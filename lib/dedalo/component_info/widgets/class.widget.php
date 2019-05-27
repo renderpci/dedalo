@@ -62,14 +62,15 @@ class widget {
 
 	/**
 	* GET_HTML
-	* @return 
+	* @return string $html
 	*/
-	public function get_html($lang=DEDALO_DATA_LANG) {
+	public function get_html($lang=DEDALO_DATA_LANG, $widget_mode=null) {
 
 		ob_start();
 		$widget_file = DEDALO_EXTRAS_PATH .''. $this->widget_path . '/' . $this->widget_name. '/' . $this->widget_name . '.php';
 		include( $widget_file );
 		$html = ob_get_clean();
+
 		return $html;
 	}//end get_html
 

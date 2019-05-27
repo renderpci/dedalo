@@ -1955,16 +1955,21 @@ abstract class component_common extends common {
 																	 $section_tipo);
 				$dato = $component->get_dato();
 
-				// resolve base_value object
-					$base_value = reset($dato);
-				// replaces locator from_component_tipo with path info
-					$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
-					
+				if(!empty($dato)){
 
-			// filter item
-				$item = new stdClass();
-					$item->q 	= $base_value;
-					$item->path = $current_element->path;
+					// resolve base_value object
+						$base_value = reset($dato);
+					// replaces locator from_component_tipo with path info
+						$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
+
+				}else{
+						$base_value = [];
+				}
+
+					// filter item
+						$item = new stdClass();
+							$item->q 	= $base_value;
+							$item->path = $current_element->path;
 
 			$ar_filter_items[] = $item;
 		}
@@ -3902,53 +3907,57 @@ abstract class component_common extends common {
 		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
 		$component_tipo_properties 	= $RecordObj_dd_component_tipo->get_propiedades(true);
 
-		//get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
-		if(isset($component_tipo_properties->source->search)){
-			$source_search = $component_tipo_properties->source->search;
-			foreach ($source_search as $current_search) {
-				if ($current_search->type === 'internal'){
-					$ar_related_section_tipo[] 	= $current_search->section_tipo;
-					$ar_terminos_relacionados 	=	$current_search->components;
+		// source. get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
+			if(isset($component_tipo_properties->source->search)){
+				// properties terms (new way)
+				$source_search = $component_tipo_properties->source->search;
+				foreach ($source_search as $current_search) {
+					if ($current_search->type === 'internal'){
+						$ar_related_section_tipo[] 	= $current_search->section_tipo;
+						$ar_terminos_relacionados 	= $current_search->components;
+					}
 				}
+			}else{
+				// structure related terms (legacy)
+				$ar_related_section_tipo  = common::get_ar_related_by_model('section', $tipo);
+				$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
 			}
-		}else{
-			# iterate related terms
-			$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
-			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);	
-		}
 
 		if (isset($ar_related_section_tipo[0])) {
-			# Create from related terms
-			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-			foreach ($ar_terminos_relacionados as $current_tipo) {
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-				if (strpos($modelo_name,'component')!==0) continue;
 
-				$path = search_development2::get_query_path($current_tipo, $section_tipo);
+			// Create from related terms
+				$section_tipo = reset($ar_related_section_tipo); // Note override section_tipo here !
+				foreach ($ar_terminos_relacionados as $current_tipo) {
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+					if (strpos($modelo_name,'component')!==0) continue;
 
-				# FILTER . filter_element (operator_group)
-					if ($options->add_filter===true) {	
-									
-						$filter_element = new stdClass();
-							$filter_element->q 		= $options->q;
-							$filter_element->lang 	= $options->lang;
-							$filter_element->path 	= $path;
+					$path = search_development2::get_query_path($current_tipo, $section_tipo);
+						#dump($path, ' path ++ current_tipo:'.$current_tipo.' - section_tipo:'.to_string($section_tipo));
 
-						if(!isset($filter_group)) {
-							$filter_group = new stdClass();
+
+					# FILTER . filter_element (operator_group)
+						if ($options->add_filter===true) {
+										
+							$filter_element = new stdClass();
+								$filter_element->q 		= $options->q;
+								$filter_element->lang 	= $options->lang;
+								$filter_element->path 	= $path;
+
+							if(!isset($filter_group)) {
+								$filter_group = new stdClass();
+							}
+							$filter_group->$logical_operator[] = $filter_element;
 						}
-						$filter_group->$logical_operator[] = $filter_element;
-					}
-				# SELECT . Select_element (select_group)
-					# Add options lang
-					$end_path = end($path);
-					$end_path->lang = $options->lang;
+					# SELECT . Select_element (select_group)
+						# Add options lang
+						$end_path = end($path);
+						$end_path->lang = $options->lang;
 
-					$select_element = new stdClass();
-						$select_element->path = $path;
+						$select_element = new stdClass();
+							$select_element->path = $path;
 
-					$select_group[] = $select_element;
-			}
+						$select_group[] = $select_element;
+				}
 		}else{
 			if($options->add_filter === true){
 
@@ -4128,7 +4137,8 @@ abstract class component_common extends common {
 
 	/**
 	* SPLIT_QUERY
-	* @return 
+	* @param object $query_object
+	* @return array $ar_query_object
 	*/
 	public static function split_query($query_object) {
 		
@@ -4140,10 +4150,10 @@ abstract class component_common extends common {
 			$search_value = json_encode($search_value);
 		}
 
-		$operator_between = '$or';
+		$operator_between = '$or';	// default (!)	
 			
 		# JSON CASE
-		if ($json_value = json_decode($search_value)) {			
+		if ($json_value = json_decode($search_value)) {
 			if (is_array($json_value) && count($json_value)>1) {			
 				$group = new stdClass();
 					$name = $operator_between;
@@ -4163,6 +4173,9 @@ abstract class component_common extends common {
 
 		# STRING CASE
 		}else{
+
+			$operator_between = '$and'; // only when is string
+
 			# \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
 			$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
 			preg_match_all($pattern, $search_value, $matches);
@@ -4283,7 +4296,7 @@ abstract class component_common extends common {
 		#		}
 		#	}
 
-		// Search filter custom
+		// Search filter custom (properties)
 			if (isset($propiedades->source->filter_custom)) {
 
 				// Build custom filter from propiedades
@@ -4307,10 +4320,6 @@ abstract class component_common extends common {
 			# Avoid auto add filter by user projects in search
 			if (!property_exists($search_query_object,'skip_projects_filter')) {
 				$search_query_object->skip_projects_filter 	= true;
-			}		
-
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
 			}
 
 		// Exec search
@@ -4318,7 +4327,11 @@ abstract class component_common extends common {
 			$rows_data 		 	 = $search_development2->search();
 			$ar_records 		 = $rows_data->ar_records;
 
-		// 		
+		// debug
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
+				debug_log(__METHOD__." rows_data->strQuery ".to_string($rows_data->strQuery), logger::DEBUG);
+			}			
 			
 		// childrens addition optional
 			// see self add_childrens
@@ -4674,39 +4687,6 @@ abstract class component_common extends common {
 
 		return $this->get_parent();
 	}//end get_section_id
-
-
-
-	/**
-	* GET_STRUCTURE_CONTEXT
-	* @return object $item
-	*/
-	public function get_structure_context() {
-		
-		$item = new stdClass();
-			$item->type 			= 'component_info';
-			$item->tipo 			= $this->get_tipo();			
-			$item->model 			= get_called_class();
-			$item->label 			= $this->get_label();
-			$item->section_tipo		= $this->get_section_tipo();		
-			$item->lang				= $this->get_lang();
-			$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;
-			
-			$item->properties 		= $this->get_propiedades();
-			$item->parent 			= $this->RecordObj_dd->get_parent();
-			$item->related 			= $this->get_ar_related_component_tipo();
-
-		// section_list optional for get related_list
-			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
-			if (isset($ar_section_list[0])) {
-				
-				$related_list_tipo 	= $ar_section_list[0];				
-				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
-				$item->related_list = $ar_components;
-			}
-
-		return $item;
-	}//end get_structure_context
 
 
 

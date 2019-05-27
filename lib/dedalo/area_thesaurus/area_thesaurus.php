@@ -37,8 +37,8 @@
 				// ts_object class
 					include(DEDALO_LIB_BASE_PATH."/ts_object/class.ts_object.php");
 				
-				// Load necessary js /css elements when we in thesaurus
-					$element_name = 'ts_object';				
+				// Load necessary js /css elements when we are in thesaurus
+					$element_name = 'ts_object';
 					css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
 					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
@@ -49,6 +49,9 @@
 					$element_name = 'tool_av_versions';
 					#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/$element_name/css/$element_name.css";
 					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/$element_name/js/$element_name.js";
+
+					$element_name = 'component_text_area';
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/mce_editor.js";
 
 					css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_records/css/section_records.css";
 
@@ -88,8 +91,7 @@
 					foreach ($hierarchy_sections as $key => $item) {
 						$ar_sections_by_type[$item->typology][] = $item;
 					}
-					# Sort by typology section_id ASC
-					ksort($ar_sections_by_type);
+
 					if(SHOW_DEBUG===true) {
 						#dump($ar_sections_by_type, ' ar_sections_by_type ++ '.to_string());
 					}

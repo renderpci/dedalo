@@ -20,7 +20,7 @@
 				$file_name 		= 'edit';
 				$propiedades 	= $this->get_propiedades();
 				
-				$propiedades->component_parent 	= $this->parent;	# add current parent section id_matrix to vars
+				$propiedades->component_parent 	= $this->parent;	# add current parent section_id to vars
 				$propiedades->lang_filter 		= DEDALO_DATA_LANG;	# add current lang to vars
 				$propiedades_json 				= json_handler::encode($propiedades);
 	

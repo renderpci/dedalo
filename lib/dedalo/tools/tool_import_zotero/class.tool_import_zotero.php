@@ -191,7 +191,7 @@ class tool_import_zotero extends tool_common {
 				if(isset($matches[2])) $dd_date->set_minute((int)$matches[2]);
 				if(isset($matches[3])) $dd_date->set_second((int)$matches[3]);
 			}
-		}		
+		}
 
 		return (object)$dd_date;
 	}//end zotero_date_to_dd_date
@@ -553,9 +553,11 @@ class tool_import_zotero extends tool_common {
 					case 'accessed':
 						$date 	   = self::zotero_date_to_dd_date( $zotero_obj->$name );
 						$component = component_common::get_instance('component_date', $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
-						$component->set_dato( $date );
+						$date_object = new stdClass();
+							$date_object->start = $date;
+						$component->set_dato( $date_object );
 						$component->Save();
-						$ar_response[$parent]->$name ="+ Saved $name value ".to_string($date)." from zotero import process";
+						$ar_response[$parent]->$name ="+ Saved $name value ".to_string($date_object)." from zotero import process";
 						break;
 
 					case 'call-number':

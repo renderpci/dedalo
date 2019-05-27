@@ -25,6 +25,9 @@ abstract class backup {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed '.__METHOD__;
+
+		# Force liberate browser session
+			session_write_close();
 		
 		try {
 			# NAME : File name formated as date . (One hour resolution)
@@ -132,10 +135,8 @@ abstract class backup {
 					}
 				}
 				
-				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);							
+				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);				
 				
-				# Force liberate browser session
-				session_write_close();
 
 				# RUN DELAYED COMMAND
 				$res = exec_::exec_sh_file($prgfile);

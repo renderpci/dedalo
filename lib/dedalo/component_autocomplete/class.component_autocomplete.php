@@ -29,14 +29,6 @@ class component_autocomplete extends component_relation_common {
 	public function get_dato() {
 
 		$dato = parent::get_dato();
-
-		// external mode
-			$propiedades = $this->get_propiedades();
-			if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
-				// set_dato_external($save=false, $changed=false, $current_dato=false)
-				$this->set_dato_external(true, false, $dato);	// Forces save updated dato with calculated external dato ($save=false, $changed=false)
-				$dato = $this->dato;
-			}		
 		
 		/* des
 			if (!empty($dato) && !is_array($dato)) {
@@ -102,7 +94,7 @@ class component_autocomplete extends component_relation_common {
 	* Get resolved string representation of current value (expected id_matrix of section or array)
 	* @return array $this->valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ' ) {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ') {
 		
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG===true) {
@@ -251,12 +243,13 @@ class component_autocomplete extends component_relation_common {
 	}//end get valor
 
 
+
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id) {
 		
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -579,7 +572,7 @@ class component_autocomplete extends component_relation_common {
 	* @param object $ar_data . Object with all component_tipo => value of component_autocomplete value elements
 	* @return locator object. Locator of new created section to add in current component_autocomplete data
 	*/
-	public static function create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data ) {
+	public static function create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data) {
 
 		// set from_component_tipo
 			$from_component_tipo = $tipo;
@@ -849,6 +842,7 @@ class component_autocomplete extends component_relation_common {
 	}//end regenerate_component
 
 
+
 	/**
 	* UPDATE_DATO_VERSION
 	* @return object $response
@@ -932,7 +926,7 @@ class component_autocomplete extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value($lang=null) {
 	
 		$this->valor = null;
 	
@@ -1011,6 +1005,49 @@ class component_autocomplete extends component_relation_common {
 		
 		return $result;
 	}//end render_list_value
+
+
+
+	/**
+	* GET_COMPONENT_INFO
+	* @return object | json string $component_info
+	*/
+	public function get_component_info($format='json') {
+
+		$component_info_obj = parent::get_component_info(false);
+
+		// external mode check
+			$propiedades = $this->get_propiedades();
+			if(isset($propiedades->source->search)){
+
+				$component_info_obj->external_data = [];
+
+				foreach ($propiedades->source->search as $current_search) {
+					if ($current_search->type === 'external'){
+
+						$external_section_tipo = $current_search->section_tipo;
+						$current_recordObjdd = new RecordObj_dd($external_section_tipo);
+						$external_section_properties = $current_recordObjdd->get_propiedades(true);
+						
+						if (isset($external_section_properties->external_data)) {
+							
+							$external_data = $external_section_properties->external_data;
+							$external_data->section_tipo = $external_section_tipo;
+
+							$component_info_obj->external_data[] = $external_data;
+						}						
+					}
+				}
+			}
+
+			if ($format === 'json') {
+				$component_info =  json_encode($component_info_obj);
+			}else{
+				$component_info = $component_info_obj;
+			}
+
+		return $component_info;		
+	}//end get_component_info
 
 
 

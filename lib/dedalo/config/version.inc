@@ -1508,6 +1508,45 @@
 		(!) Need structure version >= 08-04-2019 16:06 
 
 
+	Valencia 11-04-2019 5.4.8
+		Added new component layout render_layout_map engine in test develop mode
+
+
+	Valencia 15-04-2019 5.4.11
+		Fixed error on tool import files thats not show correctly the temporal section
+
+
+	Valencia 23-04-2019 5.4.17
+		Fixed issue on diffusion component_relation_related value when references are not included in publication data 
+
+
+	Valencia 25-04-2019 5.4.18
+		Fixed date error on import zotero. Now format is correct (using 'start' property always)
+
+
+	Valencia 25-04-2019 5.4.31
+		Fixed component_autocomplete error on parse filter fields from properties (get_filter_fields_data) (bibliography author case)
+
+	
+	Valencia 13-05-2019 5.4.32
+		Fixed thesaurus scope note issue on load text area editor (changed from component_input_text_large to component_text_area)
+
+
+	Valencia 14-05-2019 5.4.34
+		Fixed thesaurus no descriptors issue when more than one is not showed
+
+	
+	Valencia 20-05-2019 5.4.36
+		Fixed unnecessary reset values (make slow resolutions in large component_select) in component_relation_parent get_parents_recursive
+		Added get_dato_export custom resolution for component_relation_parent
+
+
+	Valencia 22-05-2019 5.4.40
+		Added thesaurus list sort alphabetically by group
+	
+
+	Valencia 27-05-2019 5.4.41	
+	Fixed error in tool time machine get_source_langs. Add project langs always for safe langs list
 
 
 	WORK IN PROGRESS
@@ -1529,12 +1568,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.7';
+	$DEDALO_VERSION = '5.4.41';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-04-2019');
+	define('DEDALO_BUILD'	, '27-05-2019');
 
 
 	/*

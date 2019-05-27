@@ -214,7 +214,10 @@ if (empty($ar_files[0])) {
 				
 					$prev_value=$value;
 					if ($name=='issued' || $name=='accessed') {				             
-						$value = tool_import_zotero::zotero_date_to_dd_date($value);						
+						$date = tool_import_zotero::zotero_date_to_dd_date($value);
+						$value_obj = new stdClass();
+							$value_obj->start = $date;
+						$value = $value_obj;						
 						if(SHOW_DEBUG) {
 							#$html .= "<br>".to_string($prev_value);
 						}

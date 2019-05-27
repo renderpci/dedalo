@@ -177,7 +177,9 @@ abstract class counter {
 	* CHECK_counters
 	* @return stdClass object $response
 	*/
-	public static function check_counters() {	
+	public static function check_counters() {
+
+		$start_time=microtime(1);
 		
 		$response = new stdClass();
 			$response->result 	= true;
@@ -186,9 +188,16 @@ abstract class counter {
 		$response->msg .= "TEST ALL COUNTERS IN DATABASE: ".DEDALO_DATABASE_CONN;
 
 		# Find and iterate all db tables
-		$sql 	= 'SELECT * FROM matrix_counter ORDER BY tipo ASC';
+		$sql 	= 'SELECT tipo, dato FROM matrix_counter ORDER BY tipo ASC';
 		$result = JSON_RecordObj_matrix::search_free($sql);
+
+		$t = exec_time_unit($start_time,'ms');
+		debug_log(__METHOD__." check_counters sql: $sql: $t ms".to_string(), logger::DEBUG);
+
+		$i=0;
 		while ($rows = pg_fetch_assoc($result)) {
+
+			$start_time=microtime(1);
 				
 			$section_tipo 		= $rows['tipo'];
 			$counter_section_id = (int)$rows['dato'];
@@ -203,13 +212,16 @@ abstract class counter {
 			$table_name = common::get_matrix_table_from_tipo($section_tipo);
 			$sql2 	 = 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
 			$result2 = JSON_RecordObj_matrix::search_free($sql2);
+
+			
+
 			if (pg_num_rows($result2) === 0) {
 				$last_section_id = 0;	// Skip empty tables
 			}else{
 				$last_section_id = (int)pg_fetch_result($result2, 0, 'section_id');
 			}
 			
-			$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
+			$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 			$response->msg .= "<hr><b>-- $section_tipo $section_name</b> - counter: $counter_section_id - last_section_id: $last_section_id ";
 			if ($last_section_id!=$counter_section_id) {
 				$response->msg .= "[?]";
@@ -217,7 +229,7 @@ abstract class counter {
 					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">UPDATE \"matrix_counter\" SET dato = $last_section_id WHERE tipo = '$section_tipo'; </span></h5>";
 				}else{
 					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">DELETE FROM \"matrix_counter\"  WHERE tipo = '$section_tipo'; </span></h5>";
-				}				
+				}
 			
 				#$response->msg .= "<br><b>   WARNING: last_section_id != counter_section_id [$last_section_id != $counter_section_id]</b>";
 				#$response->msg .= "<br>FIX AUTOMATIC TO $last_section_id start</pre>";
@@ -233,8 +245,15 @@ abstract class counter {
 			}else{
 				$response->msg .= "[ok]";
 			}
+
+			#$t = exec_time_unit($start_time,'ms');
+			#debug_log(__METHOD__." sql2: $sql2  - $t ms".to_string(), logger::DEBUG);
 			
+			$i++;
 		}//end while ($rows = pg_fetch_assoc($result)) {
+
+		$t = exec_time_unit($start_time,'ms');
+		debug_log(__METHOD__." check_counters TOTAL ($i): $t ms".to_string(), logger::DEBUG);
 
 
 		return (object)$response;

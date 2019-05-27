@@ -75,7 +75,9 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 </script>
 <?php echo trim($js_link_code) ?>
 <script>
-
+// window.addEventListener("load", function (event) {
+// 	menu.init()
+// });
 </script>
 </head>
 <body>
@@ -153,6 +155,18 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 
 		# DEBUGGER INFO
 		# if($modo!='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_debug.phtml');
+		if(SECTION_TIPO === 'test65'){
+			?>
+				<div id='section_content'>PATATAAAAA
+					
+					<script type="module" src="<?php echo DEDALO_LIB_BASE_URL ?>/test/page.js"></script>
+					<script>
+						// import {lets_go} from '../../../test/page.js';
+					</script>
+				</div>
+				
+			<?php
+		}
 		
 		
 	}#if(SHOW_DEBUG===true)

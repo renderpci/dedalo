@@ -9,7 +9,9 @@ class component_text_area extends component_common {
 	public $arguments;
 
 
-
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 		
 		// Overwrite lang when component_select_lang is present
@@ -29,6 +31,7 @@ class component_text_area extends component_common {
 
 		return true;
 	}//end __construct
+
 
 
 	/**
@@ -301,48 +304,46 @@ class component_text_area extends component_common {
 
 	/**
 	* GET VALOR
-	* Overwrite common_function
+	* Overwrite common function
 	*/
 	public function get_valor() {
 		
 		switch ($this->modo) {
 			case 'dummy':
-			case 'diffusion':
-				#$dato = $this->get_dato();
-				$dato = parent::get_dato();		
+				$valor = parent::get_dato();
 				break;
 			
 			default:
+				// old way (< 29-04-2019)
+					# $value		= $this->get_valor_list_html_to_save(100000);
+					# $current_tag = 0;
+					# $list_value = $value->$current_tag;
+					#
+ 					# if (!is_string($list_value)) {
+ 					# 	if(SHOW_DEBUG===true) {
+ 					# 		#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
+ 					# 		#throw new Exception("Error Processing Request. list_value expected string", 1);				
+ 					# 	}					
+ 					# 	debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
+ 					# 	$valor = to_string($list_value);
+ 					# }else{
+ 					# 	$valor = $list_value;
+					# }
 
-				#$dato = parent::get_dato();	
-
-				$value		= $this->get_valor_list_html_to_save(100000);
-				$current_tag = 0;
-				$list_value = $value->$current_tag;
-						
-
-				if (!is_string($list_value)) {
-					if(SHOW_DEBUG===true) {
-						#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
-						#throw new Exception("Error Processing Request. list_value expected string", 1);				
-					}			
-					
-					debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
-					$dato = to_string($list_value);			
-				}else{
-					$dato = $list_value;	
-				}		
+				// new way (>= 29-04-2019)
+					$dato 	= parent::get_dato();
+					$valor 	= TR::addTagImgOnTheFly($dato);
 
 				#$dato = TR::deleteMarks($dato);
 				#$dato = self::decode_dato_html($dato);
-				##$dato = addslashes($dato);					
+				##$dato = addslashes($dato);
 
 				# Desactivo porque elimina el '<mar>'
 				#$dato = filter_var($dato, FILTER_UNSAFE_RAW);	# FILTER_SANITIZE_STRING
 				break;
-		}		
+		}
 
-		return $dato;
+		return $valor;
 	}//end get_valor
 
 
@@ -353,15 +354,14 @@ class component_text_area extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
-		#if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		#}else{
-		#	$this->set_dato( $valor );	// Use parsed json string as dato
-		#}
-
+	
 		$valor_export = $this->get_valor($lang);
 		#$valor_export = br2nl($valor_export);
+		#dump($valor_export, ' valor_export ++ '."$this->tipo - $this->parent".to_string());
+
+		#$valor_export = strip_tags($valor_export);
+		#$valor_export = htmlspecialchars_decode($valor_export);
+		#$valor_export = html_entity_decode($valor_export);
 
 		return $valor_export;
 	}//end get_valor_export
@@ -372,6 +372,7 @@ class component_text_area extends component_common {
 	* DECODE DATO HTML
 	*/
 	protected static function decode_dato_html($dato) {
+		
 		return htmlspecialchars_decode($dato);
 	}//end decode_dato_html
 
@@ -1250,9 +1251,9 @@ class component_text_area extends component_common {
 		$current_elated_component_av = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $modelo_name='component_av', $relation_type='termino_relacionado');
 		if (isset($current_elated_component_av[0])) {
 			return $current_elated_component_av[0];
-		}else{
-			return null;
 		}
+
+		return null;		
 	}//end get_related_component_av_tipo
 	
 
@@ -1491,18 +1492,36 @@ class component_text_area extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value($lang=null) {
 		
-		$diffusion_value = $this->get_dato();  # Important: use raw text
+		$diffusion_value = $this->get_dato();  # Important: use raw text (!)
 
 		// Decode entities
 			$diffusion_value = html_entity_decode($diffusion_value);
 
-
-
-
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE_WITH_IMAGES
+	* Used in diffusion (see properties) for resolve the links of the svg and images inside the text_area
+	* @return string $diffusion_value_with_images
+	*/
+	public function get_diffusion_value_with_images() {			
+		
+		# $diffusion_value = $this->get_valor_list_html_to_save(60000);		
+		# $key = '0';		
+		# $diffusion_value_with_images = $diffusion_value->$key;
+
+		$valor = $this->get_valor($this->lang);
+
+		$diffusion_value_with_images = $valor;
+
+		return (string)$diffusion_value_with_images;		
+	}//end get_diffusion_value_with_images
+
 
 
 	/**
@@ -1518,131 +1537,148 @@ class component_text_area extends component_common {
 	* @see class.section.php
 	* @return string $html
 	*/
-	public function get_valor_list_html_to_save($max_char = 256) {
-		# Store current modo
-		$modo_previous = $this->get_modo();
+	public function get_valor_list_html_to_save($max_char=256) {
 
-		# Temporal modo
-		$this->set_modo('list');
+		 // valor . Get value with images and html tags
+		 	$valor = $this->get_valor($this->lang);
+		 
+		 // truncate string	
+			$text_fragment = common::truncate_html($max_char, $valor, $isUtf8=true);
+				 
+		 // build 'legacy' format.. only first fragment (!)
+		 	$Object_fragment = new stdClass();
+		 		$key=0;
+		 		$Object_fragment->$key = $text_fragment;
+		
+		 	return $Object_fragment;
 
-			#
-			# OBJECT WITH THE FRAGMENT OF THE TEXT
-			$Object_fragment	= new stdClass();
-			$valor 				= (string)$this->get_dato(); // Full text source
-				#dump($valor, ' valor ++ '.to_string());
-			
-			// remove all dedalo marks except the svg;
-			$options 		= new stdClass();
-			$options->deleteSvg = false;
-			$dato 			= TR::deleteMarks($valor, $options );
+		# des (old way < 29-04-2019)
+		 	/*
+			# Store current modo
+			$modo_previous = $this->get_modo();
 
-			// delete all html tags
-			$dato 			= strip_tags($dato);
-			
-			//get the pattern of the svg tags for cut the text
-			$pattern = TR::get_mark_pattern('svg_full_text');
-			// get the svg tags
-			preg_match_all($pattern, $dato, $ar_tag);
-			// cut the text with the svg tags
-			$ar_text = preg_split($pattern, $dato, 50);
+			# Temporal modo
+			$this->set_modo('list');
 
-			// get the array of the svg marks
-			$ar_marks = $ar_tag[0];
+				#
+				# OBJECT WITH THE FRAGMENT OF THE TEXT
+				$Object_fragment	= new stdClass();
+				$valor 				= (string)$this->get_dato(); // Full text source
+					#dump($valor, ' valor ++ '.to_string());
+				
+				// remove all dedalo marks except the svg;
+				$options 		= new stdClass();
+				$options->deleteSvg = false;
+				$dato 			= TR::deleteMarks($valor, $options );
 
-			//counter of the characters 
-			$number 		= 0;
+				// delete all html tags
+				$dato 			= strip_tags($dato);
+				
+				//get the pattern of the svg tags for cut the text
+				$pattern = TR::get_mark_pattern('svg_full_text');
+				// get the svg tags
+				preg_match_all($pattern, $dato, $ar_tag);
+				// cut the text with the svg tags
+				$ar_text = preg_split($pattern, $dato, 50);
 
-			//final ar
-			$ar_strip_text 	= [];
-			foreach ($ar_text as $key => $value) {
+				// get the array of the svg marks
+				$ar_marks = $ar_tag[0];
 
-				// count the characters
-				if( mb_strlen($value) <= $max_char) {
-					$number += mb_strlen($value);
-					//check that the current key is inside the array of the marks
-					$current_tag = (isset($ar_marks[$key])) ? $ar_marks[$key] : '';
-					// add the final array wiht the text and the svg mark
-					$ar_strip_text[$key] = $value . $current_tag ;
-				}else{
-					$char_to_cut = $max_char - $number;
-					$string = mb_substr($value, 0, $char_to_cut);
+				//counter of the characters 
+				$number 		= 0;
 
-					$current_tag = (isset($ar_marks[$key])) ? $ar_marks[$key] : '';
-					$ar_strip_text[$key] = $string . $current_tag;
-					break;
-				}
-			}
+				//final ar
+				$ar_strip_text 	= [];
+				foreach ($ar_text as $key => $value) {
 
-			//flat the array to one text
-			$final_text = implode(" ", $ar_strip_text);
+					// count the characters
+					if( mb_strlen($value) <= $max_char) {
+						$number += mb_strlen($value);
+						//check that the current key is inside the array of the marks
+						$current_tag = (isset($ar_marks[$key])) ? $ar_marks[$key] : '';
+						// add the final array wiht the text and the svg mark
+						$ar_strip_text[$key] = $value . $current_tag ;
+					}else{
+						$char_to_cut = $max_char - $number;
+						$string = mb_substr($value, 0, $char_to_cut);
 
-			// add the svg html
-			$text_fragment 			= TR::addTagImgOnTheFly($final_text);
-			# 
-			# FIRST fragment (key 0) always is a substring of whole text
-			/*
-			if (strlen($valor)>$max_char) {
-				$fragmento_text = tools::truncate_text($valor,$max_char);
-			}else{
-				$fragmento_text = $valor;
-			}
-			*/
-			# El fragmento 0 es el texto recortado. Los siguientes fragmentos van con los keys acorde a los tag_id correspondientes		
-			$key=0;
-			$Object_fragment->$key = $text_fragment;
-			
-			# DEPECATED 25-07-2018 
-			# REACTIVATED 03-09-2018
-			# NEXT fragments keys(1,2,..) (if tags exists)			
-				$tags_en_texto	= (array)$this->get_ar_relation_tags();		// Don't see the 'struct' marcs !!!
-				if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0) {
-					$tag_id_key = 4;
-					foreach ($tags_en_texto[0] as $key => $tag) {					
-						// $tag here is like [index-n-8-label in 8-data::data]
-						switch (true) {
-							case (strpos($tag, 'index')!==false):
-								$tag_type = 'index';
-								$pattern  = TR::get_mark_pattern('indexIn');
-								preg_match($pattern, $tag, $matches);
-								$tag_id = $matches[$tag_id_key];
-								break;
-							
-							#case (strpos($tag, 'struct')!==false):
-							#	$tag_type = 'struct';
-							#	$pattern  = TR::get_mark_pattern('structIn');
-							#	preg_match($pattern, $tag, $matches);
-							#	$tag_id = $matches[$tag_id_key];
-							#	break;
-							default:
-								debug_log(__METHOD__." Making fallback to index because tag is NOT WEEL DEFINED  ".to_string($tag), logger::ERROR);
-								$tag_type = 'index';
-								$pattern  = TR::get_mark_pattern('indexIn');
-								preg_match($pattern, $tag, $matches);
-								$tag_id = $matches[$tag_id_key];
-								break;
-						}
-						#continue;
-
-						$ar_fragmento = (array)component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $this->dato);					
-						if(isset($ar_fragmento[0]) && strlen($ar_fragmento[0])>$max_char) {
-							$fragmento_text = mb_substr($ar_fragmento[0],0,$max_char);
-							if (strlen($ar_fragmento[0])>$max_char) {
-								$fragmento_text .= '..';
-							}
-						}else{
-							$fragmento_text = isset($ar_fragmento[0]) ? $ar_fragmento[0] : '';
-						}
-						
-						$tag_id = $tags_en_texto[$tag_id_key][$key];			
-						$Object_fragment->$tag_id = $fragmento_text;
+						$current_tag = (isset($ar_marks[$key])) ? $ar_marks[$key] : '';
+						$ar_strip_text[$key] = $string . $current_tag;
+						break;
 					}
-				}//end if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0)
+				}
+
+				//flat the array to one text
+				$final_text = implode(" ", $ar_strip_text);
+
+				// add the svg html
+				$text_fragment 			= TR::addTagImgOnTheFly($final_text);
+				# 
+				# FIRST fragment (key 0) always is a substring of whole text
+
+				# if (strlen($valor)>$max_char) {
+				# 	$fragmento_text = tools::truncate_text($valor,$max_char);
+				# }else{
+				# 	$fragmento_text = $valor;
+				# }
+				
+				# El fragmento 0 es el texto recortado. Los siguientes fragmentos van con los keys acorde a los tag_id correspondientes		
+				$key=0;
+				$Object_fragment->$key = $text_fragment;
+				
+				# DEPECATED 25-07-2018 
+				# REACTIVATED 03-09-2018
+				# NEXT fragments keys(1,2,..) (if tags exists)			
+					$tags_en_texto	= (array)$this->get_ar_relation_tags();		// No contempla las marcas 'struct' !!!
+					if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0) {
+						$tag_id_key = 4;
+						foreach ($tags_en_texto[0] as $key => $tag) {					
+							// $tag here is like [index-n-8-label in 8-data::data]
+							switch (true) {
+								case (strpos($tag, 'index')!==false):
+									$tag_type = 'index';
+									$pattern  = TR::get_mark_pattern('indexIn');
+									preg_match($pattern, $tag, $matches);
+									$tag_id = $matches[$tag_id_key];
+									break;
+								
+								#case (strpos($tag, 'struct')!==false):
+								#	$tag_type = 'struct';
+								#	$pattern  = TR::get_mark_pattern('structIn');
+								#	preg_match($pattern, $tag, $matches);
+								#	$tag_id = $matches[$tag_id_key];
+								#	break;
+								default:
+									debug_log(__METHOD__." Making fallback to index because tag is NOT WEEL DEFINED  ".to_string($tag), logger::ERROR);
+									$tag_type = 'index';
+									$pattern  = TR::get_mark_pattern('indexIn');
+									preg_match($pattern, $tag, $matches);
+									$tag_id = $matches[$tag_id_key];
+									break;
+							}
+							#continue;
+
+							$ar_fragmento = (array)component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $this->dato);					
+							if(isset($ar_fragmento[0]) && strlen($ar_fragmento[0])>$max_char) {
+								$fragmento_text = mb_substr($ar_fragmento[0],0,$max_char);
+								if (strlen($ar_fragmento[0])>$max_char) {
+									$fragmento_text .= '..';
+								}
+							}else{
+								$fragmento_text = isset($ar_fragmento[0]) ? $ar_fragmento[0] : '';
+							}
+							
+							$tag_id = $tags_en_texto[$tag_id_key][$key];			
+							$Object_fragment->$tag_id = $fragmento_text;
+						}
+					}//end if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0)
+				
 			
-		
-		# Return it to anterior mode after get the html
-		$this->set_modo($modo_previous);	# Important!
-		
-		return (object)$Object_fragment;
+			# Return it to anterior mode after get the html
+			$this->set_modo($modo_previous);	# Important!			
+
+			return (object)$Object_fragment;
+			*/
 	}//end get_valor_list_html_to_save
 
 
@@ -2267,22 +2303,83 @@ class component_text_area extends component_common {
         switch (true) {
         	# IS NULL
 			case ($q==='!*'):
+				/* old 
+					$operator = 'IS NULL';
+					$q_clean  = '';
+					$query_object->operator = $operator;
+	    			$query_object->q_parsed	= $q_clean;
+	    			$query_object->unaccent = false;
+
+					$clone = clone($query_object);
+		    			$clone->operator = '~*';
+		    			$clone->q_parsed = '\'.*""\'';
+
+					$logical_operator = '$or';
+	    			$new_query_json = new stdClass;    			
+		    			$new_query_json->$logical_operator = [$query_object, $clone];
+	    			# override
+	    			$query_object = $new_query_json ;
+					*/
 				$operator = 'IS NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
-    			$query_object->unaccent = false;
-
-				$clone = clone($query_object);
-	    			$clone->operator = '~*';
-	    			$clone->q_parsed = '\'.*""\'';
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent = false;
+				$query_object->lang 	= 'all';
 
 				$logical_operator = '$or';
-    			$new_query_json = new stdClass;    			
-	    			$new_query_json->$logical_operator = [$query_object, $clone];
-    			# override
-    			$query_object = $new_query_json ;
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object];
 
+				// Search empty only in current lang
+				// Resolve lang based on if is translatable
+					$path_end 		= end($query_object->path);
+					$component_tipo = $path_end->component_tipo;
+					$RecordObj_dd   = new RecordObj_dd($component_tipo);
+					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
+					$clone = clone($query_object);
+						$clone->operator = '=';
+						$clone->q_parsed = '\'""\'';
+						$clone->lang 	 = $lang;
+
+					$new_query_json->$logical_operator[] = $clone;
+
+					// legacy data (set as null instead [])
+					$clone = clone($query_object);
+						$clone->operator = 'IS NULL';
+						$clone->lang 	 = $lang;
+
+					$new_query_json->$logical_operator[] = $clone;
+
+				// langs check all
+					/*
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
+						// Empty data is blank array []
+						$clone = clone($query_object);
+							$clone->operator = '=';
+							$clone->q_parsed = '\'""\'';
+							$clone->lang 	 = $current_lang;
+
+						$ar_query_object[] = $clone;
+
+						// legacy data (set as null instead [])
+						$clone = clone($query_object);
+							$clone->operator = 'IS NULL';
+							$clone->lang 	 = $current_lang;
+
+						$ar_query_object[] = $clone;
+					}			
+
+					#$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
+					$new_query_json->$logical_operator = $ar_query_object;
+					*/
+
+				# override
+				$query_object = $new_query_json;
 				break;
 			# IS NOT NULL
 			case ($q==='*'):
@@ -2354,12 +2451,12 @@ class component_text_area extends component_common {
     			$query_object->unaccent = true;
 				break;
 			# LITERAL
-			case (substr($q, 0, 1)==='\"' && substr($q, -1)==='\"'):
-				$operator = '~';
-				$q_clean  = str_replace('\"', '', $q);
+			case (substr($q, 0, 1)==='"' && substr($q, -1)==='"'):
+				$operator = '~*';
+				$q_clean  = str_replace('"', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# CONTAIN
 			default:
@@ -2374,6 +2471,7 @@ class component_text_area extends component_common {
 
         return $query_object;
 	}//end resolve_query_object_sql
+
 
 
 	/**

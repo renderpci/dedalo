@@ -238,6 +238,12 @@ function load_component_by_ajax($json_data) {
 		if (!empty($arguments)) {
 			$component_obj->set_arguments($arguments);
 		}
+
+	// tool user admin case
+		$user_id = navigator::get_user_id();
+		if ( $section_tipo===DEDALO_SECTION_USERS_TIPO && $user_id==$parent && $tipo===DEDALO_USER_IMAGE_TIPO ) {
+			$component_obj->permissions = 2;
+		}
 		
 	// html. Get component html
 		# $arguments = new stdClass();
@@ -274,6 +280,54 @@ function load_component_by_ajax($json_data) {
 
 	return (object)$response;
 }//end load_component_by_ajax
+
+
+
+function remove_server_dato_of_hidden_components($json_data){
+	global $start_time;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	// vars 
+		$vars = array('section_id','ar_group','lang','modo','section_tipo');
+			foreach($vars as $name) {
+				$$name = common::setVarData($name, $json_data);
+				# DATA VERIFY
+				if (empty($$name)) {
+					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+					return $response;
+				}
+			}
+	//create the section group
+
+		foreach ($ar_group as $current_tipo) {
+			//get the childrens of the current section group
+			$ar_recursive_childrens = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, 'component_', 'children_recursive', $search_exact=false);
+
+				#dump($ar_recursive_childrens);
+			foreach ($ar_recursive_childrens as $current_tipo) {
+		
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$component		= component_common::get_instance($modelo_name,
+																 $current_tipo,
+																 $section_id,
+																 $modo,
+																 $lang,
+																 $section_tipo);
+
+				$dato_empty = null;
+				$component->set_dato($dato_empty);
+				$component->Save();
+			}										
+
+		}
+
+}
 
 
 

@@ -50,7 +50,8 @@
 				vertical-align: top;
 
 				img {
-					height: 57px;
+					//height: 57px;
+					max-height: 57px;
 					width: auto;
 				}
 			}
@@ -217,9 +218,12 @@
 	----------------------------------------- */
 	#download_file {
 		clear: both;
-		border-bottom: 1px solid #B2B2B2;
+		//border-bottom: 1px solid #B2B2B2;
 		display: none;
 		padding: 20px;
+
+		position: sticky;
+    	top: 90vh;
 
 		&:before {
 			content: " ";
