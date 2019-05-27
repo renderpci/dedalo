@@ -307,7 +307,7 @@
 // IMAGE MAGICK
 	#exec(MAGICK_PATH. "convert -version", $out, $rcode); // Try to get ImageMagick "convert" program version number.
 	#if ($rcode!==0) $init_response->msg .= trim("Error on system test. ImageMagick lib not found");
-	$image_magick = trim(shell_exec('command -v '.MAGICK_PATH.'/convert'));
+	$image_magick = trim(shell_exec('command -v '.MAGICK_PATH.'convert'));
 	if (empty($image_magick)) {
 		$init_response->msg .= trim("Error on system test. ImageMagick lib not found");
 		return $init_response;
