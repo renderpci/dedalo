@@ -134,6 +134,13 @@
 							# VALUE . STRING RESOLVED TO SHOW
 							$html_content .= $label;
 							$html_content .= '<span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
+
+							/// edit button
+								$html_content .= ' <input type="button" class="icon_bs component_relation_related_button_edit" value="" ';
+								$html_content .= 'data-role="component_relation_related_button_edit" ';
+								$html_content .= "data-section_tipo=\"$current_locator->section_tipo\" ";
+								$html_content .= "data-section_id=\"$current_locator->section_id\" ";
+								$html_content .= 'onclick="component_relation_related.open_realated(this)" />';
 							
 							$html_content .= '</li>';
 						}
@@ -146,14 +153,7 @@
 							#dump($references, ' references ++ '.to_string());
 							foreach ((array)$references as $key => $current_locator) {
 								
-								$html_content .= '<div class="relation_related_input_line">';
-
-								// edit button
-									$html_content .= "<input type=\"button\" class=\"icon_bs component_relation_related_button_edit\" value=\"\" ";
-									$html_content .= "data-role=\"component_relation_related_button_edit\" ";
-									$html_content .= "data-section_tipo=\"$current_locator->section_tipo\" ";
-									$html_content .= "data-section_id=\"$current_locator->section_id\" ";
-									$html_content .= "onclick=\"component_relation_related.open_realated(this)\" />";
+								$html_content .= '<div class="relation_related_input_line">';								
 
 								// term string
 									#$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
@@ -164,6 +164,13 @@
 										$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
 									}
 									$html_content .= '</span>';
+
+								// edit button
+									$html_content .= ' <input type="button" class="icon_bs component_relation_related_button_edit" value="" ';
+									$html_content .= 'data-role="component_relation_related_button_edit" ';
+									$html_content .= "data-section_tipo=\"$current_locator->section_tipo\" ";
+									$html_content .= "data-section_id=\"$current_locator->section_id\" ";
+									$html_content .= 'onclick="component_relation_related.open_realated(this)" />';
 
 								$html_content .= '</div>';//relation_related_input_line
 							}
