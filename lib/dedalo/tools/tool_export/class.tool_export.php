@@ -240,7 +240,8 @@ class tool_export extends tool_common {
 									$column_name = RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator . $column_name;
 								}							
 						}
-
+							//remove the html tags
+							$column_name = strip_tags($column_name);
 						// header add
 							$header_columns[] = self::safe_cell_string($column_name);
 					}
@@ -349,6 +350,8 @@ class tool_export extends tool_common {
 				trigger_error("Sorry. Format not implemented yet");
 				break;
 		}
+		// ADD UTF8 with BOM
+		$export_str_data = chr(239) . chr(187) . chr(191) . $export_str_data;
 		#dump($export_str_data, ' export_str_data ++ '.to_string());
 		#dump($encoding, ' encoding ++ '.to_string());
 		/*
