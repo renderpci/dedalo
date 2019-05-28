@@ -242,6 +242,7 @@ class tool_export extends tool_common {
 						}
 							//remove the html tags
 							$column_name = strip_tags($column_name);
+							$column_name = self::normalize_quotes($column_name);
 						// header add
 							$header_columns[] = self::safe_cell_string($column_name);
 					}
@@ -797,7 +798,7 @@ class tool_export extends tool_common {
 	* @param string $result
 	* @return object $response
 	*/
-	public function write_result($result_string, $variant=null) {
+	public function write_result($result_string, $variant=null, $extension = 'csv') {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -806,7 +807,7 @@ class tool_export extends tool_common {
 		$section_tipo	= $this->section_tipo;
 		$label 			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 		$label 			= self::normalize_name($label);
-		$filename 		= 'exported_'.$variant.''.$label.'_'.navigator::get_user_id().'-'.$section_tipo.'.csv';
+		$filename 		= 'exported_'.$variant.''.$label.'_'.navigator::get_user_id().'-'.$section_tipo.'.'.$extension;
 
 		#$result_string  = str_replace('U+003B', ';', $result_string);	
 		
@@ -865,7 +866,9 @@ class tool_export extends tool_common {
 		#
 		# TABLE HTML
 		$table_html ='';
-		$table_html .= "<div class=\"caption no-print\">TABLE FROM: $file</div>";
+		if(SHOW_DEBUG===true) {
+			$table_html .= "<div class=\"caption no-print\">TABLE FROM: $file</div>";
+		}
 		$table_html .= "<table class=\"table_csv\">\n\n";		
 		ini_set('auto_detect_line_endings',TRUE);
 		$f = fopen($file, "r");			
