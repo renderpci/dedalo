@@ -68,7 +68,10 @@ function export_data($json_data) {
 			if ($data_format!=='dedalo') {
 				$change_encodig_to_ISO  = $tool_export->change_encoding_from_uft8($result_string,'ISO-8859-1');
 				$write_result_ISO 		= $tool_export->write_result($change_encodig_to_ISO, 'excel_','csv');
-				$write_result_HTML 		= $tool_export->write_result($table, 'html_','html');
+
+				// ADD UTF8 with BOM
+				$export_str_data = chr(239) . chr(187) . chr(191) . $table;
+				$write_result_HTML 		= $tool_export->write_result($export_str_data, 'html_','html');
 			}
 		
 		$response->result 	= true;						// E.g. 'ok'
