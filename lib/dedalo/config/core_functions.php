@@ -236,7 +236,7 @@ function exec_time_unit($start, $unit='ms', $round=3) {
 	$total = $end - $start;
 	if($unit==='ms') {
 		$total = $total*1000; 
-	}else if($unit==='sec') {
+	}else if($unit==='sec' || $unit==='secs') {
 		$total = $total; 
 	}  
 	return round($total,3);
