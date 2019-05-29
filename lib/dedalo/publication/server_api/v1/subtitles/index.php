@@ -75,5 +75,6 @@
 		
 
 	// Show text
+		header("Access-Control-Allow-Origin: *");
 		header('Content-Type: text/vtt');
 		echo $subtitles_text;
