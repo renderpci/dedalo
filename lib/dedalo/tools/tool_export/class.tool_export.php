@@ -240,9 +240,13 @@ class tool_export extends tool_common {
 									$column_name = RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator . $column_name;
 								}							
 						}
-							//remove the html tags
+						
+						// remove the html tags
 							$column_name = strip_tags($column_name);
+						
+						// normalize_quotes
 							$column_name = self::normalize_quotes($column_name);
+
 						// header add
 							$header_columns[] = self::safe_cell_string($column_name);
 					}
