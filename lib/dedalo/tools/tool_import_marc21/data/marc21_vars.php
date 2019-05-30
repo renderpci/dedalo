@@ -61,21 +61,39 @@ $marc21_vars = array();
 							"dd_component"=>"rsc141"
 							);
 //Publicació distribució, peu de imprenta
-	$marc21_vars[] = array("Field" 		  => "260",
-							"Subfield" 		=> "a",
-							"dd_component"=>"rsc144"
+	$marc21_vars[] = array("Field"			=> "260",
+							"Subfield"		=> "a",
+							"dd_component"	=>"rsc144"
 							);
 //Publicació editor
-	$marc21_vars[] = array("Field" 		  => "260",
-							"Subfield" 		=> "b",
-							"dd_component"=>"rsc219"
+	$marc21_vars[] = array("Field"			=> "260",
+							"Subfield"		=> "b",
+							"dd_component"	=>"rsc219"
 							);
 //Publicació fecha
-	$marc21_vars[] = array("Field" 		  		=> "260",
-							"Subfield" 			=> "c",
-							"dd_component"		=>"rsc224",
+	$marc21_vars[] = array("Field"					=> "260",
+							"Subfield"				=> "c",
+							"dd_component"			=>"rsc224",
 							"partial_left_content" 	=> 4,
 							"date_format" 			=> "year"
+							);
+
+//Publicació distribució, peu de imprenta
+	$marc21_vars[] = array("Field"			=> "264",
+							"Subfield"		=> "a",
+							"dd_component"	=>"rsc144"
+							);
+//Publicació editor
+	$marc21_vars[] = array("Field"			=> "264",
+							"Subfield"		=> "b",
+							"dd_component"	=>"rsc219"
+							);
+//Publicació fecha
+	$marc21_vars[] = array("Field"					=> "264",
+							"Subfield"				=> "c",
+							"dd_component"			=>"rsc224",
+							"partial_left_content"	=> 4,
+							"date_format"			=> "year"
 							);	
 
 //Descripció física
