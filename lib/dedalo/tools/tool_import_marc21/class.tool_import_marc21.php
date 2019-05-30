@@ -96,7 +96,7 @@ class tool_import_marc21 extends tool_common {
 
 		# Parse file
 		# MARC PEAR Lib
-		$pear_lib_path = DEDALO_LIB_BASE_PATH."/pear/";
+		$pear_lib_path = DEDALO_ROOT."/lib/pear/";
 		require($pear_lib_path . "File/MARC.php");
 
 		$ar_records = new File_MARC($file);
@@ -104,6 +104,7 @@ class tool_import_marc21 extends tool_common {
 			#echo "<pre>";
 			#echo $record;
 			#echo "</pre><hr>";
+				#dump($record, ' record ++ '.to_string());
 
 			$section_id   = null;
 			$section_tipo = self::MARC21_IMPORT_SECTION_TIPO;
@@ -143,13 +144,15 @@ class tool_import_marc21 extends tool_common {
 			*/
 
 			# Iterate defined ar fields (see marc21_vars.php)
+			
 			foreach ($this->marc21_vars as $element_vars) {
 				#dump($element_vars, '$element_vars ++ '.to_string()); 
 				
 				if (empty($element_vars['dd_component'])) {
 					dump($element_vars, ' ERROR ON element_vars: dd_component is empty ++ '.to_string());
 					continue;
-				}				
+				}
+						
 				#dump($record, ' record ++ '.to_string());
 
 				#if ($element_vars['Field']=='998') {
@@ -195,6 +198,10 @@ class tool_import_marc21 extends tool_common {
 					$value = self::get_value( $record, $element_vars );	
 				}
 
+				if(empty($value) || !isset($value)){
+					//dump($value, ' value +++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+					continue;
+				}
 
 				# skip_on_empty : When is defined, only store value when is not empty (used when in various components data like 'rsc147' )
 				if (empty($value) && (isset($element_vars["skip_on_empty"]) && $element_vars["skip_on_empty"]===true) ) {
@@ -205,7 +212,12 @@ class tool_import_marc21 extends tool_common {
 
 				if(isset($element_vars['partial_left_content'])){
 					$value_trim = trim($value);
-					$value = substr($value_trim, 0, (int)$element_vars['partial_left_content']);
+					$value_test = substr($value_trim, 0, (int)$element_vars['partial_left_content']);
+					if( is_int($value_test)=== false){
+						preg_match('/\d+/', $value, $value_test);
+						$value_test = (int)implode('', $value_test);
+					}
+					$value = $value_test;
 				}
 
 				if(isset($element_vars['date_format']) && $element_vars['date_format'] === 'year' ){
@@ -213,10 +225,10 @@ class tool_import_marc21 extends tool_common {
 					if((int)$value>0){
 						$dd_date->set_year($value);
 					}
-					$value = $dd_date;
+					$date = new StdClass();
+					$date->start = $dd_date;
+					$value = [$date];
 				}
-
-
 				
 				# DD_DATA_MAP . map current value to dedalo value when is defined (like 'cat' -> '[section_tipo:lg1,section_id:369]')
 				if ( isset($element_vars['dd_data_map']) && $dd_data_map=json_decode($element_vars['dd_data_map']) ) {
@@ -271,7 +283,8 @@ class tool_import_marc21 extends tool_common {
 			debug_log(__METHOD__." Saved all components data from section $section_tipo - $section_id ".to_string(), logger::WARNING);
 			#echo "<hr>";		
 			
-			#if ($i>=5) break;
+			#if ($i>=1) break;
+			#break;
 		$i++;}
 
 
