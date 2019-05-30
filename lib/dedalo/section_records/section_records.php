@@ -55,7 +55,6 @@
 					$record_html 	= '';
 					$record 		= new record($this, $modo);
 					$record_html	= $record->get_html();
-
 				break;
 
 		case 'list_tm':
