@@ -142,7 +142,8 @@
 					# Consulta el listado de componentes a mostrar en el listado / grupo actual
 						if (empty($layout_map)) {
 							$layout_map = component_layout::get_layout_map_from_section($current_section_obj); # Important: send obj section with REAL tipo to allow resolve structure
-						}						
+						}		
+										
 							
 						if ((int)$section->permissions>0) {
 							# WALK : Al ejecutar el walk sobre el layout map podemos excluir del rendeo de html los elementos (section_group, componente, etc.) requeridos (virtual section)

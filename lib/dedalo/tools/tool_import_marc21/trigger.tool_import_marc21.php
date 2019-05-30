@@ -33,7 +33,6 @@ function process_file($json_data) {
 				return $response;
 			}
 		}
-
 	$projects_value = json_decode($projects_value);
 	$projects_dato  = array();
 	foreach ((array)$projects_value as $key => $value) {

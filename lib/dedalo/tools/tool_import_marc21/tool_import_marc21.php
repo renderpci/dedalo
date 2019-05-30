@@ -41,7 +41,7 @@
 					$custom_layout_map = array(
 											tool_import_marc21::MARC21_PROJECTS_COMPONENT_TIPO => array()		
 										);	
-					#dump($custom_layout_map, ' custom_layout_map ++ '.to_string());
+				#	dump($custom_layout_map, ' custom_layout_map ++ '.to_string());
 				#
 				# SECTION_TEMP FORM (Temporal section)	
 					# Note that current section_id received in get url is like 'tmp1'. Section change automatically save_handler (to 'session') for manage this cases as temporal section		
@@ -51,9 +51,11 @@
 							
 					# Add custom layout map defined in propiedades of current component portal		
 					$section_temp->layout_map = $custom_layout_map;	// Inject custom layout map from 'propiedades'
+
+					$section_temp->get_dato();
 					# Section config custom				
 					$section_temp->show_inspector = (bool)false;					
-
+					
 
 				# Project temporal
 				$this->project_dato = json_decode('{"'.DEDALO_DEFAULT_PROJECT.'":2}');				

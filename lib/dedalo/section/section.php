@@ -107,8 +107,7 @@
 					if (isset($this->layout_map)) {
 						$search_options->layout_map = $this->layout_map;
 					}
-
-				
+									
 				// Section_records
 					$section_records 	  = new section_records($this->tipo, $search_options);
 					$section_records_html = $section_records->get_html();
