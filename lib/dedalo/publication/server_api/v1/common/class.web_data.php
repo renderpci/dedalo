@@ -116,11 +116,15 @@ class web_data {
 
 				foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
-			if (empty($sql_options->table) || empty($sql_options->conn)) {
-				$response->result = false;
-				$response->msg    = "Empty options->table or connexion ";
-				return $response;
-			}
+			// table verifications and clean
+				if (empty($sql_options->table) || empty($sql_options->conn)) {
+					$response->result = false;
+					$response->msg    = "Empty options->table or connexion ";
+					return $response;
+				}
+				$ar_tables = !is_array($sql_options->table) ? (array)explode(',', $sql_options->table) : (array)$sql_options->table;
+				$ar_tables = array_map("trim", $ar_tables);
+				
 			#dump($sql_options, ' sql_options ++ '.to_string());
 			#dump(json_encode($sql_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ' sql_options->resolve_portal ++ '.to_string());
 
@@ -157,8 +161,7 @@ class web_data {
 				
 				}else{
 					
-					$ar_tables = (array)explode(',', $sql_options->table);
-					$ar_tables = array_map("trim", $ar_tables);
+					
 					$end_table = end($ar_tables);
 					foreach ($ar_tables as $table) {
 					
@@ -1270,7 +1273,7 @@ class web_data {
 				$options->video_url 	 	 	= null; # Like 'http://mydomain.org/dedalo/media/av/404/'
 				$options->margin_seconds_in  	= null;
 				$options->margin_seconds_out 	= null;
-				$options->margin_chars_in 		= 100;	# default 100
+				$options->margin_chars_in 		= 5;	# default 100
 				$options->margin_chars_out		= 100;	# default 100
 				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment 
 				$options->indexation_terms 		= false; # If true, calculate all terms used in this indexation				
@@ -1394,7 +1397,7 @@ class web_data {
 						if ($options->indexation_terms===true) {
 							$result->terms = web_data::get_indexation_terms( $options->tag_id, $options->av_section_id, $options->lang )->result ;
 						} 
-							dump($result, ' result ++ '.to_string());
+						
 						return (object)$result;
 					}
 				}//end foreach($matches as $match) {
@@ -2278,7 +2281,23 @@ class web_data {
 				$options->ar_locators  	= null;
 				$options->lang 		   	= WEB_CURRENT_LANG_CODE;
 				$options->image_type   	= 'posterframe'; # posterframe | identify_image
+				$options->table   		= null; // only used when ar_locators is empty
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			// empty ar_locators case
+				if (empty($options->ar_locators)) {
+
+					$ind_options = new stdClass();
+						$ind_options->table 		= (string)$options->table;
+						$ind_options->ar_fields 	= array('section_id',FIELD_INDEX);
+						$ind_options->lang 			= $options->lang;
+						$ind_options->sql_filter 	= '`term_id` = \''.$options->term_id.'\' ';
+
+					$indexation_response = (object)web_data::get_rows_data( $ind_options );				
+					if (isset($indexation_response->result[0])) {
+						$options->ar_locators = $indexation_response->result[0][FIELD_INDEX];
+					}
+				}
 
 			if (is_string($options->ar_locators)) {
 				$options->ar_locators = json_decode($options->ar_locators);
@@ -2411,7 +2430,17 @@ class web_data {
 				$options->remove_unused_terms 	= false; // If true, exclude of results the childrens without indexations and childrens
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$section_tipo 		= explode('_', $options->term_id)[0]; 	
+			$section_tipo = explode('_', $options->term_id)[0];
+
+			if (empty($section_tipo) || empty($table_thesaurus_map[$section_tipo])) {
+				$response = new stdClass();
+					$response->result 	= [];
+					$response->msg 		= 'Error. Invalid section tipo ('.to_string($section_tipo).') or not defined in table_thesaurus_map (see API server config) ';
+					$response->total 	= 0;
+
+				return $response;
+			}
+
 			$table 				= $table_thesaurus_map[$section_tipo];
 			$lang 				= $options->lang;
 			$recursive 			= $options->recursive;
