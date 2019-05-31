@@ -4048,6 +4048,68 @@
 .sgc_edit>.wrap_component_hierarchy100 .column.component_input_text>.css_wrap_input_text>.content_data {
   width: 100%;
 }
+.sgc_edit>.wrap_component_hierarchy102 {
+  min-height: 4.667em;
+  border-right: 1px solid #EBEBEB;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-top: 1px solid #EBEBEB;
+  width: 50%;
+}
+.sgc_edit>.wrap_component_hierarchy102 >.label {
+  width: 98.5%;
+  max-width: 100%;
+  min-height: initial;
+  padding-left: 0;
+}
+.sgc_edit>.wrap_component_hierarchy102 >.content_data {
+  width: 100%;
+  display: block;
+}
+.sgc_edit>.wrap_component_hierarchy102 .mosaic_ul {
+  overflow: auto;
+  height: 160px;
+}
+.sgc_edit>.wrap_component_hierarchy102 .mosaic_ul >.mosaic_li {
+  border-left: solid 1px #dedede;
+  border-top: solid 1px #dedede;
+  width: 50%;
+  height: 160px;
+}
+.sgc_edit>.wrap_component_hierarchy102 .css_button_generic > span {
+  display: none;
+}
+.sgc_edit>.wrap_component_hierarchy104 {
+  min-height: 4.667em;
+  border-right: 1px solid #EBEBEB;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-top: 1px solid #EBEBEB;
+  width: 50%;
+}
+.sgc_edit>.wrap_component_hierarchy104 >.label {
+  width: 98.5%;
+  max-width: 100%;
+  min-height: initial;
+  padding-left: 0;
+}
+.sgc_edit>.wrap_component_hierarchy104 >.content_data {
+  width: 100%;
+  display: block;
+}
+.sgc_edit>.wrap_component_hierarchy104 .mosaic_ul {
+  overflow: auto;
+  height: 160px;
+}
+.sgc_edit>.wrap_component_hierarchy104 .mosaic_ul >.mosaic_li {
+  border-left: solid 1px #dedede;
+  border-top: solid 1px #dedede;
+  width: 50%;
+  height: 160px;
+}
+.sgc_edit>.wrap_component_hierarchy104 .css_button_generic > span {
+  display: none;
+}
 .sgc_edit>.wrap_component_hierarchy15 {
   min-height: 4.667em;
   border-right: 1px solid #EBEBEB;
@@ -4387,6 +4449,7 @@
   padding-left: 10px;
   padding-right: 10px;
   width: 50%;
+  float: right;
 }
 .sgc_edit>.wrap_component_hierarchy42 >.label {
   width: 98.5%;
@@ -10684,6 +10747,21 @@
 .sgc_edit>.wrap_component_mdcat1660 >.content_data {
   width: 100%;
   display: block;
+}
+.sgc_edit>.wrap_component_mdcat1660 .component_input_text {
+  font-size: 16px;
+}
+.sgc_edit>.wrap_component_mdcat1662 .column_mdcat1680 {
+  width: 35%;
+}
+.sgc_edit>.wrap_component_mdcat1662 .portal_item_mdcat1680 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: stretch;
+}
+.sgc_edit>.wrap_component_mdcat1662 .portal_item_mdcat2961 > div {
+  flex: 0 1 25%;
 }
 .sgc_edit>.wrap_component_mdcat1665 {
   min-height: 4.667em;
@@ -19613,7 +19691,9 @@
 }
 .wrap_section_records_mdcat2952 .portal_item_mdcat2961 {
   display: flex;
-  justify-content: space-between;
+}
+.wrap_section_records_mdcat2952 .portal_item_mdcat2961 > div {
+  flex: 0 1 25%;
 }
 .sgc_edit>.wrap_component_mdcat2953 {
   min-height: 4.667em;
@@ -22739,9 +22819,8 @@
   border-right: 1px solid #EBEBEB;
   padding-left: 10px;
   padding-right: 10px;
-  width: 50%;
+  width: 25%;
   border-top: 1px solid #EBEBEB;
-  clear: left;
 }
 .sgc_edit>.wrap_component_mdcat3347 >.label {
   width: 98.5%;
@@ -22758,7 +22837,7 @@
   border-right: 1px solid #EBEBEB;
   padding-left: 10px;
   padding-right: 10px;
-  width: 50%;
+  width: 25%;
   border-top: 1px solid #EBEBEB;
 }
 .sgc_edit>.wrap_component_mdcat3349 >.label {
@@ -22776,7 +22855,7 @@
   border-right: 1px solid #EBEBEB;
   padding-left: 10px;
   padding-right: 10px;
-  width: 50%;
+  width: 25%;
   border-top: 1px solid #EBEBEB;
 }
 .sgc_edit>.wrap_component_mdcat3350 >.label {
@@ -22794,7 +22873,7 @@
   border-right: 1px solid #EBEBEB;
   padding-left: 10px;
   padding-right: 10px;
-  width: 50%;
+  width: 25%;
   border-top: 1px solid #EBEBEB;
 }
 .sgc_edit>.wrap_component_mdcat3351 >.label {
@@ -22922,60 +23001,6 @@
   padding-left: 0;
 }
 .sgc_edit>.wrap_component_mdcat3409 >.content_data {
-  width: 100%;
-  display: block;
-}
-.sgc_edit>.wrap_component_mdcat3570 {
-  min-height: 4.667em;
-  border-right: 1px solid #EBEBEB;
-  padding-left: 10px;
-  padding-right: 10px;
-  width: 20%;
-  border-top: 1px solid #EBEBEB;
-}
-.sgc_edit>.wrap_component_mdcat3570 >.label {
-  width: 98.5%;
-  max-width: 100%;
-  min-height: initial;
-  padding-left: 0;
-}
-.sgc_edit>.wrap_component_mdcat3570 >.content_data {
-  width: 100%;
-  display: block;
-}
-.sgc_edit>.wrap_component_mdcat3571 {
-  min-height: 4.667em;
-  border-right: 1px solid #EBEBEB;
-  padding-left: 10px;
-  padding-right: 10px;
-  border-top: 1px solid #EBEBEB;
-  width: 30%;
-}
-.sgc_edit>.wrap_component_mdcat3571 >.label {
-  width: 98.5%;
-  max-width: 100%;
-  min-height: initial;
-  padding-left: 0;
-}
-.sgc_edit>.wrap_component_mdcat3571 >.content_data {
-  width: 100%;
-  display: block;
-}
-.sgc_edit>.wrap_component_mdcat3572 {
-  min-height: 4.667em;
-  border-right: 1px solid #EBEBEB;
-  padding-left: 10px;
-  padding-right: 10px;
-  width: 20%;
-  border-top: 1px solid #EBEBEB;
-}
-.sgc_edit>.wrap_component_mdcat3572 >.label {
-  width: 98.5%;
-  max-width: 100%;
-  min-height: initial;
-  padding-left: 0;
-}
-.sgc_edit>.wrap_component_mdcat3572 >.content_data {
   width: 100%;
   display: block;
 }
@@ -44666,6 +44691,7 @@
   padding-right: 10px;
   width: 33.33%;
   border-top: 1px solid #EBEBEB;
+  clear: left;
 }
 .sgc_edit>.wrap_component_rsc519 >.label {
   width: 98.5%;
@@ -44899,6 +44925,42 @@
   padding-left: 0;
 }
 .sgc_edit>.wrap_component_rsc547 >.content_data {
+  width: 100%;
+  display: block;
+}
+.sgc_edit>.wrap_component_rsc548 {
+  min-height: 4.667em;
+  border-right: 1px solid #EBEBEB;
+  padding-left: 10px;
+  padding-right: 10px;
+  width: 33.33%;
+  border-top: 1px solid #EBEBEB;
+}
+.sgc_edit>.wrap_component_rsc548 >.label {
+  width: 98.5%;
+  max-width: 100%;
+  min-height: initial;
+  padding-left: 0;
+}
+.sgc_edit>.wrap_component_rsc548 >.content_data {
+  width: 100%;
+  display: block;
+}
+.sgc_edit>.wrap_component_rsc549 {
+  min-height: 4.667em;
+  border-right: 1px solid #EBEBEB;
+  padding-left: 10px;
+  padding-right: 10px;
+  width: 33.33%;
+  border-top: 1px solid #EBEBEB;
+}
+.sgc_edit>.wrap_component_rsc549 >.label {
+  width: 98.5%;
+  max-width: 100%;
+  min-height: initial;
+  padding-left: 0;
+}
+.sgc_edit>.wrap_component_rsc549 >.content_data {
   width: 100%;
   display: block;
 }
