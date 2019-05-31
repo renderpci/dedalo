@@ -3,11 +3,17 @@
 	# CONTROLLER
 	$modo					= $this->get_modo();
 	$section_tipo 			= $this->section_tipo;
-	if(SHOW_DEBUG===true) {
-		$permissions		= 3;
-	}else{
-		$permissions		= common::get_permissions($section_tipo, $this->search_list_tipo);	
-	}
+
+	/**
+	* TEMPORAL !!
+	* Para posibilitar el acceso del filtro a las secciones virtuales, fijamos los permisos temporalmente a 2
+	*/
+	$permissions = 2;
+
+	if ($permissions<1) {
+		echo "<span class=\"css_span_dato\">Access denied</span>";
+		#return false;
+	}	
 	
 	$ar_sections_by_type 	= isset($this->ar_sections_by_type) ? $this->ar_sections_by_type : null;
 	
@@ -32,23 +38,10 @@
 	if (!isset($context->context_name)) {
 		$context->context_name = false;
 	}
-
-	/**
-	* TEMPORAL !!
-	* Para posibilitar el acceso del filtro a las secciones virtuales, fijamos los permisos temporalmente a 1
-	*/
-	$permissions=2;		
-
-	if ($permissions<1) {
-		echo "<span class=\"css_span_dato\">Access denied</span>";
-		#return false;
-	}
 	
 
-	$form_action_url 				= '';
-
-	$file_name						= $modo;
-
+	$form_action_url 	= '';
+	$file_name			= $modo;
 
 	#
 	# DEVELOPMENT 2	- SEARCH2

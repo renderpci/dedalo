@@ -309,7 +309,7 @@ class login extends common {
 			if (!empty(SAML_CONFIG['idp_ip'])) {
 				$client_ip = common::get_client_ip();
 				if (!in_array($client_ip, SAML_CONFIG['idp_ip'])) {
-					$response->msg = "Error. Invalid client IP !";
+					$response->msg = "[Login_SAML] Error. Invalid client IP !";
 					return $response;
 				}
 			}					
@@ -358,7 +358,7 @@ class login extends common {
 							
 							# LOGIN ACTIVITY REPORT
 							self::login_activity_report(
-								"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
+								"[Login_SAML] Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
 								NULL,
 								'LOG IN',
 								// activity_datos
@@ -371,8 +371,8 @@ class login extends common {
 
 							# delay failed output by 2 seconds to prevent brute force attacks
 							sleep(2);
-							$response->msg = "Error: Account inactive or not defined [1]";
-							error_log("DEDALO LOGIN ERROR : Account inactive");
+							$response->msg = "[Login_SAML] Error: Account inactive or not defined [1]";
+							error_log("[Login_SAML] DEDALO LOGIN ERROR : Account inactive");
 							return $response;
 						}
 
@@ -430,7 +430,7 @@ class login extends common {
 
 					// LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 						self::login_activity_report(
-							"Denied login attempted by: saml_user. This code does not exist in the database",
+							"[Login_SAML] Denied login attempted by: saml_user. This code does not exist in the database",
 							NULL,
 							'LOG IN',
 							// activity_datos
@@ -443,10 +443,10 @@ class login extends common {
 						);
 
 					# delay failed output after 2 seconds to prevent brute force attacks
-			        sleep(2);					
+			        sleep(2);
 					$response->msg = label::get_label('error_el_codigo_de_usuario_no_existe'); # "Error: User Code not exists! Please try again";
-					error_log("DEDALO LOGIN ERROR : Invalid saml code");
-					return $response;			
+					error_log("[Login_SAML] DEDALO LOGIN ERROR : Invalid saml code");
+					return $response;
 			}
 	
 

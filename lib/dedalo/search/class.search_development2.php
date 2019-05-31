@@ -2688,7 +2688,8 @@ class search_development2 {
 									'component_geolocation',
 									'component_info',
 									'component_state',
-									'section_tab'								
+									'section_tab',
+									'component_autocomplete_ts'
 								];
 
 		# Manage multiple sections

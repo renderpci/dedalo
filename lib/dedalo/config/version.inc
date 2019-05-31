@@ -1546,7 +1546,13 @@
 	
 
 	Valencia 27-05-2019 5.4.41	
-	Fixed error in tool time machine get_source_langs. Add project langs always for safe langs list
+		Fixed error in tool time machine get_source_langs. Add project langs always for safe langs list
+
+
+	Valencia 28-05-2019 5.4.44	
+		Fixed error in diffusion that cause infinite loop in some context like portals with external source data
+		Limit portal sort to below 1000 locators
+
 
 
 	WORK IN PROGRESS
@@ -1568,12 +1574,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.41';
+	$DEDALO_VERSION = '5.4.44';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '27-05-2019');
+	define('DEDALO_BUILD'	, '28-05-2019');
 
 
 	/*
