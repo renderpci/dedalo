@@ -10,6 +10,35 @@
 		$component_name			= get_class($this);
 		$file_name				= $modo;
 
+	// basic system files check
+		// langs js
+			# Generate js files with all labels (if not extist current lang file)
+			$folder_path = DEDALO_LIB_BASE_PATH.'/common/js/lang';
+			if( !is_dir($folder_path) ) {
+				if(!mkdir($folder_path, 0777,true)) {
+					$msg = 'Error on read or create js/lang directory. Permission denied';
+					return $msg;
+				}
+				error_log("[Login page] Created dir: $folder_path");
+			}
+			$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
+			foreach ($ar_langs as $lang => $label) {
+				$label_path  = '/common/js/lang/' . $lang . '.js';
+				if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path)) {
+					$ar_label = label::get_ar_label($lang); // Get all properties					
+					file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');				
+					error_log("[Login page] Generated js labels file for lang: $lang - $label_path");
+				}
+			}
+		// structure css
+			# Generate css structure file (if not extist)	
+			$file_path = DEDALO_LIB_BASE_PATH.'/common/css/structure.css';
+			if (!file_exists($file_path)) {			
+				$response = (object)css::build_structure_css();
+				#debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::WARNING);
+				error_log("[Login page] Generated structure css file: ".$response->msg);
+			}
+
 	
 	// Verify current URL tipo exists as DEDALO_ROOT_TIPO children before login. If not, redirect to MAIN_FALLBACK_SECTION tipo
 		$RecordObj_dd 	= new RecordObj_dd(TOP_TIPO);

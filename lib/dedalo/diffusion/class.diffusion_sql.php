@@ -479,7 +479,7 @@ class diffusion_sql extends diffusion  {
 						#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($ar_table_children));
 					}			
 					#trigger_error("Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored");
-					debug_log(__METHOD__." Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored! table_name:".$ar_field_data['table_name'], logger::ERROR);			
+					debug_log(__METHOD__." Error on find component_publication_tipo. Not found component_publication for table_tipo: $table_tipo. Ignored! table_name:".$ar_field_data['table_name'], logger::ERROR);			
 					return false;
 				}
 			}			
@@ -778,6 +778,7 @@ class diffusion_sql extends diffusion  {
 			#$diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
 			if ($build_mode==='default') {
 				$section->diffusion_info_add($diffusion_element_tipo);
+				$section->save_modified = false;
 				$section->Save();
 				debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
 			}
@@ -880,6 +881,7 @@ class diffusion_sql extends diffusion  {
 
 			$section = section::get_instance($options->section_id, $options->section_tipo, $modo='list', false);
 			$section->diffusion_info_add($options->diffusion_element_tipo);
+			$section->save_modified = false;
 			$section->Save();
 			debug_log(__METHOD__." Added current diffusion_element_tipo $options->diffusion_element_tipo to data. Section diffusion_info updated and saved [{$options->section_tipo}-{$options->section_id}]. ".to_string(), logger::DEBUG);
 			
@@ -931,7 +933,7 @@ class diffusion_sql extends diffusion  {
 			$options->propiedades 	= null;
 			$options->diffusion_element_tipo = null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
+	
 	
 		# FIXED FIELDS
 		switch ($options->typology) {
@@ -955,7 +957,11 @@ class diffusion_sql extends diffusion  {
 				$ar_field_data['field_name'] 	= RecordObj_dd::get_termino_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
 				$ar_field_data['field_value'] 	= (string)'';
 				$ar_field_data['tipo'] 			= $options->tipo;
-				
+
+				#
+				# Diffusion element
+				$diffusion_term = new RecordObj_dd($options->tipo);
+				$propiedades 	= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 
 				#
 				# Component target
@@ -970,22 +976,27 @@ class diffusion_sql extends diffusion  {
 					$ar_field_data['related_term']  = $termino_relacionado;
 					$ar_field_data['related_model'] = $modelo_name;
 
+				// component
+					$current_component	= component_common::get_instance($modelo_name,
+																		 $termino_relacionado,
+																		 $options->parent,
+																		 'list', // Note that list have dato fallback (in section)
+																		 $options->lang,
+																		 $options->section_tipo,
+																		 false);
+				
+				if(is_object($propiedades) && property_exists($propiedades, 'get_field_value') && isset($propiedades->get_field_value->get_dato_method)){
+					
+					$get_dato_method = $propiedades->get_field_value->get_dato_method;
+						#dump($get_dato_method, ' get_dato_method ++ '.to_string());
+					$dato = $current_component->{$get_dato_method}();
+						#dump($dato, ' dato ++ '.to_string($modelo_name).' - '.$get_dato_method);
+				}else{
+					$dato = $current_component->get_dato();
+				}								
 
-				$real_section_tipo 				= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($termino_relacionado, 'section', 'parent')[0];
-				$current_component 				= component_common::get_instance($modelo_name,
-																				 $termino_relacionado,
-																				 $options->parent,
-																				 'list', // Note that list have dato fallback (in section)
-																				 $options->lang,
-																				 $options->section_tipo,
-																				 false);
-				$dato 					= $current_component->get_dato();
 				$diffusion_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
-
-				#
-				# Diffusion element
-				$diffusion_term 		= new RecordObj_dd($options->tipo);
-				$propiedades 			= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+				
 	
 				# Fix diffusion element propiedades on target component to enable configure response value
 				$current_component->set_diffusion_properties($propiedades);				
@@ -1422,6 +1433,15 @@ class diffusion_sql extends diffusion  {
 							if ($modelo_name==='component_autocomplete_hi') {
 							 	$options->recursion_level = $max_recursions -1;						 	
 							}
+
+						// skip resolve components with dato external (portals)
+							$RecordObj_dd = new RecordObj_dd($current_component_tipo);
+							$current_component_propiedades = $RecordObj_dd->get_propiedades(true);
+							if (isset($current_component_propiedades->source->mode) && $current_component_propiedades->source->mode==='external') {
+								debug_log(__METHOD__." Skipped component with external source mode: ".to_string($current_component_tipo), logger::DEBUG);
+								continue;
+							}
+
 						
 						$lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);				
 
@@ -1445,7 +1465,7 @@ class diffusion_sql extends diffusion  {
 									if( !isset($ar_resolved_static[$current_section_tipo]) ||
 										!in_array($current_section_id, $ar_resolved_static[$current_section_tipo]) ) { // If not exists in ar_resolved_static, add
 										
-											$group_by_section_tipo[$current_section_tipo][] = $current_section_id; 
+											$group_by_section_tipo[$current_section_tipo][] = $current_section_id;
 									}
 								}
 							}
@@ -3025,7 +3045,6 @@ class diffusion_sql extends diffusion  {
 			switch ($output) {
 				case 'merged':
 					if ($value_array = json_decode($value)) {
-						# code...
 						$ar_value = array_merge($ar_value, (array)$value_array);
 					}					
 					break;

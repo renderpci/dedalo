@@ -73,7 +73,8 @@ lib/dedalo/tools/tool_layout_print/print_pdf/*
 
 # Automatic created files
 cookie_auth.php
-#structure.css
+lib/dedalo/common/css/structure.css
+lib/dedalo/common/js/lang/*
 *.log
 
 # Ignore default text files
@@ -103,6 +104,9 @@ lib/dedalo/login/saml/test.php
 # Drafs
 lib/dedalo/component_date_mod/
 lib/dedalo/component_portal/_versions/
+
+
+
 
 
 

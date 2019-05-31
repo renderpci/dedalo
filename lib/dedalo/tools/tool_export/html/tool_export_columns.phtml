@@ -137,6 +137,9 @@ $html='';
 		// download_file_excel
 			#$html .= "<h2><a href=\"\" target=\"_blank\" id=\"download_file_link_excel\">".label::get_label("descargar")." Excel</a></h2>";
 			$html .= '<a id="download_file_link_excel" class="btn btn-success fileinput-button"><strong>'.label::get_label("descargar").' Excel</strong></a>';
+
+		// download_file_html
+			$html .= '<a id="download_file_link_html" class="btn btn-success fileinput-button" download><strong>'.label::get_label("descargar").' HTML</strong></a>';
 		
 		// print
 			$html .= '<a id="print_button" class="btn btn-success fileinput-button" onclick="window.print()"><strong>'.label::get_label("imprimir").'</strong></a>';
