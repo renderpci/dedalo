@@ -48,9 +48,21 @@
 		$result = reset($rows_data->result);
 
 
+		// duration (from db table column 'duration')
+			$duration = $result['duration'];
+			// check format (old data is in minutes)
+			preg_match('/^\d+$/', $duration, $output_array);
+			if (!empty($output_array)) {
+				$duration_secs = (int)$duration * 60;
+				#$duration = OptimizeTC::seg2tc($secs);
+			}else{
+				$duration_secs = (int)OptimizeTC::TC2seg($duration);
+			}
+				
+
 		$sourceText_unrestricted = $result[FIELD_TRANSCRIPTION];
 		$sourceText 			 = web_data::remove_restricted_text( $sourceText_unrestricted, $av_section_id );
-		$total_ms 				 = (int)(OptimizeTC::TC2seg($result['duration']) * 1000);
+		$total_ms 				 = (int)($duration_secs * 1000);
 			
 		
 	// build_subtitles_text
