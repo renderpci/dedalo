@@ -1189,8 +1189,11 @@ abstract class diffusion  {
 																 DEDALO_DATA_NOLAN,
 																 $section_tipo);
 				$dato = $component->get_dato();
-				if (empty($dato)) {
+				if (empty($dato)) {					
 					$component->set_dato($current_date_dato);
+					// section avoid save_modified by user in diffusion
+						$section = $component->get_my_section();
+						$section->save_modified = false;
 					$component->Save();
 					$save_first = true;
 				}
@@ -1211,6 +1214,9 @@ abstract class diffusion  {
 						$locator->set_from_component_tipo($publication_first_user_tipo);
 					
 					$component->set_dato([$locator]);
+					// section avoid save_modified by user in diffusion
+						$section = $component->get_my_section();
+						$section->save_modified = false;
 					$component->Save();
 				}	
 
@@ -1224,6 +1230,9 @@ abstract class diffusion  {
 																 DEDALO_DATA_NOLAN,
 																 $section_tipo);
 				$component->set_dato($current_date_dato);
+				// section avoid save_modified by user in diffusion
+					$section = $component->get_my_section();
+					$section->save_modified = false;
 				$component->Save();
 
 			// user
@@ -1241,6 +1250,9 @@ abstract class diffusion  {
 					$locator->set_from_component_tipo($publication_last_user_tipo);
 				
 				$component->set_dato([$locator]);
+				// section avoid save_modified by user in diffusion
+					$section = $component->get_my_section();
+					$section->save_modified = false;
 				$component->Save();
 
 

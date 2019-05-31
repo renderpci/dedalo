@@ -575,11 +575,15 @@ abstract class component_common extends common {
 	*/
 	public function get_html() {
 
+		$component_name = get_called_class();
+
 		if(SHOW_DEBUG===true) {
 			$this->start_time= microtime(1);
 			$start_time 	 = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
+
+		
 
 			#
 			# DEDALO_CACHE_MANAGER : Read from cache if var exists ##
@@ -607,14 +611,14 @@ abstract class component_common extends common {
 				# Now all components call init in edit mode, therefore, is not necessary this snippet
 				#include ( DEDALO_LIB_BASE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
 				break;
-			case 'search':
-				include ( DEDALO_LIB_BASE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
+			case 'search':				
+				include ( DEDALO_LIB_BASE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );				
 				break;			
 			default:
 				# code...
 				break;
-		}
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
+		}		
+		include ( DEDALO_LIB_BASE_PATH .'/'. $component_name .'/'. $component_name .'.php' );		
 		$html = ob_get_clean();
 
 
@@ -628,10 +632,10 @@ abstract class component_common extends common {
 
 
 		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 			$total=round(microtime(1)-$this->start_time,3)*1000;	
 			if ($total>0.080) {
-				#dump($total, ' total ++ '.$this->tipo .' '. get_called_class() );
+				#dump($total, ' total ++ '.$this->tipo .' '. $component_name );
 			}
 			if($this->modo==='edit') {
 				$html = str_lreplace('</div>', "<span class=\"debug_info debug_component_total_time\">$total ms $this->modo</span></div>", $html);

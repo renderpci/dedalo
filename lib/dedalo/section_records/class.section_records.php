@@ -102,7 +102,6 @@ class section_records extends common {
 		# Fix records_data
 		$this->records_data = $records_data;
 
-
 		# Include controller
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/'.get_called_class().'/'.get_called_class().'.php' );
