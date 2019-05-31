@@ -52,6 +52,13 @@ $updates->$v = new stdClass();
 	    (tipo COLLATE pg_catalog."default", section_id, section_tipo COLLATE pg_catalog."default", lang COLLATE pg_catalog."default")
 	    TABLESPACE pg_default;
 	    ');
+
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+		CREATE INDEX matrix_hierarchy_section_tipo_section_id_DESC
+		ON public.matrix_hierarchy USING btree
+		(section_tipo COLLATE pg_catalog."default", section_id DESC)
+		TABLESPACE pg_default;
+		');
 	*/
 
 	# Update datos to section_data

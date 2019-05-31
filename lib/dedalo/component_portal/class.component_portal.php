@@ -1618,7 +1618,7 @@ class component_portal extends component_relation_common {
 		if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
 			$this->set_show_button_new(false);
 		}
-
+	
 		# Custom propiedades external dato 
 		if(isset($propiedades->source->mode) && $propiedades->source->mode==='external') {
 			$this->set_dato_external(true);	// Forces update dato with calculated external dato					
@@ -1689,17 +1689,18 @@ class component_portal extends component_relation_common {
 				$search_query_object_options->offset 		 	= $offset;
 				#$search_query_object_options->full_count 		= count($dato);
 
-				// Order
-					$order_values = array_map(function($locator){
-						return (int)$locator->section_id;
-					}, $dato);					
-					$item = new stdClass();
-						$item->column_name 	 = 'section_id';
-						$item->column_values = $order_values;		
-					$search_query_object_options->order_custom = [$item];
-
+				// Order . Below 1000 locators
+					if (count($dato)<=1000) {					
+						$order_values = array_map(function($locator){
+							return (int)$locator->section_id;
+						}, $dato);					
+						$item = new stdClass();
+							$item->column_name 	 = 'section_id';
+							$item->column_values = $order_values;		
+						$search_query_object_options->order_custom = [$item];
+					}
 			$search_query_object = component_portal::build_search_query_object($search_query_object_options);
-				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
+				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG); die();
 			
 			# Search
 			$search_develoment2  = new search_development2($search_query_object);

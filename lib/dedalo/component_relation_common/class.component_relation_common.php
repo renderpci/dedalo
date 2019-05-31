@@ -1273,7 +1273,7 @@ class component_relation_common extends component_common {
 					}
 				}
 			}
-
+			
 		// Add locator at end
 			$new_dato[] = $locator;			
 		
@@ -1350,27 +1350,47 @@ class component_relation_common extends component_common {
 			# }else{
 			# 	# untouch ar_component_to_search
 			# }
-			$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);		
-				#dump($ar_result, ' ar_result ++ '.to_string()); #die();					
-
-			foreach ((array)$dato as $key => $current_locator) {
-				if(	locator::in_array_locator( $current_locator, $ar_result, $ar_properties=array('section_id','section_tipo') )===false){
-					unset($dato[$key]);
-					$changed = true;
-				}
-			}
-
-		// dato update
+			$ar_result 		 = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 			$total_ar_result = count($ar_result);
-			if (count($dato)!==$total_ar_result) {
-				foreach ($ar_result as $key => $current_locator) {
-					if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false){
-						array_push($dato, $current_locator);
+			$total_ar_dato   = count($dato);		
+				
+			if ($total_ar_result>1000) {
+				# Not maintain order, is too expensive above 1000 locators
+				if ($total_ar_dato!==$total_ar_result) {
+					$changed = false; // avoid expensive save
+					$this->set_dato($ar_result);
+					debug_log(__METHOD__." Saving big result with different data (dato:$total_ar_dato - result:$total_ar_result) ".to_string(), logger::DEBUG);
+				}
+			}else{
+				# maintain order
+				foreach ((array)$dato as $key => $current_locator) {
+
+					// Array filter is more fast in this case for big arrays
+					$res = array_filter($ar_result, function($item) use($current_locator){
+						if ($item->section_id===$current_locator->section_id && $item->section_tipo===$current_locator->section_tipo) {
+							return $item;
+						}
+					});
+					
+					//if( locator::in_array_locator( $current_locator, $ar_result, $ar_properties=array('section_id','section_tipo') )===false){
+					if (empty($res)) {
+						unset($dato[$key]);
 						$changed = true;
 					}
 				}
-			}
-			
+
+				// dato update			
+				if ($total_ar_dato!==$total_ar_result) {
+					foreach ($ar_result as $key => $current_locator) {
+						if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false ){
+							array_push($dato, $current_locator);
+							$changed = true;
+						}
+					}
+				}
+			}		
+		
+				
 		// changed true
 			if ($changed===true) {
 				$dato = array_values($dato);

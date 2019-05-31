@@ -1729,5 +1729,34 @@ class component_date extends component_common {
 
 
 
+	/**
+	* DATA_TO_TEXT
+	* Used to convert component dato to searchable text
+	* @return string $text
+	*/
+	public static function data_to_text($data) {
+		
+		if (empty($data)) {
+			$text = '';
+		}else{			
+			$to_timestamp = function($item) {
+				$dd_date = new dd_date($item);
+				return $dd_date->get_dd_timestamp($date_format="Y-m-d", $padding=true);
+			};
+			$ar_text = [];
+			if (isset($data->start)) {
+				$ar_text[] = $to_timestamp($data->start);
+			}
+			if (isset($data->end)) {
+				$ar_text[] = $to_timestamp($data->end);
+			}
+			$text = implode('/', $ar_text);
+		}
+		
+		return $text;
+	}//end data_to_text
+
+
+
 }
 ?>
