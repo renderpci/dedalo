@@ -242,9 +242,11 @@ class full_node {
 		$rows_data	= (object)web_data::get_rows_data( $options );
 				#dump($rows_data, ' rows_data ++ '.to_string($tag_id));
 
+		$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
+
 		foreach ($rows_data->result as $key => $value) {
 			$term_id  	= $value['term_id'];
-			if($term_id===TERM_ID_RESTRICTED) continue;
+			if($term_id===TERM_ID_RESTRICTED || in_array($term_id, $ar_restricted_terms)) continue;
 			$term 		= $value[FIELD_TERM];
 			$ar_termns[$term_id] = $term;
 		}
