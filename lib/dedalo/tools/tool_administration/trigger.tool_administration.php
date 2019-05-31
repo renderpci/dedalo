@@ -767,7 +767,7 @@ function long_time_process($json_data) {
 	session_write_close();
 	
 	$seconds = 0;
-	$range = range(0, 120);
+	$range = range(0, 80);
 	foreach ($range as $key => $value) {
 		debug_log(__METHOD__." Exec iteration: $key , value: $value ".to_string(), logger::DEBUG);
 		sleep(1); // seconds

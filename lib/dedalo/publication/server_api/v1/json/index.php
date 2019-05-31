@@ -1,13 +1,4 @@
 <?php
-#include(dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/core_functions.php');
-
-# Allow CORS
-$ACCESS_CONTROL_ALLOW_ORIGIN = defined('ACCESS_CONTROL_ALLOW_ORIGIN') ? ACCESS_CONTROL_ALLOW_ORIGIN : '*';
-header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
-
-#header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-#header("Access-Control-Request-Method: POST");
-#header('Access-Control-Allow-Credentials: true');
 /*
 	JSON DISPATCHER
 
@@ -23,6 +14,47 @@ header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
 
 */
 
+
+// debug			
+	#error_log(print_r($_REQUEST,true));
+	#error_log(print_r(file_get_contents('php://input'),true));
+
+
+// headers 
+	# Allow CORS
+	$ACCESS_CONTROL_ALLOW_ORIGIN = defined('ACCESS_CONTROL_ALLOW_ORIGIN') ? ACCESS_CONTROL_ALLOW_ORIGIN : '*';
+	header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
+
+
+	# function cors() {
+	# 
+	#     // Allow from any origin
+	#     if (isset($_SERVER['HTTP_ORIGIN'])) {
+	#         // Decide if the origin in $_SERVER['HTTP_ORIGIN'] is one
+	#         // you want to allow, and if so:
+	#         header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+	#         header('Access-Control-Allow-Credentials: true');
+	#         header('Access-Control-Max-Age: 86400');    // cache for 1 day
+	#     }
+	# 
+	#     // Access-Control headers are received during OPTIONS requests
+	#     if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+	# 
+	#         if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'])) {
+	#         	// may also be using PUT, PATCH, HEAD etc
+	#             header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); 
+	#         }                    
+	# 
+	#         if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
+	#             header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+	#         }
+	# 
+	# 		exit(0);
+	#     }
+	# 
+	#     echo "You have CORS!";
+	# }
+	# cors();
 
 // safe_xss 
 	$safe_xss = function($value) {
@@ -41,28 +73,47 @@ header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
 		return $value;
 	};//end safe_xss
 
+// js fetch calls try with format like 
+	# {	
+	#	code 		: 'mmycode',
+	# 	dedalo_get 	: 'records', 
+	#	db_name 	: 'web_myweb',		
+	# 	table 		: 'mytable',
+	# 	lang 		: 'lg-spa',
+	# 	limit 		: 10
+	# }
+	#$str_json = file_get_contents('php://input');
+	#if (!empty($str_json)) {
+	#	$json_object= json_decode( $str_json );
+	#	foreach($json_object as $key => $value) {
+	#		$_REQUEST[$key] = $value;
+	#	}
+	#}
 
 // auth code 
+	// must to be identic to server config defined code
 	$code = isset($_REQUEST['code']) ? $safe_xss($_REQUEST['code']) : false;
 
 // lang 
 	$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;
 
 // db 
-	$db = isset($_REQUEST['db']) ? $safe_xss($_REQUEST['db']) : false;
+	$db_name = isset($_REQUEST['db_name']) ? $safe_xss($_REQUEST['db_name']) : false;
 
-// config . Loads server api config vars 
+// config . Load server api config vars 
 	# If received code if different to defined code, and error was launched
-	# lang for the api was fixed here with received lang var or default value is used if not
-	include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php');
+	# lang for the api was fixed here with received lang var or default value is used if not	
+	if(!include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php')) {
+		exit("Error. Server API config file not found");
+	}
 
 // options . Get request vars options to send to manager 
-	$options = isset($_REQUEST['options']) ? $safe_xss($_REQUEST['options']) : false;
+	$options = isset($_REQUEST['options']) ? $_REQUEST['options'] : false;
 
 	if ($options!==false) {
-
-		$options = json_decode( $options );
-
+		if (is_string($options)) { 
+			$options = json_decode( $options );
+		}
 	}else{
 
 		$options = new stdClass();
@@ -80,7 +131,7 @@ header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
 		}
 	}
 
-// Inject option dedalo_get as current dir name (captured as var from Apache regex)
+// dedalo_get. Inject option dedalo_get as current dir name (captured as var from Apache regex) 
 	$dedalo_get = isset($_REQUEST['dedalo_get']) ? $safe_xss($_REQUEST['dedalo_get']) : false;
 	if ($dedalo_get!==false && is_object($options)) {
 		$options->dedalo_get = $dedalo_get;
@@ -164,4 +215,4 @@ header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
 	#	error_log("api call ".PHP_EOL. json_encode($options, JSON_PRETTY_PRINT));
 	#	error_log("api result ".PHP_EOL. $result);
 	#}
-	
+

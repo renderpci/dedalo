@@ -64,11 +64,11 @@ abstract class subtitles {
 
 		// Global char time in seconds (float)
 			subtitles::$charTime = subtitles::calculate_global_char_time( $clean_sourceText_unrestricted, $options->total_ms );
-				#dump(subtitles::$charTime , ' calculate_global_char_time subtitles::$charTime  ++ '.to_string($options->total_ms));
+				#dump(subtitles::$charTime , ' calculate_global_char_time subtitles::$charTime  ++ '.to_string($options->total_ms)); die();
 
 		// Calculate ar_lines
 			$ar_lines = (array)subtitles::get_ar_lines($clean_sourceText);
-				#dump($ar_lines, ' ar_lines'); #die();
+				#dump($ar_lines, ' ar_lines'); die();
 
 		// Fragment subtitles
 			if ($options->tc_in_secs!==false || $options->tc_out_secs!==false) {
@@ -360,7 +360,7 @@ abstract class subtitles {
 				}
 			}			
 		}
-		#dump($current_charTime, 'current_charTime AFTER', array());
+		#dump($current_charTime, 'current_charTime AFTER', array()); die();
 
 		$reference_text = $text;
 		#$reference_text = strip_tags($reference_text);
@@ -372,9 +372,10 @@ abstract class subtitles {
 			$current_line = mb_substr( $text, $refPos, $maxCharLine );
 			
 			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
-			$line_length = subtitles::text_lenght($current_line); 	#dump($line_length, ' $line_length ++ '.to_string());
+			$line_length = subtitles::text_lenght($current_line); 	
+
 			
-			if($line_length < $maxCharLine) {
+			if($line_length <= $maxCharLine) {
 
 				$lastLine = true;
 				$spacePos = $line_length;
@@ -620,6 +621,7 @@ abstract class subtitles {
 		
 		#$text_lenght = strlen($text);
 		$text_lenght = mb_strlen($text, '8bit');
+		#$text_lenght = iconv_strlen($text);
 
 		return $text_lenght;
 	}//end text_lenght
