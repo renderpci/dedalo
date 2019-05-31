@@ -55,7 +55,7 @@ class dato_v4_to_section_data_v5 {
 	  "section_creator_portal_section_tipo": ""
 	}
 	*/
-	public static function convert_section_dato_to_data( stdClass $datos_column ) {
+	public static function convert_section_dato_to_data__OLD( stdClass $datos_column ) {
 
 
 		#$dato = $section->get_dato();
@@ -158,32 +158,99 @@ class dato_v4_to_section_data_v5 {
 
 
 
+	public static function convert_section_dato_to_data( stdClass $datos_column ) {
+
+		$dato = clone $datos_column;
+		
+		// values and dataframe containers
+		$values 	= [];
+		$dataframes = [];
+		foreach ($dato->components as $key_tipo => $component) {
+
+			$model = RecordObj_dd::get_modelo_name_by_tipo($key_tipo,true);	
+
+			// dato
+				foreach ($component->dato as $clang => $cdato) {
+
+					$component_dato = is_array($cdato) ? $cdato : array($cdato);
+
+					$value_obj = new stdClass();
+						$value_obj->from_component_tipo	= $key_tipo;
+						$value_obj->lang 				= $clang;
+						$value_obj->data 				= $component_dato;
+
+					// component date exception
+						if ($model==='component_date') {
+							// move actual data to 'dato'
+							$value_obj->dato = $cdato;
+							// calculate text representation of component_date and replace 'data'
+							$ar_dates = [];
+							foreach ((array)$component_dato as $current_date) {
+								$ar_dates[] = component_date::data_to_text($current_date);
+							}
+							$value_obj->data = $ar_dates;
+						}					
+					
+					$values[] = $value_obj;
+				}
+
+			// dataframe
+				if (isset($component->dataframe)) {
+					foreach ($component->dataframe as $dataframe_dato) {
+						
+						$dataframe_obj = new stdClass();
+							$dataframe_obj->from_component_tipo = $key_tipo;
+							$dataframe_obj->lang 				= DEDALO_DATA_NOLAN;
+							$dataframe_obj->data 				= $dataframe_dato;
+						$dataframes[] = $dataframe_obj;
+					}
+				}							
+		}
+
+		// add ne containes to global data
+			$dato->values 		= $values;
+			$dato->dataframes 	= $dataframes;
+
+		// remove old container components
+			unset($dato->components);
+
+		#dump($dato, ' dato ++ '.to_string());
+		#dump(json_encode($dato), ' dato json encoded ++ '.to_string());
+
+		return $dato;
+	}//end convert_section_dato_to_data
+
+
+
 	/**
 	* CONVERT_TABLE_DATA
 	* @return 
 	*/
-	public static function convert_table_data() {
+	public static function convert_table_data($ar_tables=null) {
 		
-		$ar_tables = array(
-					/*"matrix",
-					"matrix_activities",
-					"matrix_activity",
-					"matrix_hierarchy",
-					"matrix_hierarchy_main",
-					"matrix_langs",
-					"matrix_layout",
-					"matrix_list",
-					"matrix_notes",
-					"matrix_profiles",
-					"matrix_projects",
-					"matrix_test",*/
-					"matrix_users",
-					"matrix_indexations",
-					"matrix_structurations",
-					"matrix_dataframe",
-					"matrix_dd",
-					"matrix_layout_dd"
-		);
+		if ($ar_tables===null) {
+			// default		
+			$ar_tables = [
+				"matrix",
+				//"matrix_activities",
+				//"matrix_activity",
+				//"matrix_hierarchy",
+				//"matrix_hierarchy_main",
+				//"matrix_langs",
+				//"matrix_layout",
+				//"matrix_list",
+				//"matrix_notes",
+				//"matrix_profiles",
+				//"matrix_projects",
+				//"matrix_test",
+				//"matrix_users",
+				//"matrix_indexations",
+				//"matrix_structurations",
+				//"matrix_dataframe",
+				//"matrix_dd",
+				//"matrix_layout_dd"
+			];
+		}
 
 		foreach ($ar_tables as $key => $table) {
 			
@@ -202,9 +269,10 @@ class dato_v4_to_section_data_v5 {
 			}
 		
 			// iterate from 1 to last id
+			$i_ref = 0; $start_time=microtime(1);
 			for ($i=$min; $i<=$max; $i++) {
 				
-				$strQuery 	= "SELECT id, datos FROM $table WHERE id = $i";
+				$strQuery 	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
 				if(!$result) {			
 					$msg = "Failed Search id $i. Data is not found.";	
@@ -225,7 +293,7 @@ class dato_v4_to_section_data_v5 {
 						$section_data 			= self::convert_section_dato_to_data( $datos );
 						$section_data_encoded 	= json_encode($section_data);
 			
-						$strQuery 	= "UPDATE $table SET section_data = $1 WHERE id = $2 ";
+						$strQuery 	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 						$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
 						if(!$result) {			
 							$msg = "Failed Update section_data $i";
@@ -234,10 +302,15 @@ class dato_v4_to_section_data_v5 {
 						}
 					}else{
 						debug_log(__METHOD__." ERROR: Empty datos from: $table - $id ".to_string(), logger::ERROR);
-					}
+					}					
 				}
-				debug_log(__METHOD__." Updated section data table $table - id $id  ".to_string(), logger::DEBUG);
-				#break;
+
+				// log info each 1000
+					if ($i_ref===0) {
+						debug_log(__METHOD__." Partial update of section data table: $table - id: $id - total: $n_rows - total time secs: ".exec_time_unit($start_time,'sec'), logger::DEBUG);							
+					}else{
+						$i_ref = ($i_ref>1000) ? 0 : $i_ref + 1;
+					}			
 			}
 			#break; // stop now
 		}//end foreach ($ar_tables as $key => $table)
