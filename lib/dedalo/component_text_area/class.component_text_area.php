@@ -576,27 +576,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET LAST TAG REL ID
-	* @return Int max tag id value
-	*//*
-	public function get_last_tag_index_id() {
-
-		$matches = $this->get_ar_relation_tags();
-		$key 	 = 3;
-		
-		if (empty($matches[$key])) {
-			$last_tag_index_id = 0;
-		}else{
-			$last_tag_index_id = intval(max($matches[$key]));	
-		}
-
-		return (int)$last_tag_index_id;
-	}//end get_last_tag_index_id
-	*/
-
-
-
-	/**
 	* GET FRAGMENT TEXT FROM TAG
 	* @param $tag (String like '[index-n-5]' or '[/index-n-5]' or [index-r-5]...)
 	* @return $fragment_text (String like 'texto englobado por las etiquetas xxx a /xxx')
@@ -1180,80 +1159,7 @@ class component_text_area extends component_common {
 
 				$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
 
-				/* PASAMOS ESTA LÓGICA A JAVASCRIPT
-					#
-					# SOURCE LANG	
-					# Real position in chars
-					$tag_real_position = mb_strlen(substr($source_raw_text, 0, $matches_indexIn[0][1]));	
-					#$tag_position 	= $matches_indexIn[0][1];
-					$pre_fragment 	= mb_substr($source_raw_text, 0, $tag_real_position); 
-					$tc_pattern 	= TR::get_mark_pattern($mark='tc',$standalone=false);
-					preg_match_all($tc_pattern,  $pre_fragment,  $matches_tc, PREG_PATTERN_ORDER);
-						#debug_log(__METHOD__." matches_tc $tc_pattern - ".to_string($matches_tc), logger::ERROR);				
-					
-					#
-					# TARGET LANG
-					# Search the same tc tag in target				
-					$ar_reverse = array_reverse($matches_tc[0]);
-					foreach ($ar_reverse as $key => $current_tc) {
-						$tc_target_position = mb_strpos($raw_text, $current_tc);
-						if($tc_target_position!==false) {
-							$last_tc = $current_tc;
-							break;
-						}
-					}			
-
-					if ($tc_target_position!==false) {
-
-						# REFERENCE_FRAGMENT
-						$last_tc_position   = mb_strpos($pre_fragment, $last_tc) + mb_strlen($last_tc);				
-						$reference_fragment = mb_substr($pre_fragment, $last_tc_position);					
-
-						$src_ar_tags_of_type = TR::get_tags_of_type_in_text($reference_fragment, array("index","person","reference","note"));
-						
-						#$post_fragment = mb_substr($raw_text, $tc_target_position);
-						$post_fragment = mb_substr($raw_text, $tc_target_position, (strlen($reference_fragment)*2) );			
-
-						$target_ar_tags_of_type = TR::get_tags_of_type_in_text($post_fragment, array("index","person","reference","note"));
-
-						# Tags existing in target text that exists in source
-						$ar_different_tags = array();
-						foreach ($src_ar_tags_of_type as $tag_obj) {
-							$ar_found = array_filter(
-							    $target_ar_tags_of_type,
-							    function ($obj) use($tag_obj) {				    	
-							        return $obj->tag == $tag_obj->tag;
-							    }
-							);
-							if (empty($ar_found)) {
-								$ar_different_tags[] = $tag_obj->tag;
-							}
-						}
-
-						# Remove different tags from source text only to compute
-						$reference_fragment = str_replace($ar_different_tags, '', $reference_fragment);
-						
-						# Count spaces into source reference_fragment
-						preg_match_all("/ |&nbsp;/",  $reference_fragment,  $matches_spaces_reference);
-						$n_blank_spaces = count($matches_spaces_reference[0]);
-						# Count spaces into target post_fragment
-						preg_match_all("/ |&nbsp;/",  $post_fragment,  $matches_spaces, PREG_OFFSET_CAPTURE); //PREG_PATTERN_ORDER
-						# If we found the equivalent space key in target that in source, set in this point the rebuilded tag
-						$key = $n_blank_spaces -1;
-						if (isset($matches_spaces[0][$key])) {
-							#$space_position = $matches_spaces[0][$key][1];
-							# Real position in chars
-							$space_position = mb_strlen(substr($post_fragment, 0, $matches_spaces[0][$key][1]));
-							$cut_position = $tc_target_position + $space_position;
-							$raw_text = mb_substr($raw_text,0, $cut_position) . $tag_in ." DELETED TAG $tag_id AT NEAR LAST TC ". $tag_out . mb_substr($raw_text, $cut_position);
-						}else{
-							$raw_text = $tag_in ." Deleted tag $tag_id (match space key not found) ". $tag_out. $raw_text;
-						}
-
-					}else{
-						$raw_text = $tag_in ." Deleted tag $tag_id (match tc not found) ". $tag_out. $raw_text;
-					}							
-					*/
+				
 			}//end if (empty($matches_indexIn[0][0]))
 
 		}//end if ($this->lang===$source_lang)	
@@ -1573,75 +1479,6 @@ class component_text_area extends component_common {
 		$value = $component->get_html();
 
 		return $value;
-		
-		/* pasado al controlador (!)
-			# Ignore DB data
-			$value = null;
-
-			$lang_received = $lang;
-
-			# Always use original lang (defined by optional component_select_lang asociated)
-			$original_lang 	= component_text_area::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);		
-			$component 		= component_common::get_instance(__CLASS__,
-															 $tipo,
-														 	 $parent,
-														 	 $modo,
-															 $original_lang,
-														 	 $section_tipo);
-
-			// Eliminado 17-2-2018 (Imposibilita el corte de texto por tag_id en los portales)
-			#if($modo === 'portal_list'){
-			#	$list_value = $component->get_html();
-			#	return $list_value; 
-			#}
-
-			$value = $component->get_valor_list_html_to_save();
-			
-
-			#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
-			$obj_value = $value;
-
-			# value from database is always an array of strings. default we select first element (complete text)
-			# other array index are fragments of complete text
-			$current_tag = 0;
-
-			#
-			# Portal tables can reference fragments of text inside components (tags). In this cases
-			# we verify current required text is from correct component and tag
-			if ( isset($locator->component_tipo) && isset($locator->tag_id) ) {
-				$locator_component_tipo = $locator->component_tipo;
-				$locator_tag_id 		= $locator->tag_id;
-				if ($locator_component_tipo===$tipo) {
-					# Override current_tag	
-					$current_tag = (int)$locator_tag_id;
-				}
-			}
-			
-			if (is_object($obj_value) && isset($obj_value->$current_tag)) {
-				$list_value = $obj_value->$current_tag;
-			}else{			
-				$list_value = $value;
-			}
-
-			if (!is_string($list_value)) {
-				if(SHOW_DEBUG===true) {
-					#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
-					#throw new Exception("Error Processing Request. list_value expected string", 1);				
-				}			
-				
-				debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
-				$list_value = to_string($list_value);			
-			}		
-
-			# TRUNCATE ALL FRAGMENTS		
-			//TR::limpiezaFragmentoEnListados($list_value,160);
-
-			#if($calculated_value===true) $list_value = component_common::decore_untranslated( $list_value );
-			if($lang_received!==$original_lang) $list_value = component_common::decore_untranslated( $list_value );
-
-
-			return $list_value;
-			*/
 	}//end render_list_value
 
 
@@ -1778,7 +1615,7 @@ class component_text_area extends component_common {
 				$text_fragment 			= TR::addTagImgOnTheFly($final_text);
 				# 
 				# FIRST fragment (key 0) always is a substring of whole text
-			
+
 				# if (strlen($valor)>$max_char) {
 				# 	$fragmento_text = tools::truncate_text($valor,$max_char);
 				# }else{
@@ -2336,13 +2173,6 @@ class component_text_area extends component_common {
 
 			$full_tag = $matches[0][$key];
 			$raw_text = str_replace($full_tag, $full_tag . $value, $raw_text);
-			/*
-			$pos = strpos($raw_text, $full_tag);
-			if ($pos !== false) {
-			    $raw_text = substr_replace($raw_text, $full_tag.$value, $pos, strlen($full_tag));
-			}
-			*/
-			#$ar_resolved[] = $source_current_locator;
 		}		
 	
 
@@ -2451,10 +2281,6 @@ class component_text_area extends component_common {
 	    		}
 	    	}
 	    }//end foreach ((array)$result as $key => $value)
-		#dump($ar_elements, ' ar_elements ++ '.to_string());
-
-		#$response->result = $ar_elements;
-		#$response->msg 	  = 'Ok. Request done. build_geolocation_data';
 
 		#return $response;
 		return $ar_elements;//json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
