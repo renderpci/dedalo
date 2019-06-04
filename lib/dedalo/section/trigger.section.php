@@ -6,13 +6,9 @@ common::trigger_manager();
 
 
 
-
 /**
-* get_datum
-* @param $source_tipo
-* @param $target_tipo
-* @param $section_id
-* @param $section_tipo
+* GET_DATUM
+* @param $json_data
 */
 function get_datum($json_data) {
 	global $start_time;
