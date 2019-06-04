@@ -1558,6 +1558,10 @@
 		Fixed error in component_portal add element when offset is not properly calculated
 		Moved structure and langs js strings check from dd_init to login.php to allow ingnore this files in git sync
 
+	
+	Valencia 04-06-2019 5.4.46	
+		Add publication subtitles db_name optional param for discriminate database on instalations with multiple sites
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1578,12 +1582,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.45';
+	$DEDALO_VERSION = '5.4.46';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '31-05-2019');
+	define('DEDALO_BUILD'	, '04-06-2019');
 
 
 	/*

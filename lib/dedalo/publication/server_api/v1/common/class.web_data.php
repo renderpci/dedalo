@@ -53,14 +53,27 @@ class web_data {
 	* GET_DB_CONNECTION
 	* @return resource $mysql_conn
 	*/
-	public static function get_db_connection() {
+	public static function get_db_connection($db_name) {
 
-		// Custom database defined in api server check
-			if (defined('MYSQL_WEB_DATABASE_CONN')) {
-				$database = MYSQL_WEB_DATABASE_CONN;
-			}else{
-				$database = MYSQL_DEDALO_DATABASE_CONN;
-			}
+		static $mysql_conn;
+
+		if (isset($mysql_conn)) {
+			return $mysql_conn;
+		}
+
+		if ($db_name!==false) {
+			
+			// Requested database
+				$database = $db_name;
+		
+		}else{
+			// Custom database defined in api server check
+				if (defined('MYSQL_WEB_DATABASE_CONN')) {
+					$database = MYSQL_WEB_DATABASE_CONN;
+				}else{
+					$database = MYSQL_DEDALO_DATABASE_CONN;
+				}
+		}	
 
 		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
 										 		MYSQL_DEDALO_USERNAME_CONN,
@@ -112,9 +125,14 @@ class web_data {
 				$sql_options->resolve_portals_custom = false; // array | bool
 				$sql_options->apply_postprocess = false; //  bool default true
 				$sql_options->map 				= false; //  object | bool (default false). Apply map function to value like [{"field":birthplace_id","function":"resolve_geolocation","otuput_field":"birthplace_obj"}]
-				$sql_options->conn 			 	= web_data::get_db_connection();
+				$sql_options->db_name 			= false;
+				$sql_options->conn 			 	= false;
 
-				foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
+				foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}				
+
+			// build connection
+				$db_name 			= isset($sql_options->db_name) ? $sql_options->db_name : false;
+				$sql_options->conn 	= web_data::get_db_connection($db_name);
 
 			// table verifications and clean
 				if (empty($sql_options->table) || empty($sql_options->conn)) {
