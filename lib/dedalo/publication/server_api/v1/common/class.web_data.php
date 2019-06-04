@@ -53,7 +53,7 @@ class web_data {
 	* GET_DB_CONNECTION
 	* @return resource $mysql_conn
 	*/
-	public static function get_db_connection($db_name) {
+	public static function get_db_connection($db_name=false) {
 
 		static $mysql_conn;
 
