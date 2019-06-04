@@ -3498,6 +3498,8 @@ class section extends common {
 					// Iterate list_map for colums
 						foreach ((array)$ar_list_map->$section_tipo as $list_item) {
 
+							$list_item = is_array($list_item) ? (object)$list_item : $list_item;
+
 							$tipo 		= $list_item->tipo;
 							$modo 		= $list_item->modo;
 							$modelo_name= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
