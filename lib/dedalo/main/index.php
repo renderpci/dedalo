@@ -212,15 +212,9 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 						case ($modelo_name==='section') :
 
-								#$page_options = section::get_instance($id, $tipo, $modo);
-									#dump($page_options," page_options");
-									#$page_options->set_caller_id($caller_id);
-								$page_options = new StdClass();
-									$page_options->model 		= $modelo_name;
-									$page_options->section_tipo = $tipo;
-									$page_options->section_id 	= $id;
-									$page_options->mode 		= $modo;
-									$page_options->lang 		= DEDALO_DATA_LANG;
+								$element_obj = section::get_instance($id, $tipo, $modo);
+									#dump($element_obj," element_obj");
+									#$element_obj->set_caller_id($caller_id);
 
 								# FIX SECTION TIPO
 								define('SECTION_TIPO', $tipo);
@@ -278,7 +272,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				}
 
 
-				if(empty($page_options) || !is_object($page_options)) {
+				if(empty($element_obj) || !is_object($element_obj)) {
 					die("<hr><h3>Error on create section. Please define a valid section</h3>");		
 				}	
 
@@ -287,9 +281,11 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				navigator::set_selected('area', $tipo); # Fix area
 				
 				// html ('t','tipo','m','modo','id','h','parent','json') => ('caller_tipo','id','t','tipo','m','modo','context_name','parent')
-
-					#dump($element_obj, ' element_obj ++ '.to_string());
-					$html	= page::get_html($page_options);
+					$html	= html_page::get_html($element_obj, false, [
+						'tipo' => $tipo,
+						'modo' => $modo,
+						'id'   => $id
+					]);
 					#$html = html_page::get_html( $element_obj );
 					echo $html;
 				break;
