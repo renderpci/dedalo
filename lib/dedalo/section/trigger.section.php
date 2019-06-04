@@ -430,6 +430,43 @@ function get_datum($json_data) {
 	    }
 	  ]}');
 
+	
+	$search_query_object = [
+		'id' 			=> 'get_datum',
+		'section_tipo' 	=> $section_tipo,
+		'limit' 		=> 10000,
+		'order' 		=> null,
+		'offset' 		=> 0,
+		'full_count' 	=> false,
+		'filter'		=> null,
+		'select'		=> null
+	];
+	#dump($search_query_object, ' search_query_object ++ '.to_string());
+
+	$search_development2 = new search_development2($search_query_object);
+	$rows_data 		 	 = $search_development2->search();
+		#dump($rows_data, ' rows_data ++ '.to_string()); die();
+
+	$ar_list_map = new stdClass();
+		$ar_list_map->oh1 = [			
+			[
+				'tipo' 	=> "oh14",
+				'model' => "component_input_text",
+				'modo' 	=> "list"
+			],
+			[
+				'tipo' 	=> "oh16",
+				'model' => "component_input_text",
+				'modo' 	=> "list"
+			],
+			[
+				'tipo' 	=> "oh24",
+				'model' => "component_portal",
+				'modo' 	=> "list"
+			]
+		];	
+	$datum = section::build_json_rows($rows_data, 'list', $ar_list_map);
+
 	// response
 		$response->result 	= $datum;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
