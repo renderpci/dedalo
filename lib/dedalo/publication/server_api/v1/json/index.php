@@ -73,22 +73,27 @@
 		return $value;
 	};//end safe_xss
 
+
 // js fetch calls try with format like 
 	# {	
 	#	code 		: 'mmycode',
 	# 	dedalo_get 	: 'records', 
-	#	db_name 	: 'web_myweb',		
+	#	db_name 	: 'web_myweb',
 	# 	table 		: 'mytable',
 	# 	lang 		: 'lg-spa',
 	# 	limit 		: 10
 	# }
-	#$str_json = file_get_contents('php://input');
-	#if (!empty($str_json)) {
-	#	$json_object= json_decode( $str_json );
-	#	foreach($json_object as $key => $value) {
-	#		$_REQUEST[$key] = $value;
-	#	}
-	#}
+	if (empty($_REQUEST['code'])) {
+		// try to get vars from json object
+		$str_json = file_get_contents('php://input');
+		if (!empty($str_json)) {
+			$json_object= json_decode( $str_json );
+			foreach($json_object as $key => $value) {
+				if (!empty($value))
+					$_REQUEST[$key] = $value;
+			}
+		}
+	}
 
 // auth code 
 	// must to be identic to server config defined code
@@ -102,7 +107,7 @@
 
 // config . Load server api config vars 
 	# If received code if different to defined code, and error was launched
-	# lang for the api was fixed here with received lang var or default value is used if not	
+	# lang for the api was fixed here with received lang var or default value is used if not
 	if(!include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php')) {
 		exit("Error. Server API config file not found");
 	}
@@ -214,5 +219,9 @@
 	#if(SHOW_DEBUG===true) {
 	#	error_log("api call ".PHP_EOL. json_encode($options, JSON_PRETTY_PRINT));
 	#	error_log("api result ".PHP_EOL. $result);
+	#	
+	#	$t = time();	
+	#	error_log( 'API SERVER CALL $_REQUEST: '. $t . PHP_EOL . print_r($_REQUEST,true));
 	#}
 
+	
