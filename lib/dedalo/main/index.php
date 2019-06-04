@@ -216,11 +216,11 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 									#dump($page_options," page_options");
 									#$page_options->set_caller_id($caller_id);
 								$page_options = new StdClass();
-								$page_options->model 		= $modelo_name;
-								$page_options->section_tipo = $tipo;
-								$page_options->section_id 	= $id;
-								$page_options->mode 		= $modo;
-								$page_options->lang 		= DEDALO_DATA_LANG;
+									$page_options->model 		= $modelo_name;
+									$page_options->section_tipo = $tipo;
+									$page_options->section_id 	= $id;
+									$page_options->mode 		= $modo;
+									$page_options->lang 		= DEDALO_DATA_LANG;
 
 								# FIX SECTION TIPO
 								define('SECTION_TIPO', $tipo);

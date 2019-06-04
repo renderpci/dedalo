@@ -3623,6 +3623,24 @@ class section extends common {
 
 		return $clean_data;
 	}//end smart_remove_data_duplicates
+
+
+
+	/**
+	* GET_DATUM EXPERIMENTAL (!)
+	* @return array
+	*/
+	public function get_datum($search_query_object, $result_parse_mode='list') {
+		
+		// Search against database
+		$search_development2 = new search_development2($search_query_object);
+		$rows_data 		 	 = $search_development2->search();
+
+	// result_parse_mode optional		
+		#$datum = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
+
+		return $datum;
+	}//end get_datum
 	
 
 
