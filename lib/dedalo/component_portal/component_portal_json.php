@@ -93,7 +93,7 @@
 
 
 		// Value
-			$value = reset($dato); // Solo el primero para el list de mometo (en pruebas)
+			$value = reset($dato); // For now; Only the first for the list (in probe)
 						
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
