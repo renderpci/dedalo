@@ -247,8 +247,11 @@ class tool_export extends tool_common {
 						// normalize_quotes
 							$column_name = self::normalize_quotes($column_name);
 
+						// safe_cell_string
+							$column_name = self::safe_cell_string($column_name);
+
 						// header add
-							$header_columns[] = self::safe_cell_string($column_name);
+							$header_columns[] = $column_name;
 					}
 					#dump($header_columns, ' header_columns ++ '.to_string()); #die();
 					$export_str_data .= implode($delimiter, $header_columns) . PHP_EOL;
@@ -355,16 +358,8 @@ class tool_export extends tool_common {
 				trigger_error("Sorry. Format not implemented yet");
 				break;
 		}
-		// ADD UTF8 with BOM
-		$export_str_data = chr(239) . chr(187) . chr(191) . $export_str_data;
-		#dump($export_str_data, ' export_str_data ++ '.to_string());
-		#dump($encoding, ' encoding ++ '.to_string());
-		/*
-			if ($encoding!=='UTF-8') {
-				$export_str_data = $this->change_encoding_from_uft8($export_str_data, $encoding);
-				debug_log(__METHOD__." Encoding result as $encoding ".to_string(), logger::WARNING);
-			}
-			*/
+		
+		
 		return (string)$export_str_data;
 	}//end export_to
 
@@ -894,6 +889,9 @@ class tool_export extends tool_common {
 
 					// Revove html mark tags
 						#$cell = preg_replace('/<\/?mark[^>]*>/i', '', $cell);
+
+					// remove closing quotes
+						$cell = trim($cell,'"');
 					
 					$table_html .= $cell;
 					$table_html .= ($header && $i==0) ? '</th>' : '</td>';
