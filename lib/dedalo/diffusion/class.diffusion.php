@@ -894,6 +894,7 @@ abstract class diffusion  {
 	/**
 	* GET_IS_PUBLICABLE
 	* Locate component_publication in requested locator section and get its boolean value
+	* used by portals to determine what locators will be include as 'dato' to publish
 	* @param object $locator
 	* @return bool $is_publicable
 	*/

@@ -374,7 +374,7 @@ class diffusion_sql extends diffusion  {
 				$options->diffusion_element_tipo 	 = null;
 				$options->ar_childrens_tipo 	 	 = null;
 				$options->component_publication_tipo = null;
-				$options->build_mode 				 = 'default';
+				$options->build_mode 				 = 'default';				
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 		
 				foreach ($options as $var_name => $value) {
@@ -471,7 +471,7 @@ class diffusion_sql extends diffusion  {
 		
 		#
 		# COMPONENT PUBLICATION - CHECK (once)
-			if(is_null($component_publication_tipo)) {
+			if(empty($component_publication_tipo)) {
 				$component_publication_tipo = diffusion::get_component_publication_tipo($ar_table_children);
 				#dump($component_publication_tipo, ' component_publication_tipo ++ ar_table_children: '.to_string($ar_table_children));
 				if (empty($component_publication_tipo)) {
@@ -1185,10 +1185,11 @@ class diffusion_sql extends diffusion  {
 			$response->msg 		= '';
 	
 		$options = new stdClass();
-			$options->section_tipo 			= null;
-			$options->section_id   			= null;
-			$options->diffusion_element_tipo= null;
-			$options->recursion_level 		= 0;
+			$options->section_tipo 			 	 = null;
+			$options->section_id   			 	 = null;
+			$options->diffusion_element_tipo 	 = null;
+			$options->recursion_level 		 	 = 0;
+			$options->component_publication_tipo = null; // optional
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 				#dump($options, ' options ++ '.to_string()); #die();
 		#
@@ -1275,17 +1276,16 @@ class diffusion_sql extends diffusion  {
 		
 
 		#
-		# Record already resolved check
-		/*
-		if (   isset($ar_resolved_static[$options->section_tipo])   
-			#&& in_array($options->section_id, $ar_resolved_static[$options->section_tipo])
-			) {
-				#dump($ar_record_updated, ' ar_record_updated ++ '.to_string());
-			 	#dump($options->section_id, ' options->section_id already resolved. Return false ++ '.to_string($options->section_tipo));
-			$response->result 	= true;
-			$response->msg 		= 'Record already resolved '.$options->section_tipo.'_'.$options->section_id;
-			return $response;		
-		}*/
+		# Record already resolved check	
+			#if (   isset($ar_resolved_static[$options->section_tipo])   
+			#	#&& in_array($options->section_id, $ar_resolved_static[$options->section_tipo])
+			#	) {
+			#		#dump($ar_record_updated, ' ar_record_updated ++ '.to_string());
+			#	 	#dump($options->section_id, ' options->section_id already resolved. Return false ++ '.to_string($options->section_tipo));
+			#	$response->result 	= true;
+			#	$response->msg 		= 'Record already resolved '.$options->section_tipo.'_'.$options->section_id;
+			#	return $response;		
+			#}
 
 		
 		#
@@ -1330,14 +1330,15 @@ class diffusion_sql extends diffusion  {
 
 			# COLUMNS_DATA. Calculate, process and store in a class var all columns data for current diffusion_section
 				$cd_options = new stdClass();
-					$cd_options->table_tipo 			 = $table_tipo; // same as diffusion_section
-					$cd_options->ar_section_id_portal 	 = array();
-					$cd_options->database_name 		 	 = $database_name;
-					$cd_options->table_name 		 	 = $table_name;
-					$cd_options->table_propiedades 		 = $table_propiedades;
-					$cd_options->table_from_alias 		 = $table_from_alias;
-					$cd_options->ar_result 			 	 = $ar_result;
-					$cd_options->diffusion_element_tipo  = $diffusion_element_tipo;
+					$cd_options->table_tipo 			 	= $table_tipo; // same as diffusion_section
+					$cd_options->ar_section_id_portal 	 	= array();
+					$cd_options->database_name 		 	 	= $database_name;
+					$cd_options->table_name 		 	 	= $table_name;
+					$cd_options->table_propiedades 		 	= $table_propiedades;
+					$cd_options->table_from_alias 		 	= $table_from_alias;
+					$cd_options->ar_result 			 	 	= $ar_result;
+					$cd_options->diffusion_element_tipo  	= $diffusion_element_tipo;
+					$cd_options->component_publication_tipo = $options->component_publication_tipo;
 				$ar_field_data = self::build_table_columns_data( $cd_options ); // Trigger resolve		
 				#$table_data = self::$ar_table_data[$database_name][$diffusion_section]; // Result is set and usable
 					#dump($ar_field_data, ' ar_field_data ++ '.to_string($diffusion_section)); #die();

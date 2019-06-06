@@ -35,69 +35,72 @@ function export_data($json_data) {
 
 	$tool_export  = new tool_export($section_tipo,'edit',$data_format);
 
-	$layout_map = tool_export::columns_to_layout_map($columns, $section_tipo);
-		# dump($layout_map, ' $layout_map ++ '.to_string($columns));
-		if (empty($layout_map)) {			
+	// layout_map
+		$layout_map = tool_export::columns_to_layout_map($columns, $section_tipo);		
+		if (empty($layout_map)) {
 			$response->msg = "Error: layout_map is empty";
 			return $response;
 		}
 
-	$response->data_format = $data_format;
+	// data_format
+		$response->data_format = $data_format;
+
 	
 	// Get records to export
-	$records = $tool_export->get_records( $layout_map );
-		#dump($records, ' records ++ '.to_string());		
+		$records = $tool_export->get_records( $layout_map );
+	
 
 	// Result parsed as final string
-	$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);		
-		#dump(dd_memory_usage(), ' dd_memory_usage fin export_to ++ '.to_string());
-		#error_log($result_string);
+		$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);		
 
-	// Write result to file (UTF8)
-	$write_result = $tool_export->write_result( $result_string );
-		#dump($write_result, ' write_result ++ '.to_string());
+
+	// csv. Write result to file (UTF8)
+		$export_str_data = chr(239) . chr(187) . chr(191) . $result_string;
+		$write_result = $tool_export->write_result( $export_str_data );
 	
 	
-	if ($write_result->result===true ) {
-#
-		# GET CSV FILE AS TABLE
-		$table = tool_export::read_csv_file_as_table( $write_result->path, true, null, false );
+	if ($write_result->result===true) {
 
-		// Build excel version (ISO-8859-1)
-		// Write result to file (excel ISO-8859-1)
-			if ($data_format!=='dedalo') {
-				$change_encodig_to_ISO  = $tool_export->change_encoding_from_uft8($result_string,'ISO-8859-1');
-				$write_result_ISO 		= $tool_export->write_result($change_encodig_to_ISO, 'excel_','csv');
-
-				// ADD UTF8 with BOM
-				$export_str_data = chr(239) . chr(187) . chr(191) . $table;
-				$write_result_HTML 		= $tool_export->write_result($export_str_data, 'html_','html');
-			}
+		// html table. Get csv file as table
+			$table = tool_export::read_csv_file_as_table( $write_result->path, true, null, false );
 		
-		$response->result 	= true;						// E.g. 'ok'
-		$response->msg 		= $write_result->msg;		// E.g. 'Exported successfully'
-		$response->url 		= $write_result->url; 		// E.g. 'http://mydomain/path/file.csv'
-		if ($data_format!=='dedalo') {
-			$response->url_excel 	= $write_result_ISO->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
-			$response->url_html 	= $write_result_HTML->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
-		}
-		$response->table 	= $table; 					// Table is created reading exported file
+		// response 
+			$response->result 	= true;						// E.g. 'ok'
+			$response->table 	= $table; 					// Table is created reading exported file
+			$response->msg 		= $write_result->msg;		// E.g. 'Exported successfully'
+			$response->url 		= $write_result->url; 		// E.g. 'http://mydomain/path/file.csv'
+			if ($data_format!=='dedalo') {
+
+				// excel version
+					$change_encodig_to_ISO  = $tool_export->change_encoding_from_uft8($result_string,'ISO-8859-1');
+					$export_str_data 		= chr(239) . chr(187) . chr(191) . $change_encodig_to_ISO;
+					$write_result_ISO 		= $tool_export->write_result($export_str_data, 'excel_','csv');
+					$response->url_excel 	= $write_result_ISO->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
+				
+				// html for excel version
+					// BOM. Prepend utf8 BOM for easy read from excel
+					$export_str_data 		= chr(239) . chr(187) . chr(191) . $table;
+					$write_result_HTML 		= $tool_export->write_result($export_str_data, 'html_','html');			
+					$response->url_html 	= $write_result_HTML->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
+			}		
 
 	}else{
 
-		$response->msg 		= 'Error on write file: '.$write_result->msg;		
+		// response 
+			$response->msg 		= 'Error on write file: '.$write_result->msg;
 	}
 
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
+	
+	// debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
 
-		$response->debug = $debug;
-	}
+			$response->debug = $debug;
+		}
 
 
 	return (object)$response;
