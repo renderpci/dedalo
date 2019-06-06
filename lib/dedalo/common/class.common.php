@@ -1377,7 +1377,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $item
 	*/
-	public function get_structure_context() {
+	public function get_structure_context($permissions = 0) {
 
 		// class called (model name too like component_input_text)
 			$model = get_called_class();
@@ -1406,6 +1406,7 @@ abstract class common {
 				$item->properties 		= $this->get_propiedades();
 				$item->parent 			= $this->RecordObj_dd->get_parent();
 				$item->related 			= $this->get_ar_related_component_tipo();
+				$item->permissions		= $permissions;
 
 		// section_list optional for get related_list
 			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);

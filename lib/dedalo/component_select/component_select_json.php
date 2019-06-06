@@ -1,14 +1,22 @@
 <?php
 // JSON data component controller
 
+
+// component configuration vars
+	$permissions		= $this->get_component_permissions();
+	$modo				= $this->get_modo();
+
+
 // context
 	$context = [];
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context();
+			$context[] = $this->get_structure_context($permissions);
 
 // data
 	$data = [];
+
+	if($permissions > 0){
 			
 		// item_values
 			$modo = $this->get_modo();
@@ -46,5 +54,8 @@
 
 			$data[] = $item;
 
+	}// end if $permissions > 0
+
+	
 // JSON string
 	return common::build_element_json_output($context, $data);
