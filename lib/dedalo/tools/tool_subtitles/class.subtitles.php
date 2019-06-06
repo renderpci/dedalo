@@ -372,25 +372,27 @@ abstract class subtitles {
 			$current_line = mb_substr( $text, $refPos, $maxCharLine );
 			
 			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
-			$line_length = subtitles::text_lenght($current_line); 	
+			$line_length = subtitles::text_lenght($current_line);
 
+			// exception on large words
+				#dump(strpos($current_line, " "), 'strpos ++ '.$line_length.' - '.to_string($maxCharLine));	
 			
-			if($line_length <= $maxCharLine) {
+			if($line_length < $maxCharLine) {
 
 				$lastLine = true;
 				$spacePos = $line_length;
 					#dump($lastLine, ' LASTLINE .........................................................');		
 			}else{
 				#dump(strrpos($current_line, '. '), 'strrpos($current_line, '. ')');
-				/*
-				if ( strrpos($current_line, '. ') >0 ) {
-					$spacePos = strrpos($current_line, '. ')+1;
-					#$spacePos 	= mb_strlen($current_line) - $last_appear;
-				}else{
-					$spacePos = strrpos($current_line, ' '); # Localiza el último espacio
-					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
-				}
-				*/
+				
+				#if ( strrpos($current_line, '. ') >0 ) {
+				#	$spacePos = strrpos($current_line, '. ')+1;
+				#	#$spacePos 	= mb_strlen($current_line) - $last_appear;
+				#}else{
+				#	$spacePos = strrpos($current_line, ' '); # Localiza el último espacio
+				#	#$spacePos 	 = mb_strlen($current_line) - $last_appear;
+				#}
+				
 				$spacePos = mb_strrpos($current_line, ' '); # Localiza el último espacio
 					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
 			}
@@ -456,7 +458,7 @@ abstract class subtitles {
 			$refPos += $spacePos;
 			
 			$i++;
-		}while ($lastLine === false);
+		}while ($lastLine===false);
 
 		#dump($ar_lines, ' ar_lines ++ '.to_string());		
 		#die();
