@@ -1,15 +1,23 @@
 <?php
 // JSON data component controller
 
+
+// component configuration vars
+	$permissions		= $this->get_component_permissions();
+	$modo				= $this->get_modo();
+
+
 // context
 	$context = [];
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($this->tipo);
+			$context[] = $this->get_structure_context($permissions);
 			
 
 // data
 	$data = [];
+
+	if($permissions > 0){
 
 		// Building real value			
 			$dato = $this->get_dato();
@@ -93,7 +101,7 @@
 
 
 		// Value
-			$value = reset($dato); // Solo el primero para el list de mometo (en pruebas)
+			$value = reset($dato); // For now; Only the first for the list (in probe)
 						
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
@@ -105,6 +113,8 @@
 
 			$data[] = $item;
 			
+	}// end if $permissions > 0
+
 
 // JSON string
 	return common::build_element_json_output($context, $data);

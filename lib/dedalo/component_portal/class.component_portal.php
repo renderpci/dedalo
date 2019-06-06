@@ -58,44 +58,7 @@ class component_portal extends component_relation_common {
 				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");			
 			}
 		}
-		/*
-		# EDIT : Si se pasa un id vacío (desde class.section es lo normal), se verifica si existe en matrix y si no, se crea un registro que se usará en adelante
-		if($modo==='edit' && empty($id)) {
-			
-
-			# Si no existe, creamos un registro, SI o SI
-			if(empty($id)) {				
-				if( !empty($tipo) && intval($parent)>0 ) {
-					
-					$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo);
-					$RecordObj_matrix 	= new RecordObj_matrix($matrix_table,NULL, $parent, $tipo, $lang);	#($id=NULL, $parent=false, $tipo=false, $lang=DEDALO_DATA_LANG, $matrix_table='matrix')
-					$RecordObj_matrix->set_parent($parent);
-					$RecordObj_matrix->set_tipo($tipo);
-					$RecordObj_matrix->set_lang($lang);
-					$RecordObj_matrix->set_dato('');
-
-					$RecordObj_matrix->Save();
-					$id = $RecordObj_matrix->get_ID();
-
-					# DEBUG
-					if(SHOW_DEBUG===true) {
-					$msg = "INFO: Created component_portal record $id with: (tipo:$tipo, parent:$parent, lang:$lang)";
-					error_log($msg);
-					}
-				}else{
-					$msg = "Impossible create new component_portal record ";
-					if(SHOW_DEBUG===true) {
-						$component_name = RecordObj_dd::get_termino_by_tipo($tipo);
-						$msg .= "<hr> ".__METHOD__." (id:$id, tipo:$tipo, parent:$parent, lang:$lang, modo:$modo) Portal $component_name ";
-						$msg .= "<br> parent expected: ddXX . Current parent: $parent ";
-					}
-					throw new Exception($msg, 1);
-				}
-			}#if(empty($id)) {
-		}
-		*/
-
-
+		
 		# Notificamos la carga de los elementos de la sección contenida en el portal
 		if ($this->modo==='edit') {
 			$this->notify_load_lib_element_tipo_of_portal();
@@ -130,13 +93,7 @@ class component_portal extends component_relation_common {
 		
 		$dato = parent::get_dato();
 
-		// external mode
-			#$propiedades = $this->get_propiedades();
-			#if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
-			#	// set_dato_external($save=false, $changed=false, $current_dato=false)
-			#	$this->set_dato_external(true, false, $dato);	// Forces save updated dato with calculated external dato ($save=false, $changed=false)
-			#	$dato = $this->dato;
-			#}
+		// external mode see component_relation_common set_dato_external()
 
 		return (array)$dato;
 	}//end get_dato
@@ -175,103 +132,6 @@ class component_portal extends component_relation_common {
 
 		return $this->valor;
 	}//end get_valor
-
-
-
-	/**
-	* GET_VALOR_EXPORT_OLD
-	* Return component value sended to export data
-	* @return string $valor
-	*//*
-	public function get_valor_export_OLD( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
-		$dato = $this->get_dato();
-		
-		if (empty($dato)) {
-			return '';
-		}
-
-		#
-		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
-		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
-
-		#
-		# FIELDS
-		$fields=array();
-		foreach ($ar_terminos_relacionados as $key => $ar_value) {
-			foreach ($ar_value as $current_tipo) {
-				
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				if (strpos($modelo_name, 'component_')!==false) {
-					$fields[] = $current_tipo;
-				}
-			}
-		}
-
-		$ar_resolved=array();
-		foreach( (array)$dato as $key => $value) {
-
-			$section_tipo 	= $value->section_tipo;
-			$section_id 	= $value->section_id;
-
-			$ar_resolved[$section_id][] = $section_id;
-			
-			foreach ($fields as $current_tipo) {				
-			
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $current_tipo,
-																 $section_id,
-																 'list',
-																 $lang,
-																 $section_tipo);
-				$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
-
-				// Clean double spaces and remove \n
-				$current_value_export = str_replace(array("\n","  "),array(' ',' '),$current_value_export);
-
-				$ar_resolved[$section_id][] = $current_value_export;
-
-				$item = new stdClass();
-					$item->section_id 	= $section_id;
-					$item->tipo 		= $current_tipo;
-					$item->model 		= $modelo_name;
-					$item->value 		= $current_value_export;
-
-				$ar_resolved[] = $item;
-			}
-		}//end foreach( (array)$dato as $key => $value)
-				
-		
-		$ar_valor_export=array();
-		foreach ($ar_resolved as $key => $ar_value) {
-			#$valor_export .= implode("\t", $ar_value).PHP_EOL;
-			if (!empty($ar_value)) {
-				$valor_line='';
-				#$valor_line  = implode("\t", $ar_value);
-				foreach ($ar_value as $lvalue) {
-					$lvalue=trim($lvalue);
-					if (!empty($lvalue)) {
-						$valor_line .= "\t" . $lvalue;
-					}
-				}				
-				$ar_valor_export[] = trim($valor_line);
-			}
-		}
-
-		$valor_export = implode(PHP_EOL, $ar_valor_export);
-	
-
-		return (string)$valor_export;
-	}//end get_valor_export_OLD
-	*/
-
 
 
 	/**
@@ -511,10 +371,6 @@ class component_portal extends component_relation_common {
 					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
 				$component_filter_dato = [$locator];
 
-				#$msg = __METHOD__." Error on get filter data from this section ! ";
-				#trigger_error($msg);
-				#$response->msg .= $msg;
-				#return $response;
 			}
 
 		#
@@ -1005,7 +861,6 @@ class component_portal extends component_relation_common {
 			
 			if(is_array($dato)) foreach ($dato as $current_rel_locator) {
 				#dump($current_rel_locator,"current_rel_locator ");	dump($this,"");
-				#$locator_relation_as_obj = component_common::get_locator_relation_as_obj($current_rel_locator);
 				$current_portal_section_id = $current_rel_locator->section_id;
 					#dump($current_portal_section_id,'current_portal_section_id');
 				
@@ -1083,50 +938,6 @@ class component_portal extends component_relation_common {
 
 		return $stats_obj;
 	}//end get_stats_obj
-
-
-
-	/**
-	* GET_PORTALS_MAP
-	* Return array of all portals => target section like
-	* @param bool $filter_section_tipo default false
-	* @return array $ar_portals_map in format:
-	* 							key = portal tipo
-	* 							value = target_section_tipo
-	*//*
-	public static function get_ar_portals_map__DEPRECATED( $filter_section_tipo=false ) {
-
-		$component_portal_model = 'dd592';
-		$ar_all_terminoID 		= RecordObj_dd::get_ar_all_terminoID_of_modelo_tipo($component_portal_model);
-		if(SHOW_DEBUG===true) {
-			#dump($ar_all_terminoID, ' ar_all_terminoID');die();
-		}
-
-		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens(DEDALO_ROOT_TIPO);
-
-		$ar_portals_map=array();
-		foreach ($ar_all_terminoID as $key => $current_terminoID) {
-
-			if (!in_array($current_terminoID, $ar_recursive_childrens)) {
-				continue; # Skip external elements
-			}
-
-			$ar_target_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_terminoID, $modelo_name='section', $relation_type='termino_relacionado');
-			
-			if (isset($ar_target_section_tipo)) {
-				$ar_portals_map[$current_terminoID] = $ar_target_section_tipo;
-			}			
-		}
-		if(SHOW_DEBUG===true) {
-			#dump($ar_portals_map," ar_portals_map");die();
-			if (empty($ar_portals_map)) {
-				debug_log(__METHOD__." empty ar_portals_map ".to_string(), logger::DEBUG);
-			}
-		}
-
-		return (array)$ar_portals_map;
-	}//end get_ar_portals_map__DEPRECATED */	
-
 
 
 	/**
@@ -1400,23 +1211,6 @@ class component_portal extends component_relation_common {
 			if ($modelo_name===__CLASS__) {
 				$ar_found[] = $reference_obj;
 			}
-			/*		
-			$component 				= component_common::get_instance($modelo_name,
-																	 $current_component_tipo,
-																	 $current_section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $current_section_tipo);
-			$dato = (array)$component->get_dato();
-
-			foreach ($dato as $key => $current_locator) {
-
-				if (true===locator::compare_locators( $current_locator, $locator_to_search, $ar_properties)) {
-					if (!in_array($current_locator, $ar_found)) {
-						$ar_found[] = $current_locator;
-					}
-				}
-			}*/		
 		}
 		#dump($ar_found, ' ar_found ++ '.to_string());
 
@@ -1582,11 +1376,7 @@ class component_portal extends component_relation_common {
 			$query_object->offset  		= $options->offset;
 			$query_object->full_count  	= $total_locators>0 ? $total_locators : false ;//$options->full_count;
 			$query_object->order_custom = $options->order_custom;		
-			# Used only for time machine list
-			#if ($options->forced_matrix_table!==false) {
-				# add forced_matrix_table (time machine case)
-			#	$query_object->forced_matrix_table = $options->forced_matrix_table;
-			#}
+			
 			$query_object->filter  		= $filter_group;
 			$query_object->select  		= $select_group;
 
