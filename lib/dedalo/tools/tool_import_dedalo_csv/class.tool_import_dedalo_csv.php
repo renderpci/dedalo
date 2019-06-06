@@ -46,7 +46,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$verify_csv_map = self::verify_csv_map($csv_map, $section_tipo);
 			if ($verify_csv_map!==true) {
 				$result->result = false;
-				$result->msg 	= 'Error. Current csv file first row is invalid: '.$verify_csv_map;
+				$result->msg 	= 'Error. Current csv file first row is invalid (1): '.$verify_csv_map;
 				return $result;
 			}
 
@@ -498,16 +498,16 @@ class tool_import_dedalo_csv extends tool_common {
 		
 		$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false);
 		foreach ($csv_map as $key => $component_tipo) {
-				
+			
 			if(	   $component_tipo==='section_id'
 				|| $component_tipo==='created_by_user'
 				|| $component_tipo==='created_date'
 				|| $component_tipo==='modified_by_user'
 				|| $component_tipo==='modified_date') continue;
-
+	
 			if (!in_array($component_tipo, $ar_component_tipo)) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				return "Sorry, component tipo:$component_tipo ($modelo_name) not found in section:$section_tipo";
+				return "Sorry, component tipo: $component_tipo (model: $modelo_name) not found in section: $section_tipo";
 			}
 		}
 

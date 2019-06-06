@@ -374,8 +374,16 @@ abstract class subtitles {
 			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
 			$line_length = subtitles::text_lenght($current_line); 	
 
+			// exception on large words
+				#dump(strpos($current_line, " "), 'strpos ++ '.$line_length.' - '.to_string($maxCharLine));
 			
-			if($line_length <= $maxCharLine) {
+			#if (strpos($current_line, " ")===false) {
+			#	error_log("$i - line length; $line_length - maxCharLine: $maxCharLine ");	
+			#	$current_line = substr_replace($current_line, " ", ($line_length/2), 0);
+			#	$line_length = subtitles::text_lenght($current_line); 
+			#}
+			
+			if($line_length < $maxCharLine) {
 
 				$lastLine = true;
 				$spacePos = $line_length;
