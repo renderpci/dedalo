@@ -371,12 +371,21 @@ abstract class subtitles {
 
 			$current_line = mb_substr( $text, $refPos, $maxCharLine );
 			
+			// remove start and end spaces
+				$current_line = trim($current_line);
+			
 			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
 			$line_length = subtitles::text_lenght($current_line);
 
 			// exception on large words
-				#dump(strpos($current_line, " "), 'strpos ++ '.$line_length.' - '.to_string($maxCharLine));	
-			
+				#dump(strpos($current_line, " "), 'strpos current_line ++ line_length: '.$line_length.' - maxCharLine: '.to_string($maxCharLine));	
+				#if (strpos($current_line, " ")===false) {
+				#	error_log("*************************** NOT FOUND SPACE !");
+				#	$current_line = substr_replace($current_line," ", floor($line_length/2), 0);
+				#	$line_length++;					
+				#}
+				#error_log("line_length: $line_length - maxCharLine: $maxCharLine - current_line: '$current_line' ");
+
 			if($line_length < $maxCharLine) {
 
 				$lastLine = true;
@@ -395,22 +404,25 @@ abstract class subtitles {
 				
 				$spacePos = mb_strrpos($current_line, ' '); # Localiza el último espacio
 					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
+
+				// no spaces found
+					if ($spacePos===false) {
+						$spacePos = ($maxCharLine -1);
+					}
 			}
 
 			# save fragment text line
 			$current_line_cut = ''.trim( mb_substr($text, $refPos,  $spacePos) );			
 				#dump($current_line_cut, "current_line_cut $refPos, $spacePos");	
 
-			#
-			# NEGRITAS E ITALICAS
-				#dump($current_line_cut, '$siguiente_linea_add_b', array());
-
-				#añadimos negritas e italicas al principio de un párrafo que tiene continuidad en las negritas o italicas, el parrafo anterior no acaba y transpasaomos la etiqueta
+			
+			// bold an italic
+				#añadimos negritas e itálicas al principio de un párrafo que tiene continuidad en las negritas o itálicas, el parrafo anterior no acaba y transpasaomos la etiqueta
 				$current_line_cut	= $siguiente_linea_add_b .=$current_line_cut;
 				$current_line_cut	= $siguiente_linea_add_i .=$current_line_cut;
 
-				#comprobamos si las negritas tienen contiuidad en más de una línea
-				$numero_br = str_replace('<b>', '<b>', $current_line_cut, $br_in);
+				#comprobamos si las negritas tienen continuidad en más de una línea
+				$numero_br = str_replace('<b>',  '<b>',  $current_line_cut, $br_in);
 				$numero_br = str_replace('</b>', '</b>', $current_line_cut, $br_out);					
 
 				if ($br_in>$br_out){
@@ -419,11 +431,10 @@ abstract class subtitles {
 					$siguiente_linea_add_b = '<b>';
 				}else{
 					$siguiente_linea_add_b = '';
-				}
-				
+				}				
 			
-				#comprobamos si las italicas tienen contiuidad en más de una línea
-				$numero_br = str_replace('<i>', '<i>', $current_line_cut, $br_in);
+				#comprobamos si las itálicas tienen continuidad en más de una línea
+				$numero_br = str_replace('<i>',  '<i>',  $current_line_cut, $br_in);
 				$numero_br = str_replace('</i>', '</i>', $current_line_cut, $br_out);
 
 				if ($br_in>$br_out){
@@ -434,6 +445,7 @@ abstract class subtitles {
 					$siguiente_linea_add_i = '';
 				}			
 			
+			
 			# PROVISIONAL : El formateo de negritas y itálicas falla en ocasiones. Para asegurarnos de que no haya errores de forma en html revisamos 
 			# el resultado final de la línea para depurar el número y posicionamiento de las etiquetas
 			#if(SHOW_DEBUG) {
@@ -442,13 +454,10 @@ abstract class subtitles {
 			#}			
 
 			$ar_lines[$i]['text'] = trim($current_line_cut);
-			#$current_tcin_secs	  = $offsetSecs - ($this->tcin);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
-			$current_tcin_secs	  = $offsetSecs;
-
-			#$current_tcin_secs	= floatval(number_format($current_tcin_secs, 3));
-				#dump($current_tcin_secs, ' current_tcin_secs');
 			
-			$ar_lines[$i]['tcin']	= OptimizeTC::ms_format($current_tcin_secs);
+			#$current_tcin_secs	  = $offsetSecs - ($this->tcin);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
+			$current_tcin_secs	  = $offsetSecs;			
+			$ar_lines[$i]['tcin'] = OptimizeTC::ms_format($current_tcin_secs);
 
 			$duracion_linea = $spacePos * $current_charTime;
 			$offsetSecs += $duracion_linea ;	
