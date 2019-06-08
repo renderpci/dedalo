@@ -1405,16 +1405,41 @@ abstract class common {
 				
 				$item->properties 		= $this->get_propiedades();
 				$item->parent 			= $this->RecordObj_dd->get_parent();
-				$item->related 			= $this->get_ar_related_component_tipo();
-				$item->permissions		= $permissions;
+				$item->permissions		= $permissions;				
+
+				// related terms
+					$relation_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section', 'termino_relacionado', true);
+					$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'component_', 'termino_relacionado', false);	
+
+					$item->relations = [];
+					foreach ($ar_components  as $current_component) {
+						$related = new stdClass();
+							$related->section_tipo 	= $relation_section[0];
+							$related->tipo 			= $current_component;
+						$item->relations[] = $related;
+					}
+
+				
+
+
 
 		// section_list optional for get related_list
 			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
 			if (isset($ar_section_list[0])) {
 				
-				$related_list_tipo 	= $ar_section_list[0];
-				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
-				$item->related_list = $ar_components;
+				$related_list_tipo 			= $ar_section_list[0];
+				$ar_related_list_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'section', 'termino_relacionado', true);
+				$ar_related_list_components	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
+				
+			}
+
+			$item->section_list = [];
+			foreach ($ar_related_list_components as $current_component) {
+				$related = new stdClass();
+				$related->section_tipo 	= $ar_related_list_section[0];
+				$related->tipo 			= $current_component;
+
+				$item->section_list[] = $related;
 			}
 
 		return $item;
