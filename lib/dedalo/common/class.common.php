@@ -1387,6 +1387,10 @@ abstract class common {
 				$type = 'component';
 			}elseif (in_array($model, section::get_ar_grouper_models())) {
 				$type = 'grouper';
+			}elseif ($model === 'section') {
+				$type = 'section';
+			}elseif (strpos($model, 'button_')===0) {
+				$type = 'button';
 			}else{
 				debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
 				throw new Exception("Error Processing Request", 1);				
@@ -1401,46 +1405,16 @@ abstract class common {
 				$item->label 			= $this->get_label();
 				$item->section_tipo		= $this->get_section_tipo();
 				$item->lang				= $this->get_lang();
+				$item->mode				= $this->get_modo();
 				$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;				
 				$item->properties 		= $this->get_propiedades();
-				$item->parent 			= $this->RecordObj_dd->get_parent();
+				if(isset($this->from_component_tipo)){
+					$item->parent 			= $this->from_component_tipo;
+				}else{
+					$item->parent 			= $this->RecordObj_dd->get_parent();
+				}
+				
 				$item->permissions		= $permissions;				
-
-				// related terms
-					$ar_related_components 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'component_', 'termino_relacionado', false);
-					$ar_related_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section', 'termino_relacionado', true);
-					$related_section 		= $ar_related_section[0] ?? $this->get_section_tipo();
-
-					$item->relations = [];
-					foreach ($ar_related_components  as $current_component_tipo) {						
-						$related = new stdClass();
-							$related->section_tipo 	= $related_section;
-							$related->tipo 			= $current_component_tipo;
-						$item->relations[] = $related;
-					}
-
-				// section_list optional for get related_list
-					$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
-					if (isset($ar_section_list[0])) {
-						
-						$related_list_tipo 			= $ar_section_list[0];
-						$ar_related_list_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'section', 'termino_relacionado', true);
-						$related_section 			= $ar_related_list_section[0] ?? $this->get_section_tipo();
-						
-						$ar_related_list_components	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
-						
-						if (!empty($ar_related_list_components)) {					
-							$item->section_list = [];
-							foreach ($ar_related_list_components as $current_component_tipo) {
-								$related = new stdClass();
-									$related->section_tipo 	= $related_section;
-									$related->tipo 			= $current_component_tipo;
-
-								$item->section_list[] = $related;
-							}
-						}				
-					}
-			
 
 		return $item;
 	}//end get_structure_context
