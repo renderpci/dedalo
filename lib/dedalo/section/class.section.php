@@ -57,7 +57,6 @@ class section extends common {
 
 		public $layout_map;
 
-
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
 	# Format is array or null
@@ -151,17 +150,6 @@ class section extends common {
 			parent::load_structure_data();
 
 		
-		# Relaciones
-			#	$relaciones = $this->RecordObj_dd->get_relaciones()[0];
-			#
-			#	if(!empty($relaciones)) {
-			#		foreach ($relaciones as $key => $value) {
-			#			$modelo 	= RecordObj_dd::get_termino_by_tipo($key);
-			#			if($modelo=='section')
-			#			$this->tipo = $value;
-			#		}
-			#	}
-		
 	
 		// active_section_section_id : Set global var
 			if($modo==='edit'
@@ -222,11 +210,6 @@ class section extends common {
 			#$start_time = start_time();
 			#global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-			/*
-		parent::load_matrix_data();
-
-		$dato = parent::get_dato();
-		*/
 
 		# CACHE DATO
 		/*
@@ -288,6 +271,7 @@ class section extends common {
 			trigger_error("Loaded dato in section $this->section_id ($this->tipo)");
 			$section_dato_static[$this->section_id] = $this->dato;
 			*/
+			#debug_log(__METHOD__." LOADED DATA FROM DB ++++ ".to_string($this->tipo), logger::ERROR);
 		}
 
 		if(SHOW_DEBUG===true) {
@@ -3430,220 +3414,53 @@ class section extends common {
 
 
 	/**
-	* BUILD_JSON_ROWS
-	* @return object $result
+	* GET_STRUCTURE_CONTEXT
+	* @return object $item
 	*/
-	public static function build_json_rows($rows_data, $modo, $ar_list_map) {
-		$start_time=microtime(1);
+	public function get_structure_context($permissions = 0) {
 
-		// default result
-			$result = new stdClass();
-				$result->context = [];
-				$result->data 	 = [];
+		$_structure_context = parent::get_structure_context($permissions);
 
-		// Empty result case
-			if (empty($rows_data->ar_records)) {				
-				return $result;
-			}		
-		
-		$ar_json_rows = [];		
+		#if(isset($this->layout_map)){
+		#	$_structure_context->layout_map = $this->layout_map;
+		#}else{
 
-		// context
-			$context = [];
-
-			// Iterate list map
-				foreach ($ar_list_map as $section_tipo => $list_map) {
-
-					// context section info
-						$context_item = new stdClass();
-							$context_item->type  		 = 'section';
-							$context_item->section_tipo  = $section_tipo;
-							$context_item->section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
-							$context_item->modo 		 = $modo;
-						$context[] = $context_item;
-
-					#foreach ($list_map as $list_item) {
-						#
-						#	$component_tipo = $list_item->tipo;
-						#
-						#	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						#	$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
-						#	
-						#	// context column_info
-						#		$context_item = new stdClass();
-						#			$context_item->type  		 = 'column_info';
-						#			$context_item->tipo  		 = $component_tipo;
-						#			$context_item->section_tipo  = $section_tipo;
-						#			$context_item->model 		 = $modelo_name;
-						#			$context_item->label 		 = $label;
-						#		$context[] = $context_item;
-						#}
-				}
-
-		// data
-			$data = [];
-
-			// Iterate records
-				$i=0; foreach ($rows_data->ar_records as $record) {
-
-					$section_id   	= $record->section_id;
-					$section_tipo 	= $record->section_tipo;
-					$datos			= json_decode($record->datos);
-
-					// Inject known dato to avoid re connect to database
-						$section = section::get_instance($section_id, $section_tipo);
-						$section->set_dato($datos);
-						$section->bl_loaded_matrix_data = true;
-
-					// Iterate list_map for colums
-						foreach ((array)$ar_list_map->$section_tipo as $list_item) {
-
-							$list_item = is_array($list_item) ? (object)$list_item : $list_item;
-
-							$tipo 		= $list_item->tipo;
-							$modo 		= $list_item->modo;
-							$modelo_name= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-
-							switch (true) {								
-								case ($tipo==='section_tipo'): 
-									# ignore
-									continue 2;
-									break;
-
-								case (strpos($modelo_name, 'component_')===0):									
-									# components
-									$current_component  = component_common::get_instance($modelo_name,
-																						 $tipo,
-																						 $section_id,
-																						 'list',
-																						 DEDALO_DATA_LANG,
-																						 $section_tipo);									
-									$component_json = $current_component->get_json();
-
-									// data add
-										$data = array_merge($data, $component_json->data);
-
-									// context add 
-										$context = array_merge($context, $component_json->context);
-									break;
-								
-								case ($i===0 && in_array($modelo_name, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']
-									# groupers
-									$current_class_name = $modelo_name;
-									if ($modelo_name==='tab') {
-										$current_class_name = 'section_tab';
-									}
-									$current_grouper  = new $current_class_name($tipo, $section_tipo, $modo, null);									
-									
-									$grouper_json = $current_grouper->get_json();
-
-									// data . No add data here is necessary because is always empty
-										#$data = array_merge($data, $grouper_json->data);										
-
-									// context add 
-										$context = array_merge($context, $grouper_json->context);
-									break;
-
-								default:
-									# not defined modelfro context / data								
-									debug_log(__METHOD__." Ignored model $modelo_name - $tipo ".to_string(), logger::WARNING);
-									break;
-							}							
-
-						}//end iterate ar_list_map
-
-				$i++; }//end iterate records
+		// section_list optional for get related_list
+				
+			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
+			if (isset($ar_section_list[0])) {
+				
+				$related_list_tipo 			= $ar_section_list[0];
+				$ar_related_list_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'section', 'termino_relacionado', true);
+				$related_section 			= $ar_related_list_section[0] ?? $this->get_section_tipo();
 
 
-		// smart remove context duplicates (!)
-			$context = section::smart_remove_context_duplicates($context);
-
-		// smart remove data duplicates (!)
-			$data = section::smart_remove_data_duplicates($data);
-		
-
-		// Set result object
-			$result->context = $context;
-			$result->data 	 = $data;
-
-			// Debug
-				if(SHOW_DEBUG===true) {
-					$debug = new stdClass();
-						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-					$result->debug = $debug;	
-				}			
-
-
-		return $result;
-	}//end build_json_rows
-
-
-
-	/**
-	* SMART_REMOVE_CONTEXT_DUPLICATES
-	* @param array $context
-	* @return array $clean_context
-	*/
-	public static function smart_remove_context_duplicates($context) {
-		
-		$ar_component_info = [];
-		foreach ($context as $key => $value) {
+				// get the section_list properties
+				/*
+				$section_list_tipo  	  = $ar_section_list[0];
+				$RecordObj_dd 			  = new RecordObj_dd($section_list_tipo);
+				$section_list_propiedades = json_decode($RecordObj_dd->get_propiedades());
+				*/
 			
-			if (($value->type==='component')) {
-				$tipo = $value->tipo;
-				if (in_array($tipo, $ar_component_info)) {
-					unset($context[$key]);
-				}else{
-					$ar_component_info[] = $tipo;
-				}
-			}
+				
+				$ar_related_list_components	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
+				
+				if (!empty($ar_related_list_components)) {					
+					$_structure_context->layout_map = [];
+					foreach ($ar_related_list_components as $current_component_tipo) {
+						$related = new stdClass();
+							$related->section_tipo 	= $related_section;
+							$related->tipo 			= $current_component_tipo;
+							$related->mode 			= $this->get_modo();
+
+						$_structure_context->layout_map[] = $related;
+					}
+				}				
+			}	
 		}
-		$clean_context = array_values($context);
-			#dump($clean_context, ' clean_context ++ '.to_string());
+		return $_structure_context;
+	}//end get_structure_context
 
-		return $clean_context;
-	}//end smart_remove_context_duplicates
-
-
-
-	/**
-	* SMART_REMOVE_data_DUPLICATES
-	* @param array $data
-	* @return array $clean_data
-	*/
-	public static function smart_remove_data_duplicates($data) {
-		
-		$clean_data = [];
-		foreach ($data as $key => $value_obj) {			
-			if (!in_array($value_obj, $clean_data, false)) {
-				$clean_data[] = $value_obj;
-			}			
-		}
-
-		#$clean_data = array_unique($data, SORT_REGULAR);
-		#$clean_data = array_values($clean_data);
-
-		return $clean_data;
-	}//end smart_remove_data_duplicates
-
-
-
-	/**
-	* GET_DATUM EXPERIMENTAL (!)
-	* @return array
-	*/
-	public function get_datum($search_query_object, $result_parse_mode='list') {
-		
-		// Search against database
-		$search_development2 = new search_development2($search_query_object);
-		$rows_data 		 	 = $search_development2->search();
-
-	// result_parse_mode optional		
-		#$datum = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
-
-		return $datum;
-	}//end get_datum
-	
 
 
 }//end section
