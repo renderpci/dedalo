@@ -119,7 +119,7 @@ abstract class common {
 	*/
 	public function set_permissions( $number ) {
 		$this->permissions = (int)$number;
-	}
+	}//end set_permissions
 	
 	
 	
@@ -523,7 +523,8 @@ abstract class common {
 	* SET_DEFAULT_VALUE
 	*/
 	protected function set_default_value() {
-
+		
+		
 	}//end set_default_value
 
 
@@ -567,7 +568,7 @@ abstract class common {
 	*/
 	public function set_identificador_unico($string) {
 		$this->identificador_unico = $string;
-	}
+	}//end set_identificador_unico
 
 	
 	
@@ -1282,6 +1283,7 @@ abstract class common {
 
 		return $cookie_properties;
 	}//end get_cookie_properties
+
 
 
 	/**
