@@ -152,6 +152,9 @@ if($mode==='save_template') {
 */
 if($mode==='render_pdf') {
 
+	// Free browser session
+		session_write_close();
+
 	$response = new stdClass();	
 		$response->msg 	 = '';
 		$response->debug = array();
@@ -256,6 +259,9 @@ if($mode==='delete_template') {
 * @return 
 */
 if($mode==='print_pages') {	
+
+	// Free browser session
+		session_write_close();
 
 	# Verify vars set in previous step (context_name=list)
 	if( !isset($_SESSION['dedalo4']['config']['ar_templates_mix']) ||
