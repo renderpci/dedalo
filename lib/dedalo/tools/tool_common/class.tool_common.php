@@ -44,12 +44,12 @@ abstract class tool_common extends common {
 	* @return object $json
 	* Returns a var with all data encpsulated in a json object / array
 	*/
-	public function get_json(){
+	public function get_json($request_options=false){
 
-		if(SHOW_DEBUG===true) $start_time = start_time();		
+		if(SHOW_DEBUG===true) $start_time = start_time();
 		
-			# Class name is called class (ex. component_input_text), not this class (common)
-			include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'_json.php' );
+		# Class name is called class (ex. component_input_text), not this class (common)
+		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'_json.php' );
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
