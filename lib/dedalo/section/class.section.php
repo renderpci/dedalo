@@ -3464,6 +3464,82 @@ class section extends common {
 
 
 
+	/**
+	* GET_LAYOUT_MAP
+	* Calculate display items to generate portal html
+	* Cases:
+	*	1. Modo 'list' : Uses childrens to build layout map
+	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
+	*/
+	public function get_layout_map() {
+		
+		if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
+
+		$section_tipo = $this->tipo;
+
+		$ar_related=array();
+		switch ($this->modo) {
+			case 'list':
+		
+				// section_list	source		
+					$ar_terms 			= (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, 'section_list', 'children', true);
+					$section_list_tipo 	= $ar_terms[0];				
+					
+				// ar_elements. Use found related terms as new list					
+					$ar_elements = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=true, $simple=true);					
+				
+				break;
+			
+			case 'edit':
+
+				// ar_elements
+					$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
+					#$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $ar_include_modelo_name, 'children_recursive', $search_exact=false, ['box_elements']);
+					$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
+					
+				break;
+		}//end switch ($this->modo)	
+
+		
+		$layout_map = [];
+		foreach ($ar_elements as $current_element_tipo) {
+			
+			$ddo = new stdClass();
+				$ddo->tipo 			= $current_element_tipo;
+				$ddo->section_tipo 	= $this->tipo;
+				$ddo->model 		= RecordObj_dd::get_modelo_name_by_tipo($current_element_tipo,true);
+				$ddo->mode 			= $this->get_modo();
+				$ddo->typo 			= 'ddo';
+
+				// parent info
+					$RecordObj_dd 	 = new RecordObj_dd($current_element_tipo);
+					$parent 		 = $RecordObj_dd->get_parent();
+					$ddo->parent = $parent;
+			
+			$layout_map[] = $ddo;
+		}
+		#dump($layout_map, ' layout_map ++ '.to_string());
+
+		#
+		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+		# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
+		if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
+			$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+			foreach ($layout_map as $key => $item) {
+				$current_tipo = $item->tipo;
+				if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+					unset( $layout_map[$key]);
+					debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
+				}
+			}
+			$layout_map = array_values($layout_map);
+		}
+
+		return $layout_map;
+	}//end get_layout_map
+
+
+
 
 
 }//end section
