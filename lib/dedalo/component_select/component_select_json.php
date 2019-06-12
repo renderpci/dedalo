@@ -2,21 +2,29 @@
 // JSON data component controller
 
 
+
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
 
 
+
 // context
 	$context = [];
+
+	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
 			$context[] = $this->get_structure_context($permissions);
 
+	}//end if($options->get_context===true)
+
+
+
 // data
 	$data = [];
 
-	if($permissions > 0){
+	if($options->get_data===true && $permissions>0){
 			
 		// item_values
 			$modo = $this->get_modo();
@@ -54,7 +62,8 @@
 
 			$data[] = $item;
 
-	}// end if $permissions > 0
+	}//end if($options->get_data===true && $permissions>0)
+
 
 	
 // JSON string

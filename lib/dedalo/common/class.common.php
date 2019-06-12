@@ -1340,27 +1340,31 @@ abstract class common {
 
 	/**
 	* GET_JSON
-	* @return ogject $json 
+	* @param object $request_options
+	* 	Optional. Default is false
+	* @return array $json 
+	*	Array of objects with data and context (configurable)
 	*/
-	public function get_json() {
+	public function get_json($request_options=false) {
 
 		// Debug
 			if(SHOW_DEBUG===true) $start_time = start_time();
+
+		// options parse
+			$options = new stdClass();
+				$options->get_context 	= true;
+				$options->get_data 		= true;
+				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// path. Class name is called class (ex. component_input_text), not this class (common)
 			$path = DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php';
 
 		// controller include
 			$json = include( $path );
-					
-			#ob_start();
-			#include( $path );
-			#$json = ob_get_clean();
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				$exec_time = exec_time_unit($start_time,'ms')." ms";
-				
+				$exec_time = exec_time_unit($start_time,'ms')." ms";				
 				#$element = json_decode($json);
 				#	$element->debug = new stdClass();
 				#	$element->debug->exec_time = $exec_time;
@@ -1368,7 +1372,6 @@ abstract class common {
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
 			}
-			#dump($json, ' json ++ '.to_string());
 
 		return $json;		
 	}//end get_json
