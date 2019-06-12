@@ -15,6 +15,8 @@ class layout_map {
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
 	*/
 	public static function get_layout_map($section_tipo, $tipo, $modo, $user_id) {
+		throw new Exception("Error Processing Request", 1);
+		
 
 		// preset. look db presets for existing user layout_map preset
 			#$preset_data = self::search_preset($section_tipo, $tipo, $user_id);
