@@ -3421,9 +3421,10 @@ class section extends common {
 
 		$_structure_context = parent::get_structure_context($permissions);
 
-		#if(isset($this->layout_map)){
-		#	$_structure_context->layout_map = $this->layout_map;
-		#}else{
+		/*
+		if(isset($this->layout_map)){
+			$_structure_context->layout_map = $this->layout_map;
+		}else{
 
 		// section_list optional for get related_list
 				
@@ -3433,14 +3434,6 @@ class section extends common {
 				$related_list_tipo 			= $ar_section_list[0];
 				$ar_related_list_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'section', 'termino_relacionado', true);
 				$related_section 			= $ar_related_list_section[0] ?? $this->get_section_tipo();
-
-
-				// get the section_list properties
-				/*
-				$section_list_tipo  	  = $ar_section_list[0];
-				$RecordObj_dd 			  = new RecordObj_dd($section_list_tipo);
-				$section_list_propiedades = json_decode($RecordObj_dd->get_propiedades());
-				*/
 			
 				
 				$ar_related_list_components	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
@@ -3458,8 +3451,18 @@ class section extends common {
 				}				
 			}	
 		}
+		*/
+
+		// get the section_list properties
+				/*
+				$section_list_tipo  	  = $ar_section_list[0];
+				$RecordObj_dd 			  = new RecordObj_dd($section_list_tipo);
+				$section_list_propiedades = json_decode($RecordObj_dd->get_propiedades());
+				*/
 		return $_structure_context;
 	}//end get_structure_context
+
+
 
 
 
