@@ -3435,7 +3435,17 @@ class web_data {
 									$fichero_options->order 		= 'section_id ASC';
 									switch ($value_obj->eq) {
 										case '=':
-											$fichero_options->sql_filter = '`'.$value_obj->name."` = '".$current_value.'\'';
+											// comma separated values case
+											$c_ar_parts  = (array)explode(',', $current_value);											
+											$c_ar_filter = [];
+											foreach ($c_ar_parts as $c_part_value) {
+												$c_ar_filter[] = '`'.$value_obj->name.'` = \''. trim($c_part_value) .'\'';												
+											}
+											if (count($c_ar_filter)>1) {
+												$fichero_options->sql_filter = ' -- fichero filter '.PHP_EOL.' ('.implode(' OR ', $c_ar_filter).')';
+											}else{
+												$fichero_options->sql_filter = ' -- fichero filter '.PHP_EOL.' '. implode(' OR ', $c_ar_filter);
+											}										
 											break;
 										default:
 											if ($value_obj->search_mode==='int') {
@@ -3455,7 +3465,9 @@ class web_data {
 									$ar_monedas_filter[] = $row->section_id;
 								}
 								
-								$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
+								if (!empty($monedas_ar_filter)) {
+									$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
+								}								
 								break;
 
 							// TS_LUGAR_DE_HALLAZGO . SUBQUERY
@@ -3602,6 +3614,9 @@ class web_data {
 														$filter .= " AND LENGTH(CONCAT_WS('', `tipo_anverso`, `tipo_reverso`))>3";
 														$ar_filter[$current_name][] = $filter;
 														break;
+													case 'denominacion':
+														$ar_filter[$current_name][] = '`'.$value_obj->name."` LIKE '".$current_value."'";
+														break;
 													default:
 														$ar_filter[$current_name][] = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
 														break;
@@ -3627,13 +3642,21 @@ class web_data {
 					}
 
 					// Create final filter
-					$ar_filter_final = [];
-					foreach ($ar_filter as $current_name => $ar_value) {
-						$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
-					}
-					$filter = '('.implode(' '.$options->operator.' ', $ar_filter_final).')';
+						$filter = ' section_id = \'invalid_value\' ';
+						$ar_filter_final = [];
+						foreach ($ar_filter as $current_name => $ar_value) {							
+							if (!empty($ar_value)) {
+								$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
+							}							
+						}
+							dump($ar_filter_final, ' ar_filter_final ++ '.to_string());				
+						if (!empty($ar_filter_final)) {
+							$filter = ' -- filter final '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
+						}
+					
 				}
 				debug_log(__METHOD__." filter ".to_string($filter), 'DEBUG');
+				#error_log('filter ++ : '.$filter);
 			
 			// Search		
 				$tipos_options = new stdClass();
@@ -3659,14 +3682,14 @@ class web_data {
 			
 			# Convert to object all row_tipo
 			$ar_tipos = [];
-			foreach ($web_data->result as $key => $row_tipo) {
+			foreach ((array)$web_data->result as $key => $row_tipo) {
 				$ar_tipos[] = (object)$row_tipo;
 			}
 
 
 			$cultura_section_tipo = 'cult1';
 			foreach ($ar_tipos as $key => $row_tipo) {
-				if (empty($row_tipo->monedas)) continue;	
+				if (empty($row_tipo->monedas)) continue;
 
 				$monedas = json_decode($row_tipo->monedas);
 
