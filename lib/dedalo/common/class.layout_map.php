@@ -14,26 +14,22 @@ class layout_map {
 	*	1. Modo 'list' : Uses childrens to build layout map
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
 	*/
-	public static function get_layout_map($section_tipo, $tipo, $user_id) {
-
+	public static function get_layout_map($section_tipo, $tipo, $modo, $user_id) {
 
 		// preset. look db presets for existing user layout_map preset
-			$preset_data = self::search_preset($section_tipo, $tipo, $user_id);
+			#$preset_data = self::search_preset($section_tipo, $tipo, $user_id);
 
-die();
+#die();
 
-
-		
-		if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
 
 			#dump($view, ' $view ++ '.to_string());
 
 		$ar_related=array();
-		switch ($this->modo) {
+		switch ($modo) {
 			case 'list':
 			case 'portal_list':
 				# CASE SECTION LIST IS DEFINED				
-				$ar_terms 		  = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
+				$ar_terms 		  = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
 				
 				if(isset($ar_terms[0]) ) {
 					
@@ -45,18 +41,19 @@ die();
 
 					# FALLBACK RELATED WHEN SECTION LIST IS NOT DEFINED
 					# If not defined sectiopn list
-					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);						
+					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);						
 				}
 				break;
 			
 			case 'edit':
 			default:
+				$edit_view_options ='';
 				if($view==='full') { // || $view==='view_mosaic'
-					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
+					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
 					break;
 				}else{
 					# CASE VIEW IS DEFINED
-					$ar_terms = (array)RecordObj_dd::get_ar_childrens($this->tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());				
+					$ar_terms = (array)RecordObj_dd::get_ar_childrens($tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());				
 					foreach ($ar_terms as $current_term) {
 						# Locate 'edit_views' in childrens
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);						
@@ -71,7 +68,7 @@ die();
 							$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
 							# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());		
 							if ( isset($edit_view_propiedades->edit_view_options) ) {
-								$this->edit_view_options = $edit_view_propiedades->edit_view_options;									
+								$edit_view_options = $edit_view_propiedades->edit_view_options;									
 							}
 							break;
 						}						
@@ -86,10 +83,10 @@ die();
 				#dump($modelo_name,"modelo_name $modelo");
 
 			if ($modelo_name==='component_state') {
-				$this->component_state_tipo = $current_tipo; // Store to reuse in custom layout map later
+				$component_state_tipo = $current_tipo; // Store to reuse in custom layout map later
 			}
 			elseif ($modelo_name==='section') {
-				$this->ar_target_section_tipo[] = $current_tipo; // Set portal_section_tipo find it
+				$ar_target_section_tipo[] = $current_tipo; // Set portal_section_tipo find it
 				unset($ar_related[$key]); // Remove self section_tipo from array of components
 				//break;
 			}
@@ -102,9 +99,9 @@ die();
 		$layout_map = [];
 		foreach ($ar_related as $current_related) {
 			$related = new stdClass();
-						$related->section_tipo 	= $this->ar_target_section_tipo[0];
+						$related->section_tipo 	= $ar_target_section_tipo[0];
 						$related->tipo 			= $current_related;
-						$related->mode 			= $this->get_modo();
+						$related->mode 			= $modo;
 			$layout_map[] = $related;
 		}
 
@@ -140,7 +137,7 @@ die();
 				$user_locator->set_section_tipo('dd128');
 				$user_locator->set_section_id($user_id);			
 
-
+/*
 		$search_query_object = [
 			'id' 			=> 'search_preset_layout_map',
 			'modo' 			=> 'list',
@@ -198,6 +195,8 @@ die();
 			]
 
 		];
+
+		*/
 		dump($search_query_object, ' search_query_object ++ '.to_string());
 		
 		

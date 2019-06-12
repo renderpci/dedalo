@@ -760,7 +760,7 @@ class component_portal extends component_relation_common {
 		return $layout_map;
 	}//end get_layout_map
 
-*/
+	*/
 
 	/**
 	* GET_AR_COLUMNS
@@ -2036,12 +2036,19 @@ class component_portal extends component_relation_common {
 
 		$_structure_context = parent::get_structure_context($permissions);
 
+		/*
 		if(isset($this->layout_map)){
 			$_structure_context->layout_map = $this->layout_map;
 		}else{
 
 			$_structure_context->layout_map = $this->get_layout_map();
 		}
+		*/
+		$user_id = navigator::get_user_id();
+		$layout_map    = new layout_map();
+		$layout_map = $layout_map-> get_layout_map($this->section_tipo, $this->tipo, $this->modo,$user_id );
+
+			dump($layout_map, ' layout_map ++++++ '.to_string());
 
 		return $_structure_context;
 	}//end get_structure_context
