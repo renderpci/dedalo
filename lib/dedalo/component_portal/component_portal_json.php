@@ -2,6 +2,7 @@
 // JSON data component controller
 
 
+
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
@@ -10,58 +11,63 @@
 	$tipo 				= $this->get_tipo();
 
 
+
 // context
 	$context = [];
 
-	// Component structure context (tipo, relations, properties, etc.)
-		$context[] = $this->get_structure_context($permissions);
+	if($options->get_context===true){
 
-	// layout_map 
-		$layout_map 	= $this->get_layout_map();
-		$ar_subcontext 	= [];
-		foreach ($layout_map as $dd_object) {
+		// Component structure context (tipo, relations, properties, etc.)
+			$context[] = $this->get_structure_context($permissions);
 
-			$dd_object 			= (object)$dd_object;
-			$current_tipo 	 	= $dd_object->tipo;
+		// subcontext from layout_map items
+			$ar_subcontext 	= [];
+			$layout_map 	= $this->get_layout_map();		
+			foreach ($layout_map as $dd_object) {
+
+				$dd_object 		= (object)$dd_object;
+				$current_tipo 	= $dd_object->tipo;
+					
+				$mode 			= $dd_object->mode ?? 'list';
+				$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$RecordObj_dd 	= new RecordObj_dd($tipo);
+				$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$lang 			= $dd_object->lang ?? $default_lang;
+
 				
-			$mode 			= $dd_object->mode ?? 'list';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			$RecordObj_dd 	= new RecordObj_dd($tipo);
-			$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-			$lang 			= $dd_object->lang ?? $default_lang;
+				$related_component = component_common::get_instance( $model,
+																	 $current_tipo,
+																	 null,
+																	 $mode,
+																	 $lang,
+																	 $dd_object->section_tipo);
 
+				// Inject this tipo as related component from_component_tipo
+					$related_component->from_component_tipo = $tipo;
+
+				// get the JSON context of the related component
+					$component_json = $related_component->get_json();
+
+				// temp ar_subcontext
+					$ar_subcontext = array_merge($ar_subcontext, $component_json->context);
 			
-			$related_component = component_common::get_instance( $model,
-																 $current_tipo,
-																 null,
-																 $mode,
-																 $lang,
-																 $dd_object->section_tipo);
+			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 
-			// Inject this tipo as related component from_component_tipo
-				$related_component->from_component_tipo = $tipo;
+			// ar_subcontext add everyone
+				foreach ($ar_subcontext as $value) {
+					#if (!in_array($value, $context)) {
+						$context[] = $value;
+					#}
+				}
 
-			// get the JSON context of the related component
-				$component_json = $related_component->get_json();
+	}//end if($options->get_context===true)
 
-			// temp ar_subcontext
-				$ar_subcontext = array_merge($ar_subcontext, $component_json->context);
-
-		
-		}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
-
-	// ar_subcontext add everyone
-		foreach ($ar_subcontext as $value) {
-			#if (!in_array($value, $context)) {
-				$context[] = $value;
-			#}
-		}
 
 
 // data
 	$data = [];
 
-	if($permissions > 0){
+	if($options->get_data===true && $permissions>0){
 
 		// Building real value			
 			$dato = $this->get_dato();
@@ -100,14 +106,13 @@
 
 
 
-				// layout_map 
-					$layout_map 	= $this->get_layout_map();
+				// subcontext from layout_map items				
 					$ar_subcontext 	= [];
-
+					$layout_map 	= $this->get_layout_map();
 					foreach ($layout_map as $dd_object) {
 
-						$dd_object = (object)$dd_object;
-						$current_tipo 	 = $dd_object->tipo;
+						$dd_object 		= (object)$dd_object;
+						$current_tipo 	= $dd_object->tipo;
 							
 						$modo 			= 'list';
 						$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
@@ -156,6 +161,7 @@
 			$data[] = $item;
 			
 	}// end if $permissions > 0
+
 
 
 // JSON string
