@@ -33,8 +33,7 @@ class manager {
 			if (!is_object($options) || !property_exists($options,'action')) {
 				debug_log(__METHOD__." Invalid action var (not found in options) ".to_string(), logger::ERROR);
 				return $dedalo_data;
-			}
-		
+			}		
 
 		// actions
 			switch ($options->action) {

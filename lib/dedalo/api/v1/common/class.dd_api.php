@@ -12,6 +12,7 @@ class dd_api {
 		static $version = "1.0.0";  // 05-06-2019
 	
 
+
 	/**
 	* 
 	* CREATE
@@ -98,12 +99,12 @@ class dd_api {
 		$response->msg 	  		= 'Ok. Request done';
 
 		# Debug
-		if(SHOW_DEBUG===true) {
-			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
-			$response->debug = $debug;
-		}
+				$response->debug = $debug;
+			}
 
 
 		return (object)$response;
@@ -119,6 +120,7 @@ class dd_api {
 	function update($json_data) {
 	}//end update
 
+
 	
 	/**
 	* 
@@ -127,7 +129,6 @@ class dd_api {
 	*/
 	function delete($json_data) {
 	}//end delete
-
 
 
 
@@ -148,7 +149,7 @@ class dd_api {
 		// data
 			$data = [];	
 			$ar_search_query_object = array_filter($ar_context, function($item){
-				 if($item->typo === 'sqo') return $item;
+				 if($item->typo==='sqo') return $item;
 			});			
 			foreach ($ar_search_query_object as $current_sqo) {
 
@@ -168,7 +169,7 @@ class dd_api {
 							$section->set_bl_loaded_matrix_data(true);
 
 							$ar_dd_objects = array_filter($ar_context, function($item) use($section_tipo){
-								 if($item->typo === 'ddo' && $item->section_tipo === $section_tipo) return $item;
+								 if($item->typo==='ddo' && $item->section_tipo===$section_tipo) return $item;
 							});	
 
 						// Iterate dd_object for colums
@@ -184,16 +185,16 @@ class dd_api {
 								switch (true) {
 
 									case (strpos($model, 'component_')===0):									
-										# components
-										$current_component  = component_common::get_instance($model,
-																							 $tipo,
-																							 $section_id,
-																							 $mode,
-																							 $lang,
-																							 $section_tipo);
+										// components
+											$current_component  = component_common::get_instance($model,
+																								 $tipo,
+																								 $section_id,
+																								 $mode,
+																								 $lang,
+																								 $section_tipo);
 										// ar_layout_map
 											$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-												 if($item->typo === 'ddo' && $item->parent === $tipo  ) return $item;
+												 if($item->typo==='ddo' && $item->parent===$tipo  ) return $item;
 											});
 											
 											if (!empty($ar_layout_map)) {
@@ -210,11 +211,10 @@ class dd_api {
 
 										// data add
 											$data = array_merge($data, $component_json->data);
-
 										break;
 
 									default:
-										# not defined modelfro context / data								
+										# not defined model from context / data
 										debug_log(__METHOD__." Ignored model $model - $tipo ".to_string(), logger::WARNING);
 										break;
 								}							
@@ -223,7 +223,7 @@ class dd_api {
 
 					$i++; }//end iterate records
 			
-			}
+			}//end foreach ($ar_search_query_object as $current_sqo)
 
 
 		// context
@@ -237,13 +237,12 @@ class dd_api {
 				
 				$current_section = $section_dd_object->section_tipo;
 
-				// context
+				// dd_objects
 					$ar_dd_objects = array_filter($ar_context, function($item) use($current_section) {
-						 if($item->typo === 'ddo' && $item->section_tipo === $current_section) return $item;
+						 if($item->typo==='ddo' && $item->section_tipo===$current_section) return $item;
 					});	
 
-				// Iterate dd_object for context
-					
+				// Iterate dd_object from context					
 					foreach ((array)$ar_dd_objects as $dd_object) {
 
 						$dd_object = is_array($dd_object) ? (object)$dd_object : $dd_object;
@@ -261,16 +260,16 @@ class dd_api {
 						switch (true) {
 
 							case (strpos($model, 'component_')===0):									
-								# components
-								$current_component  = component_common::get_instance($model,
-																					 $tipo,
-																					 null,
-																					 $mode,
-																					 $lang,
-																					 $section_tipo);
+								// components
+									$current_component  = component_common::get_instance($model,
+																						 $tipo,
+																						 null,
+																						 $mode,
+																						 $lang,
+																						 $section_tipo);
 								// ar_layout_map
 									$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-										 if($item->typo === 'ddo' && $item->parent === $tipo ) return $item;
+										 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
 									});
 									
 									if (!empty($ar_layout_map)) {
@@ -287,57 +286,52 @@ class dd_api {
 
 								// context add
 									$context = array_merge($context, $component_json->context);
-
 								break;
 
-							case ($model === 'section'):
-
+							case ($model==='section'):
+								// section
 									$current_section = section::get_instance(null, $tipo, $mode, $cache=true);
 
-									// ar_layout_map
+								// ar_layout_map
 									$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-										 if($item->typo === 'ddo' && $item->parent === $tipo ) return $item;
-									});
-									
+										 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
+									});										
 									if (!empty($ar_layout_map)) {
-										$current_section->layout_map 		= $ar_layout_map;
+										$current_section->layout_map = $ar_layout_map;
 									}
 
-									$section_json		= $current_section->get_json();
+								// section json
+									$section_json = $current_section->get_json();
 
-									// context add 
+								// context add 
 									$context = array_merge($context, $section_json->context);
-
 								break;
 							
-							case (in_array($model, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']
-								# groupers
-
-								$current_class_name = $model;
-								if ($model==='tab') {
-									$current_class_name = 'section_tab';
-								}
-								$current_grouper  = new $current_class_name($tipo, $section_tipo, $mode, null);									
+							case (in_array($model, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']								
+								// groupers
+									$current_class_name = $model;
+									if ($model==='tab') {
+										$current_class_name = 'section_tab';
+									}
+									$current_grouper  = new $current_class_name($tipo, $section_tipo, $mode, null);									
 								
-								$grouper_json = $current_grouper->get_json();									
+								// grouper json
+									$grouper_json = $current_grouper->get_json();									
 
 								// context add 
 									$context = array_merge($context, $grouper_json->context);
 								break;
 
-
 							case (strpos($model, 'button_')===0):
+								// button								
+									$current_class_name = $model;
+									$current_button  	= new $current_class_name($tipo, null, $section_tipo);
 
-								
-								$current_class_name = $model;
-
-								$current_button  = new $current_class_name($tipo, null, $section_tipo);
-
-								$button_json = $current_button->get_json();
+								// button json
+									$button_json = $current_button->get_json();
 
 								// context add 
 									$context = array_merge($context, $button_json->context);
-
 								break;
 							
 							default:
@@ -351,19 +345,20 @@ class dd_api {
 			}// end foreach ($ar_sections_dd_objects as $section_dd_object)
 
 			// smart remove data duplicates (!)
-				//$data = section::smart_remove_data_duplicates($data);
+				// $data = section::smart_remove_data_duplicates($data);
 
 
 		// Set result object
 			$result->context = $context;
 			$result->data 	 = $data;
 
-			// Debug
-				if(SHOW_DEBUG===true) {
-					$debug = new stdClass();
-						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-					$result->debug = $debug;	
-				}			
+		
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$result->debug = $debug;	
+			}			
 
 
 		return $result;
