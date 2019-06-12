@@ -1999,12 +1999,12 @@ class component_portal extends component_relation_common {
 		#$layout_map = array($this->tipo => $ar_related);
 
 		$layout_map = [];
-		foreach ($ar_related as $current_related) {
+		foreach ($ar_related as $current_related_tipo) {
 			
 			$related = new stdClass();
-				$related->tipo 			= $current_related;
+				$related->tipo 			= $current_related_tipo;
 				$related->section_tipo 	= $this->ar_target_section_tipo[0];
-				$related->model 		= RecordObj_dd::get_modelo_name_by_tipo($current_related,true);
+				$related->model 		= RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
 				$related->mode 			= $this->get_modo();
 				
 			
