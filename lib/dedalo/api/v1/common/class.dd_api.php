@@ -200,61 +200,63 @@ class dd_api {
 								break;
 
 							# ! ya se generan en el controlador de la sección 
-							#case (strpos($model, 'component_')===0): 								
-							#	// components
-							#		$current_component  = component_common::get_instance($model,
-							#															 $tipo,
-							#															 null,
-							#															 $mode,
-							#															 $lang,
-							#															 $section_tipo);
-							#	// ar_layout_map
-							#		$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-							#			 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
-							#		});
-							#		
-							#		if (!empty($ar_layout_map)) {
-							#			$current_component->layout_map 	= $ar_layout_map;
-							#		}
-							#
-							#	// properties
-							#		if (isset($dd_object->properties)){
-							#			$current_component->set_properties($dd_object->properties);
-							#		}
-							#
-							#	// get component json
-							#		$component_json = $current_component->get_json();
-							#
-							#	// context add
-							#		$context = array_merge($context, $component_json->context);
-							#	break;							
+								#case (strpos($model, 'component_')===0): 								
+								#	// components
+								#		$current_component  = component_common::get_instance($model,
+								#															 $tipo,
+								#															 null,
+								#															 $mode,
+								#															 $lang,
+								#															 $section_tipo);
+								#	// ar_layout_map
+								#		$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
+								#			 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
+								#		});
+								#		
+								#		if (!empty($ar_layout_map)) {
+								#			$current_component->layout_map 	= $ar_layout_map;
+								#		}
+								#
+								#	// properties
+								#		if (isset($dd_object->properties)){
+								#			$current_component->set_properties($dd_object->properties);
+								#		}
+								#
+								#	// get component json
+								#		$component_json = $current_component->get_json();
+								#
+								#	// context add
+								#		$context = array_merge($context, $component_json->context);
+								#	break;							
 							
-							case (in_array($model, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']								
-								// groupers
-									$current_class_name = $model;
-									if ($model==='tab') {
-										$current_class_name = 'section_tab';
-									}
-									$current_grouper  = new $current_class_name($tipo, $section_tipo, $mode, null);									
-								
-								// grouper json
-									$grouper_json = $current_grouper->get_json();									
+							# ! ya se generan en el controlador de la sección 
+								#case (in_array($model, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']								
+								#	// groupers
+								#		$current_class_name = $model;
+								#		if ($model==='tab') {
+								#			$current_class_name = 'section_tab';
+								#		}
+								#		$current_grouper  = new $current_class_name($tipo, $section_tipo, $mode, null);									
+								#	
+								#	// grouper json
+								#		$grouper_json = $current_grouper->get_json();									
+								#
+								#	// context add 
+								#		$context = array_merge($context, $grouper_json->context);
+								#	break;
 
-								// context add 
-									$context = array_merge($context, $grouper_json->context);
-								break;
-
-							case (strpos($model, 'button_')===0):
-								// button								
-									$current_class_name = $model;
-									$current_button  	= new $current_class_name($tipo, null, $section_tipo);
-
-								// button json
-									$button_json = $current_button->get_json();
-
-								// context add 
-									$context = array_merge($context, $button_json->context);
-								break;
+							# ! ya se generan en el controlador de la sección 
+								#case (strpos($model, 'button_')===0):
+								#	// button								
+								#		$current_class_name = $model;
+								#		$current_button  	= new $current_class_name($tipo, null, $section_tipo);
+								#
+								#	// button json
+								#		$button_json = $current_button->get_json();
+								#
+								#	// context add 
+								#		$context = array_merge($context, $button_json->context);
+								#	break;
 							
 							default:
 								# not defined modelfro context / data								
