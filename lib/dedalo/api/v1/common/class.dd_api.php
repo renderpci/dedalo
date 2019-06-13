@@ -144,86 +144,6 @@ class dd_api {
 			$result = new stdClass();
 				$result->context = [];
 				$result->data 	 = [];
-		
-
-		// data
-			$data = [];	
-			$ar_search_query_object = array_filter($ar_context, function($item){
-				 if($item->typo==='sqo') return $item;
-			});			
-			foreach ($ar_search_query_object as $current_sqo) {
-
-				$search_development2 = new search_development2($current_sqo);
-				$rows_data 			 = $search_development2->search();
-
-				// Iterate records
-					$i=0; foreach ($rows_data->ar_records as $record) {
-
-						$section_id   	= $record->section_id;
-						$section_tipo 	= $record->section_tipo;
-						$datos			= json_decode($record->datos);
-
-						// Inject known dato to avoid re connect to database
-							$section = section::get_instance($section_id, $section_tipo);
-							$section->set_dato($datos);
-							$section->set_bl_loaded_matrix_data(true);
-
-							$ar_dd_objects = array_filter($ar_context, function($item) use($section_tipo){
-								 if($item->typo==='ddo' && $item->section_tipo===$section_tipo) return $item;
-							});	
-
-						// Iterate dd_object for colums
-							foreach ((array)$ar_dd_objects as $dd_object) {
-
-								$dd_object = is_array($dd_object) ? (object)$dd_object : $dd_object;
-
-								$tipo 		= $dd_object->tipo;
-								$mode 		= $dd_object->mode ?? 'list';
-								$lang 		= $dd_object->lang ?? DEDALO_DATA_LANG;
-								$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-
-								switch (true) {
-
-									case (strpos($model, 'component_')===0):									
-										// components
-											$current_component  = component_common::get_instance($model,
-																								 $tipo,
-																								 $section_id,
-																								 $mode,
-																								 $lang,
-																								 $section_tipo);
-										// ar_layout_map
-											$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-												 if($item->typo==='ddo' && $item->parent===$tipo  ) return $item;
-											});
-											
-											if (!empty($ar_layout_map)) {
-												$current_component->layout_map 	= $ar_layout_map;
-											}
-		
-										// properties
-											if (isset($dd_object->properties)){
-												$current_component->set_properties($dd_object->properties);
-											}
-
-										// get component json
-											$component_json = $current_component->get_json();
-
-										// data add
-											$data = array_merge($data, $component_json->data);
-										break;
-
-									default:
-										# not defined model from context / data
-										debug_log(__METHOD__." Ignored model $model - $tipo ".to_string(), logger::WARNING);
-										break;
-								}							
-
-							}//end iterate display_items
-
-					$i++; }//end iterate records
-			
-			}//end foreach ($ar_search_query_object as $current_sqo)
 
 
 		// context
@@ -259,35 +179,6 @@ class dd_api {
 
 						switch (true) {
 
-							case (strpos($model, 'component_')===0):									
-								// components
-									$current_component  = component_common::get_instance($model,
-																						 $tipo,
-																						 null,
-																						 $mode,
-																						 $lang,
-																						 $section_tipo);
-								// ar_layout_map
-									$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-										 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
-									});
-									
-									if (!empty($ar_layout_map)) {
-										$current_component->layout_map 	= $ar_layout_map;
-									}
-
-								// properties
-									if (isset($dd_object->properties)){
-										$current_component->set_properties($dd_object->properties);
-									}
-
-								// get component json
-									$component_json = $current_component->get_json();
-
-								// context add
-									$context = array_merge($context, $component_json->context);
-								break;
-
 							case ($model==='section'):
 								// section
 									$current_section = section::get_instance(null, $tipo, $mode, $cache=true);
@@ -297,6 +188,7 @@ class dd_api {
 										 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
 									});										
 									if (!empty($ar_layout_map)) {
+										// inject custom layout_map
 										$current_section->layout_map = $ar_layout_map;
 									}
 
@@ -306,33 +198,65 @@ class dd_api {
 								// context add 
 									$context = array_merge($context, $section_json->context);
 								break;
+
+							# ! ya se generan en el controlador de la sección 
+								#case (strpos($model, 'component_')===0): 								
+								#	// components
+								#		$current_component  = component_common::get_instance($model,
+								#															 $tipo,
+								#															 null,
+								#															 $mode,
+								#															 $lang,
+								#															 $section_tipo);
+								#	// ar_layout_map
+								#		$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
+								#			 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
+								#		});
+								#		
+								#		if (!empty($ar_layout_map)) {
+								#			$current_component->layout_map 	= $ar_layout_map;
+								#		}
+								#
+								#	// properties
+								#		if (isset($dd_object->properties)){
+								#			$current_component->set_properties($dd_object->properties);
+								#		}
+								#
+								#	// get component json
+								#		$component_json = $current_component->get_json();
+								#
+								#	// context add
+								#		$context = array_merge($context, $component_json->context);
+								#	break;							
 							
-							case (in_array($model, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']								
-								// groupers
-									$current_class_name = $model;
-									if ($model==='tab') {
-										$current_class_name = 'section_tab';
-									}
-									$current_grouper  = new $current_class_name($tipo, $section_tipo, $mode, null);									
-								
-								// grouper json
-									$grouper_json = $current_grouper->get_json();									
+							# ! ya se generan en el controlador de la sección 
+								#case (in_array($model, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']								
+								#	// groupers
+								#		$current_class_name = $model;
+								#		if ($model==='tab') {
+								#			$current_class_name = 'section_tab';
+								#		}
+								#		$current_grouper  = new $current_class_name($tipo, $section_tipo, $mode, null);									
+								#	
+								#	// grouper json
+								#		$grouper_json = $current_grouper->get_json();									
+								#
+								#	// context add 
+								#		$context = array_merge($context, $grouper_json->context);
+								#	break;
 
-								// context add 
-									$context = array_merge($context, $grouper_json->context);
-								break;
-
-							case (strpos($model, 'button_')===0):
-								// button								
-									$current_class_name = $model;
-									$current_button  	= new $current_class_name($tipo, null, $section_tipo);
-
-								// button json
-									$button_json = $current_button->get_json();
-
-								// context add 
-									$context = array_merge($context, $button_json->context);
-								break;
+							# ! ya se generan en el controlador de la sección 
+								#case (strpos($model, 'button_')===0):
+								#	// button								
+								#		$current_class_name = $model;
+								#		$current_button  	= new $current_class_name($tipo, null, $section_tipo);
+								#
+								#	// button json
+								#		$button_json = $current_button->get_json();
+								#
+								#	// context add 
+								#		$context = array_merge($context, $button_json->context);
+								#	break;
 							
 							default:
 								# not defined modelfro context / data								
@@ -346,7 +270,98 @@ class dd_api {
 
 			// smart remove data duplicates (!)
 				// $data = section::smart_remove_data_duplicates($data);
+		
 
+		// data
+			$data = [];
+			$ar_search_query_object = array_filter($ar_context, function($item){
+				 if($item->typo==='sqo') return $item;
+			});			
+			foreach ($ar_search_query_object as $current_sqo) {
+
+				$search_development2 = new search_development2($current_sqo);
+				$rows_data 			 = $search_development2->search();				
+
+				// Iterate records
+					$i=0; foreach ($rows_data->ar_records as $record) {
+
+						$section_id   	= $record->section_id;
+						$section_tipo 	= $record->section_tipo;
+						$datos			= json_decode($record->datos);
+
+						// Inject known dato to avoid re connect to database
+							$section = section::get_instance($section_id, $section_tipo);
+							$section->set_dato($datos);
+							$section->set_bl_loaded_matrix_data(true);	
+
+							$ar_dd_objects = array_filter($ar_context, function($item) use($section_tipo){
+								 if($item->typo==='ddo' && $item->section_tipo===$section_tipo) return $item;
+							});
+							if (!empty($ar_dd_objects)) {
+								// fix layout_map
+								$section->layout_map = $ar_dd_objects;
+							}							
+						
+						// Iterate dd_object for colums ( PASADO A LA SECCIÓN ! ) 
+							# foreach ((array)$ar_dd_objects as $dd_object) {
+							# 
+ 							# 	$dd_object = is_array($dd_object) ? (object)$dd_object : $dd_object;
+							# 
+ 							# 	$tipo 		= $dd_object->tipo;
+ 							# 	$mode 		= $dd_object->mode ?? 'list';
+ 							# 	$lang 		= $dd_object->lang ?? DEDALO_DATA_LANG;
+ 							# 	$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+							# 
+ 							# 	switch (true) {
+							# 
+ 							# 		case (strpos($model, 'component_')===0):									
+ 							# 			// components
+ 							# 				$current_component  = component_common::get_instance($model,
+ 							# 																	 $tipo,
+ 							# 																	 $section_id,
+ 							# 																	 $mode,
+ 							# 																	 $lang,
+ 							# 																	 $section_tipo);
+ 							# 			// ar_layout_map
+ 							# 				$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
+ 							# 					 if($item->typo==='ddo' && $item->parent===$tipo  ) return $item;
+ 							# 				});
+ 							# 				
+ 							# 				if (!empty($ar_layout_map)) {
+ 							# 					$current_component->layout_map 	= $ar_layout_map;
+ 							# 				}
+ 							# 
+ 		 					# 			// properties
+ 		 					# 				if (isset($dd_object->properties)){
+ 		 					# 					$current_component->set_properties($dd_object->properties);
+ 		 					# 				}
+							# 
+ 							# 			// get component json
+ 							# 				$component_json = $current_component->get_json();
+							# 
+ 							# 			// data add
+ 							# 				$data = array_merge($data, $component_json->data);
+ 							# 			break;
+							# 
+ 							# 		default:
+ 							# 			# not defined model from context / data
+ 							# 			debug_log(__METHOD__." Ignored model $model - $tipo ".to_string(), logger::WARNING);
+ 							# 			break;
+ 							# 	}							
+							# 
+							# }//end iterate display_items
+							
+
+						// get section json
+							$section_json = $section->get_json();
+						
+						// data add
+							$data = array_merge($data, $section_json->data);
+
+					$i++; }//end iterate records
+			
+			}//end foreach ($ar_search_query_object as $current_sqo)
+			
 
 		// Set result object
 			$result->context = $context;
