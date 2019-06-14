@@ -10,6 +10,9 @@ class dd_api {
 
 	// Version. Important!
 		static $version = "1.0.0";  // 05-06-2019
+
+	// ar_dd_objects . store current ar_dd_objects received in context to allwo external acces (portals, etc.)
+		static $ar_dd_objects;
 	
 
 
@@ -145,28 +148,36 @@ class dd_api {
 				$result->context = [];
 				$result->data 	 = [];
 
+		
+		// ar_dd_objects . Array of all dd objects in requested context
+			$ar_dd_objects = array_filter($ar_context, function($item) {
+				 if($item->typo==='ddo') return $item;
+			});
+			// set as static to allow external access
+			dd_api::$ar_dd_objects = $ar_dd_objects;
+
 
 		// context
 			$context = [];
 
 			// filter by section
-			$ar_sections_dd_objects = array_filter($ar_context, function($item) {
-				 if($item->typo==='ddo' && $item->model==='section') return $item;
+			$ar_sections_dd_objects = array_filter($ar_dd_objects, function($item) {
+				 if($item->model==='section') return $item;
 			});		
 			foreach ($ar_sections_dd_objects as $section_dd_object) {
 				
 				$current_section = $section_dd_object->section_tipo;
 
-				// dd_objects
-					$ar_dd_objects = array_filter($ar_context, function($item) use($current_section) {
-						 if($item->typo==='ddo' && $item->section_tipo===$current_section) return $item;
-					});	
+				// dd_objects of current section
+					$ar_current_section_dd_objects = array_filter($ar_dd_objects, function($item) use($current_section) {
+						 if($item->section_tipo===$current_section) return $item;
+					});
 
 				// Iterate dd_object from context					
-					foreach ((array)$ar_dd_objects as $dd_object) {
+					foreach ((array)$ar_current_section_dd_objects as $dd_object) {
 
 						$dd_object = is_array($dd_object) ? (object)$dd_object : $dd_object;
-
+	
 						$tipo 			= $dd_object->tipo;
 						$section_tipo 	= $dd_object->section_tipo;
 						$mode 			= $dd_object->mode ?? 'list';
@@ -183,17 +194,20 @@ class dd_api {
 								// section
 									$current_section = section::get_instance(null, $tipo, $mode, $cache=true);
 
-								// ar_layout_map
-									$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-										 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
-									});										
-									if (!empty($ar_layout_map)) {
-										// inject custom layout_map
-										$current_section->layout_map = $ar_layout_map;
-									}
+								// ar_section_dd_objects (ar_layout_map)
+									#$ar_section_dd_objects = array_filter($ar_dd_objects, function($item) use($tipo){
+									#	 if($item->ddo_parent===$tipo ) return $item;
+									#});										
+									#if (!empty($ar_section_dd_objects)) {
+									#	// inject custom layout_map
+									#	$current_section->layout_map = $ar_section_dd_objects;
+									#}
 
 								// section json
-									$section_json = $current_section->get_json();
+									$get_json_options = new stdClass();
+										$get_json_options->get_context 	= true;
+										$get_json_options->get_data 	= false;
+									$section_json = $current_section->get_json($get_json_options);
 
 								// context add 
 									$context = array_merge($context, $section_json->context);
@@ -209,8 +223,8 @@ class dd_api {
 								#															 $lang,
 								#															 $section_tipo);
 								#	// ar_layout_map
-								#		$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
-								#			 if($item->typo==='ddo' && $item->parent===$tipo ) return $item;
+								#		$ar_layout_map = array_filter($ar_dd_objects, function($item) use($tipo){
+								#			 if($item->ddo_parent===$tipo ) return $item;
 								#		});
 								#		
 								#		if (!empty($ar_layout_map)) {
@@ -260,27 +274,29 @@ class dd_api {
 							
 							default:
 								# not defined modelfro context / data								
-								debug_log(__METHOD__." Ignored model $model - $tipo ".to_string(), logger::WARNING);
+								debug_log(__METHOD__." 1. Ignored model '$model' - tipo: $tipo ".to_string(), logger::WARNING);
 								break;
 						}// end switch (true)
 						
-					}// end foreach ((array)$ar_dd_objects as $dd_object)
+					}// end foreach ((array)$ar_current_section_dd_objects as $dd_object)
 
 			}// end foreach ($ar_sections_dd_objects as $section_dd_object)
 
 			// smart remove data duplicates (!)
 				// $data = section::smart_remove_data_duplicates($data);
 		
-
+	
 		// data
 			$data = [];
+		
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
 			});			
 			foreach ($ar_search_query_object as $current_sqo) {
 
-				$search_development2 = new search_development2($current_sqo);
-				$rows_data 			 = $search_development2->search();				
+				// search
+					$search_development2 = new search_development2($current_sqo);
+					$rows_data 			 = $search_development2->search();				
 
 				// Iterate records
 					$i=0; foreach ($rows_data->ar_records as $record) {
@@ -294,8 +310,8 @@ class dd_api {
 							$section->set_dato($datos);
 							$section->set_bl_loaded_matrix_data(true);	
 
-							$ar_dd_objects = array_filter($ar_context, function($item) use($section_tipo){
-								 if($item->typo==='ddo' && $item->section_tipo===$section_tipo) return $item;
+							$ar_dd_objects = array_filter($ar_dd_objects, function($item) use($section_tipo){
+								 if($item->section_tipo===$section_tipo) return $item;
 							});
 							if (!empty($ar_dd_objects)) {
 								// fix layout_map
@@ -323,8 +339,8 @@ class dd_api {
  							# 																	 $lang,
  							# 																	 $section_tipo);
  							# 			// ar_layout_map
- 							# 				$ar_layout_map = array_filter($ar_context, function($item) use($tipo){
- 							# 					 if($item->typo==='ddo' && $item->parent===$tipo  ) return $item;
+ 							# 				$ar_layout_map = array_filter($ar_dd_objects, function($item) use($tipo){
+ 							# 					 if($item->ddo_parent===$tipo  ) return $item;
  							# 				});
  							# 				
  							# 				if (!empty($ar_layout_map)) {
@@ -350,10 +366,12 @@ class dd_api {
  							# 	}							
 							# 
 							# }//end iterate display_items
-							
-
+						
 						// get section json
-							$section_json = $section->get_json();
+							$get_json_options = new stdClass();
+								$get_json_options->get_context 	= false;
+								$get_json_options->get_data 	= true;
+							$section_json = $section->get_json($get_json_options);
 						
 						// data add
 							$data = array_merge($data, $section_json->data);
@@ -361,7 +379,7 @@ class dd_api {
 					$i++; }//end iterate records
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
-			
+		
 
 		// Set result object
 			$result->context = $context;
@@ -374,7 +392,7 @@ class dd_api {
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 				$result->debug = $debug;	
 			}			
-
+	
 
 		return $result;
 	}//end build_json_rows
