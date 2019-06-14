@@ -26,12 +26,14 @@
 
 	if($options->get_data===true && $permissions>0){
 		// Value
+			$value = $this->get_dato();
+			
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
 				$item->tipo 				= $this->get_tipo();
 				$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
 				$item->section_tipo 		= $this->get_section_tipo();
-				$item->value 				= $this->get_dato();
+				$item->value 				= $value;
 
 			$data[] = $item;
 
