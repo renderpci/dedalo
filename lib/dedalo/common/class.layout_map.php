@@ -223,7 +223,7 @@ class layout_map {
 
 			];
 			#dump($search_query_object, ' search_query_object ++ '.to_string());
-			error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
+			#error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
 		
 		
 		$search_development2 = new search_development2($search_query_object);

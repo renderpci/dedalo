@@ -1921,11 +1921,16 @@ class component_portal extends component_relation_common {
 	*	 Modo 'list' : Uses childrens to build layout map
 	* 	 Modo 'edit' : Uses related terms to build layout map (default)	
 	*/
+	/* PASADO A COMPONENT_RELATION_COMMON (!)
 	public function get_layout_map($view='full') {
 		
-		// call common to set layout_map using ar_dd_objects or user preset if available
-			parent::get_layout_map($view);
-			if (!empty($this->layout_map)) {
+		// already calculated
+			if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
+		
+		// 1,2 call common to set layout_map using ar_dd_objects or user preset if available
+			$layout_map = parent::get_layout_map();
+			if (!empty($layout_map)) {
+				$this->layout_map = $layout_map;
 				return $this->layout_map;
 			}
 
@@ -2021,26 +2026,26 @@ class component_portal extends component_relation_common {
 			
 			# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
 			# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
-			if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
-				$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
-				foreach ($layout_map as $key => $item) {
-					$current_tipo = $item->tipo;
-					if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
-						unset( $layout_map[$key]);
-						debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
+				if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
+					$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+					foreach ($layout_map as $key => $item) {
+						$current_tipo = $item->tipo;
+						if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+							unset( $layout_map[$key]);
+							debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
+						}
 					}
+					$layout_map = array_values($layout_map);
 				}
-				$layout_map = array_values($layout_map);
-			}
 
 		// set layout_map
 			$this->layout_map = $layout_map;
 
-			debug_log(__METHOD__." layout map calculated default from structure ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." layout map portal calculated default from structure [$this->tipo]".to_string(), logger::DEBUG);
 
 		return $this->layout_map;
 	}//end get_layout_map
-
+	*/
 
 
 	/**
