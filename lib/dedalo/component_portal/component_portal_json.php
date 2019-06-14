@@ -22,7 +22,7 @@
 
 		// subcontext from layout_map items
 			$ar_subcontext 	= [];
-			$layout_map 	= $this->get_layout_map();		
+			$layout_map 	= $this->get_layout_map();	 	
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 		= (object)$dd_object;
@@ -46,7 +46,10 @@
 					$related_component->from_component_tipo = $tipo;
 
 				// get the JSON context of the related component
-					$component_json = $related_component->get_json();
+					$get_json_options = new stdClass();
+						$get_json_options->get_context 	= true;
+						$get_json_options->get_data 	= false;
+					$component_json = $related_component->get_json($get_json_options);
 
 				// temp ar_subcontext
 					$ar_subcontext = array_merge($ar_subcontext, $component_json->context);
@@ -59,7 +62,7 @@
 						$context[] = $value;
 					#}
 				}
-
+	
 	}//end if($options->get_context===true)
 
 
@@ -75,7 +78,7 @@
 						
 				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 				$target_section_tipo	= reset($ar_target_section_tipo);
-				$max_records 			= 1;
+				$max_records 			= 10;
 				$offset 				= 0;
 
 				// search_query_object_options 
@@ -84,9 +87,9 @@
 						$search_query_object_options->section_tipo 		 = $target_section_tipo;
 						$search_query_object_options->tipo 		 		 = $this->tipo;
 						
-						# paginations options
-						$search_query_object_options->limit 		 	= $max_records;
-						$search_query_object_options->offset 		 	= $offset;
+						// paginations options
+							$search_query_object_options->limit 		 = $max_records;
+							$search_query_object_options->offset 		 = $offset;
 
 						// Order
 							$order_values = array_map(function($locator){
@@ -105,7 +108,6 @@
 					$rows_data 		 	 = $search_development2->search();
 
 
-
 				// subcontext from layout_map items				
 					$ar_subcontext 	= [];
 					$layout_map 	= $this->get_layout_map();
@@ -116,6 +118,7 @@
 							
 						$modo 			= 'list';
 						$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						
 						$RecordObj_dd 	= new RecordObj_dd($tipo);
 						$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$lang 			= $dd_object->lang ?? $default_lang;
@@ -133,7 +136,11 @@
 								$related_component->from_component_tipo = $this->tipo;
 								$related_component->from_section_tipo 	= $this->section_tipo;
 
-							$component_json = $related_component->get_json();
+							// get json
+								$get_json_options = new stdClass();
+									$get_json_options->get_context 	= false;
+									$get_json_options->get_data 	= true;
+								$component_json = $related_component->get_json($get_json_options);
 
 							// Add data
 								$data = array_merge($data, $component_json->data);
@@ -160,7 +167,7 @@
 
 			$data[] = $item;
 			
-	}// end if $permissions > 0
+	}//end if $options->get_data===true && $permissions>0
 
 
 
