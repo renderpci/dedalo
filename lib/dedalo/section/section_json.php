@@ -20,7 +20,7 @@
 
 		// subcontext from layout_map items 							
 			$ar_subcontext 	= [];
-			$layout_map 	= $this->get_layout_map(); 	#dump($layout_map, ' layout_map ++ '.to_string()); 
+			$layout_map 	= $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string());
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 		= (object)$dd_object;
@@ -28,7 +28,7 @@
 					
 				$mode 			= $dd_object->mode ?? 'list';
 				$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				
+					
 				// temp
 					#if (in_array($model, ['component_portal'])) {								
 					#	break;
@@ -87,13 +87,13 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-
+	
 		// Building real value			
 			$dato = $this->get_dato();
 			if (!empty($dato)) {				
-	
+		
 				// Iterate dd_object for colums
-					$layout_map = $this->get_layout_map();
+					$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
 					foreach ((array)$layout_map as $dd_object) {
 
 						$tipo 			= $dd_object->tipo;
@@ -102,7 +102,7 @@
 						$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						$section_id 	= $this->section_id;
 						$section_tipo 	= $this->tipo;
-
+	
 						switch (true) {
 
 							case (strpos($model, 'component_')===0):
@@ -117,7 +117,7 @@
 																						 $section_id,
 																						 $mode,
 																						 $lang,
-																						 $section_tipo);
+																						 $section_tipo);								
 								// component ar_layout_map
 									#$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
 									#	 if($item->typo==='ddo' && $item->ddo_parent===$tipo) return $item;
@@ -130,7 +130,7 @@
 									if (isset($dd_object->properties)){
 										$current_component->set_properties($dd_object->properties);
 									}
-
+	
 								// get component json
 									$get_json_options = new stdClass();
 										$get_json_options->get_context 	= false;

@@ -21,6 +21,8 @@ class dd_object extends stdClass {
 		# permissions 		: 1
 		# translatable 		: true
 
+	static $ar_type_allowed = ['section','component','grouper','button'];
+
 
 	/**
 	* __CONSTRUCT
@@ -55,8 +57,9 @@ class dd_object extends stdClass {
 			}elseif (strpos($model, 'button_')===0) {
 				$type = 'button';
 			}else{
-				debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
-				throw new Exception("Error Processing Request", 1);				
+				$msg = __METHOD__." UNDEFINED model: $model - ".$this->tipo;
+				debug_log($msg, logger::ERROR);				
+				trigger_error($msg);
 				return false;
 			}
 			$this->set_type($type);
@@ -136,9 +139,9 @@ class dd_object extends stdClass {
 	* Only allow 'section','component','groupper','button'
 	*/
 	public function set_type(string $value) {
-		$ar_allowed = ['section','component','groupper','button'];
-		if( !in_array($value, $ar_allowed) ) {
-			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_allowed), 1);
+		$ar_type_allowed = self::$ar_type_allowed;
+		if( !in_array($value, $ar_type_allowed) ) {
+			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
 		}
 		$this->type = $value;
 	}

@@ -156,10 +156,10 @@ class dd_api {
 			// set as static to allow external access
 			dd_api::$ar_dd_objects = $ar_dd_objects;
 
-
+		
 		// context
 			$context = [];
-
+		/**/
 			// filter by section
 			$ar_sections_dd_objects = array_filter($ar_dd_objects, function($item) {
 				 if($item->model==='section') return $item;
@@ -179,8 +179,8 @@ class dd_api {
 						$dd_object = is_array($dd_object) ? (object)$dd_object : $dd_object;
 	
 						$tipo 			= $dd_object->tipo;
-						$section_tipo 	= $dd_object->section_tipo;
-						$mode 			= $dd_object->mode ?? 'list';
+						$section_tipo 	= $dd_object->section_tipo;						
+						$mode 			= 'list'; // for context always 'list' to avoid autosave default values
 										
 						$RecordObj_dd 	= new RecordObj_dd($tipo);
 						$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -288,7 +288,7 @@ class dd_api {
 	
 		// data
 			$data = [];
-		
+			
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
 			});			
@@ -296,7 +296,7 @@ class dd_api {
 
 				// search
 					$search_development2 = new search_development2($current_sqo);
-					$rows_data 			 = $search_development2->search();				
+					$rows_data 			 = $search_development2->search();	
 
 				// Iterate records
 					$i=0; foreach ($rows_data->ar_records as $record) {
@@ -304,19 +304,21 @@ class dd_api {
 						$section_id   	= $record->section_id;
 						$section_tipo 	= $record->section_tipo;
 						$datos			= json_decode($record->datos);
+						
+						if (!isset($section_dd_object)) {
+							$section_dd_object = array_reduce($ar_dd_objects, function($carry, $item){
+								if($item->model==='section' && $item->section_tipo===$section_tipo) return $item;
+								return $carry;
+							});
+						}
+						$mode = $section_dd_object->mode;
+
 
 						// Inject known dato to avoid re connect to database
-							$section = section::get_instance($section_id, $section_tipo);
+							$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
 							$section->set_dato($datos);
-							$section->set_bl_loaded_matrix_data(true);	
-
-							$ar_dd_objects = array_filter($ar_dd_objects, function($item) use($section_tipo){
-								 if($item->section_tipo===$section_tipo) return $item;
-							});
-							if (!empty($ar_dd_objects)) {
-								// fix layout_map
-								$section->layout_map = $ar_dd_objects;
-							}							
+							$section->set_bl_loaded_matrix_data(true);
+													
 						
 						// Iterate dd_object for colums ( PASADO A LA SECCIÓN ! ) 
 							# foreach ((array)$ar_dd_objects as $dd_object) {

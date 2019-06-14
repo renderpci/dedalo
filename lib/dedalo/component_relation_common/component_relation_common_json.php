@@ -1,9 +1,8 @@
 <?php
 // JSON data component controller
-return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relation_common_json.php');
 
 
-/*
+
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
@@ -174,4 +173,3 @@ return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relati
 
 // JSON string
 	return common::build_element_json_output($context, $data);
-*/
