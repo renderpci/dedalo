@@ -13,18 +13,12 @@ class layout_map {
 	* Cases:
 	*	1. Modo 'list' : Uses childrens to build layout map
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
-	*/
+	*//*
 	public static function get_layout_map($section_tipo, $tipo, $modo, $user_id) {
-		throw new Exception("Error Processing Request", 1);
 		
-
 		// preset. look db presets for existing user layout_map preset
 			#$preset_data = self::search_preset($section_tipo, $tipo, $user_id);
 
-#die();
-
-
-			#dump($view, ' $view ++ '.to_string());
 
 		$ar_related=array();
 		switch ($modo) {
@@ -125,88 +119,127 @@ class layout_map {
 
 		return $layout_map;
 	}//end get_layout_map
-
+	*/
 
 
 	/**
-	* SEARCH_PRESET
+	* SEARCH_user_PRESET
 	* @return 
 	*/
-	public function search_preset($section_tipo, $tipo, $user_id) {
+	public static function search_user_preset($tipo, $section_tipo, $user_id, $modo, $view=null) {
 
 		// preset const
 			$user_locator = new locator();
 				$user_locator->set_section_tipo('dd128');
-				$user_locator->set_section_id($user_id);			
+				$user_locator->set_section_id($user_id);
+				$user_locator->set_from_component_tipo('dd654');
 
-/*
-		$search_query_object = [
-			'id' 			=> 'search_preset_layout_map',
-			'modo' 			=> 'list',
-			'section_tipo' 	=> 'dd1244',
-			'limit'			=> 1,
-			'full_count' 	=> false,
-			'filter' 		=> [
-				'$and' => [
-							[
-								'q' 	=> $tipo,
-								'path' 	=> [
-									'section_tipo' 	 => 'dd1244',
+		// preset section vars
+			$preset_section_tipo = 'dd1244';
+			$component_json_tipo = 'dd625';
+
+		// filter
+			$filter = 	[
+							(object)[
+								'q' 	=> '\''.$tipo.'\'',
+								'path' 	=> [(object)[
+									'section_tipo' 	 => $preset_section_tipo,
 									'component_tipo' => 'dd1242',
 									'modelo' 		 => 'component_input_text',
 									'name' 			 => 'Tipo'
-								]
+								]]
 							],
-							[
-								'q' 	=> $section_tipo,
-								'path' 	=> [
-									'section_tipo' 	 => 'dd1244',
+							(object)[
+								'q' 	=> '\''.$section_tipo.'\'',
+								'path' 	=> [(object)[
+									'section_tipo' 	 => $preset_section_tipo,
 									'component_tipo' => 'dd642',
 									'modelo' 		 => 'component_input_text',
 									'name' 			 => 'Section tipo'
-								]
+								]]
 							],
-							[
-								'q' 	=> $section_tipo,
-								'path' 	=> [
-									'section_tipo' 	 => 'dd1244',
-									'component_tipo' => 'dd1246',
-									'modelo' 		 => 'component_input_text',
-									'name' 			 => 'Mode'
-								]
-							],
-							[
+							(object)[
 								'q' 	=> $user_locator,
-								'path' 	=> [
-									'section_tipo' 	 => 'dd1244',
+								'path' 	=> [(object)[
+									'section_tipo' 	 => $preset_section_tipo,
 									'component_tipo' => 'dd654',
 									'modelo' 		 => 'component_select',
 									'name' 			 => 'User'
+								]]
+							],
+							(object)[
+								'q' 	=> '\''.$modo.'\'',
+								'path' 	=> [(object)[
+									'section_tipo' 	 => $preset_section_tipo,
+									'component_tipo' => 'dd1246',
+									'modelo' 		 => 'component_input_text',
+									'name' 			 => 'Modo'
+								]]
+							]														
+						];			
+			// add filter view if exists
+			if (!empty($view)) {
+				$filter[] = (object)[
+								'q' 	=> '\''.$view.'\'',
+								'path' 	=> [
+									(object)[
+										'section_tipo' 	 => $preset_section_tipo,
+										'component_tipo' => 'dd1247',
+										'modelo' 		 => 'component_input_text',
+										'name' 			 => 'view'
+									]
 								]
+							];
+			}
+		
+		// search query object
+			$search_query_object = [
+				'id' 			=> 'search_user_preset_layout_map',
+				'modo' 			=> 'list',
+				'section_tipo' 	=> 'dd1244',
+				'limit'			=> 1,
+				'full_count' 	=> false,
+				'filter' 		=> (object)[
+					'$and' => $filter
+				],
+				'select' 		=> [
+					(object)[
+						'path' 	=> [
+							(object)[
+								'section_tipo' 	=> $preset_section_tipo,
+								'component_tipo'=> $component_json_tipo,
+								'modelo' 		=> 'component_json',
+								'name'			=> 'JSON Data'
 							]
-						]
+						],
+						'component_path' => [
+					        'components',
+					        $component_json_tipo,
+					        'dato',
+					        'lg-nolan'
+					    ]						
+					]					
 				]
-			],
-			'select' 		=> [
-				[
-					"name"			=> "Tipo",
-		          	"modelo" 		=> "component_json",
-		          	"section_tipo" 	=> "dd1244",
-		          	"component_tipo"=> "dd625"
-				]
-			]
 
-		];
-
-		*/
-		dump($search_query_object, ' search_query_object ++ '.to_string());
+			];
+			#dump($search_query_object, ' search_query_object ++ '.to_string());
+			error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
 		
 		
 		$search_development2 = new search_development2($search_query_object);
 		$rows_data 			 = $search_development2->search();
-			dump($rows_data, ' rows_data ++ '.to_string());
+			#dump($rows_data, ' rows_data ++ '.to_string());
 
-	}//end search_preset
+		$ar_records = $rows_data->ar_records;
+		if (empty($ar_records)) {
+			$result 		= false;
+		}else{
+			$preset_value  	= reset($ar_records)->{$component_json_tipo};
+			$result 		= json_decode($preset_value);
+		}
+
+		return $result;
+	}//end search_user_preset
 
 
 
