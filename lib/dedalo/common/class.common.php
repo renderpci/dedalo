@@ -1561,7 +1561,7 @@ abstract class common {
 			'permissions'	=> $permissions
 		]);
 
-		// ddo_parent
+		// parent
 			if (isset(dd_api::$ar_dd_objects)) {
 				$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
 					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
@@ -1569,9 +1569,9 @@ abstract class common {
 					}
 					return $carry;
 				});
-				if (!empty($request_dd_object->ddo_parent)) {
+				if (!empty($request_dd_object->parent)) {
 					// set
-					$dd_object->ddo_parent = $request_dd_object->ddo_parent;
+					$dd_object->parent = $request_dd_object->parent;
 				}
 			}
 
@@ -1587,39 +1587,25 @@ abstract class common {
 	*/
 	public function get_layout_map($view=null) {
 		
-		$section_tipo 	= $this->get_section_tipo();
-		$tipo 			= $this->get_tipo();
-		$user_id 		= navigator::get_user_id();
-		$modo 			= $this->get_modo();
+		if (empty($this->layout_map)) {
+		
+			// calculate
+				$section_tipo 	= $this->get_section_tipo();
+				$tipo 			= $this->get_tipo();
+				$user_id 		= navigator::get_user_id();
+				$modo 			= $this->get_modo();
+			
+			$options = new stdClass();
+				$options->section_tipo 	= $section_tipo;
+				$options->tipo 			= $tipo;
+				$options->modo 			= $modo;
+				$options->user_id 		= $user_id;
+				$options->view 			= $view;
 
-		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
+			$this->layout_map = layout_map::get_layout_map($options);
+		}
 
-		// 1. dd_api::$ar_dd_objects
-			if (isset(dd_api::$ar_dd_objects)) {
-				// dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '.to_string());
-				// check found dd_objects of current portal
-				$self_ar_dd_objects = array_filter(dd_api::$ar_dd_objects, function($item) use($tipo, $section_tipo){
-					if($item->ddo_parent===$tipo) return $item;
-				});
-				if (!empty($self_ar_dd_objects)) {
-					$layout_map = array_values($self_ar_dd_objects);
-					#$a = debug_backtrace(); error_log( print_r($a,true) );
-					debug_log(__METHOD__." layout map selected from 'dd_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
-						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
-					return $layout_map;
-				}				 
-			}		
-
-		// 2. search in user presets
-			$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);			
-			if (!empty($user_preset)) {
-				$layout_map = $user_preset;
-				debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo]".to_string(), logger::DEBUG);
-					#dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));
-				return $layout_map;
-			}
-
-		return null;
+		return $this->layout_map;
 	}//end get_layout_map
 
 
