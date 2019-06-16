@@ -2076,7 +2076,7 @@ class component_relation_common extends component_common {
 	* Cases:
 	*	 Modo 'list' : Uses childrens to build layout map
 	* 	 Modo 'edit' : Uses related terms to build layout map (default)	
-	*/
+	*//*
 	public function get_layout_map($view='full') {
 		
 		// already calculated
@@ -2200,7 +2200,7 @@ class component_relation_common extends component_common {
 
 		return $this->layout_map;
 	}//end get_layout_map
-
+	*/
 
 
 

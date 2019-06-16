@@ -196,7 +196,7 @@ class dd_api {
 
 								// ar_section_dd_objects (ar_layout_map)
 									#$ar_section_dd_objects = array_filter($ar_dd_objects, function($item) use($tipo){
-									#	 if($item->ddo_parent===$tipo ) return $item;
+									#	 if($item->parent===$tipo ) return $item;
 									#});										
 									#if (!empty($ar_section_dd_objects)) {
 									#	// inject custom layout_map
@@ -224,7 +224,7 @@ class dd_api {
 								#															 $section_tipo);
 								#	// ar_layout_map
 								#		$ar_layout_map = array_filter($ar_dd_objects, function($item) use($tipo){
-								#			 if($item->ddo_parent===$tipo ) return $item;
+								#			 if($item->parent===$tipo ) return $item;
 								#		});
 								#		
 								#		if (!empty($ar_layout_map)) {
@@ -342,7 +342,7 @@ class dd_api {
  							# 																	 $section_tipo);
  							# 			// ar_layout_map
  							# 				$ar_layout_map = array_filter($ar_dd_objects, function($item) use($tipo){
- 							# 					 if($item->ddo_parent===$tipo  ) return $item;
+ 							# 					 if($item->parent===$tipo  ) return $item;
  							# 				});
  							# 				
  							# 				if (!empty($ar_layout_map)) {

@@ -103,6 +103,7 @@
 				#	$ar_section_tipos[] = $obj_value->hierarchy_target_section_tipo;
 				#	#$ar_section_names[$obj_value->hierarchy_target_section_tipo] = $obj_value->hierarchy_target_section_name;
 				#}
+				ksort($ar_sections_by_type);
 				foreach ($ar_sections_by_type as $key => $ar_value) {
 					foreach ($ar_value as $obj_value) {
 						$ar_section_tipos[] = $obj_value->hierarchy_target_section_tipo;
