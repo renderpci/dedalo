@@ -12,7 +12,6 @@ class dd_object extends stdClass {
 		# tipo 				: 'oh14',
 		# section_tipo 		: 'oh1',		
 		# parent 			: 'oh2', // structure parent
-		# ddo_parent 		: 'oh1'
 		# lang 				: 'lg-eng',	
 		# label 			: 'Title'	
 		# mode 				: "list",
@@ -174,13 +173,6 @@ class dd_object extends stdClass {
 	public function set_translatable(bool $value) {
 		
 		$this->translatable = $value;
-	}
-	/**
-	* SET_DDO_PARENT
-	*/
-	public function set_ddo_parent(string $value) {
-		
-		$this->ddo_parent = $value;
 	}
 
 
