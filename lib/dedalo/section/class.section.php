@@ -3416,52 +3416,51 @@ class section extends common {
 	/**
 	* GET_STRUCTURE_CONTEXT
 	* @return object $item
-	*/
+	*//*
 	public function get_structure_context($permissions = 0) {
 
 		$_structure_context = parent::get_structure_context($permissions);
 
 		/*
-		if(isset($this->layout_map)){
-			$_structure_context->layout_map = $this->layout_map;
-		}else{
+		#if(isset($this->layout_map)){
+		#	$_structure_context->layout_map = $this->layout_map;
+		#}else{
+		#
+		#// section_list optional for get related_list
+		#		
+		#	$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
+		#	if (isset($ar_section_list[0])) {
+		#		
+		#		$related_list_tipo 			= $ar_section_list[0];
+		#		$ar_related_list_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'section', 'termino_relacionado', true);
+		#		$related_section 			= $ar_related_list_section[0] ?? $this->get_section_tipo();
+		#	
+		#		
+		#		$ar_related_list_components	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
+		#		
+		#		if (!empty($ar_related_list_components)) {					
+		#			$_structure_context->layout_map = [];
+		#			foreach ($ar_related_list_components as $current_component_tipo) {
+		#				$related = new stdClass();
+		#					$related->section_tipo 	= $related_section;
+		#					$related->tipo 			= $current_component_tipo;
+		#					$related->mode 			= $this->get_modo();
+		#
+		#				$_structure_context->layout_map[] = $related;
+		#			}
+		#		}				
+		#	}	
+		#}
+		
 
-		// section_list optional for get related_list
+		// get the section_list properties				
+				# $section_list_tipo  	  = $ar_section_list[0];
+				# $RecordObj_dd 			  = new RecordObj_dd($section_list_tipo);
+				# $section_list_propiedades = json_decode($RecordObj_dd->get_propiedades());
 				
-			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
-			if (isset($ar_section_list[0])) {
-				
-				$related_list_tipo 			= $ar_section_list[0];
-				$ar_related_list_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'section', 'termino_relacionado', true);
-				$related_section 			= $ar_related_list_section[0] ?? $this->get_section_tipo();
-			
-				
-				$ar_related_list_components	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
-				
-				if (!empty($ar_related_list_components)) {					
-					$_structure_context->layout_map = [];
-					foreach ($ar_related_list_components as $current_component_tipo) {
-						$related = new stdClass();
-							$related->section_tipo 	= $related_section;
-							$related->tipo 			= $current_component_tipo;
-							$related->mode 			= $this->get_modo();
-
-						$_structure_context->layout_map[] = $related;
-					}
-				}				
-			}	
-		}
-		*/
-
-		// get the section_list properties
-				/*
-				$section_list_tipo  	  = $ar_section_list[0];
-				$RecordObj_dd 			  = new RecordObj_dd($section_list_tipo);
-				$section_list_propiedades = json_decode($RecordObj_dd->get_propiedades());
-				*/
 		return $_structure_context;
 	}//end get_structure_context
-
+	*/
 
 
 	/**
@@ -3470,7 +3469,7 @@ class section extends common {
 	* Cases:
 	*	Modo 'list' : Uses childrens to build layout map
 	* 	Modo 'edit' : Uses related terms to build layout map (default)	
-	*/
+	*//*
 	public function get_layout_map($view=null) {
 		
 		// already calculated
@@ -3547,7 +3546,7 @@ class section extends common {
 
 		return $this->layout_map;
 	}//end get_layout_map
-
+	*/
 
 
 

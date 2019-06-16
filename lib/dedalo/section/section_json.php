@@ -120,7 +120,7 @@
 																						 $section_tipo);								
 								// component ar_layout_map
 									#$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
-									#	 if($item->typo==='ddo' && $item->ddo_parent===$tipo) return $item;
+									#	 if($item->typo==='ddo' && $item->parent===$tipo) return $item;
 									#});									
 									#if (!empty($ar_layout_map)) {
 									#	$current_component->layout_map 	= $ar_layout_map;
