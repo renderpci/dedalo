@@ -1,8 +1,9 @@
 <?php
 // JSON data component controller
-	
+return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relation_common_json.php');
 
 
+/*
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
@@ -98,15 +99,15 @@
 
 				// ar_subcontext add everyone
 					foreach ($ar_subcontext as $value) {
-						if (!in_array($value, $context)) {
+						#if (!in_array($value, $context)) {
 							$context[] = $value;
-						}
+						#}
 					}
 
 			}//end if (!empty($dato))
 
 		// Value
-			$value = reset($dato); // For now; Only the first for the list (in probe)
+			$value = $dato;
 						
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
@@ -124,3 +125,4 @@
 
 // JSON string
 	return common::build_element_json_output($context, $data);
+*/

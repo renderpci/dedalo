@@ -412,7 +412,7 @@ class search_development2 {
 	
 		foreach ($ar_value as $search_object) {
 			if (!is_object($search_object)) {
-				dump($search_object, ' receibed object (search_object) : '.to_string());
+				dump($search_object, ' Invalid received object (search_object) : '.to_string());
 				debug_log(__METHOD__." Invalid (ignored) non object search_object: ".to_string($search_object), logger::DEBUG);
 				debug_log(__METHOD__." ar_value: ".json_encode($ar_value), logger::DEBUG);
 				throw new Exception("Error Processing Request. search_object must be an object", 1);				
@@ -1643,7 +1643,7 @@ class search_development2 {
 		$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';		
 		
 		# Avoid root user is showed except for root
-		if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO) {
+		if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO && navigator::get_user_id()!=-1) {
 			#if(SHOW_DEBUG!==true) {
 				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
 			#}			

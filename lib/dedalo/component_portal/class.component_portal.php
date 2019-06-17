@@ -1918,144 +1918,160 @@ class component_portal extends component_relation_common {
 	* GET_LAYOUT_MAP
 	* Calculate display items to generate portal html
 	* Cases:
-	*	1. Modo 'list' : Uses childrens to build layout map
-	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
+	*	 Modo 'list' : Uses childrens to build layout map
+	* 	 Modo 'edit' : Uses related terms to build layout map (default)	
 	*/
-	public function get_layout_map( $view='full' ) {
+	/* PASADO A COMPONENT_RELATION_COMMON (!)
+	public function get_layout_map($view='full') {
 		
-		if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
+		// already calculated
+			if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
+		
+		// 1,2 call common to set layout_map using ar_dd_objects or user preset if available
+			$layout_map = parent::get_layout_map();
+			if (!empty($layout_map)) {
+				$this->layout_map = $layout_map;
+				return $this->layout_map;
+			}
 
-			#dump($view, ' $view ++ '.to_string());
-
-		$ar_related=array();
-		switch ($this->modo) {
-			case 'list':
-			case 'portal_list':
-				# CASE SECTION LIST IS DEFINED				
-				$ar_terms 		  = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
-				
-				if(isset($ar_terms[0]) ) {
+		// 3 option. default from structure fallback
+			$ar_related=array();
+			switch ($this->modo) {
+				case 'list':
+				case 'portal_list':
+					# CASE SECTION LIST IS DEFINED				
+					$ar_terms 		  = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
 					
-					# Use found related terms as new list
-					$current_term = $ar_terms[0];
-					$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-					
-				}else{
+					if(isset($ar_terms[0]) ) {
+						
+						# Use found related terms as new list
+						$current_term = $ar_terms[0];
+						$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+						
+					}else{
 
-					# FALLBACK RELATED WHEN SECTION LIST IS NOT DEFINED
-					# If not defined sectiopn list
-					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);						
-				}
-				break;
-			
-			case 'edit':
-			default:
-				if($view==='full') { // || $view==='view_mosaic'
-					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
-					break;
-				}else{
-					# CASE VIEW IS DEFINED
-					$ar_terms = (array)RecordObj_dd::get_ar_childrens($this->tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());				
-					foreach ($ar_terms as $current_term) {
-						# Locate 'edit_views' in childrens
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);						
-						if ($modelo_name!=='edit_view') continue;
-
-						$view_name = RecordObj_dd::get_termino_by_tipo($current_term);	
-						if($view===$view_name){
-							# Use related terms as new list
-							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-							# Fix / set current edit_view propiedades to portal propiedades
-							$RecordObj_dd 			= new RecordObj_dd($current_term);
-							$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-							# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());		
-							if ( isset($edit_view_propiedades->edit_view_options) ) {
-								$this->edit_view_options = $edit_view_propiedades->edit_view_options;									
-							}
-							break;
-						}						
+						# FALLBACK RELATED WHEN SECTION LIST IS NOT DEFINED
+						# If not defined sectiopn list
+						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);						
 					}
-				}
-				break;
-		}//end switch ($this->modo)	
-
-		# PORTAL_SECTION_TIPO : Find portal_section_tipo in related terms and store for use later
-		foreach ((array)$ar_related as $key => $current_tipo) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				#dump($modelo_name,"modelo_name $modelo");
-
-			if ($modelo_name==='component_state') {
-				$this->component_state_tipo = $current_tipo; // Store to reuse in custom layout map later
-			}
-			elseif ($modelo_name==='section') {
-				$this->ar_target_section_tipo[] = $current_tipo; // Set portal_section_tipo find it
-				unset($ar_related[$key]); // Remove self section_tipo from array of components
-				//break;
-			}
-			elseif ($modelo_name==='exclude_elements') {
-				unset($ar_related[$key]); // Remove self section_tipo from array of components
-			}
-		}
-		#$layout_map = array($this->tipo => $ar_related);
-
-		$layout_map = [];
-		foreach ($ar_related as $current_related_tipo) {
-			
-			$related = new stdClass();
-				$related->tipo 			= $current_related_tipo;
-				$related->section_tipo 	= $this->ar_target_section_tipo[0];
-				$related->model 		= RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
-				$related->mode 			= $this->get_modo();
+					break;
 				
-			
-			$layout_map[] = $related;
-		}
+				case 'edit':
+				default:
+					if($view==='full') { // || $view==='view_mosaic'
+						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
+						break;
+					}else{
+						# CASE VIEW IS DEFINED
+						$ar_terms = (array)RecordObj_dd::get_ar_childrens($this->tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());				
+						foreach ($ar_terms as $current_term) {
+							# Locate 'edit_views' in childrens
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);						
+							if ($modelo_name!=='edit_view') continue;
 
+							$view_name = RecordObj_dd::get_termino_by_tipo($current_term);	
+							if($view===$view_name){
+								# Use related terms as new list
+								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								# Fix / set current edit_view propiedades to portal propiedades
+								$RecordObj_dd 			= new RecordObj_dd($current_term);
+								$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
+								# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());		
+								if ( isset($edit_view_propiedades->edit_view_options) ) {
+									$this->edit_view_options = $edit_view_propiedades->edit_view_options;									
+								}
+								break;
+							}						
+						}
+					}
+					break;
+			}//end switch ($this->modo)	
 
-		#
-		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
-		# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
-		if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
-			$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
-			foreach ($layout_map as $key => $item) {
-				$current_tipo = $item->tipo;
-				if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
-					unset( $layout_map[$key]);
-					debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
+			# PORTAL_SECTION_TIPO : Find portal_section_tipo in related terms and store for use later
+			foreach ((array)$ar_related as $key => $current_tipo) {
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					#dump($modelo_name,"modelo_name $modelo");
+
+				if ($modelo_name==='component_state') {
+					$this->component_state_tipo = $current_tipo; // Store to reuse in custom layout map later
+				}
+				elseif ($modelo_name==='section') {
+					$this->ar_target_section_tipo[] = $current_tipo; // Set portal_section_tipo find it
+					unset($ar_related[$key]); // Remove self section_tipo from array of components
+					//break;
+				}
+				elseif ($modelo_name==='exclude_elements') {
+					unset($ar_related[$key]); // Remove self section_tipo from array of components
 				}
 			}
-			$layout_map = array_values($layout_map);
-		}
 
-		return $layout_map;
+
+			$layout_map = [];
+			foreach ($ar_related as $current_element_tipo) {
+				
+				// parent info
+					$RecordObj_dd 	= new RecordObj_dd($current_element_tipo);
+					$parent 		= $RecordObj_dd->get_parent();
+
+				$dd_object = new dd_object((object)[
+					'tipo' 			=> $current_element_tipo,
+					'section_tipo' 	=> reset($this->ar_target_section_tipo), // (?)
+					'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_element_tipo,true),
+					'mode' 			=> $this->get_modo(),
+					'parent' 		=> $parent
+				]);
+				
+				$layout_map[] = $dd_object;
+			}
+			
+			# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+			# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
+				if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
+					$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+					foreach ($layout_map as $key => $item) {
+						$current_tipo = $item->tipo;
+						if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+							unset( $layout_map[$key]);
+							debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
+						}
+					}
+					$layout_map = array_values($layout_map);
+				}
+
+		// set layout_map
+			$this->layout_map = $layout_map;
+
+			debug_log(__METHOD__." layout map portal calculated default from structure [$this->tipo]".to_string(), logger::DEBUG);
+
+		return $this->layout_map;
 	}//end get_layout_map
-
+	*/
 
 
 	/**
 	* GET_STRUCTURE_CONTEXT
 	* @return object $item
 	*/
-	public function get_structure_context($permissions = 0) {
-
-		$_structure_context = parent::get_structure_context($permissions);
-
-		/*
-		if(isset($this->layout_map)){
-			$_structure_context->layout_map = $this->layout_map;
-		}else{
-
-			$_structure_context->layout_map = $this->get_layout_map();
-		}
-		*/
-		$user_id = navigator::get_user_id();
-		$layout_map    = new layout_map();
-		$layout_map = $layout_map-> get_layout_map($this->section_tipo, $this->tipo, $this->modo,$user_id );
-
-			dump($layout_map, ' layout_map ++++++ '.to_string());
-
-		return $_structure_context;
-	}//end get_structure_context
+	# public function get_structure_context($permissions=0) {
+	# 
+ 	# 	$structure_context = parent::get_structure_context($permissions);
+ 	# 	
+ 	# 	#if(isset($this->layout_map)){
+ 	# 	#	$structure_context->layout_map = $this->layout_map;
+ 	# 	#}else{
+ 	# 	#	$structure_context->layout_map = $this->get_layout_map();
+ 	# 	#}			
+ 	# 	
+ 	# 	#$layout_map = layout_map::get_layout_map(
+ 	# 	#	$this->section_tipo,
+ 	# 	#	$this->tipo,
+ 	# 	#	$this->modo,
+ 	# 	#	navigator::get_user_id()
+ 	# 	#);
+ 	# 	#dump($layout_map, ' layout_map ++++++ '.to_string());
+	#
+ 	# 	return $structure_context;
+	# }//end get_structure_context
 
 
 
