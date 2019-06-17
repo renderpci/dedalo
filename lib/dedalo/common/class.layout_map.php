@@ -42,6 +42,9 @@ class layout_map {
 				
 		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
+		dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
+
+
 		// 1. dd_api::$ar_dd_objects
 			if (isset(dd_api::$ar_dd_objects)) {
 				// dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '.to_string());
