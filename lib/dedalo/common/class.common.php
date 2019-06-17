@@ -1507,8 +1507,7 @@ abstract class common {
 		// sort vars
 			$tipo 		  = $this->get_tipo();
 			$section_tipo = $this->get_section_tipo();
-			$translatable = $this->RecordObj_dd->get_traducible()==='si' ? true : false;
-			$parent 	  = isset($this->from_component_tipo) ? $this->from_component_tipo : $this->RecordObj_dd->get_parent();
+			$translatable = $this->RecordObj_dd->get_traducible()==='si' ? true : false;			
 			$mode 		  = $this->get_modo();
 			$label 		  = $this->get_label();
 			$lang		  = $this->get_lang();
@@ -1517,51 +1516,8 @@ abstract class common {
 				$properties = new stdClass();
 			}
 
-
-		
-		#// resolve type
-		#	if (strpos($model, 'component_')===0) {
-		#		$type = 'component';
-		#	}elseif (in_array($model, section::get_ar_grouper_models())) {
-		#		$type = 'grouper';
-		#	}elseif ($model === 'section') {
-		#		$type = 'section';
-		#	}elseif (strpos($model, 'button_')===0) {
-		#		$type = 'button';
-		#	}else{
-		#		debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
-		#		throw new Exception("Error Processing Request", 1);				
-		#		return false;
-		#	}			
-		#// build context item
-		#	$item = new stdClass();
-		#		$item->type 			= $type; // like 'component';
-		#		$item->tipo 			= $this->get_tipo();
-		#		$item->model 			= $model;
-		#		$item->label 			= $this->get_label();
-		#		$item->section_tipo		= $this->get_section_tipo();
-		#		$item->lang				= $this->get_lang();
-		#		$item->mode				= $this->get_modo();
-		#		$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;				
-		#		$item->properties 		= $this->get_propiedades();				
-		#		
-		#		$item->permissions		= $permissions;	
-		#	return $item;
-
-		$dd_object = new dd_object((object)[
-			'label' 		=> $label,
-			'tipo' 			=> $tipo,
-			'section_tipo' 	=> $section_tipo,
-			'model' 		=> $model,
-			'parent' 		=> $parent,
-			'lang' 			=> $lang,
-			'mode' 			=> $mode,
-			'translatable' 	=> $translatable,
-			'properties' 	=> $properties,
-			'permissions'	=> $permissions
-		]);
-
 		// parent
+			$parent = isset($this->from_parent) ? $this->from_parent : $this->RecordObj_dd->get_parent();
 			if (isset(dd_api::$ar_dd_objects)) {
 				$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
 					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
@@ -1571,9 +1527,24 @@ abstract class common {
 				});
 				if (!empty($request_dd_object->parent)) {
 					// set
-					$dd_object->parent = $request_dd_object->parent;
+					$parent = $request_dd_object->parent;
 				}
 			}
+	
+		// dd_object
+			$dd_object = new dd_object((object)[
+				'label' 		=> $label,
+				'tipo' 			=> $tipo,
+				'section_tipo' 	=> $section_tipo,
+				'model' 		=> $model,
+				'parent' 		=> $parent,
+				'lang' 			=> $lang,
+				'mode' 			=> $mode,
+				'translatable' 	=> $translatable,
+				'properties' 	=> $properties,
+				'permissions'	=> $permissions
+			]);
+		
 
 		return $dd_object;
 	}//end get_structure_context
