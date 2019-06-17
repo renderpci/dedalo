@@ -151,20 +151,6 @@
 				
 			}//end if (!empty($dato))
 
-
-
-		// Value
-			#$value = reset($dato); // For now; Only the first for the list (in probe)
-			#			
-			#$item = new stdClass();
-			#	$item->section_id 			= $this->get_section_id();
-			#	$item->tipo 				= $this->get_tipo();
-			#	$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
-			#	$item->section_tipo 		= $this->get_section_tipo();
-			#	$item->model 				= get_class($this);
-			#	$item->value 				= $value;
-			#
-			#$data[] = $item;
 			
 	}// end if $permissions > 0
 
