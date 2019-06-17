@@ -20,7 +20,7 @@
 
 		// subcontext from layout_map items 							
 			$ar_subcontext 	= [];
-			$layout_map 	= $this->get_layout_map(); 	dump($layout_map, ' layout_map ++ '.to_string());
+			$layout_map 	= $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string());
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 		= (object)$dd_object;
@@ -28,14 +28,14 @@
 					
 				$mode 			= $dd_object->mode ?? 'list';
 				$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				
+					
 				// temp
-					#if (in_array($model, ['component_section_id','component_publication','component_select_lang','component_select'])) {								
+					#if (in_array($model, ['component_portal'])) {								
 					#	break;
 					#}
-					if (!in_array($model, ['component_input_text','component_text_area','section_id'])) { // ,'component_portal','component_text_area'
+					#if (!in_array($model, ['component_portal'])) { // ,'component_portal','component_text_area'
 					#	continue;
-					}
+					#}
 
 				switch (true) {
 					case (strpos($model, 'component_')===0):								
@@ -60,7 +60,10 @@
 				if (isset($related_element)) {				
 				
 					// get the JSON context of the related component
-						$element_json = $related_element->get_json();
+						$item_options = new stdClass();
+							$item_options->get_context 	 = true;
+							$item_options->get_data 	 = false;
+						$element_json = $related_element->get_json($options);
 
 					// temp ar_subcontext
 						$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
@@ -84,14 +87,13 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-
+	
 		// Building real value			
 			$dato = $this->get_dato();
-			if (!empty($dato)) {
-
-				$layout_map = $this->get_layout_map();
-	
+			if (!empty($dato)) {				
+		
 				// Iterate dd_object for colums
+					$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
 					foreach ((array)$layout_map as $dd_object) {
 
 						$tipo 			= $dd_object->tipo;
@@ -100,14 +102,14 @@
 						$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						$section_id 	= $this->section_id;
 						$section_tipo 	= $this->tipo;
-
+	
 						switch (true) {
 
 							case (strpos($model, 'component_')===0):
 
-								if (!in_array($model, ['component_input_text','component_text_area'])) { // ,'component_portal','component_text_area'
+								#if (!in_array($model, ['component_input_text','component_text_area'])) { // ,'component_portal','component_text_area'
 								#	continue 2;
-								}
+								#}
 
 								// components
 									$current_component  = component_common::get_instance($model,
@@ -115,22 +117,25 @@
 																						 $section_id,
 																						 $mode,
 																						 $lang,
-																						 $section_tipo);
+																						 $section_tipo);								
 								// component ar_layout_map
-									$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
-										 if($item->typo==='ddo' && $item->parent===$tipo  ) return $item;
-									});									
-									if (!empty($ar_layout_map)) {
-										$current_component->layout_map 	= $ar_layout_map;
-									}
+									#$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
+									#	 if($item->typo==='ddo' && $item->parent===$tipo) return $item;
+									#});									
+									#if (!empty($ar_layout_map)) {
+									#	$current_component->layout_map 	= $ar_layout_map;
+									#}
 
 								// properties
 									if (isset($dd_object->properties)){
 										$current_component->set_properties($dd_object->properties);
 									}
-
+	
 								// get component json
-									$component_json = $current_component->get_json();
+									$get_json_options = new stdClass();
+										$get_json_options->get_context 	= false;
+										$get_json_options->get_data 	= true;
+									$component_json = $current_component->get_json($get_json_options);
 
 								// data add
 									$data = array_merge($data, $component_json->data);
@@ -138,7 +143,7 @@
 
 							default:
 								# not defined model from context / data
-								debug_log(__METHOD__." Ignored model $model - $tipo ".to_string(), logger::WARNING);
+								debug_log(" Section json 2. Ignored model '$model' - tipo: '$tipo' ".to_string(), logger::WARNING);
 								break;
 						}							
 

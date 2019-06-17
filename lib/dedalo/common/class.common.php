@@ -1314,119 +1314,6 @@ abstract class common {
 
 
 	/**
-	* BUILD_ELEMENT_JSON_OUTPUT
-	* Simply group context and data into a ¡n object and encode as JSON string
-	* @param object $context
-	* @param object $data
-	* @return string $result
-	*/
-	public static function build_element_json_output($context, $data=[]) {
-		
-		$element = new stdClass();
-			$element->context = $context;
-			$element->data 	  = $data;
-
-		#if(SHOW_DEBUG===true) {
-		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-		#}else{
-		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-		#}
-		$result = $element;
-
-		return $result;
-	}//end build_element_json_output
-
-
-
-	/**
-	* GET_JSON
-	* @param object $request_options
-	* 	Optional. Default is false
-	* @return array $json 
-	*	Array of objects with data and context (configurable)
-	*/
-	public function get_json($request_options=false) {
-
-		// Debug
-			if(SHOW_DEBUG===true) $start_time = start_time();
-
-		// options parse
-			$options = new stdClass();
-				$options->get_context 	= true;
-				$options->get_data 		= true;
-				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// path. Class name is called class (ex. component_input_text), not this class (common)
-			$path = DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php';
-
-		// controller include
-			$json = include( $path );
-
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$exec_time = exec_time_unit($start_time,'ms')." ms";				
-				#$element = json_decode($json);
-				#	$element->debug = new stdClass();
-				#	$element->debug->exec_time = $exec_time;
-				#$json = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-				$json->debug = new stdClass();
-					$json->debug->exec_time = $exec_time;
-			}
-
-		return $json;		
-	}//end get_json
-
-
-
-	/**
-	* GET_STRUCTURE_CONTEXT
-	* @return object $item
-	*/
-	public function get_structure_context($permissions = 0) {
-
-		// class called (model name too like component_input_text)
-			$model = get_called_class();
-
-		// resolve type
-			if (strpos($model, 'component_')===0) {
-				$type = 'component';
-			}elseif (in_array($model, section::get_ar_grouper_models())) {
-				$type = 'grouper';
-			}elseif ($model === 'section') {
-				$type = 'section';
-			}elseif (strpos($model, 'button_')===0) {
-				$type = 'button';
-			}else{
-				debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
-				throw new Exception("Error Processing Request", 1);				
-				return false;
-			}
-			
-		// build context item
-			$item = new stdClass();
-				$item->type 			= $type; // like 'component';
-				$item->tipo 			= $this->get_tipo();
-				$item->model 			= $model;
-				$item->label 			= $this->get_label();
-				$item->section_tipo		= $this->get_section_tipo();
-				$item->lang				= $this->get_lang();
-				$item->mode				= $this->get_modo();
-				$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;				
-				$item->properties 		= $this->get_propiedades();
-				if(isset($this->from_component_tipo)){
-					$item->parent 			= $this->from_component_tipo;
-				}else{
-					$item->parent 			= $this->RecordObj_dd->get_parent();
-				}
-				
-				$item->permissions		= $permissions;				
-
-		return $item;
-	}//end get_structure_context
-
-
-
-	/**
 	* TRUNCATE_TEXT
 	* Multibyte truncate or trim text
 	*/
@@ -1540,6 +1427,187 @@ abstract class common {
 
 	    return $full_text;
 	}//end truncate_html
+
+
+
+	/**
+	* BUILD_ELEMENT_JSON_OUTPUT
+	* Simply group context and data into a ¡n object and encode as JSON string
+	* @param object $context
+	* @param object $data
+	* @return string $result
+	*/
+	public static function build_element_json_output($context, $data=[]) {
+		
+		$element = new stdClass();
+			$element->context = $context;
+			$element->data 	  = $data;
+
+		#if(SHOW_DEBUG===true) {
+		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+		#}else{
+		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+		#}
+		$result = $element;
+
+		return $result;
+	}//end build_element_json_output
+
+
+
+	/**
+	* GET_JSON
+	* @param object $request_options
+	* 	Optional. Default is false
+	* @return array $json 
+	*	Array of objects with data and context (configurable)
+	*/
+	public function get_json($request_options=false) {
+	
+		// Debug
+			if(SHOW_DEBUG===true) $start_time = start_time();
+
+		// options parse
+			$options = new stdClass();
+				$options->get_context 	= true;
+				$options->get_data 		= true;				
+				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		
+		// path. Class name is called class (ex. component_input_text), not this class (common)
+			$path = DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php';
+
+		// controller include
+			$json = include( $path );
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$exec_time = exec_time_unit($start_time,'ms')." ms";				
+				#$element = json_decode($json);
+				#	$element->debug = new stdClass();
+				#	$element->debug->exec_time = $exec_time;
+				#$json = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+				$json->debug = new stdClass();
+					$json->debug->exec_time = $exec_time;
+			}
+
+		return $json;		
+	}//end get_json
+
+
+
+	/**
+	* GET_STRUCTURE_CONTEXT
+	* @return object $item
+	*/
+	public function get_structure_context($permissions=0) {
+
+		// class called (model name too like component_input_text)
+			$model = get_called_class();
+
+		// sort vars
+			$tipo 		  = $this->get_tipo();
+			$section_tipo = $this->get_section_tipo();
+			$translatable = $this->RecordObj_dd->get_traducible()==='si' ? true : false;
+			$parent 	  = isset($this->from_component_tipo) ? $this->from_component_tipo : $this->RecordObj_dd->get_parent();
+			$mode 		  = $this->get_modo();
+			$label 		  = $this->get_label();
+			$lang		  = $this->get_lang();
+			$properties   = $this->get_propiedades();
+			if (empty($properties)) {
+				$properties = new stdClass();
+			}
+
+
+		
+		#// resolve type
+		#	if (strpos($model, 'component_')===0) {
+		#		$type = 'component';
+		#	}elseif (in_array($model, section::get_ar_grouper_models())) {
+		#		$type = 'grouper';
+		#	}elseif ($model === 'section') {
+		#		$type = 'section';
+		#	}elseif (strpos($model, 'button_')===0) {
+		#		$type = 'button';
+		#	}else{
+		#		debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
+		#		throw new Exception("Error Processing Request", 1);				
+		#		return false;
+		#	}			
+		#// build context item
+		#	$item = new stdClass();
+		#		$item->type 			= $type; // like 'component';
+		#		$item->tipo 			= $this->get_tipo();
+		#		$item->model 			= $model;
+		#		$item->label 			= $this->get_label();
+		#		$item->section_tipo		= $this->get_section_tipo();
+		#		$item->lang				= $this->get_lang();
+		#		$item->mode				= $this->get_modo();
+		#		$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;				
+		#		$item->properties 		= $this->get_propiedades();				
+		#		
+		#		$item->permissions		= $permissions;	
+		#	return $item;
+
+		$dd_object = new dd_object((object)[
+			'label' 		=> $label,
+			'tipo' 			=> $tipo,
+			'section_tipo' 	=> $section_tipo,
+			'model' 		=> $model,
+			'parent' 		=> $parent,
+			'lang' 			=> $lang,
+			'mode' 			=> $mode,
+			'translatable' 	=> $translatable,
+			'properties' 	=> $properties,
+			'permissions'	=> $permissions
+		]);
+
+		// parent
+			if (isset(dd_api::$ar_dd_objects)) {
+				$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
+					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+						return $item;
+					}
+					return $carry;
+				});
+				if (!empty($request_dd_object->parent)) {
+					// set
+					$dd_object->parent = $request_dd_object->parent;
+				}
+			}
+
+		return $dd_object;
+	}//end get_structure_context
+
+
+
+	/**
+	* GET_LAYOUT_MAP
+	* Calculate common cases for layout_map
+	* Use for shared. Overwrite or continue for custom needs
+	*/
+	public function get_layout_map($view=null) {
+		
+		if (empty($this->layout_map)) {
+		
+			// calculate
+				$section_tipo 	= $this->get_section_tipo();
+				$tipo 			= $this->get_tipo();
+				$user_id 		= navigator::get_user_id();
+				$modo 			= $this->get_modo();
+			
+			$options = new stdClass();
+				$options->section_tipo 	= $section_tipo;
+				$options->tipo 			= $tipo;
+				$options->modo 			= $modo;
+				$options->user_id 		= $user_id;
+				$options->view 			= $view;
+
+			$this->layout_map = layout_map::get_layout_map($options);
+		}
+
+		return $this->layout_map;
+	}//end get_layout_map
+
 
 
 

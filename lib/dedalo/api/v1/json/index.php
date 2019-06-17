@@ -23,15 +23,29 @@ $start_time=microtime(1);
 
 
 	// manager
-		try {
-			$manager 	 = new manager();
+		$manager = new manager();
+		
+		if(SHOW_DEBUG===true) {
+			
 			$dedalo_data = $manager->manage_request( $options );
 			$result 	 = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
 			echo $result;
-		} catch (Exception $e) {
-			$error_obj = new stdClass();
-				$error_obj->result 	= false;
-				$error_obj->msg 	= 'Exception when calling Dédalo API: '. $e->getMessage();
-			$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE);
-			echo $result;
+
+		}else{
+
+			try {
+				$dedalo_data = $manager->manage_request( $options );
+				$result 	 = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
+				echo $result;
+			} catch (Exception $e) {
+				$error_obj = new stdClass();
+					$error_obj->result 	= false;
+					$error_obj->msg 	= 'Exception when calling Dédalo API: '. $e->getMessage();
+				$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE);
+				echo $result;
+
+				if(SHOW_DEBUG===true) {
+					trigger_error($e->getMessage());
+				}
+			}
 		}
