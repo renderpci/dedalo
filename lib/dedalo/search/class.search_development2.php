@@ -171,7 +171,9 @@ class search_development2 {
 			'matrix_dd',
 			'matrix_hierarchy',
 			'matrix_hierarchy_main',
-			'matrix_langs'
+			'matrix_langs',
+			'matrix_layout',
+			'matrix_layout_dd'
 		];
 		if (in_array($this->matrix_table, $ar_tables_skip_prejects, true)) {
 			$this->skip_projects_filter = true; // Skip filter

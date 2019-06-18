@@ -1563,6 +1563,11 @@
 		Add publication subtitles db_name optional param for discriminate database on instalations with multiple sites
 
 
+	Valencia 07-06-2019 5.4.47
+		Subtitles fix: remove start and end spaces to avoid infinite loops in split lines
+
+
+
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
 					on search fix appearance issue with results css 		
@@ -1582,12 +1587,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.46';
+	$DEDALO_VERSION = '5.4.50';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '04-06-2019');
+	define('DEDALO_BUILD'	, '11-06-2019');
 
 
 	/*
