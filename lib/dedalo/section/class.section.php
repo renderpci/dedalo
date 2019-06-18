@@ -3550,6 +3550,19 @@ class section extends common {
 
 
 
+	/**
+	* GET_AR_TOOLS_OBJ
+	*	
+	*/
+	public function get_ar_tools_obj() {
+
+		$tools = []; // de momento..
+
+		return $tools;
+	}//end get_ar_tools_obj
+
+
+
 
 }//end section
 ?>
