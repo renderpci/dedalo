@@ -42,8 +42,8 @@
 																	 $lang,
 																	 $dd_object->section_tipo);
 
-				// Inject this tipo as related component from_component_tipo
-					$related_component->from_component_tipo = $tipo;
+				// Inject this tipo as related component from_parent
+					$related_component->from_parent = $tipo;
 
 				// get the JSON context of the related component
 					$get_json_options = new stdClass();
@@ -109,7 +109,7 @@
 					$rows_data 		 	 = $search_development2->search();
 
 
-				// subcontext from layout_map items				
+				// subcontext from layout_map items
 					$ar_subcontext 	= [];
 					$layout_map 	= $this->get_layout_map();
 					foreach ($layout_map as $dd_object) {
@@ -125,7 +125,7 @@
 						$lang 			= $dd_object->lang ?? $default_lang;
 						
 						foreach ($rows_data->ar_records as $current_record) {
-						
+							
 							$related_component = component_common::get_instance( $model,
 																				 $current_tipo,
 																				 $current_record->section_id,
@@ -160,7 +160,7 @@
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
 				$item->tipo 				= $this->get_tipo();
-				$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+				$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
 				$item->section_tipo 		= $this->get_section_tipo();
 				$item->model 				= get_class($this);
 				$item->value 				= $value;
