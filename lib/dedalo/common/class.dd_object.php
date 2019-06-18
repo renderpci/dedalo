@@ -19,6 +19,10 @@ class dd_object extends stdClass {
 		# properties 		: {}
 		# permissions 		: 1
 		# translatable 		: true
+		# search 			: true
+		# pagination 		: true
+		# tools 			: []
+		# css 				: {}
 
 	static $ar_type_allowed = ['section','component','grouper','button'];
 
@@ -174,6 +178,41 @@ class dd_object extends stdClass {
 		
 		$this->translatable = $value;
 	}
+
+	/**
+	* SET_SEARCH
+	*/
+	public function set_search(bool $value) {
+		
+		$this->search = $value;
+	}
+
+	/**
+	* SET_PAGINATION
+	*/
+	public function set_pagination(bool $value) {
+		
+		$this->pagination = $value;
+	}
+
+	/**
+	* SET_TOOLS
+	*/
+	public function set_tools(array $value) {
+		
+		$this->tools = $value;
+	}
+
+
+	/**
+	* SET_CSS
+	*/
+	public function set_css($value) {
+		
+		$this->tools = $value;
+	}
+
+
 
 
 }
