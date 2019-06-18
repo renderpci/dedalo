@@ -43,14 +43,14 @@
 
 
 			# INFO
-			$html_content  .= '<div class="css_rows_paginator_info">Page '.$page_number.' of '.$total_pages;
+			$html_content  .= '<div class="css_rows_paginator_info">'.str_replace('X',$page_number,str_replace('Y',$total_pages,label::get_label('pagina_de')));
 			if($modo==="list") {
-				$html_content  .= '. Displayed records from '.$page_row_begin.' to '.$page_row_end.' of '.$total_rows;
-				$html_content  .= '. '.label::get_label('go_to_page').' ';
+				$html_content  .= ' '.str_replace('X',$page_row_begin,str_replace('Y',$page_row_end,str_replace('Z',$total_rows,label::get_label('registros_mostrados'))));				
+				$html_content  .= ' '.label::get_label('go_to_page').' ';
 			}
 			
 			if($modo==="edit") {
-				$html_content  .= '. '.label::get_label('go_to_record').' ';
+				$html_content  .= ' '.label::get_label('go_to_record').' ';
 			}
 				$html_content  .= '<input id="go_to_page" placeholder="'.$page_number.'" onkeyUp="search.go_to_page(this, event, '.(int)$total_pages.', '.(int)$item_per_page.')">';
 				
