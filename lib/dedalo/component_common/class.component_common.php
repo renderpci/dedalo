@@ -964,11 +964,11 @@ abstract class component_common extends common {
 			if(SHOW_DEBUG===true) {
 				#trigger_error("Innecesario cargar los tools aquí. Modo: $this->modo");
 			}
-			return null;
+			return [];
 		} 
 
 		# Si no estamos logeados, no es necesario cargar los tools
-		if(login::is_logged()!==true) return null;
+		if(login::is_logged()!==true) return [];
 	
 		# Load all tools of current component
 		$ar_tools_name = $this->get_ar_tools_name();
@@ -999,10 +999,16 @@ abstract class component_common extends common {
 
 				# Authorized tools names
 				if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
-					$this->ar_authorized_tool_name[] = $tool_name;
+
+					$tool = new stdClass();
+						$tool->name = $tool_name;
+
+					$this->ar_authorized_tool_name[] = $tool;
 				}				
 			}
 		}
+
+
 		
 		return $this->ar_authorized_tool_name;
 	}//end load_tools
