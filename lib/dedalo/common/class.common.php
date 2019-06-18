@@ -1511,39 +1511,65 @@ abstract class common {
 			$mode 		  = $this->get_modo();
 			$label 		  = $this->get_label();
 			$lang		  = $this->get_lang();
+		// properties
 			$properties   = $this->get_propiedades();
 			if (empty($properties)) {
 				$properties = new stdClass();
 			}
-
+		// css
+			$css = new stdClass();
+			if (isset($properties->css)) {
+				$css = $properties->css;
+				// remove from propoerties object
+				unset($properties->css);
+			}		
 		// parent
-			$parent = isset($this->from_parent) ? $this->from_parent : $this->RecordObj_dd->get_parent();
-			if (isset(dd_api::$ar_dd_objects)) {
-				$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
-					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-						return $item;
+			$parent = $section_tipo; // default
+			if (isset($this->from_parent)) {
+
+				// injected by the element
+				$parent = $this->from_parent;			
+			
+			}else{
+
+				// from requested context if exists
+				if (isset(dd_api::$ar_dd_objects)) {
+					$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
+						if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+							return $item;
+						}
+						return $carry;
+					});
+					if (!empty($request_dd_object->parent)) {
+						// set
+						$parent = $request_dd_object->parent;
 					}
-					return $carry;
-				});
-				if (!empty($request_dd_object->parent)) {
-					// set
-					$parent = $request_dd_object->parent;
 				}
 			}
-	
+		// tools
+			$tools = $this->get_ar_tools_obj();
+			if ($tools===false) {
+			 	$tools = [];
+			 } 
+			
+		
 		// dd_object
 			$dd_object = new dd_object((object)[
-				'label' 		=> $label,
+				'label' 		=> $label, // *
 				'tipo' 			=> $tipo,
-				'section_tipo' 	=> $section_tipo,
-				'model' 		=> $model,
-				'parent' 		=> $parent,
+				'section_tipo' 	=> $section_tipo, // *
+				'model' 		=> $model, // *
+				'parent' 		=> $parent, // *
 				'lang' 			=> $lang,
 				'mode' 			=> $mode,
 				'translatable' 	=> $translatable,
 				'properties' 	=> $properties,
-				'permissions'	=> $permissions
+				'css'			=> $css,
+				'permissions'	=> $permissions,
+				'tools'			=> $tools		
 			]);
+
+		
 		
 
 		return $dd_object;
@@ -1578,6 +1604,17 @@ abstract class common {
 
 		return $this->layout_map;
 	}//end get_layout_map
+
+
+
+	/**
+	* GET_STRUCTURE_BUTTONS
+	* @return array
+	*/
+	public function get_structure_buttons($permissions=null) {
+		
+		return [];
+	}//end get_structure_buttons
 
 
 
