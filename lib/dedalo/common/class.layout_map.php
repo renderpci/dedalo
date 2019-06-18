@@ -39,11 +39,8 @@ class layout_map {
 			$modo 			= $options->modo;
 			$user_id 		= $options->user_id;
 			$view 			= $options->view;
-				
+		
 		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
-
-		dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
-
 
 		// 1. dd_api::$ar_dd_objects
 			if (isset(dd_api::$ar_dd_objects)) {
@@ -128,21 +125,22 @@ class layout_map {
 						break;
 				}//end switch $modo	
 
-				// portal_section_tipo : Find portal_section_tipo in related terms and store for use later
-				foreach ((array)$ar_related as $key => $current_tipo) {
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						#dump($modelo_name,"modelo_name $modelo");
-
-					if ($modelo_name==='section') {
-						$ar_target_section_tipo[] = $current_tipo; // Set portal_section_tipo find it
-						unset($ar_related[$key]); // Remove self section_tipo from array of components
-						//break;
-					}
-					elseif ($modelo_name==='exclude_elements') {
-						unset($ar_related[$key]); // Remove self section_tipo from array of components
-					}
-				}		
-		
+				// target_section_tipo, exclude_elements
+					$target_section_tipo = $section_tipo;
+					foreach ((array)$ar_related as $key => $current_tipo) {
+						
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						
+						if ($modelo_name==='section') {
+							$target_section_tipo = $current_tipo; // Set portal_section_tipo find it
+							unset($ar_related[$key]); // Remove self section_tipo from array of components
+							//break;
+						}
+						elseif ($modelo_name==='exclude_elements') {
+							unset($ar_related[$key]); // Remove self section_tipo from array of components
+						}
+					}		
+			
 				// layout map
 					$layout_map = [];
 					foreach ($ar_related as $current_element_tipo) {
@@ -152,7 +150,7 @@ class layout_map {
 
 						$dd_object = new dd_object((object)[
 							'tipo' 			=> $current_element_tipo,
-							'section_tipo' 	=> reset($ar_target_section_tipo), // (?)
+							'section_tipo' 	=> $target_section_tipo, // (?)
 							'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_element_tipo,true),
 							'mode' 			=> $modo,
 							'parent' 		=> $parent
