@@ -263,6 +263,13 @@ class component_svg extends component_common {
 	* @return string $url
 	*/
 	public static function get_url_from_locator($locator) {
+
+		if (empty($locator) || !is_object($locator)) {
+			if(SHOW_DEBUG===true) {
+				trigger_error("[get_url_from_locator] Invalid locator. ".print_r($locator,true));
+			}
+			return null;
+		}
 		
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
