@@ -19,8 +19,13 @@ class dd_object extends stdClass {
 		# properties 		: {}
 		# permissions 		: 1
 		# translatable 		: true
+		# search 			: true
+		# pagination 		: true
+		# tools 			: []
+		# css 				: {}
 
 	static $ar_type_allowed = ['section','component','grouper','button'];
+
 
 
 	/**
@@ -73,6 +78,8 @@ class dd_object extends stdClass {
 	* Verify values and set property to current object
 	*/
 	
+	
+
 	/**
 	* SET_TIPO
 	*/
@@ -82,6 +89,9 @@ class dd_object extends stdClass {
 		}
 		$this->tipo = $value;
 	}
+	
+
+
 	/**
 	* SET_SECTION_TIPO
 	*/
@@ -91,6 +101,9 @@ class dd_object extends stdClass {
 		}
 		$this->section_tipo = $value;
 	}	
+	
+
+
 	/**
 	* SET_PARENT
 	*/
@@ -100,6 +113,9 @@ class dd_object extends stdClass {
 		}
 		$this->parent = $value;
 	}
+	
+
+
 	/**
 	* SET_LANG
 	*/
@@ -109,6 +125,9 @@ class dd_object extends stdClass {
 		}
 		$this->lang = $value;
 	}
+	
+
+
 	/**
 	* SET_MODE
 	*/
@@ -116,6 +135,9 @@ class dd_object extends stdClass {
 
 		$this->mode = $value;
 	}
+	
+
+
 	/**
 	* SET_MODEL
 	*/
@@ -123,6 +145,9 @@ class dd_object extends stdClass {
 		
 		$this->model = $value;
 	}
+	
+
+
 	/**
 	* SET_TYPO
 	*/
@@ -133,6 +158,9 @@ class dd_object extends stdClass {
 		}
 		$this->typo = $value;
 	}	
+	
+
+
 	/**
 	* SET_TYPE
 	* Only allow 'section','component','groupper','button'
@@ -144,6 +172,9 @@ class dd_object extends stdClass {
 		}
 		$this->type = $value;
 	}
+	
+
+
 	/**
 	* SET_PROPERTIES
 	* Note hint parameter 'object' is not supported bellow php 7.2
@@ -153,6 +184,9 @@ class dd_object extends stdClass {
 		
 		$this->properties = $value;
 	}
+	
+
+
 	/**
 	* SET_PERMISSIONS
 	*/
@@ -160,6 +194,9 @@ class dd_object extends stdClass {
 		
 		$this->permissions = $value;
 	}
+	
+
+
 	/**
 	* SET_LABEL
 	*/
@@ -167,6 +204,9 @@ class dd_object extends stdClass {
 		
 		$this->label = $value;
 	}
+	
+
+
 	/**
 	* SET_TRANSLATABLE
 	*/
@@ -175,6 +215,27 @@ class dd_object extends stdClass {
 		$this->translatable = $value;
 	}
 
+	
 
-}
+	/**
+	* SET_TOOLS
+	*/
+	public function set_tools(array $value) {
+		
+		$this->tools = $value;
+	}
+
+
+
+	/**
+	* SET_CSS
+	*/
+	public function set_css($value) {
+		
+		$this->css = $value;
+	}
+
+
+
+}//end dd_object
 ?>
