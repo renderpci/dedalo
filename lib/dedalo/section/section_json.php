@@ -23,8 +23,9 @@
 			$layout_map 	= $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string());
 			foreach ($layout_map as $dd_object) {
 
-				$dd_object 		= (object)$dd_object;
-				$current_tipo 	= $dd_object->tipo;
+				$dd_object 				= (object)$dd_object;
+				$current_tipo 			= $dd_object->tipo;
+				$current_section_tipo 	= $dd_object->section_tipo;
 					
 				$mode 			= $dd_object->mode ?? 'list';
 				$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
@@ -38,7 +39,7 @@
 					#}
 
 				switch (true) {
-					case (strpos($model, 'component_')===0):								
+					case (strpos($model, 'component_')===0):
 						
 						$RecordObj_dd 	= new RecordObj_dd($tipo);
 						$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -49,9 +50,14 @@
 																			null,
 																			$mode,
 																			$lang,
-																			$dd_object->section_tipo);
+																			$current_section_tipo);
 						break;
 					
+					case (in_array($model, layout_map::$groupers)):
+						
+						$related_element = new $model($current_tipo, $current_section_tipo, $mode);											
+						break;
+
 					default:
 						# code...
 						break;

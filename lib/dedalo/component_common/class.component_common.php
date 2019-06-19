@@ -320,7 +320,7 @@ abstract class component_common extends common {
 
 
 		# SET_DATO_DEFAULT (new way 28-10-2016)
-		if ( $this->modo==='edit' ) {
+		if ( $this->modo==='edit' && !is_null($this->parent) ) {
 			$this->set_dato_default();
 		}
 	}//end __construct
@@ -901,7 +901,7 @@ abstract class component_common extends common {
 		if($this->ar_tools_obj===false) {
 			$this->load_tools();
 		}
-
+	
 		return $this->ar_tools_obj;
 	}//end get_ar_tools_obj
 
@@ -972,7 +972,7 @@ abstract class component_common extends common {
 	
 		# Load all tools of current component
 		$ar_tools_name = $this->get_ar_tools_name();
-				
+		
 		# check_lang_tools default is true
 		if ($check_lang_tools===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
@@ -986,7 +986,7 @@ abstract class component_common extends common {
 
 		# Create obj tools array
 		if( is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
-
+		
 			$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
 
 			if ($authorized_tool===true) {				
@@ -1007,8 +1007,7 @@ abstract class component_common extends common {
 				}				
 			}
 		}
-
-
+	
 		
 		return $this->ar_authorized_tool_name;
 	}//end load_tools
