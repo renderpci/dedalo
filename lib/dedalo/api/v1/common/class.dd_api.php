@@ -180,7 +180,7 @@ class dd_api {
 	
 						$tipo 			= $dd_object->tipo;
 						$section_tipo 	= $dd_object->section_tipo;						
-						$mode 			= 'list'; // for context always 'list' to avoid autosave default values
+						$mode 			= $dd_object->mode ?? 'list';
 										
 						$RecordObj_dd 	= new RecordObj_dd($tipo);
 						$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -379,6 +379,9 @@ class dd_api {
 							$data = array_merge($data, $section_json->data);
 
 					$i++; }//end iterate records
+
+				// store search_query_object
+					$context[] = $current_sqo;
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
 			*/
