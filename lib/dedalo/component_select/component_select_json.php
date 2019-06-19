@@ -20,7 +20,6 @@
 	
 	if($options->get_data===true && $permissions>0){
 			
-		// item_values
 		switch ($modo) {
 			case 'edit':
 				$dato 				= $this->get_dato();
