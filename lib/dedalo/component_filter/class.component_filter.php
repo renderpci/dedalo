@@ -54,7 +54,7 @@ class component_filter extends component_relation_common {
 
 		# DEDALO_DEFAULT_PROJECT
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto definido en config 
-		if ($modo==='edit' && get_called_class()==='component_filter') { // Remember that component_filter_master extends this class
+		if ($modo==='edit' && get_called_class()==='component_filter' && !is_null($this->parent)) { // Remember that component_filter_master extends this class
 			$dato = $this->get_dato();				
 			if(empty($dato)) {
 				#
