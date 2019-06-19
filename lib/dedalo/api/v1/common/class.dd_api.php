@@ -288,7 +288,7 @@ class dd_api {
 	
 		// data
 			$data = [];
-			/*
+			/**/
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
 			});			
@@ -384,7 +384,7 @@ class dd_api {
 					$context[] = $current_sqo;
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
-			*/
+			
 
 		// Set result object
 			$result->context = $context;
