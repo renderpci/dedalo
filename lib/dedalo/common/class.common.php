@@ -1524,7 +1524,7 @@ abstract class common {
 				unset($properties->css);
 			}		
 		// parent
-			$parent = $this->get_parent(); // default
+			$parent = $this->RecordObj_dd->get_parent(); // default
 			if (isset($this->from_parent)) {
 
 				// injected by the element
@@ -1547,7 +1547,7 @@ abstract class common {
 				# }
 			}
 		// tools
-			$tools = $this->get_ar_tools_obj();
+			$tools = $this->get_ar_tools_obj();			
 			if ($tools===false) {
 			 	$tools = [];
 			 } 
@@ -1566,10 +1566,8 @@ abstract class common {
 				'properties' 	=> $properties,
 				'css'			=> $css,
 				'permissions'	=> $permissions,
-				'tools'			=> $tools		
-			]);
-
-		
+				'tools'			=> $tools
+			]);		
 		
 
 		return $dd_object;
