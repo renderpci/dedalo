@@ -908,6 +908,65 @@ abstract class component_common extends common {
 
 
 	/**
+	* LOAD TOOLS
+	*/
+	public function load_tools( $check_lang_tools=true ) {
+
+		if(strpos($this->modo, 'edit')===false ){
+			if(SHOW_DEBUG===true) {
+				#trigger_error("Innecesario cargar los tools aquí. Modo: $this->modo");
+			}
+			return [];
+		} 
+
+		# Si no estamos logeados, no es necesario cargar los tools
+		if(login::is_logged()!==true) return [];
+	
+		# Load all tools of current component
+		$ar_tools_name = $this->get_ar_tools_name();
+		
+		# check_lang_tools default is true
+		if ($check_lang_tools===true) {
+			$traducible = $this->RecordObj_dd->get_traducible();
+			if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
+				$key = array_search('tool_lang',$ar_tools_name);
+				if($key!==false){
+					unset($ar_tools_name[$key]);
+				}
+			}
+		}
+	
+		# Create obj tools array
+		$this->ar_tools_obj = [];
+		if(is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
+		
+			$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
+
+			if ($authorized_tool===true) {				
+
+				# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
+				if (strpos($tool_name, 'indexation')!==false) {					
+					$ts_permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO, DEDALO_TESAURO_TIPO);
+					if ($ts_permissions<1) continue;	# Skip this tool
+				}				
+
+				# Authorized tools names
+				#if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
+
+					$tool = new stdClass();
+						$tool->name = $tool_name;
+
+					$this->ar_tools_obj[] = $tool;
+				#}				
+			}
+		}
+		
+		return $this->ar_tools_obj;
+	}//end load_tools
+
+
+
+	/**
 	* LOAD SPECIFIC TOOL
 	* Note: Used in class.inspector to load relation tool
 	* @param string $tool_name
@@ -951,66 +1010,7 @@ abstract class component_common extends common {
 		}
 			
 		return (array)$ar_tools_name;
-	}//end get_ar_tools_name
-
-
-
-	/**
-	* LOAD TOOLS
-	*/
-	public function load_tools( $check_lang_tools=true ) {
-
-		if(strpos($this->modo, 'edit')===false ){
-			if(SHOW_DEBUG===true) {
-				#trigger_error("Innecesario cargar los tools aquí. Modo: $this->modo");
-			}
-			return [];
-		} 
-
-		# Si no estamos logeados, no es necesario cargar los tools
-		if(login::is_logged()!==true) return [];
-	
-		# Load all tools of current component
-		$ar_tools_name = $this->get_ar_tools_name();
-		
-		# check_lang_tools default is true
-		if ($check_lang_tools===true) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
-				$key = array_search('tool_lang',$ar_tools_name);
-				if($key!==false){
-					unset($ar_tools_name[$key]);
-				}
-			}
-		}
-
-		# Create obj tools array
-		if( is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
-		
-			$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
-
-			if ($authorized_tool===true) {				
-
-				# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
-				if (strpos($tool_name, 'indexation')!==false) {					
-					$ts_permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO, DEDALO_TESAURO_TIPO);
-					if ($ts_permissions<1) continue;	# Skip this tool
-				}				
-
-				# Authorized tools names
-				if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
-
-					$tool = new stdClass();
-						$tool->name = $tool_name;
-
-					$this->ar_authorized_tool_name[] = $tool;
-				}				
-			}
-		}
-	
-		
-		return $this->ar_authorized_tool_name;
-	}//end load_tools
+	}//end get_ar_tools_name	
 	
 
 

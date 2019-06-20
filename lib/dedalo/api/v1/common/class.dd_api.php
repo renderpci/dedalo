@@ -284,11 +284,12 @@ class dd_api {
 
 			// smart remove data duplicates (!)
 				// $data = section::smart_remove_data_duplicates($data);
+			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 		
 	
 		// data
 			$data = [];
-			/*
+
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
 			});			
@@ -384,7 +385,8 @@ class dd_api {
 					$context[] = $current_sqo;
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
-			*/
+
+			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
 
 		// Set result object
 			$result->context = $context;
@@ -394,7 +396,9 @@ class dd_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->context_exec_time 	= $context_exec_time;
+					$debug->data_exec_time 		= $data_exec_time;
+					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
 				$result->debug = $debug;	
 			}			
 	

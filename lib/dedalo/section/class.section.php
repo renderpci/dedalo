@@ -3556,7 +3556,9 @@ class section extends common {
 	*/
 	public function get_ar_tools_obj() {
 
-		$tools = []; // de momento..
+		$tools = [
+			'name' => 'tool_time_machine'
+		]; // de momento..
 
 		return $tools;
 	}//end get_ar_tools_obj
