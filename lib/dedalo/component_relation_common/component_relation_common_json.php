@@ -18,7 +18,13 @@
 	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions);
+			$dd_object = $this->get_structure_context($permissions);
+
+		// add target sections to the dd_object
+			$target_sections = $this->get_target_sections($permissions);
+			$dd_object->target_sections = $target_sections;
+
+			$context[] = $dd_object;		
 
 		// subcontext from layout_map items
 			$ar_subcontext 	= [];
@@ -62,6 +68,9 @@
 						$context[] = $value;
 					#}
 				}
+
+
+
 	
 	}//end if($options->get_context===true)
 
