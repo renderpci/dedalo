@@ -1,13 +1,9 @@
 <?php
 // JSON data component controller
 
-
-
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
-
-
 
 // context
 	$context = [];
@@ -19,67 +15,50 @@
 
 	}//end if($options->get_context===true)
 
-
-
 // data
 	$data = [];
-	
 
 	if($options->get_data===true && $permissions>0){
 			
-		// item_values
-			$item_values = [];
-			$modo = $this->get_modo();
-			switch ($modo) {
-				case 'edit':
-					# Working here !
-					break;
-				case 'list':
+		switch ($modo) {
+			case 'edit':
+				$dato 							= $this->get_dato();
+				$ar_all_project_select_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
 
-					$ar_all_project_select_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
-					$dato 							= $this->get_dato();
-					$tipo 							= $this->get_tipo();
-
-					foreach ((array)$ar_all_project_select_langs as $key => $item) {
+				foreach ((array)$ar_all_project_select_langs as $key => $item) {
+				
+					$label   	= lang::get_name_from_code($item);
+					$code 		= $item;
+					$value 		= lang::get_lang_locator_from_code($item);
 					
-						$label   	= lang::get_name_from_code($item);
-						$code 		= $item;
-						$value 		= lang::get_lang_locator_from_code($item);
-						
-						if (!property_exists($value, 'type')) {
-							$value->type = DEDALO_RELATION_TYPE_LINK;
-						}
-						if (!property_exists($value, 'from_component_tipo')) {
-							$value->from_component_tipo = $tipo;
-						}
+					$item_value = new stdClass();			
+						$item_value->value 			= $value;
+						$item_value->label 			= $label;
+						$item_value->code 			= $code;						
+					
+					$item_values[]= $item_value;
+							
+				}	
+				break;
 
-						if (locator::in_array_locator( $value, (array)$dato, $ar_properties=array('section_id','section_tipo') )) {	# dato is array always
-							$selected = true;
-						}else{
-							$selected = false;
-						}
-
-						$item_value = new stdClass();			
-							$item_value->value 			= $value;
-							$item_value->code 			= $code;
-							$item_value->label 			= $label;
-							$item_value->selected 		= $selected;
-
-						$item_values[]= $item_value;
-						
-					}				
-					break;
-			}//end switch ($modo)
+			case 'list':
+				$dato 				= $this->get_valor();
 		
+		}			
+	
 		// item
-			$item = new stdClass();
-				$item->section_id 			= $this->get_section_id();
-				$item->tipo 				= $this->get_tipo();
-				$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
-				$item->section_tipo 		= $this->get_section_tipo();
-				$item->value 				= $item_values;
+		$item = new stdClass();
+			$item->section_id 			= $this->get_section_id();
+			$item->tipo 				= $this->get_tipo();
+			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->section_tipo 		= $this->get_section_tipo();
+			$item->value 				= $dato;
 
-			$data[] = $item;
+	if (isset($item_values)) {
+		$item->datalist 				= $item_values; //$ar_list_of_values->result;
+	}
+
+		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)
 	
