@@ -25,10 +25,9 @@
 
 				$dd_object 				= (object)$dd_object;
 				$current_tipo 			= $dd_object->tipo;
-				$current_section_tipo 	= $dd_object->section_tipo;
-					
-				$mode 			= $dd_object->mode ?? 'list';
-				$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$current_section_tipo 	= $dd_object->section_tipo;					
+				$mode 					= $dd_object->mode ?? 'list';
+				$model 					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					
 				// temp
 					#if (in_array($model, ['component_portal'])) {								
@@ -39,17 +38,15 @@
 					#}
 
 				switch (true) {
-					case (strpos($model, 'component_')===0):
+					case (strpos($model, 'component_')===0):						
 						
-						$RecordObj_dd 	= new RecordObj_dd($tipo);
-						$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$lang 			= $dd_object->lang ?? $default_lang;
+						$current_lang 	 = $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
 						
 						$related_element = component_common::get_instance( 	$model,
 																			$current_tipo,
 																			null,
 																			$mode,
-																			$lang,
+																			$current_lang,
 																			$current_section_tipo);
 						break;
 					
@@ -59,7 +56,7 @@
 						break;
 
 					default:
-						# code...
+						debug_log(" Section json 1 [context]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
 						break;
 				}
 				
@@ -102,10 +99,10 @@
 					$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
 					foreach ((array)$layout_map as $dd_object) {
 
-						$tipo 			= $dd_object->tipo;
+						$current_tipo 	= $dd_object->tipo;
 						$mode 			= $dd_object->mode ?? 'list';
-						$lang 			= $dd_object->lang ?? DEDALO_DATA_LANG;
-						$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
+						$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$section_id 	= $this->section_id;
 						$section_tipo 	= $this->tipo;
 	
@@ -119,10 +116,10 @@
 
 								// components
 									$current_component  = component_common::get_instance($model,
-																						 $tipo,
+																						 $current_tipo,
 																						 $section_id,
 																						 $mode,
-																						 $lang,
+																						 $current_lang,
 																						 $section_tipo);								
 								// component ar_layout_map
 									#$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
@@ -149,7 +146,7 @@
 
 							default:
 								# not defined model from context / data
-								debug_log(" Section json 2. Ignored model '$model' - tipo: '$tipo' ".to_string(), logger::WARNING);
+								debug_log(" Section json 2 [data]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
 								break;
 						}							
 
