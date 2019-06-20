@@ -290,6 +290,7 @@ class dd_api {
 		// data
 			$data = [];
 
+			$data_start_time=microtime(1);
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
 			});			
