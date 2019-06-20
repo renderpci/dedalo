@@ -2048,6 +2048,7 @@ class component_portal extends component_relation_common {
 	*/
 
 
+
 	/**
 	* GET_PORTAL_RECORDS
 	* Search self dato in db for paginate large portals
