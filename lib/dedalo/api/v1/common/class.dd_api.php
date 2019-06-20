@@ -289,8 +289,7 @@ class dd_api {
 	
 		// data
 			$data = [];
-			/**/
-			$data_start_time = microtime(1);
+
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
 			});			
@@ -386,8 +385,8 @@ class dd_api {
 					$context[] = $current_sqo;
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
+
 			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
-			
 
 		// Set result object
 			$result->context = $context;
