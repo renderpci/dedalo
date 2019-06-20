@@ -49,7 +49,7 @@ class component_filter_master extends component_filter {
 	*/
 	public function get_ar_tools_obj() {
 		# no tools area avilable for this component
-		return null;
+		return [];
 	}
 
 
