@@ -236,6 +236,15 @@ class dd_object extends stdClass {
 	}
 
 
+	/**
+	* SET_CSS
+	*/
+	public function set_target_sections($value) {
+		
+		$this->target_sections = $value;
+	}
+
+
 
 }//end dd_object
 ?>

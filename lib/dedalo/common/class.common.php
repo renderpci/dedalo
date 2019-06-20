@@ -1605,17 +1605,5 @@ abstract class common {
 
 
 
-	/**
-	* GET_STRUCTURE_BUTTONS
-	* @return array
-	*/
-	public function get_structure_buttons($permissions=null) {
-		
-		return [];
-	}//end get_structure_buttons
-
-
-
-
 }//end class
 ?>
