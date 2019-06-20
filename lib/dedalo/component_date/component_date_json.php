@@ -6,10 +6,6 @@
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
-	$section_tipo 		= $this->section_tipo;
-	$lang 				= $this->lang;
-	$tipo 				= $this->get_tipo();
-
 
 
 // context
@@ -29,29 +25,23 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		// Building real value			
-			$dato = $this->get_dato();
-			if (!empty($dato)) {
+	// Building real value			
+		$value = $this->get_dato();
+		if (!empty($value)) {
+					
+			// process dato ?
 						
-				// process dato ?
-				
-				
-			}//end if (!empty($dato))
+		}//end if (!empty($dato))
 
+		// Value	
+		$item = new stdClass();
+			$item->section_id 			= $this->get_section_id();
+			$item->tipo 				= $this->get_tipo();
+			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->section_tipo 		= $this->get_section_tipo();				
+			$item->value 				= $value;
 
-
-		// Value
-			$value = reset($dato); // For now; Only the first for the list (in probe)
-						
-			$item = new stdClass();
-				$item->section_id 			= $this->get_section_id();
-				$item->tipo 				= $this->get_tipo();
-				$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
-				$item->section_tipo 		= $this->get_section_tipo();
-				$item->model 				= get_class($this);
-				$item->value 				= $value;
-
-			$data[] = $item;
+		$data[] = $item;
 			
 	}// end if $permissions > 0
 

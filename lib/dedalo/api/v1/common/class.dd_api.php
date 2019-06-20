@@ -290,6 +290,7 @@ class dd_api {
 		// data
 			$data = [];
 
+			$data_start_time=microtime(1);
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
 			});			
@@ -386,7 +387,19 @@ class dd_api {
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
 
+
+			// debug info
+				if(SHOW_DEBUG===true) {
+					foreach ($data as $key => $value) {
+						if (!isset($value->model)) {
+							$model = RecordObj_dd::get_modelo_name_by_tipo($value->tipo,true);
+							$value->model = $model;
+						}
+					};
+				}
+
 			$data_exec_time	= exec_time_unit($start_time,'ms')." ms";
+
 
 		// Set result object
 			$result->context = $context;
