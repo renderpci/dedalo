@@ -1,9 +1,8 @@
 <?php
 // JSON data component controller
-return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relation_common_json.php');
 
 
-/*
+
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
@@ -23,28 +22,24 @@ return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relati
 
 		// subcontext from layout_map items
 			$ar_subcontext 	= [];
-			$layout_map 	= $this->get_layout_map();
+			$layout_map 	= $this->get_layout_map(); 	dump($layout_map, ' layout_map ++ '.to_string());
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 		= (object)$dd_object;
 				$current_tipo 	= $dd_object->tipo;
-					
 				$mode 			= $dd_object->mode ?? 'list';
 				$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$RecordObj_dd 	= new RecordObj_dd($tipo);
-				$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$lang 			= $dd_object->lang ?? $default_lang;
-
+				$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
 				
 				$related_component = component_common::get_instance( $model,
 																	 $current_tipo,
 																	 null,
 																	 $mode,
-																	 $lang,
+																	 $current_lang,
 																	 $dd_object->section_tipo);
 
-				// Inject this tipo as related component from_component_tipo
-					$related_component->from_component_tipo = $tipo;
+				// Inject this tipo as related component from_parent
+					$related_component->from_parent = $tipo;
 
 				// get the JSON context of the related component
 					$get_json_options = new stdClass();
@@ -76,62 +71,29 @@ return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relati
 		$dato = $this->get_dato();
 
 		// subdata
-			if (!empty($dato)) {
-						
-				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-				$target_section_tipo	= reset($ar_target_section_tipo);
-				$max_records 			= 10;
-				$offset 				= 0;
+			if (!empty($dato)) {			
 
-				// search_query_object_options 
-					$search_query_object_options = new stdClass();
-						$search_query_object_options->filter_by_locator  = (array)$dato;
-						$search_query_object_options->section_tipo 		 = $target_section_tipo;
-						$search_query_object_options->tipo 		 		 = $this->tipo;
-						
-						// paginations options
-							$search_query_object_options->limit 		 = $max_records;
-							$search_query_object_options->offset 		 = $offset;
+				// search self records to paginate
+					$rows_data = $this->get_portal_records($dato);
 
-						// Order
-							$order_values = array_map(function($locator){
-								return (int)$locator->section_id;
-							}, $dato);					
-							$item = new stdClass();
-								$item->column_name 	 = 'section_id';
-								$item->column_values = $order_values;		
-							$search_query_object_options->order_custom = [$item];
-
-					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
-					$search_query_object->select = [];
-
-				// search 
-					$search_development2 = new search_development2($search_query_object);
-					$rows_data 		 	 = $search_development2->search();
-
-
-				// subcontext from layout_map items				
+				// subcontext from layout_map items
 					$ar_subcontext 	= [];
 					$layout_map 	= $this->get_layout_map();
 					foreach ($layout_map as $dd_object) {
 
 						$dd_object 		= (object)$dd_object;
-						$current_tipo 	= $dd_object->tipo;
-							
-						$modo 			= 'list';
-						$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						
-						$RecordObj_dd 	= new RecordObj_dd($tipo);
-						$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$lang 			= $dd_object->lang ?? $default_lang;
+						$current_tipo 	= $dd_object->tipo;							
+						$modo 			= $dd_object->mode ?? 'list';
+						$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);							
+						$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);					
 						
 						foreach ($rows_data->ar_records as $current_record) {
-						
+							
 							$related_component = component_common::get_instance( $model,
 																				 $current_tipo,
 																				 $current_record->section_id,
 																				 $modo,
-																				 $lang,
+																				 $current_lang,
 																				 $current_record->section_tipo);
 
 							// Inject this tipo as related component from_component_tipo
@@ -161,7 +123,7 @@ return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relati
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
 				$item->tipo 				= $this->get_tipo();
-				$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+				$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
 				$item->section_tipo 		= $this->get_section_tipo();
 				$item->model 				= get_class($this);
 				$item->value 				= $value;
@@ -174,4 +136,3 @@ return include(DEDALO_LIB_BASE_PATH.'/component_relation_common/component_relati
 
 // JSON string
 	return common::build_element_json_output($context, $data);
-*/

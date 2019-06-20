@@ -2049,29 +2049,47 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* GET_STRUCTURE_CONTEXT
-	* @return object $item
+	* GET_PORTAL_RECORDS
+	* Search self dato in db for paginate large portals
+	* @return object $rows_data
 	*/
-	# public function get_structure_context($permissions=0) {
-	# 
- 	# 	$structure_context = parent::get_structure_context($permissions);
- 	# 	
- 	# 	#if(isset($this->layout_map)){
- 	# 	#	$structure_context->layout_map = $this->layout_map;
- 	# 	#}else{
- 	# 	#	$structure_context->layout_map = $this->get_layout_map();
- 	# 	#}			
- 	# 	
- 	# 	#$layout_map = layout_map::get_layout_map(
- 	# 	#	$this->section_tipo,
- 	# 	#	$this->tipo,
- 	# 	#	$this->modo,
- 	# 	#	navigator::get_user_id()
- 	# 	#);
- 	# 	#dump($layout_map, ' layout_map ++++++ '.to_string());
-	#
- 	# 	return $structure_context;
-	# }//end get_structure_context
+	public function get_portal_records($dato) {
+		
+		$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+		$target_section_tipo	= $ar_target_section_tipo; //reset($ar_target_section_tipo);
+		
+		$max_records 			= 10;
+		$offset 				= 0;
+
+		// search_query_object_options 
+			$search_query_object_options = new stdClass();
+				$search_query_object_options->filter_by_locator  = (array)$dato;
+				$search_query_object_options->section_tipo 		 = $target_section_tipo;
+				$search_query_object_options->tipo 		 		 = $this->tipo;
+				
+				// paginations options
+					$search_query_object_options->limit 		 = $max_records;
+					$search_query_object_options->offset 		 = $offset;
+
+				// Order
+					$order_values = array_map(function($locator){
+						return (int)$locator->section_id;
+					}, $dato);					
+					$item = new stdClass();
+						$item->column_name 	 = 'section_id';
+						$item->column_values = $order_values;		
+					$search_query_object_options->order_custom = [$item];
+
+			$search_query_object = component_portal::build_search_query_object($search_query_object_options);
+				#dump($search_query_object, ' search_query_object ++ '.to_string());
+			$search_query_object->select = [];
+
+		// search 
+			$search_development2 = new search_development2($search_query_object);
+			$rows_data 		 	 = $search_development2->search();
+
+		return $rows_data;
+	}//end get_portal_records
 
 
 

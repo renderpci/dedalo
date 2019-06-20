@@ -4699,5 +4699,20 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_COMPONENT_LANG
+	* Used to resolve component lang before construct it
+	* @return lang code like 'lg-spa'
+	*/
+	public static function get_component_lang($tipo, $data_lang=DEDALO_DATA_LANG) {
+		
+		$RecordObj_dd 	= new RecordObj_dd($tipo);
+		$lang 			= ($RecordObj_dd->get_traducible()==='si') ? $data_lang : DEDALO_DATA_NOLAN;
+
+		return $lang;
+	}//end get_component_lang
+
+
+
 }//end class
 ?>
