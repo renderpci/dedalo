@@ -1,8 +1,8 @@
 <?php
-
-
 /**
 * CLASS DD_OBJECT
+* Defines object with normalized properties and checks
+*
 */
 class dd_object extends stdClass {
 
@@ -234,6 +234,7 @@ class dd_object extends stdClass {
 		
 		$this->css = $value;
 	}
+
 
 
 	/**
