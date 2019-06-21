@@ -298,7 +298,23 @@ class dd_api {
 
 				// search
 					$search_development2 = new search_development2($current_sqo);
-					$rows_data 			 = $search_development2->search();	
+					$rows_data 			 = $search_development2->search();
+
+				// generated the section_data
+					foreach ($current_sqo->section_tipo as $current_section_tipo) {
+					
+						$section_data = new stdClass();
+							$section_data->tipo 		= $current_section_tipo;
+							$section_data->section_tipo = $current_section_tipo;							
+							$section_data->value 		= array_map(function($item) use($current_section_tipo){
+								if ($item->section_tipo===$current_section_tipo) {
+									return $item->section_id;
+								}
+							}, $rows_data->ar_records);
+						
+
+						$data[] = $section_data;
+					}
 
 				// Iterate records
 					$i=0; foreach ($rows_data->ar_records as $record) {
