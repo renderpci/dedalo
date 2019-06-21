@@ -28,6 +28,9 @@
 
 			$dato 			= $this->get_dato();
 			$permissions	= $this->get_permisions_of_this_area();	
+			if(SHOW_DEBUG===true) {
+				$permissions	= 3;
+			}
 			$component_info	= $this->get_component_info('json');
 
 			# HTML_TREE

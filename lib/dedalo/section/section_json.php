@@ -18,69 +18,11 @@
 		// Component structure context (tipo, relations, properties, etc.)
 			$context[] = $this->get_structure_context($permissions);
 
-		// subcontext from layout_map items
-			$ar_subcontext 	= [];
-			$layout_map 	= $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string());
-			foreach ($layout_map as $dd_object) {
-
-				$dd_object 				= (object)$dd_object;
-				$current_tipo 			= $dd_object->tipo;
-				$current_section_tipo 	= $dd_object->section_tipo;					
-				$mode 					= $dd_object->mode ?? 'list';
-				$model 					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					
-				// temp
-					#if (in_array($model, ['component_portal'])) {								
-					#	break;
-					#}
-					#if (!in_array($model, ['component_portal'])) { // ,'component_portal','component_text_area'
-					#	continue;
-					#}
-
-				switch (true) {
-					case (strpos($model, 'component_')===0):						
-						
-						$current_lang 	 = $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
-						
-						$related_element = component_common::get_instance( 	$model,
-																			$current_tipo,
-																			null,
-																			$mode,
-																			$current_lang,
-																			$current_section_tipo);
-						break;
-					
-					case (in_array($model, layout_map::$groupers)):
-						
-						$related_element = new $model($current_tipo, $current_section_tipo, $mode);											
-						break;
-
-					default:
-						debug_log(" Section json 1 [context]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
-						break;
-				}
-				
-				if (isset($related_element)) {				
-				
-					// get the JSON context of the related component
-						$item_options = new stdClass();
-							$item_options->get_context 	 = true;
-							$item_options->get_data 	 = false;
-						$element_json = $related_element->get_json($options);
-
-					// temp ar_subcontext
-						$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
-			
-				}
-			
-			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
-
-			// ar_subcontext add everyone
-				foreach ($ar_subcontext as $value) {
-					#if (!in_array($value, $context)) {
-						$context[] = $value;
-					#}
-				}
+		// subcontext from element layout_map items
+			$ar_subcontext = $this->get_ar_subcontext();
+			foreach ($ar_subcontext as $current_context) {
+				$context[] = $current_context;
+			}
 			
 	}//end if($options->get_context===true)
 
@@ -90,24 +32,27 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-	
-		// Building real value			
-			$dato = $this->get_dato();
-			if (!empty($dato)) {				
+					
+		$dato = $this->get_dato();
+
+		// subdata
+			if (!empty($dato)) {
+
+				$section_id 	= $this->section_id;
+				$section_tipo 	= $this->tipo;
 		
 				// Iterate dd_object for colums
 					$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
 					foreach ((array)$layout_map as $dd_object) {
 
+						$dd_object 		= (object)$dd_object;
 						$current_tipo 	= $dd_object->tipo;
 						$mode 			= $dd_object->mode ?? 'list';
-						$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
 						$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$section_id 	= $this->section_id;
-						$section_tipo 	= $this->tipo;
-	
+						$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
+						
 						switch (true) {
-
+							// components case
 							case (strpos($model, 'component_')===0):
 
 								// components
@@ -116,7 +61,7 @@
 																						 $section_id,
 																						 $mode,
 																						 $current_lang,
-																						 $section_tipo);								
+																						 $section_tipo);
 								// component ar_layout_map
 									#$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
 									#	 if($item->typo==='ddo' && $item->parent===$tipo) return $item;
@@ -139,7 +84,17 @@
 								// data add
 									$data = array_merge($data, $component_json->data);
 								break;
+							
+							// grouper case
+							case (in_array($model, layout_map::$groupers)):
+								
+								$related_element = new $model($current_tipo, $section_tipo, $mode);
 
+								// data add
+									$data = array_merge($data, $component_json->data);										
+								break;
+
+							// oters
 							default:
 								# not defined model from context / data
 								debug_log(" Section json 2 [data]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
@@ -149,7 +104,6 @@
 					}//end iterate display_items
 				
 			}//end if (!empty($dato))
-
 			
 	}// end if $permissions > 0
 

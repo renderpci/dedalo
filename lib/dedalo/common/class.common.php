@@ -1579,6 +1579,75 @@ abstract class common {
 
 
 	/**
+	* GET_AR_SUBCONTEXT
+	* @return array $ar_subcontext
+	*/
+	public function get_ar_subcontext() {
+
+		$ar_subcontext 	= [];
+
+		$tipo = $this->tipo;
+		
+		// subcontext from layout_map items			
+			$layout_map = $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string());
+			foreach ($layout_map as $dd_object) {
+
+				$dd_object 				= (object)$dd_object;
+				$current_tipo 			= $dd_object->tipo;
+				$current_section_tipo 	= $dd_object->section_tipo;					
+				$mode 					= $dd_object->mode ?? 'list';
+				$model 					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				
+				switch (true) {
+					// component case
+					case (strpos($model, 'component_')===0):						
+						
+						$current_lang 	 = $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);						
+						$related_element = component_common::get_instance($model,
+																		  $current_tipo,
+																		  null,
+																		  $mode,
+																		  $current_lang,
+																		  $current_section_tipo);
+						break;
+					
+					// grouper case
+					case (in_array($model, layout_map::$groupers)):
+						
+						$related_element = new $model($current_tipo, $current_section_tipo, $mode);											
+						break;
+
+					// others case
+					default:
+						debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
+						break;
+				}
+				
+				// add
+					if (isset($related_element)) {
+
+						// Inject this tipo as related element from_parent
+							$related_element->from_parent = $tipo;
+					
+						// get the JSON context of the related component
+							$item_options = new stdClass();
+								$item_options->get_context 	 = true;
+								$item_options->get_data 	 = false;
+							$element_json = $related_element->get_json($item_options);
+
+						// temp ar_subcontext
+							$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
+				}
+			
+			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
+
+		
+		return $ar_subcontext;
+	}//end get_ar_subcontext
+
+
+
+	/**
 	* GET_LAYOUT_MAP
 	* Calculate common cases for layout_map
 	* Use for shared. Overwrite or continue for custom needs
