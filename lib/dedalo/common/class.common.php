@@ -1532,19 +1532,22 @@ abstract class common {
 			
 			}else{
 
-				# // from requested context if exists
-				# if (isset(dd_api::$ar_dd_objects)) {
-				# 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
-				# 		if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-				# 			return $item;
-				# 		}
-				# 		return $carry;
-				# 	});
-				# 	if (!empty($request_dd_object->parent)) {
-				# 		// set
-				# 		$parent = $request_dd_object->parent;
-				# 	}
-				# }
+				if($mode==='list') {
+				
+					// from requested context if exists
+					if (isset(dd_api::$ar_dd_objects)) {
+					 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
+							if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+								return $item;
+							}
+							return $carry;
+						});
+						if (!empty($request_dd_object->parent)) {
+							// set
+							$parent = $request_dd_object->parent;
+						}
+					}
+				}
 			}
 		// tools
 			$tools = $this->get_ar_tools_obj();			
