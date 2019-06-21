@@ -23,7 +23,9 @@
 		switch ($modo) {
 				case 'edit':
 				$dato 				= $this->get_dato();
-				$ar_list_of_values	= $this->get_ar_list_of_values2();
+				//TODO - Change function call to retrieve dalalist data
+				$ar_list_of_values	= $this->get_ar_projects_for_current_section();
+
 				break;
 
 			case 'list':
