@@ -18,7 +18,7 @@ class layout_map {
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
 	*/
 	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
-
+	
 		$options = new stdClass();
 			$options->section_tipo 	= null;
 			$options->tipo 			= null;
@@ -42,6 +42,8 @@ class layout_map {
 			$modo 			= $options->modo;
 			$user_id 		= $options->user_id;
 			$view 			= $options->view;
+
+
 		
 		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
@@ -50,7 +52,14 @@ class layout_map {
 				// dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '.to_string());
 				// check found dd_objects of current portal
 				$self_ar_dd_objects = array_filter(dd_api::$ar_dd_objects, function($item) use($tipo, $section_tipo){
-					if($item->parent===$tipo) return $item;
+					if($item->tipo===$tipo) return false;
+
+					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					if ($model==='section') {
+						if($item->section_tipo===$section_tipo) return $item;
+					}else{
+						if($item->parent===$tipo) return $item;
+					}					
 				});
 				if (!empty($self_ar_dd_objects)) {
 					// layout_map
@@ -71,7 +80,7 @@ class layout_map {
 						#dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));					
 				}
 			}
-
+	
 		// 3. calculate from section list or related terms
 			if (!isset($layout_map)) {
 				$ar_related=array();

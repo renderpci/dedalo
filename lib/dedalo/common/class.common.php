@@ -1598,7 +1598,11 @@ abstract class common {
 				$options->tipo 			= $tipo;
 				$options->modo 			= $modo;
 				$options->user_id 		= $user_id;
+
+				if(!empty($view)) {
 				$options->view 			= $view;
+				}
+				
 
 			$this->layout_map = layout_map::get_layout_map($options);
 		}
