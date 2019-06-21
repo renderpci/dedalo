@@ -1548,7 +1548,7 @@ abstract class common {
 			}
 		// tools
 			$tools = $this->get_ar_tools_obj();			
-			if ($tools===false) {
+			if ($tools===false || is_null($tools)) {
 			 	$tools = [];
 			 } 
 			
