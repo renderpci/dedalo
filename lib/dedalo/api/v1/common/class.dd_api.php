@@ -387,6 +387,7 @@ class dd_api {
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
 
+
 			// debug info
 				if(SHOW_DEBUG===true) {
 					foreach ($data as $key => $value) {
@@ -397,7 +398,8 @@ class dd_api {
 					};
 				}
 
-			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
+			$data_exec_time	= exec_time_unit($start_time,'ms')." ms";
+
 
 		// Set result object
 			$result->context = $context;
