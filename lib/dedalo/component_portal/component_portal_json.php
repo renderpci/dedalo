@@ -38,7 +38,7 @@
 		$dato = $this->get_dato();
 
 		// subdata
-			if (!empty($dato)) {			
+			if (!empty($dato)) {
 
 				// search self records to paginate
 					$rows_data = $this->get_portal_records($dato);
