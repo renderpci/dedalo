@@ -18,7 +18,7 @@
 		// Component structure context (tipo, relations, properties, etc.)
 			$context[] = $this->get_structure_context($permissions);
 
-		// subcontext from layout_map items 							
+		// subcontext from layout_map items
 			$ar_subcontext 	= [];
 			$layout_map 	= $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string());
 			foreach ($layout_map as $dd_object) {
@@ -109,10 +109,6 @@
 						switch (true) {
 
 							case (strpos($model, 'component_')===0):
-
-								#if (!in_array($model, ['component_input_text','component_text_area'])) { // ,'component_portal','component_text_area'
-								#	continue 2;
-								#}
 
 								// components
 									$current_component  = component_common::get_instance($model,
