@@ -84,15 +84,6 @@
 								// data add
 									$data = array_merge($data, $component_json->data);
 								break;
-							
-							// grouper case
-							case (in_array($model, layout_map::$groupers)):
-								
-								$related_element = new $model($current_tipo, $section_tipo, $mode);
-
-								// data add
-									$data = array_merge($data, $component_json->data);										
-								break;
 
 							// oters
 							default:
