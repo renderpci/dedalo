@@ -43,7 +43,6 @@ class layout_map {
 			$user_id 		= $options->user_id;
 			$view 			= $options->view;
 
-
 		
 		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
@@ -111,18 +110,22 @@ class layout_map {
 							$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
 							$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
 
+						}elseif (in_array($model, self::$groupers)) {
+							// groupers
+							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+						
 						}else{
-							// others
+							// portal
 							$edit_view_options ='';
 							if($view==='full') { // || $view==='view_mosaic'
 								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
 								break;
 							}else{
 								# CASE VIEW IS DEFINED
-								$ar_terms = (array)RecordObj_dd::get_ar_childrens($tipo);				
+								$ar_terms = (array)RecordObj_dd::get_ar_childrens($tipo);
 								foreach ($ar_terms as $current_term) {
 									# Locate 'edit_views' in childrens
-									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);						
+									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);				
 									if ($modelo_name!=='edit_view') continue;
 
 									$view_name = RecordObj_dd::get_termino_by_tipo($current_term);	
@@ -185,7 +188,6 @@ class layout_map {
 				}
 				$layout_map = array_values($layout_map);
 			}
-
 
 		return $layout_map;
 	}//end get_layout_map
