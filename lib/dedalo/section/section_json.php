@@ -52,7 +52,7 @@
 						$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
 						
 						switch (true) {
-
+							// components case
 							case (strpos($model, 'component_')===0):
 
 								// components
@@ -84,7 +84,17 @@
 								// data add
 									$data = array_merge($data, $component_json->data);
 								break;
+							
+							// grouper case
+							case (in_array($model, layout_map::$groupers)):
+								
+								$related_element = new $model($current_tipo, $section_tipo, $mode);
 
+								// data add
+									$data = array_merge($data, $component_json->data);										
+								break;
+
+							// oters
 							default:
 								# not defined model from context / data
 								debug_log(" Section json 2 [data]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
