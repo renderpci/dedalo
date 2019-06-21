@@ -21,17 +21,17 @@ class component_security_areas extends component_common {
 	*/
 
 
+
 	/**
 	* GET DATO 
 	* @return object $dato
-	* Format {"dd244":"2"}
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-		if (!is_object($dato) && empty($dato)) {
-			$dato = new stdClass();
+		if (!is_array($dato) && empty($dato)) {
+			$dato = [];
 		}
-		return (object)$dato;
+		return (array)$dato;
 	}
 
 
@@ -344,18 +344,19 @@ class component_security_areas extends component_common {
 		# Section
 		$parent_tipo = $this->get_section_tipo();
 
-		# CURRENT_SECURITY_AREAS_TIPO : tipo sólo puede ser dd243 (profiles) o dd245 (usuarios)
+		# CURRENT_SECURITY_AREAS_TIPO : tipo sólo puede ser dd249 (profiles)
 		$current_security_areas_tipo = $this->get_tipo();		
 		# Context : calculate current context (editing users, profiles, etc.)
-		switch (true) {					
-			case ($current_security_areas_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO):
-				# We are in Profiles
-				$arguments_tree['context']	= 'profiles';
-				break;			
-			default:
-				die("Security problem detected: Current tipo is not valid ($current_security_areas_tipo)");
-				break;
-		}		
+		$arguments_tree['context']	= 'profiles';
+		//switch (true) {					
+		//	case ($current_security_areas_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO):
+		//		# We are in Profiles
+		//		$arguments_tree['context']	= 'profiles';
+		//		break;			
+		//	default:
+		//		die("Security problem detected: Current tipo is not valid ($current_security_areas_tipo)");
+		//		break;
+		//}	
 
 		#
 		# FILTER VIEW AREAS BY CURRENT ADMIN (ONLY CAN ADMINISTER AREAS THAT HE HAVE AUTHORIZATION)

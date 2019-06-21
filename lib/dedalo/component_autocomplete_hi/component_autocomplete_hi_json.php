@@ -22,7 +22,7 @@
 
 		// subcontext from layout_map items
 			$ar_subcontext 	= [];
-			$layout_map 	= $this->get_layout_map(); 	dump($layout_map, ' layout_map ++ '.to_string());
+			$layout_map 	= $this->get_layout_map();
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 		= (object)$dd_object;
