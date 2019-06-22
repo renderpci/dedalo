@@ -39,6 +39,7 @@ class layout_map {
 		// sort vars
 			$section_tipo 	= $options->section_tipo;
 			$tipo 			= $options->tipo;
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$modo 			= $options->modo;
 			$user_id 		= $options->user_id;
 			$view 			= $options->view;
@@ -48,12 +49,11 @@ class layout_map {
 
 		// 1. dd_api::$ar_dd_objects
 			if (isset(dd_api::$ar_dd_objects)) {
-				// dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '.to_string());
+				# dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '.to_string($tipo));
 				// check found dd_objects of current portal
-				$self_ar_dd_objects = array_filter(dd_api::$ar_dd_objects, function($item) use($tipo, $section_tipo){
+				$self_ar_dd_objects = array_filter(dd_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
 					if($item->tipo===$tipo) return false;
-
-					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					
 					if ($model==='section') {
 						if($item->section_tipo===$section_tipo) return $item;
 					}else{
@@ -61,6 +61,12 @@ class layout_map {
 					}					
 				});
 				if (!empty($self_ar_dd_objects)) {
+					
+					// groupers with childrens already defined case
+						if (in_array($model, layout_map::$groupers)) {
+							return []; // stop here (!)
+						}
+					
 					// layout_map
 						$layout_map = array_values($self_ar_dd_objects);
 						#$a = debug_backtrace(); error_log( print_r($a,true) );
