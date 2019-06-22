@@ -25,6 +25,7 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
+		
 		// Value
 			$value = $this->get_dato();
 			
