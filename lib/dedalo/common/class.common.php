@@ -1463,7 +1463,7 @@ abstract class common {
 	*	Array of objects with data and context (configurable)
 	*/
 	public function get_json($request_options=false) {
-	
+		
 		// Debug
 			if(SHOW_DEBUG===true) $start_time = start_time();
 
@@ -1474,11 +1474,11 @@ abstract class common {
 				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$model = get_class($this); // get_called_class(); // static::class
-			$tipo = $this->get_tipo();
+			$tipo  = $this->get_tipo();
 		
 		// path. Class name is called class (ex. component_input_text), not this class (common)
 			$path = DEDALO_LIB_BASE_PATH .'/'. $model .'/'. $model .'_json.php';
-
+		
 		// controller include
 			$json = include( $path );
 
@@ -1496,7 +1496,7 @@ abstract class common {
 						$current = reset($json->data);
 						$current->debug_time_json 	= $exec_time;
 						$current->debug_model 		= "$tipo - get_class: ".$model .' - get_called_class: ' . get_called_class() .' - static::class:' . static::class;
-						$current->debug_label 		= $this->get_label() .' - '. RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$current->debug_label 		= "get_label: ".$this->get_label() .' - modelo_name_by_tipo:'. RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					}
 			}
 
