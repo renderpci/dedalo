@@ -1539,6 +1539,7 @@ abstract class common {
 				unset($properties->css);
 			}		
 		// parent
+			$parent = $this->RecordObj_dd->get_parent(); // default
 			// from requested context if exists
 			if (isset(dd_api::$ar_dd_objects)) {
 
@@ -1558,9 +1559,6 @@ abstract class common {
 				// injected by the element
 				$parent = $this->from_parent;			
 			
-			}else{
-
-				$parent = $this->RecordObj_dd->get_parent(); // default
 			}
 		// tools
 			$tools = $this->get_ar_tools_obj();			
