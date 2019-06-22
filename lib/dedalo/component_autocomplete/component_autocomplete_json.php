@@ -77,14 +77,11 @@
 
 			case 'list':
 				$dato 				= $this->get_valor();
-		
+				break;
 		}
 
 		// subdata
 			if (!empty($dato)) {			
-
-				// search self records to paginate
-					$rows_data = $this->get_portal_records($dato);
 
 				// subcontext from layout_map items
 					$ar_subcontext 	= [];
@@ -97,7 +94,7 @@
 						$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);							
 						$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);					
 						
-						foreach ($rows_data->ar_records as $current_record) {
+						foreach ($dato as $current_record) {
 							
 							$related_component = component_common::get_instance( $model,
 																				 $current_tipo,
@@ -139,8 +136,8 @@
 				$item->value 				= $value;
 
 
-			if (isset($ar_list_of_values)) {
-				$item->datalist 				= $ar_list_of_values->result;
+			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
+				$item->datalist = $ar_list_of_values->result;
 			}
 
 			$data[] = $item;

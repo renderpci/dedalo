@@ -43,7 +43,7 @@
 		
 				// Iterate dd_object for colums
 					$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
-					foreach ((array)$layout_map as $dd_object) {
+					foreach ((array)$layout_map as $dd_object) {						
 
 						$dd_object 		= (object)$dd_object;
 						$current_tipo 	= $dd_object->tipo;
@@ -61,7 +61,8 @@
 																						 $section_id,
 																						 $mode,
 																						 $current_lang,
-																						 $section_tipo);
+																						 $section_tipo
+																						);
 								// component ar_layout_map
 									#$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
 									#	 if($item->typo==='ddo' && $item->parent===$tipo) return $item;
@@ -79,10 +80,22 @@
 									$get_json_options = new stdClass();
 										$get_json_options->get_context 	= false;
 										$get_json_options->get_data 	= true;
-									$component_json = $current_component->get_json($get_json_options);
+									$element_json = $current_component->get_json($get_json_options);								
+								break;
+							
+							// grouper case
+							case (in_array($model, layout_map::$groupers)):
+								
+								$related_element = new $model($current_tipo, $section_tipo, $mode);
 
-								// data add
-									$data = array_merge($data, $component_json->data);
+								// inject section_id
+									$related_element->section_id = $section_id;
+
+								// get component json
+									$get_json_options = new stdClass();
+										$get_json_options->get_context 	= false;
+										$get_json_options->get_data 	= true;
+									$element_json = $related_element->get_json($get_json_options);
 								break;
 
 							// oters
@@ -90,7 +103,12 @@
 								# not defined model from context / data
 								debug_log(" Section json 2 [data]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
 								break;
-						}							
+						}
+
+						if (isset($element_json)) {
+							// data add
+								$data = array_merge($data, $element_json->data);						
+						}													
 
 					}//end iterate display_items
 				
