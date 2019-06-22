@@ -19,6 +19,7 @@
 		// subcontext from element layout_map items
 			$ar_subcontext = $this->get_ar_subcontext();
 			foreach ($ar_subcontext as $current_context) {
+				if($current_context->tipo === 'oh15' || $current_context->tipo === 'oh14' )
 				$context[] = $current_context;
 			}
 
