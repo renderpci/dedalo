@@ -1473,34 +1473,38 @@ abstract class common {
 				$options->get_data 		= true;				
 				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$model = get_class($this); // get_called_class(); // static::class
-			$tipo  = $this->get_tipo();
+			$called_model = get_class($this); // get_called_class(); // static::class
+			$called_tipo  = $this->get_tipo();
 		
 		// path. Class name is called class (ex. component_input_text), not this class (common)
-			$path = DEDALO_LIB_BASE_PATH .'/'. $model .'/'. $model .'_json.php';
-		
+			$path = DEDALO_LIB_BASE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
+
 		// controller include
-			$json = include( $path );
+			$json = include( $path );				
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				$exec_time = exec_time_unit($start_time,'ms')." ms";				
+				$exec_time = exec_time_unit($start_time,'ms')." ms";
 				#$element = json_decode($json);
 				#	$element->debug = new stdClass();
 				#	$element->debug->exec_time = $exec_time;
 				#$json = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
-
-					if ($options->get_data===true && !empty($json->data)) {
+					
+					if ($options->get_data===true && !empty($json->data)) { // 
+							
 						$current = reset($json->data);
-						$current->debug_time_json 	= $exec_time;
-						$current->debug_model 		= "$tipo - get_class: ".$model .' - get_called_class: ' . get_called_class() .' - static::class:' . static::class;
-						$current->debug_label 		= "get_label: ".$this->get_label() .' - modelo_name_by_tipo:'. RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+							$current->debug_time_json 	= $exec_time;
+							$current->debug_model 		= "$called_tipo - get_class: ".$called_model .' - get_called_class: ' . get_called_class() .' - static::class:' . static::class;
+							$current->debug_label 		= "get_label: ".$this->get_label() .' - modelo_name_by_tipo:'. RecordObj_dd::get_modelo_name_by_tipo($called_tipo,true);
+
+						#$bt = debug_backtrace()[0];
+						#	dump($json->data, ' json->data ++ '.to_string($bt)); 
 					}
 			}
 
-		return $json;		
+		return $json;
 	}//end get_json
 
 
@@ -1512,7 +1516,8 @@ abstract class common {
 	public function get_structure_context($permissions=0) {
 
 		// class called (model name too like component_input_text)
-			$model = get_called_class();
+			#$called_model = get_called_class();
+			$called_model = get_class($this);
 
 		// sort vars
 			$tipo 		  = $this->get_tipo();
@@ -1534,30 +1539,28 @@ abstract class common {
 				unset($properties->css);
 			}		
 		// parent
-			$parent = $this->RecordObj_dd->get_parent(); // default
-			if (isset($this->from_parent)) {
+			// from requested context if exists
+			if (isset(dd_api::$ar_dd_objects)) {
 
+			 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
+					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+						return $item;
+					}
+					return $carry;
+				});				
+				if (!empty($request_dd_object->parent)) {
+					// set
+					$parent = $request_dd_object->parent;
+				}
+
+			}else if (isset($this->from_parent)) {
+	
 				// injected by the element
 				$parent = $this->from_parent;			
 			
 			}else{
 
-				if($mode==='list') {
-				
-					// from requested context if exists
-					if (isset(dd_api::$ar_dd_objects)) {
-					 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
-							if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-								return $item;
-							}
-							return $carry;
-						});
-						if (!empty($request_dd_object->parent)) {
-							// set
-							$parent = $request_dd_object->parent;
-						}
-					}
-				}
+				$parent = $this->RecordObj_dd->get_parent(); // default
 			}
 		// tools
 			$tools = $this->get_ar_tools_obj();			
@@ -1570,7 +1573,7 @@ abstract class common {
 				'label' 		=> $label, // *
 				'tipo' 			=> $tipo,
 				'section_tipo' 	=> $section_tipo, // *
-				'model' 		=> $model, // *
+				'model' 		=> $called_model, // *
 				'parent' 		=> $parent, // *
 				'lang' 			=> $lang,
 				'mode' 			=> $mode,
