@@ -146,7 +146,9 @@ class component_pdf extends component_common {
 				$ar_aditional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
 				$component->set_dato( $ar_aditional_path[$this->pdf_id] );
-				$component->Save();
+				if (!empty($parent_section_id)) {
+					$component->Save();
+				}				
 			}
 
 		}else{
@@ -221,7 +223,7 @@ class component_pdf extends component_common {
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
 			if(SHOW_DEBUG===true) {
-				trigger_error(__METHOD__." Component dato (parent:$this->parent,section_tipo:$this->section_tipo) is empty for: ".to_string($dato));
+				error_log(__METHOD__." Component dato (parent:$this->parent,section_tipo:$this->section_tipo) is empty for: ".to_string($dato));
 			}
 			return 0;	
 		}

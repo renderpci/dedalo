@@ -1472,9 +1472,12 @@ abstract class common {
 				$options->get_context 	= true;
 				$options->get_data 		= true;				
 				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$model = get_class($this); // get_called_class(); // static::class
+			$tipo = $this->get_tipo();
 		
 		// path. Class name is called class (ex. component_input_text), not this class (common)
-			$path = DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php';
+			$path = DEDALO_LIB_BASE_PATH .'/'. $model .'/'. $model .'_json.php';
 
 		// controller include
 			$json = include( $path );
@@ -1488,6 +1491,13 @@ abstract class common {
 				#$json = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
+
+					if ($options->get_data===true && !empty($json->data)) {
+						$current = reset($json->data);
+						$current->debug_time_json 	= $exec_time;
+						$current->debug_model 		= "$tipo - get_class: ".$model .' - get_called_class: ' . get_called_class() .' - static::class:' . static::class;
+						$current->debug_label 		= $this->get_label() .' - '. RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					}
 			}
 
 		return $json;		
@@ -1553,8 +1563,7 @@ abstract class common {
 			$tools = $this->get_ar_tools_obj();			
 			if ($tools===false || is_null($tools)) {
 			 	$tools = [];
-			 } 
-			
+			 }			
 		
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -1589,7 +1598,22 @@ abstract class common {
 		$tipo = $this->tipo;
 		
 		// subcontext from layout_map items			
-			$layout_map = $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string());
+			$layout_map = $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string($tipo));
+
+			// from requested context if exists
+			//	if (isset(dd_api::$ar_dd_objects)) {
+			//	 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
+			//			if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+			//				return $item;
+			//			}
+			//			return $carry;
+			//		});
+			//		if (!empty($request_dd_object->parent)) {
+			//			// set
+			//			$parent = $request_dd_object->parent;
+			//		}
+			//	}
+
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 				= (object)$dd_object;

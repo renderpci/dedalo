@@ -138,7 +138,7 @@
 				$item->model 				= get_class($this);
 				$item->value 				= $value;
 
-			if (isset($ar_list_of_values)) {
+			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 				$item->datalist 				= $ar_list_of_values->result;
 			}
 
