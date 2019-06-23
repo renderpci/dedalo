@@ -1492,12 +1492,12 @@ abstract class common {
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
 					
-					if ($options->get_data===true && !empty($json->data)) { // 
+					if (strpos($called_model, 'component_')!==false && $options->get_data===true && !empty($json->data)) { // 
 							
 						$current = reset($json->data);
 							$current->debug_time_json 	= $exec_time;
-							$current->debug_model 		= "$called_tipo - get_class: ".$called_model .' - get_called_class: ' . get_called_class() .' - static::class:' . static::class;
-							$current->debug_label 		= "get_label: ".$this->get_label() .' - modelo_name_by_tipo:'. RecordObj_dd::get_modelo_name_by_tipo($called_tipo,true);
+							$current->debug_model 		= $called_model;
+							$current->debug_label 		= $this->get_label();
 
 						#$bt = debug_backtrace()[0];
 						#	dump($json->data, ' json->data ++ '.to_string($bt)); 
@@ -1600,21 +1600,6 @@ abstract class common {
 		
 		// subcontext from layout_map items			
 			$layout_map = $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string($tipo));
-
-			// from requested context if exists
-			//	if (isset(dd_api::$ar_dd_objects)) {
-			//	 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
-			//			if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-			//				return $item;
-			//			}
-			//			return $carry;
-			//		});
-			//		if (!empty($request_dd_object->parent)) {
-			//			// set
-			//			$parent = $request_dd_object->parent;
-			//		}
-			//	}
-
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 				= (object)$dd_object;
