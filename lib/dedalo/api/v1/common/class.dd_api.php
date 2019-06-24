@@ -159,7 +159,7 @@ class dd_api {
 		
 		// context
 			$context = [];
-		/**/
+			/**/
 			// filter by section
 			$ar_sections_dd_objects = array_filter($ar_dd_objects, function($item) {
 				 if($item->model==='section') return $item;
@@ -330,12 +330,10 @@ class dd_api {
 						}
 						$mode = $section_dd_object->mode;
 
-
 						// Inject known dato to avoid re connect to database
 							$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
 							$section->set_dato($datos);
 							$section->set_bl_loaded_matrix_data(true);
-													
 						
 						// Iterate dd_object for colums ( PASADO A LA SECCIÓN ! ) 
 							# foreach ((array)$ar_dd_objects as $dd_object) {
@@ -390,7 +388,7 @@ class dd_api {
 							$get_json_options = new stdClass();
 								$get_json_options->get_context 	= false;
 								$get_json_options->get_data 	= true;
-							$section_json = $section->get_json($get_json_options);						
+							$section_json = $section->get_json($get_json_options);
 						
 						// data add
 							$data = array_merge($data, $section_json->data);
