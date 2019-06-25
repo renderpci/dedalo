@@ -1594,11 +1594,11 @@ abstract class common {
 	*/
 	public function get_ar_subcontext() {
 
-		$ar_subcontext 	= [];
+		$ar_subcontext = [];
 
 		$tipo = $this->tipo;
 		
-		// subcontext from layout_map items			
+		// subcontext from layout_map items
 			$layout_map = $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string($tipo));
 			foreach ($layout_map as $dd_object) {
 
@@ -1654,6 +1654,104 @@ abstract class common {
 		
 		return $ar_subcontext;
 	}//end get_ar_subcontext
+
+
+
+	/**
+	* GET_AR_SUBDATA
+	* @return array $ar_subcontext
+	*/
+	public function get_ar_subdata($ar_locators=null) {
+
+		$ar_subdata = [];		
+
+		// default locator build with this section params
+			if (is_null($ar_locators)) {
+				
+				$section_id 	= $this->get_section_id();
+				$section_tipo 	= $this->get_section_tipo();
+
+				$locator = new locator();
+					$locator->set_section_tipo($section_tipo);
+					$locator->set_section_id($section_id);
+				
+				$ar_locators = [$locator];
+			}
+
+		// Iterate dd_object (layout_map) for colums
+			$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
+			foreach ((array)$layout_map as $dd_object) {
+
+				$dd_object 		= (object)$dd_object;
+				$current_tipo 	= $dd_object->tipo;
+				$mode 			= $dd_object->mode ?? 'list';
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
+				
+				foreach ($ar_locators as $current_locator) {
+
+					$section_id 	= $current_locator->section_id;
+					$section_tipo 	= $current_locator->section_tipo;
+									
+					switch (true) {
+						// components case
+						case (strpos($model, 'component_')===0):
+							// components
+								$current_component  = component_common::get_instance($model,
+																					 $current_tipo,
+																					 $section_id,
+																					 $mode,
+																					 $current_lang,
+																					 $section_tipo
+																					);
+							// properties
+								if (isset($dd_object->properties)){
+									$current_component->set_properties($dd_object->properties);
+								}
+
+							// get component json
+								$get_json_options = new stdClass();
+									$get_json_options->get_context 	= false;
+									$get_json_options->get_data 	= true;
+								$element_json = $current_component->get_json($get_json_options);
+							break;
+						
+						// grouper case
+						case (in_array($model, layout_map::$groupers)):
+							
+							$related_element = new $model($current_tipo, $section_tipo, $mode);
+
+							// inject section_id
+								$related_element->section_id = $section_id;
+
+							// get component json
+								$get_json_options = new stdClass();
+									$get_json_options->get_context 	= false;
+									$get_json_options->get_data 	= true;
+								$element_json = $related_element->get_json($get_json_options);
+							break;
+
+						// oters
+						default:
+							# not defined model from context / data
+							debug_log(__METHOD__." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
+							break;
+					}
+	
+					if (isset($element_json)) {
+						// data add
+							$ar_subdata = array_merge($ar_subdata, $element_json->data);
+						// data add
+							#$ar_subdata[] = $element_json->data;
+					}
+				}//end foreach ($ar_locators as $current_locator)
+
+			}//end iterate display_items
+
+
+		return $ar_subdata;
+	}//end get_ar_subdata
+
 
 
 

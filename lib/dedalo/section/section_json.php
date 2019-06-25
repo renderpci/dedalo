@@ -38,6 +38,8 @@
 		// subdata
 		if (!empty($dato)) {
 
+			$data = $this->get_ar_subdata();
+			/*
 			$section_id 	= $this->section_id;
 			$section_tipo 	= $this->tipo;
 	
@@ -107,13 +109,13 @@
 
 					if (isset($element_json)) {
 						// data add
-							$data = array_merge($data, $element_json->data);						
+							$data = array_merge($data, $element_json->data);
 					}													
 
 				}//end iterate display_items
-			
+				*/
 		}//end if (!empty($dato))
-			
+		
 	}// end if $permissions > 0
 
 

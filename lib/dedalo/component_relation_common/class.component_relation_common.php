@@ -2125,7 +2125,7 @@ class component_relation_common extends component_common {
 	* @param array $ar_locators
 	* @return array $ar_subdata
 	*/
-	public function get_ar_subdata($ar_locators) {
+	public function get_ar_subdata($ar_locators=null) {
 
 		$ar_subdata = [];
 		
