@@ -28,64 +28,80 @@
 	}//end if($options->get_context===true)
 
 
+
 // data
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-		
-		$section_id = $this->section_id; // injected in section json controller
-		$layout_map = $this->get_layout_map();		#dump($layout_map, ' layout_map ++ '.to_string());
-		foreach ((array)$layout_map as $dd_object) {
-		
-			$dd_object 		= (object)$dd_object;
-			$current_tipo 	= $dd_object->tipo;
-			$mode 			= $dd_object->mode ?? 'list';
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
+
+		$data = $this->get_ar_subdata();
+		/*
+		$section_id 	= $this->section_id; // injected in section json controller
+		$section_tipo 	= $this->section_tipo;
+
+		// Iterate dd_object for colums
+			$layout_map = $this->get_layout_map();	#dump($layout_map, ' layout_map ++ '.to_string());
+			foreach ((array)$layout_map as $dd_object) {
 			
-			switch (true) {
-				// components case
-				case (strpos($model, 'component_')===0):
+				$dd_object 		= (object)$dd_object;
+				$current_tipo 	= $dd_object->tipo;
+				$mode 			= $dd_object->mode ?? 'list';
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
+				
+				switch (true) {
+					// components case
+					case (strpos($model, 'component_')===0):
 
-					// components
-						$current_component  = component_common::get_instance($model,
-																			 $current_tipo,
-																			 $section_id,
-																			 $mode,
-																			 $current_lang,
-																			 $section_tipo);
-					// component ar_layout_map
-						#$ar_layout_map = array_filter($layout_map, function($item) use($tipo){
-						#	 if($item->typo==='ddo' && $item->parent===$tipo) return $item;
-						#});									
-						#if (!empty($ar_layout_map)) {
-						#	$current_component->layout_map 	= $ar_layout_map;
-						#}
+						// components
+							$current_component  = component_common::get_instance($model,
+																				 $current_tipo,
+																				 $section_id,
+																				 $mode,
+																				 $current_lang,
+																				 $section_tipo);
+						// properties
+							if (isset($dd_object->properties)){
+								$current_component->set_properties($dd_object->properties);
+							}
 
-					// properties
-						if (isset($dd_object->properties)){
-							$current_component->set_properties($dd_object->properties);
-						}
+						// get component json
+							$get_json_options = new stdClass();
+								$get_json_options->get_context 	= false;
+								$get_json_options->get_data 	= true;
+							$element_json = $current_component->get_json($get_json_options);						
+						break;
 
-					// get component json
-						$get_json_options = new stdClass();
-							$get_json_options->get_context 	= false;
-							$get_json_options->get_data 	= true;
-						$component_json = $current_component->get_json($get_json_options);
+					// grouper case
+					case (in_array($model, layout_map::$groupers)):
+						
+						$related_element = new $model($current_tipo, $section_tipo, $mode);
 
-					// data add
-						$data = array_merge($data, $component_json->data);
-					break;
+						// inject section_id
+							$related_element->section_id = $section_id;
 
-				// oters
-				default:
-					# not defined model from context / data
-					debug_log(" Section json 2 [data]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
-					break;
-			}							
+						// get component json
+							$get_json_options = new stdClass();
+								$get_json_options->get_context 	= false;
+								$get_json_options->get_data 	= true;
+							$element_json = $related_element->get_json($get_json_options);
+						break;
 
-		}//end foreach ((array)$layout_map as $dd_object) {
-	
+					// oters
+					default:
+						# not defined model from context / data
+						debug_log(" Section json 2 [data]. Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
+						break;
+				}
+
+				// data add
+					if (isset($element_json)) {
+						// data add
+							$data = array_merge($data, $element_json->data);
+					}					
+
+			}//end foreach ((array)$layout_map as $dd_object) {
+		*/
 	}//end if($options->get_data===true && $permissions>0)
 
 // JSON string
