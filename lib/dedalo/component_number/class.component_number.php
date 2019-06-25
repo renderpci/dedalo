@@ -47,6 +47,8 @@ class component_number extends component_common {
 
 		$valor = $this->get_dato();
 		$valor = component_number::number_to_string($valor);
+
+			dump($valor, ' valor ++ '.to_string());
 		
 
 		return (string)$valor;
