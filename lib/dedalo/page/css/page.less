@@ -3,17 +3,32 @@
 
 // temporal debug css
 	#test_container {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+		font-size: 1em;
+		display: flex;
 
 		.section_record {
 			background-color: #DBF5FF;
 			display: block;
-			margin-bottom: 0.5em;
+			margin: 1px;
 			padding: 0.5em;
+
+			&:before {
+				content: "Section record";
+				display: block;
+				padding-bottom: 0.25em;
+			}
 
 			.section_group {
 				padding: 5px;
 				border: 1px solid #BFBFBF;
 				background-color: bisque;
+
+				&:before {
+					content: "Section group";
+					display: block;
+					padding-bottom: 0.25em;
+				}
 			}
 
 			.wrapper_component {
@@ -22,11 +37,13 @@
 				display: grid;
 				grid-template-columns: 7em auto;
 				padding: 3px;
-				margin-bottom: 1px;
+				margin: 1px;
 
 				input {
-					padding: 0.22em;
+					padding: 0.4em;
 				}
+
+				
 			}
 
 			mark {
@@ -37,4 +54,8 @@
 			    
 		}
 
+	}
+	pre {
+		background-color: #f0f8ffd1;
+		padding: 1em;
 	}
