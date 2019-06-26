@@ -29,10 +29,7 @@
 		switch ($modo) {
 			case 'edit':
 				$dato 					= $this->get_dato();
-				$ar_list_of_values = filter::get_user_authorized_projects($user_id, $this->tipo);	
-				//TODO - Change function call to retrieve dalalist data, $user_id is empty
-				//$ar_list_of_values		= $this->get_ar_projects_for_current_section();		
-			
+				$ar_list_of_values		= $this->get_ar_projects_for_current_section();							
 				break;
 			case 'list':
 				$dato 				= $this->get_valor();
