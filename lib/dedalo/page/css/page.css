@@ -1,1 +1,51 @@
-#test_container{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:1em;display:flex}#test_container .section_record{background-color:#DBF5FF;display:block;margin:1px;padding:.5em}#test_container .section_record:before{content:"Section record";display:block;padding-bottom:.25em}#test_container .section_record .section_group{padding:5px;border:1px solid #BFBFBF;background-color:bisque}#test_container .section_record .section_group:before{content:"Section group";display:block;padding-bottom:.25em}#test_container .section_record .wrapper_component{background-color:#F3F3F3;width:auto;display:grid;grid-template-columns:7em auto;padding:3px;margin:1px}#test_container .section_record .wrapper_component input{padding:.4em}#test_container .section_record mark{background-color:unset;color:unset;font-style:italic}pre{background-color:#f0f8ffd1;padding:1em}/*# sourceMappingURL=page.css.map */
+#test_container {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 1em;
+  display: flex;
+}
+#test_container ol,
+#test_container ul {
+  list-style: none;
+}
+#test_container .section_record {
+  background-color: #DBF5FF;
+  display: block;
+  margin: 1px;
+  padding: 0.5em;
+}
+#test_container .section_record:before {
+  content: "Section record";
+  display: block;
+  padding-bottom: 0.25em;
+}
+#test_container .section_record .section_group {
+  padding: 5px;
+  border: 1px solid #BFBFBF;
+  background-color: bisque;
+}
+#test_container .section_record .section_group:before {
+  content: "Section group";
+  display: block;
+  padding-bottom: 0.25em;
+}
+#test_container .section_record .wrapper_component {
+  background-color: #F3F3F3;
+  width: auto;
+  display: grid;
+  grid-template-columns: 7em auto;
+  padding: 3px;
+  margin: 1px;
+}
+#test_container .section_record .wrapper_component input {
+  padding: 0.4em;
+}
+#test_container .section_record mark {
+  background-color: unset;
+  color: unset;
+  font-style: italic;
+}
+pre {
+  background-color: #f0f8ffd1;
+  padding: 1em;
+}
+/*# sourceMappingURL=page.css.map */
