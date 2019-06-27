@@ -61,7 +61,7 @@ var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?p
 include dirname(__FILE__) . '/lang/'.DEDALO_APPLICATION_LANG.'.js';
 #include common
 
-include (dirname(dirname(dirname(dirname(__FILE__)))) . '/jquery/jquery.min.js');
+#include (dirname(dirname(dirname(dirname(__FILE__)))) . '/jquery/jquery.min.js');
 include dirname(__FILE__) . '/common.js';
 # json_elements_data array
 echo ';'.js::get_json_elements_data();
