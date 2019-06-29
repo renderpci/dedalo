@@ -56,10 +56,10 @@
 
 			#
 			# LANG SELECTOR 
-			$lang_selector_style = 'display:none';
-			if(SHOW_DEBUG===true) {
+			#$lang_selector_style = 'display:none';
+			#if(SHOW_DEBUG===true) {
 				$lang_selector_style = '';
-			}
+			#}
 			$html   .= '<span style="'.$lang_selector_style.'">';	
 			$html   .= '<label class="control-label input-lg" for="select_ts_lang">'.label::get_label('idioma').'</label>';
 			$html   .= '<select id="select_ts_lang" class="form-control" onchange="tool_ts_print.load_thesaurus_section(this)">';
