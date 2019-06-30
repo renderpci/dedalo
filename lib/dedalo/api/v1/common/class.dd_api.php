@@ -120,7 +120,60 @@ class dd_api {
 	* UPDATE
 	* @return array $result
 	*/
-	function update($json_data) {
+	static function update($json_data) {
+		global $start_time;
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$context 	= $json_data->context;
+		$data 		= $json_data->data;
+		
+		$context_type = $context->type;
+		
+		switch ($context_type) {
+			case 'component':
+
+				$model 			= $context->model;
+				$tipo 			= $context->tipo;
+				$section_tipo 	= $context->section_tipo;
+				$section_id 	= $data->section_id;
+				$lang 			= $context->lang;
+				$value 			= $data->value;
+
+				$component = component_common::get_instance( $model,
+															 $tipo,
+															 $section_id,
+															 'list',
+															 $lang,
+															 $section_tipo);
+
+				$component->set_dato($value);
+				$result = $component->Save();
+
+				break;
+			
+			default:
+				# code...
+				break;
+		}
+
+		$response->result 		= $result;
+		$response->msg 	  		= 'Ok. Request done';
+
+		# Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+
+				$response->debug = $debug;
+			}
+
+
+		return (object)$response;
 	}//end update
 
 
