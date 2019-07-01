@@ -1567,6 +1567,11 @@
 		Subtitles fix: remove start and end spaces to avoid infinite loops in split lines
 
 
+	Valencia 01-07-2019 5.4.52
+		Make section_map term format array as default instead string (string is supported for compatibility)
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1587,12 +1592,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.51';
+	$DEDALO_VERSION = '5.4.52';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '18-06-2019');
+	define('DEDALO_BUILD'	, '01-07-2019');
 
 
 	/*
