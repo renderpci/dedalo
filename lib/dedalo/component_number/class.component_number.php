@@ -33,7 +33,7 @@ class component_number extends component_common {
 
 		$format_dato = $this->set_format_form_type($dato);
 
-		return parent::set_dato( $format_dato );			
+		return parent::set_dato( $format_dato );				
 	}//end set_dato
 
 
@@ -47,8 +47,6 @@ class component_number extends component_common {
 
 		$valor = $this->get_dato();
 		$valor = component_number::number_to_string($valor);
-
-			dump($valor, ' valor ++ '.to_string());
 		
 
 		return (string)$valor;
@@ -98,6 +96,7 @@ class component_number extends component_common {
 
 		return $dato;
 	}//end set_format_form_type
+
 
 
 	/*
