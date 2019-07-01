@@ -70,7 +70,7 @@ class component_autocomplete_hi extends component_relation_common {
 			foreach ($dato as $key => $current_locator) {
 			
 				# $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false )
-				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents);
+				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents); // , ['rsc85','rsc86']
 				#dump($current_valor, ' current_valor ++ '.to_string()); break;
 
 				#
@@ -91,7 +91,7 @@ class component_autocomplete_hi extends component_relation_common {
 		}else{
 			$valor = implode($separator, $ar_valor);
 		}
-
+	
 		return $valor;
 	}//end get_valor
 
