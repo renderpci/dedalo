@@ -124,26 +124,27 @@ class dd_api {
 		global $start_time;
 
 		session_write_close();
-
+		// create the default update response
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+		// get the context and data sended
 		$context 	= $json_data->context;
 		$data 		= $json_data->data;
-		
+		//get the type of the dd_object that is calling to update
 		$context_type = $context->type;
-		
+		// switch the type (component, section)
 		switch ($context_type) {
 			case 'component':
-
+				// get the component information
 				$model 			= $context->model;
 				$tipo 			= $context->tipo;
 				$section_tipo 	= $context->section_tipo;
 				$section_id 	= $data->section_id;
 				$lang 			= $context->lang;
 				$value 			= $data->value;
-
+				// build the component
 				$component = component_common::get_instance( $model,
 															 $tipo,
 															 $section_id,
@@ -151,7 +152,14 @@ class dd_api {
 															 $lang,
 															 $section_tipo);
 
+				//get the component permisions
+				$permissions			= $component->get_component_permissions();
+				// check if the user can update the component 
+				if($permissions < 2) return $response;
+
+				// set the data sended to the component
 				$component->set_dato($value);
+				// save the new data to the component
 				$result = $component->Save();
 
 				break;
@@ -160,7 +168,7 @@ class dd_api {
 				# code...
 				break;
 		}
-
+		// if the proces is correct we return the $result to the client, for component is the section_id
 		$response->result 		= $result;
 		$response->msg 	  		= 'Ok. Request done';
 
@@ -265,65 +273,6 @@ class dd_api {
 								// context add 
 									$context = array_merge($context, $section_json->context);
 								break;
-
-							# ! ya se generan en el controlador de la sección 
-								#case (strpos($model, 'component_')===0): 								
-								#	// components
-								#		$current_component  = component_common::get_instance($model,
-								#															 $tipo,
-								#															 null,
-								#															 $mode,
-								#															 $lang,
-								#															 $section_tipo);
-								#	// ar_layout_map
-								#		$ar_layout_map = array_filter($ar_dd_objects, function($item) use($tipo){
-								#			 if($item->parent===$tipo ) return $item;
-								#		});
-								#		
-								#		if (!empty($ar_layout_map)) {
-								#			$current_component->layout_map 	= $ar_layout_map;
-								#		}
-								#
-								#	// properties
-								#		if (isset($dd_object->properties)){
-								#			$current_component->set_properties($dd_object->properties);
-								#		}
-								#
-								#	// get component json
-								#		$component_json = $current_component->get_json();
-								#
-								#	// context add
-								#		$context = array_merge($context, $component_json->context);
-								#	break;							
-							
-							# ! ya se generan en el controlador de la sección 
-								#case (in_array($model, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']								
-								#	// groupers
-								#		$current_class_name = $model;
-								#		if ($model==='tab') {
-								#			$current_class_name = 'section_tab';
-								#		}
-								#		$current_grouper  = new $current_class_name($tipo, $section_tipo, $mode, null);									
-								#	
-								#	// grouper json
-								#		$grouper_json = $current_grouper->get_json();									
-								#
-								#	// context add 
-								#		$context = array_merge($context, $grouper_json->context);
-								#	break;
-
-							# ! ya se generan en el controlador de la sección 
-								#case (strpos($model, 'button_')===0):
-								#	// button								
-								#		$current_class_name = $model;
-								#		$current_button  	= new $current_class_name($tipo, null, $section_tipo);
-								#
-								#	// button json
-								#		$button_json = $current_button->get_json();
-								#
-								#	// context add 
-								#		$context = array_merge($context, $button_json->context);
-								#	break;
 							
 							default:
 								# not defined modelfro context / data								
@@ -389,53 +338,7 @@ class dd_api {
 							$section->set_bl_loaded_matrix_data(true);
 						
 						// Iterate dd_object for colums ( PASADO A LA SECCIÓN ! ) 
-							# foreach ((array)$ar_dd_objects as $dd_object) {
-							# 
- 							# 	$dd_object = is_array($dd_object) ? (object)$dd_object : $dd_object;
-							# 
- 							# 	$tipo 		= $dd_object->tipo;
- 							# 	$mode 		= $dd_object->mode ?? 'list';
- 							# 	$lang 		= $dd_object->lang ?? DEDALO_DATA_LANG;
- 							# 	$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-							# 
- 							# 	switch (true) {
-							# 
- 							# 		case (strpos($model, 'component_')===0):									
- 							# 			// components
- 							# 				$current_component  = component_common::get_instance($model,
- 							# 																	 $tipo,
- 							# 																	 $section_id,
- 							# 																	 $mode,
- 							# 																	 $lang,
- 							# 																	 $section_tipo);
- 							# 			// ar_layout_map
- 							# 				$ar_layout_map = array_filter($ar_dd_objects, function($item) use($tipo){
- 							# 					 if($item->parent===$tipo  ) return $item;
- 							# 				});
- 							# 				
- 							# 				if (!empty($ar_layout_map)) {
- 							# 					$current_component->layout_map 	= $ar_layout_map;
- 							# 				}
- 							# 
- 		 					# 			// properties
- 		 					# 				if (isset($dd_object->properties)){
- 		 					# 					$current_component->set_properties($dd_object->properties);
- 		 					# 				}
-							# 
- 							# 			// get component json
- 							# 				$component_json = $current_component->get_json();
-							# 
- 							# 			// data add
- 							# 				$data = array_merge($data, $component_json->data);
- 							# 			break;
-							# 
- 							# 		default:
- 							# 			# not defined model from context / data
- 							# 			debug_log(__METHOD__." Ignored model $model - $tipo ".to_string(), logger::WARNING);
- 							# 			break;
- 							# 	}							
-							# 
-							# }//end iterate display_items
+
 						
 						// get section json
 							$get_json_options = new stdClass();
