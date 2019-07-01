@@ -138,30 +138,28 @@ class dd_api {
 		switch ($context_type) {
 			case 'component':
 				// get the component information
-				$model 			= $context->model;
-				$tipo 			= $context->tipo;
-				$section_tipo 	= $context->section_tipo;
-				$section_id 	= $data->section_id;
-				$lang 			= $context->lang;
-				$value 			= $data->value;
-				// build the component
-				$component = component_common::get_instance( $model,
-															 $tipo,
-															 $section_id,
-															 'list',
-															 $lang,
-															 $section_tipo);
-
-				//get the component permisions
-				$permissions			= $component->get_component_permissions();
+					$model 			= $context->model;
+					$tipo 			= $context->tipo;
+					$section_tipo 	= $context->section_tipo;
+					$section_id 	= $data->section_id;
+					$lang 			= $context->lang;
+					$value 			= $data->value;
+					// build the component
+					$component = component_common::get_instance( $model,
+																 $tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);
+				// get the component permisions
+					$permissions = $component->get_component_permissions();
 				// check if the user can update the component 
-				if($permissions < 2) return $response;
+					if($permissions < 2) return $response;
 
 				// set the data sended to the component
-				$component->set_dato($value);
+					$component->set_dato($value);
 				// save the new data to the component
-				$result = $component->Save();
-
+					$result = $component->Save();
 				break;
 			
 			default:
