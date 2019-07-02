@@ -14,7 +14,7 @@ class component_number extends component_common {
 	public function get_dato() {
 
 		$dato = parent::get_dato();				
-
+	
 		$format_dato = $this->set_format_form_type($dato);
 		
 		return $format_dato;
@@ -45,13 +45,16 @@ class component_number extends component_common {
 	*/
 	public function get_valor() {
 
-		$valor = $this->get_dato();
-		$valor = component_number::number_to_string($valor);
+		$dato = $this->get_dato();
+		if (is_array($dato)) {
+			$valor = component_number::number_to_string($dato[0]);		
+		}else{
+			$valor = component_number::number_to_string($dato);	
+		}
 		
-
 		return (string)$valor;
 	}//end get_valor
-	
+
 
 
 	/*

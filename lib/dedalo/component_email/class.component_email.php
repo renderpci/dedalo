@@ -27,7 +27,11 @@ class component_email extends component_common {
 	public function set_dato($dato) {
 
 		# Clean email
-		$dato = component_email::clean_email($dato);
+		if (is_array($dato)) {	
+			$dato = component_email::clean_email($dato[0]);	
+		}else{
+			$dato = component_email::clean_email($dato);
+		}
 
 		return parent::set_dato( (string)$dato );
 	}//end set_dato
