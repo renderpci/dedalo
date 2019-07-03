@@ -274,8 +274,14 @@ class component_relation_parent extends component_relation_common {
 		$sql_where  = "datos#>'{relations}' @> '[$compare]'::jsonb";
 		if (is_null($ar_tables)) {
 			// Calculated from section_tipo (only search in current table)
-			$table 	   = common::get_matrix_table_from_tipo($section_tipo);
-			$strQuery .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+			try {
+				$table = common::get_matrix_table_from_tipo($section_tipo);
+			} catch (Exception $e) {
+				debug_log(__METHOD__." Error on get matrix_table_from_tipo: ".to_string($section_tipo), logger::ERROR);
+			}
+			if ($table) {
+				$strQuery .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+			}			
 		}else{
 			// Iterate tables and make union search
 			$ar_query=array();
