@@ -861,13 +861,19 @@ class component_autocomplete_hi extends component_relation_common {
 
 		# Parse query_object normally with relation common method
 		$result_query_object = parent::resolve_query_object_sql($query_object);
-
+		
+		// q_operator
+			$q_operator = $result_query_object->q_operator ?? null;
+		
 		# Clone and modify query_object for search in relations_search too
 		$relation_search_obj = clone $result_query_object;
 			$relation_search_obj->component_path = ['relations_search'];
-
+		
 		# Group the two query_object in a 'or' clause
 		$operator = '$or';
+		if ($q_operator==='!=') {
+			$operator = '$and';
+		}
 		$group = new stdClass();
 			$group->{$operator} = [$result_query_object,$relation_search_obj];
 
