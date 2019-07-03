@@ -2636,7 +2636,7 @@ class section extends common {
 				$section->Save();
 				debug_log(__METHOD__." Propagated diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);						
 			}else{
-				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);
+				#debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);
 			}			
 		}
 
