@@ -279,8 +279,10 @@ class component_relation_parent extends component_relation_common {
 			} catch (Exception $e) {
 				debug_log(__METHOD__." Error on get matrix_table_from_tipo: ".to_string($section_tipo), logger::ERROR);
 			}
-			if ($table) {
+			if (!empty($table)) {
 				$strQuery .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+			}else{
+				return []; // stop here
 			}			
 		}else{
 			// Iterate tables and make union search
