@@ -2925,11 +2925,11 @@ class section extends common {
 				# Ignoerd locator
 				$ar_deleted_locators[] = $current_locator;				
 				$removed = true;
-				if(SHOW_DEBUG===true) {
-					$c_section_label 	= RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
-					$c_scomponent_label = RecordObj_dd::get_termino_by_tipo($component_tipo);
-					debug_log(__METHOD__." Deleted locator in '$relations_container'. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo - $c_section_label - $c_scomponent_label " . PHP_EOL . to_string($current_locator), logger::DEBUG);
-				}				
+				//if(SHOW_DEBUG===true) {
+				//	$c_section_label 	= RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
+				//	$c_scomponent_label = RecordObj_dd::get_termino_by_tipo($component_tipo);
+				//	debug_log(__METHOD__." Deleted locator in '$relations_container'. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo - $c_section_label - $c_scomponent_label " . PHP_EOL . to_string($current_locator), logger::DEBUG);
+				//}				
 			}else{
 				# Add normally
 				$new_relations[] = $current_locator;
