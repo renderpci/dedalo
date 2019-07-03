@@ -1571,6 +1571,11 @@
 		Make section_map term format array as default instead string (string is supported for compatibility)
 
 
+	Valencia 01-07-2019 5.4.60
+		Fixed bug in component relation parent method get_parents recursive that use cached parents incorrectly when in multiple items are processing (import, update_cache, etc.)
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1592,7 +1597,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.56';
+	$DEDALO_VERSION = '5.4.60';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}

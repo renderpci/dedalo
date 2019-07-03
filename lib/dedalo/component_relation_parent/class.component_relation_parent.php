@@ -395,7 +395,13 @@ class component_relation_parent extends component_relation_common {
 
 		// static vars set
 			static $ar_parents_recursive_resolved = array();
-			static $locators_resolved 			  = array();		
+			static $locators_resolved 			  = array();
+
+		// reset on first call
+			if ($is_recursion!==true) {
+				#$ar_parents_recursive_resolved  = [];
+				$locators_resolved 				= [];
+			}
 
 		// key_resolve
 			$key_resolve = $section_tipo.'_'.$section_id;

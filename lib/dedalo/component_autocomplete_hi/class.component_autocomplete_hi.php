@@ -137,7 +137,7 @@ class component_autocomplete_hi extends component_relation_common {
 				$section_id 	= $current_locator->section_id;
 				$section_tipo 	= $current_locator->section_tipo;
 				
-				$parents_recursive = component_relation_parent::get_parents_recursive($section_id, $section_tipo, $skip_root=true);
+				$parents_recursive = component_relation_parent::get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false);
 					#dump($parents_recursive, ' parents_recursive ++ '."$section_id, $section_tipo");
 				foreach ($parents_recursive as $key => $parent_locator) {
 
