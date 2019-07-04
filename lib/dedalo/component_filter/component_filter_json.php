@@ -25,14 +25,14 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-	
+
 		switch ($modo) {
 			case 'edit':
 				$dato 					= $this->get_dato();
 				$ar_list_of_values		= $this->get_ar_projects_for_current_section();							
 				break;
 			case 'list':
-				$dato 				= $this->get_valor();
+				$dato 				= $this->get_valor(null,'array');
 				break;
 		}
 
