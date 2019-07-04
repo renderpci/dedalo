@@ -17,7 +17,7 @@ class component_check_box extends component_relation_common {
 	* GET VALOR
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECDIFIC COMPONENT
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG ) {
+	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
 
 		if (isset($this->valor)) {
 			return $this->valor;
@@ -50,7 +50,15 @@ class component_check_box extends component_relation_common {
 			}
 		}
 		# Set value
-		$this->valor = implode(', ', $ar_values);
+		switch ($format) {
+			case 'array':
+				$this->valor = $ar_values;
+				break;		
+			case 'string':
+			default:
+				$this->valor = implode(', ', $ar_values);
+				break;
+		}
 
 		return $this->valor;		
 	}//end get_valor
