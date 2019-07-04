@@ -19,7 +19,7 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-				
+	
 		switch ($modo) {
 				case 'edit':
 				$dato 				= $this->get_dato();
@@ -27,7 +27,7 @@
 				break;
 
 			case 'list':
-				$dato 				= $this->get_valor();
+				$dato 				= $this->get_valor(null,'array');
 		
 		}
 
