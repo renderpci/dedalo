@@ -27,7 +27,12 @@
 	if($options->get_data===true && $permissions>0){
 		// Value
 			$value = $this->get_dato();
-			
+
+			// force array format always
+				if (!is_array($value)) {
+					$value = [$value];
+				}
+				
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
 				$item->tipo 				= $this->get_tipo();
