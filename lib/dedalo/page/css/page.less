@@ -1,9 +1,10 @@
 
 // temporal debug css
-	#test_container {
+	#test_container > section {
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 		font-size: 1em;
 		display: flex;
+		//flex-wrap: wrap;
 
 		ol, ul { list-style:none; }
 
@@ -64,6 +65,20 @@
 		// error
 			.error {
 				background-color: red !important;
+			}
+
+		// success
+			.success {
+				//background-color: green !important;
+				animation: cssAnimation 2s ease-out;
+			}
+
+			@keyframes cssAnimation {
+			    //0%   {background-color: green !important;}
+			    //50%  {background-color: grey;}
+			    //100% {background-color: #F3F3F3 !important;}
+			    from { background-color: green; }
+			    to { background-color: rgb(230, 230, 230); }
 			}
 
 
