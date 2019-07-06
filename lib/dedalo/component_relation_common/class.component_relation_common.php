@@ -1277,70 +1277,80 @@ class component_relation_common extends component_common {
 		// Add locator at end
 			$new_dato[] = $locator;			
 		
-		/* DES	
-			$value_to_search  = $new_dato;
-			$ar_filter_fields = [];
-			foreach ($ar_component_to_search as $component_to_search) {
-				
-				# get the modelo_name of the componet to search
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_to_search,true);
+		// Direct search (!) 
+			/*
+			function direct_search($new_dato, $ar_component_to_search, $ar_section_to_search, $tipo, $relation_type) {
+				$start_time=microtime(1);
 
-				//get the query model of the component to secarch
-				foreach ($value_to_search as $value) {
-					$ar_filter_fields[]	= $modelo_name::get_search_query( $json_field='datos', $component_to_search, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, json_encode($value), $comparison_operator='=');
+				$value_to_search  = $new_dato;
+				$ar_filter_fields = [];
+				foreach ($ar_component_to_search as $component_to_search) {
+					
+					# get the modelo_name of the componet to search
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_to_search,true);
+
+					//get the query model of the component to secarch
+					foreach ($value_to_search as $value) {
+						$ar_filter_fields[]	= $modelo_name::get_search_query( $json_field='datos', $component_to_search, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, json_encode($value), $comparison_operator='=');
+					}
+					
+					break; // Only one exists
 				}
-				
-				break; // Only one exists
-			}
-			$filter_fields = implode(' OR ', $ar_filter_fields);
-			# MATRIX TABLE : Only from first term for now
-				$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );	
+				$filter_fields = implode(' OR ', $ar_filter_fields);
+				# MATRIX TABLE : Only from first term for now
+					$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );	
 
-			# TARGET SECTIONS : Filter search by target sections (hierarchy_sections)
-				$filter_target_section = '';
-				$ar_filter=array();
-				foreach ($ar_section_to_search as $current_section_tipo) {
-					$ar_filter[] = "a.section_tipo='$current_section_tipo'";
+				# TARGET SECTIONS : Filter search by target sections (hierarchy_sections)
+					$filter_target_section = '';
+					$ar_filter=array();
+					foreach ($ar_section_to_search as $current_section_tipo) {
+						$ar_filter[] = "a.section_tipo='$current_section_tipo'";
+					}
+					$filter_target_section = '(' . implode(' OR ', $ar_filter) . ')';
+
+				# ORDER
+					$order 	= "a.section_id ASC";				
+
+				# Build the search query
+				$strQuery = PHP_EOL.sanitize_query("
+				 -- ".__METHOD__."
+					SELECT a.section_id, a.section_tipo
+					FROM \"$matrix_table\" a
+					WHERE
+					$filter_target_section
+					AND ( $filter_fields )
+					ORDER BY $order ;
+					"
+					);
+				if(SHOW_DEBUG===true) {
+					#error_log("*** set_dato_external *** ".$strQuery);
 				}
-				$filter_target_section = '(' . implode(' OR ', $ar_filter) . ')';
 
-			# ORDER
-				$order 	= "a.section_id ASC";				
+				$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
 
-			# Build the search query
-			$strQuery = PHP_EOL.sanitize_query("
-			 -- ".__METHOD__."
-				SELECT a.section_id, a.section_tipo
-				FROM \"$matrix_table\" a
-				WHERE
-				$filter_target_section
-				AND ( $filter_fields )
-				ORDER BY $order ;
-				"
-				);
-			if(SHOW_DEBUG===true) {
-				#error_log("*** set_dato_external *** ".$strQuery);
+				if(SHOW_DEBUG===true) {
+					#$subtotal = exec_time_unit($start_time,'ms')." ms";
+					#debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
+				}
+
+				# Build the locators with the result
+				$ar_result = array();
+				while ($rows = pg_fetch_assoc($result)) {
+					$locator 		= new locator();
+						$locator->set_section_id($rows['section_id']);
+						$locator->set_section_tipo($rows['section_tipo']);
+						$locator->set_type($relation_type);
+						$locator->set_from_component_tipo($tipo);
+					$ar_result[] = $locator;
+				}
+				#dump($ar_result, ' ar_result 1 DIRECT ++ '.to_string());
+
+				return $ar_result;
 			}
-
-			$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
-
-			if(SHOW_DEBUG===true) {
-				$subtotal = exec_time_unit($start_time,'ms')." ms";
-				debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
-			}
-
-			# Build the locators with the result
-			$ar_result = array();
-			while ($rows = pg_fetch_assoc($result)) {
-				$locator 		= new locator();
-					$locator->set_section_id($rows['section_id']);
-					$locator->set_section_tipo($rows['section_tipo']);
-					$locator->set_type($this->get_relation_type());
-					$locator->set_from_component_tipo($this->get_tipo());
-				$ar_result[] = $locator;
-			}
+			$ar_result = direct_search($new_dato, $ar_component_to_search, $ar_section_to_search, $this->tipo, $this->get_relation_type());	
 			*/
-
+			$ar_result = $this->get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search);
+	
 		# From locators inside property 'relations'
 		#$ar_result = $this->get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search);
 		# From table 'relations' (x number of locators in new_dato is fast aprox. because 'OR' problem in indexes)
@@ -1350,7 +1360,31 @@ class component_relation_common extends component_common {
 			# }else{
 			# 	# untouch ar_component_to_search
 			# }
-			$ar_result 		 = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
+
+			// removed way of relations (!)
+				#$ar_result 		 = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
+				#dump($ar_result, ' ar_result 2 RELATIONS TABLE ++ '.to_string());
+				
+			// way of search_development2::calculate_inverse_locators. Working here (!)
+				#$ar_result3 = [];
+				#foreach ((array)$new_dato as $reference_locator) {
+				#	$ar_related = search_development2::calculate_inverse_locators( $reference_locator, false, false, false);
+				#	foreach ($ar_related as $current_related) {
+				#		$found = array_filter($ar_result3, function($item) use($current_related) {
+				#			if ($item->from_section_id===$current_related->from_section_id && $item->from_section_tipo===$current_related->from_section_tipo) {
+				#				# ignore already added
+				#			}else{
+				#				return $item;
+				#			}
+				#		});
+				#		#if (count($found)===0) {
+				#			$ar_result3[] = $current_related;
+				#		#}					
+				#	}
+				#}
+				#dump($ar_result3, ' ar_result 3 ++ SEARCH_DEVELOPMENT2 '.to_string());
+			
+
 			$total_ar_result = count($ar_result);
 			$total_ar_dato   = count($dato);		
 				
@@ -1389,7 +1423,6 @@ class component_relation_common extends component_common {
 					}
 				}
 			}		
-		
 				
 		// changed true
 			if ($changed===true) {
@@ -1419,7 +1452,7 @@ class component_relation_common extends component_common {
 	* @return array $ar_result
 	* 	Array of locators
 	*/
-	private function get_external_result_DES($new_dato, $ar_component_to_search, $ar_section_to_search) {
+	private function get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search) {
 		$start_time=microtime(1);
 
 		$value_to_search  = $new_dato;
