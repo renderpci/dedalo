@@ -189,7 +189,7 @@ class css {
 	* BUILD_STRUCTURE_CSS
 	* @return object $response
 	*/
-	public static function build_structure_css() {
+	public static function build_structure_css_IN_PROCESS() {
 
 		$response = new stdClass();
 			$response->result = false;
@@ -202,14 +202,13 @@ class css {
 
 		#
 		# SEARCH . Get all components custom css
-		$ar_prefix = unserialize(DEDALO_PREFIX_TIPOS);
-		$filter = '';
+		$ar_prefix = unserialize(DEDALO_PREFIX_TIPOS);	
+		$ar_query  = [];
 		foreach ($ar_prefix as $prefix) {
-			$filter .= "\n\"terminoID\" LIKE '$prefix%' ";
-			if ( $prefix != end($ar_prefix) ) {
-				$filter .= "OR ";
-			}
+			$ar_query[] = "\"terminoID\" LIKE '$prefix%'";			
 		}
+		$filter = implode(' OR ', $ar_query);
+
 		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
 		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
@@ -414,6 +413,126 @@ class css {
 
 		return $css_prefix;
 	}//end get_css_prefix
+
+
+
+	/**
+	* BUILD_STRUCTURE_JSON_CSS
+	* @return object $response
+	*/
+	public static function build_structure_json_css() {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg 	  = null;
+
+		$json_css_key = 'json_css';	
+
+		include DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
+		$less = new lessc;
+		$less_code   = [];
+		$less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
+
+		#
+		# SEARCH . Get all components custom css
+		$ar_prefix = unserialize(DEDALO_PREFIX_TIPOS);	
+		$ar_query  = [];
+		foreach ($ar_prefix as $prefix) {
+			$ar_query[] = "\"terminoID\" LIKE '$prefix%'";			
+		}
+		$filter = implode(' OR ', $ar_query);
+
+		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"{$json_css_key}\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
+		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
+		$result   = pg_query(DBi::_getConnection(), $strQuery);
+		while ($rows = pg_fetch_assoc($result)) {
+
+			$terminoID 		 = $rows["terminoID"];
+			$propiedades_str = $rows["propiedades"];
+			$propiedades 	 = json_decode($propiedades_str);
+			if (!isset($propiedades->css)) {
+				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
+				continue;
+			}			
+			$css_obj = $propiedades->{$json_css_key};
+
+			// Debug only
+			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
+			#if(!in_array($terminoID, $ar_term)) continue;
+			
+			// css_prefix. get_css_prefix
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
+				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);		
+
+			// less line				
+				if ($modelo_name==='section') {
+					
+					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
+						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
+					}
+				
+					// Envolve code into custom wrapper
+					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";					
+	
+				}else{
+
+					continue; // skip others
+				}
+
+			// Add line code
+			$less_code[] = $less_line;
+		
+		}//end while ($rows = pg_fetch_assoc($result)) {
+		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);
+		$less_code = implode(' ', $less_code);	
+
+		
+		// MXINS. Get mixixns file
+			$file_name = DEDALO_LIB_BASE_PATH . self::$mixins_file_path;
+			if ($mixins_code = file_get_contents($file_name)) {
+				$less_code = $mixins_code.$less_code;
+			}	 
+
+		// Write final file. Full path
+			$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
+		
+		// Format : lessjs (default) | compressed | classic
+			$format = (DEVELOPMENT_SERVER===true) ? 'lessjs' : 'compressed';
+			$less->setFormatter($format);	// lessjs (default) | compressed | classic
+		
+		// Preserve comments : true | false	
+			$less->setPreserveComments(false);	// true | false
+		
+		// Compile 
+			#$compiled_css = $less->compile( $less_code );
+			try {
+				$compiled_css = $less->compile( $less_code );
+			} catch (exception $e) {
+				debug_log(__METHOD__." Error en compile less: ".$e->getMessage(), logger::ERROR);
+				echo "fatal error: " . $e->getMessage();
+			}
+
+		// Delete old version if exists
+			if ( file_exists($file_name) && !unlink($file_name) ) {
+				$response->result 	= false;
+				$response->msg 	  	= "Error on remove old css file ($file_name) ";	
+			}
+		
+		// write file
+			if( !$write = file_put_contents($file_name, $compiled_css) ) {
+				$response->result 	= false;
+				$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);
+			}else{
+				$file_size = format_size_units( filesize($file_name) );
+				$response->result 	 = true;
+				$response->msg 	  	 = "File css created successful. Size: $file_size";
+				$response->file_path = self::$structure_file_path;				
+			}
+			#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
+	
+
+		return (object)$response;
+	}//end build_structure_json_css
 
 
 	
