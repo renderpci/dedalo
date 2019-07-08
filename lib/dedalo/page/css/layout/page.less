@@ -1,0 +1,62 @@
+
+
+pre {
+	background-color: #f0f8ffd1;
+	padding: 1em;
+}
+
+
+// active. selected_wrap
+	.active {
+		transition: background-color 0.3s ease;
+		background-color: rgb(230, 230, 230) !important;
+	}
+// error
+	.error {
+		transition: background-color 0.3s ease;
+		background-color: red !important;
+	}
+// success
+	.success {
+		transition: background-color 0.3s ease;
+		background-color: green !important;
+		//animation: cssAnimation 2s ease-out;
+	}
+	@keyframes cssAnimation {
+	    //0%   {background-color: green !important;}
+	    //50%  {background-color: grey;}
+	    //100% {background-color: #F3F3F3 !important;}
+	    from { background-color: green; }
+	    to { background-color: rgb(230, 230, 230); }
+	}
+// hide
+	.hide {
+		//display: none !important;
+		visibility: hidden !important;
+		opacity: 0;
+		transition: visibility 0.25s, height 0.25s, opacity 0.25s linear;				
+		height: 0;
+	}
+
+
+// temporal debug css
+	section {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+		font-size: 1em;	
+		display: flex;		
+	}	
+
+
+
+// component specific
+		.css_section_id99 {
+			min-height: 1.2em;
+			border-right: 1px solid #ebebeb;
+			padding-left: 10px;
+			padding-right: 10px;
+			background-color: rgba(129,129,129,0.8);
+			color: #fff !important;
+			width: 10%;			
+		}
+		.css_email_error { background-color:red;}
+		.css_email_error:hover { background-color:orange;}
