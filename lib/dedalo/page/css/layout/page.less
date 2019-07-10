@@ -21,9 +21,9 @@ html {
 	}
 // success
 	.success {
-		transition: background-color 0.3s ease;
-		background-color: green !important;
-		//animation: cssAnimation 2s ease-out;
+		//transition: background-color 0.3s ease;
+		//background-color: green !important;
+		animation: cssAnimation 1.5s ease-out;
 	}
 	@keyframes cssAnimation {
 	    //0%   {background-color: green !important;}
@@ -40,12 +40,24 @@ html {
 		transition: visibility 0.25s, height 0.25s, opacity 0.25s linear;				
 		height: 0;
 	}
+// debug
+	.debug {
+		display:grid;
+		grid-template-columns: 40% 1fr auto;
+		background-color:#f1f2f3;
+		padding: 1em;
+
+		.total_time {
+			position: fixed;
+			right:2em;
+			top:1em;
+		}
+	}
 
 
 // temporal debug css
 	section {		
-		font-size: 1em;	
-		display: flex;		
+		font-size: 1em;				
 	}	
 
 

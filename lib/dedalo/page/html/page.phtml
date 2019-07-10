@@ -2,13 +2,14 @@
 <html>
 <head>
 	<title></title>
-	<link href="css/page.css" rel="stylesheet">
-	<script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
+	<link href="<?php echo DEDALO_LIB_BASE_URL ?>/page/css/main.css" rel="stylesheet">
+	<link href="<?php echo DEDALO_LIB_BASE_URL ?>/common/css/structure.css" rel="stylesheet">	
 </head>
 <body>
-	<div id="test_container"></div>
-	<div id="page_wrapper"></div>
+	<div id="main"></div>
+	<div id="debug" class="debug hide"></div>
 </body>
+<script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
 <script type="module" >
 	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"
 	const current_page = new page(<?php echo $page_options_json ?>)

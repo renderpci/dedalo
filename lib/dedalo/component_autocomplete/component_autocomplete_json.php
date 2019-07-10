@@ -70,13 +70,11 @@
 
 		switch ($modo) {
 			case 'edit':
-				$dato 				= $this->get_dato();				
-				//TODO - Get the proper list of values. Initially empty, dinamically apply some filter when needed
-				$ar_list_of_values	= [];//$this->get_ar_list_of_values2();
+				$dato 	= $this->get_dato();
 				break;
 
 			case 'list':
-				$dato 				= $this->get_valor();
+				$dato 	= $this->get_dato();
 				break;
 		}
 
@@ -133,14 +131,11 @@
 				$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
 				$item->section_tipo 		= $this->get_section_tipo();
 				$item->model 				= get_class($this);
-				$item->value 				= $value;
+				$item->value 				= $value;			
+				#$item->datalist 			= [];			
 
-
-			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-				$item->datalist = $ar_list_of_values->result;
-			}
-
-			$data[] = $item;
+			#$data[] = $item;
+			array_unshift($data,$item);
 			
 	}//end if $options->get_data===true && $permissions>0
 
