@@ -4,10 +4,11 @@
 	margin:1em;padding:0;
 	// flex config
 	display: flex;
-	justify-content: space-between;
+	justify-content: flex-start;
 	align-items: stretch;
 	align-content: stretch;
 	flex-wrap: wrap;
+	flex-flow: column;
 }
 .section_group_body_base {
 	margin:0;padding:0;
@@ -24,16 +25,50 @@
 	display: flex;
 	flex-wrap: wrap;	
 	flex: 1 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'> 
+	flex-grow: initial;
 }
 
 
+.section.edit {
 
-// section_record
-	.section_record {
+	display: flex;
+
+	//&:before {
+	//	content: "Section edit";
+	//	font-weight: bold;
+	//	width: 100%;
+	//	padding: 1em;		
+	//}
+}
+
+.section.list {
+
+	display: flex;
+	flex-wrap: wrap;
+
+	&:before {
+		content: "Section list";
+		font-weight: bold;
+		width: 100%;
+		padding: 1em;
+		flex-basis: 100%;
+	}
+} 
+
+// section_record edit
+	.section_record.edit {
 		// flex base config
 		.section_record_base;
 		//background-color: #DBF5FF;
 		outline: 1px solid rgba(216, 216, 216, 0.43);
+
+
+		&:before {
+			content: "Section record";
+			font-weight: bold;
+			width: 100%;
+			padding: 1em;
+		}
 
 		// section_group
 			.section_group {
@@ -61,6 +96,7 @@
 					//	flex-grow: 0;
 					//	background-color: #FF0000 !important;
 					//}
+					
 				}
 			}//end .section_group
 
@@ -92,13 +128,27 @@
 			}//end .wrapper_component
 			
 		    
-	}//end .section_record
+	}//end .section_record.edit
 
 	
-	
+// section_record list
+	.section_record.list {
+		background-color: #f7f7f7;
+		flex: 0 0 100%;
+		display: flex;
+		//flex-wrap: wrap;
+		width: 100%;
+		//outline: 1px solid rgba(216, 216, 216, 0.7);
+			
+		>div {
+			padding: 1em;
+			padding-left: 1em;
+			padding-right: 0;
+			flex: 1 0;
+			outline: 1px solid #EAEAEA;
+		}
 
-		
-	
+	}	
 
 
 	

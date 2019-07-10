@@ -60,6 +60,7 @@ class layout_map {
 						if($item->parent===$tipo) return $item;
 					}					
 				});
+				#if($tipo==='test175') dump($self_ar_dd_objects, ' self_ar_dd_objects ++ '.to_string($tipo));
 				if (!empty($self_ar_dd_objects)) {
 					
 					// groupers with childrens already defined case
@@ -73,7 +74,7 @@ class layout_map {
 						debug_log(__METHOD__." layout map selected from 'dd_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
 						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
 				}				 
-			}		
+			}
 		
 		// 2. search in user presets
 			if (!isset($layout_map)) {
@@ -82,35 +83,40 @@ class layout_map {
 					// layout_map
 						$layout_map = $user_preset;
 						debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo]".to_string(), logger::DEBUG);
-						#dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));					
+						//dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));					
 				}
 			}
 	
 		// 3. calculate from section list or related terms
 			if (!isset($layout_map)) {
+				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$ar_related=array();
 				switch ($modo) {
 					case 'list':
-					case 'portal_list':
-						# case section list is defined				
-						$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);				
-						if(isset($ar_terms[0]) ) {
-							
-							# Use found related terms as new list
-							$current_term = $ar_terms[0];
-							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-							
+					case 'portal_list':						
+						if (in_array($model, self::$groupers)) {
+							// groupers
+							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 						}else{
 
-							# Fallback related when section list is not defined					
-							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);						
+							# case section list is defined				
+							$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);				
+							if(isset($ar_terms[0]) ) {
+								
+								# Use found related terms as new list
+								$current_term = $ar_terms[0];
+								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								
+							}else{
+
+								# Fallback related when section list is not defined					
+								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);						
+							}
 						}
 						break;
 					
 					case 'edit':
 					default:
-
-						$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						if ($model==='section') {
 							// section
 							$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
@@ -118,8 +124,7 @@ class layout_map {
 
 						}elseif (in_array($model, self::$groupers)) {
 							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-						
+							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);							
 						}else{
 							// portal
 							$edit_view_options ='';

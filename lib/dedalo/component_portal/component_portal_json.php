@@ -32,7 +32,7 @@
 
 // data
 	$data = [];
-
+	
 	if($options->get_data===true && $permissions>0){
 
 		$dato = $this->get_dato();
@@ -41,12 +41,12 @@
 			// Value
 				$value = $dato;
 							
-				$item = new stdClass();
-					$item->section_id 		= $this->get_section_id();
+				$item = new stdClass();					
 					$item->tipo 			= $this->get_tipo();
-					$item->from_parent 		= isset($this->from_parent) ? $this->from_parent : $item->tipo;
 					$item->section_tipo 	= $this->get_section_tipo();
-					$item->model 			= get_class($this);
+					$item->section_id 		= $this->get_section_id();
+					$item->from_parent 		= isset($this->from_parent) ? $this->from_parent : $item->tipo;					
+					#$item->model 			= get_class($this);
 					$item->value 			= $value;
 
 				$data[] = $item;			
@@ -65,9 +65,9 @@
 
 			// subdata add
 				foreach ($ar_subdata as $current_data) {
-					$data[] = $current_data;
+					$data = array_merge($data, $current_data);
 				}
-
+	
 		}//end if (!empty($dato))
 		
 	}//end if $options->get_data===true && $permissions>0

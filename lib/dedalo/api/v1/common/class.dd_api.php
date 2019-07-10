@@ -353,6 +353,8 @@ class dd_api {
 					$context[] = $current_sqo;
 			
 			}//end foreach ($ar_search_query_object as $current_sqo)
+			// smart remove data duplicates (!)
+				$data = self::smart_remove_data_duplicates($data);
 
 			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
 			
@@ -386,9 +388,23 @@ class dd_api {
 		
 		$clean_data = [];
 		foreach ($data as $key => $value_obj) {			
-			if (!in_array($value_obj, $clean_data, false)) {
+			#if (!in_array($value_obj, $clean_data, false)) {
+			#	$clean_data[] = $value_obj;
+			#}
+			$found = array_filter($clean_data, function($item) use($value_obj){
+				if (
+					isset($item->section_tipo) && isset($value_obj->section_tipo) && $item->section_tipo===$value_obj->section_tipo &&
+					isset($item->section_id) && isset($value_obj->section_id) && $item->section_id===$value_obj->section_id && 
+					isset($item->tipo) && isset($value_obj->tipo) && $item->tipo===$value_obj->tipo && 
+					isset($item->from_parent) && isset($value_obj->from_parent) && $item->from_parent===$value_obj->from_parent
+				){
+					return $item;
+				}
+			});
+			
+			if (empty($found)) {
 				$clean_data[] = $value_obj;
-			}			
+			}
 		}
 
 		#$clean_data = array_unique($data, SORT_REGULAR);

@@ -1599,7 +1599,7 @@ abstract class common {
 		$tipo = $this->tipo;
 		
 		// subcontext from layout_map items
-			$layout_map = $this->get_layout_map(); #dump($layout_map, ' layout_map CONTEXT ++ '.to_string($tipo));
+			$layout_map = $this->get_layout_map(); 		#dump($layout_map, ' layout_map CONTEXT ++ '.to_string($tipo));
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 				= (object)$dd_object;
@@ -1638,7 +1638,7 @@ abstract class common {
 
 						// Inject this tipo as related element from_parent
 							$related_element->from_parent = $tipo;
-					
+						
 						// get the JSON context of the related component
 							$item_options = new stdClass();
 								$item_options->get_context 	 = true;
@@ -1783,7 +1783,7 @@ abstract class common {
 
 			$this->layout_map = layout_map::get_layout_map($options);
 		}
-
+		
 		return $this->layout_map;
 	}//end get_layout_map
 
