@@ -189,7 +189,7 @@ class css {
 	* BUILD_STRUCTURE_CSS
 	* @return object $response
 	*/
-	public static function build_structure_css_IN_PROCESS() {
+	public static function build_structure_css() {
 
 		$response = new stdClass();
 			$response->result = false;
