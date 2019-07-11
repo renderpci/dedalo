@@ -9,6 +9,7 @@
 	align-content: stretch;
 	flex-wrap: wrap;
 	flex-flow: column;
+	width: 100%;
 }
 .section_group_body_base {
 	margin:0;padding:0;
@@ -26,6 +27,7 @@
 	flex-wrap: wrap;	
 	flex: 0 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'> 
 	//flex-grow: initial;
+	//flex: 0 1 auto;
 }
 
 
@@ -115,18 +117,25 @@
 
 				>.label {
 					//background-color: #FEDACF;
-					flex: 1 0 20%;
+					//flex: 1 0 20%;
+					flex: 1 0 calc(20% - 2em);
 				}
 				>.content_data {
 					//background-color: #B9DFF6;
-					flex: 1 0 80%;
+					//flex: 1 0 80%;
+					flex: 1 0 calc(80% - 2em);
 				}				
 				
 				@media screen and (max-width: 768px) {
  					flex-basis: 100% !important;
 				}
 			}//end .wrapper_component
-			
+		
+
+		// inside content_data
+		.content_data & {
+			margin-left: 0;			
+		}
 		    
 	}//end .section_record.edit
 
