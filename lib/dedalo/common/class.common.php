@@ -1538,9 +1538,8 @@ abstract class common {
 				// remove from propoerties object
 				unset($properties->css);
 			}		
-		// parent
-			$parent = $this->RecordObj_dd->get_parent(); // default
-			// from requested context if exists
+		// parent 
+			// 1 . From requested context
 			if (isset(dd_api::$ar_dd_objects)) {
 
 			 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
@@ -1553,13 +1552,21 @@ abstract class common {
 					// set
 					$parent = $request_dd_object->parent;
 				}
-
-			}else if (isset($this->from_parent)) {
-	
-				// injected by the element
-				$parent = $this->from_parent;			
-			
 			}
+
+			// 2 . From injected 'from_parent'
+			if (!isset($parent) && isset($this->from_parent)) {
+				// injected by the element
+				$parent = $this->from_parent;
+			}
+
+			// 3 . From structure (fallback)
+			if (!isset($parent)) {
+				// default
+				$parent = $this->RecordObj_dd->get_parent();
+			}
+
+
 		// tools
 			$tools = $this->get_ar_tools_obj();			
 			if ($tools===false || is_null($tools)) {
