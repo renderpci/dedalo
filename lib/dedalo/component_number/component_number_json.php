@@ -34,11 +34,11 @@
 				}
 				
 			$item = new stdClass();
-				$item->section_id 			= $this->get_section_id();
-				$item->tipo 				= $this->get_tipo();
-				$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
-				$item->section_tipo 		= $this->get_section_tipo();
-				$item->value 				= $value;
+				$item->section_id 		= $this->get_section_id();
+				$item->section_tipo 	= $this->get_section_tipo();
+				$item->tipo 			= $this->get_tipo();
+				$item->from_parent 		= isset($this->from_parent) ? $this->from_parent : $item->tipo;				
+				$item->value 			= $value;
 
 			$data[] = $item;
 
