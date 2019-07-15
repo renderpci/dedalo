@@ -1574,7 +1574,9 @@
 	Valencia 01-07-2019 5.4.60
 		Fixed bug in component relation parent method get_parents recursive that use cached parents incorrectly when in multiple items are processing (import, update_cache, etc.)
 
-
+	
+	Valencia 01-07-2019 5.4.64
+		Fixed error on component_relation_related get_references when section_map thesaurus value is multiple (array)
 
 
 
@@ -1597,12 +1599,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.63';
+	$DEDALO_VERSION = '5.4.64';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-07-2019');
+	define('DEDALO_BUILD'	, '11-07-2019');
 
 
 	/*
