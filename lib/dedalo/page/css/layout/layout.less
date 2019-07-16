@@ -142,9 +142,10 @@
 // section_record list
 	.section_record.list {
 		background-color: #f7f7f7;
-		flex: 0 0 100%;
-		display: flex;
-		//flex-wrap: wrap;
+		// display: flex;
+		// flex: 0 0 100%;		
+		// //flex-wrap: wrap;
+		display: grid;
 		width: 100%;
 		//outline: 1px solid rgba(216, 216, 216, 0.7);
 			
@@ -157,17 +158,36 @@
 			outline: 1px solid #EAEAEA;
 		}
 
+		>.breakdown {
+			padding: 0;
+		}
+
 	}	
 
 
 // header_wrapper_list
 	.header_wrapper_list {
-		background-color: #CBE3BE;
-		display: flex;
+		background-color: #2c2c2e;
+		color: #efefef;
+		//display: flex;
 		width: 100%;
+		position: sticky;
+    	top: 0;
+    	//z-index: 1;
+    	display: grid;
+    	font-weight: bold;
 
 		>div {
-			flex: 1 1 auto;
+			//display: flex;
+			//flex: 1 1 100%;
+			padding: 1em;			
+			outline: 1px solid #C0C0C0;
+
+			>div {
+				//display: flex;
+				//flex: 1 1 auto;				
+				outline: 1px solid #C0C0C0;
+			}
 		}
 	}
 
