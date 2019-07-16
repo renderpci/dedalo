@@ -37,8 +37,8 @@ class component_relation_common extends component_common {
 			'component_autocomplete_hi',
 			'component_check_box',
 			'component_filter',
-			'component_filter_master',			
-			'component_portal',			
+			'component_filter_master',
+			'component_portal',
 			'component_publication',
 			'component_radio_button',
 			'component_relation_children',
@@ -46,7 +46,7 @@ class component_relation_common extends component_common {
 			'component_relation_model',
 			'component_relation_parent',
 			'component_relation_related',
-			'component_relation_struct',			
+			'component_relation_struct',
 			'component_select',
 			'component_select_lang'
 		];

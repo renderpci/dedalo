@@ -4714,5 +4714,25 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_DATA_ITEM
+	* @param mixed $value
+	* @return object $item
+	*/
+	public function get_data_item($value) {
+
+		$item = new stdClass();
+			$item->section_id 			= $this->get_section_id();
+			$item->section_tipo 		= $this->get_section_tipo();
+			$item->tipo 				= $this->get_tipo();
+			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;		
+			$item->value 				= $value;
+		
+		return $item;
+	}//end get_data_item
+
+
+
 }//end class
 ?>

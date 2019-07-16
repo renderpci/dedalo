@@ -27,18 +27,12 @@
 	if($options->get_data===true && $permissions>0){
 	
 		// Value
-			#$value = $this->get_valor();
-			$value = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=false, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-			
+		$value = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=false, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 
-			$item = new stdClass();
-				$item->section_id 		= $this->get_section_id();
-				$item->section_tipo 	= $this->get_section_tipo();
-				$item->tipo 			= $this->get_tipo();
-				$item->from_parent		= isset($this->from_parent) ? $this->from_parent : $item->tipo;				
-				$item->value 			= $value;
+		// data item
+		$item  = $this->get_data_item($value);
 
-			$data[] = $item;
+		$data[] = $item;
 		
 	}//end if($options->get_data===true && $permissions>0)
 	
