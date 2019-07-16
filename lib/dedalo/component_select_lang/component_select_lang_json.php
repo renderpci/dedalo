@@ -19,12 +19,18 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-			
+		
+		// Value
 		switch ($modo) {
+			case 'list':
+				$value = $this->get_valor();
+				break;
 			case 'edit':
-				$dato 							= $this->get_dato();
+			default:
+				$value 							= $this->get_dato();
+				// datalist
 				$ar_all_project_select_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
-
+				$datalist = [];
 				foreach ((array)$ar_all_project_select_langs as $key => $item) {
 				
 					$label   	= lang::get_name_from_code($item);
@@ -32,31 +38,22 @@
 					$value 		= lang::get_lang_locator_from_code($item);
 					
 					$item_value = new stdClass();			
-						$item_value->value 			= $value;
-						$item_value->label 			= $label;
-						$item_value->code 			= $code;						
+						$item_value->value 	= $value;
+						$item_value->label 	= $label;
+						$item_value->code 	= $code;						
 					
-					$item_values[]= $item_value;
-							
+					$datalist[]= $item_value;							
 				}	
 				break;
-
-			case 'list':
-				$dato 				= $this->get_valor();
-		
 		}			
 	
-		// item
-		$item = new stdClass();
-			$item->section_id 			= $this->get_section_id();
-			$item->tipo 				= $this->get_tipo();
-			$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
-			$item->section_tipo 		= $this->get_section_tipo();
-			$item->value 				= $dato;
+		// data item
+		$item  = $this->get_data_item($value);
 
-	if (isset($item_values)) {
-		$item->datalist 				= $item_values; //$ar_list_of_values->result;
-	}
+		// datalist
+		if (isset($datalist)) {
+			$item->datalist = $datalist;
+		}
 
 		$data[] = $item;
 

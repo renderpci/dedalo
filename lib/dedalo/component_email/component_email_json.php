@@ -25,15 +25,12 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
+		
 		// Value
 		$value = $this->get_dato();	
 		
-		$item = new stdClass();
-			$item->section_id 			= $this->get_section_id();
-			$item->tipo 				= $this->get_tipo();
-			$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
-			$item->section_tipo 		= $this->get_section_tipo();
-			$item->value 				= is_array($value) ? $value : array($value);
+		// data item
+		$item  = $this->get_data_item($value);
 
 		$data[] = $item;
 

@@ -127,19 +127,15 @@
 			}//end if (!empty($dato))
 
 
-		// Value
+			// Value
 			$value = $dato;
-						
-			$item = new stdClass();
-				$item->section_id 			= $this->get_section_id();
-				$item->tipo 				= $this->get_tipo();
-				$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
-				$item->section_tipo 		= $this->get_section_tipo();
-				$item->model 				= get_class($this);
-				$item->value 				= $value;
 
+			// data item
+			$item  = $this->get_data_item($value);
+
+			// datalist add
 			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-				$item->datalist 				= $ar_list_of_values->result;
+				$item->datalist = $ar_list_of_values->result;
 			}
 
 			$data[] = $item;

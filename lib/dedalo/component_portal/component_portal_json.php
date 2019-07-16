@@ -41,15 +41,10 @@
 			// Value
 				$value = $dato;
 							
-				$item = new stdClass();					
-					$item->tipo 			= $this->get_tipo();
-					$item->section_tipo 	= $this->get_section_tipo();
-					$item->section_id 		= $this->get_section_id();
-					$item->from_parent 		= isset($this->from_parent) ? $this->from_parent : $item->tipo;					
-					#$item->model 			= get_class($this);
-					$item->value 			= $value;
+				// data item
+				$item  = $this->get_data_item($value);
 
-				$data[] = $item;			
+				$data[] = $item;
 				
 			// subdata . search self records to paginate
 				$rows_data 	 = $this->get_portal_records($dato);

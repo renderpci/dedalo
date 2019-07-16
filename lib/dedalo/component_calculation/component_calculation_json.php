@@ -19,23 +19,22 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-			
-		switch ($modo) {
-			case 'edit':
-				$dato 				= $this->get_dato();
-				break;
+		
+		// Value
+		switch ($modo) {		
 
 			case 'list':
-				$dato 				= $this->get_valor();
-		
+				$value 	= $this->get_valor();
+				break;
+
+			case 'edit':
+			default:
+				$value 	= $this->get_dato();
+				break;
 		}
 
-		$item = new stdClass();
-			$item->section_id 			= $this->get_section_id();
-			$item->tipo 				= $this->get_tipo();
-			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
-			$item->section_tipo 		= $this->get_section_tipo();
-			$item->value 				= $dato;
+		// data item
+		$item  = $this->get_data_item($value);
 
 		$data[] = $item;
 

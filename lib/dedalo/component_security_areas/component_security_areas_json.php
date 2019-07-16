@@ -31,24 +31,17 @@
 
 		$dato = $this->get_dato();
 
-		$value = [];
-		foreach ($dato as $item) {
-			
-			$item->model = RecordObj_dd::get_modelo_name_by_tipo($item->tipo,true);
-		}
-
 		// Value
-			$value = $dato;
+		$value = [];
+		foreach ($dato as $dato_item) {			
+			$dato_item->model = RecordObj_dd::get_modelo_name_by_tipo($item->tipo,true);
+			$value[] = $dato_item;
+		}
 						
-			$item = new stdClass();
-				$item->section_id 			= $this->get_section_id();
-				$item->tipo 				= $this->get_tipo();
-				$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
-				$item->section_tipo 		= $this->get_section_tipo();
-				$item->model 				= get_class($this);
-				$item->value 				= $value;
+		// data item
+		$item  = $this->get_data_item($value);
 
-			$data[] = $item;
+		$data[] = $item;
 			
 	}//end if $options->get_data===true && $permissions>0
 

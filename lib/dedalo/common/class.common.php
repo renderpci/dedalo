@@ -1541,7 +1541,7 @@ abstract class common {
 		// parent 
 			// 1 . From requested context
 			if (isset(dd_api::$ar_dd_objects)) {
-
+			
 			 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
 					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
 						return $item;

@@ -26,43 +26,45 @@
 
 	if($options->get_data===true && $permissions>0){
 
+		// Value
 		switch ($modo) {
-			case 'edit':
-				$dato 					= $this->get_dato();
-				$ar_list_of_values		= $this->get_ar_projects_for_current_section();							
-				break;
 			case 'list':
-				$dato 				= $this->get_valor(null,'array');
+				$value = $this->get_valor(null,'array');
+				break;			
+			case 'edit':
+			default:
+				$value = $this->get_dato();
+				$ar_projects_for_current_section = $this->get_ar_projects_for_current_section();
 				break;
 		}
 
-		// item
-		$item = new stdClass();
-			$item->section_id 			= $this->get_section_id();
-			$item->tipo 				= $this->get_tipo();
-			$item->from_parent 			= isset($this->from_parent) ? $this->from_parent : $item->tipo;
-			$item->section_tipo 		= $this->get_section_tipo();
-			$item->value 				= $dato;
+		// data item
+		$item  = $this->get_data_item($value);
 
-			if (isset($ar_list_of_values)) {
-				foreach ($ar_list_of_values as $user_project) {		
+		// datalist
+		if (isset($ar_projects_for_current_section)) {
 
-					$project_value = new stdClass();
-						$project_value->section_id 		= $user_project->locator->section_id;
-						$project_value->section_tipo 	= $user_project->locator->section_tipo;
+			$item->datalist = [];
+			foreach ($ar_projects_for_current_section as $user_project) {
 
-					$project = new stdClass();
-						$project->value 				= $project_value;
-						$project->label 				= $user_project->label;
-						$project->section_id 			= $user_project->locator->section_id;
+				$project_value = new stdClass();
+					$project_value->section_id 		= $user_project->locator->section_id;
+					$project_value->section_tipo 	= $user_project->locator->section_tipo;
 
-						$item->datalist[] = $project;
-					}				
+				$project = new stdClass();
+					$project->value 				= $project_value;
+					$project->label 				= $user_project->label;
+					$project->section_id 			= $user_project->locator->section_id;
+
+				$item->datalist[] = $project;
 			}
+		}
 
 		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)
+
+
 
 // JSON string
 	return common::build_element_json_output($context, $data);

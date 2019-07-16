@@ -40,20 +40,14 @@
 			//		$value[] = $item;
 			//	}
 			//}
+			$image_item = new stdClass();
+				$image_item->url 	 = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT, false, false, false);
+				$image_item->quality = DEDALO_IMAGE_QUALITY_DEFAULT;
+			
+			$value[] = $image_item;
 
-			$item = new stdClass();
-				$item->url 		= $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT, false, false, false);
-				$item->quality 	= DEDALO_IMAGE_QUALITY_DEFAULT;
-			$value[] = $item;
-
-
-			$item = new stdClass();
-				$item->section_id 			= $this->get_section_id();
-				$item->tipo 				= $this->get_tipo();
-				$item->from_parent		 	= isset($this->from_parent) ? $this->from_parent : $item->tipo;
-				$item->from_section_tipo 	= isset($this->from_section_tipo) ? $this->from_section_tipo : $this->get_section_tipo();
-				$item->section_tipo 		= $this->get_section_tipo();
-				$item->value 				= $value;
+			// data item
+			$item  = $this->get_data_item($value);
 
 			$data[] = $item;
 
