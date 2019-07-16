@@ -396,7 +396,7 @@ class dd_api {
 					isset($item->section_tipo) && isset($value_obj->section_tipo) && $item->section_tipo===$value_obj->section_tipo &&
 					isset($item->section_id) && isset($value_obj->section_id) && $item->section_id===$value_obj->section_id && 
 					isset($item->tipo) && isset($value_obj->tipo) && $item->tipo===$value_obj->tipo && 
-					isset($item->from_parent) && isset($value_obj->from_parent) && $item->from_parent===$value_obj->from_parent
+					isset($item->from_component_tipo) && isset($value_obj->from_component_tipo) && $item->from_component_tipo===$value_obj->from_component_tipo
 				){
 					return $item;
 				}
