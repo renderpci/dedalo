@@ -1,11 +1,23 @@
 <?php
 
 	# VISUALIZADOR HTML
-	$html 	= "<!-- $tool_name $modo -->";
+	$html = "<!-- $tool_name $modo -->";
 
-	$html 	.= '<script>tool_sort.init("'. encodeURIComponent($options_json) .'")</script>';
+	#$html 	.= '<script>tool_sort.init("'. encodeURIComponent($options_json) .'")</script>';
 
-	$html 	.= "<!-- /$tool_name $modo -->";
 
-	print $html; 
-?>
+	$html 	.= '<div class="tool_grid">';
+	
+		$html .= '<div class="tool_grid_left sgc_edit">';
+		$html .= $source_html;
+		$html .= '</div>';//end tool_grid_left
+
+		$html .= '<div class="tool_grid_rigth sgc_edit">';
+		$html .= $target_html;
+		$html .= '</div>';//end tool_grid_rigth
+	
+	$html .= '</div>';//end tool_grid
+
+	$html .= "<!-- /$tool_name $modo -->";
+
+	print $html;

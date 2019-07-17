@@ -142,26 +142,38 @@ body {
 	.tool_grid {
 		display: grid;
 		//grid-template-columns: 0.8fr 1.2fr;
-		grid-template-columns: 550px auto;
+		grid-template-columns: 1fr 1fr;
 		height: 100vh;
-	}
 
-
-// tool_grid_left
-	.tool_grid_left {
-		background-color: #f3f3f3;
-
-		#search2_container_selection .search_component {
-			flex-basis: 96%;
+		>* {
+			padding: 2em;
 		}
 
-		
-	}
+		// tool_grid_left
+		.tool_grid_left {
+			background-color: #f3f3f3;
+			
+			>* {				
+				border: none !important;
+			}
 
-// tool_grid_rigth
-	.tool_grid_rigth {
-		background-color: #E8E8E8;
-	}
+			#search2_container_selection .search_component {
+				flex-basis: 96%;
+			}
+			
+		}
+
+		// tool_grid_rigth
+		.tool_grid_rigth {
+			background-color: #E8E8E8;
+		}
+
+	}//end .tool_grid
+
+
+
+
+
 
 
 // row_container
@@ -302,7 +314,10 @@ body {
 			overflow: unset;
 
 			>.css_button_generic {
-				display: none
+				
+				.tool_grid_left & {
+					display: none
+				}
 			}
 
 			.mosaic_ul .mosaic_li .button_edit, .mosaic_ul .mosaic_li .button_delete {
