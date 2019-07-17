@@ -7,28 +7,38 @@
 class tool_sort {
 	
 
-	public $source_list;
-	public $source_thesaurus;
-	public $button_trigger_tipo;
 
-	public function __construct($section_obj=null, $modo='button') {
+	public $component_obj;
+	public $target_component_tipo;
 
-		$button_trigger_tipo = isset($_REQUEST['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
+
+
+	/**
+	* __CONSTRUCT
+	*/
+	public function __construct($component_obj, $modo='button') {
 		
-		if (empty($button_trigger_tipo)) {
-			throw new Exception("Error Processing Request. Var section is empty", 1);
+		$section_id = isset($_REQUEST['section_id']) ? safe_section_id($_REQUEST['section_id']) : null;		
+		if (empty($section_id)) {
+			throw new Exception("Error Processing Request. Var section_id is empty", 1);
 		}
-	
-		$button_triguer = new RecordObj_dd($button_trigger_tipo);
-		$button_triguer_properties = $button_triguer->get_propiedades(true);
 
-		$this->source_list 			= $button_triguer_properties->source_list;
-		$this->source_thesaurus		= $button_triguer_properties->source_thesaurus;
-		$this->modo 				= $modo;
-		$this->button_trigger_tipo 	= $button_trigger_tipo;
+		$component_obj->set_parent($section_id);
+
+		// fix component_obj
+		$this->component_obj = $component_obj;
+	
+		$component_properties 	= $component_obj->get_propiedades(true);
+		$tool_properties 	 	= $component_properties->ar_tools_name->tool_sort;
+
+		
+		$this->target_component_tipo = $tool_properties->target_component_tipo;
+
+		$this->modo 			= $modo;
 
 		return true;
 	}//end __construct
+
 
 
 	/**
@@ -40,12 +50,12 @@ class tool_sort {
 
 		$context_data = [];
 
-		$button_trigger_tipo = $this->button_trigger_tipo;
+		$tool_name = get_class($this);
 
 		$context_object = new stdClass();
-		$context_object->tool 		= get_class($this);
-		$context_object->tool_label	= RecordObj_dd::get_termino_by_tipo($button_trigger_tipo, DEDALO_APPLICATION_LANG, true);
-		$context_object->type 		= 'info';
+			$context_object->tool 		= $tool_name;
+			$context_object->tool_label	= label::get_label($tool_name);
+			$context_object->type 		= 'info';
 
 		$context_data[] = $context_object;
 		
@@ -60,7 +70,7 @@ class tool_sort {
 	* @return $data array
 	*/
 	public function get_data(){
-		$data = $this->get_sections_to_catalog();
+		$data = $this->get_sections_to_sort();
 		return $data;
 	}// end get_data
 
@@ -71,7 +81,7 @@ class tool_sort {
 	* Resolve the source list to get the section_list
 	* @return html
 	*/
-	public function get_sections_to_catalog() {
+	public function get_sections_to_sort() {
 		
 		$ar_source_list = $this->source_list;
 
@@ -106,8 +116,7 @@ class tool_sort {
 	
 		$user_id 	 = navigator::get_user_id();
 		$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
-		$temp_preset_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
-	
+		$temp_preset_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;	
 
 		return $temp_preset_filter;
 	}//end get_temp_preset_filter
@@ -137,7 +146,7 @@ class tool_sort {
 				$search_options->modo 	 = 'list';
 				
 			# SEARCH_QUERY_OBJECT . Add search_query_object to options
-				$search_query_object = $current_section->build_search_query_object();							
+				$search_query_object = $current_section->build_search_query_object();
 			
 				$search_options->search_query_object = $search_query_object;
 		}else{
@@ -150,8 +159,8 @@ class tool_sort {
 
 		
 		return $search_options_json;
-
 	}//get_search_options
+
 
 
 	/**
@@ -173,9 +182,9 @@ class tool_sort {
 
 	/**
 	* GET_HTML
-	* 
+	* Load html controller file
 	*/
-	public function get_html(){
+	public function get_html() {
 		if(SHOW_DEBUG===true) {
 			#global$TIMER;$TIMER[get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
@@ -190,15 +199,15 @@ class tool_sort {
 		}
 
 		return $html;
-	}
+	}//end get_html
+
 
 
 	/**
 	* GET_JSON
-	* 
+	* Load json controller file
 	*/
-	public function get_json(){
-
+	public function get_json() {
 		if(SHOW_DEBUG===true) $start_time = start_time();		
 		
 			# Class name is called class (ex. component_input_text), not this class (common)	
@@ -211,6 +220,7 @@ class tool_sort {
 		
 		return $json;
 	}//end get_json
+
 
 	
 }//end class tool_catalogue
