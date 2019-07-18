@@ -15,9 +15,8 @@
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
-	$component_name			= get_class($this);
+	$component_name			= get_class($this);	
 	$context				= $this->get_context();
-
 	if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
 		$this->set_show_button_new(false);
 	}
@@ -28,6 +27,7 @@
 	$file_name				= $modo;
 
 	$portal_parent 			= $parent;
+	
 
 	# TIME MACHINE SPECIFIC KEY CHANGES
 	#$id_time_machine_key = isset($_REQUEST['id_time_machine']) ? '_'.safe_xss($_REQUEST['id_time_machine']) : '';
@@ -256,10 +256,13 @@
 				$options = new stdClass();
 					$options->modo		= 'portal_list';
 					$options->context 	= $context;
+
 				
+				$rows_limit = isset($this->html_options->rows_limit) ? (int)$this->html_options->rows_limit : 1;
+
 				# SEARCH_QUERY_OBJECT . Add search_query_object to options
 					$search_query_object_options = new stdClass();
-						$search_query_object_options->limit 			 = 1;
+						$search_query_object_options->limit 			 = $rows_limit;
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
 						$search_query_object_options->tipo 				 = $this->tipo;
@@ -403,8 +406,7 @@
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
 						$search_query_object_options->tipo 				 = $this->tipo;
-					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
-						#dump($search_query_object, ' search_query_object ++ '.to_string());
+					$search_query_object = component_portal::build_search_query_object($search_query_object_options);					
 					
 				# SEARCH
 				$search_develoment2  = new search_development2($search_query_object);

@@ -1055,7 +1055,7 @@ class search_development2 {
 					$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
 					$sql_query .= ') main_select';
 					// order	
-						if(isset($this->sql_query_order_custom)) {
+						if(!empty($this->sql_query_order_custom)) {
 							$sql_query .= PHP_EOL . $this->sql_query_order_custom;
 						}else{
 							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;

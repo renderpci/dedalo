@@ -41,25 +41,24 @@
 						}
 						
 						
-						if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
+						if ($rows_limit && $row_number > $rows_limit) {
 
-							if (!isset($show_more) && !empty($portal_parent)) {
-								/*
-								$show_more ='';
-								$show_more .= "<a href=\"javascript:void(0);\" class=\"show_more_link\" ";
-								$show_more .= "data-tipo=\"$tipo\" ";
-								$show_more .= "data-parent=\"$portal_parent\" ";
-								$show_more .= "data-section_tipo=\"$section_tipo\" ";
-								$show_more .= "data-target=\"show_more_{$identificador_unico}\" ";
-								$show_more .= "onclick=\"component_portal.show_more(this)\">";
-								$show_more .= label::get_label('mostrar') .' + ';
-								if(SHOW_DEBUG) {
-									 $show_more .= " $portal_parent";
-								}
-								$show_more .= "</a>";
-								$show_more .= "<div id=\"show_more_{$identificador_unico}\"></div>";
-
-								$table .= $show_more;*/
+							if (!isset($show_more) && !empty($portal_parent)) {								
+								# $show_more ='';
+								# $show_more .= "<a href=\"javascript:void(0);\" class=\"show_more_link\" ";
+								# $show_more .= "data-tipo=\"$tipo\" ";
+								# $show_more .= "data-parent=\"$portal_parent\" ";
+								# $show_more .= "data-section_tipo=\"$section_tipo\" ";
+								# $show_more .= "data-target=\"show_more_{$identificador_unico}\" ";
+								# $show_more .= "onclick=\"component_portal.show_more(this)\">";
+								# $show_more .= label::get_label('mostrar') .' + ';
+								# if(SHOW_DEBUG) {
+								# 	 $show_more .= " $portal_parent";
+								# }
+								# $show_more .= "</a>";
+								# $show_more .= "<div id=\"show_more_{$identificador_unico}\"></div>";
+								# 
+								# $table .= $show_more;
 								continue;
 							}
 							
