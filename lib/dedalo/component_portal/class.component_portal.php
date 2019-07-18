@@ -1508,7 +1508,8 @@ class component_portal extends component_relation_common {
 			$options->q 	 			= null;
 			$options->limit  			= 10;
 			$options->offset 			= 0;
-			$options->full_count		= false;			
+			$options->full_count		= false;
+			$options->order 			= null;
 			$options->order_custom 		= null;
 			$options->lang 				= DEDALO_DATA_LANG;
 			$options->id 				= 'temp';
@@ -1582,7 +1583,8 @@ class component_portal extends component_relation_common {
 			$query_object->limit   		= $options->limit;			
 			$query_object->offset  		= $options->offset;
 			$query_object->full_count  	= $total_locators>0 ? $total_locators : false ;//$options->full_count;
-			$query_object->order_custom = $options->order_custom;		
+			$query_object->order 		= $options->order;
+			$query_object->order_custom = $options->order_custom;
 			# Used only for time machine list
 			#if ($options->forced_matrix_table!==false) {
 				# add forced_matrix_table (time machine case)
@@ -1590,7 +1592,7 @@ class component_portal extends component_relation_common {
 			#}
 			$query_object->filter  		= $filter_group;
 			$query_object->select  		= $select_group;
-
+		
 		return (object)$query_object;
 	}//end build_search_query_object
 
@@ -1616,8 +1618,18 @@ class component_portal extends component_relation_common {
 		$label 			= $this->get_label();
 		$permissions	= $this->get_component_permissions();
 		$context		= $this->get_context();
-		if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
-			$this->set_show_button_new(false);
+		// context conditionals
+		if (isset($context->context_name)) {
+			// tool_time_machine. remove new/add buttons
+			if($context->context_name==='tool_time_machine') {
+				$this->set_show_button_new(false);
+			}
+			if ($context->context_name==='tool_sort') {
+				// tool_sort. order_custom from tool properties
+				if (isset($propiedades->ar_tools_name) && isset($propiedades->ar_tools_name->tool_sort) && isset($propiedades->ar_tools_name->tool_sort->source_order) ) {
+					$order_custom = $propiedades->ar_tools_name->tool_sort->source_order;
+				}
+			}
 		}
 	
 		# Custom propiedades external dato 
@@ -1691,17 +1703,21 @@ class component_portal extends component_relation_common {
 				#$search_query_object_options->full_count 		= count($dato);
 
 				// Order . Below 1000 locators
-					if (count($dato)<=1000) {					
+
+					if (isset($order_custom)) {
+						$search_query_object_options->order = $order_custom;
+					}else					
+					if (count($dato)<=1000) {
 						$order_values = array_map(function($locator){
 							return (int)$locator->section_id;
-						}, $dato);					
+						}, $dato);
 						$item = new stdClass();
 							$item->column_name 	 = 'section_id';
-							$item->column_values = $order_values;		
+							$item->column_values = $order_values;
 						$search_query_object_options->order_custom = [$item];
 					}
 			$search_query_object = component_portal::build_search_query_object($search_query_object_options);
-				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG); die();
+				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG); #die();
 			
 			# Search
 			$search_develoment2  = new search_development2($search_query_object);
@@ -1766,6 +1782,7 @@ class component_portal extends component_relation_common {
 			$ar_columns_plus[] = $column_data;
 		}
 		//dump($ar_columns, ' ar_columns ++ '.to_string($tipo));
+		//dump($rows_data, ' rows_data ++ '.to_string());
 
 		$json_d = new stdClass();
 			$json_d->dato 					= $dato;
@@ -1792,8 +1809,21 @@ class component_portal extends component_relation_common {
 			*/
 			$json_d->rows_data_values 		= array();
 
+			// apply custom sort dato using rows_data records
+				$sorted_dato = [];
+				foreach ($rows_data->ar_records as $key => $row) {
+					$ar_locators = array_filter($dato, function($item) use($row){
+						if($item->section_tipo===$row->section_tipo && $item->section_id==$row->section_id) {
+							return $item;
+						}
+					});
+					foreach ($ar_locators as $locator) {
+						$sorted_dato[] = $locator;
+					}
+				}
 
-			$row_number=0; foreach((array)$dato as $key => $current_locator) {
+			$row_number=0; foreach((array)$sorted_dato as $key => $current_locator) {
+			#$row_number=0; foreach((array)$rows_data->ar_records as $key => $current_row) {
 
 				# MAX_RECORDS Limit
 				if( $row_number >= $max_records+$offset ){
@@ -1822,13 +1852,11 @@ class component_portal extends component_relation_common {
 					#dump($current_row, ' current_row ++ '.to_string());
 
 				#
-				# Limit rows
-				/*
-				if ($this->html_options->rows_limit && $key > $this->html_options->rows_limit) {
-					debug_log(__METHOD__." Limit number of records to sowh ".to_string($this->html_options->rows_limit), logger::DEBUG);
-					break; # Limit number of records to sowh
-				}
-				*/
+				# Limit rows				
+				#if ($this->html_options->rows_limit && $key > $this->html_options->rows_limit) {
+				#	debug_log(__METHOD__." Limit number of records to sowh ".to_string($this->html_options->rows_limit), logger::DEBUG);
+				#	break; # Limit number of records to sowh
+				#}				
 
 				#
 				# REL_LOCATOR : locator like object
@@ -2082,10 +2110,19 @@ class component_portal extends component_relation_common {
 					//$json_d->json_rows = section::build_json_rows($rows_data,'list');					
 				}
 				
-		
 
 		return $json_d;
 	}//end build_component_json_data
+
+
+
+	/**
+	* GET_DATO_LOCATOR
+	* @return 
+	*/
+	public function get_dato_locator($dato, $section_tipo, $section_id, $tag_id=null) {
+		
+	}//end get_dato_locator
 
 
 
