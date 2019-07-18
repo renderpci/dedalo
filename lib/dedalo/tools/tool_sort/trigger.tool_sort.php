@@ -7,13 +7,11 @@ common::trigger_manager();
 
 
 /**
-* set_new_thesaurus_value
-* @param $source_tipo
-* @param $target_tipo
-* @param $section_id
-* @param $section_tipo
+* ASSIGN_ELEMENT
+* @param $target
+* @param $locator
 */
-function set_new_thesaurus_value($json_data) {
+function assign_element($json_data) {
 	global $start_time;
 
 	# Write session to unlock session file
@@ -23,25 +21,28 @@ function set_new_thesaurus_value($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$vars = array('section_tipo','section_id','component_tipo','dato','update_component');
+	$vars = array('target','locator');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			if ($name==='update_component_tipo') continue; # Skip non mandatory
+			#if ($name==='update_component_tipo') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
 	
-	// check dato
-		if (empty($dato) || !is_array($dato)) {
-			$response->msg .= ' Invalid dato. It must be an non empty array';
+	// check locator
+		if (empty($locator) || !is_object($locator)) {
+			$response->msg .= ' Invalid locator. It must be an non empty object';
 			return $response;
 		}
 
 
 	// component. set dato and save
+		$component_tipo = $target->tipo;
+		$section_tipo 	= $target->section_tipo;
+		$section_id 	= $target->section_id;
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$component   = component_common::get_instance($modelo_name,
 													  $component_tipo,
@@ -49,34 +50,8 @@ function set_new_thesaurus_value($json_data) {
 													  "edit",
 													  DEDALO_DATA_LANG,
 													  $section_tipo);
-		$component->set_dato($dato);
+		$component->add_locator($locator);
 		$component->Save();
-
-
-	// update optional component
-		if ($update_component!==false) {
-
-			$update_component_tipo 			= $update_component->component_tipo;
-			$update_component_section_tipo 	= $update_component->section_tipo;
-			$update_component_section_id 	= $update_component->section_id;
-			
-			// Simply load in edit mode the compomponent to force update its data
-				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($update_component_tipo,true);
-				$update_component   = component_common::get_instance($modelo_name,
-																	 $update_component_tipo,
-																	 $update_component_section_id,
-																	 "edit",
-																	 DEDALO_DATA_LANG,
-																	 $update_component_section_tipo);
-
-				# Custom propiedades external dato 
-				$update_propiedades = $update_component->get_propiedades();
-				if(isset($update_propiedades->source->mode) && $update_propiedades->source->mode==='external') {
-					$update_component->set_dato_external(true);	// Forces update dato with calculated external dato					
-				}
-				$update_dato = $update_component->get_dato(); // force update					
-		}
-
 
 	// response
 		$response->result 	= true;
@@ -94,7 +69,7 @@ function set_new_thesaurus_value($json_data) {
 		}
 	
 	return (object)$response;
-}//end set_new_thesaurus_value
+}//end assign_element
 
 
 

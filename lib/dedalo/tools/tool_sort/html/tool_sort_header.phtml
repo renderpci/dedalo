@@ -1,5 +1,5 @@
 <?php 
-		
+
 
 		$html .= "<div class=\"header_tool\">";
 		
@@ -13,47 +13,25 @@
 		#
 		# INFO
 		$html .= "<div class=\"header_info\">";
-		$html .= $tool_label;
+		$html .= $section_label;
 		$html .= "</div>";//end header_info
 
 
 		#
 		# TOP_ID SELECTOR
-		if (isset($inverse_locators) && is_array($inverse_locators)) {
+		
 			
-			$html .= "<div class=\"top_id_selector\">";
-
-			$html .= "<select id=\"top_id_selector\" class=\"custom_dropdown\"  >"; // onchange=\"$tool_name.update_top_id(this)\"
-			#$html .= " <option></option>";
-			$ar_inverse = $this->get_ar_inverse($inverse_locators);
-			foreach ($ar_inverse as $current_id => $current_name) {
-				$selected = $current_id==TOP_ID ? 'selected' : '';
-				$html .= " <option value=\"$current_id\" {$selected}>$current_name</option>";
-			}
-			$html .= "</select>";
-
-			#$html .= "<script>";
-			#$html .= "{$tool_name}.update_top_id(document.getElementById('top_id_selector'));";			
-			#$html .= "</script>";
-
-			$html .= "</div>";//end top_id_selector			
-		}
+		$html .= "<div class=\"header_info\"> ID: ";
+		$html .= $section_id;
+		$html .= "</div>";//end top_id_selector			
+	
 
 
 		#
 		# HEADER_INFO
 		#$html .= " <div id=\"header_info\"> Info: </div>";
 		$html .= "<div class=\"header_buttons\">";
-			#
-			# BUTTON_TOOL_TR_PRINT_HTML
-			if (isset($button_tool_tr_print_html)) {
-				$html .= $button_tool_tr_print_html;
-			}
-			#
-			# BUTTON_TOOL_TIME_MACHINE_HTML
-			if (isset($button_tool_time_machine_html)) {
-				$html .= $button_tool_time_machine_html;
-			}
+			
 		$html .= "</div>";//end header_buttons	
 
 		
@@ -63,6 +41,3 @@
 
 
 	$html .= "</div><!-- /header_tool -->";
-
-
-?>

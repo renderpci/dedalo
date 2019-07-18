@@ -1,9 +1,12 @@
 <?php
 
+
+
 	# VISUALIZADOR HTML
 	$html = "<!-- $tool_name $modo -->";
 
-	#$html 	.= '<script>tool_sort.init("'. encodeURIComponent($options_json) .'")</script>';
+	
+	include('tool_sort_header.phtml');
 
 
 	$html 	.= '<div class="tool_grid">';
@@ -17,6 +20,9 @@
 		$html .= '</div>';//end tool_grid_rigth
 	
 	$html .= '</div>';//end tool_grid
+
+
+	$html 	.= '<script>tool_sort.init("'. encodeURIComponent($options_json) .'")</script>';
 
 	$html .= "<!-- /$tool_name $modo -->";
 
