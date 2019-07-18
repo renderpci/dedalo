@@ -9,7 +9,8 @@ class tool_sort {
 
 
 	public $component_obj;
-	public $target_component_tipo;
+	public $target_component_tipo; // portal base
+	public $sub_target_component_tipo; // portal to update record
 
 
 
@@ -32,7 +33,9 @@ class tool_sort {
 		$tool_properties 	 	= $component_properties->ar_tools_name->tool_sort;
 
 		
-		$this->target_component_tipo = $tool_properties->target_component_tipo;
+		$this->target_component_tipo 	 = $tool_properties->target_component_tipo;
+		$this->sub_target_component_tipo = $tool_properties->sub_target_component_tipo;
+		
 
 		$this->modo 			= $modo;
 

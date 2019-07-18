@@ -358,3 +358,23 @@ body {
 			line-height: 2em;
 		}*/
 	}
+
+
+// drag and drop
+	.dragover {	
+		outline: 2px dashed orange;
+	}
+	.drop {
+		//outline: 2px dashed green;
+		animation-duration: 1s;
+		animation-name: outline_to_green;
+	}
+	@keyframes outline_to_green {
+	  from {
+	    outline: 2px dashed green; 
+	  }
+	  to {
+	    outline: 2px dashed transparent;
+	  }
+	}
+
