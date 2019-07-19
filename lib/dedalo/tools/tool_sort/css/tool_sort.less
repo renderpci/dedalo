@@ -166,6 +166,11 @@ body {
 		// tool_grid_rigth
 		.tool_grid_rigth {
 			background-color: #E8E8E8;
+
+			>.wrap_component {
+				position: sticky;
+				top: 0;
+			}
 		}
 
 	}//end .tool_grid
@@ -186,18 +191,21 @@ body {
 	.rows_container {
 
 		>.row_container {
-			display: flex;
-			flex-flow: row;
-			padding: 2px;
+			//display: flex;
+			//flex-flow: row;
+			//padding: 2px;
 			width: 100%;
 			position: relative;
 			align-items: center;
 			background-color: #ffffff;
+			padding-right: 60px;
+			padding-top: 1px;
+			padding-bottom: 1px;
 
 			>.column_cell {
 
 				flex-direction: column;
-				max-width: 84.1%;
+				//max-width: 84.1%;
 				//width: 92%;
 
 				// portal
@@ -208,7 +216,9 @@ body {
 				// portal images
 					>.component_portal_list >.component_portal_column {
 						padding-left: 0;
-						width: 50%;
+						//width: 50%;
+						width: 100%;
+						overflow: hidden;
 						
 
 						>img {
@@ -377,4 +387,17 @@ body {
 	    outline: 2px dashed transparent;
 	  }
 	}
+
+
+#section_filter_container {
+	display: none;
+}
+
+.row_container img {
+	-webkit-user-select: none;
+	-webkit-user-drag: none;
+	-webkit-app-region: no-drag;
+	cursor: default;
+}
+
 
