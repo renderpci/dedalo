@@ -611,9 +611,9 @@
 			#
 			# PHP USER
 			if(SHOW_DEBUG===true) {
-			$processUser = posix_getpwuid(posix_geteuid());
+			$processUser = get_current_user(); // $processUser = posix_getpwuid(posix_geteuid());
 			$html .= tool_administration::show_info( "PHP user",
-													 $processUser['name'],
+													 $processUser,
 													 $processUser
 													);			
 			}
@@ -626,7 +626,7 @@
 			$user_limits .= "-Hn\t\t\t\t     ".shell_exec("ulimit -Hn");
 			$user_limits .= "-Sn\t\t\t\t     ".shell_exec("ulimit -Sn");
 			$html .= tool_administration::show_info( "USER_LIMITS",
-													 "".$processUser['name'],
+													 "".$processUser,
 													 $user_limits
 													);
 			}
