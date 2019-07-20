@@ -171,6 +171,58 @@ body {
 				position: sticky;
 				top: 0;
 			}
+
+			// temporal
+				.portal_section {
+
+					>.row_header {
+    					
+
+    					&>:last-child {
+    						//width: 300px !important;
+    						//background-color: #26E8B8 !important;
+    					}
+	    			}
+
+					>.rows_wrapper >.table_row {
+						display: flex;
+	    				
+
+	    				.column.component_image, .column:last-of-type {
+							max-width: unset!important;
+							width: 60%!important;
+							background-color: #fff;
+	    				}
+
+	    				.column.component_portal {
+	    					>div {
+	    						display: flex;
+	    						flex-wrap: wrap;
+	    					}
+	    				}
+	    				
+	    				>:last-child {
+	    					//background-color: #E1E81F;
+	    					display: flex;
+	    					max-width: unset;
+
+	    					.portal_item_numisdata9 {
+	    						//background-color: #E13418;
+	    						display: flex;
+	    						max-width: unset;
+	    						//height: 120px;
+	    						outline: 1px solid #eeeeee;
+	    						
+
+	    						.div_image_image_in_list {
+	    							//height: 120px;
+	    							//width: 150px;
+	    						}
+	    					}
+	    				}
+					}//end >.rows_wrapper .table_row
+
+				}//end .portal_section
 		}
 
 	}//end .tool_grid
@@ -224,9 +276,9 @@ body {
 						>img {
 							//height: 200px;
 							height: unset;
-							max-height: 200px;
+							max-height: 80px; // 120
 							cursor: zoom-in;
-							object-fit: cover;
+							object-fit: contain;
 						}
 					}
 				
