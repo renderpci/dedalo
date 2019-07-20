@@ -44,12 +44,12 @@
 
 				// Role .
 				$source_lang = DEDALO_DATA_LANG;
-				if ($lang===$source_lang) {
+				if ($modo==='tool_lang' && $lang===$source_lang) {
 					$role = "source_lang";
 				}else{
 					$role = "tranlation_lang";
 				}			
-				
+				// Dont break here. Continue as modo edit
 		case 'edit'	:
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";

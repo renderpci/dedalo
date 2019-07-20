@@ -80,9 +80,10 @@
 				if (isset($propiedades->read_only) && $propiedades->read_only==true) {
 					$read_only = 'readonly';
 				}
-				if (isset($role) && $role=="source_lang") {
+				if (isset($role) && $role==='source_lang') {					
 					$read_only = 'readonly';
 				}
+					
 
 				# Button add
 				if (isset($propiedades->multi_value) && $propiedades->multi_value==true) {

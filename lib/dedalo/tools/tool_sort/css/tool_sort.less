@@ -13,12 +13,12 @@ body {
     flex-direction: column;
 }
 
-.html_page_wrap_tool_cataloging, .html_page_wrap_tool_cataloging .content_html {
+.html_page_wrap_tool_sort, .html_page_wrap_tool_sort .content_html {
 	height: 100%;
 }
 
 
-.tool_cataloging_icon {
+.tool_sort_icon {
 	background-color: @color_trascription;
 	background-image: url(../../../themes/default/icon_transcription_hover.svg);
 	// Adjust icon size
@@ -28,9 +28,9 @@ body {
 } 
 
 
-/* tool_cataloging CASE
+/* tool_sort CASE
 	--------------------------------------------- */
-	.html_page_wrap_tool_cataloging .content_data {
+	.html_page_wrap_tool_sort .content_data {
 		width: 100%;		
 	}
 
@@ -74,7 +74,7 @@ body {
 
 /* PAGE
 ------------------------------------------------------ */
-	.wrap_tool_cataloging_page {
+	.wrap_tool_sort_page {
 		//background-color: #F590F0;
 		margin: 0;
 		padding: 0;
@@ -92,7 +92,7 @@ body {
 
 
 // inspector
-	#inspector_log.tool_cataloging_inspector_log {
+	#inspector_log.tool_sort_inspector_log {
 		//background-color: aliceblue;
 		display: block;
 		padding-left: 4px;
@@ -118,13 +118,13 @@ body {
 	}
 
 
-	.view_tool_cataloging_item {
+	.view_tool_sort_item {
 		text-align: left;
 	}
 
 
 
-	.html_page_wrap_tool_cataloging .toponymy_list li {
+	.html_page_wrap_tool_sort .toponymy_list li {
 		width: 100%;
 	}
 
@@ -142,26 +142,43 @@ body {
 	.tool_grid {
 		display: grid;
 		//grid-template-columns: 0.8fr 1.2fr;
-		grid-template-columns: 400px auto;
+		grid-template-columns: 1fr 1fr;
 		height: 100vh;
-	}
 
-
-// tool_grid_left
-	.tool_grid_left {
-		background-color: #f3f3f3;
-
-		#search2_container_selection .search_component {
-			flex-basis: 96%;
+		>* {
+			padding: 2em;
 		}
 
-		
-	}
+		// tool_grid_left
+		.tool_grid_left {
+			background-color: #f3f3f3;
+			
+			>* {				
+				border: none !important;
+			}
 
-// tool_grid_rigth
-	.tool_grid_rigth {
-		background-color: #E8E8E8;
-	}
+			#search2_container_selection .search_component {
+				flex-basis: 96%;
+			}
+			
+		}
+
+		// tool_grid_rigth
+		.tool_grid_rigth {
+			background-color: #E8E8E8;
+
+			>.wrap_component {
+				position: sticky;
+				top: 0;
+			}
+		}
+
+	}//end .tool_grid
+
+
+
+
+
 
 
 // row_container
@@ -174,19 +191,21 @@ body {
 	.rows_container {
 
 		>.row_container {
-			display: flex;
-			flex-flow: row;
-			padding: 2px;
+			//display: flex;
+			//flex-flow: row;
+			//padding: 2px;
 			width: 100%;
 			position: relative;
 			align-items: center;
 			background-color: #ffffff;
-
+			padding-right: 60px;
+			padding-top: 1px;
+			padding-bottom: 1px;
 
 			>.column_cell {
 
 				flex-direction: column;
-				max-width: 84.1%;
+				//max-width: 84.1%;
 				//width: 92%;
 
 				// portal
@@ -197,14 +216,14 @@ body {
 				// portal images
 					>.component_portal_list >.component_portal_column {
 						padding-left: 0;
-						width: 50%;
+						//width: 50%;
+						width: 100%;
+						overflow: hidden;
 						
 
 						>img {
-
-							height: 125px;
 							//height: 200px;
-							//height: unset;
+							height: unset;
 							max-height: 200px;
 							cursor: zoom-in;
 							object-fit: cover;
@@ -305,7 +324,10 @@ body {
 			overflow: unset;
 
 			>.css_button_generic {
-				display: none
+				
+				.tool_grid_left & {
+					display: none
+				}
 			}
 
 			.mosaic_ul .mosaic_li .button_edit, .mosaic_ul .mosaic_li .button_delete {
@@ -346,3 +368,36 @@ body {
 			line-height: 2em;
 		}*/
 	}
+
+
+// drag and drop
+	.dragover {	
+		outline: 2px dashed orange;
+	}
+	.drop {
+		//outline: 2px dashed green;
+		animation-duration: 1s;
+		animation-name: outline_to_green;
+	}
+	@keyframes outline_to_green {
+	  from {
+	    outline: 2px dashed green; 
+	  }
+	  to {
+	    outline: 2px dashed transparent;
+	  }
+	}
+
+
+#section_filter_container {
+	display: none;
+}
+
+.row_container img {
+	-webkit-user-select: none;
+	-webkit-user-drag: none;
+	-webkit-app-region: no-drag;
+	cursor: default;
+}
+
+
