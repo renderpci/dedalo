@@ -3516,7 +3516,7 @@ class section extends common {
 																						 'list',
 																						 DEDALO_DATA_LANG,
 																						 $section_tipo);									
-									$component_json = $current_component->get_json();
+									$component_json = $current_component->get_json(); // get_json defined in class.common.php
 
 									// data add
 										$data = array_merge($data, $component_json->data);
