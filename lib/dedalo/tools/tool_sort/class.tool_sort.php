@@ -187,11 +187,12 @@ class tool_sort {
 
 								$ar_filter_items[] = $filter_item;
 							}
-						}
+						
 
-						$operator = '$or';
-						$search_query_object->filter = new stdClass();
-							$search_query_object->filter->{$operator} = $ar_filter_items;
+							$operator = '$or';
+							$search_query_object->filter = new stdClass();
+								$search_query_object->filter->{$operator} = $ar_filter_items;
+						}	
 
 					// order custom
 						//$component_properties 		= $this->component_obj->get_propiedades(true);
