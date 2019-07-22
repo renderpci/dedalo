@@ -23,6 +23,7 @@
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/css/component_input_text.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/css/component_text_area.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_number/css/component_number.css";
+						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_relation_related/css/component_relation_related.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 					// js
 						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/search/js/search2.js";
@@ -34,6 +35,7 @@
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/render_component_image.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/js/render_component_input_text.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_number/js/render_component_number.js";
+							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_relation_related/js/render_component_relation_related.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_section_id/js/render_component_section_id.js";					
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/render_component_text_area.js";
 
@@ -77,11 +79,36 @@
 				$target_html 		  = $target_component_obj->get_html();
 
 
+
+			// target records to check if already used
+				$target_dato = $target_component_obj->get_dato();
+				$sub_target_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($this->sub_target_component_tipo,true);
+				$ar_used_section_id_box = [];
+				foreach ($target_dato as $current_locator) {					
+					
+					$sub_target_component = component_common::get_instance( $sub_target_modelo_name,
+																			$this->sub_target_component_tipo,
+																			$current_locator->section_id,
+																			'list',
+																			DEDALO_DATA_LANG,
+																			$current_locator->section_tipo ); 
+					$sub_target_dato = $sub_target_component->get_dato();
+						#dump($sub_target_dato, ' sub_target_dato ++ '.to_string());
+					foreach ($sub_target_dato as $current_dato) {
+						$ar_used_section_id_box[] = $current_dato->section_id;
+					}
+				}
+				$ar_used_section_id = array_values( array_unique($ar_used_section_id_box) );
+
+
+
 			// datum
 				$datum = new stdClass();
 					$datum->context_data = $this->get_context_data();
 					$datum->data 		 = $this->get_data();
 						#dump($datum, ' datum ++ '.to_string());
+
+			
 
 			// options init
 				$options = new stdClass();
@@ -90,6 +117,8 @@
 					$options->source_component_tipo		= $source_component_obj->get_tipo();
 					$options->target_component_tipo		= $target_component_obj->get_tipo();
 					$options->sub_target_component_tipo	= $this->sub_target_component_tipo;
+					$options->ar_used_section_id 		= $ar_used_section_id;
+					$options->custom_order 				= $this->tool_properties->source_order;
 		
 				$options_json = json_encode($options);
 			

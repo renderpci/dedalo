@@ -14,6 +14,7 @@ class tool_sort {
 
 	// section way
 		public $source_list;
+		public $tool_properties;
 
 
 
@@ -34,6 +35,7 @@ class tool_sort {
 	
 		$component_properties 	= $component_obj->get_propiedades(true);
 		$tool_properties 	 	= $component_properties->ar_tools_name->tool_sort;
+		$this->tool_properties 	= $tool_properties;
 
 
 		// section way
@@ -192,8 +194,19 @@ class tool_sort {
 							$search_query_object->filter->{$operator} = $ar_filter_items;
 
 					// order custom
-						$component_properties 		= $this->component_obj->get_propiedades(true);
-						$search_query_object->order = $component_properties->ar_tools_name->tool_sort->source_order;
+						//$component_properties 		= $this->component_obj->get_propiedades(true);
+						//$search_query_object->order = $component_properties->ar_tools_name->tool_sort->source_order;
+						
+						// by dato (like portal)
+							$dato = $this->component_obj->get_dato();
+							$order_values = array_map(function($locator){
+								return (int)$locator->section_id;
+							}, $dato);					
+							$item = new stdClass();
+								$item->column_name 	 = 'section_id';
+								$item->column_values = $order_values;		
+							$search_query_object->order_custom = [$item];
+
 
 					// full_count
 						$search_query_object->full_count = count($dato) ?? false;
