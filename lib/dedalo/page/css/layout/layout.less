@@ -107,7 +107,7 @@
 				// flex base config
 				.component_base;
 
-				background-color: #FBFBFB;				
+				background-color: rgba(251, 251, 251, 0.70); //#FBFBFB;
 				outline: 1px solid rgba(216, 216, 216, 0.43);
 
 				>*{
@@ -123,7 +123,20 @@
 					//background-color: #B9DFF6;
 					//flex: 1 0 80%;
 					flex: 1 0 calc(80% - 2em);
-				}				
+					display: flex;
+
+					>.inputs_container {
+						flex: 1 1 auto;
+					}
+
+					>.buttons_container {
+						flex: 0 1;
+
+						>*{
+							margin: 0.5em;
+						}
+					}
+				}
 				
 				@media screen and (max-width: 768px) {
  					flex-basis: 100% !important;
