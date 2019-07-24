@@ -285,9 +285,8 @@ class dd_api {
 					}// end foreach ((array)$ar_current_section_dd_objects as $dd_object)
 
 			}// end foreach ($ar_sections_dd_objects as $section_dd_object)
-
-			// smart remove data duplicates (!)
-				// $data = section::smart_remove_data_duplicates($data);
+			// smart remove context duplicates (!)
+				#$context = self::smart_remove_context_duplicates($context);
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 		
 	
@@ -416,6 +415,41 @@ class dd_api {
 
 		return $clean_data;
 	}//end smart_remove_data_duplicates
+
+
+
+	/**
+	* SMART_REMOVE_context_DUPLICATES
+	* @param array $data
+	* @return array $clean_data
+	*/
+	private static function smart_remove_context_duplicates($context) {
+		
+		$clean_context = [];
+		foreach ($context as $key => $value_obj) {			
+			#if (!in_array($value_obj, $clean_context, false)) {
+			#	$clean_context[] = $value_obj;
+			#}
+			$found = array_filter($clean_context, function($item) use($value_obj){
+				if (
+					$item->section_tipo===$value_obj->section_tipo &&				
+					$item->tipo===$value_obj->tipo && 
+					$item->lang===$value_obj->lang
+				){
+					return $item;
+				}
+			});
+			
+			if (empty($found)) {
+				$clean_context[] = $value_obj;
+			}
+		}
+
+		#$clean_context = array_unique($context, SORT_REGULAR);
+		#$clean_context = array_values($clean_context);
+
+		return $clean_context;
+	}//end smart_remove_context_duplicates
 
 
 
