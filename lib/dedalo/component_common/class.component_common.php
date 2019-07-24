@@ -4033,10 +4033,14 @@ abstract class component_common extends common {
 			#return array();
 		#}
 
-		$component_tipo = end($query_object->path)->component_tipo;
+		# component_path
+		if(isset(end($query_object->path)->component_tipo)) {
+			$component_tipo = end($query_object->path)->component_tipo;
 
-		# component path default
-		$query_object->component_path = ['components',$component_tipo,'dato'];
+			# component path default
+			$query_object->component_path = ['components',$component_tipo,'dato'];
+		}
+
 		# component lang
 		if (!isset($query_object->lang)) {
 			# default
