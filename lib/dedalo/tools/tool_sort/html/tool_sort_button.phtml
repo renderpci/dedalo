@@ -10,11 +10,15 @@
 	# ICON
 	$title	  = label::get_label('abrir').' '.label::get_label('herramienta');
 	
-	$html_tool .= '<a href="javascript:void(0);" class="id_column_buttons button_catalogue link" title="'.$title.'" onclick="tool_common.open_tool_cataloging(this)" ';
-	$html_tool .= 'data-tool_tipo="'.$tool_tipo.'" ';
-	$html_tool .= 'data-section_tipo="'.$section_tipo.'" ';
-	$html_tool .= 'data-section_id="'.$section_id.'" ';
-	$html_tool .= 'data-tab_id="'.$tool_name.'_'.$section_tipo.'_'.$section_id.'" ';
+	$html_tool .= '<a href="javascript:void(0);" class="id_column_buttons button_transcription link" title="'.$title.'" onclick="tool_common.open_tool_sort(this)" ';
+	
+	$html_tool .= 'data-tool_name="'.$tool_name.'" ';
+	$html_tool .= 'data-section_tipo="'.$section_tipo.'" ';	
+	$html_tool .= 'data-parent="'.$section_id.'" ';
+	$html_tool .= 'data-tipo="'.$this->component_obj->get_tipo().'" ';
+	#$html_tool .= 'data-tool_tipo="'.$tool_tipo.'" ';	
+	#$html_tool .= 'data-tab_id="'.$tool_name.'_'.$section_tipo.'_'.$section_id.'" ';
+	
 	$html_tool .= '>';
 		$html_tool .= "<span class='section_id_number'>";
 		$html_tool .= " $section_id ";
@@ -26,5 +30,3 @@
 	
 	# PRINT HTML
 	print $html_tool;
-	
-?>

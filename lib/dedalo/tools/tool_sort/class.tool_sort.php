@@ -4,7 +4,7 @@
 *
 *
 */
-class tool_sort {
+class tool_sort extends tool_common {
 	
 
 
@@ -22,13 +22,52 @@ class tool_sort {
 	* __CONSTRUCT
 	*/
 	public function __construct($component_obj, $modo='button') {
+	#public function __construct($section=null, $modo='button') {
 		
-		$section_id = isset($_REQUEST['section_id']) ? safe_section_id($_REQUEST['section_id']) : null;		
-		if (empty($section_id)) {
-			throw new Exception("Error Processing Request. Var section_id is empty", 1);
-		}
+		/*
+		#if (empty($section)) {
+		#	throw new Exception("Error Processing Request. Var section is empty", 1);
+		#}
+		$this->section_tipo 		= $component_obj->get_section_tipo();
+		$this->section_id			= $component_obj->get_parent();
+		$this->modo 				= $modo;
 
-		$component_obj->set_parent($section_id);
+		switch ($modo) {
+			case 'button':
+				# Injected in section obj (rows_list.phtml)
+				#$tool_tipo = $section->tool_section_tipo;
+				break;
+			
+			default:
+				# Form url get vars
+				if(isset($_REQUEST['tool_tipo'])) {
+					$tool_tipo = $_REQUEST['tool_tipo'];
+				}else{
+					$tool_tipo = false;
+					if ($modo!=='button') {
+						trigger_error("Invalid param get tool_tipo");
+					}
+				}
+				break;
+		}		
+
+		# Fix tool_tipo
+		$this->tool_tipo = $tool_tipo;
+		*/
+		
+		switch ($modo) {
+			case 'button':
+				break;
+			
+			case 'page':
+			default:
+				$section_id = isset($_REQUEST['section_id']) ? safe_section_id($_REQUEST['section_id']) : null;		
+				if (empty($section_id)) {
+					throw new Exception("Error Processing Request. Var section_id is empty", 1);
+				}
+				$component_obj->set_parent($section_id);
+				break;
+		}
 
 		// fix component_obj
 		$this->component_obj = $component_obj;
@@ -48,7 +87,7 @@ class tool_sort {
 		
 
 		$this->modo = $modo;
-
+		
 		return true;
 	}//end __construct
 
