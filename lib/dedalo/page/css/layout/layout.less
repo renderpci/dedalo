@@ -124,6 +124,7 @@
 					//flex: 1 0 80%;
 					flex: 1 0 calc(80% - 2em);
 					display: flex;
+					flex-wrap: wrap;
 
 					>.inputs_container {
 						flex: 1 1 auto;
@@ -136,7 +137,13 @@
 							margin: 0.5em;
 						}
 					}
+
+					&.nowrap {
+						flex-wrap: nowrap;
+					}
 				}
+
+
 				
 				@media screen and (max-width: 768px) {
  					flex-basis: 100% !important;
