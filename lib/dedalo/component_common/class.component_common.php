@@ -4737,5 +4737,40 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* UPDATE_DATA_VALUE
+	* @return 
+	*/
+	public function update_data_value($data) {
+
+		$changed_data 	= $data->changed_data;
+		$value 			= $data->value;
+		$lang 			= $this->get_lang();
+		$properties 	= $this->get_propiedades();
+
+		if($changed_data->value !== null || $lang === DEDALO_DATA_NOLAN ){
+			$this->set_dato($value);
+			return true;
+		}else{
+
+			$section = section::get_instance($this->get_parent(), $this->get_section_tipo());
+
+			$ar_langs = $this->get_component_ar_langs();
+			foreach ($ar_langs as $current_lang) {
+				$this->set_lang($current_lang);
+				$dato 			= $this->get_dato();
+				array_splice($dato, $changed_data->key, 1);
+				$this->set_dato($dato);
+				#$this->Save();
+				$this->save_to_database = false;
+				$section->save_component_dato($this);
+			}
+			$this->save_to_database = true;
+			return true;
+		}
+	}//end update_data_value
+
+
+
 }//end class
 ?>
