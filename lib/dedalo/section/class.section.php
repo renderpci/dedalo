@@ -1298,8 +1298,12 @@ class section extends common {
 
 	
 		// publication . Remove published records in mysql, etc.
-			diffusion::delete_record($this->tipo, $this->section_id);
-
+			try {
+				diffusion::delete_record($this->tipo, $this->section_id);
+			} catch (Exception $e) {
+				debug_log(__METHOD__." Error on diffusion::delete_record: ".$e->getMessage(), logger::ERROR);
+			}
+		
 
 		if( TOP_TIPO != $this->tipo ){
 			$is_portal = true;
