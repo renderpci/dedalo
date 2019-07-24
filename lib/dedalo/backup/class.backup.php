@@ -1060,16 +1060,24 @@ abstract class backup {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed '.__METHOD__;
+
+		// user bse dir
+			try {
+				
+				#$processUser = posix_getpwuid(posix_geteuid());
+				#$base_dir 	 = $processUser['dir'];
+				$base_dir 	 = getenv("HOME");
+				$file 		 = $base_dir.'/.pgpass';
+
+			}catch(Exception $e) {				
+				debug_log(__METHOD__."  ".$e->getMessage(), logger::ERROR);
+			}
 		
 		#
 		# PGPASS VERIFY
-		if (function_exists('posix_getpwuid')) {
+		if (isset($file)) {
 
 			$response->result 	= true;
-						
-			$processUser = posix_getpwuid(posix_geteuid());
-			$base_dir 	 = $processUser['dir'];
-			$file 		 = $base_dir.'/.pgpass';
 
 			# File test
 			if (!file_exists($file)) {
