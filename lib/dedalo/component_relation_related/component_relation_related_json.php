@@ -11,7 +11,9 @@
 	$data = [];
 
 		// Value
-			$value = array_values( $this->get_valor($lang=DEDALO_DATA_LANG, $format='array', $ar_related_terms=false) );			
+			$value = array_values( $this->get_valor($lang=DEDALO_DATA_LANG, $format='array', $ar_related_terms=false) );
+
+			$references = $this->get_calculated_references();		
 			
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
@@ -19,6 +21,7 @@
 				$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
 				$item->section_tipo 		= $this->get_section_tipo();
 				$item->value 				= $value;
+				$item->references 			= $references;
 
 			$data[] = $item;
 

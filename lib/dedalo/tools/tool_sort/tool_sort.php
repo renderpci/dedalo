@@ -7,10 +7,20 @@
 	$file_name			= $modo;	
 	$tool_label 		= label::get_label($tool_name);
 
+	#$section_tipo 	= $this->section_tipo;
+	#$section_id 	= $this->section_id;
+	$tool_name		= get_class($this);
+	#$section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
+	#$tool_tipo		= $this->get_tool_tipo();
+
+	$section_tipo 	= $this->component_obj->get_section_tipo();
+	$section_id 	= $this->component_obj->get_parent();
+
 
 	switch($modo) {
 		
-		case 'button':			
+		case 'button':
+					
 			break;
 
 		case 'page':
@@ -63,8 +73,8 @@
 
 
 			// section info
-			 	$section_tipo 	= $source_component_obj->get_section_tipo();
- 				$section_id 	= $source_component_obj->get_parent();
+			 	#$section_tipo 	= $source_component_obj->get_section_tipo();
+ 				#$section_id 	= $source_component_obj->get_parent();
 				$section_label  = RecordObj_dd::get_termino_by_tipo($section_tipo,DEDALO_APPLICATION_LANG);
 			
 

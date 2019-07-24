@@ -169,6 +169,7 @@ body {
 
 			>.wrap_component {
 				position: sticky;
+				position: -webkit-sticky;
 				top: 0;
 			}
 
@@ -257,6 +258,7 @@ body {
 
 			&.snap {
 				position: sticky !important;
+				position: -webkit-sticky !important;
 				top: 0;
 				z-index: 9;
 				outline: 1px solid #cccccc;
@@ -465,8 +467,8 @@ body {
 
 // column_original_duplicate
 	.column_original_duplicate {
-		display: flex;
-		flex-wrap: wrap;
+		//display: flex;
+		//flex-wrap: wrap;
 		/* padding-top: .5em; */
 		/* padding-bottom: .5em; */
 		/* border-left: 1px solid #eee; */
@@ -479,12 +481,7 @@ body {
 
 		>label {
 			margin-right: 0.75em;
-		}
-
-		>.button_original_duplicate {
-			flex: 0 0 42%;
-			margin-top: 0.5em;
-		}
+		}		
 	}
 
 
@@ -496,6 +493,14 @@ body {
 		&.active {
 			background-color: #79E47F;
 		}
+	}
+
+//button_original_duplicate
+	.button_original_duplicate {
+		//flex: 0 0 42%;
+		//margin-top: 0.5em;
+		padding: .5em;
+		margin-left: 1em;
 	}
 
 
