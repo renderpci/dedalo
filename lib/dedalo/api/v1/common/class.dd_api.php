@@ -137,6 +137,7 @@ class dd_api {
 		// switch the type (component, section)
 		switch ($context_type) {
 			case 'component':
+
 				// get the component information
 					$model 			= $context->model;
 					$tipo 			= $context->tipo;
@@ -144,7 +145,9 @@ class dd_api {
 					$section_id 	= $data->section_id;
 					$lang 			= $context->lang;
 					$value 			= $data->value;
-					// build the component
+					$changed_data 	= $data->changed_data;
+
+				// build the component
 					$component = component_common::get_instance( $model,
 																 $tipo,
 																 $section_id,
@@ -156,10 +159,11 @@ class dd_api {
 				// check if the user can update the component 
 					if($permissions < 2) return $response;
 
-				// set the data sended to the component
-					$component->set_dato($value);
+				// update the dato with the change data send by client
+					$component->update_data_value($data);
 				// save the new data to the component
 					$result = $component->Save();
+
 				break;
 			
 			default:
