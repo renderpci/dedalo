@@ -2032,7 +2032,7 @@ class search_development2 {
 			case 'column':
 				if(SHOW_DEBUG===true) {
 					$component_path_data 	= end($path);
-					$component_tipo 		= $component_path_data->component_tipo;
+					$component_tipo 		= $component_path_data->component_tipo ?? $component_path_data->modelo;
 					$component_name 		= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
 					$modelo_name 			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$sql_where .= "-- COLUMN FORMAT - $component_tipo - $component_name - $table_alias - $component_path - ".strtoupper($modelo_name)."\n";
