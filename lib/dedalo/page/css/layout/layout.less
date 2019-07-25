@@ -1,5 +1,14 @@
 
 
+
+// html inputs
+	input[type="text"], input[type="number"] {
+		height: 2.5em;
+		//margin-bottom: 0.1em;
+	}
+
+
+
 .section_record_base {
 	margin:1em;padding:0;
 	// flex config
@@ -125,6 +134,7 @@
 					flex: 1 0 calc(80% - 2em);
 					display: flex;
 					flex-wrap: wrap;
+					flex-flow: column; 
 
 					>.inputs_container {
 						flex: 1 1 auto;
@@ -140,9 +150,9 @@
 
 					&.nowrap {
 						flex-wrap: nowrap;
+						flex-flow: nowrap;
 					}
 				}
-
 
 				
 				@media screen and (max-width: 768px) {
@@ -241,15 +251,57 @@
 	}
 
 
+
 // buttons with icons
+	.button {
+		color: #a2a2a2;
+  		cursor: pointer;
+  		height: 1em;
+  		opacity: 0.7;
+  		&:hover {
+  			opacity: 1;
+  		}
+  		&:active {
+  			color: #000000;
+  		}
+	}
 	.remove {
 		.fa-icon;
-  		.fas;
-  		color: #a2a2a2;
-  		cursor: pointer;
+  		.fas;  		
   		&:before {
 			//content: @fa-var-user;
 			content: @fa-var-trash-alt;
 		}
 	}
+	.add {
+		.fa-icon;
+  		.fas;
+  		&:before {
+			//content: @fa-var-user;
+			content: @fa-var-plus-circle;
+		}
+	}
 
+
+
+// ul inside content data
+	ul {
+		.content_data & {
+			//background-color: #74D6BA;
+			display: flex;
+    		flex-wrap: wrap;
+
+			>li {
+				//background-color: #D7B274;
+				padding-right: 1em;
+				display: flex;
+				flex: 1 1 50%;
+				flex-wrap: nowrap;
+
+				>label {
+					padding-left: 0.25em;
+					//padding-right: 0.5em;
+				}
+			}
+		}
+	}

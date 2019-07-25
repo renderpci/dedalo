@@ -225,7 +225,7 @@ class dd_api {
 			/**/
 			// filter by section
 			$ar_sections_dd_objects = array_filter($ar_dd_objects, function($item) {
-				 if($item->model==='section') return $item;
+				 if(isset($item->model) && $item->model==='section') return $item;
 			});		
 			foreach ($ar_sections_dd_objects as $section_dd_object) {
 				

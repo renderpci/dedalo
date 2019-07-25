@@ -4739,35 +4739,52 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_DATA_VALUE
-	* @return 
+	* Used to maintain component data when dd_api saves component
+	* @param object $data
+	* @return bool true
+	* @see dd_api update 
 	*/
 	public function update_data_value($data) {
 
-		$changed_data 	= $data->changed_data;
-		$value 			= $data->value;
-		$lang 			= $this->get_lang();
-		$properties 	= $this->get_propiedades();
+		$changed_data 		= $data->changed_data;
+		$value 				= $data->value;
+		$lang 				= $this->get_lang();
+		$properties 		= $this->get_propiedades();
+		$with_lang_versions = $properties->with_lang_versions ?? false;
 
-		if($changed_data->value !== null || $lang === DEDALO_DATA_NOLAN ){
-			$this->set_dato($value);
-			return true;
-		}else{
-
+		if ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN || $with_lang_versions===false)) {
+		
+			// propagate to other data langs
 			$section = section::get_instance($this->get_parent(), $this->get_section_tipo());
+
+			// deactivate save option
+			$this->save_to_database = false; 
 
 			$ar_langs = $this->get_component_ar_langs();
 			foreach ($ar_langs as $current_lang) {
+				
+				// change lang and get dato
 				$this->set_lang($current_lang);
-				$dato 			= $this->get_dato();
+				$dato = $this->get_dato();
+				
+				// remove null key and set dato updated
 				array_splice($dato, $changed_data->key, 1);
-				$this->set_dato($dato);
-				#$this->Save();
-				$this->save_to_database = false;
+				$this->set_dato($dato);				
+				
+				// send to section for fix data (avoid save each lang)
 				$section->save_component_dato($this);
 			}
-			$this->save_to_database = true;
-			return true;
+
+			// reactivate save option
+			$this->save_to_database = true; 
+		
+		}else{
+
+			$this->set_dato($value);  
 		}
+
+		
+		return true;
 	}//end update_data_value
 
 
