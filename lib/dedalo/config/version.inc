@@ -1599,7 +1599,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.72';
+	$DEDALO_VERSION = '5.4.73';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
