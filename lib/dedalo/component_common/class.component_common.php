@@ -4752,7 +4752,7 @@ abstract class component_common extends common {
 		$properties 		= $this->get_propiedades();
 		$with_lang_versions = $properties->with_lang_versions ?? false;
 
-		if ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN || $with_lang_versions===false)) {
+		if ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)) {
 		
 			// propagate to other data langs
 			$section = section::get_instance($this->get_parent(), $this->get_section_tipo());
@@ -4780,7 +4780,7 @@ abstract class component_common extends common {
 		
 		}else{
 
-			$this->set_dato($value);  
+			$this->set_dato($value);
 		}
 
 		
