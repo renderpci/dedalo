@@ -34,6 +34,7 @@
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/css/component_text_area.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_number/css/component_number.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_relation_related/css/component_relation_related.css";
+						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete/css/component_autocomplete.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 					// js
 						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/search/js/search2.js";
@@ -46,6 +47,7 @@
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/js/render_component_input_text.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_number/js/render_component_number.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_relation_related/js/render_component_relation_related.js";
+							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete/js/render_component_autocomplete.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_section_id/js/render_component_section_id.js";					
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/render_component_text_area.js";
 
