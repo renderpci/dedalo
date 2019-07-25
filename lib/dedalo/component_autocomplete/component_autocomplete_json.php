@@ -12,6 +12,10 @@
 
 		// Value
 			$value = array_values( $this->get_valor($lang=DEDALO_DATA_LANG, $format='array', $ar_related_terms=false) );
+
+			$value = array_map(function($item){
+				return $item->label;
+			}, $value);
 			
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();

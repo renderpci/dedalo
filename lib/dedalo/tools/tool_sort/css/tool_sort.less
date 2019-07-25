@@ -142,8 +142,8 @@ body {
 	.tool_grid {
 		display: grid;
 		//grid-template-columns: 0.8fr 1.2fr;
-		grid-template-columns: 1fr 1fr;
-		height: 100vh;
+		grid-template-columns: 1fr 1fr;		
+		height: calc(100vh - 30px);
 
 		>* {
 			padding: 2em;
@@ -152,6 +152,7 @@ body {
 		// tool_grid_left
 		.tool_grid_left {
 			background-color: #f3f3f3;
+			overflow: scroll;
 			
 			>* {				
 				border: none !important;
@@ -166,6 +167,7 @@ body {
 		// tool_grid_rigth
 		.tool_grid_rigth {
 			background-color: #E8E8E8;
+			overflow: scroll;
 
 			>.wrap_component {
 				position: sticky;
@@ -260,6 +262,7 @@ body {
 				position: sticky !important;
 				position: -webkit-sticky !important;
 				top: 0;
+				bottom: 0;
 				z-index: 9;
 				outline: 1px solid #cccccc;
 
