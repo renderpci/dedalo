@@ -7,7 +7,7 @@
 		//margin-bottom: 0.1em;
 		padding:0.5em;
 		border: 1px solid #E0E0E0;
-		width: 97%;
+		width: 100%;
 	}
 
 
@@ -214,7 +214,8 @@
 					>.buttons_container {
 						flex: 0 1;
 						>*{
-							margin: 0.365em;
+							//margin: 0.365em;
+							line-height: 1.25em;
 						}
 					}
 
@@ -268,6 +269,7 @@
   		cursor: pointer;
   		height: 1em;
   		opacity: 0.7;
+  		padding: 0.35em;
   		&:hover {
   			opacity: 1;
   		}
@@ -308,10 +310,16 @@
 				flex: 1 1 50%;
 				flex-wrap: nowrap;
 
+				
+
 				>label {
 					padding-left: 0.25em;
 					//padding-right: 0.5em;
 				}
+			}
+
+			&.inputs_container >li {
+				flex: 1 1 100%;
 			}
 		}
 	}
