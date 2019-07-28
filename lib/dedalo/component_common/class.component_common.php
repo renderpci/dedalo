@@ -4752,35 +4752,48 @@ abstract class component_common extends common {
 		$properties 		= $this->get_propiedades();
 		$with_lang_versions = $properties->with_lang_versions ?? false;
 
-		if ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)) {
-		
-			// propagate to other data langs
-			$section = section::get_instance($this->get_parent(), $this->get_section_tipo());
 
-			// deactivate save option
-			$this->save_to_database = false; 
+		switch (true) {
+			case ($changed_data->key === false && $changed_data->value===null):
 
-			$ar_langs = $this->get_component_ar_langs();
-			foreach ($ar_langs as $current_lang) {
-				
-				// change lang and get dato
-				$this->set_lang($current_lang);
-				$dato = $this->get_dato();
-				
-				// remove null key and set dato updated
-				array_splice($dato, $changed_data->key, 1);
-				$this->set_dato($dato);				
-				
-				// send to section for fix data (avoid save each lang)
-				$section->save_component_dato($this);
-			}
+				if(!empty($value)) {
+					throw new Exception("Error Processing Request. Expected empty value and received: " .json_encode($value), 1);
+					return false;
+				}			
+				$this->set_dato($value);
+				break;
 
-			// reactivate save option
-			$this->save_to_database = true; 
-		
-		}else{
+			case ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)):
 
-			$this->set_dato($value);
+				// propagate to other data langs
+				$section = section::get_instance($this->get_parent(), $this->get_section_tipo());
+
+				// deactivate save option
+				$this->save_to_database = false; 
+
+				$ar_langs = $this->get_component_ar_langs();
+				foreach ($ar_langs as $current_lang) {
+					
+					// change lang and get dato
+					$this->set_lang($current_lang);
+					$dato = $this->get_dato();
+					
+					// remove null key and set dato updated
+					array_splice($dato, $changed_data->key, 1);
+					$this->set_dato($dato);				
+					
+					// send to section for fix data (avoid save each lang)
+					$section->save_component_dato($this);
+				}
+
+				// reactivate save option
+				$this->save_to_database = true; 
+				break;
+			
+			default:
+
+				$this->set_dato($value);
+				break;
 		}
 
 		
