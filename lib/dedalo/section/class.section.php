@@ -1298,8 +1298,12 @@ class section extends common {
 
 	
 		// publication . Remove published records in mysql, etc.
-			diffusion::delete_record($this->tipo, $this->section_id);
-
+			try {
+				diffusion::delete_record($this->tipo, $this->section_id);
+			} catch (Exception $e) {
+				debug_log(__METHOD__." Error on diffusion::delete_record: ".$e->getMessage(), logger::ERROR);
+			}
+		
 
 		if( TOP_TIPO != $this->tipo ){
 			$is_portal = true;
@@ -2636,7 +2640,7 @@ class section extends common {
 				$section->Save();
 				debug_log(__METHOD__." Propagated diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);						
 			}else{
-				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);
+				#debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);
 			}			
 		}
 
@@ -2925,11 +2929,11 @@ class section extends common {
 				# Ignoerd locator
 				$ar_deleted_locators[] = $current_locator;				
 				$removed = true;
-				if(SHOW_DEBUG===true) {
-					$c_section_label 	= RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
-					$c_scomponent_label = RecordObj_dd::get_termino_by_tipo($component_tipo);
-					debug_log(__METHOD__." Deleted locator in '$relations_container'. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo - $c_section_label - $c_scomponent_label " . PHP_EOL . to_string($current_locator), logger::DEBUG);
-				}				
+				//if(SHOW_DEBUG===true) {
+				//	$c_section_label 	= RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
+				//	$c_scomponent_label = RecordObj_dd::get_termino_by_tipo($component_tipo);
+				//	debug_log(__METHOD__." Deleted locator in '$relations_container'. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo - $c_section_label - $c_scomponent_label " . PHP_EOL . to_string($current_locator), logger::DEBUG);
+				//}				
 			}else{
 				# Add normally
 				$new_relations[] = $current_locator;
@@ -3516,7 +3520,7 @@ class section extends common {
 																						 'list',
 																						 DEDALO_DATA_LANG,
 																						 $section_tipo);									
-									$component_json = $current_component->get_json();
+									$component_json = $current_component->get_json(); // get_json defined in class.common.php
 
 									// data add
 										$data = array_merge($data, $component_json->data);

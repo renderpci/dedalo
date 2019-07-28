@@ -171,7 +171,9 @@ class search_development2 {
 			'matrix_dd',
 			'matrix_hierarchy',
 			'matrix_hierarchy_main',
-			'matrix_langs'
+			'matrix_langs',
+			'matrix_layout',
+			'matrix_layout_dd'
 		];
 		if (in_array($this->matrix_table, $ar_tables_skip_prejects, true)) {
 			$this->skip_projects_filter = true; // Skip filter
@@ -1563,7 +1565,7 @@ class search_development2 {
 					$path 	   		= $order_obj->path;	
 					$end_path  		= end($path);
 					$component_tipo = $end_path->component_tipo;
-					
+					$type 			= $order_obj->type ?? 'string';
 
 					if ($component_tipo==='section_id') {
 						# section_id column case
@@ -1577,7 +1579,11 @@ class search_development2 {
 						$table_alias= $this->get_table_alias_from_path($path);
 						$selector 	= implode(',', $order_obj->component_path);
 						$alias 		= $component_tipo . '_order';
-						$base 		= $table_alias . '.datos#>>\'{'.$selector.'}\'';
+						if ($type==='integer') {
+							$base 	= $table_alias . '.datos#>\'{'.$selector.'}\'';
+						}else{
+							$base 	= $table_alias . '.datos#>>\'{'.$selector.'}\'';
+						}						
 						$column 	= $base .' as '.$alias;
 
 						# Add to global order columns (necessary for order...)

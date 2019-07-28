@@ -63,7 +63,7 @@ class component_relation_related extends component_relation_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
 		#return "working here! ".__METHOD__;
 	
 		if (isset($this->valor)) {
@@ -609,22 +609,43 @@ class component_relation_related extends component_relation_common {
 		# Select
 		$section_map 	= section::get_section_map($this->section_tipo);
 		$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-			#dump($thesaurus_map, ' $thesaurus_map ++ '.to_string());
+	
 		if (isset($thesaurus_map->term)) {
 
-			$select_path = new stdClass();
-				$select_path->name 				= 'Term';
-				$select_path->modelo 			= RecordObj_dd::get_modelo_name_by_tipo($thesaurus_map->term,true);
-				$select_path->section_tipo 		= $this->section_tipo;
-				$select_path->component_tipo 	= $thesaurus_map->term;
-		
-			$select_path = array($select_path);
+			#$select_path = new stdClass();
+			#	$select_path->name 				= 'Term';
+			#	$select_path->modelo 			= RecordObj_dd::get_modelo_name_by_tipo($thesaurus_map->term,true);
+			#	$select_path->section_tipo 		= $this->section_tipo;
+			#	$select_path->component_tipo 	= $thesaurus_map->term;
+			#
+		 	#$select_path = array($select_path);
+			#
+			#$select_group = new stdClass();
+			#	$select_group->path 		  = $select_path;
+			#	$select_group->component_path = ['components',$thesaurus_map->term,'valor_list'];
+			#
+			#$select = [$select_group];
+			
+			// array way
+			$thesaurus_map_terms = is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+			$select = [];
+			foreach ($thesaurus_map_terms as $key => $current_term) {
+				
+				$select_path = new stdClass();
+					$select_path->name 				= 'Term';
+					$select_path->modelo 			= RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
+					$select_path->section_tipo 		= $this->section_tipo;
+					$select_path->component_tipo 	= $current_term;
+			
+				$select_path = array($select_path);
 
-			$select_group = new stdClass();
-				$select_group->path 		  = $select_path;
-				$select_group->component_path = ['components',$thesaurus_map->term,'valor_list'];
+				$select_group = new stdClass();
+					$select_group->path 		  = $select_path;
+					$select_group->component_path = ['components',$current_term,'valor_list'];
 
-			$select = [$select_group];
+				$select[] = $select_group;
+			}
+			
 		}else{
 			$select = array(); // Nothing is selected but section_id, section_tipo columns
 		}		
@@ -646,24 +667,12 @@ class component_relation_related extends component_relation_common {
 		$ar_result = [];
 		foreach ($records_data->ar_records as $key => $row) {
 
-
 			$element = new stdClass();
 				$element->section_tipo 			= $row->section_tipo;
 				$element->section_id 			= $row->section_id;
 				$element->from_component_tipo 	= $this->tipo;
 
-			if (isset($thesaurus_map->term) && $term = json_decode($row->{$thesaurus_map->term})) {
-		
-				/*$lang = DEDALO_DATA_LANG;
-				switch (true) {
-					case isset($term->$lang):
-						$label = $term->$lang;
-
-						break;
-					default:
-						$label = reset($term);
-						break;
-				}*/
+			if (isset($thesaurus_map_terms)) {				
 
 				$label = self::get_locator_value($element, DEDALO_DATA_LANG, false, $ar_componets_related, $divisor);
 

@@ -1267,7 +1267,8 @@ class component_portal extends component_relation_common {
 	
 
 		if ($modo==='list' || $modo==='portal_list') {
-			$component->html_options->rows_limit = 1;
+			$propiedades = $component->get_propiedades();
+			$component->html_options->rows_limit = (isset($propiedades->list_max_records)) ? $propiedades->list_max_records : 1;
 		}
 
 		# Set section_list_key for select what section list (can exists various) is selected to layout map

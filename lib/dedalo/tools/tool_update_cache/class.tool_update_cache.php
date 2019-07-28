@@ -93,8 +93,6 @@ class tool_update_cache {
 			}
 			
 
-			
-
 		#
 		# RECORDS
 		# Use actual list search options as base to build current search
@@ -140,7 +138,8 @@ class tool_update_cache {
 																	 $section_id,
 																	 'edit',
 																	 DEDALO_DATA_LANG,
-																	 $this->section_tipo);
+																	 $this->section_tipo,
+																	 false);
 				$current_component->get_dato(); # !! Important get dato before regenerate
 				$result = $current_component->regenerate_component();
 				if ($result!==true) {

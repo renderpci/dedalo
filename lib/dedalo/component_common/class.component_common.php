@@ -2109,9 +2109,15 @@ abstract class component_common extends common {
 				foreach ($ar_componets_related as $related_tipo) {
 
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
+									
 					if ($modelo_name==='component_autocomplete_hi') {
 						# resolve
 						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
+
+					}else if (in_array($modelo_name , component_relation_common::get_components_with_relations())){
+						# resolve
+						$current_label = component_relation_common::get_locator_value($value, $lang, false, [$related_tipo], ', ');
+
 					}elseif ($modelo_name==='component_section_id') {
 						$current_label = $current_row->{$related_tipo};					
 					}else{
@@ -2121,7 +2127,7 @@ abstract class component_common extends common {
 					}
 					if (!empty($current_label)) {
 						$ar_label[] = $current_label;
-					}					
+					}
 				}
 				$label = implode(' | ', $ar_label);
 

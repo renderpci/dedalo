@@ -55,7 +55,7 @@ $vars = array(
 );
 foreach($vars as $name)	$$name = common::setVar($name);
 
-
+error_log( print_r($_REQUEST,true));
 
 /**
 * SHOW_INDEXATIONS : diffusion_index_ts
@@ -74,6 +74,31 @@ if($accion==='show_indexations') {
 
 }#end show_indexations
 */
+
+
+
+/**
+* LISTADOHIJOS : listados (al abrir la flecha,etc..)
+*/
+if($accion==='listadoHijos') {
+
+	# Write session to unlock session file
+	session_write_close();
+
+	if(!$terminoID) 	exit("Need more vars: terminoID: $terminoID ");
+	
+	$parentInicial		= $terminoID ;
+	$terminoIDActual	= false ;	#echo "$modo,$type,$ts_lang";
+	
+	# init dd in requested modo
+	$dd 				= new dd($modo,$type,$ts_lang);	
+	$html 				= $dd->buildTree($parentInicial, $terminoIDActual, $terminoIDresalte); 	
+	
+	echo $html;	
+
+	die();
+}
+
 
 
 /**
@@ -178,7 +203,6 @@ if($accion==='insertTS') {
 
 
 
-
 /**
 * UPDATE_TR_ORDER
 */
@@ -209,7 +233,6 @@ if($accion==='update_tr_order') {
 
 	exit();
 }
-
 
 
 
@@ -354,6 +377,7 @@ if($accion==='deleteTS') {
 
 	exit();	
 }
+
 
 
 /**
@@ -515,29 +539,6 @@ if($accion==='editTS') {
 
 
 
-
-
-/**
-* LISTADOHIJOS : listados (al abrir la flecha,etc..)
-*/
-if($accion==='listadoHijos') {
-
-	if(!$terminoID) 	exit("Need more vars: terminoID: $terminoID ");
-	
-	$parentInicial		= $terminoID ;
-	$terminoIDActual	= false ;	#echo "$modo,$type,$ts_lang";
-	
-	# init dd in requested modo
-	$dd 				= new dd($modo,$type,$ts_lang);	
-	$html 				= $dd->buildTree($parentInicial, $terminoIDActual, $terminoIDresalte); 	
-	
-	echo $html;
-
-	# Write session to unlock session file
-	session_write_close();
-
-	die();
-}
 
 
 /**

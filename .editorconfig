@@ -1,0 +1,27 @@
+# https://editorconfig.org/
+
+root = true
+
+# All files.
+[*]
+tab_width                = 4
+
+
+# All files.
+[*]
+charset                  = utf-8
+end_of_line              = lf
+indent_size              = 4
+indent_style             = tab
+trim_trailing_whitespace = true
+insert_final_newline     = true
+
+
+[COMMIT_EDITMSG]
+charset                  = utf-8
+end_of_line              = lf
+indent_size              = 4
+indent_style             = space
+trim_trailing_whitespace = true
+insert_final_newline     = true
+max_line_length          = 80
