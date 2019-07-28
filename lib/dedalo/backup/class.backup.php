@@ -1058,30 +1058,47 @@ abstract class backup {
 	public static function db_system_config_verify() {
 
 		$response = new stdClass();
-			$response->result 	= true;
+			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed '.__METHOD__;
+
+		// user bse dir
+			try {
+				
+				#$processUser = posix_getpwuid(posix_geteuid());
+				#$base_dir 	 = $processUser['dir'];
+				$base_dir 	 = getenv("HOME");
+				$file 		 = $base_dir.'/.pgpass';
+
+			}catch(Exception $e) {				
+				debug_log(__METHOD__."  ".$e->getMessage(), logger::ERROR);
+			}
 		
 		#
 		# PGPASS VERIFY
-		$processUser = posix_getpwuid(posix_geteuid());
-		$base_dir 	 = $processUser['dir'];
-		$file 		 = $base_dir.'/.pgpass';		
+		if (isset($file)) {
 
-		# File test
-		if (!file_exists($file)) {
-			#die( wrap_pre("Error. Database system configuration not allow import (1). pgpass not found") );
-			$response->msg 		= 'Error. Database system configuration not allow import (1). pgpass not found '.__METHOD__;
+			$response->result 	= true;
+
+			# File test
+			if (!file_exists($file)) {
+				#die( wrap_pre("Error. Database system configuration not allow import (1). pgpass not found") );
+				$response->msg 		= 'Error. Database system configuration not allow import (1). pgpass not found '.__METHOD__;
+				$response->result 	= false;
+			}
+
+			# File permissions
+			$perms = decoct(fileperms($file) & 0777);
+			if ($perms!='600') {
+				#die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
+				$response->msg 		= 'Error. Database system configuration not allow import (2). pgpass invalid permissions '.__METHOD__;
+				$response->result 	= false;
+			}
+
+		}else{
+			
 			$response->result 	= false;
+			$response->msg 		= 'Error. PHP function posix_getpwuid not exists '.__METHOD__;
 		}
-
-		# File permissions
-		$perms = decoct(fileperms($file) & 0777);
-		if ($perms!='600') {
-			#die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
-			$response->msg 		= 'Error. Database system configuration not allow import (2). pgpass invalid permissions '.__METHOD__;
-			$response->result 	= false;
-		}
-
 
 		return (object)$response;
 	}#end db_system_config_verify

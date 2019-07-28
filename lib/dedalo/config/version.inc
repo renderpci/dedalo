@@ -1558,6 +1558,27 @@
 		Fixed error in component_portal add element when offset is not properly calculated
 		Moved structure and langs js strings check from dd_init to login.php to allow ingnore this files in git sync
 
+	
+	Valencia 04-06-2019 5.4.46	
+		Add publication subtitles db_name optional param for discriminate database on instalations with multiple sites
+
+
+	Valencia 07-06-2019 5.4.47
+		Subtitles fix: remove start and end spaces to avoid infinite loops in split lines
+
+
+	Valencia 01-07-2019 5.4.52
+		Make section_map term format array as default instead string (string is supported for compatibility)
+
+
+	Valencia 01-07-2019 5.4.60
+		Fixed bug in component relation parent method get_parents recursive that use cached parents incorrectly when in multiple items are processing (import, update_cache, etc.)
+
+	
+	Valencia 01-07-2019 5.4.64
+		Fixed error on component_relation_related get_references when section_map thesaurus value is multiple (array)
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1578,12 +1599,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.45';
+	$DEDALO_VERSION = '5.4.73';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '31-05-2019');
+	define('DEDALO_BUILD'	, '25-07-2019');
 
 
 	/*

@@ -274,8 +274,16 @@ class component_relation_parent extends component_relation_common {
 		$sql_where  = "datos#>'{relations}' @> '[$compare]'::jsonb";
 		if (is_null($ar_tables)) {
 			// Calculated from section_tipo (only search in current table)
-			$table 	   = common::get_matrix_table_from_tipo($section_tipo);
-			$strQuery .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+			try {
+				$table = common::get_matrix_table_from_tipo($section_tipo);
+			} catch (Exception $e) {
+				debug_log(__METHOD__." Error on get matrix_table_from_tipo: ".to_string($section_tipo), logger::ERROR);
+			}
+			if (!empty($table)) {
+				$strQuery .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+			}else{
+				return []; // stop here
+			}			
 		}else{
 			// Iterate tables and make union search
 			$ar_query=array();
@@ -387,7 +395,13 @@ class component_relation_parent extends component_relation_common {
 
 		// static vars set
 			static $ar_parents_recursive_resolved = array();
-			static $locators_resolved 			  = array();		
+			static $locators_resolved 			  = array();
+
+		// reset on first call
+			if ($is_recursion!==true) {
+				#$ar_parents_recursive_resolved  = [];
+				$locators_resolved 				= [];
+			}
 
 		// key_resolve
 			$key_resolve = $section_tipo.'_'.$section_id;

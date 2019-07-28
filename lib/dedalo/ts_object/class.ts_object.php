@@ -581,7 +581,7 @@ class ts_object extends Accessors {
 			return $term_by_locator_data[$cache_uid];
 		}
 
-		$valor = false;
+		$final_value = false;
 
 		$section_map 	= section::get_section_map($locator->section_tipo);
 		$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
@@ -596,54 +596,66 @@ class ts_object extends Accessors {
 				$valor .= '_'. $locator->component_tipo;
 			if(isset($locator->tag_id))
 				$valor .= '_'. $locator->tag_id;
-					
+
+			// final value
+				$final_value = $valor;
+
 		}else{
 
-			$tipo 		 	= $thesaurus_map->term;
+			$ar_tipo 		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
 			$parent 		= $locator->section_id;
 			$section_tipo 	= $locator->section_tipo;
-			$modelo_name 	= 'component_input_text';
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			#if(SHOW_DEBUG===true) {
-			#	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			#	if ($real_modelo_name!==$modelo_name) {
-			#		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
-			#	}
-			#}
-			$component 		= component_common::get_instance( $modelo_name,
-															  $tipo,
-															  $parent,
-															  'edit',
-															  $lang,
-															  $section_tipo);
-			$valor = $component->get_valor($lang);
-				//dump($valor, ' valor ++ '.to_string($tipo));	
-			if (empty($valor)) {
+			
+			$ar_value = [];
+			foreach ($ar_tipo as $tipo) {
 						
-				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-				#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
-				#if($lang!==$main_lang) {
-				#	$component->set_lang($main_lang);
-				#	$valor = $component->get_valor($main_lang);
-				#	if (strlen($valor)>0) {
-				#		$valor = component_common::decore_untranslated( $valor );
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				#if(SHOW_DEBUG===true) {
+				#	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				#	if ($real_modelo_name!==$modelo_name) {
+				#		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
 				#	}
-				#
-				#	# return component to previous lang
-				#	$component->set_lang($lang);
 				#}
-				#
-				#if (empty($valor)) {
+				$component 		= component_common::get_instance( $modelo_name,
+																  $tipo,
+																  $parent,
+																  'edit',
+																  $lang,
+																  $section_tipo);
+				$valor = $component->get_valor($lang);
+					//dump($valor, ' valor ++ '.to_string($tipo));	
+				if (empty($valor)) {
+							
+					$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
+					#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
+					#if($lang!==$main_lang) {
+					#	$component->set_lang($main_lang);
+					#	$valor = $component->get_valor($main_lang);
+					#	if (strlen($valor)>0) {
+					#		$valor = component_common::decore_untranslated( $valor );
+					#	}
+					#
+					#	# return component to previous lang
+					#	$component->set_lang($lang);
+					#}
+					#
+					#if (empty($valor)) {
 
-					$dato_full = $component->get_dato_full();
-					# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-					$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
-					if (is_array($valor)) {
-						$valor = implode(', ', $valor);
-					}
-					#dump($valor, ' valor ++ '.to_string());
-				#}
-			}
+						$dato_full = $component->get_dato_full();
+						# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
+						$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
+						if (is_array($valor)) {
+							$valor = implode(', ', $valor);
+						}						
+						#dump($valor, ' valor ++ '.to_string());
+					#}
+				}
+
+				$ar_value[] = $valor;
+			}//end foreach ($ar_tipo as $tipo) {
+	
+			// final value
+				$final_value = implode(', ', $ar_value);
 		}
 		#dump($valor, ' valor ++ '.to_string($locator->section_tipo."-".$locator->section_id));
 
@@ -661,10 +673,10 @@ class ts_object extends Accessors {
 
 		# Cache control (session)		
 		#$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
-		$term_by_locator_data[$cache_uid] = $valor;
+		$term_by_locator_data[$cache_uid] = $final_value;
 				
 		
-		return $valor;
+		return $final_value;
 	}//end get_term_by_locator
 
 

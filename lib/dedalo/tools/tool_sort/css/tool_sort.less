@@ -1,0 +1,542 @@
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+html {
+
+}
+body {
+ 	display: flex;
+    flex-direction: column;
+}
+
+.html_page_wrap_tool_sort, .html_page_wrap_tool_sort .content_html {
+	height: 100%;
+}
+
+
+.tool_sort_icon {
+	background-color: @color_trascription;
+	background-image: url(../../../themes/default/icon_transcription_hover.svg);
+	// Adjust icon size
+	background-size: 18px !important;
+    background-position-y: 3px !important;
+    background-position-x: 6px !important;
+} 
+
+
+/* tool_sort CASE
+	--------------------------------------------- */
+	.html_page_wrap_tool_sort .content_data {
+		width: 100%;		
+	}
+
+
+/* HEADER
+------------------------------------------------------ */
+	.header_tool {
+
+		}
+		.header_tool .select_fast_lang_switch {
+			float: left;
+			position: relative;	
+			top: 3px;
+			left: 10px;
+			text-transform: capitalize;
+			padding-right: 20px;
+		}
+		//.header_tool .lang_selector_in_header .select_fast_lang_switch select {
+		.header_tool .lang_selector_in_header .select_fast_lang_switch{
+			opacity: 1;
+			margin-left: 5px;
+			margin-right: 10px;
+			color: #000000;
+			max-width: 84px;
+		}
+		.header_tool .lang_selector_in_header{
+			padding: 2px;
+			padding-right: 10px;
+			padding-left: 10px;
+		}
+		.header_tool #header_info {
+			display:block;
+			float: left;
+			position: relative;
+			margin-left: 15px;
+			top: 8px;
+			line-height: 1em;
+		}
+
+
+
+/* PAGE
+------------------------------------------------------ */
+	.wrap_tool_sort_page {
+		//background-color: #F590F0;
+		margin: 0;
+		padding: 0;
+		display: block;
+		position: absolute;
+		
+		//width: 100%;
+		//height: 96%;		
+		//overflow: hidden;
+		
+		width: 99.9%;
+		height: ~"calc(100% - 30px)";
+	}
+
+
+
+// inspector
+	#inspector_log.tool_sort_inspector_log {
+		//background-color: aliceblue;
+		display: block;
+		padding-left: 4px;
+		padding-right: 4px;
+		z-index: 10;
+		min-width: 400px;		
+		margin-right: 72px;
+		margin-left: 151px;
+		width: auto;
+		height: 2em;
+		position: absolute;
+		margin-top: 0.70em;
+	}
+
+
+
+/* TAGS INSPECTOR
+------------------------------------------------------ */
+	#tags_inspector {
+		background-color: #99C9F5;
+		height: 24px;
+		width: 100%;
+	}
+
+
+	.view_tool_sort_item {
+		text-align: left;
+	}
+
+
+
+	.html_page_wrap_tool_sort .toponymy_list li {
+		width: 100%;
+	}
+
+
+
+
+// tool list paginator
+	#section_paginator {
+		padding-top: 0.5em;
+	}
+
+
+
+// tool_grid
+	.tool_grid {
+		display: grid;
+		//grid-template-columns: 0.8fr 1.2fr;
+		grid-template-columns: 1fr 1fr;		
+		height: calc(100vh - 30px);
+
+		>* {
+			padding: 2em;
+		}
+
+		// tool_grid_left
+		.tool_grid_left {
+			background-color: #f3f3f3;
+			overflow: scroll;
+			
+			>* {				
+				border: none !important;
+			}
+
+			#search2_container_selection .search_component {
+				flex-basis: 96%;
+			}
+			
+		}
+
+		// tool_grid_rigth
+		.tool_grid_rigth {
+			background-color: #E8E8E8;
+			overflow: scroll;
+
+			>.wrap_component {
+				position: sticky;
+				position: -webkit-sticky;
+				top: 0;
+			}
+
+			// temporal
+				.portal_section {
+
+					>.row_header {
+    					
+
+    					&>:last-child {
+    						//width: 300px !important;
+    						//background-color: #26E8B8 !important;
+    					}
+	    			}
+
+					>.rows_wrapper >.table_row {
+						display: flex;
+	    				
+
+	    				.column.component_image, .column:last-of-type {
+							max-width: unset!important;
+							width: 60%!important;
+							background-color: #fff;
+	    				}
+
+	    				.column.component_portal {
+	    					>div {
+	    						display: flex;
+	    						flex-wrap: wrap;
+	    					}
+	    				}
+	    				
+	    				>:last-child {
+	    					//background-color: #E1E81F;
+	    					display: flex;
+	    					max-width: unset;
+
+	    					.portal_item_numisdata9 {
+	    						//background-color: #E13418;
+	    						display: flex;
+	    						max-width: unset;
+	    						//height: 120px;
+	    						outline: 1px solid #eeeeee;
+	    						
+
+	    						.div_image_image_in_list {
+	    							//height: 120px;
+	    							//width: 150px;
+	    						}
+	    					}
+	    				}
+					}//end >.rows_wrapper .table_row
+
+				}//end .portal_section
+		}
+
+	}//end .tool_grid
+
+
+
+
+
+
+
+// row_container
+	.row_container {
+
+	}
+
+
+// rows_container
+	.rows_container {
+		overflow: unset !important;
+		
+		>.row_container {
+			//display: flex;
+			//flex-flow: row;
+			//padding: 2px;
+			width: 100%;
+			position: relative;
+			align-items: center;
+			background-color: #ffffff;
+			padding-right: 60px;
+			padding-top: 1px;
+			padding-bottom: 1px;
+
+			&.snap {
+				position: sticky !important;
+				position: -webkit-sticky !important;
+				top: 0;
+				bottom: 0;
+				z-index: 9;
+				outline: 1px solid #cccccc;
+
+				background-color: rgba(249, 249, 249, 0.90);; // ?
+			}
+
+			>.column_cell {
+
+				flex-direction: column;
+				//max-width: 84.1%;
+				//width: 92%;
+
+				// portal
+				>.component_portal_list{
+				//	border-right: 1px solid #cccccc;
+				}
+				
+				// portal images
+					>.component_portal_list >.component_portal_column {
+						padding-left: 0;
+						//width: 50%;
+						width: 100%;
+						overflow: hidden;
+						
+
+						>img {
+							//height: 200px;
+							height: unset;
+							max-height: 150px; // 120
+							cursor: zoom-in;
+							object-fit: contain;
+						}
+					}
+				
+				// input text name
+				>.component_input_text_list {
+					padding: 1em;
+					text-align: center;
+					width: 100%;
+					font-size: 18px;
+				}
+
+			}//end >.column_cell			
+
+			.drag_item {
+				background-image: url(../../../themes/default/move.svg);
+				background-repeat: no-repeat;
+				background-position: center;
+				background-size: 18px 18px;
+				//background-color: #dbdbdb;
+				opacity: 0.3;
+				width: 5.8%;
+				height: 100%;
+				position: absolute;
+				right: -1px;
+				bottom: 0;
+				cursor: move;
+
+				&:hover:not(.row_used) {
+					background-image: url(../../../themes/default/move_hover.svg);
+					background-color: #9B9B9B;
+					opacity: 0.7;
+				}
+			}
+			
+		}//end >.row_container
+
+	}//end rows_container
+
+
+
+// search_group_container
+	#search_group_container {
+		flex-wrap: wrap;
+
+		#root_search_group {
+			width: 100%;
+		}
+
+		@down_width: 32%;
+		.max_group {
+			margin-left: 5px;
+			width: @down_width;
+		}
+		.reset_group {
+			width: @down_width;
+		}
+		#button_submit {
+			width: @down_width - 0.5;
+			margin-right: 5px;
+		}
+	}
+
+
+
+// sections_select
+	#sections_select {
+		height: 25px;
+		float: right;
+		margin: 5px;
+		height: 2.3em;
+	}
+
+
+
+// button_open_search2
+	.button_open_search2 {
+		margin-left: 2px;
+	}
+
+
+// thesaurus_container
+	#thesaurus_container {
+		padding: 10px;
+
+		position: -webkit-sticky;
+		position: sticky;
+		top: 0;
+	}
+
+// test portal
+	.css_wrap_portal {
+
+		>.content_data {
+
+			overflow: unset;
+
+			>.css_button_generic {
+				
+				.tool_grid_left & {
+					display: none
+				}
+			}
+
+			.mosaic_ul .mosaic_li .button_edit, .mosaic_ul .mosaic_li .button_delete {
+				display: none !important;
+			}
+		}
+
+		.mosaic_item .div_image_portal_list_view_mosaic {
+			background-size: contain !important;
+			background-color: #ffffff;
+		}
+	}
+
+// remove border on components showed in thesaurus
+	.wrap_ts_object .data_container .wrap_component {
+		border: none !important;
+	}
+
+	
+// row_used
+	.row_used {
+		transition: all 1s ease;
+		//transition: opacity 1s ease;
+		background-color: #ff9b00;
+    	opacity: 0.8 !important;
+
+		/*
+		&:after {
+			content: " ";
+			background-color: #ec8a0a;
+			color: #fff;
+			position: absolute;
+			right: 0;
+			top: 0;
+			width: 29px;
+			text-align: center;
+			height: 2em;
+			line-height: 2em;
+		}*/
+	}
+
+
+// drag and drop
+	.dragover {	
+		outline: 2px dashed orange;
+	}
+	.drop {
+		//outline: 2px dashed green;
+		animation-duration: 1s;
+		animation-name: outline_to_green;
+	}
+	@keyframes outline_to_green {
+	  from {
+	    outline: 2px dashed green; 
+	  }
+	  to {
+	    outline: 2px dashed transparent;
+	  }
+	}
+
+
+#section_filter_container {
+	display: none;
+}
+
+.row_container img {
+	-webkit-user-select: none;
+	-webkit-user-drag: none;
+	-webkit-app-region: no-drag;
+	cursor: default;
+}
+
+
+// column_original_duplicate
+	.column_original_duplicate {
+		//display: flex;
+		//flex-wrap: wrap;
+		/* padding-top: .5em; */
+		/* padding-bottom: .5em; */
+		/* border-left: 1px solid #eee; */
+		padding: 1em;
+		height: 100%;
+
+		>* {
+			padding: 0.2em;
+		}
+
+		>label {
+			//margin-right: 0.75em;
+		}		
+	}
+
+
+// custom_order_button
+	.custom_order_button {
+    	//height: 2.3em;
+		padding: 0.5em;
+
+		&.active {
+			background-color: #79E47F;
+		}
+	}
+
+//button_original_duplicate
+	.button_original_duplicate {
+		//flex: 0 0 42%;
+		//margin-top: 0.5em;
+		padding: .5em;
+		margin-left: 1em;
+	}
+
+
+
+// row_snap
+	.row_snap {
+		height: 100%;
+		padding: 1em;
+		//border-left: 1px solid #eeeeee;
+		border-left: 1px solid rgba(238, 238, 238, 0.4392156862745098);
+
+		>* {
+			margin-left: .2em;
+    		padding: 0.2em;
+		}
+
+		>label {
+			
+		}
+	}
+
+	
+// provisional para numisdata
+	.rows_container>.row_container {
+	    //grid-template-columns: 50px 50px 1fr 1fr 150px 150px 95px 75px;
+	    grid-template-columns: 50px 50px 1fr 1fr 270px 270px 85px 75px;
+
+	    >.column_cell {
+	    	//height: 100%;
+	    	//height: 100%;
+	    	//padding: 0.5em;
+	    	//outline: 1px solid rgba(238,238,238,.43921569);
+	    }
+	}
+
+

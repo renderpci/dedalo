@@ -137,14 +137,13 @@ if (login::is_logged()) {
 
 			#
 			# DEDALO_ENTITY
-			$processUser = posix_getpwuid(posix_geteuid());
 			$debug_line_html .= "<span>".DEDALO_ENTITY."</span>";
 
 
 			#
 			# PHP USER
-			$processUser = posix_getpwuid(posix_geteuid());
-			$debug_line_html .= "<span>PHP ".phpversion()." ".ini_get('session.save_handler')." <span>".$processUser['name']."</span></span>";
+			$processUser = get_current_user(); // posix_getpwuid(posix_geteuid());
+			$debug_line_html .= "<span>PHP ".phpversion()." ".ini_get('session.save_handler')." <span>".$processUser."</span></span>";
 
 			#
 			# DATABASE 

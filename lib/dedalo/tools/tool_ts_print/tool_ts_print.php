@@ -31,10 +31,18 @@
 				function cmp($a, $b) {
 					return strcmp($a->{DEDALO_HIERARCHY_TERM_TIPO}, $b->{DEDALO_HIERARCHY_TERM_TIPO});
 				}
-				usort($ar_hierachies, "cmp");		
-				
+				usort($ar_hierachies, "cmp");
+
+				// debug
+					#$ar_hierachies2 = array_filter($ar_hierachies, function($item){
+					#	if ($item->hierarchy53==='ts1') {
+					#		return $item;
+					#	}
+					#});
+					#$ar_hierachies = array_values($ar_hierachies2);
+
 				# First section. Select first hierarchy target section for draw initial data
-				$first_hierarchy 	= reset($ar_hierachies);
+				$first_hierarchy 	= reset($ar_hierachies);				
 				$first_section_tipo = $first_hierarchy->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO};	
 
 				# ts_data . Build ts_data object with all section info 
