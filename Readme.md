@@ -1,4 +1,4 @@
-<img src="http://dedalo4.antropolis.net/dedalo/images/logos/dedalo_logo.png" alt="Dédalo logo" />
+<img src="https://dedalo.render.es/dedalo/images/logos/dedalo_logo.png" alt="Dédalo logo" />
 
 **README**
 
@@ -29,7 +29,7 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 
 You can see Dédalo in action:
 
-<p><a href="http://dedalo4.antropolis.net/dedalo/lib/dedalo/main/?t=oh1" target="_blank">Dédalo demo</a></p>
+<p><a href="https://dedalo.render.es/dedalo/lib/dedalo/main/?t=oh1" target="_blank">Dédalo demo</a></p>
 
 Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
@@ -37,7 +37,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 <p><a href="http://www.occupation-memories.org/de/archive/index.html" target="_blank">Freie Universität Berlin</a></p>
 <p><a href="https://numisdata.org/sardinia/" target="_blank">Findsopts in Sardinia</a></p>
 <p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>	
-<p><a href="http://bancmemorial.gencat.cat/web/home/?&amp;lang=eng" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
+<p><a href="https://arxiu.memoria.gencat.cat/en/app/#/" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
 <p><a href="https://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>
 <p><a href="http://memoriahistorica.paiporta.es" target="_blank">Arxiu de la Memòria Històrica de Paiporta</a> Delegación de Memoria Histórica de la Diputación de Valencia </p>
 <p><a href="http://memoriahistorica.dival.es/recursos/archivo-memoria-historica/" target="_blank">Nuestra Memoria. Archivo de historia oral</a></p>	
