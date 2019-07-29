@@ -28,7 +28,23 @@ html {
 	.success {
 		//transition: background-color 0.3s ease;
 		//background-color: green !important;
-		animation: success_animation 1.7s ease-out;
+	//	animation: success_animation 1.7s ease-out;
+		position: relative;
+
+		&:before {
+			content: "\a0";
+			display: block;
+			//padding: 2px 0;
+			//line-height: 1px;
+			border-top: 3px solid green;
+			z-index: 9;
+			top: 0;
+			left: 0;
+			position: absolute;
+			animation: success_animation_line 2s ease-out;
+			width: 0;
+			opacity: 0;
+		}
 	}
 	@keyframes success_animation {
 	    //0%   {background-color: green !important;}
@@ -37,6 +53,12 @@ html {
 	    from { background-color: green; }
 	    to { background-color: rgb(230, 230, 230); }
 	}
+	@keyframes success_animation_line {
+	    0%  { width: 1%;   opacity: 0.5; }
+	    22% { width: 100%; opacity: 1; }
+	    60% { width: 100%; opacity: 1; }
+	    100%{ width: 100%; opacity: 0; }
+	}	
 // loading
 	.loading {
 		opacity: 0.4;
