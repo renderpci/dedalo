@@ -2,7 +2,7 @@
 
 
 // html inputs
-	input[type="text"], input[type="number"], textarea {
+	input[type="text"], input[type="number"], textarea, .contenteditable {
 		height: 2.5em;
 		//margin-bottom: 0.1em;
 		padding:0.5em;
@@ -265,35 +265,56 @@
 
 // buttons with icons
 	.button {
-		color: #a2a2a2;
-  		cursor: pointer;
-  		height: 1em;
-  		opacity: 0.7;
-  		padding: 0.35em;
-  		&:hover {
-  			opacity: 1;
-  		}
-  		&:active {
-  			color: #000000;
-  		}
-	}
-	.remove {
-		.fa-icon;
-  		.fas;  		
-  		&:before {
-			//content: @fa-var-user;
-			content: @fa-var-trash-alt;
-		}
-	}
-	.add {
-		.fa-icon;
-  		.fas;
-  		&:before {
-			//content: @fa-var-user;
-			content: @fa-var-plus-circle;
-		}
-	}
+		display: none;
 
+		.active & {
+			color: #a2a2a2;
+	  		cursor: pointer;
+	  		height: 1em;
+	  		opacity: 0.7;
+	  		padding: 0.35em;
+	  		&:hover {
+	  			opacity: 1;
+	  		}
+	  		&:active {
+	  			color: #000000;
+	  		}
+
+	  		&.remove {
+				.fa-icon;
+		  		.fas;  		
+		  		&:before {
+					//content: @fa-var-user;
+					content: @fa-var-trash-alt;
+				}
+			}
+			&.add {
+				.fa-icon;
+		  		.fas;
+		  		&:before {
+					//content: @fa-var-user;
+					content: @fa-var-plus-circle;
+				}
+			}
+			&.edit {
+				.fa-icon;
+		  		.fas;
+		  		&:before {
+					//content: @fa-var-user;
+					content: @fa-var-pen;
+				}
+			}
+			&.reset {
+				.fa-icon;
+		  		.fas;
+		  		&:before {
+					//content: @fa-var-user;
+					content: @fa-var-eraser;
+				}
+			}
+		}
+	}
+	
 
 
 // ul inside content data
