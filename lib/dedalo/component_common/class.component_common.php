@@ -2150,7 +2150,7 @@ abstract class component_common extends common {
 					});	
 				}
 			}else{
-				// Deafult. Alphabetic ascendent
+				// Default. Alphabetic ascendent
 				usort($result, function($a,$b){
 					return strnatcmp($a->label, $b->label);
 				});
@@ -4754,7 +4754,7 @@ abstract class component_common extends common {
 
 
 		switch (true) {
-			case ($changed_data->key === false && $changed_data->value===null):
+			case ($changed_data->key===false && $changed_data->value===null):
 
 				if(!empty($value)) {
 					throw new Exception("Error Processing Request. Expected empty value and received: " .json_encode($value), 1);
@@ -4795,7 +4795,7 @@ abstract class component_common extends common {
 				$this->set_dato($value);
 				break;
 		}
-
+		
 		
 		return true;
 	}//end update_data_value
