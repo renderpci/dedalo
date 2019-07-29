@@ -178,6 +178,7 @@ class dd_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->json_data 	= $json_data;
 
 				$response->debug = $debug;
 			}
