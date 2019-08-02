@@ -314,8 +314,12 @@ class dd_api {
 								if ($item->section_tipo===$current_section_tipo) {
 									return $item->section_id;
 								}
-							}, $rows_data->ar_records);						
-
+							}, $rows_data->ar_records);
+							// pagination info
+							$section_data->offset 		= $current_sqo->offset;
+							$section_data->limit 		= $current_sqo->limit;
+							$section_data->total 		= $current_sqo->full_count;
+						
 						$data[] = $section_data;
 					}
 
