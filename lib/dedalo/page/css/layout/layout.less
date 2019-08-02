@@ -21,7 +21,7 @@
 		align-items: stretch;
 		align-content: stretch;
 		flex-wrap: wrap;
-		flex-flow: column;
+		flex-flow: column;		
 		width: 100%;
 	}
 	.section_group_body_base {
@@ -48,12 +48,21 @@
 // section edit
 	.section.edit {
 		display: flex;
+		flex-wrap: wrap;
 		//&:before {
 		//	content: "Section edit";
 		//	font-weight: bold;
 		//	width: 100%;
 		//	padding: 1em;		
 		//}
+
+		>*:not(.full_width) {
+			flex: 1;
+		}
+
+		>.full_width {
+			width: 100%;
+		}
 	}
 
 
