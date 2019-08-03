@@ -4791,7 +4791,6 @@ abstract class component_common extends common {
 				break;
 			
 			default:
-
 				$this->set_dato($value);
 				break;
 		}
