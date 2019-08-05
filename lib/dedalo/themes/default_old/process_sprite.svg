@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
+	<!ENTITY ns_flows "http://ns.adobe.com/Flows/1.0/">
+	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
+	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
+	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
+]>
+<svg version="1.1" id="Layer_1" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:a="http://ns.adobe.com/AdobeSVGViewerExtensions/3.0/"
+	 x="0px" y="0px" viewBox="0 0 105.1 16.8" enable-background="new 0 0 105.1 16.8" xml:space="preserve">
+<g>
+	<circle fill-rule="evenodd" clip-rule="evenodd" fill="#B3B3B3" cx="26.1" cy="8.4" r="8.4"/>
+	<g>
+		<path fill="#FFFFFF" d="M23.2,5.9h-2V5.2H26v0.7h-2v5.7h-0.8V5.9z"/>
+		<path fill="#FFFFFF" d="M26.7,5.3c0.4-0.1,1-0.1,1.6-0.1c0.9,0,1.5,0.2,1.9,0.5c0.3,0.3,0.5,0.7,0.5,1.2c0,0.8-0.5,1.4-1.2,1.6v0
+			c0.5,0.2,0.8,0.6,0.9,1.3c0.2,0.9,0.4,1.5,0.5,1.8H30c-0.1-0.2-0.2-0.7-0.4-1.5c-0.2-0.9-0.5-1.2-1.3-1.2h-0.8v2.8h-0.8V5.3z
+			 M27.5,8.2h0.8c0.9,0,1.4-0.5,1.4-1.2c0-0.8-0.6-1.2-1.5-1.2c-0.4,0-0.7,0-0.8,0.1V8.2z"/>
+	</g>
+</g>
+<g>
+	<circle fill-rule="evenodd" clip-rule="evenodd" fill="#B3B3B3" cx="8.4" cy="8.4" r="8.4"/>
+	<g>
+		<path fill="#FFFFFF" d="M5.7,5.2h3.5v0.7H6.5V8h2.4v0.7H6.5v2.9H5.7V5.2z"/>
+		<path fill="#FFFFFF" d="M11.1,5.2v6.4h-0.8V5.2H11.1z"/>
+	</g>
+</g>
+<g>
+	<circle fill-rule="evenodd" clip-rule="evenodd" fill="#B3B3B3" cx="43.7" cy="8.4" r="8.4"/>
+	<g>
+		<path fill="#FFFFFF" d="M41.2,5.9h-2V5.2H44v0.7h-2v5.7h-0.8V5.9z"/>
+		<path fill="#FFFFFF" d="M44.7,5.2h0.8v5.7h2.7v0.7h-3.6V5.2z"/>
+	</g>
+</g>
+<g>
+	<circle fill-rule="evenodd" clip-rule="evenodd" fill="#B3B3B3" cx="61.4" cy="8.4" r="8.4"/>
+	<g>
+		<path fill="#FFFFFF" d="M61.7,8.3c0,2.2-1.3,3.4-3,3.4c-1.7,0-2.9-1.3-2.9-3.3c0-2,1.3-3.4,3-3.4C60.6,5.1,61.7,6.4,61.7,8.3z
+			 M56.7,8.4c0,1.4,0.7,2.6,2,2.6c1.3,0,2.1-1.2,2.1-2.7c0-1.3-0.7-2.6-2-2.6C57.4,5.8,56.7,7,56.7,8.4z"/>
+		<path fill="#FFFFFF" d="M62.8,5.3c0.4-0.1,1-0.1,1.6-0.1c0.9,0,1.5,0.2,1.9,0.5c0.3,0.3,0.5,0.7,0.5,1.2c0,0.8-0.5,1.4-1.2,1.6v0
+			c0.5,0.2,0.8,0.6,0.9,1.3c0.2,0.9,0.4,1.5,0.5,1.8h-0.9c-0.1-0.2-0.2-0.7-0.4-1.5c-0.2-0.9-0.5-1.2-1.3-1.2h-0.8v2.8h-0.8V5.3z
+			 M63.6,8.2h0.8c0.9,0,1.4-0.5,1.4-1.2c0-0.8-0.6-1.2-1.5-1.2c-0.4,0-0.7,0-0.8,0.1V8.2z"/>
+	</g>
+</g>
+<g>
+	<circle fill-rule="evenodd" clip-rule="evenodd" fill="#B3B3B3" cx="96.7" cy="8.4" r="8.4"/>
+	<g>
+		<path fill="#FFFFFF" d="M94,5.2v6.4h-0.8V5.2H94z"/>
+		<path fill="#FFFFFF" d="M95.5,11.6V5.2h0.9l2.1,3.2c0.5,0.8,0.8,1.4,1.2,2.1l0,0c-0.1-0.9-0.1-1.6-0.1-2.6V5.2h0.8v6.4h-0.8
+			l-2-3.3c-0.4-0.7-0.9-1.4-1.2-2.1l0,0c0,0.8,0.1,1.6,0.1,2.6v2.7H95.5z"/>
+	</g>
+</g>
+<g>
+	<circle fill-rule="evenodd" clip-rule="evenodd" fill="#B3B3B3" cx="79.1" cy="8.4" r="8.4"/>
+	<g>
+		<path fill="#FFFFFF" d="M73.6,10.6c0.4,0.2,0.9,0.4,1.5,0.4c0.8,0,1.3-0.4,1.3-1.1c0-0.6-0.3-0.9-1.2-1.3c-1-0.4-1.7-0.9-1.7-1.8
+			c0-1,0.8-1.7,2.1-1.7c0.7,0,1.1,0.2,1.4,0.3l-0.2,0.7c-0.2-0.1-0.6-0.3-1.2-0.3c-0.9,0-1.2,0.5-1.2,1c0,0.6,0.4,0.9,1.3,1.2
+			c1.1,0.4,1.6,0.9,1.6,1.9c0,1-0.7,1.8-2.2,1.8c-0.6,0-1.3-0.2-1.6-0.4L73.6,10.6z"/>
+		<path fill="#FFFFFF" d="M83.8,8.8c0-0.9-0.1-2-0.1-2.8h0c-0.2,0.8-0.5,1.6-0.8,2.4l-1.1,3.1h-0.6l-1-3.1c-0.3-0.9-0.6-1.7-0.7-2.5
+			h0c0,0.8-0.1,1.9-0.1,2.8L79,11.6h-0.8l0.4-6.4h1.1l1.1,3.1c0.3,0.8,0.5,1.5,0.6,2.2h0c0.2-0.6,0.4-1.4,0.7-2.2l1.1-3.1h1.1
+			l0.4,6.4H84L83.8,8.8z"/>
+	</g>
+</g>
+</svg>
