@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="124 381.9 386 370" enable-background="new 124 381.9 386 370" xml:space="preserve">
+	 <defs>
+	 	<style type="text/css"><![CDATA[
+	 		line.svg_open_line{
+	 			stroke: #000000;
+	 			fill: none;
+	 			stroke-width: 21;
+	 			stroke-miterlimit: 10;
+	 		}
+	 		]]>
+ 		</style>
+ 	</defs>
+<line class="svg_open_line" x1="438.4" y1="561.6" x2="186.9" y2="561.6"/>
+<line class="svg_open_line" x1="312.7" y1="687.4" x2="312.7" y2="435.9"/>
+<circle stroke="#000000" fill="none" stroke-width="21" stroke-miterlimit="10" cx="312.6" cy="561.7" r="159.7"/>
+</svg>
