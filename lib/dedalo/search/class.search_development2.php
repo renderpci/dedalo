@@ -1170,7 +1170,7 @@ class search_development2 {
 
 					$sql_select = '';
 			
-					if ($modelo_name==='component_section_id') {
+					if ($modelo_name==='component_section_id' || $modelo_name === 'section_id') {
 						
 						$sql_select .= $table_alias.'.section_id';
 						$sql_select .= ' as '.$column_alias;
