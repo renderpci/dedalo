@@ -1513,7 +1513,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $item
 	*/
-	public function get_structure_context($permissions=0) {
+	public function get_structure_context($permissions=0, $sqo_object=null) {
 
 		// class called (model name too like component_input_text)
 			#$called_model = get_called_class();
@@ -1526,11 +1526,13 @@ abstract class common {
 			$mode 		  = $this->get_modo();
 			$label 		  = $this->get_label();
 			$lang		  = $this->get_lang();
+		
 		// properties
 			$properties   = $this->get_propiedades();
 			if (empty($properties)) {
 				$properties = new stdClass();
 			}
+		
 		// css
 			$css = new stdClass();
 			if (isset($properties->css)) {
@@ -1538,6 +1540,7 @@ abstract class common {
 				// remove from propoerties object
 				unset($properties->css);
 			}		
+		
 		// parent 
 			// 1 . From requested context
 			if (isset(dd_api::$ar_dd_objects)) {
@@ -1565,14 +1568,26 @@ abstract class common {
 				// default
 				$parent = $this->RecordObj_dd->get_parent();
 			}
-
-
+		
 		// tools
 			$tools = $this->get_ar_tools_obj();			
 			if ($tools===false || is_null($tools)) {
 			 	$tools = [];
 			 }			
 		
+		// sqo_context
+			 if($sqo_object === true){
+			 	$sqo_context = $this->get_sqo_context();
+				if ($sqo_context===false || is_null($sqo_context)) {
+				 	$sqo_context = [];
+				 }
+			}else{
+				$sqo_context = null;
+			}			
+
+			
+
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label' 		=> $label, // *
@@ -1586,7 +1601,8 @@ abstract class common {
 				'properties' 	=> $properties,
 				'css'			=> $css,
 				'permissions'	=> $permissions,
-				'tools'			=> $tools
+				'tools'			=> $tools,
+				'sqo_context' 	=> $sqo_context,
 			]);		
 		
 
@@ -1784,7 +1800,7 @@ abstract class common {
 				$options->user_id 		= $user_id;
 
 				if(!empty($view)) {
-				$options->view 			= $view;
+					$options->view 		= $view;
 				}
 				
 
@@ -1795,6 +1811,106 @@ abstract class common {
 	}//end get_layout_map
 
 
+	/**
+	* GET_SQO_CONTEXT
+	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
+	* The search_query_object_context (sqo_context) have at least:
+	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo) 
+	* one ddo for the searched section 
+	* one ddo for the component searched.
+	* is possible create more than one ddo for different components.
+	* @return 
+	*/
+	public function get_sqo_context() {
+
+		
+		$sqo_context = json_decode('[
+			{
+				"typo": "sqo",
+				"id": "temp",
+				"section_tipo": ["numisdata3"],
+				"filter": {
+					"$or": [
+						{
+							"q": null,
+							"lang": "all",
+							"path": [
+								{
+									"name"			: "Catálogo",
+									"modelo"			: "component_select",
+									"section_tipo"	: "numisdata3",
+									"component_tipo"	: "numisdata309"
+								},
+								{
+									"name"			: "Catálogo",
+									"modelo"			: "component_input_text",
+									"section_tipo"	: "numisdata300",
+									"component_tipo"	: "numisdata303",
+									"lang"			: "all"
+								}
+							]
+						},
+						{
+							"q"		: null,
+							"lang"	: "all",
+							"path"	: [
+								{
+									"name"			: "Número",
+									"modelo"			: "component_input_text",
+									"section_tipo"	: "numisdata3",
+									"component_tipo"	: "numisdata27",
+									"lang"			: "all"
+								}
+							]
+						}
+					]
+				},
+				"limit": 40,
+				"offset": 0,
+				"skip_projects_filter": true
+			},
+			{ 
+				"typo"			: "ddo",
+				"model"			: "section",			
+				"tipo" 			: "numisdata3",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "no-lan",
+				"parent"			: "root"
+			},
+			{ 
+				"typo"			: "ddo",
+				"tipo" 			: "numisdata27",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "lg-eng",
+				"parent"			: "numisdata3",		
+				"model"			: "component_input_text"
+			},
+			{ 
+				"typo"			: "ddo",
+				"tipo" 			: "numisdata309",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "lg-nolan",
+				"parent"			: "numisdata3",		
+				"model"			: "component_select"
+			},
+			{ 
+				"typo"			: "ddo",
+				"tipo" 			: "numisdata81",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "lg-eng",
+				"parent"		: "numisdata3",		
+				"model"			: "component_input_text"
+			}
+		]');
+
+
+		return $sqo_context;
+		
+	}//end get_sqo_context
 
 }//end class
 ?>
