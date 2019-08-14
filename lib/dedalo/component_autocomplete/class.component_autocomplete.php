@@ -1049,7 +1049,169 @@ class component_autocomplete extends component_relation_common {
 		return $component_info;		
 	}//end get_component_info
 
+public function get_sqo_context() {
 
+				$section_tipo 	= $this->get_section_tipo();
+				$tipo			= $this->get_tipo();
+				$propiedades	= $this->get_propiedades();
+				$parent			= $this->get_parent();
+				$autosearch_options_id 	 = 'autosearch_options_' . $section_tipo .'_'. $tipo .'_'. $parent;
+				$autosearch_options_js 	 = '';
+		// service autocomplete options
+				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+
+		// search_sections . set and remove search sections duplicates
+				$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
+
+		// search_query_object params
+			# Limit
+			$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;			
+
+		// search_query_object build
+			$query_object_options = new stdClass();
+				$query_object_options->q 	 			= null;
+				$query_object_options->limit  			= $limit;
+				$query_object_options->offset 			= 0;
+				$query_object_options->section_tipo 	= $search_sections;
+				$query_object_options->tipo 			= $tipo;
+			$search_query_object 		= component_autocomplete::build_search_query_object($query_object_options);
+				# skip_projects_filter true on edit mode
+				$search_query_object->skip_projects_filter 	= true;
+			$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS );
+
+				dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
+		// Filter_by_list (Propiedades option)
+				$filter_by_list = false; // Default
+				if (isset($propiedades->source->filter_by_list)) {
+					$filter_by_list = $propiedades->source->filter_by_list;
+				}
+				$json_filter_by_list = json_encode($filter_by_list);
+
+		// Filter_by_list
+				if ($filter_by_list!==false) {
+					// Calculate ar elements to show in filter
+					$ar_elements = component_relation_common::get_filter_list_data($filter_by_list);
+
+					$filter_list_options = new stdClass();
+						$filter_list_options->target_id 	= $autosearch_options_id;
+						$filter_list_options->tipo 			= $tipo;
+						$filter_list_options->section_tipo 	= $section_tipo;
+						$filter_list_options->ar_elements 	= $ar_elements;
+					
+					$autosearch_options_js .= 'service_autocomplete.build_filter_list('.json_encode($filter_list_options).');';
+				}//end if ($filter_by_list!==false)
+
+
+		// Filter by fields (advanced search)
+					$filter_by_fields = false;
+					// Calculate ar elements to show in filter
+					$ar_elements = component_relation_common::get_filter_fields_data($search_query_object, $propiedades);
+					if (!empty($ar_elements)) {
+						$filter_by_fields = true;
+						
+						$filter_fields_options = new stdClass();
+							$filter_fields_options->tipo 		 = $tipo;
+							$filter_fields_options->section_tipo = $section_tipo;
+							$filter_fields_options->ar_elements  = $ar_elements;
+							$filter_fields_options->op_label_or  = RecordObj_dd::get_termino_by_tipo('dd1061',DEDALO_DATA_LANG,true);
+							$filter_fields_options->op_label_and = RecordObj_dd::get_termino_by_tipo('dd1060',DEDALO_DATA_LANG,true);
+							$filter_fields_options->operator  	 = isset($propiedades->source->operator) ? $propiedades->source->operator : 'or';
+							$filter_fields_options->q_split  	 = isset($propiedades->source->q_split) ? (bool)$propiedades->source->q_split : true;
+							$filter_fields_options->target_id 	 = $autosearch_options_id;
+
+						$autosearch_options_js .= 'service_autocomplete.build_source_search_selector('.json_encode($filter_fields_options).');';
+					}
+								
+		
+
+		
+		$sqo_context = json_decode('[
+			{
+				"typo": "sqo",
+				"id": "temp",
+				"section_tipo": ["numisdata3"],
+				"filter": {
+					"$or": [
+						{
+							"q": null,
+							"lang": "all",
+							"path": [
+								{
+									"name"				: "Catálogo",
+									"modelo"			: "component_select",
+									"section_tipo"		: "numisdata3",
+									"component_tipo"	: "numisdata309"
+								},
+								{
+									"name"				: "Catálogo",
+									"modelo"			: "component_input_text",
+									"section_tipo"		: "numisdata300",
+									"component_tipo"	: "numisdata303",
+									"lang"				: "all"
+								}
+							]
+						},
+						{
+							"q"		: null,
+							"lang"	: "all",
+							"path"	: [
+								{
+									"name"				: "Número",
+									"modelo"			: "component_input_text",
+									"section_tipo"		: "numisdata3",
+									"component_tipo"	: "numisdata27",
+									"lang"				: "all"
+								}
+							]
+						}
+					]
+				},
+				"limit": 40,
+				"offset": 0,
+				"skip_projects_filter": true
+			},
+			{ 
+				"typo"			: "ddo",
+				"model"			: "section",			
+				"tipo" 			: "numisdata3",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "no-lan",
+				"parent"			: "root"
+			},
+			{ 
+				"typo"			: "ddo",
+				"tipo" 			: "numisdata27",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "lg-eng",
+				"parent"			: "numisdata3",		
+				"model"			: "component_input_text"
+			},
+			{ 
+				"typo"			: "ddo",
+				"tipo" 			: "numisdata309",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "lg-nolan",
+				"parent"			: "numisdata3",		
+				"model"			: "component_select"
+			},
+			{ 
+				"typo"			: "ddo",
+				"tipo" 			: "numisdata81",
+				"section_tipo" 	: "numisdata3",
+				"mode" 			: "list",
+				"lang" 			: "lg-eng",
+				"parent"		: "numisdata3",		
+				"model"			: "component_input_text"
+			}
+		]');
+
+
+		return $sqo_context;
+		
+	}//end get_sqo_context
 
 }
 ?>
