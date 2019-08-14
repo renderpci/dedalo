@@ -3906,22 +3906,23 @@ abstract class component_common extends common {
 		$id 			  = $options->id;
 		$logical_operator = $options->logical_operator;
 		$tipo 			  = $options->tipo;
+		
 		# Default from options
-		$section_tipo = $options->section_tipo;
+		$section_tipo = is_array($options->section_tipo) ? $options->section_tipo : [$options->section_tipo];
 
 		# Defaults
 		$filter_group = null;
 		$select_group = array();		
 
 		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
-		$component_tipo_properties 	= $RecordObj_dd_component_tipo->get_propiedades(true);
+		$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_propiedades(true);
 
 		// source. get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
 			if(isset($component_tipo_properties->source->search)){
 				// properties terms (new way)
 				$source_search = $component_tipo_properties->source->search;
 				foreach ($source_search as $current_search) {
-					if ($current_search->type === 'internal'){
+					if ($current_search->type==='internal'){
 						$ar_related_section_tipo[] 	= $current_search->section_tipo;
 						$ar_terminos_relacionados 	= $current_search->components;
 					}
@@ -3930,19 +3931,19 @@ abstract class component_common extends common {
 				// structure related terms (legacy)
 				$ar_related_section_tipo  = common::get_ar_related_by_model('section', $tipo);
 				$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
-			}
+			}		
 
-		if (isset($ar_related_section_tipo[0])) {
-
-			// Create from related terms
-				$section_tipo = reset($ar_related_section_tipo); // Note override section_tipo here !
+		// Create from related terms
+			//$section_tipo = reset($ar_related_section_tipo); // Note override section_tipo here !
+			foreach ((array)$section_tipo as $current_section_tipo) {
+								
 				foreach ($ar_terminos_relacionados as $current_tipo) {
+					
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 					if (strpos($modelo_name,'component')!==0) continue;
 
-					$path = search_development2::get_query_path($current_tipo, $section_tipo);
-						#dump($path, ' path ++ current_tipo:'.$current_tipo.' - section_tipo:'.to_string($section_tipo));
-
+					$path = search_development2::get_query_path($current_tipo, $current_section_tipo);
+						#dump($path, ' path ++ current_tipo:'.$current_tipo.' - current_section_tipo:'.to_string($current_section_tipo));
 
 					# FILTER . filter_element (operator_group)
 						if ($options->add_filter===true) {
@@ -3967,26 +3968,29 @@ abstract class component_common extends common {
 
 						$select_group[] = $select_element;
 				}
-		}else{
-			if($options->add_filter === true){
-
-				$path = search_development2::get_query_path($tipo, $section_tipo);
-
-				$filter_element = new stdClass();
-					$filter_element->q 	 			= $options->q ;
-					$filter_element->q_operator  	= $options->q_operator ;
-					$filter_element->q_split 		= $options->q_split;
-					$filter_element->lang 			= $options->lang;
-					$filter_element->path			= $path;
-
-				$filter_group = new stdClass();
-					$filter_group->$logical_operator = [$filter_element];
 			}
-			$select_group_element = new stdClass();
-				$select_group_element->path = $path;
-
-			$select_group = [$select_group_element];
-		}
+		
+		#else{
+		#	if($options->add_filter===true){
+		#
+		#		$path = search_development2::get_query_path($tipo, $section_tipo);
+		#
+		#		$filter_element = new stdClass();
+		#			$filter_element->q 	 			= $options->q ;
+		#			$filter_element->q_operator  	= $options->q_operator ;
+		#			$filter_element->q_split 		= $options->q_split;
+		#			$filter_element->lang 			= $options->lang;
+		#			$filter_element->path			= $path;
+		#
+		#		$filter_group = new stdClass();
+		#			$filter_group->$logical_operator = [$filter_element];
+		#	}
+		#	$select_group_element = new stdClass();
+		#		$select_group_element->path = $path;
+		#
+		#	$select_group = [$select_group_element];
+		#
+		#}
 				
 		$query_object = new stdClass();
 			$query_object->id  	   		= $id;
