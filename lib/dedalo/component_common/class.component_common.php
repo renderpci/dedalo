@@ -4058,7 +4058,7 @@ abstract class component_common extends common {
 			$query_object->limit   		= $options->limit;
 			$query_object->offset  		= $options->offset;
 		
-	
+
 		return (object)$query_object;
 	}//end build_search_query_object
 
