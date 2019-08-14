@@ -30,7 +30,8 @@
 		switch ($modo) {			
 			case 'list':
 				$value 				= $this->get_valor(null,'array');
-			
+				break;
+
 			case 'edit':
 			default:
 				$value 				= $this->get_dato();
@@ -44,7 +45,7 @@
 		if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 			$item->datalist = $ar_list_of_values->result;
 		}
-
+		
 		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)
