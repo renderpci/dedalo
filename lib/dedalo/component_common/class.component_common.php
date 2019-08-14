@@ -3921,7 +3921,7 @@ abstract class component_common extends common {
 			$source_search = isset($component_tipo_properties->source->search) ? $component_tipo_properties->source->search : call_user_func(function() use ($tipo, $section_tipo) {
 				
 				$source_search_item = new stdClass();
-					$source_search_item->type 			= "internal";
+					$source_search_item->type 			= 'internal';
 					$source_search_item->section_tipo 	= reset($section_tipo); // In old way (related), only one section can be defined 
 					$source_search_item->components 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
 				
@@ -3948,6 +3948,8 @@ abstract class component_common extends common {
 
 		// source_search iteration
 			foreach ($source_search as $source_search_item) {
+
+				if ($source_search_item->type!=='internal') continue; // Ignore non internal search items
 				
 				foreach ($source_search_item->components as $current_tipo) {
 
