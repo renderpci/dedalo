@@ -3146,7 +3146,7 @@ class section extends common {
 		# QUERY OBJECT	
 		$query_object = new stdClass();
 			$query_object->id  	   		= $options->id;
-			$query_object->section_tipo = $options->section_tipo;
+			$query_object->section_tipo = [$options->section_tipo];
 			$query_object->limit   		= $options->limit;
 			$query_object->order   		= $options->order;
 			$query_object->offset  		= $options->offset;
