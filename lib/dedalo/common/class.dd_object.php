@@ -238,11 +238,19 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_CSS
+	* SET_TARGET_SECTIONS
 	*/
 	public function set_target_sections($value) {
 		
 		$this->target_sections = $value;
+	}
+
+	/**
+	* SET_SQO_CONTEXT
+	*/
+	public function set_sqo_context($value) {
+		
+		$this->sqo_context = $value;
 	}
 
 
