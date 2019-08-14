@@ -18,7 +18,7 @@
 	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions);
+			$context[] = $this->get_structure_context($permissions, $sqo_context=true);
 
 		// subcontext from layout_map items
 			$ar_subcontext 	= [];
@@ -59,6 +59,7 @@
 					#}
 				}
 	
+
 	}//end if($options->get_context===true)
 
 
