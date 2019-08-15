@@ -46,6 +46,10 @@ class manager {
 					$dedalo_data = (object)dd_api::update( $options );
 					break;
 
+				case 'count':
+					$dedalo_data = (object)dd_api::count( $options );
+					break;
+
 				default:
 					$dedalo_data = new stdClass();
 						$dedalo_data->result = false;
