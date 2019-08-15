@@ -190,7 +190,7 @@ class search_development2 {
 	*/
 	public function search() {
 
-		$start_time=microtime(1);		
+		$start_time=microtime(1);
 
 		# Converts json search_query_object to sql query string
 		$sql_query = $this->parse_search_query_object( $full_count=false );
@@ -269,8 +269,7 @@ class search_development2 {
 		#
 		# RECORDS_DATA BUILD TO OUTPUT
 			$records_data = new stdClass();
-				#$records_data->search_query_object	= $this->search_query_object;
-				$records_data->ar_records = $ar_records;
+				$records_data->ar_records 	= $ar_records;
 				if(SHOW_DEVELOPER===true) {
 					$records_data->generated_time['parsed_time'] 	 = $parsed_time;
 					# Info about required time to exec the search
@@ -279,7 +278,7 @@ class search_development2 {
 					$records_data->strQuery = $sql_query;
 					if (isset($full_count_sql_query)) {				
 						$records_data->strQuery .= PHP_EOL . $full_count_sql_query;
-					}				
+					}
 					#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
 					#dump($records_data, '$records_data', array());
 					$this->search_query_object->generated_time 	= $records_data->generated_time['get_records_data'];
@@ -292,6 +291,47 @@ class search_development2 {
 
 		return $records_data;
 	}//end search
+
+
+
+	/**
+	* COUNT
+	* Count the rows of the sqo
+	* @return  
+	*/
+	public function count() {
+
+		$start_time=microtime(1);
+
+		#
+		# ONLY_COUNT
+		# Exec a count query
+		# Converts json search_query_object to sql query string
+			$count_sql_query	= $this->parse_search_query_object( $only_count=true );			
+			$count_result		= JSON_RecordObj_matrix::search_free($count_sql_query);
+			$row_count			= pg_fetch_assoc($count_result);
+			$total				= (int)$row_count['full_count'];
+			# Fix total value
+			$this->search_query_object->total = $total;
+			
+		#
+		# RECORDS_DATA BUILD TO OUTPUT
+			$records_data = new stdClass();
+				#$records_data->search_query_object	= $this->search_query_object;
+				$records_data->total = $total;
+				if(SHOW_DEVELOPER===true) {
+					# Info about required time to exec the search
+					$records_data->debug->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+					# Query to database string
+					$records_data->debug->strQuery = $count_sql_query;		
+					$this->search_query_object->generated_time 	= $records_data->debug->generated_time['get_records_data'];
+				}
+
+		//sleep(4);
+
+		return $records_data;
+		
+	}//end count
 
 
 
