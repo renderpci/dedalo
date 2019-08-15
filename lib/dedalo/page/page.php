@@ -2,7 +2,7 @@
 	#dump($_REQUEST, ' _REQUEST ++ '.to_string());
 	# PAGE CONTROLLER
 
-	// test vars
+	// test vars (!)
 		$page_items = [];
 
 		// item (section, tool, etc.)
@@ -10,10 +10,14 @@
 			$page_item->model 		 = 'section';
 			$page_item->section_tipo = 'test65';
 			$page_item->section_id 	 = 2;
-			$page_item->mode 	 	 = 'list';
+			$page_item->mode 	 	 = 'edit';
+			$page_item->lang 	 	 = DEDALO_DATA_LANG;
 
 		// add
 		$page_items[] = $page_item;
+
+		$page_options = new StdClass();
+			$page_options->page_items = $page_items;
 
 	#$page_options = new StdClass();
 	#	$page_options->model 		= 'section';

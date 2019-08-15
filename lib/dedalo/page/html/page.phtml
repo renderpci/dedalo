@@ -3,7 +3,7 @@
 <head>
 	<title></title>
 	<link href="<?php echo DEDALO_LIB_BASE_URL ?>/page/css/main.css" rel="stylesheet">
-	<link href="<?php echo DEDALO_LIB_BASE_URL ?>/common/css/structure.css" rel="stylesheet">	
+	<link href="<?php echo DEDALO_LIB_BASE_URL ?>/common/css/structure.css" rel="stylesheet">
 </head>
 <body>
 	<div id="main" class="hide"></div>
@@ -12,7 +12,7 @@
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
 <script type="module" >
 	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"
-	const current_page = new page(<?php echo json_encode($page_items) ?>)
+	const current_page = new page(<?php echo json_encode($page_options) ?>)
 	current_page.init();
 </script>
 </html>
