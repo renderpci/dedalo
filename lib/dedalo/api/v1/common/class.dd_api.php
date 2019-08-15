@@ -198,15 +198,52 @@ class dd_api {
 	}//end delete
 
 
+	/**
+	* 
+	* COUNT
+	* @return array $result
+	*/
+	static function count($json_data) {
+		global $start_time;
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$sqo = $json_data->sqo;
+
+		// search
+			$search_development2	= new search_development2($sqo);
+			$total 			 		= $search_development2->count();
+			$result 				= $total;
+		
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$result->debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+			}		
+		
+		$response->result 		= $result;
+		$response->msg 	  		= 'Ok. Request done';
+
+		return (object)$response;
+	}//end count
+
+
+
+
+
+
 
 	/**
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
 	private static function build_json_rows($ar_context) {
+		
 		$start_time=microtime(1);
 
-		
 		// default result
 			$result = new stdClass();
 				$result->context = [];
