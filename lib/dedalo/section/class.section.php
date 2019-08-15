@@ -3414,143 +3414,6 @@ class section extends common {
 
 
 	/**
-	* GET_STRUCTURE_CONTEXT
-	* @return object $item
-	*//*
-	public function get_structure_context($permissions = 0) {
-
-		$_structure_context = parent::get_structure_context($permissions);
-
-		/*
-		#if(isset($this->layout_map)){
-		#	$_structure_context->layout_map = $this->layout_map;
-		#}else{
-		#
-		#// section_list optional for get related_list
-		#		
-		#	$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
-		#	if (isset($ar_section_list[0])) {
-		#		
-		#		$related_list_tipo 			= $ar_section_list[0];
-		#		$ar_related_list_section 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'section', 'termino_relacionado', true);
-		#		$related_section 			= $ar_related_list_section[0] ?? $this->get_section_tipo();
-		#	
-		#		
-		#		$ar_related_list_components	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
-		#		
-		#		if (!empty($ar_related_list_components)) {					
-		#			$_structure_context->layout_map = [];
-		#			foreach ($ar_related_list_components as $current_component_tipo) {
-		#				$related = new stdClass();
-		#					$related->section_tipo 	= $related_section;
-		#					$related->tipo 			= $current_component_tipo;
-		#					$related->mode 			= $this->get_modo();
-		#
-		#				$_structure_context->layout_map[] = $related;
-		#			}
-		#		}				
-		#	}	
-		#}
-		
-
-		// get the section_list properties				
-				# $section_list_tipo  	  = $ar_section_list[0];
-				# $RecordObj_dd 			  = new RecordObj_dd($section_list_tipo);
-				# $section_list_propiedades = json_decode($RecordObj_dd->get_propiedades());
-				
-		return $_structure_context;
-	}//end get_structure_context
-	*/
-
-
-	/**
-	* GET_LAYOUT_MAP
-	* Calculate display items to generate portal html
-	* Cases:
-	*	Modo 'list' : Uses childrens to build layout map
-	* 	Modo 'edit' : Uses related terms to build layout map (default)	
-	*//*
-	public function get_layout_map($view=null) {
-		
-		// already calculated
-			if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
-
-		// 1,2 call common to set layout_map using ar_dd_objects or user preset if available
-			$layout_map = parent::get_layout_map();
-			if (!empty($layout_map)) {
-				$this->layout_map = $layout_map;
-				return $this->layout_map;
-			}
-	
-		// 3 option. default from structure fallback
-			$ar_related=array();
-			switch ($this->modo) {
-				case 'list':
-			
-					// section_list	source
-						$ar_terms 			= (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
-						$section_list_tipo 	= $ar_terms[0];	
-						
-					// ar_elements. Use found related terms as new list
-						$ar_elements = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=true, $simple=true);					
-					
-					break;
-				
-				case 'edit':
-
-					// ar_elements
-						$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
-						#$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $ar_include_modelo_name, 'children_recursive', $search_exact=false, ['box_elements']);
-						$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
-						
-					break;
-			}//end switch ($this->modo)	
-
-			$layout_map = [];
-			foreach ($ar_elements as $current_element_tipo) {
-						
-				// parent info
-					$RecordObj_dd 	= new RecordObj_dd($current_element_tipo);
-					$parent 		= $RecordObj_dd->get_parent();
-
-				$dd_object = new dd_object((object)[					
-					'tipo' 			=> $current_element_tipo,
-					'section_tipo' 	=> $this->get_section_tipo(),
-					'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_element_tipo,true),
-					'mode' 			=> $this->get_modo(),
-					'parent' 		=> $parent
-				]);
-				
-				$layout_map[] = $dd_object;
-			}
-			#dump($layout_map, ' layout_map ++ '.to_string());
-
-			# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
-			# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
-				if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
-					$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
-					foreach ($layout_map as $key => $item) {
-						$current_tipo = $item->tipo;
-						if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
-							unset( $layout_map[$key]);
-							debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
-						}
-					}
-					$layout_map = array_values($layout_map);
-				}
-
-		// set layout_map
-			$this->layout_map = $layout_map;
-
-			debug_log(__METHOD__." layout map section calculated default from structure [$this->tipo]".to_string(), logger::DEBUG);
-
-		return $this->layout_map;
-	}//end get_layout_map
-	*/
-
-
-
-	/**
 	* GET_AR_TOOLS_OBJ
 	*	
 	*/
@@ -3564,7 +3427,40 @@ class section extends common {
 	}//end get_ar_tools_obj
 
 
+	/**
+	* GET_SQO_CONTEXT
+	* @return 
+	*/
+	public function get_sqo_context() {
 
+		$sqo_context = [];
+
+		$section_tipo 	= $this->tipo;
+		$section_id 	= $this->section_id;
+		$mode 			= $this->mode;
+		$lang 			= $this->lang;
+
+		// Records_html. Render search form html using search.
+		// We know the current record id but we search like a list filtered by id for maintain always the same criterion 
+			$self_locator = new locator();
+				$self_locator->set_section_tipo($section_tipo);
+				$self_locator->set_section_id($section_id);
+
+			# SEARCH_QUERY_OBJECT . Add search_query_object to options
+			$search_query_object_options = new stdClass();
+				$search_query_object_options->limit  		= 1;
+				$search_query_object_options->offset 		= 0;
+				$search_query_object_options->filter_by_id 	= [$self_locator];
+			$search_query_object = $this->build_search_query_object($search_query_object_options);
+
+			# Create new options object
+			$sqo_context = $search_query_object;
+			
+				dump($sqo_context, '$sqo_context ++ '.to_string());;
+
+		return $sqo_context;
+		
+	}//end get_sqo_context
 
 }//end section
 ?>
