@@ -1177,7 +1177,7 @@ public function get_sqo_context() {
 				"section_tipo" 	: "numisdata3",
 				"mode" 			: "list",
 				"lang" 			: "no-lan",
-				"parent"			: "root"
+				"parent"		: "root"
 			},
 			{ 
 				"typo"			: "ddo",
@@ -1185,7 +1185,7 @@ public function get_sqo_context() {
 				"section_tipo" 	: "numisdata3",
 				"mode" 			: "list",
 				"lang" 			: "lg-eng",
-				"parent"			: "numisdata3",		
+				"parent"		: "numisdata3",		
 				"model"			: "component_input_text"
 			},
 			{ 
@@ -1194,7 +1194,7 @@ public function get_sqo_context() {
 				"section_tipo" 	: "numisdata3",
 				"mode" 			: "list",
 				"lang" 			: "lg-nolan",
-				"parent"			: "numisdata3",		
+				"parent"		: "numisdata3",		
 				"model"			: "component_select"
 			},
 			{ 
