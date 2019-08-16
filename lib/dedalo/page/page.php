@@ -26,8 +26,8 @@
 			$page_item->mode 	 	 = $mode;
 			$page_item->lang 	 	 = DEDALO_DATA_LANG;
 
-			// add
-			$page_items[] = $page_item;		
+		// add
+		$page_items[] = $page_item;		
 
 		$page_options = new StdClass();
 			$page_options->page_items = $page_items;
