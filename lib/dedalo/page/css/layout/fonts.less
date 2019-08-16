@@ -1,5 +1,69 @@
+/*
+@import url(http://fonts.googleapis.com/css?family=Oxygen:400,300,700);
+*/
+
+
+@fonts_base_path : "./fonts";
+
+// fontawesome
+	@import "@{fonts_base_path}/fontawesome/less/fontawesome.less";
+	@import "@{fonts_base_path}/fontawesome/less/solid.less";
+	@import "@{fonts_base_path}/fontawesome/less/brands.less";
+	//@import "./fonts/fontawesome/less/light.less";
+
+@font-face {
+		font-family: 'Oxygen';
+		src: url('@{fonts_base_path}/oxigen-webfont/oxygen-regular-webfont.eot');
+	    src: url('@{fonts_base_path}/oxigen-webfont/oxygen-regular-webfont.eot?#iefix') format('embedded-opentype'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-regular-webfont.woff2') format('woff2'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-regular-webfont.woff') format('woff'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-regular-webfont.ttf') format('truetype'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-regular-webfont.svg#oxygenregular') format('svg');
+	    font-weight: normal;
+	    font-style: normal;
+	    font-display: fallback;
+}
+@font-face {
+		font-family: 'Oxygen-Bold';
+		src: url('@{fonts_base_path}/oxigen-webfont/oxygen-bold-webfont.eot');
+	    src: url('@{fonts_base_path}/oxigen-webfont/oxygen-bold-webfont.eot?#iefix') format('embedded-opentype'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-bold-webfont.woff2') format('woff2'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-bold-webfont.woff') format('woff'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-bold-webfont.ttf') format('truetype'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-bold-webfont.svg#oxygenbold') format('svg');
+	    font-weight: normal;
+	    font-style: normal;
+	    font-display: fallback;
+}
+@font-face {
+		font-family: 'Oxygen-light';
+	    src: url('@{fonts_base_path}/oxigen-webfont/oxygen-light-webfont.eot');
+	    src: url('@{fonts_base_path}/oxigen-webfont/oxygen-light-webfont.eot?#iefix') format('embedded-opentype'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-light-webfont.woff2') format('woff2'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-light-webfont.woff') format('woff'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-light-webfont.ttf') format('truetype'),
+	         url('@{fonts_base_path}/oxigen-webfont/oxygen-light-webfont.svg#oxygenlight') format('svg');
+	    font-weight: normal;
+	    font-style: normal;
+	    font-display: fallback;
+}
+/*
+@font-face {
+    font-family: 'san_francisco_displayregular';
+    src: url('@{fonts_base_path}/san_francisco/web/sanfranciscodisplay-regular-webfont.eot');
+    src: url('@{fonts_base_path}/san_francisco/web/sanfranciscodisplay-regular-webfont.eot?#iefix') format('embedded-opentype'),
+         url('@{fonts_base_path}/san_francisco/web/sanfranciscodisplay-regular-webfont.woff2') format('woff2'),
+         url('@{fonts_base_path}/san_francisco/web/sanfranciscodisplay-regular-webfont.woff') format('woff'),
+         url('@{fonts_base_path}/san_francisco/web/sanfranciscodisplay-regular-webfont.ttf') format('truetype'),
+         url('@{fonts_base_path}/san_francisco/web/sanfranciscodisplay-regular-webfont.svg#san_francisco_displayregular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}*/
+
 
 	
-	.global_font {
-		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	}
+.global_font {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+
