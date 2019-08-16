@@ -1079,7 +1079,7 @@ public function get_sqo_context() {
 				$search_query_object->skip_projects_filter 	= true;
 			$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS );
 
-				dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
+				//dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
 		// Filter_by_list (Propiedades option)
 				$filter_by_list = false; // Default
 				if (isset($propiedades->source->filter_by_list)) {
