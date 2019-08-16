@@ -3437,7 +3437,7 @@ class section extends common {
 
 		$section_tipo 	= $this->tipo;
 		$section_id 	= $this->section_id;
-		$mode 			= $this->mode;
+		$mode 			= $this->modo;
 		$lang 			= $this->lang;
 
 		// Records_html. Render search form html using search.
@@ -3455,8 +3455,6 @@ class section extends common {
 
 			# Create new options object
 			$sqo_context = $search_query_object;
-			
-				dump($sqo_context, '$sqo_context ++ '.to_string());;
 
 		return $sqo_context;
 		
