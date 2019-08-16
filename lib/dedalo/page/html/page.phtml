@@ -14,5 +14,6 @@
 	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"
 	const current_page = new page(<?php echo json_encode($page_options) ?>)
 	current_page.init();
+	current_page.render();
 </script>
 </html>

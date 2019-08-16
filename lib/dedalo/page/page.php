@@ -16,6 +16,17 @@
 		// add
 		$page_items[] = $page_item;
 
+				// item (section, tool, etc.)
+		$page_item = new StdClass();
+			$page_item->model 		 = 'section';
+			$page_item->section_tipo = 'rsc170';
+			$page_item->section_id 	 = '';
+			$page_item->mode 	 	 = 'edit';
+			$page_item->lang 	 	 = DEDALO_DATA_LANG;
+
+		// add
+		$page_items[] = $page_item;
+
 		$page_options = new StdClass();
 			$page_options->page_items = $page_items;
 
