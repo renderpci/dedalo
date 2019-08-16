@@ -6,10 +6,12 @@
 	<link href="<?php echo DEDALO_LIB_BASE_URL ?>/common/css/structure.css" rel="stylesheet">
 </head>
 <body>
+	<?php #echo $html_header ?>
 	<div id="main" class="hide"></div>
 	<div id="debug" class="debug hide"></div>
 </body>
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
+<script src="<?php echo DEDALO_LIB_BASE_URL ?>/menu/js/menu.js"></script>
 <script type="module" >
 	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"
 	const current_page = new page(<?php echo json_encode($page_options) ?>)
