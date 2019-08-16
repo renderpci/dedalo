@@ -9,7 +9,7 @@
 		$page_item = new StdClass();
 			$page_item->model 		 = 'section';
 			$page_item->section_tipo = 'test65';
-			$page_item->section_id 	 = 2;
+			$page_item->section_id 	 = '';
 			$page_item->mode 	 	 = 'edit';
 			$page_item->lang 	 	 = DEDALO_DATA_LANG;
 
