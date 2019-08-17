@@ -185,7 +185,7 @@ class menu extends common {
 		#if($tipo == navigator::get_selected('area')) {
 			#$termino= "<span class=\"menu_a_span_hilite\">$termino</span>";
 		#}
-		$path = DEDALO_LIB_BASE_URL .'/main/';
+		$path = DEDALO_LIB_BASE_URL .'/page/';
 		$url  = "{$path}?t=$tipo";
 
 		# Redirections when area is a special thesaurus class
