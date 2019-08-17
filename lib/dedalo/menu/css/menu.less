@@ -59,7 +59,12 @@ background-color: #FFFF00;
 	height: 29px;
 	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 	background: #2e2e2e;
+
+	font-family: "Oxygen-light", sans-serif;
+	    font-size: 0.84em;
+    line-height: 1.2em;
 	}
+
 	.menu_wrapper_debug {
 		background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
 	}
@@ -85,13 +90,14 @@ background-color: #FFFF00;
 
 	/*-- Quit button --*/
 	#menu_wrapper #quit {
+		position: relative;
 		float: left;
-		top: 7px;
-		left: 10px;
+		top: 3px;
+		left: 9px;
 		z-index: 100;
-		color: #ffffff;
-		font-size: 16px;
+		color: #fff;
 		transition: color 0s ease-in-out;
+		font-size: 1em;
 		/*background-color:#d4d4d4;
 		background-position: -120px -72px;
 		border-radius: 3px;*/
@@ -119,7 +125,7 @@ background-color: #FFFF00;
 		width: 20px;
 		height: 20px;
 		position: absolute;
-		top: 5px;
+		top: 4px;
 		left: 45px;
 		background-image: url('../../themes/default/dedalo_logo.svg');
 		background-repeat: no-repeat;
@@ -141,9 +147,16 @@ background-color: #FFFF00;
 		float: left;
 		display: inline-block;
 		margin: 0;
-		margin-left: 64px;
+		margin-left: 49px;
 		padding: 0;
 		text-align: left;
+
+		// d6
+		//display: block;
+	    //width: 100%;
+	    //background-color: #BD0016;
+	    //height: 30px;
+	    //margin: 0;
 
 		li {
 			margin: 0 2px;
@@ -164,7 +177,10 @@ background-color: #FFFF00;
 			padding-left: 6px;
 			letter-spacing: 0.7px;
 			font-weight: 300 !important;
-			font-size: 13px;
+			//font-size: 13px;
+
+			//font-size: 0.84em;
+    		//line-height: 1.2em;
 
 			// On click menu link a
 			&:active {
@@ -369,6 +385,8 @@ background-color: #FFFF00;
 		//background-color: #373737;
 		padding-right: 15px;
 		padding-left: 7px;
+		height: 25px;
+		font-size: 0.9em;
 	}
 	#menu_wrapper .dedalo_aplication_langs_selector.unsync {
 		color: #fdcf39;
@@ -478,6 +496,7 @@ background-color: #FFFF00;
 .debug_line_wrap {
 	font-family: 'Oxygen-light';
 	font-weight: 100;
+	font-size: 0.82em;
 	width: 100%;
 	height: 24px;
 	background-color: rgb(107, 107, 107);

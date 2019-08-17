@@ -189,57 +189,57 @@
 
 
 // wrapper_component
-		.wrapper_component {
+	.wrapper_component {
 
-			// inside .section_record.edit context
-			.section_record.edit & {
-				// flex base config
-				.component_base;
+		// inside .section_record.edit context
+		.section_record.edit & {
+			// flex base config
+			.component_base;
 
-				background-color: rgba(251, 251, 251, 0.70); //#FBFBFB;
-				outline: 1px solid rgba(216, 216, 216, 0.43);
+			background-color: rgba(251, 251, 251, 0.70); //#FBFBFB;
+			outline: 1px solid rgba(216, 216, 216, 0.43);
 
-				>*{
-					padding: 1em;
+			>*{
+				padding: 1em;
+			}
+
+			>.label {
+				//background-color: #FEDACF;
+				//flex: 1 0 20%;
+				flex: 1 0 calc(20% - 2em);
+			}
+			>.content_data {
+				//background-color: #B9DFF6;
+				//flex: 1 0 80%;
+				flex: 1 0 calc(80% - 2em);
+				display: flex;
+				flex-wrap: wrap;
+				flex-flow: column;
+				align-items: flex-start;
+
+				>.inputs_container {
+					flex: 1 1 auto;
 				}
 
-				>.label {
-					//background-color: #FEDACF;
-					//flex: 1 0 20%;
-					flex: 1 0 calc(20% - 2em);
-				}
-				>.content_data {
-					//background-color: #B9DFF6;
-					//flex: 1 0 80%;
-					flex: 1 0 calc(80% - 2em);
-					display: flex;
-					flex-wrap: wrap;
-					flex-flow: column;
-					align-items: flex-start;
-
-					>.inputs_container {
-						flex: 1 1 auto;
-					}
-
-					>.buttons_container {
-						flex: 0 1;
-						>*{
-							//margin: 0.365em;
-							line-height: 1.25em;
-						}
-					}
-
-					&.nowrap {
-						flex-wrap: nowrap;
-						flex-flow: nowrap;
+				>.buttons_container {
+					flex: 0 1;
+					>*{
+						//margin: 0.365em;
+						//line-height: 1.25em;
 					}
 				}
-				
-				@media screen and (max-width: 768px) {
-					flex-basis: 100% !important;
+
+				&.nowrap {
+					flex-wrap: nowrap;
+					flex-flow: nowrap;
 				}
 			}
-		}//end .wrapper_component
+			
+			@media screen and (max-width: 768px) {
+				flex-basis: 100% !important;
+			}
+		}
+	}//end .wrapper_component
 
 
 
@@ -276,13 +276,15 @@
 // buttons with icons
 	.button {
 		display: none;
+		color: #a2a2a2;
+		cursor: pointer;
 
-		.active & {
-			color: #a2a2a2;
-	  		cursor: pointer;
+		.active &, &.link {
+			
 	  		height: 1em;
 	  		opacity: 0.7;
 	  		padding: 0.35em;
+	  		
 	  		&:hover {
 	  			opacity: 1;
 	  		}
@@ -292,9 +294,8 @@
 
 	  		&.remove {
 				.fa-icon;
-		  		.fas;  		
+		  		.fas;
 		  		&:before {
-					//content: @fa-var-user;
 					content: @fa-var-trash-alt;
 				}
 			}
@@ -302,7 +303,6 @@
 				.fa-icon;
 		  		.fas;
 		  		&:before {
-					//content: @fa-var-user;
 					content: @fa-var-plus-circle;
 				}
 			}
@@ -310,7 +310,6 @@
 				.fa-icon;
 		  		.fas;
 		  		&:before {
-					//content: @fa-var-user;
 					content: @fa-var-pen;
 				}
 			}
@@ -318,12 +317,20 @@
 				.fa-icon;
 		  		.fas;
 		  		&:before {
-					//content: @fa-var-user;
 					content: @fa-var-eraser;
 				}
 			}
-		}
-	}
+			&.off {
+				.fa-icon;
+				.fas;
+				&:before {
+					content: @fa-var-power-off;
+				}
+			}
+		
+		}//end .active &, &.link
+		
+	}//end .button
 	
 
 
@@ -357,5 +364,15 @@
 			}
 		}
 	}
+
+
+
+// page_container
+	.page_container {
+		display: grid;
+	}
+
+
+
 
 
