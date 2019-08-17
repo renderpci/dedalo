@@ -29,7 +29,8 @@ if (login::is_logged()) {
 		echo '<div id="menu_background" class="menu_background">';
 			#
 			# Quit button
-			echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
+			#echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
+			echo "<div id=\"quit\" class=\"button off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
 
 			# Toggle Menu responsive
 			echo "<div id=\"toggle_menu\" class=\"glyphicons glyphicons-show-lines link\" title=\"".label::get_label('menu')."\" onclick=\"menu.toggle_menu(this)\">=</div>";
@@ -41,7 +42,7 @@ if (login::is_logged()) {
 
 			# INSPECTOR : button open / hide sidebar 
 			$caller_id = navigator::get_selected('caller_id');
-			if( empty($caller_id) && $modo==='edit' ) {
+			if( empty($caller_id) && $mode==='edit' ) {
 				echo '<!-- Inspector toggle button -->';
 				#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
 				echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
@@ -111,7 +112,7 @@ if (login::is_logged()) {
 				}				
 			}		
 			echo '<!-- Section label -->';
-			if( !empty($section_tipo) && $modo==='list' ) {
+			if( !empty($section_tipo) && $mode==='list' ) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_list \">$section_name</div>";
 			}else if(!empty($section_tipo)) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_edit\" title=\"".label::get_label('ir_al_listado')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				

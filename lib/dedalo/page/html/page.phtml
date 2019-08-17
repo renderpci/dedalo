@@ -6,10 +6,13 @@
 	<link href="<?php echo DEDALO_LIB_BASE_URL ?>/common/css/structure.css" rel="stylesheet">
 </head>
 <body>
-	<?php #echo $html_header ?>
+	<?php echo $html_header ?>
 	<div id="main" class="hide"></div>
 	<div id="debug" class="debug hide"></div>
 </body>
+<script>
+const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
+</script>
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/menu/js/menu.js"></script>
 <script type="module" >
