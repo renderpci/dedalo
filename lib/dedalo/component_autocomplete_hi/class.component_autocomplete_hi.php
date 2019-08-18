@@ -323,34 +323,11 @@ class component_autocomplete_hi extends component_relation_common {
 			  ]
 			}
 		');
-		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
-		#debug_log(__METHOD__."  ".json_encode($search_query_object, JSON_PRETTY_PRINT).to_string(), logger::DEBUG);
 
 		$search_development2 = new search_development2($search_query_object);
 		$result = $search_development2->search();
 			#dump($result, ' result ++ '.to_string());
 
-		/* OLD WAY
-		foreach ((array)$hierarchy_types as $tipology_section_id) {
-		
-			#
-			# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
-			$search_hierarchies_options = area_thesaurus::get_options_for_search_hierarchies(DEDALO_HIERARCHY_TYPES_SECTION_TIPO, $tipology_section_id);
-				#dump($search_hierarchies_options, ' search_hierarchies_options ++ '.to_string());
-			# Calculate rows from database using search class like lists
-			$hierarchies_rows_obj = search::get_records_data($search_hierarchies_options);
-				#dump($hierarchies_rows_obj, ' hierarchies_rows_obj ++ '.to_string());
-			foreach ($hierarchies_rows_obj->result as $key => $value) {
-				$ar_value = reset($value);
-				$target_section_tipo = json_decode($ar_value[DEDALO_HIERARCHY_TARGET_SECTION_TIPO]);
-					#dump($ar_value, ' ar_value ++ current_section_id '.to_string($target_section_tipo));
-					#dump($target_section_tipo, ' target_section_tipo ++ '.to_string());
-				if (is_array($target_section_tipo)) {
-					$hierarchy_sections_from_types[] = reset($target_section_tipo);
-				}				
-			}
-		}
-		dump($hierarchy_sections_from_types, ' hierarchy_sections_from_types ++ '.to_string()); */
 
 		$target_section_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 		foreach ($result->ar_records as $key => $row) {
