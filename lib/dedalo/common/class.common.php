@@ -1573,7 +1573,7 @@ abstract class common {
 			$tools = $this->get_ar_tools_obj();			
 			if ($tools===false || is_null($tools)) {
 			 	$tools = [];
-			 }			
+			 }
 		
 		// sqo_context
 			 if($sqo_object === true){
@@ -1584,8 +1584,6 @@ abstract class common {
 			}else{
 				$sqo_context = null;
 			}			
-
-			
 
 
 		// dd_object
@@ -1605,6 +1603,18 @@ abstract class common {
 				'sqo_context' 	=> $sqo_context,
 			]);		
 		
+		/*
+		* OPTIONAL PROPERTIES
+		*/
+
+		// Filter_by_list
+			if (isset($properties->source->filter_by_list)) {
+				// Calculate ar elements to show in filter
+				$filter_list= $properties->source->filter_by_list;
+				$filter_by_list = component_relation_common::get_filter_list_data($filter_list);
+				$dd_object->filter_by_list = $filter_by_list;
+			}
+
 
 		return $dd_object;
 	}//end get_structure_context
