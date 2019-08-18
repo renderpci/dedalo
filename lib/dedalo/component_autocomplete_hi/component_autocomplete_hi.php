@@ -70,9 +70,9 @@
 
 						$filter_custom = [];
 						$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_section_id'], true, true, true, true, false);
+						
 						$path = new stdClass();
 							$path->section_tipo 	= $section_tipo;
-							# get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false)
 							$path->component_tipo 	= reset($component_section_id_tipo);
 							$path->modelo 			= 'component_section_id';
 							$path->name 			= 'Id';
