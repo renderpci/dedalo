@@ -1649,40 +1649,19 @@ class component_relation_common extends component_common {
 			$current_component  = component_common::get_instance($c_modelo_name,
 																 $f_component_tipo,
 																 null,
-																 'list',
+																 'edit',
 																 DEDALO_DATA_LANG,
 																 $f_section_tipo);
+			// get section json
+				$get_json_options = new stdClass();
+					$get_json_options->get_context 	= false;
+					$get_json_options->get_data 	= true;
+				$filter_list_data[] = $current_component->get_json($get_json_options);
+			
 
-			$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);
-			foreach ((array)$ar_list_of_values->result as $key => $item) {
-
-				$current_label = $item->label;
-				$current_value = $item->value;
-
-				$current_locator = new locator();
-					$current_locator->set_type(DEDALO_RELATION_TYPE_LINK); # Add relation type (always link)
-					$current_locator->set_section_id($current_value->section_id);
-					$current_locator->set_section_tipo($current_value->section_tipo);										
-					$current_locator->set_from_component_tipo($f_component_tipo); # Add from_component_tipo
-				
-				$current_locator_json = json_encode($current_locator);
-				
-				$input_id = hash('sha256', $current_locator_json);
-
-				// Element
-				$element = new stdClass();
-					$element->id 		= $input_id;
-					$element->value 	= $current_locator;					
-					$element->label 	= $current_label;
-					$element->component_tipo = $f_component_tipo;
-
-				$filter_list_data[] = $element;
-
-			}//end foreach ((array)$ar_list_of_values->result as $key => $item)					
 		}
 
-
-		return $filter_list_data;
+		return $filter_list_data;		
 	}//end get_filter_list_data
 
 

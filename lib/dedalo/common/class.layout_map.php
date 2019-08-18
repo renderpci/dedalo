@@ -44,6 +44,9 @@ class layout_map {
 			$user_id 		= $options->user_id;
 			$view 			= $options->view;
 
+		// properties
+			$RecordObj_dd = new RecordObj_dd($tipo);
+			$properties 	= $RecordObj_dd->get_propiedades(true);
 		
 		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
@@ -90,27 +93,35 @@ class layout_map {
 		// 3. calculate from section list or related terms
 			if (!isset($layout_map)) {
 				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$ar_related=array();
+				$ar_related 	= [];
 				switch ($modo) {
 					case 'list':
 					case 'portal_list':						
 						if (in_array($model, self::$groupers)) {
 							// groupers
 							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+
 						}else{
 
-							# case section list is defined				
-							$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);				
-							if(isset($ar_terms[0]) ) {
-								
-								# Use found related terms as new list
-								$current_term = $ar_terms[0];
-								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-								
+							if(isset($properties->source->config_context)){
+								// v6 definition in properties
+								$config_context = component_common::get_config_context($tipo, $external=false);
+							
 							}else{
-
-								# Fallback related when section list is not defined					
-								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);						
+								// legacy case
+								# case section list is defined
+								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+								if(isset($ar_terms[0])) {
+									
+									# Use found related terms as new list
+									$current_term = $ar_terms[0];
+									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								
+								}else{
+								
+									# Fallback related when section list is not defined					
+									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);						
+								}
 							}
 						}
 						break;
@@ -124,12 +135,21 @@ class layout_map {
 
 						}elseif (in_array($model, self::$groupers)) {
 							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);							
+							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+
 						}else{
 							// portal
 							$edit_view_options ='';
 							if($view==='full') { // || $view==='view_mosaic'
-								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+								
+								if(isset($properties->source->config_context)){
+									// v6 definition in properties
+									$config_context = component_common::get_config_context($tipo, $external=false);
+								
+								}else{
+								
+									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+								}
 								break;
 							}else{
 								# CASE VIEW IS DEFINED
@@ -139,7 +159,7 @@ class layout_map {
 									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);				
 									if ($modelo_name!=='edit_view') continue;
 
-									$view_name = RecordObj_dd::get_termino_by_tipo($current_term);	
+									$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
 									if($view===$view_name){
 										# Use related terms as new list
 										$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);										
@@ -151,40 +171,57 @@ class layout_map {
 						break;
 				}//end switch $modo	
 
-				// target_section_tipo, exclude_elements
+
+			// parse ar_related as config_context format
+				if (!isset($config_context) && !empty($ar_related)) {
+					
+					$ar_related_clean 	 = [];
 					$target_section_tipo = $section_tipo;
-					foreach ((array)$ar_related as $key => $current_tipo) {
-						
+					foreach ((array)$ar_related as $key => $current_tipo) {						
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						
 						if ($modelo_name==='section') {
-							$target_section_tipo = $current_tipo; // Set portal_section_tipo find it
-							unset($ar_related[$key]); // Remove self section_tipo from array of components
-							//break;
+							$target_section_tipo = $current_tipo; // Overwrite
+							continue;
+						}else if ($modelo_name==='section' || $modelo_name==='exclude_elements') {
+							continue;
 						}
-						elseif ($modelo_name==='exclude_elements') {
-							unset($ar_related[$key]); // Remove self section_tipo from array of components
-						}
-					}		
-			
-				// layout map
-					$layout_map = [];
-					foreach ($ar_related as $current_element_tipo) {
-						// parent info
-							$RecordObj_dd 	= new RecordObj_dd($current_element_tipo);
-							$parent 		= $RecordObj_dd->get_parent();
+						$ar_related_clean[] = $current_tipo;
+					}
+				
+					// build config_context_item
+					$config_context_item = new stdClass();
+						$config_context_item->type 			= 'internal';
+						$config_context_item->section_tipo 	= $target_section_tipo;
+						$config_context_item->search 		= $ar_related_clean;
+						$config_context_item->select 		= $ar_related_clean;
+						$config_context_item->show 			= $ar_related_clean;
+
+					$config_context = [$config_context_item];
+				}//end if (!isset($config_context) && !empty($ar_related))
+
+
+			// layout_map
+				$layout_map = [];
+				foreach ($config_context as $current_section_config) {
+					if($current_section_config->type!=='internal') continue;
+					
+					$current_section_tipo = $current_section_config->section_tipo;
+					foreach ($current_section_config->show as $current_tipo) {
+
+						$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+						$parent 		= $RecordObj_dd->get_parent();
 
 						$dd_object = new dd_object((object)[
-							'tipo' 			=> $current_element_tipo,
-							'section_tipo' 	=> $target_section_tipo, // (?)
-							'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_element_tipo,true),
+							'tipo' 			=> $current_tipo,
+							'section_tipo' 	=> $current_section_tipo,
+							'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true),
 							'mode' 			=> $modo,
 							'parent' 		=> $parent
 						]);
-						
 						$layout_map[] = $dd_object;
 					}
-			
+				}
+				
 			}//end if (!isset($layout_map))
 		
 		// Remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map

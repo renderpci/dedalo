@@ -1049,169 +1049,359 @@ class component_autocomplete extends component_relation_common {
 		return $component_info;		
 	}//end get_component_info
 
-public function get_sqo_context() {
 
-				$section_tipo 	= $this->get_section_tipo();
-				$tipo			= $this->get_tipo();
-				$propiedades	= $this->get_propiedades();
-				$parent			= $this->get_parent();
-				$autosearch_options_id 	 = 'autosearch_options_' . $section_tipo .'_'. $tipo .'_'. $parent;
-				$autosearch_options_js 	 = '';
-		// service autocomplete options
+	// HIERARCHY LEGACY
+	/**
+	* GET_HIERARCHY_SECTIONS_FROM_TYPES
+	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
+	* @return array $hierarchy_sections_from_types
+	*/
+	public static function get_hierarchy_sections_from_types( $hierarchy_types ) {
+		
+		$hierarchy_sections_from_types = array();
+
+		
+		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
+		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;		
+
+	
+		$ar_filter = [];
+		# Active
+		$active_locator = new locator();
+			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+			$active_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+			$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+			$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
+
+		$ar_filter[] = '{
+				"q": '.json_encode(json_encode($active_locator)).',
+				"path": [
+					{
+						"section_tipo": "'.$hierarchy_section_tipo.'",
+						"component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'",
+						"modelo": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
+						"name": "Active"
+					}
+				]
+			}';
+		# Typology
+		foreach ((array)$hierarchy_types as $key => $value) {
+
+			$typology_locator = new locator();
+				$typology_locator->set_section_id($value);
+				$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
+				$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TIPOLOGY_TIPO);
+
+			$ar_filter[] = '{
+				"q": '.json_encode(json_encode($typology_locator)).',
+				"path": [
+					{
+						"section_tipo": "hierarchy1",
+						"component_tipo": "hierarchy9",
+						"modelo": "component_select",
+						"name": "Typology"
+					}
+				]
+			}';
+		}//end foreach ((array)$hierarchy_types as $key => $value)
+		
+		$filter = implode(',',$ar_filter);
+		
+		$search_query_object = json_decode('
+			{
+			  "id": "get_hierarchy_sections_from_types",
+			  "section_tipo": "'.$hierarchy_section_tipo.'",
+			  "skip_projects_filter":"true",
+			  "limit":0,
+			  "filter": {
+				"$and": [
+				  '.$filter.'
+				]
+			  },
+			  "select": [
+				{
+				  "path": [
+					{
+					  "section_tipo": "'.$hierarchy_section_tipo.'",
+					  "component_tipo": "'.$hierarchy_name_tipo.'",
+					  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($hierarchy_name_tipo,true).'",
+					  "name": "Hierarchy name",
+					  "lang": "all"
+					}
+				  ]
+				},
+				{
+				  "path": [
+					{
+					  "section_tipo": "'.$hierarchy_section_tipo.'",
+					  "component_tipo": "'.DEDALO_HIERARCHY_TARGET_SECTION_TIPO.'",
+					  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($hierarchy_name_tipo,true).'",
+					  "name": "Target thesaurus"
+					}
+				  ]
+				}
+			  ]
+			}
+		');
+
+		$search_development2 = new search_development2($search_query_object);
+		$result = $search_development2->search();
+			#dump($result, ' result +***************+ '.to_string());
+
+
+		$target_section_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+		foreach ($result->ar_records as $key => $row) {
+			$hierarchy_sections_from_types[] = $row->{$target_section_tipo};
+		}
+		
+
+		return (array)$hierarchy_sections_from_types;
+	}//end get_hierarchy_sections_from_types
+
+
+
+	/**
+	* ADD_HIERARCHY_SECTIONS_FROM_TYPES
+	* Merge resolved hierarchy_sections_from_types with received section_to_search
+	* and create an array unique
+	* @return array $section_to_search
+	*/
+	public static function add_hierarchy_sections_from_types($hierarchy_types) {
+
+		$hierarchy_sections_from_types = [];
+		foreach ((array)$hierarchy_types as $current_type) {
+			$sections_from_types = component_autocomplete::get_hierarchy_sections_from_types( $current_type );
+			$hierarchy_sections_from_types = array_merge($hierarchy_sections_from_types, $sections_from_types);
+		}		
+		
+		return (array)$hierarchy_sections_from_types;
+	}//end add_hierarchy_sections_from_types
+
+
+
+	/**
+	* GET_HIERARCHY_TERMS_FILTER
+	* @return 
+	*/
+	public function get_hierarchy_terms_filter() {
+
+		$propiedades = $this->get_propiedades();
+		$filter_custom = [];
+
+		$terms = $propiedades->source->hierarchy_terms;
+		
+		foreach ($terms as $current_item) {
+			$resursive = (bool)$current_item->recursive;
+			# Get childrens						
+			$ar_childrens = component_relation_children::get_childrens($current_item->section_id, $current_item->section_tipo, null, $resursive);
+			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_item->section_tipo, ['component_section_id'], true, true, true, true, false);
+
+			$path = new stdClass();
+				$path->section_tipo 	= $current_item->section_tipo;
+				$path->component_tipo 	= reset($component_section_id_tipo);
+				$path->modelo 			= 'component_section_id';
+				$path->name 			= 'Id';
+
+			$ar_section_id = array_map(function($children){
+				return $children->section_id;
+			}, $ar_childrens);
+
+			$filter_item = new stdClass();
+				$filter_item->q 	= implode(',', $ar_section_id);
+				$filter_item->path 	= [$path];
+
+				$filter_custom[] = $filter_item;
+
+		}// end foreach
+
+		return $filter_custom;
+
+	}//end get_hierarchy_terms_filter
+
+	//END HIERARCHY LEGACY
+
+
+	/**
+	* GET_SQO_CONTEXT
+	* @return object | json 
+	*/
+	public function get_sqo_context() {
+
+			$sqo_context = [];
+
+			$section_tipo 	= $this->get_section_tipo();
+			$tipo			= $this->get_tipo(); 
+			$propiedades	= $this->get_propiedades();
+			$parent			= $this->get_parent();
+			$autosearch_options_id 	 = 'autosearch_options_' . $section_tipo .'_'. $tipo .'_'. $parent;
+			$autosearch_options_js 	 = '';
+			// service autocomplete options
 				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 
-		// search_sections . set and remove search sections duplicates
+			// search_sections . set and remove search sections duplicates
 				$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
 
-		// search_query_object params
-			# Limit
-			$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;			
-
-		// search_query_object build
-			$query_object_options = new stdClass();
-				$query_object_options->q 	 			= null;
-				$query_object_options->limit  			= $limit;
-				$query_object_options->offset 			= 0;
-				$query_object_options->section_tipo 	= $search_sections;
-				$query_object_options->tipo 			= $tipo;
-			$search_query_object 		= component_autocomplete::build_search_query_object($query_object_options);
-				# skip_projects_filter true on edit mode
-				$search_query_object->skip_projects_filter 	= true;
-			$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS );
-
-				//dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
-		// Filter_by_list (Propiedades option)
-				$filter_by_list = false; // Default
-				if (isset($propiedades->source->filter_by_list)) {
-					$filter_by_list = $propiedades->source->filter_by_list;
+				$filter_custom = [];
+			// get get_hierarchy_terms
+				if (isset($propiedades->source->hierarchy_terms)) {
+					$hierarchy_terms_filter = $this->get_hierarchy_terms_filter();
+					$filter_custom = array_merge($filter_custom, $hierarchy_terms_filter);
 				}
-				$json_filter_by_list = json_encode($filter_by_list);
 
-		// Filter_by_list
-				if ($filter_by_list!==false) {
-					// Calculate ar elements to show in filter
-					$ar_elements = component_relation_common::get_filter_list_data($filter_by_list);
+			// filter custom
+				if (isset($propiedades->source->filter_custom)) {
+					$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
+				}
 
-					$filter_list_options = new stdClass();
-						$filter_list_options->target_id 	= $autosearch_options_id;
-						$filter_list_options->tipo 			= $tipo;
-						$filter_list_options->section_tipo 	= $section_tipo;
-						$filter_list_options->ar_elements 	= $ar_elements;
+			// search_query_object params
+				# Limit
+				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;
+				# operator can be injected by api
+				$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;			
+
+			// search_query_object build
+				$query_object_options = new stdClass();
+					$query_object_options->q 	 				= null;
+					$query_object_options->limit  				= $limit;
+					$query_object_options->offset 				= 0;
+					$query_object_options->section_tipo 		= $search_sections;
+					$query_object_options->tipo 				= $tipo;
+					$query_object_options->logical_operator 	= $operator;
+					$query_object_options->add_select 			= false;
+					$query_object_options->filter_custom 		= !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
+					$search_query_object->skip_projects_filter 	= true; // skip_projects_filter true on edit mode
+				
+				$search_query_object = component_autocomplete::build_search_query_object($query_object_options);
+				
+				// add sqo
+				$sqo_context[] = $search_query_object;
+
+
+			// fields for select. add ddo
+				$config_context = component_common::get_config_context($tipo, $external=false);
+				foreach ($config_context as $current_section_config) {
+					if($current_section_config->type!=='internal') continue;
 					
-					$autosearch_options_js .= 'service_autocomplete.build_filter_list('.json_encode($filter_list_options).');';
-				}//end if ($filter_by_list!==false)
+					$section_tipo = $current_section_config->section_tipo;
 
+					$dd_object = new dd_object((object)[
+						'tipo' 			=> $section_tipo,
+						'section_tipo' 	=> $section_tipo,
+						'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true),
+						'mode' 			=> 'list',
+						'lang'			=> DEDALO_DATA_NOLAN,
+						'parent' 		=> 'root'
+					]);					
+					$sqo_context[] = $dd_object;
 
-		// Filter by fields (advanced search)
-					$filter_by_fields = false;
-					// Calculate ar elements to show in filter
-					$ar_elements = component_relation_common::get_filter_fields_data($search_query_object, $propiedades);
-					if (!empty($ar_elements)) {
-						$filter_by_fields = true;
-						
-						$filter_fields_options = new stdClass();
-							$filter_fields_options->tipo 		 = $tipo;
-							$filter_fields_options->section_tipo = $section_tipo;
-							$filter_fields_options->ar_elements  = $ar_elements;
-							$filter_fields_options->op_label_or  = RecordObj_dd::get_termino_by_tipo('dd1061',DEDALO_DATA_LANG,true);
-							$filter_fields_options->op_label_and = RecordObj_dd::get_termino_by_tipo('dd1060',DEDALO_DATA_LANG,true);
-							$filter_fields_options->operator  	 = isset($propiedades->source->operator) ? $propiedades->source->operator : 'or';
-							$filter_fields_options->q_split  	 = isset($propiedades->source->q_split) ? (bool)$propiedades->source->q_split : true;
-							$filter_fields_options->target_id 	 = $autosearch_options_id;
+					foreach ($current_section_config->select as $current_component_tipo) {
 
-						$autosearch_options_js .= 'service_autocomplete.build_source_search_selector('.json_encode($filter_fields_options).');';
+						$RecordObj_dd = new RecordObj_dd($current_component_tipo);
+						$current_lang = $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
+						$dd_object = new dd_object((object)[
+							'tipo' 			=> $current_component_tipo,
+							'section_tipo' 	=> $section_tipo,
+							'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true),
+							'mode' 			=> 'list',
+							'lang'			=> $current_lang,
+							'parent' 		=> $section_tipo
+						]);						
+						$sqo_context[] = $dd_object;
 					}
-								
-		
+				}//end foreach ($config_context as $current_section_config)
 
-		
-		$sqo_context = json_decode('[
-			{
-				"typo": "sqo",
-				"id": "temp",
-				"section_tipo": ["numisdata3"],
-				"filter": {
-					"$or": [
-						{
-							"q": null,
-							"lang": "all",
-							"path": [
-								{
-									"name"				: "Catálogo",
-									"modelo"			: "component_select",
-									"section_tipo"		: "numisdata3",
-									"component_tipo"	: "numisdata309"
-								},
-								{
-									"name"				: "Catálogo",
-									"modelo"			: "component_input_text",
-									"section_tipo"		: "numisdata300",
-									"component_tipo"	: "numisdata303",
-									"lang"				: "all"
-								}
-							]
-						},
-						{
-							"q"		: null,
-							"lang"	: "all",
-							"path"	: [
-								{
-									"name"				: "Número",
-									"modelo"			: "component_input_text",
-									"section_tipo"		: "numisdata3",
-									"component_tipo"	: "numisdata27",
-									"lang"				: "all"
-								}
-							]
-						}
-					]
+
+			///////////////////////////////////////////
+
+			/*											
+			$sqo_context = json_decode('[
+				{
+					"typo": "sqo",
+					"id": "temp",
+					"section_tipo": ["numisdata3"],
+					"filter": {
+						"$or": [
+							{
+								"q": null,
+								"lang": "all",
+								"path": [
+									{
+										"name"				: "Catálogo",
+										"modelo"			: "component_select",
+										"section_tipo"		: "numisdata3",
+										"component_tipo"	: "numisdata309"
+									},
+									{
+										"name"				: "Catálogo",
+										"modelo"			: "component_input_text",
+										"section_tipo"		: "numisdata300",
+										"component_tipo"	: "numisdata303",
+										"lang_DES"				: "all"
+									}
+								]
+							},
+							{
+								"q"		: null,
+								"lang"	: "all",
+								"path"	: [
+									{
+										"name"				: "Número",
+										"modelo"			: "component_input_text",
+										"section_tipo"		: "numisdata3",
+										"component_tipo"	: "numisdata27",
+										"lang_DES"				: "all"
+									}
+								]
+							}
+						]
+					},
+					"limit": 40,
+					"offset": 0,
+					"skip_projects_filter": true
 				},
-				"limit": 40,
-				"offset": 0,
-				"skip_projects_filter": true
-			},
-			{ 
-				"typo"			: "ddo",
-				"model"			: "section",			
-				"tipo" 			: "numisdata3",
-				"section_tipo" 	: "numisdata3",
-				"mode" 			: "list",
-				"lang" 			: "no-lan",
-				"parent"		: "root"
-			},
-			{ 
-				"typo"			: "ddo",
-				"tipo" 			: "numisdata27",
-				"section_tipo" 	: "numisdata3",
-				"mode" 			: "list",
-				"lang" 			: "lg-eng",
-				"parent"		: "numisdata3",		
-				"model"			: "component_input_text"
-			},
-			{ 
-				"typo"			: "ddo",
-				"tipo" 			: "numisdata309",
-				"section_tipo" 	: "numisdata3",
-				"mode" 			: "list",
-				"lang" 			: "lg-nolan",
-				"parent"		: "numisdata3",		
-				"model"			: "component_select"
-			},
-			{ 
-				"typo"			: "ddo",
-				"tipo" 			: "numisdata81",
-				"section_tipo" 	: "numisdata3",
-				"mode" 			: "list",
-				"lang" 			: "lg-eng",
-				"parent"		: "numisdata3",		
-				"model"			: "component_input_text"
-			}
-		]');
+				{ 
+					"typo"			: "ddo",
+					"model"			: "section",			
+					"tipo" 			: "numisdata3",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "no-lan",
+					"parent"		: "root"
+				},
+				{ 
+					"typo"			: "ddo",
+					"tipo" 			: "numisdata27",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "lg-nolan",
+					"parent"		: "numisdata3",		
+					"model"			: "component_input_text"
+				},
+				{ 
+					"typo"			: "ddo",
+					"tipo" 			: "numisdata309",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "lg-nolan",
+					"parent"		: "numisdata3",		
+					"model"			: "component_select"
+				},
+				{ 
+					"typo"			: "ddo",
+					"tipo" 			: "numisdata81",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "lg-eng",
+					"parent"		: "numisdata3",		
+					"model"			: "component_input_text"
+				}
+			]');
+			*/
 
+			return $sqo_context;			
+		}//end get_sqo_context
 
-		return $sqo_context;
-		
-	}//end get_sqo_context
-
-}
+	}
 ?>
