@@ -2812,44 +2812,44 @@ abstract class component_common extends common {
 		$propiedades = $this->get_propiedades();
 
 		if(isset($propiedades->source->config_context)){
-			$ar_terminoID_by_modelo_name = [];
+			$ar_target_section_tipo = [];
 			foreach ($propiedades->source->config_context as $current_item) {
 				if ($current_item->type!=='internal') continue;
-				$ar_terminoID_by_modelo_name[] = $current_item->section_tipo;
+
+				//add hierarchy_types
+				if(isset($current_item->hierarchy_types)){
+					// get the hierarchy sections from properties
+						$hierarchy_types = isset($current_item->hierarchy_types) ? $current_item->hierarchy_types : null;
+						
+					# Resolve hierarchy_sections for speed
+						if (!empty($hierarchy_types)) {
+							$hierarchy_sections_from_types = component_autocomplete::add_hierarchy_sections_from_types($hierarchy_types);
+						
+							# Add hierarchy_sections_from_types
+							foreach ($hierarchy_sections_from_types as $current_section_tipo) {
+								if (!in_array($current_section_tipo, $ar_target_section_tipo)) {
+									$ar_target_section_tipo[] = $current_section_tipo;
+								}
+							}
+						}
+				}else{
+					$ar_target_section_tipo[] = $current_item->section_tipo;
+				}
+				
 			}
 		}else{
-			$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
+			$ar_target_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
 		}
 
-		//add hierarchy_types
-		if(isset($propiedades->source->hierarchy_types)){
-			// get the hierarchy sections from properties
-				$hierarchy_types = isset($propiedades->source->hierarchy_types) ? $propiedades->source->hierarchy_types : null;
-				
-				# Resolve hierarchy_sections for speed
-				if (!empty($hierarchy_types)) {
-					$hierarchy_sections_from_types = component_autocomplete::add_hierarchy_sections_from_types($hierarchy_types);
-				}
+		$ar_target_section_tipo = array_values($ar_target_section_tipo);
 
-					# Add hierarchy_sections_from_types
-					foreach ($hierarchy_sections_from_types as $current_section_tipo) {
-						if (!in_array($current_section_tipo, $ar_terminoID_by_modelo_name)) {
-							$ar_terminoID_by_modelo_name[] = $current_section_tipo;
-						}
-					}
-					
-					$ar_terminoID_by_modelo_name = array_values($ar_terminoID_by_modelo_name);
-		}
 
 		if(SHOW_DEBUG===true) {
-			if ( empty( $ar_terminoID_by_modelo_name)) {
+			if ( empty( $ar_target_section_tipo)) {
 				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo,null,true);
 				throw new Exception("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo", 1);
 			}			
 		}
-
-		$ar_target_section_tipo = $ar_terminoID_by_modelo_name;
-	
 
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
@@ -4830,7 +4830,35 @@ abstract class component_common extends common {
 					$current_config_context->show = $current_config_context->select;
 				}
 
-				$config_context[] = $current_config_context;
+				//add hierarchy_types
+				if(isset($current_config_context->hierarchy_types)){
+					// get the hierarchy sections from properties
+						$hierarchy_types = $current_config_context->hierarchy_types;
+						
+					# Resolve hierarchy_sections for speed
+						if (!empty($hierarchy_types)) {
+							
+							$hierarchy_sections_from_types = component_autocomplete::add_hierarchy_sections_from_types($hierarchy_types);
+						
+							# Add hierarchy_sections_from_types
+							foreach ($hierarchy_sections_from_types as $current_section_tipo) {
+
+								// build config_context_item
+									$config_context_item = new stdClass();
+										$config_context_item->type 			= 'internal';
+										$config_context_item->section_tipo 	= $current_section_tipo;
+										$config_context_item->search 		= $current_config_context->search;
+										$config_context_item->select 		= $current_config_context->select;
+										$config_context_item->show 			= $current_config_context->show;
+
+									$config_context[] = $config_context_item;
+														
+							}
+						}
+				}else{				
+
+					$config_context[] = $current_config_context;
+				}
 			}
 
 		}else{
