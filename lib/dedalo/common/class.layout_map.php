@@ -138,10 +138,13 @@ class layout_map {
 							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 
 						}else{
-							// portal
+							// portal, autocomplete
+							// OVERWRITTE MODO: when one component call for you own layout the mode of the component will be edit,
+							// but the components that it referenced will be in list, (autocomplete, portal that show the components inside in list)
+							$modo = 'list';
 							$edit_view_options ='';
 							if($view==='full') { // || $view==='view_mosaic'
-								
+
 								if(isset($properties->source->config_context)){
 									// v6 definition in properties
 									$config_context = component_common::get_config_context($tipo, $external=false);
@@ -236,7 +239,6 @@ class layout_map {
 				}
 				$layout_map = array_values($layout_map);
 			}
-
 		return $layout_map;
 	}//end get_layout_map
 
