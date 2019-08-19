@@ -3460,5 +3460,36 @@ class section extends common {
 		
 	}//end get_sqo_context
 
+
+
+	/**
+	* GET_SECTION_MODEL
+	* Resolve section component_relation_model value (hierarchy sections only)
+	* Gets component_relation_model value (dato and value) in current section (by locator) 
+	* @return object $model_obj
+	*/
+	public static function get_section_model($locator, $lang=DEDALO_DATA_LANG) {
+
+		$parent 		= $locator->section_id;
+		$section_tipo	= $locator->section_tipo;
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO, true);
+		$component 		= component_common::get_instance($modelo_name,
+														 DEDALO_THESAURUS_RELATION_MODEL_TIPO,
+														 $parent,
+														 'list',
+														 $lang,
+														 $section_tipo);
+		$dato  = (array)$component->get_dato();
+		$value = $component->get_valor($lang);
+
+		$model_obj = new stdClass();
+			$model_obj->name 	= $value;
+			$model_obj->locator = reset($dato);
+
+		return $model_obj;
+	}//end get_section_model
+
+
+
 }//end section
 ?>
