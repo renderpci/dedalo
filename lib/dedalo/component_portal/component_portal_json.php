@@ -60,7 +60,7 @@
 
 			// subdata add
 				foreach ($ar_subdata as $current_data) {
-					$data = array_merge($data, $current_data);
+					$data[] = $current_data;
 				}
 	
 		}//end if (!empty($dato))
