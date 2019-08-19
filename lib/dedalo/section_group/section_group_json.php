@@ -34,7 +34,16 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$data = $this->get_ar_subdata();
+		$section_id 	= $this->get_section_id();
+		$section_tipo 	= $this->get_section_tipo();
+		
+		$locator = new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+		
+		$value = [$locator];
+			
+		$data = $this->get_ar_subdata($value);
 		/*
 		$section_id 	= $this->section_id; // injected in section json controller
 		$section_tipo 	= $this->section_tipo;
