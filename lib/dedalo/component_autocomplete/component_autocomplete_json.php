@@ -79,6 +79,27 @@
 				break;
 		}
 
+		if (!empty($dato)) {
+
+			// Value
+				$value = $dato;
+							
+			// data item
+				$item  = $this->get_data_item($value);
+
+				$data[] = $item;
+
+			// subcontext data from layout_map items	
+				$ar_subdata = $this->get_ar_subdata($value);
+
+			// subdata add
+				foreach ($ar_subdata as $current_data) {
+					$data[] = $current_data;
+				}
+	
+	
+		}//end if (!empty($dato))
+/*
 		// subdata
 			if (!empty($dato)) {			
 
@@ -131,7 +152,7 @@
 
 			#$data[] = $item;
 			array_unshift($data, $item);
-			
+*/			
 	}//end if $options->get_data===true && $permissions>0
 
 
