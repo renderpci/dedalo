@@ -32,13 +32,28 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-					
-		$dato = $this->get_dato();
-
+			
 		// subdata
-		if (!empty($dato)) {
+		// default locator build with this section params			
+			 $section_id 	= $this->get_section_id();
+			 $section_tipo 	= $this->get_tipo();
+			 
+			 $locator = new locator();
+			 	$locator->set_section_tipo($section_tipo);
+			 	$locator->set_section_id($section_id);
+			 
+			 $value = [$locator];
+			 
+			 $data = $this->get_ar_subdata($value);
 
-			$data = $this->get_ar_subdata();
+
+		// subdata add
+			/*
+			foreach ($ar_subdata as $current_data) {
+				$data = array_merge($data, $current_data);
+			}
+			*/
+
 			/*
 			$section_id 	= $this->section_id;
 			$section_tipo 	= $this->tipo;
@@ -114,7 +129,7 @@
 
 				}//end iterate display_items
 				*/
-		}//end if (!empty($dato))
+		
 		
 	}// end if $permissions > 0
 
