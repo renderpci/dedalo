@@ -609,7 +609,7 @@ class component_relation_common extends component_common {
 				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
 				# NOTE: get_parents_recursive is disabled because generate some problems to fix. For now we use only first parent
 				#$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);					
-				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);	
+				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);
 				#$n_ar_parents = count($ar_parents);
 					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
 			
@@ -624,7 +624,7 @@ class component_relation_common extends component_common {
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
 					if (!empty($current_value)) {
 						$ar_values[]  = $current_value;
-					}
+					}					
 					//break;
 					#$ar_locators_resolved[] = $current_locator->section_tipo.'_'.$current_locator->section_id;
 				}
@@ -2096,56 +2096,6 @@ class component_relation_common extends component_common {
 		return (array)$target_sections;
 	}//end get_target_sections
 
-
-
-	/**
-	* GET_AR_SUBDATA
-	* Iterate locators building and getting each layout map component data
-	* @param array $ar_locators
-	* @return array $ar_subdata
-	*/
-	public function get_ar_subdata($ar_locators=null) {
-
-		$ar_subdata = [];
-		
-		/// subcontext from layout_map items					
-			$layout_map = $this->get_layout_map();
-			foreach ($layout_map as $dd_object) {
-
-				$dd_object 		= (object)$dd_object;
-				$current_tipo 	= $dd_object->tipo;							
-				$mode 			= $dd_object->mode ?? 'list';
-				$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);							
-				$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);					
-				
-				foreach ($ar_locators as $current_locator) {
-					
-					$current_component = component_common::get_instance( $model,
-																		 $current_tipo,
-																		 $current_locator->section_id,
-																		 $mode,
-																		 $current_lang,
-																		 $current_locator->section_tipo);
-
-					// Inject this tipo as related component from_component_tipo
-						$current_component->from_component_tipo = $this->tipo;
-						$current_component->from_section_tipo 	= $this->section_tipo;
-
-					// get component json
-						$get_json_options = new stdClass();
-							$get_json_options->get_context 	= false;
-							$get_json_options->get_data 	= true;
-						$component_json = $current_component->get_json($get_json_options);
-
-					// data add
-						$ar_subdata[] = $component_json->data;
-
-				}//end foreach ($rows_data->ar_records as $current_locator)
-			
-			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
-		
-		return $ar_subdata;			
-	}//end get_ar_subdata
 
 
 }//end component_relation_common
