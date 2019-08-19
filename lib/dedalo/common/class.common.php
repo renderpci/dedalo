@@ -1694,38 +1694,32 @@ abstract class common {
 	* GET_AR_SUBDATA
 	* @return array $ar_subcontext
 	*/
-	public function get_ar_subdata($ar_locators=null) {
+	public function get_ar_subdata($ar_locators) {
 
 		$ar_subdata = [];		
 
-		// default locator build with this section params
-			if (is_null($ar_locators)) {
-				
-				$section_id 	= $this->get_section_id();
-				$section_tipo 	= $this->get_section_tipo();
-
-				$locator = new locator();
-					$locator->set_section_tipo($section_tipo);
-					$locator->set_section_id($section_id);
-				
-				$ar_locators = [$locator];
-			}
+		
+		
+		$source_componet_tipo 	= $this->tipo;
+		$source_model 			= RecordObj_dd::get_modelo_name_by_tipo($source_componet_tipo,true);
+		$source_properties 		= $this->get_propiedades();
 
 		// Iterate dd_object (layout_map) for colums
 			$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
-			foreach ((array)$layout_map as $dd_object) {
 
-				$dd_object 		= (object)$dd_object;
-				$current_tipo 	= $dd_object->tipo;
-				$mode 			= $dd_object->mode ?? 'list';
-				$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
-				
-				foreach ($ar_locators as $current_locator) {
+			foreach ($ar_locators as $current_locator) {
 
-					$section_id 	= $current_locator->section_id;
-					$section_tipo 	= $current_locator->section_tipo;
-									
+				$section_id 	= $current_locator->section_id;
+				$section_tipo 	= $current_locator->section_tipo;
+
+				foreach ((array)$layout_map as $dd_object) {
+
+					$dd_object 		= (object)$dd_object;
+					$current_tipo 	= $dd_object->tipo;
+					$mode 			= $dd_object->mode ?? 'list';
+					$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
+										
 					switch (true) {
 						// components case
 						case (strpos($model, 'component_')===0):
@@ -1740,6 +1734,11 @@ abstract class common {
 							// properties
 								if (isset($dd_object->properties)){
 									$current_component->set_properties($dd_object->properties);
+								}
+							// Inject this tipo as related component from_component_tipo
+								if (strpos($source_model, 'component_')===0){
+									$current_component->from_component_tipo = $this->tipo;
+									$current_component->from_section_tipo 	= $this->section_tipo;
 								}
 
 							// get component json
@@ -1777,10 +1776,33 @@ abstract class common {
 						// data add
 							#$ar_subdata[] = $element_json->data;
 					}
-				}//end foreach ($ar_locators as $current_locator)
+				}//end iterate display_items
 
-			}//end iterate display_items
+				// dd_info, additional information about row
+				if (isset($source_properties->value_with_parents) && $source_properties->value_with_parents === true){
+					$value_with_parents = component_relation_common::get_locator_value($current_locator, DEDALO_DATA_LANG, $show_parents=true);
 
+					$divisor = $source_properties->source->value_with_parents ?? ' | ';
+					
+					$source_term_model = section::get_section_model($current_locator);
+					
+					$dd_info_values = [
+						$source_term_model->name,
+						$value_with_parents
+					];					
+					$dd_info_value = [implode($divisor, $dd_info_values)];
+
+					$dd_info = new stdClass();
+						$dd_info->tipo 			= 'ddinfo';
+						$dd_info->section_id 	= $section_id;
+						$dd_info->section_tipo	= $section_tipo;
+						$dd_info->value 		= $dd_info_value;
+						$dd_info->parent 		= $source_componet_tipo;
+
+					$ar_subdata[] = $dd_info;
+				}// end $value_with_parent = true
+
+			}//end foreach ($ar_locators as $current_locator)
 
 		return $ar_subdata;
 	}//end get_ar_subdata
