@@ -341,17 +341,20 @@ class dd_api {
 					$search_development2 = new search_development2($current_sqo);
 					$rows_data 			 = $search_development2->search();
 
-				// generated the self section_data
+				// section. generated the self section_data
 					foreach ($current_sqo->section_tipo as $current_section_tipo) {
 					
 						$section_data = new stdClass();
 							$section_data->tipo 		= $current_section_tipo;
-							$section_data->section_tipo = $current_section_tipo;							
-							$section_data->value 		= array_map(function($item) use($current_section_tipo){
-								if ($item->section_tipo===$current_section_tipo) {
-									return $item->section_id;
+							$section_data->section_tipo = $current_section_tipo;														
+							$ar_section_id = [];
+							foreach ($rows_data->ar_records as $current_row) {
+								if ($current_row->section_tipo===$current_section_tipo) {
+									$ar_section_id[] = $current_row->section_id;
 								}
-							}, $rows_data->ar_records);
+							}
+							$section_data->value 		= $ar_section_id;
+
 							// pagination info
 							$section_data->offset 		= $current_sqo->offset;
 							$section_data->limit 		= $current_sqo->limit;
@@ -373,15 +376,13 @@ class dd_api {
 								return $carry;
 							});
 						}
+						
 						$mode = $section_dd_object->mode;
 
 						// Inject known dato to avoid re connect to database
 							$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
 							$section->set_dato($datos);
-							$section->set_bl_loaded_matrix_data(true);
-						
-						// Iterate dd_object for colums ( PASADO A LA SECCIÓN ! ) 
-
+							$section->set_bl_loaded_matrix_data(true);						
 						
 						// get section json
 							$get_json_options = new stdClass();
