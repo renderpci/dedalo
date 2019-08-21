@@ -3483,7 +3483,7 @@ class section extends common {
 		$value = $component->get_valor($lang);
 
 		$model_obj = new stdClass();
-			$model_obj->name 	= $value;
+			$model_obj->name 	= $value ?? '';
 			$model_obj->locator = reset($dato);
 
 		return $model_obj;
