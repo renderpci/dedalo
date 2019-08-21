@@ -1200,8 +1200,8 @@ class search_development2 {
 					$column_alias 		 = $component_tipo;
 					$modelo_name 		 = $last_item->modelo;
 					$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
-					#$aply_distinct 	 = isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
-					$aply_distinct 		 = (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
+					#$apply_distinct 	 = isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
+					$apply_distinct 		 = (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
 					$component_path 	 = implode(',', $select_object->component_path);
 					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 						# In activity section, data container is allways 'dato'
@@ -1249,7 +1249,7 @@ class search_development2 {
 						}				
 
 						# All
-						if ($aply_distinct===true) {
+						if ($apply_distinct===true) {
 							# Define as default order prevent apply default behavior
 							$this->sql_query_order_default = $sql_select .' ASC';
 							# Define custom sql_query_order_window_subselect
@@ -1262,7 +1262,7 @@ class search_development2 {
 					}
 
 					# Add line
-					if ($aply_distinct===true) {
+					if ($apply_distinct===true) {
 						# Force key 0 to overwrite first select line
 						$ar_sql_select[0] = $sql_select;
 						# Move section_id column to end of select
