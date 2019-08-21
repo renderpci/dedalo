@@ -1577,18 +1577,19 @@ class search_development2 {
 				$ar_custom_queryorder = [];
 				foreach ($this->search_query_object->order_custom as $item_key => $order_item) {
 					
-					$column_name   	= $order_item->column_name;
-					$column_values 	= $order_item->column_values;
-					$table 			= ($item_key>0) ? 'x'.$item_key : 'x';					
+					$column_section_tipo   	= '\''.$order_item->section_tipo.'\''; // added 21-08-2019
+					$column_name   			= $order_item->column_name;
+					$column_values 			= $order_item->column_values;
+					$table 					= ($item_key>0) ? 'x'.$item_key : 'x';					
 
 					$pairs = [];
 					foreach ($column_values as $key => $value) {
 						$value 	 = is_string($value) ? "'" . $value . "'" : $value;
-						$pair 	 = '('.$value.','.($key+1).')';
+						$pair 	 = '('.$column_section_tipo.','.$value.','.($key+1).')';
 						$pairs[] = $pair;
 					}
 					// Join like: LEFT JOIN (VALUES (7,1),(1,2)) as x(ordering_id, ordering) ON main_select.section_id = x.ordering_id ORDER BY x.ordering ASC
-					$ar_custom_query[] 		= 'LEFT JOIN (VALUES '.implode(',', $pairs).') as '.$table.'(ordering_id, ordering) ON main_select.'.$column_name.'='.$table.'.ordering_id';
+					$ar_custom_query[] 		= 'LEFT JOIN (VALUES '.implode(',', $pairs).') as '.$table.'(ordering_section_tipo, ordering_id, ordering) ON main_select.'.$column_name.'='.$table.'.ordering_id AND main_select.section_tipo='.$table.'.ordering_section_tipo'; // added 21-08-2019
 					$ar_custom_queryorder[] = 'ORDER BY '.$table.'.ordering ASC';
 				}				
 				$this->sql_query_order_custom = implode(' ', $ar_custom_query) . ' ' . implode(',', $ar_custom_queryorder);
