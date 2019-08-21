@@ -1376,6 +1376,7 @@ class component_portal extends component_relation_common {
 							return (int)$locator->section_id;
 						}, $dato);					
 						$item = new stdClass();
+							$item->section_tipo  = $section_tipo;
 							$item->column_name 	 = 'section_id';
 							$item->column_values = $order_values;		
 						$search_query_object_options->order_custom = [$item];
@@ -1833,6 +1834,7 @@ class component_portal extends component_relation_common {
 						return (int)$locator->section_id;
 					}, $dato);					
 					$item = new stdClass();
+						$item->section_tipo  = reset($target_section_tipo); // mono ?
 						$item->column_name 	 = 'section_id';
 						$item->column_values = $order_values;		
 					$search_query_object_options->order_custom = [$item];

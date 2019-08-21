@@ -1963,6 +1963,7 @@ class component_relation_common extends component_common {
 					return (int)$locator->section_id;
 				}, $dato);
 				$item = new stdClass();
+					$item->section_tipo  = reset($ar_target_section_tipo); // mono ?
 					$item->column_name 	 = 'section_id';
 					$item->column_values = $order_values;
 				$order_custom = [$item];
