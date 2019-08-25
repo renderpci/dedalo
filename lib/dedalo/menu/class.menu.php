@@ -79,13 +79,13 @@ class menu extends common {
 			$uid=(string)$option;
 			if( isset($_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG]) ) {
 				#error_log("--get_menu_structure_html is returned from session cache");
-				if(SHOW_DEBUG===true) {
+				##if(SHOW_DEBUG===true) {
 					# nothing to do;
 					#dump($uid, '$uid');
 					#return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
-				}else{
+				##}else{
 					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
-				}											
+				##}											
 			}				
 		}
 
@@ -159,11 +159,11 @@ class menu extends common {
 		
 		# STORE CACHE DATA
 		if ($option==='create_link') {
-			if (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
+			##if (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 				# Nothing to store
-			}else{
+			##}else{
 				$_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG] = tools::clean_html_code($menu_structure_html);				
-			}
+			##}
 		}
 
 		if(SHOW_DEBUG===true) {
