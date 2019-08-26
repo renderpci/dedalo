@@ -383,8 +383,8 @@ class component_autocomplete_hi extends component_relation_common {
 	/**
 	* BUILD_SEARCH_QUERY_OBJECT
 	* @return object $search_query_object
-	*/
-	public static function build_search_query_object($request_options) {
+	
+	public static function build_search_query_object_DES($request_options) {
 
 		$options = new stdClass();
 			$options->q 	 			= null;
@@ -482,7 +482,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 		return (object)$search_query_object;
 	}//end build_search_query_object
-
+	*/
 
 
 	/**
