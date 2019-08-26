@@ -4733,6 +4733,7 @@ abstract class component_common extends common {
 			$item->section_id 			= $this->get_section_id();
 			$item->section_tipo 		= $this->get_section_tipo();
 			$item->tipo 				= $this->get_tipo();
+			$item->lang 				= $this->get_lang();
 			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;				
 			$item->value 				= $value;
 		
