@@ -127,7 +127,7 @@ class component_section_id extends component_common {
 		$query_object->component_path = ['section_id'];
 		
 		$query_object->unaccent = false;	
-
+		
 
         switch (true) {
         	# BETWEEN

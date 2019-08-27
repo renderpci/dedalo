@@ -16,7 +16,7 @@
 			$page_item->lang 	 	 = DEDALO_DATA_LANG;
 
 			// add
-			$page_items[] = $page_item;
+			#$page_items[] = $page_item;
 
 		// item (section, tool, etc.)
 		$page_item = new StdClass();
