@@ -62,7 +62,9 @@ class search_development2 {
 		# matrix tables
 		protected $ar_matrix_tables;
 
-	
+		# filter_by_locators
+		protected $filter_by_locators;
+
 
 	/**
 	* __CONSTRUCT
@@ -122,6 +124,10 @@ class search_development2 {
 		if(!isset($this->search_query_object->select)) {
 			$this->search_query_object->select = [];
 		}
+
+		if(isset($this->search_query_object->filter_by_locators)) {
+			$this->filter_by_locators = $this->search_query_object->filter_by_locators;
+		}		
 
 		# Default records limit
 		if(!isset($this->search_query_object->limit)) {
@@ -287,8 +293,8 @@ class search_development2 {
 
 		#debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		#debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
-		
-
+		#error_log(to_string($sql_query));
+	
 		return $records_data;
 	}//end search
 
@@ -831,15 +837,15 @@ class search_development2 {
 		}		
 
 		# Search elements. Order is important 	
-			$main_where_sql 	= $this->build_main_where_sql();
-			$sql_query_order 	= $this->build_sql_query_order();	// Order before select !
-			$sql_query_select 	= $this->build_sql_query_select($full_count);
-			$sql_filter 		= $this->build_sql_filter();
-			$sql_projects_filter= $this->build_sql_projects_filter();
-			$sql_joins 			= $this->get_sql_joins();
-			$main_from_sql  	= $this->build_main_from_sql();	
-			$sql_limit 			= $this->search_query_object->limit;
-			$sql_offset 		= $this->search_query_object->offset;
+			$main_where_sql 		= $this->build_main_where_sql();
+			$sql_query_order 		= $this->build_sql_query_order();	// Order before select !
+			$sql_query_select 		= $this->build_sql_query_select($full_count);
+			$sql_filter 			= $this->build_sql_filter();			
+			$sql_projects_filter	= $this->build_sql_projects_filter();
+			$sql_joins 				= $this->get_sql_joins();
+			$main_from_sql  		= $this->build_main_from_sql();	
+			$sql_limit 				= $this->search_query_object->limit;
+			$sql_offset 			= $this->search_query_object->offset;
 
 			if (empty($sql_query_order)) {
 				$sql_query_order = $this->build_sql_query_order_default();
@@ -855,6 +861,24 @@ class search_development2 {
 		$sql_query  = '';
 
 		switch (true) {
+
+		// sql_filter_by_locators
+			case (isset($this->filter_by_locators)):
+
+				$sql_filter_by_locators		 = $this->build_sql_filter_by_locators();
+				$sql_filter_by_locators_order= $this->build_sql_filter_by_locators_order();
+				
+				// select 
+					$sql_query .= 'SELECT * FROM(';
+					$sql_query .= PHP_EOL . 'SELECT *';
+					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+					$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
+					$sql_query .= PHP_EOL . ') main_select';
+				// order
+					$sql_query .= PHP_EOL . $sql_filter_by_locators_order;
+				// limit
+					$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+				break;
 
 		// count case 
 			case ($full_count===true):
@@ -875,6 +899,8 @@ class search_development2 {
 					$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
 					if (!empty($sql_filter)) {
 						$sql_query .= $sql_filter;
+					}elseif (!empty($sql_filter_by_locators)) {
+						$sql_query .= $sql_filter_by_locators;
 					}
 					#if (!empty($sql_projects_filter)) {
 					#	$sql_query .= $sql_projects_filter;
@@ -884,7 +910,7 @@ class search_development2 {
 					}
 					if (!empty($this->filter_join_where)) {
 						$sql_query .= $this->filter_join_where;
-					}
+					}					
 				// multisection union case
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
@@ -919,6 +945,8 @@ class search_development2 {
 							$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;					
 							if (!empty($sql_filter)) {
 								$sql_query .= $sql_filter;
+							}elseif (!empty($sql_filter_by_locators)) {
+								$sql_query .= $sql_filter_by_locators;
 							}
 							if (isset($this->filter_by_user_records)) {
 								$sql_query .= $this->filter_by_user_records;
@@ -995,13 +1023,15 @@ class search_development2 {
 							$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;					
 							if (!empty($sql_filter)) {
 								$sql_query .= $sql_filter;
+							}elseif (!empty($sql_filter_by_locators)) {
+								$sql_query .= $sql_filter_by_locators;
 							}
 							if (isset($this->filter_by_user_records)) {
 								$sql_query .= $this->filter_by_user_records;
 							}
 							if (!empty($this->filter_join_where)) {
 								$sql_query .= $this->filter_join_where;
-							}
+							}							
 						// multi section union case
 							if (count($this->ar_section_tipo)>1) {
 								$sql_query = $this->build_union_query($sql_query);
@@ -1722,6 +1752,57 @@ class search_development2 {
 
 		return $filter_query;
 	}//end build_sql_filter
+
+
+
+	/**
+	* BUILD_SQL_FILTER_BY_LOCATORS
+	* @return string | null 
+	*/
+	public function build_sql_filter_by_locators() {
+		
+		$table = $this->main_section_tipo_alias;
+
+		$ar_parts = [];
+		foreach ($this->filter_by_locators as $key => $current_locator) {
+			
+			$string_query  = '';
+			$string_query .= '(';
+			$string_query .= $table.'.section_id='.$current_locator->section_id;
+			$string_query .= ' AND ';
+			$string_query .= $table.'.section_tipo=\''.$current_locator->section_tipo.'\'';
+			$string_query .= ')';
+
+			$ar_parts[] = $string_query;
+		}
+
+		$sql_filter = PHP_EOL . implode(' OR ', $ar_parts);
+		
+		return $sql_filter;
+	}//end build_sql_filter_by_locators
+
+
+	/**
+	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
+	* @return 
+	*/
+	public function build_sql_filter_by_locators_order() {
+		
+		$ar_values = [];
+		foreach ($this->filter_by_locators as $key => $current_locator) {
+
+			$value = '(\''.$current_locator->section_tipo.'\'';
+			$value .= ','.$current_locator->section_id;
+			$value .= ','.($key+1).')';
+			
+			$ar_values[] = $value;
+		}
+
+		$string_query = 'LEFT JOIN (VALUES ' . implode(',', $ar_values) . ') as x(ordering_section, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section ORDER BY x.ordering ASC';
+
+
+		return $string_query;
+	}//end build_sql_filter_by_locators_order
 	
 
 
