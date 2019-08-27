@@ -4789,8 +4789,17 @@ abstract class component_common extends common {
 
 		$properties = $this->get_propiedades();
 
-		$limit 	= $this->limit ?? $properties->max_records ?? 10;
-		$offset = $this->offset ?? 0;
+		switch ($this->get_modo()) {
+			case 'list':
+				$limit = $this->pagination->limit ?? $properties->list_max_records ?? 10;
+				break;
+			
+			default:
+				$limit = $this->pagination->limit ?? $properties->max_records ?? 10;
+				break;
+		}
+
+		$offset = $this->pagination->offset ?? 0;
 
 		$dato = $this->get_dato();
 
@@ -4800,6 +4809,7 @@ abstract class component_common extends common {
 			$paginated_key = $key + $offset;
 			$value->paginated_key = $paginated_key;
 		}
+
 
 		return $dato_paginated;		
 	}//end get_dato_paginated
