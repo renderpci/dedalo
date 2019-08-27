@@ -3902,110 +3902,6 @@ abstract class component_common extends common {
 	################################## SEARCH 2 ########################################################
 
 
-
-	/**
-	* BUILD_SEARCH_QUERY_OBJECT
-	* Generic builder for search_query_object (override when need)
-	* @return object $query_object
-	*/
-	public static function build_search_query_object( $request_options ) {
-
-		$start_time=microtime(1);
-	
-		$options = new stdClass();
-			$options->q 	 			= null;
-			$options->q_operator		= null;
-			$options->q_split			= null;
-			$options->limit  			= 10;
-			$options->offset 			= 0;
-			$options->lang 				= 'all';
-			$options->logical_operator 	= '$or';
-			$options->id 				= 'temp';
-			$options->section_tipo		= null; // use always array as value
-			$options->add_filter		= true;
-			$options->add_select		= true;
-			$options->tipo				= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		$id 			  = $options->id;
-		$logical_operator = $options->logical_operator;
-		$tipo 			  = $options->tipo;
-		
-		# Default from options (always array)
-		$section_tipo = is_array($options->section_tipo) ? $options->section_tipo : [$options->section_tipo];
-
-		# Defaults
-		$filter_group = null;
-		$select_group = array();		
-
-		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
-		$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_propiedades(true);
-
-		// source search. If not defined, use fallback to legacy related terms and build one
-			$config_context = component_common::get_config_context($tipo, $external=false);
-
-		// config_context iteration
-			foreach ($config_context as $source_search_item) {
-				
-				foreach ($source_search_item->search as $current_tipo) {
-
-					// check is real component
-						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-						if (strpos($model,'component')!==0) {
-							debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
-							continue;
-						}
-									
-					$path = search_development2::get_query_path($current_tipo, $source_search_item->section_tipo);
-
-					# FILTER . filter_element (operator_group)
-						if ($options->add_filter===true) {
-										
-							$filter_element = new stdClass();
-								$filter_element->q 		= $options->q;
-								$filter_element->lang 	= $options->lang;
-								$filter_element->path 	= $path;
-
-							if(!isset($filter_group)) {
-								$filter_group = new stdClass();
-							}
-							$filter_group->$logical_operator[] = $filter_element;
-						}
-
-					# SELECT . Select_element (select_group)
-						if($options->add_select===true){
-
-							# Add options lang
-							$end_path = end($path);
-							$end_path->lang = $options->lang;
-
-							$select_element = new stdClass();
-								$select_element->path = $path;
-
-							$select_group[] = $select_element;
-						}
-						
-
-				}//end foreach ($source_search_item->components as $current_tipo)
-
-			}//end foreach ($source_search as $source_search_item) {
-		
-		// sqo		
-			$query_object = new stdClass();
-				$query_object->typo  	   	= 'sqo';
-				$query_object->id  	   		= $id;
-				$query_object->section_tipo = $section_tipo;
-				$query_object->filter  		= $filter_group;
-				$query_object->select  		= $select_group;
-				$query_object->limit   		= $options->limit;
-				$query_object->offset  		= $options->offset;
-		
-
-		return (object)$query_object;
-	}//end build_search_query_object
-
-
-
 	/**
 	* GET_SEARCH_QUERY2
 	* @return array $ar_query_object
@@ -4708,97 +4604,77 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_COMPONENT_LANG
-	* Used to resolve component lang before construct it
-	* @return lang code like 'lg-spa'
-	*/
-	public static function get_component_lang($tipo, $data_lang=DEDALO_DATA_LANG) {
-		
-		$RecordObj_dd 	= new RecordObj_dd($tipo);
-		$lang 			= ($RecordObj_dd->get_traducible()==='si') ? $data_lang : DEDALO_DATA_NOLAN;
-
-		return $lang;
-	}//end get_component_lang
-
-
-
-	/**
-	* GET_DATA_ITEM
-	* @param mixed $value
-	* @return object $item
-	*/
-	public function get_data_item($value) {
-
-		$item = new stdClass();
-			$item->section_id 			= $this->get_section_id();
-			$item->section_tipo 		= $this->get_section_tipo();
-			$item->tipo 				= $this->get_tipo();
-			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;				
-			$item->value 				= $value;
-		
-		return $item;
-	}//end get_data_item
-
-
-
-	/**
 	* UPDATE_DATA_VALUE
 	* Used to maintain component data when dd_api saves component
 	* @param object $data
 	* @return bool true
 	* @see dd_api update 
 	*/
-	public function update_data_value($data) {
+	public function update_data_value($changed_data) {
 
-		$changed_data 		= $data->changed_data;
-		$value 				= $data->value;
+		$dato 				= $this->get_dato();
 		$lang 				= $this->get_lang();
 		$properties 		= $this->get_propiedades();
 		$with_lang_versions = $properties->with_lang_versions ?? false;
 
+		switch ($changed_data->action) {
+			case 'insert':
+				$dato[$changed_data->key] = $changed_data->value;
+				$this->set_dato($dato);
 
-		switch (true) {
-			case ($changed_data->key===false && $changed_data->value===null):
-
-				if(!empty($value)) {
-					throw new Exception("Error Processing Request. Expected empty value and received: " .json_encode($value), 1);
-					return false;
-				}			
-				$this->set_dato($value);
 				break;
+			case 'update':
+				$dato[$changed_data->key] = $changed_data->value;
+				$this->set_dato($dato);
 
-			case ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)):
+				break;
+			case 'remove':
+				switch (true) {
+					case ($changed_data->key===false && $changed_data->value===null):
+						$value = [];
+						$this->set_dato($value);
+						break;
 
-				// propagate to other data langs
-				$section = section::get_instance($this->get_parent(), $this->get_section_tipo());
+					case ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)):
 
-				// deactivate save option
-				$this->save_to_database = false; 
+						// propagate to other data langs
+						$section = section::get_instance($this->get_parent(), $this->get_section_tipo());
 
-				$ar_langs = $this->get_component_ar_langs();
-				foreach ($ar_langs as $current_lang) {
+						// deactivate save option
+						$this->save_to_database = false; 
+
+						$ar_langs = $this->get_component_ar_langs();
+						foreach ($ar_langs as $current_lang) {
+							
+							// change lang and get dato
+							$this->set_lang($current_lang);
+							$dato = $this->get_dato();
+							
+							// remove null key and set dato updated
+							array_splice($dato, $changed_data->key, 1);
+							$this->set_dato($dato);				
+							
+							// send to section for fix data (avoid save each lang)
+							$section->save_component_dato($this);
+						}
+
+						// reactivate save option
+						$this->save_to_database = true; 
+						break;
 					
-					// change lang and get dato
-					$this->set_lang($current_lang);
-					$dato = $this->get_dato();
-					
-					// remove null key and set dato updated
-					array_splice($dato, $changed_data->key, 1);
-					$this->set_dato($dato);				
-					
-					// send to section for fix data (avoid save each lang)
-					$section->save_component_dato($this);
+					default:
+						$key = $changed_data->key;
+						array_splice($dato, $key, 1);
+						$this->set_dato($dato);
+						break;
 				}
-
-				// reactivate save option
-				$this->save_to_database = true; 
 				break;
 			
 			default:
-				$this->set_dato($value);
+				# code...
 				break;
 		}
-		
+
 		
 		return true;
 	}//end update_data_value
@@ -4862,19 +4738,30 @@ abstract class component_common extends common {
 			}
 
 		}else{
+			
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
-			$ar_related_components = [];
-			foreach ($ar_related as $key => $current_tipo) {
-						
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				
-				if ($modelo_name==='section') {
-					$target_section_tipo = $current_tipo; // Set portal_section_tipo find it
-					continue;
+			if ($model==='section') {
+				// section
+				$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
+				$ar_related_components = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_tipo_exclude_elements=false);
+				$target_section_tipo = $tipo;
+			}else{
+
+				$ar_related = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
+
+				$ar_related_components = [];
+				foreach ($ar_related as $key => $current_tipo) {
+							
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					
+					if ($modelo_name==='section') {
+						$target_section_tipo = $current_tipo; // Set portal_section_tipo find it
+						continue;
+					}
+
+					$ar_related_components[] = $current_tipo;
 				}
-
-				$ar_related_components[] = $current_tipo;
 			}
 
 			// build config_context_item
@@ -4891,6 +4778,31 @@ abstract class component_common extends common {
 		
 		return $config_context;
 	}//end get_config_context
+
+
+
+	/**
+	* GET_DATO_PAGINATED
+	* @return 
+	*/
+	public function get_dato_paginated() {
+
+		$properties = $this->get_propiedades();
+
+		$limit 	= $this->limit ?? $properties->max_records ?? 10;
+		$offset = $this->offset ?? 0;
+
+		$dato = $this->get_dato();
+
+		$dato_paginated = array_slice($dato, $offset, $limit);
+
+		foreach ($dato_paginated as $key => $value) {
+			$paginated_key = $key + $offset;
+			$value->paginated_key = $paginated_key;
+		}
+
+		return $dato_paginated;		
+	}//end get_dato_paginated
 
 
 
