@@ -3063,8 +3063,8 @@ class section extends common {
 	/**
 	* BUILD_SEARCH_QUERY_OBJECT
 	* @return object $query_object
-	*/
-	public function build_search_query_object( $request_options=array() ) {
+	
+	public function build_search_query_object_DES( $request_options=array() ) {
 
 		$start_time=microtime(1);
 	
@@ -3162,7 +3162,7 @@ class section extends common {
 
 		return (object)$query_object;
 	}//end build_search_query_object
-
+	*/
 
 
 	/**
@@ -3433,12 +3433,15 @@ class section extends common {
 	*/
 	public function get_sqo_context() {
 
-		$sqo_context = [];
+		$sqo_context = new stdClass();
+
+		$show = [];
 
 		$section_tipo 	= $this->tipo;
 		$section_id 	= $this->section_id;
 		$mode 			= $this->modo;
 		$lang 			= $this->lang;
+
 
 		// Records_html. Render search form html using search.
 		// We know the current record id but we search like a list filtered by id for maintain always the same criterion 
@@ -3451,13 +3454,18 @@ class section extends common {
 				$search_query_object_options->limit  		= 1;
 				$search_query_object_options->offset 		= 0;
 				$search_query_object_options->filter_by_id 	= [$self_locator];
-			$search_query_object = $this->build_search_query_object($search_query_object_options);
+				$search_query_object_options->tipo 			= $section_tipo;
+				$search_query_object_options->section_tipo 	= [$section_tipo];
+			#$search_query_object = $this->build_search_query_object($search_query_object_options);
+			$search_query_object = common::build_search_query_object($search_query_object_options);
 
 			# Create new options object
-			$sqo_context = $search_query_object;
+			$show[] = $search_query_object;
 
-		return $sqo_context;
-		
+		$sqo_context->show 		= $show;
+		$sqo_context->search 	= [];
+
+		return $sqo_context;		
 	}//end get_sqo_context
 
 
@@ -3468,7 +3476,7 @@ class section extends common {
 	* Gets component_relation_model value (dato and value) in current section (by locator) 
 	* @return object $model_obj
 	*/
-	public static function get_section_model($locator, $lang=DEDALO_DATA_LANG) {
+	public static function get_section_model_DES($locator, $lang=DEDALO_DATA_LANG) {
 
 		$parent 		= $locator->section_id;
 		$section_tipo	= $locator->section_tipo;
