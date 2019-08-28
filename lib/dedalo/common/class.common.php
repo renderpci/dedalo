@@ -1632,7 +1632,14 @@ abstract class common {
 		$tipo = $this->tipo;
 		
 		// subcontext from layout_map items
-			$layout_map = $this->get_layout_map(); 		#dump($layout_map, ' layout_map CONTEXT ++ '.to_string($tipo));
+			$layout_map_options = new stdClass();
+				$layout_map_options->section_tipo 			= $this->get_section_tipo();
+				$layout_map_options->tipo 					= $this->get_tipo();
+				$layout_map_options->modo 					= $this->get_modo();
+				$layout_map_options->config_context_type 	= 'show';
+			
+			$layout_map = layout_map::get_layout_map($layout_map_options);
+
 			foreach ($layout_map as $dd_object) {
 
 				$dd_object 				= (object)$dd_object;
@@ -1645,7 +1652,7 @@ abstract class common {
 					// component case
 					case (strpos($model, 'component_')===0):						
 						
-						$current_lang 	 = $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);						
+						$current_lang 	 = $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);						
 						$related_element = component_common::get_instance($model,
 																		  $current_tipo,
 																		  null,
@@ -1696,16 +1703,20 @@ abstract class common {
 	*/
 	public function get_ar_subdata($ar_locators) {
 
-		$ar_subdata = [];		
-
+		$ar_subdata = [];
 		
-		
-		$source_componet_tipo 	= $this->tipo;
-		$source_model 			= RecordObj_dd::get_modelo_name_by_tipo($source_componet_tipo,true);
-		$source_properties 		= $this->get_propiedades();
+		$source_tipo 		= $this->get_tipo();
+		$source_model 		= RecordObj_dd::get_modelo_name_by_tipo($source_tipo,true);
+		$source_properties 	= $this->get_propiedades();
 
 		// Iterate dd_object (layout_map) for colums
-			$layout_map = $this->get_layout_map(); 	#dump($layout_map, ' layout_map DATA ++ '.to_string());
+			$layout_map_options = new stdClass();
+				$layout_map_options->section_tipo 			= $this->get_section_tipo();
+				$layout_map_options->tipo 					= $this->get_tipo();
+				$layout_map_options->modo 					= $this->get_modo();
+				$layout_map_options->config_context_type 	= 'show';
+			
+			$layout_map = layout_map::get_layout_map($layout_map_options); 
 
 			foreach ($ar_locators as $current_locator) {
 
@@ -1718,9 +1729,28 @@ abstract class common {
 					$current_tipo 	= $dd_object->tipo;
 					$mode 			= $dd_object->mode ?? 'list';
 					$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					$current_lang 	= $dd_object->lang ?? component_common::get_component_lang($current_tipo, DEDALO_DATA_LANG);
+					$current_lang 	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 										
 					switch (true) {
+
+						// section case
+						case ($model==='section'):
+
+							$datos = json_decode($current_locator->datos);
+
+							// section
+								$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
+								$section->set_dato($datos);
+								$section->set_bl_loaded_matrix_data(true);						
+						
+
+							// get component json
+								$get_json_options = new stdClass();
+									$get_json_options->get_context 	= false;
+									$get_json_options->get_data 	= true;
+								$element_json = $current_component->get_json($get_json_options);
+							break;
+
 						// components case
 						case (strpos($model, 'component_')===0):
 							// components
@@ -1778,29 +1808,14 @@ abstract class common {
 					}
 				}//end iterate display_items
 
+			
 				// dd_info, additional information about row
-				if (isset($source_properties->value_with_parents) && $source_properties->value_with_parents === true){
-					$value_with_parents = component_relation_common::get_locator_value($current_locator, DEDALO_DATA_LANG, $show_parents=true);
+					if (isset($source_properties->value_with_parents) && $source_properties->value_with_parents===true){
+						
+						$dd_info = common::get_ddinfo_parents($current_locator, $source_tipo);
 
-					$divisor = $source_properties->source->value_with_parents ?? ' | ';
-					
-					$source_term_model = section::get_section_model($current_locator);
-					
-					$dd_info_values = [
-						$source_term_model->name,
-						$value_with_parents
-					];					
-					$dd_info_value = [implode($divisor, $dd_info_values)];
-
-					$dd_info = new stdClass();
-						$dd_info->tipo 			= 'ddinfo';
-						$dd_info->section_id 	= $section_id;
-						$dd_info->section_tipo	= $section_tipo;
-						$dd_info->value 		= $dd_info_value;
-						$dd_info->parent 		= $source_componet_tipo;
-
-					$ar_subdata[] = $dd_info;
-				}// end $value_with_parent = true
+						$ar_subdata[] = $dd_info;
+					}// end $value_with_parent = true
 
 			}//end foreach ($ar_locators as $current_locator)
 
@@ -1814,7 +1829,7 @@ abstract class common {
 	* GET_LAYOUT_MAP
 	* Calculate common cases for layout_map
 	* Use for shared. Overwrite or continue for custom needs
-	*/
+	*//*
 	public function get_layout_map($view=null) {
 		
 		if (empty($this->layout_map)) {
@@ -1841,6 +1856,8 @@ abstract class common {
 		
 		return $this->layout_map;
 	}//end get_layout_map
+	*/
+
 
 
 	/**
@@ -1857,9 +1874,213 @@ abstract class common {
 
 		$sqo_context = [];
 
-		return $sqo_context;
-		
+		return $sqo_context;		
 	}//end get_sqo_context
+
+
+
+	/**
+	* GET_DDINFO_PARENTS
+	* @return object $dd_info
+	*/
+	public static function get_ddinfo_parents($locator, $source_component_tipo) {
+
+		$section_id 	= $locator->section_id;
+		$section_tipo 	= $locator->section_tipo;
+
+		$RecordObj_dd 	= new RecordObj_dd($source_component_tipo);
+		$properties 	= $RecordObj_dd->get_propiedades(true);
+
+		$divisor 		= $properties->source->divisor ?? ' | ';
+		
+		//$source_term_model  = section::get_section_model($locator);
+		
+		$dd_info_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, $show_parents=true,false, $divisor, false);
+
+		$dd_info = new stdClass();
+			$dd_info->tipo 			= 'ddinfo';
+			$dd_info->section_id 	= $section_id;
+			$dd_info->section_tipo	= $section_tipo;
+			$dd_info->value 		= [$dd_info_value];
+			$dd_info->parent 		= $source_component_tipo;
+		
+
+		return $dd_info;
+	}//end get_ddinfo_parents
+
+
+
+	/**
+	* BUILD_SEARCH_QUERY_OBJECT
+	* Generic builder for search_query_object (override when need)
+	* @return object $query_object
+	*/
+	public static function build_search_query_object( $request_options ) {
+
+		$start_time=microtime(1);
+	
+		$options = new stdClass();
+			$options->q 	 			= null;
+			$options->q_operator		= null;
+			$options->q_split			= null;
+			$options->limit  			= 10;
+			$options->offset 			= 0;
+			$options->lang 				= 'all';
+			$options->logical_operator 	= '$or';
+			$options->id 				= 'temp';
+			$options->section_tipo		= null; // use always array as value
+			$options->add_filter		= true;
+			$options->add_select		= true;
+			$options->tipo				= null;
+			$options->order_custom		= null;
+			$options->filter_by_locator	= false;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$id 			  = $options->id;
+		$logical_operator = $options->logical_operator;
+		$tipo 			  = $options->tipo;
+		
+		# Default from options (always array)
+		$section_tipo = is_array($options->section_tipo) ? $options->section_tipo : [$options->section_tipo];
+
+		# Defaults
+		$filter_group = null;
+		$select_group = array();	
+		$total_locators = false;	
+
+		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
+		$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_propiedades(true);
+
+		// source search. If not defined, use fallback to legacy related terms and build one
+			$config_context = component_common::get_config_context($tipo, $external=false);
+
+		// config_context iteration
+			foreach ($config_context as $source_search_item) {
+				
+				foreach ($source_search_item->search as $current_tipo) {
+
+					// check is real component
+						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+						if (strpos($model,'component')!==0) {
+							debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
+							continue;
+						}
+									
+					$path = search_development2::get_query_path($current_tipo, $source_search_item->section_tipo);
+
+					# FILTER . filter_element (operator_group)
+						if ($options->add_filter===true) {
+							// filter_by_locator case
+
+							if ($options->filter_by_locator!==false) {
+								$ar_section_id = [];
+								// Is an array of objects					
+									foreach ((array)$options->filter_by_locator as $key => $value_obj) {
+										$current_section_id = (int)$value_obj->section_id;
+										if (!in_array($current_section_id, $ar_section_id)) {
+											$ar_section_id[] = $current_section_id;
+										}						
+									}
+									
+									$filter_element = new stdClass();
+										$filter_element->q 		= json_encode($ar_section_id);
+										$filter_element->path 	= json_decode('[
+						                    {
+						                        "section_tipo": "'.$source_search_item->section_tipo.'",
+						                        "component_tipo": "dummy",
+						                        "modelo": "component_section_id",
+						                        "name": "Portal searching"
+						                    }
+						                ]');
+										
+									$logical_operator = '$and';
+
+									$total_locators = count($ar_section_id);
+									
+							}else{//end if ($options->filter_by_locator!==false)
+								
+								$filter_element = new stdClass();
+									$filter_element->q 		= $options->q;
+									$filter_element->lang 	= $options->lang;
+									$filter_element->path 	= $path;
+							}
+							
+							if(!isset($filter_group)) {
+								$filter_group = new stdClass();
+							}
+							$filter_group->$logical_operator[] = $filter_element;
+						}
+
+
+					# SELECT . Select_element (select_group)
+						if($options->add_select===true){
+
+							# Add options lang
+							$end_path = end($path);
+							$end_path->lang = $options->lang;
+
+							$select_element = new stdClass();
+								$select_element->path = $path;
+
+							$select_group[] = $select_element;
+						}
+						
+
+				}//end foreach ($source_search_item->components as $current_tipo)
+
+			}//end foreach ($source_search as $source_search_item) {
+		
+		// sqo		
+			$query_object = new stdClass();
+				$query_object->typo  	   	= 'sqo';
+				$query_object->id  	   		= $id;
+				$query_object->section_tipo = $section_tipo;
+				$query_object->filter  		= $filter_group;
+				$query_object->select  		= $select_group;
+				$query_object->order_custom = $options->order_custom;
+				$query_object->limit   		= $options->limit;
+				$query_object->offset  		= $options->offset;
+				$query_object->full_count  	= $total_locators>0 ? $total_locators : false ;
+		
+
+		return (object)$query_object;
+	}//end build_search_query_object
+
+
+
+	/**
+	* GET_DATA_ITEM
+	* @param mixed $value
+	* @return object $item
+	*/
+	public function get_data_item($value) {
+
+		$item = new stdClass();
+			$item->section_id 			= $this->get_section_id();
+			$item->section_tipo 		= $this->get_section_tipo();
+			$item->tipo 				= $this->get_tipo();
+			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;				
+			$item->value 				= $value;
+		
+		return $item;
+	}//end get_data_item
+
+
+
+	/**
+	* GET_ELEMENT_LANG
+	* Used to resolve component lang before construct it
+	* @return lang code like 'lg-spa'
+	*/
+	public static function get_element_lang($tipo, $data_lang=DEDALO_DATA_LANG) {
+		
+		$RecordObj_dd 	= new RecordObj_dd($tipo);
+		$lang 			= ($RecordObj_dd->get_traducible()==='si') ? $data_lang : DEDALO_DATA_NOLAN;
+
+		return $lang;
+	}//end get_element_lang
+
+
 
 }//end class
 ?>

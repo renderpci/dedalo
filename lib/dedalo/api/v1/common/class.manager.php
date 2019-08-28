@@ -42,8 +42,8 @@ class manager {
 					$dedalo_data = (object)dd_api::read( $options );
 					break;
 
-				case 'update':
-					$dedalo_data = (object)dd_api::update( $options );
+				case 'save':
+					$dedalo_data = (object)dd_api::save( $options );
 					break;
 
 				case 'count':

@@ -42,6 +42,8 @@
 			
 		// data item
 		$item  = $this->get_data_item($value);
+		$item->parent_tipo 			= $this->get_tipo();
+		$item->parent_section_id 	= $this->get_section_id();
 
 		$data[] = $item;
 
