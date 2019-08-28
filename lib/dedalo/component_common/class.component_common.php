@@ -4604,6 +4604,42 @@ abstract class component_common extends common {
 
 
 	/**
+
+	* GET_COMPONENT_LANG
+	* Used to resolve component lang before construct it
+	* @return lang code like 'lg-spa'
+	*/
+	public static function get_component_lang($tipo, $data_lang=DEDALO_DATA_LANG) {
+		
+		$RecordObj_dd 	= new RecordObj_dd($tipo);
+		$lang 			= ($RecordObj_dd->get_traducible()==='si') ? $data_lang : DEDALO_DATA_NOLAN;
+
+		return $lang;
+	}//end get_component_lang
+
+
+
+	/**
+	* GET_DATA_ITEM
+	* @param mixed $value
+	* @return object $item
+	*/
+	public function get_data_item($value) {
+
+		$item = new stdClass();
+			$item->section_id 			= $this->get_section_id();
+			$item->section_tipo 		= $this->get_section_tipo();
+			$item->tipo 				= $this->get_tipo();
+			$item->lang 				= $this->get_lang();
+			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;				
+			$item->value 				= $value;
+		
+		return $item;
+	}//end get_data_item
+
+
+
+	/**
 	* UPDATE_DATA_VALUE
 	* Used to maintain component data when dd_api saves component
 	* @param object $data
