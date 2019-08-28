@@ -117,21 +117,22 @@ class dd_api {
 
 	/**
 	* 
-	* UPDATE
+	* SAVE
 	* @return array $result
 	*/
-	static function update($json_data) {
+	static function save($json_data) {
 		global $start_time;
 
 		session_write_close();
-		// create the default update response
+		// create the default save response
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// get the context and data sended
-		$context 	= $json_data->context;
-		$data 		= $json_data->data;
+		$context 		= $json_data->context;
+		$data 			= $json_data->data;
+		
 		//get the type of the dd_object that is calling to update
 		$context_type = $context->type;
 		// switch the type (component, section)
@@ -144,14 +145,13 @@ class dd_api {
 					$section_tipo 	= $context->section_tipo;
 					$section_id 	= $data->section_id;
 					$lang 			= $context->lang;
-					$value 			= $data->value;
 					$changed_data 	= $data->changed_data;
 
 				// build the component
 					$component = component_common::get_instance( $model,
 																 $tipo,
 																 $section_id,
-																 'list',
+																 'edit',
 																 $lang,
 																 $section_tipo);
 				// get the component permisions
@@ -160,9 +160,19 @@ class dd_api {
 					if($permissions < 2) return $response;
 
 				// update the dato with the change data send by client
-					$component->update_data_value($data);
+					$component->update_data_value($changed_data);
 				// save the new data to the component
-					$result = $component->Save();
+					$component->Save();
+
+				// element json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context 	= true;
+						$get_json_options->get_data 	= true;
+					$element_json = $component->get_json($get_json_options);
+
+				// data add
+					$result = $element_json;
+
 
 				break;
 			
@@ -185,7 +195,7 @@ class dd_api {
 
 
 		return (object)$response;
-	}//end update
+	}//end save
 
 
 	
@@ -236,10 +246,248 @@ class dd_api {
 
 
 
+
 	/**
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
+	private static function build_json_rows($sqo_context) {
+		
+		$start_time=microtime(1);
+
+		// default result
+			$result = new stdClass();
+				$result->context = [];
+				$result->data 	 = [];
+
+		
+		// ar_dd_objects . Array of all dd objects in requested context
+			$ar_dd_objects = array_filter($sqo_context, function($item) {
+				 if($item->typo==='ddo') return $item;
+			});
+			// set as static to allow external access
+			dd_api::$ar_dd_objects = $ar_dd_objects;
+
+
+			/**/
+			// filter by section
+			$ar_ddo_source = array_filter($sqo_context, function($item) {
+				 if(isset($item->typo) && $item->typo==='source') return $item;
+			});
+			$ddo_source 	= reset($ar_ddo_source);
+			$mode 			= $ddo_source->mode;
+			$lang 			= $ddo_source->lang ?? null;
+			$section_tipo 	= $ddo_source->section_tipo ?? null;
+			$section_id 	= $ddo_source->section_id ?? null;
+			$tipo 			= $ddo_source->tipo;
+			$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		
+			$ar_search_query_object = array_filter($sqo_context, function($item){
+				 if($item->typo==='sqo') return $item;
+			});		
+		// context
+			$context = [];
+			foreach ($ar_search_query_object as $current_sqo) {
+				switch (true) {
+
+					case ($model==='section'):
+						// section
+							$element = sections::get_instance(null, $current_sqo, $tipo, $mode, $lang);
+						break;
+
+					case (strpos($model, 'component_')===0):
+						// component
+							$element 		= component_common::get_instance($model,
+																			 $tipo,
+																			 null,
+																			 $mode,
+																			 $lang,
+																			 $section_tipo);					
+						break;
+					
+					default:
+						# not defined modelfro context / data								
+						debug_log(__METHOD__." 1. Ignored model '$model' - tipo: $tipo ".to_string(), logger::WARNING);
+						break;
+				}// end switch (true)			
+
+				// element json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context 	= true;
+						$get_json_options->get_data 	= false;
+					$element_json = $element->get_json($get_json_options);
+
+				// context add 
+					$context = $element_json->context;
+			}
+
+			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
+			
+	
+		// data
+			$data = [];
+			
+			$data_start_time=microtime(1);
+			
+			foreach ($ar_search_query_object as $current_sqo) {
+				
+
+					switch (true) {
+
+						case ($model==='section'):
+							/*
+								// search
+									$search_development2 = new search_development2($current_sqo);
+									$rows_data 			 = $search_development2->search();
+
+								// section. generated the self section_data
+								foreach ($current_sqo->section_tipo as $current_section_tipo) {
+								
+									$section_data = new stdClass();
+										$section_data->tipo 		= $current_section_tipo;
+										$section_data->section_tipo = $current_section_tipo;														
+										$ar_section_id = [];
+										foreach ($rows_data->ar_records as $current_row) {
+											if ($current_row->section_tipo===$current_section_tipo) {
+												$ar_section_id[] = $current_row->section_id;
+											}
+										}
+										$section_data->value 		= $ar_section_id;
+
+										// pagination info
+										$section_data->offset 		= $current_sqo->offset;
+										$section_data->limit 		= $current_sqo->limit;
+										$section_data->total 		= $current_sqo->full_count;
+									
+									$data[] = $section_data;
+								}
+
+								// Iterate records
+								$i=0; foreach ($rows_data->ar_records as $record) {
+
+									$section_id   	= $record->section_id;
+									$section_tipo 	= $record->section_tipo;
+									$datos			= json_decode($record->datos);
+									
+									if (!isset($section_dd_object)) {
+										$section_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($section_tipo){
+											if($item->model==='section' && $item->section_tipo===$section_tipo) return $item;
+											return $carry;
+										});
+									}
+
+									$mode = $section_dd_object->mode;
+
+									// Inject known dato to avoid re connect to database
+										$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
+										$section->set_dato($datos);
+										$section->set_bl_loaded_matrix_data(true);						
+									
+									// get section json
+										$get_json_options = new stdClass();
+											$get_json_options->get_context 	= false;
+											$get_json_options->get_data 	= true;
+										$section_json = $section->get_json($get_json_options);
+									
+									// data add
+										$data = array_merge($data, $section_json->data);
+
+									// get_ddinfo_parents
+										if (isset($current_sqo->value_with_parents) && $current_sqo->value_with_parents===true) {
+											
+											$locator = new locator();
+												$locator->set_section_tipo($section_tipo);
+												$locator->set_section_id($section_id);
+											
+											$dd_info = common::get_ddinfo_parents($locator, $current_sqo->source_component_tipo);
+
+											$data[] = $dd_info;
+										}
+
+
+								$i++; }//end iterate records
+								*/
+
+							// setions instance
+							$element = sections::get_instance(null, $current_sqo, $tipo, $mode,$lang);		
+
+							break;
+
+						case (strpos($model, 'component_')===0):
+							
+							// component instance
+							$element 		= component_common::get_instance($model,
+																		 $tipo,
+																		 $section_id,
+																		 $mode,
+																		 $lang,
+																		 $section_tipo);
+							// fix pagination vars
+							$element->limit 	= $current_sqo->limit ?? null;
+							$element->offset 	= $current_sqo->offset ?? null;
+
+								dump($element, ' element +------+ '.to_string());
+
+							break;
+						
+						default:
+							# not defined modelfro context / data								
+							debug_log(__METHOD__." 1. Ignored model '$model' - tipo: $tipo ".to_string(), logger::WARNING);
+							break;
+					}// end switch (true)	
+
+
+					// add if exists
+						if (isset($element)) {
+
+							// element json
+								$get_json_options = new stdClass();
+									$get_json_options->get_context 	= false;
+									$get_json_options->get_data 	= true;
+								$element_json = $element->get_json($get_json_options);
+
+							// data add
+								$data = array_merge($data, $element_json->data);
+
+						}//end if (isset($element)) 
+
+				// store search_query_object
+					$context[] = $current_sqo;				
+			
+			}//end foreach ($ar_search_query_object as $current_sqo)
+			// smart remove data duplicates (!)
+				$data = self::smart_remove_data_duplicates($data);
+
+			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
+			
+
+		// Set result object
+			$result->context = $context;
+			$result->data 	 = $data;
+				//dump($result, ' result ++ '.to_string());
+		
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->context_exec_time 	= $context_exec_time;
+					$debug->data_exec_time 		= $data_exec_time;
+					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
+				$result->debug = $debug;	
+			}			
+	
+
+		return $result;
+	}//end build_json_rows
+
+
+
+
+
+
+	/**
+	* BUILD_JSON_ROWS
+	* @return object $result
+	*//*
 	private static function build_json_rows($ar_context) {
 		
 		$start_time=microtime(1);
@@ -260,7 +508,7 @@ class dd_api {
 		
 		// context
 			$context = [];
-			/**/
+			
 			// filter by section
 			$ar_sections_dd_objects = array_filter($ar_dd_objects, function($item) {
 				 if(isset($item->model) && $item->model==='section') return $item;
@@ -330,7 +578,7 @@ class dd_api {
 	
 		// data
 			$data = [];
-			/**/
+			
 			$data_start_time=microtime(1);
 			$ar_search_query_object = array_filter($ar_context, function($item){
 				 if($item->typo==='sqo') return $item;
@@ -376,7 +624,7 @@ class dd_api {
 								return $carry;
 							});
 						}
-						
+
 						$mode = $section_dd_object->mode;
 
 						// Inject known dato to avoid re connect to database
@@ -392,6 +640,19 @@ class dd_api {
 						
 						// data add
 							$data = array_merge($data, $section_json->data);
+
+						// get_ddinfo_parents
+							if (isset($current_sqo->value_with_parents) && $current_sqo->value_with_parents===true) {
+								
+								$locator = new locator();
+									$locator->set_section_tipo($section_tipo);
+									$locator->set_section_id($section_id);
+								
+								$dd_info = common::get_ddinfo_parents($locator, $current_sqo->source_component_tipo);
+
+								$data[] = $dd_info;
+							}
+
 
 					$i++; }//end iterate records
 
@@ -422,7 +683,7 @@ class dd_api {
 
 		return $result;
 	}//end build_json_rows
-
+	*/
 
 
 	/**
