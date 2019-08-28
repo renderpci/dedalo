@@ -208,6 +208,7 @@ class dd_api {
 	}//end delete
 
 
+
 	/**
 	* 
 	* COUNT
@@ -242,8 +243,7 @@ class dd_api {
 
 
 
-
-
+	// private methods ///////////////////////////////////
 
 
 
@@ -269,47 +269,64 @@ class dd_api {
 			dd_api::$ar_dd_objects = $ar_dd_objects;
 
 
-			/**/
-			// filter by section
-			$ar_ddo_source = array_filter($sqo_context, function($item) {
-				 if(isset($item->typo) && $item->typo==='source') return $item;
+		// ddo_source			
+			$ddo_source = array_reduce($sqo_context, function($carry, $item){
+				if (isset($item->typo) && $item->typo==='source') {
+					return $item;
+				}
+				return $carry;
 			});
-			$ddo_source 	= reset($ar_ddo_source);
+
+			$action 		= $ddo_source->action;
 			$mode 			= $ddo_source->mode;
 			$lang 			= $ddo_source->lang ?? null;
-			$section_tipo 	= $ddo_source->section_tipo ?? null;
+			$section_tipo 	= $ddo_source->section_tipo;
 			$section_id 	= $ddo_source->section_id ?? null;
-			$tipo 			= $ddo_source->tipo;
+			$tipo 			= $ddo_source->tipo ?? null;
 			$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$limit 			= $ddo_source->pagination->limit ?? null;
+			$offset 		= $ddo_source->pagination->offset ?? null;
 		
-			$ar_search_query_object = array_filter($sqo_context, function($item){
-				 if($item->typo==='sqo') return $item;
-			});		
-		// context
+		// sqo
+			## $ar_search_query_object = array_filter($sqo_context, function($item){
+			## 	 if($item->typo==='sqo') return $item;
+			## });
+			$search_query_object = array_reduce($sqo_context, function($carry, $item){
+				if (isset($item->typo) && $item->typo==='sqo') {
+					return $item;
+				}
+				return $carry;
+			});	
+		
+		// CONTEXT 
 			$context = [];
-			foreach ($ar_search_query_object as $current_sqo) {
-				switch (true) {
+			
+				switch ($action) {
 
-					case ($model==='section'):
-						// section
-							$element = sections::get_instance(null, $current_sqo, $tipo, $mode, $lang);
+					case 'search':
+						
+						// sections
+							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
+						
 						break;
 
-					case (strpos($model, 'component_')===0):
+					case 'get_data':
+
 						// component
-							$element 		= component_common::get_instance($model,
-																			 $tipo,
-																			 null,
-																			 $mode,
-																			 $lang,
-																			 $section_tipo);					
+							$element = component_common::get_instance($model,
+																	  $tipo,
+																	  $section_id,
+																	  $mode,
+																	  $lang,
+																	  $section_tipo);
 						break;
 					
 					default:
 						# not defined modelfro context / data								
-						debug_log(__METHOD__." 1. Ignored model '$model' - tipo: $tipo ".to_string(), logger::WARNING);
+						debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
 						break;
 				}// end switch (true)			
+
 
 				// element json
 					$get_json_options = new stdClass();
@@ -319,22 +336,19 @@ class dd_api {
 
 				// context add 
 					$context = $element_json->context;
-			}
-
+			
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 			
 	
-		// data
+		// DATA 
 			$data = [];
 			
 			$data_start_time=microtime(1);
 			
-			foreach ($ar_search_query_object as $current_sqo) {
-				
+			
+					switch ($action) {
 
-					switch (true) {
-
-						case ($model==='section'):
+						case 'search':
 							/*
 								// search
 									$search_development2 = new search_development2($current_sqo);
@@ -407,32 +421,36 @@ class dd_api {
 
 								$i++; }//end iterate records
 								*/
+							
+							// setions 
+								$element = sections::get_instance(null, $search_query_object, $tipo, $mode, $lang);
 
-							// setions instance
-							$element = sections::get_instance(null, $current_sqo, $tipo, $mode,$lang);		
+							// store search_query_object
+								//$context[] = $current_sqo;
 
 							break;
 
-						case (strpos($model, 'component_')===0):
+						case 'get_data':
 							
-							// component instance
-							$element 		= component_common::get_instance($model,
-																		 $tipo,
-																		 $section_id,
-																		 $mode,
-																		 $lang,
-																		 $section_tipo);
-							// fix pagination vars
-							$element->limit 	= $current_sqo->limit ?? null;
-							$element->offset 	= $current_sqo->offset ?? null;
+							// component
+								$element 	= component_common::get_instance($model,
+																			 $tipo,
+																			 $section_id,
+																			 $mode,
+																			 $lang,
+																			 $section_tipo);
+							// pagination. fix pagination vars
+								$pagination = new stdClass();
+									$pagination->limit 	= $limit;
+									$pagination->offset = $offset;
 
-								dump($element, ' element +------+ '.to_string());
+								$element->pagination = $pagination;
 
 							break;
 						
 						default:
 							# not defined modelfro context / data								
-							debug_log(__METHOD__." 1. Ignored model '$model' - tipo: $tipo ".to_string(), logger::WARNING);
+							debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
 							break;
 					}// end switch (true)	
 
@@ -451,10 +469,7 @@ class dd_api {
 
 						}//end if (isset($element)) 
 
-				// store search_query_object
-					$context[] = $current_sqo;				
-			
-			}//end foreach ($ar_search_query_object as $current_sqo)
+					
 			// smart remove data duplicates (!)
 				$data = self::smart_remove_data_duplicates($data);
 
@@ -478,9 +493,6 @@ class dd_api {
 
 		return $result;
 	}//end build_json_rows
-
-
-
 
 
 
@@ -684,6 +696,7 @@ class dd_api {
 		return $result;
 	}//end build_json_rows
 	*/
+
 
 
 	/**
