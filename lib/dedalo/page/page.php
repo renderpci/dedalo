@@ -2,66 +2,6 @@
 	#dump($_REQUEST, ' _REQUEST ++ '.to_string());
 	# PAGE CONTROLLER
 
-	$mode = 'edit';
-
-
-	// test vars (!)
-		$page_items = [];
-
-		// item (section, tool, etc.)
-		#$page_item = new StdClass();
-		#	$page_item->model 		 = 'section';
-		#	$page_item->section_tipo = 'rsc170';
-		#	$page_item->section_id 	 = '';
-		#	$page_item->mode 	 	 = $mode;
-		#	$page_item->lang 	 	 = DEDALO_DATA_LANG;
-		#
-		#	// add
-		#	#$page_items[] = $page_item;
-		
-
-		$section_tipo 	= 'test65';
-		$section_id		= '';
-		$mode 	 	 	= $mode;
-		$lang 	 	 	= DEDALO_DATA_LANG;
-
-		// sqo_context
-			$sqo_context = (function($section_id, $section_tipo, $mode, $lang) {
-
-				$section = section::get_instance($section_id, $section_tipo, $mode); 
-				$section->set_lang($lang);
-				$sqo_context = $section->get_sqo_context();
-		
-				return $sqo_context;
-			})($section_id, $section_tipo, $mode, $lang);
-
-
-		// item (section, tool, etc.)
-			$page_item = new StdClass();
-				$page_item->model 		 = 'section';
-				$page_item->section_tipo = 'test65';
-				$page_item->section_id 	 = $section_id;
-				$page_item->mode 	 	 = $mode;
-				$page_item->lang 	 	 = DEDALO_DATA_LANG;
-				$page_item->sqo_context  = $sqo_context;
-		//	dump($page_item, ' page_item ++ '.to_string());
-		// add
-			$page_items[] = $page_item;
-		
-		
-		$page_options = new StdClass();
-			$page_options->page_items = $page_items;
-
-	#$page_options = new StdClass();
-	#	$page_options->model 		= 'section';
-	#	$page_options->section_tipo = $_REQUEST['tipo'] ?? $_REQUEST['t'] ?? false;
-	#	$page_options->section_id 	= $_REQUEST['id'] ?? false;
-	#	$page_options->mode 		= $_REQUEST['mode'] ?? $_REQUEST['m'] ?? 'list';
-	#	$page_options->lang 		= $_REQUEST['lang'] ?? DEDALO_DATA_LANG;
-	#
-	#$page_options_json = json_encode($page_options);
-
-
 
 	// page globals
 		$page_globals = (function($mode) {
@@ -135,47 +75,39 @@
 		
 
 		// page_options
-			$page_options = (function($mode) {
+			$mode 			= 'edit';
+			$section_tipo 	= 'test65';
+			$section_id		= '';
+			$mode 	 	 	= $mode;
+			$lang 	 	 	= DEDALO_DATA_LANG;
 
-				#$page_options = new StdClass();
-				#	$page_options->model 		= 'section';
-				#	$page_options->section_tipo = $_REQUEST['tipo'] ?? $_REQUEST['t'] ?? false;
-				#	$page_options->section_id 	= $_REQUEST['id'] ?? false;
-				#	$page_options->mode 		= $_REQUEST['mode'] ?? $_REQUEST['m'] ?? 'list';
-				#	$page_options->lang 		= $_REQUEST['lang'] ?? DEDALO_DATA_LANG;
-				#
-				#$page_options_json = json_encode($page_options);
+			// sqo_context
+				$sqo_context = (function($section_id, $section_tipo, $mode, $lang) {
 
-				// test vars (!)
-				$page_items = [];
+					$section = section::get_instance($section_id, $section_tipo, $mode); 
+					$section->set_lang($lang);
+					$sqo_context = $section->get_sqo_context();
+			
+					return $sqo_context;
+				})($section_id, $section_tipo, $mode, $lang);
 
-				// item (section, tool, etc.)
-				$page_item = new StdClass();
-					$page_item->model 		 = 'section';
-					$page_item->section_tipo = 'rsc170';
-					$page_item->section_id 	 = '';
-					$page_item->mode 	 	 = $mode;
-					$page_item->lang 	 	 = DEDALO_DATA_LANG;
 
-					// add
-				#	$page_items[] = $page_item;
-
-				// item (section, tool, etc.)
+			// item (section, tool, etc.)
 				$page_item = new StdClass();
 					$page_item->model 		 = 'section';
 					$page_item->section_tipo = 'test65';
-					$page_item->section_id 	 = '';
+					$page_item->section_id 	 = $section_id;
 					$page_item->mode 	 	 = $mode;
 					$page_item->lang 	 	 = DEDALO_DATA_LANG;
+					$page_item->sqo_context  = $sqo_context;
+			
 
-				// add
-				$page_items[] = $page_item;		
-
-				$page_options = new StdClass();
-					$page_options->page_items = $page_items;
-
-				return $page_options;
-			})($mode);
+			// add
+				$page_items[] = $page_item;
+			
+			
+			$page_options = new StdClass();
+				$page_options->page_items = $page_items;
 
 
 		// page header
