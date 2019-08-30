@@ -40,7 +40,7 @@ function get_components_from_section($json_data) {
 		}
 
 
-	$components_from_section = search_development2::get_components_from_section($section_tipo);
+	$components_from_section = search::get_components_from_section($section_tipo);
 
 	
 	$response->result 	= $components_from_section->result;
@@ -182,7 +182,7 @@ function get_component_presets($json_data) {
 
 
 	$logged_user_id 		= navigator::get_user_id();
-	$ar_component_presets 	= search_development2::get_component_presets($logged_user_id, $target_section_tipo);
+	$ar_component_presets 	= search::get_component_presets($logged_user_id, $target_section_tipo);
 
 	# Get permissions to allow/disallow buttons
 	$section_tipo 		 	= _PRESETS_LIST_SECTION_TIPO; // Presets list
@@ -428,8 +428,8 @@ function search($json_data) {
 		}
 	
 
-	$search_development2 = new search_development2($search_query_object);
-	$result = $search_development2->search();
+	$search = new search($search_query_object);
+	$result = $search->search();
 	
 	
 	$response->result 		= $result;
@@ -480,7 +480,7 @@ function save_temp_preset($json_data) {
 
 	$user_id = navigator::get_user_id();
 	
-	$save_temp_preset = search_development2::save_temp_preset($user_id, $section_tipo, $filter_obj);
+	$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
 	if ($save_temp_preset===true) {
 		$response->result 	= $save_temp_preset;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
@@ -531,7 +531,7 @@ function load_temp_filter($json_data) {
 
 
 	$user_id 	 = navigator::get_user_id();
-	$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
+	$temp_preset = search::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
 	$temp_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
 	
 	$response->result 	= $temp_filter;

@@ -313,7 +313,7 @@ class search_development2 {
 		# ONLY_COUNT
 		# Exec a count query
 		# Converts json search_query_object to sql query string
-			$count_sql_query	= $this->parse_search_query_object( $only_count=true );			
+			$count_sql_query	= $this->parse_search_query_object( $only_count=true );				
 			$count_result		= JSON_RecordObj_matrix::search_free($count_sql_query);
 			$row_count			= pg_fetch_assoc($count_result);
 			$total				= (int)$row_count['full_count'];
@@ -335,8 +335,7 @@ class search_development2 {
 
 		//sleep(4);
 
-		return $records_data;
-		
+		return $records_data;		
 	}//end count
 
 
@@ -863,7 +862,7 @@ class search_development2 {
 		switch (true) {
 
 		// sql_filter_by_locators
-			case (isset($this->filter_by_locators)):
+			case (isset($this->filter_by_locators) && !empty($this->filter_by_locators)):
 
 				$sql_filter_by_locators		 = $this->build_sql_filter_by_locators();
 				$sql_filter_by_locators_order= $this->build_sql_filter_by_locators_order();
@@ -1760,7 +1759,7 @@ class search_development2 {
 	* @return string | null 
 	*/
 	public function build_sql_filter_by_locators() {
-		
+
 		$table = $this->main_section_tipo_alias;
 
 		$ar_parts = [];
@@ -2776,7 +2775,7 @@ class search_development2 {
 
 
 
-	############################ SEARCH2 #################################
+	############################ FILTER FUNCTIONS #################################
 
 
 
@@ -3261,6 +3260,10 @@ class search_development2 {
 
 		return $search_options_title;
 	}//end search_options_title
+
+
+
+	############################ END FILTER FUNCTIONS #################################
 
 
 
