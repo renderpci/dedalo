@@ -29,6 +29,16 @@
 
 
 
+// context_simple
+	if($options->get_context_simple===true){
+
+		// Component structure context_simple (tipo, relations, properties, etc.)
+			$context[] = $this->get_structure_context_simple($permissions);
+
+	}//end if($options->get_context_simple===true)
+
+
+
 // data
 	$data = [];
 
@@ -46,6 +56,8 @@
 		$data = $this->get_ar_subdata($value);
 		
 	}//end if($options->get_data===true && $permissions>0)
+
+
 
 // JSON string
 	return common::build_element_json_output($context, $data);
