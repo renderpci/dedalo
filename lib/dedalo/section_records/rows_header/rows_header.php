@@ -137,7 +137,7 @@
 				}
 			}*/
 
-			$path = search_development2::get_query_path($current_tipo, $section_tipo, $resolve_related=true);
+			$path = search::get_query_path($current_tipo, $section_tipo, $resolve_related=true);
 				#dump($path, ' path ++ '.to_string($current_tipo));
 			
 

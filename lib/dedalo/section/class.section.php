@@ -2648,7 +2648,7 @@ class section extends common {
 	/**
 	* GET_INVERSE_REFERENCES
 	* Get calculated inverse locators for all matrix tables
-	* @see search_development2::calculate_inverse_locator
+	* @see search::calculate_inverse_locator
 	* @return array $inverse_locators
 	*/
 	public function get_inverse_references() {
@@ -2658,7 +2658,7 @@ class section extends common {
 			return array();
 		}
 
-		#$inverse_locators = search_development2::get_inverse_relations_from_relations_table($this->tipo, $this->section_id);
+		#$inverse_locators = search::get_inverse_relations_from_relations_table($this->tipo, $this->section_id);
 		
 		# Create a minimal locator based on current section
 		$reference_locator = new locator();
@@ -2666,7 +2666,7 @@ class section extends common {
 			$reference_locator->set_section_id($this->section_id);
 		
 		# Get calculated inverse locators for all matrix tables
-		$inverse_locators = search_development2::calculate_inverse_locators( $reference_locator );
+		$inverse_locators = search::calculate_inverse_locators( $reference_locator );
 
 
 		return (array)$inverse_locators;	
@@ -3109,7 +3109,7 @@ class section extends common {
 							continue;
 						}
 						$select_element = new stdClass();
-							$select_element->path = search_development2::get_query_path($component_tipo, $options->section_tipo, false);					
+							$select_element->path = search::get_query_path($component_tipo, $options->section_tipo, false);					
 						# Add to group
 						$select_group[] = $select_element;
 					}
@@ -3216,7 +3216,7 @@ class section extends common {
 
 
 		# conform each object
-		if (search_development2::is_search_operator($current_query_object)===true) {
+		if (search::is_search_operator($current_query_object)===true) {
 			foreach ($current_query_object as $operator => $ar_elements) {
 				foreach ($ar_elements as $c_query_object) {
 					// Inject all resolved query objects
@@ -3427,43 +3427,73 @@ class section extends common {
 	}//end get_ar_tools_obj
 
 
+
 	/**
 	* GET_SQO_CONTEXT
-	* @return 
+	* @return object $sqo_context
 	*/
 	public function get_sqo_context() {
 
 		$sqo_context = new stdClass();
-
-		$show = [];
+			$sqo_context->show 	 = [];
+			$sqo_context->search = [];
+		
 
 		$section_tipo 	= $this->tipo;
 		$section_id 	= $this->section_id;
 		$mode 			= $this->modo;
 		$lang 			= $this->lang;
+		$limit 			= ($mode==='list') ? 10 : 1;
+			
+
+		
+		// SHOW 
+			// search_query_object
+				$sqo_options = new stdClass();							
+					$sqo_options->tipo 			= $section_tipo;
+					$sqo_options->section_tipo 	= [$section_tipo];
+					$sqo_options->limit  		= $limit;
+					$sqo_options->offset 		= 0;
+					$sqo_options->full_count 	= false;
+					$sqo_options->add_select 	= false;
+					$sqo_options->direct 		= true;
+
+					// filter_by_locators. when sectio_id is received 
+					if (!empty($section_id)) {
+						$self_locator = new locator();
+							$self_locator->set_section_tipo($section_tipo);
+							$self_locator->set_section_id($section_id);
+						$sqo_options->filter_by_locators = [$self_locator];
+					}
+				
+				$search_query_object = common::build_search_query_object($sqo_options);
 
 
-		// Records_html. Render search form html using search.
-		// We know the current record id but we search like a list filtered by id for maintain always the same criterion 
-			$self_locator = new locator();
-				$self_locator->set_section_tipo($section_tipo);
-				$self_locator->set_section_id($section_id);
 
-			# SEARCH_QUERY_OBJECT . Add search_query_object to options
-			$search_query_object_options = new stdClass();
-				$search_query_object_options->limit  		= 1;
-				$search_query_object_options->offset 		= 0;
-				$search_query_object_options->filter_by_id 	= [$self_locator];
-				$search_query_object_options->tipo 			= $section_tipo;
-				$search_query_object_options->section_tipo 	= [$section_tipo];
-			#$search_query_object = $this->build_search_query_object($search_query_object_options);
-			$search_query_object = common::build_search_query_object($search_query_object_options);
+			
+			// add sqo
+				$sqo_context->show[] = $search_query_object;
 
-			# Create new options object
-			$show[] = $search_query_object;
+			// ddo show
+				$layout_map_options = new stdClass();
+					$layout_map_options->section_tipo 		 = $section_tipo;
+					$layout_map_options->tipo 				 = $section_tipo;
+					$layout_map_options->modo 				 = $mode;
+					$layout_map_options->add_section 		 = true;
+					$layout_map_options->config_context_type = 'show';
 
-		$sqo_context->show 		= $show;
-		$sqo_context->search 	= [];
+				$ar_ddo = layout_map::get_layout_map($layout_map_options);
+
+			// add layout_map ddo's
+				$sqo_context->show = array_merge($sqo_context->show, $ar_ddo);
+		
+		
+		
+		// SEARCH
+			// nothing to do yet
+
+			
+
 
 		return $sqo_context;		
 	}//end get_sqo_context

@@ -107,13 +107,13 @@ class tool_export extends tool_common {
 		$search_query_object->select = []; // reset
 		foreach ($ar_component_tipo as $key => $component_tipo) {
 			
-			$path = search_development2::get_query_path($component_tipo, $section_tipo, false);
+			$path = search::get_query_path($component_tipo, $section_tipo, false);
 
 			$path_element = new stdClass();
 				$path_element->path = $path;
 
 			# Parse current path with component and add
-			$search_query_object->select[] = search_development2::component_parser_select($path_element);			
+			$search_query_object->select[] = search::component_parser_select($path_element);			
 		}
 
 		# Reset search limit and offset
@@ -121,7 +121,7 @@ class tool_export extends tool_common {
 		$search_query_object->offset = 0;
 		
 		# SEARCH
-		$search_develoment2  = new search_development2($search_query_object);
+		$search_develoment2  = new search($search_query_object);
 		$rows_data 		 	 = $search_develoment2->search();
 
 		$this->ar_records = $rows_data->ar_records;

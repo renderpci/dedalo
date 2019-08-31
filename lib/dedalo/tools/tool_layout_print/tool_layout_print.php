@@ -119,8 +119,8 @@
 						$section_current_search_query_object->limit 	 = 0;
 						$section_current_search_query_object->offset 	 = 0;
 						// Re-search
-						$search_development2 = new search_development2($section_current_search_query_object);
-						$result = $search_development2->search();
+						$search = new search($section_current_search_query_object);
+						$result = $search->search();
 							#dump($result, ' result ++ '.to_string()); die();
 						$ar_records 				= $result->ar_records;
 						$tool_layout_print_records 	= $ar_records;
@@ -150,7 +150,7 @@
 									#$search_query_object->select  = []; // unset select
 							
 							# SEARCH
-								$search_develoment2  = new search_development2($search_query_object);
+								$search_develoment2  = new search($search_query_object);
 								$rows_data 		 	 = $search_develoment2->search();
 					
 							$tool_layout_print_records = $rows_data->ar_records;*/
@@ -282,8 +282,8 @@
 						$section_current_search_query_object->limit 	 = 0;
 						$section_current_search_query_object->offset 	 = 0;
 						// Re-search
-						$search_development2 = new search_development2($section_current_search_query_object);
-						$result = $search_development2->search();
+						$search = new search($section_current_search_query_object);
+						$result = $search->search();
 							#dump($result, ' result ++ '.to_string()); die();
 						$ar_records 				= $result->ar_records;
 						$tool_layout_print_records 	= $ar_records;					

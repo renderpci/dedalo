@@ -386,8 +386,8 @@ class component_autocomplete extends component_relation_common {
 			debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
 		}		
 		
-		$search_development2 = new search_development2($search_query_object);
-		$rows_data 		 	 = $search_development2->search();
+		$search = new search($search_query_object);
+		$rows_data 		 	 = $search->search();
 			#dump($rows_data, ' rows_data ++ '.to_string());
 
 		$propiedades 	 = $this->get_propiedades();
@@ -1145,8 +1145,8 @@ class component_autocomplete extends component_relation_common {
 			}
 		');
 
-		$search_development2 = new search_development2($search_query_object);
-		$result = $search_development2->search();
+		$search = new search($search_query_object);
+		$result = $search->search();
 			#dump($result, ' result +***************+ '.to_string());
 
 
@@ -1245,7 +1245,16 @@ class component_autocomplete extends component_relation_common {
 		$mode 			= $this->get_modo();
 		$lang 			= $this->get_lang();
 
-			
+		// SOURCE SEARCH
+			$source_search = new stdClass();
+				$source_search->typo 	= 'source';
+				$source_search->action 	= 'search';
+				$source_search->tipo 	= $tipo;
+				$source_search->lang 	= $lang;
+				$source_search->mode 	= 'list';
+
+			$search[] = $source_search;
+
 			// service autocomplete options
 				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 			// search_sections . set and remove search sections duplicates
@@ -1291,8 +1300,7 @@ class component_autocomplete extends component_relation_common {
 					$search_query_object->value_with_parents = true;
 					$search_query_object->source_component_tipo = $tipo;
 
-				}// end $value_with_parent = true
-				
+				}// end $value_with_parent = true				
 				
 				// add sqo
 				$search[] = $search_query_object;
@@ -1303,6 +1311,9 @@ class component_autocomplete extends component_relation_common {
 
 				$limit 	= $propiedades->max_records ?? 10;
 				$offset = 0;
+				$pagination = new stdClass();
+					$pagination->limit 	= $limit;
+					$pagination->offset = $offset;
 				
 				$show_search_query_object_options = new stdClass();
 					$show_search_query_object_options->section_tipo 		= $search_sections;
@@ -1438,8 +1449,8 @@ class component_autocomplete extends component_relation_common {
 
 			// fix
 			$this->sqo_context	= $sqo_context;
-			$this->limit 		= $limit;
-			$this->offset 		= $offset;
+			$this->pagination	= $pagination;
+
 
 			return $sqo_context;			
 		}//end get_sqo_context

@@ -1014,8 +1014,8 @@ class tool_layout_print extends tool_common {
 		}
 		';
 		$search_query_object = json_decode($search_query_object);
-		$search_development2 = new search_development2($search_query_object);
-		$result = $search_development2->search();
+		$search = new search($search_query_object);
+		$result = $search->search();
 
 		$ar_section_id = array_map(function($item){
 			return $item->section_id;
@@ -1214,7 +1214,7 @@ class tool_layout_print extends tool_common {
 				$search_query_object->select  = []; // unset select
 		
 		# SEARCH
-			$search_develoment2  = new search_development2($search_query_object);
+			$search_develoment2  = new search($search_query_object);
 			$rows_data 		 	 = $search_develoment2->search();
 
 

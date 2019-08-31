@@ -672,14 +672,14 @@ function convert_search_object_to_sql_query($json_data) {
 
 	if($search_query_object = json_decode($json_string)) {
 		
-		$search_development2 = new search_development2($search_query_object);
+		$search = new search($search_query_object);
 		
-		#$sql_query = $search_development2->parse_search_query_object();
+		#$sql_query = $search->parse_search_query_object();
 		#$sql_query = addslashes($sql_query);	
 		#$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
 
 		// search exec
-			$rows = $search_development2->search();
+			$rows = $search->search();
 
 		// sql string query
 			$sql_query = $rows->strQuery;

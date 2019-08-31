@@ -32,7 +32,7 @@ class relation_list extends common {
 	/**
 	* GET_INVERSE_REFERENCES
 	* Get calculated inverse locators for all matrix tables
-	* @see search_development2::calculate_inverse_locator
+	* @see search::calculate_inverse_locator
 	* @return array $inverse_locators
 	*/
 	public function get_inverse_references($limit=1, $offset=0, $count=false) {
@@ -48,7 +48,7 @@ class relation_list extends common {
 			$reference_locator->set_section_id($this->section_id);
 		
 		# Get calculated inverse locators for all matrix tables
-		$inverse_locators = search_development2::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
+		$inverse_locators = search::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
 
 
 		return (array)$inverse_locators;	

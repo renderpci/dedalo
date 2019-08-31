@@ -1218,7 +1218,7 @@ class component_portal extends component_relation_common {
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					if (strpos($modelo_name,'component')!==0) continue;
 
-					$path = search_development2::get_query_path($current_tipo, $section_tipo, false);
+					$path = search::get_query_path($current_tipo, $section_tipo, false);
 					
 					# SELECT . Select_element (select_group)
 						$select_element = new stdClass();
@@ -1385,7 +1385,7 @@ class component_portal extends component_relation_common {
 				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG); die();
 			
 			# Search
-			$search_develoment2  = new search_development2($search_query_object);
+			$search_develoment2  = new search($search_query_object);
 			$rows_data 		 	 = $search_develoment2->search();
 
 			#
@@ -1844,8 +1844,8 @@ class component_portal extends component_relation_common {
 			$search_query_object->select = [];
 
 		// search 
-			$search_development2 = new search_development2($search_query_object);
-			$rows_data 		 	 = $search_development2->search();
+			$search = new search($search_query_object);
+			$rows_data 		 	 = $search->search();
 
 		return $rows_data;
 	}//end get_portal_records

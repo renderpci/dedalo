@@ -1694,8 +1694,8 @@ class hierarchy {
 		  ]
 		}');
 
-		$search_development2 = new search_development2($search_query_object);
-		$search_result 		 = $search_development2->search();
+		$search = new search($search_query_object);
+		$search_result 		 = $search->search();
 		$ar_records 		 = $search_result->ar_records;
 
 		foreach ($ar_records as $key => $row) {
@@ -1744,8 +1744,8 @@ class hierarchy {
 			}');
 
 		// search
-			$search_development2 = new search_development2($search_query_object);
-			$search_result 		 = $search_development2->search();
+			$search = new search($search_query_object);
+			$search_result 		 = $search->search();
 			$record 		 	 = reset($search_result->ar_records);		
 		
 		// section id

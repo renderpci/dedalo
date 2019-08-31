@@ -282,7 +282,7 @@ class component_relation_index extends component_relation_common {
 			}
 		
 		# calculate_inverse_locators: $locator, $limit=false, $offset=false, $count=false
-		$result = search_development2::calculate_inverse_locators( $locator );
+		$result = search::calculate_inverse_locators( $locator );
 
 			
 		/*

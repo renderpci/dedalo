@@ -24,7 +24,7 @@
 	switch($modo) {	
 		
 		case 'button':
-				$contain_references = search_development2::have_inverse_relations($section_tipo, $section_id);
+				$contain_references = search::have_inverse_relations($section_tipo, $section_id);
 				break;
 		
 		case 'page':
@@ -63,7 +63,7 @@
 						$target_reference_locator->set_section_tipo($section_tipo);
 						$target_reference_locator->set_section_id($section_id);
 
-					$inverse_locators = search_development2::calculate_inverse_locators( $target_reference_locator );
+					$inverse_locators = search::calculate_inverse_locators( $target_reference_locator );
 					
 					$ar_oh1 = array_filter($inverse_locators, function($current_locator) {
 						return $current_locator->from_section_tipo === TOP_TIPO;

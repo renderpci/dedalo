@@ -789,7 +789,7 @@ class tool_import_zotero extends tool_common {
 		    }
 		}';
 
-		$search = new search_development2( json_decode($seach_query_object) );
+		$search = new search( json_decode($seach_query_object) );
 		$result = $search->search();
 
 		$section_id = null; // Default
@@ -842,7 +842,7 @@ class tool_import_zotero extends tool_common {
 		    }
 		}';
 
-		$search = new search_development2( json_decode($seach_query_object) );
+		$search = new search( json_decode($seach_query_object) );
 		$result = $search->search();
 
 		$section_id = null; // Default

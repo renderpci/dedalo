@@ -1368,7 +1368,7 @@ class tool_administration extends tool_common {
 								$propagate_options->section_id 	 		= $section_id;
 								$propagate_options->section_tipo 		= $section_tipo;
 								$propagate_options->from_component_tipo = $from_component_tipo;
-							$propagate_response = search_development2::propagate_component_dato_to_relations_table( $propagate_options );
+							$propagate_response = search::propagate_component_dato_to_relations_table( $propagate_options );
 						}
 
 					}else{

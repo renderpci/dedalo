@@ -41,8 +41,8 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 	';
 	$search_query_object = json_decode($search_query_object);
 
-	$search_development2 = new search_development2($search_query_object);
-	$search_result 		 = $search_development2->search();
+	$search = new search($search_query_object);
+	$search_result 		 = $search->search();
 		#dump($search_result, ' search_result ++ '.to_string());
 	$ar_section_id = array_map(function($item){
 		return $item->section_id;

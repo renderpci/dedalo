@@ -640,8 +640,8 @@ class component_relation_related extends component_relation_common {
 			$search_query_object->full_count 	= false;		
 		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' $search_query_object ++ '.to_string()); #die();
 
-		$search_development2 = new search_development2($search_query_object);
-		$records_data 		 = $search_development2->search();
+		$search = new search($search_query_object);
+		$records_data 		 = $search->search();
 
 		$ar_result = [];
 		foreach ($records_data->ar_records as $key => $row) {

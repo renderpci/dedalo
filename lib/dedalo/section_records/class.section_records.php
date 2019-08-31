@@ -76,15 +76,15 @@ class section_records extends common {
 			# Calculate rows from database. Exec search
 			if ( $search_options->modo==='list_tm' ) {
 				// Case time machine uses a different resolution for the search_query_object
-				include(DEDALO_LIB_BASE_PATH . '/search/class.search_development2_tm.php');
-				$search_development2 = new search_development2_tm($search_options->search_query_object);
+				include(DEDALO_LIB_BASE_PATH . '/search/class.search_tm.php');
+				$search = new search_tm($search_options->search_query_object);
 
 			}else{
 				// Comom case
-				$search_development2 = new search_development2($search_options->search_query_object);
+				$search = new search($search_options->search_query_object);
 								
 			}			
-			$records_data = $search_development2->search();
+			$records_data = $search->search();
 
 			#
 			# Save current search options
@@ -93,8 +93,8 @@ class section_records extends common {
 				section_records::set_search_options($search_options, $search_options_id);
 			}
 
-			// Fix search_development2 search_query_object_preparse for debug
-			$this->search_query_object_preparse = $search_development2->search_query_object_preparse;
+			// Fix search search_query_object_preparse for debug
+			$this->search_query_object_preparse = $search->search_query_object_preparse;
 
 			#debug_log(__METHOD__." this->search_options **** ".json_encode($this->search_options), logger::DEBUG);						
 		}

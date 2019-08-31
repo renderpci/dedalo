@@ -111,7 +111,7 @@ class tool_update_cache {
 						$search_query_object->select = []; // unset select
 			
 			# SEARCH
-				$search_develoment2  = new search_development2($search_query_object);
+				$search_develoment2  = new search($search_query_object);
 				$rows_data 		 	 = $search_develoment2->search();
 
 

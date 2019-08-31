@@ -367,7 +367,7 @@ class logger_backend_activity extends logger_backend {
 								$relation_options->section_id 			= $id_section;
 								$relation_options->from_component_tipo 	= self::$_COMPONENT_PROYECTOS['tipo'];
 								$relation_options->ar_locators 			= $project_relations;
-							$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);						
+							$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);						
 						}
 						
 

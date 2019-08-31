@@ -1523,8 +1523,8 @@ abstract class component_common extends common {
 		if (isset($this->propiedades->filtered_by_search)) {
 
 			$search_query_object = json_decode( json_encode($this->propiedades->filtered_by_search) );
-			$search_development2 = new search_development2($search_query_object);
-			$records_data 		 = $search_development2->search();
+			$search = new search($search_query_object);
+			$records_data 		 = $search->search();
 				#dump($records_data, ' records_data ++ '.to_string());
 			$ar_current_dato = $records_data->ar_records;
 			/*
@@ -2073,8 +2073,8 @@ abstract class component_common extends common {
 			$query_select = [];
 			foreach ($ar_componets_related as $related_tipo) {
 
-			    // path . search_development2::get_query_path($tipo, $section_tipo, $resolve_related=true)
-				$path = search_development2::get_query_path($related_tipo, $target_section_tipo, $resolve_related=true);
+			    // path . search::get_query_path($tipo, $section_tipo, $resolve_related=true)
+				$path = search::get_query_path($related_tipo, $target_section_tipo, $resolve_related=true);
 
 				// add selector lag 'all' to last element of path
 				$end_path = end($path);
@@ -2090,8 +2090,8 @@ abstract class component_common extends common {
 
 
 		// Search
-			$search_development2 = new search_development2($search_query_object);
-			$records_data 		 = $search_development2->search();
+			$search = new search($search_query_object);
+			$records_data 		 = $search->search();
 			$ar_current_dato 	 = $records_data->ar_records;
 				#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
 				#dump($ar_current_dato, ' ar_current_dato ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
@@ -3961,7 +3961,7 @@ abstract class component_common extends common {
 		}		
 
 		# conform each object
-		if (search_development2::is_search_operator($current_query_object)===true) {
+		if (search::is_search_operator($current_query_object)===true) {
 			foreach ($current_query_object as $operator => $ar_elements) {
 				foreach ($ar_elements as $c_query_object) {
 					// Inject all resolved query objects
@@ -4236,8 +4236,8 @@ abstract class component_common extends common {
 			}
 
 		// Exec search
-			$search_development2 = new search_development2($search_query_object);
-			$rows_data 		 	 = $search_development2->search();
+			$search = new search($search_query_object);
+			$rows_data 		 	 = $search->search();
 			$ar_records 		 = $rows_data->ar_records;
 
 		// debug
@@ -4476,8 +4476,8 @@ abstract class component_common extends common {
 			
 		$search_query_object = self::build_search_query_object($options);
 
-		$search_development2 = new search_development2($search_query_object);
-		$response = $search_development2->search();
+		$search = new search($search_query_object);
+		$response = $search->search();
 
 		$result = (count($response->ar_records)>0) ?  false : true; 
 
@@ -4536,7 +4536,7 @@ abstract class component_common extends common {
 			}else{
 				$related_tipo = false; //$current_column_tipo;
 			}
-			$path 		= search_development2::get_query_path($tipo, $section_tipo, true, $related_tipo);
+			$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
 			$end_path 	= end($path);
 			$end_path->selector = $selector;
 			
@@ -4553,8 +4553,8 @@ abstract class component_common extends common {
 			}';
 			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
 			$search_query_object = json_decode($search_query_object);
-			$search_development2 = new search_development2($search_query_object);
-			$result 			 = $search_development2->search();
+			$search = new search($search_query_object);
+			$result 			 = $search->search();
 			#dump($result, ' result ** ++ '.to_string());
 
 		// Parse results for stats
