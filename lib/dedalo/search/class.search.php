@@ -2781,7 +2781,8 @@ class search {
 
 	/**
 	* FILTER_GET_COMPONENTS
-	* Used to build search presets. Get all section components available
+	* Get list of all components available for current section
+	* Used to build search presets in filter
 	* @return object $response
 	*/
 	public static function filter_get_components($ar_section_tipo, $path=[], $ar_tipo_exclude_elements=false) {		
@@ -2901,31 +2902,12 @@ class search {
 
 
 	/**
-	* REDUCE_AR_SECTION_TIPO
-	* @return 
-	*//*
-	public static function reduce_ar_section_tipo( $ar_section_tipo ) {
-		
-		$groupped_ar_section_tipo = [];
-
-
-		foreach ($ar_section_tipo as $key => $current_section_tipo) {
-			
-
-
-		}
-
-
-		return $groupped_ar_section_tipo
-	}//end reduce_ar_section_tipo */
-
-
-
-	/**
-	* GET_COMPONENT_PRESETS
+	* FILTER_GET_USER_PRESETS
+	* Return all saved user presets of current section
+	* Used to build list of user presets in filter
 	* @return array $component_presets
 	*/
-	public static function get_component_presets($user_id=null, $target_section_tipo=null, $section_tipo='dd623') {
+	public static function filter_get_user_presets($user_id=null, $target_section_tipo=null, $section_tipo='dd623') {
 		
 		#$section_tipo 		 			= 'dd623'; // Presets list dd623 or dd655 (temp)
 		$name_component_tipo 			= 'dd624'; // Name field
@@ -2975,7 +2957,7 @@ class search {
 		$strQuery 	= "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE (section_tipo='$section_tipo') $filter ORDER BY section_id ASC ";
 		$result		= JSON_RecordObj_matrix::search_free($strQuery);
 
-		$component_presets=array();
+		$user_presets=array();
 		while ($rows = pg_fetch_assoc($result)) {
 			
 			$element = new stdClass();
@@ -3014,13 +2996,13 @@ class search {
 				$element->save_arguments = $save_arguments;
 
 			# Add element
-			$component_presets[] = $element;			
+			$user_presets[] = $element;			
 		}
-		#dump($component_presets, ' component_presets ++ '.to_string($strQuery));
+		#dump($user_presets, ' user_presets ++ '.to_string($strQuery));
 
 
-		return (array)$component_presets;
-	}//end get_component_presets
+		return (array)$user_presets;
+	}//end filter_get_user_presets
 
 
 
@@ -3029,7 +3011,7 @@ class search {
 	* Find requested preset section_id (in presets list or temp presets)
 	* @return object | null 
 	*/
-	public static function get_preset($section_tipo, $user_id, $target_section_tipo) {
+	public static function get_preset($user_id, $target_section_tipo, $preset_section_tipo) {
 
 		$preset_obj = null;
 
@@ -3045,7 +3027,7 @@ class search {
 		$filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
 
 		// Find existing preset
-		$strQuery = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.' WHERE (section_tipo = \''.$section_tipo.'\') '.PHP_EOL.'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL.'LIMIT 1;';		
+		$strQuery = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.' WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL.'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL.'LIMIT 1;';		
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 		if (!is_resource($result)) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
@@ -3079,7 +3061,7 @@ class search {
 		$matrix_table 	= 'matrix_list';
 
 		// Find existing preset (returns section_id if exists or null if not)
-		$preset_obj = search::get_preset($section_tipo, $user_id, $target_section_tipo);		
+		$preset_obj = search::get_preset($user_id, $target_section_tipo, $section_tipo);		
 		if (empty($preset_obj)) {
 			# Create new section if not exists
 			$section 	= section::get_instance(null, $section_tipo);
