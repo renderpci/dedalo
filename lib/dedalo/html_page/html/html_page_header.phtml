@@ -45,7 +45,8 @@ if (login::is_logged()) {
 			if( empty($caller_id) && $mode==='edit' ) {
 				echo '<!-- Inspector toggle button -->';
 				#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
-				echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
+				#echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
+				echo '<span class="button align_justify" title="'.label::get_label('mostrar_inspector').'" onclick="inspector.toggle_sidebar()"></span>';
 			}
 		echo '</div><!-- /menu_background -->';
 
