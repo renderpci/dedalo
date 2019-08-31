@@ -14,7 +14,8 @@
 
 // base mixins
 	.section_record_base {
-		margin:1em;padding:0;
+		margin: 0;
+		padding: 0;
 		// flex config
 		display: flex;
 		justify-content: flex-start;
@@ -25,7 +26,8 @@
 		width: 100%;
 	}
 	.section_group_body_base {
-		margin:0;padding:0;
+		margin: 0;
+		padding: 0;
 		// flex config
 		display: flex;
 		justify-content: flex-start;
@@ -34,7 +36,8 @@
 		flex-wrap: wrap;	
 	}
 	.component_base {
-		margin:0;padding:0;
+		margin: 0;
+		padding: 0;
 		// flex config
 		display: flex;
 		flex-wrap: wrap;	
@@ -326,13 +329,22 @@
 				&:before {
 					content: @fa-var-power-off;
 				}
-			}&.change_mode {
+			}
+			&.change_mode {
 				.fa-icon;
 		  		.fas;
 		  		&:before {
 					content: @fa-var-pen;
 				}
 			}
+			&.align_justify {
+				.fa-icon;
+				.fas;
+				&:before {
+					content: @fa-var-align-justify;
+				}
+			}
+			
 		
 		}//end .active &, &.link
 		
@@ -376,6 +388,7 @@
 // page_container
 	.page_container {
 		display: grid;
+		padding: 1em;
 	}
 
 
