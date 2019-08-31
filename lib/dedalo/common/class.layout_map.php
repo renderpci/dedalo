@@ -727,8 +727,8 @@ class layout_map {
 			#error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
 		
 		
-		$search_development2 = new search_development2($search_query_object);
-		$rows_data 			 = $search_development2->search();
+		$search = new search($search_query_object);
+		$rows_data 			 = $search->search();
 			#dump($rows_data, ' rows_data ++ '.to_string());
 
 		$ar_records = $rows_data->ar_records;

@@ -25,7 +25,8 @@ include(DEDALO_LIB_BASE_PATH . '/common/class.dd_object.php'); # new 12-06-2019
 include(DEDALO_LIB_BASE_PATH . '/common/class.relation.php');
 include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_common.php');
 include(DEDALO_LIB_BASE_PATH . '/component_relation_common/class.component_relation_common.php');
-include(DEDALO_LIB_BASE_PATH . '/search/class.search_development2.php');
+include(DEDALO_LIB_BASE_PATH . '/search/class.search.php');
+include(DEDALO_LIB_BASE_PATH . '/api/v1/common/class.dd_api.php');
 
 	
 class class_loader {

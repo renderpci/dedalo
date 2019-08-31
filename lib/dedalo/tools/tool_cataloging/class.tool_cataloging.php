@@ -105,7 +105,7 @@ class tool_cataloging {
 	public function get_temp_preset_filter($section_tipo) {
 	
 		$user_id 	 = navigator::get_user_id();
-		$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
+		$temp_preset = search::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
 		$temp_preset_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
 	
 

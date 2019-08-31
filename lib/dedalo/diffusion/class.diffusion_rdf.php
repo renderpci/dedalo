@@ -1007,8 +1007,8 @@ class diffusion_rdf extends diffusion {
 					$search_query_object = json_decode($query);
 
 				// search
-					$search_development2 = new search_development2($search_query_object);
-					$result 			 = $search_development2->search();
+					$search = new search($search_query_object);
+					$result 			 = $search->search();
 					$row 				 = reset($result->ar_records);	
 				
 				// base_uri
@@ -1156,8 +1156,8 @@ class diffusion_rdf extends diffusion {
 		#dump(null, 'search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
 		// search
-			$search_development2 = new search_development2($search_query_object);
-			$result 			 = $search_development2->search();
+			$search = new search($search_query_object);
+			$result 			 = $search->search();
 			$rows 				 = $result->ar_records;
 
 		return (array)$rows;
@@ -1213,8 +1213,8 @@ class diffusion_rdf extends diffusion {
 			#dump($query, 'search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
 		// search
-			$search_development2 = new search_development2($search_query_object);
-			$result 			 = $search_development2->search();
+			$search = new search($search_query_object);
+			$result 			 = $search->search();
 			$ar_records 		 = $result->ar_records;
 
 		// format output as array of id's

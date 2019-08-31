@@ -477,8 +477,8 @@ class component_calculation extends component_common {
 			foreach ($ar_search_query_object as $search_query_object) {
 
 				// Search
-					$search_development2 = new search_development2($search_query_object);
-					$search_data 		 = $search_development2->search();
+					$search = new search($search_query_object);
+					$search_data 		 = $search->search();
 					$ar_records 		 = $search_data->ar_records;
 
 				// Result map. If result_map exists, parse result rows
@@ -1000,8 +1000,8 @@ class component_calculation extends component_common {
 
 
 		# Search records
-		$search_development2 = new search_development2($search_query_object);
-		$search_result 		 = $search_development2->search();
+		$search = new search($search_query_object);
+		$search_result 		 = $search->search();
 		$ar_records 		 = $search_result->ar_records;
 
 		$ar_values = [];
@@ -1128,7 +1128,7 @@ class component_calculation extends component_common {
 
 		# Select
 		$select = [];
-		$path   = search_development2::get_query_path($current_tipo, $current_section_tipo, false);
+		$path   = search::get_query_path($current_tipo, $current_section_tipo, false);
 		$element = new stdClass();
 			$element->path = $path;
 			$element->component_path = ["components",$current_tipo,"dato",$lang];
@@ -1162,7 +1162,7 @@ class component_calculation extends component_common {
 			foreach ($component_filter_dato as $search) {
 				foreach ($search as $current_component_tipo => $q) {
 
-					$path    = search_development2::get_query_path($current_component_tipo, $current_section_tipo, false);
+					$path    = search::get_query_path($current_component_tipo, $current_section_tipo, false);
 					$element = new stdClass();
 						$element->path = $path;
 						$element->q    = $q;					
@@ -1188,8 +1188,8 @@ class component_calculation extends component_common {
 		#dump(null, ' search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT)); exit();
 		
 		# Search records
-		$search_development2 = new search_development2($search_query_object);
-		$search_result 		 = $search_development2->search();
+		$search = new search($search_query_object);
+		$search_result 		 = $search->search();
 		$ar_records 		 = $search_result->ar_records;
 
 

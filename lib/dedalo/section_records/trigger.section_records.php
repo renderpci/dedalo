@@ -114,8 +114,8 @@ function search_rows($json_data) {
 		#$search_query_object->limit = 20;
 
 	// Search against database
-		$search_development2 = new search_development2($search_query_object);
-		$rows_data 		 	 = $search_development2->search();
+		$search = new search($search_query_object);
+		$rows_data 		 	 = $search->search();
 
 	// result_parse_mode optional
 		switch ($result_parse_mode) {

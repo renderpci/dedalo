@@ -58,8 +58,8 @@ class tool_add_component_data extends tool_common {
 		$this->search_options->search_query_object->select 	= [];
 
 		# Search
-		$search_development2 = new search_development2($this->search_options->search_query_object);
-		$rows_data 			 = $search_development2->search();
+		$search = new search($this->search_options->search_query_object);
+		$rows_data 			 = $search->search();
 			#dump($rows_data, ' get_rows_data'.to_string()); die();
 
 		$ar_records  	= (array)$rows_data->ar_records;

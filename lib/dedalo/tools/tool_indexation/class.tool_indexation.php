@@ -68,7 +68,7 @@ class tool_indexation extends tool_common {
 				$locator->set_tag_id($tag_id);				
 
 						
-			$ar_locators = search_development2::calculate_inverse_locators( $locator );
+			$ar_locators = search::calculate_inverse_locators( $locator );
 				#dump($ar_locators, ' ar_locators ++ '.to_string());
 				#dump($locator, ' locator ++ '.to_string());
 

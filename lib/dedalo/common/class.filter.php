@@ -157,8 +157,8 @@ abstract class filter {
 		');
 		#dump( json_encode($search_query_object), ' search_query_object ++ '.to_string());
 
-		$search_development2 = new search_development2($search_query_object);
-		$result = $search_development2->search();
+		$search = new search($search_query_object);
+		$result = $search->search();
 
 		$ar_projects = [];
 		foreach ($result->ar_records as $key => $row) {

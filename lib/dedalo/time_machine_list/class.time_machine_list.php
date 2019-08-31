@@ -32,7 +32,7 @@ class time_machine_list extends common {
 	/**
 	* GET_TIME_MACHINE_RECORDS
 	* Get the last time_machine records of the current section
-	* @see search_development2::calculate_inverse_locator
+	* @see search::calculate_inverse_locator
 	* @return array $inverse_locators
 	*/
 	public function get_time_machine_list_obj($limit=1, $offset=0, $count=false) {

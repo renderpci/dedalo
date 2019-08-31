@@ -888,7 +888,7 @@ class component_filter extends component_relation_common {
 			}else{
 				$related_tipo = false; //$current_column_tipo;
 			}
-			$path 		= search_development2::get_query_path($tipo, $section_tipo, true, false);
+			$path 		= search::get_query_path($tipo, $section_tipo, true, false);
 			$end_path 	= end($path);
 			$end_path->selector = $selector;
 			
@@ -905,8 +905,8 @@ class component_filter extends component_relation_common {
 			}';
 			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
 			$search_query_object = json_decode($search_query_object);
-			$search_development2 = new search_development2($search_query_object);
-			$result 			 = $search_development2->search();
+			$search = new search($search_query_object);
+			$result 			 = $search->search();
 			#dump($result, ' result ** ++ '.to_string());
 
 		// Parse results for stats

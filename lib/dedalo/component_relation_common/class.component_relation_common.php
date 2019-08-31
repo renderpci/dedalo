@@ -494,7 +494,7 @@ class component_relation_common extends component_common {
 					$relation_options->from_component_tipo 	= $tipo;
 					$relation_options->ar_locators 			= $current_dato;
 				
-				$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
+				$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
 			}
 		}
 
@@ -967,7 +967,7 @@ class component_relation_common extends component_common {
 		# split multiple
 		$current_query_object = component_common::split_query($query_object);
 		# conform each object
-		if (search_development2::is_search_operator($current_query_object)===true) {
+		if (search::is_search_operator($current_query_object)===true) {
 			foreach ($current_query_object as $operator => $ar_elements) {
 				foreach ($ar_elements as $c_query_object) {
 					$c_query_object = self::resolve_query_object_sql($c_query_object);
@@ -1621,7 +1621,7 @@ class component_relation_common extends component_common {
 			$locator->set_tag_id($options->fields->tag_id);
 			}
 		
-		$result = search_development2::calculate_inverse_locators( $locator, $limit=false, $offset=false, $count=false );
+		$result = search::calculate_inverse_locators( $locator, $limit=false, $offset=false, $count=false );
 
 
 		return $result;
@@ -1792,7 +1792,7 @@ class component_relation_common extends component_common {
 			}else{
 				$related_tipo = false; //$current_column_tipo;
 			}
-			$path 		= search_development2::get_query_path($tipo, $section_tipo, true, $related_tipo);
+			$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
 			$end_path 	= end($path);
 			$end_path->selector = $selector;
 			
@@ -1809,8 +1809,8 @@ class component_relation_common extends component_common {
 			}';
 			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
 			$search_query_object = json_decode($search_query_object);
-			$search_development2 = new search_development2($search_query_object);
-			$result 			 = $search_development2->search();
+			$search = new search($search_query_object);
+			$result 			 = $search->search();
 			#dump($result, ' result ** ++ '.to_string());
 
 		// Parse results for stats
@@ -1911,7 +1911,7 @@ class component_relation_common extends component_common {
 
 						$current_section_tipo = ($item->section_tipo==='current') ? reset($ar_target_section_tipo) : $item->section_tipo;						
 						
-						$path = search_development2::get_query_path($item->component_tipo, $current_section_tipo, false);
+						$path = search::get_query_path($item->component_tipo, $current_section_tipo, false);
 											
 						// Select_element (select_group)
 							$select_element = new stdClass();							
@@ -1979,8 +1979,8 @@ class component_relation_common extends component_common {
 					$search_query_object->select  		= $select_group;
 
 			// Search
-				$search_develoment2  = new search_development2($search_query_object);
-				$rows_data 		 	 = $search_develoment2->search();
+				$search  	= new search($search_query_object);
+				$rows_data 	= $search->search();
 					#dump($rows_data, ' rows_data ++ '.to_string());
 
 			// Resolve columns				

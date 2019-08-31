@@ -64,8 +64,8 @@ function export_list($json_data) {
 				$search_query_object->select  = []; // unset select
 		
 		# SEARCH
-			$search_develoment2  = new search_development2($search_query_object);
-			$rows_data 		 	 = $search_develoment2->search();
+			$search  = new search($search_query_object);
+			$rows_data 		 	 = $search->search();
 		
 		
 		$resolve_references = true;
