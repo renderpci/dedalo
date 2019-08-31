@@ -36,6 +36,16 @@ class manager {
 			}		
 
 		// actions
+			$dd_api = new dd_api;
+			if ( !method_exists($dd_api, $options->action) ) {
+				$dedalo_data = new stdClass();
+					$dedalo_data->result = false;
+					$dedalo_data->msg 	 = "Error. Undefined method (action) : ".$options->action;
+			}else{
+				$dedalo_data = (object)dd_api::{$options->action}( $options );
+			}
+
+			/*
 			switch ($options->action) {
 
 				case 'read':
@@ -56,7 +66,7 @@ class manager {
 						$dedalo_data->msg 	 = "Error. Undefined method (action) : ".$options->action;
 					break;
 			}
-	
+			*/
 
 		return $dedalo_data;
 	}//end manage_request

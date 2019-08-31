@@ -246,8 +246,8 @@ class web_data {
 			'
 		
 
-		$search_development2 = new search_development2($search_query_object);
-		$result = $search_development2->search();
+		$search = new search($search_query_object);
+		$result = $search->search();
 		
 		
 		$response->result 		= $result;

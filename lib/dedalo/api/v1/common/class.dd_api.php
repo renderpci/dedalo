@@ -15,13 +15,20 @@ class dd_api {
 		static $ar_dd_objects;
 	
 
+	/**
+	* __CONSTRUCT
+	* @return 
+	*/
+	public function __construct() {
+		
+	}//end __construct
 
 	/**
 	* 
 	* CREATE
 	* @return array $result
 	*/
-	function create($json_data) {
+	static function create($json_data) {
 
 		global $start_time;
 
@@ -226,9 +233,9 @@ class dd_api {
 		$sqo = $json_data->sqo;
 
 		// search
-			$search_development2	= new search_development2($sqo);
-			$total 			 		= $search_development2->count();
-			$result 				= $total;
+			$search	= new search($sqo);
+			$total	= $search->count();
+			$result	= $total;
 		
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -240,6 +247,38 @@ class dd_api {
 
 		return (object)$response;
 	}//end count
+
+
+
+	/**
+	* 
+	* FILTER_GET_COMPONENTS
+	* @return array $result
+	*/
+	static function filter_get_components($json_data){
+		global $start_time;
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+			$ar_section_tipo = (array)$json_data->ar_section_tipo;
+
+			$filter_components = search::filter_get_components($ar_section_tipo);
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = new stdClass();
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			}		
+		
+		$response->result 		= $filter_components;
+		$response->msg 	  		= 'Ok. Request done';
+
+		return (object)$response;
+	}//end filter_get_components
 
 
 
@@ -288,9 +327,6 @@ class dd_api {
 			$offset 		= $ddo_source->pagination->offset ?? null;
 		
 		// sqo
-			## $ar_search_query_object = array_filter($sqo_context, function($item){
-			## 	 if($item->typo==='sqo') return $item;
-			## });
 			$search_query_object = array_reduce($sqo_context, function($carry, $item){
 				if (isset($item->typo) && $item->typo==='sqo') {
 					return $item;
@@ -351,8 +387,8 @@ class dd_api {
 						case 'search':
 							/*
 								// search
-									$search_development2 = new search_development2($current_sqo);
-									$rows_data 			 = $search_development2->search();
+									$search = new search($current_sqo);
+									$rows_data 			 = $search->search();
 
 								// section. generated the self section_data
 								foreach ($current_sqo->section_tipo as $current_section_tipo) {
@@ -479,7 +515,7 @@ class dd_api {
 		// Set result object
 			$result->context = $context;
 			$result->data 	 = $data;
-				//dump($result, ' result ++ '.to_string());
+		
 		
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -487,8 +523,9 @@ class dd_api {
 					$debug->context_exec_time 	= $context_exec_time;
 					$debug->data_exec_time 		= $data_exec_time;
 					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
-				$result->debug = $debug;	
-			}			
+				$result->debug = $debug;
+				#dump($debug, ' debug ++ '.to_string());
+			}	
 	
 
 		return $result;
@@ -598,8 +635,8 @@ class dd_api {
 			foreach ($ar_search_query_object as $current_sqo) {
 
 				// search
-					$search_development2 = new search_development2($current_sqo);
-					$rows_data 			 = $search_development2->search();
+					$search = new search($current_sqo);
+					$rows_data 			 = $search->search();
 
 				// section. generated the self section_data
 					foreach ($current_sqo->section_tipo as $current_section_tipo) {
