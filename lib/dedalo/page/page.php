@@ -2,6 +2,8 @@
 	#dump($_REQUEST, ' _REQUEST ++ '.to_string());
 	# PAGE CONTROLLER
 
+	$mode = 'edit';
+
 
 	// page globals
 		$page_globals = (function($mode) {
@@ -21,9 +23,9 @@
 				#$obj->section_name 	= defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
 				# top
 				#$obj->top_tipo 		= TOP_TIPO;
-				#$obj->top_id 		= TOP_ID;
+				#$obj->top_id 			= TOP_ID;
 				# modo
-				$obj->mode 			= isset($mode) ? $mode : null;
+				$obj->mode 				= isset($mode) ? $mode : null;
 				# caller_tipo
 				#$obj->caller_tipo 	= $caller_tipo;
 				# context_name
@@ -72,13 +74,11 @@
 		die("Not logged!");
 	
 	}else{
-		
 
-		// page_options
-			$mode 			= 'edit';
+		// page_options			
 			$section_tipo 	= 'test65';
 			$section_id		= '';
-			$mode 	 	 	= $mode;
+			$mode 	 	 	= 'search';
 			$lang 	 	 	= DEDALO_DATA_LANG;
 
 			// sqo_context
@@ -99,15 +99,45 @@
 					$page_item->section_id 	 = $section_id;
 					$page_item->mode 	 	 = $mode;
 					$page_item->lang 	 	 = DEDALO_DATA_LANG;
-					$page_item->sqo_context  = $sqo_context;
+					$page_item->sqo_context  = $sqo_context;			
+
+			// add
+				$page_items[] = $page_item;
+		
+
+		// page_options			
+			$section_tipo 	= 'test65';
+			$section_id		= '';
+			$mode 	 	 	= 'edit';
+			$lang 	 	 	= DEDALO_DATA_LANG;
+
+			// sqo_context
+				$sqo_context = (function($section_id, $section_tipo, $mode, $lang) {
+
+					$section = section::get_instance($section_id, $section_tipo, $mode); 
+					$section->set_lang($lang);
+					$sqo_context = $section->get_sqo_context();
 			
+					return $sqo_context;
+				})($section_id, $section_tipo, $mode, $lang);
+
+
+			// item (section, tool, etc.)
+				$page_item = new StdClass();
+					$page_item->model 		 = 'section';
+					$page_item->section_tipo = 'test65';
+					$page_item->section_id 	 = $section_id;
+					$page_item->mode 	 	 = $mode;
+					$page_item->lang 	 	 = DEDALO_DATA_LANG;
+					$page_item->sqo_context  = $sqo_context;			
 
 			// add
 				$page_items[] = $page_item;
 			
 			
 			$page_options = new StdClass();
-				$page_options->page_items = $page_items;
+				$page_options->mode  		= 'section';
+				$page_options->page_items 	= $page_items;
 
 
 		// page header
