@@ -1469,8 +1469,9 @@ abstract class common {
 
 		// options parse
 			$options = new stdClass();
-				$options->get_context 	= true;
-				$options->get_data 		= true;				
+				$options->get_context 			= true;
+				$options->get_context_simple 	= false;
+				$options->get_data 				= true;
 				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$called_model = get_class($this); // get_called_class(); // static::class
@@ -1511,7 +1512,7 @@ abstract class common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
-	* @return object $item
+	* @return object $dd_object
 	*/
 	public function get_structure_context($permissions=0, $sqo_object=null) {
 
@@ -1573,7 +1574,7 @@ abstract class common {
 			$tools = $this->get_ar_tools_obj();			
 			if ($tools===false || is_null($tools)) {
 			 	$tools = [];
-			 }
+			}
 		
 		// sqo_context
 			if($sqo_object===true){
@@ -1622,6 +1623,71 @@ abstract class common {
 
 
 	/**
+	* GET_STRUCTURE_CONTEXT_simple
+	* @return object $dd_object
+	*/
+	public function get_structure_context_simple($permissions=0) {
+
+		// class called (model name too like component_input_text)
+			#$called_model = get_called_class();
+			$called_model = get_class($this);
+
+		// sort vars
+			$tipo 		  = $this->get_tipo();
+			$section_tipo = $this->get_section_tipo();
+			$translatable = $this->RecordObj_dd->get_traducible()==='si' ? true : false;			
+			$mode 		  = $this->get_modo();
+			$label 		  = $this->get_label();
+			$lang		  = $this->get_lang();			
+		
+		// parent 
+			// 1 . From requested context
+			if (isset(dd_api::$ar_dd_objects)) {
+			
+			 	$request_dd_object = array_reduce(dd_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
+					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+						return $item;
+					}
+					return $carry;
+				});				
+				if (!empty($request_dd_object->parent)) {
+					// set
+					$parent = $request_dd_object->parent;
+				}
+			}
+
+			// 2 . From injected 'from_parent'
+			if (!isset($parent) && isset($this->from_parent)) {
+				// injected by the element
+				$parent = $this->from_parent;
+			}
+
+			// 3 . From structure (fallback)
+			if (!isset($parent)) {
+				// default
+				$parent = $this->RecordObj_dd->get_parent();
+			}		
+	
+		// dd_object
+			$dd_object = new dd_object((object)[
+				'label' 		=> $label,
+				'tipo' 			=> $tipo,
+				'section_tipo' 	=> $section_tipo,
+				'model' 		=> $called_model,
+				'parent' 		=> $parent,
+				'lang' 			=> $lang,
+				'mode' 			=> $mode,
+				'translatable' 	=> $translatable,				
+				'permissions'	=> $permissions				
+			]);		
+	
+
+		return $dd_object;
+	}//end get_structure_context_simple
+
+
+
+	/**
 	* GET_AR_SUBCONTEXT
 	* @return array $ar_subcontext
 	*/
@@ -1650,7 +1716,7 @@ abstract class common {
 				
 				switch (true) {
 					// component case
-					case (strpos($model, 'component_')===0):						
+					case (strpos($model, 'component_')===0):
 						
 						$current_lang 	 = $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);						
 						$related_element = component_common::get_instance($model,
@@ -2033,7 +2099,7 @@ abstract class common {
 								continue;
 							}
 
-						$path = search_development2::get_query_path($current_tipo, $source_search_item->section_tipo);
+						$path = search::get_query_path($current_tipo, $source_search_item->section_tipo);
 						
 						# FILTER . filter_element (operator_group)
 							if ($options->add_filter===true) {								
