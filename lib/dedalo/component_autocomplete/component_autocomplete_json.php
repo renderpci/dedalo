@@ -30,23 +30,35 @@
 
 
 
+// context_simple
+	if($options->get_context_simple===true){
+
+		// Component structure context_simple (tipo, relations, properties, etc.)
+			$context[] = $this->get_structure_context_simple($permissions);
+
+	}//end if($options->get_context_simple===true)
+
+
+
 // data
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
 
-		$section_id		= $this->get_parent();
+		$section_id	= $this->get_parent();
+		$properties = $this->get_propiedades();
 
 		switch ($modo) {
 			case 'edit':
-				//$dato 	= $this->get_dato();
-				$value 	= $this->get_dato_paginated();
 				$dato 	= $this->get_dato();
+				$value 	= $this->get_dato_paginated();				
+				$limit 	= $this->pagination->limit ?? $properties->max_records ?? 10;
 
 				break;
 
 			case 'list':
 				$dato 	= $this->get_dato();
+				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
 				break;
 		}
 
@@ -56,7 +68,12 @@
 				$item = $this->get_data_item($value);
 					$item->parent_tipo 			= $tipo;
 					$item->parent_section_id 	= $section_id;
-					$item->total_records		= count($dato);
+					// fix pagination vars
+						$pagination = new stdClass();
+							$pagination->total	= count($dato);
+							$pagination->limit 	= $limit;
+							$pagination->offset = $this->pagination->offset ?? 0;
+					$item->pagination = $pagination;
 
 				$data[] = $item;
 

@@ -16,7 +16,7 @@
 	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions, $sqo_context=true);
+			$context[] = $this->get_structure_context($permissions, $sqo_context=false);
 
 		// subcontext from element layout_map items
 			$ar_subcontext = $this->get_ar_subcontext();
@@ -28,10 +28,22 @@
 
 
 
+// context_simple
+	if($options->get_context_simple===true){
+
+		// Component structure context_simple (tipo, relations, properties, etc.)
+			$context[] = $this->get_structure_context_simple($permissions);
+
+	}//end if($options->get_context_simple===true)
+
+
+
 // data
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
+
+		
 			
 		// subdata
 		// default locator build with this section params			
