@@ -202,8 +202,7 @@ function get_component_presets($json_data) {
 
 		$response->debug = $debug;
 	}
-
-
+	
 	return (object)$response;
 }//end get_component_presets
 
