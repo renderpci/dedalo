@@ -2784,13 +2784,8 @@ class search {
 	* Used to build search presets. Get all section components available
 	* @return object $response
 	*/
-	public static function filter_get_components($ar_section_tipo, $path=[], $ar_tipo_exclude_elements=false) {
-		#dump($section_tipo, ' section_tipo ++ '.to_string());
+	public static function filter_get_components($ar_section_tipo, $path=[], $ar_tipo_exclude_elements=false) {		
 		$start_time=microtime(1);
-		
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
 
 		$ar_result = [];
 
@@ -2867,143 +2862,40 @@ class search {
 					default:
 						debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$element_tipo' ".to_string(), logger::WARNING);
 						break;
-				}
+				}//end switch (true)
 
 				// element json
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 			= false;
 						$get_json_options->get_context_simple 	= true;
-						$get_json_options->get_data 			= false;						
+						$get_json_options->get_data 			= false;
 					$element_json = $element->get_json($get_json_options);
 
-				// context add 
-					$context[] = $element_json->context;
-			}
+				// item context simple
+					$item_context = $element_json->context;
 
-			return $context;
-
-			continue;
-
-			# section label
-			$section_label 	  = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG , true, true);
-
-			$ar_children 	  = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
-			$ar_section_group = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['section_group','section_group_div','section_tab'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements);
-			
-			// Add section common info
-			$ar_section_group[] = DEDALO_SECTION_INFO_SECTION_GROUP;	
-
-			$ar_section_group_parsed = [];
-			foreach ($ar_section_group as $section_group_tipo) {				
-
-				$current_section_group_modelo = RecordObj_dd::get_modelo_name_by_tipo($section_group_tipo,true);
-				switch ($current_section_group_modelo) {
-					case 'section_tab':
-						# Section tab case need resolve children tabs
-						$ar_tabs = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
-						foreach ($ar_tabs as $tab_tipo) {
-							$ar_section_group_parsed[] = $tab_tipo;
-						}
-						break;					
-					default:
-						# Add regular section group
-						$ar_section_group_parsed[] = $section_group_tipo;
-						break;
-				}
-			}		
-	
-			foreach ($ar_section_group_parsed as $section_group_tipo) {				
-
-				# section_group_label
-				$section_group_label 		= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
-				$ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
-				#$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');				
-				
-				foreach ($ar_section_group_childrens as $component_tipo) {
-					
-					if ($section_group_tipo!==DEDALO_SECTION_INFO_SECTION_GROUP && !in_array($component_tipo, $ar_children)) {
-						continue;
+				// target section tipo add
+					if ($model==='component_portal' || $model==='component_autocomplete') {
+						$ddo = reset($item_context);
+						$target_section_tipo = $element->get_ar_target_section_tipo();
+						// Check target section access here ?
+						$n_sections = count($target_section_tipo);
+						if ($n_sections===1) {
+							$ddo->target_section_tipo = $target_section_tipo;
+						}else{
+							debug_log(__METHOD__." Ignored $model with section tipo: ".to_string($target_section_tipo).' only allowed 1 section_tipo' , logger::DEBUG);
+						}				
 					}
 
-					$has_subquery   = false;
-					$target_section = false;
+				// context add 
+					$context = array_merge($context, $item_context);
 
-					$element = new stdClass();
-						$element->section_group_tipo  		= $section_group_tipo;
-						$element->section_group_label  		= $section_group_label;
-						$element->section_tipo  			= $section_tipo;
-						$element->section_label  			= $section_label;
-						$element->component_tipo  			= $component_tipo;					
-						$element->component_label 			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG , true, true);
-						$element->path  					= $path;
-						$element->has_subquery  			= false; // Default (changes when component_portal/component_autocomplete)
-						$element->target_section  			= false; // Default (changes when component_portal/component_autocomplete)
-						$element->ar_tipo_exclude_elements 	= false; // default (changes when component_portal/component_autocomplete and ar_terminos_relacionados_to_exclude)
-					
-					// Exclude components
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						if(true===in_array($modelo_name, $ar_components_exclude)) continue; // Skip excluded components				
+			}//end foreach ($ar_elements as $element_tipo)
 
-					// Check components with has_subquery
-						if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete') {
-							
-							// set has_subquery as true
-							$element->has_subquery 	 = true;
-
-							// set target_section
-							$element->target_section = common::get_ar_related_by_model('section', $component_tipo);
-							
-							$current_target_section  = reset($element->target_section);
-
-							if ($user_id_logged!=DEDALO_SUPERUSER && 
-								(!isset($ar_authorized_areas->$current_target_section) || (int)$ar_authorized_areas->$current_target_section<1)) {
-								// user don't have access to current section. skip section
-								continue;
-							}
-
-							// set exclude_elements
-							$ar_exclude_elements_tipo = common::get_ar_related_by_model('exclude_elements', $component_tipo);
-							if (isset($ar_exclude_elements_tipo[0])) {
-								
-								$tipo_exclude_elements = $ar_exclude_elements_tipo[0];
-
-								$ar_terminos_relacionados_to_exclude = RecordObj_dd::get_ar_terminos_relacionados($tipo_exclude_elements, $cache=false, $simple=true);
-
-								foreach ($ar_terminos_relacionados_to_exclude as $key => $exclude_component_tipo) {
-									
-									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($exclude_component_tipo, true);
-									if ($modelo_name==='section_group' || $modelo_name==='section_group_div' || $modelo_name==='section_tab') {
-										$ar_recursive_childrens = (array)section::get_ar_recursive_childrens($exclude_component_tipo);
-										//dump($ar_recursive_childrens,'ar_recursive_childrens');
-										$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
-									}
-								}//end foreach ($ar_terminos_relacionados_to_exclude as $key => $exclude_component_tipo) {
-
-								// set ar_tipo_exclude_elements
-								$element->ar_tipo_exclude_elements = $ar_terminos_relacionados_to_exclude;
-							}
-						}//end if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete')
-
-					// Add modelo_name
-					$element->modelo_name = $modelo_name;
-					
-					// Add element
-					$ar_result[] = $element;
-				}
-			}//end foreach ($ar_section_group_childrens as $component_tipo)
-
-		}
-		#dump($ar_result, ' ar_result ++ '.to_string());
-
-		$response->result 	= $ar_result;
-		$response->msg 		= 'Ok. Request done.';
-		if(SHOW_DEBUG===true) {
-			$total_time = exec_time_unit($start_time,'ms');
-			$response->msg .= " Total: ".count($ar_result)." in $total_time ms";			
-		}
+		}//end foreach ((array)$ar_section_tipo as $section_tipo)
 
 
-		return $response;
+		return $context;
 	}//end filter_get_components
 
 
