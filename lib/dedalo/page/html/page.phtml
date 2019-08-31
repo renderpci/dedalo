@@ -16,7 +16,9 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/menu/js/menu.js"></script>
 <script type="module" >
-	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"
+	// launch preload all components files in parallel
+	// import('../common/js/components_list.js')
+	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"	
 	const current_page = new page(<?php echo json_encode($page_options) ?>)
 	current_page.init();
 	current_page.render();
