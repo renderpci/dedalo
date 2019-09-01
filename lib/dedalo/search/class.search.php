@@ -2825,7 +2825,7 @@ class search {
 		#dump($ar_authorized_areas, ' ar_authorized_areas ++ '.to_string());
 
 		foreach ((array)$ar_section_tipo as $section_tipo) {
-
+			
 			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
 				&& $user_id_logged!=DEDALO_SUPERUSER
 				&& (!isset($ar_authorized_areas->$section_tipo) || (int)$ar_authorized_areas->$section_tipo<1)) {				
@@ -2833,9 +2833,25 @@ class search {
 				continue;
 			}
 
+			$context = [];
+
+			//create the section instance and get the context_simple
+				$dd_section = section::get_instance(null, $section_tipo, $modo='list', $cache=true);
+
+			// element json
+				$get_json_options = new stdClass();
+					$get_json_options->get_context 			= false;
+					$get_json_options->get_context_simple 	= true;
+					$get_json_options->get_data 			= false;
+				$element_json = $dd_section->get_json($get_json_options);
+
+			// item context simple
+				$item_context = $element_json->context;
+			
+			$context = array_merge($context, $item_context);
+
 			$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_include_elements, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
 
-			$context = [];
 			foreach ($ar_elements as $element_tipo) {
 
 				$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
