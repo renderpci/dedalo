@@ -252,10 +252,13 @@ class dd_api {
 
 	/**
 	* 
-	* FILTER_GET_COMPONENTS
-	* @return array $result
+	* GET_SECTION_COMPONENTS
+	* Get all components of current section (used in section filter)
+	* @param object $json_data
+	*	array $json_data->ar_section_tipo
+	* @return object $response
 	*/
-	static function filter_get_components($json_data){
+	static function get_section_components($json_data){
 		global $start_time;
 
 		session_write_close();
@@ -277,8 +280,17 @@ class dd_api {
 		$response->result 		= $filter_components;
 		$response->msg 	  		= 'Ok. Request done';
 
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->json_data 	= $json_data;
+				$response->debug = $debug;
+				#dump($debug, ' debug ++ '.to_string());
+			}
+
 		return (object)$response;
-	}//end filter_get_components
+	}//end get_section_components
 
 
 
