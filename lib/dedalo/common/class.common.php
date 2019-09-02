@@ -2208,5 +2208,152 @@ abstract class common {
 
 
 
+	/**
+	* GET_SECTION_COMPONENTS
+	* Get list of all components available for current section using get_context_simple
+	* Used to build search presets in filter
+	* @param array $request_options
+	* @return array $context
+	*/
+	public static function get_section_components($request_options) {
+		$start_time=microtime(1);
+
+		$options = new stdClass();
+			$options->ar_section_tipo 			= null;
+			$options->path 						= [];
+			$options->ar_tipo_exclude_elements 	= [];
+			$options->ar_components_exclude 	= [	
+				'component_password',
+				'component_filter_records',
+				'component_image',
+				'component_av',
+				'component_pdf',
+				'component_security_administrator',
+				//'component_relation_children',
+				//'component_relation_related',
+				//'component_relation_model',
+				//'component_relation_parent',
+				//'component_relation_index',
+				//'component_relation_struct',
+				'component_geolocation',
+				'component_info',
+				'component_state',
+				'section_tab',
+			];
+			$options->ar_include_elements 		= [
+				'component',
+				'section_group',
+				'section_group_div',
+				'section_tab'
+			];
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+
+		$ar_section_tipo 			= $options->ar_section_tipo;
+		$path 						= $options->path;
+		$ar_tipo_exclude_elements 	= $options->ar_tipo_exclude_elements;
+		$ar_components_exclude 		= $options->ar_components_exclude;
+		$ar_include_elements 		= $options->ar_include_elements;
+
+		# Manage multiple sections
+		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
+		#$ar_section_tipo = (array)$section_tipo;
+
+		$user_id_logged		 = navigator::get_user_id();
+		$ar_authorized_areas = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, 'full');
+		#dump($ar_authorized_areas, ' ar_authorized_areas ++ '.to_string());
+
+		$context = [];
+		foreach ((array)$ar_section_tipo as $section_tipo) {
+			
+			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
+				&& $user_id_logged!=DEDALO_SUPERUSER
+				&& (!isset($ar_authorized_areas->$section_tipo) || (int)$ar_authorized_areas->$section_tipo<1)) {				
+				// user don't have access to current section. skip section
+				continue;
+			}			
+
+			//create the section instance and get the context_simple
+				$dd_section = section::get_instance(null, $section_tipo, $modo='list', $cache=true);
+
+			// element json
+				$get_json_options = new stdClass();
+					$get_json_options->get_context 			= false;
+					$get_json_options->get_context_simple 	= true;
+					$get_json_options->get_data 			= false;
+				$element_json = $dd_section->get_json($get_json_options);
+
+			// item context simple
+				$item_context = $element_json->context;
+			
+			$context = array_merge($context, $item_context);
+
+			$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_include_elements, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
+
+			foreach ($ar_elements as $element_tipo) {
+
+				$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+
+				switch (true) {
+					// component case
+					case (strpos($model, 'component_')===0):
+						
+						$current_lang 	 = DEDALO_DATA_LANG;
+						$element  = component_common::get_instance(	$model,
+																	$element_tipo,
+																	null,
+																	'list',
+																	$current_lang,
+																	$section_tipo);
+				break;
+					
+					// grouper case
+					case (in_array($model, layout_map::$groupers)):
+						
+						$element  = new $model($element_tipo, $section_tipo, 'list');											
+						break;
+
+					// others case
+					default:
+						debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$element_tipo' ".to_string(), logger::WARNING);
+						break;
+				}//end switch (true)
+
+				// element json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context 			= false;
+						$get_json_options->get_context_simple 	= true;
+						$get_json_options->get_data 			= false;
+					$element_json = $element->get_json($get_json_options);
+
+				// item context simple
+					$item_context = $element_json->context;
+
+				// target section tipo add
+					if ($model==='component_portal' || $model==='component_autocomplete') {
+						$ddo = reset($item_context);
+						$target_section_tipo = $element->get_ar_target_section_tipo();
+						// Check target section access here ?
+						$n_sections = count($target_section_tipo);
+						if ($n_sections===1) {
+							$ddo->target_section_tipo = $target_section_tipo;
+						}else{
+							debug_log(__METHOD__." Ignored $model with section tipo: ".to_string($target_section_tipo).' only allowed 1 section_tipo' , logger::DEBUG);
+						}				
+					}
+
+				// context add 
+					$context = array_merge($context, $item_context);
+
+			}//end foreach ($ar_elements as $element_tipo)
+
+		}//end foreach ((array)$ar_section_tipo as $section_tipo)
+
+
+		return $context;
+	}//end get_section_components
+
+
+
 }//end class
 ?>
