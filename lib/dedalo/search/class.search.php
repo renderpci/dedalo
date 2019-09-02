@@ -2780,41 +2780,51 @@ class search {
 
 
 	/**
-	* FILTER_GET_COMPONENTS
+	* GET_section_COMPONENTS
 	* Get list of all components available for current section
 	* Used to build search presets in filter
-	* @return object $response
+	* @param array $request_options
+	* @return array $context
 	*/
-	public static function filter_get_components($ar_section_tipo, $path=[], $ar_tipo_exclude_elements=false) {		
+	public static function get_section_components($request_options) {		
 		$start_time=microtime(1);
 
-		$ar_result = [];
+		$options = new stdClass();
+			$options->ar_section_tipo 			= null;
+			$options->path 						= [];
+			$options->ar_tipo_exclude_elements 	= [];
+			$options->ar_components_exclude 	= [	
+				'component_password',
+				'component_filter_records',
+				'component_image',
+				'component_av',
+				'component_pdf',
+				'component_security_administrator',
+				//'component_relation_children',
+				//'component_relation_related',
+				//'component_relation_model',
+				//'component_relation_parent',
+				//'component_relation_index',
+				//'component_relation_struct',
+				'component_geolocation',
+				'component_info',
+				'component_state',
+				'section_tab',
+			];
+			$options->ar_include_elements 		= [
+				'component',
+				'section_group',
+				'section_group_div',
+				'section_tab'
+			];
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$ar_components_exclude = [	
-			'component_password',
-			'component_filter_records',
-			'component_image',
-			'component_av',
-			'component_pdf',
-			'component_security_administrator',
-			//'component_relation_children',
-			//'component_relation_related',
-			//'component_relation_model',
-			//'component_relation_parent',
-			//'component_relation_index',
-			//'component_relation_struct',
-			'component_geolocation',
-			'component_info',
-			'component_state',
-			'section_tab',
-		];
 
-		$ar_include_elements = [
-			'component',
-			'section_group',
-			'section_group_div',
-			'section_tab'
-		];
+		$ar_section_tipo 			= $options->ar_section_tipo;
+		$path 						= $options->path;
+		$ar_tipo_exclude_elements 	= $options->ar_tipo_exclude_elements;
+		$ar_components_exclude 		= $options->ar_components_exclude;
+		$ar_include_elements 		= $options->ar_include_elements;
 
 		# Manage multiple sections
 		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
@@ -2824,6 +2834,7 @@ class search {
 		$ar_authorized_areas = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, 'full');
 		#dump($ar_authorized_areas, ' ar_authorized_areas ++ '.to_string());
 
+		$context = [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 			
 			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
@@ -2831,9 +2842,7 @@ class search {
 				&& (!isset($ar_authorized_areas->$section_tipo) || (int)$ar_authorized_areas->$section_tipo<1)) {				
 				// user don't have access to current section. skip section
 				continue;
-			}
-
-			$context = [];
+			}			
 
 			//create the section instance and get the context_simple
 				$dd_section = section::get_instance(null, $section_tipo, $modo='list', $cache=true);
@@ -2913,7 +2922,7 @@ class search {
 
 
 		return $context;
-	}//end filter_get_components
+	}//end get_section_components
 
 
 

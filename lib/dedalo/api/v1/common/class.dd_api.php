@@ -8,6 +8,7 @@
 class dd_api {
 
 
+
 	// Version. Important!
 		static $version = "1.0.0";  // 05-06-2019
 
@@ -15,16 +16,20 @@ class dd_api {
 		static $ar_dd_objects;
 	
 
-	/**
-	* __CONSTRUCT
-	* @return 
-	*/
-	public function __construct() {
-		
-	}//end __construct
 
 	/**
-	* 
+	* __CONSTRUCT
+	* @return bool
+	*
+	public function __construct() {
+		
+		return true;
+	}//end __construct
+	*/
+
+
+
+	/** 
 	* CREATE
 	* @return array $result
 	*/
@@ -83,8 +88,7 @@ class dd_api {
 
 
 
-	/**
-	* 
+	/** 
 	* READ
 	* @return array $result
 	*/
@@ -122,8 +126,7 @@ class dd_api {
 
 
 
-	/**
-	* 
+	/** 
 	* SAVE
 	* @return array $result
 	*/
@@ -206,8 +209,7 @@ class dd_api {
 
 
 	
-	/**
-	* 
+	/** 
 	* DELETE
 	* @return array $result
 	*/
@@ -216,8 +218,7 @@ class dd_api {
 
 
 
-	/**
-	* 
+	/** 
 	* COUNT
 	* @return array $result
 	*/
@@ -250,8 +251,7 @@ class dd_api {
 
 
 
-	/**
-	* 
+	/** 
 	* GET_SECTION_COMPONENTS
 	* Get all components of current section (used in section filter)
 	* @param object $json_data
@@ -268,8 +268,10 @@ class dd_api {
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 			$ar_section_tipo = (array)$json_data->ar_section_tipo;
-
-			$filter_components = search::filter_get_components($ar_section_tipo);
+			
+			$filter_components = search::get_section_components([
+				'ar_section_tipo' => $ar_section_tipo
+			]);
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -294,8 +296,7 @@ class dd_api {
 
 
 
-	/**
-	* 
+	/** 
 	* FILTER_GET_EDITING_PRESET
 	* @return array $result
 	*/
@@ -327,8 +328,7 @@ class dd_api {
 
 
 
-	/**
-	* 
+	/** 
 	* FILTER_GET_USER_PRESETS
 	* @return array $result
 	*/
