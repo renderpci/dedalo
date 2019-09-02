@@ -269,7 +269,7 @@ class dd_api {
 
 			$ar_section_tipo = (array)$json_data->ar_section_tipo;
 			
-			$filter_components = search::get_section_components([
+			$filter_components = common::get_section_components([
 				'ar_section_tipo' => $ar_section_tipo
 			]);
 
