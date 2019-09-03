@@ -1469,10 +1469,10 @@ abstract class common {
 
 		// options parse
 			$options = new stdClass();
-				$options->get_context 			= true;
-				$options->get_context_simple 	= false;
-				$options->get_data 				= true;
-				$options->get_sqo_context 		= false;
+				$options->get_context 		= true;
+				$options->context_type 		= 'default';
+				$options->get_data 			= true;
+				$options->get_sqo_context 	= false;
 				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$called_model = get_class($this); // get_called_class(); // static::class
@@ -2210,16 +2210,17 @@ abstract class common {
 
 
 	/**
-	* GET_SECTION_ELEMENTS_CONTEXT_SIMPLE
+	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get list of all components available for current section using get_context_simple
 	* Used to build search presets in filter
 	* @param array $request_options
 	* @return array $context
 	*/
-	public static function get_section_elements_context_simple($request_options) {
+	public static function get_section_elements_context($request_options) {
 		$start_time=microtime(1);
 
 		$options = new stdClass();
+			$options->context_type 				= 'simple';
 			$options->ar_section_tipo 			= null;
 			$options->path 						= [];
 			$options->ar_tipo_exclude_elements 	= [];
@@ -2255,6 +2256,7 @@ abstract class common {
 		$ar_tipo_exclude_elements 	= $options->ar_tipo_exclude_elements;
 		$ar_components_exclude 		= $options->ar_components_exclude;
 		$ar_include_elements 		= $options->ar_include_elements;
+		$context_type 				= $options->context_type;
 
 		# Manage multiple sections
 		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
@@ -2279,9 +2281,9 @@ abstract class common {
 
 			// element json
 				$get_json_options = new stdClass();
-					$get_json_options->get_context 			= false;
-					$get_json_options->get_context_simple 	= true;
-					$get_json_options->get_data 			= false;
+					$get_json_options->get_context 		= true;
+					$get_json_options->context_type 	= $context_type;
+					$get_json_options->get_data 		= false;
 				$element_json = $dd_section->get_json($get_json_options);
 
 			// item context simple
@@ -2322,9 +2324,9 @@ abstract class common {
 
 				// element json
 					$get_json_options = new stdClass();
-						$get_json_options->get_context 			= false;
-						$get_json_options->get_context_simple 	= true;
-						$get_json_options->get_data 			= false;
+						$get_json_options->get_context 		= true;
+						$get_json_options->context_type 	= $context_type;
+						$get_json_options->get_data 		= false;
 					$element_json = $element->get_json($get_json_options);
 
 				// item context simple
@@ -2352,7 +2354,7 @@ abstract class common {
 
 
 		return $context;
-	}//end get_section_elements_context_simple
+	}//end get_section_elements_context
 
 
 

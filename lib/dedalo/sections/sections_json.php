@@ -13,31 +13,28 @@
 	$context = [];
 
 	if($options->get_context===true){
-
-		foreach ((array)$ar_section_tipo as $current_section_tipo) {
+		switch ($options->context_type) {
+			case 'simple':
+				// Component structure context_simple (tipo, relations, properties, etc.)
+				$context[] = $this->get_structure_context_simple($permissions);
+				break;
 			
-			$section = section::get_instance(null, $current_section_tipo, $modo);
+			default:
+				foreach ((array)$ar_section_tipo as $current_section_tipo) {
+			
+					$section = section::get_instance(null, $current_section_tipo, $modo);
 
-			// get the JSON context of the related component
-				$section_options = new stdClass();
-					$section_options->get_context	= true;
-					$section_options->get_data 	 	= false;
-				$section_json = $section->get_json($section_options);		
-	
-			$context = array_merge($context, $section_json->context);
+					// get the JSON context of the related component
+						$section_options = new stdClass();
+							$section_options->get_context	= true;
+							$section_options->get_data 	 	= false;
+						$section_json = $section->get_json($section_options);		
+			
+					$context = array_merge($context, $section_json->context);
+				}
+				break;
 		}
-			
 	}//end if($options->get_context===true)
-
-
-
-// context_simple
-	if($options->get_context_simple===true){
-
-		// Component structure context_simple (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context_simple($permissions);
-
-	}//end if($options->get_context_simple===true)
 
 
 

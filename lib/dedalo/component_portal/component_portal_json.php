@@ -16,28 +16,25 @@
 	$context = [];
 
 	if($options->get_context===true){
-
-		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions);
+		switch ($options->context_type) {
+			case 'simple':
+				// Component structure context_simple (tipo, relations, properties, etc.)
+				$context[] = $this->get_structure_context_simple($permissions);
+				break;
 			
-		// subcontext from element layout_map items
-			$ar_subcontext = $this->get_ar_subcontext();
-			foreach ($ar_subcontext as $current_context) {
-				$context[] = $current_context;
-			}
-	
+			default:
+				// Component structure context (tipo, relations, properties, etc.)
+					$context[] = $this->get_structure_context($permissions);
+					
+				// subcontext from element layout_map items
+					$ar_subcontext = $this->get_ar_subcontext();
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
+				break;
+		}
 	}//end if($options->get_context===true)
-
-
-
-// context_simple
-	if($options->get_context_simple===true){
-
-		// Component structure context_simple (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context_simple($permissions);
-
-	}//end if($options->get_context_simple===true)
-
+	
 
 
 // data
