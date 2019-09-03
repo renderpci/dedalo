@@ -17,8 +17,10 @@
 
 	if($options->get_context===true){
 
+		$sqo_context = true; // overwrite default false to force calculate
+
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions, $sqo_context=true);
+			$context[] = $this->get_structure_context($permissions, $sqo_context);
 
 		// subcontext from element layout_map items
 			$ar_subcontext = $this->get_ar_subcontext();

@@ -1472,6 +1472,7 @@ abstract class common {
 				$options->get_context 			= true;
 				$options->get_context_simple 	= false;
 				$options->get_data 				= true;
+				$options->get_sqo_context 		= false;
 				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$called_model = get_class($this); // get_called_class(); // static::class
@@ -1514,7 +1515,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=0, $sqo_object=null) {
+	public function get_structure_context($permissions=0, $sqo_object=false) {
 
 		// class called (model name too like component_input_text)
 			#$called_model = get_called_class();
@@ -2209,13 +2210,13 @@ abstract class common {
 
 
 	/**
-	* GET_SECTION_COMPONENTS
+	* GET_SECTION_ELEMENTS_CONTEXT_SIMPLE
 	* Get list of all components available for current section using get_context_simple
 	* Used to build search presets in filter
 	* @param array $request_options
 	* @return array $context
 	*/
-	public static function get_section_components($request_options) {
+	public static function get_section_elements_context_simple($request_options) {
 		$start_time=microtime(1);
 
 		$options = new stdClass();
@@ -2351,7 +2352,7 @@ abstract class common {
 
 
 		return $context;
-	}//end get_section_components
+	}//end get_section_elements_context_simple
 
 
 
