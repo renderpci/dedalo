@@ -269,7 +269,7 @@ class dd_api {
 		// vars from json_data
 			$tipo 			= $json_data->tipo;
 			$section_tipo 	= $json_data->section_tipo;
-			$model 			= $json_data->model : RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model 			= $json_data->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang 			= $json_data->lang ?? DEDALO_DATA_LANG;
 		
 		// build element
@@ -308,13 +308,13 @@ class dd_api {
 
 
 	/** 
-	* get_section_elements_context_simple
+	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get all components of current section (used in section filter)
 	* @param object $json_data
 	*	array $json_data->ar_section_tipo
 	* @return object $response
 	*/
-	static function get_section_elements_context_simple($json_data){
+	static function get_section_elements_context($json_data){
 		global $start_time;
 
 		session_write_close();
@@ -323,10 +323,12 @@ class dd_api {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$ar_section_tipo = (array)$json_data->ar_section_tipo;
+			$ar_section_tipo 	= (array)$json_data->ar_section_tipo;
+			$context_type 		= $json_data->context_type;
 			
-			$filter_components = common::get_section_elements_context_simple([
-				'ar_section_tipo' => $ar_section_tipo
+			$filter_components = common::get_section_elements_context([
+				'ar_section_tipo' 	=> $ar_section_tipo,
+				'context_type' 		=> $context_type
 			]);
 
 		// Debug
@@ -348,7 +350,7 @@ class dd_api {
 			}
 
 		return (object)$response;
-	}//end get_section_elements_context_simple
+	}//end get_section_elements_context
 
 
 
