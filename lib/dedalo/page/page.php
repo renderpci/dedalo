@@ -1,8 +1,9 @@
 <?php
 	#dump($_REQUEST, ' _REQUEST ++ '.to_string());
 	# PAGE CONTROLLER
-
-	$mode = 'edit';
+	
+	// page mode
+		$mode = 'edit';
 
 
 	// page globals
@@ -74,67 +75,70 @@
 		die("Not logged!");
 	
 	}else{
-
-		// page_options			
-			$section_tipo 	= 'test65';
-			$section_id		= '';
-			$mode 	 	 	= 'list';
-			$lang 	 	 	= DEDALO_DATA_LANG;
-
-			// sqo_context
-				$sqo_context = (function($section_id, $section_tipo, $mode, $lang) {
-
-					$section = section::get_instance($section_id, $section_tipo, $mode); 
-					$section->set_lang($lang);
-					$sqo_context = $section->get_sqo_context();
-			
-					return $sqo_context;
-				})($section_id, $section_tipo, $mode, $lang);
-
-
-			// item (section, tool, etc.)
-				$page_item = new StdClass();
-					$page_item->model 		 = 'section';
-					$page_item->section_tipo = 'test65';
-					$page_item->section_id 	 = $section_id;
-					$page_item->mode 	 	 = $mode;
-					$page_item->lang 	 	 = DEDALO_DATA_LANG;
-					$page_item->sqo_context  = $sqo_context;			
-
-			// add
-				$page_items[] = $page_item;
 		
+		// sqo_context
+			//$sqo_context = (function($section_id, $section_tipo, $mode, $lang) {
+			//
+			//	$section = section::get_instance($section_id, $section_tipo, $mode); 
+			//	$section->set_lang($lang);
+			//	$sqo_context = $section->get_sqo_context();
+			//
+			//	return $sqo_context;
+			//})($section_id, $section_tipo, $mode, $lang);
 
-		// page_options			
-			$section_tipo 	= 'test65';
-			$section_id		= '';
-			$mode 	 	 	= 'edit';
-			$lang 	 	 	= DEDALO_DATA_LANG;
 
-			// sqo_context
-				$sqo_context = (function($section_id, $section_tipo, $mode, $lang) {
-
+			// add page item
+				/*
+				$page_items[] = (function() {
+				
+					$section_tipo 	= 'test65';
+					$section_id		= '';
+					$mode 	 	 	= 'list';
+					$lang 	 	 	= DEDALO_DATA_LANG;
+				
+					// sqo_context
 					$section = section::get_instance($section_id, $section_tipo, $mode); 
 					$section->set_lang($lang);
 					$sqo_context = $section->get_sqo_context();
-			
-					return $sqo_context;
-				})($section_id, $section_tipo, $mode, $lang);
+				
+					$page_item = new StdClass();
+						$page_item->model 		 = 'section';
+						$page_item->section_tipo = $section_tipo;
+						$page_item->section_id 	 = $section_id;
+						$page_item->mode 	 	 = $mode;
+						$page_item->lang 	 	 = DEDALO_DATA_LANG;
+						$page_item->sqo_context  = $sqo_context;
+				
+					return $page_item;
+				})();
+				*/
 
+			// add page item
+				$page_items[] = (function() {
 
-			// item (section, tool, etc.)
-				$page_item = new StdClass();
-					$page_item->model 		 = 'section';
-					$page_item->section_tipo = 'test65';
-					$page_item->section_id 	 = $section_id;
-					$page_item->mode 	 	 = $mode;
-					$page_item->lang 	 	 = DEDALO_DATA_LANG;
-					$page_item->sqo_context  = $sqo_context;			
+					$section_tipo 	= 'test65';
+					$section_id		= null;
+					$mode 	 	 	= 'edit';
+					$lang 	 	 	= DEDALO_DATA_LANG;
 
-			// add
-				$page_items[] = $page_item;
+					// sqo_context
+					$section = section::get_instance($section_id, $section_tipo, $mode); 
+					$section->set_lang($lang);
+					$sqo_context = $section->get_sqo_context();
+
+					$page_item = new StdClass();
+						$page_item->model 		 = 'section';
+						$page_item->section_tipo = $section_tipo;
+						$page_item->section_id 	 = $section_id;
+						$page_item->mode 	 	 = $mode;
+						$page_item->lang 	 	 = DEDALO_DATA_LANG;
+						$page_item->sqo_context  = $sqo_context;
+			
+					return $page_item;
+				})();
 			
 			
+		// page_options set
 			$page_options = new StdClass();
 				$page_options->mode  		= 'section';
 				$page_options->page_items 	= $page_items;
