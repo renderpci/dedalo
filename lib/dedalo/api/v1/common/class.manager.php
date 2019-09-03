@@ -28,6 +28,8 @@ class manager {
 	*/
 	public function manage_request( $options ) {
 
+		$api_start_time=microtime(1);
+
 		// options check
 			$dedalo_data = null;
 			if (!is_object($options) || !property_exists($options,'action')) {
@@ -67,6 +69,23 @@ class manager {
 					break;
 			}
 			*/
+
+		if(SHOW_DEBUG===true) {
+			$api_debug = new stdClass();
+				$api_debug->api_exec_time = exec_time_unit($api_start_time,'ms')." ms";
+					
+			if (is_object($dedalo_data->debug)) {
+				// add to existing debug properties
+				foreach ($api_debug as $key => $value) {
+					$dedalo_data->debug->{$key} = $value;
+				}
+			}else{
+				// create new debug property
+				$dedalo_data->debug = $api_debug;
+			}
+			dump($dedalo_data->debug, ' $dedalo_data->debug ++ '.to_string($options->action));
+		}
+
 
 		return $dedalo_data;
 	}//end manage_request

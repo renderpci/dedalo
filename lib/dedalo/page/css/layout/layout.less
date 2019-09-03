@@ -118,7 +118,9 @@
 		background-color: #f7f7f7;		
 		display: grid;
 		width: 100%;
-		height: 100%;		
+		height: 100%;
+
+		outline: 1px solid #EAEAEA;	
 		
 		// hover main row
 		.section > &&:hover {
@@ -146,7 +148,7 @@
 			padding-right: 0;
 			//padding: 0;
 			flex: 1 0;
-			outline: 1px solid #EAEAEA;
+			//outline: 1px solid #EAEAEA;
 
 			word-wrap: break-word;
     		overflow: hidden;
@@ -348,8 +350,14 @@
 					content: @fa-var-align-justify;
 				}
 			}
-			
-		
+			&.search {
+				.fa-icon;
+				.fas;
+				&:before {
+					content: @fa-var-search;
+				}
+			}
+					
 		}//end .active &, &.link
 		
 	}//end .button
