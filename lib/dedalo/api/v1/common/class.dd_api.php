@@ -252,13 +252,69 @@ class dd_api {
 
 
 	/** 
-	* GET_SECTION_COMPONENTS
+	* GET_ELEMENT_CONTEXT
 	* Get all components of current section (used in section filter)
 	* @param object $json_data
 	*	array $json_data->ar_section_tipo
 	* @return object $response
 	*/
-	static function get_section_components($json_data){
+	static function get_element_context($json_data){		
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// vars from json_data
+			$tipo 			= $json_data->tipo;
+			$section_tipo 	= $json_data->section_tipo;
+			$model 			= $json_data->model : RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$lang 			= $json_data->lang ?? DEDALO_DATA_LANG;
+		
+		// build element
+			switch ($model) {
+				case 'section':
+					$element 		= section::get_instance(null, $section_tipo);
+					break;
+				
+				case 'component':
+				default:
+					$element 		= component_common::get_instance($model,
+																	 $tipo,
+																	 null,
+																	 'list',
+																	 $lang,
+																	 $section_tipo);
+					break;
+			}
+
+		// element json
+			$get_json_options = new stdClass();
+				$get_json_options->get_context 	= true;
+				$get_json_options->get_data 	= false;
+			$element_json = $element->get_json($get_json_options);
+
+		// context add 
+			$context = $element_json->context;
+
+		
+		$response->result 		= $context;
+		$response->msg 	  		= 'Ok. Request done';
+
+		return (object)$response;
+	}//end get_element_context
+
+
+
+	/** 
+	* get_section_elements_context_simple
+	* Get all components of current section (used in section filter)
+	* @param object $json_data
+	*	array $json_data->ar_section_tipo
+	* @return object $response
+	*/
+	static function get_section_elements_context_simple($json_data){
 		global $start_time;
 
 		session_write_close();
@@ -269,7 +325,7 @@ class dd_api {
 
 			$ar_section_tipo = (array)$json_data->ar_section_tipo;
 			
-			$filter_components = common::get_section_components([
+			$filter_components = common::get_section_elements_context_simple([
 				'ar_section_tipo' => $ar_section_tipo
 			]);
 
@@ -292,7 +348,7 @@ class dd_api {
 			}
 
 		return (object)$response;
-	}//end get_section_components
+	}//end get_section_elements_context_simple
 
 
 
@@ -608,209 +664,6 @@ class dd_api {
 
 		return $result;
 	}//end build_json_rows
-
-
-
-	/**
-	* BUILD_JSON_ROWS
-	* @return object $result
-	*//*
-	private static function build_json_rows($ar_context) {
-		
-		$start_time=microtime(1);
-
-		// default result
-			$result = new stdClass();
-				$result->context = [];
-				$result->data 	 = [];
-
-		
-		// ar_dd_objects . Array of all dd objects in requested context
-			$ar_dd_objects = array_filter($ar_context, function($item) {
-				 if($item->typo==='ddo') return $item;
-			});
-			// set as static to allow external access
-			dd_api::$ar_dd_objects = $ar_dd_objects;
-
-		
-		// context
-			$context = [];
-			
-			// filter by section
-			$ar_sections_dd_objects = array_filter($ar_dd_objects, function($item) {
-				 if(isset($item->model) && $item->model==='section') return $item;
-			});		
-			foreach ($ar_sections_dd_objects as $section_dd_object) {
-				
-				$current_section = $section_dd_object->section_tipo;
-
-				// dd_objects of current section
-					$ar_current_section_dd_objects = array_filter($ar_dd_objects, function($item) use($current_section) {
-						 if($item->section_tipo===$current_section) return $item;
-					});
-
-				// Iterate dd_object from context					
-					foreach ((array)$ar_current_section_dd_objects as $dd_object) {
-
-						$dd_object = is_array($dd_object) ? (object)$dd_object : $dd_object;
-	
-						$tipo 			= $dd_object->tipo;
-						$section_tipo 	= $dd_object->section_tipo;						
-						$mode 			= $dd_object->mode ?? 'list';
-										
-						$RecordObj_dd 	= new RecordObj_dd($tipo);
-						$default_lang 	= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$lang 			= $dd_object->lang ?? $default_lang;
-
-						$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-
-						switch (true) {
-
-							case ($model==='section'):
-								// section
-									$current_section = section::get_instance(null, $tipo, $mode, $cache=true);
-
-								// ar_section_dd_objects (ar_layout_map)
-									#$ar_section_dd_objects = array_filter($ar_dd_objects, function($item) use($tipo){
-									#	 if($item->parent===$tipo ) return $item;
-									#});										
-									#if (!empty($ar_section_dd_objects)) {
-									#	// inject custom layout_map
-									#	$current_section->layout_map = $ar_section_dd_objects;
-									#}
-
-								// section json
-									$get_json_options = new stdClass();
-										$get_json_options->get_context 	= true;
-										$get_json_options->get_data 	= false;
-									$section_json = $current_section->get_json($get_json_options);
-
-								// context add 
-									$context = array_merge($context, $section_json->context);
-								break;
-							
-							default:
-								# not defined modelfro context / data								
-								debug_log(__METHOD__." 1. Ignored model '$model' - tipo: $tipo ".to_string(), logger::WARNING);
-								break;
-						}// end switch (true)
-						
-					}// end foreach ((array)$ar_current_section_dd_objects as $dd_object)
-
-			}// end foreach ($ar_sections_dd_objects as $section_dd_object)
-			// smart remove context duplicates (!)
-				#$context = self::smart_remove_context_duplicates($context);
-			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
-		
-	
-		// data
-			$data = [];
-			
-			$data_start_time=microtime(1);
-			$ar_search_query_object = array_filter($ar_context, function($item){
-				 if($item->typo==='sqo') return $item;
-			});			
-			foreach ($ar_search_query_object as $current_sqo) {
-
-				// search
-					$search = new search($current_sqo);
-					$rows_data 			 = $search->search();
-
-				// section. generated the self section_data
-					foreach ($current_sqo->section_tipo as $current_section_tipo) {
-					
-						$section_data = new stdClass();
-							$section_data->tipo 		= $current_section_tipo;
-							$section_data->section_tipo = $current_section_tipo;														
-							$ar_section_id = [];
-							foreach ($rows_data->ar_records as $current_row) {
-								if ($current_row->section_tipo===$current_section_tipo) {
-									$ar_section_id[] = $current_row->section_id;
-								}
-							}
-							$section_data->value 		= $ar_section_id;
-
-							// pagination info
-							$section_data->offset 		= $current_sqo->offset;
-							$section_data->limit 		= $current_sqo->limit;
-							$section_data->total 		= $current_sqo->full_count;
-						
-						$data[] = $section_data;
-					}
-
-				// Iterate records
-					$i=0; foreach ($rows_data->ar_records as $record) {
-
-						$section_id   	= $record->section_id;
-						$section_tipo 	= $record->section_tipo;
-						$datos			= json_decode($record->datos);
-						
-						if (!isset($section_dd_object)) {
-							$section_dd_object = array_reduce($ar_dd_objects, function($carry, $item){
-								if($item->model==='section' && $item->section_tipo===$section_tipo) return $item;
-								return $carry;
-							});
-						}
-
-						$mode = $section_dd_object->mode;
-
-						// Inject known dato to avoid re connect to database
-							$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
-							$section->set_dato($datos);
-							$section->set_bl_loaded_matrix_data(true);						
-						
-						// get section json
-							$get_json_options = new stdClass();
-								$get_json_options->get_context 	= false;
-								$get_json_options->get_data 	= true;
-							$section_json = $section->get_json($get_json_options);
-						
-						// data add
-							$data = array_merge($data, $section_json->data);
-
-						// get_ddinfo_parents
-							if (isset($current_sqo->value_with_parents) && $current_sqo->value_with_parents===true) {
-								
-								$locator = new locator();
-									$locator->set_section_tipo($section_tipo);
-									$locator->set_section_id($section_id);
-								
-								$dd_info = common::get_ddinfo_parents($locator, $current_sqo->source_component_tipo);
-
-								$data[] = $dd_info;
-							}
-
-
-					$i++; }//end iterate records
-
-				// store search_query_object
-					$context[] = $current_sqo;
-			
-			}//end foreach ($ar_search_query_object as $current_sqo)
-			// smart remove data duplicates (!)
-				$data = self::smart_remove_data_duplicates($data);
-
-			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
-			
-
-		// Set result object
-			$result->context = $context;
-			$result->data 	 = $data;
-
-		
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->context_exec_time 	= $context_exec_time;
-					$debug->data_exec_time 		= $data_exec_time;
-					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
-				$result->debug = $debug;	
-			}			
-	
-
-		return $result;
-	}//end build_json_rows
-	*/
 
 
 
