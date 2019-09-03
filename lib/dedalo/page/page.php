@@ -78,7 +78,7 @@
 		// page_options			
 			$section_tipo 	= 'test65';
 			$section_id		= '';
-			$mode 	 	 	= 'search';
+			$mode 	 	 	= 'list';
 			$lang 	 	 	= DEDALO_DATA_LANG;
 
 			// sqo_context
