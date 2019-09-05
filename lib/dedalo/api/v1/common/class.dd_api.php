@@ -253,9 +253,9 @@ class dd_api {
 
 	/** 
 	* GET_ELEMENT_CONTEXT
-	* Get all components of current section (used in section filter)
+	* 
 	* @param object $json_data
-	*	array $json_data->ar_section_tipo
+	*	
 	* @return object $response
 	*/
 	static function get_element_context($json_data){		
@@ -267,10 +267,11 @@ class dd_api {
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// vars from json_data
-			$tipo 			= $json_data->tipo;
-			$section_tipo 	= $json_data->section_tipo;
-			$model 			= $json_data->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$lang 			= $json_data->lang ?? DEDALO_DATA_LANG;
+			$source 		= $json_data->source;
+				$tipo 			= $source->tipo;
+				$section_tipo 	= $source->section_tipo;
+				$model 			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$lang 			= $source->lang ?? DEDALO_DATA_LANG;
 		
 		// build element
 			switch ($model) {
@@ -469,7 +470,8 @@ class dd_api {
 				}
 				return $carry;
 			});	
-		
+	
+
 		// CONTEXT 
 			$context = [];
 			
