@@ -507,7 +507,7 @@
 		lib : geoip2 added library
 		lib : added composer installer and autoloader
 		filter : fixed issue that return partial result on section users. Now cross areas (administrator <-> user) can be values 1 or 2 to be showed in users list.
-		tool_transcription : added specific add-ons. 
+		tool_transcription : added specific add-ons.
 		tool_transcription : context_name 'component_av' add new options: Change av control preferences (play/pause key, auto-rewind time, insert_tag key)
 		component_autocomplete_ts : now searches are case insensitive (ILIKE)
 		structure.css : added functionality to customize appearance on layout of components, section_groups, sections and other structure elements.
@@ -517,7 +517,7 @@
 		component_password : added control to avoid autocomplete
 		tool_administration : added new tool 'tool_administration' for technical administrative and debug tasks
 
-	
+
 	Valencia 06-05-2016 v4.0.10
 		structure : added new model 'component_publication'
 					changed all elements 'Diffusion' from model 'component_radio_button' to 'component_publication'
@@ -540,16 +540,16 @@
 		tool_administrator: new "update.php" file with control of the updates procedures. New «delete all data of the component» that can delete all data of the component or your language.
 		Schema of the DB : new «matrix_updates» table with «id», «datos», for control the update process.
 
-	
+
 	Valencia 12-05-2016 v4.0.11
 		security_areas : changed format from array to object (see updates) and removed '-admin' elements. Now areas have 3 permissions value: 0,2,3 (no access, access, admin)
 		security_access : changed format from array to object (see updates)
 		security : solved issue when non global admin enter to users section list don't show available user records
-		lock_elements : added icon 'lock' on locked components 
+		lock_elements : added icon 'lock' on locked components
 		tool_administrator : new option 'Remove av temporals' to delete ffmpeg temporal files in av/tmp folder
 		tool_administrator : new option 'Ignore temporarily the publication status when publishing' to passthru component_publication value in some necessary cases
 		tool_administrator : multiple sql querys are supported now on dedalo data updates
-	
+
 
 	Valencia 23-05-2016
 		component_filter : fixed bug when in global admin, projects are showed by id_matrix instead section_id
@@ -566,19 +566,19 @@
 		tool_upload : added postprocessiong create transcription when upload pdf media
 		tool_portal : added edit already existing portal links to enable, for example select a fragment when link is created in one user action (bibliography, etc..)
 		component_portal : fixed various issues related with refresh component in some context. Now centralized html _page page_globals engine is dedicated to manage components refresh
-		html_page : added centralized control / management of page components to refresh when new windows are open by tools etc 
+		html_page : added centralized control / management of page components to refresh when new windows are open by tools etc
 		search : optimized 'current_edit' search . Removed count
 				 added always order by section_id clause to maintain pagination consistence over list and edit modes
 		tool_comom : adequate to use html_page refresh components
 		config : add constant 'DEDALO_PDF_THUMB_DEFAULT' default value 'thumb' to store rendered pdf preview thumbs
-	
+
 
 	Valencia 03-06-2016
 		component_text_area : fonts used for create labels (indexation, timecode, etc.) are moved from lib/fonts to lib/dedalo/themes/default/fonts for convenience
 		btn labels : changed font from arial to 'liberation'
 		tool_transcription : fixed issue where lang selector it is out of sync with the language of the text area when component_textarea is forced to change lang
 
-	
+
 	Valencia 04-06-2016 v4.0.12
 		component_select_lang : multi and using locators (like component select)
 		component_project_langs : now use array of locators (like component select)
@@ -600,11 +600,11 @@
 	Pushkar 26-07-2016
 		tool_difussion : add window scroll top on publish record
 		tool_image_versions : fixed loosed section_tipo var on trigger when rotate image
-		
+
 
 	Manali 06-08-2016
-		search : javascript coode conversions from jquey to pure javascript and optimized record navigation 
-	
+		search : javascript coode conversions from jquey to pure javascript and optimized record navigation
+
 
 	Benimamet 17-08-2016
 		lib/json_editor : updated version from 5.1.5 to 5.5.6
@@ -624,7 +624,7 @@
 		locator : Add property 'type' to object locator
 		hierarchy : Added new hierarchy element to control new thesaurus model
 		json_handler : fixed bug when encoded result 0 was generated an error.
-	
+
 
 	Benimamet 01-09-2016
 		component_relation_common : created new class for manage common logic of relation components
@@ -642,7 +642,7 @@
 		search : performance : modified order_by when section activity is used. No longer adds "order by section_id" at end of query
 		common : added get_main_lang method (gets the info from config)
 		component_input_text : now supports main_lang fallback on list mode
-		component_text_area : now supports main_lang fallback on list mode		
+		component_text_area : now supports main_lang fallback on list mode
 		component_relation_common : added get_main_lang method (gets the info from hierarchy section data)
 		component_relation_parent : now supports main_lang fallback on list mode
 		component_relation_model : now supports main_lang fallback on list mode
@@ -661,16 +661,16 @@
 
 	Ruzafa 09-09-2016
 		config : DEDALO_AR_EXCLUDE_COMPONENTS . Added constant de set array of components to hide in sections, etc.
-				 Removed action occurs in:	class.component_layout.php, 
-				 							record.php, 
-				 							class.records_search.php, 
-				 							class.component_portal.php, 
+				 Removed action occurs in:	class.component_layout.php,
+				 							record.php,
+				 							class.records_search.php,
+				 							class.component_portal.php,
 				 							class:component_security_access.php
 		component_autocomplete_ts : added source type 'tree' to add terms directly from thesaurus
 
 
 	Benimamet 15-09-2016 v4.0.15.a
-		component_autocomplete_ts : fixed bug when search only uses descriptors elements with parent like 'prefix1'. Now prefix is calculated always to avoid this 
+		component_autocomplete_ts : fixed bug when search only uses descriptors elements with parent like 'prefix1'. Now prefix is calculated always to avoid this
 									(desirable value to filter is 'prefix' without number)
 
 
@@ -678,64 +678,64 @@
 		lib tinymce : version updated from 4.4.0 to 4.4.3
 		component_security_access : changed to save only one section at once. Control of minimum php config max_input_vars was set (>1000 please)
 		component_security_areas  : changed to save without propagation to component_security_access dato (multiple issues were detected with propagation)
-	
+
 
 	Ruzafa 21-09-2016 v4.0.15.h
 		backup : structure import and export methods are review to not use 'id' and avoid conflicts on import
 				 unified db calls as pgsl daemon commands
-	
+
 
 	Benimamet 25-09-2016 v4.0.15.hd
 		locator : added property 'from_component_tipo' for set source component tipo
 		component_relation_common : changed to manage section 'relations' container as dato of components that extends this class
-	
+
 
 	Benimamet 28-09-2016 v4.0.15.hf
 		area : solved bug on error is triggered on installations where not defined new 'area_thesaurus' model
-	
+
 
 	Benimamet 29-09-2016 v4.0.15.hl
 		component_portal : add target_section permissions control on portal buttons (add element to portal, remove element from portal)
-	
+
 
 	Benimamet 30-09-2016 v4.0.15.hq
 		component_date : add mode 'time' to manage times in hours, minutes and seconds like 15:23:12
-	
+
 
 	Benimamet 04-09-2016 v4.0.15.ia
 		search : fixed bug when search in virtual sections (erroneous section_real_tipo var is changed to section_tipo)
-	
+
 
 	Benimamet 06-09-2016 v4.0.15.id
 		component_portal : added view 'Mosaic'
 		component_autocomplete_ts : added option to hide resolved parents in value (set propiedades->value_with_parents: false)
-	
+
 
 	Benimamet 06-09-2016 v4.0.15.id
 		component_portal : added view 'Mosaic'
 		component_autocomplete_ts : added option to hide resolved parents in value (set propiedades->value_with_parents: false)
-	
+
 
 	Benimamet 11-10-2016 v4.0.15.ja
 		component_security_access : fixed issue when buttons in virtual sections are no showed
-		tool_import_dedalo_csv : added tool to import csv files (with dedalo special format: 
+		tool_import_dedalo_csv : added tool to import csv files (with dedalo special format:
 			- section_tipo is file base name like dd21 on file dd21.csv
 			- first line columns are components_tipo to import
 			- column section_id is optional (if exists, force to use defined values)
 			- portals and other reference type dato components value are always as array of locators like [{"section_tipo":"dd21","section_id":"1",etc..}]
-	
+
 	Valencia 13-10-2016 v4.0.15.jd
 		tool_upload : fixed issue when browser is locked until ffmpeg ends the media transcode
 		component_date : fixed bug when order not work in search list
 		component_common : added method to control order_by param in search orders
 
-	
-	Valencia 19-10-2016 v4.0.15.k0	
+
+	Valencia 19-10-2016 v4.0.15.k0
 		component_autocomplete_hi : created new model and component for use with new dedalo thesaurus v4
 		component_publication : fixed issue when in portal, values was overwritten in some cases (two o more portals with same component publication)
-	
-	
-	Valencia 20-10-2016 v4.0.15.kb	
+
+
+	Valencia 20-10-2016 v4.0.15.kb
 		section : created new structure section element named 'section_map' to maping section components to different uses
 				  for example: define what component is used as 'term' by thesaurus and hierarchies
 
@@ -744,7 +744,7 @@
 		hierarchy : added matrix table 'matrix_langs' and imported all thesaurus v3 langs data.
 		component_select_lang : now resolve with new lang data v4
 		lang : added class to manage lang needs
-		hierarchy : modified to contemplate import thesaurus v3 exceptions (code and model basically) 
+		hierarchy : modified to contemplate import thesaurus v3 exceptions (code and model basically)
 		tool_portal : fixed bug when a link is replaced. Now, when user select a record to edit in portal edit and selects a different link (another tag for example), old locator is replaced by new locator in portal
 
 
@@ -770,7 +770,7 @@
 
 	Valencia 31-10-2016 v4.5.0.bd
 		menu : added thesaurus v4 menu links (reads from structure)
-	
+
 
 	Valencia 02-11-2016 v4.5.0.bj
 		ImageMagick class : added control of preview image layers (tifs) and skip in conversions
@@ -780,26 +780,26 @@
 	Valencia 05-11-2016 v4.5.0.bk
 		ImageMagick class : fixed issue when conform headers is done only with fast start. Now copy and later fast start is maked on conform
 		css : no longer browser cache structure.css file when in debug mode
-	
+
 
 	Valencia 07-11-2016 v4.5.0.bl
 		counter : optimized class
-		diffusion_sql : fixed some minor issues when publish data 
+		diffusion_sql : fixed some minor issues when publish data
 		diffusion_mysql : removed is publicable verification. No longer necessary because previous verification is made
-	
+
 
 	Valencia 12-11-2016 v4.5.0.bo
-		component_image : fixed bug when in time machine mode images with custom path (like '/0') are no found 
+		component_image : fixed bug when in time machine mode images with custom path (like '/0') are no found
 		search : load_rows : fixed bug when in time machine list, paginator don't use the correct container for load records
-		widgets : descriptors : Rebuilded to load by ajax on demand instead load always in lists (performance problem) 
-	
+		widgets : descriptors : Rebuilded to load by ajax on demand instead load always in lists (performance problem)
+
 
 	Valencia 15-11-2016 v4.5.0.bp
 		component_state : fixed permissions issue on 'validation' selector when not was shown to admin general and area/section administrators
 		component_text_area : changed data showed in list mode. Now, if exists related component_select_lang, original lang is used always in lists
 							  Now value list is always calculated from original lang
 		component_info : widget tags : now data showed is synchronized with component_text_area lang (original lang when exists)
-		
+
 
 	Valencia 17-11-2016 v4.5.0.bs
 		tool_transcription : fixed issue when text area forced lang is not updated in video subtitles track lang. Now, on load component_text_area
@@ -842,7 +842,7 @@
 		component_input_text : fixed issue when search exact (Now 'dato' is array and need jsonb array search operators)
 							   fixed issue with double and single quotes broken input viewed value
 		component_select : fixed issue with select wrap component blur on every select action
-	
+
 
 	Valencia 17-01-2017 v4.5.1.c10
 		common : notify_load_lib_element_tipo : Changed to manage only model names (and not model tipos)
@@ -870,7 +870,7 @@
 
 	Valencia 26-01-2017 v4.5.1.c18
 		tool_import_files : fix issue with components permissions showed in temp section are wrong
-	
+
 
 	Valencia 02-02-2017 v4.5.1.c23
 		component_portal : get_valor_export Fixed issue when empty values generate double tabs and spaces
@@ -879,7 +879,7 @@
 	Valencia 03-02-2017 v4.5.1.c25
 		tool_portal : fixed bug when link row to portal don't send the correct parent after to do a search in tool_portal window
 
-	
+
 	Valencia 06-02-2017 v4.5.1.c26
 		diffusion_sql : get_ts_columns : added 'geolocalizacion' column for publication
 
@@ -894,7 +894,7 @@
 		leaflet-draw : Updated from 0.2.4 to 0.4.9
 		tinymce : Updated from 4.0.2 to 4.0.3
 		component_common_draw : added html_delimiter builder
-	
+
 
 	Valencia 15-02-2017 v4.5.1.df
 		common : get_main_lang : fixed bug when main_lang returned is erroneous when section is not children of thesaurus
@@ -907,7 +907,7 @@
 
 
 	Valencia 02-03-2017 v4.5.1.ei16
-		search : added option to search into the same component of different portals 
+		search : added option to search into the same component of different portals
 
 
 	Valencia 05-03-2017 v4.5.1.ei17
@@ -919,14 +919,14 @@
 
 
 	Valencia 07-03-2017 v4.5.2a4
-		subtitles : standardize as share static library usable by public websites 
-		TR : standardize as share static library usable by public websites 
-		OptimizeTC : standardize as share static library usable by public websites 
+		subtitles : standardize as share static library usable by public websites
+		TR : standardize as share static library usable by public websites
+		OptimizeTC : standardize as share static library usable by public websites
 		web_data : (api_dedalo_web) standardize as share static library usable by public websites
 
 
 	Valencia 09-03-2017 v4.5.2a5
-		subtitles : fixed incorrect call to tool_subtitles 
+		subtitles : fixed incorrect call to tool_subtitles
 
 
 	Valencia 11-03-2017 v4.5.2a9
@@ -942,7 +942,7 @@
 
 
 	Valencia 24-03-2017 v4.6.0m
-		dd_date : fixed issue where search value is not properly calculated 
+		dd_date : fixed issue where search value is not properly calculated
 		component_relation_parent : removed default tools for component because this component is always a computed value
 									fixed bug when infinite recursion occurs. To prevent infinite loop, a new control is added
 
@@ -955,7 +955,7 @@
 	Valencia 28-03-2017 v4.6.0p
 		component_text_area : added notes state a/b : 'private/public' -orange/green-
 		component_publication : adapted to support notes (+ mode 'edit_note') and auto sync current note tag state on change (js component_publication.change_tag_state)
-	
+
 
 	Valencia 28-03-2017 v4.6.0u
 		component_autocomplete : changed way of work
@@ -974,7 +974,7 @@
 	Valencia 28-04-2017 v4.6.1hc
 		component_autocomplete : fixed bug when multiple input text elements save the same value on create new record
 
-	
+
 	Valencia 08-05-2017 v4.6.1hi7
 		login : fixed bug on clean install when database data version is < 4.0.22
 		config4 : added constant ENCRYPTION_MODE to define current encryption mode
@@ -983,7 +983,7 @@
 	Berlin 10-05-2017 v4.6.1hi8
 		component_text_area : get_fragment_text_from_rel_locator : fixed bug on switch tag type is erroneous and time codes are not calculated properly
 
-	
+
 	Valencia 16-05-2017 4.6.1hj12
 		config : added new constant SHOW_DEVELOPER to control especial debug info showed to developers
 		login : added new method to control when user is developer
@@ -995,7 +995,7 @@
 		component_portal : Changed to enable limit viewed records and use "Show more items" link action
 		tool_lang : Fixed issue where copy to target lang not set editor as "Dirty" and then don't save. Now component save on copy content from source
 		are_thesaurus : search : fixed wrong filter sql code. Now correct f_unaccent is used instead unaccent to obtain gain of index
-		tool_av_versions : Added new behavior: on download, use original filename if exists 
+		tool_av_versions : Added new behavior: on download, use original filename if exists
 
 
 	Valencia 31-05-2017 4.6.2b1
@@ -1010,7 +1010,7 @@
 	Valencia 21-06-2017 4.6.2c4
 		fixed issues with js 'let' in non strict mode libs
 
-	
+
 	Valencia 22-06-2017 4.6.2c5
 		filter : fixed issue where user can view records of projects that this user don't have actually. Now only in case that record don't have project, user that was created can view it
 
@@ -1019,7 +1019,7 @@
 		filter : fixed issue where new filter (projects) fails in postgresql <= 9.4 on detect null value in jsonb
 		tool_export : fixed issue that shows column titles always in Spanish. Now uses DEDALO_DATA_LANG to render column titles
 
-	
+
 	Valencia 29-06-2017 4.6.2c7
 		tool_didffusion : fixed bug that return wrong value when multiple publication elements are defined
 		component_portal::get_diffusion_value : fixed bug that not return the correct value when diffusion field propiedades->data_to_be_used = "valor" is requested
@@ -1027,18 +1027,18 @@
 
 
 	Valencia 30-06-2017 4.6.2c7cd
-		component_text_area : added tiny editor control to avoid users can insert reserved chars: <> mapped to [] 
+		component_text_area : added tiny editor control to avoid users can insert reserved chars: <> mapped to []
 
-	
+
 	Valencia 30-06-2017 4.6.2c8
 		component_portal : fixed issue when read very old data as string. Now, wen portal detect string dato, emit a warning and saves empty array value instead
 
-	
+
 	Valencia 10-07-2017 4.6.2d1
 		component_relation_related : configurated to allow relations with all thesaurus terms instead only same section
 		component_text_area : updated tinyMCE editor version from 4.5.7 to 4.6.4 . This version allow replace "reference" tags content without delete the reference tags (use Alt click to select reference content text)
 
-	
+
 	Valencia 11-07-2017 4.6.2d3
 		component_common : Added var $update_diffusion_info_propagate_changes to define when the save process of a component set callers (inverse locators) as publication outdated
 						   When in edit mode is true, else is false
@@ -1048,7 +1048,7 @@
 		component_reference_common : Fixed bug when empty arrays are not included in subquery results.
 		tool_import_dedalo_csv : Added Delete file option in each file row
 		component_relation_parent : get_parents : Fixed bug when parents are from hierarchy (hierarchy1) instead self thesaurus section (ex. ts1)
-	
+
 
 	Valencia 13-07-2017 4.6.2d5
 		tool_replace_component_data : Changed dialog from jquery ui to bootstrap dialog
@@ -1072,7 +1072,7 @@
 	Valencia 25-07-2017 4.6.2d11
 		component_relation_parent : get_parents_recursive : Fixed bug when a term parent is bad configured provokes infinite loop
 
-	
+
 	Valencia 27-07-2017 4.6.2d12
 		diffusion_sql : fix bug when tables alias records are not deleted on unpublish
 
@@ -1083,18 +1083,18 @@
 
 	Valencia 31-08-2017 4.7.0a8
 		component_text_area : updated tinyMCE editor version from 4.6.4 to 4.6.5
-		component_text_area : created a second editor (switable) "text_preview"			
+		component_text_area : created a second editor (switable) "text_preview"
 		tool_lang : Added option to edit and translate the chapter headings
-		component_common : refactorized all to manage all request as json request 
-		triggers : refactorized all to use json request 
-		tool_structuration : refactorized all		
+		component_common : refactorized all to manage all request as json request
+		triggers : refactorized all to use json request
+		tool_structuration : refactorized all
 		components DDBB dato container: added "dataframe" to allocate metadata of component value like certainty, time, space, etc.
 		dataframe : created dataframe tool to manage the dataframe info inside each component
 		tool_transcription, tool_structuration, tool_indexation, tool_lang : refactorized to send and receive notifications of value change and update self data
 		tool_lang_multi : added net tool to fast and easy translate content of components
 		various : refactorized many js and php files to use json request instead get / post request
 		many, many details and fixes are made
-		
+
 
 	Valencia 05-08-2017 4.7.0b17
 		section : fixed bug when component_relation_common set a empty value (from time machine->assign_vale or ts_object->order, for example) now all locators of type requested are removed correctly
@@ -1102,7 +1102,7 @@
 
 
 	Valencia 09-08-2017 4.7.0b36
-		tool_import_dedalo_csv : fixed issue with upload js library that stops on 
+		tool_import_dedalo_csv : fixed issue with upload js library that stops on
 		backup : import_structure : Added optional download and update from a remote server (master)
 		Config : added constants:
 		# REMOTE_STRUCTURE_SERVER_CODE
@@ -1114,20 +1114,20 @@
 
 	Valencia 11-09-2017 4.7.0b40
 		component_html_text : fixed bug on search . Input name now is normative and search is enable again
-		
-	
+
+
 	Valencia 12-09-2017 4.7.0bc1
 		component_portal : fixed bug on load more items don't activate component scripts
-		
+
 
 	Valencia 29-09-2017 4.7.0bc3
 		component_text_area : fixed bug on load structuration info from tool lang. Undefined trigger vars are fixed
-		tool_posterframe ; fix issue on generate identify image 
-		
-	
+		tool_posterframe ; fix issue on generate identify image
+
+
 	Valencia 04-10-2017 4.7.1
 		main : fixed security issue of requested vars (tipo and id) to avoid sql injection attacks
-		
+
 
 	Valencia 08-10-2017 4.7.0d2
 		area_thesaurus : added toggle show/hide tipology option in tree view
@@ -1138,15 +1138,15 @@
 
 	Valencia 08-10-2017 4.7.0c1
 		diffusion_sql : update_ts_term : Limit recursion to maximun to avoid infinite loops. Default recursions: 2
-		
-	
+
+
 	Valencia 11-10-2017 4.7.0c3
 		component_portal : fixed permissions bug when user can remove resources from portal without valid permissions in target section delete button
-		
+
 
 	Valencia 16-10-2017 4.7.0c4
 		backup : fixed permissions issue when download structure
-		
+
 
 	Valencia 21-10-2017 4.7.1a1
 		component_reference_common : added postgrsql function for compatibility with postgresql 10 (Please update dedalo to version >=471)
@@ -1162,7 +1162,7 @@
 
 	Valencia 06-11-2017 4.7.1a18
 		section : removed method add_relations. Now, relations are added individually
-		component_relation_common : set_dato now is compatible with new relation type 'link' for future portals and autocompletes 
+		component_relation_common : set_dato now is compatible with new relation type 'link' for future portals and autocompletes
 		component_relation_autocomplete : added transition component for replacement of actual component_autocomplete
 
 
@@ -1172,7 +1172,7 @@
 		tool_portal : js : fixed bug when section_id is parsed as int (incompatible with temp section_id)
 		tool_common : propagate_temp_section_data : added relation components propagate dato loosed feature
 		trigger.import_files : updated component_portal add new element method for compatibility with version >=4.8
-	
+
 
 	Valencia 27-11-2018 4.8.1t
 		component_relation_common : created new dedalo components dir 'component_relation_common' to organize all relation common code
@@ -1190,9 +1190,9 @@
 		component_image : fixed issues with canvas resize and view (argggg...)
 		paper js : updated library from 0.9.9 to 0.11.5
 
-	
+
 	Valencia 22-01-2018 4.8.1ab5
-		tool_import_files : Added new options: 
+		tool_import_files : Added new options:
 			Import file name mode (to process smart numbered images)
 			Image processor selector (to trigger predefined in 'propiedades' scripts and commands)
 			Target component (to select different target components from importer)
@@ -1201,17 +1201,17 @@
 	Valencia 25-01-2018 4.8.1ab9
 		component_number : 	set js validator / formatter to force always . instead ,
 							php controller to format float numbers with . instead , when print
-		
-	
+
+
 	Valencia 27-01-2018 4.8.1b
 		inverse_locators : 	review all classes to unify new inverse locator format (using from_component_tipo, from_section_tipo, from_section_id)
-	
-	
+
+
 	Valencia 05-02-2018 4.8.1g
 		component_text_area : added method fix_broken_peson_tags to fix untranslated person info
 		component_common : added script to all components (at end of component html) that load js and css files if not already loaded
-	
-		
+
+
 	Valencia 07-02-2018 4.8.1h
 		search2 : fixed minor issues and added new features in alpha mode for test
 
@@ -1233,11 +1233,11 @@
 		tool_import_zotero : Fixed error on import when set component_autocomplete dato is made it
 		component_geolocation : Fixed init problem that unable load related component_text_area tags be rendered on ajax paginate
 
-	
-	Valencia 09-03-2018 4.8.3c16
-		tool_import_zotero : Updated for use modern trigger format. Fixed old format issues with component_autocomplete. 
 
-	
+	Valencia 09-03-2018 4.8.3c16
+		tool_import_zotero : Updated for use modern trigger format. Fixed old format issues with component_autocomplete.
+
+
 	Valencia 26-03-2018 4.8.3c20
 		search2 : Added operators to relationable components (radio_button, select, etc.)
 
@@ -1258,7 +1258,7 @@
 	Valencia 27-04-2018 4.9.0g
 		tool_replace : fixed issue when dato to replace is 0 (component_number cases)
 
-	
+
 	Valencia 30-04-2018 4.9.0h
 		tool_export : fixed error on export raw data relation common components
 
@@ -1271,7 +1271,7 @@
 	Valencia 02-05-2018 4.9.0n
 		component_autocomplete : get_valor_export : fixed error on get export value when recived var '$valor' is empty instead null
 
-	
+
 	Valencia 11-05-2018 4.9.0q
 		backup class : fixed curl issue when download structure from https servers (master)
 
@@ -1280,7 +1280,7 @@
 		config : updated outdated sample config files
 		session : fixed minor issues when multiple dedalo servers are in the same domain
 
-	
+
 	Valencia 14-05-2018 4.9.0s
 		component_date : fix issue when empty date is not removed from search object
 		search_development2 : fixed bug when Limit and Offset was made inside search window instead for global result
@@ -1288,8 +1288,8 @@
 
 	Valencia 15-05-2018 4.9.0t
 		component_autocomplete_hi : fix bug add_hierarchy_sections_from_types when more than one hierarchy_types is received
-		
-	
+
+
 	Valencia 16-05-2018 4.9.0t
 		search_development2 : fixed bug when order is not default in subquery window
 
@@ -1310,21 +1310,21 @@
 		updates : reference_dato_v47_to_relation_dato_v48 : convert_reference_dato_to_relation_dato : Fixed bug that ignores ds and dataframe when convert data from 4.7.1 to 4.8.0
 		component_common : save js : Add fallback for get tipo, parent, section_tipo, ans lang vars from wrapper when not present in the received component
 
-	
+
 	Valencia 02-06-2018 4.9.5
 		search : optimized subquery and projects filter (using relations table)
-	
-	
+
+
 	Valencia 05-06-2018 4.9.5d
 		component_filter : fixed bug that cause component_filter_master was set default value when is called in edit mode (because extends component_filter)
-	
+
 
 	Valencia 13-06-2018 4.9.5f
 		component_portal : fixed bug on create new record from portal in paginated portals
 		component_portal : fixed pagination issues
 		component_portal : fixed bug on drag portal element between different connected portals (and optimized drag and drop)
 		component_relation_common : set_dato_external : changed calculation way to table relations for speed (x number of locators in new_dato is fast aprox. because 'OR' problem in indexes)
-	
+
 
 	Helsinki 29-06-2018 4.9.5g
 		class.ts_term.php : added optional scope_note as var/column
@@ -1333,12 +1333,12 @@
 	Valencia 02-07-2018 4.9.5h
 		class.Ffmpeg.php : build_fragment : Fixed issue with duration format. Converted from float to string tc for safe ffmpeg command execution in all environments
 
-	
+
 	Valencia 04-07-2018 4.9.5j
 		class.search_development2.php : added var $sql_query_order_window_subselect for custom order in window sub-select query when DISCTINCT is applied
 		class.component_autocomplete_hi.js : link_term : fixed bug with new add_locator arguments. Updated format for unify
-	
-	
+
+
 	Valencia 05-07-2018 4.9.5k
 		trigger.tool_diffusion.php : added try catch option to capture errors on db calls
 		class.DBi.php : _getConnection_mysql : added throw new Exception when connection / query fail on mysql query
@@ -1351,7 +1351,7 @@
 	Valencia 09-07-2018 4.9.5n
 		search_development2 : fixed issue with window subquery when search multiple sections
 
-	
+
 	Valencia 10-07-2018 4.9.5o
 		component_common : get_search_query2 : added query_object q_split option to control split literals
 		component_autocomplete_hi : autocomplete_hi_search : added q_split (with default value as false) to avoid split literal names like 'l'atmella del mar'
@@ -1368,7 +1368,7 @@
 
 	Valencia 18-07-2018 4.9.6a
 		component_autocomplete : added q_split (with default value as true) to control split literal names like 'els catalans als camps nazis'
-		component_autocomplete : rebuild_search_query_object : js : added q_split 
+		component_autocomplete : rebuild_search_query_object : js : added q_split
 		service-autocomplete : convert_data_to_label_value : added sort terms in result list
 		search_development2 : fixed bug in activity section when search window is not set to desc order by default
 		button_new : fixed issue when section search_query_object (full_count) is not updated when a new record is created
@@ -1376,7 +1376,7 @@
 
 
 	Valencia 19-07-2018 4.9.6c
-		component_relation_parent : unified js code to allow future search mode (work in progress) 
+		component_relation_parent : unified js code to allow future search mode (work in progress)
 
 
 	Valencia 20-07-2018 4.9.6d
@@ -1389,16 +1389,16 @@
 
 	Valencia 24-07-2018 4.9.7c
 		class.diffusion_sql_php : map_parent_to_norder : fix issue with parent locator component tipo getter
-		core_fumtions : safe_xss : add security rules 
+		core_fumtions : safe_xss : add security rules
 		service_autocomplete : fix on_source problem when propiedades custon filter is not defined
-		component_text_area.js : preprocess_text_to_save : fixed bug that break timecode tags  
+		component_text_area.js : preprocess_text_to_save : fixed bug that break timecode tags
 
-	
+
 	Valencia 25-07-2018 4.9.8a
 		various : fixed vulnerabilities in Dédalo code
 		files : re-order and remove old files and folders (old thesaurus and related)
 
-	
+
 	Valencia 29-07-2018 4.9.8e
 		Login : fixed password issue with some chars on safe_xss check
 
@@ -1423,17 +1423,17 @@
 
 
 	Valencia 29-10-2018 4.9.12
-		tool_diffusion : added auto-publish publication_schema on edit structure diffusion element 
+		tool_diffusion : added auto-publish publication_schema on edit structure diffusion element
 
 
 	Valencia 02-11-2018 4.9.14
 		component_state : removed NVD3_URL_CSS link because conflict with component geolocation polygon lines css (Intangible Heritage)
 
-	
+
 	Valencia 05-11-2018 5.0.0
 		Updated version from 4 to 5
 
-	
+
 	Valencia 06-11-2018 5.0.1
 		component_pdf : updated pdfjs lib to 2.0.943
 						added full screen mode
@@ -1445,14 +1445,14 @@
 
 	Valencia 12-12-2018 5.0.27
 		tool_layout_print : Reenabled search using search_query_object
-		
+
 
 	Valencia 12-12-2018 5.0.29
-		diffusion_stats : Reenabled diffusion_stats using search_query_object (Working here)		
+		diffusion_stats : Reenabled diffusion_stats using search_query_object (Working here)
 
 
 	Valencia 14-12-2018 5.0.32
-		diffusion_stats : Fixed issues and optimization works (Working here)		
+		diffusion_stats : Fixed issues and optimization works (Working here)
 
 
 	Valencia 15-12-2018 5.0.33
@@ -1482,7 +1482,7 @@
 	Valencia 17-01-2019 5.1.9
 		component_input_text : Fixed issue when render_list_value with empty value in current lang. Fixed search issues with empty and not empty values in all langs
 
-	
+
 	Valencia 28-01-2019 5.2.0
 		search : Recoded to make it independent of initator (js/php) and context
 
@@ -1505,7 +1505,7 @@
 
 	Valencia 08-04-2019 5.4.0
 		Added publication (diffusion) info data to section. First publication date and user and last publication date and user
-		(!) Need structure version >= 08-04-2019 16:06 
+		(!) Need structure version >= 08-04-2019 16:06
 
 
 	Valencia 11-04-2019 5.4.8
@@ -1517,7 +1517,7 @@
 
 
 	Valencia 23-04-2019 5.4.17
-		Fixed issue on diffusion component_relation_related value when references are not included in publication data 
+		Fixed issue on diffusion component_relation_related value when references are not included in publication data
 
 
 	Valencia 25-04-2019 5.4.18
@@ -1527,7 +1527,7 @@
 	Valencia 25-04-2019 5.4.31
 		Fixed component_autocomplete error on parse filter fields from properties (get_filter_fields_data) (bibliography author case)
 
-	
+
 	Valencia 13-05-2019 5.4.32
 		Fixed thesaurus scope note issue on load text area editor (changed from component_input_text_large to component_text_area)
 
@@ -1535,7 +1535,7 @@
 	Valencia 14-05-2019 5.4.34
 		Fixed thesaurus no descriptors issue when more than one is not showed
 
-	
+
 	Valencia 20-05-2019 5.4.36
 		Fixed unnecessary reset values (make slow resolutions in large component_select) in component_relation_parent get_parents_recursive
 		Added get_dato_export custom resolution for component_relation_parent
@@ -1543,23 +1543,23 @@
 
 	Valencia 22-05-2019 5.4.40
 		Added thesaurus list sort alphabetically by group
-	
 
-	Valencia 27-05-2019 5.4.41	
+
+	Valencia 27-05-2019 5.4.41
 		Fixed error in tool time machine get_source_langs. Add project langs always for safe langs list
 
 
-	Valencia 28-05-2019 5.4.44	
+	Valencia 28-05-2019 5.4.44
 		Fixed error in diffusion that cause infinite loop in some context like portals with external source data
 		Limit portal sort to below 1000 locators
 
-	
-	Valencia 31-05-2019 5.4.45	
+
+	Valencia 31-05-2019 5.4.45
 		Fixed error in component_portal add element when offset is not properly calculated
 		Moved structure and langs js strings check from dd_init to login.php to allow ingnore this files in git sync
 
-	
-	Valencia 04-06-2019 5.4.46	
+
+	Valencia 04-06-2019 5.4.46
 		Add publication subtitles db_name optional param for discriminate database on instalations with multiple sites
 
 
@@ -1574,15 +1574,18 @@
 	Valencia 01-07-2019 5.4.60
 		Fixed bug in component relation parent method get_parents recursive that use cached parents incorrectly when in multiple items are processing (import, update_cache, etc.)
 
-	
+
 	Valencia 01-07-2019 5.4.64
 		Fixed error on component_relation_related get_references when section_map thesaurus value is multiple (array)
+
+	Valencia 06-09-2019 5.4.74
+		Fix error on exec_component_triggers in radio button and component common show_section_group
 
 
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
-					on search fix appearance issue with results css 		
+					on search fix appearance issue with results css
 		structure config search for all resources (notes, chapter titles, etc.)
 		tool_structuration : solve error in structure tag inside text (is showed outside)
 
@@ -1599,12 +1602,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.73';
+	$DEDALO_VERSION = '5.4.74';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '25-07-2019');
+	define('DEDALO_BUILD'	, '06-09-2019');
 
 
 	/*
