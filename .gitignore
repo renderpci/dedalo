@@ -111,4 +111,7 @@ lib/dedalo/common/css/structure.css
 # js langs
 lib/dedalo/common/js/lang/*
 
+# .jsbeautifyrc
+.jsbeautifyrc
+
 
