@@ -1,7 +1,7 @@
 <?php
 	#dump($_REQUEST, ' _REQUEST ++ '.to_string());
 	# PAGE CONTROLLER
-	
+
 	// page mode
 		$mode = 'edit';
 
@@ -62,107 +62,38 @@
 
 
 	if (login::is_logged()!==true) {
-			
+
 		# CONTENT HTML IS LOGIN FORM
 
 		$username	= NULL;
-		$user_id	= NULL;	
-		
+		$user_id	= NULL;
+
 		# BUILD LOGIN HTML
 		$login		= new login('edit');
 		$html_header= $login->get_html();
 
 		die("Not logged!");
-	
+
 	}else{
-		
-		// sqo_context
-			//$sqo_context = (function($section_id, $section_tipo, $mode, $lang) {
-			//
-			//	$section = section::get_instance($section_id, $section_tipo, $mode); 
-			//	$section->set_lang($lang);
-			//	$sqo_context = $section->get_sqo_context();
-			//
-			//	return $sqo_context;
-			//})($section_id, $section_tipo, $mode, $lang);
-
-
-			// add page item
-				/*
-				$page_items[] = (function() {
-				
-					$section_tipo 	= 'test65';
-					$section_id		= '';
-					$mode 	 	 	= 'list';
-					$lang 	 	 	= DEDALO_DATA_LANG;
-				
-					// sqo_context
-					$section = section::get_instance($section_id, $section_tipo, $mode); 
-					$section->set_lang($lang);
-					$sqo_context = $section->get_sqo_context();
-				
-					$page_item = new StdClass();
-						$page_item->model 		 = 'section';
-						$page_item->section_tipo = $section_tipo;
-						$page_item->section_id 	 = $section_id;
-						$page_item->mode 	 	 = $mode;
-						$page_item->lang 	 	 = DEDALO_DATA_LANG;
-						$page_item->sqo_context  = $sqo_context;
-				
-					return $page_item;
-				})();
-				*/
-
-			// add page item
-				$page_items[] = (function() {
-
-					$section_tipo 	= 'test65';
-					$section_id		= null;
-					$mode 	 	 	= 'edit';
-					$lang 	 	 	= DEDALO_DATA_LANG;
-
-					// sqo_context
-					$section = section::get_instance($section_id, $section_tipo, $mode); 
-					$section->set_lang($lang);
-					$sqo_context = $section->get_sqo_context();
-
-					$page_item = new StdClass();
-						$page_item->model 		 = 'section';
-						$page_item->section_tipo = $section_tipo;
-						$page_item->section_id 	 = $section_id;
-						$page_item->mode 	 	 = $mode;
-						$page_item->lang 	 	 = DEDALO_DATA_LANG;
-						$page_item->sqo_context  = $sqo_context;
-			
-					return $page_item;
-				})();
-			
-			
-		// page_options set
-			$page_options = new StdClass();
-				$page_options->mode  		= 'section';
-				$page_options->page_items 	= $page_items;
-
 
 		// page header
 			$html_header = (function($mode) {
-				
+
 			    switch (true) {
-				
+
 					case (isset($_REQUEST['menu']) && $_REQUEST['menu']==0):
 						$html = '';
 						break;
-				
-					case (isset($_REQUEST['menu']) && $_REQUEST['menu']==1):
+
 					default:
 						# MENU
 						$menu 		= new menu($mode);
-						$menu_html 	= $menu->get_html();			
+						$menu_html 	= $menu->get_html();
 						ob_start();
 						include ( DEDALO_LIB_BASE_PATH . '/html_page/html/html_page_header.phtml' );
 						$html = ob_get_clean();
 						break;
-				
+
 					#case ($context_name==='list_in_portal'):
 					#	$html_header .= '<div class="breadcrumb">';
 					#	$html_header .= strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
@@ -170,31 +101,87 @@
 					#	$html_header .= '</div>';
 					#	$html_header .= '<div class="breadcrumb_spacer"></div>';
 					#	break;
-				
-					#case (strpos($m, 'tool_')===false): //empty($context_name) && 
+
+					#case (strpos($m, 'tool_')===false): //empty($context_name) &&
 					#	# MENU
 					#	$menu_html = null;
 					#	if(empty($caller_id)) {
 					#		$menu 		= new menu($mode);
-					#		$menu_html 	= $menu->get_html();	
+					#		$menu_html 	= $menu->get_html();
 					#	}
 					#	ob_start();
 					#	include ( DEDALO_LIB_BASE_PATH . '/html_page/html/html_page_header.phtml' );
 					#	$html_header = ob_get_clean();
 					#	break;
-					
+
 					#default:
 					#	$html_header = '';
 					#	break;
 				}
-				
+
 				return $html;
 			})($mode);
-		
-	}
 
 
-	$page_html	= dirname(__FILE__) . '/html/page.phtml';	
-	if( !include($page_html) ) {
-		echo "<div class=\"error\">Invalid page file</div>";
-	}
+		// add page element
+			/*
+			$page_elements[] = (function() {
+
+				$section_tipo 	= 'test65';
+				$section_id		= '';
+				$mode 	 	 	= 'list';
+				$lang 	 	 	= DEDALO_DATA_LANG;
+
+				// sqo_context
+				$section = section::get_instance($section_id, $section_tipo, $mode);
+				$section->set_lang($lang);
+				$sqo_context = $section->get_sqo_context();
+
+				$page_element = new StdClass();
+					$page_element->model 		 = 'section';
+					$page_element->section_tipo = $section_tipo;
+					$page_element->section_id 	 = $section_id;
+					$page_element->mode 	 	 = $mode;
+					$page_element->lang 	 	 = DEDALO_DATA_LANG;
+					$page_element->sqo_context  = $sqo_context;
+
+				return $page_element;
+			})();
+			*/
+
+		// add page element
+			$page_elements[] = (function() {
+
+				$section_tipo 	= 'test65';
+				$section_id		= null;
+				$mode 	 	 	= 'edit';
+				$lang 	 	 	= DEDALO_DATA_LANG;
+
+				// sqo_context
+				$section = section::get_instance($section_id, $section_tipo, $mode);
+				$section->set_lang($lang);
+				$sqo_context = $section->get_sqo_context();
+
+				$page_element = new StdClass();
+					$page_element->model 		 = 'section';
+					$page_element->section_tipo  = $section_tipo;
+					$page_element->section_id 	 = $section_id;
+					$page_element->mode 	 	 = $mode;
+					$page_element->lang 	 	 = DEDALO_DATA_LANG;
+					$page_element->sqo_context  = $sqo_context;
+
+				return $page_element;
+			})();
+
+		// page_options set
+			$page_options = new StdClass();
+				$page_options->mode  			= 'default';
+				$page_options->page_elements 	= $page_elements;
+
+	}//end if (login::is_logged()!==true)
+
+
+	$page_html = dirname(__FILE__) . '/html/page.phtml';
+	if( !include($page_html) ) echo "<div class=\"error\">Invalid page file</div>";
+
+
