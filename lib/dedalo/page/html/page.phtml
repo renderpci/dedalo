@@ -16,11 +16,55 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/menu/js/menu.js"></script>
 <script type="module" >
+	/*
 	// launch preload all components files in parallel
 	// import('../common/js/components_list.js')
-	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"	
-	const current_page = new page(<?php echo json_encode($page_options) ?>)
-	current_page.init();
+	import {page} from "<?php echo DEDALO_LIB_BASE_URL ?>/page/js/page.js"
+	const current_page = new page();
+	current_page.init(<?php echo json_encode($page_options) ?>);
 	current_page.render();
+	*/
+
+	const main = document.getElementById("main")
+		  main.classList.add("loading")
+
+	// page instance
+	import '../page/js/page.js'
+	import {get_instance} from '../common/js/instances.js'
+	( async () => {
+		const t0 = performance.now()
+
+		get_instance({
+			model 		: 'page',
+			mode		: <?php echo json_encode($page_options->mode) ?> || 'default',
+			elements 	: <?php echo json_encode($page_options->page_elements) ?>
+		})
+		.then( async (page) => {
+			//console.log("+ Page instantiated in time ms: ",performance.now()-t0)
+			const page_container = await page.render()
+
+			// main add and restore class
+				main.appendChild(page_container)
+		 		main.classList.remove("loading","hide")
+
+
+			//console.log("page:",page);
+			//setTimeout( async (e)=>{
+			//	console.log("heello:");
+			//	await page.refresh()
+			//		console.log("page:",page);
+			//},6000)
+
+			// debug
+			if(SHOW_DEBUG===true) {
+				console.log("+ Page instantiated and rendered total in time ms: ",performance.now()-t0)
+			}
+		})
+
+
+
+	})()
+
+
 </script>
 </html>
