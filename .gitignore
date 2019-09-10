@@ -80,7 +80,7 @@ lib/dedalo/common/js/lang/*
 # Ignore default text files
 robots.txt
 
-# Ignore some special files 
+# Ignore some special files
 koala-config.json
 config.codekit3
 
@@ -105,8 +105,10 @@ lib/dedalo/login/saml/test.php
 lib/dedalo/component_date_mod/
 lib/dedalo/component_portal/_versions/
 
+# structure css
+lib/dedalo/common/css/structure.css
 
-
-
+# js langs
+lib/dedalo/common/js/lang/*
 
 
