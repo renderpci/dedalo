@@ -62,6 +62,11 @@ class search_development2 {
 		# matrix tables
 		protected $ar_matrix_tables;
 
+		# having vars
+		protected $having_query_object;
+		protected $having_top_operator;
+		protected $having_ar_sql_joins;
+		protected $having_search_objects;
 
 
 	/**
@@ -847,6 +852,14 @@ class search_development2 {
 					if (!empty($this->filter_join_where)) {
 						$sql_query .= $this->filter_join_where;
 					}
+				// having
+					$sql_filter_having 	= $this->build_sql_filter_having([
+						'order_query' => '',
+						'limit_query' => ''
+					]);
+					if (!empty($sql_filter_having)) {
+						$sql_query .= PHP_EOL . $sql_filter_having .') ';
+					}
 				// multisection union case
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
@@ -926,6 +939,14 @@ class search_development2 {
 								$offset_query = ' OFFSET ' . $sql_offset;
 								$sql_query .= $offset_query;
 							}
+						// having
+							$sql_filter_having 	= $this->build_sql_filter_having([
+								'order_query' => $order_query,
+								'limit_query' => $limit_query
+							]);
+							if (!empty($sql_filter_having)) {
+								$sql_query .= PHP_EOL . ') ' . $sql_filter_having;
+							}
 						// sub select (window) close
 							if($this->allow_sub_select_by_id===true) {
 								$sql_query .= PHP_EOL . ') ';
@@ -996,7 +1017,8 @@ class search_development2 {
 								$sql_query .= $order_query;
 						// limit
 							if ($this->search_query_object->limit>0) {
-								$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+								$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
+								$sql_query  .= $limit_query;
 							}
 						// offset
 							if ($this->search_query_object->offset>0) {
@@ -1004,6 +1026,14 @@ class search_development2 {
 							}
 							if($this->allow_sub_select_by_id===true) {
 								$sql_query .= PHP_EOL . ') ';
+							}
+						// having
+							$sql_filter_having 	= $this->build_sql_filter_having([
+								'order_query' => $order_query,
+								'limit_query' => $limit_query ?? ''
+							]);
+							if (!empty($sql_filter_having)) {
+								$sql_query .= PHP_EOL . ') ' . $sql_filter_having;
 							}
 					}//end if($this->allow_sub_select_by_id===true)
 
@@ -1039,6 +1069,14 @@ class search_development2 {
 						if (isset($this->filter_by_user_records)) {
 							$query_inside .= $this->filter_by_user_records;
 						}
+					// having
+						$sql_filter_having 	= $this->build_sql_filter_having([
+							'order_query' => '',
+							'limit_query' => ''
+						]);
+						if (!empty($sql_filter_having)) {
+							$query_inside .= PHP_EOL . ' ' . $sql_filter_having .') ';
+						}
 					// multi section union case
 						if (count($this->ar_section_tipo)>1) {
 							$query_inside = $this->build_union_query($query_inside);
@@ -1062,7 +1100,8 @@ class search_development2 {
 						}
 					// limit
 						if ($this->search_query_object->limit>0) {
-							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+							$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
+							$sql_query .= $limit_query;
 						}
 					// offset
 						if ($this->search_query_object->offset>0) {
@@ -1675,9 +1714,11 @@ class search_development2 {
 			$operator = key($this->search_query_object->filter);
 			$ar_value = $this->search_query_object->filter->{$operator};
 			if(!empty($ar_value)) {
-				$filter_query .= ' AND (';
-				$filter_query .= $this->filter_parser($operator, $ar_value);
-				$filter_query .= ')';
+
+				$query = $this->filter_parser($operator, $ar_value);
+				if(!empty($query)) {
+					$filter_query .= ' AND ('.$query.')';
+				}
 
 				#if (isset($this->global_group_query)) {
 				#	$filter_query .= "\n" . $this->global_group_query;
@@ -1698,11 +1739,22 @@ class search_development2 {
 	*/
 	public function filter_parser($op, $ar_value) {
 
+		if ($op==='$or_link') {
+			$obj = new stdClass();
+				$obj->{$op} = $ar_value;
+			// store search_object
+			$this->having_query_object = $obj;
+			$this->having_top_operator = 'OR';
+
+			$op = '$or';
+		}
+
 		$string_query = '';
 
 		$total = count($ar_value);
-			#dump($total, ' total 1 ++ '.to_string());
-		$operator = strtoupper( substr($op, 1) );
+
+		// sql operator like 'OR'
+		$sql_operator = strtoupper( substr($op, 1) );
 
 		// Portal various values case
 			/*
@@ -1727,7 +1779,7 @@ class search_development2 {
 				}
 				if ($is_portal_linked===true) {
 					// Change current operator
-					$operator = 'OR';
+					$sql_operator = 'OR';
 					// Define global group code to add in sql query
 					$this->global_group_query = 'GROUP BY '.$this->main_section_tipo_alias.'.id HAVING count(*) > ' . ($n_match-1);
 				}
@@ -1740,31 +1792,33 @@ class search_development2 {
 			$op2 = key($search_object);
 
 			if ($op2==='$or_link') {
+
+				// store search_object
+				if (!isset($this->having_query_object)) {
+					$this->having_query_object = $search_object;
+					$this->having_top_operator = $sql_operator;
+				}
+
+				$ar_value_having = $search_object->$op2;
+				$op2 = '$or';
+			}
+
+			#if (!property_exists($search_object,'path')) {
+			if ($op2==='$or' || $op2==='$and') {
 				# Case operator
-				$current_ar_value = $search_object->$op2;
+				$real_op 	= key($search_object);
+				$ar_value2 	= $search_object->{$real_op};
 
-
-				#$link_string_query  = $this->filter_parser($op2, $current_ar_value);
-
-				#	dump($link_string_query, ' link_string_query ++ '.to_string());
-
-				$having = $this->build_having($current_ar_value);
-
-			#}else if (!property_exists($search_object,'path')) {
-			}else if ($op2==='$or' || $op2==='$and') {
-				# Case operator
-				$ar_value2 	= $search_object->$op2;
-
-				$operator2 = strtoupper( substr($op2, 1) );
+				$sql_operator2 = strtoupper( substr($op2, 1) );
 				#if ($key > 1) {
-				#	$string_query .= ' '.$operator2.'** ';
+				#	$string_query .= ' '.$sql_operator2.'** ';
 				#}
 				$string_query .= ' (';
 				$string_query .= $this->filter_parser($op2, $ar_value2);
 				$string_query .= ' )';
 
 				if ($key+1 < $total) {
-					$string_query .= ' '.$operator.' ';
+					$string_query .= ' '.$sql_operator.' ';
 				}
 
 			}else{
@@ -1777,18 +1831,10 @@ class search_development2 {
 
 					$string_query .= $this->get_sql_where($search_object);
 
-					#if ($op==='$or_link') {
-					#	$n_links = count($ar_value) -1;
-					#	$string_query .= $this->build_having($search_object, $n_links);
-					#
-					#	// force operator to or
-					#	$operator = 'or';
-					#}
-
 					if ($key+1 !== $total){
-						#$operator = strtoupper( substr($op, 1) );
-						#$string_query .= ") ".$operator." (";
-						$string_query .= ' '.$operator.' ';
+						#$sql_operator = strtoupper( substr($op, 1) );
+						#$string_query .= ") ".$sql_operator." (";
+						$string_query .= ' '.$sql_operator.' ';
 					}
 				#}
 			}
@@ -1801,106 +1847,129 @@ class search_development2 {
 
 
 	/**
-	* BUILD_HAVING
-	* @return
+	* BUILD_SQL_FILTER_HAVING
+	* @return string $filter_query
 	*/
-	public function build_having($ar_value) {
-		/*
-		oh1.id in (
-			SELECT DISTINCT ON(oh1.section_id,oh1.section_tipo) oh1.id FROM matrix AS oh1
+	protected function build_sql_filter_having($ar_options) {
+		$filter_query  = '';
 
-			-- JOIN GROUP matrix - oh1_oh24_rs197 - Informantes
-			LEFT JOIN relations AS r_oh1_oh24_rs197 ON (oh1.section_id=r_oh1_oh24_rs197.section_id AND oh1.section_tipo=r_oh1_oh24_rs197.section_tipo AND r_oh1_oh24_rs197.from_component_tipo='oh24')
-			LEFT JOIN matrix AS oh1_oh24_rs197 ON (r_oh1_oh24_rs197.target_section_id=oh1_oh24_rs197.section_id AND r_oh1_oh24_rs197.target_section_tipo=oh1_oh24_rs197.section_tipo)
+		/* reference :
+			oh1.id in (
+				SELECT DISTINCT ON(oh1.section_id,oh1.section_tipo) oh1.id FROM matrix AS oh1
 
-			WHERE (oh1.section_tipo='oh1') AND
-			(oh1_oh24_rs197.datos#>'{relations}' @> '[{"section_tipo":"dd882","section_id":"1","type":"dd151","from_component_tipo":"rsc94"}]')
+				-- JOIN GROUP matrix - oh1_oh24_rs197 - Informantes
+				LEFT JOIN relations AS r_oh1_oh24_rs197 ON (oh1.section_id=r_oh1_oh24_rs197.section_id AND oh1.section_tipo=r_oh1_oh24_rs197.section_tipo AND r_oh1_oh24_rs197.from_component_tipo='oh24')
+				LEFT JOIN matrix AS oh1_oh24_rs197 ON (r_oh1_oh24_rs197.target_section_id=oh1_oh24_rs197.section_id AND r_oh1_oh24_rs197.target_section_tipo=oh1_oh24_rs197.section_tipo)
 
-			GROUP BY oh1.id
-			HAVING COUNT( DISTINCT oh1_oh24_rs197.datos#>'{relations}') > 1
+				WHERE (oh1.section_tipo='oh1') AND
+				(oh1_oh24_rs197.datos#>'{relations}' @> '[{"section_tipo":"dd882","section_id":"1","type":"dd151","from_component_tipo":"rsc94"}]')
 
-			ORDER BY oh1.section_id ASC LIMIT 10
-		)
-		*/
+				GROUP BY oh1.id
+				HAVING COUNT( DISTINCT oh1_oh24_rs197.datos#>'{relations}') > 1
 
-		$filter_query 		= $this->filter_parser($op='$or', $ar_value);
-		$main_where_sql 	= $this->build_main_where_sql();
-		// order
-		$sql_query_order 	= $this->build_sql_query_order();
-		if (empty($sql_query_order)) {
-			$sql_query_order = $this->build_sql_query_order_default();
+				ORDER BY oh1.section_id ASC LIMIT 10
+			)
+			*/
+
+		#if (!empty($this->search_query_object->filter)) {
+		if (!empty($this->having_query_object)) {
+
+			// reset
+			$this->having_search_objects = [];
+
+			$operator 				= key($this->having_query_object);
+			$ar_value 				= $this->having_query_object->{$operator};
+			$main_from_sql  		= $this->build_main_from_sql();
+			$main_where_sql 		= $this->build_main_where_sql();
+			$filter_parser_having 	= $this->filter_parser_having($operator, $ar_value);
+
+			$join_query 			= implode('', (array)$this->having_ar_sql_joins);
+			$main_section_tipo 		= $this->main_section_tipo_alias;
+
+			// component_path_full
+			$having_search_objects 	= $this->having_search_objects;
+			if (empty($having_search_objects)) {
+				return '';
+			}
+			$search_object 			= reset($having_search_objects);
+			$path					= $search_object->path;
+			$table_alias 			= $this->get_table_alias_from_path($path);
+			$component_path 		= implode(',', $search_object->component_path);
+			$search_object_type 	= isset($search_object->type) ? $search_object->type : 'string';
+			$component_path_full	= $table_alias . '.datos' . (($search_object_type==='string') ? '#>>' : '#>') . '\'{' . $component_path . '}\'';
+
+
+			if(!empty($ar_value)) {
+				#$filter_query .= PHP_EOL . ') '.$this->having_top_operator.' -- having clause';
+				$filter_query .= PHP_EOL . ' AND -- having clause';
+				$filter_query .= PHP_EOL . $main_section_tipo.'.id in ( ';
+				$filter_query .= PHP_EOL . "SELECT DISTINCT ON({$main_section_tipo}.section_id,{$main_section_tipo}.section_tipo) {$main_section_tipo}.id FROM {$main_from_sql} ";
+				$filter_query .= $join_query;
+				$filter_query .= PHP_EOL . "WHERE {$main_where_sql} AND (";
+				$filter_query .= $filter_parser_having;
+				$filter_query .= ') ';
+				$filter_query .= PHP_EOL . "GROUP BY {$this->main_section_tipo_alias}.id";
+				$filter_query .= PHP_EOL . "HAVING COUNT(DISTINCT {$component_path_full}) >= " .count($having_search_objects);
+				$filter_query .= $ar_options['order_query'] ?? '';
+				$filter_query .= $ar_options['limit_query'] ?? '';
+			}
 		}
-		// limit
-		$sql_limit 			= $this->search_query_object->limit;
-		if ($this->search_query_object->limit>0) {
-			$limit_query = 'LIMIT ' . $sql_limit;
-		}
-		$main_from_sql  	= $this->build_main_from_sql();
-		$join_query 		= implode(PHP_EOL, $this->ar_sql_joins);
 
-		$s  = PHP_EOL . "{$this->main_section_tipo_alias}.id in ( ";
-		$s .= PHP_EOL . "SELECT DISTINCT ON({$this->main_section_tipo_alias}.section_id,{$this->main_section_tipo_alias}.section_tipo) {$this->main_section_tipo_alias}.id FROM {$main_from_sql} ";
-		$s .= $join_query;
-		$s .= PHP_EOL . "WHERE {$main_where_sql} AND ";
-		#$s .= PHP_EOL . "(oh1_oh24_rs197.datos#>'{relations}' @> '[{\"section_tipo\":\"dd882\",\"section_id\":\"1\",\"type\":\"dd151\",\"from_component_tipo\":\"rsc94\"}]')";
-		$s .= PHP_EOL . $filter_query;
-
-		$s .= PHP_EOL . "GROUP BY {$this->main_section_tipo_alias}.id";
-		$s .= PHP_EOL . "HAVING COUNT(DISTINCT oh1_oh24_rs197.datos#>'{relations}') > 1";
-
-		$s .= PHP_EOL . 'ORDER BY '. $sql_query_order;
-		$s .= PHP_EOL . $limit_query ?? '';
-		$s .= PHP_EOL . ")";
-
-
-		dump($s, ' s ++ '.to_string());
+		return $filter_query;
+	}//end build_sql_filter_having
 
 
 
+	/**
+	* FILTER_PARSER_having
+	* @param string $op
+	* @param array $ar_value
+	* @return string $string_query
+	*/
+	public function filter_parser_having($op, $ar_value) {
 
+		$string_query 	= '';
+		$total 			= count($ar_value);
 
-		return true;
+		// sql operator like 'OR'
+		$sql_operator 	= 'OR';
 
-		$ar_key_join 		= [];
-		$component_path 	= implode(',', $search_object->component_path);
-		$path 				= $search_object->path;
-		$ar_sql_having 		= [];
+		foreach ($ar_value as $key => $search_object) {
 
-		foreach ($path as $key => $step_object) {
+			// operator ? check
+			$op2 = key($search_object);
 
-			if ($key===0) {
-				$base_key 		= $this->main_section_tipo_alias; //self::trim_tipo($step_object->section_tipo);
-				$ar_key_join[] 	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
+			if ($op2==='$or_link') {
+
+				// recursion
+				$string_query  .= $this->filter_parser_having($op2, $search_object->$op2);
+
+			}else if ($op2==='$or' || $op2==='$and') {
+
 				continue;
-			}
 
-			if ($key===1) {
-				$current_key = $base_key;
 			}else{
-				$current_key = implode('_', $ar_key_join);
+				# Case elements
+				$n_levels = count($search_object->path);
+				if ($n_levels>1) {
+					$this->having_ar_sql_joins = $this->build_sql_join($search_object->path);
+				}
+
+				// store all search objects
+				$this->having_search_objects[] = $search_object;
+
+				$string_query .= $this->get_sql_where($search_object);
+
+				// sql operator between
+				if (($key+1)!==$total){
+					$string_query .= ' '.$sql_operator.' ';
+				}
 			}
-			#dump($current_key, ' current_key ++ '.to_string($key));
+		}//end foreach ($ar_value as $key => $search_object) {
 
-			if($key === $total_paths-1) {
-				$ar_key_join[] 	= self::trim_tipo($step_object->section_tipo);
-			}else{
-				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-				$component_model = RecordObj_dd::get_modelo_name_by_tipo($step_object->component_tipo,true);
-			}
 
-			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
-			$last_section_tipo 	= $step_object->section_tipo;
-			$t_name 			= implode('_', $ar_key_join);
-			if (!isset($ar_sql_having[$t_name])) {
-				$having = PHP_EOL;
-				$having .= "HAVING COUNT( DISTINCT {$t_name}.datos#>{'$component_path'}) > {$lenght} ";
-				$having .= PHP_EOL;
-			}
-		}
-
-		return $having;
-
-	}//end build_having
+		return $string_query;
+	}//end filter_parser_having
 
 
 
@@ -1928,6 +1997,8 @@ class search_development2 {
 		$ar_key_join 		= [];
 		$base_key 			= '';
 		$total_paths 		= count($path);
+
+		$ar_current_sql_join= [];
 
 		foreach ($path as $key => $step_object) {
 
@@ -1986,12 +2057,20 @@ class search_development2 {
 
 				// Add to joins
 				$this->ar_sql_joins[$t_name] = $sql_join;
+
+			}else{
+
+				# Join from cache
+				$sql_join = $this->ar_sql_joins[$t_name];
 			}
-		}
+
+			$ar_current_sql_join[$t_name] = $sql_join;
+
+		}//end foreach ($path as $key => $step_object)
 		#$key_group = implode('_', $ar_key_join);
 		#dump($this->ar_sql_joins, '$this->ar_sql_joins ++ '.to_string());
 
-		return true;
+		return $ar_current_sql_join;
 	}//end build_sql_join
 
 
@@ -2075,6 +2154,9 @@ class search_development2 {
 		# search_object_unaccent: true, false
 		$search_object_unaccent = isset($search_object->unaccent) ? $search_object->unaccent : false;
 
+		# safe operator
+		$safe_operator = $search_object->operator==='OR_LINK' ? 'OR' : $search_object->operator;
+
 
 		$sql_where  = "\n";
 
@@ -2110,7 +2192,7 @@ class search_development2 {
 				}
 
 				# operator
-				$sql_where .= ' '.$search_object->operator.' ';
+				$sql_where .= ' '.$safe_operator.' ';
 
 				if($search_object_unaccent===true) {
 					$sql_where .= 'f_unaccent(';
@@ -2173,7 +2255,7 @@ class search_development2 {
 				$sql_where .= $table_alias . '.'.$component_path;
 
 				# operator
-				$sql_where .= ' '.$search_object->operator.' ';
+				$sql_where .= ' '.$safe_operator.' ';
 
 				# q
 				$sql_where .= $search_object->q_parsed;
