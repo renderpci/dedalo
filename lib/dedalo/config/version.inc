@@ -1578,8 +1578,14 @@
 	Valencia 01-07-2019 5.4.64
 		Fixed error on component_relation_related get_references when section_map thesaurus value is multiple (array)
 
+
 	Valencia 06-09-2019 5.4.74
 		Fix error on exec_component_triggers in radio button and component common show_section_group
+
+
+	Valencia 12-09-2019 5.4.76
+		Enable search_development2 'build_having' when operator is '$or_link'
+
 
 
 
@@ -1602,12 +1608,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.75';
+	$DEDALO_VERSION = '5.4.76';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-09-2019');
+	define('DEDALO_BUILD'	, '12-09-2019');
 
 
 	/*
