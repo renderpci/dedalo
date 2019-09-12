@@ -92,7 +92,7 @@
 
 				$component_info 	= $this->get_component_info('json');
 
-				$dato = htmlentities($dato);
+				#$dato = htmlentities($dato);
 				$file_name = 'list';
 				break;
 						
