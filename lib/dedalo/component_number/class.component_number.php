@@ -13,13 +13,14 @@ class component_number extends component_common {
 	*/
 	public function get_dato() {
 
-		$dato = parent::get_dato();				
-	
-		$format_dato = $this->set_format_form_type($dato);
-		
-		return $format_dato;
-	}//end get_dato
+		$dato = parent::get_dato();
 
+		foreach ((array)$dato as $key => $value) {
+			$format_dato[] = $this->set_format_form_type($value);
+		}
+
+		return (array)$format_dato;
+	}//end get_dato
 
 
 	/**
@@ -27,17 +28,17 @@ class component_number extends component_common {
 	*/
 	public function set_dato($dato) {
 
-		if ($dato==='') {
-			$dato = null;
-		}		
-
-		if (is_array($dato)) {
-			$format_dato = $this->set_format_form_type($dato[0]);		
-		}else{
-			$format_dato = $this->set_format_form_type($dato);
+		$safe_dato=array();
+		foreach ((array)$dato as $key => $value) {
+			if (is_numeric($value)) {
+				$safe_dato[] = $this->set_format_form_type($value);
+			}else{
+				
+			}
 		}
+		$dato = $safe_dato;
 
-		return parent::set_dato( $format_dato );				
+		parent::set_dato( (array)$dato );				
 	}//end set_dato
 
 
@@ -47,16 +48,34 @@ class component_number extends component_common {
 	* Returns int or float number as string formatted
 	* @return string $valor
 	*/
-	public function get_valor() {
+	public function get_valor($index='all') {
+
+		$valor ='';
 
 		$dato = $this->get_dato();
-		if (is_array($dato)) {
-			$valor = component_number::number_to_string($dato[0]);		
-		}else{
-			$valor = component_number::number_to_string($dato);	
+
+		if(empty($dato)) {			
+			return (string)$valor;
 		}
-		
+				
+		if ($index==='all') {			
+			$ar = array();
+			foreach ($dato as $key => $value) {
+				$value = component_number::number_to_string($value);
+				if (!empty($value)) {
+					$ar[] = $value;	
+				}							
+			}
+			if (count($ar)>0) {
+				$valor = implode(',',$ar);
+			}			
+		}else{
+			$index = (int)$index;
+			$valor = isset($dato[$index]) ? $dato[$index] : null;
+		}
+
 		return (string)$valor;
+
 	}//end get_valor
 
 
@@ -341,7 +360,15 @@ class component_number extends component_common {
 		return $diffusion_value;
 	}//end get_diffusion_value
 
+	/**
+	* GET_STRUCTURE_BUTTONS
+	* @return 
+	*/
+	public function get_structure_buttons($permissions=null) {
+		
 
+		return [];
+	}//end get_structure_buttons
 
 }//end component_number
 ?>
