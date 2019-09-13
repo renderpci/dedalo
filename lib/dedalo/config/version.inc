@@ -1587,6 +1587,10 @@
 		Enable search_development2 'build_having' when operator is '$or_link'
 
 
+	Valencia 13-09-2019 5.4.80
+		Implements search operator '$or_link' in filter
+
+
 
 
 	WORK IN PROGRESS
@@ -1608,12 +1612,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.76';
+	$DEDALO_VERSION = '5.4.81';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-09-2019');
+	define('DEDALO_BUILD'	, '13-09-2019');
 
 
 	/*

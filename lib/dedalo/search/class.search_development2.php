@@ -64,7 +64,6 @@ class search_development2 {
 
 		# having vars
 		protected $having_query_object;
-		protected $having_top_operator;
 		protected $having_ar_sql_joins;
 		protected $having_search_objects;
 
@@ -796,6 +795,9 @@ class search_development2 {
 			#debug_log(__METHOD__." DEBUG_JSON_STRING \n".to_string().$debug_json_string, logger::DEBUG);
 			#$this->remove_distinct=true;
 		}
+
+		// having reset
+			$this->having_search_objects = [];
 
 		# Search elements. Order is important
 			$main_where_sql 	= $this->build_main_where_sql();
@@ -1740,12 +1742,14 @@ class search_development2 {
 	public function filter_parser($op, $ar_value) {
 
 		if ($op==='$or_link') {
+
 			$obj = new stdClass();
 				$obj->{$op} = $ar_value;
+
 			// store search_object
 			$this->having_query_object = $obj;
-			$this->having_top_operator = 'OR';
 
+			// override
 			$op = '$or';
 		}
 
@@ -1796,10 +1800,9 @@ class search_development2 {
 				// store search_object
 				if (!isset($this->having_query_object)) {
 					$this->having_query_object = $search_object;
-					$this->having_top_operator = $sql_operator;
 				}
 
-				$ar_value_having = $search_object->$op2;
+				// override
 				$op2 = '$or';
 			}
 
@@ -1875,7 +1878,7 @@ class search_development2 {
 		if (!empty($this->having_query_object)) {
 
 			// reset
-			$this->having_search_objects = [];
+			#$this->having_search_objects = [];
 
 			$operator 				= key($this->having_query_object);
 			$ar_value 				= $this->having_query_object->{$operator};
@@ -1898,8 +1901,13 @@ class search_development2 {
 			$search_object_type 	= isset($search_object->type) ? $search_object->type : 'string';
 			$component_path_full	= $table_alias . '.datos' . (($search_object_type==='string') ? '#>>' : '#>') . '\'{' . $component_path . '}\'';
 
-
 			if(!empty($ar_value)) {
+
+				$q_unique = [];
+				foreach ($having_search_objects as $current) {
+					if (!in_array($current->q, $q_unique)) $q_unique[] = $current->q;
+				}
+
 				#$filter_query .= PHP_EOL . ') '.$this->having_top_operator.' -- having clause';
 				$filter_query .= PHP_EOL . ' AND -- having clause';
 				$filter_query .= PHP_EOL . $main_section_tipo.'.id in ( ';
@@ -1909,11 +1917,13 @@ class search_development2 {
 				$filter_query .= $filter_parser_having;
 				$filter_query .= ') ';
 				$filter_query .= PHP_EOL . "GROUP BY {$this->main_section_tipo_alias}.id";
-				$filter_query .= PHP_EOL . "HAVING COUNT(DISTINCT {$component_path_full}) >= " .count($having_search_objects);
+				$filter_query .= PHP_EOL . "HAVING COUNT(DISTINCT {$component_path_full}) >= " .count($q_unique);
 				$filter_query .= $ar_options['order_query'] ?? '';
 				$filter_query .= $ar_options['limit_query'] ?? '';
 			}
+
 		}
+
 
 		return $filter_query;
 	}//end build_sql_filter_having
@@ -1946,7 +1956,15 @@ class search_development2 {
 
 			}else if ($op2==='$or' || $op2==='$and') {
 
-				continue;
+				$sql_operator2 = strtoupper( substr($op2, 1) );
+
+				$string_query .= ' (';
+				$string_query  .= $this->filter_parser_having($op2, $search_object->$op2);
+				$string_query .= ' )';
+
+				if ($key+1 < $total) {
+					$string_query .= ' '.$sql_operator2.' ';
+				}
 
 			}else{
 				# Case elements
