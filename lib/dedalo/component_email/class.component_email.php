@@ -14,9 +14,10 @@ class component_email extends component_common {
 	* GET DATO : Format "user@domain.com"
 	*/
 	public function get_dato() {
+
 		$dato = parent::get_dato();
 		
-		return (string)$dato;
+		return (array)$dato;
 	}//end get_dato
 
 
@@ -26,14 +27,13 @@ class component_email extends component_common {
 	*/
 	public function set_dato($dato) {
 
-		# Clean email
-		if (is_array($dato)) {	
-			$dato = component_email::clean_email($dato[0]);	
-		}else{
-			$dato = component_email::clean_email($dato);
+		$safe_dato=array();
+		foreach ((array)$dato as $key => $value) {			
+				$safe_dato[] = component_email::clean_email($value);		
 		}
+		$dato = $safe_dato;
 
-		return parent::set_dato( (string)$dato );
+		parent::set_dato( (array)$dato );		
 	}//end set_dato
 
 
@@ -46,9 +46,11 @@ class component_email extends component_common {
 
 		# Opcionalmente se podría validar mediante aquí el dato.. aunque ya se ha hecho en javascript
 		$email = $this->get_dato();
-		if (!empty($email) && false===component_email::is_valid_email($email)) {
-			debug_log(__METHOD__." No data is saved. Invalid email ".to_string($email), logger::ERROR);
-			return false;
+		foreach ((array)$email as $key => $value) {		
+			if (!empty($value) && false===component_email::is_valid_email($value)) {
+				debug_log(__METHOD__." No data is saved. Invalid email ".to_string($value), logger::ERROR);
+				return false;
+			}
 		}
 
 		# A partir de aquí, salvamos de forma estándar
@@ -285,7 +287,15 @@ class component_email extends component_common {
 		return $ar_operators;
 	}//end search_operators_info
 
+	/**
+	* GET_STRUCTURE_BUTTONS
+	* @return 
+	*/
+	public function get_structure_buttons($permissions=null) {
+		
 
+		return [];
+	}//end get_structure_buttons
 
 }
 ?>
