@@ -1,29 +1,30 @@
 <?php
 
-	# VISUALIZADOR HTML		
-	
+	# VISUALIZADOR HTML
+
 	print "<div class=\"wrap_component css_wrap_radio_button tooltip_active\" ";
+	print "data-tipo=\"{$tipo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print "data-q_operator='".$q_operator."' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print ">";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 
-	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch(true) {
-			
-		case $permissions==0	:	
+
+		case $permissions==0	:
 				$html_content .= "";
-				break;						
-		
+				break;
+
 		case ($permissions>=1)	:
-					
+
 				# COMPARISON OPERATORS
 				#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
@@ -34,7 +35,7 @@
 
 
 				$html_content .= '<ul class="radio_button_ul_list">';
-				
+
 				# INPUT
 				#$html_content .= "<span id=\"search_component_$tipo\">";
 				$i=0; foreach ($ar_list_of_values->result as $key => $item) {
@@ -52,7 +53,7 @@
 					}
 
 					$locator_json = json_encode($locator);
-	
+
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? true : false;
 					$checked  = '';
 					if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
@@ -60,7 +61,7 @@
 					}
 
 					$html_content .= '<li>';
-					
+
 					$html_content .= "<input class=\"css_radio_button\" type=\"radio\" ";
 					$html_content .= "id=\"{$search_input_id}\" ";
 					$html_content .= "name=\"{$search_input_name}\" ";
@@ -80,18 +81,18 @@
 				$html_content .= '</ul>';//end radio_button_ul_list
 
 				# LOGICAL OPERATORS
-				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);							
+				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 	}
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-	
-	
+
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
-	
-	
+
+
 	print '</div>'; //wrap
 
 
