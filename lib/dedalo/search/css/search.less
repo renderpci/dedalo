@@ -32,37 +32,8 @@
 	}
 
 
-// max_group
-	.max_group {		
-		width: 50px;
-		min-width: 50px;
-		margin-bottom: 5px;
-		margin-top: 5px;
-		background-color: #ffffff;
-		position: relative;
-		border-radius: 4px;
-		display: block;
-		// border: 1px solid #e6e6e6;
-		overflow: hidden;
-		margin-right: 0px;
-	
-		.max_input_label {
-			display: block;
-			width: 100%;
-			text-align: center;
-			padding: 3px;
-			position: absolute;
-		}
 
-		input.max_input {
-			border: none;
-			width: 100%;
-			height:100%;
-			cursor: default;
-			text-align: center;
-			font-size: 1.2em;
-		}
-	}
+
 
 
 
@@ -88,7 +59,6 @@
 // search_global_container
 	.search_global_container {
 		display: flex;
-		flex-wrap: wrap;
 		background-color: fade(@bg_color_global, 70%);
 		//background-color: rgba(239, 239, 239, 0.71);
 		border-radius: 5px;
@@ -330,7 +300,13 @@
 				position: relative;
 				display: flex;
 				flex-grow: 2;
-				flex-wrap: wrap;									
+				flex-wrap: wrap;	
+
+				.button.close {
+					position: absolute;
+					right: 0;
+					top: 0;
+				}								
 				}
 				.search_group > .operator {
 					//background-color: #9cd950;
@@ -359,17 +335,21 @@
 					left: 0;
 					top: 0;	
 					margin: 0;
-					opacity: 0.6;				
+					opacity: 0.6;
+
+					&:hover {
+						opacity: 0.7;
+					}
+
+					&.and {
+						background-color: #3FB630
+					}
+					&.or {
+						background-color: #3379b8;
+					}
 				}
-				.search_group > .operator:hover {
-					opacity: 0.7;
-				}
-				.search_group > .operator.and {
-					background-color: #3FB630
-				}
-				.search_group > .operator.or {
-					background-color: #3379b8;
-				}
+				
+				
 			.root_search_group {
 				margin: 0;
 				margin-left: 5px;
@@ -377,27 +357,13 @@
 				justify-content: flex-start;
 				border-radius: 2px;
 			}
-			.search_group > .button_plus {
-				z-index: 9;
-				background-color: #1fdcc9;
+			.button.add {				
 				position: absolute;
-				right: 5px;
-				top: 25px;
-				width: 16px;
-				height: 16px;
-				background-color: #6d6d6d;
-				cursor: pointer;
-				text-align: center;
-				border-radius: 8px;
-				color: aliceblue;
-				}
-				.search_group > .button_plus:after{
-					content: "+"
-
-				}
-			.search_group#root_search_group > .button_plus {
-					top: 5px;
-				}
+				right: 0;
+				top: 1.4em;				
+				color: #080808;
+			}
+			
 
 
 		/* search_component
@@ -406,7 +372,7 @@
 			//background-color: lighten(@component_color, 10%); 
 			background-color: rgba(251, 251, 251, 0.48);
 			display: flex;
-			flex-direction: row-reverse;
+			//flex-direction: row-reverse;
 			position: relative;
 			// Add
 			margin: 2px;
@@ -416,6 +382,17 @@
 			flex-basis: 32%;				
 			min-height: 55px;
 			border-radius: 2px;
+
+				>.wrapper_component {
+					flex-grow: 1;
+
+					>.label {
+						padding: 0.5em;
+					}
+					>.content_data {
+						padding: 0.5em;
+					}
+				}
 			}
 			/*
 			.search_component > .operator {
@@ -466,24 +443,7 @@
 			}*/
 
 
-		/* buttons
-		--------------------------- */
-		.button_reset {
-			margin: 5px;
-			margin-right: 0;
-			display: block;
-			flex-grow: 1;
-		}
-		.button_submit {
-			margin: 5px;
-			margin-right: 0;
-			margin-right: 7px;
-		}
-		.reset_group{
-			display: flex;
-			 flex-direction: column;
-		}
-
+		
 
 
 	/* search presets
@@ -662,6 +622,86 @@
 			min-width: 38px;
 		}
 	}
+
+
+
+// search_buttons_container
+	.search_buttons_container {
+		//background-color: #ea9cd2; 
+		min-height: 6em;		
+		display: flex;
+		padding: 0.25em; 
+
+		>* {
+			height: 100%;
+			width: 100%;			
+		}
+
+		.button {
+			height: 100%;
+			font-size: 1em;
+			background-color: #f99c29;
+			opacity: 1;
+			color: #ffffff;
+			border: 1px solid #ffffff;
+			border-radius: 0.25em;
+
+			&:hover {
+				background-color: darken(#f99c29, 10%);
+			}
+		}
+
+		// max_group
+		>.max_group {
+			display: flex;
+			flex-direction: column;
+			
+			background-color: #ffffff;
+			position: relative;
+			border-radius: 4px;		
+			overflow: hidden;		
+		
+			.max_input_label {
+				display: block;
+				width: 100%;
+				text-align: center;
+				padding: 1em;
+				position: absolute;
+			}
+
+			input.max_input {
+				border: none;
+				width: 100%;
+				height:100%;
+				text-align: center;
+				font-size: 1.1em;			
+    			padding-top: 2em;
+			}
+		}
+
+		// reset group
+		>.reset_group{
+			display: flex;
+			flex-direction: column;
+
+			.button.reload {
+				flex-grow: 1;
+			}
+			.button.show_all {
+				flex-grow: 1;
+			}
+		}	
+		
+		// submit
+		>.button.submit {
+			background-color: #5cb85c;
+			&:hover {
+				background-color: darken(#5cb85c, 10%);
+			}
+		}
+		
+
+	}//end .search_buttons_container
 			
 
 

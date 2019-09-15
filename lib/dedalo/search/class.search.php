@@ -504,7 +504,7 @@ class search {
 	* @param bool $full_count
 	*	default false
 	* @return string $sql_query
-	*//**/
+	*//*
 	public function parse_search_query_object__OLD( $full_count=false ) {
 		#dump($this->search_query_object->filter, ' this->search_query_object->filter 1 ++ '.to_string());
 		#$start_time=microtime(1);
@@ -797,14 +797,14 @@ class search {
 		
 		$sql_query .= ';' . PHP_EOL;
 
-		#dump(null, ' sql_query ++ '.to_string($sql_query)); die();
+		#dump(null, ' sql_query ++ '.to_string($sql_query)); #die();
 		#debug_log(__METHOD__." SQL QUERY: ".to_string($sql_query), logger::DEBUG);
 		#debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		
 		return $sql_query;
 	}//end parse_search_query_object__OLD
-	
+	*/
 
 
 
