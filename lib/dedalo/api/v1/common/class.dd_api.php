@@ -103,7 +103,6 @@ class dd_api {
 
 		$context = $json_data->context;
 
-
 		$json_rows = self::build_json_rows($context);
 
 		$result = $json_rows;
@@ -140,8 +139,8 @@ class dd_api {
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// get the context and data sended
-		$context 		= $json_data->context;
-		$data 			= $json_data->data;
+		$context 	= $json_data->context;
+		$data 		= $json_data->data;
 
 		//get the type of the dd_object that is calling to update
 		$context_type = $context->type;
@@ -182,7 +181,6 @@ class dd_api {
 
 				// data add
 					$result = $element_json;
-
 
 				break;
 
@@ -357,7 +355,7 @@ class dd_api {
 
 	/**
 	* FILTER_GET_EDITING_PRESET
-	* @return array $result
+	* @return object $response
 	*/
 	static function filter_get_editing_preset($json_data){
 		global $start_time;
@@ -388,8 +386,41 @@ class dd_api {
 
 
 	/**
+	* FILTER_SET_EDITING_PRESET
+	* @return object $response
+	*/
+	static function filter_set_editing_preset($json_data){
+		global $start_time;
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+			$user_id 		= navigator::get_user_id();
+			$section_tipo 	= $json_data->section_tipo;
+			$filter_obj 	= $json_data->filter_obj;
+
+			$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
+		
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = new stdClass();
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			}
+
+		$response->result 		= $save_temp_preset;
+		$response->msg 	  		= 'Ok. Request done';
+
+		return (object)$response;
+	}//end filter_set_editing_preset
+
+
+
+	/**
 	* FILTER_GET_USER_PRESETS
-	* @return array $result
+	* @return object $response
 	*/
 	static function filter_get_user_presets($json_data){
 		global $start_time;
@@ -443,7 +474,6 @@ class dd_api {
 			});
 			// set as static to allow external access
 			dd_api::$ar_dd_objects = $ar_dd_objects;
-
 
 		// ddo_source
 			$ddo_source = array_reduce($sqo_context, function($carry, $item){

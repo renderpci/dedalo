@@ -365,6 +365,13 @@
 				&:before {
 					content: @fa-var-envelope;
 				}
+			}
+			&.close {
+				.fa-icon;
+				.fas;
+				&:before {
+					content: @fa-var-times-circle; 
+				}
 			}					
 		}//end .active &, &.link
 	}//end .button
@@ -392,6 +399,13 @@
 				>input {
 					margin-right: 0.5em;
 				}
+
+				// q_operator
+				>input.q_operator {
+					width: 3em;
+					text-align: center;
+				}
+				
 			}
 
 			&.inputs_container >li {
@@ -406,10 +420,17 @@
 		padding: 1em;
 	}
 
+
+
 // input focus show next item (button remove)
-	input:focus + .display_none {
+	input:focus + .display_none.remove {
 		.display_block;
 	}
 	.display_block {
 		display: block !important;
 	}
+
+
+
+
+

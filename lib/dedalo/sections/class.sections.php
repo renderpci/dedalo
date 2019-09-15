@@ -73,8 +73,8 @@ class sections extends common {
 	*/
 	public function get_dato() {
 		
-		$search = new search($this->search_query_object);
-		$rows_data 			 = $search->search();
+		$search 	= new search($this->search_query_object);
+		$rows_data	= $search->search();
 
 		$ar_records = $rows_data->ar_records;
 
