@@ -19,45 +19,15 @@
 
 
 // wrapper_search
-	.wrapper_search {
+.wrapper_search {
 
-
-	}
-
-
-
-// filter_button
-	.filter_button {
+	// filter_button
+	>.filter_button {
 		margin-bottom: 0.5em;
 	}
 
-
-
-
-
-
-
-// button_save_preset
-	.button_save_preset {
-		display: none;
-	}
-
-
-
-// Button open first list
-	.button_open_search {
-		//margin-bottom: 5px;
-		margin-top: 2px;
-		text-transform: capitalize;
-		letter-spacing: 0.03em;
-		border-color: #bbbbbb;
-		background-color: rgba(239,239,239,0.7);
-	}
-
-
-
-// search_global_container
-	.search_global_container {
+	// search_global_container
+	>.search_global_container {
 		display: flex;
 		background-color: fade(@bg_color_global, 70%);
 		//background-color: rgba(239, 239, 239, 0.71);
@@ -67,17 +37,62 @@
 		width: 100%;
 		background-color: #00CA00;
 
+		>.button_save_preset {
+			display: none;
+			margin: 0;
+			position: absolute;
+			top: -35px;
+			left: 105px;
+
+			&.in_thesaurus {
+				top: -100px;
+			}
+		}
+
+		>.toggle_container_selector {
+
+		}
 
 		// Left components list
-		.search_container_selector {
+		>.search_container_selector {
 			display: flex;
-			//display: none;
 
 			// Standard section container (receive all json elements inside)
 			ul.search_section_container {
 				//background-color: #88D6E4;
 				width: fit-content;
-			}
+
+				// Section label bar
+				>.search_section_bar_label {
+					font-family: "Oxygen-light";
+					padding: 0.25em;
+					border-right: 1px solid #a5a5a5;
+					background-color: #575a5c;;
+					color: #ffffff;
+					font-size: 1em;
+		    		line-height: 1em;
+					// Avoid click events affect here (received with :after)
+					pointer-events: none;
+
+					.target_container >.search_section_container &:after {
+						content: "X";
+						display: block;
+						// background-color: #a0a0a0;
+						float: right;
+						width: 1em;
+						text-align: center;
+						//border-radius: 50%;
+						//line-height: 15px;
+						//position: relative;
+						//top: 2px;
+						cursor: pointer;
+						// Allow receive here the click button of real dom element
+						pointer-events: all;
+						padding-left: 1em;
+					}
+				}
+
+			}//end ul.search_section_container
 		}
 
 		// Center selection drag area
@@ -86,6 +101,233 @@
 			background-color: #d0e2f5;
 			position: relative;
 			padding-top: 0;
+
+			.search_group_container {
+				display: flex;
+				//position: relative;
+				position: -webkit-sticky;
+				position: -moz-sticky;
+				position: sticky;
+				top: 60px;
+
+				.search_group {
+					border: 0.5px solid #b9b9b9;
+					padding: 5px;
+					padding-right: 24px;
+					padding-left: 28px;
+					//margin: 10px;
+					//margin-top: 0;
+					//margin-bottom: 0;
+					margin: 2px;
+					min-height: 66px;
+					min-width: 165px;
+					background-color: rgba(255, 255, 255, 0.5);
+					resize: both;
+					overflow: -webkit-paged-x;
+					position: relative;
+					display: flex;
+					flex-grow: 2;
+					flex-wrap: wrap;
+
+					&.root_search_group {
+						margin: 0;
+						margin-left: 5px;
+						margin-right: 5px;
+						justify-content: flex-start;
+						border-radius: 2px;
+					}
+
+					// search_component
+					>.search_component {
+						//background-color: lighten(@component_color, 10%);
+						background-color: rgba(251, 251, 251, 0.48);
+						display: flex;
+						//flex-direction: row-reverse;
+						position: relative;
+						// Add
+						margin: 2px;
+						border: 1px solid #e6e6e6;
+						// Experimental all same width
+						// width: 300px;
+						flex-basis: 32%;
+						min-height: 55px;
+						border-radius: 2px;
+
+							>.wrapper_component {
+								flex-grow: 1;
+
+								>.label {
+									padding: 0.5em;
+								}
+								>.content_data {
+									padding: 0.5em;
+								}
+							}
+						>.button_close {
+							z-index: 9;
+
+							&:active {
+								opacity: 0.5
+							}
+						}
+
+						>.wrap_component {
+
+							>.css_label {
+								width: 100%;
+								max-width: initial;
+							}
+
+							>.content_data {
+								width: 100%;
+
+								input[type=text] {
+									width: 100%;
+								}
+							}
+						}//end >.wrap_component
+					}
+
+					// Last component
+					>.search_component:last-of-type {
+						margin-right: 10px !important;
+					}
+
+
+					>.operator {
+						//background-color: #9cd950;
+						//float: left;
+						color: #fcf4ff;
+						//margin: -5px;
+						//margin-right: 5px;
+						margin-left: -10px;
+						padding: 4px;
+						border-right: 1px solid rgba(123, 150, 177, 0.45);
+						text-align: center;
+						max-width: 32px;
+						//writing-mode: vertical-rl;
+						writing-mode: vertical-lr;
+						//text-orientation: upright;
+						width: 24px;
+						text-transform: uppercase;
+						cursor: pointer;
+						user-select: none;
+						-moz-user-select: none;
+						-webkit-user-select: none;
+						letter-spacing: 1px;
+
+						height: 100%;
+						position: absolute;
+						left: 0;
+						top: 0;
+						margin: 0;
+						opacity: 0.6;
+
+						&:hover {
+							opacity: 0.7;
+						}
+
+						&.and {
+							background-color: #3FB630
+						}
+						&.or {
+							background-color: #3379b8;
+						}
+					}//end >.operator
+
+					>.button.close {
+						position: absolute;
+						right: 0;
+						top: 0;
+					}
+
+					>.button.add {
+						position: absolute;
+						right: 0;
+						top: 1.4em;
+						color: #080808;
+					}
+
+				}//end .search_group
+
+				// search_buttons_container
+				>.search_buttons_container {
+					//background-color: #ea9cd2;
+					min-height: 6em;
+					display: flex;
+					padding: 0.25em;
+
+					>* {
+						height: 100%;
+						width: 100%;
+					}
+
+					.button {
+						height: 100%;
+						font-size: 1em;
+						background-color: #f99c29;
+						opacity: 1;
+						color: #ffffff;
+						border: 1px solid #ffffff;
+						border-radius: 0.25em;
+
+						&:hover {
+							background-color: darken(#f99c29, 10%);
+						}
+					}
+
+					// max_group
+					>.max_group {
+						display: flex;
+						flex-direction: column;
+
+						background-color: #ffffff;
+						position: relative;
+						border-radius: 4px;
+						overflow: hidden;
+
+						.max_input_label {
+							display: block;
+							width: 100%;
+							text-align: center;
+							padding: 1em;
+							position: absolute;
+						}
+
+						input.max_input {
+							border: none;
+							width: 100%;
+							height:100%;
+							text-align: center;
+							font-size: 1.1em;
+			    			padding-top: 2em;
+						}
+					}
+
+					// reset group
+					>.reset_group{
+						display: flex;
+						flex-direction: column;
+
+						.button.reload {
+							flex-grow: 1;
+						}
+						.button.show_all {
+							flex-grow: 1;
+						}
+					}
+
+					// submit
+					>.button.submit {
+						background-color: #5cb85c;
+						&:hover {
+							background-color: darken(#5cb85c, 10%);
+						}
+					}
+
+				}//end .search_buttons_container
+
+			}//end .search_group_container
 		}
 
 		// Right user presets
@@ -95,11 +337,150 @@
 			min-width: 140px;
 			display: block;
 			background-color: #CD7348;
+
+			>.component_presets_label {
+				background-color: #575a5c;
+				color: #ffffff;
+				text-align: center;
+				padding: 4px;
+
+				mark {
+					color: #ffffff;
+					background-color: initial;
+					opacity: initial;
+				}
+
+				>.button_plus {
+					z-index: 9;
+					float: right;
+					width: 15px;
+					height: 15px;
+					cursor: pointer;
+					text-align: center;
+					border-radius: 7px;
+					color: #565a5c;
+					background-color: #f3f3f3;
+					font-size: 12px;
+					line-height: 15px;
+					padding: 0;
+					font-family: sans-serif;
+				}
+			}//end .component_presets_label
+
+
+			>.new_preset_div {
+				background-color: #565a5c;
+				color: #d2d2d2;
+				border-radius: 0;
+
+				.wrap_component {
+					padding: 5px;
+				}
+
+				>.btn {
+					margin: 10px;
+				}
+			}
+
+			>.search_options_title_item {
+
+				> span {
+					display: inline-block;
+					min-width: 38px;
+				}
+			}
+
+			// div_edit
+			>.div_edit {
+				background-color: #cfcfcf;
+				width: 100% !important;
+				max-width: 100% !important;
+				display: flex;
+				flex-flow: column;
+				border-radius: 2px;
+				//width: 100%;
+
+				>.wrap_component .content_data {
+					width: 100%;
+				}
+				>.wrap_component .label {
+					color: #f7f7f7;
+
+					mark {
+						color: #f7f7f7 !important;
+					}
+				}
+
+				>.wrap_component:last-of-type {
+					padding-bottom: 10px;
+				}
+				>.selected_wrap {
+					background: initial !important;
+				}
+
+			}//end .div_edit
+
+			// list
+			ul.component_presets_list {
+				clear: both;
+
+				> li {
+					line-height: 2em;
+					border-bottom: 1px solid #dbdbdb;
+					padding: 5px;
+					padding-bottom: 1px;
+					padding-top: 1px;
+					position: relative;
+					//display: flex;
+
+					&.selected {
+						//font-weight: bold !important;
+						color: #000000;
+						font-family: "Oxygen-bold";
+					}
+
+					.component_presets_button_load, .component_presets_button_options, .component_presets_button_delete {
+						position: absolute;
+						opacity: .3;
+						//vertical-align: sub;
+						transform-origin: bottom;
+						//-webkit-transform-origin: bottom;
+					}
+					.component_presets_button_load {
+						//background-position: -432px 0; // options
+						//background-position: -192px -72px; // step backward
+						background-position: -432px -72px;
+						transform: scale(1.21);
+						//-moz-transform: scale(1.21);
+						top: 6px;
+						left: 2px;
+					}/*
+					.component_presets_button_options {
+						background-position: -432px 0; // options
+						zoom: 121%;
+						-moz-transform: scale(1.21);
+						margin-right: 3px;
+					}*/
+					.component_presets_button_delete {
+						background-position: -456px 0;
+						margin-left: 5px;
+						right: 5px;
+						top: 5px;
+					}
+				}
+
+			}//end ul.component_presets_list
+
+		}//end .search_container_selection_presets
+
+		>.toggle_container_selection_presets {
+
 		}
 
-
-
 	}//end .search_global_container
+
+}//end .wrapper_search
+
 
 
 
@@ -123,41 +504,27 @@
 
 
 
+// Button open first list
+	.button_open_search {
+		//margin-bottom: 5px;
+		margin-top: 2px;
+		text-transform: capitalize;
+		letter-spacing: 0.03em;
+		border-color: #bbbbbb;
+		background-color: rgba(239,239,239,0.7);
+	}
+
+
+
+
+
+
 	// Target section container (receive all json elements inside recursive)
 	.search_section_container.target_container {
 		display: flex;
 		background-color: rgba(201,201,201,0.3);
 	}
 
-		// Section label bar
-		.search_section_bar_label {
-			font-family: "Oxygen-light";
-			padding: 0.25em;
-			border-right: 1px solid #a5a5a5;
-			background-color: #575a5c;;
-			color: #ffffff;
-			font-size: 1em;
-    		line-height: 1em;
-			// Avoid click events affect here (received with :after)
-			pointer-events: none;
-
-			.target_container >.search_section_container &:after {
-				content: "X";
-				display: block;
-				// background-color: #a0a0a0;
-				float: right;
-				width: 1em;
-				text-align: center;
-				//border-radius: 50%;
-				//line-height: 15px;
-				//position: relative;
-				//top: 2px;
-				cursor: pointer;
-				// Allow receive here the click button of real dom element
-				pointer-events: all;
-				padding-left: 1em;
-			}
-		}
 
 
 		// Items list generic
@@ -175,7 +542,6 @@
 				user-select: none;
 			}
 		}
-
 
 		// Items list section_group
 		li.search_section_group_label {
@@ -258,113 +624,20 @@
 		*/
 	}
 
+
+
 // Prevent the text contents of draggable elements from being selectable.
 	.search_global_container[draggable] {
-	  -moz-user-select: none;
-	  -khtml-user-select: none;
-	  -webkit-user-select: none;
-	  user-select: none;
-	  /* Required to make elements draggable in old WebKit */
-	  -khtml-user-drag: element;
-	  -webkit-user-drag: element;
+		-moz-user-select: none;
+		-khtml-user-select: none;
+		-webkit-user-select: none;
+		user-select: none;
+		/* Required to make elements draggable in old WebKit */
+		-khtml-user-drag: element;
+		-webkit-user-drag: element;
 	}
 
 
-	/* search_container_selection
-	---------------------------------------------------------- */
-		.search_container_selection {
-
-			}
-			.search_group_container {
-				display: flex;
-				//position: relative;
-				position: -webkit-sticky;
-				position: -moz-sticky;
-				position: sticky;
-				top: 60px;
-			}
-			.search_group {
-				border: 0.5px solid #b9b9b9;
-				padding: 5px;
-				padding-right: 24px;
-				padding-left: 28px;
-				//margin: 10px;
-				//margin-top: 0;
-				//margin-bottom: 0;
-				margin: 2px;
-				min-height: 66px;
-				min-width: 165px;
-				background-color: rgba(255, 255, 255, 0.5);
-				resize: both;
-				overflow: -webkit-paged-x;
-				position: relative;
-				display: flex;
-				flex-grow: 2;
-				flex-wrap: wrap;
-
-				.button.close {
-					position: absolute;
-					right: 0;
-					top: 0;
-				}
-
-				>.operator {
-					//background-color: #9cd950;
-					//float: left;
-					color: #fcf4ff;
-					//margin: -5px;
-					//margin-right: 5px;
-					margin-left: -10px;
-					padding: 4px;
-					border-right: 1px solid rgba(123, 150, 177, 0.45);
-					text-align: center;
-					max-width: 32px;
-					//writing-mode: vertical-rl;
-					writing-mode: vertical-lr;
-					//text-orientation: upright;
-					width: 24px;
-					text-transform: uppercase;
-					cursor: pointer;
-					user-select: none;
-					-moz-user-select: none;
-					-webkit-user-select: none;
-					letter-spacing: 1px;
-
-					height: 100%;
-					position: absolute;
-					left: 0;
-					top: 0;
-					margin: 0;
-					opacity: 0.6;
-
-					&:hover {
-						opacity: 0.7;
-					}
-
-					&.and {
-						background-color: #3FB630
-					}
-					&.or {
-						background-color: #3379b8;
-					}
-				}//end >.operator
-
-				>.button.add {
-					position: absolute;
-					right: 0;
-					top: 1.4em;
-					color: #080808;
-				}
-
-				&.root_search_group {
-					margin: 0;
-					margin-left: 5px;
-					margin-right: 5px;
-					justify-content: flex-start;
-					border-radius: 2px;
-				}
-
-			}
 
 
 
@@ -372,342 +645,28 @@
 
 
 
-		/* search_component
-		-------------------------- */
-		.search_container_selection .search_component {
-			//background-color: lighten(@component_color, 10%);
-			background-color: rgba(251, 251, 251, 0.48);
-			display: flex;
-			//flex-direction: row-reverse;
-			position: relative;
-			// Add
-			margin: 2px;
-			border: 1px solid #e6e6e6;
-			// Experimental all same width
-			// width: 300px;
-			flex-basis: 32%;
-			min-height: 55px;
-			border-radius: 2px;
-
-				>.wrapper_component {
-					flex-grow: 1;
-
-					>.label {
-						padding: 0.5em;
-					}
-					>.content_data {
-						padding: 0.5em;
-					}
-				}
-			}
-			/*
-			.search_component > .operator {
-				background-color: #77c9c2;
-				color: #fcf4ff;
-				margin: 0;
-				padding: 4px;
-				text-align: center;
-				//transform: rotate(90deg);
-				//transform-origin: top left;
-				//height: 20px;
-				//position: relative;
-				//right: -20px;
-				writing-mode: vertical-rl;
-				//text-orientation: upright;
-				width: 24px;
-			}*/
-			.search_component > .button_close {
-				//position: absolute;
-				//margin-right: 4px;
-				//cursor: pointer;
-				z-index: 9;
-				}
-				.search_component > .button_close:active {
-					opacity: 0.5
-				}
-
-			.search_component > .wrap_component > .css_label {
-				width: 100%;
-				max-width: initial;
-			}
-			.search_component > .wrap_component > .content_data {
-				width: 100%;
-			}
-			.search_component > .wrap_component > .content_data input[type=text] {
-				width: 100%;
-			}
-
-			// Last component
-			.search_group > .search_component:last-of-type {
-				margin-right: 10px !important;
-			}
-			/*
-			.search_group > .search_component:last-of-type:not(:nth-child(1)) .button_close { // > .button_close
-				right: 20px;
-				//background-color: #000000 !important;
-				//opacity: 0.7
-			}*/
 
 
 
 
 
-	/* search presets
-	-------------------------- */
-		.search_new_presets {
-			//background-color: #DEE0DE;
-
-			label, .content_data, .css_input_text_search {
-				max-width: 100%;
-				width: 100%;
-			}
-		}
-
-		.component_presets_label {
-			background-color: #575a5c;
-			color: #ffffff;
-			text-align: center;
-			padding: 4px;
-
-			mark {
-				color: #ffffff;
-				background-color: initial;
-				opacity: initial;
-			}
-
-			>.button_plus {
-				z-index: 9;
-				float: right;
-				width: 15px;
-				height: 15px;
-				cursor: pointer;
-				text-align: center;
-				border-radius: 7px;
-				color: #565a5c;
-				background-color: #f3f3f3;
-				font-size: 12px;
-				line-height: 15px;
-				padding: 0;
-				font-family: sans-serif;
-			}
-		}//end .component_presets_label
-
-
-
-		ul.component_presets_list {
-			clear: both;
-
-			> li {
-				line-height: 2em;
-				border-bottom: 1px solid #dbdbdb;
-				padding: 5px;
-				padding-bottom: 1px;
-				padding-top: 1px;
-				position: relative;
-				//display: flex;
-
-				&.selected {
-					//font-weight: bold !important;
-					color: #000000;
-					font-family: "Oxygen-bold";
-				}
-			}
-
-					}
-
-
-			.component_presets_button_load, .component_presets_button_options, .component_presets_button_delete {
-				position: absolute;
-				opacity: .3;
-				//vertical-align: sub;
-				transform-origin: bottom;
-				//-webkit-transform-origin: bottom;
-			}
-			.component_presets_button_load {
-				//background-position: -432px 0; // options
-				//background-position: -192px -72px; // step backward
-				background-position: -432px -72px;
-				transform: scale(1.21);
-				//-moz-transform: scale(1.21);
-				top: 6px;
-				left: 2px;
-			}/*
-			.component_presets_button_options {
-				background-position: -432px 0; // options
-				zoom: 121%;
-				-moz-transform: scale(1.21);
-				margin-right: 3px;
-			}*/
-			.component_presets_button_delete {
-				background-position: -456px 0;
-				margin-left: 5px;
-				right: 5px;
-				top: 5px;
-			}
-
-
-
-
-// div_edit
-	.div_edit {
-		background-color: #cfcfcf;
-		width: 100% !important;
-		max-width: 100% !important;
-		display: flex;
-		flex-flow: column;
-		border-radius: 2px;
-		//width: 100%;
-
-		>.wrap_component .content_data {
-			width: 100%;
-		}
-		>.wrap_component .label {
-			color: #f7f7f7;
-
-			mark {
-				color: #f7f7f7 !important;
-			}
-		}
-
-		>.wrap_component:last-of-type {
-			padding-bottom: 10px;
-		}
-		>.selected_wrap {
-			background: initial !important;
-		}
-
-	}
+// search presets
+	//.search_new_presets {
+	//	//background-color: #DEE0DE;
+	//
+	//	label, .content_data, .css_input_text_search {
+	//		max-width: 100%;
+	//		width: 100%;
+	//	}
+	//}
 
 
 
 // css_label
-	.css_label {
-		width: 100% !important;
-		max-width: 100% !important;
-	}
-
-
-
-// new_preset_div
-	.new_preset_div {
-		background-color: #565a5c;
-		color: #d2d2d2;
-		border-radius: 0;
-
-		.wrap_component {
-			padding: 5px;
-		}
-
-		>.btn {
-			margin: 10px;
-		}
-	}
-
-
-
-// button_save_preset
-	.button_save_preset {
-		display: none;
-		margin: 0;
-		position: absolute;
-		top: -35px;
-		left: 105px;
-
-		&.in_thesaurus {
-			top: -100px;
-		}
-	}
-
-
-
-// search_options_title_item
-	.search_options_title_item {
-
-		> span {
-			display: inline-block;
-			min-width: 38px;
-		}
-	}
-
-
-
-// search_buttons_container
-	.search_buttons_container {
-		//background-color: #ea9cd2;
-		min-height: 6em;
-		display: flex;
-		padding: 0.25em;
-
-		>* {
-			height: 100%;
-			width: 100%;
-		}
-
-		.button {
-			height: 100%;
-			font-size: 1em;
-			background-color: #f99c29;
-			opacity: 1;
-			color: #ffffff;
-			border: 1px solid #ffffff;
-			border-radius: 0.25em;
-
-			&:hover {
-				background-color: darken(#f99c29, 10%);
-			}
-		}
-
-		// max_group
-		>.max_group {
-			display: flex;
-			flex-direction: column;
-
-			background-color: #ffffff;
-			position: relative;
-			border-radius: 4px;
-			overflow: hidden;
-
-			.max_input_label {
-				display: block;
-				width: 100%;
-				text-align: center;
-				padding: 1em;
-				position: absolute;
-			}
-
-			input.max_input {
-				border: none;
-				width: 100%;
-				height:100%;
-				text-align: center;
-				font-size: 1.1em;
-    			padding-top: 2em;
-			}
-		}
-
-		// reset group
-		>.reset_group{
-			display: flex;
-			flex-direction: column;
-
-			.button.reload {
-				flex-grow: 1;
-			}
-			.button.show_all {
-				flex-grow: 1;
-			}
-		}
-
-		// submit
-		>.button.submit {
-			background-color: #5cb85c;
-			&:hover {
-				background-color: darken(#5cb85c, 10%);
-			}
-		}
-
-
-	}//end .search_buttons_container
+	//.css_label {
+	//	width: 100% !important;
+	//	max-width: 100% !important;
+	//}
 
 
 
