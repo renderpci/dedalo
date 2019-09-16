@@ -5019,6 +5019,31 @@ textarea,
 .button.link.close:before {
   content: "\f057";
 }
+.active .button.go_iri,
+.button.link.go_iri {
+  font-weight: normal;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+}
+.active .button.go_iri.fa-pull-left,
+.button.link.go_iri.fa-pull-left {
+  margin-right: 0.3em;
+}
+.active .button.go_iri.fa-pull-right,
+.button.link.go_iri.fa-pull-right {
+  margin-left: 0.3em;
+}
+.active .button.go_iri:before,
+.button.link.go_iri:before {
+  content: "\f0c1";
+}
 .content_data ul {
   display: flex;
   flex-wrap: wrap;
