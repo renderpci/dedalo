@@ -142,55 +142,44 @@
 						//background-color: lighten(@component_color, 10%);
 						background-color: rgba(251, 251, 251, 0.48);
 						display: flex;
-						//flex-direction: row-reverse;
 						position: relative;
 						// Add
 						margin: 2px;
 						border: 1px solid #e6e6e6;
 						// Experimental all same width
-						// width: 300px;
-						flex-basis: 32%;
+						//width: 250px;
+						//flex-basis: 32%;
 						min-height: 55px;
 						border-radius: 2px;
+						flex: 1 1 300px;
+						width: 300px;
+						flex-wrap: wrap;
 
-							>.wrapper_component {
-								flex-grow: 1;
+						>.wrapper_component {
+							flex-grow: 1;
 
-								>.label {
-									padding: 0.5em;
-								}
-								>.content_data {
-									padding: 0.5em;
-								}
+							>.label {
+								padding: 0.5em;
 							}
-						>.button_close {
-							z-index: 9;
+							>.content_data {
+								padding: 0.5em;
+							}
+						}
+
+						>.button.close {
+							position: absolute;
+							right: 0;
+							z-index: 999999;
 
 							&:active {
 								opacity: 0.5
 							}
 						}
-
-						>.wrap_component {
-
-							>.css_label {
-								width: 100%;
-								max-width: initial;
-							}
-
-							>.content_data {
-								width: 100%;
-
-								input[type=text] {
-									width: 100%;
-								}
-							}
-						}//end >.wrap_component
 					}
 
 					// Last component
 					>.search_component:last-of-type {
-						margin-right: 10px !important;
+						//margin-right: 10px !important;
 					}
 
 
