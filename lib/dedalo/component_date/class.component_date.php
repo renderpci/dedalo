@@ -864,7 +864,7 @@ class component_date extends component_common {
 				// Replace q_object
 				$q_object 	= $date_default_obj;
 				#debug_log(__METHOD__." Created new q_object from: $query_object->q  ->  ".to_string($q_object), logger::WARNING);
-			}else{
+			}else if (empty($query_object->q_operator)) {
 
 				$query_object->operator = '=';
     			$query_object->q_parsed	= "'INVALID VALUE!'";
@@ -891,7 +891,7 @@ class component_date extends component_common {
 	        		// Extract directly from calculated time in javascript
 						$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
 						$operator = !empty($q_operator) ? trim($q_operator) : '=';
-						$dd_date  = new dd_date($q_object->start);
+						$dd_date  = isset($q_object->start) ? new dd_date($q_object->start) : null;
 
 					switch ($operator) {
 						case '<':
@@ -934,6 +934,54 @@ class component_date extends component_common {
 							$query_object->q_parsed			= null;
 							$query_object->format 			= 'array_elements';
 							$query_object->array_elements 	= $group_array_elements;
+							break;
+
+						case '!*':
+
+							$query1 = clone($query_object);
+								$query1->operator 	= ' ';
+								$query1->q_parsed 	= 'IS NULL';
+								$query1->format		= 'typeof';
+
+							$query2 = clone($query_object);
+								$query2->operator 	= '=';
+								$query2->q_parsed	= '\'[]\'';
+								$query2->type 		= 'string';
+
+							$logical_operator = '$or';
+
+							$new_query_json = new stdClass();
+								$new_query_json->$logical_operator = [$query1, $query2];
+
+							$query_object = $new_query_json;
+							break;
+
+						case '*':
+
+							$query1 = clone($query_object);
+								$query1->operator 	= '=';
+								$query1->q_parsed 	= '\'array\''; # (!) remember quotes inside
+								$query1->format		= 'typeof';
+
+							$query2 = clone($query_object);
+								$query2->operator 	= '!=';
+								$query2->q_parsed	= '\'[]\'';
+								$query2->type 		= 'string';
+
+							$logical_operator = '$and';
+
+							$new_query_json = new stdClass();
+								$new_query_json->$logical_operator = [$query1, $query2];
+
+							$query_object = $new_query_json;
+
+
+							#$query_object->operator 		= '=';
+							#$query_object->q_parsed 		= '\'array\''; # (!) remember quotes inside
+
+							$query_object->operator 		= ' ';
+							$query_object->q_parsed 		= 'IS NOT NULL'; # (!) remember quotes inside
+							$query_object->format			= 'typeof';
 							break;
 
 						case '=':
