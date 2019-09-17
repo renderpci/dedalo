@@ -373,6 +373,13 @@
 					content: @fa-var-times-circle;
 				}
 			}
+			&.go_iri {
+				.fa-icon;
+				.fas;
+				&:before {
+					content: @fa-var-link;
+				}
+			}
 		}//end .active &, &.link
 	}//end .button
 
@@ -423,18 +430,14 @@
 
 
 // input focus show next item (button remove)
-	input:focus  {
-
-		& + .display_none.remove {
+	input:focus ~ .display_none.remove {
 			.display_block;
-		}
-
 	}
+
+	input:focus  ~ .display_none.email_send {
+			.display_block;
+	}
+
 	.display_block {
 		display: block !important;
 	}
-
-
-
-
-
