@@ -2,7 +2,7 @@
 
 
 // html inputs
-	input[type="text"], input[type="number"], textarea, .contenteditable {
+	input[type="text"], input[type="number"], input[type="url"], textarea, .contenteditable {
 		height: 2.5em;
 		//margin-bottom: 0.1em;
 		padding:0.5em;
@@ -373,7 +373,7 @@
 					content: @fa-var-times-circle;
 				}
 			}
-			&.go_iri {
+			&.go_link {
 				.fa-icon;
 				.fas;
 				&:before {
@@ -435,6 +435,10 @@
 	}
 
 	input:focus  ~ .display_none.email_send {
+			.display_block;
+	}
+
+	input:focus  ~ .display_none.go_link {
 			.display_block;
 	}
 
