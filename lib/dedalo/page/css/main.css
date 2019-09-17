@@ -5079,6 +5079,106 @@ input:focus ~ .display_none.email_send {
 .display_block {
   display: block !important;
 }
+.hidden_tooltip {
+  opacity: 0;
+  visibility: hidden;
+}
+.tooltip_toggle {
+  position: relative;
+}
+.tooltip_toggle > .elements > .tooltip {
+  transition: all 0.5s ease;
+  position: absolute;
+  top: 6.25em;
+  z-index: 9999999999999999999;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 1em;
+  line-height: 1.5em;
+  border-radius: 5px;
+  font-size: 0.8em;
+  left: 0;
+  width: 100%;
+  max-width: 200px;
+}
+.tooltip_toggle > .elements > .tooltip > .search_options_title_item {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+}
+.tooltip_toggle > .elements > .tooltip > .search_options_title_item > span:first-of-type {
+  text-align: center;
+  font-weight: bold;
+}
+.tooltip_toggle > .elements > .tooltip:after {
+  bottom: 100%;
+  left: 50%;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+  border-bottom-color: rgba(0, 0, 0, 0.8);
+  border-width: 10px;
+  margin-left: -10px;
+}
+.tooltip_toggle:hover > .elements > .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+/*
+	.tooltip_toggle {
+	  cursor: pointer;
+	  position: relative;
+	  z-index: 9999999999999999999;
+	}
+
+	.tooltip_toggle::before {
+	  position: absolute;
+	  top: -80px;
+	  left: -80px;
+	  background-color: green;
+	  border-radius: 5px;
+	  color: #fff;
+	  content: attr(data-tooltip);
+	  padding: 1rem;
+	  text-transform: none;
+	  -webkit-transition: all 0.5s ease;
+	  transition: all 0.5s ease;
+	  width: 15em;
+	}
+
+	.tooltip_toggle::after {
+	  position: absolute;
+	  top: -12px;
+	  left: 9px;
+	  border-left: 5px solid transparent;
+	  border-right: 5px solid transparent;
+	  border-top: 5px solid green;
+	  content: " ";
+	  font-size: 0;
+	  line-height: 0;
+	  margin-left: -5px;
+	  width: 0;
+	}
+
+	.tooltip_toggle::before,
+	.tooltip_toggle::after {
+	  color: #efefef;
+	  font-family: monospace;
+	  font-size: 16px;
+	  opacity: 0;
+	  pointer-events: none;
+	  text-align: center;
+	}
+
+	.tooltip_toggle:hover::before,
+	.tooltip_toggle:hover::after {
+	  opacity: 1;
+	  -webkit-transition: all 0.75s ease;
+	  transition: all 0.75s ease;
+	}
+	*/
 html {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -11548,4 +11648,3 @@ div.mce-tinymce.mce-fullscreen {
 		}
 	}
 	*/
-/*# sourceMappingURL=main.css.map */
