@@ -1138,7 +1138,8 @@ class component_date extends component_common {
 			'<='	=> 'menor_o_igual_que',
 			'>' 	=> 'mayor_que',
 			'<'		=> 'menor_que',
-			#'=' 	=> 'igual'
+			'*' 	=> 'no_vacio', // not null
+			'!*' 	=> 'campo_vacio', // null
 		];
 
 		return $ar_operators;
