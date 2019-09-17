@@ -14,7 +14,7 @@
  Podría incorporar un calendario desplegable para seleccionar la fecha de forma normalizada..
 */
 class component_date extends component_common {
-	
+
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
@@ -24,12 +24,12 @@ class component_date extends component_common {
 	public static $ar_american = array('lg-eng','lg-angl','lg-ango','lg-meng');
 
 
-	
+
 	/**
 	* __CONSTRUCT
 	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-		
+
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
@@ -39,7 +39,7 @@ class component_date extends component_common {
 		if(SHOW_DEBUG===true) {
 			if ($this->RecordObj_dd->get_traducible()==='si') {
 				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");		
+				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
 	}//end __construct
@@ -48,10 +48,10 @@ class component_date extends component_common {
 
 	/**
 	* SAVE OVERRIDE
-	* Overwrite component_common method 
+	* Overwrite component_common method
 	*/
 	public function Save() {
-			
+
 		# Dato
 		$dato = $this->dato;
 
@@ -77,7 +77,7 @@ class component_date extends component_common {
 			$this->dato[$key] = self::add_time( $current_dato );
 		}
 
-			
+
 		# From here, save normally
 		return parent::Save();
 	}//end Save
@@ -97,15 +97,15 @@ class component_date extends component_common {
 	* }}]
 	*/
 	public function get_dato() {
-		
+
 		$dato = parent::get_dato();
-		
+
 		# Compatibility with version 4.0.14 to 4.6 dedalo instalations
 		if (is_object($dato) && !empty(get_object_vars($dato)) ) {
 			$safe_dato=array();
-			
+
 			$safe_dato[] = $dato;
-			
+
 			$dato = $safe_dato;
 			$this->set_dato($dato);
 			$this->Save();
@@ -125,7 +125,7 @@ class component_date extends component_common {
 		# 	$dato = parent::get_dato();
 		# }
 		#dump( $dato, ' dato get_dato ++ '.to_string());
-		
+
 		return (array)$dato;
 	}//end get_dato
 
@@ -148,15 +148,15 @@ class component_date extends component_common {
 			$safe_dato		= array();
 			$safe_dato[] 	= $dato;
 			$dato 			= $safe_dato;
-		}		
+		}
 
 		# Remove empy objects
-		$clean_dato = array(); 
+		$clean_dato = array();
 		foreach ((array)$dato as $key => $value_obj) {
 			$ar_vars = [];
 			if (is_object($value_obj)) {
 				$ar_vars = (array)get_object_vars($value_obj);
-			}			
+			}
 				//dump($ar_vars, ' ar_vars ++ '.to_string());
 			if(!empty($ar_vars)) {
 				$clean_dato[] = $value_obj;
@@ -193,7 +193,7 @@ class component_date extends component_common {
 			#case isset($dato->period):
 			case is_object($dato) && property_exists($dato, 'period'):
 				$date_mode = 'period';
-				break;			
+				break;
 			default:
 				if (isset($propiedades->date_mode)) {
 					$date_mode = $propiedades->date_mode; // Default from structure if is defined
@@ -210,14 +210,14 @@ class component_date extends component_common {
 	/**
 	* GET_DATE_NOW
 	* Get current full date (with hours, minutes and seconds) as dd_date object
-	* @return object dd_date 
+	* @return object dd_date
 	*/
 	public static function get_date_now() {
-		
+
 		$date = new DateTime();
 
 		$dato = new dd_date();
-			$dato->set_year( 	$date->format('Y') );	// 	 $date->format('Y-m-d H:i:s'); # Default as DB format 
+			$dato->set_year( 	$date->format('Y') );	// 	 $date->format('Y-m-d H:i:s'); # Default as DB format
 			$dato->set_month( 	$date->format('m') );
 			$dato->set_day( 	$date->format('d') );
 			$dato->set_hour( 	$date->format('H') );
@@ -225,7 +225,7 @@ class component_date extends component_common {
 			$dato->set_second( 	$date->format('s') );
 
 		return (object)$dato;
-	}//end get_date_now	
+	}//end get_date_now
 
 
 
@@ -238,13 +238,13 @@ class component_date extends component_common {
 		#$previous_modo = $this->get_modo();
 		#$this->set_modo('list'); // Force list mode
 		#$valor = $this->get_html();
-		# Restore modo after 
+		# Restore modo after
 		#$this->set_modo($previous_modo);
 
 		$ar_dato 		= $this->get_dato();
 		$propiedades	= $this->get_propiedades();
-		$ar_valor		= array();	
-		$valor			= '';	
+		$ar_valor		= array();
+		$valor			= '';
 		$date_mode 		= $this->get_date_mode();
 		foreach ($ar_dato as $key => $current_dato) {
 			$ar_valor[$key] ='';
@@ -256,8 +256,8 @@ class component_date extends component_common {
 					if(isset($current_dato->start)) {
 						$dd_date	= new dd_date($current_dato->start);
 						/*
-						$valor_start= isset($propiedades->method->get_valor_local) 
-									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+						$valor_start= isset($propiedades->method->get_valor_local)
+									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) )
 									: component_date::get_valor_local( $dd_date, false );
 									*/
 						if(isset($current_dato->start->day)) {
@@ -269,7 +269,7 @@ class component_date extends component_common {
 								$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
 							}
 						}
-						
+
 						$ar_valor[$key] .= $valor_start;
 					}
 
@@ -278,8 +278,8 @@ class component_date extends component_common {
 					if(isset($current_dato->end)) {
 						$dd_date	= new dd_date($current_dato->end);
 						/*
-						$valor_end 	= isset($propiedades->method->get_valor_local) 
-									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+						$valor_end 	= isset($propiedades->method->get_valor_local)
+									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) )
 									: component_date::get_valor_local( $dd_date, false );
 						*/
 
@@ -335,7 +335,7 @@ class component_date extends component_common {
 								$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
 							}
 						}
-						
+
 						$ar_valor[$key] .= $valor_start;
 					}
 					/*
@@ -363,7 +363,7 @@ class component_date extends component_common {
 		}
 
 		$valor = implode('|',$ar_valor);
-		
+
 		return (string)$valor;
 	}//end get_valor
 
@@ -390,7 +390,7 @@ class component_date extends component_common {
 		}
 		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
 		$valor_local 	= $dd_date->get_dd_timestamp($date_format, $padding=false);
-			#dump($valor_local, ' valor_local ++ '.to_string());		
+			#dump($valor_local, ' valor_local ++ '.to_string());
 		#debug_log(__METHOD__." valor_local: $valor_local ".to_string($valor_local), logger::WARNING);
 
 
@@ -404,7 +404,7 @@ class component_date extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 			$valor = $this->get_valor($lang);
@@ -412,16 +412,16 @@ class component_date extends component_common {
 			#$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		
+
 		#$valor = strip_tags($valor); // Removes the span tag used in list mode
 		/*
 		$previous_modo = $this->get_modo();
 		$this->set_modo('list'); // Force list mode
 		$valor = $this->get_html();
-		# Restore modo after 
+		# Restore modo after
 		$this->set_modo($previous_modo);
 		*/
-		
+
 		return (string)$valor;
 	}//end get_valor_export
 
@@ -462,11 +462,11 @@ class component_date extends component_common {
 				$offset_key 	= key($offset);
 				$offset_value 	= $offset[$offset_key];
 				$date->$offset_key(new DateInterval($offset_value));		# Formated like: P10D (10 days)
-				$timestamp = $date->format('Y-m-d H:i:s'); 	# Default as DB format 
+				$timestamp = $date->format('Y-m-d H:i:s'); 	# Default as DB format
 				break;
-			
+
 			default:
-				$timestamp 	= $date->format('Y-m-d H:i:s'); # Default as DB format 
+				$timestamp 	= $date->format('Y-m-d H:i:s'); # Default as DB format
 				break;
 		}
 		#dump($timestamp,'$timestamp ');
@@ -480,7 +480,7 @@ class component_date extends component_common {
 	* TIMESTAMP TO EUROPEAN DATE
 	* @param $timestamp
 	* @param $seconds (default false)
-	* Convert DB timestamp to date (American or European date) like '2013-04-23 19:47:05' to 23-04-2013 19:47:05 
+	* Convert DB timestamp to date (American or European date) like '2013-04-23 19:47:05' to 23-04-2013 19:47:05
 	*/
 	public static function timestamp_to_date($timestamp, $full=true) {
 
@@ -506,12 +506,12 @@ class component_date extends component_common {
 		$date	= $dia . '-' .$mes . '-' .$ano ;
 
 		if($full===true) {
-			$date	.= ' ' .$hora . ':' .$min . ':' .$sec ;			
+			$date	.= ' ' .$hora . ':' .$min . ':' .$sec ;
 		}
-				
+
 		return $date;
 	}//end timestamp_to_date
-	
+
 
 
 	/**
@@ -532,8 +532,8 @@ class component_date extends component_common {
 			$format = 'HH'.dd_date::$time_separator.'MM'.dd_date::$time_separator.'SS';
 		}else{
 			$format = 'DD'.dd_date::$separator.'MM'.dd_date::$separator.'YYYY';
-		}		
-		
+		}
+
 		return $format;
 	}//end get_ejemplo
 
@@ -543,12 +543,12 @@ class component_date extends component_common {
 	* GET_STATS_VALUE_RESOLVED
 	*/
 	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
-		
+
 		$caller_component = get_called_class();
 
 			#dump($stats_propiedades,'stats_propiedades '.$caller_component);
 
-		#if($caller_component=='component_autocomplete_ts') 		
+		#if($caller_component=='component_autocomplete_ts')
 		#dump($current_stats_value ,'$current_stats_value '.$tipo ." $caller_component");
 
 		foreach ($current_stats_value as $current_dato => $value) {
@@ -557,7 +557,7 @@ class component_date extends component_common {
 			if($stats_propiedades->context_name==='year_only') {
 				$current_dato = date("Y", strtotime($current_dato));
 			}
-			
+
 			if( empty($current_dato) ) {
 
 				$current_dato = 'nd';
@@ -576,14 +576,14 @@ class component_date extends component_common {
 					#dump($valor,'valor '.$caller_component. " - current_dato:$current_dato");
 
 				$ar_final[$valor] = $value;
-			}			
+			}
 
 		}//end foreach
-		
+
 		$label 		= RecordObj_dd::get_termino_by_tipo( $tipo ).':'.$stats_model;
 		$ar_final 	= array($label => $ar_final );
 			#dump($ar_final,'$ar_final '.$caller_component . " ".print_r($current_stats_value,true));
-		
+
 		return $ar_final;
 	}//end get_stats_value_resolved
 
@@ -591,7 +591,7 @@ class component_date extends component_common {
 
 	/*
 	* GET_METHOD
-	* Return the result of the method calculation into the component 
+	* Return the result of the method calculation into the component
 	*/
 	public function get_method( $param ){
 		switch ($param) {
@@ -599,7 +599,7 @@ class component_date extends component_common {
 				//return self::get_timestamp_now_for_db();
 				return self::get_date_now();
 				break;
-			
+
 			default:
 				return false;
 				break;
@@ -610,7 +610,7 @@ class component_date extends component_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -624,7 +624,7 @@ class component_date extends component_common {
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		
+
 		if ( empty($search_value) ) {
 			return false;
 		}
@@ -639,10 +639,10 @@ class component_date extends component_common {
 
 		$search_query='';
 		switch (true) {
-			
+
 			case ($search_tipo===DEDALO_ACTIVITY_WHEN):
-				
-				if ($comparison_operator==='=') {				
+
+				if ($comparison_operator==='=') {
 					$search_value = str_replace('/', '-', $search_value);
 					$ar_parts = explode('-', $search_value);
 						#dump($ar_parts, ' ar_parts ++ '.to_string());
@@ -660,10 +660,10 @@ class component_date extends component_common {
 					}
 					if (!empty($ar_filter)) {
 						$search_query = implode(' AND ', $ar_filter);
-					}				
+					}
 				}//end if ($comparison_operator=='=') {
 
-				
+
 				#$search_query = " CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' AS DATE) $comparison_operator CAST('$search_value' AS DATE)";
 				#$search_query = "CAST(date AS DATE) $comparison_operator '$search_value' ";
 				break;
@@ -676,49 +676,49 @@ class component_date extends component_common {
 
 				/*
 					 SELECT a.id, a.section_id, a.section_tipo,
-					 a.datos#>>'{components, rsc224, dato, lg-nolan}' AS rsc224 
-					 FROM "matrix" a 
-					  WHERE a.id IN (SELECT a.id FROM "matrix" a WHERE  a.section_id IS NOT NULL 
-					-- filter_by_section_tipo -- 
+					 a.datos#>>'{components, rsc224, dato, lg-nolan}' AS rsc224
+					 FROM "matrix" a
+					  WHERE a.id IN (SELECT a.id FROM "matrix" a WHERE  a.section_id IS NOT NULL
+					-- filter_by_section_tipo --
 					 AND (a.section_tipo = 'rsc205')  AND (
 					-- filter_by_search --
 
-					 -- filter_by_search rsc224 component_date 
-					a.id IN (SELECT a.id 
+					 -- filter_by_search rsc224 component_date
+					a.id IN (SELECT a.id
 					  FROM "matrix" a, jsonb_array_elements(a.datos#>'{components, rsc224, dato, lg-nolan}') as rsc224
 					  WHERE rsc224#>>'{period,time}' = '64281600'
 					OR
 					(
-					rsc224#>>'{start,time}' <= '64281600' AND 
+					rsc224#>>'{start,time}' <= '64281600' AND
 					rsc224#>>'{end,time}' >= '64281600'
 					)
 					OR
 					rsc224#>>'{start,time}' = '64281600' AND
 					rsc224#>>'{end,time}' IS NULL
 					)
-					) 
-					 ORDER BY a.section_id ASC  
-					 LIMIT 10)  
+					)
+					 ORDER BY a.section_id ASC
+					 LIMIT 10)
 					 ORDER BY a.section_id ASC ;
 					*/
-				
+
 				/*
 				$db_version 	= pg_version(DBi::_getConnection())['server'];
 				$ar_db_version 	= explode('.', $db_version);
 				$select_query 	= '';
 				$lg_nolang = 'lg-nolan';
 				if( isset($ar_db_version[0]) && $ar_db_version[0] >= 10 ) {
-					
+
 					$select_query .= "\n  check_array_component((jsonb_typeof({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}') = 'array' AND {$json_field}#>'{components, $search_tipo, dato, $lg_nolang}' != '[]' ),({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}')) \n";
 					$select_query .= "  as {$search_tipo}_array_elements";
-					
+
 				}else{
-					
+
 					$select_query .= "\n  case when (jsonb_typeof({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}') = 'array' AND {$json_field}#>'{components, $search_tipo, dato, $lg_nolang}' != '[]' ) \n";
 					$select_query .= "  then jsonb_array_elements({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}') \n";
 					$select_query .= "  else {$json_field}#>'{components, $search_tipo, dato, $lg_nolang}' \n";
 					$select_query .= "  end as {$search_tipo}_array_elements";
-				}*/				
+				}*/
 
 				##$db_version 	= pg_version(DBi::_getConnection())['server'];
 				##$ar_db_version 	= explode('.', $db_version);
@@ -726,36 +726,36 @@ class component_date extends component_common {
 				$lg_nolang = DEDALO_DATA_NOLAN;
 				// DD_DATE
 				$dd_date = new dd_date();
-				$dd_date->set_date_from_input_field( $search_value );	
+				$dd_date->set_date_from_input_field( $search_value );
 				$time 	 = dd_date::convert_date_to_seconds($dd_date);
 					#dump($dd_date, ' dd_date ++ time: '.$time." - search_value: ".to_string($search_value));
 				$search_value = $time;
-				
-				
-				#$comparison_operator = '='; // Force always 
-				
-				$search_query  .= " a.id IN (SELECT a.id FROM";				
+
+
+				#$comparison_operator = '='; // Force always
+
+				$search_query  .= " a.id IN (SELECT a.id FROM";
 
 				#$search_query  .= "\n  jsonb_array_elements($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') as $search_tipo";
-				
+
 				#if( isset($ar_db_version[0]) && $ar_db_version[0] >= 10 ) {
-					
+
 					$search_query .= "\n  check_array_component((jsonb_typeof({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}') = 'array' AND {$json_field}#>'{components, $search_tipo, dato, $lg_nolang}' != '[]' ),({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}')) \n";
 					$search_query .= "  as {$search_tipo}_array_elements";
-					
+
 				#}else{
-				#	
+				#
 				#	$search_query .= "\n  case when (jsonb_typeof({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}') = 'array' AND {$json_field}#>'{components, $search_tipo, dato, $lg_nolang}' != '[]' ) \n";
 				#	$search_query .= "  then jsonb_array_elements({$json_field}#>'{components, $search_tipo, dato, $lg_nolang}') \n";
 				#	$search_query .= "  else {$json_field}#>'{components, $search_tipo, dato, $lg_nolang}' \n";
 				#	$search_query .= "  end as {$search_tipo}_array_elements";
 				#}
-				
+
 				#$search_query .= "\n  case when (jsonb_typeof({$json_field}#>'{components, $search_tipo, dato, $current_lang}') = 'array' AND {$json_field}#>'{components, $search_tipo, dato, $current_lang}' != '[]')";
 				#$search_query .= "\n  then jsonb_array_elements({$json_field}#>'{components, $search_tipo, dato, $current_lang}')";
 				#$search_query .= "\n  else {$json_field}#>'{components, $search_tipo, dato, $current_lang}'";
-				#$search_query .= "\n  end as {$search_tipo}";	 // _array_elements		
-				##$search_query .= "\n  ,{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, $current_lang}' as $search_tipo";			
+				#$search_query .= "\n  end as {$search_tipo}";	 // _array_elements
+				##$search_query .= "\n  ,{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, $current_lang}' as $search_tipo";
 
 				$search_query .= "\n  WHERE ";
 
@@ -764,7 +764,7 @@ class component_date extends component_common {
 				# TIME
 					$aditional_path 	 = 'time';
 					$search_query .= "\n  -- TIME\n   {$search_tipo}_array_elements#>'{".$aditional_path."}' $comparison_operator '$search_value'";
-					#$search_query  = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' $comparison_operator '$search_value' ";				
+					#$search_query  = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' $comparison_operator '$search_value' ";
 
 				# RANGE
 					// Search in ranges
@@ -774,11 +774,11 @@ class component_date extends component_common {
 						#$search_query .= " \n OR (\n  CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' AS integer) <= $search_value";
 						$search_query .= " \n  -- RANGE\n   OR (\n   {$search_tipo}_array_elements#>'{".$aditional_path."}' <= '$search_value'";
 						#$search_query .= " \n OR (\n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' <= '$search_value'";
-						
+
 						$aditional_path= 'end, time';
 						#$search_query .= " AND \n  CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' AS integer) >= $search_value )";
 						$search_query .= " AND \n   {$search_tipo}_array_elements#>'{".$aditional_path."}' >= '$search_value')";
-						#$search_query .= " AND \n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' >= '$search_value' )";						
+						#$search_query .= " AND \n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' >= '$search_value' )";
 					}
 
 					$aditional_path= 'start, time';
@@ -787,13 +787,13 @@ class component_date extends component_common {
 					##$aditional_path= 'end, time';
 					##$search_query .= " AND \n  {$search_tipo}_array_elements#>'{".$aditional_path."}' IS NULL)";
 					#$search_query .= " AND \n $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' IS NULL )";
-				
+
 
 				# PERIOD
 					$aditional_path= 'period, time';
 					$search_query .= " \n  -- PERIOD\n   OR (\n   {$search_tipo}_array_elements#>'{".$aditional_path."}' $comparison_operator '$search_value')";
 					#$search_query .= " \n OR (\n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' = '$search_value' ";
-				
+
 				$search_query .= "\n )";
 				break;
 		}
@@ -801,10 +801,10 @@ class component_date extends component_common {
 		if (empty($search_query)) {
 			$search_query='id>0';
 		}
-		
+
 		if(SHOW_DEBUG===true) {
 			#dump($search_query, ' search_query ++ '.to_string());
-			$search_query = "\n -- filter_by_search [".__METHOD__."] $search_tipo ". get_called_class() ." \n".$search_query;			
+			$search_query = "\n -- filter_by_search [".__METHOD__."] $search_tipo ". get_called_class() ." \n".$search_query;
 		}
 		return $search_query;
 	}//end get_search_query
@@ -816,7 +816,7 @@ class component_date extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-	
+
 		// Check if q is an valid object
 		// Note that if q is number, json_decode not will generate error here
 		if (!$q_object = json_decode($query_object->q)) {
@@ -826,16 +826,16 @@ class component_date extends component_common {
 		if (empty($query_object->q) && empty($query_object->q_operator)) {
 			return $query_object;
 		}
-	
-		// Case search with plain text like from autocomplete 
+
+		// Case search with plain text like from autocomplete
 		if (!is_object($q_object)) {
 			// Check for operators and date elements
 
 			// Note that here the order is inverse: YY-MM-DD (in component is DD-MM-YY)
 			#preg_match("/^(>=|<=|>|<)?([0-9]{1,10})(-(1[0-2]|[1-9]))?(-(3[01]|[12][0-9]|[1-9]))?$/", $query_object->q, $matches);
 			preg_match("/^(\W{1,2})?([0-9]{1,10})-?([0-9]{1,2})?-?([0-9]{1,2})?$/", $query_object->q, $matches);
-			if (isset($matches[0])) {				
-			
+			if (isset($matches[0])) {
+
 				$key_op 	= 1;
 				$key_year 	= 2;
 				$key_month 	= 3;
@@ -850,8 +850,8 @@ class component_date extends component_common {
 						if (!empty($matches[$key_day]) && $matches[$key_day]<=31) {
 							$base_date->day 	= $matches[$key_day];
 						}
-					}									
-				
+					}
+
 				$dd_date  	= new dd_date($base_date);
 				$time 		= dd_date::convert_date_to_seconds($dd_date);
 				$dd_date->set_time($time);
@@ -862,37 +862,37 @@ class component_date extends component_common {
 					$date_default_obj->start = $dd_date;
 
 				// Replace q_object
-				$q_object 	= $date_default_obj;				
+				$q_object 	= $date_default_obj;
 				#debug_log(__METHOD__." Created new q_object from: $query_object->q  ->  ".to_string($q_object), logger::WARNING);
-			}else{
+			}else if (empty($query_object->q_operator)) {
 
 				$query_object->operator = '=';
     			$query_object->q_parsed	= "'INVALID VALUE!'";
 				return $query_object;
 			}
 		}
-	
+
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-		
+
 		$component_tipo = end($query_object->path)->component_tipo;
         $RecordObj   	= new RecordObj_dd($component_tipo);
         $propiedades 	= json_decode($RecordObj->get_propiedades());
         $date_mode 	 	= isset($propiedades->date_mode) ? $propiedades->date_mode : 'date';
         	#dump($query_object, ' date_mode ++ '.to_string($date_mode));
-	
+
 		$query_object->component_path = ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
 		$query_object->type 		  = 'jsonb';
-		
+
         switch ($date_mode) {
         	case 'date':
         	case 'range':
-        		
+
         		# SEARCH_OBJECT 1
 	        		// Extract directly from calculated time in javascript
 						$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
-						$operator = !empty($q_operator) ? trim($q_operator) : '=';					
-						$dd_date  = new dd_date($q_object->start);
-					
+						$operator = !empty($q_operator) ? trim($q_operator) : '=';
+						$dd_date  = isset($q_object->start) ? new dd_date($q_object->start) : null;
+
 					switch ($operator) {
 						case '<':
 						case '>=':
@@ -903,7 +903,7 @@ class component_date extends component_common {
 								$query1->q_parsed			= '\''.$q_clean.'\'';
 								$query1->type 				= 'jsonb';
 
-							$group_op_name = '$or';	
+							$group_op_name = '$or';
 							$group_array_elements = new stdClass();
 								$group_array_elements->{$group_op_name} = [$query1];
 
@@ -913,11 +913,11 @@ class component_date extends component_common {
 							$query_object->format 			= 'array_elements';
 							$query_object->array_elements 	= $group_array_elements;
 							break;
-						
+
 						case '>':
 						case '<=':
 
-							$final_range = self::get_final_search_range_seconds($dd_date);						
+							$final_range = self::get_final_search_range_seconds($dd_date);
 
 							$query1 = new stdClass();
 								$query1->component_path 	= ['start','time'];
@@ -925,7 +925,7 @@ class component_date extends component_common {
 								$query1->q_parsed			= '\''.$final_range.'\'';
 								$query1->type 				= 'jsonb';
 
-							$group_op_name = '$or';	
+							$group_op_name = '$or';
 							$group_array_elements = new stdClass();
 								$group_array_elements->{$group_op_name} = [$query1];
 
@@ -936,11 +936,59 @@ class component_date extends component_common {
 							$query_object->array_elements 	= $group_array_elements;
 							break;
 
+						case '!*':
+
+							$query1 = clone($query_object);
+								$query1->operator 	= ' ';
+								$query1->q_parsed 	= 'IS NULL';
+								$query1->format		= 'typeof';
+
+							$query2 = clone($query_object);
+								$query2->operator 	= '=';
+								$query2->q_parsed	= '\'[]\'';
+								$query2->type 		= 'string';
+
+							$logical_operator = '$or';
+
+							$new_query_json = new stdClass();
+								$new_query_json->$logical_operator = [$query1, $query2];
+
+							$query_object = $new_query_json;
+							break;
+
+						case '*':
+
+							$query1 = clone($query_object);
+								$query1->operator 	= '=';
+								$query1->q_parsed 	= '\'array\''; # (!) remember quotes inside
+								$query1->format		= 'typeof';
+
+							$query2 = clone($query_object);
+								$query2->operator 	= '!=';
+								$query2->q_parsed	= '\'[]\'';
+								$query2->type 		= 'string';
+
+							$logical_operator = '$and';
+
+							$new_query_json = new stdClass();
+								$new_query_json->$logical_operator = [$query1, $query2];
+
+							$query_object = $new_query_json;
+
+
+							#$query_object->operator 		= '=';
+							#$query_object->q_parsed 		= '\'array\''; # (!) remember quotes inside
+
+							$query_object->operator 		= ' ';
+							$query_object->q_parsed 		= 'IS NOT NULL'; # (!) remember quotes inside
+							$query_object->format			= 'typeof';
+							break;
+
 						case '=':
 						default:
 
 							$final_range = self::get_final_search_range_seconds($dd_date);
-							
+
 							# ARRAY ELEMENTS SUBGROUPS
 							# ARRAY ELEMENTS SUB_GROUP1
 								$query1 = new stdClass();
@@ -954,7 +1002,7 @@ class component_date extends component_common {
 									$query2->operator 			= '>=';
 									$query2->q_parsed			= '\''.$q_clean.'\'';
 									$query2->type 				= 'jsonb';
-									
+
 								# Add to sub_group1
 								$sub_group1 = new stdClass();
 									$sub_name1 = '$and';
@@ -985,7 +1033,7 @@ class component_date extends component_common {
 							$group_array_elements = new stdClass();
 								$group_array_elements->{$group_op_name} = [$sub_group1,$sub_group2];
 
-							
+
 							# query_object config
 							$query_object->q_parsed			= null;
 							$query_object->format 			= 'array_elements';
@@ -1002,14 +1050,14 @@ class component_date extends component_common {
         		/* En proceso ...
 				$q_clean  = isset($q_object->time) ? $q_object->time : 0;
 				$operator = isset($q_object->op) ? $q_object->op : '=';
-				
+
 				$query1 = new stdClass();
 					$query1->component_path 	= ['period','time'];
 					$query1->operator 			= $operator;
 					$query1->q_parsed 					= '\''.$q_clean.'\'';
 					$query1->type 				= 'jsonb';
 
-				$group_op_name = '$or';	
+				$group_op_name = '$or';
 				$group_array_elements = new stdClass();
 					$group_array_elements->{$group_op_name} = [$query1];
 
@@ -1017,30 +1065,30 @@ class component_date extends component_common {
 				$query_object->q_parsed				= null;
 				$query_object->format 			= 'array_elements';
 				$query_object->array_elements 	= $group_array_elements;
-				
+
 				$final_query_object = $query_object;*/
         		break;
 
         	case 'time':
 
 				// Extract directly from calculated time in javascript
-				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;				
+				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
 				$operator = !empty($q_operator) ? trim($q_operator) : '=';
-		
+
 				if ($operator!=="=") {
-					
+
 					$query1 = new stdClass();
 					$query1->component_path 	= ['start','time'];
 					$query1->operator 			= $operator;
 					$query1->q_parsed			= '\''.$q_clean.'\'';
 					$query1->type 				= 'jsonb';
 
-					$group_op_name = '$or';	
+					$group_op_name = '$or';
 					$group_array_elements = new stdClass();
 						$group_array_elements->{$group_op_name} = [$query1];
 
 				}else{
-					
+
 					$query1 = new stdClass();
 						$query1->component_path 	= ['start','time'];
 						$query1->operator 			= '>=';
@@ -1054,21 +1102,21 @@ class component_date extends component_common {
 						$query2->operator 			= '<=';
 						$query2->q_parsed			= '\''.$final_range.'\'';
 						$query2->type 				= 'jsonb';
-					
-					$group_op_name = '$and';	
+
+					$group_op_name = '$and';
 					$group_array_elements = new stdClass();
 						$group_array_elements->{$group_op_name} = [$query1,$query2];
-				}				
+				}
 
 				# query_object config
 				$query_object->q_info 			= '';
 				$query_object->q_parsed			= null;
 				$query_object->format 			= 'array_elements';
 				$query_object->array_elements 	= $group_array_elements;
-					
+
 				$final_query_object = $query_object;
         		break;
-        		
+
 		}//end switch ($date_mode)
 		#dump($final_query_object, ' final_query_object ++ '.to_string());
 
@@ -1084,7 +1132,7 @@ class component_date extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-	
+
 		$ar_operators = [
 			'>=' 	=> 'mayor_o_igual_que',
 			'<='	=> 'menor_o_igual_que',
@@ -1105,7 +1153,7 @@ class component_date extends component_common {
 	* @return int $final_range
 	*/
 	protected static function get_final_search_range_seconds($dd_date) {
-		
+
 		$final_search_range_seconds = 0;
 
 		# Time
@@ -1115,37 +1163,37 @@ class component_date extends component_common {
 
 		}
 		elseif (isset($dd_date->minute)) {
-			
+
 			$dd_date_clone = clone($dd_date);
 			$dd_date_clone->seconds = 59;
-			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);		
+			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
 		}
 		elseif (isset($dd_date->hour)) {
-			
+
 			$dd_date_clone = clone($dd_date);
 			$dd_date_clone->minute = 59;
-			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);	
+			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
 		}
 
 		# Date
 		if (isset($dd_date->day)) {
-			
+
 			$dd_date_clone = clone($dd_date);
 			$dd_date_clone->day = $dd_date_clone->day+1;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
-		
+
 		}elseif (isset($dd_date->month)) {
-			
+
 			$dd_date_clone = clone($dd_date);
 			$dd_date_clone->month = $dd_date_clone->month+1;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
-		
+
 		}elseif (isset($dd_date->year)) {
-			
+
 			$dd_date_clone = clone($dd_date);
 			$dd_date_clone->year = $dd_date_clone->year+1;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
-					
+
 		}
 
 
@@ -1192,14 +1240,14 @@ class component_date extends component_common {
 			default:
 		}
 
-		
+
 		return (string)$order_by_resolved;
 	}//end get_search_order
 
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* @return object stdClass $search_comparison_operators
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=','>','<','>=','<=') ) {
@@ -1209,14 +1257,14 @@ class component_date extends component_common {
 		# Overwrite defaults with 'propiedades'->SQL_comparison_operators
 			if(SHOW_DEBUG===true) {
 				#dump($this->propiedades, " this->propiedades ".to_string());;
-			}		
+			}
 			if(isset($this->propiedades->SQL_comparison_operators)) {
 				$comparison_operators = (array)$this->propiedades->SQL_comparison_operators;
 			}
 
 
 		foreach ($comparison_operators as $current) {
-			# Get the name of the operator in current lang 
+			# Get the name of the operator in current lang
 			$operator = operator::get_operator($current);
 			$search_comparison_operators->$current = $operator;
 		}
@@ -1236,7 +1284,7 @@ class component_date extends component_common {
 	public static function add_time( $current_dato ) {
 
 		if(empty($current_dato)) return $current_dato;
-		
+
 		// Period date mode
 		if( isset($current_dato->period) ) {
 			$dd_date = new dd_date($current_dato->period);
@@ -1266,15 +1314,15 @@ class component_date extends component_common {
 			}
 			$dd_date->set_time( $time );
 			$current_dato->end = $dd_date;
-		}		
+		}
 
 		// Default date mode
 		// PREVIOUS 4.9.1
 		/*
 		if( isset($current_dato->year) ) {
 
-			$dd_date = new dd_date($current_dato); 
-			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
+			$dd_date = new dd_date($current_dato);
+			$time 	 = dd_date::convert_date_to_seconds($dd_date);
 			if (isset($current_dato->time) && $current_dato->time!=$time) {
 				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time. []", logger::WARNING);
 			}
@@ -1284,9 +1332,9 @@ class component_date extends component_common {
 		*/
 		// Time date mode
 		else if( isset($current_dato->hour) ) {
-			$dd_date = new dd_date($current_dato); 
-			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
-			
+			$dd_date = new dd_date($current_dato);
+			$time 	 = dd_date::convert_date_to_seconds($dd_date);
+
 			if (isset($current_dato->time) && $current_dato->time!=$time) {
 				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time. []", logger::WARNING);
 			}
@@ -1302,7 +1350,7 @@ class component_date extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @return 
+	* @return
 	*/
 	public static function update_dato_version($request_options) {
 
@@ -1319,37 +1367,37 @@ class component_date extends component_common {
 			$update_version = $options->update_version;
 			$dato_unchanged = $options->dato_unchanged;
 			$reference_id 	= $options->reference_id;
-			
+
 
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
 			/* EN PROCESO
 			case '4.9.2':
-					
+
 				# Transform old dato in activity section
 				if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && !empty($dato_unchanged) && is_string($dato_unchanged)) {
-					
+
 					$dd_date    = new dd_date();
 					$new_dato 	= (object)$dd_date->get_date_from_timestamp( $dato_unchanged );
-											
+
 					$response = new stdClass();
 						$response->result =1;
 						$response->new_dato = $new_dato;
 						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;					
+					return $response;
 
 				}else{
 					$response = new stdClass();
 						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 						return $response;
 				}
 				break;
 				*/
 			case '4.9.1':
 				if (!empty($dato_unchanged)) {
-					
+
 					/* 	Change the dato to be compatible with the range format {"start":{...}}
 					*	From:
 					*	[{"time":64313740800,"year":2001}]
@@ -1366,7 +1414,7 @@ class component_date extends component_common {
 						case isset($dato_unchanged[0]->period):
 							$response = new stdClass();
 							$response->result = 2;
-							$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+							$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 
 							break;
 						default:
@@ -1386,21 +1434,21 @@ class component_date extends component_common {
 							break;
 					}
 
-					
+
 					return $response;
 
 				}else{
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
-				}	
+				}
 				break;
 
 
 			case '4.8.1':
 				if (!empty($dato_unchanged)) {
-					
+
 					$new_dato = $dato_unchanged; // Only we need re-save the dato to recalculate time in seconds
 
 					$response = new stdClass();
@@ -1412,9 +1460,9 @@ class component_date extends component_common {
 				}else{
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
-				}	
+				}
 				break;
 
 			case '4.7.0':
@@ -1422,8 +1470,8 @@ class component_date extends component_common {
 					#dump($dato_unchanged, ' dato_unchanged ++ '.to_string($reference_id)); #die();
 
 					$new_dato = [];
-					$new_dato = $dato_unchanged;					
-						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));						
+					$new_dato = $dato_unchanged;
+						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));
 
 					$response = new stdClass();
 					$response->result = 1;
@@ -1434,17 +1482,17 @@ class component_date extends component_common {
 				}else{
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
-				}	
+				}
 				break;
 
 			case '4.0.14':
 				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
 					#dump($dato_unchanged, ' dato_unchanged ++ '.to_string($reference_id)); #die();
 
-					$new_dato = component_date::add_time($dato_unchanged);					
-						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));						
+					$new_dato = component_date::add_time($dato_unchanged);
+						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));
 
 					$response = new stdClass();
 					$response->result = 1;
@@ -1455,31 +1503,31 @@ class component_date extends component_common {
 				}else{
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
-				}				
+				}
 				break;
 
 			case '4.0.10':
 				#$dato = $this->get_dato_unchanged();
-					
+
 				# Compatibility old dedalo instalations
 				if (is_string($dato_unchanged) && !empty($dato_unchanged)) {
 						#dump($dato, ' dato '.to_string($this->parent).' '. to_string($this->section_tipo));
 					$dd_date    = new dd_date();
 					$new_dato 	= (object)$dd_date->get_date_from_timestamp( $dato_unchanged );
-											
+
 					$response = new stdClass();
 					$response->result =1;
 					$response->new_dato = $new_dato;
 					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					return $response;
-					
+
 
 				}else{
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
 				}
 				break;
@@ -1490,7 +1538,7 @@ class component_date extends component_common {
 			default:
 				# code...
 				break;
-		}		
+		}
 	}//end update_dato_version
 
 
@@ -1511,7 +1559,7 @@ class component_date extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+
 		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			# nothing to do. Value is final value
 		}else{
@@ -1521,18 +1569,18 @@ class component_date extends component_common {
 													 	 $modo,
 														 DEDALO_DATA_NOLAN,
 													 	 $section_tipo);
-			
+
 			# Use already query calculated values for speed
 			#$dato = json_handler::decode($value);
 			#$component->set_dato($dato);
 
 			$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-			
+
 			$value = $component->get_html();
 			#$value = $component->get_valor();
 		}
 
-		return $value;		
+		return $value;
 	}//end render_list_value
 
 
@@ -1548,7 +1596,7 @@ class component_date extends component_common {
 	*/
 	public function get_diffusion_value( $lang=null ) {
 
-		$diffusion_value = '';		
+		$diffusion_value = '';
 		$ar_dato 		 = $this->get_dato();
 
 		if(empty($ar_dato)){
@@ -1566,7 +1614,7 @@ class component_date extends component_common {
 						$dd_date 		= new dd_date($dato->start);
 						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
 						$ar_date[] 		= $timestamp;
-					}				
+					}
 					// end
 					if (isset($dato->end) && isset($dato->end->year)) {
 						$dd_date 		= new dd_date($dato->end);
@@ -1629,7 +1677,7 @@ class component_date extends component_common {
 		# NOTA
 		# Para publicación, NO está solucionado el caso en que hay más de una fecha... ejem.. VALORAR ;-)
 		$diffusion_value = reset($ar_diffusion_values); // Temporal !!
-	
+
 		# Force null on empty to avoid errors on mysql save value invalid format
 		# Only valid dates or null area accepted
 		if (empty($diffusion_value)) {
@@ -1656,7 +1704,7 @@ class component_date extends component_common {
 	public function get_valor_list_html_to_save() {
 		#$result = $this->get_dato_unchanged();
 		$result = $this->get_valor();
-		
+
 		return $result;
 	}//end get_valor_list_html_to_save
 
@@ -1670,8 +1718,8 @@ class component_date extends component_common {
 	public function get_calculation_data($options = null){
 
 		$ar_data = [];
-		
-		// select			
+
+		// select
 		$select 	= $options->select;
 		if(isset($options->format)){
 			$format = $options->format;
@@ -1685,7 +1733,7 @@ class component_date extends component_common {
 				$data_obj =	$current_dato->{$select};
 			}else{
 				return false;
-			} 
+			}
 
 			if($format==='dd_date'){
 				$data_obj->format = ($select==='period') ? 'period' : 'date';
@@ -1701,7 +1749,7 @@ class component_date extends component_common {
 		}
 
 		$data = array_sum($ar_data);
-	
+
 
 		return (int)$data;
 	}//end get_calculation_data
@@ -1713,7 +1761,7 @@ class component_date extends component_common {
 	* @return string $label
 	*/
 	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) {
-		
+
 		$value_decoded = json_decode($value);
 		if (!empty($value_decoded)) {
 			$date = reset($value_decoded);
@@ -1735,10 +1783,10 @@ class component_date extends component_common {
 	* @return string $text
 	*/
 	public static function data_to_text($data) {
-		
+
 		if (empty($data)) {
 			$text = '';
-		}else{			
+		}else{
 			$to_timestamp = function($item) {
 				$dd_date = new dd_date($item);
 				return $dd_date->get_dd_timestamp($date_format="Y-m-d", $padding=true);
@@ -1752,7 +1800,7 @@ class component_date extends component_common {
 			}
 			$text = implode('/', $ar_text);
 		}
-		
+
 		return $text;
 	}//end data_to_text
 
