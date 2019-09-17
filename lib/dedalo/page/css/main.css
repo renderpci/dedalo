@@ -4573,6 +4573,7 @@ pre {
 }
 input[type="text"],
 input[type="number"],
+input[type="url"],
 textarea,
 .contenteditable {
   height: 2.5em;
@@ -5019,8 +5020,8 @@ textarea,
 .button.link.close:before {
   content: "\f057";
 }
-.active .button.go_iri,
-.button.link.go_iri {
+.active .button.go_link,
+.button.link.go_link {
   font-weight: normal;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
@@ -5032,16 +5033,16 @@ textarea,
   font-family: 'Font Awesome 5 Free';
   font-weight: 900;
 }
-.active .button.go_iri.fa-pull-left,
-.button.link.go_iri.fa-pull-left {
+.active .button.go_link.fa-pull-left,
+.button.link.go_link.fa-pull-left {
   margin-right: 0.3em;
 }
-.active .button.go_iri.fa-pull-right,
-.button.link.go_iri.fa-pull-right {
+.active .button.go_link.fa-pull-right,
+.button.link.go_link.fa-pull-right {
   margin-left: 0.3em;
 }
-.active .button.go_iri:before,
-.button.link.go_iri:before {
+.active .button.go_link:before,
+.button.link.go_link:before {
   content: "\f0c1";
 }
 .content_data ul {
@@ -5074,6 +5075,9 @@ input:focus ~ .display_none.remove {
   display: block !important;
 }
 input:focus ~ .display_none.email_send {
+  display: block !important;
+}
+input:focus ~ .display_none.go_link {
   display: block !important;
 }
 .display_block {
