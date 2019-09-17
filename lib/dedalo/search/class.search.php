@@ -3069,12 +3069,13 @@ class search {
 		$search_options_title = '';
 
 		if (!empty($search_operators_info)) {
+
 			$search_options_title .= '<b>'.label::get_label('opciones_de_busqueda') . ':</b>';
 			foreach ($search_operators_info as $ikey => $ivalue) {
 				$search_options_title .= '<div class="search_options_title_item"><span>' . $ikey .'</span><span>'. label::get_label($ivalue).'</span></div>';
 			}
 
-			$search_options_title = htmlspecialchars($search_options_title);
+			#$search_options_title = htmlspecialchars($search_options_title);
 		}
 
 
