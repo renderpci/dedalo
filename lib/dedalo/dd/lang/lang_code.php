@@ -14,11 +14,11 @@ $lang_path = DEDALO_LIB_BASE_PATH . '/dd/lang/'.$lang_file.'.php';
 
 
 # load lang file
-if(file_exists($lang_path)) {	
+if(file_exists($lang_path)) {
 	require_once($lang_path);
 }else{
 	$codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-	$msg = "$codHeader Dedalo Language not defined! ";
+	$msg = "$codHeader Dedalo Language not defined! ($lang)";
 	if(NIVEL==10)
 	$msg .= $lang_path;
 	$msg .= " <br><a href=\"javascript:top.location='?lang=en';\"> Back </a> ";
