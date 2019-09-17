@@ -814,6 +814,8 @@ class search_development2 {
 				$sql_query_order = $this->build_sql_query_order_default();
 			}
 
+			$sql_filter_having = $this->build_sql_filter_having();
+
 		# FORCE FALSE ALWAYS THAT EXIST $this->ar_sql_joins . Pending solve subquery pagination issue !
 			#if (!empty($sql_joins)) {
 			#	$this->allow_sub_select_by_id = false;
@@ -855,10 +857,6 @@ class search_development2 {
 						$sql_query .= $this->filter_join_where;
 					}
 				// having
-					$sql_filter_having 	= $this->build_sql_filter_having([
-						'order_query' => '',
-						'limit_query' => ''
-					]);
 					if (!empty($sql_filter_having)) {
 						$sql_query .= PHP_EOL . $sql_filter_having .') ';
 					}
@@ -931,7 +929,7 @@ class search_development2 {
 								$sql_query .= $order_query;
 						// limit
 							$limit_query = '';
-							if ($this->search_query_object->limit>0) {
+							if ($this->search_query_object->limit>0 && empty($sql_filter_having)) {
 								$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
 								$sql_query .= $limit_query;
 							}
@@ -941,13 +939,9 @@ class search_development2 {
 								$offset_query = ' OFFSET ' . $sql_offset;
 								$sql_query .= $offset_query;
 							}
-						// having
-							$sql_filter_having 	= $this->build_sql_filter_having([
-								'order_query' => $order_query,
-								'limit_query' => $limit_query
-							]);
+						// having . Not add limit here (!)
 							if (!empty($sql_filter_having)) {
-								$sql_query .= PHP_EOL . ') ' . $sql_filter_having;
+								$sql_query .= PHP_EOL . ') ' . $sql_filter_having . PHP_EOL . $order_query . PHP_EOL . $offset_query ;
 							}
 						// sub select (window) close
 							if($this->allow_sub_select_by_id===true) {
@@ -1024,18 +1018,15 @@ class search_development2 {
 							}
 						// offset
 							if ($this->search_query_object->offset>0) {
-								$sql_query .= ' OFFSET ' . $sql_offset;
+								$offset_query = ' OFFSET ' . $sql_offset;
+								$sql_query 	 .= $offset_query;
 							}
 							if($this->allow_sub_select_by_id===true) {
 								$sql_query .= PHP_EOL . ') ';
 							}
 						// having
-							$sql_filter_having 	= $this->build_sql_filter_having([
-								'order_query' => $order_query,
-								'limit_query' => $limit_query ?? ''
-							]);
 							if (!empty($sql_filter_having)) {
-								$sql_query .= PHP_EOL . ') ' . $sql_filter_having;
+								$sql_query .= PHP_EOL . ') ' . $sql_filter_having . PHP_EOL . $order_query . PHP_EOL . $offset_query ;
 							}
 					}//end if($this->allow_sub_select_by_id===true)
 
@@ -1072,10 +1063,6 @@ class search_development2 {
 							$query_inside .= $this->filter_by_user_records;
 						}
 					// having
-						$sql_filter_having 	= $this->build_sql_filter_having([
-							'order_query' => '',
-							'limit_query' => ''
-						]);
 						if (!empty($sql_filter_having)) {
 							$query_inside .= PHP_EOL . ' ' . $sql_filter_having .') ';
 						}
@@ -1853,7 +1840,7 @@ class search_development2 {
 	* BUILD_SQL_FILTER_HAVING
 	* @return string $filter_query
 	*/
-	protected function build_sql_filter_having($ar_options) {
+	protected function build_sql_filter_having($ar_options=[]) {
 		$filter_query  = '';
 
 		/* reference :
@@ -1918,11 +1905,11 @@ class search_development2 {
 				$filter_query .= ') ';
 				$filter_query .= PHP_EOL . "GROUP BY {$this->main_section_tipo_alias}.id";
 				$filter_query .= PHP_EOL . "HAVING COUNT(DISTINCT {$component_path_full}) >= " .count($q_unique);
-				$filter_query .= $ar_options['order_query'] ?? '';
-				$filter_query .= $ar_options['limit_query'] ?? '';
+				#$filter_query .= $ar_options['order_query'] ?? '';
+				#$filter_query .= $ar_options['limit_query'] ?? '';
 			}
 
-		}
+		}//end if (!empty($this->having_query_object))
 
 
 		return $filter_query;
@@ -2247,7 +2234,6 @@ class search_development2 {
 				# )
 
 				$component_tipo = end($path)->component_tipo;
-					#dump($search_object, ' search_object ++ '.to_string());
 				if(SHOW_DEBUG===true) {
 					$object_info = isset($search_object->q_info) ? $search_object->q_info : '';
 					$sql_where .= "-- ARRAY ELEMENTS FORMAT - $component_tipo - $table_alias - info:$object_info \n";
@@ -2259,6 +2245,11 @@ class search_development2 {
 				$sql_where .= 'WHERE'.PHP_EOL;
 				$sql_where .= self::resolve_array_elements( $search_object->array_elements, $component_tipo );
 				$sql_where .= PHP_EOL.') -- end check_array_component'.PHP_EOL;
+				break;
+
+			case 'typeof999':
+
+				$sql_where .= 'jsonb_typeof('.$table_alias.'.datos#>\'{'.$component_path.'}\')'.$safe_operator.$search_object->q_parsed;
 				break;
 
 			case 'column':
