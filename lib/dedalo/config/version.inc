@@ -1591,6 +1591,13 @@
 		Implements search operator '$or_link' in filter
 
 
+	Valencia 17-09-2019 5.4.82
+		Implements date q_operator: !* and *
+		Add search_development type of filter: 'typeof' to use like:
+			jsonb_typeof(oh1.datos#>'{components,oh29,dato,lg-nolan}')='array'
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1612,12 +1619,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.81';
+	$DEDALO_VERSION = '5.4.82';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '13-09-2019');
+	define('DEDALO_BUILD'	, '17-09-2019');
 
 
 	/*
