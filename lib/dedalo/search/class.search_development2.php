@@ -2247,7 +2247,15 @@ class search_development2 {
 				$sql_where .= PHP_EOL.') -- end check_array_component'.PHP_EOL;
 				break;
 
-			case 'typeof999':
+			case 'typeof':
+
+				if(SHOW_DEBUG===true) {
+					$component_path_data 	= end($path);
+					$component_tipo 		= $component_path_data->component_tipo;
+					$component_name 		= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
+					$modelo_name 			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
+				}
 
 				$sql_where .= 'jsonb_typeof('.$table_alias.'.datos#>\'{'.$component_path.'}\')'.$safe_operator.$search_object->q_parsed;
 				break;
