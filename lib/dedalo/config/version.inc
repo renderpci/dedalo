@@ -1619,7 +1619,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.82';
+	$DEDALO_VERSION = '5.4.83';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
