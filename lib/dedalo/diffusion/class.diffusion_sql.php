@@ -1603,7 +1603,8 @@ class diffusion_sql extends diffusion  {
 					'theme',
 					//'thesaurus',
 					//'title',
-					'typology'
+					'typology',
+					'dada_mod' // added 18-09-2019
 				];
 
 			$fields_array = [];
@@ -2565,7 +2566,8 @@ class diffusion_sql extends diffusion  {
 
 		if (!empty($dato)) {
 			$terminoID = array();
-			foreach ($dato as $current_locator) {
+
+			foreach ((array)$dato as $current_locator) {
 
 				if ($ar_filter!==false) foreach ($ar_filter as $filter_obj) {
 					foreach ($filter_obj as $f_property => $f_value) {
@@ -2587,6 +2589,7 @@ class diffusion_sql extends diffusion  {
 			}
 			$terminoID = json_encode($terminoID);
 		}
+
 
 		return $terminoID;
 	}//end map_locator_to_terminoID
@@ -3206,4 +3209,3 @@ class diffusion_sql extends diffusion  {
 
 
 }
-?>
