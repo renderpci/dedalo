@@ -270,6 +270,7 @@ class dd_api {
 				$section_tipo 	= $source->section_tipo;
 				$model 			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$lang 			= $source->lang ?? DEDALO_DATA_LANG;
+				$mode 			= $source->mode ?? 'list';
 
 		// build element
 			switch ($model) {
@@ -282,7 +283,7 @@ class dd_api {
 					$element 		= component_common::get_instance($model,
 																	 $tipo,
 																	 null,
-																	 'list',
+																	 $mode,
 																	 $lang,
 																	 $section_tipo);
 					break;
@@ -403,7 +404,7 @@ class dd_api {
 			$filter_obj 	= $json_data->filter_obj;
 
 			$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
-		
+
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
