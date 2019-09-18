@@ -1597,6 +1597,8 @@
 			jsonb_typeof(oh1.datos#>'{components,oh29,dato,lg-nolan}')='array'
 
 
+	Valencia 18-09-2019 5.4.83
+		Fix component input text error on search non empty values (operator '*')
 
 
 
@@ -1624,7 +1626,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-09-2019');
+	define('DEDALO_BUILD'	, '18-09-2019');
 
 
 	/*
