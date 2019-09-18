@@ -4,7 +4,7 @@
 
 *Dédalo*
 
-** ATENTION: New v6_developer branch is added, the v6 is in alpha state, the deverloper branch is freeze for new features and only update for bugs or errors**
+**ATENTION: New v6_developer branch is added, the v6 is in alpha state, the deverloper branch is freeze for new features and only update for bugs or errors**
 
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 
 
