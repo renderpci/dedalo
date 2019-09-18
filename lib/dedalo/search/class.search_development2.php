@@ -1869,8 +1869,10 @@ class search_development2 {
 				if (!in_array($current->q, $q_unique)) $q_unique[] = $current->q;
 			}
 
-			$filter_query .= PHP_EOL.PHP_EOL . "  GROUP BY {$this->main_section_tipo_alias}.id";
-			$filter_query .= " HAVING COUNT(DISTINCT {$this->having_path}) >= " .count($q_unique) .PHP_EOL;
+			if (isset($this->having_path)) {
+				$filter_query .= PHP_EOL.PHP_EOL . "  GROUP BY {$this->main_section_tipo_alias}.id";
+				$filter_query .= " HAVING COUNT(DISTINCT {$this->having_path}) >= " .count($q_unique) .PHP_EOL;
+			}
 		}
 
 		return $filter_query;
