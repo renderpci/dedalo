@@ -1601,6 +1601,11 @@
 		Fix component input text error on search non empty values (operator '*')
 
 
+	Valencia 18-09-2019 5.4.84
+		Fix search error on having searches (left join keys are more reliables now)
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1621,7 +1626,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.83';
+	$DEDALO_VERSION = '5.4.84';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}

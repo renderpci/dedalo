@@ -796,7 +796,7 @@ class search_development2 {
 			#$this->remove_distinct=true;
 		}
 
-		// having reset
+		// having reset and build
 			$this->having_search_objects = [];
 
 		# Search elements. Order is important
@@ -805,6 +805,10 @@ class search_development2 {
 			$sql_query_select 	= $this->build_sql_query_select($full_count);
 			$sql_filter 		= $this->build_sql_filter();
 			$sql_projects_filter= $this->build_sql_projects_filter();
+
+			// having. (!) order is important. before get_sql_joins
+			$sql_filter_having = $this->build_sql_filter_having();
+
 			$sql_joins 			= $this->get_sql_joins();
 			$main_from_sql  	= $this->build_main_from_sql();
 			$sql_limit 			= $this->search_query_object->limit;
@@ -814,7 +818,6 @@ class search_development2 {
 				$sql_query_order = $this->build_sql_query_order_default();
 			}
 
-			$sql_filter_having = $this->build_sql_filter_having();
 
 		# FORCE FALSE ALWAYS THAT EXIST $this->ar_sql_joins . Pending solve subquery pagination issue !
 			#if (!empty($sql_joins)) {
@@ -858,7 +861,8 @@ class search_development2 {
 					}
 				// having
 					if (!empty($sql_filter_having)) {
-						$sql_query .= PHP_EOL . $sql_filter_having .') ';
+						#$sql_query .= PHP_EOL . $sql_filter_having .') ';
+						$sql_query .= $sql_filter_having;
 					}
 				// multisection union case
 					if (count($this->ar_section_tipo)>1) {
@@ -901,6 +905,10 @@ class search_development2 {
 							if (!empty($this->filter_join_where)) {
 								$sql_query .= $this->filter_join_where;
 							}
+							// having
+							if (!empty($sql_filter_having)) {
+								$sql_query .= $sql_filter_having;
+							}
 						// order (default for maintain result consistency)
 							$order_query = '';
 							if (isset($this->sql_query_order_window_subselect)) {
@@ -936,13 +944,13 @@ class search_development2 {
 						// offset
 							$offset_query = '';
 							if ($this->search_query_object->offset>0) {
-								$offset_query = ' OFFSET ' . $sql_offset;
+								$offset_query = PHP_EOL . 'OFFSET ' . $sql_offset;
 								$sql_query .= $offset_query;
 							}
 						// having . Not add limit here (!)
-							if (!empty($sql_filter_having)) {
-								$sql_query .= PHP_EOL . ') ' . $sql_filter_having . PHP_EOL . $order_query . PHP_EOL . $offset_query ;
-							}
+							// if (!empty($sql_filter_having)) {
+							// 	// $sql_query .= PHP_EOL . ') ' . $sql_filter_having . PHP_EOL . $order_query . PHP_EOL . $offset_query;
+							// }
 						// sub select (window) close
 							if($this->allow_sub_select_by_id===true) {
 								$sql_query .= PHP_EOL . ') ';
@@ -980,6 +988,10 @@ class search_development2 {
 							}
 							if (!empty($this->filter_join_where)) {
 								$sql_query .= $this->filter_join_where;
+							}
+							// having
+							if (!empty($sql_filter_having)) {
+								$sql_query .= $sql_filter_having;
 							}
 						// multi section union case
 							if (count($this->ar_section_tipo)>1) {
@@ -1025,9 +1037,9 @@ class search_development2 {
 								$sql_query .= PHP_EOL . ') ';
 							}
 						// having
-							if (!empty($sql_filter_having)) {
-								$sql_query .= PHP_EOL . ') ' . $sql_filter_having . PHP_EOL . $order_query . PHP_EOL . $offset_query ;
-							}
+							#if (!empty($sql_filter_having)) {
+							#	$sql_query .= PHP_EOL . ') ' . $sql_filter_having . PHP_EOL . $order_query . PHP_EOL . $offset_query ;
+							#}
 					}//end if($this->allow_sub_select_by_id===true)
 
 				// wrap query
@@ -1062,10 +1074,10 @@ class search_development2 {
 						if (isset($this->filter_by_user_records)) {
 							$query_inside .= $this->filter_by_user_records;
 						}
-					// having
-						if (!empty($sql_filter_having)) {
-							$query_inside .= PHP_EOL . ' ' . $sql_filter_having .') ';
-						}
+						// having
+							if (!empty($sql_filter_having)) {
+								$query_inside .= $sql_filter_having;
+							}
 					// multi section union case
 						if (count($this->ar_section_tipo)>1) {
 							$query_inside = $this->build_union_query($query_inside);
@@ -1700,6 +1712,7 @@ class search_development2 {
 		$filter_query  = '';
 
 		if (!empty($this->search_query_object->filter)) {
+
 			$operator = key($this->search_query_object->filter);
 			$ar_value = $this->search_query_object->filter->{$operator};
 			if(!empty($ar_value)) {
@@ -1733,7 +1746,7 @@ class search_development2 {
 			$obj = new stdClass();
 				$obj->{$op} = $ar_value;
 
-			// store search_object
+ 			// store search_object
 			$this->having_query_object = $obj;
 
 			// override
@@ -1841,76 +1854,24 @@ class search_development2 {
 	* @return string $filter_query
 	*/
 	protected function build_sql_filter_having($ar_options=[]) {
+
 		$filter_query  = '';
 
-		/* reference :
-			oh1.id in (
-				SELECT DISTINCT ON(oh1.section_id,oh1.section_tipo) oh1.id FROM matrix AS oh1
-
-				-- JOIN GROUP matrix - oh1_oh24_rs197 - Informantes
-				LEFT JOIN relations AS r_oh1_oh24_rs197 ON (oh1.section_id=r_oh1_oh24_rs197.section_id AND oh1.section_tipo=r_oh1_oh24_rs197.section_tipo AND r_oh1_oh24_rs197.from_component_tipo='oh24')
-				LEFT JOIN matrix AS oh1_oh24_rs197 ON (r_oh1_oh24_rs197.target_section_id=oh1_oh24_rs197.section_id AND r_oh1_oh24_rs197.target_section_tipo=oh1_oh24_rs197.section_tipo)
-
-				WHERE (oh1.section_tipo='oh1') AND
-				(oh1_oh24_rs197.datos#>'{relations}' @> '[{"section_tipo":"dd882","section_id":"1","type":"dd151","from_component_tipo":"rsc94"}]')
-
-				GROUP BY oh1.id
-				HAVING COUNT( DISTINCT oh1_oh24_rs197.datos#>'{relations}') > 1
-
-				ORDER BY oh1.section_id ASC LIMIT 10
-			)
-			*/
-
-		#if (!empty($this->search_query_object->filter)) {
 		if (!empty($this->having_query_object)) {
 
-			// reset
-			#$this->having_search_objects = [];
+			$operator 	= key($this->having_query_object);
+			$ar_value 	= $this->having_query_object->{$operator};
+			// exec to add all search_objects to '$this->having_search_objects' and count later
+			$this->filter_parser_having($operator, $ar_value);
 
-			$operator 				= key($this->having_query_object);
-			$ar_value 				= $this->having_query_object->{$operator};
-			$main_from_sql  		= $this->build_main_from_sql();
-			$main_where_sql 		= $this->build_main_where_sql();
-			$filter_parser_having 	= $this->filter_parser_having($operator, $ar_value);
-
-			$join_query 			= implode('', (array)$this->having_ar_sql_joins);
-			$main_section_tipo 		= $this->main_section_tipo_alias;
-
-			// component_path_full
-			$having_search_objects 	= $this->having_search_objects;
-			if (empty($having_search_objects)) {
-				return '';
-			}
-			$search_object 			= reset($having_search_objects);
-			$path					= $search_object->path;
-			$table_alias 			= $this->get_table_alias_from_path($path);
-			$component_path 		= implode(',', $search_object->component_path);
-			$search_object_type 	= isset($search_object->type) ? $search_object->type : 'string';
-			$component_path_full	= $table_alias . '.datos' . (($search_object_type==='string') ? '#>>' : '#>') . '\'{' . $component_path . '}\'';
-
-			if(!empty($ar_value)) {
-
-				$q_unique = [];
-				foreach ($having_search_objects as $current) {
-					if (!in_array($current->q, $q_unique)) $q_unique[] = $current->q;
-				}
-
-				#$filter_query .= PHP_EOL . ') '.$this->having_top_operator.' -- having clause';
-				$filter_query .= PHP_EOL . ' AND -- having clause';
-				$filter_query .= PHP_EOL . $main_section_tipo.'.id in ( ';
-				$filter_query .= PHP_EOL . "SELECT DISTINCT ON({$main_section_tipo}.section_id,{$main_section_tipo}.section_tipo) {$main_section_tipo}.id FROM {$main_from_sql} ";
-				$filter_query .= $join_query;
-				$filter_query .= PHP_EOL . "WHERE {$main_where_sql} AND (";
-				$filter_query .= $filter_parser_having;
-				$filter_query .= ') ';
-				$filter_query .= PHP_EOL . "GROUP BY {$this->main_section_tipo_alias}.id";
-				$filter_query .= PHP_EOL . "HAVING COUNT(DISTINCT {$component_path_full}) >= " .count($q_unique);
-				#$filter_query .= $ar_options['order_query'] ?? '';
-				#$filter_query .= $ar_options['limit_query'] ?? '';
+			$q_unique = [];
+			foreach ((array)$this->having_search_objects as $current) {
+				if (!in_array($current->q, $q_unique)) $q_unique[] = $current->q;
 			}
 
-		}//end if (!empty($this->having_query_object))
-
+			$filter_query .= PHP_EOL.PHP_EOL . "  GROUP BY {$this->main_section_tipo_alias}.id";
+			$filter_query .= " HAVING COUNT(DISTINCT {$this->having_path}) >= " .count($q_unique) .PHP_EOL;
+		}
 
 		return $filter_query;
 	}//end build_sql_filter_having
@@ -1920,16 +1881,11 @@ class search_development2 {
 	/**
 	* FILTER_PARSER_having
 	* @param string $op
+	*	like '$or_link'
 	* @param array $ar_value
-	* @return string $string_query
+	* @return bool true
 	*/
 	public function filter_parser_having($op, $ar_value) {
-
-		$string_query 	= '';
-		$total 			= count($ar_value);
-
-		// sql operator like 'OR'
-		$sql_operator 	= 'OR';
 
 		foreach ($ar_value as $key => $search_object) {
 
@@ -1939,41 +1895,26 @@ class search_development2 {
 			if ($op2==='$or_link') {
 
 				// recursion
-				$string_query  .= $this->filter_parser_having($op2, $search_object->$op2);
+				$this->filter_parser_having($op2, $search_object->$op2);
 
 			}else if ($op2==='$or' || $op2==='$and') {
 
-				$sql_operator2 = strtoupper( substr($op2, 1) );
-
-				$string_query .= ' (';
-				$string_query  .= $this->filter_parser_having($op2, $search_object->$op2);
-				$string_query .= ' )';
-
-				if ($key+1 < $total) {
-					$string_query .= ' '.$sql_operator2.' ';
-				}
+				$this->filter_parser_having($op2, $search_object->$op2);
 
 			}else{
-				# Case elements
-				$n_levels = count($search_object->path);
-				if ($n_levels>1) {
-					$this->having_ar_sql_joins = $this->build_sql_join($search_object->path);
-				}
 
-				// store all search objects
-				$this->having_search_objects[] = $search_object;
+				// store all iterated search objects to count later
+					$this->having_search_objects[] = $search_object;
 
-				$string_query .= $this->get_sql_where($search_object);
-
-				// sql operator between
-				if (($key+1)!==$total){
-					$string_query .= ' '.$sql_operator.' ';
-				}
+				// force calculate deep joins
+					$current_path 	= $search_object->path;
+					$path 			= $this->get_deep_path($current_path);
+					$this->build_sql_join($path, true);
 			}
 		}//end foreach ($ar_value as $key => $search_object) {
 
 
-		return $string_query;
+		return true;
 	}//end filter_parser_having
 
 
@@ -1996,17 +1937,21 @@ class search_development2 {
 	* @return bool true
 	* Builds one table join based on requested path
 	*/
-	public function build_sql_join($path) {
+	public function build_sql_join($original_path) {
 
-		$rel_table   		= self::$relations_table;
-		$ar_key_join 		= [];
-		$base_key 			= '';
-		$total_paths 		= count($path);
+		$path 			= $original_path;
+		$total_paths	= count($original_path);
 
-		$ar_current_sql_join= [];
+		$rel_table   	= self::$relations_table;
+		$ar_key_join 	= [];
+		$base_key 		= '';
+
+
+		$ar_current_sql_join = [];
 
 		foreach ($path as $key => $step_object) {
 
+			// skip first level always
 			if ($key===0) {
 				$base_key 		= $this->main_section_tipo_alias; //self::trim_tipo($step_object->section_tipo);
 				$ar_key_join[] 	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
@@ -2020,26 +1965,33 @@ class search_development2 {
 			}
 			#dump($current_key, ' current_key ++ '.to_string($key));
 
-			if($key === $total_paths-1) {
-				$ar_key_join[] 	= self::trim_tipo($step_object->section_tipo);
-			}else{
+			#if($key === $total_paths-1) {
+			#	// last item
+			#	$ar_key_join[] 	= self::trim_tipo($step_object->section_tipo);
+			#}else{
+				// in the middle item
 				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-			}
+			#}
 
 			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
 			$last_section_tipo 	= $step_object->section_tipo;
 			$t_name 			= implode('_', $ar_key_join);
-			#$t_name2 			= $this->get_table_alias_from_path($path); // Test !!
-			#debug_log(__METHOD__." t_name  ".to_string($t_name), logger::DEBUG);
-			#debug_log(__METHOD__." t_name2 ".to_string($t_name2), logger::DEBUG);
 			$t_relation			= 'r_'.$t_name ;
 
-			if (!isset($this->ar_sql_joins[$t_name])) {
+			// t_name_key
+			$t_name_key = $t_name;
+
+			if (!isset($this->ar_sql_joins[$t_name_key])) {
 
 				$sql_join  = "\n";
 				if(SHOW_DEBUG===true) {
 					$section_name = RecordObj_dd::get_termino_by_tipo($step_object->section_tipo, null, true, false);
-					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
+					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name";
+					if (isset($path[$key-1])) {
+						$from_component_tipo_model = RecordObj_dd::get_modelo_name_by_tipo($path[$key-1]->component_tipo,true);
+						$sql_join .= ' - from_component_tipo: '.$path[$key-1]->component_tipo .' ['.$from_component_tipo_model.']';
+					}
+					$sql_join  .= PHP_EOL;
 				}
 				# Join relation table
 				$sql_join .= ' LEFT JOIN ' .$rel_table. ' AS ' .$t_relation. ' ON (';
@@ -2060,16 +2012,19 @@ class search_development2 {
 				# Join next table
 				$sql_join .= ' LEFT JOIN '.$matrix_table.' AS '.$t_name .' ON ('. $t_relation.'.target_section_id='.$t_name.'.section_id AND '.$t_relation.'.target_section_tipo='.$t_name.'.section_tipo)';
 
+				// store having_path (overwrite until last)
+				$this->having_path = $t_name . '.section_id';
+
 				// Add to joins
-				$this->ar_sql_joins[$t_name] = $sql_join;
+				$this->ar_sql_joins[$t_name_key] = $sql_join;
 
 			}else{
 
 				# Join from cache
-				$sql_join = $this->ar_sql_joins[$t_name];
+				$sql_join = $this->ar_sql_joins[$t_name_key];
 			}
 
-			$ar_current_sql_join[$t_name] = $sql_join;
+			$ar_current_sql_join[$t_name_key] = $sql_join;
 
 		}//end foreach ($path as $key => $step_object)
 		#$key_group = implode('_', $ar_key_join);
@@ -2077,6 +2032,69 @@ class search_development2 {
 
 		return $ar_current_sql_join;
 	}//end build_sql_join
+
+
+
+	/**
+	* GET_DEEP_PATH
+	* @return array $path
+	*/
+	public function get_deep_path($path) {
+
+		$end_path 	= end($path);
+		$end_model 	= RecordObj_dd::get_modelo_name_by_tipo($end_path->component_tipo,true);
+
+		if (!in_array($end_model, component_relation_common::get_components_with_relations())) {
+			// already resolved final path
+			return $path;
+		}
+
+
+		switch (true) {
+			case ($end_model==='component_autocomplete_hi'):
+				# add to path to force deep join
+				$post_end_path = self::get_query_path(DEDALO_THESAURUS_TERM_TIPO, DEDALO_THESAURUS_SECTION_TIPO); // $resolve_related=true, $related_tipo=false
+				#dump($post_end_path, ' post_end_path ++ '.to_string());
+				break;
+
+			case ($end_model==='component_autocomplete'):
+
+				#$component = component_common::get_instance($end_model,
+				#											$end_path->component_tipo,
+				#											null,
+				#											'list',
+				#											DEDALO_DATA_NOLAN,
+				#											$end_path->section_tipo);
+				#
+				#$ar_target_section_tipo = $component->get_ar_target_section_tipo();
+					#dump($ar_target_section_tipo, ' ar_target_section_tipo ++ '.to_string());
+				# add to path to force deep join
+				$post_end_path = self::get_query_path($end_path->component_tipo, $end_path->section_tipo); // $resolve_related=true, $related_tipo=false
+					#dump($post_end_path2, ' post_end_path2 ++ '.to_string());
+				break;
+
+			default:
+				$post_end_path = self::get_query_path($end_path->component_tipo, $end_path->section_tipo); // $resolve_related=true, $related_tipo=false
+				break;
+		}
+
+
+		// recursion
+		if (isset($post_end_path)) {
+			$path = array_merge($path, $this->get_deep_path($post_end_path));
+		}
+
+		// remove duplicates
+		$clean_path = [];
+		foreach ($path as $value) {
+			$key = $value->component_tipo . $value->section_tipo;
+			$clean_path[$key] = $value;
+		}
+		$path = array_values($clean_path);
+
+
+		return $path;
+	}//end get_deep_path
 
 
 
@@ -2368,11 +2386,11 @@ class search_development2 {
 
 			}else{
 
-				if ($key===$total -1) { // last
-					$ar_key[] = self::trim_tipo($step_object->section_tipo);
-				}else{
+				#if ($key===$total -1) { // last
+				#	$ar_key[] = self::trim_tipo($step_object->section_tipo);
+				#}else{
 					$ar_key[] = self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-				}
+				#}
 			}
 
 
