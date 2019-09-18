@@ -1,26 +1,21 @@
 
 
-
 // layout general
-	@import "../layout/reset.less";
-	@import "../layout/fonts.less";
-	@import "../layout/layout.less";
-	@import "../layout/page.less";
-
-
+	/**/
+	@import "./layout/reset.less";
+	@import "./layout/fonts.less";
+	@import "./layout/layout.less";
+	@import "./layout/page.less";
 
 // groupers
+	/**/
 	@import "../../section_group/css/section_group.less";
 	@import "../../section_tab/css/section_tab.less";
 
-
-
 // services
-	@import "../layout/paginator.less";
+	@import "./layout/paginator.less";
 	@import "../../search/css/search.less";
 	@import "../../services/service_autocomplete/css/service_autocomplete.less";
-
-
 
 // menu
 	@import "../../menu/css/menu.less";
@@ -28,9 +23,10 @@
 	//@import "../../../bootstrap/less/variables.less";
 	//@import "../../../bootstrap/less/glyphicons.less";
 
-
+	//@import "../../login/css/login.less";
 
 // components
+	/**/
 	@component_prefix : "component_";
 	@component_sufix  : "";
 	@import "../../@{component_prefix}input_text/css/@{component_prefix}input_text@{component_sufix}.less";
@@ -81,5 +77,4 @@
 	@import "../../@{component_prefix}svg/css/@{component_prefix}svg@{component_sufix}.less";
 	@import "../../@{component_prefix}template/css/@{component_prefix}template@{component_sufix}.less";
 	@import "../../@{component_prefix}text_area/css/@{component_prefix}text_area@{component_sufix}.less";
-
 
