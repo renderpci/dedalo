@@ -2586,7 +2586,20 @@ class diffusion_sql extends diffusion  {
 
 				$terminoID[] = $section_tipo .'_'. $section_id;
 
+
+				// add parents option
+				// if defined in propeerties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+					if (isset($options->propiedades->process_dato_arguments->custom_arguments->add_parents) && $options->propiedades->process_dato_arguments->custom_arguments->add_parents===true) {
+						# calculate parents and add to dato
+						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+						$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+						foreach ($ar_parents as $parent_locator) {
+							$terminoID[] = $parent_locator->section_tipo .'_'. $parent_locator->section_id;
+						}
+					}
 			}
+
+
 			$terminoID = json_encode($terminoID);
 		}
 
