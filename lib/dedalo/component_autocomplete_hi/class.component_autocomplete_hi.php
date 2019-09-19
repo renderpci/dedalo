@@ -632,53 +632,6 @@ class component_autocomplete_hi extends component_relation_common {
 
 
 
-	/**
-	* MAP_LOCATOR_TO_TERM_ID
-	* Alias of diffusion_sql::map_locator_to_term_id
-	* @return string | null $term_id
-	*/
-	public function map_locator_to_term_id() {
-
-		$term_id = null;
-
-		$dato = $this->get_dato();
-
-		if (!empty($dato)) {
-
-			// arguments from properties->process_dato_arguments->custom_arguments
-				$args 	 = func_get_args(); // is array of objects
-				$options = new stdClass();
-				foreach ($args as $value_obj) {
-					foreach ($value_obj as $key => $value) {
-						$options->{$key} = $value;
-					}
-				}
-					dump($options, ' options ++ '.to_string());
-
-			// add parents option
-				$new_dato = [];
-				if (isset($options->add_parents) && $options->add_parents===true) {
-					# calculate parents and add to dato
-					foreach ((array)$dato as $current_locator) {
-						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-						$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, false);
-							dump($ar_parents, ' ar_parents ++ '.to_string());
-						foreach ($ar_parents as $parent_locator) {
-							$new_dato[] = $parent_locator;
-						}
-					}
-					$dato = array_merge($dato, $new_dato);
-				}
-
-			// send to diffusion for normalize formats
-				$term_id = diffusion_sql::map_locator_to_term_id(null, $dato);
-		}
-
-		return $term_id;
-	}//end map_locator_to_term_id
-
-
-
 	### GET_LEGACY_MODEL
 
 
