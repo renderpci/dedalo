@@ -14,7 +14,7 @@ class hierarchy {
 
 	/**
 	* GET_DEFAULT_SECTION_TIPO_TERM
-	* @return 
+	* @return
 	*/
 	public static function get_default_section_tipo_term($tld) {
 
@@ -25,25 +25,25 @@ class hierarchy {
 
 	/**
 	* GET_DEFAULT_SECTION_TIPO_MODEL
-	* @return 
+	* @return
 	*/
 	public static function get_default_section_tipo_model($tld) {
 		return strtolower($tld) . '2';
 	}//end get_default_section_tipo_model
 
 
-	
+
 	/**
 	* GENERATE_VIRTUAL_SECTION
 	* Note that virtual sections not contains components, only a exclude elements term
-	* @return 
+	* @return
 	*/
 	public static function generate_virtual_section( $request_options ) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
-		
+
 		$options = new stdClass();
 			$options->section_id   = null;
 			$options->section_tipo = null;
@@ -53,7 +53,7 @@ class hierarchy {
 		$current_hierarchy_section_id   = $options->section_id;
 
 		#
-		# ACTIVE		
+		# ACTIVE
 		$active_tipo 	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
 		$component 		= component_common::get_instance( $modelo_name,
@@ -70,8 +70,8 @@ class hierarchy {
 					$response->msg 		= label::get_label('error_generate_hierarchy'); //'Current hierarchy is not active.';
 					return $response;
 				}
-		
-		
+
+
 
 		#
 		# TLD
@@ -82,7 +82,7 @@ class hierarchy {
 														  $options->section_id,
 														  'edit',
 														  DEDALO_DATA_NOLAN,
-														  $options->section_tipo);			
+														  $options->section_tipo);
 		$tld2 = strtolower($component->get_valor());
 		if (empty($tld2)) {
 			$response->result 	= false;
@@ -92,7 +92,7 @@ class hierarchy {
 
 
 		#
-		# TIPOLOGY OF HIERARCHY 
+		# TIPOLOGY OF HIERARCHY
 		$hierarchy_type	= DEDALO_HIERARCHY_TIPOLOGY_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type, true);
 		$component 		= component_common::get_instance( $modelo_name,
@@ -122,7 +122,7 @@ class hierarchy {
 
 		#
 		# COMMANDS SEQUENCE
-		
+
 		#
 		# VIRTUAL SECTION . Tesaurus term
 		if($is_toponymy===true) {
@@ -154,10 +154,10 @@ class hierarchy {
 					$response->result 	 = $create_term->result;
 					$response->msg 		.= $create_term->msg;
 				}
-		
+
 		#
 		# VIRTUAL SECTION MODELO . Model term
-		$default_section_tipo_model = self::get_default_section_tipo_model($tld2);				
+		$default_section_tipo_model = self::get_default_section_tipo_model($tld2);
 		$options = new stdClass();
 			$options->terminoID 	= $default_section_tipo_model;	//$tld2.'2';
 			$options->parent 		= DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;	//'dd101';
@@ -171,7 +171,7 @@ class hierarchy {
 				$options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
 			}else{
 				$options->relaciones 	= json_decode('[{"dd6":"hierarchy20"}]');
-			}			
+			}
 			$options->propiedades 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= $name . ' [m]';
@@ -329,9 +329,9 @@ class hierarchy {
 			$options->traducible 	= 'no';
 
 			// Listado Tesauro . Referecia para el nuevo elemento
-			$RecordObj_dd = new RecordObj_dd('hierarchy44');	
-			
-			$options->relaciones 	= $RecordObj_dd->get_relaciones();	//json_decode('[{"dd57":"hierarchy24"},{"dd9":"hierarchy25"},{"dd10":"hierarchy28"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd431":"hierarchy35"},{"dd432":"hierarchy40"},{"dd43":"hierarchy41"},{"dd57":"hierarchy23"},{"dd428":"hierarchy27"},{"dd57":"hierarchy26"}]');	
+			$RecordObj_dd = new RecordObj_dd('hierarchy44');
+
+			$options->relaciones 	= $RecordObj_dd->get_relaciones();	//json_decode('[{"dd57":"hierarchy24"},{"dd9":"hierarchy25"},{"dd10":"hierarchy28"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd431":"hierarchy35"},{"dd432":"hierarchy40"},{"dd43":"hierarchy41"},{"dd57":"hierarchy23"},{"dd428":"hierarchy27"},{"dd57":"hierarchy26"}]');
 			$options->propiedades 	= $RecordObj_dd->get_propiedades();
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Listado tesauro';
@@ -340,7 +340,7 @@ class hierarchy {
 				if ($create_term) {
 					$response->result 	 = $create_term->result;
 					$response->msg 		.= $create_term->msg;
-				}		
+				}
 
 		#
 		# VIRTUAL SECTION-LIST-THESAURUS . MODELO . Model terms
@@ -362,7 +362,7 @@ class hierarchy {
 					$response->result 	 = $create_term->result;
 					$response->msg 		.= $create_term->msg;
 				}
-		
+
 
 		#
 		# ROOT TERMS
@@ -375,7 +375,7 @@ class hierarchy {
 		hierarchy::create_root_terms( $create_records_options );
 		*/
 
-		
+
 
 
 		#
@@ -385,9 +385,9 @@ class hierarchy {
 			$permissions_options->section_tipo 	= $current_hierarchy_section_tipo;
 			$permissions_options->section_id 	= $current_hierarchy_section_id;
 			$permissions_options->ar_sections 	= array($default_section_tipo_term, $default_section_tipo_model);
-			
+
 		hierarchy::set_hierarchy_permissions( $permissions_options );
-		
+
 		return (object)$response;
 	}//end generate_virtual_section
 
@@ -414,7 +414,7 @@ class hierarchy {
 
 			$section = section::get_instance($section_id,$current_section_tipo);
 			$section->forced_create_record();
-			
+
 			$component 		= component_common::get_instance($modelo_name,
 															 $tipo,
 															 $section_id,
@@ -428,7 +428,7 @@ class hierarchy {
 			debug_log(__METHOD__." Created first record of thesaurus section $current_section_tipo - $section_id ".to_string(), logger::DEBUG);
 
 			# Attach as children of current hierarchy
-			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHIDRENS_TIPO : DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;		
+			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHIDRENS_TIPO : DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
 			$component_relation_children = component_common::get_instance('component_relation_children',
 															 			  $component_relation_children_tipo,
 															 			  $options->section_id,
@@ -467,8 +467,8 @@ class hierarchy {
 
 		# Profile
 		$profile_id   = component_profile::get_profile_from_user_id( $user_id );
-		$section_id   = $profile_id;		
-		$permissions  = 2;		
+		$section_id   = $profile_id;
+		$permissions  = 2;
 
 
 		#
@@ -490,16 +490,16 @@ class hierarchy {
 																	 DEDALO_DATA_NOLAN,
 																	 DEDALO_SECTION_PROFILES_TIPO);
 			$dato_security_access 	= (object)$component_security_access->get_dato();
-		
+
 
 		# Iterate sections (normally like ts1,ts2)
 		foreach ((array)$options->ar_sections as $current_section_tipo) {
-			
+
 			# Security areas
 			$dato_security_areas->$current_section_tipo = $permissions;
-			
-			
-			# Security access			
+
+
+			# Security access
 			# Components inside section
 			$real_section = section::get_section_real_tipo_static( $current_section_tipo );
 			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($real_section,
@@ -511,7 +511,7 @@ class hierarchy {
 			$dato_security_access->$current_section_tipo = new stdClass();
 			foreach ($ar_children as $children_tipo) {
 				$dato_security_access->$current_section_tipo->$children_tipo = $permissions;
-			}			
+			}
 
 		}//end foreach ($ar_sections as $current_section_tipo)
 
@@ -524,7 +524,7 @@ class hierarchy {
 
 		# Regenerate permissions table
 		security::reset_permissions_table();
-		
+
 		return true;
 	}//end set_hierarchy_permissions
 
@@ -548,14 +548,14 @@ class hierarchy {
 			$options->tld2 			= '';
 			$options->traducible 	= 'no';
 			$options->relaciones 	= '';
-			$options->propiedades 	= '';			
+			$options->propiedades 	= '';
 			$options->name 			= '';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$response = new stdClass();
 				$response->result 	= false;
 				$response->msg 		= '';
-		
+
 
 		# STRUCTURE ELEMENT TEST . Test record exits
 		$RecordObj_dd 	= new RecordObj_dd($options->terminoID, $options->tld2);
@@ -568,7 +568,7 @@ class hierarchy {
 
 		$ar_childrens = RecordObj_dd::get_ar_childrens($options->parent);
 		$norden 	  = (int)count($ar_childrens)+1;
-			
+
 		# Defaults
 		$RecordObj_dd->set_terminoID($options->terminoID);
 		$RecordObj_dd->set_parent($options->parent);
@@ -583,7 +583,7 @@ class hierarchy {
 		$RecordObj_dd->set_propiedades($options->propiedades);
 
 		$RecordObj_dd->set_force_insert_on_save(true); # important !
-			
+
 		# SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
 		$created_id_ts = $RecordObj_dd->save_term_and_descriptor( $options->name );
 			if ($created_id_ts) {
@@ -598,7 +598,7 @@ class hierarchy {
 
 	/**
 	* UPDATE_FROM_4_0_TO_4_1
-	* @return 
+	* @return
 	*/
 	public static function update_jerarquia_from_4_0_to_4_1() {
 
@@ -648,7 +648,7 @@ class hierarchy {
 			$tipo = new locator();
 				$tipo->set_section_tipo("hierarchy13");
 				$tipo->set_section_id($tipo_orig);
-			
+
 			$activa = new locator();
 				$activa->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				if ($activa_orig === 'si') {
@@ -656,7 +656,7 @@ class hierarchy {
 				}else{
 					$activa->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
 				}
-			
+
 			# component_select_lang dato
 			if ((int)$ar_v[0]===4 && (int)$ar_v[1]>=5) {
 				# New way >= 4.5.0
@@ -669,9 +669,9 @@ class hierarchy {
 					$lang_ts = new RecordObj_ts($mainLang_orig);
 					$lang_id = $lang_ts->get_ID();
 					$mainLang->set_section_id($lang_id);
-			}				
+			}
 
-		
+
 			$section_tipo = $hierarchy_section_tipo;
 			$section_id   = $i;
 			$section 	  = section::get_instance($section_id, $section_tipo);
@@ -688,7 +688,7 @@ class hierarchy {
 
 			#
 			# Create structure virtual section
-			#if ( strtolower($alpha2) === 'lg') {		
+			#if ( strtolower($alpha2) === 'lg') {
 				$options = new stdClass();
 					$options->section_tipo = $section_tipo;
 					$options->section_id   = $section_id;
@@ -698,7 +698,7 @@ class hierarchy {
 			$i++;
 		}//end while ($rows = pg_fetch_assoc($result))
 
-		
+
 		$response->result 	= true;
 		$response->msg 		= "Updated hierarchy from 4.0 to >=4.1. Added $i records to section: $hierarchy_section_tipo ";
 
@@ -709,7 +709,7 @@ class hierarchy {
 
 	/**
 	* ROW_TO_JSON_OBJ
-	* @return 
+	* @return
 	*/
 	private static function row_to_json_obj($tipo, $parent, $dato=null, $lang='lg-spa',$section_tipo) {
 
@@ -717,11 +717,11 @@ class hierarchy {
 			return false;
 		}
 
-		# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)		
+		# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
 		$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);
 		if ($section_modelo_name!=='section') {
 			throw new Exception("Error Processing Request. Section tipo '$section_tipo' not exists in structure.<br>
-					Please review your structure data before continue working to avoid critical errors.<br>", 1);				
+					Please review your structure data before continue working to avoid critical errors.<br>", 1);
 		}
 
 		$modo ='edit';
@@ -738,19 +738,19 @@ class hierarchy {
 		unset($modelo_name);
 		unset($component);
 
-		return null;		
+		return null;
 	}//end row_to_json_obj
 
 
 
 	/**
 	* UPDATE_JER_ES_FROM_4_0_TO_4_1
-	* @return 
+	* @return
 	*/
 	public static function update_jer_from_4_0_to_4_1($tld, $modelo) {
 
 		# Disable logging activity and time machine # !IMPORTANT
-		logger_backend_activity::$enable_log = false;	
+		logger_backend_activity::$enable_log = false;
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -775,7 +775,7 @@ class hierarchy {
 				$response->msg[] = to_string($res);
 				break;
 			}
-		}		
+		}
 		*/
 
 		if ($tld==='lg' && $modelo==='no') {
@@ -788,7 +788,7 @@ class hierarchy {
 
 			debug_log(__METHOD__." Deleted langs data from matrix_langs and matrix_counter".to_string(), logger::WARNING);
 		}
-		
+
 
 		#
 		# SOURCE TABLE DATA
@@ -818,7 +818,7 @@ class hierarchy {
 			$propiedades		= (string)$rows['propiedades'];
 
 			self::rows_jer_to_matrix_json(	$id,
-											$terminoID, 
+											$terminoID,
 											$parent,
 											$dato_modelo,
 											$section_tipo_id,
@@ -831,10 +831,10 @@ class hierarchy {
 											$tld,
 											$modelo);
 
-			debug_log(__METHOD__." Updated / created element terminoID:$terminoID, parent:$parent, tld:$tld, dato_modelo:".to_string($dato_modelo), logger::DEBUG);			
-			
+			debug_log(__METHOD__." Updated / created element terminoID:$terminoID, parent:$parent, tld:$tld, dato_modelo:".to_string($dato_modelo), logger::DEBUG);
+
 			unset($id);
-			unset($terminoID); 
+			unset($terminoID);
 			unset($parent);
 			unset($dato_modelo);
 			unset($section_tipo_id);
@@ -845,7 +845,7 @@ class hierarchy {
 			unset($relaciones);
 			unset($propiedades);
 			#$i++;
-			
+
 			// let GC do the memory job
 			time_nanosleep(0, 10000000); // 10 ms
 		}//end while ($rows = pg_fetch_assoc($result)) {
@@ -853,14 +853,14 @@ class hierarchy {
 		$response->result 	= true;
 		$response->msg 		= "'$tld' updated successfully";
 
-		return $response;		
+		return $response;
 	}//end update_jer_from_4_0_to_4_1
 
 
 
 	/**
 	* ROWS_JER_TO_MATRIX_JSON
-	* @return null 
+	* @return null
 	*/
 	private static function rows_jer_to_matrix_json($id, $terminoID, $parent, $dato_modelo, $section_tipo_id, $esdescriptor_orig, $visible_orig, $norden, $usableIndex_orig, $relaciones, $propiedades, $tld, $modelo) {
 
@@ -871,7 +871,7 @@ class hierarchy {
 			}else{
 				$esdescriptor->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
 			}
-		
+
 		$visible = new locator();
 			$visible->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 			if ($visible_orig === 'si') {
@@ -889,7 +889,7 @@ class hierarchy {
 			}
 
 		if(strpos($terminoID, 'lg-')===0) {
-			
+
 			$dato_childrens = array();
 				$ar_childrens = RecordObj_ts::get_ar_childrens($terminoID);
 				$from_component_tipo = DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
@@ -906,13 +906,13 @@ class hierarchy {
 					$dato_childrens[] =  $children;
 				}
 		}else{
-			
+
 			$dato_childrens = array();
 				$ar_childrens = RecordObj_ts::get_ar_childrens($terminoID);
 				foreach ($ar_childrens as $curent_tipo) {
-					
+
 					$children_id = substr($curent_tipo, 2);
-					
+
 					$children = new locator();
 						$children->set_section_tipo($tld.$section_tipo_id);
 						$children->set_section_id($children_id);
@@ -922,7 +922,7 @@ class hierarchy {
 					$dato_childrens[] = $children;
 				}
 
-		}//end if(strpos($terminoID, 'lg-')===0)		
+		}//end if(strpos($terminoID, 'lg-')===0)
 
 		if(empty($dato_modelo)) {
 			$loc_modelo = null;
@@ -939,7 +939,7 @@ class hierarchy {
 		$relaciones	= json_decode($relaciones);
 		$relacion = array();
 		if(!empty($relaciones) && is_array($relaciones)){
-			
+
 			foreach ($relaciones as $value) {
 
 				$locator = new locator();
@@ -992,7 +992,7 @@ class hierarchy {
 		unset($component_children );
 		unset($component_relacion );
 		unset($component_modelo );
-		
+
 		$strQuery_descriptors = "SELECT * FROM \"matrix_descriptors\" WHERE parent = '$terminoID'";
 		$result_descriptors	  = JSON_RecordObj_matrix::search_free($strQuery_descriptors);
 			while ($rows_descriptors = pg_fetch_assoc($result_descriptors)) {
@@ -1020,7 +1020,7 @@ class hierarchy {
 						#$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
 						$locator->type = DEDALO_RELATION_TYPE_INDEX_TIPO; // note is a stdClass now
 					}
-					
+
 					$component_index	= self::row_to_json_obj('hierarchy40', $id, $dato, DEDALO_DATA_NOLAN, $section_tipo);
 					unset($component_index);
 				}
@@ -1054,7 +1054,7 @@ class hierarchy {
 				}
 				elseif($tipo === 'geolocalizacion'){
 
-					$datos = explode(",", $dato); 
+					$datos = explode(",", $dato);
 
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
 					$component = component_common::get_instance($modelo_name,
@@ -1071,7 +1071,7 @@ class hierarchy {
 					}
 					$component_dato->lat = $datos[0];
 					$component_dato->lon = $datos[1];
-					
+
 					$component_notes	= self::row_to_json_obj('hierarchy31', $id, $component_dato, DEDALO_DATA_NOLAN ,$section_tipo);
 
 					unset($modelo_name);
@@ -1107,7 +1107,7 @@ class hierarchy {
 						$dato_time->end = $dd_date;
 
 					}else{
-						
+
 						$fecha = explode("/", $dato);
 
 						$dato_time = new dd_date();
@@ -1135,14 +1135,14 @@ class hierarchy {
 
 			}//end while
 
-		return null;		
-	}//end rows_to_matrix_json	
+		return null;
+	}//end rows_to_matrix_json
 
 
 
 	/**
 	* GET_LG_ID_FROM_TERMINOID
-	* @return 
+	* @return
 	*/
 	private static function get_lg_id_from_terminoID( $termino_id ) {
 
@@ -1166,7 +1166,7 @@ class hierarchy {
 	* @return string $main_lang
 	*/
 	public static function get_main_lang($section_tipo) {
-		
+
 		static $ar_main_lang;
 
 		if(isset($ar_main_lang[$section_tipo])) return $ar_main_lang[$section_tipo];
@@ -1178,7 +1178,7 @@ class hierarchy {
 
 		# Dedalo version parts
 		$ar_v = explode('.', DEDALO_VERSION);
-			
+
 		$matrix_table			= 'matrix_hierarchy_main';
 		$hierarchy_lang_tipo 	= DEDALO_HIERARCHY_LANG_TIPO;
 		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
@@ -1187,7 +1187,7 @@ class hierarchy {
 
 		$prefix = RecordObj_dd::get_prefix_from_tipo($section_tipo);
 		$prefix = strtoupper($prefix); // data is stored always in uppercase
-		
+
 		$strQuery  ='-- '.__METHOD__;
 		$strQuery .= "\nSELECT section_id, datos#>'{relations}' AS relations \nFROM $matrix_table WHERE";
 		$strQuery .= "\n section_tipo = '$hierarchy_section_tipo' AND";
@@ -1198,7 +1198,7 @@ class hierarchy {
 		$strQuery .= "LIMIT 1";
 			#dump(null, ' strQuery ++ '.to_string($strQuery));
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		$main_lang = null;		
+		$main_lang = null;
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$section_id	= $rows['section_id'];
@@ -1207,21 +1207,21 @@ class hierarchy {
 			$ar_main_lang_locator = array_filter($relations, function($current_locator) use($hierarchy_lang_tipo) {
 				if(SHOW_DEBUG===true) {
 					#if (!isset($current_locator->from_component_tipo)) {
-					#	throw new Exception("Error Processing Request", 1);					
+					#	throw new Exception("Error Processing Request", 1);
 					#}
 				}
 				return (isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo === $hierarchy_lang_tipo);
-			});	
+			});
 
-			// dato in db is json string representation of locators array 
+			// dato in db is json string representation of locators array
 			if (empty($ar_main_lang_locator)) {
 				if(SHOW_DEBUG) {
 					dump($ar_main_lang_locator, ' ar_main_lang_locator ++ '.$hierarchy_lang_tipo.' '.to_string($relations));
-					throw new Exception("Error Processing Request. ar_main_lang_locator dato is not json valid!", 1);					
+					throw new Exception("Error Processing Request. ar_main_lang_locator dato is not json valid!", 1);
 				}
 			}
 			$main_lang_locator	= reset($ar_main_lang_locator);
-			
+
 
 			if ((int)$ar_v[0]>=4 && (int)$ar_v[1]>=5) {
 				# New way >= 4.5.0
@@ -1236,7 +1236,7 @@ class hierarchy {
 				switch (true) {
 					case ($section_tipo==='es1'):
 						$main_lang = 'lg-spa';
-						break;					
+						break;
 					default:
 						$main_lang = 'lg-eng';
 						break;
@@ -1249,7 +1249,7 @@ class hierarchy {
 			break;
 		}//end while
 		#dump($main_lang, ' main_lang ++ for section_tipo: '.to_string($section_tipo));
-		
+
 		return (string)$main_lang;
 	}//end get_main_lang
 
@@ -1276,16 +1276,16 @@ class hierarchy {
 			  if($current_type!==$last_type) $filter_by_type .= " AND ";
 		  }
 		}
-		
+
 		# Query
 		$strQuery = "
 			SELECT a.id, a.section_id, a.section_tipo,
-			a.datos#>>'{components, hierarchy48, dato, lg-nolan}' AS hierarchy48,			
+			a.datos#>>'{components, hierarchy48, dato, lg-nolan}' AS hierarchy48,
 			a.datos#>>'{components, hierarchy5, dato, lg-nolan}' AS name,
 			a.datos#>>'{components, hierarchy53, dato, lg-nolan}' AS target_section,
-			a.datos#>>'{components, hierarchy58, dato, lg-nolan}' AS target_section_model,			
+			a.datos#>>'{components, hierarchy58, dato, lg-nolan}' AS target_section_model,
 			a.datos#>>'{components, hierarchy6, dato, lg-nolan}' AS hierarchy6,
-			a.datos#>>'{components, hierarchy7, dato, lg-nolan}' AS hierarchy7,		
+			a.datos#>>'{components, hierarchy7, dato, lg-nolan}' AS hierarchy7,
 			a.datos#>>'{components, hierarchy8, dato, lg-nolan}' AS main_lang,
 			a.datos#>>'{relations}' AS hierarchy59
 			FROM \"".hierarchy::$table."\" a
@@ -1293,22 +1293,22 @@ class hierarchy {
 			a.section_tipo = 'hierarchy1'
 			-- filter by is active 'yes'
 			AND $active_value
-			-- filter_by_search hierarchy9 component_select 
+			-- filter_by_search hierarchy9 component_select
  			$filter_by_type
-			ORDER BY a.section_id ASC  
+			ORDER BY a.section_id ASC
 			";
 			#dump(null, ' strQuery ++ '.to_string($strQuery));
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 
 		$active_hierarchies=array();
-		while ($rows = pg_fetch_assoc($result)) {			
+		while ($rows = pg_fetch_assoc($result)) {
 			$section_id 			= $rows['section_id'];
 			$name 					= $rows['name']; // Note name is NOT translatable
 			$target_section			= $rows['target_section'];
 			$target_section_model	= $rows['target_section_model'];
 			$main_lang				= $rows['main_lang'];
-			
-			
+
+
 			if (is_array($ar_name=json_decode($name))) {
 				$name = reset($ar_name);
 			}
@@ -1319,11 +1319,11 @@ class hierarchy {
 				$target_section_model = reset($ar_target_section_model);
 			}
 			#dump($target_section, ' target_section ++ '.to_string($strQuery));
-			
+
 			$active_hierarchies[$section_id] = array("name"=>$name,
 													"target_section"=>$target_section,
 													"target_section_model"=>$target_section_model,
-													"main_lang"=>$main_lang													
+													"main_lang"=>$main_lang
 													);
 		}
 		#dump($active_hierarchies, ' $active_hierarchies ++ '.to_string($strQuery));
@@ -1342,7 +1342,7 @@ class hierarchy {
 	* @return array $all_tables
 	*/
 	public static function get_all_tables( $ar_section_tipo ) {
-		
+
 		$all_tables = array();
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 			$table = common::get_matrix_table_from_tipo($section_tipo);
@@ -1350,7 +1350,7 @@ class hierarchy {
 				$all_tables[] = $table;
 			}
 		}
-		
+
 		return (array)$all_tables;
 	}//end get_all_tables
 
@@ -1362,7 +1362,7 @@ class hierarchy {
 	* @return array $all_term_tipo_by_map
 	*/
 	public static function get_all_term_tipo_by_map( $ar_section_tipo ) {
-		
+
 		$all_term_tipo_by_map=array();
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
@@ -1386,12 +1386,12 @@ class hierarchy {
 	* GET_ELEMENT_TIPO_FROM_SECTION_MAP
 	* Search in section_map the current request element,
 	* For example, search for term tipo, childrens element tipo, etc..
-	* @return string|null $element_tipo 
+	* @return string|null $element_tipo
 	*/
 	public static function get_element_tipo_from_section_map( $section_tipo, $type ) {
 
 		$element_tipo = null;
-		
+
 		# Search map
 		$ar_elements = hierarchy::get_section_map_elemets($section_tipo);
 			#dump($ar_elements, ' $ar_elements ++ '.to_string($section_tipo));
@@ -1402,7 +1402,7 @@ class hierarchy {
 				break;
 			}
 		}
-		#dump($element_tipo, ' element_tipo ++ '.$type.' - '.to_string($section_tipo));		
+		#dump($element_tipo, ' element_tipo ++ '.$type.' - '.to_string($section_tipo));
 
 		return $element_tipo;
 	}//end get_element_tipo_from_section_map
@@ -1415,18 +1415,18 @@ class hierarchy {
 	* @return array ar_elements
 	*/
 	public static function get_section_map_elemets( $section_tipo ) {
-	
+
 		$ar_elements = array();
 
 		if (empty($section_tipo)) {
 			return $ar_elements;
 		}
-		
+
 		static $section_map_elemets ;
 		if (isset($section_map_elemets[$section_tipo])) {
 			return $section_map_elemets[$section_tipo];
 		}
-		
+
 		// Elements are stored in current section > section_map
 		// Search element in current section
 		$ar_modelo_name_required = array('section_map');
@@ -1449,13 +1449,13 @@ class hierarchy {
 																				$recursive=false,
 																				$search_exact=true);
 			}
-		}//end if (!isset($ar_children[0])) 
+		}//end if (!isset($ar_children[0]))
 
 
 		# If element exists (section_map) we get element 'propiedades' json value as array
 		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
 		if (isset($ar_children[0])) {
-			
+
 			$section_map_tipo = $ar_children[0];
 
 			# relation map
@@ -1463,10 +1463,10 @@ class hierarchy {
 			$ar_propiedades  = json_decode($RecordObj_dd->get_propiedades());
 				#dump($ar_elements, ' ar_elements ++ '.to_string());
 
-			$ar_elements = (array)$ar_propiedades;		
+			$ar_elements = (array)$ar_propiedades;
 			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
 		}
-	
+
 		# Set static var for reuse
 		$section_map_elemets[$section_tipo] = $ar_elements;
 		#debug_log(__METHOD__." ar_elements $section_tipo - ".to_string($ar_elements), logger::DEBUG);
@@ -1480,12 +1480,12 @@ class hierarchy {
 	* GET_ELEMENT_TIPO_FROM_SECTION_LIST_THESAURUS
 	* Search in section_list_thesaurus the current request element,
 	* For example, search for term tipo, childrens element tipo, etc..
-	* @return string|null $element_tipo 
+	* @return string|null $element_tipo
 	*//*
 	public static function get_element_tipo_from_section_list_thesaurus( $section_tipo, $type ) {
 
 		$element_tipo = null;
-		
+
 		# Search map
 		$ar_elements = ts_object::get_ar_elements($section_tipo);
 
@@ -1507,7 +1507,7 @@ class hierarchy {
 	* @return object $response
 	*/
 	public static function update_target_section( $request_options ) {
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
@@ -1541,7 +1541,7 @@ class hierarchy {
 		debug_log(__METHOD__." tipo: $tipo - tld ".to_string($tld), logger::DEBUG);
 
 
-		# DEDALO_HIERARCHY_TARGET_SECTION_TIPO	
+		# DEDALO_HIERARCHY_TARGET_SECTION_TIPO
 		$tipo 			= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
@@ -1555,7 +1555,7 @@ class hierarchy {
 		$component->Save();
 		debug_log(__METHOD__." tipo: $tipo - default_section_tipo_term ".to_string($default_section_tipo_term), logger::DEBUG);
 
-		# DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO	
+		# DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO
 		$tipo 			= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
@@ -1579,7 +1579,7 @@ class hierarchy {
 
 	/**
 	* SET_LANG_HIERARCHY
-	* @return 
+	* @return
 	*/
 	public static function set_lang_hierarchy() {
 
@@ -1594,13 +1594,13 @@ class hierarchy {
 			$section_id = $rows['section_id'];
 			break;
 		}
-		
+
 		if (!isset($section_id)) {
 			$response->msg .= "Record with TLD2: 'LG' not found in table ".hierarchy::$table;
 			return $response;
 		}
 
-		// DEDALO_HIERARCHY_TARGET_SECTION_TIPO hierarchy53 
+		// DEDALO_HIERARCHY_TARGET_SECTION_TIPO hierarchy53
 		$tipo 			= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
@@ -1624,7 +1624,7 @@ class hierarchy {
 		$component->set_dato( array("lg2") );
 		$component->Save();
 
-		// DEDALO_HIERARCHY_CHIDRENS_TIPO 	
+		// DEDALO_HIERARCHY_CHIDRENS_TIPO
 		$tipo 			= DEDALO_HIERARCHY_CHIDRENS_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
@@ -1638,10 +1638,10 @@ class hierarchy {
 			$locator->set_section_id(1); // 1
 			$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
 			$locator->set_from_component_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO); // hierarchy53
-		
+
 		$component->set_dato( $locator );
 		$component->Save();
-		
+
 		$response->result = true;
 		$response->msg 	  = "Section hierarchy ".DEDALO_HIERARCHY_SECTION_TIPO." - $section_id is configurated successfully";
 
@@ -1657,10 +1657,16 @@ class hierarchy {
 	*/
 	public static function get_hierarchy_type_from_section_tipo($section_tipo) {
 
+		// cache results recover if exists
+			static $hierarchy_type_from_section_tipo;
+			if (isset($hierarchy_type_from_section_tipo[$section_tipo])) {
+				return $hierarchy_type_from_section_tipo[$section_tipo];
+			}
+
 		$hierarchy_type = null;
-		
+
 		$search_query_object = json_decode('{
-		  "id": "hierarchy1_list",		  
+		  "id": "hierarchy1_list",
 		  "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
 		  "order": false,
 		  "limit": 1,
@@ -1704,8 +1710,11 @@ class hierarchy {
 				if (isset($ar_locators[0]->section_id)) {
 					$hierarchy_type = (int)$ar_locators[0]->section_id;
 				}
-			}			
-		}		
+			}
+		}
+
+		// cache results
+			$hierarchy_type_from_section_tipo[$section_tipo] = $hierarchy_type;
 
 		return $hierarchy_type;
 	}//end get_hierarchy_type_from_section_tipo
@@ -1720,8 +1729,8 @@ class hierarchy {
 	* @return int $section_id | null
 	*/
 	public static function get_hierarchy_section($section_tipo, $hierarchy_component_tipo) {
-		
-		$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_component_tipo,true); 
+
+		$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_component_tipo,true);
 
 		// search query object
 			$search_query_object = json_decode('{
@@ -1746,12 +1755,12 @@ class hierarchy {
 		// search
 			$search_development2 = new search_development2($search_query_object);
 			$search_result 		 = $search_development2->search();
-			$record 		 	 = reset($search_result->ar_records);		
-		
+			$record 		 	 = reset($search_result->ar_records);
+
 		// section id
 			$section_id = isset($record->section_id) ? $record->section_id : null;
-		
-		return $section_id;	
+
+		return $section_id;
 	}//end get_hierarchy_section
 
 
