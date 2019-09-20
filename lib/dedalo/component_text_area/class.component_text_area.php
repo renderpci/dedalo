@@ -1331,7 +1331,6 @@ class component_text_area extends component_common {
 				}
 
 		}//end foreach ($result as $key => $row)
-
 		$indexations_locators = json_encode($ar_indexations);
 
 
