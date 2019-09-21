@@ -36,7 +36,7 @@ class web_data {
 		#static $version = "1.0.17"; // 01-10-2017
 		#static $version = "1.0.18"; // 06-10-2017
 		#static $version = "1.0.20"; // 24-10-2017
-		#static $version = "1.0.21"; // 30-10-2017 
+		#static $version = "1.0.21"; // 30-10-2017
 		#static $version = "1.0.22"; // 19-12-2017
 		#static $version = "1.0.23";  // 20-12-2017
 		#static $version = "1.0.24";  // 16-01-2018 fixed get_thesaurus_root_list comma separated parents issue
@@ -62,10 +62,10 @@ class web_data {
 		}
 
 		if ($db_name!==false) {
-			
+
 			// Requested database
 				$database = $db_name;
-		
+
 		}else{
 			// Custom database defined in api server check
 				if (defined('MYSQL_WEB_DATABASE_CONN')) {
@@ -73,7 +73,7 @@ class web_data {
 				}else{
 					$database = MYSQL_DEDALO_DATABASE_CONN;
 				}
-		}	
+		}
 
 		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
 										 		MYSQL_DEDALO_USERNAME_CONN,
@@ -101,20 +101,20 @@ class web_data {
 				#error_log(to_string($request_options));
 				#debug_log(__METHOD__." request_options ".to_string($request_options), logger::DEBUG);
 			}
-			
+
 			$response = new stdClass();
 				$response->result = false;
 				$response->msg    = "Error on get data";
 
-			$start_time = microtime(1);		
-			
+			$start_time = microtime(1);
+
 			# Options defaults
 			$sql_options = new stdClass();
 				$sql_options->table 		 	= null;
 				$sql_options->ar_fields 	 	= array('*');
 				$sql_options->sql_fullselect 	= false; // default false
 				$sql_options->section_id 	 	= false;
-				$sql_options->sql_filter 	 	= ""; //publicacion = 'si'				
+				$sql_options->sql_filter 	 	= ""; //publicacion = 'si'
 				$sql_options->lang 			 	= null;	//WEB_CURRENT_LANG_CODE;
 				$sql_options->order 			= '`id` ASC';
 				$sql_options->limit 		 	= 0;
@@ -128,7 +128,7 @@ class web_data {
 				$sql_options->db_name 			= false;
 				$sql_options->conn 			 	= false;
 
-				foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}				
+				foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
 			// build connection
 				$db_name 			= isset($sql_options->db_name) ? $sql_options->db_name : false;
@@ -142,7 +142,7 @@ class web_data {
 				}
 				$ar_tables = !is_array($sql_options->table) ? (array)explode(',', $sql_options->table) : (array)$sql_options->table;
 				$ar_tables = array_map("trim", $ar_tables);
-				
+
 			#dump($sql_options, ' sql_options ++ '.to_string());
 			#dump(json_encode($sql_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ' sql_options->resolve_portal ++ '.to_string());
 
@@ -151,7 +151,7 @@ class web_data {
 					$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id;
 				}else{
 					$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id . " AND " . $sql_options->sql_filter;
-				}				
+				}
 			}
 
 			# Convert text ar_fields to array
@@ -176,18 +176,18 @@ class web_data {
 
 					# WHERE
 					$strQuery .= self::build_sql_where($sql_options->lang, $sql_options->sql_filter);
-				
+
 				}else{
-					
-					
+
+
 					$end_table = end($ar_tables);
 					foreach ($ar_tables as $table) {
-					
+
 						# SELECT
 						$strQuery .= self::build_sql_select($sql_options->ar_fields);
-							
+
 						# FROM
-						$strQuery .= self::build_sql_from($table);	
+						$strQuery .= self::build_sql_from($table);
 
 						# WHERE
 						$strQuery .= self::build_sql_where($sql_options->lang, $sql_options->sql_filter);
@@ -201,19 +201,19 @@ class web_data {
 						if ($table!==$end_table) {
 						$strQuery .= "\nUNION ALL ";
 						}
-					}										
-				}			
-				
+					}
+				}
+
 				# ORDER
 				if(!empty($sql_options->order)) {
 					$strQuery .= self::build_sql_order($sql_options->order);
 				}
 
 				# LIMIT
-				if(!empty($sql_options->limit)) {			
+				if(!empty($sql_options->limit)) {
 					$strQuery .= self::build_sql_limit($sql_options->limit, $sql_options->offset);
 				}
-				
+
 				$sql_options->strQuery = $strQuery;
 				if(SHOW_DEBUG) {
 					#dump($strQuery);
@@ -222,7 +222,7 @@ class web_data {
 			# SAFE QUERY TEST
 			preg_match_all("/delete|update|insert/i", $strQuery, $output_array);
 			if (!empty($output_array)) {
-				$response->result = false;				
+				$response->result = false;
 				$response->msg    = "Error on sql request. Ilegal option";
 				if(SHOW_DEBUG===true) {
 					$response->msg    .= " : $strQuery";
@@ -230,16 +230,16 @@ class web_data {
 			}
 
 			#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
-			#if (strpos($sql_options->sql_filter, 'Barcelona')!==false ) {		
+			#if (strpos($sql_options->sql_filter, 'Barcelona')!==false ) {
 				#dump($sql_options->sql_filter, ' strQuery ++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($strQuery));
 				#error_log($strQuery);
 			#}
-			
+
 			# EXEC QUERY
-			$result = $sql_options->conn->query($strQuery);		
+			$result = $sql_options->conn->query($strQuery);
 
 			if (!$result) {
-				# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas		
+				# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
 				$response->result = false;
 				$response->msg    = "Error on sql request (no result) ";
 				#if(SHOW_DEBUG===true) {
@@ -258,12 +258,12 @@ class web_data {
 				$response->total = (int)web_data::count_records( $strQuery, $sql_options->conn );
 			}//end if ($sql_options->count===true) {
 
-			
-			if (empty($sql_options->ar_fields) || $sql_options->ar_fields[0]=='*') {			
+
+			if (empty($sql_options->ar_fields) || $sql_options->ar_fields[0]=='*') {
 				$sql_options->ar_fields = array_keys((array)$result->fetch_assoc());
 				$result->data_seek(0); # Reset pointer of fetch_assoc
 			}
-	
+
 
 			# RESOLVE_PORTAL. PUBLICATION_SCHEMA
 			# When options resolve_portal is true, we create a virtual resolve_portals_custom options from publication_schema whith all portals
@@ -272,14 +272,14 @@ class web_data {
 			}
 
 			$i=0;while ( $rows = $result->fetch_assoc() ) {
-		
+
 				foreach($sql_options->ar_fields as $current_field) {
 
 					if ($current_field==='id') {
 						# continue; // Skip mysql table id
 						# Replace id column for table name column
 						# If table is array, only first table is supported
-						$ar_data[$i]['table'] = $sql_options->table; 
+						$ar_data[$i]['table'] = $sql_options->table;
 						continue;
 					}
 
@@ -288,15 +288,15 @@ class web_data {
 						$ar_parts = explode(' AS ', $current_field);
 						$current_field = trim($ar_parts[1]);
 					}
-	
+
 
 					# POSTPROCESS_FIELD if need
 					if ($sql_options->apply_postprocess===true) {
 						$field_data = self::postprocess_field($current_field, $rows[$current_field]); // Default
 					}else{
 						$field_data = $rows[$current_field];
-					}				
-					
+					}
+
 
 					# Default behaviour
 					$ar_data[$i][$current_field] = $field_data;
@@ -315,9 +315,9 @@ class web_data {
 						}
 					}
 				}
-			
-			$i++;}; 
-			
+
+			$i++;};
+
 			$result->free();
 			#web_data::get_db_connection()->close();
 
@@ -352,7 +352,7 @@ class web_data {
 			# Fixed properties
 			$response->result 	= $ar_data;
 			$response->msg    	= "Ok request done";
-			
+
 
 			return $response;
 		}//end get_rows_data
@@ -364,14 +364,14 @@ class web_data {
 		* @return string $sql
 		*/
 		private static function build_sql_select($ar_fields) {
-			
+
 			$sql='';
 			$sql .= "\nSELECT ";
-			
+
 			# FIELDS
 			$query_fields='';
-			foreach ((array)$ar_fields as $current_field) {				
-				
+			foreach ((array)$ar_fields as $current_field) {
+
 				if (strpos($current_field, 'DISTINCT')!==false || strpos($current_field, 'CONCAT')!==false || $current_field=='*' || strpos($current_field, 'MATCH')!==false || strpos($current_field, ' AS ')!==false) {
 					$query_fields .= $current_field;
 				}else{
@@ -407,7 +407,7 @@ class web_data {
 		*/
 		private static function build_sql_where($lang, $sql_filter) {
 			$sql='';
-			$sql .= "\nWHERE section_id IS NOT NULL";			
+			$sql .= "\nWHERE section_id IS NOT NULL";
 
 			# SQL_FILTER
 			if(!empty($sql_filter) && strlen($sql_filter)>2 ) {
@@ -415,7 +415,7 @@ class web_data {
 					$sql .= "\n$sql_filter";
 				}else{
 					$sql .= "\nAND (".$sql_filter.")";
-				}				
+				}
 			}
 
 			# LANG
@@ -487,7 +487,7 @@ class web_data {
 
 			# Config file constant
 			#	$data = json_decode(PUBLICATION_SCHEMA);
-			
+
 			$data = false;
 
 			$strQuery = "SELECT data FROM publication_schema WHERE id = 1";
@@ -497,7 +497,7 @@ class web_data {
 				$data = json_decode($rows['data']);
 				break;
 			}
-			
+
 
 			return $data;
 		}//end get_publication_schema
@@ -521,7 +521,7 @@ class web_data {
 					$data = json_decode($rows['data']);
 					$ar_tables[$name] = $data;
 				}
-			}		
+			}
 			#dump($ar_tables, ' ar_tables ++ '.to_string());
 
 			return $ar_tables;
@@ -534,13 +534,13 @@ class web_data {
 		* @return array $ar_portal
 		*/
 		private static function portal_resolve($rows, $current_field, $options, $resolve_portals_custom) {
-			$ar_portal=array();			
+			$ar_portal=array();
 
 			if ($resolve_portals_custom!==false) {
 				# resolve_portals_custom is received
 				$current_field_ar_id = $current_field;	//in_array($current_field, (array)$resolve_portals_custom);
 				$table 				 = $resolve_portals_custom->{$current_field};
-				
+
 			}else{
 				# default case
 				$current_field_ar_id = str_replace('_table', '_id', $current_field); // los datos apunta al nombre de esta columna (XX_table) pero están en XX_id
@@ -548,8 +548,8 @@ class web_data {
 			}
 			if(empty($rows[$current_field_ar_id])) return $ar_portal;
 			$current_ar_value = json_decode($rows[$current_field_ar_id]);
-			 		
-		 	
+
+
 		 	if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
 
 		 		$portal_options = new stdClass();
@@ -557,7 +557,7 @@ class web_data {
 		 			$portal_options->lang  = $options->lang;
 		 			if (isset($options->resolve_portal)) {
 		 			$portal_options->resolve_portal = $options->resolve_portal;
-		 			}	
+		 			}
 
 		 			# Resolve_portals_custom deeper
 		 			# If you need deep resolve, define resolve_portals_custom using table name separated by point like:
@@ -571,16 +571,16 @@ class web_data {
 	 					# (!) Note that $resolve_portals_custom is different that $options->resolve_portals_custom because is already parsed
 		 				foreach ($resolve_portals_custom as $name => $target) {
 		 					$field = explode('.', $name);
-		 					if (isset($field[1])) {		 						
-		 						$field = $field[1];			
+		 					if (isset($field[1])) {
+		 						$field = $field[1];
 		 						$portal_options->resolve_portals_custom->{$field} = $target;
 		 					}
-		 				}	 					
-	 				}	
+		 				}
+	 				}
 
 		 			$filter = PUBLICACION_FILTER_SQL;
-		 			if( !empty($options->portal_filter) 
-		 				&& isset($options->portal_filter[$portal_options->table]) ) 
+		 			if( !empty($options->portal_filter)
+		 				&& isset($options->portal_filter[$portal_options->table]) )
 		 				{
 		 					$filter = $options->portal_filter[$portal_options->table];
 		 			}
@@ -590,7 +590,7 @@ class web_data {
 		 		$rows_data = (array)self::get_rows_data($portal_options)->result;
 		 		//error_log( 'rows_data: '. to_string($portal_options) );
 
-		 		if (!empty($rows_data[0])) { 			
+		 		if (!empty($rows_data[0])) {
 
 		 			$ar_portal[] = $rows_data[0];
 
@@ -602,7 +602,7 @@ class web_data {
 							foreach ($options->map as $map_obj) {
 								if ($map_obj->table===$table) {
 									$ar_portal[$key][$map_obj->output_field] = map::{$map_obj->function}($row[$map_obj->field], $options->lang);
-								}								
+								}
 							}
 						}
 					}
@@ -621,9 +621,9 @@ class web_data {
 		*/
 		private static function count_records( $sql, $conn=false ) {
 
-			if($conn===false) $conn=web_data::get_db_connection();			
+			if($conn===false) $conn=web_data::get_db_connection();
 			debug_log(__METHOD__." sql ".to_string($sql), logger::DEBUG);
-			$ar = explode("\n", $sql);			
+			$ar = explode("\n", $sql);
 			foreach ($ar as $key => $line) {
 				switch (true) {
 					case (strpos($line, 'SELECT')!==false):
@@ -648,7 +648,7 @@ class web_data {
 			}
 			$count_query = trim(implode("\n", $ar));  //."\n) AS tables";
 			$count_query = "SELECT COUNT(*) AS total FROM (\n" .$count_query. "\n) AS tables";
-			
+
 			$count_result= $conn->query($count_query);
 			if (!$count_result) {
 				if(SHOW_DEBUG) {
@@ -658,7 +658,7 @@ class web_data {
 					#echo "<div class=\"error\" >Error Processing Request</div>";
 					#throw new Exception("Error Processing Request", 1);
 				}
-				# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas		
+				# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
 				return 0;
 			}
 			$ar_record = $count_result->fetch_assoc();
@@ -690,7 +690,7 @@ class web_data {
 					#dump($dedalo_data_file, ' $dedalo_data_file ++ '.to_string($url));
 				$dedalo_data = json_decode( $dedalo_data_file, false, 512, JSON_UNESCAPED_UNICODE );
 					#dump($dedalo_data, ' dedalo_data ++ '.to_string($url)); #die();
-			
+
 			}else{
 				# FROM CURRENT SERVER
 
@@ -717,7 +717,7 @@ class web_data {
 						$dedalo_data = (object)web_data::get_rows_data( $request_options );
 						break;
 				}
-			}		
+			}
 
 			if (!is_object($dedalo_data)) {
 				$dedalo_data = new stdClass();
@@ -725,7 +725,7 @@ class web_data {
 					if(SHOW_DEBUG===true) {
 						$dedalo_data->debug = new stdClass();
 						$dedalo_data->debug->info = "Error in response results: ".to_string($dedalo_data_file);
-					}				
+					}
 			}
 			#error_log( to_string($dedalo_data->debug) );
 
@@ -743,9 +743,9 @@ class web_data {
 		* @return array $ar_tables
 		*/
 		private static function get_all_tables() {
-			
-			$strQuery = "SHOW TABLES";		
-			
+
+			$strQuery = "SHOW TABLES";
+
 			$conn=web_data::get_db_connection();
 
 			# EXEC QUERY
@@ -767,9 +767,9 @@ class web_data {
 		* @return array $ar_columns
 		*/
 		private static function get_table_fields( $table, $full=false ) {
-			
+
 			$strQuery = "SHOW COLUMNS FROM $table";
-			
+
 			# EXEC QUERY
 			$conn=web_data::get_db_connection();
 
@@ -787,7 +787,7 @@ class web_data {
 					$ar_columns[] = $row;
 				}else{
 					$ar_columns[] = $row['Field'];
-				}			
+				}
 			}
 
 			return (array)$ar_columns;
@@ -797,7 +797,7 @@ class web_data {
 
 		/**
 		* GET_TABLES_INFO
-		* @return 
+		* @return
 		*/
 		public static function get_tables_info( $full=false ) {
 
@@ -807,8 +807,8 @@ class web_data {
 			foreach ($ar_tables as $table) {
 
 				$table_fields = self::get_table_fields( $table, $full);
-				
-				$tables_info->{$table} = $table_fields;			
+
+				$tables_info->{$table} = $table_fields;
 			}
 
 			return (object)$tables_info;
@@ -818,7 +818,7 @@ class web_data {
 
 		/**
 		* GET_TABLES_INFO_REMOTE
-		* @return 
+		* @return
 		*/
 		private static function get_tables_info_remote() {
 
@@ -832,7 +832,7 @@ class web_data {
 			$search_data_records_file 	= file_get_contents($url) ;
 				#dump($search_data_records_file, ' $search_data_records_file ++ '.to_string());
 			$search_data_records 		= json_decode( $search_data_records_file, false, 512, JSON_UNESCAPED_UNICODE );
-				#dump($search_data_records, ' search_data_records ++ '.to_string()); die();		
+				#dump($search_data_records, ' search_data_records ++ '.to_string()); die();
 		}//end get_tables_info_remote
 
 
@@ -854,12 +854,12 @@ class web_data {
 		* @return mixed $data
 		*/
 		private static function postprocess_field($field_name, $data) {
-			
+
 			switch ($field_name) {
 				case 'rsc36': // Transcription text
 					$data = TR::deleteMarks($data);
 					break;
-				
+
 				default:
 					# Nothing to do here
 					break;
@@ -876,7 +876,7 @@ class web_data {
 	* @param object $request_options
 	* 	string $request_options->av_section_id (one or various numbers separated by comma)
 	* 	string $request_options->lang like 'lg-spa' (optional)
-	* @return 
+	* @return
 	*/
 	public static function get_reel_terms( $request_options ) {
 		#dump($request_options, ' $request_options ++ '.to_string());
@@ -890,7 +890,7 @@ class web_data {
 
 		$TRANSCRIPTION_TIPO 		= TRANSCRIPTION_TIPO;
 		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
-		
+
 		$ar_filter = array();
 		$ar = explode(',', $options->av_section_id);
 		foreach ($ar as $current_av_section_id) {
@@ -904,9 +904,9 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			#$response->msg 	= 'Error. Request failed (get_reel_terms)';
-		
+
 		// Format: "section_top_id":"30","section_tipo":"rsc167","section_id":"39"
-		
+
 		$s_options = new stdClass();
 			$s_options->table 		= (string)TABLE_THESAURUS;
 			$s_options->ar_fields 	= array(FIELD_TERM_ID,FIELD_TERM,'indexation');
@@ -920,7 +920,7 @@ class web_data {
 
 		$ar_termns = array();
 		if (is_array($rows_data->result)) foreach($rows_data->result as $key => $value) {
-			
+
 			$term_id  	= $value[FIELD_TERM_ID];
 			$indexation = json_decode($value['indexation']);
 
@@ -963,7 +963,7 @@ class web_data {
 	* GET_REEL_FRAGMENTS_OF_TYPE
 	* Return all fragments inside reel transcription (of passed type like 'index')
 	* @param string $av_section_id (one or various separated by comma)
-	* @return 
+	* @return
 	*/
 	public static function get_reel_fragments_of_type( $request_options ) {
 
@@ -983,10 +983,10 @@ class web_data {
 		#
 		# Transcription text
 		$TRANSCRIPTION_TIPO 		= TRANSCRIPTION_TIPO;
-		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;		
-		
-		$sql_filter = '(section_id = '.(int)$options->av_section_id.')';		
-				
+		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
+
+		$sql_filter = '(section_id = '.(int)$options->av_section_id.')';
+
 		$s_options = new stdClass();
 			$s_options->table 		= (string)TABLE_AUDIOVISUAL;
 			$s_options->ar_fields 	= array(TRANSCRIPTION_TIPO,FIELD_VIDEO);
@@ -997,11 +997,11 @@ class web_data {
 			#dump($rows_data, ' rows_data ++ '.to_string()); #die();
 
 		$raw_text = '';
-		if (is_array($rows_data->result)) foreach($rows_data->result as $key => $value) {			
+		if (is_array($rows_data->result)) foreach($rows_data->result as $key => $value) {
 			$raw_text = $value[TRANSCRIPTION_TIPO];
 			break;
 		}
-		
+
 		#
 		# Find indexations etc.
 		$pattern 	= TR::get_mark_pattern($options->type);
@@ -1013,7 +1013,7 @@ class web_data {
 		$ar_tag_id = $matches[$key_tag_id];
 
 		$ar_fragments = [];
-		$fr_options = new stdClass();			
+		$fr_options = new stdClass();
 			$fr_options->lang   		 		= $options->lang;
 			$fr_options->raw_text 		 		= $raw_text;
 			$fr_options->av_section_id  		= $options->av_section_id;
@@ -1022,9 +1022,9 @@ class web_data {
 			$fr_options->video_url 	 	 		= null; # Like 'http://mydomain.org/dedalo/media/av/404/'
 			$fr_options->margin_seconds_in  	= null;
 			$fr_options->margin_seconds_out 	= null;
-			$fr_options->fragment_terms_inside 	= false; # If true, calculate terms indexed inside this fragment 
+			$fr_options->fragment_terms_inside 	= false; # If true, calculate terms indexed inside this fragment
 			$fr_options->indexation_terms 		= false; # If true, calculate all terms used in this indexation
-		
+
 		foreach ($ar_tag_id as $tag_id) {
 
 			// filter_by_tag_id
@@ -1039,7 +1039,7 @@ class web_data {
 
 			$fragment = web_data::build_fragment($fr_options);
 				#dump($fragment, ' fragment ++ '.to_string($fr_options));
-			
+
 			$element = new stdClass();
 				$element->tag_id  	 	= $tag_id;
 				$element->tcin_secs  	= $fragment->tcin_secs;
@@ -1072,7 +1072,7 @@ class web_data {
 				$ar_restricted_fragments = web_data::get_ar_restricted_fragments( $options->av_section_id );
 					#dump($ar_restricted_fragments, ' ar_restricted_fragments ++ '.to_string($options->av_section_id));
 				$response->ar_restricted_fragments = $ar_restricted_fragments;
-			}	
+			}
 
 
 		return (object)$response;
@@ -1082,7 +1082,7 @@ class web_data {
 
 	/**
 	* GET_FRAGMENT_FROM_INDEX_LOCATOR
-	* Calculate all fragaments indexed with this locator 
+	* Calculate all fragaments indexed with this locator
 	* @param object | string $index_locator
 	*	$index_locator can be a php object or a json string representation of the object
 	* @return object $response
@@ -1093,15 +1093,15 @@ class web_data {
 			$options->index_locator  = null;
 			$options->lang 			 = WEB_CURRENT_LANG_CODE;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	
+
 		$response = new stdClass();
 			$response->result 	= false;
 			#$response->msg 		= 'Error. Request failed (get_fragment_from_index_locator)';
-		
+
 		#$index_locator = '{"type":"dd96","tag_id":"1","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}';
 		# Locator like:
 		# {"type":"dd96","tag_id":"1","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
-		
+
 		$index_locator = $options->index_locator;
 
 		if (is_array($index_locator)) {
@@ -1115,12 +1115,12 @@ class web_data {
 				$locator = reset($locator);
 			}
 		}
-			
+
 		$av_section_id 	= $locator->section_id;
 		$tag_id 		= $locator->tag_id;
 
 		#
-		# AUDIOVISUAL DATA 
+		# AUDIOVISUAL DATA
 		# Raw text
 		$s_options = new stdClass();
 			$s_options->table 	 			= TABLE_AUDIOVISUAL;
@@ -1128,30 +1128,30 @@ class web_data {
 			$s_options->lang  	 			= $options->lang;
 			$s_options->sql_filter 			= '`section_id` = '.$av_section_id;
 			$s_options->apply_postprocess 	= false; // Avoid clean text on false
-			
+
 		$rows_data	= (object)web_data::get_rows_data( $s_options );
 		if(SHOW_DEBUG===true) {
 			#dump($rows_data, ' rows_data ++ '.to_string($locator));;
-		}			
+		}
 
 		if (empty($rows_data->result)) {
 			return null;
 		}
 
 		$raw_text  = reset($rows_data->result)[FIELD_TRANSCRIPTION];
-		$video_url = reset($rows_data->result)[FIELD_VIDEO];	
+		$video_url = reset($rows_data->result)[FIELD_VIDEO];
 
 		#
-		# FRAGMENT DATA 
-		# Create fragment and tesaurus associated	
-		$f_options = new stdClass();			
-			$f_options->tag_id 		 	= $tag_id;			
+		# FRAGMENT DATA
+		# Create fragment and tesaurus associated
+		$f_options = new stdClass();
+			$f_options->tag_id 		 	= $tag_id;
 			$f_options->av_section_id  	= $av_section_id;
 			$f_options->lang 		  	= $options->lang;
 			$f_options->component_tipo 	= AV_TIPO;
 			$f_options->section_tipo 	= $locator->section_tipo;
 			$f_options->raw_text 		= $raw_text;
-				
+
 			$fragments_obj = web_data::build_fragment( $f_options );
 			#if(SHOW_DEBUG===true) {
 				#dump($fragments_obj, ' fragments_obj ++ '.to_string( $av_section_id )); die();
@@ -1206,13 +1206,13 @@ class web_data {
 			# Reset array keys
 			$rows_data->result = array_values($rows_data->result);
 			*/
-		
+
 		# Unified version
 		$locator = new locator();
 			$locator->set_tag_id($tag_id);
 			$locator->set_section_id($av_section_id);
-			$locator->set_section_tipo(AUDIOVISUAL_SECTION_TIPO);			
-		
+			$locator->set_section_tipo(AUDIOVISUAL_SECTION_TIPO);
+
 		$rows_data = web_data::get_indexation_terms_multiple( array($locator), $lang );
 
 		return $rows_data;
@@ -1244,10 +1244,10 @@ class web_data {
 				$av_section_id 	 = $locator->section_id;
 				$av_section_tipo = $locator->section_tipo;
 
-				$ar_filter[] = "`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$av_section_tipo\"%'";				
+				$ar_filter[] = "`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$av_section_tipo\"%'";
 			}
 			$options->sql_filter = implode(" OR ",$ar_filter);
-			
+
 		$rows_data	= (object)web_data::get_rows_data( $options );
 			#dump($rows_data, ' rows_data ++ '.to_string($tag_id));
 
@@ -1274,7 +1274,7 @@ class web_data {
 	*	$result->fragment string. Clean text without tags
 	*	$result->tcin_secs int. Seconds for video cut in
 	*	$result->tcin_secs int. Seconds for video cut out
-	*	$result->video_url string. Full video path with tc in and out vars	
+	*	$result->video_url string. Full video path with tc in and out vars
 	*/
 	public static function build_fragment( $request_options ) {
 
@@ -1293,13 +1293,13 @@ class web_data {
 				$options->margin_seconds_out 	= null;
 				$options->margin_chars_in 		= 5;	# default 100
 				$options->margin_chars_out		= 100;	# default 100
-				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment 
-				$options->indexation_terms 		= false; # If true, calculate all terms used in this indexation				
+				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment
+				$options->indexation_terms 		= false; # If true, calculate all terms used in this indexation
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
 		$result = new stdClass();
-	
+
 		// video filename
 			if (is_null($options->video_url)) {
 				$base_url 	= WEB_VIDEO_BASE_URL;
@@ -1315,7 +1315,7 @@ class web_data {
 
 		// Build in/out regex pattern to search
 			$regexp = $tag_in ."(.*)". $tag_out;
-		
+
 		// Search fragment_text
 			# Dato raw from matrix db
 			$raw_text = $options->raw_text;
@@ -1334,28 +1334,28 @@ class web_data {
 
 			$raw_text = html_entity_decode($raw_text);
 				#dump(null, ' dato ++ '.trim($raw_text));
-	
+
 			// PREG_MATCH_ALL
 				$preg_match_all_result = preg_match_all("/$regexp/", $raw_text, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER );
 				#$preg_match_all_result = _mb_ereg_search_all($raw_text, "/$regexp/u", $resultOrder = 0); $matches = $preg_match_all_result;
 				#$preg_match_all_result = free_node::pregMatchCapture($matchAll=true, "/$regexp/", $raw_text, $offset=0);
 				#if(SHOW_DEBUG===true) {
 					#dump($matches, ' matches preg_match_all_result ++ '.to_string($regexp)); #die();
-				#}			
-			if( !empty($preg_match_all_result) ) {				
+				#}
+			if( !empty($preg_match_all_result) ) {
 
 				$fragment_inside_key = 3;
 				$tag_in_pos_key 	 = 1;
 				$tag_out_pos_key 	 = 4;
 
 				foreach($matches as $match) {
-					
+
 					if (isset($match[$fragment_inside_key][0])) {
-						
+
 						$fragment_text_raw 	= $match[$fragment_inside_key][0];
-						
+
 						$fragment_text 		= $fragment_text_raw;
-						
+
 						# Clean fragment_text
 						$fragment_text 		= TR::deleteMarks($fragment_text);
 						#$fragment_text = self::decode_dato_html($fragment_text);
@@ -1384,7 +1384,7 @@ class web_data {
 							}
 							if (!is_null($options->margin_seconds_out)) {
 								$tcout_secs = OptimizeTC::tc_margin_seconds('out', $tcout_secs, $options->margin_seconds_out);
-							}						
+							}
 
 						// VIDEO_URL Like: /dedalo/media/av/404/rsc35_rsc167_1.mp4?vbegin=0&vend=42
 							#$video_url = $base_url.'/'.$file_name.'?vbegin='.$tcin_secs.'&vend='.$tcout_secs;
@@ -1392,30 +1392,30 @@ class web_data {
 
 						// Subtitles url
 							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs, $options->lang);
-						
+
 						$result->fragm 			= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
 						#$result->fragm_raw 	= $fragment_text_raw;
 						$result->video_url		= $video_url;
 						$result->subtitles_url	= $subtitles_url;
-						#$result->terms 		= array();	// For unify object response only			        	
+						#$result->terms 		= array();	// For unify object response only
 						#$result->tcin 			= $tcin;
 						#$result->tcout 		= $tcout;
 						$result->tcin_secs 		= $tcin_secs;
 						$result->tcout_secs 	= $tcout_secs;
 
 							#dump($result->fragm, '$result->fragm ++ '.to_string($video_url));
-						# FRAGMENT_TERMS INSIDE . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta indexacion						
+						# FRAGMENT_TERMS INSIDE . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta indexacion
 						if ($options->fragment_terms_inside===true) {
 							# Array of terms in current fragment
 							$fragment_before = $fragment_after = $fragment_text_raw;
 							$result->fragment_terms_inside = free_node::get_fragment_terms( $options->av_section_id, $fragment_before, $fragment_after, $options->lang );
 						}
-						
-						# INDEXATION_TERMS . Sacamos todos los término de esta indexacion				
+
+						# INDEXATION_TERMS . Sacamos todos los término de esta indexacion
 						if ($options->indexation_terms===true) {
 							$result->terms = web_data::get_indexation_terms( $options->tag_id, $options->av_section_id, $options->lang )->result ;
-						} 
-						
+						}
+
 						return (object)$result;
 					}
 				}//end foreach($matches as $match) {
@@ -1431,24 +1431,24 @@ class web_data {
 	* @return string $text;
 	*/
 	public static function remove_restricted_text( $raw_text, $av_section_id ) {
-		
+
 		$text = $raw_text;	// Untouched by default
-	
+
 		# Clean text
 		#$delete_options = new stdClass();
 		#	$delete_options->deleteTC = false;
 		#$text = TR::deleteMarks($text, $delete_options);
 			#$text = self::decode_dato_html($text);
-	
+
 		$ar_restricted_fragments = self::get_ar_restricted_fragments( $av_section_id );
 			#dump($ar_restricted_fragments, ' ar_restricted_fragments ++** '.to_string($av_section_id)); #die();
 		foreach ($ar_restricted_fragments as $key => $fragm_obj) {
-			
-			// skip replace on some cases (empty, sort text, etc.) 
+
+			// skip replace on some cases (empty, sort text, etc.)
 				if (empty($fragm_obj->fragm) || mb_strlen($fragm_obj->fragm)<5) {
 					continue;
 				}
-			
+
 			// old replace all
 				#$text = str_replace($fragm_obj->fragm, ' *** ', $text, $count);
 
@@ -1477,7 +1477,7 @@ class web_data {
 	* @return array
 	*/
 	public static function get_ar_restricted_fragments( $section_id ) {
-		
+
 		static $ar_restricted_fragments;
 		if (isset($ar_restricted_fragments[$section_id])) {
 			if(SHOW_DEBUG) {
@@ -1488,7 +1488,7 @@ class web_data {
 
 		$ar_fragments_from_reel = self::get_ar_fragments_from_reel( $section_id, TERM_ID_RESTRICTED );
 			#dump($ar_fragments_from_reel, ' $ar_fragments_from_reel ++ '.to_string(TERM_ID_RESTRICTED));
-		
+
 		if(isset($ar_fragments_from_reel[TERM_ID_RESTRICTED])) {
 			foreach ($ar_fragments_from_reel[TERM_ID_RESTRICTED] as $current_locator) {
 				$fragment_data = self::get_fragment_data( $section_id, $current_locator->tag_id );
@@ -1512,15 +1512,15 @@ class web_data {
 	* @return object
 	*/
 	public static function get_fragment_data( $av_section_id, $tag_id ) {
-		
+
 		# TRANSCRIPTION
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_AUDIOVISUAL;
 			$options->ar_fields 	= array(FIELD_TRANSCRIPTION);
 			$options->sql_filter 	= "section_id = $av_section_id AND lang = '".WEB_CURRENT_LANG_CODE."' " . PUBLICACION_FILTER_SQL;
 			$options->order 		= null;
-			$options->limit 		= null;		
-			
+			$options->limit 		= null;
+
 			$rows_data = (object)web_data::get_rows_data( $options );
 				#dump($rows_data, ' rows_data'); die();
 
@@ -1533,8 +1533,8 @@ class web_data {
 		# FRAGMENTS
 
 		#
-		# FRAGMENT DATA 
-		# Create fragment and tesaurus associated	
+		# FRAGMENT DATA
+		# Create fragment and tesaurus associated
 		$options = new stdClass();
 			$options->tag_id 			 = $tag_id;
 			$options->av_section_id  	 = $av_section_id;
@@ -1546,7 +1546,7 @@ class web_data {
 			$options->margin_chars_in 	 = 0;	# default 100
 			$options->margin_chars_out	 = 0;	# default 100
 			$options->raw_text 			 = $raw_text;
-		
+
 			$fragments_obj = web_data::build_fragment( $options );
 				#dump($fragments_obj, ' fragments_obj ++ '.to_string()); die();
 
@@ -1557,7 +1557,7 @@ class web_data {
 
 	/**
 	* GET_AR_FRAGMENTS_FROM_REEL
-	* Calcula los locators (por tanto los tags) de las indexaciones hacia esta cinta y los agrupa por terminoID	
+	* Calcula los locators (por tanto los tags) de las indexaciones hacia esta cinta y los agrupa por terminoID
 	* Nótese el orden del filtro, que busca en un array de locators codificado json como string de tipo:
 	* 	[{"section_top_tipo":"oh1","section_top_id":"30","section_tipo":"rsc167","section_id":"39","component_tipo":"rsc36","tag_id":"25"}]
 	* Se usa por ejemplo para despejar los fragmentos restringidos dentro de una transcripción
@@ -1575,7 +1575,7 @@ class web_data {
 	*            )
 	* @return array $ar_locators
 	*/
-	public static function get_ar_fragments_from_reel( $section_id, $term_id=false, $section_tipo=AUDIOVISUAL_SECTION_TIPO) {	
+	public static function get_ar_fragments_from_reel( $section_id, $term_id=false, $section_tipo=AUDIOVISUAL_SECTION_TIPO) {
 		// "section_id":"40","section_tipo":"rsc167","component_tipo":"rsc36"
 		#$filter = "(`index` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
 		$filter = "(`indexation` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%')";
@@ -1583,21 +1583,21 @@ class web_data {
 		if ($term_id) {
 			$filter = "`term_id` = '$term_id' AND $filter ";
 		}
-	
+
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
 			$options->ar_fields 	= array('indexation','term_id');
 			$options->sql_filter 	= $filter; 	// !IMPORTANT : NEVER USE PUBLICATION FILTER HERE // ." AND lang = '".WEB_CURRENT_LANG_CODE."' "
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->order 		= null;
-			$options->limit 		= null;		
-			
+			$options->limit 		= null;
+
 			$rows_data = (object)web_data::get_rows_data( $options );
 				#dump($rows_data, ' rows_data - term_id: '.$term_id); #die();
 
 		if (empty($rows_data->result)) {
 			return array(); // Current reel dont have relations with this term
-		}		
+		}
 
 		$ar_locators = array();
 		foreach ((array)$rows_data->result as $ar_value) {
@@ -1606,13 +1606,13 @@ class web_data {
 			$ar_index  			= json_decode($ar_value['indexation']);
 				#dump($ar_index, ' ar_index ++ '.to_string());
 			foreach ((array)$ar_index as $key => $locator) {
-				if ($locator->section_tipo==$section_tipo && $locator->section_id==$section_id) {					
+				if ($locator->section_tipo==$section_tipo && $locator->section_id==$section_id) {
 					$ar_locators[$current_term_id][] = $locator;
 				}
-			}			
+			}
 		}
 		#dump($ar_locators, ' ar_locators ++ '.to_string()); die();
-		
+
 		return $ar_locators;
 	}#end get_ar_fragments_from_reel
 
@@ -1634,16 +1634,16 @@ class web_data {
 		public static function get_thesaurus_root_list( $request_options ) {
 			// Globals from config
 			global $table_thesaurus_map, $thesaurus_root_list_parents;
-			
+
 			$options = new stdClass();
 				$options->table  			= (string)TABLE_THESAURUS;
 				$options->parents  			= isset($thesaurus_root_list_parents) ? $thesaurus_root_list_parents : false;
 				$options->exclude_tld 		= array("xx");
 				$options->lang 		 		= WEB_CURRENT_LANG_CODE;
-				$options->order 			= "`norder` ASC";				
+				$options->order 			= "`norder` ASC";
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 					#dump($options->parents, '$options->parents ++ '.to_string());
-			
+
 			if ($options->parents!==false) {
 
 				# When is user send var, is string comma separated list of terms
@@ -1659,7 +1659,7 @@ class web_data {
 					$tld = $ar[0];
 					if ($tld==='hierarchy1') {
 						$tld = $parent; // Full like hierarchy1_246
-											
+
 						# Resolve parent term name
 						$options_hierarchy = new stdClass();
 							$options_hierarchy->table 		= TABLE_HIERARCHY;
@@ -1669,11 +1669,11 @@ class web_data {
 							$options_hierarchy->limit 		= 1;
 							$options_hierarchy->order 		= '';
 						$rows_data	= (object)web_data::get_rows_data( $options_hierarchy );
-												
-						$parent_term = isset($rows_data->result[0]) ? $rows_data->result[0]['name'] : '';												
+
+						$parent_term = isset($rows_data->result[0]) ? $rows_data->result[0]['name'] : '';
 
 					}else{
-						
+
 						# Resolve parent term name
 						$options_hierarchy = new stdClass();
 							$options_hierarchy->table 		= $options->table;
@@ -1686,7 +1686,7 @@ class web_data {
 							#dump($rows_data, ' rows_data ++ '.to_string($options_hierarchy));
 						#$parent_term = reset($rows_data->result)['term'];
 						$parent_term = isset($rows_data->result[0]) ? $rows_data->result[0]['term'] : '';
-					}					
+					}
 
 					$ar_value[] = array('tld'=>$tld, 'term_id'=>$parent, 'term'=>$parent_term );
 				}
@@ -1701,17 +1701,17 @@ class web_data {
 						#$rd_options->order 	= $options->order;
 						$rd_options->order 		= "";
 
-					$rows_data	= (object)web_data::get_rows_data( $rd_options );			
+					$rows_data	= (object)web_data::get_rows_data( $rd_options );
 			}
 			#dump($rows_data, ' rows_data ++ '.to_string());
-			
-			
+
+
 			# THESAURUS ROOT LEVEL TERMS
 				# Get data from each term
 				$ar_ts_terms=array();
 				$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
 				foreach ((array)$rows_data->result as $ar_value) {
-	
+
 					$current_tld = $ar_value['tld'];
 						# Skip excluded tlds
 						if (in_array($current_tld, $options->exclude_tld)) {
@@ -1741,20 +1741,20 @@ class web_data {
 
 					$ar_children = ts_term::get_ar_children($term_id, $thesaurus_table);
 						#dump($ar_children, '$ar_children ++ '.to_string($term_id));
-	
+
 					foreach ($ar_children as $current_term_id) {
 
 						# Skip optional restricted terms (defined in config)
 						if (in_array($current_term_id, $ar_restricted_terms)) {
 							continue;
-						}	
+						}
 
 						# Create a object 'ts_term' and get term info
 						$ts_term_options = new stdClass();
 							$ts_term_options->table 	  = $thesaurus_table;
 							$ts_term_options->parent_term = $ar_value['term'];
 						$ts_term = ts_term::get_ts_term_instance($current_term_id, $options->lang , $ts_term_options);
-					
+
 						# Force to load data from database
 						$ts_term->load_data();
 
@@ -1785,7 +1785,7 @@ class web_data {
 		* @return string $random_term
 		*/
 		public static function get_thesaurus_random_term( $request_options ) {
-		
+
 			$options = new stdClass();
 				$options->table  	 			 = (string)TABLE_THESAURUS;
 				$options->exclude_tld 			 = array("xx");
@@ -1795,7 +1795,7 @@ class web_data {
 
 			$field_term 	= FIELD_TERM;
 			$field_term_id 	= FIELD_TERM_ID;
-			
+
 			$exclude_filter = '';
 			$ar = array();
 			foreach ($options->exclude_tld as $tld) {
@@ -1803,7 +1803,7 @@ class web_data {
 			}
 			$exclude_filter = ' AND ('.implode(' AND ',$ar).')';
 
-			$lang_filter 	= " AND lang = '".$options->lang."' ";			
+			$lang_filter 	= " AND lang = '".$options->lang."' ";
 
 			#
 			# RANDOM TERM
@@ -1815,7 +1815,7 @@ class web_data {
 				$sd_options->limit 		= 1;
 			$search_data	= (object)web_data::get_rows_data( $sd_options );
 
-			$row = reset($search_data->result);					
+			$row = reset($search_data->result);
 
 			$response = new stdClass();
 				$response->term 		= $row[$field_term];
@@ -1830,8 +1830,8 @@ class web_data {
 		/**
 		* GET_THESAURUS_SEARCH
 		* @return object $response
-		*	$response->search_data stdClass 
-		*	$response->ar_ts_terms array of 'ts_term' objects 
+		*	$response->search_data stdClass
+		*	$response->ar_ts_terms array of 'ts_term' objects
 		*	$response->ar_highlight array of terms located in search
 		*/
 		public static function get_thesaurus_search( $request_options ) {
@@ -1843,12 +1843,12 @@ class web_data {
 				$options->rows_per_page 		 = 1;
 				$options->page_number 			 = 1;
 				$options->exclude_tld 			 = array("xx");
-				$options->tree_root 			 = 'last_parent'; # first_parent | last_parent	
-				$options->publicacion_filter_sql = '';					
+				$options->tree_root 			 = 'last_parent'; # first_parent | last_parent
+				$options->publicacion_filter_sql = '';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$field_term = FIELD_TERM;		
-			
+			$field_term = FIELD_TERM;
+
 			# Offset
 			$offset = 0;
 			if ($options->page_number>1) {
@@ -1860,8 +1860,8 @@ class web_data {
 			if ($q!==false) {
 				$q = web_data::get_db_connection()->real_escape_string($q);
 			}
-			
-			
+
+
 			# Search in DDBB
 			$rd_options = new stdClass();
 				$rd_options->table 			= $options->table;
@@ -1869,35 +1869,35 @@ class web_data {
 				#$rd_options->ar_fields 	= array('section_id','descriptor','tld','term_id',FIELD_TERM,'index','lang','childrens','related','time','space','code');
 				$rd_options->sql_filter 	= "`$field_term` LIKE '%".$q."%' " . $options->publicacion_filter_sql;
 				$rd_options->lang 			= $options->lang;
-				$rd_options->order 			= null;			
+				$rd_options->order 			= null;
 				$rd_options->limit 			= $options->rows_per_page;
 				$rd_options->offset 		= $offset;
 				$rd_options->count 			= true;
 			$search_data = (object)web_data::get_rows_data( $rd_options );
-	
-			# Safe descriptors 
+
+			# Safe descriptors
 			foreach ($search_data->result as $key => $value_obj) {
 				#dump((object)$value_obj, ' $value_obj ++ '.to_string());
 				$search_data->result[$key] = (array)web_data::no_descriptor_to_descriptor( (object)$value_obj );
 			}
-			#dump($search_data, ' search_data ++ '.to_string());		
+			#dump($search_data, ' search_data ++ '.to_string());
 
 			# Add vars for pagination
 			$search_data->page_number 	 = $options->page_number;
 			$search_data->rows_per_page  = $options->rows_per_page;
-			
+
 			$ar_ts_terms=array();
 			$ar_highlight=array();
 			$ar_parent=array();
 			foreach ((array)$search_data->result as $ar_value) {
-			
+
 				$tld 		= $ar_value['tld'];
 				$term_id 	= $ar_value['term_id'];
 				$term 		= $ar_value[$field_term];
 				$parent 	= $ar_value['parent'];
 				$descriptor = $ar_value['descriptor']; // es descriptor: no | yes
 				$indexation = $ar_value['indexation'];
-	
+
 				if (strpos($parent,'[')===0) {
 					# is json array
 					$ar_parent  = json_decode($parent);
@@ -1916,15 +1916,15 @@ class web_data {
 					$first_parent = $parent;
 				}
 
-				$ts_term = ts_term::get_ts_term_instance($first_parent, $options->lang, $options_ts_term=null);						
-				$ts_term->load_data(); // Force load db data	
+				$ts_term = ts_term::get_ts_term_instance($first_parent, $options->lang, $options_ts_term=null);
+				$ts_term->load_data(); // Force load db data
 				$ar_ts_terms[$tld][] = $ts_term;*/
 				###
 
 				/*
 				foreach ($ar_parent as $key => $cparent) {
 					if (strpos($cparent, 'hierarchy')!==false) continue;
-					$ts_term 			 = ts_term::get_ts_term_instance($cparent, $options->lang, $options_ts_term=null);						
+					$ts_term 			 = ts_term::get_ts_term_instance($cparent, $options->lang, $options_ts_term=null);
 					$ar_ts_terms[$tld][] = $ts_term;
 					break; // Stop in first level
 				}*/
@@ -1949,7 +1949,7 @@ class web_data {
 					$ts_term 			 = ts_term::get_ts_term_instance($term_id, $options->lang, $ts_term_options);
 					$ts_term->load_data(); // Force load db data
 					$ar_ts_terms[$tld][] = $ts_term;
-				
+
 				}else{
 					# Normal case
 					$ts_term_options = new stdClass();
@@ -1959,20 +1959,20 @@ class web_data {
 					$ts_term 			 = ts_term::get_ts_term_instance($root_parent, $options->lang, $ts_term_options);
 					$ts_term->load_data(); // Force load db data
 					$ar_ts_terms[$tld][] = $ts_term;
-				}				
-				
+				}
+
 
 				# highlight add
 				$ar_highlight[] = $term_id;
 				break;
-			}//end foreach ((array)$search_data->result) as $tld) 
+			}//end foreach ((array)$search_data->result) as $tld)
 			#dump($ar_ts_terms, ' ar_ts_terms ++ '.to_string()); die();
 
 			$response = new stdClass();
 				$response->search_data 	= $search_data;
 				$response->ar_ts_terms 	= $ar_ts_terms;
 				$response->ar_highlight = $ar_highlight;
-				$response->ar_parent 	= $ar_parent;		
+				$response->ar_parent 	= $ar_parent;
 			#dump($response, ' response ++ '.to_string()); #exit();
 
 			return $response;
@@ -1982,7 +1982,7 @@ class web_data {
 
 		/**
 		* NO_DESCRIPTOR_TO_DESCRIPTOR
-		* @return 
+		* @return
 		*/
 		public static function no_descriptor_to_descriptor( $term_obj ) {
 			#dump($term_obj, ' term_obj ++ '.to_string());
@@ -1999,8 +1999,8 @@ class web_data {
 					$rd_options->ar_fields 		= array('*');
 					$rd_options->sql_filter 	= FIELD_TERM_ID ." = '$term_obj->parent'";
 					$rd_options->lang 			= $term_obj->lang;
-					$rd_options->order 			= null;			
-					$rd_options->limit 			= 1;					
+					$rd_options->order 			= null;
+					$rd_options->limit 			= 1;
 				$search_data = (object)web_data::get_rows_data( $rd_options );
 
 				if (!empty($search_data->result)) {
@@ -2044,10 +2044,10 @@ class web_data {
 			# q scape
 			if ($options->q!==false) {
 				$options->q = web_data::get_db_connection()->real_escape_string($options->q);
-			}			
+			}
 
 			if ($options->q!==false) {
-			
+
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $options->table;
 					$sd_options->ar_fields  = array($field_term );
@@ -2092,10 +2092,10 @@ class web_data {
 				$options->ar_term_id 		= null;
 				$options->lang 		 		= WEB_CURRENT_LANG_CODE;
 				$options->table 	 		= (string)TABLE_THESAURUS;
-				$options->combine 			= false;  # false | combined | cumulative 
+				$options->combine 			= false;  # false | combined | cumulative
 				$options->get_matching_terms= false; # boolean
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	
+
 			if (is_array($options->ar_term_id)) {
 				$ar_term_id = $options->ar_term_id;
 			}else{
@@ -2103,7 +2103,7 @@ class web_data {
 					$ar_term_id = explode(',',$options->ar_term_id);
 				}
 			}
-		
+
 			$ar_thesaurus_term = array();
 			foreach ( (array)$ar_term_id as $term_id ) {
 
@@ -2122,12 +2122,12 @@ class web_data {
 				#dump($thesaurus_table, ' thesaurus_table ++ '.to_string($term_id));
 
 				//$search_data->result[$key] = (array)web_data::no_descriptor_to_descriptor( (object)$value_obj );
-				
+
 				$ts_term_options = new stdClass();
 					$ts_term_options->table = $thesaurus_table;
 				$ts_term 			 = ts_term::get_ts_term_instance($term_id, $options->lang, $ts_term_options);
 				$ts_term->load_data(); // Force load db data
-					#dump($ts_term, ' ts_term ++ '.to_string());				
+					#dump($ts_term, ' ts_term ++ '.to_string());
 				$ar_thesaurus_term[] = $ts_term;
 			}
 			#dump($ar_thesaurus_term, ' $ar_thesaurus_term ++ '.to_string()); die();
@@ -2143,10 +2143,10 @@ class web_data {
 					$combine_options->ar_ts_terms 		= $ar_thesaurus_term;
 					$combine_options->get_matching_terms= $options->get_matching_terms;
 					$combine_options->lang 				= $options->lang;
-				$combine_result = web_data::combine_terms( $combine_options ); // $ar_thesaurus_term = 	
+				$combine_result = web_data::combine_terms( $combine_options ); // $ar_thesaurus_term =
 				$matching_terms = $combine_result->matching_terms;
 			}
-						
+
 			$response = new stdClass();
 				$response->result 				= $ar_thesaurus_term;
 				$response->matching_terms 		= $matching_terms;
@@ -2168,18 +2168,18 @@ class web_data {
 		* @return object $response
 		*/
 		public static function combine_terms( $request_options ) {
-			
+
 			$options = new stdClass();
 				# options to send at 'get_thesaurus_term'
 				$options->ar_term_id 		= array();
-				$options->ar_ts_terms 		= array();				
+				$options->ar_ts_terms 		= array();
 				$options->lang 				= WEB_CURRENT_LANG_CODE;
 				$options->mode 	 	 		= 'combined'; # Available: combined | cumulative
 				$options->get_matching_terms= false;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			#$ts_terms 	 = web_data::get_thesaurus_term( $options );
-			#$options->ar_ts_terms = $ts_terms->result;			
+			#$options->ar_ts_terms = $ts_terms->result;
 
 			if (count((array)$options->ar_term_id)<2) return false;
 
@@ -2187,7 +2187,7 @@ class web_data {
 			$matching_terms = array();
 
 			switch ($options->mode) {
-				
+
 				case 'combined':
 					# Prepare a global array with all indexations groupped by term_id
 					$ar_indexation   = array();
@@ -2198,16 +2198,16 @@ class web_data {
 						foreach ($ar_locators as $c_locator) {
 							$key_compare = $c_locator->section_tipo.'_'. $c_locator->section_id.'_'. $c_locator->tag_id;
 							$ar_indexation[$ts_object->term_id][] = $key_compare;	//json_encode($c_locator);
-						}						
+						}
 					}
 					#dump($ar_indexation, ' ar_indexation ++ '.to_string());
-					
+
 					# Resolve simple intersections
 					$ar_indexation_resolved = (array)call_user_func_array('array_intersect',$ar_indexation);
 						#dump($ar_indexation_resolved, ' ar_indexation_resolved ++ '.to_string());
 
 					# Add real locators coincidents with resolved intersections
-					$intersect_locators = array();					
+					$intersect_locators = array();
 					foreach ((array)$options->ar_ts_terms as $key => $ts_object) {
 						$ar_locators = json_decode($ts_object->indexation);
 						foreach ($ar_locators as $lkey => $c_locator) {
@@ -2236,17 +2236,17 @@ class web_data {
 						// Overwrite old value with validated locators
 						$ts_object->indexation = $intersect_locators;	//json_encode($intersect_locators);
 					}
-					#dump($options->ar_ts_terms, ' $options->ar_ts_terms ++ '.to_string());					
+					#dump($options->ar_ts_terms, ' $options->ar_ts_terms ++ '.to_string());
 
 					# Search matching terms
 					# Matching terms are other terms that appears on same indexations (current indexation locators)
 					# Iterate current indexation locators
 					if ($options->get_matching_terms===true && $total_intersect_locators>0) {
-					
+
 						$first_ts_term = reset($options->ar_ts_terms); // Only one is useful (all term indexation are identical)
 						$ar_indexation = json_decode($first_ts_term->indexation);
 							#dump($indexation, ' indexation ++ '.to_string());
-						$matching_terms = array();	
+						$matching_terms = array();
 						$ar_temp_matching_terms = web_data::get_indexation_terms_multiple( $ar_indexation, $options->lang );
 						foreach ((array)$ar_temp_matching_terms->result as $key => $ar_value) {
 								#dump($ar_value, ' ar_value ++ '.to_string());
@@ -2255,10 +2255,10 @@ class web_data {
 								}
 							}
 						/*
-						foreach ((array)$ar_indexation as $current_locator) {						
+						foreach ((array)$ar_indexation as $current_locator) {
 							$ar_temp_matching_terms = web_data::get_indexation_terms( $current_locator->tag_id, $current_locator->section_id, $options->lang );
 
-							# dump($ar_temp_matching_terms, ' ar_temp_matching_terms ++ '.to_string());						
+							# dump($ar_temp_matching_terms, ' ar_temp_matching_terms ++ '.to_string());
 							foreach ((array)$ar_temp_matching_terms->result as $key => $ar_value) {
 								#dump($ar_value, ' ar_value ++ '.to_string());
 								if ( !in_array($ar_value['term_id'], $ar_used_term_id) ) {
@@ -2293,7 +2293,7 @@ class web_data {
 		*	$response->msg string Message to developer like ok / error
 		*/
 		public static function get_thesaurus_indexation_node( $request_options ) {
-			
+
 			$options = new stdClass();
 				$options->term_id  		= null;
 				$options->ar_locators  	= null;
@@ -2311,7 +2311,7 @@ class web_data {
 						$ind_options->lang 			= $options->lang;
 						$ind_options->sql_filter 	= '`term_id` = \''.$options->term_id.'\' ';
 
-					$indexation_response = (object)web_data::get_rows_data( $ind_options );				
+					$indexation_response = (object)web_data::get_rows_data( $ind_options );
 					if (isset($indexation_response->result[0])) {
 						$options->ar_locators = $indexation_response->result[0][FIELD_INDEX];
 					}
@@ -2354,11 +2354,11 @@ class web_data {
 				unset($indexation_node->indexations);
 				# Remove temporal vars to clean data output
 				unset($indexation_node->options);
-				
+
 				$ar_indexation_node[] = $indexation_node;
 			}
 			#debug_log(__METHOD__." ar_indexation_node ".to_string($ar_indexation_node), logger::DEBUG);
-			
+
 			$response = new stdClass();
 				$response->result 	= $ar_indexation_node;
 				$response->msg 		= 'Ok. Request thesaurus_indexation_node done';
@@ -2375,12 +2375,12 @@ class web_data {
 		*/
 		public static function record_is_active($table, $section_id, $lang=WEB_CURRENT_LANG_CODE) {
 
-			$record_is_active = false;	
+			$record_is_active = false;
 
 			$s_options = new stdClass();
 				$s_options->table 		= (string)$table;
 				$s_options->ar_fields 	= array('section_id');
-				$s_options->lang 		= $lang;				
+				$s_options->lang 		= $lang;
 				$s_options->section_id 	= $section_id;
 
 			$response = (object)web_data::get_rows_data( $s_options );
@@ -2388,7 +2388,7 @@ class web_data {
 			if (!empty($response->result)) {
 				$record_is_active = true;
 			}
-			
+
 
 			return (bool)$record_is_active;
 		}//end record_is_active
@@ -2400,7 +2400,7 @@ class web_data {
 		* @return object $response
 		*/
 		public static function get_thesaurus_video_view_data( $request_options ) {
-		
+
 			$options = new stdClass();
 				$options->term_id 	  	  		= null;
 				$options->ar_locators 	  		= null;
@@ -2411,14 +2411,14 @@ class web_data {
 				$options->add_subtitles			= false;
 				$options->image_type 	 		= 'posterframe';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		
+
 			$video_view_options = new stdClass();
 				$video_view_options->lang 			= $options->lang;
 				$video_view_options->add_subtitles 	= $options->add_subtitles;
 			$video_view_data = new video_view_data( $video_view_options );
 			$video_view_data->load_thesaurus_video_view_data( $options->term_id, $options->ar_locators, $options->ar_locators_key );
-	
-	
+
+
 			if ($options->raw_text===false) {
 				unset($video_view_data->raw_text);
 			}
@@ -2439,7 +2439,7 @@ class web_data {
 			global $table_thesaurus_map; // From server api config
 
 			$options = new stdClass();
-				$options->term_id  				= null;				
+				$options->term_id  				= null;
 				$options->recursive 			= false;
 				$options->lang 		   			= WEB_CURRENT_LANG_CODE;
 				$options->ar_fields 			= array('*');
@@ -2479,7 +2479,7 @@ class web_data {
 
 
 			// get_items. Recursion is optional
-			// if (!function_exists('get_items')) 
+			// if (!function_exists('get_items'))
 			function get_items($current_term_id, $table, $lang, $ar_fields, $recursive, $only_descriptors, $remove_restricted, $remove_unused_terms) {
 
 				# Compatibility with old parent data (single)
@@ -2503,13 +2503,13 @@ class web_data {
 						$ar[] = "term_id != '{$restricted_term}'";
 					}
 					$term_filter .= ' AND (' . implode(' AND ', $ar) . ') ';
-				}								
+				}
 
 				# Remove unused terms
 				if ($remove_unused_terms===true) {
 					$term_filter .= ' AND (indexation IS NOT NULL OR childrens IS NOT NULL)';
 				}
-				#error_log($term_filter);			
+				#error_log($term_filter);
 
 
 				$sd_options = new stdClass();
@@ -2522,8 +2522,8 @@ class web_data {
 				$search_data = (object)web_data::get_rows_data( $sd_options );
 					#debug_log(__METHOD__." search data ".to_string($search_data), logger::DEBUG);
 
-				$ar_data = ($search_data->result!==false) ? (array)$search_data->result : [];		
-				
+				$ar_data = ($search_data->result!==false) ? (array)$search_data->result : [];
+
 				if ($recursive===true && !empty($search_data->result)) {
 					foreach($ar_data as $current_row) {
 						#dump($current_row, ' current_row ++ '.to_string());
@@ -2539,7 +2539,7 @@ class web_data {
 			}//end get_items
 			$ar_children = get_items($options->term_id, $table, $lang, $ar_fields, $recursive, $only_descriptors, $remove_restricted, $remove_unused_terms);
 				#dump($ar_children, ' ar_children ++ '.to_string());
-			
+
 			$response = new stdClass();
 				$response->result 	= $ar_children;
 				$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
@@ -2552,26 +2552,26 @@ class web_data {
 
 		/**
 		* GET_THESAURUS_CHILDRENS__OLD
-		* @return 
+		* @return
 		*/ /*
 		public static function get_thesaurus_childrens__OLD( $request_options ) {
 			global $table_thesaurus_map; // From server api config
 
 			$options = new stdClass();
-				$options->term_id  		= null;				
+				$options->term_id  		= null;
 				$options->recursive 	= false;
 				$options->lang 		   	= WEB_CURRENT_LANG_CODE;
 				$options->ar_fields 	= array('*');
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$section_tipo 	= explode('_', $options->term_id)[0]; 	
+			$section_tipo 	= explode('_', $options->term_id)[0];
 			$table 			= $table_thesaurus_map[$section_tipo];
 			$lang 			= $options->lang;
 			$recursive 		= $options->recursive;
 			$ar_fields 		= $options->ar_fields;
 
 			// get_items. Recursion is optional
-			// if (!function_exists('get_items')) 
+			// if (!function_exists('get_items'))
 			function get_items($current_term_id, $table, $lang, $ar_fields, $recursive) {
 
 				# Compatibility with old parent data (single)
@@ -2592,11 +2592,11 @@ class web_data {
 					$sd_options->lang 	 	= $lang;
 
 				$search_data = (object)web_data::get_rows_data( $sd_options );
-					#dump($search_data, ' search_data ++ '.to_string($sd_options));	
+					#dump($search_data, ' search_data ++ '.to_string($sd_options));
 
-				$ar_data = (array)$search_data->result;		
-								
-				if ($recursive===true && !empty($search_data->result)) {						
+				$ar_data = (array)$search_data->result;
+
+				if ($recursive===true && !empty($search_data->result)) {
 					foreach ($search_data->result as $current_row) {
 						$ar_data = array_merge($ar_data, get_items($current_row["term_id"], $table, $lang, $ar_fields, $recursive));
 					}
@@ -2607,7 +2607,7 @@ class web_data {
 			$ar_children = get_items($options->term_id, $table, $lang, $ar_fields, $recursive);
 				#dump($ar_children, ' ar_children ++ '.to_string());
 
-			
+
 			$response = new stdClass();
 				$response->result 	= $ar_children;
 				$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
@@ -2621,15 +2621,15 @@ class web_data {
 
 		/**
 		* GET_THESAURUS_PARENTS
-		* @return 
+		* @return
 		*/
 		public static function get_thesaurus_parents( $request_options ) {
 			global $table_thesaurus_map; // From server api config
 
-			$start_time = microtime(1);	
+			$start_time = microtime(1);
 
 			$options = new stdClass();
-				$options->term_id  		= null;				
+				$options->term_id  		= null;
 				$options->recursive 	= true;
 				$options->lang 		   	= WEB_CURRENT_LANG_CODE;
 				$options->ar_fields 	= array('*');
@@ -2640,7 +2640,7 @@ class web_data {
 			#$section_id 	= $ar_parts [1];
 			$table 			= $table_thesaurus_map[$section_tipo];
 			$lang 			= $options->lang;
-			$recursive 		= $options->recursive;	
+			$recursive 		= $options->recursive;
 			$ar_fields 		= $options->ar_fields;
 
 			// term_id is mandatory
@@ -2649,15 +2649,15 @@ class web_data {
 					$ar_fields = array_map(function($item){
 						return trim($item);
 					}, $ar_fields);
-				}				
+				}
 				if (!in_array('term_id', (array)$ar_fields)) {
 					$ar_fields[] = 'term_id';
 				}
 
 			// get_items. Recursion is optional
-			// if (!function_exists('get_items')) 
+			// if (!function_exists('get_items'))
 			function get_items($current_term_id, $table, $lang, $ar_fields, $recursive) {
-								
+
 				$ar_parts 		= explode('_', $current_term_id);
 				$section_tipo 	= $ar_parts [0];
 				$section_id 	= $ar_parts [1];
@@ -2671,11 +2671,11 @@ class web_data {
 					$sd_options->lang 	 	= $lang;
 
 				$search_data	= (object)web_data::get_rows_data( $sd_options );
-					#dump($search_data, ' search_data ++ '.to_string($sd_options));	
+					#dump($search_data, ' search_data ++ '.to_string($sd_options));
 
-				$ar_data = (array)$search_data->result;		
-								
-				if ($recursive===true && !empty($search_data->result)) {						
+				$ar_data = (array)$search_data->result;
+
+				if ($recursive===true && !empty($search_data->result)) {
 					foreach ($search_data->result as $current_row) {
 						$ar_data = array_merge($ar_data, get_items($current_row["term_id"], $table, $lang, $ar_fields, $recursive));
 					}
@@ -2686,7 +2686,7 @@ class web_data {
 			$ar_parent = get_items($options->term_id, $table, $lang, $ar_fields, $recursive);
 				#dump($ar_parent, ' ar_parent ++ '.to_string());
 
-			
+
 			$response = new stdClass();
 				$response->result 	= $ar_parent;
 				$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
@@ -2706,7 +2706,7 @@ class web_data {
 
 		/**
 		* GET_FREE_SEARCH
-		* Note: Search string is expected utf-8 rawurlencoded — URL-encode according to RFC 3986 
+		* Note: Search string is expected utf-8 rawurlencoded — URL-encode according to RFC 3986
 		* @return object $response
 		*/
 		public static function get_free_search( $request_options ) {
@@ -2714,7 +2714,7 @@ class web_data {
 			$response = new stdClass();
 				$response->result = false;
 				$response->msg 	  = 'Error. Request free_search failed';
-			
+
 			$options = new stdClass();
 				$options->q 				= null;
 				$options->search_mode 		= 'full_text_search';
@@ -2726,14 +2726,14 @@ class web_data {
 				$options->count 			= true;
 				$options->image_type 	 	= 'posterframe';
 				$options->list_fragment 	= true;
-				$options->video_fragment 	= false;				
+				$options->video_fragment 	= false;
 				$options->fragment_terms 	= false;
 				$options->filter 			= false;
 				$options->lang 				= WEB_CURRENT_LANG_CODE;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	
-		
-			# Search string is expected rawurlencoded — URL-encode according to RFC 3986 
+
+
+			# Search string is expected rawurlencoded — URL-encode according to RFC 3986
 			#$options->q = addslashes( rawurldecode($options->q) );
 			$options->q = web_data::get_db_connection()->real_escape_string($options->q);
 
@@ -2744,7 +2744,7 @@ class web_data {
 
 			# TABLE FIELDS
 			# $ar_fields = web_data::get_table_fields(TABLE_AUDIOVISUAL);
-			$ar_fields = array("section_id",FIELD_VIDEO,FIELD_TRANSCRIPTION);		
+			$ar_fields = array("section_id",FIELD_VIDEO,FIELD_TRANSCRIPTION);
 
 			#
 			# AUDIOVISUAL RECORDS
@@ -2798,14 +2798,14 @@ class web_data {
 					#dump($fn_options, ' fn_options ++ '.to_string());
 				$free_node = new free_node( $av_section_id, $fn_options );
 				$free_node->load_data(); # Froce to load data
-				
+
 				# Clean data
 				$FIELD_TRANSCRIPTION = FIELD_TRANSCRIPTION;
 				unset($free_node->{$FIELD_TRANSCRIPTION});
 
 				if(SHOW_DEBUG===true) {
 					#dump($free_node, ' free_node ++ '.to_string());;
-				}	
+				}
 
 				$ar_free_nodes[] = $free_node;
 			}//end foreach ($rows_data->result as $key => $obj_value)
@@ -2816,8 +2816,8 @@ class web_data {
 			$response->total 		 = $rows_data->total;
 
 			$response->result 	= $ar_free_nodes;
-			$response->msg 		= 'Ok. Request free_search done successfully';		
-			
+			$response->msg 		= 'Ok. Request free_search done successfully';
+
 
 			return $response;
 		}//end get_free_search
@@ -2826,7 +2826,7 @@ class web_data {
 
 	/* FULL NODE
 	----------------------------------------------------------------------- */
-		
+
 
 
 		/**
@@ -2835,7 +2835,7 @@ class web_data {
 		* Used when you need show full interview (mode full)
 		* @return object $response
 		*/
-		public static function get_full_reel( $request_options ) {			
+		public static function get_full_reel( $request_options ) {
 
 			$options = new stdClass();
 				$options->av_section_id		= false;
@@ -2846,7 +2846,7 @@ class web_data {
 
 			$response = new stdClass();
 				$response->result = false;
-				$response->msg 	  = 'Error. Request full_reel failed';	
+				$response->msg 	  = 'Error. Request full_reel failed';
 
 			$full_node = new full_node( $options->av_section_id, $fn_options=$options );
 			$full_node->load_data(); # Froce to load data
@@ -2854,7 +2854,7 @@ class web_data {
 			# Clean data
 			$FIELD_TRANSCRIPTION = FIELD_TRANSCRIPTION;
 			unset($full_node->{$FIELD_TRANSCRIPTION});
-	
+
 			$response->result = $full_node;
 			$response->msg 	  = 'Ok. Request full_reel done successfully';
 
@@ -2871,7 +2871,7 @@ class web_data {
 
 		/**
 		* GET_GEOLOCATION_DATA -> moved to class.diffusion_sql.php
-		* @return 
+		* @return
 		*//*
 		public static function get_geolocation_data( $request_options ) {
 
@@ -2881,7 +2881,7 @@ class web_data {
 			$request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
 
 			$options = new stdClass();
-				$options->raw_text			= false;		
+				$options->raw_text			= false;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$response = new stdClass();
@@ -2893,13 +2893,13 @@ class web_data {
 
 			# split by pattern
 			$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
-			$result 		  = preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);	
+			$result 		  = preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
 			# sample result
 			#[0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
 		    #[1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
 		    #[2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
-		    #[3] => &nbsp;Texto dos		    
+		    #[3] => &nbsp;Texto dos
 
 		    $ar_elements = array();
 		    $pattern_geo = TR::get_mark_pattern('geo',$standalone=true);
@@ -2925,7 +2925,7 @@ class web_data {
 
 		    		$element = new stdClass();
 		    			$element->layer_id 		= $layer_id;
-		    			$element->text 			= $text;		    			
+		    			$element->text 			= $text;
 		    			$element->layer_data	= $layer_data;
 
 		    		$ar_elements[] = $element;
@@ -2937,7 +2937,7 @@ class web_data {
 
 			$response->result = $ar_elements;
 			$response->msg 	  = 'Ok. Request done. get_geolocation_data';
-			
+
 			return $response;
 		}//end get_geolocation_data*/
 
@@ -2949,7 +2949,7 @@ class web_data {
 
 		/**
 		* GET_GLOBAL_SEARCH
-		* Note: Search string is expected utf-8 rawurlencoded — URL-encode according to RFC 3986 
+		* Note: Search string is expected utf-8 rawurlencoded — URL-encode according to RFC 3986
 		* @return object $response
 		*/
 		public static function get_global_search( $request_options ) {
@@ -2957,7 +2957,7 @@ class web_data {
 			$response = new stdClass();
 				$response->result = false;
 				$response->msg 	  = 'Error. Request free_search failed';
-			
+
 			$options = new stdClass();
 				$options->q 				= null;
 				$options->search_modifier 	= 'IN BOOLEAN MODE';
@@ -2969,9 +2969,9 @@ class web_data {
 				$options->count 			= true;
 				$options->ar_fields 		= array('section_id','list_data','link');
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	
-		
-			# Search string is expected rawurlencoded — URL-encode according to RFC 3986 			
+
+
+			# Search string is expected rawurlencoded — URL-encode according to RFC 3986
 			# q scape
 			if ($options->q!==false) {
 				$options->q = web_data::get_db_connection()->real_escape_string($options->q);
@@ -3000,8 +3000,8 @@ class web_data {
 					# Add filter
 					$search_options->sql_filter .= 'MATCH ('.$field_full_data.') AGAINST (\''.$options->q.'\' '.$options->search_modifier.')';
 				}
-				# sql_filter		
-				if ($options->sql_filter!==false) {					
+				# sql_filter
+				if ($options->sql_filter!==false) {
 					if (!empty($options->q)) {
 						$search_options->sql_filter .= ' AND (' . $options->sql_filter .')';
 					}else{
@@ -3016,7 +3016,7 @@ class web_data {
 
 			$rows_data = (object)web_data::get_rows_data( $search_options );
 				#dump($rows_data->result, ' $rows_data ++ '.to_string());
-				#dump($search_options, ' $search_options ++ '.to_string()); die();	
+				#dump($search_options, ' $search_options ++ '.to_string()); die();
 
 			if($rows_data->result===false) {
 				$response->result = false;
@@ -3041,17 +3041,17 @@ class web_data {
 
 		/**
 		* GET_GLOBAL_SEARCH_JSON
-		* Note: Search string is expected utf-8 rawurlencoded — URL-encode according to RFC 3986 
+		* Note: Search string is expected utf-8 rawurlencoded — URL-encode according to RFC 3986
 		* @return object $response
 		*/
 		public static function get_global_search_json( $request_options ) {
-	
+
 			$response = new stdClass();
 				$response->results = false;
 				#$response->msg 	   = 'Error. Request free_search failed';
-			
+
 			$options = new stdClass();
-				$options->json_search = null;				
+				$options->json_search = null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 			# Example
 				# {
@@ -3078,7 +3078,8 @@ class web_data {
 				#    	 "theme": "Espais de la Guerra Civil",
 				#    	 "thesaurus": ["id_1", "id_2", "id_3"],
 				#    	 "title": "Títol específic",
-				#    	 "typology": "Llibre"
+				#    	 "typology": "Llibre",
+				#		 "dada_mod": "2015-12-22"
 				#     },
 				#     "pagination":{
 				#    	 "limit": 10,
@@ -3091,13 +3092,13 @@ class web_data {
 				# }
 				#dump($options, ' options ++ '.to_string());
 
-			
+
 			if(!$json_data = json_decode($options->json_search)){
 				debug_log(__METHOD__." Error on make global search. Invalid options  ".to_string($options->json_search), logger::WARNING);
 				return $response;
 			}
 			#dump($json_data, ' json_data ++ '.to_string());
-			
+
 			$q = isset($json_data->query) ? $json_data->query : null;
 
 			switch ($json_data->lang) {
@@ -3109,7 +3110,7 @@ class web_data {
 			}
 
 			$rows_per_page  = isset($json_data->pagination->limit) ? $json_data->pagination->limit : 10;
-			$offset 		= isset($json_data->pagination->offset) ? $json_data->pagination->offset : 0;		
+			$offset 		= isset($json_data->pagination->offset) ? $json_data->pagination->offset : 0;
 
 			#
 			# ORDER
@@ -3121,7 +3122,7 @@ class web_data {
 						$json_data->sort->name = 'sort'; // Changed 16-11-2018 !!
 					}elseif ($json_data->sort->name==='date') {
 						$json_data->sort->name = 'start_date';
-					}					
+					}
 					$order = $json_data->sort->name.' '.strtoupper($json_data->sort->direction);
 				}
 
@@ -3135,8 +3136,8 @@ class web_data {
 			$options->count 			= true;
 			$options->order 			= $order;
 			#$options->ar_fields 		= array('id','section_id','list_data','link');
-		
-			# Search string is expected rawurlencoded — URL-encode according to RFC 3986 
+
+			# Search string is expected rawurlencoded — URL-encode according to RFC 3986
 			# q scape
 			if ($options->q!==false) {
 				$options->q = web_data::get_db_connection()->real_escape_string($options->q);
@@ -3160,11 +3161,11 @@ class web_data {
 				}
 				# dead_at_prison
 				if (!empty($json_data->filters->dead_at_prison) && is_bool($json_data->filters->dead_at_prison)) {
-					if ($json_data->filters->dead_at_prison===true) {						
+					if ($json_data->filters->dead_at_prison===true) {
 						$ar_filter[] = "dead_at_prison = 1 ";
-					}else if ($json_data->filters->dead_at_prison===false) {						
+					}else if ($json_data->filters->dead_at_prison===false) {
 						$ar_filter[] = "dead_at_prison IS NULL ";
-					}					
+					}
 				}
 				# end_date . data format timestamp UNIX
 				if (!empty($json_data->filters->end_date)) {
@@ -3211,7 +3212,7 @@ class web_data {
 				if (!empty($json_data->filters->pub_year)) {
 					$ar_filter[] = "pub_year = ".$json_data->filters->pub_year;
 				}
-				# region . like 
+				# region . like
 				if (!empty($json_data->filters->region)) {
 					$ar_filter[] = "region LIKE '%\"".escape_string($json_data->filters->region)."\"%'";
 				}
@@ -3251,13 +3252,29 @@ class web_data {
 				if (!empty($json_data->filters->typology)) {
 					$ar_filter[] = "`typology` = '".$json_data->filters->typology."'";
 				}
+				# dada_mod
+				if (!empty($json_data->filters->dada_mod)) {
 
+					preg_match('/(>=|<=|>|<)(.*)/', $json_data->filters->dada_mod, $match);
+
+					if (isset($match[1]) && isset($match[2])) {
+
+						$operator 	= $match[1];
+						$date_value = $match[2];
+
+						$ar_filter[] = '`dada_mod` '.$operator.' \''.$date_value.'\'';
+					}else{
+						$ar_filter[] = '`dada_mod` REGEXP \''.$json_data->filters->dada_mod.'\'';
+					}
+				}
+
+				// sql_filter string
 				if (!empty($ar_filter)) {
 					$options->sql_filter = implode(' AND ', $ar_filter);
 				}
 				#dump($options->sql_filter, '$options->sql_filter ++ '.to_string());
-	
-			
+
+
 			# Offset
 			#if ($options->page_number>1) {
 			#	$options->offset = ($options->page_number-1) * $options->rows_per_page;
@@ -3305,14 +3322,14 @@ class web_data {
 					# Add filter
 					$search_options->sql_filter .= 'MATCH ('.$field_full_data.') AGAINST (\''.$options->q.'\' '.$options->search_modifier.')';
 				}
-				# sql_filter		
-				if ($options->sql_filter!==false) {					
+				# sql_filter
+				if ($options->sql_filter!==false) {
 					if (!empty($options->q)) {
 						$search_options->sql_filter .= ' AND (' . $options->sql_filter .')';
 					}else{
 						$search_options->sql_filter .= $options->sql_filter;
 					}
-				}				
+				}
 
 				if( !empty($options->q) && empty($options->order) ) {
 					$options->order = "relevance DESC";
@@ -3325,7 +3342,7 @@ class web_data {
 						$options->order .= ', sort_id ASC';
 					}
 
-				$search_options->lang 		= $options->lang;				
+				$search_options->lang 		= $options->lang;
 				$search_options->order 		= $options->order;
 				$search_options->limit 		= $options->rows_per_page;
 				$search_options->offset 	= $options->offset;
@@ -3333,7 +3350,7 @@ class web_data {
 
 			$rows_data = (object)web_data::get_rows_data( $search_options );
 				#dump($rows_data, ' $rows_data ++ '.to_string($search_options));
-				#dump($search_options, ' $search_options ++ '.to_string()); die();	
+				#dump($search_options, ' $search_options ++ '.to_string()); die();
 
 			if($rows_data->result===false) {
 				#$response->result = false;
@@ -3343,8 +3360,8 @@ class web_data {
 				$response->error_id   = 1;
 				return $response;
 			}
-	
-			# Custom output		
+
+			# Custom output
 			$ar_result_final = [];
 			foreach ($rows_data->result as $key => $row) {
 
@@ -3352,7 +3369,7 @@ class web_data {
 				$fields_data = json_decode($row['fields']);
 
 				$row_formated = array();
-				
+
 				$row_formated['id'] 	= $link->section_id; //$row['section_id'];
 				$row_formated['table'] 	= $link->table;
 
@@ -3405,8 +3422,8 @@ class web_data {
 				$options->order 	= null;
 				$options->operator 	= 'AND';
 				$options->lang 		= WEB_CURRENT_LANG_CODE;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}			
-		
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
 			$ar_monedas_filter = false;
 
 			// Filter
@@ -3417,7 +3434,7 @@ class web_data {
 					foreach ($options->ar_query as $key => $value_obj) {
 
 						$current_value = addslashes($value_obj->value);
-						$current_name  = $value_obj->name;					
+						$current_name  = $value_obj->name;
 
 						if (!isset($value_obj->eq)) {
 							$value_obj->eq = 'LIKE';
@@ -3427,7 +3444,7 @@ class web_data {
 
 							// FICHERO . SUBQUERY
 							case 'fichero':
-								$fichero_options = new stdClass();								
+								$fichero_options = new stdClass();
 									$fichero_options->table  	 	= 'fichero';
 									$fichero_options->ar_fields  	= ['section_id'];
 									$fichero_options->lang  	 	= $options->lang;
@@ -3436,16 +3453,16 @@ class web_data {
 									switch ($value_obj->eq) {
 										case '=':
 											// comma separated values case
-											$c_ar_parts  = (array)explode(',', $current_value);											
+											$c_ar_parts  = (array)explode(',', $current_value);
 											$c_ar_filter = [];
 											foreach ($c_ar_parts as $c_part_value) {
-												$c_ar_filter[] = '`'.$value_obj->name.'` = \''. trim($c_part_value) .'\'';												
+												$c_ar_filter[] = '`'.$value_obj->name.'` = \''. trim($c_part_value) .'\'';
 											}
 											if (count($c_ar_filter)>1) {
 												$fichero_options->sql_filter = ' -- fichero filter '.PHP_EOL.' ('.implode(' OR ', $c_ar_filter).')';
 											}else{
 												$fichero_options->sql_filter = ' -- fichero filter '.PHP_EOL.' '. implode(' OR ', $c_ar_filter);
-											}										
+											}
 											break;
 										default:
 											if ($value_obj->search_mode==='int') {
@@ -3464,10 +3481,10 @@ class web_data {
 									# Store for filter later
 									$ar_monedas_filter[] = $row->section_id;
 								}
-								
+
 								if (!empty($monedas_ar_filter)) {
 									$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
-								}								
+								}
 								break;
 
 							// TS_LUGAR_DE_HALLAZGO . SUBQUERY
@@ -3491,13 +3508,13 @@ class web_data {
 										break;
 								}
 								$web_data = self::get_rows_data($lugar_de_hallazgo_options);
-								
+
 								# Ahora buscamos en hallazgos, que es el que está conectado con ts_lugar_de_hallazgo
-								$hallazgos_filter = [];						
+								$hallazgos_filter = [];
 								foreach ($web_data->result as $lugar_de_hallazgo_value) {
 									$lugar_de_hallazgo_value = (object)$lugar_de_hallazgo_value;
 									$hallazgos_filter[] = '`tipologia_dato` LIKE \'%"'.$lugar_de_hallazgo_value->term_id.'"%\'';
-								}						
+								}
 								$hallazgos_options = new stdClass();
 									$hallazgos_options->table  	 	= 'hallazgos'; //'ts_cultura';
 									$hallazgos_options->ar_fields  	= ['section_id'];
@@ -3508,7 +3525,7 @@ class web_data {
 									#dump($web_data, ' $web_data ++ '.to_string($hallazgos_options));
 
 								# Ahora buscamos en fichero, que es el que está conectado con hallazgos
-								$fichero_filter = [];						
+								$fichero_filter = [];
 								foreach ($web_data->result as $hallazgos_value) {
 									$hallazgos_value = (object)$hallazgos_value;
 									$fichero_filter[] = '`hallazgo_dato` LIKE \'%"'.$hallazgos_value->section_id.'"%\'';
@@ -3558,7 +3575,7 @@ class web_data {
 									$ar_filter[$current_name][] = '`cultura` LIKE \'%"'.$row->term_id.'"%\''; // Filter for table tipos
 								}
 								break;
-							
+
 							// TIPOS . DIRECT
 							case 'tipos':
 							default:
@@ -3569,29 +3586,29 @@ class web_data {
 											return $element->name==='fecha_fin';
 										});
 										$ar_field = array_values($ar_field); # Reset keys
-										if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
+										if (!empty($ar_field) && !empty($ar_field[0]->value)) {
 											# Existe valor de fecha_inicio
 											$ar_filter[$current_name][] = '(CAST(`fecha_inicio` AS INT) >= '.$current_value.')';
-											
+
 										}else{
 											$ar_filter[$current_name][] = '((`fecha_fin` IS NULL AND `fecha_inicio` = '.$current_value.') OR (CAST(`fecha_fin` AS INT) >= '.$current_value.' AND CAST(`fecha_inicio` AS INT) <= '.$current_value.'))';
-										}								
-									
+										}
+
 									}elseif ($value_obj->name==='fecha_fin') {
-										
+
 										$ar_field = array_filter($options->ar_query,function($element){
 											return $element->name==='fecha_inicio';
 										});
 										$ar_field = array_values($ar_field); # Reset keys
-										if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
+										if (!empty($ar_field) && !empty($ar_field[0]->value)) {
 											# Existe valor de fecha_inicio
 											$ar_filter[$current_name][] = '(CAST(`fecha_fin` AS INT) <= '.$current_value.')';
-										
+
 										}else{
 											# No hay fecha de inicio
 											$ar_filter[$current_name][] = '(`fecha_fin` = '.$current_value.')';
-										}									
-									}							
+										}
+									}
 
 								}else{
 									switch ($value_obj->eq) {
@@ -3602,7 +3619,7 @@ class web_data {
 										default:
 											if ($value_obj->search_mode==='int') {
 												$ar_filter[$current_name][] = '`'.$value_obj->name."` = ".(int)$current_value;
-											}else{												
+											}else{
 												switch ($value_obj->name) {
 													case 'leyenda':
 														$filter  = "CONCAT_WS(' ', `leyenda_anverso`, `leyenda_reverso`) LIKE '%".trim($current_value)."%'";
@@ -3623,8 +3640,8 @@ class web_data {
 												}
 											}
 											break;
-									}//end switch ($value_obj->eq)																				
-								}					
+									}//end switch ($value_obj->eq)
+								}
 								break;
 						}//end switch ($value_obj->table)
 
@@ -3632,7 +3649,7 @@ class web_data {
 
 					// Overrides ar_monedas_filter when is received search for 'fichero' section_id
 					$ar_fichero_section_id = array_filter($options->ar_query, function($element){
-						return ($element->table === 'fichero' && $element->name === 'section_id'); 
+						return ($element->table === 'fichero' && $element->name === 'section_id');
 					});
 					if (!empty($ar_fichero_section_id)) {
 						$ar_monedas_filter = []; // reset
@@ -3644,21 +3661,21 @@ class web_data {
 					// Create final filter
 						$filter = ' section_id = \'invalid_value\' ';
 						$ar_filter_final = [];
-						foreach ($ar_filter as $current_name => $ar_value) {							
+						foreach ($ar_filter as $current_name => $ar_value) {
 							if (!empty($ar_value)) {
 								$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
-							}							
+							}
 						}
-							dump($ar_filter_final, ' ar_filter_final ++ '.to_string());				
+							dump($ar_filter_final, ' ar_filter_final ++ '.to_string());
 						if (!empty($ar_filter_final)) {
 							$filter = ' -- filter final '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
 						}
-					
+
 				}
 				debug_log(__METHOD__." filter ".to_string($filter), 'DEBUG');
 				#error_log('filter ++ : '.$filter);
-			
-			// Search		
+
+			// Search
 				$tipos_options = new stdClass();
 					$tipos_options->table  	 	= 'tipos';
 					$tipos_options->lang  	 	= $options->lang;
@@ -3666,7 +3683,7 @@ class web_data {
 					$tipos_options->offset 		= $options->offset;
 					$tipos_options->count 		= ($options->total!==false) ? false : $options->count;
 					$tipos_options->order 		= $options->order;
-					$tipos_options->sql_filter 	= $filter;				
+					$tipos_options->sql_filter 	= $filter;
 					$tipos_options->resolve_portals_custom = new stdClass();
 						$tipos_options->resolve_portals_custom->autoridad_dato = 'personalidades';
 						$tipos_options->resolve_portals_custom->catalogo_dato  = 'catalogo';
@@ -3679,7 +3696,7 @@ class web_data {
 					if ($options->total!==false) {
 						$web_data->total = $options->total;
 					}
-			
+
 			# Convert to object all row_tipo
 			$ar_tipos = [];
 			foreach ((array)$web_data->result as $key => $row_tipo) {
@@ -3707,7 +3724,7 @@ class web_data {
 					$fichero_options->lang  	 	= $options->lang;
 					$fichero_options->limit 		= 0;
 					$fichero_options->sql_filter 	= $filter;
-					$fichero_options->order 		= 'section_id ASC';					
+					$fichero_options->order 		= 'section_id ASC';
 					$fichero_options->resolve_portals_custom = new stdClass();
 						$fichero_options->resolve_portals_custom->imagen_anverso  = 'imagen';
 						$fichero_options->resolve_portals_custom->imagen_reverso  = 'imagen';
@@ -3719,11 +3736,11 @@ class web_data {
 				foreach ($fichero_web_data->result as $key => $value) {
 					$fichero_ar_rows[] = (object)$value;
 				}
-				
+
 				// Add resolved values
 				/*
 				if (!empty($fichero_web_data->result)) {
-					
+
 					foreach ($fichero_ar_rows as $ckey => $cvalue) {
 						if (empty($cvalue->bibliografia_dato)) {
 							$fichero_ar_rows[$ckey]->publicaciones = null;
@@ -3731,7 +3748,7 @@ class web_data {
 						}
 
 						$fichero_ar_rows[$ckey]->publicaciones = [];
-						
+
 						// Publicaciones add
 						$bibliografia_dato = (array)json_decode($cvalue->bibliografia_dato);
 						foreach ($bibliografia_dato as $cbkey => $current_biblio_id) {
@@ -3747,7 +3764,7 @@ class web_data {
 								$fichero_ar_rows[$ckey]->publicaciones[] = reset($rows_data_biblio->result);
 							}
 						}
-						
+
 						// Publicaciones add
 						#$bibliografia_dato  = $cvalue->bibliografia_dato;
 						#$ar_biblio 			= explode(',', $bibliografia_dato);
@@ -3755,7 +3772,7 @@ class web_data {
 						#foreach ($ar_biblio as $current_biblio_json) {
 						#	$json_data = (array)json_decode($current_biblio_json);
 						#	foreach ($json_data as $cbkey => $current_biblio_id) {
-						#		
+						#
 						#		$options_biblio = new stdClass();
 						#			$options_biblio->table  	 	= 'publicaciones';
 						#			$options_biblio->lang  	 		= $options->lang;
@@ -3771,22 +3788,22 @@ class web_data {
 						#}
 
 					}//end foreach ($fichero_ar_rows as $ckey => $cvalue)
-					#dump($fichero_ar_rows, ' fichero_ar_rows ++ '.to_string());			
+					#dump($fichero_ar_rows, ' fichero_ar_rows ++ '.to_string());
 				}
 				*/
 
 				// Add monedas
 				$row_tipo->monedas = $fichero_ar_rows;
 
-		
-				// Cultura add								
+
+				// Cultura add
 				if (!empty($row_tipo->cultura)) {
 
 					$cultura_dato = (array)json_decode($row_tipo->cultura);
-						#dump($cultura_dato, ' cultura_dato ++ '.to_string());	
+						#dump($cultura_dato, ' cultura_dato ++ '.to_string());
 					$ar_cultura   = array_filter($cultura_dato, function($element) use($cultura_section_tipo) {
 						return (strpos($element, $cultura_section_tipo)===0);
-					});								
+					});
 					if (!empty($ar_cultura)) {
 						$ar_filter_cultura = [];
 						foreach ($ar_cultura as $current_cultura_term_id) {
@@ -3801,11 +3818,11 @@ class web_data {
 							$options_cultura->limit 		= 0;
 						$rows_data_cultura = self::get_rows_data($options_cultura);
 							#dump($rows_data_cultura->result, '$rows_data_cultura->result ++ '.to_string());
-						# Replace row content				
+						# Replace row content
 						$row_tipo->cultura = $rows_data_cultura->result;
 					}
-				}			
-			
+				}
+
 			}//end foreach ($web_data->result as $key => $row_tipo)
 			#dump($web_data->result, '$web_data->result ++ '.to_string());
 
@@ -3818,7 +3835,7 @@ class web_data {
 				$response->total 	= isset($web_data->total) ? $web_data->total : null;
 				$response->msg 		= 'Ok. Request done!';
 
-			
+
 			return $response;
 		}//end search_tipos
 
@@ -3826,8 +3843,8 @@ class web_data {
 
 	/* IMAGE
 	----------------------------------------------------------------------- */
-	public static function get_image_data( $request_options ) {	
-		
+	public static function get_image_data( $request_options ) {
+
 		$options = new stdClass();
 			$options->section_id				= false;
 			$options->lang 						= WEB_CURRENT_LANG_CODE;
@@ -3839,12 +3856,12 @@ class web_data {
 
 		$response = new stdClass();
 			$response->result = false;
-			$response->msg 	  = 'Error. Request get_image_data failed';	
+			$response->msg 	  = 'Error. Request get_image_data failed';
 
 		$image = new image( $options->section_id, $fn_options=$options );
 		$image->load_data(); # Froce to load data
 			#dump($image, ' image ++ '.to_string());
-		
+
 
 		$response->result = $image;
 		$response->msg 	  = 'Ok. Request get_image_data done successfully';
@@ -3884,15 +3901,15 @@ class web_data {
 				$search_options->order 		= '`norder` ASC';
 			$data = self::get_rows_data($search_options);
 				#dump($data, ' data ++ '.to_string($search_options));
-		
-		$ar_data = $data->result;	
+
+		$ar_data = $data->result;
 			#dump($ar_data, ' ar_data ++ '.to_string($term_id));
 
 		foreach ((array)$data->result as $key => $value) {
 
 			$value 		= (object)$value;
 			$childrens 	= json_decode($value->childrens);
-						
+
 			if (!empty($childrens)) {
 
 				$childrens_options = clone $options;
@@ -3919,14 +3936,14 @@ class web_data {
 	*	Like: {
 	*		ar_calls : [
 	*			{ id : menu_all,
-	*			  options : options 
+	*			  options : options
 	*			}
 	*		]
 	*	}
 	* @return object $response
 	*/
 	public static function get_combi( $request_options ) {
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= __METHOD__ . ' Error. Request failed';
@@ -3934,9 +3951,9 @@ class web_data {
 		$ar_response = [];
 
 		// iterate all calls
-			foreach ($request_options->ar_calls as $call_obj) {				
+			foreach ($request_options->ar_calls as $call_obj) {
 
-				// call to local static method 
+				// call to local static method
 					$manager = new manager();
 					$current_response = $manager->manage_request($call_obj->options);
 
@@ -3944,7 +3961,7 @@ class web_data {
 					$current_response->id = $call_obj->id;
 
 				// store response
-					$ar_response[] = $current_response;								
+					$ar_response[] = $current_response;
 			}
 
 
