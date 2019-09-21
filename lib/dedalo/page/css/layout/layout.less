@@ -23,7 +23,7 @@
 		align-content: stretch;
 		flex-wrap: wrap;
 		flex-flow: column;
-		width: 100%;		
+		width: 100%;
 	}
 	.section_group_body_base {
 		margin: 0;
@@ -116,7 +116,7 @@
 	.section_record.list {
 		position: relative;
 		background-color: #f7f7f7;
-		display: grid;
+		//display: block;
 		width: 100%;
 		height: 100%;
 
@@ -143,15 +143,25 @@
 		}
 
 		>div {
+			//display: inline-block;
 			padding: 1em;
 			padding-left: 1em;
 			padding-right: 0;
-			//padding: 0;
 			flex: 1 0;
+			//padding: 0;
 			//outline: 1px solid #EAEAEA;
 
 			word-wrap: break-word;
 			overflow: hidden;
+
+			.component_autocomplete & {
+				display: inline-block;
+			}
+
+			&.info {
+				border-left: 1px solid #eaeaea;
+				margin-left: 1em;
+			}
 		}
 
 		>.breakdown {
