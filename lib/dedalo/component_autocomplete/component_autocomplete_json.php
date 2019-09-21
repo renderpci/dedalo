@@ -57,6 +57,7 @@
 
 			case 'list':
 				$dato 	= $this->get_dato();
+				$value 	= reset($this->get_dato()); // de momento !!	
 				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
 				break;
 		}
@@ -84,8 +85,7 @@
 					$current_data->parent_tipo 			= $tipo;
 					$current_data->parent_section_id 	= $section_id;
 					$data[] = $current_data;
-				}
-	
+				}	
 	
 		}//end if (!empty($dato))		
 	}//end if $options->get_data===true && $permissions>0

@@ -173,6 +173,8 @@ class dd_api {
 				// save the new data to the component
 					$component->Save();
 
+					$dato = $component->get_dato();
+
 				// element json
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 	= true;
@@ -676,7 +678,7 @@ class dd_api {
 
 
 			// smart remove data duplicates (!)
-				$data = self::smart_remove_data_duplicates($data);
+				#$data = self::smart_remove_data_duplicates($data);
 
 			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
 

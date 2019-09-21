@@ -1790,13 +1790,17 @@ abstract class common {
 				$layout_map_options->config_context_type 	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-
+			
 			foreach ($ar_locators as $current_locator) {
 
 				$section_id 	= $current_locator->section_id;
 				$section_tipo 	= $current_locator->section_tipo;
 
 				foreach ((array)$layout_map as $dd_object) {
+
+					if ($dd_object->section_tipo!==$section_tipo) {
+						continue; // prevents multisection duplicate items
+					}
 
 					$dd_object 		= (object)$dd_object;
 					$current_tipo 	= $dd_object->tipo;

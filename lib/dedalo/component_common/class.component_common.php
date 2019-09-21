@@ -4652,11 +4652,12 @@ abstract class component_common extends common {
 		$lang 				= $this->get_lang();
 		$properties 		= $this->get_propiedades();
 		$with_lang_versions = $properties->with_lang_versions ?? false;
-
+		
 		switch ($changed_data->action) {
 			case 'insert':
 				$dato[$changed_data->key] = $changed_data->value;
 				$this->set_dato($dato);
+					dump($dato, ' dato ++ '.to_string());
 
 				break;
 			case 'update':
