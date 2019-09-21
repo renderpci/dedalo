@@ -141,6 +141,7 @@ class dd_api {
 		// get the context and data sended
 		$context 	= $json_data->context;
 		$data 		= $json_data->data;
+		$section_id	= $json_data->section_id;
 
 		//get the type of the dd_object that is calling to update
 		$context_type = $context->type;
@@ -152,7 +153,6 @@ class dd_api {
 					$model 			= $context->model;
 					$tipo 			= $context->tipo;
 					$section_tipo 	= $context->section_tipo;
-					$section_id 	= $data->section_id;
 					$lang 			= $context->lang;
 					$changed_data 	= $data->changed_data;
 
