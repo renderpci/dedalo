@@ -1,53 +1,54 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
 	print "<div class=\"wrap_component css_wrap_profile tooltip_active\" ";
+	print "data-tipo=\"{$tipo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print ">";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch($permissions) {
-			
-		case 0	:	
+
+		case 0	:
 				$html_content .= "";
-				break;				
-		
+				break;
+
 		default:
 				# COMPARISON OPERATORS
 				$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
-				
+
 				# SELECT
 				$html_content .= "<select class=\"css_profile\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\">";
-					
-					$html_content .= "<option value=\"\"> </option>";					
-					foreach ($ar_select_values as $key => $label) {						
+
+					$html_content .= "<option value=\"\"> </option>";
+					foreach ($ar_select_values as $key => $label) {
 						$html_content .= "<option value='$key'> {$label}</option>";
-					}					
-				$html_content .= "</select>";	
-				
+					}
+				$html_content .= "</select>";
+
 
 				# LOGICAL OPERATORS
 				$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-											
+
 	}
-	
+
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-	
+
 
 	# PRINT HTML
 	print $html_label;
-	print $html_content;	
+	print $html_content;
 
-	
+
 	print "</div>"; //wrap
 ?>
