@@ -21,12 +21,17 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$sqo_context = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $sqo_context);
+					$current_context = $this->get_structure_context($permissions, $sqo_context);
+					// add records_mode if not defined to properties
+					if (!isset($properties->source->records_mode)) {
+						$current_context->properties->source->records_mode = 'list';
+					}
+					$context[] = $current_context;
 
 				// subcontext from element layout_map items
 					$ar_subcontext = $this->get_ar_subcontext();
@@ -50,20 +55,20 @@
 		switch ($modo) {
 			case 'edit':
 				$dato 	= $this->get_dato();
-				$value 	= $this->get_dato_paginated();				
+				$value 	= $this->get_dato_paginated();
 				$limit 	= $this->pagination->limit ?? $properties->max_records ?? 10;
 
 				break;
 
 			case 'list':
 				$dato 	= $this->get_dato();
-				$value 	= reset($this->get_dato()); // de momento !!	
+				$value 	= reset($this->get_dato()); // de momento !!
 				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
 				break;
 		}
 
 		if (!empty($dato)) {
-			
+
 			// data item
 				$item = $this->get_data_item($value);
 					$item->parent_tipo 			= $tipo;
@@ -77,7 +82,7 @@
 
 				$data[] = $item;
 
-			// subcontext data from layout_map items	
+			// subcontext data from layout_map items
 				$ar_subdata = $this->get_ar_subdata($value);
 
 			// subdata add
@@ -85,9 +90,9 @@
 					$current_data->parent_tipo 			= $tipo;
 					$current_data->parent_section_id 	= $section_id;
 					$data[] = $current_data;
-				}	
-	
-		}//end if (!empty($dato))		
+				}
+
+		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 
 

@@ -1568,7 +1568,12 @@ abstract class common {
 			// 3 . From structure (fallback)
 			if (!isset($parent)) {
 				// default
-				$parent = $this->RecordObj_dd->get_parent();
+				if($called_model === 'section'){
+					$parent = $this->get_section_tipo();
+				}else{
+					$parent = $this->RecordObj_dd->get_parent();
+				}
+
 			}
 
 		// tools
@@ -1790,7 +1795,7 @@ abstract class common {
 				$layout_map_options->config_context_type 	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-			
+
 			foreach ($ar_locators as $current_locator) {
 
 				$section_id 	= $current_locator->section_id;
