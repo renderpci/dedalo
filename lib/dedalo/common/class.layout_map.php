@@ -271,6 +271,7 @@ class layout_map {
 				}
 			}//end if (!isset($layout_map))
 
+
 		// Remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
 			if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
 				$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);

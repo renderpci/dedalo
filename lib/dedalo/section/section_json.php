@@ -20,7 +20,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
 					$context[] = $this->get_structure_context($permissions, $sqo_context=false);
@@ -41,22 +41,22 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		
-			
+
+
 		// subdata
-		// default locator build with this section params			
+		// default locator build with this section params
 			 $section_id 	= $this->get_section_id();
 			 $section_tipo 	= $this->get_tipo();
-			 
+
 			 $locator = new locator();
 			 	$locator->set_section_tipo($section_tipo);
 			 	$locator->set_section_id($section_id);
-			 
+
 			 $value = [$locator];
-			 
+
 		// subdata add
 			 $data = $this->get_ar_subdata($value);
-		
+
 	}// end if $permissions > 0
 
 

@@ -9,6 +9,7 @@
 	$section_tipo 		= $this->section_tipo;
 	$lang 				= $this->lang;
 	$tipo 				= $this->get_tipo();
+	$properties 		= $this->get_propiedades();
 
 
 
@@ -27,6 +28,9 @@
 					$current_context = $this->get_structure_context($permissions);
 					// add records_mode if not defined to properties
 					if (!isset($properties->source->records_mode)) {
+						if (!isset($properties->source)) {
+							$properties->source = new stdClass();
+						}
 						$current_context->properties->source->records_mode = 'list';
 					}
 					$context[] = $current_context;
