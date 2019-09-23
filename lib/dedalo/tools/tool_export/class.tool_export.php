@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS TOOL_EXPORT
-	
-	Export selected records in different formats using section_list as base fields reference 
-	
+
+	Export selected records in different formats using section_list as base fields reference
+
 */
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 
@@ -21,7 +21,7 @@ class tool_export extends tool_common {
 	public static $quotes 	 		  = '"';
 	public static $delimiter 		  = ';';
 	public static $internal_separator = PHP_EOL;
-	
+
 
 
 	/**
@@ -41,9 +41,9 @@ class tool_export extends tool_common {
 		}
 
 		$this->section_tipo = $section_tipo;
-		
+
 		# Fix current component/section
-		#$this->section_obj = $section_obj;		
+		#$this->section_obj = $section_obj;
 
 		# Fix modo
 		$this->modo = $modo;
@@ -63,16 +63,16 @@ class tool_export extends tool_common {
 	* SET_UP
 	*/
 	static function set_up() {
-		
-		$var_requested = common::get_request_var('button_tipo');		
+
+		$var_requested = common::get_request_var('button_tipo');
 		if (!empty($var_requested)) {
 			$button_obj  = new button_import($var_requested, null, $this->section_tipo);
 			$propiedades = json_handler::decode($button_obj->RecordObj_dd->get_propiedades());
 
-			// in process..		
+			// in process..
 		}
 
-		return true;	
+		return true;
 	}//end set_up
 
 
@@ -82,11 +82,11 @@ class tool_export extends tool_common {
 	* @return array|null
 	*/
 	public function get_records( $layout_map ) {
-	
+
 		if (!empty($this->ar_records)) {
 			return $this->ar_records;
 		}
-		
+
 		#
 		# SEARCH_OPTIONS
 		$section_tipo 		  = $this->section_tipo;
@@ -96,30 +96,30 @@ class tool_export extends tool_common {
 		if ($saved_search_options===false) {
 			trigger_error("Sorry, search_options [$search_options_id] not exits in section_records::get_search_options");
 			return null;
-		}		
-		
+		}
+
 		# SEARCH_QUERY_OBJECT . Add search_query_object to options
-		$search_query_object = $saved_search_options->search_query_object;	
+		$search_query_object = $saved_search_options->search_query_object;
 
 
 		# SELECT. layout map is used to set columns select in sesearch_query_object
 		$ar_component_tipo = reset($layout_map);
 		$search_query_object->select = []; // reset
 		foreach ($ar_component_tipo as $key => $component_tipo) {
-			
+
 			$path = search_development2::get_query_path($component_tipo, $section_tipo, false);
 
 			$path_element = new stdClass();
 				$path_element->path = $path;
 
 			# Parse current path with component and add
-			$search_query_object->select[] = search_development2::component_parser_select($path_element);			
+			$search_query_object->select[] = search_development2::component_parser_select($path_element);
 		}
 
 		# Reset search limit and offset
 		$search_query_object->limit  = 0;
 		$search_query_object->offset = 0;
-		
+
 		# SEARCH
 		$search_develoment2  = new search_development2($search_query_object);
 		$rows_data 		 	 = $search_develoment2->search();
@@ -142,7 +142,7 @@ class tool_export extends tool_common {
 		$quotes 			= tool_export::$quotes;
 		$delimiter			= tool_export::$delimiter;
 		$internal_separator = tool_export::$internal_separator;
-	
+
 		if (is_null($ar_records)) {
 			// Calculate records when not are already received
 			$ar_records = $this->get_records();
@@ -150,14 +150,14 @@ class tool_export extends tool_common {
 		#dump($ar_records, ' ar_records ++ '.to_string());
 
 		$ar_records_deep_resolved=array();
-		foreach ((array)$ar_records as $key => $row) {			
+		foreach ((array)$ar_records as $key => $row) {
 			$section_id = $row->section_id;
 			$ar_records_deep_resolved[$section_id] = $this->deep_resolve_row($row);
 		}
-		#dump($ar_records_deep_resolved, ' $ar_records_deep_resolved ++ '.to_string());	
+		#dump($ar_records_deep_resolved, ' $ar_records_deep_resolved ++ '.to_string());
 		#$memory_usage = dd_memory_usage();
 		#dump($memory_usage, ' memory_usage deep_resolve_row ++ '.to_string());
-		
+
 
 		// breakdown
 			$breakdown = ($this->data_format==='breakdown' || $this->data_format==='breakdown_html') ? true : false;
@@ -165,24 +165,24 @@ class tool_export extends tool_common {
 		switch ($format) {
 			// CSV
 			case 'csv':
-				$export_str_data 	= '';											
-				
+				$export_str_data 	= '';
+
 				// header tipos calculate looking all rows different columns
 					$header_tipos = [];
 					foreach ($ar_records_deep_resolved as $key => $row) {
 						#dump($row, ' row ++ '.to_string());
 						foreach ($row as $item) {
-							
+
 							// search for look if already exists
 								$ar_found = array_filter($header_tipos, function($element) use($item){
 									return $element->component_tipo===$item->component_tipo
 										&& $element->section_tipo===$item->section_tipo
 										&& $element->from_component_tipo===$item->from_component_tipo
 										&& $element->from_section_tipo===$item->from_section_tipo;
-										
+
 								});
 							// if not already exists, add
-								if (empty($ar_found)) {									
+								if (empty($ar_found)) {
 									// add
 										$h_item = new stdClass();
 											$h_item->component_tipo 	  = $item->component_tipo;
@@ -203,24 +203,24 @@ class tool_export extends tool_common {
 						if ($current_tipo!=='id' && $current_tipo!=='section_id' && $current_tipo!=='section_tipo') {
 							# Resolve name
 							if($this->data_format==='dedalo') {
-								
+
 								$column_name = trim($current_tipo);
-							
+
 							}else{
 
 								#if ($h_item->section_tipo!==$section_tipo) {
 									$column_name  = '';
 									// from_section label
-										if ($h_item->from_section_tipo!==$h_item->section_tipo && $h_item->from_section_tipo!==$section_tipo) {											
+										if ($h_item->from_section_tipo!==$h_item->section_tipo && $h_item->from_section_tipo!==$section_tipo) {
 											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator ;
 										}
 									// section label
 										#$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator ;
 
 									// from_component label
-										if ($h_item->from_component_tipo!==$h_item->component_tipo) {											
+										if ($h_item->from_component_tipo!==$h_item->component_tipo) {
 											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_component_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator ;
-										}									
+										}
 									// component label
 										$column_name .= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 								#}else{
@@ -234,16 +234,16 @@ class tool_export extends tool_common {
 							}
 						}else{
 							$column_name = $current_tipo;
-							
+
 							// from_section label
 								if ($h_item->from_section_tipo!==$h_item->section_tipo) {
 									$column_name = RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . $internal_separator . $column_name;
-								}							
+								}
 						}
-						
+
 						// remove the html tags
 							$column_name = strip_tags($column_name);
-						
+
 						// normalize_quotes
 							$column_name = self::normalize_quotes($column_name);
 
@@ -258,7 +258,7 @@ class tool_export extends tool_common {
 
 				// build rows. parse and fill empty columns
 					foreach ($ar_records_deep_resolved as $section_id => $row) {
-						
+
 						$ar_columns = [];
 						$ar_columns_keys = [];
 						foreach ($header_tipos as $h_key => $h_item) {
@@ -312,17 +312,17 @@ class tool_export extends tool_common {
 						#dump($ar_columns, ' ar_columns ++ '.to_string());
 						#dump(count($ar_columns), 'count($ar_columns) ++ '.to_string());
 						#dump(count($header_tipos), 'count($header_tipos) ++ '.to_string());
-						#dump($ar_columns_keys, ' ar_columns_keys ++ '.to_string());						
-						
+						#dump($ar_columns_keys, ' ar_columns_keys ++ '.to_string());
+
 						// breakdown
 							if ($breakdown===true) {
-								// group ar_columns_keys by value key. iterate grouped items and write row columns 
-									$ar_group = tool_export::group_by($ar_columns_keys, 'value_key');								
+								// group ar_columns_keys by value key. iterate grouped items and write row columns
+									$ar_group = tool_export::group_by($ar_columns_keys, 'value_key');
 									foreach ($ar_group as $_ar_items) {
 
 										$ar_cells = [];
 										foreach ($header_tipos as $h_key => $h_item) {
-										
+
 											$ar_found = array_filter($_ar_items, function($element) use($h_item){
 												return $element['header_tipo']===$h_item->component_tipo;
 											});
@@ -339,7 +339,7 @@ class tool_export extends tool_common {
 												if ($this->data_format==='breakdown') {
 													$current_value = strip_tags($current_value);
 												}
-											
+
 											// add
 												$ar_cells[] = $current_value;
 										}
@@ -353,13 +353,13 @@ class tool_export extends tool_common {
 							}
 					}
 				break;
-			
+
 			default:
 				trigger_error("Sorry. Format not implemented yet");
 				break;
 		}
-		
-		
+
+
 		return (string)$export_str_data;
 	}//end export_to
 
@@ -370,8 +370,8 @@ class tool_export extends tool_common {
 	* @return string $ISO_result_string
 	*/
 	public function change_encoding_from_uft8($result_string, $encoding='ISO-8859-1') {
-		$ISO_result_string= mb_convert_encoding($result_string, $encoding, 'UTF-8'); // ISO-8859-1 default 
-		
+		$ISO_result_string= mb_convert_encoding($result_string, $encoding, 'UTF-8'); // ISO-8859-1 default
+
 		return $ISO_result_string;
 	}//end change_encoding_from_uft8
 
@@ -387,14 +387,14 @@ class tool_export extends tool_common {
 		#dump($record, ' record ++ '.to_string());
 
 		$quotes = tool_export::$quotes;
-		
+
 
 		$row_deep_resolved=array();
 		foreach ($record as $key => $value) {
 
 			$component_tipo  = $key;
-			$section_tipo 	 = $record->section_tipo;		
-			
+			$section_tipo 	 = $record->section_tipo;
+
 			if ($key==='id' || $key==='section_tipo') continue;
 			if ($key==='section_id') {
 				if($this->data_format==='dedalo') {
@@ -406,14 +406,14 @@ class tool_export extends tool_common {
 						$row_item->from_component_tipo	= $component_tipo;
 						$row_item->from_section_tipo 	= $section_tipo;
 						$row_item->value 				= $current_value;
-				
+
 					$row_deep_resolved[] = $row_item;
-				}				
+				}
 				continue;
 			}
-						
-			$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($key,true);			
-			$parent 		 = $record->section_id;			
+
+			$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($key,true);
+			$parent 		 = $record->section_id;
 			$component 	     = component_common::get_instance($modelo_name,
 															  $component_tipo,
 															  $parent,
@@ -422,8 +422,8 @@ class tool_export extends tool_common {
 															  $section_tipo,
 															  false);
 			if($this->data_format==='dedalo') {
-				
-				// Full source untouched dato				
+
+				// Full source untouched dato
 					$valor_export 	 = $this->get_valor_dedalo($component);
 
 				// escape delimiter for avoid breaks
@@ -438,15 +438,15 @@ class tool_export extends tool_common {
 						$row_item->from_component_tipo	= $component_tipo;
 						$row_item->from_section_tipo 	= $section_tipo;
 						$row_item->value 				= $current_value;
-				
+
 					$row_deep_resolved[] = $row_item;
 			}else{
 
 				// call to component for get valor export
-					$valor_export = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );					
+					$valor_export = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
 					#dump($valor_export, ' valor_export ++ '.to_string());
 					#debug_log(__METHOD__." valor_export $modelo_name - $component_tipo - $parent +  valor_export: ".to_string($valor_export), logger::DEBUG);
-					#$row_deep_resolved = $valor_export;					
+					#$row_deep_resolved = $valor_export;
 
 				// add merged
 					$resolve_inside = true;
@@ -460,8 +460,8 @@ class tool_export extends tool_common {
 																												  $valor_export,
 																												  false));
 					}
-			}			
-			
+			}
+
 
 		}//end foreach ($record as $component_tipo => $value) {
 		#dump($row_deep_resolved, ' row_deep_resolved ++ '.to_string());
@@ -476,7 +476,7 @@ class tool_export extends tool_common {
 	* @return array $ar_values
 	*/
 	public static function recursive_value_resolve($component_tipo, $section_tipo, $from_section_tipo, $from_component_tipo, $valor_export, $is_recursion) {
-		
+
 		$ar_values = [];
 
 		// quotes . Start and end chars to delimit cell like '"' in "mhy value"
@@ -485,9 +485,9 @@ class tool_export extends tool_common {
 		$internal_separator = tool_export::$internal_separator;
 
 		if (is_array($valor_export)) {
-			
+
 			foreach ($valor_export as $item) {
-				
+
 				if (is_array($item->value)) {
 
 					// Recursion resolve
@@ -497,22 +497,22 @@ class tool_export extends tool_common {
 																								  $item->from_component_tipo,
 																								  $item->value,
 																								  true));
-				
+
 				}else{
-					
-					// vertical format 
+
+					// vertical format
 						$ar_found = array_filter($ar_values, function($element) use($item){
 							return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo && $element->from_component_tipo===$item->from_component_tipo;
-						});					
+						});
 						if (!empty($ar_found)) {
 
 							// Update existing object value mixed with new
 								$found_obj 			= reset($ar_found);
-								#$current_value 	= $found_obj->value . $internal_separator . self::format_valor_csv_export_string($item->value);								
+								#$current_value 	= $found_obj->value . $internal_separator . self::format_valor_csv_export_string($item->value);
 								$current_value 		= is_array($found_obj->value) ? $found_obj->value : array($found_obj->value);
 								$current_value[] 	= self::format_valor_csv_export_string($item->value);
 								$found_obj->value 	= $current_value;
-						
+
 						}else{
 
 							// create new and add
@@ -527,24 +527,24 @@ class tool_export extends tool_common {
 								$ar_values[] = $row_item;
 						}
 				}
-			
+
 			}//end foreach ($valor_export as $item)
-			
+
 		}else{
-			
+
 			// vertical format
 				$ar_found = array_filter($ar_values, function($element) use($component_tipo, $from_section_tipo, $from_component_tipo){
 					return $element->component_tipo===$component_tipo && $element->from_section_tipo===$from_section_tipo && $element->from_component_tipo===$from_component_tipo;
-				});					
+				});
 				if (!empty($ar_found)) {
 
 					// Update existing object value mixed with new
-						$found_obj 			= reset($ar_found);						
+						$found_obj 			= reset($ar_found);
 						#$current_value 	= $found_obj->value . $internal_separator . self::format_valor_csv_export_string($valor_export);
 						$current_value 		= is_array($found_obj->value) ? $found_obj->value : array($found_obj->value);
 						$current_value[] 	= self::format_valor_csv_export_string($valor_export);
 						$found_obj->value 	= $current_value;
-				
+
 				}else{
 
 					// create new and add
@@ -580,7 +580,7 @@ class tool_export extends tool_common {
 		#$valor_export = strip_tags($valor_export);
 
 		// replace hard spaces
-			$valor_export = str_replace(['&nbsp;',"\xc2\xa0"], ' ', $valor_export);			
+			$valor_export = str_replace(['&nbsp;',"\xc2\xa0"], ' ', $valor_export);
 
 		// remove untranstaled tags
 			$valor_export = str_replace(['<mark>','</mark>'], '', $valor_export);
@@ -588,8 +588,8 @@ class tool_export extends tool_common {
 		// encode delimiter to avoid breaks
 			$valor_export 	 = str_replace(';','U+003B', $valor_export);
 
-		// csv normalize and scape quotes 		
-			$valor_export = self::escape_quotes($valor_export);		
+		// csv normalize and scape quotes
+			$valor_export = self::escape_quotes($valor_export);
 
 		return $valor_export;
 	}//end format_valor_csv_export_string
@@ -642,7 +642,7 @@ class tool_export extends tool_common {
 	* @return string
 	*/
 	public static function escape_quotes(string $str) {
-		
+
 		// normalize quotes
 			$str = self::normalize_quotes($str);
 
@@ -664,7 +664,7 @@ class tool_export extends tool_common {
 
 		// avoid break cell when csv parse. safe manage internal column separators
 			#$cell_value = str_replace(';', 'U+003B', $cell_value);
-		
+
 		// create final value inside csv quotes
 			$cell_value = $quotes . trim($cell_value) . $quotes;
 
@@ -694,15 +694,15 @@ class tool_export extends tool_common {
 
 		$component_name 				= get_class($component);
 		$ar_components_with_relations 	= component_relation_common::get_components_with_relations($component_name);
-		
+
 		if (in_array($component_name, $ar_components_with_relations)) {
-			
+
 			# Relations
 			if ($component_name==='component_relation_parent') {
 				$ar_valor = $component->get_dato_export();
 			}else{
 				$ar_valor = $component->get_dato();
-			}			
+			}
 
 		}else{
 
@@ -715,28 +715,28 @@ class tool_export extends tool_common {
 				}
 			*/
 			#}else{
-				
+
 				$ar_valor = [];
-				
+
 				$ar_langs = common::get_ar_all_langs();
 				# Add nolan as lang
 				$ar_langs[] = DEDALO_DATA_NOLAN;
 				foreach ($ar_langs as $current_lang) {
-					
+
 					$dato = $section->get_component_dato($tipo, $current_lang, $lang_fallback=false);
 					if (!empty($dato)) {
 						$ar_valor[$current_lang] = $dato;
 					}
 				}
-				#dump($ar_valor, ' $ar_valor ++ '.to_string());				
+				#dump($ar_valor, ' $ar_valor ++ '.to_string());
 				#dump($valor_dedalo, ' $valor_dedalo ++ '.to_string());
 			#}
 		}
 
 		if (!empty($ar_valor)) {
 			$valor_dedalo = json_encode($ar_valor, JSON_UNESCAPED_UNICODE);
-		}		
-		
+		}
+
 
 		return (string)$valor_dedalo;
 	}//end get_valor_dedalo
@@ -749,7 +749,7 @@ class tool_export extends tool_common {
 	* Get all section fields
 	*/
 	public function get_ar_columns() {
-		
+
 		$section_tipo 			 = $this->section_tipo;
 		$ar_modelo_name_required = array('component');
 
@@ -761,10 +761,19 @@ class tool_export extends tool_common {
 
 			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			#if($modelo_name=='component_section_id') continue; # Skip component_section_id (is fixed data in export)
-			
+
 			$name = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 			$ar_columns[$tipo] = $name;
 		}
+
+		// aditional section info fields. dd196
+			$parent_tipo 	= DEDALO_SECTION_INFO_SECTION_GROUP;
+			$RecordObj_dd 	= new RecordObj_dd($parent_tipo);
+			$childrens 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($parent_tipo, 'component_', 'children', $search_exact=false);
+			foreach ($childrens as $current_tipo) {
+				$name = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+				$ar_columns[$current_tipo] = $name;
+			}
 
 		return $ar_columns;
 	}//end get_ar_columns
@@ -780,7 +789,7 @@ class tool_export extends tool_common {
 		if (is_string($columns)) {
 			$columns = json_decode($columns);
 		}
-		
+
 		$layout_map=array();
 		foreach ($columns as $tipo => $value) {
 			$layout_map[$section_tipo][] = $tipo;
@@ -802,17 +811,17 @@ class tool_export extends tool_common {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
-		
+
 		$section_tipo	= $this->section_tipo;
 		$label 			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 		$label 			= self::normalize_name($label);
 		$filename 		= 'exported_'.$variant.''.$label.'_'.navigator::get_user_id().'-'.$section_tipo.'.'.$extension;
 
-		#$result_string  = str_replace('U+003B', ';', $result_string);	
-		
+		#$result_string  = str_replace('U+003B', ';', $result_string);
+
 		$target_dir 	= DEDALO_TOOL_EXPORT_FOLDER_PATH;
 		if( !is_dir($target_dir) ) {
-			if(!mkdir($target_dir, 0777,true)) throw new Exception("Error on read or create directory. Permission denied \"$target_dir\" (1)");						
+			if(!mkdir($target_dir, 0777,true)) throw new Exception("Error on read or create directory. Permission denied \"$target_dir\" (1)");
 		}
 		file_put_contents( $target_dir.'/'.$filename, $result_string);
 
@@ -833,7 +842,7 @@ class tool_export extends tool_common {
 	*/
 	public static function normalize_name( $str ) {
 
-		$str = strip_tags($str); 
+		$str = strip_tags($str);
 	    $str = preg_replace('/[\r\n\t ]+/', ' ', $str);
 	    $str = preg_replace('/[\"\*\/\:\<\>\?\'\|]+/', ' ', $str);
 	    $str = strtolower($str);
@@ -858,7 +867,7 @@ class tool_export extends tool_common {
 
 		if (empty($delimiter)) {
 			$delimiter = tool_export::$delimiter;
-		}	
+		}
 
 		$html='';
 
@@ -868,18 +877,18 @@ class tool_export extends tool_common {
 		if(SHOW_DEBUG===true) {
 			$table_html .= "<div class=\"caption no-print\">TABLE FROM: $file</div>";
 		}
-		$table_html .= "<table class=\"table_csv\">\n\n";		
+		$table_html .= "<table class=\"table_csv\">\n\n";
 		ini_set('auto_detect_line_endings',TRUE);
-		$f = fopen($file, "r");			
-		$i=0; while (($line = fgetcsv($f, 300000, $delimiter)) !== false) {			
-				
+		$f = fopen($file, "r");
+		$i=0; while (($line = fgetcsv($f, 300000, $delimiter)) !== false) {
+
 				$table_html .= '<tr>';
 				foreach ($line as $cell) {
 					$table_html .= ($header && $i===0) ? '<th>' : '<td>';
-					$cell=nl2br($cell);					
-					#$cell=htmlspecialchars($cell); // htmlspecialchars_decode($cell);					
+					$cell=nl2br($cell);
+					#$cell=htmlspecialchars($cell); // htmlspecialchars_decode($cell);
 					#$cell = str_replace("\t", " <blockquote> </blockquote> ", $cell);
-					
+
 					// images . Replace images url to html img tags
 						$regex = '/https?\:\/\/[^\\" ]+.(jpg|svg)/i';
 						$cell  = preg_replace($regex, "<img src=\"$0\"/>", $cell);
@@ -892,14 +901,14 @@ class tool_export extends tool_common {
 
 					// remove closing quotes
 						$cell = trim($cell,'"');
-					
+
 					$table_html .= $cell;
 					$table_html .= ($header && $i==0) ? '</th>' : '</td>';
 				}
 				$table_html .= "</tr>\n";
-				
+
 				$i++;
-		}		
+		}
 		fclose($f);
 		ini_set('auto_detect_line_endings',FALSE);
 		$table_html .= "\n</table>";
@@ -931,16 +940,16 @@ class tool_export extends tool_common {
 	* @return array $result
 	*/
 	public static function group_by($array, $key) {
-		
+
 		$result = array();
 		foreach($array as $val) {
 			$result[$val[$key]][] = $val;
 		}
 
-		return $result;							
+		return $result;
 	}//end group_by
 
 
-	
+
 }//end class
 ?>

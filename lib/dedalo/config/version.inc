@@ -1605,6 +1605,10 @@
 		Fix search error on having searches (left join keys are more reliables now)
 
 
+	Valencia 23-09-2019 5.4.88
+		Add tool export section info components
+
+
 
 
 	WORK IN PROGRESS
@@ -1626,12 +1630,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.86';
+	$DEDALO_VERSION = '5.4.88';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-09-2019');
+	define('DEDALO_BUILD'	, '23-09-2019');
 
 
 	/*
