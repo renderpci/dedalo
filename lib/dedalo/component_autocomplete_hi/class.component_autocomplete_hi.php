@@ -5,7 +5,7 @@
 *
 */
 class component_autocomplete_hi extends component_relation_common {
-	
+
 
 	# relation_type
 	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
@@ -28,11 +28,11 @@ class component_autocomplete_hi extends component_relation_common {
 
 
 	/**
-	* GET VALOR 
+	* GET VALOR
 	* Get resolved string representation of current tesauro value
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $separator='<br>' ) {
-		
+
 		$dato = $this->get_dato();
 
 		if ( empty($dato) ) {
@@ -44,11 +44,11 @@ class component_autocomplete_hi extends component_relation_common {
 		}
 
 		if(!is_array($dato)) return "Sorry, type:" .gettype($dato). " not supported yet (Only array format)";
-		
+
 		if (isset($this->ar_valor_resolved)) {
-			
+
 			$ar_valor = $this->ar_valor_resolved;
-		
+
 		}else{
 
 			# lang never must be DEDALO_DATA_NOLAN
@@ -62,13 +62,13 @@ class component_autocomplete_hi extends component_relation_common {
 			if(SHOW_DEBUG===true) {
 				#dump($propiedades, ' propiedades ++ '.to_string());
 				#dump($show_parents, ' show_parents ++ '.to_string());
-				#$show_parents = false; 
-			}			
-			
-	
+				#$show_parents = false;
+			}
+
+
 			$ar_valor = array();
 			foreach ($dato as $key => $current_locator) {
-			
+
 				# $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false )
 				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents); // , ['rsc85','rsc86']
 				#dump($current_valor, ' current_valor ++ '.to_string()); break;
@@ -76,7 +76,7 @@ class component_autocomplete_hi extends component_relation_common {
 				#
 				# REMOVE TAGS FROM NON TRANSLATED TERMS
 				# $current_valor = strip_tags($current_valor);
-				
+
 				$current_locator_string 			= json_encode($current_locator);
 				$ar_valor[$current_locator_string]  = $current_valor;
 
@@ -84,14 +84,14 @@ class component_autocomplete_hi extends component_relation_common {
 
 			$this->ar_valor_resolved = $ar_valor;
 		}
-		
+
 
 		if ($format==='array') {
 			$valor = $ar_valor;
 		}else{
 			$valor = implode($separator, $ar_valor);
 		}
-	
+
 		return $valor;
 	}//end get_valor
 
@@ -103,7 +103,7 @@ class component_autocomplete_hi extends component_relation_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
@@ -129,14 +129,14 @@ class component_autocomplete_hi extends component_relation_common {
 
 		$dato = $this->get_dato();
 		if (!empty($dato)) {
-			
+
 			$relations_search_value = [];
-		
-			foreach ((array)$dato as $key => $current_locator) {			
+
+			foreach ((array)$dato as $key => $current_locator) {
 
 				$section_id 	= $current_locator->section_id;
 				$section_tipo 	= $current_locator->section_tipo;
-				
+
 				$parents_recursive = component_relation_parent::get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false);
 					#dump($parents_recursive, ' parents_recursive ++ '."$section_id, $section_tipo");
 				foreach ($parents_recursive as $key => $parent_locator) {
@@ -149,7 +149,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 					if (!in_array($locator, $relations_search_value)) {
 						$relations_search_value[] = $locator;
-					}					
+					}
 				}
 			}
 		}
@@ -163,7 +163,7 @@ class component_autocomplete_hi extends component_relation_common {
 	* GET_TERMINOID_BY_LOCATOR
 	* @param object $locator
 	* @return string $terminoID
-	*/ 
+	*/
 	public static function get_terminoID_by_locator( $locator ) {
 
 		if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
@@ -174,7 +174,7 @@ class component_autocomplete_hi extends component_relation_common {
 		$section_tipo = $locator->section_tipo;
 		$section_id   = $locator->section_id;
 		$terminoID 	  = substr($section_tipo,0,strlen($section_tipo)-1).$section_id;
-		
+
 		return (string)$terminoID;
 	}//end get_terminoID_by_locator
 
@@ -185,11 +185,11 @@ class component_autocomplete_hi extends component_relation_common {
 	* @return string|null
 	*/
 	public function get_source_mode() {
-		
+
 		# COMPONENT PROPIEDADES VAR
 		$propiedades = $this->get_propiedades();
 
-		if ( isset($propiedades->jer_tipo) ) {			
+		if ( isset($propiedades->jer_tipo) ) {
 			# TEMPORAL
 			debug_log(__METHOD__." Deprecated source mode format. Please use new format like 'propiedades->source->mode' ".to_string(), logger::ERROR);
 			return 'jer_tipo';
@@ -205,7 +205,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 
 	/**
-	* GER_AR_LINK_FIELDS 
+	* GER_AR_LINK_FIELDS
 	*/
 	public function ger_ar_link_fields(){
 		$ar_link_fields = array();
@@ -221,14 +221,14 @@ class component_autocomplete_hi extends component_relation_common {
 				$modelo_name = RecordObj_dd::get_termino_by_tipo($tipo_modelo,null,true);
 
 				$ar_link_fields[$modelo_name] = $current_link_fields;
-			}			
+			}
 		}
 		//dump($ar_link_fields,'$ar_link_fields');
 
 		return $ar_link_fields;
 	}//END ger_ar_link_fields
 
-	
+
 
 	/**
 	* GET_HIERARCHY_SECTIONS_FROM_TYPES
@@ -236,14 +236,14 @@ class component_autocomplete_hi extends component_relation_common {
 	* @return array $hierarchy_sections_from_types
 	*/
 	public static function get_hierarchy_sections_from_types( $hierarchy_types ) {
-		
+
 		$hierarchy_sections_from_types = array();
 
-		
-		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
-		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;		
 
-	
+		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
+		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
+
+
 		$ar_filter = [];
 		# Active
 		$active_locator = new locator();
@@ -284,9 +284,9 @@ class component_autocomplete_hi extends component_relation_common {
 				]
 			}';
 		}//end foreach ((array)$hierarchy_types as $key => $value)
-		
+
 		$filter = implode(',',$ar_filter);
-		
+
 		$search_query_object = json_decode('
 			{
 			  "id": "get_hierarchy_sections_from_types",
@@ -332,7 +332,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 		/* OLD WAY
 		foreach ((array)$hierarchy_types as $tipology_section_id) {
-		
+
 			#
 			# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
 			$search_hierarchies_options = area_thesaurus::get_options_for_search_hierarchies(DEDALO_HIERARCHY_TYPES_SECTION_TIPO, $tipology_section_id);
@@ -347,7 +347,7 @@ class component_autocomplete_hi extends component_relation_common {
 					#dump($target_section_tipo, ' target_section_tipo ++ '.to_string());
 				if (is_array($target_section_tipo)) {
 					$hierarchy_sections_from_types[] = reset($target_section_tipo);
-				}				
+				}
 			}
 		}
 		dump($hierarchy_sections_from_types, ' hierarchy_sections_from_types ++ '.to_string()); */
@@ -356,7 +356,7 @@ class component_autocomplete_hi extends component_relation_common {
 		foreach ($result->ar_records as $key => $row) {
 			$hierarchy_sections_from_types[] = $row->{$target_section_tipo};
 		}
-		
+
 
 		return (array)$hierarchy_sections_from_types;
 	}//end get_hierarchy_sections_from_types
@@ -378,9 +378,9 @@ class component_autocomplete_hi extends component_relation_common {
 		foreach ((array)$hierarchy_types as $current_type) {
 			$sections_from_types = component_autocomplete_hi::get_hierarchy_sections_from_types( $current_type );
 			$hierarchy_sections_from_types = array_merge($hierarchy_sections_from_types, $sections_from_types);
-		}		
+		}
 		#dump($hierarchy_sections_from_types, ' hierarchy_sections_from_types ++ '.to_string($hierarchy_types)); #die();
-		
+
 		# Add hierarchy_sections_from_types
 		foreach ($hierarchy_sections_from_types as $current_section_tipo) {
 			if (!in_array($current_section_tipo, $hierarchy_sections)) {
@@ -396,7 +396,7 @@ class component_autocomplete_hi extends component_relation_common {
 		}
 
 		$hierarchy_sections = array_values($hierarchy_sections);
-		
+
 
 		return (array)$hierarchy_sections;
 	}//end add_hierarchy_sections_from_types
@@ -424,7 +424,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$options->tipo				= null;
 			$options->filter_items 		= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		
+
 		# search_query_object (can be string or object)
 		$search_query_object = new stdClass();
 			$search_query_object->id 				= $options->id;
@@ -432,17 +432,17 @@ class component_autocomplete_hi extends component_relation_common {
 			$search_query_object->section_tipo 		= $options->section_tipo; // $hierarchy_sections;
 			$search_query_object->limit 			= (int)$options->limit;
 			$search_query_object->distinct_values 	= $options->distinct_values;
-			
-			// filter 
+
+			// filter
 				$search_query_object->filter = new stdClass();
-				
+
 				$search_tipos_op = count($options->search_tipos)>1 ? '$or' : '$and';
 				foreach ($options->search_tipos as $current_search_tipo) {
 					$filter_obj = new stdClass();
 						$filter_obj->q 			= $options->q;
 						$filter_obj->q_operator = null;
 						$filter_obj->q_split 	= false;
-						
+
 							$path_obj = new stdClass();
 								$path_obj->section_tipo 	= DEDALO_THESAURUS_SECTION_TIPO; // Fixed (is not important here)
 								$path_obj->component_tipo 	= $current_search_tipo;
@@ -454,13 +454,13 @@ class component_autocomplete_hi extends component_relation_common {
 
 					$search_query_object->filter->{$search_tipos_op}[] = $filter_obj;
 				}//end foreach
-				
+
 				# propiedades filter_custom or hierarchy_terms constrain
 				if (!empty($options->filter_custom)) {
 					$op_and = '$and';
 					$op_or 	= '$or';
 					$group = new stdClass();
-						$group->{$op_or} = [];	
+						$group->{$op_or} = [];
 					foreach ((array)$options->filter_custom as $current_filter) {
 						#$search_query_object->filter->{$op}[] = $current_filter;
 						$group->{$op_or}[] = $current_filter;
@@ -468,7 +468,7 @@ class component_autocomplete_hi extends component_relation_common {
 					$search_query_object->filter->{$op_and}[] = $group;
 				}
 
-			// select 
+			// select
 				$search_query_object->select = [];
 
 				foreach ($options->search_tipos as $current_search_tipo) {
@@ -482,21 +482,21 @@ class component_autocomplete_hi extends component_relation_common {
 						$path_obj->selector 		= 'valor';
 						$path_obj->lang 			= 'all';
 					$select_obj->path = [$path_obj];
-					
-					# Select add 
+
+					# Select add
 					$search_query_object->select[] = $select_obj;
 				}
 
 				if($options->show_modelo_name===true) {
 					$select_obj = new stdClass();
-						
+
 					$path_obj = new stdClass();
 						$path_obj->section_tipo 	= DEDALO_THESAURUS_SECTION_TIPO;
 						$path_obj->component_tipo 	= DEDALO_THESAURUS_RELATION_MODEL_TIPO;
 						$path_obj->modelo 			= 'component_relation_model';
 						$path_obj->name 			= 'Model';
 					$select_obj->path = [$path_obj];
-					
+
 					# Select add (model)
 					$search_query_object->select[] = $select_obj;
 				}
@@ -539,7 +539,7 @@ class component_autocomplete_hi extends component_relation_common {
 					if (empty($current_label)) {
 						$current_label = $hs_section_tipo .' (!)';
 					}
-					
+
 					$element = new stdClass();
 						$element->key 	= $current_key;
 						$element->label	= $current_label;
@@ -563,9 +563,9 @@ class component_autocomplete_hi extends component_relation_common {
 																		 DEDALO_DATA_LANG,
 																		 $f_section_tipo);
 
-					$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);		
+					$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);
 					foreach ((array)$ar_list_of_values->result as $hs_value => $item) {
-						
+
 						$current_label 	= strip_tags($item->label);
 						$current_key 	= json_encode($item->value);
 
@@ -579,12 +579,12 @@ class component_autocomplete_hi extends component_relation_common {
 				break;
 		}
 
-		// Sort elements		
+		// Sort elements
 		//asort($ar_filter_options, SORT_NATURAL);
 		usort($ar_filter_options, function($a, $b){
 			return strcmp($a->label, $b->label);
 		});
-		
+
 		return $ar_filter_options;
 	}//end get_ar_filter_options
 
@@ -617,37 +617,18 @@ class component_autocomplete_hi extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null, $type=false ) {
-		
-		// separator. 
+
+		// separator.
 		$separator = ' - '; # (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 
 		$diffusion_value = $this->get_valor($lang, 'string', $separator);
-		$diffusion_value = strip_tags($diffusion_value);	
+		$diffusion_value = strip_tags($diffusion_value);
 			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
 		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
 			#dump($term, ' term ++ '.to_string());
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
-
-
-
-	/**
-	* MAP_LOCATOR_TO_TERM_ID
-	* Alias of diffusion_sql::map_locator_to_term_id
-	* @return string | null $term_id
-	*/
-	public function map_locator_to_term_id() {
-
-		$term_id = null;
-
-		$dato = $this->get_dato();
-		if (!empty($dato)) {
-			$term_id = diffusion_sql::map_locator_to_term_id(null, $dato);
-		}
-
-		return $term_id;
-	}//end map_locator_to_term_id
 
 
 
@@ -660,11 +641,11 @@ class component_autocomplete_hi extends component_relation_common {
 	* @return string $term
 	*/
 	public static function get_political_toponymy( $request_options ) {
-		
+
 		// options parse
 			$options = new stdClass();
 				$options->locator 	= null;
-				$options->lang 		= DEDALO_DATA_LANG;				
+				$options->lang 		= DEDALO_DATA_LANG;
 				$options->type 		= 'municipality';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
@@ -684,7 +665,7 @@ class component_autocomplete_hi extends component_relation_common {
 				// term plain without parents
 					$term = ts_object::get_term_by_locator( $locator, $options->lang, true );
 
-			}else{			
+			}else{
 
 				// section data of current locator
 					$section_tipo 	= $options->locator->section_tipo;
@@ -693,16 +674,16 @@ class component_autocomplete_hi extends component_relation_common {
 				// political_map
 					$political_map 	= self::get_legacy_political_map($section_tipo);
 					if(empty($political_map)){
-						
+
 						debug_log(__METHOD__." Empty political_map (ignored resolution by political_map for section: $section_tipo) ".to_string(), logger::WARNING);
 						return null;
-					
+
 					}else{
-					
+
 						// current_map check
 							$current_map = array_reduce($political_map, function($carry, $item) use($type){
 								return $item->type===$type ? $item : $carry;
-							});				
+							});
 							if (empty($current_map)) {
 								debug_log(__METHOD__." Empty political_map type (ignored resolution by political_map for type: $options->type in section: $section_tipo) ".to_string(), logger::WARNING);
 								return null;
@@ -710,12 +691,12 @@ class component_autocomplete_hi extends component_relation_common {
 					}
 
 				// component_model_tipo of current section
-					$ar_component_model_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_relation_model'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);				
+					$ar_component_model_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_relation_model'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 					$component_model_tipo 	 = reset($ar_component_model_tipo);
 					if (empty($component_model_tipo)) {
 						debug_log(__METHOD__." Empty section component_model_tipo. Please, review structure of section: '$section_tipo' and add a component_relation_model ) ".to_string(), logger::ERROR);
 						return null;
-					}			
+					}
 
 				// compare model
 					$compare_model = function($section_tipo, $section_id, $component_model_tipo, $current_map) {
@@ -740,14 +721,14 @@ class component_autocomplete_hi extends component_relation_common {
 						return $result;
 					};
 
-				// self term check 
+				// self term check
 					if (true===$compare_model($section_tipo, $section_id, $component_model_tipo, $current_map)) {
 						// term
 							$term = ts_object::get_term_by_locator( $locator, $options->lang, true );
-				// childrens check 
+				// childrens check
 					}else{
 						// search in parents recursive
-							$parents_recursive = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, true);					
+							$parents_recursive = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, true);
 							foreach ($parents_recursive as $key => $current_parent_locator) {
 								if (true===$compare_model($current_parent_locator->section_tipo, $current_parent_locator->section_id, $component_model_tipo, $current_map)) {
 									// term
@@ -759,7 +740,7 @@ class component_autocomplete_hi extends component_relation_common {
 			}
 
 		// term
-			$term = isset($term) ? strip_tags($term) : null;			
+			$term = isset($term) ? strip_tags($term) : null;
 
 
 		return $term;
@@ -772,13 +753,13 @@ class component_autocomplete_hi extends component_relation_common {
 	* Return an array of political map models of each country
 	* This is a legacy function for compatibility with old publication tables
 	* and is NOT a future way of work
-	* @return 
+	* @return
 	*/
 	public static function get_legacy_political_map( $section_tipo ) {
-		
+
 		switch ($section_tipo) {
 			# Spain
-			case 'es1':				
+			case 'es1':
 				# models
 				$ar_models = [
 					(object)['type' => 'country', 				'section_tipo' => 'es2', 'section_id' => '8868'],
@@ -861,14 +842,14 @@ class component_autocomplete_hi extends component_relation_common {
 
 		# Parse query_object normally with relation common method
 		$result_query_object = parent::resolve_query_object_sql($query_object);
-		
+
 		// q_operator
 			$q_operator = $result_query_object->q_operator ?? null;
-		
+
 		# Clone and modify query_object for search in relations_search too
 		$relation_search_obj = clone $result_query_object;
 			$relation_search_obj->component_path = ['relations_search'];
-		
+
 		# Group the two query_object in a 'or' clause
 		$operator = '$or';
 		if ($q_operator==='!=') {
