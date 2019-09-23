@@ -157,7 +157,7 @@ class layout_map {
 							// portal, autocomplete
 							// OVERWRITTE MODO: when one component call for you own layout the mode of the component will be edit,
 							// but the components that it referenced will be in list, (autocomplete, portal that show the components inside in list)
-							$modo = 'list';
+							$modo = isset($properties->source->records_mode) ? $properties->source->records_mode : 'list';
 							$edit_view_options ='';
 							if($view==='full') { // || $view==='view_mosaic'
 
