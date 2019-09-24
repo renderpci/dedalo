@@ -526,7 +526,11 @@
 		// Items list generic
 		ul.search_section_container ul {
 			position: relative;
-			min-width: 140px;
+
+			//&:not(:last-of-type) {
+			//    min-width: 140px;
+			//    background-color: #EAEA00 !important;
+			//}
 
 			li {
 				padding: 4px;
@@ -538,6 +542,9 @@
 				user-select: none;
 			}
 		}
+
+
+
 
 		// Items list section_group
 		li.search_section_group_label {
