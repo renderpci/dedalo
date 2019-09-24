@@ -154,7 +154,7 @@
 
 				$section_tipo 	= 'test65';
 				$section_id		= null;
-				$mode 	 	 	= 'edit';
+				$mode 	 	 	= 'list';
 				$lang 	 	 	= DEDALO_DATA_LANG;
 
 				// sqo_context
