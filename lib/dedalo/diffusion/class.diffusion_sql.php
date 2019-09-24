@@ -1604,7 +1604,7 @@ class diffusion_sql extends diffusion  {
 					//'thesaurus',
 					//'title',
 					'typology',
-					'dada_mod' // added 18-09-2019
+					'data_mod' // added 18-09-2019
 				];
 
 			$fields_array = [];
@@ -3053,10 +3053,10 @@ class diffusion_sql extends diffusion  {
 			if (isset($process_dato_arguments->custom_arguments)) {
 				$custom_arguments = (array)$process_dato_arguments->custom_arguments;
 			}
-
 			if ($method==='get_diffusion_value') {
 				#$value = $component->{$method}($options->lang);
-				$custom_arguments[] = $options->lang;
+				#$custom_arguments[] = $options->lang;
+				array_unshift($custom_arguments, $options->lang); // always as first argument (!)
 			}
 			$value = call_user_func_array(array($component, $method), $custom_arguments);
 
