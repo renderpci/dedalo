@@ -22,6 +22,7 @@ test
 *.graffle
 *.data
 .smbdelete*
+* copy.*
 
 install/import/hierarchy
 str_data*
