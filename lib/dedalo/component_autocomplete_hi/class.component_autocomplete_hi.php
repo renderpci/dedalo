@@ -616,16 +616,41 @@ class component_autocomplete_hi extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null, $type=false ) {
+	public function get_diffusion_value( $lang=DEDALO_DATA_LANG, $option_obj=null ) {
 
 		// separator.
 		$separator = ' - '; # (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 
 		$diffusion_value = $this->get_valor($lang, 'string', $separator);
+
+		#dump($option_obj, ' option_obj ++ '.to_string());
+		#dump(func_get_args(), 'func_get_args() ++ '.to_string());
+
+		if (!empty($option_obj)) {
+			foreach ($option_obj as $key => $value) {
+				// parents recursive resolve
+					if ($key==='add_parents' && $value===true) {
+						$dato = $this->get_dato();
+						foreach ($dato as $current_locator) {
+							// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+							$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+							$ar_terms = [];
+							foreach ($ar_parents as $parent_locator) {
+								$term = ts_object::get_term_by_locator( $parent_locator, $lang, $from_cache=true );
+								if (!empty($term)) {
+									$ar_terms[] = $term;
+								}
+							}
+							if (!empty($ar_terms)) {
+								$diffusion_value .= $separator . implode($separator, $ar_terms);
+							}
+						}
+					}
+			}//end foreach ($option_obj as $key => $value)
+		}
+
+
 		$diffusion_value = strip_tags($diffusion_value);
-			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
-		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
-			#dump($term, ' term ++ '.to_string());
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
