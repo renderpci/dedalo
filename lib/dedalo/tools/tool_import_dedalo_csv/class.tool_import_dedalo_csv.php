@@ -560,7 +560,11 @@ class tool_import_dedalo_csv extends tool_common {
 					# Test valid json
 					if (strpos($value,'[')===0 || strpos($value,'{')===0) {
 
-						$test = json_decode($value, JSON_THROW_ON_ERROR);
+						#if (version_compare(phpversion(), "7.3.0", ">=")) {
+						#	$test = json_decode($value, JSON_THROW_ON_ERROR);
+						#}else{
+							$test = json_decode($value);
+						#}
 						if ($test===null) {
 							$current_line = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>";
 							debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
