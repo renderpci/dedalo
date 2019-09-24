@@ -3079,15 +3079,15 @@ class web_data {
 				#    	 "thesaurus": ["id_1", "id_2", "id_3"],
 				#    	 "title": "Títol específic",
 				#    	 "typology": "Llibre",
-				#		 "dada_mod": "2015-12-22"
+				#		 "data_mod": "2015-12-22"
 				#     },
 				#     "pagination":{
 				#    	 "limit": 10,
 				#    	 "offset": 0
 				#     },
 				#     "sort":{
+				#    	 "name": "date",
 				#    	 "direction": "asc",
-				#    	 "name": "date"
 				#     }
 				# }
 				#dump($options, ' options ++ '.to_string());
@@ -3120,8 +3120,12 @@ class web_data {
 						#$json_data->sort->name = 'full_data';
 						#$json_data->sort->name = 'name_surname'; // Changed 18-03-2018 !!
 						$json_data->sort->name = 'sort'; // Changed 16-11-2018 !!
-					}elseif ($json_data->sort->name==='date') {
+					}
+					elseif ($json_data->sort->name==='date') {
 						$json_data->sort->name = 'start_date';
+					}
+					elseif ($json_data->sort->name==='data_mod') {
+						$json_data->sort->name = 'data_mod';
 					}
 					$order = $json_data->sort->name.' '.strtoupper($json_data->sort->direction);
 				}
@@ -3252,19 +3256,19 @@ class web_data {
 				if (!empty($json_data->filters->typology)) {
 					$ar_filter[] = "`typology` = '".$json_data->filters->typology."'";
 				}
-				# dada_mod
-				if (!empty($json_data->filters->dada_mod)) {
+				# data_mod
+				if (!empty($json_data->filters->data_mod)) {
 
-					preg_match('/(>=|<=|>|<)(.*)/', $json_data->filters->dada_mod, $match);
+					preg_match('/(>=|<=|>|<)(.*)/', $json_data->filters->data_mod, $match);
 
 					if (isset($match[1]) && isset($match[2])) {
 
 						$operator 	= $match[1];
 						$date_value = $match[2];
 
-						$ar_filter[] = '`dada_mod` '.$operator.' \''.$date_value.'\'';
+						$ar_filter[] = '`data_mod` '.$operator.' \''.$date_value.'\'';
 					}else{
-						$ar_filter[] = '`dada_mod` REGEXP \''.$json_data->filters->dada_mod.'\'';
+						$ar_filter[] = '`data_mod` REGEXP \''.$json_data->filters->data_mod.'\'';
 					}
 				}
 
