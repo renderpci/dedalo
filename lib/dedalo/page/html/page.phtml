@@ -8,7 +8,7 @@
 <body>
 	<?php echo $html_header ?>
 	<div id="main" class="hide"></div>
-	<div id="debug" class="debug hide99"></div>
+	<div id="debug" class="debug hide"></div>
 </body>
 <script>
 const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
