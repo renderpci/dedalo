@@ -261,10 +261,10 @@
 					}
 				}
 
-				&.nowrap {
-					flex-wrap: nowrap;
-					flex-flow: nowrap;
-				}
+				//&.nowrap {
+				//	flex-wrap: nowrap;
+				//	flex-flow: nowrap;
+				//}
 			}
 
 			@media screen and (max-width: 768px) {
@@ -272,6 +272,13 @@
 			}
 		}
 	}//end .wrapper_component
+
+
+
+	.nowrap {
+		flex-wrap: nowrap !important;
+		flex-flow: nowrap !important;
+	}
 
 
 
@@ -316,6 +323,7 @@
 			height: 1em;
 			opacity: 0.7;
 			padding: 0.35em;
+			padding-left: 0.5em;
 
 			display: block;
 
@@ -452,6 +460,12 @@
 		padding: 1em;
 	}
 
+
+
+// paginator
+	.paginator {
+		width: 100%;
+	}
 
 
 // input focus show next item (button remove)
