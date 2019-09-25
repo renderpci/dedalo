@@ -128,6 +128,7 @@
 		width: 100%;
 		height: 100%;
 		margin-right: 0.5em;
+		z-index: -1;
 
 		outline: 1px solid #EAEAEA;
 
@@ -286,7 +287,7 @@
 		display: grid;
 		line-height: 1.1em;
 		//font-weight: bold;
-		z-index: 1;
+		z-index: -1;
 
 		>div {
 			//display: flex;
@@ -481,11 +482,11 @@
 		position: relative;
 
 		>.elements >.tooltip {
-			transition: all .5s ease;
+			transition: all 0.5s ease;
 			position: absolute;
 			top: 6.25em;
 			z-index: 9999999999999999999;
-			background-color: rgba(0, 0, 0, 0.8);
+			background-color: rgba(0, 0, 0, 0.9);
 			color: #fff;
 			padding: 1em;
 			line-height: 1.5em;
