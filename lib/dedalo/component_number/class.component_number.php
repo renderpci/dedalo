@@ -5,9 +5,9 @@
 *
 */
 class component_number extends component_common {
-	
 
-	
+
+
 	/**
 	* GET_DATO
 	*/
@@ -15,6 +15,7 @@ class component_number extends component_common {
 
 		$dato = parent::get_dato();
 
+		$format_dato = [];
 		foreach ((array)$dato as $key => $value) {
 			$format_dato[] = $this->set_format_form_type($value);
 		}
@@ -33,12 +34,12 @@ class component_number extends component_common {
 			if (is_numeric($value)) {
 				$safe_dato[] = $this->set_format_form_type($value);
 			}else{
-				
+
 			}
 		}
 		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );				
+		parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
@@ -54,21 +55,21 @@ class component_number extends component_common {
 
 		$dato = $this->get_dato();
 
-		if(empty($dato)) {			
+		if(empty($dato)) {
 			return (string)$valor;
 		}
-				
-		if ($index==='all') {			
+
+		if ($index==='all') {
 			$ar = array();
 			foreach ($dato as $key => $value) {
 				$value = component_number::number_to_string($value);
 				if (!empty($value)) {
-					$ar[] = $value;	
-				}							
+					$ar[] = $value;
+				}
 			}
 			if (count($ar)>0) {
 				$valor = implode(',',$ar);
-			}			
+			}
 		}else{
 			$index = (int)$index;
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
@@ -92,8 +93,8 @@ class component_number extends component_common {
 			return $dato;
 		}
 
-	
-		if(empty($propiedades->type)){			
+
+		if(empty($propiedades->type)){
 			return (float)$dato;
 		}else{
 			foreach ($propiedades->type as $key => $value) {
@@ -109,9 +110,9 @@ class component_number extends component_common {
 
 						}else{
 							$dato = (int)substr($dato,0,$value);
-						}						
+						}
 						break;
-					
+
 					default:
 						$dato = (float)round($dato,$value);
 						break;
@@ -137,7 +138,7 @@ class component_number extends component_common {
 			return $dato;
 		}
 
-		if(empty($propiedades->type)){			
+		if(empty($propiedades->type)){
 			return (string)$dato;
 		}else{
 			foreach ($propiedades->type as $key => $value) {
@@ -153,9 +154,9 @@ class component_number extends component_common {
 
 						}else{
 							$dato = (string)substr($dato,0,$value);
-						}						
+						}
 						break;
-					
+
 					default:
 						$dato = number_format($dato,$value,'.','');
 						break;
@@ -185,7 +186,7 @@ class component_number extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+
 
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
@@ -193,18 +194,18 @@ class component_number extends component_common {
 												 	 $modo,
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
-		
+
 		# Use already query calculated values for speed
 		#$dato = json_handler::decode($value);
 		#$component->set_dato($dato);
 
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-		
+
 		$value = $component->get_html();
 		#$value = $component->get_valor();
 
 
-		return $value;		
+		return $value;
 	}//end render_list_value
 
 
@@ -214,18 +215,18 @@ class component_number extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
+
 		$q = $query_object->q;
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
 			$q = json_decode($q);
-		}	
+		}
 
     	# Always set fixed values
 		$query_object->type = 'number';
 
 
-		$query_object->component_path[] = 'lg-nolan'; 
-		
+		$query_object->component_path[] = 'lg-nolan';
+
 		# Always without unaccent
 		$query_object->unaccent = false;
 
@@ -233,7 +234,7 @@ class component_number extends component_common {
 		//$sequence_separator = ',';
 
         switch (true) {
-        	
+
         	# BETWEEN
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
@@ -251,19 +252,19 @@ class component_number extends component_common {
 
 				// Return an array instead object
 				#$query_object = [$query_object_one,$query_object_two];
-				
+
 				// Group in a new "AND"
 				$current_op = '$and';
 				$new_query_object = new stdClass();
 					$new_query_object->{$current_op} = [$query_object_one,$query_object_two];
 
 				$query_object = $new_query_object;
-				break;	
+				break;
         	# SEQUENCE
 			/*case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
 				$ar_parts 	= explode($sequence_separator, $q);
-				$ar_result  = []; 
+				$ar_result  = [];
 				foreach ($ar_parts as $key => $value) {
 					$value = (int)$value;
 					if ($value<1) continue;
@@ -292,7 +293,7 @@ class component_number extends component_common {
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
-				break;		
+				break;
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
@@ -310,11 +311,11 @@ class component_number extends component_common {
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
-				$q_clean  = str_replace('+', '', $q);				
+				$q_clean  = str_replace('+', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';	
+    			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
-		}//end switch (true) {		
+		}//end switch (true) {
 
 
         return $query_object;
@@ -328,7 +329,7 @@ class component_number extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'...' 	=> 'entre',
 			#',' 	=> 'secuencia',
@@ -353,7 +354,7 @@ class component_number extends component_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang ) {
-		
+
 		$dato 			 = parent::get_dato();
 		$diffusion_value = $dato;
 
@@ -362,10 +363,10 @@ class component_number extends component_common {
 
 	/**
 	* GET_STRUCTURE_BUTTONS
-	* @return 
+	* @return
 	*/
 	public function get_structure_buttons($permissions=null) {
-		
+
 
 		return [];
 	}//end get_structure_buttons

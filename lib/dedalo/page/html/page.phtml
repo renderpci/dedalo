@@ -8,7 +8,7 @@
 <body>
 	<?php echo $html_header ?>
 	<div id="main" class="hide"></div>
-	<div id="debug" class="debug hide"></div>
+	<div id="debug" class="debug hide99"></div>
 </body>
 <script>
 const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
@@ -41,12 +41,11 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 		})
 		.then( async (page) => {
 			//console.log("+ Page instantiated in time ms: ",performance.now()-t0)
-			const page_container = await page.render()
+			const page_wrapper = await page.render()
 
 			// main add and restore class
-				main.appendChild(page_container)
+				main.appendChild(page_wrapper)
 		 		main.classList.remove("loading","hide")
-
 
 			//console.log("page:",page);
 			//setTimeout( async (e)=>{
@@ -61,10 +60,7 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 			}
 		})
 
-
-
 	})()
-
 
 </script>
 </html>
