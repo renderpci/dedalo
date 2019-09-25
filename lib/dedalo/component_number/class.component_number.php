@@ -215,11 +215,13 @@ class component_number extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-
-		$q = $query_object->q;
-		if (isset($query_object->type) && $query_object->type==='jsonb') {
-			$q = json_decode($q);
-		}
+		
+		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+			
+		#$q = $query_object->q;
+		#if (isset($query_object->type) && $query_object->type==='jsonb') {
+		#	$q = json_decode($q);
+		#}	
 
     	# Always set fixed values
 		$query_object->type = 'number';
@@ -232,6 +234,8 @@ class component_number extends component_common {
 
 		$between_separator  = '...';
 		//$sequence_separator = ',';
+
+		#$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
         switch (true) {
 
@@ -311,9 +315,9 @@ class component_number extends component_common {
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
-				$q_clean  = str_replace('+', '', $q);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';
+				$q_clean  = str_replace('+', '', $q);				
+				$query_object->operator = '@>';
+				$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
 		}//end switch (true) {
 
