@@ -240,7 +240,7 @@ class dd_api {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				$result->debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+				$result->debug->exec_time = exec_time_unit($start_time,'ms')." ms";
 			}
 
 		$response->result 		= $result;

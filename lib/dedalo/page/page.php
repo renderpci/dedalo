@@ -3,7 +3,7 @@
 	# PAGE CONTROLLER
 
 	// page mode
-		$mode = 'edit';
+		define('MODE', isset($_GET['m']) ? $_GET['m'] : (isset($_GET['mode']) ? $_GET['mode'] : 'edit'));
 
 
 	// page globals
@@ -58,7 +58,7 @@
 				$obj->float_window_features 		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 
 			return $obj;
-		})($mode);
+		})(MODE);
 
 
 	if (login::is_logged()!==true) {
@@ -120,7 +120,7 @@
 				}
 
 				return $html;
-			})($mode);
+			})(MODE);
 
 
 		// add page element
@@ -154,11 +154,11 @@
 
 				$section_tipo 	= 'test65';
 				$section_id		= null;
-				$mode 	 	 	= 'list';
+				#$mode 	 	 	= $mode;
 				$lang 	 	 	= DEDALO_DATA_LANG;
 
 				// sqo_context
-				$section = section::get_instance($section_id, $section_tipo, $mode);
+				$section = section::get_instance($section_id, $section_tipo, MODE);
 				$section->set_lang($lang);
 				$sqo_context = $section->get_sqo_context();
 
@@ -166,7 +166,7 @@
 					$page_element->model 		 = 'section';
 					$page_element->section_tipo  = $section_tipo;
 					$page_element->section_id 	 = $section_id;
-					$page_element->mode 	 	 = $mode;
+					$page_element->mode 	 	 = MODE;
 					$page_element->lang 	 	 = DEDALO_DATA_LANG;
 					$page_element->sqo_context  = $sqo_context;
 
