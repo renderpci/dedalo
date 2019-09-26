@@ -488,14 +488,16 @@
 
 
 // tooltip
-	.hidden_tooltip {
-		opacity: 0;
-		visibility: hidden;
-	}
 	.tooltip_toggle {
 		position: relative;
 
-		>.elements >.tooltip {
+		.hidden_tooltip {
+			opacity: 0;
+			visibility: hidden;
+			//display: none;
+		}
+
+		.tooltip {
 			transition: all 0.5s ease;
 			position: absolute;
 			top: 6.25em;
@@ -522,7 +524,6 @@
 				}
 			}
 
-
 			&:after {
 				bottom: 100%;
 				left: 50%;
@@ -539,11 +540,14 @@
 			}
 		}
 
-		&:hover >.elements >.tooltip {
+		&:hover .tooltip {
 			visibility: visible;
 			opacity: 1;
 		}
+
 	}
+
+
 
 	/*
 	.tooltip_toggle {
