@@ -48,184 +48,213 @@
 
 
 
-// section edit
-	.section.edit {
+// page
+	.wrapper_page {
+		display: grid;
+		padding: 1em;
+	}
 
-		>.content_data {
-			display: flex;
-			flex-wrap: wrap;
-			width: 100%;
 
-			//&:before {
-			//	content: "Section edit";
-			//	font-weight: bold;
-			//	width: 100%;
-			//	padding: 1em;
-			//}
 
-			>*:not(.full_width) {
-				flex: 1;
+// section
+	.section {
+
+		&.edit {
+			>.content_data {
+				display: flex;
+				flex-wrap: wrap;
+				width: 100%;
+
+				//&:before {
+				//	content: "Section edit";
+				//	font-weight: bold;
+				//	width: 100%;
+				//	padding: 1em;
+				//}
+
+				>*:not(.full_width) {
+					flex: 1;
+				}
+
+				//&:before {
+				//	content: "Section edit";
+				//	font-weight: bold;
+				//	width: 100%;
+				//	padding: 1em;
+				//	flex-basis: 100%;
+				//}
+			}
+		}//end &.edit
+
+
+		&.list {
+
+			>.content_data {
+				//display: flex;
+				//flex-wrap: wrap;
+				width: 100%;
+
+				//&:before {
+				//	content: "Section list";
+				//	font-weight: bold;
+				//	width: 100%;
+				//	padding: 1em;
+				//	flex-basis: 100%;
+				//}
 			}
 
+		}//end &.list
 
-			//&:before {
-			//	content: "Section edit";
-			//	font-weight: bold;
-			//	width: 100%;
-			//	padding: 1em;
-			//	flex-basis: 100%;
-			//}
-		}
-	}
+
+	}//section
 
 
 
-// section list
-	.section.list {
+// section_record
+	.section_record {
 
-		>.content_data {
-			//display: flex;
-			//flex-wrap: wrap;
+		&.edit {
+			.section_record_base; // flex base config
+				//background-color: #DBF5FF;
+				outline: 1px solid rgba(216, 216, 216, 0.43);
+
+				//&:before {
+				//	content: "Section record";
+				//	font-weight: bold;
+				//	width: 100%;
+				//	padding: 1em;
+				//}
+
+				// inside content_data
+				>.content_data & {
+					margin-left: 0;
+				}
+		}//end &.edit
+
+
+		&.list {
+			position: relative;
+			background-color: #f7f7f7;
+			display: grid;
 			width: 100%;
+			height: 100%;
+			margin-right: 0.5em;
+			//z-index: -1;
 
-			//&:before {
-			//	content: "Section list";
-			//	font-weight: bold;
-			//	width: 100%;
-			//	padding: 1em;
-			//	flex-basis: 100%;
-			//}
+			outline: 1px solid #EAEAEA;
 
-		}
+			// hover main row
+			.section > &&:hover {
+				//&:after {
+				//	content: " ";
+				//	display: block;
+				//	position: absolute;
+				//	left: 0;
+				//	bottom: 0;
+				//	height: 100%;
+				//	width: 100%;
+				//	//background-color: #000000;
+				//	//opacity: 0.035;
+				//	border-bottom: 3px solid #000000;
+				//	border-top: 3px solid #000000;
+				//}
+				div {
+					background-color: #E4E4E4 !important;
+				}
+			}
 
-	}
+			>div {
+				//display: inline-block;
+				padding: 1em;
+				padding-left: 1em;
+				padding-right: 0;
+				flex: 1 0;
+				//padding: 0;
+				//outline: 1px solid #EAEAEA;
+
+				word-wrap: break-word;
+				overflow: hidden;
 
 
 
-// section_record edit
-	.section_record.edit {
-		.section_record_base; // flex base config
-		//background-color: #DBF5FF;
-		outline: 1px solid rgba(216, 216, 216, 0.43);
+				.component_autocomplete & {
+					display: inline-block;
+				}
 
-		//&:before {
-		//	content: "Section record";
-		//	font-weight: bold;
-		//	width: 100%;
-		//	padding: 1em;
-		//}
+				&.info {
+					border-left: 1px solid #eaeaea;
+					margin-left: 1em;
+				}
+			}
 
-		// inside content_data
-		>.content_data & {
-			margin-left: 0;
-		}
+			>.breakdown {
+				padding: 0;
+			}
+
+		}//end &.list
+
 
 	}//end .section_record.edit
-
-
-
-// section_record list
-	.section_record.list {
-		position: relative;
-		background-color: #f7f7f7;
-		display: grid;
-		width: 100%;
-		height: 100%;
-		margin-right: 0.5em;
-		//z-index: -1;
-
-		outline: 1px solid #EAEAEA;
-
-		// hover main row
-		.section > &&:hover {
-			//&:after {
-			//	content: " ";
-			//	display: block;
-			//	position: absolute;
-			//	left: 0;
-			//	bottom: 0;
-			//	height: 100%;
-			//	width: 100%;
-			//	//background-color: #000000;
-			//	//opacity: 0.035;
-			//	border-bottom: 3px solid #000000;
-			//	border-top: 3px solid #000000;
-			//}
-			div {
-				background-color: #E4E4E4 !important;
-			}
-		}
-
-		>div {
-			//display: inline-block;
-			padding: 1em;
-			padding-left: 1em;
-			padding-right: 0;
-			flex: 1 0;
-			//padding: 0;
-			//outline: 1px solid #EAEAEA;
-
-			word-wrap: break-word;
-			overflow: hidden;
-
-
-
-			.component_autocomplete & {
-				display: inline-block;
-			}
-
-			&.info {
-				border-left: 1px solid #eaeaea;
-				margin-left: 1em;
-			}
-		}
-
-		>.breakdown {
-			padding: 0;
-		}
-
-	}
 
 
 
 // section_group
 	.section_group {
 
-		// inside .section_record.edit context
-		.section_record.edit & {
-			//background-color: bisque;
-			//outline: 1px solid rgba(216, 216, 216, 0.43);
-			width: 100%;
-			//border: 1px solid #BFBFBF;
+		&.edit {
 
-			>.label {
-				background-color: #949494;
-				//background-image: url('../../themes/default/bg_black.png');
-				color: #ffffff;
-				padding: 1em;
-				cursor: pointer;
-				&:active {
-					opacity: 0.5;
+			// inside .section_record.edit context
+			.section_record.edit & {
+				//background-color: bisque;
+				//outline: 1px solid rgba(216, 216, 216, 0.43);
+				width: 100%;
+				//border: 1px solid #BFBFBF;
+
+				>.label {
+					background-color: #949494;
+					//background-image: url('../../themes/default/bg_black.png');
+					color: #ffffff;
+					padding: 1em;
+					cursor: pointer;
+					&:active {
+						opacity: 0.5;
+					}
+				}
+				>.content_data {
+					// flex base config
+					.section_group_body_base;
+
+					//>.wrapper_component:last-of-type {
+					////>.wrapper_component:nth-last-of-type(1) {
+					//	flex-grow: 0;
+					//	background-color: #FF0000 !important;
+					//}
 				}
 			}
-			>.content_data {
-				// flex base config
-				.section_group_body_base;
 
-				//>.wrapper_component:last-of-type {
-				////>.wrapper_component:nth-last-of-type(1) {
-				//	flex-grow: 0;
-				//	background-color: #FF0000 !important;
-				//}
-			}
-		}
+		}//end &.edit
+
+
+		&.list {
+
+		}//end &.list
 
 	}//end .section_group
 
 
 
-// wrapper_component
+// component
 	.wrapper_component {
+
+		&.edit {
+
+		}//end &.edit
+
+
+		&.list {
+
+		}//end &.list
+
 
 		// inside .section_record.edit context
 		.section_record.edit & {
@@ -279,6 +308,7 @@
 				flex-basis: 100% !important;
 			}
 		}
+
 	}//end .wrapper_component
 
 
@@ -462,12 +492,6 @@
 		}
 	}
 
-// wrapper_page
-	.wrapper_page {
-		display: grid;
-		padding: 1em;
-	}
-
 
 
 // paginator
@@ -476,16 +500,17 @@
 	}
 
 
+
 // input focus show next item (button remove)
 	input:focus ~ .display_none.remove {
 			.display_block;
 	}
 
-	input:focus  ~ .display_none.email_send {
+	input:focus ~ .display_none.email_send {
 			.display_block;
 	}
 
-	input:focus  ~ .display_none.go_link {
+	input:focus ~ .display_none.go_link {
 			.display_block;
 	}
 
@@ -610,4 +635,5 @@
 	  transition: all 0.75s ease;
 	}
 	*/
+
 
