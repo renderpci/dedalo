@@ -54,6 +54,7 @@
 		>.content_data {
 			display: flex;
 			flex-wrap: wrap;
+
 			//&:before {
 			//	content: "Section edit";
 			//	font-weight: bold;
@@ -78,8 +79,8 @@
 
 		>.content_data {
 
-			display: flex;
-			flex-wrap: wrap;
+			//display: flex;
+			//flex-wrap: wrap;
 
 			&:before {
 				content: "Section list";
@@ -204,7 +205,7 @@
 					opacity: 0.5;
 				}
 			}
-			>.body {
+			>.content_data {
 				// flex base config
 				.section_group_body_base;
 
@@ -233,6 +234,10 @@
 
 			>*{
 				padding: 1em;
+
+				&.paginator {
+					padding: 0;
+				}
 			}
 
 			>.label {
@@ -454,8 +459,8 @@
 		}
 	}
 
-// page_wrapper
-	.page_wrapper {
+// wrapper_page
+	.wrapper_page {
 		display: grid;
 		padding: 1em;
 	}

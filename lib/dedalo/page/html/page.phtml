@@ -41,10 +41,10 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 		})
 		.then( async (page) => {
 			//console.log("+ Page instantiated in time ms: ",performance.now()-t0)
-			const page_wrapper = await page.render()
+			const wrapper_page = await page.render()
 
 			// main add and restore class
-				main.appendChild(page_wrapper)
+				main.appendChild(wrapper_page)
 		 		main.classList.remove("loading","hide")
 
 			//console.log("page:",page);
