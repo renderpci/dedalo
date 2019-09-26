@@ -377,127 +377,177 @@ class component_iri extends component_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
 	* @return object $query_object
+	*	Edited/parsed version of received object 
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
-		
-		$q = $query_object->q;
-		if (isset($query_object->type) && $query_object->type==='jsonb') {
-			$q = json_decode($q);
-		}
+        #debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+					
+		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+			
+		#$q = $query_object->q;
+		#if (isset($query_object->type) && $query_object->type==='jsonb') {
+		#	$q = json_decode($q);
+		#}	
 
-		if (!is_object($q)) {
-			$q = json_decode($q);
-		}
-
-		$q = $q->iri;
-
-    	# Always set fixed values
+		# Always set fixed values
 		$query_object->type = 'string';
 		
 		$q = pg_escape_string(stripslashes($q));
-		
-        switch (true) {
-        	/*
+
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
+
+		# Prepend if exists
+		#if (isset($query_object->q_operator)) {
+		#	$q = $query_object->q_operator . $q;
+		#}
+
+		switch (true) {
+			# EMPTY VALUE (in current lang data)
 			case ($q==='!*'):
 				$operator = 'IS NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
-    			$query_object->unaccent = false;
-
-    			$clone = clone($query_object);
-	    			$clone->operator = '=';
-	    			$clone->q_parsed = "'[]'";
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent = false;
+				$query_object->lang 	= 'all';
 
 				$logical_operator = '$or';
-    			$new_query_json = new stdClass;    			
-	    			$new_query_json->$logical_operator = [$query_object, $clone];
-    			# override
-    			$query_object = $new_query_json ;
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object];
+
+				// Search empty only in current lang
+				// Resolve lang based on if is translatable
+					$path_end 		= end($query_object->path);
+					$component_tipo = $path_end->component_tipo;
+					$RecordObj_dd   = new RecordObj_dd($component_tipo);
+					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
+					#$clone = clone($query_object);
+					#	$clone->operator = '=';
+					#	$clone->q_parsed = '\'[]\'';
+					#	$clone->lang 	 = $lang;
+					#$new_query_json->$logical_operator[] = $clone;
+
+					$clone = clone($query_object);
+						$clone->operator = '=';
+						$clone->q_parsed = '\'\'';
+						$clone->lang 	 = $lang;
+					$new_query_json->$logical_operator[] = $clone;
+
+					// legacy data (set as null instead '')
+					$clone = clone($query_object);
+						$clone->operator = 'IS NULL';
+						$clone->lang 	 = $lang;
+					$new_query_json->$logical_operator[] = $clone;			
+
+				# override
+				$query_object = $new_query_json ;
 				break;
+			# NOT EMPTY (in any project lang data)
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
-    			$query_object->unaccent = false;
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent = false;
 
-    			$clone = clone($query_object);
-	    			$clone->operator = '!=';
-	    			$clone->q_parsed = "'[]'";
+				$logical_operator ='$and';
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object];
 
-				$logical_operator ='$or';
-    			$new_query_json = new stdClass;    			
-    				$new_query_json->$logical_operator = [$query_object, $clone];    			
-    			# override
-    			$query_object = $new_query_json ;
+				// langs check
+					$ar_query_object = [];
+					
+						#$clone = clone($query_object);
+						#	$clone->operator = '!=';
+						#	$clone->q_parsed = '\'[]\'';
+						#	$clone->lang 	 = DEDALO_DATA_NOLAN;
+						#$ar_query_object[] = $clone;
+
+						$clone = clone($query_object);
+							$clone->operator = '!=';
+							$clone->q_parsed = '\'\'';
+							$clone->lang 	 = DEDALO_DATA_NOLAN;
+						$ar_query_object[] = $clone;
+					
+
+					$logical_operator ='$or';
+					$langs_query_json = new stdClass;
+						$langs_query_json->$logical_operator = $ar_query_object;				
+
+				# override
+				$query_object = [$new_query_json, $langs_query_json];
 				break;
 			# IS DIFFERENT			
-			case (strpos($q, '!=')===0):
+			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '!~';
-    			$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
-    			$query_object->unaccent = false;
+				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = false;
 				break;
-			# IS EQUAL
-			case (strpos($q, '=')===0):
+			# IS SIMILAR
+			case (strpos($q, '=')===0 || $q_operator==='='):
 				$operator = '=';
 				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '~';
-    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-    			$query_object->unaccent = false;
+				$query_object->operator = '~*';
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = true;
 				break;
 			# NOT CONTAIN
-			case (strpos($q, '-')===0):
+			case (strpos($q, '-')===0 || $q_operator==='-'):
 				$operator = '!~*';
 				$q_clean  = str_replace('-', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
-			# CONTAIN				
+			# CONTAIN EXPLICIT
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# ENDS WITH
 			case (substr($q, 0, 1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
+				$query_object->unaccent = true;
 				break;
 			# BEGINS WITH
 			case (substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
-			*/
-			# CONTAIN
+			# LITERAL
+			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
+				$operator = '~';
+				$q_clean  = str_replace("'", '', $q);
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = false;
+				break;
+			# DEFAULT CONTAIN 
 			default:
 				$operator = '~*';
 				$q_clean  = str_replace('+', '', $q);				
 				$query_object->operator = $operator;
-				#$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-    			$query_object->q_parsed	= '\'.*\[{"iri":.*'.$q_clean.'.*}\]\''; // unaccent(nu4.datos#>>'{components,numisdata275,dato}') ~* unaccent('.*\[{"iri":.*net.*}\]'))
-    			$query_object->unaccent = true;
-				break;
-		}//end switch (true) {		
-       
-
-        return $query_object;
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
+				break;			
+		}//end switch (true) {
+		  
+		return $query_object;
 	}//end resolve_query_object_sql
-
 
 
 	/**
@@ -528,6 +578,28 @@ class component_iri extends component_common {
 		return $diffusion_value;
 	}//end get_diffusion_value
 
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+		
+		$ar_operators = [
+			'*' 	 => 'no_vacio', // not null
+			'!*' 	 => 'campo_vacio', // null	
+			'=' 	 => 'similar_a',
+			'!=' 	 => 'distinto_de',
+			'-' 	 => 'no_contiene',
+			'*text*' => 'contiene',
+			'text*'  => 'empieza_con',
+			'*text'  => 'acaba_con',
+			'\'text\'' => 'literal',
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
+	
 	/**
 	* GET_STRUCTURE_BUTTONS
 	* @return 
