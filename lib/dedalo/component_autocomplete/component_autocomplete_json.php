@@ -9,7 +9,7 @@
 	$section_tipo 		= $this->section_tipo;
 	$lang 				= $this->lang;
 	$tipo 				= $this->get_tipo();
-
+	$properties 		= $this->get_propiedades() ?? new stdClass();
 
 
 // context
@@ -28,7 +28,13 @@
 				// Component structure context (tipo, relations, properties, etc.)
 					$current_context = $this->get_structure_context($permissions, $sqo_context);
 					// add records_mode if not defined to properties
-					if (!isset($properties->source->records_mode)) {
+					if (!isset($current_context->properties->source->records_mode)) {
+						if (!property_exists($current_context, 'properties')) {
+							$current_context->properties = new stdClass();
+						}
+						if (!property_exists($current_context->properties, 'source')) {
+							$current_context->properties->source = new stdClass();
+						}
 						$current_context->properties->source->records_mode = 'list';
 					}
 					$context[] = $current_context;
