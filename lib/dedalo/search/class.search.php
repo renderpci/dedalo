@@ -293,7 +293,7 @@ class search {
 
 		#debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		#debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
-		error_log(to_string($sql_query));
+		//error_log("sql_query: \n" . to_string($sql_query));
 
 		return $records_data;
 	}//end search
