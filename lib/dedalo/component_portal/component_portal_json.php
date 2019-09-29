@@ -9,9 +9,7 @@
 	$section_tipo 		= $this->section_tipo;
 	$lang 				= $this->lang;
 	$tipo 				= $this->get_tipo();
-	$properties 		= $this->get_propiedades();
-
-
+	$properties 		= $this->get_propiedades() ?? new stdClass();
 
 // context
 	$context = [];
@@ -27,9 +25,12 @@
 				// Component structure context (tipo, relations, properties, etc.)
 					$current_context = $this->get_structure_context($permissions);
 					// add records_mode if not defined to properties
-					if (!isset($properties->source->records_mode)) {
-						if (!isset($properties->source)) {
-							$properties->source = new stdClass();
+					if (!isset($current_context->properties->source->records_mode)) {
+						if (!property_exists($current_context, 'properties')) {
+							$current_context->properties = new stdClass();
+						}
+						if (!property_exists($current_context->properties, 'source')) {
+							$current_context->properties->source = new stdClass();
 						}
 						$current_context->properties->source->records_mode = 'list';
 					}
@@ -51,9 +52,29 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$dato = $this->get_dato();
+		$section_id	= $this->get_parent();
+		$properties = $this->get_propiedades();
+
+		switch ($modo) {
+			case 'edit':
+				$dato 	= $this->get_dato();
+				$value 	= $this->get_dato_paginated();
+				$limit 	= $this->pagination->limit ?? $properties->max_records ?? 10;
+
+				break;
+
+			case 'list':
+				$dato 	= $this->get_dato();
+				$value 	= reset($this->get_dato()); // de momento !!
+				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
+				break;
+		}
+
+
+
 		if (!empty($dato)) {
 
+			/*
 			// Value
 				$value = $dato;
 
@@ -76,6 +97,30 @@
 
 			// subdata add
 				foreach ($ar_subdata as $current_data) {
+					$data[] = $current_data;
+				}
+			*/
+
+			// data item
+				$item = $this->get_data_item($value);
+					$item->parent_tipo 			= $tipo;
+					$item->parent_section_id 	= $section_id;
+					// fix pagination vars
+						$pagination = new stdClass();
+							$pagination->total	= count($dato);
+							$pagination->limit 	= $limit;
+							$pagination->offset = $this->pagination->offset ?? 0;
+					$item->pagination = $pagination;
+
+				$data[] = $item;
+
+			// subcontext data from layout_map items
+				$ar_subdata = $this->get_ar_subdata($value);
+
+			// subdata add
+				foreach ($ar_subdata as $current_data) {
+					$current_data->parent_tipo 			= $tipo;
+					$current_data->parent_section_id 	= $section_id;
 					$data[] = $current_data;
 				}
 
