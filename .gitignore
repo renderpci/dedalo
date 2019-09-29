@@ -116,3 +116,7 @@ lib/dedalo/common/js/lang/*
 
 
 /lib/dedalo/.jsbeautifyrc
+
+/lib/dedalo/search/js/paginator copy.js
+
+/lib/dedalo/search/js/search copy.js
