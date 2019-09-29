@@ -162,6 +162,8 @@
 				$section->set_lang($lang);
 				$sqo_context = $section->get_sqo_context();
 
+				$sqo_context->show[0]->limit = 2;
+
 				$page_element = new StdClass();
 					$page_element->model 		 = 'section';
 					$page_element->section_tipo  = $section_tipo;
