@@ -162,9 +162,7 @@
 				$section->set_lang($lang);
 				$sqo_context = $section->get_sqo_context();
 
-
-				if(MODE==='edit') $sqo_context->show[0]->limit = 2; // Force show 2 records
-
+				//if(MODE==='edit') $sqo_context->show[0]->limit = 3; // Force show 2 records
 
 				$page_element = new StdClass();
 					$page_element->model 		 = 'section';
