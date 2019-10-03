@@ -2521,7 +2521,7 @@ class diffusion_sql extends diffusion  {
 
 				$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
 
-				$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'];
+				$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'] ?? 0;
 
 				# Set temporally to skip and force parent publication
 				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
