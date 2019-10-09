@@ -4654,12 +4654,19 @@ abstract class component_common extends common {
 
 		switch ($changed_data->action) {
 			case 'insert':
-				$dato[$changed_data->key] = $changed_data->value;
-				$this->set_dato($dato);
-				break;
-
 			case 'update':
-				$dato[$changed_data->key] = $changed_data->value;
+				// check if the key exist in the $dato if the key exist chage it directly else create all positions with null value for coherence
+				if(isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato)){
+					$dato[$changed_data->key] = $changed_data->value;
+				}else{
+					for ($i=0; $i < $changed_data->key; $i++) { 
+						if(!isset($dato[$i])){
+							$dato[$i] = null;
+						}
+					}
+					$dato[$changed_data->key] = $changed_data->value;
+				}
+				
 				$this->set_dato($dato);
 
 				break;
