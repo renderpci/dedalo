@@ -54,6 +54,7 @@
 
 		$section_id	= $this->get_parent();
 		$properties = $this->get_propiedades();
+		$value 		= $this->get_dato();
 
 		switch ($modo) {
 			case 'edit':
@@ -65,7 +66,7 @@
 
 			case 'list':
 				$dato 	= $this->get_dato();
-				$value 	= reset($this->get_dato()); // de momento !!
+				$value 	= $value; // de momento !!
 				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
 				break;
 		}
