@@ -4659,17 +4659,18 @@ abstract class component_common extends common {
 				if(isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato)){
 					$dato[$changed_data->key] = $changed_data->value;
 				}else{
-					for ($i=0; $i < $changed_data->key; $i++) { 
+					// fill gaps in array
+					for ($i=0; $i <= $changed_data->key; $i++) {
 						if(!isset($dato[$i])){
 							$dato[$i] = null;
 						}
 					}
 					$dato[$changed_data->key] = $changed_data->value;
 				}
-				
-				$this->set_dato($dato);
 
+				$this->set_dato($dato);
 				break;
+
 			case 'remove':
 				switch (true) {
 					case ($changed_data->key===false && $changed_data->value===null):
