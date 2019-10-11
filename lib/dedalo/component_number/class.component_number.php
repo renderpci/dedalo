@@ -87,43 +87,41 @@ class component_number extends component_common {
 	* SET_FORMAT_FORM_TYPE
 	* Format the dato into the standard format or the propiedades format of the current intance of the component
 	*/
-	public function set_format_form_type( $dato ) {
+	public function set_format_form_type( $dato_value ) {
 
-		$propiedades = $this->get_propiedades();
-
-		if($dato === null || empty($dato)){
-			return $dato;
+		if($dato_value===null || empty($dato_value)){
+			return $dato_value;
 		}
 
-
+		$propiedades = $this->get_propiedades();
 		if(empty($propiedades->type)){
-			return (float)$dato;
+			return (float)$dato_value;
 		}else{
 			foreach ($propiedades->type as $key => $value) {
 
 				switch ($key) {
-					case 'int':
-						if($value === 0 || empty($value)){
-							return (int)$dato;
-						}
-						if ( strpos($dato, '-')===0 )  {
-							$dato = '-'.substr($dato,1,$value);
-							$dato = (int)$dato;
 
+					case 'int':
+						if($value===0 || empty($value)){
+							return (int)$dato_value;
+						}
+						if ( strpos($dato_value, '-')===0 )  {
+							$dato_value = '-'.substr($dato_value,1,$value);
+							$dato_value = (int)$dato_value;
 						}else{
-							$dato = (int)substr($dato,0,$value);
+							$dato_value = (int)substr($dato_value,0,$value);
 						}
 						break;
 
 					default:
-						$dato = (float)round($dato,$value);
+						$dato_value = (float)round($dato_value,$value);
 						break;
 				}
 
 			}//end foreach ($propiedades->type as $key => $value)
 		}//end if(empty($propiedades->type))
 
-		return $dato;
+		return $dato_value;
 	}//end set_format_form_type
 
 
@@ -132,42 +130,41 @@ class component_number extends component_common {
 	* NUMBER_TO_STRING
 	* Format the dato into the standard format or the propiedades format of the current intance of the component
 	*/
-	public function number_to_string( $dato ) {
+	public function number_to_string( $dato_value ) {
 
-		$propiedades = $this->get_propiedades();
-
-		if($dato === null || empty($dato)){
-			return $dato;
+		if($dato_value===null || empty($dato_value)){
+			return $dato_value;
 		}
 
+		$propiedades = $this->get_propiedades();
 		if(empty($propiedades->type)){
-			return (string)$dato;
+			return (string)$dato_value;
 		}else{
 			foreach ($propiedades->type as $key => $value) {
 
 				switch ($key) {
 					case 'int':
 						if($value === 0 || empty($value)){
-							return (string)$dato;
+							return (string)$dato_value;
 						}
-						if ( strpos($dato, '-')===0 )  {
-							$dato = '-'.substr($dato,1,$value);
-							$dato = (string)$dato;
+						if ( strpos($dato_value, '-')===0 )  {
+							$dato_value = '-'.substr($dato_value,1,$value);
+							$dato_value = (string)$dato_value;
 
 						}else{
-							$dato = (string)substr($dato,0,$value);
+							$dato_value = (string)substr($dato_value,0,$value);
 						}
 						break;
 
 					default:
-						$dato = number_format($dato,$value,'.','');
+						$dato_value = number_format($dato_value,$value,'.','');
 						break;
 				}
 
 			}//end foreach ($propiedades->type as $key => $value)
 		}//end if(empty($propiedades->type))
 
-		return $dato;
+		return $dato_value;
 	}//end number_to_string
 
 
@@ -217,13 +214,13 @@ class component_number extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
+
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-			
+
 		#$q = $query_object->q;
 		#if (isset($query_object->type) && $query_object->type==='jsonb') {
 		#	$q = json_decode($q);
-		#}	
+		#}
 
     	# Always set fixed values
 		$query_object->type = 'number';
@@ -317,7 +314,7 @@ class component_number extends component_common {
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
-				$q_clean  = str_replace('+', '', $q);				
+				$q_clean  = str_replace('+', '', $q);
 				$query_object->operator = '@>';
 				$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
