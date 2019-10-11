@@ -61,12 +61,12 @@
 				$dato 	= $this->get_dato();
 				$value 	= $this->get_dato_paginated();
 				$limit 	= $this->pagination->limit ?? $properties->max_records ?? 10;
-
 				break;
 
 			case 'list':
 				$dato 	= $this->get_dato();
-				$value 	= reset($dato); // de momento !!
+				#$value 	= reset($dato); // de momento !!
+				$value 	= $this->get_dato_paginated();
 				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
 				break;
 		}
@@ -75,31 +75,31 @@
 		if (!empty($dato)) {
 
 			/*
-			// Value
-				$value = $dato;
+				// Value
+					$value = $dato;
 
-				// data item
-				$item  = $this->get_data_item($value);
+					// data item
+					$item  = $this->get_data_item($value);
 
-				$data[] = $item;
+					$data[] = $item;
 
-			// subdata . search self records to paginate
-				$rows_data 	 = $this->get_portal_records($dato);
-				$ar_locators = array_map(function($item){
-					$locator = new stdClass();
-						$locator->section_tipo 	= $item->section_tipo;
-						$locator->section_id 	= $item->section_id;
-					return $locator;
-				}, $rows_data->ar_records);
+				// subdata . search self records to paginate
+					$rows_data 	 = $this->get_portal_records($dato);
+					$ar_locators = array_map(function($item){
+						$locator = new stdClass();
+							$locator->section_tipo 	= $item->section_tipo;
+							$locator->section_id 	= $item->section_id;
+						return $locator;
+					}, $rows_data->ar_records);
 
-			// subcontext data from layout_map items
-				$ar_subdata = $this->get_ar_subdata($ar_locators);
+				// subcontext data from layout_map items
+					$ar_subdata = $this->get_ar_subdata($ar_locators);
 
-			// subdata add
-				foreach ($ar_subdata as $current_data) {
-					$data[] = $current_data;
-				}
-			*/
+				// subdata add
+					foreach ($ar_subdata as $current_data) {
+						$data[] = $current_data;
+					}
+				*/
 
 			// data item
 				$item = $this->get_data_item($value);
