@@ -24,6 +24,7 @@ class component_number extends component_common {
 	}//end get_dato
 
 
+
 	/**
 	* SET_DATO
 	*/
@@ -31,15 +32,16 @@ class component_number extends component_common {
 
 		$safe_dato=array();
 		foreach ((array)$dato as $key => $value) {
-			if (is_numeric($value)) {
+			if (is_null($value) || ) {
+				$safe_dato[] = null;
+			}elseif (is_numeric($value)) {
 				$safe_dato[] = $this->set_format_form_type($value);
 			}else{
-
+				trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
 			}
 		}
-		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+		parent::set_dato( $safe_dato );
 	}//end set_dato
 
 
