@@ -32,7 +32,7 @@ class component_number extends component_common {
 
 		$safe_dato=array();
 		foreach ((array)$dato as $key => $value) {
-			if (is_null($value) || ) {
+			if (is_null($value) || $value==='') {
 				$safe_dato[] = null;
 			}elseif (is_numeric($value)) {
 				$safe_dato[] = $this->set_format_form_type($value);
