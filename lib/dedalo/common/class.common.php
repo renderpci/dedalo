@@ -1798,6 +1798,15 @@ abstract class common {
 
 			foreach ($ar_locators as $current_locator) {
 
+				// check locator format
+					if (!is_object($current_locator)) {
+						if(SHOW_DEBUG===true) {
+							dump($ar_locators, ' ar_locators ++ '.to_string());
+							throw new Exception("Error Processing Request", 1);
+						}
+						continue;
+					}
+
 				$section_id 	= $current_locator->section_id;
 				$section_tipo 	= $current_locator->section_tipo;
 
