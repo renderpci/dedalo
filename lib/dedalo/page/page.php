@@ -16,7 +16,13 @@
 				$obj->dedalo_application_lang 		= DEDALO_APPLICATION_LANG;
 				$obj->dedalo_data_lang 				= DEDALO_DATA_LANG;
 				$obj->dedalo_data_nolan 			= DEDALO_DATA_NOLAN;
-				$obj->dedalo_projects_default_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+				$obj->dedalo_projects_default_langs = array_map(function($current_lang){
+					$lang_obj = new stdClass();
+						$lang_obj->label = lang::get_name_from_code($current_lang);
+						$lang_obj->value = $current_lang;
+					return $lang_obj;
+				}, unserialize(DEDALO_PROJECTS_DEFAULT_LANGS));
+
 				# parent
 				#$obj->_parent 	= isset($parent) ? (int)$parent : '';
 				# tipos
