@@ -257,7 +257,8 @@
 
 
 		// inside .section_record.edit context
-		.section_record.edit & {
+		//.section_record.edit &, .components_container & { 22
+		.section_record.edit &, .wrapper_tool & {
 			// flex base config
 			.component_base;
 
@@ -320,6 +321,46 @@
 
 
 
+// tool
+	.tool_container {
+
+
+		.wrapper_tool {
+			padding: 1em;
+			background-color: #F5EBB5;
+
+			>* {
+				padding: 1em;
+			}
+
+			>.tool_header {
+				background-color: #B2C8F6;
+
+				>.label {
+
+				}
+			}
+
+			>.buttons {
+				background-color: #BAF1F6;
+			}
+
+			>.content_data {
+				background-color: #B7F9BB;
+
+				>* {
+					padding: 1em;
+				}
+			}
+		}
+
+
+
+	}//end tool_container
+
+
+
+
 // header_wrapper_list
 	.header_wrapper_list {
 		background-color: #2c2c2e;
@@ -355,6 +396,8 @@
 		display: none;
 		color: #a2a2a2;
 		cursor: pointer;
+		background-repeat: no-repeat;
+		background-position: center;
 
 		.active &, &.link {
 
