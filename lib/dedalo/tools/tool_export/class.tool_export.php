@@ -141,7 +141,7 @@ class tool_export extends tool_common {
 
 		$quotes 			= tool_export::$quotes;
 		$delimiter			= tool_export::$delimiter;
-		$internal_separator = tool_export::$internal_separator;
+		$internal_separator = ($this->data_format==='html') ? trim('<br>') : tool_export::$internal_separator;
 
 		if (is_null($ar_records)) {
 			// Calculate records when not are already received
