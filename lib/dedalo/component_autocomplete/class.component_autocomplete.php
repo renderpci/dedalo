@@ -248,7 +248,7 @@ class component_autocomplete extends component_relation_common {
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
-	*/
+	*//* USE RESOLUTION OF PARENT CLASS (COMPONENT_RELATION_COMMON) 14-10-2019
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id) {
 
 		if (empty($valor)) {
@@ -321,6 +321,7 @@ class component_autocomplete extends component_relation_common {
 
 		return $valor_export;
 	}//end get_valor_export
+	*/
 
 
 
