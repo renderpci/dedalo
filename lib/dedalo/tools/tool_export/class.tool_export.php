@@ -433,6 +433,7 @@ class tool_export extends tool_common {
 					#$row_deep_resolved[$key] = $valor_export;
 					$current_value = $valor_export;
 					$row_item = new stdClass();
+						$row_item->model				= $modelo_name; // for debug info only
 						$row_item->component_tipo		= $component_tipo;
 						$row_item->section_tipo 		= $section_tipo;
 						$row_item->from_component_tipo	= $component_tipo;
@@ -444,7 +445,7 @@ class tool_export extends tool_common {
 
 				// call to component for get valor export
 					$valor_export = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
-					#dump($valor_export, ' valor_export ++ '.to_string());
+					#dump($valor_export, ' valor_export ++ '.to_string($modelo_name));
 					#debug_log(__METHOD__." valor_export $modelo_name - $component_tipo - $parent +  valor_export: ".to_string($valor_export), logger::DEBUG);
 					#$row_deep_resolved = $valor_export;
 
@@ -459,12 +460,13 @@ class tool_export extends tool_common {
 																												  $from_component_tipo=$component_tipo,
 																												  $valor_export,
 																												  false));
+						#dump($row_deep_resolved, ' row_deep_resolved ++ '.$modelo_name.' '.to_string($component_tipo));
 					}
 			}
 
 
 		}//end foreach ($record as $component_tipo => $value) {
-		#dump($row_deep_resolved, ' row_deep_resolved ++ '.to_string());
+		#dump($row_deep_resolved, ' row_deep_resolved ++++++++++++++++ '.to_string());
 
 		return (array)$row_deep_resolved;
 	}//end deep_resolve_row
