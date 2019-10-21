@@ -12,7 +12,7 @@
 	<div id="debug" class="debug hide"></div>
 </body>
 <script>
-const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
+var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
 </script>
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/common/js/enviroment.js.php"></script>
 <script src="<?php echo DEDALO_LIB_BASE_URL ?>/menu/js/menu.js"></script>
