@@ -79,7 +79,7 @@
 		$login		= new login('edit');
 		$html_header= $login->get_html();
 
-		die("Not logged!");
+		die("Not logged! <a href=\"/dedalo\">Login</a>");
 
 	}else{
 
