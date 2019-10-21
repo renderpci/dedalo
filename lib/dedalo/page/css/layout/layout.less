@@ -349,7 +349,7 @@
 				background-color: #B7F9BB;
 
 				>* {
-					padding: 1em;
+					//padding: 1em;
 				}
 			}
 		}
@@ -621,6 +621,28 @@
 			opacity: 1;
 		}
 
+	}
+
+
+// disabled_component
+	.disabled_component {
+		position: relative;
+
+		>.wrapper_component {
+			pointer-events: none;
+			//opacity: 0.8;
+			//background-color: #F7B74C
+		}
+
+		&:after {
+			.fa-icon;
+			.fas;
+			content: @fa-var-lock;
+			position: absolute;
+			top: 4px;
+			right: 4px;
+			color: #fd0000;
+		}
 	}
 
 
