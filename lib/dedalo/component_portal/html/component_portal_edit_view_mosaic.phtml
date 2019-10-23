@@ -1,9 +1,9 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 /*
 if($this->generate_json_element===true) {
-	
+
 	$html_content = '';
 	$html_content .= '<div id="'.$id_wrapper.'">';
 
@@ -25,7 +25,7 @@ if($this->generate_json_element===true) {
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
 	$component_alias_css = isset($propiedades->alias_component_tipo) ? ' alias_'.$propiedades->alias_component_tipo : '';
-	
+
 	#print "<div id=\"portal_table_{$tipo}\" class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" ";
 	print '<div id="portal_table_'.$tipo.'" class="wrap_component css_wrap_portal wrap_component_'.$modo.' wrap_component_'.$edit_view.' wrap_component_'.$tipo . $component_alias_css.'" ';
 	print "id=\"{$id_wrapper}\" ";
@@ -39,36 +39,36 @@ if($this->generate_json_element===true) {
 	print "data-dato='{$valor}' ";
 	print "data-target_section_tipo='{$ar_target_section_tipo_json}' ";
 	print ">";
-	
-		
+
+
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
 
-		
+
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
 		switch(true) {
-				
-			case ($permissions<1):	
+
+			case ($permissions<1):
 				$html_contenido .= "";
 				break;
-							
+
 			case ($permissions>=1):
 
 				#
 				# HEADER ROW HTML
 					#$html_contenido .= "<div class=\"portal_header_row \">";
-				
+
 					#
 					# BUTTONS
 					if ($this->html_options->buttons && ($show_button_new===true || empty($dato)) ) {
-						
+
 						#
 						# BUTTON NEW HTML
 						if( $permissions>=2 && $modo!=='print') {
-							foreach ($ar_target_section_tipo as $current_target_section_tipo) {										
+							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
 								$button_new = "<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
-								data-portal_tipo=\"{$this->tipo}\" 
+								data-portal_tipo=\"{$this->tipo}\"
 								data-portal_parent=\"{$this->parent}\"
 								data-portal_section_tipo=\"{$this->section_tipo}\"
 								data-target_section_tipo=\"{$current_target_section_tipo}\"
@@ -83,11 +83,11 @@ if($this->generate_json_element===true) {
 								break; // Only first for now
 							}
 						}
-						
+
 						#
-						# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)	
+						# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
 						if($modo!=='print') {
-													
+
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
 								$button_select  = '';
 								$button_select .= "<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\" ";
@@ -105,7 +105,7 @@ if($this->generate_json_element===true) {
 								$button_select .= "</div>";
 								$html_contenido .= $button_select;
 							}//end foreach ($ar_target_section_tipo as $current_target_section_tipo) {
-							
+
 						}//end if($modo!='print')
 
 						#
@@ -116,14 +116,14 @@ if($this->generate_json_element===true) {
 							$html_contenido .= $button_toggle_view;
 						}
 					}//end buttons if ($show_button_new===true || !is_array($dato))
-					
+
 					#$html_contenido .= "</div><!-- /portal_header_row -->";
 
 				#
 				# SECTION HTML (LIST ROWS)
 				#
 				# $html_contenido .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div portal_table_wraper\" >";
-	
+
 				if (isset($this->edit_view_options)) {
 					# Config from propiedades
 					$element_width 	= $this->edit_view_options->element_width;
@@ -135,13 +135,13 @@ if($this->generate_json_element===true) {
 					debug_log(__METHOD__." Using defaults to view mosaic images portal_tipo:$tipo ($element_width x $element_height) ".to_string(), logger::DEBUG);
 				}
 				$image_styles = "width:$element_width;height:$element_height";
-				
-				
+
+
 				#
 				# MOSAIC ROWS
-				# dump($dato, ' dato ++ '.to_string());	
+				# dump($dato, ' dato ++ '.to_string());
 				$mosaic_html  = '';
-				$mosaic_html .= "<ul class=\"tbody mosaic_ul\">";						
+				$mosaic_html .= "<ul class=\"tbody mosaic_ul\">";
 				$row_number=0; foreach((array)$dato as $key => $current_locator) {
 
 					$row_number++;
@@ -152,7 +152,7 @@ if($this->generate_json_element===true) {
 					$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
 					$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );
-						#dump($current_row, ' $current_row ++ '.to_string($current_locator));				
+						#dump($current_row, ' $current_row ++ '.to_string($current_locator));
 
 					#
 					# ROWS_LIMIT Limit showed rows
@@ -170,7 +170,7 @@ if($this->generate_json_element===true) {
 						$section_id 		 = $current_section_id;
 						$target_section_tipo = $current_section_tipo;
 
-					# Permissions of target section. Applied to delete button									
+					# Permissions of target section. Applied to delete button
 						$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
 
 					#
@@ -190,14 +190,15 @@ if($this->generate_json_element===true) {
 								# Only accept component_image as column
 								debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image are valid in mosaic mode ", logger::DEBUG);
 								continue;
-							}					
-						
+							}
+
 							#
 							# EDIT BUTTON
 								$context_http_query = http_build_query($context);
 								$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
 								$url .= "&locator=". urlencode($rel_locator);
-								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+								$url .= "&top_tipo=".TOP_TIPO;
+								$url .= "&top_id=".(!empty(TOP_ID) TOP_ID : $section_id);
 								$url .= "&exclude_elements=".$exclude_elements;
 
 								# Breadcrumb : add bc_path = url vars
@@ -209,7 +210,7 @@ if($this->generate_json_element===true) {
 								$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
 									#dump($section_id_path,"id_path - $section_id");
 								$url 	.= "&id_path=". $id_path;
-									
+
 
 								# Title
 								$title = label::get_label('editar_registro').' '.$section_id;
@@ -230,18 +231,18 @@ if($this->generate_json_element===true) {
 										$mosaic_html .= " $section_id ";
 										$mosaic_html .= "</span>";
 										*/
-									$mosaic_html .= "</a>";											
+									$mosaic_html .= "</a>";
 								}
 
 							#
 							# DELETE RECORD BUTTON
 								if ($permissions>=2) {
-									$title 		  = label::get_label('borrar') .' '. label::get_label('recurso');									
+									$title 		  = label::get_label('borrar') .' '. label::get_label('recurso');
 									$mosaic_html .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"component_portal.open_delete_dialog(this)\"
 												data-rel_locator='{$rel_locator}'
 												data-permission_section=\"{$permission_section}\"
 												title=\"$title\">";
-									
+
 									if(SHOW_DEBUG) {
 										/*
 										$mosaic_html .= "<mark class=\"row_debug_info\">";
@@ -259,7 +260,7 @@ if($this->generate_json_element===true) {
 							# COMPONENTS COLUMNS
 								# aditional td css selectors
 								$td_css_selector = 'li_'.$modelo_name.' li_'.$column_tipo;
-								
+
 								$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : null;
 								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
 																				 $column_tipo, // current component tipo
@@ -272,7 +273,7 @@ if($this->generate_json_element===true) {
 																				 $tipo
 																				);
 
-								
+
 								#
 								# TD COLUMN
 								$mosaic_html .= "<div class=\"$td_css_selector\">";
@@ -282,7 +283,7 @@ if($this->generate_json_element===true) {
 									$mosaic_html .= to_string($value);
 								}
 								$mosaic_html .= "</div>";
-							
+
 
 						}//end foreach ($ar_columns as $column_tipo => $column_label)
 						$mosaic_html .= "</li>";
@@ -291,11 +292,11 @@ if($this->generate_json_element===true) {
 
 
 				$mosaic_html .= "</ul>";
-				
+
 
 				$html_contenido .= $mosaic_html;
 
-				
+
 				#$html_contenido .= "</div>";
 
 
@@ -311,8 +312,8 @@ if($this->generate_json_element===true) {
 
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);	
-		
+		tools::prepare_content($html_contenido);
+
 
 		# PRINT HTML
 		if ($show_button_new && $this->html_options->buttons) {
@@ -329,35 +330,35 @@ if($this->generate_json_element===true) {
 			$style='';
 			if ($total_list_time>$limit_time) {
 				$style = "color:red";
-			}			
+			}
 			$html_info .= "<div class=\"debug_info portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
 			$html_info .= $total_list_time;
 			#$html_info .= ", get_rows_data:".$rows_data->generated_time['get_rows_data']." (over {$rows_data->options->full_count} records)";
 			#$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);
 			if (isset($rows_data->generated_time['rows_paginator'])) {
 				#$html_info .= ", rows_paginator: ".$rows_data->generated_time['rows_paginator'];
-			}			
+			}
 			if (isset($rows_data->generated_time['rows_header'])) {
 				#$html_info .= ", rows_header: ".$rows_data->generated_time['rows_header'];
 			}
-			if (isset($rows_data->generated_time['rows'])) {		
+			if (isset($rows_data->generated_time['rows'])) {
 				#$html_info .= ", rows: ".$rows_data->generated_time['rows'];
 			}
 			#dump($rows_data->options->search_options_session_key," ");
-			if (isset($rows_data->options->search_options_session_key)) {		
+			if (isset($rows_data->options->search_options_session_key)) {
 				$html_info .= ", ".$rows_data->options->search_options_session_key;
 			}
 			$html_info .= "";
 			$html_info .= "<pre style=\"display:none\"> ".$rows_data->strQuery ."</pre>";
 			$html_info .= "</div>";
 			#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
-				
-			$html_contenido .= $html_info; 
+
+			$html_contenido .= $html_info;
 		}#end if(SHOW_DEBUG)
-		
+
 		print $html_contenido;
-	
-	
+
+
 	print "</div>";
 
 	# html_delimiter
