@@ -15,7 +15,7 @@ class component_portal extends component_relation_common {
 	public $ar_target_section_tipo ;	# Used to fix ar section tipo (calculado a partir de los componentes relacionado de modelo section)
 	public $target_section_tipo;		# Used in tool portal (resiest by url)
 	public $portal_parent ;				# Used to fix current portal_parent in button new
-	
+
 	public $layout_map;
 	public $ar_columns;					# Array of columns (tipo=>label)
 
@@ -33,7 +33,7 @@ class component_portal extends component_relation_common {
 	public $offset = null;
 
 
-	
+
 	/**
 	* __CONSTRUCT
 	*/
@@ -43,7 +43,7 @@ class component_portal extends component_relation_common {
 			$component_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
 			global$TIMER;$TIMER[__METHOD__.'_' .$component_name.'_IN_'.$tipo.'_'.$modo.'_'.$parent.'_'.microtime(1)]=microtime(1);
 		}
-		
+
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
@@ -51,22 +51,22 @@ class component_portal extends component_relation_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-		
+
 		if(SHOW_DEBUG===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
-				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");			
+				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
 		/*
 		# EDIT : Si se pasa un id vacío (desde class.section es lo normal), se verifica si existe en matrix y si no, se crea un registro que se usará en adelante
 		if($modo==='edit' && empty($id)) {
-			
+
 
 			# Si no existe, creamos un registro, SI o SI
-			if(empty($id)) {				
+			if(empty($id)) {
 				if( !empty($tipo) && intval($parent)>0 ) {
-					
+
 					$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo);
 					$RecordObj_matrix 	= new RecordObj_matrix($matrix_table,NULL, $parent, $tipo, $lang);	#($id=NULL, $parent=false, $tipo=false, $lang=DEDALO_DATA_LANG, $matrix_table='matrix')
 					$RecordObj_matrix->set_parent($parent);
@@ -117,17 +117,17 @@ class component_portal extends component_relation_common {
 			global$TIMER;$TIMER[__METHOD__.'_' .$component_name.'_OUT_'.$tipo.'_'.$modo.'_'.$parent.'_'.microtime(1)]=microtime(1);
 		}
 
-		return true;	
+		return true;
 	}//end __construct
 
 
 
 	/**
 	* GET_DATO
-	* @return 
+	* @return
 	*/
 	public function get_dato() {
-		
+
 		$dato = parent::get_dato();
 
 		// external mode
@@ -144,8 +144,8 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* GET VALOR 
-	* Get resolved string representation of current values (locators)	
+	* GET VALOR
+	* Get resolved string representation of current values (locators)
 	* @return string | null
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ' ) {
@@ -156,14 +156,14 @@ class component_portal extends component_relation_common {
 		}
 
 		$options = new stdClass();
-			$options->lang 				= $lang;	
+			$options->lang 				= $lang;
 			$options->data_to_be_used 	= $data_to_be_used;
 			$options->separator_rows 	= $separator_rows;
 			$options->separator_fields 	= $separator_fields;
 
 			$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
 				#dump($valor_from_ar_locators, ' valor_from_ar_locators');
-		
+
 		if(SHOW_DEBUG===true) {
 			#$total_list_time = round(microtime(1)-$start_time,3);
 			#$bt = debug_backtrace();
@@ -184,7 +184,7 @@ class component_portal extends component_relation_common {
 	* @return string $valor
 	*//*
 	public function get_valor_export_OLD( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
@@ -192,13 +192,13 @@ class component_portal extends component_relation_common {
 		}
 
 		$dato = $this->get_dato();
-		
+
 		if (empty($dato)) {
 			return '';
 		}
 
 		#
-		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
+		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
 		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
 
 		#
@@ -206,7 +206,7 @@ class component_portal extends component_relation_common {
 		$fields=array();
 		foreach ($ar_terminos_relacionados as $key => $ar_value) {
 			foreach ($ar_value as $current_tipo) {
-				
+
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				if (strpos($modelo_name, 'component_')!==false) {
 					$fields[] = $current_tipo;
@@ -221,9 +221,9 @@ class component_portal extends component_relation_common {
 			$section_id 	= $value->section_id;
 
 			$ar_resolved[$section_id][] = $section_id;
-			
-			foreach ($fields as $current_tipo) {				
-			
+
+			foreach ($fields as $current_tipo) {
+
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $current_tipo,
@@ -247,8 +247,8 @@ class component_portal extends component_relation_common {
 				$ar_resolved[] = $item;
 			}
 		}//end foreach( (array)$dato as $key => $value)
-				
-		
+
+
 		$ar_valor_export=array();
 		foreach ($ar_resolved as $key => $ar_value) {
 			#$valor_export .= implode("\t", $ar_value).PHP_EOL;
@@ -260,13 +260,13 @@ class component_portal extends component_relation_common {
 					if (!empty($lvalue)) {
 						$valor_line .= "\t" . $lvalue;
 					}
-				}				
+				}
 				$ar_valor_export[] = trim($valor_line);
 			}
 		}
 
 		$valor_export = implode(PHP_EOL, $ar_valor_export);
-	
+
 
 		return (string)$valor_export;
 	}//end get_valor_export_OLD
@@ -280,7 +280,7 @@ class component_portal extends component_relation_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
@@ -288,17 +288,17 @@ class component_portal extends component_relation_common {
 		}
 
 		$dato = $this->get_dato();
-		
 
-		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
+
+		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
 			$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
 
-		
+
 		// FIELDS
 			$fields=array();
 			foreach ($ar_terminos_relacionados as $key => $ar_value) {
 				foreach ($ar_value as $current_tipo) {
-					
+
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					if (strpos($modelo_name, 'component_')!==false) {
 						$fields[] = $current_tipo;
@@ -323,9 +323,9 @@ class component_portal extends component_relation_common {
 					$item->value 				= $section_id;
 
 				$ar_resolved[] = $item;
-			
-			foreach ($fields as $current_tipo) {				
-			
+
+			foreach ($fields as $current_tipo) {
+
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $current_tipo,
@@ -348,10 +348,10 @@ class component_portal extends component_relation_common {
 			}
 		}//end foreach( (array)$dato as $key => $value)
 		#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
-		
+
 		$valor_export = $ar_resolved;
 		#dump($valor_export, ' valor_export ++ '.to_string($this->tipo));
-		
+
 		return $valor_export;
 	}//end get_valor_export
 
@@ -377,9 +377,9 @@ class component_portal extends component_relation_common {
 	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO_OF_PORTAL
 	* Force notify portal related components load for give css/js support
-	*/ 
+	*/
 	protected function notify_load_lib_element_tipo_of_portal() {
-		
+
 		$ar_children_tipo=array();
 
 		$ar_relaciones = (array)$this->RecordObj_dd->get_relaciones();
@@ -400,14 +400,14 @@ class component_portal extends component_relation_common {
 	}//end notify_load_lib_element_tipo_of_portal
 
 
-	
+
 	/**
 	* Save : Overwrite Save common
 	*/
 	public function Save() {
 
 		# Salvamos de forma estándar
-		$result = parent::Save();		
+		$result = parent::Save();
 
 		return $result;
 	}//end Save
@@ -416,7 +416,7 @@ class component_portal extends component_relation_common {
 
 	/**
 	* UPDATE_STATE
-	* Recoge el dato del component state de esta sección y lo añade 
+	* Recoge el dato del component state de esta sección y lo añade
 	* @param object $rows_data_state
 	* @return bool
 	*/
@@ -449,11 +449,11 @@ class component_portal extends component_relation_common {
 			}
 		}
 
-		return false;			
+		return false;
 	}//end update_state
 
 
-	
+
 	/**
 	* REMOVE_STATE_FROM_LOCATOR
 	* DELETE AND UPDATE the state of this section and his parents
@@ -518,7 +518,7 @@ class component_portal extends component_relation_common {
 			}
 
 		#
-		# 2 SECTION . Creamos un nuevo registro vacío en la sección a que apunta el portal	
+		# 2 SECTION . Creamos un nuevo registro vacío en la sección a que apunta el portal
 		# Section record . create new empty section in target section tipo
 		# TRUE : Se le pasa 'true' al comando "Save" para decirle que SI es un portal
 			if (empty($options->section_target_tipo)) {
@@ -526,7 +526,7 @@ class component_portal extends component_relation_common {
 				$section_target_tipo 	= reset($ar_target_section_tipo);
 			}else{
 				$section_target_tipo 	= $options->section_target_tipo;
-			}			
+			}
 			$section_new = section::get_instance(null, $section_target_tipo);
 
 			$save_options = new stdClass();
@@ -534,8 +534,8 @@ class component_portal extends component_relation_common {
 				$save_options->portal_tipo 	= $this->tipo;
 				$save_options->top_tipo 	= $options->top_tipo;
 				$save_options->top_id 		= $options->top_id;
-			
-			$new_section_id = $section_new->Save( $save_options );			
+
+			$new_section_id = $section_new->Save( $save_options );
 
 			if($new_section_id<1) {
 				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
@@ -543,18 +543,18 @@ class component_portal extends component_relation_common {
 				$response->msg .= $msg;
 				return $response;
 			}
-		
+
 		#
 		# 3 PROYECTOS SET. Creamos un nuevo registro de filtro ('component_filter') hijo de la nueva sección creada, que heredará los datos del filtro de la sección principal
 		# Set target section projects filter settings as current secion
-		# Los proyectos se heredan desde el registro actual donde está el portal hacia el registro destino del portal 
+		# Los proyectos se heredan desde el registro actual donde está el portal hacia el registro destino del portal
 			#$ar_component_filter = (array)$section_new->get_ar_children_objects_by_modelo_name_in_section('component_filter',true);
 			$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_target_tipo, 'component_filter', $from_cache=true, $resolve_virtual=true);
 			if (!isset($ar_tipo_component_filter[0])) {
 				$msg = __METHOD__." Error target section 'component_filter' not found in $section_target_tipo ! ";
 				trigger_error($msg);
 				$response->msg .= $msg;
-				return $response;		
+				return $response;
 			}else{
 				$component_filter 	= component_common::get_instance('component_filter',
 																	 $ar_tipo_component_filter[0],
@@ -570,22 +570,22 @@ class component_portal extends component_relation_common {
 		#
 		# 4 PORTAL . Insertamos en dato (el array de 'id_madrix' del component_portal actual) el nuevo registro creado
 		# Portal dato. add current section id to component portal dato array
-					
-			# Basic locator 
+
+			# Basic locator
 			$locator = new locator();
 				$locator->set_section_id($new_section_id);
 				$locator->set_section_tipo($section_target_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 				$locator->set_from_component_tipo($this->tipo);
-			
-			$added = $this->add_locator_to_dato($locator);			
+
+			$added = $this->add_locator_to_dato($locator);
 			if ($added!==true) {
 				$msg = __METHOD__." Error add_locator_to_dato. New locator is not added ! ";
 				trigger_error($msg);
 				$response->msg .= $msg;
-				return $response;	
+				return $response;
 			}
-			
+
 
 		# Save current component updated data
 		$this->Save();
@@ -595,7 +595,7 @@ class component_portal extends component_relation_common {
 		$response->section_id 	= $new_section_id;
 		$response->added_locator= $locator;
 		$response->msg 			= 'Ok. Request done '.__METHOD__;
-		
+
 		return $response;
 	}//end add_new_element
 
@@ -606,7 +606,7 @@ class component_portal extends component_relation_common {
 	* @return object $response
 	*/
 	public function remove_element( $request_options ) {
-		
+
 		$options = new stdClass();
 			$options->locator 		= null;
 			$options->remove_mode	= 'delete_link';	// delete_link | delete_all (deletes link and resource)
@@ -623,8 +623,8 @@ class component_portal extends component_relation_common {
 		if ($result!==true) {
 			$response->msg .= " Error on remove locator. Skipped action ";
 			return $response;
-		}		
-		
+		}
+
 		# Remove target record
 		if ($options->remove_mode==='delete_all') {
 
@@ -636,7 +636,7 @@ class component_portal extends component_relation_common {
 			}
 		}
 
-		# Update state	
+		# Update state
 		# DELETE AND UPDATE the component state of this section and his parents
 		$state = $this->remove_state_from_locator( $locator );
 
@@ -658,20 +658,20 @@ class component_portal extends component_relation_common {
 	* @return array $component_filter_dato
 	*/
 	public function get_current_section_filter_data() {
-		
+
 		$section_id		= $this->get_parent();
 		$section_tipo	= $this->get_section_tipo();
 		$section 		= section::get_instance($section_id, $section_tipo);
 
 		# 1.1 PROYECTOS DE PROYECTOS : Portales de la sección proyectos
 		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
-			
+
 			#$component_filter_dato 	= array($section_id=>"2"); # Será su propio filtro
 			$filter_locator = new locator();
 				$filter_locator->set_section_tipo($section_tipo);
 				$filter_locator->set_section_id($section_id);
 			$component_filter_dato = [$filter_locator];
-		
+
 		}else{
 
 			$search_model = 'component_filter';
@@ -682,7 +682,7 @@ class component_portal extends component_relation_common {
 			}else {
 				$component_filter		= $ar_children_objects_by_modelo_name_in_section[0];
 				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
-			}						
+			}
 		}
 
 		return $component_filter_dato;
@@ -701,7 +701,7 @@ class component_portal extends component_relation_common {
 		$ar_id_records 			= array();
 		$ar_rel_locator 		= array();
 		$ar_section_relations 	= array();
-							
+
 		if(is_array($dato)) foreach ($dato as $rel_locator) {
 
 			#dump($rel_locator,"rel_locator ");
@@ -709,22 +709,22 @@ class component_portal extends component_relation_common {
 				if(SHOW_DEBUG===true) {
 					dump($rel_locator,"rel_locator");
 				}
-				throw new Exception("Error Processing Request. rel_locator is not object", 1);				
+				throw new Exception("Error Processing Request. rel_locator is not object", 1);
 			}
-		
+
 			$id_record = $rel_locator->section_id;
-			
+
 			if(!empty( $id_record )) {
-				
+
 				# Notar que aquí se sobreescriben los registros con el mismo id de section en la etiqueta (como 10.0.1 y 10.dd56.2)
-				# y por tanto sólo se almacenarán en el array de id's uno por sección				
+				# y por tanto sólo se almacenarán en el array de id's uno por sección
 				if (!in_array($id_record, $ar_id_records)) {
 					$ar_id_records[]	= $id_record ;
 				}
-				$ar_rel_locator[] 		= $rel_locator;								
+				$ar_rel_locator[] 		= $rel_locator;
 
 				# Almacenamos el array de etiquetas de esta sección para usarlo en el listado de relaciones en la clase 'rows'
-				$ar_section_relations[$id_record][] = $rel_locator;				
+				$ar_section_relations[$id_record][] = $rel_locator;
 			}
 		}//end foreach ($dato as $rel_locator)
 
@@ -737,7 +737,7 @@ class component_portal extends component_relation_common {
 			case 'ar_rel_locator':
 				return $ar_rel_locator;
 				break;
-			
+
 			case 'ar_multiple':
 			default:
 				return $ar_section_relations;
@@ -748,7 +748,7 @@ class component_portal extends component_relation_common {
 	}//end get_ar_section_relations_for_current_section_tipo_static
 
 
-	
+
 	/**
 	* ADD_LOCATOR
 	* @param object $locator
@@ -802,36 +802,36 @@ class component_portal extends component_relation_common {
 	* Calculate current layout map to generate portal html
 	* Cases:
 	*	1. Modo 'list' : Uses childrens to build layout map
-	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
+	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
 	*/
 	public function get_layout_map( $view='full' ) {
-		
+
 		if ($this->section_list_key===0 && isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
 
 			#dump($view, ' $view ++ '.to_string());
 
 		$ar_related=array();
 		switch ($this->modo) {
-			case 'list':			
+			case 'list':
 			case 'portal_list':
-				# CASE SECTION LIST IS DEFINED				
+				# CASE SECTION LIST IS DEFINED
 				$ar_terms 		  = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
 				$section_list_key = (int)$this->section_list_key;
-				
+
 				if(isset($ar_terms[$section_list_key]) ) {
-					
+
 					# Use found related terms as new list
 					$current_term = $ar_terms[$section_list_key];
 					$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-					
+
 				}else{
 
 					# FALLBACK RELATED WHEN SECTION LIST IS NOT DEFINED
 					# If not defined sectiopn list
-					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);						
+					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
 				}
 				break;
-			
+
 			case 'edit':
 			default:
 				if($view==='full') { // || $view==='view_mosaic'
@@ -839,29 +839,29 @@ class component_portal extends component_relation_common {
 					break;
 				}else{
 					# CASE VIEW IS DEFINED
-					$ar_terms = (array)RecordObj_dd::get_ar_childrens($this->tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());				
+					$ar_terms = (array)RecordObj_dd::get_ar_childrens($this->tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());
 					foreach ($ar_terms as $current_term) {
 						# Locate 'edit_views' in childrens
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);						
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
 						if ($modelo_name!=='edit_view') continue;
 
-						$view_name = RecordObj_dd::get_termino_by_tipo($current_term);	
+						$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
 						if($view===$view_name){
 							# Use related terms as new list
 							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
 							# Fix / set current edit_view propiedades to portal propiedades
 							$RecordObj_dd 			= new RecordObj_dd($current_term);
 							$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-							# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());		
+							# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());
 							if ( isset($edit_view_propiedades->edit_view_options) ) {
-								$this->edit_view_options = $edit_view_propiedades->edit_view_options;									
+								$this->edit_view_options = $edit_view_propiedades->edit_view_options;
 							}
 							break;
-						}						
+						}
 					}
 				}
 				break;
-		}//end switch ($this->modo)	
+		}//end switch ($this->modo)
 
 		# PORTAL_SECTION_TIPO : Find portal_section_tipo in related terms and store for use later
 		foreach ((array)$ar_related as $key => $current_tipo) {
@@ -913,20 +913,20 @@ class component_portal extends component_relation_common {
 	public function get_ar_columns( $view='full' ) {
 
 		if($this->section_list_key===0 && isset($this->ar_columns)) return $this->ar_columns;
-		
+
 		$layout_map  	= $this->get_layout_map($view);
 		$ar_hcolumns 	= reset($layout_map);
 		$ar_columns 	= array();
 
 		# Semantic nodes columns
-		$semantic_nodes = $this->get_semantic_nodes();		
-		foreach ((array)$semantic_nodes as $semantic_node_tipo) {	
+		$semantic_nodes = $this->get_semantic_nodes();
+		foreach ((array)$semantic_nodes as $semantic_node_tipo) {
 			$ar_columns['ds_'.$semantic_node_tipo] = RecordObj_dd::get_termino_by_tipo($semantic_node_tipo);
 		}
 
 		# Regular columns
-		foreach ((array)$ar_hcolumns as $value) {			
-			$ar_columns[$value] = RecordObj_dd::get_termino_by_tipo($value,DEDALO_APPLICATION_LANG,true);			
+		foreach ((array)$ar_hcolumns as $value) {
+			$ar_columns[$value] = RecordObj_dd::get_termino_by_tipo($value,DEDALO_APPLICATION_LANG,true);
 		}
 
 		# Move publication columns to second column
@@ -962,13 +962,13 @@ class component_portal extends component_relation_common {
 		if ($this->section_list_key===0) {
 			# Fix value only in default case
 			$this->ar_columns = $ar_columns;
-		}		
-		
+		}
+
 		return $ar_columns;
 	}//end get_ar_columns
 
 
-		
+
 	/**
 	* GET_DIFFUSION_OBJ
 	*/
@@ -986,50 +986,50 @@ class component_portal extends component_relation_common {
     #            )
     #    )
 	public function get_diffusion_obj( $propiedades ) {
-		
+
 		#
 		# DIFFUSION_OBJ : Build standar diffusion_obj from component common
 		#
-			$diffusion_obj = parent::get_diffusion_obj( $propiedades );	
+			$diffusion_obj = parent::get_diffusion_obj( $propiedades );
 
 			if(!is_object($propiedades)) {
 				return $diffusion_obj;
 			}
 
 		#
-		# PORTAL RESOLVE SPECIFIC VALUE 
+		# PORTAL RESOLVE SPECIFIC VALUE
 		#
 			$valor=array();
 			$dato = $this->get_dato();
 				#dump($dato, ' dato get_diffusion_obj $propiedades');
-			
+
 			if(is_array($dato)) foreach ($dato as $current_rel_locator) {
 				#dump($current_rel_locator,"current_rel_locator ");	dump($this,"");
 				#$locator_relation_as_obj = component_common::get_locator_relation_as_obj($current_rel_locator);
 				$current_portal_section_id = $current_rel_locator->section_id;
 					#dump($current_portal_section_id,'current_portal_section_id');
-				
+
 				# Propiedades_portal_list
-				$ar_propiedades_portal_list = $propiedades->portal_list;		
+				$ar_propiedades_portal_list = $propiedades->portal_list;
 					#dump($ar_propiedades_portal_list,'ar_propiedades_portal_list '.to_string($this->tipo));
-				
+
 				if ( !empty($ar_propiedades_portal_list) && is_array($ar_propiedades_portal_list)) foreach ($ar_propiedades_portal_list as $current_component_tipo) {
-						
+
 					$current_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 					$current_component 		= component_common::get_instance($current_modelo_name, $current_component_tipo, $current_portal_section_id, $this->modo, DEDALO_DATA_NOLAN, $current_rel_locator->section_tipo);
 						#dump($current_component,"current_component_tipo $current_component_tipo - $this->section_tipo");
 					if(SHOW_DEBUG===true) {
 						#error_log(__METHOD__." NOTA: USADO MUPREVA21 FIJO TEMPORALMENTE ");
-					}					
+					}
 					$valor[$current_portal_section_id][$current_component_tipo] = $current_component->get_valor();
-				}			
+				}
 
-			}#end if(is_array($dato)) foreach ($dato as $current_rel_locator) 		
+			}#end if(is_array($dato)) foreach ($dato as $current_rel_locator)
 
 		# OVERWRITE DEFAULT DIFFUSION_OBJ DATO WITH SPECIFIC COMPONENT RESOLUTION DATO
 		$diffusion_obj->columns['valor'] = $valor;
 
-		
+
 		return $diffusion_obj;
 	}//end get_diffusion_obj
 
@@ -1039,7 +1039,7 @@ class component_portal extends component_relation_common {
 	* GET_STATS_OBJ
 	*/
 	public function get_stats_obj( $propiedades ) {
-		
+
 		return null; // DESACTIVO !!!
 
 
@@ -1056,15 +1056,15 @@ class component_portal extends component_relation_common {
 				#dump($current_portal_section_id,'current_portal_section_id');
 
 			if (empty($current_portal_section_id)) {
-				# Puede tratarswe de un portal vacío (creado, pero sin registros asociados todavía)	
+				# Puede tratarswe de un portal vacío (creado, pero sin registros asociados todavía)
 				# Skip
-				continue;		
+				continue;
 			}
-			
+
 			# PROPIEDADES_PORTAL_LIST
-			$ar_propiedades_portal_list = $propiedades->portal_list;			
+			$ar_propiedades_portal_list = $propiedades->portal_list;
 			if ( !empty($ar_propiedades_portal_list) && is_array($ar_propiedades_portal_list)) foreach ($ar_propiedades_portal_list as $current_component_tipo) {
-					
+
 				$current_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 				$current_component 		= component_common::get_instance($current_modelo_name,
 																		 $current_component_tipo,
@@ -1073,12 +1073,12 @@ class component_portal extends component_relation_common {
 																		 DEDALO_DATA_LANG,
 																		 $this->section_tipo);
 					#dump($current_component,'$current_component');
-				
+
 				$ar_dato[] = $current_component->get_dato();
-			}			
+			}
 
 		}#end if(is_array($dato)) foreach ($dato as $current_rel_locator) {
-		
+
 		$stats_obj = $ar_dato;
 
 		return $stats_obj;
@@ -1112,10 +1112,10 @@ class component_portal extends component_relation_common {
 			}
 
 			$ar_target_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_terminoID, $modelo_name='section', $relation_type='termino_relacionado');
-			
+
 			if (isset($ar_target_section_tipo)) {
 				$ar_portals_map[$current_terminoID] = $ar_target_section_tipo;
-			}			
+			}
 		}
 		if(SHOW_DEBUG===true) {
 			#dump($ar_portals_map," ar_portals_map");die();
@@ -1125,7 +1125,7 @@ class component_portal extends component_relation_common {
 		}
 
 		return (array)$ar_portals_map;
-	}//end get_ar_portals_map__DEPRECATED */	
+	}//end get_ar_portals_map__DEPRECATED */
 
 
 
@@ -1166,16 +1166,16 @@ class component_portal extends component_relation_common {
 	* @return object $row / bool false
 	*/
 	public function row_in_result( $locator, $ar_result ) {
-		
+
 		if (empty($ar_result)) {
 			return false;
 		}
 		foreach ($ar_result as $key => $row) {
-			
+
 			$section_id 	= $row->section_id;
 			$section_tipo 	= $row->section_tipo;
 			$tag_id 		= isset($row->tag_id) ? $row->tag_id : false;	// optional
-			
+
 			/*
 			if ($tag_id && isset($locator->tag_id) && $section_id == $locator->section_id && $section_tipo === $locator->section_tipo && $tag_id==$locator->tag_id) {
 				$findit = true;
@@ -1194,8 +1194,8 @@ class component_portal extends component_relation_common {
 				# add current_id as current_id (rel_locator
 				$current_row = $row;
 				$current_row->current_id = $section_id;
-				break;			
-			}	    	
+				break;
+			}
 		}
 
 		if (!isset($current_row)) {
@@ -1203,11 +1203,11 @@ class component_portal extends component_relation_common {
 			$current_row = new stdClass();
 				$current_row->current_id = null;
 				$current_row->section_id = $locator->section_id;
-				$current_row->section_tipo = $locator->section_tipo;			
+				$current_row->section_tipo = $locator->section_tipo;
 		}
-		
-	
-		return $current_row;		
+
+
+		return $current_row;
 	}//end row_in_result
 
 
@@ -1217,7 +1217,7 @@ class component_portal extends component_relation_common {
 	*
 	*/
 	public function get_ar_target_section_tipo() {
-		
+
 		if (!$this->tipo) return NULL;
 
 		if(isset($this->ar_target_section_tipo)) {
@@ -1235,7 +1235,7 @@ class component_portal extends component_relation_common {
 		}
 
 		$ar_target_section_tipo = $ar_terminoID_by_modelo_name;
-		
+
 		return $this->ar_target_section_tipo = (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo
 
@@ -1257,14 +1257,14 @@ class component_portal extends component_relation_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null, $section_list_key=0) {
-	
+
 		$component = component_common::get_instance(__CLASS__,
 													$tipo,
 													$parent,
 													$modo,
 													DEDALO_DATA_NOLAN,
 													$section_tipo);
-	
+
 
 		if ($modo==='list' || $modo==='portal_list') {
 			$propiedades = $component->get_propiedades();
@@ -1273,16 +1273,16 @@ class component_portal extends component_relation_common {
 
 		# Set section_list_key for select what section list (can exists various) is selected to layout map
 		$component->set_section_list_key( (int)$section_list_key );
-		
+
 		# Use already query calculated values for speed
 		#$ar_records   = (array)json_handler::decode($value);
 		##$component->set_dato($ar_locators);
 
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo.'_'.$section_list_key); // Set unic id for build search_options_session_key used in sessions
 		$html = $component->get_html();
-		
+
 		return $html;
-	}//end render_list_value 
+	}//end render_list_value
 
 
 
@@ -1296,7 +1296,7 @@ class component_portal extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-		
+
 		$diffusion_value = null;
 
 		# Propiedades of diffusion element that references this component
@@ -1343,12 +1343,12 @@ class component_portal extends component_relation_common {
 								debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 								continue;
 							}
-							
+
 						$ar_values[] = $current_locator->section_id;
 					}
 				}
 				$diffusion_value = $ar_values;
-				break;		
+				break;
 		}
 
 		return $diffusion_value;
@@ -1362,7 +1362,7 @@ class component_portal extends component_relation_common {
 	* @return bool
 	*/
 	public static function get_order_by_locator() {
-		
+
 		return false;
 	}//end get_order_by_locator
 
@@ -1375,16 +1375,16 @@ class component_portal extends component_relation_common {
 	* @see class.component_text_area.php -> fix_broken_index_tags
 	*/
 	public static function get_component_pointers($component_tipo, $section_tipo, $section_id, $tag_id=null) {
-		
+
 		$locator_to_search = new locator();
 			$locator_to_search->set_section_tipo($section_tipo);
 			$locator_to_search->set_section_id($section_id);
-			$locator_to_search->set_component_tipo($component_tipo);				
+			$locator_to_search->set_component_tipo($component_tipo);
 
-			if (!is_null($tag_id)) 
+			if (!is_null($tag_id))
 				$locator_to_search->set_tag_id($tag_id);
-					
-			
+
+
 		$section 		  = section::get_instance($section_id, $section_tipo);
 		$inverse_locators = $section->get_inverse_locators();
 		$ar_properties 	  = array_keys((array)$locator_to_search);
@@ -1401,7 +1401,7 @@ class component_portal extends component_relation_common {
 			if ($modelo_name===__CLASS__) {
 				$ar_found[] = $reference_obj;
 			}
-			/*		
+			/*
 			$component 				= component_common::get_instance($modelo_name,
 																	 $current_component_tipo,
 																	 $current_section_id,
@@ -1417,12 +1417,12 @@ class component_portal extends component_relation_common {
 						$ar_found[] = $current_locator;
 					}
 				}
-			}*/		
+			}*/
 		}
 		#dump($ar_found, ' ar_found ++ '.to_string());
 
 		return (array)$ar_found;
-	}//end get_component_pointers	
+	}//end get_component_pointers
 
 
 
@@ -1435,14 +1435,14 @@ class component_portal extends component_relation_common {
 	*/
 	public function regenerate_component() {
 
-		# Custom propiedades external dato 
+		# Custom propiedades external dato
 		$propiedades = $this->get_propiedades();
 
 		if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
-			
-			// Forces update dato with calculated external dato	
+
+			// Forces update dato with calculated external dato
 			$this->set_dato_external(true, true);
-		
+
 		}else{
 
 			# Force loads dato always !IMPORTANT
@@ -1451,7 +1451,7 @@ class component_portal extends component_relation_common {
 			# Save component data
 			$this->Save();
 		}
-		
+
 		return true;
 	}//end regenerate_component
 
@@ -1462,7 +1462,7 @@ class component_portal extends component_relation_common {
 	* @return bool
 	*/
 	public function set_locator_order($locator, $norder) {
-		
+
 		$dato = $this->get_dato();
 
 		# Remove requested locator from dato
@@ -1483,7 +1483,7 @@ class component_portal extends component_relation_common {
 			return false;
 		}
 
-		# Add requested locator at proper position		
+		# Add requested locator at proper position
 		# array_splice($ar_values, (int)$norder -1, 0, array($original_locator));
 		array_splice($ar_values, (int)$norder, 0, array($original_locator));
 
@@ -1503,39 +1503,39 @@ class component_portal extends component_relation_common {
 	public static function build_search_query_object( $request_options=array() ) {
 
 		$start_time=microtime(1);
-	
+
 		$options = new stdClass();
 			$options->q 	 			= null;
 			$options->limit  			= 10;
 			$options->offset 			= 0;
-			$options->full_count		= false;			
+			$options->full_count		= false;
 			$options->order_custom 		= null;
 			$options->lang 				= DEDALO_DATA_LANG;
 			$options->id 				= 'temp';
 			$options->section_tipo		= null;
 			$options->select_fields		= 'default';
 			$options->filter_by_locator	= false;
-			$options->tipo 				= null;			
+			$options->tipo 				= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		
-		# Defaults		
-		$section_tipo 	= $options->section_tipo;	
-		$tipo 			= $options->tipo;	
+
+		# Defaults
+		$section_tipo 	= $options->section_tipo;
+		$tipo 			= $options->tipo;
 
 		# SELECT
 			$select_group = [];
 			$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
-			if (isset($ar_related_section_tipo[0])) {	
+			if (isset($ar_related_section_tipo[0])) {
 
 				# Create from related terms
 				$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);		
+				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
 				foreach ($ar_terminos_relacionados as $current_tipo) {
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					if (strpos($modelo_name,'component')!==0) continue;
 
 					$path = search_development2::get_query_path($current_tipo, $section_tipo, false);
-					
+
 					# SELECT . Select_element (select_group)
 						$select_element = new stdClass();
 							$select_element->path = $path;
@@ -1549,14 +1549,14 @@ class component_portal extends component_relation_common {
 			$ar_section_id = [];
 			if ($options->filter_by_locator!==false) {
 
-					// Is an array of objects					
+					// Is an array of objects
 					foreach ((array)$options->filter_by_locator as $key => $value_obj) {
 						$current_section_id = (int)$value_obj->section_id;
 						if (!in_array($current_section_id, $ar_section_id)) {
 							$ar_section_id[] = $current_section_id;
-						}						
+						}
 					}
-					
+
 					$filter_element = new stdClass();
 						$filter_element->q 		= json_encode($ar_section_id);
 						$filter_element->path 	= json_decode('[
@@ -1567,7 +1567,7 @@ class component_portal extends component_relation_common {
 		                        "name": "Portal searching"
 		                    }
 		                ]');
-						
+
 					$op = '$and';
 					$filter_group = new stdClass();
 						$filter_group->$op = [$filter_element];
@@ -1575,14 +1575,14 @@ class component_portal extends component_relation_common {
 
 		$total_locators = count($ar_section_id);
 
-		# QUERY OBJECT	
+		# QUERY OBJECT
 		$query_object = new stdClass();
 			$query_object->id  	   		= $options->id;
 			$query_object->section_tipo = $section_tipo;
-			$query_object->limit   		= $options->limit;			
+			$query_object->limit   		= $options->limit;
 			$query_object->offset  		= $options->offset;
 			$query_object->full_count  	= $total_locators>0 ? $total_locators : false ;//$options->full_count;
-			$query_object->order_custom = $options->order_custom;		
+			$query_object->order_custom = $options->order_custom;
 			# Used only for time machine list
 			#if ($options->forced_matrix_table!==false) {
 				# add forced_matrix_table (time machine case)
@@ -1619,10 +1619,10 @@ class component_portal extends component_relation_common {
 		if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
 			$this->set_show_button_new(false);
 		}
-	
-		# Custom propiedades external dato 
+
+		# Custom propiedades external dato
 		if(isset($propiedades->source->mode) && $propiedades->source->mode==='external') {
-			$this->set_dato_external(true);	// Forces update dato with calculated external dato					
+			$this->set_dato_external(true);	// Forces update dato with calculated external dato
 		}
 
 		$dato 				= $this->get_dato();
@@ -1633,7 +1633,7 @@ class component_portal extends component_relation_common {
 
 		$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 		$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
-		
+
 		if (isset($propiedades->html_options)) foreach ($propiedades->html_options as $key => $value) {
 			$this->html_options->$key = $value;
 		}
@@ -1650,8 +1650,8 @@ class component_portal extends component_relation_common {
 			$edit_view	= $propiedades->edit_view;
 			$file_view 	= $modo.'_'.$edit_view;
 		}
-		#debug_log(__METHOD__." propiedades - edit_view:$edit_view -  ".to_string($propiedades->edit_view), logger::DEBUG);						
-		
+		#debug_log(__METHOD__." propiedades - edit_view:$edit_view -  ".to_string($propiedades->edit_view), logger::DEBUG);
+
 		if (empty($dato)) {
 
 			# Empty object
@@ -1661,12 +1661,12 @@ class component_portal extends component_relation_common {
 			$this->html_options->header = false;
 			$this->html_options->rows 	= false;
 
-			#throw new Exception("Stopped Processing Request. Empty dato here !", 1);						
+			#throw new Exception("Stopped Processing Request. Empty dato here !", 1);
 
 		}else{
 
 			$filter_by_locator = (array)$dato;
-			
+
 			$context = new stdClass();
 				$context->context_name 	= 'list_in_portal';
 				$context->portal_tipo 	= $tipo;
@@ -1691,18 +1691,18 @@ class component_portal extends component_relation_common {
 				#$search_query_object_options->full_count 		= count($dato);
 
 				// Order . Below 1000 locators
-					if (count($dato)<=1000) {					
+					if (count($dato)<=1000) {
 						$order_values = array_map(function($locator){
 							return (int)$locator->section_id;
-						}, $dato);					
+						}, $dato);
 						$item = new stdClass();
 							$item->column_name 	 = 'section_id';
-							$item->column_values = $order_values;		
+							$item->column_values = $order_values;
 						$search_query_object_options->order_custom = [$item];
 					}
 			$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG); die();
-			
+
 			# Search
 			$search_develoment2  = new search_development2($search_query_object);
 			$rows_data 		 	 = $search_develoment2->search();
@@ -1716,8 +1716,8 @@ class component_portal extends component_relation_common {
 				$state_options->tipo_de_dato = 'dato';
 				$state_options->layout_map 	 = array($this->component_state_tipo);
 				$rows_data_state = search::get_records_data($state_options);
-					dump($rows_data_state, ' rows_data_state ++ '.to_string());		
-				
+					dump($rows_data_state, ' rows_data_state ++ '.to_string());
+
 				# STATE UPDATE DATA
 				$this->update_state($rows_data_state);
 			}
@@ -1731,7 +1731,7 @@ class component_portal extends component_relation_common {
 
 		# Buttons new/add
 		$show_button_new = $this->get_show_button_new();
-		
+
 		# Daggable
 		$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null;
 
@@ -1743,10 +1743,10 @@ class component_portal extends component_relation_common {
 		#$total_records  = count($dato);
 		#$max_records 	= $this->max_records!==null ? (int)$this->max_records : 5;
 		#$offset 		= $this->offset!==null ? (int)$this->offset : 0;
-		
 
-		#################### 
-		
+
+		####################
+
 
 		$ar_columns_plus = array();
 		foreach ($ar_columns as $c_tipo => $c_label) {
@@ -1774,7 +1774,7 @@ class component_portal extends component_relation_common {
 			$json_d->permissions 			= $permissions;
 			$json_d->component_info 		= $component_info;
 			$json_d->exclude_elements 		= $exclude_elements;
-			$json_d->html_options 			= $this->html_options;			
+			$json_d->html_options 			= $this->html_options;
 			$json_d->context 				= $context;
 			$json_d->rows_data 				= $rows_data;
 			$json_d->ar_columns 			= $ar_columns_plus;
@@ -1799,7 +1799,7 @@ class component_portal extends component_relation_common {
 				if( $row_number >= $max_records+$offset ){
 					break;
 				}
-			
+
 				$row_number++;
 
 				# Offset
@@ -1812,13 +1812,13 @@ class component_portal extends component_relation_common {
 					trigger_error("ERROR. Skipped invalid locator ");
 					continue; # Skip invalid locator
 				}
-				
+
 				$current_section_id 	= $current_locator->section_id;
 				$current_section_tipo 	= $current_locator->section_tipo;
 				$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
 				$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
-				$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );						
+				$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );
 					#dump($current_row, ' current_row ++ '.to_string());
 
 				#
@@ -1840,15 +1840,15 @@ class component_portal extends component_relation_common {
 					$section_id 		 = $current_section_id;
 					$target_section_tipo = $current_section_tipo;
 
-				#debug_log(__METHOD__." **************** here  - modo:$modo - key:$key - ar_columns ".json_encode($ar_columns, JSON_PRETTY_PRINT), logger::DEBUG);	
-				
+				#debug_log(__METHOD__." **************** here  - modo:$modo - key:$key - ar_columns ".json_encode($ar_columns, JSON_PRETTY_PRINT), logger::DEBUG);
+
 				# Permissions of target section. Applied to delete button
 				$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
-				
+
 				#
 				# COLUMNS
 					$sort_id = !empty($rel_locator) ? $rel_locator : 0;
-					$table='';															
+					$table='';
 					foreach ($ar_columns as $column_tipo => $column_label) {
 
 						#
@@ -1864,7 +1864,8 @@ class component_portal extends component_relation_common {
 								$context_http_query = http_build_query($context);
 								$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
 								$url .= "&locator=". urlencode($rel_locator);
-								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+								$url .= "&top_tipo=".TOP_TIPO;
+								$url .= "&top_id=".(!empty(TOP_ID) ? TOP_ID : $section_id);
 								$url .= "&exclude_elements=".$exclude_elements;
 
 								# Breadcrumb : add bc_path = url vars
@@ -1875,7 +1876,7 @@ class component_portal extends component_relation_common {
 								# id_path
 								$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
 									#dump($section_id_path,"id_path - $section_id");
-								$url 	.= "&id_path=". $id_path;								
+								$url 	.= "&id_path=". $id_path;
 
 								# Title
 								$title = label::get_label('editar_registro').' '.$section_id;
@@ -1896,18 +1897,18 @@ class component_portal extends component_relation_common {
 									$edit_button .= "class=\"id_column_buttons button_edit link\" ";
 									$edit_button .= $additional_css_style;
 									$edit_button .= "title=\"$title\">";
-										# SECTION_ID TEXT									
-										$edit_button .= "<span class=\"section_id_number\">";										
-										$edit_button .= $section_id;										
-										$edit_button .= "</span>";									
-									$edit_button .= "</a>";											
+										# SECTION_ID TEXT
+										$edit_button .= "<span class=\"section_id_number\">";
+										$edit_button .= $section_id;
+										$edit_button .= "</span>";
+									$edit_button .= "</a>";
 								}
 								$column_edit_value .= $edit_button;
-							
+
 
 							#
 							# DELETE RECORD BUTTON
-								$delete_button = '';							
+								$delete_button = '';
 								if ($permissions>=2) {
 
 									# Defaults restrictive
@@ -1917,14 +1918,14 @@ class component_portal extends component_relation_common {
 									if (isset($delete_button_objects[0])) {
 										$permission_target_section_delete = common::get_permissions($target_section_tipo, $delete_button_objects[0]);
 									}
-									
-									$title	= label::get_label('borrar') .' '. label::get_label('recurso');													
+
+									$title	= label::get_label('borrar') .' '. label::get_label('recurso');
 									$delete_button .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" ";
 									$delete_button .= "onclick=\"component_portal.open_delete_dialog(this)\" ";
 									$delete_button .= "data-rel_locator='{$rel_locator}' ";
 									$delete_button .= "data-permission_target_section_delete=\"{$permission_target_section_delete}\" ";
-									$delete_button .= "title=\"$title\">";							
-									$delete_button .= "</a>";								
+									$delete_button .= "title=\"$title\">";
+									$delete_button .= "</a>";
 								}
 
 							$json_d->rows_data_values[$key][$column_tipo] = array('edit'   => $column_edit_value,
@@ -1938,7 +1939,7 @@ class component_portal extends component_relation_common {
 
 								$component_name = RecordObj_dd::get_termino_by_tipo($current_locator->component_tipo);
 								$tag_id_column_value = '';
-								$tag_id_column_value .= "<div class=\"tag_id tooltip_active\" title=\"$component_name\">";											
+								$tag_id_column_value .= "<div class=\"tag_id tooltip_active\" title=\"$component_name\">";
 								$tag_id_column_value .= $current_locator->tag_id;
 								$tag_id_column_value .= "</div>";
 
@@ -1957,7 +1958,7 @@ class component_portal extends component_relation_common {
 							$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
 								#dump($current_locator, ' current_locator ++ '.to_string());
 								#dump($ds_element, ' ds_element ++ '.to_string());
-							
+
 							$ds_value = '';
 							$ds_value .= "<div class=\"td_ds\">";
 							ob_start();
@@ -1965,7 +1966,7 @@ class component_portal extends component_relation_common {
 							$ds_value .= ob_get_clean();
 							$ds_value .= "</div>";
 
-							$json_d->rows_data_values[$key][$column_tipo] = $ds_value;				
+							$json_d->rows_data_values[$key][$column_tipo] = $ds_value;
 
 						#
 						# COMPONENTS COLUMNS
@@ -1991,7 +1992,7 @@ class component_portal extends component_relation_common {
 							# RECORDS FROM DATABASE
 							# $column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
 							$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : null;
-						
+
 
 							# Detect and avoid structure errors (portal list with deprecated elements for example)
 							if (strpos($modelo_name, 'component_')===false) {
@@ -2004,7 +2005,7 @@ class component_portal extends component_relation_common {
 
 							$render_list_mode = 'portal_list';
 							// Verificar este supuesto !!!
-			
+
 							switch ($edit_view) {
 								case 'view_mosaic':
 									$render_list_mode = 'portal_list_view_mosaic';
@@ -2026,13 +2027,13 @@ class component_portal extends component_relation_common {
 									break;
 							}
 							#debug_log(__METHOD__." ++++++++++++++++++++++++++ render_list_mode ".to_string($render_list_mode), logger::ERROR);
-					
-		
+
+
 							# Overwrite default list mode when need. Set component propiedades 'elements_list_mode' as you want, like edit..
 							if (isset($propiedades->elements_list_mode->$column_tipo->mode)) {
 								$render_list_mode = $propiedades->elements_list_mode->$column_tipo->mode;
 							}
-	
+
 							if ($render_list_mode==='edit') {
 								$current_component = component_common::get_instance( $modelo_name,
 																					 $column_tipo,
@@ -2051,22 +2052,22 @@ class component_portal extends component_relation_common {
 																			 $section_id, // Current portal parent
 																			 $current_locator, // Used by text_area to select fragment
 																			 $tipo // Current component_portal tipo
-																			);	
+																			);
 							}
 
 							#
-							# TD COLUMN					
-							if (is_string($value)) {						
+							# TD COLUMN
+							if (is_string($value)) {
 								$json_d->rows_data_values[$key][$column_tipo] = $value;
-							}else{						
+							}else{
 								$json_d->rows_data_values[$key][$column_tipo] = to_string($value);
 							}
 						}//end if ($modelo_name=='component_portal')
 					}//end foreach ($ar_columns as $column_tipo => $column_label)
 
 
-				
-			
+
+
 			#$row_number++;
 			}//end foreach((array)$dato as $key => $current_locator)
 			#dump($dato, ' dato ++ '.to_string());
@@ -2078,11 +2079,11 @@ class component_portal extends component_relation_common {
 
 			// working here (!)
 				if(SHOW_DEBUG===true && DEVELOPMENT_SERVER===true) {
-					//if ($tipo==='oh17') 
-					//$json_d->json_rows = section::build_json_rows($rows_data,'list');					
+					//if ($tipo==='oh17')
+					//$json_d->json_rows = section::build_json_rows($rows_data,'list');
 				}
-				
-		
+
+
 
 		return $json_d;
 	}//end build_component_json_data
@@ -2110,7 +2111,7 @@ class component_portal extends component_relation_common {
 
 			$RecordObj_dd 		= new RecordObj_dd($ref_component_tipo);
 			$lang 				= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-			$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($ref_component_tipo,true);						
+			$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($ref_component_tipo,true);
 			$current_componet 	= component_common::get_instance($modelo_name,
 																 $ref_component_tipo,
 																 $section_id,
