@@ -1609,6 +1609,19 @@
 		Add tool export section info components
 
 
+	Valencia 24-10-2019 5.4.92
+		Fix top_tipo issues in list and portals
+
+
+	Valencia 24-10-2019 5.4.93
+		Add multivalue to component email (from string to array dato).
+		Add update script to data version from 5.1.1 to 5.1.2 that convert component_email dato from string
+		to array
+
+
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1630,12 +1643,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.91';
+	$DEDALO_VERSION = '5.4.93';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-09-2019');
+	define('DEDALO_BUILD'	, '23-10-2019');
 
 
 	/*
