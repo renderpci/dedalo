@@ -2,13 +2,13 @@
 @common_css: "../../common/css";
 
 // Usage
-@import "@{common_css}/library.less"; 
+@import "@{common_css}/library.less";
 
 
 
 /* WRAP DIV CONTAINER */
 .css_wrap_email {
-	
+
 	}
 	.css_wrap_email .content_data {
 
@@ -21,7 +21,7 @@
 .css_email_lupa_bg {
 	background-image: url('../../themes/default/lupa2.gif');
 	background-repeat:no-repeat;
-	background-position:0 1px;	
+	background-position:0 1px;
 }
 
 .css_email_error { background-color:red;}
@@ -41,6 +41,11 @@
 	margin-left: 5px;
 	padding-top: 5px;
 	/* margin-top: 3px; */
+	float: right;
+
+	&.current {
+		float: none;
+	}
 }
 
 
@@ -70,7 +75,49 @@
 	cursor: pointer;
 	opacity: 1;
 	vertical-align: middle;
+}
 
 
+.btn_add_email {
+	text-transform: none;
+    display: table;
+    top: -23px;
+    margin-right: 4px;
+    margin-top: 0;
+    padding: 3px;
+    padding-right: 4px;
+    padding-left: 4px;
+    white-space: nowrap;
+    font-size: 32%;
+    font-weight: normal;
+    background-image: none;
+    box-shadow: none;
+    position: absolute;
+    right: 0;
+    //margin-left: 3px;
+    @media screen and (min-width: @content_data_max_width) {
+		top: 0px;
+		padding-top: 5px;
+		padding-left: 6px;
+		padding-right: 6px;
+		padding-bottom: 4px;
+		right: -3px;
+    }
+}
+
+.css_email_add {
+	display: inline-block;
+    width: 14px;
+    height: 14px;
+    line-height: 14px;
+    vertical-align: text-top;
+    background-image: url(../../themes/default/svg_icons.svg);
+    background-position: 0 -96px;
+    background-size: 474px 184px;
+    background-repeat: no-repeat;
+    list-style: none;
+    position: relative;
+    cursor: pointer;
+    opacity: 1;
 }
 
