@@ -1,28 +1,26 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
-	
-	echo "\n<!-- EMAIL [tipo:$tipo section_id_matrix:$parent] -->";	
-		
+
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	switch($permissions) {
-			
+
 		case 0	:
-			
-				$html_contenido .= ''; 		
+
+				$html_contenido .= '';
 				break;
-					
+
 		case ($permissions>=1)	:
 
-				$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";					
+				$html_contenido .= "<span class=\"css_span_dato\">$valor</span>";
 				break;
-							
-	}	
 
-	
-	# PRINT HTML	
-	print $html_contenido;	
-	
-?>
+	}
+
+
+	# PRINT HTML
+	print $html_contenido;
+
+
