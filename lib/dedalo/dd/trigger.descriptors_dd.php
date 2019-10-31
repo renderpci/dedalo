@@ -23,17 +23,17 @@ foreach($vars as $name)	$$name = common::setVar($name);
 
 
 if($mode==='removeDescriptor') {
-	
+
 	if(!$id || !$terminoID) die("Need more data! id:$id - terminoID:$terminoID ");
-	
+
 	$html = '';
-	
+
 	$matrix_table 	= RecordObj_descriptors_dd::$descriptors_matrix_table;
 	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, $id);
 	$parent			= $RecordObj->get_parent();
 	$termino		= $RecordObj->get_dato();
 	$lang			= $RecordObj->get_lang();
-		
+
 	$RecordObj->MarkForDeletion();
 
 	# Borramos sus datos accesorios (def)
@@ -45,14 +45,14 @@ if($mode==='removeDescriptor') {
 	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
 	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='obs');
 	$RecordObj->MarkForDeletion();
-	
+
 	exit($html);
 }
 
 if($mode=='newDescriptor') {
-	
-	if(!$terminoID_lang || !$terminoID) die(" Error. Need more data! terminoID_lang:$terminoID_lang ,terminoID:$terminoID ");	
-		
+
+	if(!$terminoID_lang || !$terminoID) die(" Error. Need more data! terminoID_lang:$terminoID_lang ,terminoID:$terminoID ");
+
 	# Verificamos si ya existe un descriptor con este perfil
 	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
 	$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL, $parent=$terminoID, $lang=$terminoID_lang, $tipo='termino');
@@ -65,16 +65,16 @@ if($mode=='newDescriptor') {
 		$RecordObj		= new RecordObj_descriptors_dd($matrix_table, NULL);
 		$RecordObj->set_parent($terminoID);
 		$RecordObj->set_tipo('termino');
-		$RecordObj->set_lang($terminoID_lang);	
+		$RecordObj->set_lang($terminoID_lang);
 		$RecordObj->Save();
-		
+
 		$id			= $RecordObj->get_ID();
 			#dump($id,'id 2 created');
 	}
 	#$html = "lang:$lang - tld:$tld - terminoID:$terminoID - id:$id" ;#$html = var_dump($RecordObj);
 
 	session_write_close();
-	
+
 	$html = $id;
 	exit($html);
 }
@@ -85,7 +85,7 @@ if($mode=='saveDescriptor') {
 	session_write_close();
 
 	if(!$terminoID) die(" Error. Need more data! terminoID:$terminoID ");
-	
+
 	$html = '';
 
 	$matrix_table	= RecordObj_descriptors_dd::$descriptors_matrix_table;
@@ -98,20 +98,41 @@ if($mode=='saveDescriptor') {
 	exit();
 }
 
+
+
+# EXPORT_ONTOLOGY
+if($mode=='export_ontology') {
+
+	session_write_close();
+
+	if(empty($terminoID)) die(" Error. Need more data! terminoID:$terminoID ");
+
+	$html = '';
+
+	include(dirname(__FILE__) . '/class.ontology.php');
+
+	$response = ontology::export($terminoID);
+
+	echo (string)$html;
+	exit();
+}//end export_ontology
+
+
+
 if($mode=='codigoKeyUp') {
-	
+
 	if(!$termino || !$terminoID) die("Need more data! terminoID:$terminoID , termino:$termino ");
-	
+
 	# DESACTIVO (¿Recuperar?)
 	exit();
 	/*
-	$n = Descriptors::descriptorExists($termino,'termino');	
+	$n = Descriptors::descriptorExists($termino,'termino');
 	exit("$n");
 	*/
 }
 
-if($mode=='networkTest') {	
+if($mode=='networkTest') {
 	exit(' networkTest ok! ');
 }
 
-?>
+

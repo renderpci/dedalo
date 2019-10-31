@@ -7,7 +7,7 @@ require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
 * LOGIN
 */
 $is_logged	= login::is_logged();
-	
+
 if($is_logged!==true) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -31,7 +31,7 @@ if($mode==='loadDescriptorsGrid') {
 
 	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
 	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);				#dump($id);die();
-	$ar_transtations_of_current = $RecordObj_descriptors_dd->get_ar_translations_of_current();		#dump($ar_transtations_of_current,'ar_transtations_of_current '.$id); #die();
+	$ar_transtations_of_current = $RecordObj_descriptors_dd->get_ar_translations_of_current();	#dump($ar_transtations_of_current,'ar_transtations_of_current '.$id); #die();
 
 	if(empty($ar_transtations_of_current)) die();
 
@@ -44,31 +44,31 @@ if($mode==='loadDescriptorsGrid') {
 	}else{
 
 		# Iterate all traductions
-		foreach($ar_transtations_of_current as $id => $current_lang) {				
+		foreach($ar_transtations_of_current as $id => $current_lang) {
 
 			# TERMINO : Data from current descriptor
 			$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
 			$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, $id);
 			$termino 				= $RecordObj_descriptors_dd->get_dato();		#dump($termino,'termino');
-			$parent_desc			= $RecordObj_descriptors_dd->get_parent();		
+			$parent_desc			= $RecordObj_descriptors_dd->get_parent();
 			$lang 					= $RecordObj_descriptors_dd->get_lang();
-			$mainLang 				= $RecordObj_descriptors_dd->get_mainLang();	#dump($id,"mainLang");		
+			$mainLang 				= $RecordObj_descriptors_dd->get_mainLang();	#dump($id,"mainLang");
 			$langFull 				= lang::get_name_from_code( $lang );
 
 
-			# DEF : Data from def	
+			# DEF : Data from def
 			$matrix_table			= RecordObj_descriptors_dd::$descriptors_matrix_table;
-			$RecordObj				= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');	
+			$RecordObj				= new RecordObj_descriptors_dd($matrix_table, NULL, $parent_desc, $lang, $tipo='def');
 			$def 					= $RecordObj->get_dato();
-			$def_id 				= $RecordObj->get_ID();		#dump($RecordObj);			
-			
+			$def_id 				= $RecordObj->get_ID();		#dump($RecordObj);
+
 			require(DEDALO_LIB_BASE_PATH . '/dd/html/dd_descriptors_grid.phtml');
 		 }
 	}
 
 	# Write session to unlock session file
 	session_write_close();
-	
+
 	exit();
 }
 
