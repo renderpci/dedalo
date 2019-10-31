@@ -65,19 +65,19 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 </head>
 <body <?php /* onBeforeUnload="closeTesaurus()" */?>>
 <div id="wrapGeneral">
-		
+
 		<form name="form1" id="form1" method="post" onSubmit="return validar(this)" >
-			
+
 			<table class="table_edit">
-				
+
 				<tr>
 					<td align="right" nowrap class="topTDround"><?php echo "$editar_title $termino_title  <strong>$terminoID</strong> "?></td>
 				</tr>
-			 
-			
+
+
 				<!-- OPCIONES PRINCIPALES -->
 				<tr>
-					<td>    	    
+					<td>
 						<table class="table_opciones_principales" width="100%" border="0" cellspacing="2" cellpadding="2">
 							<tr>
 
@@ -93,7 +93,7 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 							<?php /*
 							<!-- USABLE EN INDEXACION -->
 							<td align="center" valign="top"><?php echo $usable_en_title . $indexacion_title ?>
-									<?php 
+									<?php
 									$selectBGcolor = false ;
 									if($usableIndex=='si') $selectBGcolor = "background-color:#090;" ;
 									if($usableIndex=='no') $selectBGcolor = "background-color:#FF0000;" ;
@@ -109,19 +109,19 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 
 							<!-- MODELO -->
 							<td align="center"  valign="top">
-								<?php 
+								<?php
 								echo ucfirst($modelo_title);
 								if(SHOW_DEBUG==true || SHOW_DEVELOPER===true) echo " (esmodelo:$esmodelo)" ;
 								?>
 								<br>
-								<?php 
+								<?php
 								# select modelos
-								if($esmodelo!='si')	{					
+								if($esmodelo!='si')	{
 									echo "<input name=\"esmodelo\" type=\"hidden\" id=\"esmodelo\" style=\"width:30px;text-align:center\" value=\"no\" readonly>";
-									include_once('dd_select_modelos.php');					
-								}else{					
+									include_once('dd_select_modelos.php');
+								}else{
 									echo "<input name=\"esmodelo\" type=\"text\" id=\"esmodelo\" style=\"width:30px;text-align:center\" value=\"si\" readonly>";
-								}          	
+								}
 								?>
 							</td>
 
@@ -144,18 +144,18 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 							</td>
 
 							</tr>
-						</table><!-- /table_opciones_principales -->        
+						</table><!-- /table_opciones_principales -->
 				 </td>
-				</tr>    
+				</tr>
 				<!-- /OPCIONES PRINCIPALES -->
-				
-				
-				
+
+
+
 				<!-- TERMINO Y TRADUCCIONES -->
 				<tr>
-					<td>        
+					<td>
 						<table id="terminosTable" width="100%" border="0" cellpadding="0" cellspacing="0">
-							
+
 							<!-- header -->
 							<tr>
 								<td class="td_header" style="text-align:left;"><?php echo $idioma_title ?></td>
@@ -163,40 +163,40 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 								<td class="td_header" width="420" ><?php echo $definicion_title ?></td>
 								<td class="td_header" width="40"  ><?php echo $nuevo_title ?></td>
 							</tr>
-									
-							<!-- mainLang --> 
+
+							<!-- mainLang -->
 							<tr>
 								<td colspan="4" style="margin:0px;padding:0px;"><div id="div_keyup"><!-- Ajax response here codigoKeyup(termino) --></div></td>
 							</tr>
-							
-							<!-- descriptors_tr -->        
+
+							<!-- descriptors_tr -->
 							<?php echo $descriptors_tr_html ?>
 
-							
-							<!-- traducciones header --> 
+
+							<!-- traducciones header -->
 							<tr>
 								<td colspan="4" class="td_header" style="text-align:left;" ><?php echo $traducciones_title ?></td>
-							</tr>              
-							<!-- traducciones descriptors grid ts_descriptors_grid.php ajax -->          
+							</tr>
+							<!-- traducciones descriptors grid ts_descriptors_grid.php ajax -->
 							<tbody id="tbodyDescriptorsGrid">
 								<!-- Ajax load grid from ts_descriptors_grid.php . need id of currrent descriptor -->
 							</tbody>
-										 
-						</table> <!-- /terminosTable -->      
+
+						</table> <!-- /terminosTable -->
 					</td>
 				</tr>
 				<!-- /TERMINO Y TRADUCCIONES -->
 
-				
-				
-				<!-- INFORMACION --> 
+
+
+				<!-- INFORMACION -->
 				<tr>
 					<td class="td_header"> <?php echo $informacion_title ?></td>
-				</tr>    
-				
-				<!-- OBSERVACIONES --> 
-				<?php echo $descriptors_tr_obs_html ?>        
-						
+				</tr>
+
+				<!-- OBSERVACIONES -->
+				<?php echo $descriptors_tr_obs_html ?>
+
 				<!-- RELACIONES -->
 				<tr>
 					<td>
@@ -210,30 +210,30 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 							</div><!-- /div_wraper -->
 					</td>
 				</tr>
-				<!-- /INFORMACION -->  
-			
-				
-				
+				<!-- /INFORMACION -->
+
+
+
 				<!-- OTRA INFO -->
 				<!-- HEADER OTRA INFO -->
 				<tr>
-					<td class="td_header" onClick="simpleToogleTBODY('otraInfo',this);redimensionarVentana();" style="cursor:pointer"> 
-						<?php echo $otra_informacion_title ?> <div class="flecha_close_tboby"></div> 
+					<td class="td_header" onClick="simpleToogleTBODY('otraInfo',this);redimensionarVentana();" style="cursor:pointer">
+						<?php echo $otra_informacion_title ?> <div class="flecha_close_tboby"></div>
 					</td>
 				</tr>
-				
-				<!-- TBODY OTRA INFO -->
-				<tbody id="otraInfo">  
 
-				
+				<!-- TBODY OTRA INFO -->
+				<tbody id="otraInfo">
+
+
 				<!-- PROPIEDADES (JSON) -->
 				<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
 				<tr>
 					<td>
 						<div class="wraper_propiedades">
-							<?php /*							
+							<?php /*
 							<label class="left_div propiedades_label">Propiedades (JSON)</label>
-							*/ ?>											
+							*/ ?>
 							<textarea id="propiedades" name="propiedades" class="propiedades_textarea"><?php echo $propiedades ?></textarea>
 							<?php #dump($propiedades, ' propiedades ++ '.to_string()); ?>
 							<div id="editor_json" class="editor_json_container"></div>
@@ -246,57 +246,57 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 							    error: function (err) {
 							      alert(err.toString());
 							    }
-							  };  
+							  };
 							  // create the editor
 							  var container = document.getElementById('editor_json');
 							  var editor 	= new JSONEditor(container, options, <?php echo !empty($propiedades) ? (string)$propiedades : '""' ?>);
 							 	//console.log(editor);
-							  
+
 							// Send JSON text to input and force save
 							// document.getElementById('submit_button').onclick = function () {
 							//	    $('#propiedades')
 							//	    	.val(editor.getText())
-							//	    	.trigger('change');						
-							// };							 						 
-							</script>	
-							<?php /**/ ?>				
+							//	    	.trigger('change');
+							// };
+							</script>
+							<?php /**/ ?>
 						</div><!-- /div_wraper -->
 					</td>
 				</tr>
 				<?php } #if (SHOW_DEBUG) ?>
 
 
-				<!-- HIERARCHIE INFO -->        
+				<!-- HIERARCHIE INFO -->
 				<tr class="row_border_bottom">
-					<td>       
+					<td>
 					 <table class="table_hierarchy_info">
 						<?php /*
 						<!-- PARENTS -->
 						<tr>
 							<td align="right" valign="top" nowrap  ><?php echo $jerarquia_title ?>: <?php echo $padres_title ?></td>
 							<td align="center"  valign="top" nowrap bgcolor="#999999">
-								<?php      
-								# PARENTS : SACAMOS RECURSIVAMENTE TODOS LOS PADRES QUE TENDRÁ EL TESAURO ACTUAL                         
+								<?php
+								# PARENTS : SACAMOS RECURSIVAMENTE TODOS LOS PADRES QUE TENDRÁ EL TESAURO ACTUAL
 								$matriz = $ar_parents_of_this;	#$padresArray['termino'];#print_r($matriz);
-								$nivel = 0 ;	
-								if(is_array($matriz)) {                
-										$niveles = count($matriz)-1 ;				 
-										foreach( $matriz as $myKey=>$value5) {                
+								$nivel = 0 ;
+								if(is_array($matriz)) {
+										$niveles = count($matriz)-1 ;
+										foreach( $matriz as $myKey=>$value5) {
 												echo "$nivel_title " ;
-												echo " $nivel <br>";                
+												echo " $nivel <br>";
 												$nivel++ ;
 										}
-								}			       
+								}
 								?>
 							</td>
 							<td align="left" style="font-size:9px;">
-								<?php        
+								<?php
 								# ordenamos inversamente los padres
 								$nivel = 0 ;
 								if(is_array($matriz)) {
 										krsort($matriz);
-										$niveles = count($matriz)-1 ;					 
-										foreach( $matriz as $key => $value) {					
+										$niveles = count($matriz)-1 ;
+										foreach( $matriz as $key => $value) {
 												echo $value . '<br> ';
 												$nivel++ ;
 										}
@@ -315,16 +315,16 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 						 </td>
 						 <td align="left">
 								<div style="max-height:70px; overflow:auto" >
-								<?php 
-								$nivel +1 ;	            
-					
-								# HERMANOS : Array de hermanos del término actual	
-								if(is_array($ar_siblings)) {      				
-									foreach($ar_siblings as $current_terminoID) {      					
-										$ar_hermanosNombres[]	= RecordObj_dd::get_termino_by_tipo($current_terminoID);					
-									}      				
-									echo implode(', ',$ar_hermanosNombres); 
-								}			       
+								<?php
+								$nivel +1 ;
+
+								# HERMANOS : Array de hermanos del término actual
+								if(is_array($ar_siblings)) {
+									foreach($ar_siblings as $current_terminoID) {
+										$ar_hermanosNombres[]	= RecordObj_dd::get_termino_by_tipo($current_terminoID);
+									}
+									echo implode(', ',$ar_hermanosNombres);
+								}
 								?>
 								</div>
 						 </td>
@@ -339,22 +339,22 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 						 <td align="left"  >
 								<div style="max-height:70px; overflow:auto" >
 								<?php
-								# HIJOS : Mostramos el deglose de hijos del término actual desde el array de datos 
+								# HIJOS : Mostramos el deglose de hijos del término actual desde el array de datos
 								$sizeOf_hijosArray = sizeof($hijosArray);
 								$n=0;
 								if(is_array($hijosArray)) foreach($hijosArray as $hijoActual) {
 										#echo $hijoActual ;
 										echo RecordObj_dd::get_termino_by_tipo($hijoActual);
 										$n++;
-										if($n < $sizeOf_hijosArray) echo ', ';  
-										#echo ",($sizeOf_hijosArray)";      
+										if($n < $sizeOf_hijosArray) echo ', ';
+										#echo ",($sizeOf_hijosArray)";
 								}
 								?>
 								</div>
 						 </td>
 						</tr>
 						<!-- /HIJOS -->
-						<?php */ ?>  
+						<?php */ ?>
 
 						<!-- PARENT : Dependiente de (padre) -->
 						<tr >
@@ -368,27 +368,27 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 						</tr>
 						<!-- /PARENT : Dependiente de (padre) -->
 
-					 </table><!-- /table_hierarchy_info -->       
+					 </table><!-- /table_hierarchy_info -->
 					</td>
 				</tr>
-				
+
 				</tbody><!-- /otraInfo -->
-				
-				
-				
+
+
+
 				<!-- SUBMIT -->
 				<tr>
 					<td style="padding:10px; text-align:center">
-						<div class="form_buttons">        
+						<div class="form_buttons">
 							<input type="hidden" name="terminoID" value="<?php echo $terminoID # el terminoID devuelto por por la búsqueda.(idem que el get) ?>">
-							
+
 							<!-- Campos obligatorios -->
 							<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
 							<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
-											
+
 							<input type="hidden" name="MM_insert" value="form1">
 							<input type="hidden" name="accion" value="editTS">
-							
+
 							<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="submit(this)">
 							<script type="text/javascript">
 							// Send JSON text to input and force update
@@ -398,18 +398,20 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 							   			.trigger('change');
 							}
 							</script>
-							
-							<input name="cancelar" type="button" value=" <?php echo $cerrar_title ?> "  onClick="javascript:window.close() ;">
-						</div><!-- /form_buttons -->    
+
+							<input name="cancelar" type="button" value=" <?php echo $cerrar_title ?> "  onClick="javascript:window.close();">
+
+							<input name="export" type="button" value=" Export " onClick="export_ontology('<?php echo $terminoID ?>');">
+						</div><!-- /form_buttons -->
 					</td>
 				</tr>
 				 <!-- /SUBMIT -->
-					
-					
+
+
 			</table><!-- /table_edit -->
 		</form>
-		
- 
+
+
 </div><!-- wrapGeneral -->
 </body>
 </html>
