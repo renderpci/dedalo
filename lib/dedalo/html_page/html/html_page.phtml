@@ -1,6 +1,6 @@
 <?php
 /*
-# HEADERS FOR ALLOW CACHE THIS PAGE 
+# HEADERS FOR ALLOW CACHE THIS PAGE
 header("Cache-Control: private, max-age=10800, pre-check=10800");
 header("Pragma: private");
 header("Expires: " . date(DATE_RFC822,strtotime(" 120 day")));
@@ -87,17 +87,17 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 
 	#
 	# HEADER . PAGE HEADER HTML
-		print $html_header;	
+		print $html_header;
 
 
 	#
-	# LOG MESSAGES		
+	# LOG MESSAGES
 		print '<!-- LOG MESSAGES HTML -->';
 		print '<div id="log_messages" ondblclick="this.innerHTML=\'\';">';
 		if(SHOW_DEBUG===true) {
 			if (!TOP_TIPO) {
 				print "<div class=\"warning\">Error: TOP_TIPO is empty</div>";
-			}		
+			}
 		}
 		print implode('<br>', (array)$log_messages);
 		if(error_get_last()) {
@@ -106,8 +106,8 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 			print "</pre>";
 		}
 		print '</div><!-- /log_messages -->';
-		
-	
+
+
 	#
 	# GLOBAL INFO
 		print '<!-- GLOBAL INFO-->';
@@ -129,7 +129,7 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 
 		# BUTTON BACK
 		if(
-			isset($_SERVER['HTTP_REFERER']) 
+			isset($_SERVER['HTTP_REFERER'])
 			&& empty($caller_id)
 			&& empty($_GET['bc_path'])
 			&& strpos($modo, 'tool_')===false
@@ -149,27 +149,5 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 	?>
 
 </div><!-- /html_page_wrap -->
-<?php
-	# DEBUG
-	if(SHOW_DEBUG===true) {
-
-		# DEBUGGER INFO
-		# if($modo!='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_debug.phtml');
-		if(SECTION_TIPO === 'test65'){
-			?>
-				<div id='section_content'>PATATAAAAA
-					
-					<script type="module" src="<?php echo DEDALO_LIB_BASE_URL ?>/test/page.js"></script>
-					<script>
-						// import {lets_go} from '../../../test/page.js';
-					</script>
-				</div>
-				
-			<?php
-		}
-		
-		
-	}#if(SHOW_DEBUG===true)
-?>
 </body>
 </html>
