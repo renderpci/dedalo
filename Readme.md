@@ -14,7 +14,7 @@ Dédalo use the structured Ontology for three things:
 	2. Build the programing objects in the execution time (in real time).
 	3. Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
-The ontology can be changed by the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
+The ontology can be changed by the time and this will change the data and the programing code; it's possible develop new functionalities without change the data, and you can change the metadata without change the code or the data.
 
 Dédalo is based in linked data model, and use a relative, multireference and universal locator. The locator can find:
 entity, section, component, and tag. In other words, the locator can find, archives (in others entities), records, fields, and part of the fields (sub-field data).
@@ -40,6 +40,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 <p><a href="https://arxiu.memoria.gencat.cat/en/app/#/" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
 <p><a href="https://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>
 <p><a href="http://memoriahistorica.paiporta.es" target="_blank">Arxiu de la Memòria Històrica de Paiporta</a> Delegación de Memoria Histórica de la Diputación de Valencia </p>
+<p><a href="https://numisdata.org/valencia/" target="_blank">Monedas, medallas y fichas de la colección de Vidal Valle</a></p>
 <p><a href="http://memoriahistorica.dival.es/recursos/archivo-memoria-historica/" target="_blank">Nuestra Memoria. Archivo de historia oral</a></p>	
 <p><a href="http://memorialdemocratic.gencat.cat/ca/exposicions/expcicions_virtuals/catalunya_en_transicio/" target="_blank">
 	Catalonia in transition</a> (Transition in Catalonia - Memorial Democràtic)</p>
@@ -51,7 +52,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 *Required for the OS*
 
-- PHP 7.1+
+- PHP 7.2+
 - Apache 2.4.2+
 - Postgres 10.1+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication).
@@ -143,7 +144,7 @@ Dédalo have three main updates procedures:
 	-  If all go well you will see a repport with the changes.
 	-  Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v4.0.9 pass from v4.0.9 to -> v4.0.10, v4.0.10 to -> v4.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
 	-  Log-out and log-in with normal admin user.
-	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" into the list of the sections for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
+	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" into the list of the sections for update some changes into the components (this task force to update all components with the new model 1 to 1), and will apply the changes to the data into the databases.
 
 **IMPORT TOPONYMY**
 
