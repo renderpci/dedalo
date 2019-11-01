@@ -1,8 +1,8 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
-	
+	# VISUALIZADOR HTML
+
+
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
@@ -12,44 +12,83 @@
 	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-parent=\"{$parent}\" ";
 	print "data-modo=\"{$modo}\" ";
-	print "data-dato=\"{$dato}\" ";
+	print "data-dato=\"{$dato_json}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print ">";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch(true) {
-			
+
 		case $permissions===0 :
 				$html_content .= "";
 				break;
-						
-		case $permissions===1 : 	
-				$html_content .= "<span class=\"css_span_dato\">$dato</span>";
-				break;	
-		
-		case $permissions>=2 :
-	
-				# INPUT EMAIL	
-				$html_content .= "<input class=\"css_email\" type=\"text\" ";
-				$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
-				$html_content .= "onchange=\"component_email.Save(this)\" ";
-				$html_content .= "name=\"{$input_name}\" ";
-				$html_content .= "data-tipo=\"{$tipo}\" ";
-				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-				$html_content .= "data-parent=\"{$parent}\" ";
-				$html_content .= "data-lang=\"{$lang}\" ";
-				$html_content .= "value=\"{$dato}\" ";
-				$html_content .= "title=\"$html_title\" ";
-				$html_content .= "tabindex=\"1\" ";
-				$html_content .= "/>";
 
-				# EMAIL SEND BUTTON
-				$html_content .= "<div class=\"css_button_generic btn_create_email_list\" onclick=\"component_email.send_email(this)\">";
+		case $permissions===1 :
+				$html_content .= "<span class=\"css_span_dato\">$dato</span>";
+				break;
+
+		case $permissions>=2 :
+
+				# Button add
+				$html_content .= "<div class=\"css_button_generic btn_add_input_text\" onclick=\"component_email.add_input(this)\">";
+				$html_content .= "<div class=\"link css_email_add\"></div>";
+				$html_content .= "</div>";
+
+
+				# dato_view
+				$dato_view = empty($dato) ? array("") : $dato;
+				$html_content .= '<ul>';
+				foreach ($dato_view as $key => $value) {
+					# Fix issues with quotes
+					$value = htmlentities($value);
+
+					$html_content .= '<li>';
+
+					// input email
+					$html_content .= "<input class=\"css_email\" type=\"text\" ";
+					$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+					$html_content .= "onchange=\"component_email.Save(this)\" ";
+					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "value=\"{$value}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "tabindex=\"1\" ";
+					$html_content .= "/>";
+
+					// button send to current emails
+					$html_content .= "<div class=\"css_button_generic btn_create_email_list current\" onclick=\"component_email.send_email(this, 'current')\">";
+					$html_content .= "<div class=\"css_email_send\"></div>";
+					$html_content .= "</div>";
+
+					$html_content .= '</li>';
+
+				}//end foreach
+				$html_content .= '</ul>';
+
+				//# INPUT EMAIL
+				//$html_content .= "<input class=\"css_email\" type=\"text\" ";
+				//$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+				//$html_content .= "onchange=\"component_email.Save(this)\" ";
+				//$html_content .= "name=\"{$input_name}\" ";
+				//$html_content .= "data-tipo=\"{$tipo}\" ";
+				//$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				//$html_content .= "data-parent=\"{$parent}\" ";
+				//$html_content .= "data-lang=\"{$lang}\" ";
+				//$html_content .= "value=\"{$dato}\" ";
+				//$html_content .= "title=\"$html_title\" ";
+				//$html_content .= "tabindex=\"1\" ";
+				//$html_content .= "/>";
+
+				// button send to all emails
+				$html_content .= "<div class=\"css_button_generic btn_create_email_list\" onclick=\"component_email.send_email(this, 'all')\">";
 				$html_content .= "<div class=\"css_email_send\"></div>";
 				$html_content .= "</div>";
 
@@ -67,7 +106,7 @@
 							#unset($propiedades->css);
 							#dump($propiedades, '$propiedades->multiple_data_tipo ++ '.to_string());
 						#}
-					}						
+					}
 				}
 
 				#
@@ -84,12 +123,12 @@
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-	
-	
+
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
-	
+
 	print "</div>"; //wrap
 
 
@@ -97,4 +136,3 @@
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
 
-?>

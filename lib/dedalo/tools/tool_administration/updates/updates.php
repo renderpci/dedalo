@@ -7,6 +7,25 @@ $updates = new stdClass();
 
 
 
+$v=512; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 1;
+	$updates->$v->version_minor 	 = 2;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 1;
+	$updates->$v->update_from_minor  = 1;
+
+
+	# UPDATE COMPONENTS
+	$updates->$v->components_update = ['component_email'];	// Force convert from string to array
+
+
+
 $v=511; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -31,15 +50,15 @@ $updates->$v = new stdClass();
 		-- DELETE DUPLICATES
 		DELETE FROM relations a USING (
 			SELECT MIN(id) as id, section_tipo, section_id, target_section_tipo, target_section_id, from_component_tipo
-		        FROM relations 
+		        FROM relations
 		        GROUP BY (section_tipo, section_id, target_section_tipo, target_section_id, from_component_tipo) HAVING COUNT(*) > 1
 			) b
-			WHERE 
-		    a.section_tipo = b.section_tipo 
-		AND a.section_id = b.section_id 
-		AND a.target_section_tipo = b.target_section_tipo 
-		AND a.target_section_id = b.target_section_id 
-		AND a.from_component_tipo = b.from_component_tipo 
+			WHERE
+		    a.section_tipo = b.section_tipo
+		AND a.section_id = b.section_id
+		AND a.target_section_tipo = b.target_section_tipo
+		AND a.target_section_id = b.target_section_id
+		AND a.from_component_tipo = b.from_component_tipo
 		AND a.id <> b.id ;
 
 		-- CONSTRAIN RELATIONS ALL FIELDS
@@ -102,7 +121,7 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 0;
 
 	#UPDATE COMPONENTS
-	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time	
+	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time
 
 
 
@@ -136,7 +155,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_method  = "convert_table_data";
 		$script_obj->script_vars    = [json_encode(['component_filter_master','component_filter']), $move_to_relations_container=false]; // Note that only ONE argument as array is sended
 	$updates->$v->run_scripts[] = $script_obj;
-	
+
 
 
 $v=483; #####################################################################################
@@ -153,7 +172,7 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 2;
 
 
-	# DATABASE UPDATES 
+	# DATABASE UPDATES
 	/*$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			CREATE TABLE \"relations\" (
 			  \"id\" serial NOT NULL,
@@ -228,7 +247,7 @@ $updates->$v = new stdClass();
 			DROP INDEX IF EXISTS matrix_dd_relations_idx ;
 			DROP INDEX IF EXISTS matrix_layout_dd_relations_idx ;
 			DROP INDEX IF EXISTS matrix_activity_relations_idx ;
-			DROP INDEX IF EXISTS matrix_activity_order_section_id_desc ;			
+			DROP INDEX IF EXISTS matrix_activity_order_section_id_desc ;
 
 			CREATE INDEX matrix_relations_idx ON matrix USING GIN ((matrix.datos#>'{relations}') jsonb_path_ops);
 			CREATE INDEX matrix_users_relations_idx ON matrix_users USING gin ((datos#>'{relations}') jsonb_path_ops);
@@ -245,7 +264,7 @@ $updates->$v = new stdClass();
 			CREATE INDEX matrix_layout_dd_relations_idx ON matrix_layout_dd USING gin ((datos#>'{relations}') jsonb_path_ops);
 			CREATE INDEX matrix_activity_relations_idx ON matrix_activity USING gin ((datos#>'{relations}') jsonb_path_ops);
 			CREATE INDEX matrix_activity_order_section_id_desc ON public.matrix_activity USING btree (section_id DESC);
-			
+
 			DROP INDEX IF EXISTS matrix_langs_relations_idx ;
 			DROP INDEX IF EXISTS matrix_langs_hierarchy41_gin ;
 			CREATE INDEX matrix_langs_relations_idx ON matrix_langs USING gin ((datos#>'{relations}') jsonb_path_ops);
@@ -281,7 +300,7 @@ $updates->$v = new stdClass();
 
 
 	#UPDATE COMPONENTS
-	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time			
+	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time
 
 
 
@@ -296,8 +315,8 @@ $updates->$v = new stdClass();
 	# MINIM UPDATE FROM
 	$updates->$v->update_from_major  = 4;
 	$updates->$v->update_from_medium = 7;
-	$updates->$v->update_from_minor  = 1;	
-	
+	$updates->$v->update_from_minor  = 1;
+
 	# UPDATE COMPONENTS
 	#$updates->$v->components_update = ['component_relation_autocomplete'];
 
@@ -306,7 +325,7 @@ $updates->$v = new stdClass();
 	$alert->command 	 = 'Follow this steps:
 							<br> 1 - Dédalo version. Verify that you are running version code >= 4.8
 							<br> 2 - Backup. Make a complete DB backup and make sure is finished and reliable (you can use "Make backup" link above)
-							<br> 3 - Run update. Remember: rewrite all data takes a long time and is a good idea here tail error log for check the progress and avoid timeout confusions. 
+							<br> 3 - Run update. Remember: rewrite all data takes a long time and is a good idea here tail error log for check the progress and avoid timeout confusions.
 							<br> 4 - Server. On finish, restart your http and db server to avoid undesired cache problems
 							';
 	$updates->$v->alert_update[] 	= $alert;
@@ -315,7 +334,7 @@ $updates->$v = new stdClass();
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			CREATE SEQUENCE IF NOT EXISTS public.relations_id_seq;
-			
+
 			CREATE TABLE IF NOT EXISTS \"relations\" (
 			  \"id\" integer NOT NULL DEFAULT nextval('relations_id_seq'::regclass),
 			  \"section_tipo\" character varying(254) NOT NULL,
@@ -348,7 +367,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "reference_dato_v47_to_relation_dato_v48";
 		$script_obj->script_method  = "convert_table_data";
 		$script_obj->script_vars    = json_encode(['component_autocomplete','component_autocomplete_hi','component_check_box','component_portal','component_radio_button','component_select']); // Note that only ONE argument encoded is sended
-						
+
 
 	$updates->$v->run_scripts[] = $script_obj;
 
@@ -380,7 +399,7 @@ $updates->$v = new stdClass();
 									END$$ LANGUAGE plpgsql;
 									");
 	// IMMUTABLE
-	
+
 	#UPDATE COMPONENTS
 	#
 
@@ -402,12 +421,12 @@ $updates->$v = new stdClass();
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 									CREATE TABLE IF NOT EXISTS public.matrix_dataframe
-									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
+									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 									WITH (OIDS = FALSE);
-									CREATE SEQUENCE matrix_dataframe_id_seq; 
+									CREATE SEQUENCE matrix_dataframe_id_seq;
 									ALTER TABLE public.matrix_dataframe ALTER COLUMN id SET DEFAULT nextval('matrix_dataframe_id_seq'::regclass);
 									");
-	
+
 	#UPDATE COMPONENTS
 	$updates->$v->components_update = ['component_date'];
 
@@ -430,17 +449,17 @@ $updates->$v = new stdClass();
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 									CREATE TABLE IF NOT EXISTS public.matrix_indexations
-									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
+									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 									WITH (OIDS = FALSE);
-									CREATE SEQUENCE matrix_indexations_id_seq; 
+									CREATE SEQUENCE matrix_indexations_id_seq;
 									ALTER TABLE public.matrix_indexations ALTER COLUMN id SET DEFAULT nextval('matrix_indexations_id_seq'::regclass);
 									");
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 									CREATE TABLE IF NOT EXISTS public.matrix_structurations
-									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
+									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 									WITH (OIDS = FALSE);
-									CREATE SEQUENCE matrix_structurations_id_seq; 
+									CREATE SEQUENCE matrix_structurations_id_seq;
 									ALTER TABLE public.matrix_structurations ALTER COLUMN id SET DEFAULT nextval('matrix_structurations_id_seq'::regclass);
 									");
 
@@ -460,13 +479,13 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 23;
 
 	# DATABASE UPDATES
-	/*	
-	
+	/*
+
 	*/
 
 	# RUN_SCRIPTS
 	# Order is important !
-	
+
 	/*
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
@@ -487,7 +506,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_vars    = array('lg','si');
 	$updates->$v->run_scripts[] = $script_obj;
 	*/
-	
+
 	/*
 	# TS
 	$script_obj = new stdClass();
@@ -541,7 +560,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('pt','si');
 	$updates->$v->run_scripts[] = $script_obj;
-	
+
 	/*
 	# USA
 	$script_obj = new stdClass();
@@ -579,7 +598,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('es','si');
-	$updates->$v->run_scripts[] = $script_obj;	
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Algeria
@@ -606,7 +625,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ma','si');
 	$updates->$v->run_scripts[] = $script_obj;
-	
+
 	#$updates->$v->run_scripts = $scripts;*/
 
 
@@ -626,9 +645,9 @@ $updates->$v = new stdClass();
 
 
 	# DATABASE UPDATES
-	# Create trigram text extension for gin index 
+	# Create trigram text extension for gin index
 	$alert 					= new stdClass();
-	
+
 	$alert->notification 	= 'Before run this update, please copy and run the SQL command bellow into the PostgresSQL with superuser rights (Dédalo can\'t do this action because it can\'t scale privileges)
 	After this, run update normally';
 	$alert->command 		= PHP_EOL.sanitize_query("
@@ -638,7 +657,7 @@ $updates->$v = new stdClass();
 	$updates->$v->alert_update[] 	= $alert;
 
 
-	
+
 	# Create INMUTABLE function f_unaccent that replace MUTABLE / STABLE unaccent function
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
 									CREATE OR REPLACE FUNCTION f_unaccent(text)
@@ -649,7 +668,7 @@ $updates->$v = new stdClass();
 									');
 	# Create index for component_autocomplete_hi search
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-									CREATE INDEX matrix_hierarchy_term ON matrix_hierarchy USING gin(f_unaccent(datos#>>'{components, hierarchy25, dato}') gin_trgm_ops);				
+									CREATE INDEX matrix_hierarchy_term ON matrix_hierarchy USING gin(f_unaccent(datos#>>'{components, hierarchy25, dato}') gin_trgm_ops);
 									");
 
 
@@ -698,7 +717,7 @@ $updates->$v = new stdClass();
 										\"datos\" = jsonb_set (datos, '{components,dd132,dato,lg-nolan}', jsonb '[\"root\"]')
 										WHERE \"id\" = '-1';
 									");
-	
+
 
 
 $v=4020; #####################################################################################
@@ -726,9 +745,9 @@ $updates->$v = new stdClass();
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 									CREATE TABLE public.matrix_notes
-									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
+									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 									WITH (OIDS = FALSE);
-									CREATE SEQUENCE matrix_notes_id_seq; 
+									CREATE SEQUENCE matrix_notes_id_seq;
 									ALTER TABLE public.matrix_notes ALTER COLUMN id SET DEFAULT nextval('matrix_notes_id_seq'::regclass);
 									");
 
@@ -769,7 +788,7 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium = 0;
 	$updates->$v->update_from_minor  = 17;
 
-	
+
 	$scripts = array();
 
 	# LANGS
@@ -818,7 +837,7 @@ $updates->$v = new stdClass();
 	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(' CREATE TABLE IF NOT EXISTS "matrix_langs"
 									(
 									LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE
-									) 
+									)
 									WITH (OIDS = FALSE);
 									CREATE SEQUENCE matrix_langs_id_seq;
 									ALTER TABLE matrix_langs ALTER COLUMN id SET DEFAULT nextval(\'matrix_langs_id_seq\'::regclass);
@@ -832,7 +851,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('lg','no');
 	$updates->$v->run_scripts[] = $script_obj;
-	
+
 	$script_obj = new stdClass();
 		$script_obj->info   		= "Add records of langs models from thesaurus v3 to v4";
 		$script_obj->script_class   = "hierarchy";
@@ -856,8 +875,8 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 15;
 
 
-	#$updates->$v->SQL_update[]  = ' ALTER TABLE public.main_dd ADD CONSTRAINT tld UNIQUE(tld); ';	
-	
+	#$updates->$v->SQL_update[]  = ' ALTER TABLE public.main_dd ADD CONSTRAINT tld UNIQUE(tld); ';
+
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
 									DROP INDEX public.matrix_activity_id_btree;
 									CREATE INDEX matrix_activity_order_id_asc
@@ -869,8 +888,8 @@ $updates->$v = new stdClass();
 										 USING btree
 										 (id DESC NULLS LAST); ');
 
-	#$updates->$v->SQL_update[] = ' DROP INDEX matrix_hierarchy_relations_idx; ';	
-	#$updates->$v->SQL_update[] = ' CREATE INDEX matrix_hierarchy_relations_idx ON matrix_hierarchy USING gin ((datos #> \'{relations}\')); ';	
+	#$updates->$v->SQL_update[] = ' DROP INDEX matrix_hierarchy_relations_idx; ';
+	#$updates->$v->SQL_update[] = ' CREATE INDEX matrix_hierarchy_relations_idx ON matrix_hierarchy USING gin ((datos #> \'{relations}\')); ';
 
 
 
@@ -897,10 +916,10 @@ $updates->$v = new stdClass();
 		CREATE INDEX matrix_time_machine_timestamp ON matrix_time_machine USING btree (timestamp DESC NULLS LAST);
 		CREATE INDEX "matrix_time_machine_userID" ON matrix_time_machine USING btree ("userID");
 		CREATE INDEX matrix_time_machine_state ON matrix_time_machine USING btree (state);
-		CREATE INDEX matrix_time_machine_datos_gin  ON matrix_time_machine USING gin (dato jsonb_path_ops); 
+		CREATE INDEX matrix_time_machine_datos_gin  ON matrix_time_machine USING gin (dato jsonb_path_ops);
 		';
 
-	
+
 
 $v=4014; #####################################################################################
 $updates->$v = new stdClass();
@@ -916,8 +935,8 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 12;
 
 	# DATABASE UPDATES
-	# Create trigram text extension for gin index 
-	$alert = new stdClass();	
+	# Create trigram text extension for gin index
+	$alert = new stdClass();
 		$alert->notification 	= 'Before run this update, please copy and run the SQL command bellow into the PostgresSQL with superuser rights (Dédalo can\'t do this action because it can\'t scale privileges)
 								  After this, run update normally';
 		$alert->command 		= PHP_EOL.sanitize_query("CREATE EXTENSION unaccent;");
@@ -925,21 +944,21 @@ $updates->$v = new stdClass();
 
 
 	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(' CREATE TABLE IF NOT EXISTS "matrix_hierarchy"
-			( LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS ) 
+			( LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS )
 			WITH (OIDS = FALSE);
 			CREATE SEQUENCE matrix_hierarchy_id_seq;
 			ALTER TABLE matrix_hierarchy ALTER COLUMN id SET DEFAULT nextval(\'matrix_hierarchy_id_seq\'::regclass); ');
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('	CREATE TABLE IF NOT EXISTS  "matrix_hierarchy_main"
-			( LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS ) 
+			( LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS )
 			WITH (OIDS = FALSE);
-			CREATE SEQUENCE matrix_hierarchy_main_id_seq; 
+			CREATE SEQUENCE matrix_hierarchy_main_id_seq;
 			ALTER TABLE matrix_hierarchy_main ALTER COLUMN id SET DEFAULT nextval(\'matrix_hierarchy_main_id_seq\'::regclass); ');
 
 	#$updates->$v->SQL_update[] 	= 'CREATE EXTENSION unaccent';
-	
+
 	#$updates->$v->SQL_update[] 	= ' INSERT INTO "main_dd" ("tld", "counter", "name") VALUES (\'hierarchy\', 0, \'hierarchy\');';
-	
+
 	#UPDATE COMPONENTS
 	# Order is important !
 	$updates->$v->components_update = ['component_date'];
@@ -963,7 +982,7 @@ $updates->$v = new stdClass();
 	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(' CREATE TABLE IF NOT EXISTS "matrix_langs"
 									(
 									LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE
-									) 
+									)
 									WITH (OIDS = FALSE);
 									CREATE SEQUENCE matrix_langs_id_seq;
 									ALTER TABLE matrix_langs ALTER COLUMN id SET DEFAULT nextval(\'matrix_langs_id_seq\'::regclass);
@@ -994,7 +1013,7 @@ $updates->$v = new stdClass();
 	$updates->$v->components_update = ['component_security_access','component_security_areas'];
 
 
-	
+
 	$updates->$v->SQL_update[] 	= ' CREATE TABLE IF NOT EXISTS public.jer_ds (
 										LIKE public.jer_ts INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
 								  	) WITH (OIDS = FALSE) ';
@@ -1004,11 +1023,11 @@ $updates->$v = new stdClass();
 	$updates->$v->SQL_update[] 	= ' UPDATE jerarquia SET tipo = 8 WHERE tipo = 7 ';
 	$updates->$v->SQL_update[] 	= ' INSERT INTO "jerarquia_tipos" ("id", "nombre", "orden") VALUES (\'7\', \'Semantic\', \'7\') ';
 	$updates->$v->SQL_update[] 	= ' INSERT INTO "jerarquia" ("alpha3", "alpha2", "nombre", "tipo", "activa", "mainLang") VALUES (\'DSE\', \'DS\', \'Semantic\', \'7\', \'si\', \'lg-spa\') ';
-	
+
 	$updates->$v->SQL_update[] 	= ' CREATE TABLE IF NOT EXISTS "matrix_test"
 									(
 									LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
-									) 
+									)
 									WITH (OIDS = FALSE);
 									CREATE SEQUENCE matrix_test_id_seq;
 									ALTER TABLE matrix_test ALTER COLUMN id SET DEFAULT nextval(\'matrix_test_id_seq\'::regclass); ';
@@ -1017,7 +1036,7 @@ $updates->$v = new stdClass();
 	$updates->$v->SQL_update[] = ' CREATE TABLE IF NOT EXISTS "matrix_langs"
 									(
 									LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE
-									) 
+									)
 									WITH (OIDS = FALSE);
 									CREATE SEQUENCE matrix_langs_id_seq;
 									ALTER TABLE matrix_langs ALTER COLUMN id SET DEFAULT nextval(\'matrix_langs_id_seq\'::regclass);
@@ -1042,7 +1061,7 @@ $updates->$v = new stdClass();
 	#UPDATE COMPONENTS
 	$updates->$v->components_update = ['component_date'];
 
-	
+
 	$updates->$v->SQL_update[] 	= ' CREATE TABLE IF NOT EXISTS "matrix_notifications" (
 										"id" serial NOT NULL,
 										"datos" jsonb NULL,
@@ -1054,7 +1073,7 @@ $updates->$v = new stdClass();
 										"datos" jsonb NULL,
 										CONSTRAINT matrix_updates_id PRIMARY KEY(id)
 									) ';
-	
+
 
 
 $v=409; #####################################################################################
@@ -1065,7 +1084,7 @@ $updates->$v = new stdClass();
 	$updates->$v->version_medium 	 = 0;
 	$updates->$v->version_minor 	 = 9;
 
-	# MINIM UPDATE FROM 
+	# MINIM UPDATE FROM
 	$updates->$v->update_from_major  = 4;
 	$updates->$v->update_from_medium = 0;
 	$updates->$v->update_from_minor  = 8;
@@ -1080,8 +1099,8 @@ $updates->$v = new stdClass();
 										"datos" jsonb NULL,
 										CONSTRAINT matrix_notifications_id PRIMARY KEY(id)
 									) ';
-	$updates->$v->SQL_update[] 	= ' INSERT INTO "matrix_notifications" ("datos") VALUES (\'[]\') ';								
-							
-			
+	$updates->$v->SQL_update[] 	= ' INSERT INTO "matrix_notifications" ("datos") VALUES (\'[]\') ';
+
+
 
 ?>

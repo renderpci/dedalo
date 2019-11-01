@@ -1604,7 +1604,7 @@ class diffusion_sql extends diffusion  {
 					//'thesaurus',
 					//'title',
 					'typology',
-					'dada_mod' // added 18-09-2019
+					'data_mod' // added 18-09-2019
 				];
 
 			$fields_array = [];
@@ -2521,7 +2521,7 @@ class diffusion_sql extends diffusion  {
 
 				$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
 
-				$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'];
+				$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'] ?? 0;
 
 				# Set temporally to skip and force parent publication
 				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
@@ -3053,10 +3053,10 @@ class diffusion_sql extends diffusion  {
 			if (isset($process_dato_arguments->custom_arguments)) {
 				$custom_arguments = (array)$process_dato_arguments->custom_arguments;
 			}
-
 			if ($method==='get_diffusion_value') {
 				#$value = $component->{$method}($options->lang);
-				$custom_arguments[] = $options->lang;
+				#$custom_arguments[] = $options->lang;
+				array_unshift($custom_arguments, $options->lang); // always as first argument (!)
 			}
 			$value = call_user_func_array(array($component, $method), $custom_arguments);
 
