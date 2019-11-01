@@ -104,11 +104,20 @@ class RecordObj_dd_edit extends RecordObj_dd {
 	* Actualiza el contador para el tld dado (ej. 'dd').
 	* El 'current_value' es opcional. Si no se recibe se calcula
 	*/
-	protected static function update_counter($tld, $current_value=false) {
+	public static function update_counter($tld, $current_value=false) {
 
-		if (!$current_value) {
-			$current_value = self::get_counter_value($tld);
+		#if (!$current_value) {
+		#	$current_value = self::get_counter_value($tld);
+		#}
+
+		$db_value = self::get_counter_value($tld);
+		if ($current_value<$db_value) {
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Ignored invalid counter value: $current_value . DB value is $db_value ".to_string(), logger::ERROR);
+			}
+			return false;
 		}
+
 		$counter_dato_updated = intval($current_value+1) ;
 
 		$strQuery 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
@@ -128,20 +137,22 @@ class RecordObj_dd_edit extends RecordObj_dd {
 	/**
 	* GET_COUNTER_VALUE
 	*/
-	protected static function get_counter_value($tld) {
+	public static function get_counter_value($tld) {
+		
 		$strQuery 		= "SELECT counter FROM \"main_dd\" WHERE tld = '$tld' LIMIT 1";
 		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
 		$counter_value 	= pg_fetch_assoc($result)['counter'];
 
 		if (!$counter_value || is_null($counter_value)) {
-			if(SHOW_DEBUG===true) {
-				trigger_error("Error on get_counter_value 'RecordObj_dd_edit'. counter for tld not found.");
-			}
-			return false;
+
+			$insert_counter = 'INSERT INTO "main_dd" ("tld", "counter") VALUES (\''.$tld.'\', 0);';
+			pg_query(DBi::_getConnection(), $insert_counter);
+
+			return 0;
 		}
 
 		return (int)$counter_value;
-	}
+	}//end get_counter_value
 	
 
 
