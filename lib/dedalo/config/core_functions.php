@@ -424,7 +424,7 @@ function encryption_mode() {
 		return ENCRYPTION_MODE;
 	}
 
-	$current_version = tool_administration::get_current_version_in_db();
+	$current_version = get_current_version_in_db();
 
 	$min_subversion = 22; # real: 22 (see updates.php)
 	if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= $min_subversion) ||
@@ -1399,4 +1399,66 @@ function show_msg($msg, $type='ERROR') {
 
 
 
-?>
+/**
+* GET_CURRENT_VERION
+* Get the version of the data into the DB
+* The data version need to be compatible with the program files, but,
+* when Dédalo program change (for update), the data and the program is un-sync before admin run the update
+* @return array $current_version
+*/
+public static function get_current_version_in_db() {
+
+	static $current_version;
+
+	if (isset($current_version)) {
+		return $current_version;
+	}
+
+	#
+	# Test table exists	and create if not
+	$table_exits = self::table_exits("matrix_updates");
+
+	if (!$table_exits) {
+		self::create_table(
+				$table_name = "matrix_updates",
+				$ar_columns = array("id" 	=> "serial NOT NULL",
+									"datos" => "jsonb NULL")
+				);
+		# Set to default minimal db version	(4.0.9)
+		self::update_dedalo_data_version('4.0.9');
+	}
+
+	#Query the last row of matrix_updates, it is the last update, and the current version.
+	$strQuery = 'SELECT id, datos
+				FROM "matrix_updates"
+				ORDER BY id DESC
+				LIMIT 1';
+
+	#echo "<br> strQuery: $strQuery <br>";
+	#perform query
+	$result = JSON_RecordObj_matrix::search_free($strQuery);
+
+	#loop the rows
+	while ($rows = pg_fetch_assoc($result)) {
+
+		$id 	= (int)$rows['id'];
+		$datos 	= (string)$rows['datos'];
+
+		$datos	= (object)json_handler::decode($datos);
+	}
+
+	$current_version = array();
+
+	if (isset($datos)) {
+
+		$ar_version = explode(".", $datos->dedalo_version);
+
+		$current_version[0] = (int)$ar_version[0];
+		$current_version[1] = (int)$ar_version[1];
+		$current_version[2] = (int)$ar_version[2];
+	}
+
+	return $current_version;
+}//end get_current_version_in_db
+
+

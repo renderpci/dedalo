@@ -50,7 +50,7 @@ class component_reference_common extends component_common {
 			$options->json_field  = 'dato';
 			$options->search_tipo = null;
 			$options->lang 		  = null;
-			$options->subquery 	  = true;		
+			$options->subquery 	  = true;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$json_field = 'a.'.$options->json_field; // Add 'a.' for mandatory table alias search
@@ -64,19 +64,16 @@ class component_reference_common extends component_common {
 				$select_query .= "\n  -- ".get_called_class().' > '.__METHOD__." $options->search_tipo . Select with_references ";
 			}
 
-			// Dedalo version
-			#$current_version = tool_administration::get_dedalo_version();
-			#if( $current_version[0] >= 4 && $current_version[1]>= 7 && $current_version[2]>= 1) {
 			// DB version
 			$db_version 	= pg_version(DBi::_getConnection())['server'];
-			$ar_db_version 	= explode('.', $db_version);	
+			$ar_db_version 	= explode('.', $db_version);
 			if( isset($ar_db_version[0]) && $ar_db_version[0] >= 10 ) {
-				
+
 				$select_query .= "\n  check_array_component((jsonb_typeof({$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}') = 'array' AND {$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}' != '[]' ),({$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}')) \n";
 				$select_query .= "  as {$options->search_tipo}_array_elements";
-				
+
 			}else{
-				
+
 				$select_query .= "\n  case when (jsonb_typeof({$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}') = 'array' AND {$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}' != '[]' ) \n";
 				$select_query .= "  then jsonb_array_elements({$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}') \n";
 				$select_query .= "  else {$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}' \n";
@@ -88,7 +85,7 @@ class component_reference_common extends component_common {
 			}else{
 				$select_query .= "\n  ,{$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}' as $options->search_tipo";
 			}
-			
+
 		#}else{
 		#	if(SHOW_DEBUG===true) {
 		#		$select_query .= "\n  -- ".get_called_class().' > '.__METHOD__." $options->search_tipo . Select with_references (subquery false) ";
@@ -104,7 +101,7 @@ class component_reference_common extends component_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -118,7 +115,7 @@ class component_reference_common extends component_common {
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		
+
 		$untouch_search_value = $search_value;
 
 		$search_value = json_decode($search_value);
@@ -153,15 +150,15 @@ class component_reference_common extends component_common {
 					$current_value = json_encode($current_value);
 					$ar_data[] = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb ";
 				}
-				break;			
+				break;
 		}
 		$search_query = implode(" OR \n",$ar_data);
-		
+
 		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search ".__METHOD__." $search_tipo ". get_called_class() ." \n".$search_query ;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 		}
-		
+
 
 		return $search_query;
 	}//end get_search_query
@@ -171,7 +168,7 @@ class component_reference_common extends component_common {
 	/**
 	* SET_DATO_EXTERNAL
 	* get the dato from other component that reference at the current section of the component (portal, autocomplete, select, etc)
-	* the result will be the result of the search to the external section and component 
+	* the result will be the result of the search to the external section and component
 	* and the combiantion with the dato of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
 	* @return dato
 	*/
@@ -181,8 +178,8 @@ class component_reference_common extends component_common {
 		$propiedades 				= $this->get_propiedades();
 		$ar_section_to_search 		= $propiedades->source->section_to_search;
 		$ar_component_to_search 	= $propiedades->source->component_to_search;
-		
-	
+
+
 		//get the locator of the current section for search in the component that call this section
 		$section_id 	= $this->get_parent();
 		$section_tipo 	= $this->get_section_tipo();
@@ -190,22 +187,22 @@ class component_reference_common extends component_common {
 		$locator 		= new locator();
 			$locator->set_section_id($section_id);
 			$locator->set_section_tipo($section_tipo);
-			
+
 		$value_to_search = array($locator);
 		$value_to_search = json_encode($value_to_search);
 
 		foreach ($ar_component_to_search as $component_to_search) {
-		
+
 			# get the modelo_name of the componet to search
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_to_search,true);
 
 			//get the query model of the component to secarch
 			$filter_fields 	= $modelo_name::get_search_query( $json_field='datos', $component_to_search, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, $value_to_search, $comparison_operator='=');
-			
+
 			break; // Only one exists
 		}
 		# MATRIX TABLE : Only from first term for now
-			$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );	
+			$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );
 
 		# TARGET SECTIONS : Filter search by target sections (hierarchy_sections)
 			$filter_target_section = '';
@@ -216,7 +213,7 @@ class component_reference_common extends component_common {
 			$filter_target_section = '(' . implode(' OR ', $ar_filter) . ')';
 
 		# ORDER
-			$order 	= "a.section_id ASC";				
+			$order 	= "a.section_id ASC";
 
 		# Build the search query
 		$strQuery = PHP_EOL.sanitize_query("
@@ -225,7 +222,7 @@ class component_reference_common extends component_common {
 			FROM \"$matrix_table\" a
 			WHERE
 			$filter_target_section
-			AND $filter_fields 
+			AND $filter_fields
 			ORDER BY $order
 			"
 			);
@@ -256,7 +253,7 @@ class component_reference_common extends component_common {
 
 		$dato = array_values($dato);
 		$this->set_dato($dato);
-		$this->Save();		
+		$this->Save();
 	}//end set_dato_external
 
 
