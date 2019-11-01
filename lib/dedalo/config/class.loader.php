@@ -1,6 +1,6 @@
 <?php
 /*
-	LOADER DEDALO COMPONENTS 
+	LOADER DEDALO COMPONENTS
 */
 include(DEDALO_LIB_BASE_PATH . '/db/class.DBi.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
@@ -28,30 +28,30 @@ include(DEDALO_LIB_BASE_PATH . '/component_relation_common/class.component_relat
 include(DEDALO_LIB_BASE_PATH . '/search/class.search.php');
 include(DEDALO_LIB_BASE_PATH . '/api/v1/common/class.dd_api.php');
 
-	
+
 class class_loader {
-	
-	
+
+
 	public function __construct() {
-		
+
 		# Check if PHP versiion is supported
 		#self::test_php_version_supported();
-		
+
 		spl_autoload_extensions('.php');
 		spl_autoload_register(array($this, 'loader'));
 	}
-	
-		
+
+
 	private static function loader($className) {
-	
-		switch (true) {			
+
+		switch (true) {
 			case (strpos($className, 'tool_')!==false):
 				$file_path	= DEDALO_LIB_BASE_PATH . '/tools/' . $className . '/class.' . $className . '.php';
 				break;
 
 			case (strpos($className, 'diffusion_')!==false):
 				$file_path	= DEDALO_LIB_BASE_PATH . '/diffusion/' . $className . '/class.' . $className . '.php';
-				break;			
+				break;
 
 			case (strpos($className, 'Smalot')!==false):
 			case (strpos($className, 'Zend')!==false):
@@ -59,7 +59,7 @@ class class_loader {
 				return;
 				break;
 
-			case (strpos($className, 'default')!==false):				
+			case (strpos($className, 'default')!==false):
 				if(SHOW_DEBUG===true) {
 					$bt = debug_backtrace();
 					echo "<pre>";
@@ -79,43 +79,48 @@ class class_loader {
 				# Folder base dedalo lib
 				$file_path	= DEDALO_LIB_BASE_PATH . '/' . $className . '/class.' . $className . '.php';
 				break;
-		}		
-		
+		}
+
 		if ( !include($file_path) ) {
+			if(SHOW_DEBUG===true) {
+				$bt = debug_backtrace();
+				dump($bt, ' ERROR ON LOADER INCLUDE FILE !! bt ++ '.to_string($file_path));
+				die();
+			}
 			throw new Exception(__METHOD__ . "<hr> A loader call was made to class <b>$className</b><br> File not exits at: <b>$file_path</b><br>
-				Please, remember require this file in main class (like component_common) or create standar dedalo lib path folder 
+				Please, remember require this file in main class (like component_common) or create standar dedalo lib path folder
 				like '/component_input_text/class.component_input_text.php' for loader calls. ");
 		}
-		
+
 	}#end loader
-	
-	
-	
+
+
+
 	# Test if PHP versiion is supported
-	static private function test_php_version_supported() {		
-		
+	static private function test_php_version_supported() {
+
 		static $php_version_supported;
-		
+
 		if(isset($php_version_supported)) {
 			return ($php_version_supported);
 		}
-		
+
 		$current_php_version		= phpversion();
 		$minimun_php_version		= '5.4.3';
-		
-		
+
+
 		$ar_current_php_version = explode('.',$current_php_version);
 		$ar_minimun_php_version = explode('.',$minimun_php_version);
 
 		if ($ar_current_php_version[1]<4) {
 			trigger_error("PHP version $current_php_version is not full compatible with this application. Please update ASAP to PHP 5.4");
-		}		
-		
-		if(	$ar_current_php_version[0] < $ar_minimun_php_version[0] || 
+		}
+
+		if(	$ar_current_php_version[0] < $ar_minimun_php_version[0] ||
 			($ar_current_php_version[0] === $ar_minimun_php_version[0] && $ar_current_php_version[1] < $ar_minimun_php_version[1])
 		  )
 		  throw new Exception( " This PHP version (".phpversion().") is not supported ! Please update your PHP to $minimun_php_version or higher ASAP ");
-		
+
 		$php_version_supported = true;
 	}//end test_php_version_supported
 
