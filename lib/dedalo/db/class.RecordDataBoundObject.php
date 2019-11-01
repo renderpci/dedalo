@@ -214,18 +214,18 @@ abstract class RecordDataBoundObject {
 			$strQuery		= ' UPDATE "'.$this->strTableName.'" SET ' ;
 			$strQuery_set	= '';
 
-			foreach($this->arRelationMap as $key => $value) {					
+			foreach($this->arRelationMap as $key => $value) {
 
 				$actualVal = & $this->$value ;
 
 				if(array_key_exists($value, $this->arModifiedRelations)) {
 
-					$current_val = $actualVal;#json_handler::encode($actualVal);						
+					$current_val = $actualVal;#json_handler::encode($actualVal);
 
 					if (is_object($current_val) || is_array($current_val)) {
 						$current_val = json_handler::encode($current_val);
 					}
-
+					
 					if(is_int($current_val)) {		 // changed  from is_numeric to is_int (06-06-2016)
 						$strQuery_set .= "\"$key\" = $current_val, ";
 					}else{						

@@ -50,12 +50,12 @@
 			},
 			"translatable": false,
 			"tr": [
-				"rsc21",
-				"rsc19",
-				"rsc23",
-				"rsc263",
-				"rsc36",
-				"rsc35"
+				{"tipo":"rsc21"},
+				{"tipo":"rsc19"},
+				{"tipo":"rsc23"},
+				{"tipo":"rsc263"},
+				{"tipo":"rsc36"},
+				{"tipo":"rsc35"}
 			]
 		}
 	],
