@@ -1,5 +1,9 @@
 <?php
-
+/**
+* ONTOLOGY
+* Manages structure (ontology) import and export data
+* Useful for developers to create tools structure data
+*/
 class ontology {
 
 
@@ -45,7 +49,7 @@ class ontology {
 
 	/**
 	* TIPO_TO_JSON_ITEM
-	* Resolve full dd item data from tipo
+	* Resolve full ontology item data from tipo
 	* @param string $tipo
 	* @return object $item
 	*/
@@ -84,6 +88,7 @@ class ontology {
 		$item = (object)[
 			'tipo' 			=> $tipo,
 			'tld' 			=> $RecordObj_dd->get_tld(),
+			'is_model' 		=> $RecordObj_dd->get_esmodelo(),
 			'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($tipo,true),
 			'model_tipo' 	=> $RecordObj_dd->get_modelo(),
 			'parent' 		=> $RecordObj_dd->get_parent(),
@@ -102,20 +107,23 @@ class ontology {
 
 	/**
 	* IMPORT
-	* @return
+	* Create one NEW term for each onomastic item in data.
+	* (!) Note that is important clean old terms before because current funtion don't 
+	* update terms, only insert new terms (!)
+	* @return bool true
 	*/
 	public static function import(array $data) {
-
-		$data = !is_array($data) ? array($data) : $data;
 
 		foreach ($data as $key => $item) {
 
 			// term. jer_dd
-				$esmodelo = $item->is_model ?? 'si';
+				$esmodelo 	= $item->is_model ?? 'no';
 				$traducible = $item->translatable===true ? 'si' : 'no';
 
-				$RecordObj_dd_edit = new RecordObj_dd_edit($item->tipo, $item->tld);
+				$RecordObj_dd_edit = new RecordObj_dd_edit(null, $item->tld);
 
+				$RecordObj_dd_edit->set_terminoID($item->tipo);
+				$RecordObj_dd_edit->set_esdescriptor('si');
 				$RecordObj_dd_edit->set_esdescriptor('si');
 				$RecordObj_dd_edit->set_visible('si');
 				$RecordObj_dd_edit->set_parent($item->parent);
@@ -127,8 +135,8 @@ class ontology {
 				$RecordObj_dd_edit->set_modelo($item->model_tipo);
 				$RecordObj_dd_edit->set_tld($item->tld);
 
-				$RecordObj_dd_edit->Save();
-
+				$term_id = $RecordObj_dd_edit->Save();
+				
 			// descriptors
 				$descriptors = $item->descriptors;
 				foreach ($descriptors as $current_descriptor) {
@@ -156,17 +164,102 @@ class ontology {
 	* IMPORT_TOOLS
 	* @return
 	*/
-	public function import_tools() {
+	public static function import_tools() {
+
+		// get the all tools folders
+			$ar_tools = (array)glob(DEDALO_LIB_BASE_PATH . '/tools/*', GLOB_ONLYDIR);
+
+		// Ontologies. Get the all tools ontologies
+			$ar_ontologies = [];
+			foreach ($ar_tools as $current_dir_tool) {
+				$info_file = $current_dir_tool . '/info.json';
+				if(!file_exists($info_file)){
+					debug_log(__METHOD__." file info.json dont exist into $current_dir_tool".to_string(), logger::ERROR);
+					continue;
+				}
+
+				$info_object	= json_decode( file_get_contents($info_file) );
+				if(isset($info_object->ontology)){
+					$ar_ontologies[] = $info_object->ontology ;
+				}else{
+					debug_log(__METHOD__." the current info.json don't has ontology modificator ".to_string(), logger::DEBUG);
+				}
+			}//end foreach ($ar_tools)
+
+		// Clean. remove all tools records in the database
+			$ar_term_id	= [];
+			$sql_query = 'SELECT "terminoID" FROM "jer_dd" WHERE "tld" = \'tool\' ';
+			$result = pg_query(DBi::_getConnection(), $sql_query);
+			while ($rows = pg_fetch_assoc($result)) {
+				$ar_term_id[] = $rows['terminoID'];
+			}
+
+			if(!empty($ar_term_id)){
+				
+				// delete terms (jer_dd)
+					$sql_query 			= 'DELETE FROM "jer_dd" WHERE "tld" = \'tool\' ';
+					$result_delete_jer 	= pg_query(DBi::_getConnection(), $sql_query);
+				
+				// delete descriptors (matrix_descriptors_dd)
+					$ar_filter = array_map(function($term_id){
+						return 'parent=\''.$term_id.'\'';
+					}, $ar_term_id);
+					$filter = implode(' OR ', $ar_filter);
+
+					$delete_sql_descriptors 	= 'DELETE FROM "matrix_descriptors_dd" WHERE ' .$filter;
+					$result_delete_descriptors 	= pg_query(DBi::_getConnection(), $delete_sql_descriptors);
+
+				// reset the tool counter
+					$sql_reset_counter 	  = ' DELETE FROM "main_dd" WHERE "tld" = \'tool\' ';
+					$result_reset_counter = pg_query(DBi::_getConnection(), $sql_reset_counter);
+			}
+
+		// Insert new . Parse and renumerated the ontologies term_id
+			$counter = 0;
+			foreach ($ar_ontologies as $curernt_ontology) {
+				$new_ontology = ontology::renumerate_term_id($curernt_ontology, $counter);				
+				ontology::import($new_ontology);
+			}
+
+			// update counter at end to consolidate
+			RecordObj_dd_edit::update_counter('tool', $counter-1);
 
 
-
-
+		return true;
 	}//end import_tools
+
+
+
+	/**
+	* RENUMERATE_TERM_ID
+	* @return 
+	*/
+	public static function renumerate_term_id($ontology, &$counter) {
+
+		foreach ($ontology as $item) {
+			$tipo = $item->tipo;
+			$ar_items_childrens = array_filter($ontology, function($current_element) use($tipo){
+				return $current_element->parent === $tipo;
+			});
+			$new_tld = 'tool'.++$counter;
+
+			$item->tipo = $new_tld;
+			$item->tld 	= 'tool';
+
+			foreach ($ar_items_childrens as $key => $current_element) {
+				$ontology[$key]->parent = $new_tld;
+			}
+		}
+
+		return $ontology;
+	}//end renumerate_term_id
 
 
 
 }//end ontology
 
+
+/**/
 DBi::_getConnection();
 include('class.RecordObj_dd_edit.php');
 $data = json_decode('[
@@ -186,7 +279,7 @@ $data = json_decode('[
         "target_section_tipo": "rsc167",
         "target_component_tipo": "rsc35",
         "target_tool": "tool_transcription",
-        "prueba":"Hola test 2"
+        "prueba":"Hola test 7"
       }
     },
     "relations": null,
@@ -265,4 +358,6 @@ $data = json_decode('[
   }
 ]');
 #ontology::import($data);
+ontology::import_tools();
+
 
