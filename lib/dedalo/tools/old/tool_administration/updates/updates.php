@@ -32,6 +32,24 @@ $updates->$v = new stdClass();
 	");
 
 
+$v=512; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 1;
+	$updates->$v->version_minor 	 = 2;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 1;
+	$updates->$v->update_from_minor  = 1;
+
+
+	# UPDATE COMPONENTS
+	$updates->$v->components_update = ['component_email'];	// Force convert from string to array
+
+
 $v=511; #####################################################################################
 $updates->$v = new stdClass();
 
