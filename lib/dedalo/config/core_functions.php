@@ -1406,7 +1406,7 @@ function show_msg($msg, $type='ERROR') {
 * when Dédalo program change (for update), the data and the program is un-sync before admin run the update
 * @return array $current_version
 */
-public static function get_current_version_in_db() {
+function get_current_version_in_db() {
 
 	static $current_version;
 
@@ -1414,28 +1414,12 @@ public static function get_current_version_in_db() {
 		return $current_version;
 	}
 
-	#
-	# Test table exists	and create if not
-	$table_exits = self::table_exits("matrix_updates");
-
-	if (!$table_exits) {
-		self::create_table(
-				$table_name = "matrix_updates",
-				$ar_columns = array("id" 	=> "serial NOT NULL",
-									"datos" => "jsonb NULL")
-				);
-		# Set to default minimal db version	(4.0.9)
-		self::update_dedalo_data_version('4.0.9');
-	}
-
-	#Query the last row of matrix_updates, it is the last update, and the current version.
+	# Query the last row of matrix_updates, it is the last update, and the current version.
 	$strQuery = 'SELECT id, datos
 				FROM "matrix_updates"
 				ORDER BY id DESC
 				LIMIT 1';
 
-	#echo "<br> strQuery: $strQuery <br>";
-	#perform query
 	$result = JSON_RecordObj_matrix::search_free($strQuery);
 
 	#loop the rows
@@ -1443,7 +1427,6 @@ public static function get_current_version_in_db() {
 
 		$id 	= (int)$rows['id'];
 		$datos 	= (string)$rows['datos'];
-
 		$datos	= (object)json_handler::decode($datos);
 	}
 
