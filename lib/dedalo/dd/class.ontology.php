@@ -9,7 +9,7 @@ class ontology {
 	* @return object $data
 	*/
 	public static function export($tipo) {
-		
+
 		$data = ontology::parse($tipo);
 
 		return $data;
@@ -35,9 +35,9 @@ class ontology {
 			foreach ($childrens as $children_tipo) {
 				$ar_data[] = ontology::tipo_to_json_item($children_tipo);
 			}
-		
+
 		#dump($ar_data, '$ar_data ++ '.to_string());
-		
+
 		return $ar_data;
 	}//end parse
 
@@ -70,9 +70,9 @@ class ontology {
 			}
 
 		// relations
-			$current_relations = $RecordObj_dd->get_relaciones();		
+			$current_relations = $RecordObj_dd->get_relaciones();
 			if (!empty($current_relations)) {
-				
+
 				$relations = array_map(function($element){
 					$element = is_array($element) ? (object)$element : $element;
 					$current_obj = new stdClass();
@@ -102,60 +102,66 @@ class ontology {
 
 	/**
 	* IMPORT
-	* @return 
+	* @return
 	*/
 	public static function import(array $data) {
 
 		$data = !is_array($data) ? array($data) : $data;
 
 		foreach ($data as $key => $item) {
-			
-			// jer_dd
+
+			// term. jer_dd
 				$esmodelo = $item->is_model ?? 'si';
 				$traducible = $item->translatable===true ? 'si' : 'no';
 
-				$RecordObj_dd_edit 	= new RecordObj_dd_edit($item->tipo, $item->tld);	
-					# Defaults
-					$RecordObj_dd_edit->set_esdescriptor('si');
-					$RecordObj_dd_edit->set_visible('si');	
-					$RecordObj_dd_edit->set_parent($item->parent);
-					$RecordObj_dd_edit->set_esmodelo($esmodelo);
-					$RecordObj_dd_edit->set_norden($item->order);
-					$RecordObj_dd_edit->set_traducible($traducible);
-					$RecordObj_dd_edit->set_relaciones($item->relations);
-					$RecordObj_dd_edit->set_propiedades($item->properties);
-					$RecordObj_dd_edit->set_modelo($item->model_tipo);
-					$RecordObj_dd_edit->set_tld($item->tld);
+				$RecordObj_dd_edit = new RecordObj_dd_edit($item->tipo, $item->tld);
 
-			
-				
-				# SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
-				$created_id_matrix = $RecordObj_dd_edit->Save();
-					dump($created_id_matrix, ' created_id_matrix ++ '.to_string());
+				$RecordObj_dd_edit->set_esdescriptor('si');
+				$RecordObj_dd_edit->set_visible('si');
+				$RecordObj_dd_edit->set_parent($item->parent);
+				$RecordObj_dd_edit->set_esmodelo($esmodelo);
+				$RecordObj_dd_edit->set_norden($item->order);
+				$RecordObj_dd_edit->set_traducible($traducible);
+				$RecordObj_dd_edit->set_relaciones($item->relations);
+				$RecordObj_dd_edit->set_propiedades($item->properties);
+				$RecordObj_dd_edit->set_modelo($item->model_tipo);
+				$RecordObj_dd_edit->set_tld($item->tld);
 
-				
+				$RecordObj_dd_edit->Save();
 
-				$descriptor = $item->descriptors;
-
-				foreach ($descriptor as $current_descriptor) {
+			// descriptors
+				$descriptors = $item->descriptors;
+				foreach ($descriptors as $current_descriptor) {
 
 					$term = $current_descriptor->type==='term' ? 'termino' : $current_descriptor->type;
-					
-					$RecordObj_descriptors_dd 	= new RecordObj_descriptors_dd(
-						'matrix_descriptors_dd', NULL, $item->tipo,$current_descriptor->lang, $term
+
+					$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(
+						'matrix_descriptors_dd', null, $item->tipo, $current_descriptor->lang, $term
 					);
-						dump($RecordObj_descriptors_dd, ' RecordObj_descriptors_dd ++ '.to_string());
 
 					$RecordObj_descriptors_dd->set_dato($current_descriptor->value);
 					$RecordObj_descriptors_dd->Save();
-				}// end foreach ($descriptor)
+
+				}// end foreach ($descriptors)
 
 		}//end foreach ($data as $key => $item)
-	
-		
 
 
+		return true;
 	}//end import
+
+
+
+	/**
+	* IMPORT_TOOLS
+	* @return
+	*/
+	public function import_tools() {
+
+
+
+
+	}//end import_tools
 
 
 
@@ -258,5 +264,5 @@ $data = json_decode('[
     ]
   }
 ]');
-ontology::import($data);
+#ontology::import($data);
 
