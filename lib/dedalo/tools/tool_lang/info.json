@@ -20,45 +20,100 @@
 			"compoment_text_area"
 		]
 	},
-	"ontology": [
-		{
-			"type": "main",
-			"parent": "oh80",
-			"model": "section_tool",
-			"term": {
-				"lg-spa": "Traducción",
-				"lg-eng": "Translation"
-			},
-			"translatable": false,
-			"properties": {
-				"context": {
-					"context_name": "section_tool",
-					"tool_section_tipo": "oh85",
-					"top_tipo": "oh1",
-					"target_section_tipo": "rsc167",
-					"target_component_tipo": "rsc36",
-					"target_tool": "tool_lang"
-				}
-			}
-		},
-		{
-			"type": "children",
-			"model": "section_list",
-			"term": {
-				"lg-spa": "Listado",
-				"lg-eng": "List"
-			},
-			"translatable": false,
-			"tr": [
-				{"tipo":"rsc21"},
-				{"tipo":"rsc19"},
-				{"tipo":"rsc23"},
-				{"tipo":"rsc263"},
-				{"tipo":"rsc36"},
-				{"tipo":"rsc35"}
-			]
-		}
-	],
+	"ontology":[
+  {
+    "tipo": "oh81",
+    "tld": "oh",
+    "model": "section_tool",
+    "model_tipo": "dd125",
+    "parent": "oh80",
+    "order": 1,
+    "translatable": false,
+    "properties": {
+      "context": {
+        "context_name": "section_tool",
+        "tool_section_tipo": "oh81",
+        "top_tipo": "oh1",
+        "target_section_tipo": "rsc167",
+        "target_component_tipo": "rsc35",
+        "target_tool": "tool_transcription"
+      }
+    },
+    "relations": null,
+    "descriptors": [
+      {
+        "value": "Transcription nuevisimo",
+        "lang": "lg-eng",
+        "type": "term"
+      },
+      {
+        "value": "Transcripción entrevistas",
+        "lang": "lg-spa",
+        "type": "term"
+      },
+      {
+        "value": "Transcripció dentrevistes",
+        "lang": "lg-cat",
+        "type": "term"
+      },
+      {
+        "value": "Μεταγραφή συνεντεύξεις",
+        "lang": "lg-ell",
+        "type": "term"
+      }
+    ]
+  },
+  {
+    "tipo": "oh82",
+    "tld": "oh",
+    "model": "section_list",
+    "model_tipo": "dd91",
+    "parent": "oh81",
+    "order": 1,
+    "translatable": false,
+    "properties": null,
+    "relations": [
+      {
+        "tipo": "rsc21"
+      },
+      {
+        "tipo": "rsc19"
+      },
+      {
+        "tipo": "rsc23"
+      },
+      {
+        "tipo": "rsc263"
+      },
+      {
+        "tipo": "rsc36"
+      },
+      {
+        "tipo": "rsc244"
+      },
+      {
+        "tipo": "rsc35"
+      }
+    ],
+    "descriptors": [
+      {
+        "value": "Listado",
+        "lang": "lg-spa",
+        "type": "term"
+      },
+      {
+        "value": "Llistat",
+        "lang": "lg-cat",
+        "type": "term"
+      },
+      {
+        "value": "List",
+        "lang": "lg-eng",
+        "type": "term"
+      }
+    ]
+  }
+],
 	"translator_engine": [
 		{
 			"name": "babel",
