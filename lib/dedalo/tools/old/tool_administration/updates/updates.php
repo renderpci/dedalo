@@ -6,6 +6,31 @@ global $updates;
 $updates = new stdClass();
 
 
+/// UPDATE 6 NULL
+
+$v=600; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 6;
+	$updates->$v->version_medium 	 = 0;
+	$updates->$v->version_minor 	 = 0;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 1;
+	$updates->$v->update_from_minor  = 2;
+
+# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+		ALTER TABLE \"jer_dd\"
+		ALTER \"parent\" TYPE character varying(32),
+		ALTER \"parent\" DROP DEFAULT,
+		ALTER \"parent\" DROP NOT NULL;
+		COMMENT ON COLUMN \"jer_dd\".\"parent\" IS '';
+		COMMENT ON TABLE \"jer_dd\" IS '';
+	");
+
 
 $v=511; #####################################################################################
 $updates->$v = new stdClass();
