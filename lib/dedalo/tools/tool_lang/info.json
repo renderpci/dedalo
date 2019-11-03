@@ -24,6 +24,7 @@
   {
     "tipo": "oh81",
     "tld": "oh",
+    "is_model": "no",
     "model": "section_tool",
     "model_tipo": "dd125",
     "parent": "oh80",
@@ -42,7 +43,12 @@
     "relations": null,
     "descriptors": [
       {
-        "value": "Transcription nuevisimo",
+        "value": "Trascrizioni interviste",
+        "lang": "lg-ita",
+        "type": "term"
+      },
+      {
+        "value": "Transcription",
         "lang": "lg-eng",
         "type": "term"
       },
@@ -52,7 +58,7 @@
         "type": "term"
       },
       {
-        "value": "Transcripció dentrevistes",
+        "value": "Transcripció d'entrevistes",
         "lang": "lg-cat",
         "type": "term"
       },
@@ -66,6 +72,7 @@
   {
     "tipo": "oh82",
     "tld": "oh",
+    "is_model": "no",
     "model": "section_list",
     "model_tipo": "dd91",
     "parent": "oh81",
@@ -96,6 +103,11 @@
       }
     ],
     "descriptors": [
+      {
+        "value": "Elenco",
+        "lang": "lg-ita",
+        "type": "term"
+      },
       {
         "value": "Listado",
         "lang": "lg-spa",
