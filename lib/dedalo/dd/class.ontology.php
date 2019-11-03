@@ -108,7 +108,7 @@ class ontology {
 	/**
 	* IMPORT
 	* Create one NEW term for each onomastic item in data.
-	* (!) Note that is important clean old terms before because current funtion don't 
+	* (!) Note that is important clean old terms before because current funtion don't
 	* update terms, only insert new terms (!)
 	* @return bool true
 	*/
@@ -136,7 +136,7 @@ class ontology {
 				$RecordObj_dd_edit->set_tld($item->tld);
 
 				$term_id = $RecordObj_dd_edit->Save();
-				
+
 			// descriptors
 				$descriptors = $item->descriptors;
 				foreach ($descriptors as $current_descriptor) {
@@ -195,11 +195,11 @@ class ontology {
 			}
 
 			if(!empty($ar_term_id)){
-				
+
 				// delete terms (jer_dd)
 					$sql_query 			= 'DELETE FROM "jer_dd" WHERE "tld" = \'tool\' ';
 					$result_delete_jer 	= pg_query(DBi::_getConnection(), $sql_query);
-				
+
 				// delete descriptors (matrix_descriptors_dd)
 					$ar_filter = array_map(function($term_id){
 						return 'parent=\''.$term_id.'\'';
@@ -217,7 +217,7 @@ class ontology {
 		// Insert new . Parse and renumerated the ontologies term_id
 			$counter = 0;
 			foreach ($ar_ontologies as $curernt_ontology) {
-				$new_ontology = ontology::renumerate_term_id($curernt_ontology, $counter);				
+				$new_ontology = ontology::renumerate_term_id($curernt_ontology, $counter);
 				ontology::import($new_ontology);
 			}
 
@@ -232,7 +232,7 @@ class ontology {
 
 	/**
 	* RENUMERATE_TERM_ID
-	* @return 
+	* @return
 	*/
 	public static function renumerate_term_id($ontology, &$counter) {
 
@@ -259,10 +259,10 @@ class ontology {
 }//end ontology
 
 
-/**/
+/*
 DBi::_getConnection();
 include('class.RecordObj_dd_edit.php');
-$data = json_decode('[
+$ontology_data = json_decode('[
   {
     "tipo": "oh81",
     "tld": "oh",
@@ -357,7 +357,7 @@ $data = json_decode('[
     ]
   }
 ]');
-#ontology::import($data);
+#ontology::import($ontology_data);
 ontology::import_tools();
-
+*/
 
