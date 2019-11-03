@@ -179,10 +179,11 @@ class ontology {
 				}
 
 				$info_object	= json_decode( file_get_contents($info_file) );
+				// check the ontology
 				if(isset($info_object->ontology)){
 					$ar_ontologies[] = $info_object->ontology ;
 				}else{
-					debug_log(__METHOD__." the current info.json don't has ontology modificator ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__." the current info.json don't has ontology modificator ".to_string(), logger::ERROR);
 				}
 			}//end foreach ($ar_tools)
 
