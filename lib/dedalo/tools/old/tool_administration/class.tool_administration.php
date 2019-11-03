@@ -1759,4 +1759,5 @@ class tool_administration extends tool_common {
 
 
 }//end class
-?>
+
+
