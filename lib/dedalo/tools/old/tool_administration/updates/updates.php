@@ -6,7 +6,7 @@ global $updates;
 $updates = new stdClass();
 
 
-/// UPDATE 6 NULL
+/// UPDATE 6 PROVISIONAL WITH THE PARTIAL UPDATES THAN WILL BE NECESARY
 
 $v=600; #####################################################################################
 $updates->$v = new stdClass();
@@ -22,14 +22,33 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 2;
 
 # DATABASE UPDATES
-	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-		ALTER TABLE \"jer_dd\"
-		ALTER \"parent\" TYPE character varying(32),
-		ALTER \"parent\" DROP DEFAULT,
-		ALTER \"parent\" DROP NOT NULL;
-		COMMENT ON COLUMN \"jer_dd\".\"parent\" IS '';
-		COMMENT ON TABLE \"jer_dd\" IS '';
-	");
+	// alter the null option of the parent colum in jer_dd (NULL is now allowed)
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			ALTER TABLE \"jer_dd\"
+			ALTER \"parent\" TYPE character varying(32),
+			ALTER \"parent\" DROP DEFAULT,
+			ALTER \"parent\" DROP NOT NULL;
+			COMMENT ON COLUMN \"jer_dd\".\"parent\" IS '';
+			COMMENT ON TABLE \"jer_dd\" IS '';
+		");
+
+	// create the matrix_tools
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			CREATE TABLE public.matrix_tools
+			(
+			   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
+			) 
+			WITH (OIDS = FALSE);
+			CREATE SEQUENCE matrix_tools_id_seq; 
+			ALTER TABLE public.matrix_tools ALTER COLUMN id SET DEFAULT nextval('matrix_tools_id_seq'::regclass);
+
+			DROP INDEX IF EXISTS \"matrix_tools_expr_idx3\", \"matrix_tools_expr_idx2\", \"matrix_tools_expr_idx1\", \"matrix_tools_expr_idx\", \"matrix_tools_id_idx1\";
+		");
+
+	// drop the old matrix_stat
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			DROP TABLE IF EXISTS \"matrix_stat\" CASCADE;
+		");
 
 
 $v=512; #####################################################################################
