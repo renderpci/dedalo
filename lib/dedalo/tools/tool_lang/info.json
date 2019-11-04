@@ -18,6 +18,7 @@
 	},
 	"ontology":[
   {
+    "is_model": "no",
     "tipo": "tool_dev1",
     "tld": "tool_dev",
     "model": "section_tool",
@@ -38,7 +39,12 @@
     "relations": null,
     "descriptors": [
       {
-        "value": "Transcription nuevisimo",
+        "value": "Trascrizioni interviste",
+        "lang": "lg-ita",
+        "type": "term"
+      },
+      {
+        "value": "Transcription",
         "lang": "lg-eng",
         "type": "term"
       },
@@ -48,7 +54,7 @@
         "type": "term"
       },
       {
-        "value": "Transcripció dentrevistes",
+        "value": "Transcripció d'entrevistes",
         "lang": "lg-cat",
         "type": "term"
       },
@@ -70,6 +76,7 @@
     ]
   },
   {
+    "is_model": "no",
     "tipo": "tool_dev2",
     "tld": "tool_dev",
     "model": "section_list",
@@ -102,6 +109,11 @@
       }
     ],
     "descriptors": [
+      {
+        "value": "Elenco",
+        "lang": "lg-ita",
+        "type": "term"
+      },
       {
         "value": "Listado",
         "lang": "lg-spa",
