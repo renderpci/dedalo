@@ -1947,7 +1947,7 @@ class diffusion_sql extends diffusion  {
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
 							'field_name'  => 'fons',
-							'field_value' => $fons
+							'field_value' => '["'.$fons.'"]'
 						];
 				}
 			}//end foreach ($ar_fields as $section_id => $ar_langs) {
