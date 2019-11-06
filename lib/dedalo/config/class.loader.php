@@ -29,6 +29,8 @@ include(DEDALO_LIB_BASE_PATH . '/search/class.search.php');
 include(DEDALO_LIB_BASE_PATH . '/api/v1/common/class.dd_api.php');
 
 
+
+
 class class_loader {
 
 
@@ -125,6 +127,7 @@ class class_loader {
 	}//end test_php_version_supported
 
 
+
 };
 
 
@@ -141,4 +144,3 @@ if (!defined('DEDALO_STRUCTURE_LANG')) {
 	#error_log("--> WARNING: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP");
 	debug_log(__METHOD__."Loader: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP ()".to_string(), logger::DEBUG);
 }
-?>
