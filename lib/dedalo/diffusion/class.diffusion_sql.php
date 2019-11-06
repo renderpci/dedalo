@@ -1933,6 +1933,22 @@ class diffusion_sql extends diffusion  {
 							'field_name'  => 'table',
 							'field_value' => $table_name
 						];
+
+					# fons (archive code)
+						switch ($table_name) {
+							case 'interview': 			$fons = 1; break;
+							case 'biblioteca': 			$fons = 12; break;
+							case 'sra': 				$fons = 2; break;
+							case 'privacio_llibertat': 	$fons = 3; break;
+							case 'deportats': 			$fons = 6; break;
+							case 'espais_memoria': 		$fons = 4; break;
+							case 'cens_simbologia': 	$fons = 5; break;
+							default: $fons = null;
+						}
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'fons',
+							'field_value' => $fons
+						];
 				}
 			}//end foreach ($ar_fields as $section_id => $ar_langs) {
 			#dump($ar_fields_global, ' ar_fields_global ++ '.to_string());
