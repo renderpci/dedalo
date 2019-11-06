@@ -59,6 +59,35 @@
 // section
 	.section {
 
+		>.buttons {
+			padding: 1em;
+			width: 100%;
+			background-color: #f5f2e8;
+			margin-top: 0.5em;
+			margin-bottom: 0.5em;
+			border-radius: 0.25em;
+			display: flex;
+    		flex-direction: row-reverse;
+
+			>.button {
+				background-color: #FD891D;
+				color: #ffffff;
+				display: block;
+				width: auto;
+				padding: 1em;
+				padding-top: 0.5em;
+				padding-bottom: 0.5em;
+				border-radius: 0.25em;
+
+				&:hover {
+					color: #000000;
+				}
+				&:active {
+					color: #ffffff;
+				}
+			}
+		}
+
 		&.edit {
 			>.content_data {
 				display: flex;
@@ -88,7 +117,6 @@
 
 
 		&.list {
-
 			>.content_data {
 				//display: flex;
 				//flex-wrap: wrap;
