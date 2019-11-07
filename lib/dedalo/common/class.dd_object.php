@@ -10,12 +10,12 @@ class dd_object extends stdClass {
 		# typo				: "ddo"  (ddo | sqo)
 		# type				: "component"  (section | component | groupper | button)
 		# tipo 				: 'oh14',
-		# section_tipo 		: 'oh1',		
+		# section_tipo 		: 'oh1',
 		# parent 			: 'oh2', // structure parent
-		# lang 				: 'lg-eng',	
-		# label 			: 'Title'	
+		# lang 				: 'lg-eng',
+		# label 			: 'Title'
 		# mode 				: "list",
-		# model				: 'component_input_text',		
+		# model				: 'component_input_text',
 		# properties 		: {}
 		# permissions 		: 1
 		# translatable 		: true
@@ -24,13 +24,13 @@ class dd_object extends stdClass {
 		# tools 			: []
 		# css 				: {}
 
-	static $ar_type_allowed = ['section','component','grouper','button'];
+	static $ar_type_allowed = ['section','component','grouper','button','area','widget'];
 
 
 
 	/**
 	* __CONSTRUCT
-	* @param object $data 
+	* @param object $data
 	*	optional . Default is null
 	*/
 	public function __construct( $data=null ) {
@@ -84,8 +84,8 @@ class dd_object extends stdClass {
 	* SET  METHODDS
 	* Verify values and set property to current object
 	*/
-	
-	
+
+
 
 	/**
 	* SET_TIPO
@@ -96,19 +96,19 @@ class dd_object extends stdClass {
 		}
 		$this->tipo = $value;
 	}
-	
+
 
 
 	/**
 	* SET_SECTION_TIPO
 	*/
 	public function set_section_tipo(string $value) {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(strpos($this->model, 'area')!==0 && !RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
 		}
 		$this->section_tipo = $value;
-	}	
-	
+	}
+
 
 
 	/**
@@ -120,7 +120,7 @@ class dd_object extends stdClass {
 		}
 		$this->parent = $value;
 	}
-	
+
 
 
 	/**
