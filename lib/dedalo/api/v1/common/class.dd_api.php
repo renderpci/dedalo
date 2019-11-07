@@ -570,13 +570,20 @@ class dd_api {
 
 					case 'get_data':
 
-						// component
-							$element = component_common::get_instance($model,
-																	  $tipo,
-																	  $section_id,
-																	  $mode,
-																	  $lang,
-																	  $section_tipo);
+						if (strpos($model, 'component')===0) {
+
+							// component
+								$element = component_common::get_instance($model,
+																		  $tipo,
+																		  $section_id,
+																		  $mode,
+																		  $lang,
+																		  $section_tipo);
+						}else{
+
+							// others (area, etc.)
+								$element = new $model($tipo, $mode);
+						}
 						break;
 
 					default:
@@ -690,20 +697,26 @@ class dd_api {
 
 						case 'get_data':
 
-							// component
-								$element 	= component_common::get_instance($model,
-																			 $tipo,
-																			 $section_id,
-																			 $mode,
-																			 $lang,
-																			 $section_tipo);
-							// pagination. fix pagination vars
-								$pagination = new stdClass();
-									$pagination->limit 	= $limit;
-									$pagination->offset = $offset;
+							if (strpos($model, 'component')===0) {
 
-								$element->pagination = $pagination;
+								// component
+									$element 	= component_common::get_instance($model,
+																				 $tipo,
+																				 $section_id,
+																				 $mode,
+																				 $lang,
+																				 $section_tipo);
+								// pagination. fix pagination vars
+									$pagination = new stdClass();
+										$pagination->limit 	= $limit;
+										$pagination->offset = $offset;
 
+									$element->pagination = $pagination;
+							}else{
+
+								// others (area, etc.)
+									$element = new $model($tipo, $mode);
+							}
 							break;
 
 						default:
