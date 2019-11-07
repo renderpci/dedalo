@@ -1,9 +1,9 @@
 <?php
-// JSON data component controller
+// JSON data controller
 
 
 
-// component configuration vars
+// configuration vars
 	$tipo				= $this->get_tipo();
 	$permissions		= common::get_permissions($tipo, $tipo);
 	$modo				= $this->get_modo();

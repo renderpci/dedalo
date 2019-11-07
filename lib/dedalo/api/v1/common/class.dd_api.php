@@ -107,11 +107,10 @@ class dd_api {
 
 		$result = $json_rows;
 
+		$response->result 	= $result;
+		$response->msg 	  	= 'Ok. Request done';
 
-		$response->result 		= $result;
-		$response->msg 	  		= 'Ok. Request done';
-
-		# Debug
+		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
@@ -540,7 +539,7 @@ class dd_api {
 			$action 		= $ddo_source->action;
 			$mode 			= $ddo_source->mode;
 			$lang 			= $ddo_source->lang ?? null;
-			$section_tipo 	= $ddo_source->section_tipo;
+			$section_tipo 	= $ddo_source->section_tipo ?? null;
 			$section_id 	= $ddo_source->section_id ?? null;
 			$tipo 			= $ddo_source->tipo ?? null;
 			$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);

@@ -1718,7 +1718,7 @@ abstract class common {
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
 
-			foreach ($layout_map as $dd_object) {
+			if($layout_map) foreach($layout_map as $dd_object) {
 
 				$dd_object 				= (object)$dd_object;
 				$current_tipo 			= $dd_object->tipo;
@@ -1796,7 +1796,7 @@ abstract class common {
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
 
-			foreach ($ar_locators as $current_locator) {
+			if($layout_map) foreach($ar_locators as $current_locator) {
 
 				// check locator format
 					if (!is_object($current_locator)) {
@@ -1963,7 +1963,7 @@ abstract class common {
 	*/
 	public function get_sqo_context() {
 
-		$sqo_context = [];
+		$sqo_context = (object)[];
 
 		return $sqo_context;
 	}//end get_sqo_context

@@ -42,14 +42,19 @@ class dd_object extends stdClass {
 			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
 			return false;
 		}
-		foreach ($data as $key => $value) {			
-			$method = 'set_'.$key;
-			$this->{$method}($value);
-		}
+
+		// set model in first time
+			$this->set_model($data->model);
+
+		// set all properties
+			foreach ($data as $key => $value) {
+				$method = 'set_'.$key;
+				$this->{$method}($value);
+			}
 
 		// set typo always
 			$this->set_typo('ddo');
-	
+
 		// resolve type
 			$model = $this->model;
 			if (strpos($model, 'component_')===0) {
@@ -57,12 +62,14 @@ class dd_object extends stdClass {
 			}elseif ($model==='section') {
 				$type = 'section';
 			}elseif (in_array($model, section::get_ar_grouper_models())) {
-				$type = 'grouper';			
+				$type = 'grouper';
 			}elseif (strpos($model, 'button_')===0) {
 				$type = 'button';
+			}elseif (strpos($model, 'area')===0) {
+				$type = 'area';
 			}else{
 				$msg = __METHOD__." UNDEFINED model: $model - ".$this->tipo;
-				debug_log($msg, logger::ERROR);				
+				debug_log($msg, logger::ERROR);
 				trigger_error($msg);
 				return false;
 			}
@@ -125,7 +132,7 @@ class dd_object extends stdClass {
 		}
 		$this->lang = $value;
 	}
-	
+
 
 
 	/**
@@ -135,17 +142,17 @@ class dd_object extends stdClass {
 
 		$this->mode = $value;
 	}
-	
+
 
 
 	/**
 	* SET_MODEL
 	*/
 	public function set_model(string $value) {
-		
+
 		$this->model = $value;
 	}
-	
+
 
 
 	/**
@@ -157,8 +164,8 @@ class dd_object extends stdClass {
 			$value = 'ddo';
 		}
 		$this->typo = $value;
-	}	
-	
+	}
+
 
 
 	/**
@@ -172,7 +179,7 @@ class dd_object extends stdClass {
 		}
 		$this->type = $value;
 	}
-	
+
 
 
 	/**
@@ -181,47 +188,47 @@ class dd_object extends stdClass {
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
 	*/
 	public function set_properties($value) {
-		
+
 		$this->properties = $value;
 	}
-	
+
 
 
 	/**
 	* SET_PERMISSIONS
 	*/
 	public function set_permissions(int $value) {
-		
+
 		$this->permissions = $value;
 	}
-	
+
 
 
 	/**
 	* SET_LABEL
 	*/
 	public function set_label(string $value) {
-		
+
 		$this->label = $value;
 	}
-	
+
 
 
 	/**
 	* SET_TRANSLATABLE
 	*/
 	public function set_translatable(bool $value) {
-		
+
 		$this->translatable = $value;
 	}
 
-	
+
 
 	/**
 	* SET_TOOLS
 	*/
 	public function set_tools(array $value) {
-		
+
 		$this->tools = $value;
 	}
 
@@ -231,7 +238,7 @@ class dd_object extends stdClass {
 	* SET_CSS
 	*/
 	public function set_css($value) {
-		
+
 		$this->css = $value;
 	}
 
@@ -241,7 +248,7 @@ class dd_object extends stdClass {
 	* SET_TARGET_SECTIONS
 	*/
 	public function set_target_sections($value) {
-		
+
 		$this->target_sections = $value;
 	}
 
@@ -249,7 +256,7 @@ class dd_object extends stdClass {
 	* SET_SQO_CONTEXT
 	*/
 	public function set_sqo_context($value) {
-		
+
 		$this->sqo_context = $value;
 	}
 
