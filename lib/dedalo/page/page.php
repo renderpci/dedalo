@@ -5,6 +5,8 @@
 	// page mode
 		define('MODE', isset($_GET['m']) ? $_GET['m'] : (isset($_GET['mode']) ? $_GET['mode'] : 'edit'));
 
+	$tipo = $_GET['t'] ?? null;
+
 
 	// page globals
 		$page_globals = (function($mode) {
@@ -156,10 +158,11 @@
 			})();
 			*/
 
-		// add page element
+		// add page element [section]
+			/*
 			$page_elements[] = (function() {
 
-				$section_tipo 	= 'test65';
+				$section_tipo 	= $_GET['t'] ?? 'test65';
 				$section_id		= null;
 				#$mode 	 	 	= $mode;
 				$lang 	 	 	= DEDALO_DATA_LANG;
@@ -181,6 +184,60 @@
 
 				return $page_element;
 			})();
+			*/
+
+
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		#dump($model, ' model ++ '.to_string($tipo));
+		switch ($model) {
+			case 'area':
+			case 'area_development':
+				$page_elements[] = (function() use ($model, $tipo){
+
+					// sqo_context
+					#$area = new $model($tipo, MODE);
+					#$area->set_lang($lang);
+					#$sqo_context = $area->get_sqo_context();
+					#	dump($sqo_context, ' sqo_context ++ '.to_string());
+
+					$page_element = new StdClass();
+						$page_element->model 		= $model;
+						$page_element->tipo  		= $tipo;
+						$page_element->mode 	 	= MODE;
+						$page_element->lang 	 	= DEDALO_DATA_LANG;
+						#$page_element->sqo_context  = $sqo_context;
+
+					return $page_element;
+				})();
+				break;
+
+			case 'section':
+			default:
+				$page_elements[] = (function() use ($model, $tipo){
+
+					$section_tipo 	= $tipo ?? 'test65';
+					$section_id		= null;
+					$lang 	 	 	= DEDALO_DATA_LANG;
+
+					// sqo_context
+					$section = section::get_instance($section_id, $section_tipo, MODE);
+					$section->set_lang($lang);
+					$sqo_context = $section->get_sqo_context();
+
+					//if(MODE==='edit') $sqo_context->show[0]->limit = 3; // Force show 2 records
+
+					$page_element = new StdClass();
+						$page_element->model 		 = $model;
+						$page_element->section_tipo  = $section_tipo;
+						$page_element->section_id 	 = $section_id;
+						$page_element->mode 	 	 = MODE;
+						$page_element->lang 	 	 = $lang;
+						$page_element->sqo_context   = $sqo_context;
+
+					return $page_element;
+				})();
+				break;
+		}//end switch ($model)
 
 		// page_options set
 			$page_options = new StdClass();
