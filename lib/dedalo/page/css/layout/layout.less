@@ -74,6 +74,13 @@
 // area
 	.area {
 
+		>.label {
+			font-size: 1.6em;
+			padding-top: 0.5em;
+			padding-bottom: 0.5em;
+			padding-left: 0.2em;
+		}
+
 		>.content_data {
 			display: flex;
 		}
@@ -98,10 +105,11 @@
 				text-transform: uppercase;
 				letter-spacing: 0.025em;
 
-				&:after {
+				&:before {
 					.icon_svg;
 					background-image: url(../../themes/default/icons/gear.svg);
 					margin-left: 1em;
+					filter: invert();
 				}
 			}
 			>.widget_body {
@@ -120,7 +128,6 @@
 						background-image: url(../../themes/default/icons/arrow-circle-right.svg);
 						float: left;
 						margin-right: 0.25em;
-						filter: invert();
 					}
 				}
 
@@ -157,7 +164,6 @@
 					>.clean:after {
 						.icon_svg;
 						background-image: url(../../themes/default/icons/eraser.svg);
-						filter: invert();
 						cursor: pointer;
 					}
 				}
