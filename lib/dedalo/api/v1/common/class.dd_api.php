@@ -473,8 +473,8 @@ class dd_api {
 			$options 		= $json_data->options;
 
 			// check class file
-				if ($class_name==='ontology') {
-					include_once(DEDALO_LIB_BASE_PATH . '/dd/class.ontology.php');
+				if ($class_name==='tools_register') {
+					include_once(DEDALO_LIB_BASE_PATH . '/core/class.tools_register.php');
 				}
 
 			if (!method_exists($class_name, $method)) {

@@ -45,7 +45,7 @@ class area_development extends area {
 				$item->info 	= 'Click to read tools folder and update the tools register in database';
 				$item->body 	= ' ';
 				$item->trigger 	= (object)[
-					'class_name' => 'ontology',
+					'class_name' => 'tools_register',
 					'method' 	 => 'import_tools',
 					'options' 	 => null
 				];

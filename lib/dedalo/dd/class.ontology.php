@@ -164,156 +164,14 @@ class ontology {
 
 
 	/**
-	* IMPORT_TOOLS
-	* Read all dedalo dir 'tools' subfolders and extract property 'ontology' from all 'info.json' files
-	* Remove all previous values in database about tld 'tool' and insert safe renumerated all new structure terms
-	* from imported ontologies
-	* @return array $info_file_processed
-	*	Array of objects
-	*/
-	public static function import_tools() {
-
-		$info_file_processed = [];
-
-		// tipos
-			$tipo_label 	= 'dd1326';
-			$tipo_ontology 	= 'dd1334';
-			$tipo_version 	= 'dd1327';
-
-		// get the all tools folders
-			$ar_tools = (array)glob(DEDALO_LIB_BASE_PATH . '/tools/*', GLOB_ONLYDIR);
-
-
-
-		// Ontologies. Get the all tools ontologies
-			$counter = 0;
-			$ar_ontologies 		 = [];
-			$info_objects_parsed = [];
-			foreach ($ar_tools as $current_dir_tool) {
-
-				if (preg_match('/.*(\/acc|\/old)$/i', $current_dir_tool)) continue;
-
-				$info_file = $current_dir_tool . '/info.json';
-				if(!file_exists($info_file)){
-					debug_log(__METHOD__." file info.json dont exist into $current_dir_tool".to_string(), logger::ERROR);
-					continue;
-				}
-
-				// info object (JSON encoded)
-					$info_object 	 = json_decode( file_get_contents($info_file) );
-					$new_info_object = clone $info_object;
-
-				// ontology from info object
-					$current_ontology = ($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}) ?
-						json_decode($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}) :
-						null;
-
-				if(!empty($current_ontology)){
-
-					$new_ontology = ontology::renumerate_term_id($current_ontology, $counter);
-
-					$ar_ontologies[] = $new_ontology;
-
-					// update ontology
-					$new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'} = json_encode($new_ontology);
-
-				}else{
-
-					debug_log(__METHOD__." The current info.json don't have ontology modificator ".to_string(), logger::ERROR);
-				}
-
-				// add info_objects_parsed
-					$info_objects_parsed[] = $new_info_object;
-
-				// info_file_processed
-					$label   = reset($info_object->components->{$tipo_label}->dato->{'lg-nolan'});
-					$version = reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'});
-					$info_file_processed[] = (object)[
-						'dir'   	=> str_replace(DEDALO_LIB_BASE_PATH, '', $current_dir_tool),
-						'label' 	=> $label,
-						'version' 	=> $version
-					];
-
-			}//end foreach ($ar_tools)
-
-
-		// DB Updates
-			// structure
-			if (!empty($ar_ontologies)) {
-
-				// Clean. remove structure records in the database
-					ontology::clean_structure_data();
-
-				// import ontology (structure) in jer_dd
-					foreach ($ar_ontologies as $current_ontology) {
-						ontology::import($current_ontology);
-					}
-
-				// update counter at end to consolidate
-					RecordObj_dd_edit::update_counter('tool', $counter-1);
-			}
-
-			// section
-			if (!empty($info_objects_parsed)) {
-
-				// Clean. remove tools section records in the database
-					ontology::clean_section_tools_data();
-
-				// import record (section tool1) in db matrix_tools
-					$section_id_counter = 1; // first section_id to use
-					foreach ($info_objects_parsed as $current_info_object) {
-						ontology::import_info_object($current_info_object, $section_id_counter);
-					}
-			}
-
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Imported $counter ontology items from dirs: ".json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), logger::DEBUG);
-			}
-
-
-		return $info_file_processed;
-	}//end import_tools
-
-
-
-	/**
-	* IMPORT_INFO_OBJECT
-	* Info object is exactly a dedalo raw record data
-	* @return bool true
-	*/
-	private static function import_info_object($info_object, &$section_id_counter) {
-
-		// replace object section_id with new forced counter
-		$info_object->section_id = $section_id_counter;
-		$info_object->label 	 = 'Tools register';
-		$datos 	 				 = json_handler::encode($info_object);
-		$section_tools_tipo 	 = 'dd1324';
-
-		$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
-		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_tools_tipo, $datos ));
-
-		// update counter on every imported record
-		counter::update_counter($section_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
-
-		// if all is ok, update counter value
-		$section_id_counter++;
-
-		return true;
-	}//end import_info_object
-
-
-
-	/**
 	* CLEAN_STRUCTURE_DATA
 	* @return bool true
 	*/
-	private static function clean_structure_data() {
+	public static function clean_structure_data($tld) {
 
 		// structure
 			$ar_term_id	= [];
-			$sql_query = 'SELECT "terminoID" FROM "jer_dd" WHERE "tld" = \'tool\' ';
+			$sql_query = 'SELECT "terminoID" FROM "jer_dd" WHERE "tld" = \''.$tld.'\' ';
 			$result = pg_query(DBi::_getConnection(), $sql_query);
 			while ($rows = pg_fetch_assoc($result)) {
 				$ar_term_id[] = $rows['terminoID'];
@@ -322,7 +180,7 @@ class ontology {
 			if(!empty($ar_term_id)){
 
 				// delete terms (jer_dd)
-					$sql_query 			= 'DELETE FROM "jer_dd" WHERE "tld" = \'tool\' ';
+					$sql_query 			= 'DELETE FROM "jer_dd" WHERE "tld" = \''.$tld.'\' ';
 					$result_delete_jer 	= pg_query(DBi::_getConnection(), $sql_query);
 
 				// delete descriptors (matrix_descriptors_dd)
@@ -335,34 +193,14 @@ class ontology {
 					$result_delete_descriptors 	= pg_query(DBi::_getConnection(), $delete_sql_descriptors);
 
 				// reset the tool counter
-					$sql_reset_counter 	  = 'DELETE FROM "main_dd" WHERE "tld" = \'tool\';';
+					$sql_reset_counter 	  = 'DELETE FROM "main_dd" WHERE "tld" = \''.$tld.'\' ';
 					$result_reset_counter = pg_query(DBi::_getConnection(), $sql_reset_counter);
 			}
 
 		return true;
 	}//end clean_structure_data
 
-
-
-	/**
-	* CLEAN_SECTION_TOOLS_DATA
-	* @return bool true
-	*/
-	private static function clean_section_tools_data() {
-
-		// section
-			$section_tools_tipo 	= 'dd1324';
-			$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_tools_tipo.'\';';
-			$result_delete_section 	= pg_query(DBi::_getConnection(), $sql_query);
-
-			// reset counter
-			$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_tools_tipo.'\';';
-			$result_reset_counter 	= pg_query(DBi::_getConnection(), $sql_reset_counter);
-
-		return true;
-	}//end clean_section_tools_data
-
-
+	
 
 	/**
 	* RENUMERATE_TERM_ID
