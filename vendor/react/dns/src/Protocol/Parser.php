@@ -4,6 +4,7 @@ namespace React\Dns\Protocol;
 
 use React\Dns\Model\Message;
 use React\Dns\Model\Record;
+use React\Dns\Query\Query;
 use InvalidArgumentException;
 
 /**
@@ -11,7 +12,7 @@ use InvalidArgumentException;
  *
  * Obsolete and uncommon types and classes are not implemented.
  */
-class Parser
+final class Parser
 {
     /**
      * Parses the given raw binary message into a Message object
@@ -22,80 +23,86 @@ class Parser
      */
     public function parseMessage($data)
     {
+        // create empty message with two additional, temporary properties for parser
         $message = new Message();
+        $message->data = $data;
+        $message->consumed = null;
+
         if ($this->parse($data, $message) !== $message) {
             throw new InvalidArgumentException('Unable to parse binary message');
+        }
+
+        unset($message->data, $message->consumed);
+
+        return $message;
+    }
+
+    private function parse($data, Message $message)
+    {
+        if (!isset($message->data[12 - 1])) {
+            return;
+        }
+
+        list($id, $fields, $qdCount, $anCount, $nsCount, $arCount) = array_values(unpack('n*', substr($message->data, 0, 12)));
+        $message->consumed += 12;
+
+        $message->id = $id;
+        $message->rcode = $fields & 0xf;
+        $message->ra = (($fields >> 7) & 1) === 1;
+        $message->rd = (($fields >> 8) & 1) === 1;
+        $message->tc = (($fields >> 9) & 1) === 1;
+        $message->aa = (($fields >> 10) & 1) === 1;
+        $message->opcode = ($fields >> 11) & 0xf;
+        $message->qr = (($fields >> 15) & 1) === 1;
+
+        // parse all questions
+        for ($i = $qdCount; $i > 0; --$i) {
+            $question = $this->parseQuestion($message);
+            if ($question === null) {
+                return;
+            } else {
+                $message->questions[] = $question;
+            }
+        }
+
+        // parse all answer records
+        for ($i = $anCount; $i > 0; --$i) {
+            $record = $this->parseRecord($message);
+            if ($record === null) {
+                return;
+            } else {
+                $message->answers[] = $record;
+            }
+        }
+
+        // parse all authority records
+        for ($i = $nsCount; $i > 0; --$i) {
+            $record = $this->parseRecord($message);
+            if ($record === null) {
+                return;
+            } else {
+                $message->authority[] = $record;
+            }
+        }
+
+        // parse all additional records
+        for ($i = $arCount; $i > 0; --$i) {
+            $record = $this->parseRecord($message);
+            if ($record === null) {
+                return;
+            } else {
+                $message->additional[] = $record;
+            }
         }
 
         return $message;
     }
 
     /**
-     * @deprecated unused, exists for BC only
-     * @codeCoverageIgnore
+     * @param Message $message
+     * @return ?Query
      */
-    public function parseChunk($data, Message $message)
-    {
-        return $this->parse($data, $message);
-    }
-
-    private function parse($data, Message $message)
-    {
-        $message->data .= $data;
-
-        if (!$message->header->get('id')) {
-            if (!$this->parseHeader($message)) {
-                return;
-            }
-        }
-
-        if ($message->header->get('qdCount') != count($message->questions)) {
-            if (!$this->parseQuestion($message)) {
-                return;
-            }
-        }
-
-        if ($message->header->get('anCount') != count($message->answers)) {
-            if (!$this->parseAnswer($message)) {
-                return;
-            }
-        }
-
-        return $message;
-    }
-
-    public function parseHeader(Message $message)
-    {
-        if (!isset($message->data[12 - 1])) {
-            return;
-        }
-
-        $header = substr($message->data, 0, 12);
-        $message->consumed += 12;
-
-        list($id, $fields, $qdCount, $anCount, $nsCount, $arCount) = array_values(unpack('n*', $header));
-
-        $rcode = $fields & bindec('1111');
-        $z = ($fields >> 4) & bindec('111');
-        $ra = ($fields >> 7) & 1;
-        $rd = ($fields >> 8) & 1;
-        $tc = ($fields >> 9) & 1;
-        $aa = ($fields >> 10) & 1;
-        $opcode = ($fields >> 11) & bindec('1111');
-        $qr = ($fields >> 15) & 1;
-
-        $vars = compact('id', 'qdCount', 'anCount', 'nsCount', 'arCount',
-                            'qr', 'opcode', 'aa', 'tc', 'rd', 'ra', 'z', 'rcode');
-
-
-        foreach ($vars as $name => $value) {
-            $message->header->set($name, $value);
-        }
-
-        return $message;
-    }
-
-    public function parseQuestion(Message $message)
+    private function parseQuestion(Message $message)
     {
         $consumed = $message->consumed;
 
@@ -110,27 +117,25 @@ class Parser
 
         $message->consumed = $consumed;
 
-        $message->questions[] = array(
-            'name' => implode('.', $labels),
-            'type' => $type,
-            'class' => $class,
+        return new Query(
+            implode('.', $labels),
+            $type,
+            $class
         );
-
-        if ($message->header->get('qdCount') != count($message->questions)) {
-            return $this->parseQuestion($message);
-        }
-
-        return $message;
     }
 
-    public function parseAnswer(Message $message)
+    /**
+     * @param Message $message
+     * @return ?Record returns parsed Record on success or null if data is invalid/incomplete
+     */
+    private function parseRecord(Message $message)
     {
         $consumed = $message->consumed;
 
         list($name, $consumed) = $this->readDomain($message->data, $consumed);
 
         if ($name === null || !isset($message->data[$consumed + 10 - 1])) {
-            return;
+            return null;
         }
 
         list($type, $class) = array_values(unpack('n*', substr($message->data, $consumed, 4)));
@@ -148,7 +153,7 @@ class Parser
         $consumed += 2;
 
         if (!isset($message->data[$consumed + $rdLength - 1])) {
-            return;
+            return null;
         }
 
         $rdata = null;
@@ -195,6 +200,18 @@ class Parser
                     'target' => $target
                 );
             }
+        } elseif (Message::TYPE_SSHFP === $type) {
+            if ($rdLength > 2) {
+                list($algorithm, $hash) = \array_values(\unpack('C*', \substr($message->data, $consumed, 2)));
+                $fingerprint = \bin2hex(\substr($message->data, $consumed + 2, $rdLength - 2));
+                $consumed += $rdLength;
+
+                $rdata = array(
+                    'algorithm' => $algorithm,
+                    'type' => $hash,
+                    'fingerprint' => $fingerprint
+                );
+            }
         } elseif (Message::TYPE_SOA === $type) {
             list($mname, $consumed) = $this->readDomain($message->data, $consumed);
             list($rname, $consumed) = $this->readDomain($message->data, $consumed);
@@ -213,6 +230,22 @@ class Parser
                     'minimum' => $minimum
                 );
             }
+        } elseif (Message::TYPE_CAA === $type) {
+            if ($rdLength > 3) {
+                list($flag, $tagLength) = array_values(unpack('C*', substr($message->data, $consumed, 2)));
+
+                if ($tagLength > 0 && $rdLength - 2 - $tagLength > 0) {
+                    $tag = substr($message->data, $consumed + 2, $tagLength);
+                    $value = substr($message->data, $consumed + 2 + $tagLength, $rdLength - 2 - $tagLength);
+                    $consumed += $rdLength;
+
+                    $rdata = array(
+                        'flag' => $flag,
+                        'tag' => $tag,
+                        'value' => $value
+                    );
+                }
+            }
         } else {
             // unknown types simply parse rdata as an opaque binary string
             $rdata = substr($message->data, $consumed, $rdLength);
@@ -221,20 +254,12 @@ class Parser
 
         // ensure parsing record data consumes expact number of bytes indicated in record length
         if ($consumed !== $expected || $rdata === null) {
-            return;
+            return null;
         }
 
         $message->consumed = $consumed;
 
-        $record = new Record($name, $type, $class, $ttl, $rdata);
-
-        $message->answers[] = $record;
-
-        if ($message->header->get('anCount') != count($message->answers)) {
-            return $this->parseAnswer($message);
-        }
-
-        return $message;
+        return new Record($name, $type, $class, $ttl, $rdata);
     }
 
     private function readDomain($data, $consumed)
@@ -245,7 +270,19 @@ class Parser
             return array(null, null);
         }
 
-        return array(implode('.', $labels), $consumed);
+        // use escaped notation for each label part, then join using dots
+        return array(
+            \implode(
+                '.',
+                \array_map(
+                    function ($label) {
+                        return \addcslashes($label, "\0..\40.\177");
+                    },
+                    $labels
+                )
+            ),
+            $consumed
+        );
     }
 
     private function readLabels($data, $consumed)
@@ -293,60 +330,5 @@ class Parser
         }
 
         return array($labels, $consumed);
-    }
-
-    /**
-     * @deprecated unused, exists for BC only
-     * @codeCoverageIgnore
-     */
-    public function isEndOfLabels($data, $consumed)
-    {
-        $length = ord(substr($data, $consumed, 1));
-        return 0 === $length;
-    }
-
-    /**
-     * @deprecated unused, exists for BC only
-     * @codeCoverageIgnore
-     */
-    public function getCompressedLabel($data, $consumed)
-    {
-        list($nameOffset, $consumed) = $this->getCompressedLabelOffset($data, $consumed);
-        list($labels) = $this->readLabels($data, $nameOffset);
-
-        return array($labels, $consumed);
-    }
-
-    /**
-     * @deprecated unused, exists for BC only
-     * @codeCoverageIgnore
-     */
-    public function isCompressedLabel($data, $consumed)
-    {
-        $mask = 0xc000; // 1100000000000000
-        list($peek) = array_values(unpack('n', substr($data, $consumed, 2)));
-
-        return (bool) ($peek & $mask);
-    }
-
-    /**
-     * @deprecated unused, exists for BC only
-     * @codeCoverageIgnore
-     */
-    public function getCompressedLabelOffset($data, $consumed)
-    {
-        $mask = 0x3fff; // 0011111111111111
-        list($peek) = array_values(unpack('n', substr($data, $consumed, 2)));
-
-        return array($peek & $mask, $consumed + 2);
-    }
-
-    /**
-     * @deprecated unused, exists for BC only
-     * @codeCoverageIgnore
-     */
-    public function signedLongToUnsignedLong($i)
-    {
-        return $i & 0x80000000 ? $i - 0xffffffff : $i;
     }
 }

@@ -21,7 +21,7 @@ class WrappedListenerTest extends TestCase
     /**
      * @dataProvider provideListenersToDescribe
      */
-    public function testListenerDescription(callable $listener, $expected)
+    public function testListenerDescription($listener, $expected)
     {
         $wrappedListener = new WrappedListener($listener, null, $this->getMockBuilder(Stopwatch::class)->getMock(), $this->getMockBuilder(EventDispatcherInterface::class)->getMock());
 
@@ -30,21 +30,17 @@ class WrappedListenerTest extends TestCase
 
     public function provideListenersToDescribe()
     {
-        $listeners = array(
-            array(new FooListener(), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::__invoke'),
-            array(array(new FooListener(), 'listen'), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listen'),
-            array(array('Symfony\Component\EventDispatcher\Tests\Debug\FooListener', 'listenStatic'), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listenStatic'),
-            array('var_dump', 'var_dump'),
-            array(function () {}, 'closure'),
-        );
-
-        if (\PHP_VERSION_ID >= 70100) {
-            $listeners[] = array(\Closure::fromCallable(array(new FooListener(), 'listen')), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listen');
-            $listeners[] = array(\Closure::fromCallable(array('Symfony\Component\EventDispatcher\Tests\Debug\FooListener', 'listenStatic')), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listenStatic');
-            $listeners[] = array(\Closure::fromCallable(function () {}), 'closure');
-        }
-
-        return $listeners;
+        return [
+            [new FooListener(), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::__invoke'],
+            [[new FooListener(), 'listen'], 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listen'],
+            [['Symfony\Component\EventDispatcher\Tests\Debug\FooListener', 'listenStatic'], 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listenStatic'],
+            [['Symfony\Component\EventDispatcher\Tests\Debug\FooListener', 'invalidMethod'], 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::invalidMethod'],
+            ['var_dump', 'var_dump'],
+            [function () {}, 'closure'],
+            [\Closure::fromCallable([new FooListener(), 'listen']), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listen'],
+            [\Closure::fromCallable(['Symfony\Component\EventDispatcher\Tests\Debug\FooListener', 'listenStatic']), 'Symfony\Component\EventDispatcher\Tests\Debug\FooListener::listenStatic'],
+            [\Closure::fromCallable(function () {}), 'closure'],
+        ];
     }
 }
 

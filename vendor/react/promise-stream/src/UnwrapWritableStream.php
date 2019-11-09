@@ -16,7 +16,7 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
 {
     private $promise;
     private $stream;
-    private $buffer = '';
+    private $buffer = array();
     private $closed = false;
     private $ending = false;
 
@@ -35,7 +35,7 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
 
         $this->promise = $promise->then(
             function ($stream) {
-                if (!($stream instanceof WritableStreamInterface)) {
+                if (!$stream instanceof WritableStreamInterface) {
                     throw new InvalidArgumentException('Not a writable stream');
                 }
                 return $stream;
@@ -69,10 +69,15 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
                 $stream->on('close', array($out, 'close'));
                 $out->on('close', array($stream, 'close'));
 
-                if ($buffer !== '') {
+                if ($buffer) {
                     // flush buffer to stream and check if its buffer is not exceeded
-                    $drained = $stream->write($buffer) !== false;
-                    $buffer = '';
+                    $drained = true;
+                    foreach ($buffer as $chunk) {
+                        if (!$stream->write($chunk)) {
+                            $drained = false;
+                        }
+                    }
+                    $buffer = array();
 
                     if ($drained) {
                         // signal drain event, because the output stream previous signalled a full buffer
@@ -100,7 +105,7 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
     public function write($data)
     {
         if ($this->ending) {
-            return;
+            return false;
         }
 
         // forward to inner stream if possible
@@ -109,7 +114,7 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
         }
 
         // append to buffer and signal the buffer is full
-        $this->buffer .= $data;
+        $this->buffer[] = $data;
         return false;
     }
 
@@ -128,7 +133,7 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
 
         // append to buffer
         if ($data !== null) {
-            $this->buffer .= $data;
+            $this->buffer[] = $data;
         }
     }
 
@@ -143,7 +148,7 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
             return;
         }
 
-        $this->buffer = '';
+        $this->buffer = array();
         $this->ending = true;
         $this->closed = true;
 
@@ -151,7 +156,9 @@ class UnwrapWritableStream extends EventEmitter implements WritableStreamInterfa
         if ($this->promise instanceof CancellablePromiseInterface) {
             $this->promise->cancel();
         }
+        $this->promise = $this->stream = null;
 
-        $this->emit('close', array($this));
+        $this->emit('close');
+        $this->removeAllListeners();
     }
 }
