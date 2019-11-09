@@ -1,5 +1,5 @@
 <?php
-#require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+#require_once( dirname(dirname(__FILE__)) .'/config/config.php');
 #require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
 
 /**
@@ -36,34 +36,17 @@
 
  		if(isset(label::$ar_label[$lang])) return label::$ar_label[$lang];
 
-
-		switch (true) {
-
-			# using DEDALO_CACHE_MANAGER as cache
-			case (DEDALO_CACHE_MANAGER===true && CACHE_LABELS===true) :
-
-				$cache_key_name = DEDALO_DATABASE_CONN.'_label_'.$lang;;
-				if (cache::exists($cache_key_name)) {
-					#error_log("INFO: readed data from label cache key: $cache_key_name");
-					label::$ar_label[$lang] = unserialize(cache::get($cache_key_name));
-				}else{
-					# Calculate label for current lang and store
-					label::$ar_label[$lang] = self::set_static_label_vars( $lang );
-					cache::set($cache_key_name, serialize( label::$ar_label[$lang] ));
-				}
-				break;
-
 			# Using php session as cache
-			default:				
-				if( isset($_SESSION['dedalo4']['config']['ar_label'][$lang]) ) {
-					# Get from session	
-					label::$ar_label[$lang] = $_SESSION['dedalo4']['config']['ar_label'][$lang];		
-				}else{
-					# Calculate label for current lang and store
-					label::$ar_label[$lang] = self::set_static_label_vars( $lang );	
-					$_SESSION['dedalo4']['config']['ar_label'][$lang] = label::$ar_label[$lang];				
-				}								
-		}
+				
+			if( isset($_SESSION['dedalo4']['config']['ar_label'][$lang]) ) {
+				# Get from session	
+				label::$ar_label[$lang] = $_SESSION['dedalo4']['config']['ar_label'][$lang];		
+			}else{
+				# Calculate label for current lang and store
+				label::$ar_label[$lang] = self::set_static_label_vars( $lang );	
+				$_SESSION['dedalo4']['config']['ar_label'][$lang] = label::$ar_label[$lang];				
+			}								
+
 
 		$ar_label = label::$ar_label[$lang];
 	

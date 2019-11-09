@@ -5,7 +5,7 @@
 * No debe pasarse en la variable el path completo, ni la calidad, solo el path adicional y el nombre del archivo con la terminación
 * tipo '/0/0/75-1.jpg' o 'dd720-1'
 */
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+require_once( dirname(dirname(__FILE__)) .'/config/config.php');
 
 # Write session to unlock session file
 session_write_close();

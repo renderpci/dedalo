@@ -2,7 +2,7 @@
 $start_time=microtime(1);
 set_time_limit ( 259200 );  // 3 dias
 $session_duration_hours = 72;
-include( dirname(dirname(dirname(__FILE__))).'/config/config4.php');
+include( dirname(dirname(dirname(__FILE__))).'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 

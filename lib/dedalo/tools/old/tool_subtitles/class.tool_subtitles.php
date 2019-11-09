@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL_SUBTITLES
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( dirname(dirname(dirname(__FILE__))) .'/media_engine/class.OptimizeTC.php');
 require_once( dirname(__FILE__) .'/class.subtitles.php');
 

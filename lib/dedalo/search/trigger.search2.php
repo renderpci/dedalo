@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(__FILE__)).'/config/config4.php');
+include( dirname(dirname(__FILE__)).'/config/config.php');
 
 # Common vars
 define('_PRESETS_LIST_SECTION_TIPO', 				'dd623');

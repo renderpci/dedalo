@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL TIME MACHINE
 */
-#require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+#require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 #require_once(DEDALO_LIB_BASE_PATH .'/db/class.RecordObj_time_machine.php');
 class tool_time_machine extends tool_common {
 

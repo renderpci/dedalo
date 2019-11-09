@@ -1,5 +1,5 @@
 <?php
-require( dirname(dirname(__FILE__)) . '/config/config4.php' );
+require( dirname(dirname(__FILE__)) . '/config/config.php' );
 /**
 * Redirects to propper place based on config
 */

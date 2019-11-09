@@ -1,7 +1,7 @@
 <?php
 ################################################################
 # DEDALO CONF FILE
-	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config4.php';
+	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
 
 
 

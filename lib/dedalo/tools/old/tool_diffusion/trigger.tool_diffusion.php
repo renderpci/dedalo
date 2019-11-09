@@ -1,7 +1,7 @@
 <?php
 $start_time=microtime(1);
 set_time_limit ( 259200 );  // 3 dias
-include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 include( DEDALO_LIB_BASE_PATH .'/diffusion/class.diffusion.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();

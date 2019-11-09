@@ -5,7 +5,7 @@
 * This script render final document necessary to create the pdf file from DEDALO_PDF_RENDERER (wkhtmltopdf)
 * Is accesible for DEDALO_PDF_RENDERER without login (user data is created from actual logged user)
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( dirname(__FILE__) .'/class.tool_layout_print.php'); 
 
 	#

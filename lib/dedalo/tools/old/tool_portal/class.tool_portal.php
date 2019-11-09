@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL RELATION
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 
 class tool_portal extends tool_common {

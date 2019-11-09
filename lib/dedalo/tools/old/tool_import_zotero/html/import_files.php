@@ -1,6 +1,6 @@
 <?php
 $TOP_TIPO=false;
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 require_once( dirname(dirname(__FILE__)) .'/class.tool_import_zotero.php');  # Read constants from here
 
 #error_reporting(E_ALL | E_STRICT);

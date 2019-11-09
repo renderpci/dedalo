@@ -3,7 +3,7 @@
 * CLASS TOOL_LAYOUT_PRINT
 * Manage presets and layout print
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( DEDALO_ROOT .'/lib/htmLawed/htmLawed.php');
 
 

@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 /*
 * CLASS REFERENCE_DATO_V47_TO_RELATION_DATO_V48 - C
 *

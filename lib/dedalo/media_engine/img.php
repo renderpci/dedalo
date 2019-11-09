@@ -5,7 +5,7 @@ if(SHOW_DEBUG) {
 }
 */
 #define('DEDALO_LIB_BASE_PATH', dirname( dirname(__FILE__) ));
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+require_once( dirname(dirname(__FILE__)) .'/config/config.php');
 require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.Thumb.php');
 
 # Write session to unlock session file

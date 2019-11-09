@@ -2,7 +2,7 @@
 // JSON DOCUMENT
 header('Content-Type: application/json');
 
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 # Write session to unlock session file
 session_write_close();

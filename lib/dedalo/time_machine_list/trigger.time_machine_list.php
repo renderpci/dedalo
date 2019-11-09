@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+require_once( dirname(dirname(__FILE__)).'/config/config.php');
 common::trigger_manager();
 
 # IGNORE_USER_ABORT

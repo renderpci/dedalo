@@ -4,7 +4,7 @@
 * Get requested str_data from extras dir and send as download file
 * Used for master entity for get structure files
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( DEDALO_LIB_BASE_PATH . '/backup/class.backup.php');
 
 // DATA . The only one var received is a json encoded var called "data"

@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL_CALENDAR
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 
 class tool_calendar extends tool_common {

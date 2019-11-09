@@ -66,7 +66,7 @@
 
 
 	# IMPORT SCRIPT MUPREVA IMAGENES ASOCIADAS 
-	require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php');
+	require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 	require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
 
 	# Login check

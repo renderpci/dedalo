@@ -56,19 +56,9 @@
 
 
 ################################################################
-# CACHE MANAGER
-	define('DEDALO_CACHE_MANAGER', false );	# redis / memcached / zebra_db / false
-	if(DEDALO_CACHE_MANAGER) {
-		define('DEDALO_CACHE_MANAGER_DB', 'cache_'.substr(DEDALO_HOST, 0,-5) );
-		include(DEDALO_LIB_BASE_PATH.'/config/cache_manager.php');
-	}
-
-
-
-################################################################
 # CORE REQUIRE
 	# BASIC FUNCTIONS	
-	include_once(DEDALO_LIB_BASE_PATH.'/config/core_functions.php');
+	include_once(DEDALO_LIB_BASE_PATH.'/core/core_functions.php');
 	# VERSION
 	include(DEDALO_LIB_BASE_PATH.'/config/version.inc');
 	# Dedalo str tipos
@@ -78,7 +68,7 @@
 
 ################################################################
 # DB : CONEXIÓN CON LA BASE DE DATOS MYSQL
-	include(DEDALO_LIB_BASE_PATH.'/config/config4_db.php');	
+	include(DEDALO_LIB_BASE_PATH.'/config/config_db.php');	
 	define('SLOW_QUERY_MS'	, 1200);
 
 
@@ -189,7 +179,7 @@
 		logger::$obj['error'] = logger::get_instance('error');
 
 	# ERROR : Handler class
-	include(DEDALO_LIB_BASE_PATH.'/config/class.Error.php');
+	include(DEDALO_LIB_BASE_PATH.'/core/class.Error.php');
 
 
 
@@ -446,7 +436,7 @@
 
 ################################################################
 # LOADER (AUTO LOAD CALLED CLASSES)
-	include(DEDALO_LIB_BASE_PATH.'/config/class.loader.php');
+	include(DEDALO_LIB_BASE_PATH.'/core/class.loader.php');
 
 
 
