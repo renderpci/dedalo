@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.8.5 (2019-10-29)
+
+*   Internal refactorings and optimizations to improve request parsing performance.
+    Benchmarks suggest number of requests/s improved by ~30% for common `GET` requests.
+    (#345, #346, #349 and #350 by @clue)
+
+*   Add documentation and example for JSON/XML request body and
+    improve documentation for concurrency and streaming requests and for error handling.
+    (#341 and #342 by @clue)
+
+## 0.8.4 (2019-01-16)
+
+*   Improvement: Internal refactoring to simplify response header logic.
+    (#321 by @clue)
+
+*   Improvement: Assign Content-Length response header automatically only when size is known.
+    (#329 by @clue)
+
+*   Improvement: Import global functions for better performance.
+    (#330 by @WyriHaximus)
+
 ## 0.8.3 (2018-04-11)
 
 *   Feature: Do not pause connection stream to detect closed connections immediately.
