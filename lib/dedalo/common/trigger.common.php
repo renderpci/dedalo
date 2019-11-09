@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(__FILE__)).'/config/config4.php');
+include( dirname(dirname(__FILE__)).'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 $options = new stdClass();
 	$options->test_login = false; # Allow change lang before login

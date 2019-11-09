@@ -3,7 +3,7 @@
 * TOOL_IMPORT_BIBTEX PREVIEW
 *
 */
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 require_once( dirname(dirname(__FILE__)) .'/class.tool_import_bibtex.php');  # Read constants from here
 
 # Button tipo set

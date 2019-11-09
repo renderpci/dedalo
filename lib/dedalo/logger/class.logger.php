@@ -2,7 +2,7 @@
 /*
 * CLASS LOGGER
 */
-#require_once( dirname(dirname(__FILE__)) . '/config/config4.php');
+#require_once( dirname(dirname(__FILE__)) . '/config/config.php');
 
 class logger {
 

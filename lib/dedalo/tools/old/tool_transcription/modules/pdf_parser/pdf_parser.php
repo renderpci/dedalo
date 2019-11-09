@@ -53,7 +53,7 @@ require_once($lib_path.'Font/FontType1.php');
 require_once($lib_path.'Font/FontType0.php');
 
 
-#require_once('../dedalo/config/config4.php');
+#require_once('../dedalo/config/config.php');
 
 //$filename = "El_pasado_en_su_lugar_2014.pdf";
 

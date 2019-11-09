@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL SEMANTIC NODES
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 
 class tool_semantic_nodes extends tool_common {

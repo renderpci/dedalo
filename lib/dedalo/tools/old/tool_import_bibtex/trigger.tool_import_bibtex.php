@@ -3,7 +3,7 @@
 # Set session_duration_hours before load 'config' file (override default value)
 $session_duration_hours = 24;
 
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( dirname(__FILE__) .'/class.tool_import_bibtex.php');  # Read constants from here (pass url 'button_tipo' if needed)
 
 if(login::is_logged()!==true) {

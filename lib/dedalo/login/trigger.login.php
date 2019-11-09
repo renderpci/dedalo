@@ -1,7 +1,7 @@
 <?php
 $TOP_TIPO=false;
 $start_time=microtime(1);
-include( dirname(dirname(__FILE__)).'/config/config4.php');
+include( dirname(dirname(__FILE__)).'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager( json_decode('{"test_login":false}') );
 

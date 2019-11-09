@@ -10,7 +10,7 @@
 $start_time=microtime(1);
 
 // Require files
-	require_once( dirname(dirname(dirname(__FILE__))) . '/config/config4.php' );
+	require_once( dirname(dirname(dirname(__FILE__))) . '/config/config.php' );
 	require_once( dirname(__FILE__) . '/saml_config.php' );
 	require_once( SAML_SETTINGS_PATH );
 	require_once( TOOLKIT_PATH . '_toolkit_loader.php' );

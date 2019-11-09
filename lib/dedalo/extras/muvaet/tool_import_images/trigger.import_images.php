@@ -5,7 +5,7 @@
 	SCRIPT PARA LANZAR A MANO LA IMPORTACIÓN DE CARPETAS
 
 */
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 
 
 # login test

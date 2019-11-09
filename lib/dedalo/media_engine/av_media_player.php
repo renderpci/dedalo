@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+require_once( dirname(dirname(__FILE__)) .'/config/config.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');

@@ -5,7 +5,7 @@ set_time_limit ( 259200 );  // 3 dias
 header('Content-Type: application/json');
 
 $session_duration_hours = 72;
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 # Disable logging activity and time machine # !IMPORTANT
 logger_backend_activity::$enable_log = false;

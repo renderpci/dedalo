@@ -1,7 +1,7 @@
 <?php
 $start_time=microtime(1);
 set_time_limit ( 3600 * 2 );  // 2 Hours (1h = 3600 sec)
-include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 include( dirname(__FILE__) .'/class.tool_import_kml.php');  # Read constants from here (pass url 'button_tipo' if needed)
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();

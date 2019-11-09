@@ -25,7 +25,7 @@
 * CLASS PDF_PARSER
 * Manage the pdf parser for the pages of the print layout
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( DEDALO_ROOT .'/lib/tcpdf/tcpdf.php');
 
 

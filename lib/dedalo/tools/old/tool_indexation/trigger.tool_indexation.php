@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 common::trigger_manager();
 
 

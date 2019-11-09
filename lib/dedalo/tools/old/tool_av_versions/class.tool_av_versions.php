@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL AV VERSIONS
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 
 class tool_av_versions extends tool_common {

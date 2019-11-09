@@ -3,7 +3,7 @@ $start_time=microtime(1);
 
 	// includes
 		// config dedalo
-		include dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php';
+		include dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
 		// json manager
 		include dirname(dirname(__FILE__)) .'/common/class.manager.php';
 		// web_data

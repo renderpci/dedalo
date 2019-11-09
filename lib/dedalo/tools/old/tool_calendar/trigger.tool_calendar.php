@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( dirname(__FILE__) .'/class.tool_calendar.php');  
 /*
 	$tool_name 	  = 'tool_calendar';

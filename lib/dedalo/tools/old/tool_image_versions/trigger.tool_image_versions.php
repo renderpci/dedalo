@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
 
 

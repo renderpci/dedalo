@@ -1,5 +1,5 @@
 <?php
-#include_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+#include_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 /*
 * CLASS TOOL_NOTE

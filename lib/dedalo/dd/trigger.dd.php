@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+require_once( dirname(dirname(__FILE__)).'/config/config.php');
 # Old lang vars
 require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
 

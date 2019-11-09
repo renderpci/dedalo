@@ -4,7 +4,7 @@
 * This file is called across ajax from /html/jquery_upload.phtml for manage uploaded files in server side
 * Paths vars are defined on invoke class tool_import_files
 */
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php');
+require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 require_once( DEDALO_LIB_BASE_PATH.'/tools/tool_import_files/class.tool_import_files.php');
 require_once( DEDALO_UPLOADER_DIR.'/server/php/UploadHandler.php');
 

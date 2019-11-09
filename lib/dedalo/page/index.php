@@ -1,6 +1,6 @@
 <?php 
 // dedalo config include
-	$config4_path = dirname(dirname(__FILE__)).'/config/config4.php';
+	$config4_path = dirname(dirname(__FILE__)).'/config/config.php';
 	if( !include($config4_path) ) {
 		die("Dédalo is misconfigured. Please review your app config");
 	}

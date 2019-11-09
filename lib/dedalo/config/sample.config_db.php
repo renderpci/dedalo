@@ -14,7 +14,7 @@ define('DEDALO_SOCKET_CONN'         ,  null);       	# Like '/var/pgsql-socket' 
 define('DEDALO_DATABASE_CONN'		, 'dedalo4_XXX');
 define('DEDALO_USERNAME_CONN'		, 'myusername');
 define('DEDALO_PASSWORD_CONN'		, 'mypassword');
-define('DEDALO_INFORMACION'			, 'Dédalo 4 install version');
+define('DEDALO_INFORMACION'			, 'Dédalo install version');
 
 # MYSQL (PUBLIC DATA)
 # MySQL connection for publication
