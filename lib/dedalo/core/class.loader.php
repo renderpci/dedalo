@@ -110,14 +110,14 @@ class class_loader {
 		}
 
 		$current_php_version		= phpversion();
-		$minimun_php_version		= '5.4.3';
+		$minimun_php_version		= '7.2.0';
 
 
 		$ar_current_php_version = explode('.',$current_php_version);
 		$ar_minimun_php_version = explode('.',$minimun_php_version);
 
 		if ($ar_current_php_version[1]<4) {
-			trigger_error("PHP version $current_php_version is not full compatible with this application. Please update ASAP to PHP 5.4");
+			trigger_error("PHP version $current_php_version is not full compatible with this application. Please update ASAP to PHP 7.2");
 		}
 
 		if(	$ar_current_php_version[0] < $ar_minimun_php_version[0] ||
