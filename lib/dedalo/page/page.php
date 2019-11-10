@@ -3,7 +3,7 @@
 	# PAGE CONTROLLER
 
 	// page mode
-		define('MODE', isset($_GET['m']) ? $_GET['m'] : (isset($_GET['mode']) ? $_GET['mode'] : 'edit'));
+		define('MODE', isset($_GET['m']) ? $_GET['m'] : (isset($_GET['mode']) ? $_GET['mode'] : 'list'));
 
 	$tipo = $_GET['t'] ?? null;
 
@@ -206,6 +206,42 @@
 						$page_element->mode 	 	= MODE;
 						$page_element->lang 	 	= DEDALO_DATA_LANG;
 						#$page_element->sqo_context  = $sqo_context;
+
+					return $page_element;
+				})();
+				break;
+
+			case 'section_tool':
+
+				$page_elements[] = (function() use ($model, $tipo){
+
+					# Configure section from section_tool data
+					$RecordObj_dd = new RecordObj_dd($tipo);
+					$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+
+					#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo : 
+					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
+					
+					$section_tipo 	= $tipo;
+
+					$section_id		= null;
+					$lang 	 	 	= DEDALO_DATA_LANG;
+ 
+					// sqo_context
+					$section = section::get_instance($section_id, $section_tipo, MODE);
+					$section->set_lang($lang);
+					$section->config = $propiedades->config;
+					$sqo_context = $section->get_sqo_context();
+
+					//if(MODE==='edit') $sqo_context->show[0]->limit = 3; // Force show 2 records
+
+					$page_element = new StdClass();
+						$page_element->model 		 = 'section';
+						$page_element->section_tipo  = $section_tipo;
+						$page_element->section_id 	 = $section_id;
+						$page_element->mode 	 	 = MODE;
+						$page_element->lang 	 	 = $lang;
+						$page_element->sqo_context   = $sqo_context;
 
 					return $page_element;
 				})();

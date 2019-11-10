@@ -30,8 +30,6 @@ class section extends common {
 		# Buttons objs
 		public $ar_buttons ;
 
-		public $caller_id;						# Necesario para calcular relation (también se admite como REQUEST['caller_id'])
-
 		public $ar_all_project_langs;
 
 		public $show_inspector = true;			# default show: true
@@ -3446,7 +3444,6 @@ class section extends common {
 		$limit 			= ($mode==='list') ? 10 : 1;
 			
 
-		
 		// SHOW 
 			// search_query_object
 				$sqo_options = new stdClass();							
