@@ -140,9 +140,10 @@ $autoloader	= new class_loader();
 # INIT NAVIGATOR
 $navigator	= new navigator();
 
-
+/*
 if (!defined('DEDALO_STRUCTURE_LANG')) {
 	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
 	#error_log("--> WARNING: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP");
 	debug_log(__METHOD__."Loader: Constant 'DEDALO_STRUCTURE_LANG' is not defined in config. Please set ASAP ()".to_string(), logger::DEBUG);
 }
+*/
