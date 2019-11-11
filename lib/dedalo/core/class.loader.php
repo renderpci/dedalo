@@ -2,7 +2,6 @@
 /*
 	LOADER DEDALO COMPONENTS
 */
-include(DEDALO_LIB_BASE_PATH . '/logger/class.logger.php');
 include(DEDALO_LIB_BASE_PATH . '/core/class.Error.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.DBi.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
