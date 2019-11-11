@@ -1447,3 +1447,24 @@ function get_current_version_in_db() {
 }//end get_current_version_in_db
 
 
+
+/**
+* GET_DEDALO_VERSION
+* Get the program files version, the files need change for update the data.
+* Download the Dédalo files and run the update procedure.
+* @return array $current_version
+*/
+function get_dedalo_version() {
+
+	$current_version = array();
+
+	$ar_version = explode(".", DEDALO_VERSION);
+
+	$current_version[0] = (int)$ar_version[0];
+	$current_version[1] = (int)$ar_version[1];
+	$current_version[2] = (int)$ar_version[2];
+
+	return $current_version;
+}//end get_dedalo_version
+
+
