@@ -30,6 +30,7 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 
 	// page instance
 	import '../page/js/page.js'
+	import event_manager from '../page/js/page.js'
 	import {get_instance} from '../common/js/instances.js'
 	( async () => {
 		const t0 = performance.now()
@@ -58,6 +59,9 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 			if(SHOW_DEBUG===true) {
 				console.log("+ Page instantiated and rendered total in time ms: ",performance.now()-t0)
 			}
+
+			// event publish generica page
+				event_manager.publish('render_page', wrapper_page)
 		})
 
 	})()
