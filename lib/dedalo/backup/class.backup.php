@@ -1384,6 +1384,25 @@ abstract class backup {
 
 
 
+	/**
+	* MAKE_BACKUP
+	* @return object $response
+	*/
+	public static function make_backup() {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= '';
+
+		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
+		$username = $_SESSION['dedalo4']['auth']['username'];
+
+		$response = backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
+		#debug_log(__METHOD__."  backup_info: $response->msg ".to_string(), logger::DEBUG);
+
+		return (object)$response;
+	}//end make_backup
+
+
+
 }//end class
-
-
