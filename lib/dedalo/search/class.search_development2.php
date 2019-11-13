@@ -1110,7 +1110,7 @@ class search_development2 {
 						}
 					if(SHOW_DEBUG===true) {
 						$sql_query = '-- Search With order' . PHP_EOL . $sql_query;
-						debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
+						#debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
 					}
 				break;
 		}
@@ -2105,6 +2105,10 @@ class search_development2 {
 	* @return string $trimmed_tipo
 	*/
 	public static function trim_tipo($tipo, $max=2) {
+
+		if ($tipo==='section_id') {
+			return $tipo;
+		}
 
 		preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
 
