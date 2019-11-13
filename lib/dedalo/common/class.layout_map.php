@@ -250,19 +250,35 @@ class layout_map {
 							$parent 		= $RecordObj_dd->get_parent();
 						}
 
+						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+
 						// component add
 							$dd_object = new dd_object((object)[
 								'tipo' 			=> $current_tipo,
 								'section_tipo' 	=> $current_section_tipo,
-								'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true),
+								'model' 		=> $model,
 								'mode' 			=> $modo,
 								'parent' 		=> $parent
 							]);
 							if(!empty($lang)) $dd_object->lang = $lang;
 
+							// remove non allow components
+								#$allow_models = [
+								#	'component_input_text',
+								#	//'component_number',
+								#	//'component_autocomplete',
+								#	'section',
+								#	'area',
+								#	'area_development',
+								#	'section_group'
+								#];
+								#if (!in_array($model, $allow_models)) {
+								#	continue;
+								#}
+
 							$layout_map[] = $dd_object;
-					}
-				}
+					}//end foreach ($current_section_config->{$config_context_type} as $current_tipo)
+				}//end foreach ($config_context as $current_section_config)
 
 				if(SHOW_DEBUG===true) {
 					foreach ($layout_map as $current_item) {
@@ -284,6 +300,7 @@ class layout_map {
 				}
 				$layout_map = array_values($layout_map);
 			}
+
 
 		return $layout_map;
 	}//end get_layout_map
