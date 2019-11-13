@@ -60,7 +60,7 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 				console.log("+ Page instantiated and rendered total in time ms: ",performance.now()-t0)
 			}
 
-			// event publish generica page
+			// event publish generic page
 				event_manager.publish('render_page', wrapper_page)
 		})
 
