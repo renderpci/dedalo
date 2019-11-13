@@ -1431,7 +1431,7 @@ abstract class common {
 							$current->debug_time_json 	= $exec_time;
 							$current->debug_model 		= $called_model;
 							$current->debug_label 		= $this->get_label();
-
+							$current->debug_mode 		= $this->get_modo();
 						#$bt = debug_backtrace()[0];
 						#	dump($json->data, ' json->data ++ '.to_string($bt));
 					}
