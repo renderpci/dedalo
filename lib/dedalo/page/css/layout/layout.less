@@ -1,13 +1,16 @@
-
+// vars
+	@inspector_width : 15em;
 
 
 // html inputs
 	input[type="text"], input[type="number"], input[type="url"], textarea, .contenteditable {
+		width: 100%;
 		height: 2.5em;
 		//margin-bottom: 0.1em;
-		padding:0.5em;
-		border: 1px solid #E0E0E0;
-		width: 100%;
+		padding: 0.5em;
+		//border: 1px solid #E0E0E0;
+		outline: 1px solid #E0E0E0;
+		border: none;
 	}
 
 
@@ -292,7 +295,7 @@
 
 
 // section
-	.section {
+	.wrapper_section {
 
 		>.buttons {
 			padding: 1em;
@@ -324,6 +327,8 @@
 		}
 
 		&.edit {
+			padding-right: @inspector_width;
+
 			>.content_data {
 				display: flex;
 				flex-wrap: wrap;
@@ -429,8 +434,8 @@
 			>div {
 				//display: inline-block;
 				padding: 1em;
-				padding-left: 1em;
-				padding-right: 0;
+				//padding-left: 1em;
+				//padding-right: 0;
 				flex: 1 0;
 				//padding: 0;
 				//outline: 1px solid #EAEAEA;
@@ -519,16 +524,25 @@
 		}//end &.list
 
 
+		&.edit_in_list {
+
+			>*  {
+				padding: 0 !important;
+			}
+
+		}//end &.edit_in_list
+
+
 		// inside .section_record.edit context
 		//.section_record.edit &, .components_container & { 22
-		.section_record.edit &, .wrapper_tool & {
+		.section_record &, .wrapper_tool & {
 			// flex base config
 			.component_base;
 
 			background-color: rgba(251, 251, 251, 0.70); //#FBFBFB;
 			outline: 1px solid rgba(216, 216, 216, 0.43);
 
-			>*{
+			>* {
 				padding: 1em;
 
 				&.paginator {
@@ -555,10 +569,22 @@
 				}
 
 				>.buttons_container {
+					background-color: #ffffff;
 					flex: 0 1;
+					padding: 0.15em;
+					border-radius: 0.25em;
+					position: relative;
+
 					>*{
 						//margin: 0.365em;
 						//line-height: 1.25em;
+					}
+
+					>.close {
+						position: absolute;
+						top: -1.2em;
+						right: -1.2em;
+						color: #f78a1c;
 					}
 				}
 
@@ -623,7 +649,6 @@
 
 
 
-
 // header_wrapper_list
 	.header_wrapper_list {
 		background-color: #2c2c2e;
@@ -632,7 +657,7 @@
 		width: 100%;
 		position: sticky;
 		top: 55px;
-		z-index: 100;
+		z-index: 1;
 		display: grid;
 		line-height: 1.1em;
 		//font-weight: bold;
@@ -661,14 +686,18 @@
 		cursor: pointer;
 		background-repeat: no-repeat;
 		background-position: center;
+		background-size: contain;
+		//padding: 0.5em;
+
+		height: 1em;
+		margin: 0.5em;
+		margin-top: 0.25em;
+		margin-bottom: 0.25em;
 
 		.active &, &.link {
 
-			height: 1em;
+			//height: 1em;
 			opacity: 0.7;
-			padding: 0.35em;
-			padding-left: 0.5em;
-
 			display: block;
 
 			&:hover {
@@ -803,6 +832,19 @@
 // paginator
 	.paginator {
 		width: 100%;
+	}
+
+
+
+// inspector
+	.inspector {
+		height: 100%;
+		width: @inspector_width;
+		background-color: #fcfcfc;
+		position: fixed;
+		top: 67px;
+		right: 0;
+		border: 1px solid #eee;
 	}
 
 
