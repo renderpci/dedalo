@@ -1732,8 +1732,9 @@ abstract class common {
 				// check locator format
 					if (!is_object($current_locator)) {
 						if(SHOW_DEBUG===true) {
+							dump($current_locator, ' current_locator ++ '.to_string());
 							dump($ar_locators, ' ar_locators ++ '.to_string());
-							throw new Exception("Error Processing Request", 1);
+							throw new Exception("Error Processing Request. current_locator is not an object", 1);
 						}
 						continue;
 					}
