@@ -12,7 +12,6 @@
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= $label;
-	$ar_tools_obj			= $this->get_ar_tools_obj();
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
