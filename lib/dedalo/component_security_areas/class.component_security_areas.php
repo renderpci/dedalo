@@ -54,14 +54,6 @@ class component_security_areas extends component_common {
 	}
 
 
-	
-	# Override component_common method
-	public function get_ar_tools_obj() {
-		return NULL;
-	}
-
-	
-
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save

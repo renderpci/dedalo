@@ -1473,11 +1473,7 @@ abstract class common {
 
 			}
 
-		// tools
-			//$tools = $this->get_ar_tools_obj();
-			//if ($tools===false || is_null($tools)) {
-			// 	$tools = [];
-			//}			
+		// tools	
 			$tools = array_map(function($item){
 
 				$tool = new stdClass();
