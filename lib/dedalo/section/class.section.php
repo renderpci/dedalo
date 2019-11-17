@@ -3381,21 +3381,6 @@ class section extends common {
 
 
 	/**
-	* GET_AR_TOOLS_OBJ
-	*	
-	*/
-	public function get_ar_tools_obj() {
-
-		$tools = [
-			'name' => 'tool_time_machine'
-		]; // de momento..
-
-		return $tools;
-	}//end get_ar_tools_obj
-
-
-
-	/**
 	* GET_SQO_CONTEXT
 	* @return object $sqo_context
 	*/

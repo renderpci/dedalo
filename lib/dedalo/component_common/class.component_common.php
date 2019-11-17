@@ -856,19 +856,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_AR_TOOLS_OBJ
-	*/
-	public function get_ar_tools_obj() {
-		if($this->ar_tools_obj===false) {
-			$this->load_tools();
-		}
-
-		return $this->ar_tools_obj;
-	}//end get_ar_tools_obj
-
-
-
-	/**
 	* LOAD TOOLS
 	*/
 	public function load_tools( $check_lang_tools=true ) {
@@ -2580,7 +2567,7 @@ abstract class component_common extends common {
 		}
 
 		if (!isset($this->ar_authorized_tool_name)) {
-			$this->get_ar_tools_obj();
+			//REMOVED OLD WAY$this->get_ar_tools_obj();
 		}
 
 		return (array)$this->ar_authorized_tool_name;

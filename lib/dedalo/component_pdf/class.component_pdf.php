@@ -267,22 +267,6 @@ class component_pdf extends component_common {
 	
 
 
-	# OVERRIDE COMPONENT_COMMON METHOD
-	public function get_ar_tools_obj() {
-		
-		# Remove common tools (time machine and lang)
-		#unset($this->ar_tools_name);
-		$this->ar_tools_name = array();
-
-		# Add tool_image_versions
-		$this->ar_tools_name[] = 'tool_pdf_versions';
-		$this->ar_tools_name[] = 'tool_transcription';
-		
-		return parent::get_ar_tools_obj();
-	}
-
-
-
 	/**
 	* GET_PDF_URL
 	*/

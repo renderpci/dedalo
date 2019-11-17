@@ -36,20 +36,6 @@ class component_info extends component_common {
 
 
 	/**
-	* GET_AR_TOOLS_OBJ
-	*/
-	public function get_ar_tools_obj() {
-		
-		# Remove all tools 
-		#unset($this->ar_tools_name);
-		$this->ar_tools_name = array();
-	
-		return parent::get_ar_tools_obj();
-	}//end get_ar_tools_obj
-
-
-
-	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
 	* Receive value from section list and return proper value to show in list
