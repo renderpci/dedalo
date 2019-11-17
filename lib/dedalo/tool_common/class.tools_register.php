@@ -15,7 +15,7 @@ class tools_register {
 
 	/**
 	* IMPORT_TOOLS
-	* Read all dedalo dir 'tools' subfolders and extract property 'ontology' from all 'info.json' files
+	* Read all dedalo dir 'tools' subfolders and extract property 'ontology' from all 'register.json' files
 	* Remove all previous values in database about tld 'tool' and insert safe renumerated all new structure terms
 	* from imported ontologies
 	* @return array $info_file_processed
@@ -42,9 +42,9 @@ class tools_register {
 
 				if (preg_match('/.*(\/acc|\/old)$/i', $current_dir_tool)) continue;
 
-				$info_file = $current_dir_tool . '/info.json';
+				$info_file = $current_dir_tool . '/register.json';
 				if(!file_exists($info_file)){
-					debug_log(__METHOD__." file info.json dont exist into $current_dir_tool".to_string(), logger::ERROR);
+					debug_log(__METHOD__." file register.json dont exist into $current_dir_tool".to_string(), logger::ERROR);
 					continue;
 				}
 
@@ -68,7 +68,7 @@ class tools_register {
 
 				}else{
 
-					debug_log(__METHOD__." The current info.json don't have ontology modificator ".to_string(), logger::ERROR);
+					debug_log(__METHOD__." The current register.json don't have ontology modificator ".to_string(), logger::ERROR);
 				}
 
 				// add info_objects_parsed
