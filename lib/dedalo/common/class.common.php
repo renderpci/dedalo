@@ -136,25 +136,7 @@ abstract class common {
 
 
 		if( !$this->bl_loaded_structure_data) {
-
-			/*
-			# DEDALO_CACHE_MANAGER : var
-			$cache_var='get_load_structure_data_'.$this->tipo;
-			if(DEDALO_CACHE_MANAGER && cache::exists($cache_var)) {
-				#dump($cache_var,"COMPONENT SHOW FROM CACHE");
-				$this->RecordObj_dd = unserialize(cache::get($cache_var));
-				#error_log("Readed cache: $cache_var ");
-			}else{
-				# Creamos un nuevo objeto de estructura (tesauro)
-				$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
-
-				# DEDALO_CACHE_MANAGER : Lo metemos en cache
-				if(DEDALO_CACHE_MANAGER) {
-					cache::set($cache_var, serialize($this->RecordObj_dd));
-					#error_log("Added cache: $cache_var ");
-				}
-			}
-			*/
+			
 			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
 
 			# Fix vars
@@ -162,23 +144,7 @@ abstract class common {
 			$this->norden	= $this->RecordObj_dd->get_norden();
 			$this->required	= $this->RecordObj_dd->get_usableIndex();
 
-			/*
-			# DEDALO_CACHE_MANAGER : var
-			$cache_var='get_load_structure_data_label_'.$this->tipo;
-			if(DEDALO_CACHE_MANAGER && cache::exists($cache_var)) {
-				#dump($cache_var,"COMPONENT SHOW FROM CACHE");
-				$this->label		= cache::get($cache_var);
-				#error_log("Readed cache: $cache_var ");
-			}else{
-				$this->label		= RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_APPLICATION_LANG);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
-
-				# DEDALO_CACHE_MANAGER : Lo metemos en cache
-				if(DEDALO_CACHE_MANAGER) {
-					cache::set($cache_var, $this->label);
-					#error_log("Added cache: $cache_var ");
-				}
-			}
-			*/
+			
 			$this->label = RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 
@@ -1508,10 +1474,21 @@ abstract class common {
 			}
 
 		// tools
-			$tools = $this->get_ar_tools_obj();
-			if ($tools===false || is_null($tools)) {
-			 	$tools = [];
-			}
+			//$tools = $this->get_ar_tools_obj();
+			//if ($tools===false || is_null($tools)) {
+			// 	$tools = [];
+			//}			
+			$tools = array_map(function($item){
+
+				$tool = new stdClass();
+					$tool->name = $item->name;
+					$tool->icon = DEDALO_LIB_BASE_URL . '/tools/' . $item->name . '/img/icon.svg';
+					$tool->show_in_inspector = $item->show_in_inspector;
+					$tool->show_in_component = $item->show_in_component;
+
+				return $tool;
+			}, $this->get_tools());
+			
 
 		// sqo_context
 			if($sqo_object===true){
@@ -2311,6 +2288,101 @@ abstract class common {
 
 		return $context;
 	}//end get_section_elements_context
+
+
+	/**
+	* GET_TOOLS
+	* @return 
+	*/
+	public function get_tools() {
+
+		$registered_tools 	= $this->get_registered_tools();
+		$model 				= get_class($this);
+		$tipo 				= $this->tipo;
+		$is_component 		= strpos($model, 'component_')===0;
+
+		$tools = [];
+		foreach ($registered_tools as $tool) {
+
+			if( in_array($model, $tool->afected_models)
+				|| ($is_component===true && in_array('all_components', $tool->afected_models))
+				|| in_array($tipo, $tool->afected_tipos)
+			  ) {
+
+				if (isset($tool->requirement_translatable)) {
+					$is_translatable = $is_component ? ($this->traducible==='no' ? false : true) : false;
+					if ($tool->requirement_translatable===$is_translatable) {
+						$tools[] = $tool;
+					}
+				}else{
+					$tools[] = $tool;
+				}					
+			}
+		}
+
+		return $tools;		
+	}//end get_tools
+
+
+
+	/**
+	* GET_REGISTERED_TOOLS
+	* @return 
+	*/
+	public function get_registered_tools() {
+
+		if(isset($_SESSION['dedalo']['registered_tools'])) {
+			return $_SESSION['dedalo']['registered_tools'];
+		}
+
+		$sqo_tool_active = json_decode('{
+				"section_tipo": "dd1324",
+				"limit": 0,
+				"filter": {
+				    "$and": [
+				        {
+				            "q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
+				            "q_operator": null,
+				            "path": [
+				                {
+				                    "section_tipo": "dd1324",
+				                    "component_tipo": "dd1354",
+				                    "modelo": "component_radio_button",
+				                    "name": "Active"
+				                }
+				            ]
+				        }
+				    ]
+				}
+			}');
+
+		$search = new search($sqo_tool_active);
+		$result = $search->search();
+
+		$registered_tools = [];
+		foreach ($result->ar_records as $record) {
+			$section = section::get_instance($record->section_id, $record->section_tipo);
+			$section_dato = json_decode($record->datos);
+			$section->set_dato($section_dato);
+			$section->set_bl_loaded_matrix_data(true);
+
+			$component_tipo = 'dd1353';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															$component_tipo,
+															$record->section_id,
+															'list',
+															DEDALO_DATA_NOLAN,
+															$record->section_tipo);
+			$registered_tools[] 	= $component->get_dato();
+		}
+
+		$_SESSION['dedalo']['registered_tools'] = $registered_tools;
+
+		#dump($registered_tools, ' registered_tools +----------------------+ '.to_string());
+
+		return $registered_tools;		
+	}//end get_registered_tools
 
 
 
