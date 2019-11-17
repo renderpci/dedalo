@@ -1,1 +1,1 @@
-.components_container{display:grid;grid-template-columns:1fr 1fr;grid-gap:1em;background-color:#D6F737}.components_container>select{width:fit-content;height:2em}/*# sourceMappingURL=tool_lang.css.map */
+.components_container{display:grid;grid-template-columns:1fr 1fr;grid-gap:1em}.components_container>select{width:fit-content;height:2em;font-size:.8em}/*# sourceMappingURL=tool_lang.css.map */
