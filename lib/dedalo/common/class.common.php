@@ -1477,6 +1477,8 @@ abstract class common {
 			$tools = array_map(function($item){
 
 				$tool = new stdClass();
+					$tool->section_id 	= $item->section_id;
+					$tool->section_tipo = $item->section_tipo;
 					$tool->name = $item->name;
 					$tool->icon = DEDALO_LIB_BASE_URL . '/tools/' . $item->name . '/img/icon.svg';
 					$tool->show_in_inspector = $item->show_in_inspector;
