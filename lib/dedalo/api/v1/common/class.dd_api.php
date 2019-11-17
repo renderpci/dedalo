@@ -472,11 +472,6 @@ class dd_api {
 			$method 		= $json_data->method;
 			$options 		= $json_data->options;
 
-			// check class file
-				if ($class_name==='tools_register') {
-					include_once(DEDALO_LIB_BASE_PATH . '/core/class.tools_register.php');
-				}
-
 			if (!method_exists($class_name, $method)) {
 
 				$response->msg .= ' >> method '.$method.' not exists';

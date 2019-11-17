@@ -31,7 +31,6 @@ include(DEDALO_LIB_BASE_PATH . '/api/v1/common/class.dd_api.php');
 
 
 
-
 class class_loader {
 
 
@@ -48,6 +47,11 @@ class class_loader {
 	private static function loader($className) {
 
 		switch (true) {
+
+			case ($className==='tools_register'):
+				$file_path	= DEDALO_LIB_BASE_PATH . '/tool_common/class.tools_register.php';
+				break;
+
 			case (strpos($className, 'tool_')!==false):
 				$file_path	= DEDALO_LIB_BASE_PATH . '/tools/' . $className . '/class.' . $className . '.php';
 				break;
