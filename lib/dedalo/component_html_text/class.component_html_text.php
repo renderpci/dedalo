@@ -48,14 +48,6 @@ class component_html_text extends component_common {
 	}
 
 
-
-	# OVERRIDE COMPONENT_COMMON METHOD
-	public function get_ar_tools_obj() {		
-		return parent::get_ar_tools_obj();
-	}	
-
-
-
 	/**
 	* GET DATO DEFAULT 
 	* Overwrite common_function

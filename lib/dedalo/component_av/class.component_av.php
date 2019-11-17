@@ -104,27 +104,6 @@ class component_av extends component_common {
 	}//end set_dato
 	
 
-	
-	# OVERRIDE COMPONENT_COMMON METHOD
-	public function get_ar_tools_obj() {
-		
-		# Remove common tools (time machine and lang)
-		#unset($this->ar_tools_name);
-		$this->ar_tools_name = array();
-
-		# Add tool_transcription
-		$this->ar_tools_name[] = 'tool_transcription';
-
-		# Add tool_av_versions
-		$this->ar_tools_name[] = 'tool_av_versions';
-
-		# Add tool_posterframe
-		$this->ar_tools_name[] = 'tool_posterframe';
-		
-		return parent::get_ar_tools_obj();
-	}//end get_ar_tools_obj
-
-
 
 	/**
 	* GET VALOR
