@@ -35,15 +35,15 @@ $updates->$v = new stdClass();
 
 	// create the matrix_tools
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			CREATE TABLE public.matrix_tools
-			(
-			   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
-			)
-			WITH (OIDS = FALSE);
-			CREATE SEQUENCE matrix_tools_id_seq;
-			ALTER TABLE public.matrix_tools ALTER COLUMN id SET DEFAULT nextval('matrix_tools_id_seq'::regclass);
+		CREATE TABLE IF NOT EXISTS public.matrix_tools
+		(
+		   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
+		)
+		WITH (OIDS = FALSE);
+		CREATE SEQUENCE IF NOT EXISTS matrix_tools_id_seq;
+		ALTER TABLE public.matrix_tools ALTER COLUMN id SET DEFAULT nextval('matrix_tools_id_seq'::regclass);
 
-			DROP INDEX IF EXISTS \"matrix_tools_expr_idx3\", \"matrix_tools_expr_idx2\", \"matrix_tools_expr_idx1\", \"matrix_tools_expr_idx\", \"matrix_tools_id_idx1\";
+		DROP INDEX IF EXISTS \"matrix_tools_expr_idx3\", \"matrix_tools_expr_idx2\", \"matrix_tools_expr_idx1\", \"matrix_tools_expr_idx\", \"matrix_tools_id_idx1\";
 		");
 	*/
 	// drop the old matrix_stat
