@@ -112,7 +112,7 @@ abstract class JSON_RecordDataBoundObject {
 		#dump($this->use_cache,'$this->use_cache ID:'.$this->ID." - tipo:$this->tipo");
 
 		# CACHE_MANAGER /**/		
-		if( $this->use_cache===true && $this->use_cache_manager===true && DEDALO_CACHE_MANAGER===true) { // && cache::exists($strQuery)  // USING CACHE MANAGER
+		if( $this->use_cache===true && $this->use_cache_manager===true) { // && cache::exists($strQuery)  // USING CACHE MANAGER
 
 			#$arRow	= json_handler::decode(cache::get($strQuery));
 			$dato	= unserialize(cache::get($strQuery));
@@ -163,7 +163,7 @@ abstract class JSON_RecordDataBoundObject {
 
 			# CACHE RESULTS
 			# Note: Avoid use cache in long imports (memory overloads)		
-				if( $this->use_cache===true && $this->use_cache_manager===true && DEDALO_CACHE_MANAGER===true) {
+				if( $this->use_cache===true && $this->use_cache_manager===true) {
 					# CACHE_MANAGER			
 					cache::set($strQuery, serialize($dato));
 				}else if( $this->use_cache===true ) {
@@ -517,7 +517,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 		# CACHE_MANAGER : Using external cache manager (like redis) 
-		if( $use_cache===true && $this->use_cache_manager===true && DEDALO_CACHE_MANAGER===true) { //  && cache::exists($strQuery) 
+		if( $use_cache===true && $this->use_cache_manager===true) { //  && cache::exists($strQuery) 
 			
 			$ar_records	= unserialize(cache::get($strQuery));
 			#$ar_records	= json_handler::decode(cache::get($strQuery));
@@ -556,7 +556,7 @@ abstract class JSON_RecordDataBoundObject {
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
 			# the nexts results are 0 and duplicate records are builded in matrix)
 			$n_records = count($ar_records);
-			if( $use_cache===true && $this->use_cache_manager===true && DEDALO_CACHE_MANAGER===true && $n_records>0) {
+			if( $use_cache===true && $this->use_cache_manager===true && $n_records>0) {
 				# CACHE_MANAGER
 				cache::set($strQuery, serialize($ar_records));
 			}else if( $use_cache===true && $n_records>0 ) {

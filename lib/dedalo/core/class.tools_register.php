@@ -10,6 +10,9 @@ require_once(DEDALO_LIB_BASE_PATH . '/dd/class.ontology.php');
 class tools_register {
 
 
+	static $section_tools_tipo = 'dd1324';
+
+
 	/**
 	* IMPORT_TOOLS
 	* Read all dedalo dir 'tools' subfolders and extract property 'ontology' from all 'info.json' files
@@ -29,7 +32,6 @@ class tools_register {
 
 		// get the all tools folders
 			$ar_tools = (array)glob(DEDALO_LIB_BASE_PATH . '/tools/*', GLOB_ONLYDIR);
-
 
 
 		// Ontologies. Get the all tools ontologies
@@ -109,7 +111,24 @@ class tools_register {
 				// import record (section tool1) in db matrix_tools
 					$section_id_counter = 1; // first section_id to use
 					foreach ($info_objects_parsed as $current_info_object) {
-						tools_register::import_info_object($current_info_object, $section_id_counter);
+
+						// save new record with serialized section_id
+						$created_section_id = tools_register::import_info_object($current_info_object, $section_id_counter);
+						
+						// build tool_object (simple)
+						$tool_object = tools_register::parse_tool_object(tools_register::$section_tools_tipo, $created_section_id);
+
+						// tool_obj . Set and save updated section
+							$component_tipo = 'dd1353';
+							$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$component 		= component_common::get_instance($model,
+																			 $component_tipo,
+																			 $created_section_id,
+																			 'list',
+																			 DEDALO_DATA_NOLAN,
+																			 tools_register::$section_tools_tipo);
+							$component->set_dato($tool_object);					
+							$component->save();	
 					}
 			}
 
@@ -126,9 +145,198 @@ class tools_register {
 
 
 	/**
+	* PARSE_TOOL_OBJECT
+	* Build a tool object from section tools register development
+	* 
+	* @param object $current_info_object
+	*	Full dedalo section data object from one record 
+	* @return object $tool_object
+	*	Simple and human readable json object to use with components, sections, areas..
+	*/
+	public static function parse_tool_object($section_tipo, $section_id) {
+		
+		$tool_object = new stdClass();
+
+		// name
+			$component_tipo = 'dd1326';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 	= $component->get_dato();
+			$value 	= reset($dato);
+			$tool_object->name = $value;
+
+
+		// label
+			$component_tipo = 'dd799';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 			= $component->get_dato_full();
+			$value 			= [];
+			foreach ($dato as $curent_lang => $current_value) {
+				$value[] = (object)[
+					'lang'  => $curent_lang,
+					'value' => reset($current_value)
+				];
+			}
+			$tool_object->label = $value;
+
+		// version
+			$component_tipo = 'dd1327';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 	= $component->get_dato();
+			$value 	= reset($dato);
+			$tool_object->vesion = $value;
+
+		// dedalo version (minimal requeriment)
+			$component_tipo = 'dd1328';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 	= $component->get_dato();
+			$value 	= reset($dato);
+			$tool_object->dd_version = $value;
+
+		// afected components (models)
+			$component_tipo = 'dd1330';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array');					
+			$tool_object->afected_models = $value;
+
+		// description
+			$component_tipo = 'dd612';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+
+			$dato 			= $component->get_dato_full();
+			$value 			= [];
+			foreach ($dato as $curent_lang => $current_value) {
+				$value[] = (object)[
+					'lang'  => $curent_lang,
+					'value' => $current_value
+				];
+			}
+			$tool_object->description = $value;
+
+		// afected components (tipos)
+			$component_tipo = 'dd1350';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$value 			= $component->get_dato() ?? [];				
+			$tool_object->afected_tipos = $value;
+
+		// show in inspector
+			$component_tipo = 'dd1331';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 			= $component->get_dato();
+			$dato_ref 		= reset($dato)->section_id;
+			$value 			= $dato_ref == '1' ? true : false;				
+			$tool_object->show_in_inspector = $value;
+
+		// show in component
+			$component_tipo = 'dd1332';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 			= $component->get_dato();
+			$dato_ref 		= reset($dato)->section_id;
+			$value 			= $dato_ref == '1' ? true : false;				
+			$tool_object->show_in_component = $value;
+
+		// requirement translatable
+			$component_tipo = 'dd1333';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 			= $component->get_dato();
+			$dato_ref 		= reset($dato)->section_id;
+			$value 			= $dato_ref == '1' ? true : false;				
+			$tool_object->requirement_translatable = $value;
+
+		// ontology
+			$component_tipo = 'dd1334';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$value 			= $component->get_dato();					
+			$tool_object->ontology = $value;
+
+
+		// properties
+			$component_tipo = 'dd1335';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$value 			= $component->get_dato();					
+			$tool_object->properties = $value;
+
+
+		return $tool_object;
+	}//end parse_tool_object
+
+
+
+	/**
 	* IMPORT_INFO_OBJECT
 	* Info object is exactly a dedalo raw record data
-	* @return bool true
+	* @return int $section_id
 	*/
 	private static function import_info_object($info_object, &$section_id_counter) {
 
@@ -136,9 +344,9 @@ class tools_register {
 		$info_object->section_id = $section_id_counter;
 		$info_object->label 	 = 'Tools register';
 		$datos 	 				 = json_handler::encode($info_object);
-		$section_tools_tipo 	 = 'dd1324';
+		$section_tools_tipo 	 = tools_register::$section_tools_tipo; //  'dd1324';
 
-		$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
+		$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING section_id';
 		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_tools_tipo, $datos ));
 
 		// update counter on every imported record
@@ -147,12 +355,10 @@ class tools_register {
 		// if all is ok, update counter value
 		$section_id_counter++;
 
-		return true;
+		$section_id = pg_fetch_result($result,0,'section_id');
+
+		return $section_id;
 	}//end import_info_object
-
-
-
-
 
 
 
