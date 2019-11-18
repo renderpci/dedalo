@@ -208,7 +208,7 @@ class area_development extends area {
 				$item->label 	= 'DATABASE INFO';
 				$item->info 	= null;
 				$item->body 	= 'Database '.$info['IntervalStyle']. " ". $info['server']. " ".DEDALO_HOSTNAME_CONN;
-				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT).'</pre>';
+				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
 			$ar_widgets[] = $item;
 
 
@@ -222,7 +222,7 @@ class area_development extends area {
 				$item->label 	= 'PHP USER';
 				$item->info 	= null;
 				$item->body 	= 'PHP user '.$info['name'];
-				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT).'</pre>';
+				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
 			$ar_widgets[] = $item;
 
 
