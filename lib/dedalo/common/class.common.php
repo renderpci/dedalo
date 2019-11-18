@@ -136,7 +136,7 @@ abstract class common {
 
 
 		if( !$this->bl_loaded_structure_data) {
-			
+
 			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
 
 			# Fix vars
@@ -144,7 +144,7 @@ abstract class common {
 			$this->norden	= $this->RecordObj_dd->get_norden();
 			$this->required	= $this->RecordObj_dd->get_usableIndex();
 
-			
+
 			$this->label = RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 
@@ -1473,20 +1473,25 @@ abstract class common {
 
 			}
 
-		// tools	
+		// tools
 			$tools = array_map(function($item){
+
+				$label = array_reduce($item->label, function($el, $carry){
+					return $el->lang===DEDALO_DATA_LANG ? $el->value : $carry;
+				}, null);
 
 				$tool = new stdClass();
 					$tool->section_id 	= $item->section_id;
 					$tool->section_tipo = $item->section_tipo;
-					$tool->name = $item->name;
-					$tool->icon = DEDALO_LIB_BASE_URL . '/tools/' . $item->name . '/img/icon.svg';
+					$tool->name  		= $item->name;
+					$tool->label 		= $label;
+					$tool->icon 		= DEDALO_LIB_BASE_URL . '/tools/' . $item->name . '/img/icon.svg';
 					$tool->show_in_inspector = $item->show_in_inspector;
 					$tool->show_in_component = $item->show_in_component;
 
 				return $tool;
 			}, $this->get_tools());
-			
+
 
 		// sqo_context
 			if($sqo_object===true){
@@ -2290,7 +2295,7 @@ abstract class common {
 
 	/**
 	* GET_TOOLS
-	* @return 
+	* @return
 	*/
 	public function get_tools() {
 
@@ -2314,18 +2319,18 @@ abstract class common {
 					}
 				}else{
 					$tools[] = $tool;
-				}					
+				}
 			}
 		}
 
-		return $tools;		
+		return $tools;
 	}//end get_tools
 
 
 
 	/**
 	* GET_REGISTERED_TOOLS
-	* @return 
+	* @return
 	*/
 	public function get_registered_tools() {
 
@@ -2377,12 +2382,12 @@ abstract class common {
 
 		$_SESSION['dedalo']['registered_tools'] = $registered_tools;
 
-		#dump($registered_tools, ' registered_tools +----------------------+ '.to_string());
 
-		return $registered_tools;		
+		return $registered_tools;
 	}//end get_registered_tools
 
 
 
 }//end class
-?>
+
+
