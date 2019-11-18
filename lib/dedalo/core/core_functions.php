@@ -64,11 +64,11 @@ function dump($val, $var_name=NULL, $arguments=array()){
 				break;
 			case is_array($val):
 				#$value_html .= var_export($val, true);
-				$value_html .= json_encode($val,JSON_PRETTY_PRINT);
+				$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 				break;
 			case is_object($val):
 				#$value_html .= var_export($val,true);
-				$value_html .= json_encode($val,JSON_PRETTY_PRINT);
+				$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 				break;
 			default:
 				if(is_string($val) && $val != strip_tags($val)) {

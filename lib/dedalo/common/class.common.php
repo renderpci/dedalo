@@ -1476,9 +1476,10 @@ abstract class common {
 		// tools
 			$tools = array_map(function($item){
 
-				$label = array_reduce($item->label, function($el, $carry){
-					return $el->lang===DEDALO_DATA_LANG ? $el->value : $carry;
+				$label = array_reduce($item->label, function($carry, $el){
+					return ($el->lang===DEDALO_DATA_LANG) ? $el->value : $carry;
 				}, null);
+				//dump($label, ' label ++ '.to_string());
 
 				$tool = new stdClass();
 					$tool->section_id 	= $item->section_id;
