@@ -9,7 +9,7 @@ class menu extends common {
 
 	protected $modo;
 
-	
+
 	public function __construct($modo) {
 		$this->modo = $modo;
 
@@ -28,8 +28,8 @@ class menu extends common {
 		if(!login::is_logged()) return null;
 
 		$user_id_logged 		= navigator::get_user_id();
-		$arguments_tree			= array();	
-		$arguments_tree['ul_id']= 'menu';	
+		$arguments_tree			= array();
+		$arguments_tree['ul_id']= 'menu';
 
 		if( (bool)component_security_administrator::is_global_admin($user_id_logged) !== true ) {
 			# Get array of authorized areas for current logged user
@@ -37,9 +37,9 @@ class menu extends common {
 			$arguments_tree['dato'] = $ar_authorized_areas;
 				#dump($ar_authorized_areas,'ar_authorized_areas');
 		}
-	
+
 		$html = self::get_menu_structure_html($option='create_link', $arguments_tree);
-		
+
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
@@ -57,7 +57,7 @@ class menu extends common {
 		$link = "<a href=\"javascript:menu.load_ref('$url')\">$label</a>";
 		#$link = '<a href="javascript:void(0);" onclick="menu.load_ref(this, event, \''.$url.'\')">'.$label.'</a>';
 		#$link = '<a href="javascript:void(0);" class="menu_link_a" data-url="'.$url.'">'.$label.'</a>';
-		
+
 		return $link;
 	}//end build_menu_link
 
@@ -73,7 +73,7 @@ class menu extends common {
 	*/
 	public static function get_menu_structure_html($option, $arguments_tree) {
 		#unset($_SESSION['dedalo4']['config']['menu_structure_html']);
-		
+
 		# STATIC CACHE	(Only for menu - option='create_link' -)
 		if ($option==='create_link') {
 			$uid=(string)$option;
@@ -82,11 +82,11 @@ class menu extends common {
 				if(SHOW_DEBUG===true) {
 					# nothing to do;
 					#dump($uid, '$uid');
-					#return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
+					#return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];
 				}else{
-					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
-				}											
-			}				
+					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];
+				}
+			}
 		}
 
 		if(SHOW_DEBUG===true) {
@@ -94,29 +94,29 @@ class menu extends common {
 		}
 		$ul_id = isset($arguments_tree['ul_id']) ? $arguments_tree['ul_id'] : 'menu';
 
-		$menu_structure_html = '<ul id="'.$ul_id.'" class="menu_ul_'.$option.'">';		
-			
+		$menu_structure_html = '<ul id="'.$ul_id.'" class="menu_ul_'.$option.'">';
+
 			$ar_ts_children_areas = area::get_ar_ts_children_all_areas_hierarchized();
 				#dump($ar_ts_children_areas,"ar_ts_children_areas");
 
 			# BUILD MENU RECURSIVELY
 			$menu_structure_html .= self::walk_ar_structure($ar_ts_children_areas, $arguments_tree, $option);
 
-			
+
 			# THESAURUS ADD MENU MANUAL
 			$user_id_logged 			 = navigator::get_user_id();
 			$logged_user_is_global_admin = (bool)component_security_administrator::is_global_admin($user_id_logged);
-			
+
 			$security = new security();
-			$tesauro_permissions = security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);				
-			if ( (array_key_exists(DEDALO_TESAURO_TIPO, $ar_ts_children_areas) && $tesauro_permissions>=2) || $logged_user_is_global_admin===true) {			
+			$tesauro_permissions = security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
+			if ( (array_key_exists(DEDALO_TESAURO_TIPO, $ar_ts_children_areas) && $tesauro_permissions>=2) || $logged_user_is_global_admin===true) {
 				#dump($ar_ts_children_areas,$ar_ts_children_areas);
 				switch (true) {
 					case ($option==='create_link'):
 
 						# TESAURO LINK IN MENU
 						/*
-						if(SHOW_DEBUG===true) {						
+						if(SHOW_DEBUG===true) {
 						$tesauro_html = '';
 						$tesauro_html .= '<li class="has-sub menu_li_inactive">';
 						$tesauro_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">TS V3</a>"; // ucfirst(label::get_label('tesauro'))
@@ -131,13 +131,13 @@ class menu extends common {
 						*/
 
 						# STRUCTURE LINK IN MENU.  && file_exists(DEDALO_LIB_BASE_PATH.'/dd')
-						if( (SHOW_DEBUG===true) || 
+						if( (SHOW_DEBUG===true) ||
 							(DEDALO_ENTITY==='master' && $logged_user_is_global_admin===true && SHOW_DEVELOPER===true)
-						) {							
+						) {
 							// Structure links
 								$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
 									$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
-									$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';								
+									$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';
 									$menu_structure_html .= self::build_menu_link($structure_path, 'Structure');
 									$menu_structure_html .= '<ul>';
 									$menu_structure_html .= '<li>';
@@ -147,22 +147,22 @@ class menu extends common {
 								$menu_structure_html .= '</li>';
 						}
 						break;
-					
+
 					default:
 						# code...
 						break;
-				}			
+				}
 			}//end if ( (array_key_exists(DEDALO_TESAURO_TIPO, $ar_ts_children_areas) && $tesauro_permissions==2) || $logged_user_is_global_admin===true) {
-			
+
 		$menu_structure_html .= '</ul>';
 
-		
+
 		# STORE CACHE DATA
 		if ($option==='create_link') {
 			if (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 				# Nothing to store
 			}else{
-				$_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG] = tools::clean_html_code($menu_structure_html);				
+				$_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG] = tools::clean_html_code($menu_structure_html);
 			}
 		}
 
@@ -193,18 +193,18 @@ class menu extends common {
 			$url  = "{$path}?t=".DEDALO_TESAURO_TIPO;
 		}elseif ($tipo===DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO) {
 			$url  = "{$path}?t=".DEDALO_TESAURO_TIPO.'&model=1';
-		}		
-		
+		}
+
 		if ($modelo_name==='section_tool') {
 
 			$RecordObj_dd = new RecordObj_dd($tipo);
 			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
-			if ($propiedades) {
+			if ($propiedades && isset($propiedades->context)) {
 				$url = "{$path}?t={$tipo}&top_tipo={$propiedades->context->top_tipo}";
 			}
 			//dump($propiedades, ' propiedades ++ '.to_string());
 		}
-		
+
 		$link = self::build_menu_link($url, $termino);
 
 		return $link;
@@ -273,7 +273,7 @@ class menu extends common {
 			}
 
 			/*
-			* VISIBLE . Excluimos las secciones marcadas como 'visible=no' en estructura y las que 
+			* VISIBLE . Excluimos las secciones marcadas como 'visible=no' en estructura y las que
 			* no deben ser mostradas (tesauro selector, media area, etc.)
 			*/
 			$RecordObj_dd	= new RecordObj_dd($tipo);
@@ -282,7 +282,7 @@ class menu extends common {
 				case ($option==='create_link' && $visible === 'no'):
 				case ($option==='create_link' && $tipo === DEDALO_MEDIA_AREA_TIPO):
 				#case ($option==='create_link' && $tipo === DEDALO_TESAURO_TIPO):
-				case ($option==='create_link' && $tipo === DEDALO_ENTITY_MEDIA_AREA_TIPO):					
+				case ($option==='create_link' && $tipo === DEDALO_ENTITY_MEDIA_AREA_TIPO):
 						$show = false;
 						break;
 				case ($option==='create_link' && in_array($tipo, unserialize(DEDALO_ENTITY_MENU_SKIP_TIPOS))):
@@ -292,7 +292,7 @@ class menu extends common {
 						$skip = true;
 						break;
 			}
-			
+
 			# MODELO
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
@@ -315,7 +315,7 @@ class menu extends common {
 			}
 			*/
 
-			
+
 			if (!empty($value) && $modelo_name!=='section') {
 				$open_term = '<li class="has-sub">';
 			}
@@ -326,8 +326,8 @@ class menu extends common {
 			}
 
 			$dato_current	= isset($dato->$tipo) ? intval($dato->$tipo) : null;
-			
-			
+
+
 			if($skip===true) {
 
 				if(is_array($value) && $modelo_name!=='section') {
@@ -335,16 +335,16 @@ class menu extends common {
 					#dump($html,'$html');
 				}
 
-			}else if($show===true) {			
-				
+			}else if($show===true) {
+
 
 				$html	.= $open_term;
 
 				# Decorate term
 				$html 	.= self::$option($tipo, $termino, $modelo_name, $arguments_tree);
 
-				if(is_array($value) && $modelo_name!=='section') {					
-					
+				if(is_array($value) && $modelo_name!=='section') {
+
 					$current_html = self::walk_ar_structure($value, $arguments_tree, $option);	# Recursion walk_ar_structure
 					if (strlen($current_html)) {
 						$html .= $open_group;
@@ -355,9 +355,9 @@ class menu extends common {
 
 				$html .= $close_term;
 			}
-			
-		}//end foreach($ar_structure as $tipo => $value) {		
-		
+
+		}//end foreach($ar_structure as $tipo => $value) {
+
 		return $html;
 	}//end walk_ar_structure
 
