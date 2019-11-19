@@ -1604,7 +1604,8 @@ class diffusion_sql extends diffusion  {
 					//'thesaurus',
 					//'title',
 					'typology',
-					'data_mod' // added 18-09-2019
+					'data_mod', // added 18-09-2019
+					'fons_code'
 				];
 
 			$fields_array = [];
@@ -1903,7 +1904,7 @@ class diffusion_sql extends diffusion  {
 							$current_column_name = RecordObj_dd::get_termino_by_tipo($current_tipo, 'lg-spa', true);
 							$fields_obj = new stdClass();
 								$fields_obj->name  = $current_column_name;
-								$fields_obj->value = trim( strip_tags($current_value) );
+								$fields_obj->value = is_string($current_value) ? trim( strip_tags($current_value) ) : $current_value;
 							$ar_objects[] = $fields_obj;
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
@@ -1934,21 +1935,23 @@ class diffusion_sql extends diffusion  {
 							'field_value' => $table_name
 						];
 
-					# fons (archive code)
+					# fons_code (archive code)
+						/*
 						switch ($table_name) {
-							case 'interview': 			$fons = 1; break;
-							case 'biblioteca': 			$fons = 12; break;
-							case 'sra': 				$fons = 2; break;
-							case 'privacio_llibertat': 	$fons = 3; break;
-							case 'deportats': 			$fons = 6; break;
-							case 'espais_memoria': 		$fons = 4; break;
-							case 'cens_simbologia': 	$fons = 5; break;
-							default: $fons = null;
+							case 'interview': 			$fons_code = 1; break;
+							case 'biblioteca': 			$fons_code = 12; break;
+							case 'sra': 				$fons_code = 2; break;
+							case 'privacio_llibertat': 	$fons_code = 3; break;
+							case 'deportats': 			$fons_code = 6; break;
+							case 'espais_memoria': 		$fons_code = 4; break;
+							case 'cens_simbologia': 	$fons_code = 5; break;
+							default: $fons_code = null;
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'fons',
-							'field_value' => '["'.$fons.'"]'
+							'field_name'  => 'fons_code',
+							'field_value' => '["'.$fons_code.'"]'
 						];
+						*/
 				}
 			}//end foreach ($ar_fields as $section_id => $ar_langs) {
 			#dump($ar_fields_global, ' ar_fields_global ++ '.to_string());
@@ -2997,7 +3000,21 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
-	* object_to_string
+	* RETURN_FIXED_VALUE
+	* Fake method to return properties defined fixed value
+	* @return string
+	*/
+	public static function return_fixed_value( $options, $dato ) {
+
+		$value = $options->propiedades->process_dato_arguments->value ?? null;
+
+		return $value;
+	}//end return_fixed_value
+
+
+
+	/**
+	* OBJECT_TO_STRING
 	* @return
 	*/
 	public static function object_to_string( $options, $dato ) {
