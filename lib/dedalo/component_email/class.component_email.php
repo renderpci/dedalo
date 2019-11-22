@@ -28,8 +28,12 @@ class component_email extends component_common {
 
 		if (!is_null($dato)) {
 
-			$safe_dato=[];
-			foreach ((array)$dato as $key => $value) {
+			$safe_dato = [];
+
+			if (!is_array($dato)) {
+				$dato = [$dato];
+			}
+			foreach ($dato as $key => $value) {
 
 				$value = !is_string($value) ? to_string($value) : $value;
 

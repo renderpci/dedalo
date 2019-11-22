@@ -57,8 +57,8 @@ function dump($val, $var_name=NULL, $arguments=array()){
 		$html .= PHP_EOL . " value: " ;
 		switch (true) {
 			case is_array($val):
-				$value_html .= print_r($val, true);
-				#$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				#$value_html .= print_r($val, true);
+				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				break;
 			case is_object($val):
 				#$value_html .= print_r($val,true);
