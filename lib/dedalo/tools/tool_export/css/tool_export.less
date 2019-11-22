@@ -17,14 +17,14 @@
 		font-family: Arial, sans-serif;
 		font-size: 12px;
 		width: 100%;
-		table-layout: fixed;		
-	
+		table-layout: fixed;
+
 		tr {
 
 			>th, >td {
 				display: table-cell;
 				max-height: 50px;
-				overflow: auto;				
+				overflow: auto;
 				padding: 2px;
 				padding-left: 0.4em;
 				overflow-wrap: break-word;
@@ -60,15 +60,15 @@
 
 				>td {
 					background-color: #f9f9f9;
-				}				
+				}
 			}
 
 		}
-		
+
 	}//end .table_csv
-		
-	
-	
+
+
+
 
 
 
@@ -97,14 +97,14 @@
 		}
 	#col2 {
 		/*background-color: #FFFFFF;*/
-		width: 80px;		
+		width: 80px;
 		background-image: url('../../../../../images/arrow-right-512.png');
 		background-size: 50%;
 		background-position: center;
 		background-repeat: no-repeat;
 		height: 100%;
 		opacity: 0.7;
-	}	
+	}
 	.list_title {
 		padding: 10px;
 		text-transform: uppercase;
@@ -113,7 +113,7 @@
 		color: #ffffff;
 	}
 	#wrap_columns_selector ul {
-		border: 1px solid #eee;		
+		border: 1px solid #eee;
 		list-style-type: none;
 		margin: 0;
 		padding: 5px 0 0 0;
@@ -134,7 +134,7 @@
 		min-width: 250px;
 		margin: 2px;
 		padding: 3px;
-		font-size: 1.2em;		
+		font-size: 1.2em;
 		cursor: move;
 		background-color: #5CB85C;
 		color: #000000;
@@ -183,7 +183,7 @@
 		#buttons_div select {
 			margin-bottom: 5px;
 		}
-	
+
 
 	.move_columns {
 		display: block;
@@ -194,7 +194,7 @@
 		margin-bottom: 0;
 	}
 	#active_all_columns {
-		margin-top: 40px;		
+		margin-top: 40px;
 
 		&:before {
 			content: ">>";
@@ -222,8 +222,8 @@
 		display: none;
 		padding: 20px;
 
-		position: sticky;
-    	top: 90vh;
+		//position: sticky;
+    	//top: 90vh;
 
 		&:before {
 			content: " ";
@@ -251,8 +251,8 @@
 
 
 	}//end #download_file
-		
-			
+
+
 
 
 	/* TABLE_DATA_PREVIEW
@@ -271,11 +271,11 @@
 
 
 // content_html
-	.content_html {		
+	.content_html {
 		width: 100%;
 		height: 100vh;
-		display: block;		
-	}	
+		display: block;
+	}
 
 
 // tool_title
@@ -289,7 +289,7 @@
 
 
 // print
-	@media print {    
+	@media print {
 	    .no-print, .no-print *
 	    {
 	        display: none !important;
@@ -305,5 +305,72 @@
 	}
 
 
+// section_list_selector
+	.section_list_selector {
+		display: none;
+		margin: 1em;
+		margin-top: 0.75em;
+		padding: 1em;
+		padding-left: 1em;
+		padding-right: 1em;
+		line-height: 1.5em;
+		width: ~"calc(100% - 2em)";
+		background-color: rgb(168, 199, 168);
+		border-radius: 0.5em;
 
+		&.active {
+			display: table;
+		}
+
+		// header 'Custom fields'
+		>h4 {
+			margin-bottom: 0.5em;
+		}
+
+		// line with input checkbox and label
+		>div {
+			width: 100%;
+			margin-bottom: 0.15em;
+			display: flex;
+
+			>input {
+
+			}
+
+			>label {
+				margin-left: 0.5em;
+				cursor: pointer;
+				padding-right: 1.5em;
+			}
+		}
+	}
+
+	// arrow to show/hide list
+	#col3 .arrow_list_selector  {
+
+		@size : 0.65em;
+
+		float: right;
+		//background-color: #44FBFB;
+		width: 0;
+		height: 0;
+		border-left: @size solid transparent;
+		border-right: @size solid transparent;
+		border-top: @size solid #FBFFF2;
+		margin: 0.25em;
+		margin-top: 0.35em;
+		cursor: pointer;
+
+		&.active {
+			border-left: @size solid transparent;
+			border-right: @size solid transparent;
+			border-bottom: @size solid #FBFFF2;
+			border-top: none;
+		}
+	}
+
+	// left conatiner case not show the fields list
+	#col1 .section_list_selector {
+		display: none !important;
+	}
 

@@ -22,6 +22,8 @@ class tool_export extends tool_common {
 	public static $delimiter 		  = ';';
 	public static $internal_separator = PHP_EOL;
 
+	public $section_list_custom;
+
 
 
 	/**
@@ -111,6 +113,7 @@ class tool_export extends tool_common {
 
 			$path_element = new stdClass();
 				$path_element->path = $path;
+					#dump($path_element, ' path_element ++ '.to_string());
 
 			# Parse current path with component and add
 			$search_query_object->select[] = search_development2::component_parser_select($path_element);
@@ -129,7 +132,6 @@ class tool_export extends tool_common {
 
 		return $this->ar_records;
 	}//end get_records
-
 
 
 
@@ -442,6 +444,28 @@ class tool_export extends tool_common {
 
 					$row_deep_resolved[] = $row_item;
 			}else{
+
+				// section_list_custom
+					if ($modelo_name==='component_portal' && !empty($this->section_list_custom)) {
+						#dump($this->section_list_custom, ' section_list_custom ++ '.to_string());
+						// like
+						//	{
+						//	   "oh24" : [
+						//	      "rsc279",
+						//	       "rsc97"
+						//	   ]
+						//	}
+						// override component 'relaciones'
+						if (isset($this->section_list_custom->{$component_tipo}) && !empty($this->section_list_custom->{$component_tipo})) {
+							$relaciones = array_map(function($item){
+								return (object)[
+									'dd6' => $item
+								];
+							}, $this->section_list_custom->{$component_tipo});
+							// inject 'relaciones'
+							$component->RecordObj_dd->set_relaciones($relaciones);
+						}
+					}
 
 				// call to component for get valor export
 					$valor_export = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
@@ -954,4 +978,3 @@ class tool_export extends tool_common {
 
 
 }//end class
-?>

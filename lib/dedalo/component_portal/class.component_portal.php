@@ -289,10 +289,10 @@ class component_portal extends component_relation_common {
 
 		$dato = $this->get_dato();
 
+		// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
 
 		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
 			$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
-
 
 		// FIELDS
 			$fields=array();
@@ -900,6 +900,7 @@ class component_portal extends component_relation_common {
 			# Fix only in default case
 			$this->layout_map = $layout_map;
 		}
+
 
 		return $layout_map;
 	}//end get_layout_map
