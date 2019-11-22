@@ -13,7 +13,7 @@ common::trigger_manager();
 */
 function Save($json_data) {
 	global $start_time;
-	
+
 	# Write session to unlock session file
 	#session_write_close();
 	#dump($maintenance_mode, ' maintenance_mode ++ '.to_string());
@@ -34,19 +34,20 @@ function Save($json_data) {
 					return $response;
 				}
 			}
-	
+
 	// dato . json decode try
-		if (!$dato_clean = json_decode($dato)) {
+		$dato_clean = json_decode($dato);
+		if (is_null($dato_clean)) {
 			$dato_clean = $dato;
 		}
-	
+
 	// caller_dataset check
 		if (!empty($caller_dataset)) {
 			$caller_dataset = json_decode($caller_dataset);
 		}
-	
+
 	// permissions
-		// case tool user admin (user editing self) 
+		// case tool user admin (user editing self)
 			$ar_user_allow_tipos = [
 				DEDALO_USER_PASSWORD_TIPO, // password
 				DEDALO_FULL_USER_NAME_TIPO, // full user name
@@ -54,21 +55,21 @@ function Save($json_data) {
 				DEDALO_USER_IMAGE_TIPO // image
 			];
 			$user_id = navigator::get_user_id(); // current logged user
-			$is_user_admin_edit = (bool)($section_tipo===DEDALO_SECTION_USERS_TIPO && in_array($tipo, $ar_user_allow_tipos) && $parent==$user_id);		
-		// switch 
+			$is_user_admin_edit = (bool)($section_tipo===DEDALO_SECTION_USERS_TIPO && in_array($tipo, $ar_user_allow_tipos) && $parent==$user_id);
+		// switch
 			if ($is_user_admin_edit===true) {
-				
+
 				$permissions = 2;
-			
+
 			}else{
 				if(isset($caller_dataset->component_tipo)) {
-					# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset	
+					# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset
 					$permissions = common::get_permissions($section_tipo, $caller_dataset->component_tipo);
 				}else{
 					$permissions = common::get_permissions($section_tipo, $tipo);
 				}
 			}
-		// return on insufficient permissions 
+		// return on insufficient permissions
 			if ($permissions<2) {
 				$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
@@ -83,8 +84,8 @@ function Save($json_data) {
 			#throw new Exception("Trigger Error: class: $modelo_name not found", 1);
 			$response->msg = "Trigger Error: Nothing is saved. class: '$modelo_name' not found in Dédalo";
 			return $response;
-		}	
-		
+		}
+
 	// component : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL)
 		$component_obj = component_common::get_instance($modelo_name,
 														$tipo,
@@ -92,7 +93,7 @@ function Save($json_data) {
 														$modo,
 														$lang,
 														$section_tipo);
-	
+
 	// unique value server check
 		$properties = $component_obj->get_propiedades();
 		if(isset($properties->unique->server_check) && $properties->unique->server_check===true){
@@ -107,9 +108,9 @@ function Save($json_data) {
 
 	// caller_dataset optional
 		if (!empty($caller_dataset)) {
-			
+
 			# inject component caller_dataset
-			$component_obj->caller_dataset = $caller_dataset;		
+			$component_obj->caller_dataset = $caller_dataset;
 
 			# force to save component
 			$old_dato 	= 'impossible data' . microtime(true);
@@ -123,13 +124,13 @@ function Save($json_data) {
 	// Assign received dato to component
 		$component_obj->set_dato( $dato_clean );
 
-	// Check if dato is changed 
+	// Check if dato is changed
 	$new_dato	= $component_obj->get_dato();
 
-	// Response . Check if new dato is different of current dato. 
+	// Response . Check if new dato is different of current dato.
 	// (!) Important: use operator '==' to allow compare objects properly
 		if((is_object($new_dato) && $new_dato==$old_dato) || $new_dato===$old_dato){
-			
+
 			$response->result 	= $parent;
 			$response->msg 		= 'Ok. Request done [Save]. Data is not changed. Is not necessary update component db data';
 
@@ -143,12 +144,12 @@ function Save($json_data) {
 				# Return id
 				$response->result 	= $section_id;
 				$response->msg 		= 'Ok. Request done [Save]';
-			}else{			
+			}else{
 				$response->result 	= false;
 				$response->msg 		= 'Error. Received section_id is invalid [Save] '.json_encode($section_id);
 			}
 		}
-	
+
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -175,7 +176,7 @@ function Save($json_data) {
 	}
 
 	# Write session to unlock session file
-	#session_write_close();	
+	#session_write_close();
 
 	return (object)$response;
 }//end Save
@@ -198,7 +199,7 @@ function load_component_by_ajax($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	// vars 
+	// vars
 		$vars = array('parent','tipo','lang','modo','section_tipo','current_tipo_section','context_name','arguments','top_tipo','top_id');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -210,7 +211,7 @@ function load_component_by_ajax($json_data) {
 				}
 			}
 
-	// component 
+	// component
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component_obj 	= component_common::get_instance($modelo_name,
 														 $tipo,
@@ -233,7 +234,7 @@ function load_component_by_ajax($json_data) {
 			$component_obj->set_context($context);
 			#dump($context_name,"context_name");
 		}
-	
+
 	// arguments
 		if (!empty($arguments)) {
 			$component_obj->set_arguments($arguments);
@@ -244,7 +245,7 @@ function load_component_by_ajax($json_data) {
 		if ( $section_tipo===DEDALO_SECTION_USERS_TIPO && $user_id==$parent && $tipo===DEDALO_USER_IMAGE_TIPO ) {
 			$component_obj->permissions = 2;
 		}
-		
+
 	// html. Get component html
 		# $arguments = new stdClass();
 		# 	$arguments->permissions = 1;
@@ -262,7 +263,7 @@ function load_component_by_ajax($json_data) {
 		$response->result 	= $html;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
-	// debug 
+	// debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
 				$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";
@@ -276,7 +277,7 @@ function load_component_by_ajax($json_data) {
 
 			$response->debug = $debug;
 		}
-	
+
 
 	return (object)$response;
 }//end load_component_by_ajax
@@ -293,7 +294,7 @@ function remove_server_dato_of_hidden_components($json_data){
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	// vars 
+	// vars
 		$vars = array('section_id','ar_group','lang','modo','section_tipo');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -311,7 +312,7 @@ function remove_server_dato_of_hidden_components($json_data){
 
 				#dump($ar_recursive_childrens);
 			foreach ($ar_recursive_childrens as $current_tipo) {
-		
+
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$component		= component_common::get_instance($modelo_name,
 																 $current_tipo,
@@ -323,7 +324,7 @@ function remove_server_dato_of_hidden_components($json_data){
 				$dato_empty = null;
 				$component->set_dato($dato_empty);
 				$component->Save();
-			}										
+			}
 
 		}
 
@@ -344,9 +345,9 @@ function get_component_json_data__DEACTIVATED($json_data) {
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed [get_component_json_data]';	
-	
-	$vars = array('section_id','section_tipo','component_tipo','lang','dato','modo','max_records','offset','top_tipo','top_id', 'propiedades'); // ,'current_tipo_section','context_name','arguments')		
+		$response->msg 		= 'Error. Request failed [get_component_json_data]';
+
+	$vars = array('section_id','section_tipo','component_tipo','lang','dato','modo','max_records','offset','top_tipo','top_id', 'propiedades'); // ,'current_tipo_section','context_name','arguments')
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -358,7 +359,7 @@ function get_component_json_data__DEACTIVATED($json_data) {
 		}
 
 	#debug_log(__METHOD__." propiedades ".json_encode($propiedades, JSON_PRETTY_PRINT), logger::DEBUG);
-	
+
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component_obj 	= component_common::get_instance($modelo_name,
 													 $component_tipo,
@@ -378,7 +379,7 @@ function get_component_json_data__DEACTIVATED($json_data) {
 	# PROPIEDADES OVERWRITES
 	#if ($propiedades) {
 	#	$component_obj->set_propiedades($propiedades);
-	#}	
+	#}
 	#$component_obj->set_max_records(1);
 
 	# If dato is received, inject dato to current component (portal time machine case for example)
@@ -390,7 +391,7 @@ function get_component_json_data__DEACTIVATED($json_data) {
 	$component_json_data = $component_obj->get_json();
 	if(SHOW_DEBUG===true) {
 		#debug_log(__METHOD__." component_obj (modo:$modo) ".json_encode($component_obj, JSON_PRETTY_PRINT), logger::DEBUG);
-	}		
+	}
 
 	$response->result 	= $component_json_data;
 	$response->msg 		= 'Ok. Request done [get_component_json_data]';
@@ -409,7 +410,7 @@ function get_component_json_data__DEACTIVATED($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 
 	return (object)$response;
 }//get_component_json_data
