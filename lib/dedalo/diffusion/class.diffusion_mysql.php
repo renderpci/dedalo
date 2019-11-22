@@ -232,7 +232,7 @@ class diffusion_mysql extends diffusion_sql  {
 			# EXEC SINGLE QUERY TO DATABASE
 			$result = self::exec_mysql_query( $sql_query_line, $table_name, $database_name );
 
-			debug_log(__METHOD__." Exec chunk query $chunk_key of $n_ar_chunk (max. $max_insert_chunk of total $n_ar_fields) to $table_name ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." Exec chunk query $chunk_key of $n_ar_chunk (max. $max_insert_chunk of total $n_ar_fields) to $table_name ".to_string($result), logger::DEBUG);
 
 		}//end foreach ($ar_chunk as $key => $current_ar_fields) {
 

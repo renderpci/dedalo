@@ -1914,10 +1914,19 @@ class diffusion_sql extends diffusion  {
 
 					# FILTER_DATE
 						$filter_date = isset($filter_date_data[$lang][0]) ? $filter_date_data[$lang][0] : null;
-						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'filter_date',
-							'field_value' => $filter_date
-						];
+						// if (strpos($filter_date, '|')!==false) {
+							// $ar_filter_date = explode(' | ', $filter_date);
+							// $filter_date = isset($ar_filter_date[0]) ? $ar_filter_date[0] : null;
+						// }
+						if(preg_match('/^[0-9]{4}-[09]{2}-[09]{2}/', $filter_date, $output_array)) {
+							$filter_date = reset($output_array);
+
+							$ar_fields_global[$pseudo_section_id][$lang][] = [
+								'field_name'  => 'filter_date',
+								'field_value' => $filter_date
+							];
+						}
+
 
 					# LINK
 						$link_obj = [
@@ -1974,7 +1983,11 @@ class diffusion_sql extends diffusion  {
 		$save = diffusion_mysql::save_record($save_options);
 			#dump($save, ' save ++ '.to_string());
 
+		if (!isset($save->new_id)) {
+			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::DEBUG);
+		}
 		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
+
 
 		return (object)$save;
 	}//end save_global_search_data
