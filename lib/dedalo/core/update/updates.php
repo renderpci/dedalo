@@ -190,7 +190,7 @@ $updates->$v = new stdClass();
 
 
 	# DATABASE UPDATES
-	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.reference_dato_v47_to_relation_dato_v48.php');
 
 	# Update datos to section_data
 	$script_obj = new stdClass();
@@ -241,7 +241,7 @@ $updates->$v = new stdClass();
 			");*/
 
 	# DATABASE UPDATES
-	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.reference_dato_v47_to_relation_dato_v48.php');
 
 	# Update datos to section_data
 	$script_obj = new stdClass();
@@ -403,7 +403,7 @@ $updates->$v = new stdClass();
 
 
 	# DATABASE UPDATES
-	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.reference_dato_v47_to_relation_dato_v48.php');
 
 	# Update datos to section_data
 	$script_obj = new stdClass();
