@@ -150,20 +150,20 @@ $html='';
 									*/
 
 							// format
-								$html .= '<span class="input-label">Format</span>';
+								$html .= '<span class="input-label">'.label::get_label("formato").'</span>';
 								$html .= '<select id="select_data_format_export" class="form-control">';
-								$html .= '<option value="standard">Standard</option>';
+								$html .= '<option value="standard">'.label::get_label("estandar").'</option>';
 								$html .= '<option value="html">HTML</option>';
 								#if(SHOW_DEVELOPER===true) {
-									$html .= '<option value="breakdown">Breakdown</option>';
-									$html .= '<option value="breakdown_html">Breakdown HTML</option>';
+									$html .= '<option value="breakdown">'.label::get_label("desglose").'</option>';
+									$html .= '<option value="breakdown_html">'.label::get_label("desglose").' HTML</option>';
 								#}
 								$html .= '<option value="dedalo">Dédalo (Raw)</option>';
 								$html .= '</select>';
 
 							// active-unactive all
-								$html .= '<a id="active_all_columns" class="move_columns" onclick="tool_export.active_all_columns(this);">Active all columns</a>';
-								$html .= '<a id="unactive_all_columns" class="move_columns" onclick="tool_export.unactive_all_columns(this);">Unactive all columns</a>';
+								$html .= '<a id="active_all_columns" class="move_columns" onclick="tool_export.active_all_columns(this);">'.label::get_label("activar_todas_las_columnas").'</a>';
+								$html .= '<a id="unactive_all_columns" class="move_columns" onclick="tool_export.unactive_all_columns(this);">'.label::get_label("desactivar_todas_las_columnas").'</a>';
 
 							$html .= '</div>';
 
