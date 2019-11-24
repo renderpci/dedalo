@@ -52,6 +52,33 @@ $updates->$v = new stdClass();
 		");
 
 
+
+$v=514; #####################################################################################
+$updates->$v = new stdClass();
+
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 1;
+	$updates->$v->version_minor 	 = 4;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 1;
+	$updates->$v->update_from_minor  = 2;
+
+
+	# Update datos to section_data
+	$script_obj = new stdClass();
+		$script_obj->info   		= "Delete the old data from component_filter (project) into dd265";
+		$script_obj->script_class   = "tool_administration";
+		$script_obj->script_method  = "delete_component_tipo_in_matrix_table";
+		$script_obj->script_vars    = [
+			'dd153', 'dd265', false, true, null
+		]; // Note that only ONE argument as array is sended
+	$updates->$v->run_scripts[] = $script_obj;
+
+
 $v=512; #####################################################################################
 $updates->$v = new stdClass();
 
