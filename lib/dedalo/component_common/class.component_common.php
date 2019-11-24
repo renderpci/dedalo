@@ -4588,10 +4588,10 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_DATA_VALUE
-	* Used to maintain component data when dd_api saves component
+	* Used to maintain component data when dd_core_api saves component
 	* @param object $data
 	* @return bool true
-	* @see dd_api update
+	* @see dd_core_api update
 	*/
 	public function update_data_value($changed_data) {
 

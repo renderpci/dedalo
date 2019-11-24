@@ -38,37 +38,31 @@ class manager {
 			}		
 
 		// actions
-			$dd_api = new dd_api;
-			if ( !method_exists($dd_api, $options->action) ) {
-				$dedalo_data = new stdClass();
-					$dedalo_data->result = false;
-					$dedalo_data->msg 	 = "Error. Undefined method (action) : ".$options->action;
-			}else{
-				$dedalo_data = (object)dd_api::{$options->action}( $options );
-			}
+			$dd_api_type = $options->dd_api ?? 'dd_core_api';
 
-			/*
-			switch ($options->action) {
-
-				case 'read':
-					$dedalo_data = (object)dd_api::read( $options );
+			switch ($dd_api_type) {
+				case 'dd_utils_api':
+					$dd_utils_api = new dd_utils_api();
+					if ( !method_exists($dd_utils_api, $options->action) ) {
+						$dedalo_data = new stdClass();
+							$dedalo_data->result = false;
+							$dedalo_data->msg 	 = "Error. Undefined dd_utils_api method (action) : ".$options->action;
+					}else{
+						$dedalo_data = (object)dd_utils_api::{$options->action}( $options );
+					}
 					break;
-
-				case 'save':
-					$dedalo_data = (object)dd_api::save( $options );
-					break;
-
-				case 'count':
-					$dedalo_data = (object)dd_api::count( $options );
-					break;
-
-				default:
-					$dedalo_data = new stdClass();
-						$dedalo_data->result = false;
-						$dedalo_data->msg 	 = "Error. Undefined method (action) : ".$options->action;
+				
+				case 'dd_core_api':
+					$dd_core_api = new dd_core_api();
+					if ( !method_exists($dd_core_api, $options->action) ) {
+						$dedalo_data = new stdClass();
+							$dedalo_data->result = false;
+							$dedalo_data->msg 	 = "Error. Undefined dd_core_api method (action) : ".$options->action;
+					}else{
+						$dedalo_data = (object)dd_core_api::{$options->action}( $options );
+					}
 					break;
 			}
-			*/
 
 		if(SHOW_DEBUG===true) {
 			$api_debug = new stdClass();
