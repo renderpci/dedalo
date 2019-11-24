@@ -1,11 +1,10 @@
 <?php
-
 /**
-* DD_API
+* DD_CORE_API
 * Manage API RESP data with Dédalo
 *
 */
-class dd_api {
+class dd_core_api {
 
 
 
@@ -452,51 +451,6 @@ class dd_api {
 
 
 
-	/**
-	* TRIGGER
-	* Exec a custom trigger call to class->method from client side
-	* @param object $json_data
-	*	array $json_data->ar_section_tipo
-	* @return object $response
-	*/
-	static function trigger($json_data){
-		global $start_time;
-
-		session_write_close();
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-
-			$class_name 	= $json_data->class_name;
-			$method 		= $json_data->method;
-			$options 		= $json_data->options;
-
-			if (!method_exists($class_name, $method)) {
-
-				$response->msg .= ' >> method '.$method.' not exists';
-
-			}else{
-
-				$result = $class_name::$method($options);
-
-				$response->result = $result;
-				$response->msg 	  = 'Ok. Request done';
-			}
-
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-					$debug->json_data 	= $json_data;
-				$response->debug = $debug;
-				#dump($debug, ' debug ++ '.to_string());
-			}
-
-		return (object)$response;
-	}//end trigger
-
-
 
 	// private methods ///////////////////////////////////
 
@@ -521,7 +475,7 @@ class dd_api {
 				 if($item->typo==='ddo') return $item;
 			});
 			// set as static to allow external access
-			dd_api::$ar_dd_objects = $ar_dd_objects;
+			dd_core_api::$ar_dd_objects = $ar_dd_objects;
 
 		// ddo_source
 			$ddo_source = array_reduce($sqo_context, function($carry, $item){
@@ -834,4 +788,4 @@ class dd_api {
 
 
 
-}//end web_data
+}//end dd_core_api
