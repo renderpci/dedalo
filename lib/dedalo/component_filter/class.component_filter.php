@@ -3,15 +3,15 @@
 * CLASS COMPONENT FILTER
 
 1 - Get the section_id of the user
-2 - With the user
-1 - Despejamos el section_id de usuario
-2 - Con el despejamos el component_filter_master
-3 - Averiguamos si es admin mediante component-security-administrator (valor 1)
-4 -  Si es usuario cogemos los datos del component_filter_master y su relación (tipo) para resolver la etiqueta
-5 - Generamos los checkbox de selección con las secciones obtenidas y con la etiqueta despejada del tipo (dd156)
-6 - Guarda el arras de proyectos para esta sección dentro de los accesibles para el usuario.
+2 - With the user:
+	1 - get the user section_id
+	2 - withe the user section_id build the component_filter_master
+	3 - check the admin user with component-security-administrator (value 1)
+	4 - if the user is not admin, get the data of the component_filter_master and his tipo for get the label
+	5 - Build the checkbox list (datalist) of the sections that we get and the label of the tipo dd156
+	6 - Save the array of the projects for this section inside the user projects (in the user section)
 
-NOTA: al crear una sección se asigna un proyecto por defecto y no puede haber menos de 1.
+NOTE: when a section is created will be assigned a default project and at least need to be 1 or more.
 
 */
 class component_filter extends component_relation_common {
@@ -23,9 +23,6 @@ class component_filter extends component_relation_common {
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
-
-	# MATRIX_TABLE
-	#protected static $filter_matrix_table = 'matrix';
 
 	# RELATION_TYPE
 	protected $relation_type = DEDALO_RELATION_TYPE_FILTER;
@@ -217,15 +214,17 @@ class component_filter extends component_relation_common {
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='html' ) {
 
-		$ar_proyectos_for_current_section = self::get_ar_projects_for_current_section();
+		# User loged now
+		$user_id 	 = navigator::get_user_id();
+		$ar_projects = filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		$dato 		= $this->get_dato();
 		$ar_final 	= array();
-		foreach ((array)$ar_proyectos_for_current_section as $key => $row) {
+		foreach ((array)$ar_projects as $key => $row) {
 			if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
 				$ar_final[] = $row;
 			}
-		}//end foreach ($ar_proyectos_for_current_section as $section_id => $name)
+		}//end foreach ($ar_projects as $section_id => $name)
 
 		$ar_label = [];
 		foreach ($ar_final as $row) {
@@ -272,187 +271,113 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* GET_AR_PROJECTS_FOR_CURRENT_SECTION
+	* GET_DATALIST
 	* Works like ar_list_of_values but filtered by user authorized projects
 	* @return array $ar_projects
 	*/
-	public function get_ar_projects_for_current_section() {
+	public function get_datalist() {
 
 		# User loged now
 		$user_id 	 = navigator::get_user_id();
 		$ar_projects = filter::get_user_authorized_projects($user_id, $this->tipo);
 
-		return $ar_projects;
-	}//end get_ar_projects_for_current_section
+		$typology_section_tipo 	= 'dd1318';
+		#$typology_sections 		= section::get_ar_all_section_records_unfiltered($typology_section_tipo);
 
+		$sqo = json_decode('
+			{
+			    "section_tipo": "'.$typology_section_tipo.'",
+			    "limit": 0,
+			    "offset": 0,
+			    "full_count": false,
+			    "filter": null
+			}
+		');
+		$search = new search($sqo);
+		$search = $search->search();
+
+		$ar_projects_parsed = [];
+		$ar_section_id 		= [];
+		foreach ($ar_projects as $item) {
+			$ar_tipology = (array)$item->typology;
+			foreach ($ar_tipology as $typology_locator) {
+
+				$project = new stdClass();
+					$project->type 	 		= 'project';
+					$project->parent 		= $typology_locator;
+					$project->label 		= $item->label;
+					$project->section_id 	= $item->locator->section_id;
+					$project->value 		= $item->locator;
+				
+				$ar_projects_parsed[] = $project;
+
+				if(!in_array($typology_locator->section_id, $ar_section_id)) $ar_section_id[] = $typology_locator->section_id;
+			}
+		}
+		
+		$ar_groupers = [];
+		foreach ($search->ar_records as $key => $row) {
+
+			$section_id 	= $row->section_id;
+			$section_tipo 	= $row->section_tipo;
+
+			if(in_array($section_id, $ar_section_id)){
+
+				$ar_groupers = array_merge($ar_groupers, $this->get_project_groupers($section_tipo, $section_id));
+
+			}
+		}
+
+		$ar_datalist = array_merge($ar_groupers, $ar_projects_parsed);
+			dump($ar_datalist, ' ar_datalist ++ '.to_string());
+
+		return $ar_datalist;
+	}//end get_datalist
 
 
 	/**
-	* GET AR PROYECTOS SECTION ID MATRIX
-	* Se usa en section edit para mostrar el listado de checkboxes de
-	* los proyectos autorizados al usuario actual logeado
-	* en cualquier sección estándar
-	*
-	* @return $ar_proyectos_for_current_section
-	*	Array proyectos id matrix
+	* GET_PROJECT_GROUPERS
+	* @return 
 	*/
-	public function get_ar_projects_for_current_section__OLD() {
+	public function get_project_groupers($section_tipo, $section_id) {
 
-		# STATIC CACHE
-		#static $cache_ar_proyectos_for_current_section;
-		#if( isset($cache_ar_proyectos_for_current_section[$this->tipo]) ) {
-		#	#trigger_error("Returned data from static cache get_ar_projects_for_current_section ");
-		#	return $cache_ar_proyectos_for_current_section[$this->tipo];
-		#}
-		#
-		## unset($_SESSION['dedalo4']['config']['all_authorized_content_sections']);
-		##if(isset($_SESSION['dedalo4']['config']['ar_proyectos_for_current_section'][DEDALO_DATA_LANG])) {
-		##	return $_SESSION['dedalo4']['config']['ar_proyectos_for_current_section'][DEDALO_DATA_LANG];
-		##}
-		#
-		#if(SHOW_DEBUG===true) {
-		#	$start_time = start_time();
-		#	global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
-		#}
+		$name_tipo 	 = 'dd1320';
+		$parent_tipo = 'dd169';
 
-		$ar_proyectos_for_current_section = array();
+		// name
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
+		$component 		= component_common::get_instance($modelo_name,
+														 $name_tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_LANG,
+														 $section_tipo);
+		$value = $component->get_valor();
 
-		# Usuario logeado actualmente
-		$user_id = navigator::get_user_id();
-			#dump($user_id,'user_id');
+		// parent
+		$model_parent 		= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo,true);
+		$parent_component 	= component_common::get_instance($model_parent,
+														 $parent_tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+		$parent_value = $parent_component->get_dato();
 
-		# Test is_global_admin
-		$is_global_admin = component_security_administrator::is_global_admin($user_id);
-		if ($is_global_admin===true) {
+		$grouper = new stdClass();
+			$grouper->type 			= 'typology';
+			$grouper->label 		= $value;
+			$grouper->section_id 	= $section_id;
+			$grouper->parent 		= !empty($parent_value) ? $parent_value: null;
 
-			# SÓLO PARA ADMINISTRADORES.
-			# BYPASS EL FILTRO Y ACCEDE A TODOS LOS PROYECTOS
-			# Buscamos TODOS los registros de section tipo DEDALO_SECTION_PROJECTS_TIPO
+		$ar_groupers[] = $grouper;
 
-				#$strQuery   = "-- ".__METHOD__."\n SELECT section_id \n FROM \"matrix_projects\" ORDER BY section_id ASC";	//WHERE $sql_filtro
-				#$result		= JSON_RecordObj_matrix::search_free($strQuery);
+		 if(!empty($parent_value)){
+			$ar_groupers = array_merge($ar_groupers, $this->get_project_groupers($parent_value->section_tipo, $parent_value->section_id));
+		} 
 
-				#$ar_proyectos_section_id=array();
-				#while ($rows = pg_fetch_assoc($result)) {
-				#	$ar_proyectos_section_id[] = $rows['section_id'];
-				#}
-				##dump($ar_proyectos_section_id	, ' ar_proyectos_section_id');
-
-
-		}else{
-
-			# USUARIOS COMUNES.
-			# DEVUELVE SÓLO LOS PROYECTOS DEL USUARIO (filter master)
-			# Los proyectos autorizados al usuario actual, de tipo '{"212":2,"250":2,"274":2,"783":2,"791":2,"803":2}'
-				$component_filter_master 	= component_common::get_instance('component_filter_master',
-																			 DEDALO_FILTER_MASTER_TIPO,
-																			 $user_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 DEDALO_SECTION_USERS_TIPO);
-				$dato = (array)$component_filter_master->get_dato();
-					#dump($component_filter_master, ' dato');
-
-				$ar_proyectos_section_id = array_keys($dato);
-					#dump($ar_proyectos_section_id,'ar_proyectos_section_id',"resultado de component_check_box::get_array_dato_from_js_dato(dato)");
-		}
-
-		$strQuery  = '';
-		# SELECCIÓN CON TODOS LOS LENGUAJES
-		$strQuery .= "SELECT section_id, ";
-		$strQuery .= "datos #>>'{components,".DEDALO_PROJECTS_NAME_TIPO.",dato}' AS project_name " ;
-		$strQuery .= "\n FROM \"matrix_projects\" ";
-		$strQuery .= "\n WHERE ";
-		$strQuery .= "\n section_tipo = '".DEDALO_SECTION_PROJECTS_TIPO."' ";
-		if ($is_global_admin!==true) {
-			$strQuery .= "\n AND (";
-			$last = end($ar_proyectos_section_id);
-			foreach ($ar_proyectos_section_id as $current_section_id) {
-				$strQuery .= "section_id = $current_section_id ";
-				if($current_section_id!==$last) $strQuery .= " OR ";
-			}
-			$strQuery .= ") ";
-		}
-		$strQuery .= "\n ORDER BY section_id ASC; ";
-		#debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::ERROR);
-		$result = JSON_RecordObj_matrix::search_free($strQuery);
-		while ($rows = pg_fetch_assoc($result)) {
-			$current_section_id = $rows['section_id'];
-			$project_names		= json_decode($rows['project_name']);
-				#dump($project_names, ' $project_names ++ '.to_string($current_section_id));
-			$project_name = '';
-			if (!is_null($project_names)) {
-
-				if (property_exists($project_names, DEDALO_DATA_LANG)) {
-					# REMOVE STRING TEST ON V4.5 CONSOLIDATED
-					if (is_string($project_names->{DEDALO_DATA_LANG})) {
-						$project_name = $project_names->{DEDALO_DATA_LANG};
-						debug_log(__METHOD__." Project name is string. Update projects dato ASAP ".to_string(), logger::WARNING);
-					}else{
-						$project_name = reset($project_names->{DEDALO_DATA_LANG}); 	#dump($project_name, ' project_name 1 ++ '.to_string(DEDALO_DATA_LANG)); die();
-					}
-				}elseif (property_exists($project_names, DEDALO_APPLICATION_LANGS_DEFAULT)) {
-					# REMOVE STRING TEST ON V4.5 CONSOLIDATED
-					if (is_string($project_names->{DEDALO_APPLICATION_LANGS_DEFAULT})) {
-						$project_name = $project_names->{DEDALO_APPLICATION_LANGS_DEFAULT};
-						debug_log(__METHOD__." Project name is string. Update projects dato ASAP ".to_string(), logger::WARNING);
-					}else{
-						$project_name = reset($project_names->{DEDALO_APPLICATION_LANGS_DEFAULT}); #dump($project_name, ' project_name 2 ++ '.to_string(DEDALO_APPLICATION_LANGS_DEFAULT)); die();
-					}
-				}else{
-					# REMOVE STRING TEST ON V4.5 CONSOLIDATED
-					if (is_string($project_names)) {
-						$project_name = $project_names;
-						debug_log(__METHOD__." Project name is string. Update projects dato ASAP ".to_string(), logger::WARNING);
-					}else{
-						$project_name = reset($project_names);
-						$project_name = to_string($project_name);  #dump($project_name, ' project_name 3 ++ '.to_string($project_names)); die();
-					}
-				}
-			}
-			$ar_proyectos_for_current_section[$current_section_id] = (string)$project_name;
-		}
-		/*
-		// Resolve projects names
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true);
-		$ar_proyectos_for_current_section=array();
-		foreach ($ar_proyectos_section_id as $current_section_id) {
-
-			$component = component_common::get_instance($modelo_name,
-														DEDALO_PROJECTS_NAME_TIPO,
-														$current_section_id,
-														'list',
-														DEDALO_DATA_LANG,
-														DEDALO_SECTION_PROJECTS_TIPO);
-			$current_dato = $component->get_valor();
-
-			// Fallback to application default lang
-			if ( empty($current_dato) ) {
-				$component = component_common::get_instance($modelo_name,
-														DEDALO_PROJECTS_NAME_TIPO,
-														$current_section_id,
-														'list',
-														DEDALO_APPLICATION_LANGS_DEFAULT,
-														DEDALO_SECTION_PROJECTS_TIPO);
-				$current_dato = "<mark>".$component->get_valor()."</mark>";
-			}
-
-			$ar_proyectos_for_current_section[$current_section_id] = (string)$current_dato;
-		}
-
-		# STATIC CACHE
-		$cache_ar_proyectos_for_current_section[$this->tipo] = $ar_proyectos_for_current_section;
-		#$_SESSION['dedalo4']['config']['ar_proyectos_for_current_section'][DEDALO_DATA_LANG] = $ar_proyectos_for_current_section;
-
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
-			#dump($ar_proyectos_for_current_section,'$ar_proyectos_for_current_section');
-			#debug_log(__METHOD__." exec_time ".exec_time($start_time). to_string(), logger::WARNING);
-		}
-		*/
-
-		return (array)$ar_proyectos_for_current_section;
-	}//end get_ar_projects_for_current_section
+		return $ar_groupers;
+	}//end get_project_groupers
 
 
 
@@ -696,52 +621,6 @@ class component_filter extends component_relation_common {
 
 		return $new_dato;
 	}//end convert_dato_pre_490
-
-
-
-	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		if ( empty($search_value) ) {
-			return null;
-		}
-
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-
-		if (is_array($search_value)) {
-			$current_search_value = implode("','", $search_value);
-		}else{
-			$current_search_value = $search_value;
-		}
-
-		#$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,$current_lang}' ?| array['$current_search_value'] ";
-		switch (true) {
-			case $comparison_operator==='=':
-				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' ?| array['$current_search_value'] ";
-				break;
-			case $comparison_operator==='!=':
-				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_search_value]'::jsonb)=FALSE ";
-				break;
-		}
-
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-		}
-		return $search_query;
-	}
 
 
 
