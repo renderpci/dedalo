@@ -154,6 +154,11 @@ class tool_administration extends tool_common {
 			#$msg[] = "$strQuery";
 		}
 
+		// is_relationable check
+			$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$components_with_relations = component_relation_common::get_components_with_relations();
+			$is_relationable = in_array($model, $components_with_relations);
+
 		#loop the rows
 		while ($rows = pg_fetch_assoc($result)) {
 
@@ -162,18 +167,42 @@ class tool_administration extends tool_common {
 			$section_tipo 	= $rows['section_tipo'];
 			$datos 			= (string)$rows['datos'];
 
+			if ($id<1) {
+				continue; // avoid modify root user data
+			}
+
 			$datos	= (object)json_handler::decode($datos);
 
 			$before = "";
 			$after  = "";
 
-			debug_log(__METHOD__." component_tipo: $component_tipo ".json_encode($datos), logger::DEBUG);
+			debug_log(__METHOD__." component_tipo: $component_tipo ($model) ".json_encode($datos), logger::DEBUG);
 
 			switch (true) {
 				case ($component_tipo==='inverse_locators' && property_exists($datos, $component_tipo)):
 					$before = json_encode($datos);
 
 					unset($datos->inverse_locators);
+
+					$after = json_encode($datos);
+
+					$proced = true;
+					break;
+
+				case (true===$is_relationable && property_exists($datos, 'relations')):
+					$before = json_encode($datos);
+
+					$changed = false;
+					foreach ((array)$datos->relations as $rkey => $current_relation) {
+						if (isset($current_relation->from_component_tipo) && $current_relation->from_component_tipo===$component_tipo) {
+							unset($datos->relations[$rkey]);
+							error_log("+++++++++++ removed dato in section_id: $section_id ");
+							$changed = true;
+						}
+					}
+					if (true==$changed) {
+						$datos->relations = array_values($datos->relations);
+					}
 
 					$after = json_encode($datos);
 
