@@ -19,7 +19,7 @@ $updates->$v = new stdClass();
 	# MINIM UPDATE FROM
 	$updates->$v->update_from_major  = 5;
 	$updates->$v->update_from_medium = 1;
-	$updates->$v->update_from_minor  = 2;
+	$updates->$v->update_from_minor  = 4;
 
 # DATABASE UPDATES
 	/*
