@@ -43,16 +43,6 @@ class component_filter_master extends component_filter {
 	}//end Save
 
 
-	/*
-	* GET_AR_TOOLS_OBJ
-	* Override component_common method
-	*/
-	public function get_ar_tools_obj() {
-		# no tools area avilable for this component
-		return [];
-	}
-
-
 
 	/**
 	* PROPAGATE_FILTER

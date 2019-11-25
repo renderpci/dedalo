@@ -111,6 +111,7 @@ class tool_export extends tool_common {
 
 			$path_element = new stdClass();
 				$path_element->path = $path;
+					dump($path_element, ' path_element ++ '.to_string());
 
 			# Parse current path with component and add
 			$search_query_object->select[] = search::component_parser_select($path_element);

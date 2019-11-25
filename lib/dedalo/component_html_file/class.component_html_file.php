@@ -125,23 +125,6 @@ class component_html_file extends component_common {
 		parent::set_dato( (object)$dato );
 	}
 	
-	
-	
-	# OVERRIDE COMPONENT_COMMON METHOD
-	public function get_ar_tools_obj() {
-		
-		# Remove common tools (time machine and lang)
-		#unset($this->ar_tools_name);
-		$this->ar_tools_name = array();
-
-		# Add tool_image_versions
-		#$this->ar_tools_name[] = 'tool_html_file_versions';
-
-		# empty
-		$this->ar_tools_name = array();
-		
-		return parent::get_ar_tools_obj();
-	}
 
 
 	/**

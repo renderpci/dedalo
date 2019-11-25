@@ -177,6 +177,9 @@ define('OP_AND'											, '$and');
 # SEARCH PRESETS
 define('DEDALO_SERVICES_SECTION_TIPO'					, 'dd1010');
 
+# TOOLS REGISTER
+define('DEDALO_REGISTER_TOOLS_SECTION_TIPO'				, 'dd1324');
+
 if (!defined('DEDALO_PROTOCOL')) {
 	define('DEDALO_PROTOCOL', 'http://');
 }

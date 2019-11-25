@@ -109,13 +109,6 @@ class component_security_access extends component_common {
 
 	
 
-	# GET_AR_TOOLS_OBJ : Override component_common method
-	public function get_ar_tools_obj() {
-		return NULL;
-	}
-
-
-
 	# GET_CALLER_ID
 	public function get_caller_id() {
 		return $this->caller_id ;

@@ -271,23 +271,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_AR_TOOLS_OBJ
-	* Override component_common method
-	*/
-	public function get_ar_tools_obj() {
-		# Add tool_indexation
-		$this->ar_tools_name[] = 'tool_indexation';
-		$this->ar_tools_name[] = 'tool_structuration';
-		$this->ar_tools_name[] = 'tool_tc';
-		$this->ar_tools_name[] = 'tool_tr_print';
-		#$this->ar_tools_name[] = 'tool_lang_multi';	
-		
-		return parent::get_ar_tools_obj();
-	}//end get_ar_tools_obj
-	
-
-
-	/**
 	* GET DATO DEFAULT 
 	* Overwrite common_function
 	*/

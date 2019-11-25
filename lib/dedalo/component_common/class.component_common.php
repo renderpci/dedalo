@@ -584,25 +584,6 @@ abstract class component_common extends common {
 		}
 
 
-
-			#
-			# DEDALO_CACHE_MANAGER : Read from cache if var exists ##
-			if(DEDALO_CACHE_MANAGER===true && CACHE_COMPONENTS===true) {
-				# No guardamos los componentes de actividad en cache
-				if (!in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
-					$cache_key_name = $this->get_component_cache_key_name();
-					if (cache::exists($cache_key_name)) {
-						#debug_log("INFO: readed data from component cache key: $cache_key_name");
-						# Notify for load component js/css
-						# Ojo! los portales auto-notifican a sus componentes, (notify_load_lib_element_tipo_of_portal) por lo que
-						# haría falta una forma de ejecutar esto aun cuando se usan desde cache..
-						//common::notify_load_lib_element_tipo($modelo_name, $modo);
-						return cache::get($cache_key_name);
-					}
-				}
-			}# /DEDALO_CACHE_MANAGER #################################
-
-
 		#
 		# HTML BUFFER
 		ob_start();
@@ -620,15 +601,6 @@ abstract class component_common extends common {
 		}
 		include ( DEDALO_LIB_BASE_PATH .'/'. $component_name .'/'. $component_name .'.php' );
 		$html = ob_get_clean();
-
-
-			#
-			# DEDALO_CACHE_MANAGER : Set cache var #################
-			if(DEDALO_CACHE_MANAGER===true && CACHE_COMPONENTS===true) {
-				#if(strpos($cache_key_name, 'list')!=false)
-				cache::set($cache_key_name, $html);
-			}# /DEDALO_CACHE_MANAGER #################################
-
 
 
 		if(SHOW_DEBUG===true) {
@@ -767,17 +739,6 @@ abstract class component_common extends common {
 		$this->save_activity();
 
 
-		# DEDALO_CACHE_MANAGER : Delete cache of current component html
-		if(DEDALO_CACHE_MANAGER===true && CACHE_COMPONENTS===true) {
-			# No borramos la chache de los componentes de activity ya que no son editables y por tanto no cambian nunca
-			if (!in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
-				# Delete all caches of current tipo
-				cache::del_contains($this->tipo);
-			}
-			#debug_log(__METHOD__." Saved dato of component $this->tipo ($this->label) ");
-		}
-
-
 		return (int)$section_id;
 	}//end Save
 
@@ -891,19 +852,6 @@ abstract class component_common extends common {
 			return true;
 		}
 	}//end get_required
-
-
-
-	/**
-	* GET_AR_TOOLS_OBJ
-	*/
-	public function get_ar_tools_obj() {
-		if($this->ar_tools_obj===false) {
-			$this->load_tools();
-		}
-
-		return $this->ar_tools_obj;
-	}//end get_ar_tools_obj
 
 
 
@@ -2619,7 +2567,7 @@ abstract class component_common extends common {
 		}
 
 		if (!isset($this->ar_authorized_tool_name)) {
-			$this->get_ar_tools_obj();
+			//REMOVED OLD WAY$this->get_ar_tools_obj();
 		}
 
 		return (array)$this->ar_authorized_tool_name;
@@ -4640,10 +4588,10 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_DATA_VALUE
-	* Used to maintain component data when dd_api saves component
+	* Used to maintain component data when dd_core_api saves component
 	* @param object $data
 	* @return bool true
-	* @see dd_api update
+	* @see dd_core_api update
 	*/
 	public function update_data_value($changed_data) {
 

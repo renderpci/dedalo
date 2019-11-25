@@ -40,7 +40,7 @@
 			case 'edit':
 			default:
 				$value = $this->get_dato();
-				$ar_projects_for_current_section = $this->get_ar_projects_for_current_section();
+				$datalist = $this->get_datalist();
 				break;
 		}
 
@@ -48,22 +48,8 @@
 		$item  = $this->get_data_item($value);
 
 		// datalist
-		if (isset($ar_projects_for_current_section)) {
-
-			$item->datalist = [];
-			foreach ($ar_projects_for_current_section as $user_project) {
-
-				$project_value = new stdClass();
-					$project_value->section_id 		= $user_project->locator->section_id;
-					$project_value->section_tipo 	= $user_project->locator->section_tipo;
-
-				$project = new stdClass();
-					$project->value 				= $project_value;
-					$project->label 				= $user_project->label;
-					$project->section_id 			= $user_project->locator->section_id;
-
-				$item->datalist[] = $project;
-			}
+		if (isset($datalist)) {
+			$item->datalist = $datalist;
 		}
 
 		$data[] = $item;

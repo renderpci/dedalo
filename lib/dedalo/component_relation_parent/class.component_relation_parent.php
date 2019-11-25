@@ -33,14 +33,6 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	# Override component_common method
-	# This component don't save dato. Is only a computed value in current moment
-	public function get_ar_tools_obj() {
-		return NULL;
-	}
-
-
-
 	/**
 	* GET DATO
 	* This component don't store data, only manages calculated data from component_relation_children generated data

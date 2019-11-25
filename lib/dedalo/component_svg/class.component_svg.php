@@ -280,27 +280,6 @@ class component_svg extends component_common {
 
 
 	/**
-	* GET_AR_TOOLS_OBJ
-	* Override component_common method
-	*/	
-	public function get_ar_tools_obj() {
-		
-		# Remove common tools (time machine and lang)
-		#unset($this->ar_tools_name);
-		$this->ar_tools_name = array();
-
-		# Add tool_transcription
-		#$this->ar_tools_name[] = 'tool_transcription';
-
-		# Add tool_image_versions
-		$this->ar_tools_name[] = 'tool_upload';
-		
-		return parent::get_ar_tools_obj();
-	}//end get_ar_tools_obj
-
-
-
-	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
 	* Receive value from section list and return proper value to show in list
