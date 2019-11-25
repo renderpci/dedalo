@@ -103,7 +103,7 @@ abstract class RecordDataBoundObject {
 		#dump($this->use_cache,'$this->use_cache ID:'.$this->ID." - tipo:$this->tipo");
 
 		# CACHE_MANAGER
-		if( $this->use_cache_manager===true && $this->use_cache===true && DEDALO_CACHE_MANAGER===true) { //  && cache::exists($strQuery) 
+		if( $this->use_cache_manager===true && $this->use_cache===true) { //  && cache::exists($strQuery) 
 
 			#$arRow	= json_handler::decode(cache::get($strQuery));
 			$arRow	= unserialize(cache::get($strQuery));
@@ -149,7 +149,7 @@ abstract class RecordDataBoundObject {
 			#if($this->use_cache===true)
 			$ar_RecordDataObject_load_query_cache[$strQuery] = $arRow;
 			# CACHE_MANAGER
-			if( $this->use_cache_manager===true && $this->use_cache===true && DEDALO_CACHE_MANAGER===true && strpos($strQuery, '_dd')!==false ) {
+			if( $this->use_cache_manager===true && $this->use_cache===true && strpos($strQuery, '_dd')!==false ) {
 				#cache::set($strQuery, json_handler::encode($arRow));
 				cache::set($strQuery, serialize($arRow));
 			}
@@ -579,7 +579,7 @@ abstract class RecordDataBoundObject {
 
 		# CACHE_MANAGER
 		# USING EXTERNAL CACHE MANAGER (LIKE REDIS)
-		if( $this->use_cache===true && $this->use_cache_manager===true && DEDALO_CACHE_MANAGER===true) { // && cache::exists($strQuery) 
+		if( $this->use_cache===true && $this->use_cache_manager===true) { // && cache::exists($strQuery) 
 			
 			$ar_records	= unserialize(cache::get($strQuery));
 			#$ar_records	= json_handler::decode(cache::get($strQuery));
@@ -629,7 +629,7 @@ abstract class RecordDataBoundObject {
 				$ar_RecordDataObject_query_search_cache[$strQuery] = $ar_records;
 
 				# CACHE_MANAGER
-				if( $this->use_cache_manager===true && $this->use_cache===true && DEDALO_CACHE_MANAGER===true && strpos($strQuery, '_dd')!==false ) {
+				if( $this->use_cache_manager===true && $this->use_cache===true && strpos($strQuery, '_dd')!==false ) {
 					#cache::set($strQuery, json_handler::encode($ar_records));
 					cache::set($strQuery, serialize($ar_records));
 				}

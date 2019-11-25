@@ -95,6 +95,7 @@ abstract class filter {
 			throw new Exception("Error Processing Request. Propiedades for section_map: $section_map is empty !", 1);				
 		}
 		$projects_name_tipo = $propiedades_obj->thesaurus->term;
+		$typology_tipo 		= $propiedades_obj->thesaurus->typology;
 			#dump($projects_name_tipo, ' projects_name_tipo ++ '.to_string());
 
 		$filter = '';
@@ -151,6 +152,17 @@ abstract class filter {
 			          "lang": "all"
 			        }
 			      ]
+			    },
+			     {
+			      "path": [
+			        {
+			          "section_tipo": "'.$projects_section_tipo.'",
+			          "component_tipo": "'.$typology_tipo.'",
+			          "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($typology_tipo,true).'",
+			          "name": "Project typology",
+			          "lang": "all"
+			        }
+			      ]
 			    }
 			  ]
 			}
@@ -176,9 +188,13 @@ abstract class filter {
 				$locator->set_from_component_tipo($from_component_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 
+			$typology = json_decode($row->{$typology_tipo}) ?? null;
+		
+
 			$element = new stdClass();
 				$element->label 	= $label;
 				$element->locator 	= $locator;
+				$element->typology 	= $typology;
 			
 			$ar_projects[] = $element;
 		}

@@ -15,7 +15,6 @@
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
-	$ar_tools_obj			= $this->get_ar_tools_obj();	
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();

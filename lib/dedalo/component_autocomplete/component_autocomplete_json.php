@@ -68,7 +68,7 @@
 
 			case 'list':
 				$dato 	= $this->get_dato();
-				$value 	= reset($this->get_dato()); // de momento !!
+				$value 	= $dato;
 				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
 				break;
 		}

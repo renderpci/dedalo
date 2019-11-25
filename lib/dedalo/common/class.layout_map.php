@@ -54,13 +54,13 @@ class layout_map {
 			$RecordObj_dd = new RecordObj_dd($tipo);
 			$properties 	= $RecordObj_dd->get_propiedades(true);
 
-		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
+		#dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
-		// 1. dd_api::$ar_dd_objects
-			if (isset(dd_api::$ar_dd_objects)) {
-				# dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '.to_string($tipo));
+		// 1. dd_core_api::$ar_dd_objects
+			if (isset(dd_core_api::$ar_dd_objects)) {
+				# dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '.to_string($tipo));
 				// check found dd_objects of current portal
-				$self_ar_dd_objects = array_filter(dd_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
+				$self_ar_dd_objects = array_filter(dd_core_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
 					if($item->tipo===$tipo) return false;
 
 					if ($model==='section') {
@@ -80,11 +80,11 @@ class layout_map {
 					// layout_map
 						$layout_map = array_values($self_ar_dd_objects);
 						#$a = debug_backtrace(); error_log( print_r($a,true) );
-						debug_log(__METHOD__." layout map selected from 'dd_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
 						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
 						if(SHOW_DEBUG===true) {
 							foreach ($layout_map as $current_item) {
-								$current_item->debug_from = 'dd_api::$ar_dd_objects';
+								$current_item->debug_from = 'dd_core_api::$ar_dd_objects';
 							}
 						}
 				}
@@ -345,13 +345,13 @@ class layout_map {
 			$RecordObj_dd = new RecordObj_dd($tipo);
 			$properties 	= $RecordObj_dd->get_propiedades(true);
 
-		#dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
+		#dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
-		// 1. dd_api::$ar_dd_objects
-			if (isset(dd_api::$ar_dd_objects)) {
-				# dump(dd_api::$ar_dd_objects, '+++++++++++++++++++ dd_api::$ar_dd_objects ++ '.to_string($tipo));
+		// 1. dd_core_api::$ar_dd_objects
+			if (isset(dd_core_api::$ar_dd_objects)) {
+				# dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '.to_string($tipo));
 				// check found dd_objects of current portal
-				$self_ar_dd_objects = array_filter(dd_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
+				$self_ar_dd_objects = array_filter(dd_core_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
 					if($item->tipo===$tipo) return false;
 
 					if ($model==='section') {
@@ -371,7 +371,7 @@ class layout_map {
 					// layout_map
 						$layout_map = array_values($self_ar_dd_objects);
 						#$a = debug_backtrace(); error_log( print_r($a,true) );
-						debug_log(__METHOD__." layout map selected from 'dd_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
 						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
 				}
 			}

@@ -19,7 +19,7 @@ $updates->$v = new stdClass();
 	# MINIM UPDATE FROM
 	$updates->$v->update_from_major  = 5;
 	$updates->$v->update_from_medium = 1;
-	$updates->$v->update_from_minor  = 2;
+	$updates->$v->update_from_minor  = 4;
 
 # DATABASE UPDATES
 	/*
@@ -35,21 +35,48 @@ $updates->$v = new stdClass();
 
 	// create the matrix_tools
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			CREATE TABLE public.matrix_tools
-			(
-			   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
-			)
-			WITH (OIDS = FALSE);
-			CREATE SEQUENCE matrix_tools_id_seq;
-			ALTER TABLE public.matrix_tools ALTER COLUMN id SET DEFAULT nextval('matrix_tools_id_seq'::regclass);
+		CREATE TABLE IF NOT EXISTS public.matrix_tools
+		(
+		   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
+		)
+		WITH (OIDS = FALSE);
+		CREATE SEQUENCE IF NOT EXISTS matrix_tools_id_seq;
+		ALTER TABLE public.matrix_tools ALTER COLUMN id SET DEFAULT nextval('matrix_tools_id_seq'::regclass);
 
-			DROP INDEX IF EXISTS \"matrix_tools_expr_idx3\", \"matrix_tools_expr_idx2\", \"matrix_tools_expr_idx1\", \"matrix_tools_expr_idx\", \"matrix_tools_id_idx1\";
+		DROP INDEX IF EXISTS \"matrix_tools_expr_idx3\", \"matrix_tools_expr_idx2\", \"matrix_tools_expr_idx1\", \"matrix_tools_expr_idx\", \"matrix_tools_id_idx1\";
 		");
 	*/
 	// drop the old matrix_stat
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			DROP TABLE IF EXISTS \"matrix_stat\" CASCADE;
 		");
+
+
+
+$v=514; #####################################################################################
+$updates->$v = new stdClass();
+
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 1;
+	$updates->$v->version_minor 	 = 4;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 1;
+	$updates->$v->update_from_minor  = 2;
+
+
+	# Update datos to section_data
+	$script_obj = new stdClass();
+		$script_obj->info   		= "Delete the old data from component_filter (project) into dd265";
+		$script_obj->script_class   = "tool_administration";
+		$script_obj->script_method  = "delete_component_tipo_in_matrix_table";
+		$script_obj->script_vars    = [
+			'dd153', 'dd265', false, true, null
+		]; // Note that only ONE argument as array is sended
+	$updates->$v->run_scripts[] = $script_obj;
 
 
 $v=512; #####################################################################################
@@ -190,7 +217,7 @@ $updates->$v = new stdClass();
 
 
 	# DATABASE UPDATES
-	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.reference_dato_v47_to_relation_dato_v48.php');
 
 	# Update datos to section_data
 	$script_obj = new stdClass();
@@ -241,7 +268,7 @@ $updates->$v = new stdClass();
 			");*/
 
 	# DATABASE UPDATES
-	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.reference_dato_v47_to_relation_dato_v48.php');
 
 	# Update datos to section_data
 	$script_obj = new stdClass();
@@ -403,7 +430,7 @@ $updates->$v = new stdClass();
 
 
 	# DATABASE UPDATES
-	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.reference_dato_v47_to_relation_dato_v48.php');
 
 	# Update datos to section_data
 	$script_obj = new stdClass();

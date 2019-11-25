@@ -120,10 +120,6 @@
 					background-color: #777bb3;
 				}
 
-				.editor_json {
-					//height: 100vh;
-				}
-
 				iframe.php_info_iframe {
 					margin: 0;
 					padding: 0;
@@ -131,6 +127,12 @@
 				}
 			}//end php_info
 
+			&#search_query_object_test_enviroment {
+
+				#json_editor_container {
+					height: 50vh;
+				}
+			}
 
 			>.widget_label {
 				padding: 1em;
@@ -513,6 +515,7 @@
 
 // component
 	.wrapper_component {
+		position: relative;
 
 		&.edit {
 
@@ -520,6 +523,19 @@
 
 
 		&.list {
+
+			&.component_image {
+				padding: 0;
+				background-color: #ffffff;
+				text-align: center;
+				display: block;
+				>img {
+					padding: 0;
+					height: 100%;
+					max-height: 5em;
+					width: auto;
+				}
+			}
 
 		}//end &.list
 
@@ -573,7 +589,7 @@
 					flex: 0 1;
 					padding: 0.15em;
 					border-radius: 0.25em;
-					position: relative;
+					//position: relative;
 
 					>*{
 						//margin: 0.365em;
@@ -582,9 +598,11 @@
 
 					>.close {
 						position: absolute;
-						top: -1.2em;
-						right: -1.2em;
+						top: -0.1em;
+						right: -0.4em;
 						color: #f78a1c;
+						opacity: 1;
+						z-index: 2;
 					}
 				}
 
@@ -628,6 +646,10 @@
 				>.label {
 
 				}
+
+				>.description {
+					font-weight: 100;
+				}
 			}
 
 			>.buttons {
@@ -644,9 +666,39 @@
 		}
 
 
+		// inside modal
+		//.tool_header {
+		//	background-color: #B2C8F6;
+
+			//>.label {
+//
+			//}
+
+
+		//}
+
+
 
 	}//end tool_container
 
+
+
+// modal
+	dd-modal {
+		z-index: 10;
+
+		.tool_header {
+
+			.label {
+
+			}
+			.description {
+				font-weight: normal;
+				font-size: 0.7em;
+				padding-top: 0.5em;
+			}
+		}
+	}
 
 
 // header_wrapper_list

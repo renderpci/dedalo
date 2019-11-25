@@ -105,18 +105,18 @@ class tools_register {
 			// section
 			if (!empty($info_objects_parsed)) {
 
-				// Clean. Remove tools register section records in the database
+				// Clean. remove tools section records in the database
 					tools_register::clean_section_tools_data();
 
-				// import parsed file objects to db matrix_tools (tool1 section)
+				// import record (section tool1) in db matrix_tools
 					$section_id_counter = 1; // first section_id to use
 					foreach ($info_objects_parsed as $current_info_object) {
 
 						// save new record with serialized section_id
-							$created_section_id = tools_register::import_register_object($current_info_object, $section_id_counter);
-
-						// build tool_object (simple human readable version of tool info)
-							$tool_object = tools_register::parse_tool_object(tools_register::$section_tools_tipo, $created_section_id);
+						$created_section_id = tools_register::import_info_object($current_info_object, $section_id_counter);
+						
+						// build tool_object (simple)
+						$tool_object = tools_register::parse_tool_object(tools_register::$section_tools_tipo, $created_section_id);
 
 						// tool_obj . Set and save updated section
 							$component_tipo = 'dd1353';
@@ -127,8 +127,8 @@ class tools_register {
 																			 'list',
 																			 DEDALO_DATA_NOLAN,
 																			 tools_register::$section_tools_tipo);
-							$component->set_dato($tool_object);
-							$component->save();
+							$component->set_dato($tool_object);					
+							$component->save();	
 					}
 			}
 
@@ -147,14 +147,14 @@ class tools_register {
 	/**
 	* PARSE_TOOL_OBJECT
 	* Build a tool object from section tools register development
-	*
+	* 
 	* @param object $current_info_object
-	*	Full dedalo section data object from one record
+	*	Full dedalo section data object from one record 
 	* @return object $tool_object
 	*	Simple and human readable json object to use with components, sections, areas..
 	*/
 	public static function parse_tool_object($section_tipo, $section_id) {
-
+		
 		$tool_object = new stdClass();
 
 		$tool_object->section_tipo 	= $section_tipo;
@@ -228,7 +228,7 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array');
+			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array');					
 			$tool_object->afected_models = $value;
 
 		// description
@@ -260,7 +260,7 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato() ?? [];
+			$value 			= $component->get_dato() ?? [];				
 			$tool_object->afected_tipos = $value;
 
 		// show in inspector
@@ -274,7 +274,7 @@ class tools_register {
 															 $section_tipo);
 			$dato 			= $component->get_dato();
 			$dato_ref 		= reset($dato)->section_id;
-			$value 			= $dato_ref == '1' ? true : false;
+			$value 			= $dato_ref == '1' ? true : false;				
 			$tool_object->show_in_inspector = $value;
 
 		// show in component
@@ -288,7 +288,7 @@ class tools_register {
 															 $section_tipo);
 			$dato 			= $component->get_dato();
 			$dato_ref 		= reset($dato)->section_id;
-			$value 			= $dato_ref == '1' ? true : false;
+			$value 			= $dato_ref == '1' ? true : false;				
 			$tool_object->show_in_component = $value;
 
 		// requirement translatable
@@ -302,7 +302,7 @@ class tools_register {
 															 $section_tipo);
 			$dato 			= $component->get_dato();
 			$dato_ref 		= reset($dato)->section_id;
-			$value 			= $dato_ref == '1' ? true : false;
+			$value 			= $dato_ref == '1' ? true : false;				
 			$tool_object->requirement_translatable = $value;
 
 		// ontology
@@ -314,7 +314,7 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato();
+			$value 			= $component->get_dato();					
 			$tool_object->ontology = $value;
 
 
@@ -327,7 +327,7 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato();
+			$value 			= $component->get_dato();					
 			$tool_object->properties = $value;
 
 
@@ -337,11 +337,11 @@ class tools_register {
 
 
 	/**
-	* IMPORT_REGISTER_OBJECT
+	* IMPORT_INFO_OBJECT
 	* Info object is exactly a dedalo raw record data
 	* @return int $section_id
 	*/
-	private static function import_register_object($info_object, &$section_id_counter) {
+	private static function import_info_object($info_object, &$section_id_counter) {
 
 		// replace object section_id with new forced counter
 		$info_object->section_id = $section_id_counter;
@@ -361,7 +361,7 @@ class tools_register {
 		$section_id = pg_fetch_result($result,0,'section_id');
 
 		return $section_id;
-	}//end import_register_object
+	}//end import_info_object
 
 
 

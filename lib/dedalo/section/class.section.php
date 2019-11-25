@@ -1116,12 +1116,6 @@ class section extends common {
 		}//end if ($this->id >= 1)	
 
 
-		// dedalo_cache_manager : reset caches
-			if( DEDALO_CACHE_MANAGER===true ) {
-				debug_log(__METHOD__." Deleted cache keys contains '$this->tipo' from section:Save method");
-				cache::del_contains( $this->tipo );
-			}
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
@@ -1307,12 +1301,7 @@ class section extends common {
 					"delete_mode"	=> $delete_mode,
 					"section_tipo"	=> $this->tipo
 					)
-		);
-
-		# DEDALO_CACHE_MANAGER : get_ar_filter_cache
-		if( DEDALO_CACHE_MANAGER===true ) {
-			cache::del_contains( $this->tipo );
-		}
+		);		
 
 		# Reset session search_options
 		# fa falta aixó ?
@@ -1344,34 +1333,14 @@ class section extends common {
 		if(SHOW_DEBUG===true){
 			$start_time = start_time();
 			global$TIMER;$TIMER[__METHOD__.'_in_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-			
-			# DEDALO_CACHE_MANAGER : Read from cache if var exists ##################
-			if(DEDALO_CACHE_MANAGER===true && CACHE_SECTIONS===true) {
-				$cache_key_name = $this->get_section_cache_key_name();
-				if (cache::exists($cache_key_name)) {
-					#debug_log(__METHOD__. " readed data from section cache key: $cache_key_name");
-					return cache::get($cache_key_name);
-				}
-			}
-			# /DEDALO_CACHE_MANAGER #################################################
+		}			
 		
 
 		# Load controller
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
 		$html =  ob_get_clean();
-		
-
-			
-			# DEDALO_CACHE_MANAGER : Set cache var #################################
-			if(DEDALO_CACHE_MANAGER===true && CACHE_SECTIONS===true) {
-				#if(strpos($cache_key_name, 'list')!=false && strpos($cache_key_name, 'portal')===false) 
-				cache::set($cache_key_name, $html);				
-			}
-			# /DEDALO_CACHE_MANAGER #################################################
-
+					
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' ' );
@@ -3408,21 +3377,6 @@ class section extends common {
 
 		return $ar_groupers_models;
 	}//end get_ar_grouper_models
-
-
-
-	/**
-	* GET_AR_TOOLS_OBJ
-	*	
-	*/
-	public function get_ar_tools_obj() {
-
-		$tools = [
-			'name' => 'tool_time_machine'
-		]; // de momento..
-
-		return $tools;
-	}//end get_ar_tools_obj
 
 
 

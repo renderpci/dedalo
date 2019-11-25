@@ -19,7 +19,7 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$context 				= $this->get_context();
-	$context_name 			= $context->context_name;	
+	$context_name 			= $context->context_name ?? null;	
 	
 	if($permissions===0) return null;
 	

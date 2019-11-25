@@ -6,8 +6,6 @@ $start_time=microtime(1);
 		include dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
 		// json manager
 		include dirname(dirname(__FILE__)) .'/common/class.manager.php';
-		// web_data
-		#include dirname(dirname(__FILE__)) .'/common/class.dd_api.php';
 
 
 	// get post vars
