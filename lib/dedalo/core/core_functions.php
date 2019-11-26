@@ -338,10 +338,10 @@ function get_last_modified_file($path, $allowed_extensions) {
 		$directory_iterator = new RecursiveIteratorIterator($iterator);
 
 	// Sets a var to receive the last modified filename
-		$last_modified_file = "";
+		$last_modified_file = null;
 
 	// Then we walk through all the files inside all folders in the base folder
-		foreach ($directory_iterator as $name => $object) {
+		if (!empty($directory_iterator)) foreach ($directory_iterator as $name => $object) {
 
 			$ar_bits = explode(".", $name);
 			$extension = end($ar_bits);
@@ -362,7 +362,7 @@ function get_last_modified_file($path, $allowed_extensions) {
 		}
 	// If the $last_modified_file isn't set, there were no files we throw an exception
 		if (empty($last_modified_file)) {
-			throw new Exception("No files in the directory");
+			debug_log(__METHOD__." No files found in directory path: ".to_string($path), logger::ERROR);
 		}
 
 	return $last_modified_file;
