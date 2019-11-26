@@ -6,6 +6,7 @@
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
+	$properties			= $this->get_propiedades();
 
 
 
@@ -20,8 +21,9 @@
 				break;
 			
 			default:
+				$sqo_context = isset($properties->unique) ? true : false;
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions);
+					$context[] = $this->get_structure_context($permissions, $sqo_context);
 
 				// add buttons
 					$context = array_merge($context, $this->get_structure_buttons($permissions));
