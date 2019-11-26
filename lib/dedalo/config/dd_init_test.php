@@ -4,7 +4,7 @@
 # Comprueba la existencia de elementos / directorios / permisos necesarios para ejecutar Dédalo
 
 
-// RESPONSE 
+// RESPONSE
 	$init_response = new stdClass();
 		$init_response->result 	= false;
 		$init_response->msg 	= 'Error on init test '.PHP_EOL;
@@ -23,10 +23,10 @@
 		$init_response->msg .= trim(" Error. mb_internal_encoding is required by Dédalo. Please install php mbstring to continue");
 		return $init_response;
 	}
- 
+
 
 // BACKUPS
-	# Target folder exists test	
+	# Target folder exists test
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/backups';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
@@ -38,7 +38,7 @@
 
 
 // BACKUPS_STRUCTURE
-	# Target folder exists test	
+	# Target folder exists test
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/backups_structure';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
@@ -50,7 +50,7 @@
 
 
 // BACKUP_TEMP
-	# Target folder exists test	
+	# Target folder exists test
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/temp';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
@@ -62,7 +62,7 @@
 
 
 // BACKUP USERS DIR
-	# Target folder exists test	
+	# Target folder exists test
 	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/users';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
@@ -74,7 +74,7 @@
 
 
 // BACKUP_TEMP
-	# Target folder exists test	
+	# Target folder exists test
 	if (defined('STRUCTURE_DOWNLOAD_DIR') && STRUCTURE_DOWNLOAD_DIR!==false) {
 		$folder_path = STRUCTURE_DOWNLOAD_DIR;
 		if( !is_dir($folder_path) ) {
@@ -103,10 +103,11 @@
 
 
 // MEDIA folder
-	# Target folder exists test	
+	# Target folder exists test
 	$folder_path = DEDALO_MEDIA_BASE_PATH;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
+			debug_log(__METHOD__." ERROR ON CREATE DIR: $folder_path  ".to_string(), logger::ERROR);
 			$init_response->msg .= trim(" Error on read or create media directory. Permission denied");
 			return $init_response;
 		}
@@ -130,7 +131,7 @@
 
 // MEDIA AV POSTERFRAME
 	/*
-	# Target folder exists test	
+	# Target folder exists test
 	$folder_path = DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_AV_FOLDER . '/posterframe/deleted';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0777,true)) {
@@ -182,7 +183,7 @@
 
 
 // MEDIA HTML FILES folder
-	# Target folder exists test	
+	# Target folder exists test
 	if(defined('DEDALO_HTML_FILES_FOLDER')) {
 	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_HTML_FILES_FOLDER;
 	if( !is_dir($folder_path) ) {
@@ -195,7 +196,7 @@
 
 
 // MEDIA WEB IMAGES folder
-	# Target folder exists test	
+	# Target folder exists test
 	if(defined('DEDALO_IMAGE_WEB_FOLDER')) {
 	$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
 	if( !is_dir($folder_path) ) {
@@ -208,7 +209,7 @@
 
 
 // MEDIA EXPORT folder
-	# Target folder exists test	
+	# Target folder exists test
 	if(defined('DEDALO_TOOL_EXPORT_FOLDER_PATH')) {
 	$folder_path = DEDALO_TOOL_EXPORT_FOLDER_PATH;
 	if( !is_dir($folder_path) ) {
@@ -248,9 +249,9 @@
 
 
 // MEDIA PROTECTION
-	# Target folder exists test	
+	# Target folder exists test
 	if(defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
-		/*	
+		/*
 		# Test .htaccess file
 		$htaccess_file = DEDALO_MEDIA_BASE_PATH . '/.htaccess';
 		if (!file_exists($htaccess_file)) {
@@ -260,8 +261,8 @@
 	}
 
 
-// LOGS FOLDER 
-	# Target folder exists test	
+// LOGS FOLDER
+	# Target folder exists test
 	$folder_path = DEDALO_LOGS_DIR;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0777,true)) {
@@ -272,7 +273,7 @@
 	}
 
 
-// PSQL (Agus problem) 
+// PSQL (Agus problem)
 	$path = DB_BIN_PATH . 'psql';
 	$psql = trim(shell_exec('command -v '. $path));
 	if (empty($psql)) {
@@ -281,7 +282,7 @@
 	}
 
 
-// PGPASS FILE 
+// PGPASS FILE
 	$php_user_home 	= getenv("HOME"); //$_SERVER['HOME'];
 	$path 			= $php_user_home . '/.pgpass';
 	if (!file_exists($path )) {
@@ -298,10 +299,10 @@
 					#return $init_response;
 				}else{
 					debug_log(__METHOD__." Changed permissions of file .pgpass to 0600 ".to_string(), logger::ERROR);
-				}	
+				}
 		}
 	}
-	
+
 
 
 // IMAGE MAGICK
@@ -360,7 +361,7 @@
 
 // DEFAULT PROJECT
 	if (!defined('DEDALO_DEFAULT_PROJECT') || !defined('DEDALO_FILTER_SECTION_TIPO_DEFAULT')) {
-	    #$init_response->msg .= trim("Error Processing Request. Please define DEDALO_DEFAULT_PROJECT");  
+	    #$init_response->msg .= trim("Error Processing Request. Please define DEDALO_DEFAULT_PROJECT");
 	    $init_response->msg .= trim("Error Processing Request. Please define congif DEDALO_DEFAULT_PROJECT and DEDALO_FILTER_SECTION_TIPO_DEFAULT");
 	    return $init_response;
 	}
@@ -409,7 +410,7 @@
 #		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path)) {
 #			$ar_label = label::get_ar_label($lang); // Get all properties
 #				#dump($ar_label, ' ar_label');
-#			
+#
 #			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
 #			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 #		}
@@ -417,10 +418,10 @@
 
 
 #// STRUCTURE CSS (moved to login.php !)
-#	# Generate css structure file (in not extist)	
+#	# Generate css structure file (in not extist)
 #	$file_path = DEDALO_LIB_BASE_PATH.'/common/css/structure.css';
 #	if (!file_exists($file_path)) {
-#	
+#
 #		$response = (object)css::build_structure_css();
 #		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::DEBUG);
 #	}
@@ -439,7 +440,7 @@
 #	}
 
 
-// ALL IS OK 
+// ALL IS OK
 	$init_response->result 	= true;
 	$init_response->msg 	= 'Ok. init test done';
 
