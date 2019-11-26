@@ -714,6 +714,8 @@ class login extends common {
 
 		# BACKUP ALL
 		if( DEDALO_BACKUP_ON_LOGIN ) {
+			# Close script session
+			session_write_close();
 			require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
 			$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
 			$backup_info = $backup_secuence_response->msg;
