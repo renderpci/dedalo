@@ -329,7 +329,7 @@ class component_filter extends component_relation_common {
 		}
 
 		$ar_datalist = array_merge($ar_groupers, $ar_projects_parsed);
-			dump($ar_datalist, ' ar_datalist ++ '.to_string());
+			#dump($ar_datalist, ' ar_datalist ++ '.to_string());
 
 		return $ar_datalist;
 	}//end get_datalist
