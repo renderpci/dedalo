@@ -14,7 +14,7 @@ class login extends common {
 	protected $modelo;
 	protected $tipo_active_account 	= 'dd131';
 	protected $tipo_button_login 	= 'dd259';
-	
+
 	protected static $login_matrix_table = 'matrix';
 
 	const SU_DEFAULT_PASSWORD = '';
@@ -65,7 +65,7 @@ class login extends common {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed [Login]';
-	
+
 		# Test mcrypt lib
 		#if (!function_exists('mcrypt_encrypt')) {
 		#	$response->msg = "Error Processing Request: MCRYPT lib is not available";
@@ -92,7 +92,7 @@ class login extends common {
 				# Check safe var
 				$$var_name = safe_xss($trigger_post_vars[$var_name]);
 			}
-			
+
 		}
 
 		$html='';
@@ -105,7 +105,7 @@ class login extends common {
 		# Username query
 		$min_subversion = 22;
 		if( $current_data_version[0] >= 5 ||
-			($current_data_version[0] >= 4 && $current_data_version[1] >= 0 && $current_data_version[2] >= $min_subversion) || 
+			($current_data_version[0] >= 4 && $current_data_version[1] >= 0 && $current_data_version[2] >= $min_subversion) ||
 			($current_data_version[0] >= 4 && $current_data_version[1] >= 5) ||
 			$current_data_version[0] > 4 ) {
 			// Dato of component_input_text is array
@@ -170,7 +170,7 @@ class login extends common {
 			foreach($ar_result as $section_id) {
 
 				$user_id = $section_id;
-				
+
 				# Search password
 				$password_encrypted = component_password::encrypt_password($password);
 				$component_password = component_common::get_instance('component_password',
@@ -179,7 +179,7 @@ class login extends common {
 																	 'edit',
 																	 DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);
 				$password_dato 		= $component_password->get_dato();
-				
+
 				if( $password_encrypted!==$password_dato ) {
 
 					#
@@ -198,7 +198,7 @@ class login extends common {
 						);
 					# delay failed output by 2 seconds to prevent brute force attacks
 	        		sleep(2);
-					
+
 					$response->msg = "Error: Wrong password [1]";
 					error_log("DEDALO LOGIN ERROR : Wrong password");
 					return $response;
@@ -206,9 +206,9 @@ class login extends common {
 
 				if( isset($password_dato) && strlen($password_dato) ) {
 
-					// Active account check 
+					// Active account check
 						$active_account = login::active_account_check($section_id);
-					
+
 						if( $active_account!==true ) {
 
 							#
@@ -242,9 +242,9 @@ class login extends common {
 
 					// Profile / projects check
 						if($is_global_admin!==true) {
-							
+
 							#
-							# PROFILE							
+							# PROFILE
 								$user_have_profile = login::user_have_profile_check($user_id);
 								if ($user_have_profile!==true) {
 									$response->msg = label::get_label('error_usuario_sin_perfil');
@@ -263,7 +263,7 @@ class login extends common {
 
 					// Full_username
 						$full_username = login::get_full_username($user_id);
-					
+
 					// Login (all is ok) - init login secuence when all is ok
 						$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
 						if ($init_user_login_secuence->result===false) {
@@ -300,7 +300,7 @@ class login extends common {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= __METHOD__.' Error. Request failed';
-		
+
 		$options = new stdClass();
 			$options->code = null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
@@ -312,21 +312,21 @@ class login extends common {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";
 					return $response;
 				}
-			}					
+			}
 
 		# Search code
 			$arguments=array();
 			$arguments["strPrimaryKeyName"] = 'section_id';
 			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
 			$arguments["datos#>>'{components,dd1053,dato,lg-nolan}'"] = json_encode((array)$options->code,JSON_UNESCAPED_UNICODE);
-			
+
 			$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
 			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
 			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
 
 			$section_id = !empty($ar_result[0]) ? $ar_result[0] : false;
 			if($section_id!==false) {
-				
+
 				// Ok
 
 					$section_id = $ar_result[0];
@@ -344,18 +344,18 @@ class login extends common {
 								login::Quit(array(
 									'mode' => 'saml',
 									'cause'=> 'Browser already logged as different user'
-								)); // Logout old user before continue login 
-							}							
+								)); // Logout old user before continue login
+							}
 						}
-					
-					// Active account check 
+
+					// Active account check
 						$active_account = login::active_account_check($section_id);
 						if( $active_account!==true ) {
 
 							#
 							# STOP : ACCOUNT INACTIVE
 							#
-							
+
 							# LOGIN ACTIVITY REPORT
 							self::login_activity_report(
 								"[Login_SAML] Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
@@ -381,9 +381,9 @@ class login extends common {
 
 					// Profile / projects check
 						if($is_global_admin!==true) {
-							
+
 							#
-							# PROFILE							
+							# PROFILE
 								$user_have_profile = login::user_have_profile_check($section_id);
 								if ($user_have_profile!==true) {
 									$response->msg = label::get_label('error_usuario_sin_perfil');
@@ -398,10 +398,10 @@ class login extends common {
 									return $response;
 								}
 
-						}//end if(!component_security_administrator::is_global_admin($section_id))					
-					
+						}//end if(!component_security_administrator::is_global_admin($section_id))
+
 					// LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
-						
+
 						// User name
 							$username = login::get_username($section_id);
 
@@ -448,7 +448,7 @@ class login extends common {
 					error_log("[Login_SAML] DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;
 			}
-	
+
 
 		return $response;
 	}//end Login_SAML
@@ -503,7 +503,7 @@ class login extends common {
 	public static function active_account_check($section_id) {
 
 		$active_account = false; // Default false
-		
+
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
 		$component_radio_button = component_common::get_instance($modelo_name,
 																 DEDALO_CUENTA_ACTIVA_TIPO,
@@ -515,7 +515,7 @@ class login extends common {
 
 		# OJO: El valor válido sólo puede ser 1 que es 'Si' en la lista de valores referenciada y se asigna como constante en config 'NUMERICAL_MATRIX_VALUE_YES'
 		if (isset($cuenta_activa_dato[0]) && isset($cuenta_activa_dato[0]->section_id) && $cuenta_activa_dato[0]->section_id==NUMERICAL_MATRIX_VALUE_YES) {
-			
+
 			$active_account = true;
 		}
 
@@ -532,7 +532,7 @@ class login extends common {
 	public static function user_have_profile_check($section_id) {
 
 		$user_have_profile = false; // Default false
-		
+
 		$component_profile 		  = component_common::get_instance('component_profile',
 																	DEDALO_USER_PROFILE_TIPO,
 																	$section_id,
@@ -541,7 +541,7 @@ class login extends common {
 																	DEDALO_SECTION_USERS_TIPO);
 		$profile_dato = (int)$component_profile->get_dato();
 		if (!empty($profile_dato) && $profile_dato>0) {
-			
+
 			$user_have_profile = true;
 		}
 
@@ -558,16 +558,16 @@ class login extends common {
 	public static function user_have_projects_check($section_id) {
 
 		$user_have_projects = false; // Default false
-		
+
 		$component_filter_master 	= component_common::get_instance('component_filter_master',
 																	 DEDALO_FILTER_MASTER_TIPO,
 																	 $section_id,
 																	 'list',
 																	 DEDALO_DATA_LANG,
-																	 DEDALO_SECTION_USERS_TIPO); 
+																	 DEDALO_SECTION_USERS_TIPO);
 		$filter_master_dato 		= (array)$component_filter_master->get_dato();
 		if (!empty($filter_master_dato) && count($filter_master_dato)>0) {
-			
+
 			$user_have_projects = true;
 		}
 
@@ -587,14 +587,14 @@ class login extends common {
 	public static function rest_login( stdClass $options ) {
 		global $rest_config;
 		#unset($_SESSION['dedalo4']);
-		
+
 		$response = new stdClass();
 
 
 		if ( !property_exists($options, 'source_ip') ) {
 			$options->source_ip = $_SERVER['REMOTE_ADDR'];
 		}
-	
+
 		if ( !property_exists($options, 'auth_code') || $options->auth_code!=$rest_config->auth_code ) {
 			$response->logged 	= false;
 			$response->msg 		= 'Invalid auth_code';
@@ -608,10 +608,10 @@ class login extends common {
 		}
 
 		# Is already logged? If yes, return true and no activity log is generated again
-		if ( 
-			isset($_SESSION['dedalo4']['auth']['user_id']) && 
+		if (
+			isset($_SESSION['dedalo4']['auth']['user_id']) &&
 			$_SESSION['dedalo4']['auth']['user_id']==$rest_config->user_id &&
-			($_SESSION['dedalo4']['auth']['is_logged']==1) 
+			($_SESSION['dedalo4']['auth']['is_logged']==1)
 		 ) {
 			$response->logged 	= true;
 			$response->msg 		= 'User is already logged';
@@ -631,13 +631,13 @@ class login extends common {
 		$activity_datos['result'] 	= "allow";
 		$activity_datos['cause'] 	= "rest_login";
 		if (isset($_SERVER['REQUEST_URI']))
-		$activity_datos['url'] 		= urldecode( 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] );		
+		$activity_datos['url'] 		= urldecode( 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] );
 		if (isset($_SERVER['HTTP_REFERER']))
 		$activity_datos['referer'] 	= $_SERVER['HTTP_REFERER'];
 		if (property_exists($options, 'activity_info')) {
 			$activity_datos['activity_info'] = $options->activity_info;
 		}
-		
+
 		self::login_activity_report(
 			"User $rest_config->user_id is logged. Hello $rest_config->user",
 			null,
@@ -650,7 +650,7 @@ class login extends common {
 		$response->msg 		= 'Logged successfully';
 		return $response;
 	}#rest_login
-	
+
 
 
 	/**
@@ -658,7 +658,7 @@ class login extends common {
 	* Init login secuence when all is ok
 	* @param int $user_id
 	* @param string $username
-	* @return bool 
+	* @return bool
 	*/
 	private static function init_user_login_secuence($user_id, $username, $full_username, $init_test=true, $login_type='default') {
 
@@ -670,18 +670,18 @@ class login extends common {
 			$response->errors 	= [];
 
 		#ob_implicit_flush(true);
-		
+
 		# RESET ALL SESSION VARS BEFORE INIT
 		#if(isset($_SESSION)) foreach ($_SESSION as $key => $value) {
 			# Nothint to delete
-		#}	
-		
+		#}
+
 		# DEDALO INIT TEST SECUENCE
 		if ($init_test===true) {
 			require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
 			if ($init_response->result===false) {
 				debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
-				// Don't stop here. Only inform user of init error via jasvascript 
+				// Don't stop here. Only inform user of init error via jasvascript
 					# $response->result 	= false;
 					# $response->msg 		= $init_response->msg;
 					# return $response;
@@ -691,7 +691,7 @@ class login extends common {
 
 		// IS_GLOBAL_ADMIN (before set user session vars)
 			$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)component_security_administrator::is_global_admin($user_id);
-		
+
 		// IS_DEVELOPER (before set user session vars)
 			$_SESSION['dedalo4']['auth']['is_developer'] 	= (bool)login::is_developer($user_id);
 
@@ -705,7 +705,7 @@ class login extends common {
 			$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
 
 		// login_type
-			$_SESSION['dedalo4']['auth']['login_type']  = $login_type;			
+			$_SESSION['dedalo4']['auth']['login_type']  = $login_type;
 
 		# Auth cookie
 		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
@@ -714,6 +714,8 @@ class login extends common {
 
 		# BACKUP ALL
 		if( DEDALO_BACKUP_ON_LOGIN ) {
+			# Close script session
+			session_write_close();
 			require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
 			$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
 			$backup_info = $backup_secuence_response->msg;
@@ -721,9 +723,9 @@ class login extends common {
 			$backup_info = 'Deactivated "on login backup" for this domain';
 		}
 
-		
+
 		try {
-			
+
 			# REMOVE LOCK_COMPONENTS ELEMENTS
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 				lock_components::force_unlock_all_components($user_id);
@@ -736,7 +738,7 @@ class login extends common {
 		} catch (Exception $e) {
 			debug_log(__METHOD__." $e ", logger::CRITICAL);
 		}
-		
+
 
 
 		# LOG : Prepare and save login action
@@ -760,7 +762,7 @@ class login extends common {
 		$response->result 	= true;
 		$response->msg 	 	= 'Ok init_user_login_secuence is done';
 
-		
+
 		return $response;
 	}//end init_user_login_secuence
 
@@ -777,7 +779,7 @@ class login extends common {
 
 		$current = '';
 		$previous= '';
-	
+
 		$ktoday 	= date("Y_m_d");
 		$kyesterday = date("Y_m_d",strtotime("-1 day"));
 
@@ -790,10 +792,10 @@ class login extends common {
 		}
 
 		if ( $cookie_file_exists===true && isset($ar_data->$ktoday) && isset($ar_data->$kyesterday) ) {
-			
+
 			$data = $ar_data;
 			debug_log(__METHOD__." data 1 Recycle ".to_string($data), logger::DEBUG);
-		
+
 		}else{
 
 			$data = new stdClass();
@@ -812,8 +814,8 @@ class login extends common {
 					$kyesterday_data->cookie_name  = self::get_auth_cookie_name();
 					$kyesterday_data->cookie_value = self::get_auth_cookie_value();
 
-				$data->$kyesterday = $kyesterday_data; 
-			}					
+				$data->$kyesterday = $kyesterday_data;
+			}
 			# File cookie data
 			if( !file_put_contents($cookie_file, json_encode($data)) ){
 				throw new Exception("Error Processing Request. Media protecction error on create cookie_file", 1);
@@ -841,7 +843,7 @@ class login extends common {
 				# $htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
 				# $htaccess_text .= 'Require valid-user'.PHP_EOL;
 				# $htaccess_text .= 'Satisfy any'.PHP_EOL;
-			
+
 
 			# APACHE 2.4
 			$htaccess_text  = '';
@@ -884,11 +886,11 @@ class login extends common {
 				unlink($cookie_file);
 				# Launch Exception
 				throw new Exception("Error Processing Request. Media protecction error on create access file", 1);
-			}	
-		}			
+			}
+		}
 
-		$_SESSION['dedalo4']['auth']['cookie_auth'] = $data;	
-		# SET COOKIE		
+		$_SESSION['dedalo4']['auth']['cookie_auth'] = $data;
+		# SET COOKIE
 		$cookie_properties = common::get_cookie_properties();
 		#setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
 		setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
@@ -913,7 +915,7 @@ class login extends common {
 
 
 	/**
-	* GET_AUTH_COOKIE_value	
+	* GET_AUTH_COOKIE_value
 	*    [mday]    => 17
 	*    [wday]    => 2
 	*    [mon]     => 6
@@ -954,19 +956,19 @@ class login extends common {
 		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
 
 		# NO ESTÁ AUTENTIFICADO
-		if( empty($_SESSION['dedalo4']['auth']['user_id']) || 
-			empty($_SESSION['dedalo4']['auth']['is_logged']) || 
-			$_SESSION['dedalo4']['auth']['is_logged'] !== 1 || 
-			empty($_SESSION['dedalo4']['auth']['salt_secure']) 
+		if( empty($_SESSION['dedalo4']['auth']['user_id']) ||
+			empty($_SESSION['dedalo4']['auth']['is_logged']) ||
+			$_SESSION['dedalo4']['auth']['is_logged'] !== 1 ||
+			empty($_SESSION['dedalo4']['auth']['salt_secure'])
 			) {
-			
-			
+
+
 			if (empty($_SESSION['dedalo4']['auth']['user_id'])) {
 
 				# Store current lang for not loose
 				$dedalo_application_lang = isset($_SESSION['dedalo4']['config']['dedalo_application_lang']) ? $_SESSION['dedalo4']['config']['dedalo_application_lang'] : false;
 				$dedalo_data_lang 		 = isset($_SESSION['dedalo4']['config']['dedalo_data_lang']) ? $_SESSION['dedalo4']['config']['dedalo_data_lang'] : false;
-            
+
 				# remove complete session
 				unset($_SESSION['dedalo4']);
 
@@ -976,7 +978,7 @@ class login extends common {
 				}
 				if ( $dedalo_data_lang) {
 					$_SESSION['dedalo4']['config']['dedalo_data_lang'] 		  = $dedalo_data_lang;
-				}				
+				}
 			}
 
 			return false;
@@ -1021,7 +1023,7 @@ class login extends common {
 		ob_start();
 		include ( $file_include );
 		$html =  ob_get_clean();
-		
+
 
 		return $html;
 	}//end get_html
@@ -1074,7 +1076,7 @@ class login extends common {
 				$cookie_auth = (object)$_SESSION['dedalo4']['auth']['cookie_auth'];
 				$ktoday 	 = date("Y_m_d");
 				$kyesterday  = date("Y_m_d",strtotime("-1 day"));
-		
+
 				if (isset($cookie_auth->$ktoday->cookie_name)) {
 					#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
 					setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
@@ -1130,21 +1132,21 @@ class login extends common {
 	* TEST_SU_DEFAULT_PASSWORD
 	* Check if admin user password default has ben changed or not
 	* If is fefault password returns true, else false
-	* @return bool true/false 
+	* @return bool true/false
 	*/
 	public function test_su_default_password() {
-	
+
 		$component  = component_common::get_instance('component_password',
 													 DEDALO_USER_PASSWORD_TIPO,
 													 -1,
 													 'edit',
 													 DEDALO_DATA_NOLAN,
 													 DEDALO_SECTION_USERS_TIPO);
-		$dato = $component->get_dato();		
+		$dato = $component->get_dato();
 
 		if ($dato==='') {
 			return true;
-		}		
+		}
 
 		return false;
 	}//end test_su_default_password
@@ -1159,14 +1161,14 @@ class login extends common {
 	* @return bool
 	*/
 	public static function is_developer($user_id) {
-	
+
 		$is_developer = false;
-		
+
 		$user_id = (int)$user_id;
 
 		# Dedalo superuser case
 		if ($user_id==DEDALO_SUPERUSER) return true;
-	
+
 		# Empty user_id
 		if ($user_id<1) return false;
 
@@ -1183,7 +1185,7 @@ class login extends common {
 													   DEDALO_DATA_NOLAN,
 													   DEDALO_SECTION_USERS_TIPO);
 		$dato = $component->get_dato();
-	
+
 		if (empty($dato)) {
 			return false;
 		}
@@ -1193,8 +1195,8 @@ class login extends common {
 		if (isset($locator->section_id) && (int)$locator->section_id===1) {
 			$is_developer = true;
 		}
-	
-	
+
+
 		return $is_developer;
 	}//end is_developer
 
