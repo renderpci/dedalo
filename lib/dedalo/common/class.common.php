@@ -1876,7 +1876,27 @@ abstract class common {
 	*/
 	public function get_sqo_context() {
 
-		$sqo_context = (object)[];
+		$section_tipo 	= $this->get_section_tipo();
+		$tipo			= $this->get_tipo();
+
+		// search_query_object build
+			$query_object_options = new stdClass();
+				$query_object_options->q 	 				= null;
+				$query_object_options->limit  				= 1;
+				$query_object_options->offset 				= 0;
+				$query_object_options->section_tipo 		= [$section_tipo];
+				$query_object_options->tipo 				= $tipo;
+				#$query_object_options->logical_operator 	= 'AND';
+				$query_object_options->add_select 			= false;
+				$query_object_options->add_filter			= true;
+				#$query_object_options->filter_custom 		= null;
+				#$query_object_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
+
+				dump($tipo, ' tipo +---------------+ '.to_string());
+
+		$sqo_context = common::build_search_query_object($query_object_options);
+
+			dump($sqo_context, ' sqo_context +---------------+ '.to_string());
 
 		return $sqo_context;
 	}//end get_sqo_context

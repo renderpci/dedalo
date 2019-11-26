@@ -352,7 +352,6 @@ class component_filter extends component_relation_common {
 		// ar_datalist final merge all element
 		$ar_datalist = array_merge($ar_groupers, $ar_projects_parsed);
 
-
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
 		}
