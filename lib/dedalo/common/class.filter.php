@@ -5,7 +5,7 @@
 *
 */
 abstract class filter {
-	
+
 
 
 	/**
@@ -23,7 +23,7 @@ abstract class filter {
 			$ar_filter[] = $profile_sql;
 		}
 		$sql_filter = implode(' OR ', $ar_filter);
-		
+
 		#
 		# SEARCH PROFILES WITH CURRENT USER AREAS
 		$profile_sql = 'SELECT section_id FROM "matrix_profiles" WHERE ' . $sql_filter;
@@ -31,7 +31,7 @@ abstract class filter {
 		$result = JSON_RecordObj_matrix::search_free($profile_sql);
 		$ar_profile_id=array();
 		while ($rows = pg_fetch_assoc($result)) {
-			$section_id 	 = $rows['section_id'];	
+			$section_id 	 = $rows['section_id'];
 			$ar_profile_id[] = $section_id;
 		}
 
@@ -60,12 +60,12 @@ abstract class filter {
 																		 'list',
 																		 DEDALO_DATA_NOLAN,
 																		 DEDALO_SECTION_USERS_TIPO);
-			$dato = (array)$component_filter_master->get_dato();		
+			$dato = (array)$component_filter_master->get_dato();
 		}
 
 		$user_projects_cache[$user_id] = $dato;
 
-		return $dato;		
+		return $dato;
 	}//end get_user_projects
 
 
@@ -77,97 +77,98 @@ abstract class filter {
 	* @return array $ar_projects
 	*/
 	public static function get_user_authorized_projects( $user_id, $from_component_tipo ) {
-		
-		# projects_section_tipo
-		$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT; // Default is Projects but can be another
+		$start_time=microtime(1);
 
+		// projects_section_tipo
+			$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT; // Default is Projects but it can be another
 
-		$ar_section_map = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($projects_section_tipo, 'section_map', 'children', true);
-		$section_map 	= reset($ar_section_map);
-			#dump($section_map, ' section_map ++ '.to_string());
+		// section map
+			$ar_section_map = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($projects_section_tipo, 'section_map', 'children', true);
+			$section_map 	= reset($ar_section_map);
 
-		# projects_name_tipo
-		# Get ts_map for locate name component (for future )
-		$RecordObj_dd = new RecordObj_dd($section_map);
-		$propiedades  = $RecordObj_dd->get_propiedades();
-		if (!$propiedades_obj = json_decode($propiedades)) {
-			dump($propiedades, ' propiedades ++ '.to_string($section_map));
-			throw new Exception("Error Processing Request. Propiedades for section_map: $section_map is empty !", 1);				
-		}
-		$projects_name_tipo = $propiedades_obj->thesaurus->term;
-		$typology_tipo 		= $propiedades_obj->thesaurus->typology;
-			#dump($projects_name_tipo, ' projects_name_tipo ++ '.to_string());
-
-		$filter = '';
-	
-		# User loged now
-		$user_id 		 = navigator::get_user_id();
-		$is_global_admin = component_security_administrator::is_global_admin($user_id);
-		if ($is_global_admin===false) {
-			# filter_master
-			$component_filter_master = component_common::get_instance('component_filter_master',
-																	  DEDALO_FILTER_MASTER_TIPO,
-																	  $user_id,
-																	  'list',
-																	  DEDALO_DATA_NOLAN,
-																	  DEDALO_SECTION_USERS_TIPO);
-			$dato = (array)$component_filter_master->get_dato();
-			
-			$ar_id = [];
-			foreach ($dato as $key => $current_locator) {
-				$ar_id[] = (int)$current_locator->section_id;
-			}		
-			
-			$filter = '{
-		        "q": "'.json_encode($ar_id).'",
-		        "path": [
-		          {
-		            "section_tipo": "'.$projects_section_tipo.'",
-		            "component_tipo": "section_id",
-		            "modelo": "component_section_id",
-		            "name": "section_id"
-		          }
-		        ]
-		      }';	
-		}//end if ($is_global_admin===false)
-
-		$search_query_object = json_decode('
-			{
-			  "id": "get_ar_projects_for_current_section",
-			  "section_tipo": "'.$projects_section_tipo.'",		
-			  "limit":0,
-			  "filter": {
-			    "$and": [
-			      '.$filter.'
-			    ]
-			  },
-			  "select": [
-			    {
-			      "path": [
-			        {
-			          "section_tipo": "'.$projects_section_tipo.'",
-			          "component_tipo": "'.$projects_name_tipo.'",
-			          "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($projects_name_tipo,true).'",
-			          "name": "Project name",
-			          "lang": "all"
-			        }
-			      ]
-			    },
-			     {
-			      "path": [
-			        {
-			          "section_tipo": "'.$projects_section_tipo.'",
-			          "component_tipo": "'.$typology_tipo.'",
-			          "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($typology_tipo,true).'",
-			          "name": "Project typology",
-			          "lang": "all"
-			        }
-			      ]
-			    }
-			  ]
+		// projects_name_tipo. Get ts_map for locate name component (for future )
+			$RecordObj_dd = new RecordObj_dd($section_map);
+			$propiedades  = $RecordObj_dd->get_propiedades();
+			if (!$propiedades_obj = json_decode($propiedades)) {
+				dump($propiedades, ' propiedades ++ '.to_string($section_map));
+				throw new Exception("Error Processing Request. Propiedades for section_map: $section_map is empty !", 1);
 			}
-		');
-		#dump( json_encode($search_query_object), ' search_query_object ++ '.to_string());
+			$projects_name_tipo = $propiedades_obj->thesaurus->term;
+
+		// typology tipo
+			$typology_tipo 		= $propiedades_obj->thesaurus->typology ?? 'dd157';
+
+
+		// filter by filter_master
+			$user_id 		 = navigator::get_user_id();
+			$is_global_admin = component_security_administrator::is_global_admin($user_id);
+			if ($is_global_admin===true) {
+				// bypass filter
+				$filter = '';
+			}else{
+				// filter_master data builds filter ooptions
+				$component_filter_master = component_common::get_instance('component_filter_master',
+																		  DEDALO_FILTER_MASTER_TIPO,
+																		  $user_id,
+																		  'list',
+																		  DEDALO_DATA_NOLAN,
+																		  DEDALO_SECTION_USERS_TIPO);
+				$dato  = (array)$component_filter_master->get_dato();
+				$ar_id = array_map(function($locator){
+					return (int)$locator->section_id;
+				}, $dato);
+
+				$filter = '{
+			        "q": "'.json_encode($ar_id).'",
+			        "path": [
+			          {
+			            "section_tipo": "'.$projects_section_tipo.'",
+			            "component_tipo": "section_id",
+			            "modelo": "component_section_id",
+			            "name": "section_id"
+			          }
+			        ]
+			      }';
+			}//end if ($is_global_admin===false)
+
+		// search_query_object
+			$search_query_object = json_decode('
+				{
+				  "id": "get_ar_projects_for_current_section",
+				  "section_tipo": "'.$projects_section_tipo.'",
+				  "limit":0,
+				  "filter": {
+				    "$and": [
+				      '.$filter.'
+				    ]
+				  },
+				  "select": [
+				    {
+				      "path": [
+				        {
+				          "section_tipo": "'.$projects_section_tipo.'",
+				          "component_tipo": "'.$projects_name_tipo.'",
+				          "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($projects_name_tipo,true).'",
+				          "name": "Project name",
+				          "lang": "all"
+				        }
+				      ]
+				    },
+				     {
+				      "path": [
+				        {
+				          "section_tipo": "'.$projects_section_tipo.'",
+				          "component_tipo": "'.$typology_tipo.'",
+				          "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($typology_tipo,true).'",
+				          "name": "Project typology",
+				          "lang": "all"
+				        }
+				      ]
+				    }
+				  ]
+				}
+			');
+			#dump( json_encode($search_query_object), ' search_query_object ++ '.to_string());
 
 		$search = new search($search_query_object);
 		$result = $search->search();
@@ -176,12 +177,10 @@ abstract class filter {
 		foreach ($result->ar_records as $key => $row) {
 			#dump($row->{$projects_name_tipo}, ' row ++ '.to_string());
 
-			if (!empty($row->{$projects_name_tipo})) {
-				$label = component_common::get_value_with_fallback_from_dato_full( $row->{$projects_name_tipo}, true );
-			}else{
-				$label = '';
-			}
-			
+			$label = !empty($row->{$projects_name_tipo})
+						? component_common::get_value_with_fallback_from_dato_full( $row->{$projects_name_tipo}, true)
+						: '';
+
 			$locator = new locator();
 				$locator->set_section_tipo($row->section_tipo);
 				$locator->set_section_id($row->section_id);
@@ -189,34 +188,37 @@ abstract class filter {
 				$locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 
 			$typology = json_decode($row->{$typology_tipo}) ?? null;
-		
 
 			$element = new stdClass();
 				$element->label 	= $label;
 				$element->locator 	= $locator;
 				$element->typology 	= $typology;
-			
+
 			$ar_projects[] = $element;
 		}
-		#dump($ar_projects, ' ar_projects ++ '.to_string());
 
-		return $ar_projects;		
+		if(SHOW_DEBUG===true) {
+			debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
+		}
+
+
+		return $ar_projects;
 	}//end get_user_authorized_projects
 
 
 
 	/**
 	* GET_FILTER_USER_RECORDS_BY_ID
-	* Filter user access to section records by section_id 
+	* Filter user access to section records by section_id
 	* In process.... (need specific component for manage)
 	* @return string $sql_filtro
 	*/
 	public static function get_filter_user_records_by_id( $user_id ) {
-		
+
 		$filter_user_records_by_id = array();
 
 		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
-			
+
 			$modelo_name 	= 'component_filter_records';
 			$tipo 			= DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO;
 			$component 		= component_common::get_instance($modelo_name,
@@ -251,23 +253,23 @@ abstract class filter {
 			if(SHOW_DEBUG===true) {
 				#var_dump(debug_backtrace());
 			}
-		
-			
+
+
 
 			#
 			# DEDALO_BYPASS_FILTER
 			# In some cases yo can bypass filter setting a constant in config called DEDALO_BYPASS_FILTER to bool true
 			if ( defined('DEDALO_BYPASS_FILTER') && DEDALO_BYPASS_FILTER===true ) {
 				$sql_filter .= "\n-- filter is BYPASSED -- \n";
-				return $sql_filter; 
+				return $sql_filter;
 			}
 
 			# Verify minimun valid options acepted
 			if(!is_object($filter_options)) {
 				trigger_error("ilegal filter_options type");
 				if(SHOW_DEBUG===true) {
-					dump($filter_options,"filter_options");			
-				}			
+					dump($filter_options,"filter_options");
+				}
 				return null;
 			}
 			if(empty($filter_options->section_tipo)){
@@ -278,7 +280,7 @@ abstract class filter {
 			$options = new stdClass();
 				$options->section_tipo 	= false;
 				$options->projects 		= false;
-				$options->json_field	= 'datos';			
+				$options->json_field	= 'datos';
 				foreach ($filter_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
@@ -289,12 +291,12 @@ abstract class filter {
 			}
 			#dump($options,"filter_options");
 
-			
+
 			$is_global_admin = (bool)component_security_administrator::is_global_admin(navigator::get_user_id());
 			if ($is_global_admin===true) {
-				$sql_filter .= '';		
+				$sql_filter .= '';
 			}else{
-				if (empty($options->projects)) {				
+				if (empty($options->projects)) {
 					debug_log(__METHOD__. "<div class=\"warning\">Warning: User without projects!!</div>", logger::WARNING);
 				}
 
@@ -319,9 +321,9 @@ abstract class filter {
 							$ar_values_string 	= implode(',', $ar_values);
 							$sql_filter .= " OR a.section_id IN ($ar_values_string)";
 						}
-						$sql_filter .= "\n)";			
+						$sql_filter .= "\n)";
 						break;
-					
+
 					##### USERS ########################################################
 					case ($options->section_tipo===DEDALO_SECTION_USERS_TIPO) :
 
@@ -332,7 +334,7 @@ abstract class filter {
 						$sql_filter .= "\n a.$options->json_field @>'{\"created_by_userID\":".$user_id."}'::jsonb OR \n";
 						$sql_filter .= '((';
 						# Editing users. Use user areas as filter
-		
+
 						#
 						# USER PROFILE
 						# Calculate current user profile id
@@ -376,14 +378,14 @@ abstract class filter {
 
 						#
 						# SEARCH PROFILES WITH CURRENT USER AREAS
-						$ar_profile_id = self::get_profiles_for_areas( $ar_area_tipo );						
+						$ar_profile_id = self::get_profiles_for_areas( $ar_area_tipo );
 							#dump($ar_profile_id, ' $ar_profile_id ++ '.to_string($profile_sql)); die();
 
 						$last_item = end($ar_profile_id);
 						foreach ($ar_profile_id as $current_profile_id) {
 							$sql_filter.= "\n a.$options->json_field#>'{components, ".DEDALO_USER_PROFILE_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' = '$current_profile_id' ";
 							if ($current_profile_id != $last_item) $sql_filter .= "OR";
-						}					
+						}
 						$sql_filter .= "\n)";
 							#dump($sql_filter, ' $sql_filter ++ '.to_string($ar_profile_id)); die();
 
@@ -414,7 +416,7 @@ abstract class filter {
 						$sql_filter .= ')';
 							#dump($sql_filter, ' $sql_filter ++ '.to_string());
 						break;
-					
+
 					##### DEFAULT ########################################################
 					default:
 						$sql_filter .= "\n-- filter_by_projects --\n";
@@ -469,23 +471,23 @@ abstract class filter {
 	public static function is_authorized_record($section_id, $section_tipo) {
 
 		throw new Exception(" Invalid Method! ".__METHOD__." Change to new search way", 1);
-		
+
 		$is_global_admin = component_security_administrator::is_global_admin( navigator::get_user_id() );
-		if ($is_global_admin===true) {			
-			return true;		
+		if ($is_global_admin===true) {
+			return true;
 		}
-			
-		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);		
+
+		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
 		#
 		# DEDALO SUPERUSER EDIT CASE
 		# Avoid show DEDALO_SUPERUSER to edit
-			if($section_id==DEDALO_SUPERUSER && $matrix_table==='matrix_users') {		
+			if($section_id==DEDALO_SUPERUSER && $matrix_table==='matrix_users') {
 				$msg="Error Processing Request.";
 				if(SHOW_DEBUG===true) $msg .= "<hr>Current user is not editable : $matrix_table";
 				throw new Exception($msg, 1);
 			}
-		
+
 		# Mode : using 'search::get_records_data' query and filtering by id
 		# DESESTIMADA (es mas sencilla pero crea un problema con el layout map que no vale la pena resolver)
 		/*
@@ -494,7 +496,7 @@ abstract class filter {
 		*/
 		$locator = new locator();
 			$locator->set_section_id($section_id);
-			$locator->set_section_tipo($section_tipo);			
+			$locator->set_section_tipo($section_tipo);
 
 		$options = new stdClass();
 			$options->section_tipo 	= (string)$section_tipo;
@@ -510,7 +512,7 @@ abstract class filter {
 		}
 
 		return false;
-	}//end is_authorized_record	
+	}//end is_authorized_record
 
 
 
