@@ -288,9 +288,9 @@ class menu extends common {
 				case ($option==='create_link' && in_array($tipo, unserialize(DEDALO_ENTITY_MENU_SKIP_TIPOS))):
 						$skip = true;
 						break;
-				case ($tipo===DEDALO_SECTION_PROFILES_TIPO && $logged_user_is_global_admin!==true):
-						$skip = true;
-						break;
+				#case ($tipo===DEDALO_SECTION_PROFILES_TIPO && $logged_user_is_global_admin!==true): (Removed 27-11-2019)
+				#		$skip = true;
+				#		break;
 			}
 
 			# MODELO
