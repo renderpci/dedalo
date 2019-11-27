@@ -1,189 +1,120 @@
-/* NAVIGATOR
-------------------------------------------------------- */
-	.css_wrap_rows_paginator {
-		/* float: left; */
-		//min-height: 28px;
-		//top: 4px;
-		//position: relative;
-		//float: left;
+// PAGINATOR
 
+
+
+// wrapper_paginator
+	.wrapper_paginator {
 		line-height: 1em;
 		padding: 0.5em;
 
-			// ICONS BOOTSTRAP
-			// .icon_bs {
-			// 	display: inline-block;
-			// 	width: 14px;
-			// 	height: 14px;
-			// 	line-height: 14px;
-			// 	//vertical-align: text-top;
-			// 	vertical-align: text-top;
-			// 	//background-image: url("../../themes/default/glyphicons-halflings.png");
-			// 	background-image: url("../../themes/default/svg_icons.svg");
-			// 	background-position: -48px -24px;
-			// 	background-size: 474px 184px;
-			// 	background-repeat: no-repeat;
-			// 	list-style: none;
-			// 	position: relative;
-			// 	/*top: -1px;*/
-			// 	cursor: pointer;
-			// 	opacity: 1;
-			// 	//zoom: 1.25;
+		>.content_data {
 
-			// 	&:hover {
-			// 		opacity: 1
-			// 	}
-			// 	&:active {
-			// 		opacity: 0.4
-			// 	}
+			// buttons (css_rows_paginator_div_links)
+			.css_rows_paginator_div_links {
+				display: flex;
+				display: inline;
+				vertical-align: bottom;
+				margin-right: 0.25em;
 
-			// 	&.unactive {
-			// 		opacity: 0.4;
-			// 		cursor: default;
-			// 	}
-			// }
+				button {
+					background-color: transparent;
+					background-size: 100%;
+					background-repeat: no-repeat;
+					background-position: center;
+					border: none;
+					height: 1em;
+					padding: 1em;
+					cursor: pointer;
+					margin-right: 0.35em;
+					user-select: none;
 
-		}//end .css_wrap_rows_paginator
-		.inspector_div .css_wrap_rows_paginator {
-			top: 0;
-			float: none;
-		}
-		.css_wrap_rows_paginator .css_rows_paginator_content {
-			color: #616161;
-			min-height: 1.5em;
-			margin: 0;
-			padding: 0;
-			//padding-left: 1em;
-			position: relative;
-			font-size: 0.95em;
-		}
-		.css_wrap_rows_paginator_edit {
-			position: relative;
-			left: 80px;
-			top: 10px;
-		}
-		/* navigator showed in section list */
-		.wrap_section_list .css_wrap_rows_paginator .css_rows_paginator_content {
-			top: 4px;
-			@media screen and (max-width: @movil_max_width) { // 768px
-				top: 0;
-			}
-		}
+					&:active {
+						opacity: 0.2;
+					}
 
-		.css_wrap_rows_paginator .css_rows_paginator_content .css_rows_paginator_info {
-			display: inline;
-			line-height: 1.5em;
-		}
-		#wrap_inspector_paginator .css_rows_paginator_info {
-			padding-top: 10px;
-		}
-		.css_wrap_rows_paginator .css_rows_paginator_content .css_rows_paginator_div_links {
-			display: inline;
-			vertical-align: bottom;
-			}
-			.css_rows_paginator_div_links a {
-				margin-left: 5px;
-				margin-right: 5px;
-				padding: 1px;
-				padding-left: 5px;
-				padding-right: 5px;
-				background-color: #999;
-				font-weight: normal;
-				border: none;
-				border-radius: 3px;
-				color: #F7F7F7;
-				box-shadow: 1px 1px 2px #888888;
-				background-color: #BF9C3B;
-			}
-		.css_wrap_rows_paginator .row_no_records_found {
-			display: inline-block;
-			padding: 5px;
-			color: #7C807D;
-		}
-		.css_rows_paginator_div_links {
-			display: flex;
+					// unactive
+					&.unactive {
+						opacity: 0.4;
 
-			button {
-				background-color: transparent;
-				background-size: 100%;
-				background-repeat: no-repeat;
-				background-position: center;
-				border: none;
-				height: 1em;
-				padding: 1em;
-				cursor: pointer;
-				margin-right: 0.35em;
-				user-select: none;
+						&:hover {
+							opacity: 0.4;
+							cursor: default !important;
+						}
+					}
+				}//end button
 
-				&:active {
-					opacity: 0.2;
+				//.element-color(@color) {
+					//	background-image: url('data:image/svg+xml;utf8,<svg width="1792" height="1792" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg"><path d="M1683 141q19-19 32-13t13 32v1472q0 26-13 32t-32-13l-710-710q-9-9-13-19v710q0 26-13 32t-32-13l-710-710q-19-19-19-45t19-45l710-710q19-19 32-13t13 32v710q4-10 13-19z" fill="@{color}"/></svg>');
+					//}
+
+				.paginator_first_icon {
+					//background-image: url('../../themes/default/icons/backward.svg');
+					background-image: url('../../themes/default/icons/forward.svg');
+					transform: scaleX(-1);
+					background-size: 80%;
 				}
-			}
 
-			//.element-color(@color) {
-  			//	background-image: url('data:image/svg+xml;utf8,<svg width="1792" height="1792" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg"><path d="M1683 141q19-19 32-13t13 32v1472q0 26-13 32t-32-13l-710-710q-9-9-13-19v710q0 26-13 32t-32-13l-710-710q-19-19-19-45t19-45l710-710q19-19 32-13t13 32v710q4-10 13-19z" fill="@{color}"/></svg>');
-  			//}
+				.paginator_prev_icon {
+					background-image: url('../../themes/default/icons/play.svg');
+					transform: scaleX(-1);
+				}
 
-			.paginator_first_icon {
-				//background-image: url('../../themes/default/icons/backward.svg');
-				background-image: url('../../themes/default/icons/forward.svg');
-				transform: scaleX(-1);
-				background-size: 80%;
-			}
+				.paginator_next_icon {
 
-			.paginator_prev_icon {
-				background-image: url('../../themes/default/icons/play.svg');
-				transform: scaleX(-1);
-			}
+					background-image: url('../../themes/default/icons/play.svg');
+				}
 
-			.paginator_next_icon {
-				background-image: url('../../themes/default/icons/play.svg');
-			}
+				.paginator_last_icon {
+					background-image: url('../../themes/default/icons/forward.svg');
+					background-size: 80%;
+				}
 
-			.paginator_last_icon {
-				background-image: url('../../themes/default/icons/forward.svg');
-				background-size: 80%;
-			}
+				.paginator_desactive {
+					cursor: default;
+					opacity: 0.1 !important;
+				}
+			}//end .css_rows_paginator_div_links
 
-			.paginator_desactive {
-				cursor: default;
-				opacity: 0.1 !important;
-			}
+
+
+			// text
+			.css_rows_paginator_info {
+				display: inline;
+				line-height: 1.5em;
+
+				>.displayed_records {
+					//display: none;
+				}
+
+				// go_to_page input
+				>input#go_to_page {
+					text-align: center;
+					padding: 0.25em;
+					margin-left: 0.5em;
+					width: 6em;
+					border-radius: 0.2em;
+					border: 1px solid #ececec;
+				}
+			}//end .css_rows_paginator_info
+
+
+
+		}//end .content_data
+	}//end .wrapper_paginator
+
+
+
+// wrapper_inspector context overrides
+	.wrapper_inspector {
+
+		.displayed_records {
+			display: none;
 		}
 
-
-
-		.css_section_list_wrap .css_wrap_rows_paginator .css_rows_paginator_content .css_rows_paginator_div_links {
-			@media screen and (max-width: @movil_max_width) { // 768px
-				zoom: 1.7;
-				padding-bottom: 5px;
-			}
+		.go_to_page_text {
+			display: inline-block;
+    		clear: left;
 		}
+	}
 
-		#sidebar .css_wrap_rows_paginator {
-			@media screen and (max-width: @movil_max_width) { // 768px
-				//height: 28px;
-				top: 0;
-				position: relative;
-				text-align: center;
-				zoom: 1.7;
-			}
-		}
-		.unactive {
-			opacity: 0.4;
-
-			&:hover {
-				opacity: 0.4;
-				cursor: default !important;
-			}
-		}
-
-		#go_to_page {
-			text-align: center;
-			padding: .25em;
-			margin-left: .5em;
-			width: 6em;
-			border-radius: .2em;
-			border: 1px solid #ececec;
-		}
 
