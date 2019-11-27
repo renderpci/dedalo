@@ -2,7 +2,7 @@
 @common_css: "../../common/css";
 
 // Usage
-@import "@{common_css}/library.less"; 
+@import "@{common_css}/library.less";
 
 // inspector
 	.wrapper_inspector {
@@ -10,8 +10,8 @@
 		padding: 0px;
 		margin: 0px;
 		width: 98.2%;
-		//position: fixed;	
-		//background-color: #4ce6e4;	
+		//position: fixed;
+		//background-color: #4ce6e4;
 		//width: 235px !important;
 		@media screen and (max-width: @tablet_max_width) { // 980px
 			width: 100% !important;
@@ -30,6 +30,21 @@
 		.css_button_generic > span {
 			display: none;
 		}
+
+		>.label {
+			padding: 1em;
+			background-color: #949494;
+			color: #ffffff;
+		}
+
+		.css_rows_paginator_div_links {
+			padding-bottom: 0.5em;
+
+			>.icon_bs {
+
+			}
+
+		}
 	}
 
 
@@ -40,21 +55,29 @@
 		display: block;
 		margin: 0;
 		padding: 0;
-		
-		padding-top: 4px;
-		padding-bottom: 4px;
-		
-		color: #999999;
-		font-family: Arial, Helvetica, sans-serif;	
-		box-shadow: inset 0px -2px 3px rgb(220, 220, 220);
-		width: 100%;
-		
-		//background-color: #F9F9F9; 
+
+		//padding-top: 0.5em;
+		//padding-bottom: 0.5em;
+
+		//color: #999999;
+		//font-family: Arial, Helvetica, sans-serif;
+		//box-shadow: inset 0px -2px 3px rgb(220, 220, 220);
+		//width: 100%;
+
+		//background-color: #F9F9F9;
 		//background-color: rgba(249, 249, 249, 0.82);
-				
+
 		//max-height: 280px;
 		//overflow: auto;
-		
+
+		.wrapper_component {
+			padding: 1em;
+
+			>.label {
+				padding-bottom: 1em;
+			}
+		}
+
 		@media screen and (max-width: @movil_max_width) { // 768px
 			box-shadow: none;
 		}
@@ -72,7 +95,7 @@
 			display: block;
 			min-width: 60px;
 			background-color: #eee;
-			margin-right: 0;       
+			margin-right: 0;
 			text-align: right;
 			border-radius: 2px;
 			clear: left;
@@ -83,8 +106,8 @@
 		    max-height: 300px;
 		    text-overflow: ellipsis;
 		    overflow: hidden;
-		    word-break: break-all;   
-		    float: left;    
+		    word-break: break-all;
+		    float: left;
 		    margin-left: 2px;
 		}
 	}
@@ -168,7 +191,7 @@
 /* INSPECTOR DEBUG
 ---------------------------------------- */
 #inspector_debug {
-	
+
 }
 #inspector_debug .key {
 	//margin-left: 4px;
@@ -243,7 +266,7 @@
 			width: 99.9%;
 		}
 	}
-	
+
 
 
 /* INSPECTOR COMMONS*/
@@ -290,7 +313,7 @@
 		margin-top: 2px;
 		padding-top: 2px;
 		border-bottom:1px solid #c9c9c9;
-		line-height: 1.6em;	
+		line-height: 1.6em;
 
 		:first-letter {
 			text-transform: capitalize;

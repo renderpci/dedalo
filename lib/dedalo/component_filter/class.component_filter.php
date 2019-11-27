@@ -292,6 +292,7 @@ class component_filter extends component_relation_common {
 					$project = new stdClass();
 						$project->type 	 		= 'project';
 						$project->label 		= $project_item->label;
+						$project->section_tipo 	= $project_item->locator->section_tipo;
 						$project->section_id 	= $project_item->locator->section_id;
 						$project->value 		= $project_item->locator;
 						$project->parent 		= null;
@@ -305,6 +306,7 @@ class component_filter extends component_relation_common {
 						$project = new stdClass();
 							$project->type 	 		= 'project';
 							$project->label 		= $project_item->label;
+							$project->section_tipo 	= $project_item->locator->section_tipo;
 							$project->section_id 	= $project_item->locator->section_id;
 							$project->value 		= $project_item->locator;
 							$project->parent 		= $typology_locator;
@@ -350,7 +352,12 @@ class component_filter extends component_relation_common {
 			$ar_groupers = array_unique($ar_groupers, SORT_REGULAR); // remove posible duplicates when parent resolution is called
 
 		// ar_datalist final merge all element
-		$ar_datalist = array_merge($ar_groupers, $ar_projects_parsed);
+			$ar_datalist = array_merge($ar_groupers, $ar_projects_parsed);
+
+		// sort by label asc
+			usort($ar_datalist, function($a, $b) {
+				return strcasecmp($a->label, $b->label);
+			});
 
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
@@ -358,6 +365,7 @@ class component_filter extends component_relation_common {
 
 		return $ar_datalist;
 	}//end get_datalist
+
 
 
 	/**
@@ -401,6 +409,7 @@ class component_filter extends component_relation_common {
 			$grouper = new stdClass();
 				$grouper->type 			= 'typology';
 				$grouper->label 		= $name_value;
+				$grouper->section_tipo 	= $section_tipo;
 				$grouper->section_id 	= $section_id;
 				$grouper->parent 		= !empty($parent_dato) ? reset($parent_dato) : null;
 
