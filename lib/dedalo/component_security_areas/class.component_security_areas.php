@@ -503,7 +503,7 @@ class component_security_areas extends component_common {
 				if (false===$logged_user_is_global_admin) {
 					$permissions = common::get_permissions($tipo, $tipo);
 					if((int)$permissions<1) {
-						$show = false;
+						#$show = false;
 						$skip = true;
 					}
 				}
