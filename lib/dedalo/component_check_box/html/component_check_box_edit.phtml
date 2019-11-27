@@ -1,7 +1,7 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
+	# VISUALIZADOR HTML
+
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
@@ -16,32 +16,32 @@
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print ">";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 
 	$required_code 	= null;
 	#if($required)
 	#	$required_code = 'style="font-weight:bold"';
-	
+
 	# CONTENIDO (INPUT)
 	$html_content  = '';
 	switch($permissions) {
-			
-		case 0	:	
-			$html_content .= ""; 
+
+		case 0	:
+			$html_content .= "";
 			break;
-		
+
 		case 1	:
-			$html_content .= $valor;
+			$html_content .= $value;
 			break;
-						
+
 		case 2 :
-		case 3 :					
-		
+		case 3 :
+
 			$html_content .= '<ul class="group">';
 			$i=1; foreach ($ar_list_of_values->result as $key => $item) {
-				
+
 				$label   = (string)$item->label;
 
 				$locator = new stdClass();
@@ -51,7 +51,7 @@
 					$locator->from_component_tipo 	= $tipo;
 
 				$locator_json = json_encode($locator);
-				
+
 				$checked  = '';
 				if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
 					$checked  = 'checked="checked"';
@@ -60,10 +60,10 @@
 				$tabindex = $i==1 ? 'tabindex="1"' : '';
 
 				$current_id = $input_name.'_'.$i;
-				
+
 				$html_content .= '<li>';
 
-				# 
+				#
 				# INPUT
 				$html_content .= "<input type=\"checkbox\" class=\"css_check_box\" ";
 				$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
@@ -79,9 +79,9 @@
 				$html_content .= "$checked ";
 				$html_content .= "$tabindex ";
 				$html_content .= "/>";
-				
+
 				#
-				# LABEL				
+				# LABEL
 				$html_content .= '<label for="'.$current_id.'" class="css_check_box_rotulo'. $required_code .'"';
 				$html_content .= '>';
 				$html_content .= $label;
@@ -113,22 +113,21 @@
 	tools::prepare_content($html_content);
 
 
-	
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
 
-	
+
 	#if(SHOW_DEBUG && isset($ar_list_of_values->debug)) {
 	#	echo $ar_list_of_values->debug;
 	#}
-	
-	
-	print "</div>"; //wrap
+
+
+	print '</div>'; //wrap
 
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
 
-?>
