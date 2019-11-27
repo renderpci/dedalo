@@ -265,17 +265,17 @@ class login extends common {
 						$full_username = login::get_full_username($user_id);
 
 					// Login (all is ok) - init login secuence when all is ok
-						$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
-						if ($init_user_login_secuence->result===false) {
+						$init_user_login_sequence = login::init_user_login_sequence($user_id, $username, $full_username);
+						if ($init_user_login_sequence->result===false) {
 							# RETURN FALSE
 							$response->result = false;
-							$response->msg 	  = $init_user_login_secuence->msg;
-							$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
-						}else if($init_user_login_secuence->result===true) {
+							$response->msg 	  = $init_user_login_sequence->msg;
+							$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+						}else if($init_user_login_sequence->result===true) {
 							# RETURN OK AND RELOAD PAGE
 							$response->result = true;
 							$response->msg 	  = " Login.. ";
-							$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
+							$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
 						}
 
 				}//end if(isset($ar_password_id[0])
@@ -408,18 +408,18 @@ class login extends common {
 						// Full username
 							$full_username = login::get_full_username($section_id);
 
-						// init_user_login_secuence
-							$init_user_login_secuence = login::init_user_login_secuence($section_id, $username, $full_username, $init_test=false, 'saml');
-							if ($init_user_login_secuence->result===false) {
+						// init_user_login_sequence
+							$init_user_login_sequence = login::init_user_login_sequence($section_id, $username, $full_username, $init_test=false, 'saml');
+							if ($init_user_login_sequence->result===false) {
 								# RETURN FALSE
 								$response->result = false;
-								$response->msg 	  = $init_user_login_secuence->msg;
-								$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
-							}else if($init_user_login_secuence->result===true) {
+								$response->msg 	  = $init_user_login_sequence->msg;
+								$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+							}else if($init_user_login_sequence->result===true) {
 								# RETURN OK AND RELOAD PAGE
 								$response->result = true;
 								$response->msg 	  = " Login.. ";
-								$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
+								$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
 							}
 			}else{
 
@@ -654,19 +654,19 @@ class login extends common {
 
 
 	/**
-	* INIT_USER_LOGIN_SECUENCE
+	* INIT_USER_LOGIN_SEqUENCE
 	* Init login secuence when all is ok
 	* @param int $user_id
 	* @param string $username
 	* @return bool
 	*/
-	private static function init_user_login_secuence($user_id, $username, $full_username, $init_test=true, $login_type='default') {
+	private static function init_user_login_sequence($user_id, $username, $full_username, $init_test=true, $login_type='default') {
 
 		$start_time=microtime(1);
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 	 	= 'Error on init_user_login_secuence';
+			$response->msg 	 	= 'Error on init_user_login_sequence';
 			$response->errors 	= [];
 
 		#ob_implicit_flush(true);
@@ -760,11 +760,11 @@ class login extends common {
 			);
 
 		$response->result 	= true;
-		$response->msg 	 	= 'Ok init_user_login_secuence is done';
+		$response->msg 	 	= 'Ok init_user_login_sequence is done';
 
 
 		return $response;
-	}//end init_user_login_secuence
+	}//end init_user_login_sequence
 
 
 
