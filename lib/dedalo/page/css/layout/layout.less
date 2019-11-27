@@ -331,6 +331,10 @@
 		&.edit {
 			padding-right: @inspector_width;
 
+			&.full_width {
+				padding-right: 0;
+			}
+
 			>.content_data {
 				display: flex;
 				flex-wrap: wrap;
@@ -933,6 +937,23 @@
 		top: 67px;
 		right: 0;
 		border: 1px solid #eee;
+	}
+	.toggle_inspector {
+		//background-color: #fcfcfc;
+		background-image: url(../../themes/default/icons/reorder.svg);
+		background-position: center;
+		background-size: 78%;
+		background-repeat: no-repeat;
+		height: 1em;
+		width: 1em;
+		position: fixed;
+		padding: 1em;
+		top: 4.70em;
+		right: 0.95em;
+		cursor: pointer;
+		z-index: 9999;
+		border: 1px solid #949494;
+		border-radius: 0.12em;
 	}
 
 
