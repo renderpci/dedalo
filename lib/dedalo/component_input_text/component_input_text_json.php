@@ -19,7 +19,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$sqo_context = isset($properties->unique) ? true : false;
 				// Component structure context (tipo, relations, properties, etc.)
@@ -36,8 +36,8 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){		
-				
+	if($options->get_data===true && $permissions>0){
+
 		// Value
 		switch ($modo) {
 			case 'list':
@@ -47,8 +47,8 @@
 			default:
 				$value = $this->get_dato();
 				break;
-		}		
-			
+		}
+
 		// data item
 		$item  = $this->get_data_item($value);
 		$item->parent_tipo 			= $this->get_tipo();

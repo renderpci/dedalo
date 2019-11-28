@@ -1540,7 +1540,6 @@ abstract class common {
 			}
 
 
-
 		return $dd_object;
 	}//end get_structure_context
 
@@ -1828,7 +1827,6 @@ abstract class common {
 
 
 
-
 	/**
 	* GET_LAYOUT_MAP
 	* Calculate common cases for layout_map
@@ -1872,31 +1870,92 @@ abstract class common {
 	* one ddo for the searched section
 	* one ddo for the component searched.
 	* is possible create more than one ddo for different components.
-	* @return
+	* @return object | json
 	*/
 	public function get_sqo_context() {
 
+		if (isset($this->sqo_context)) {
+			return $this->sqo_context;
+		}
+
+		$sqo_context = new stdClass();
+		$search = [];
+		$show	= [];
+
+
 		$section_tipo 	= $this->get_section_tipo();
 		$tipo			= $this->get_tipo();
+		$lang 			= $this->get_lang();
 
-		// search_query_object build
-			$query_object_options = new stdClass();
-				$query_object_options->q 	 				= null;
-				$query_object_options->limit  				= 1;
-				$query_object_options->offset 				= 0;
-				$query_object_options->section_tipo 		= [$section_tipo];
-				$query_object_options->tipo 				= $tipo;
-				#$query_object_options->logical_operator 	= 'AND';
-				$query_object_options->add_select 			= false;
-				$query_object_options->add_filter			= true;
-				#$query_object_options->filter_custom 		= null;
-				#$query_object_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
+		// SEARCH
 
-				dump($tipo, ' tipo +---------------+ '.to_string());
+			// typo SOURCE SEARCH
+				$source_search = new stdClass();
+					$source_search->typo 			= 'source';
+					$source_search->action 			= 'search';
+					$source_search->tipo 			= $tipo;
+					$source_search->section_tipo 	= $section_tipo;
+					$source_search->lang 			= $lang;
+					$source_search->mode 			= 'list';
 
-		$sqo_context = common::build_search_query_object($query_object_options);
+				// add source
+				$search[] = $source_search;
 
-			dump($sqo_context, ' sqo_context +---------------+ '.to_string());
+				// service autocomplete options
+					$ar_target_section_tipo = [$section_tipo];
+				// search_sections . set and remove search sections duplicates
+					$search_sections 		= $ar_target_section_tipo;
+
+
+			// typo SEARCH
+				$filter_custom = [];
+
+				// filter custom
+					if (isset($propiedades->source->filter_custom)) {
+						$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
+					}
+
+				// search_query_object params
+					# Limit
+					$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 10;
+					# operator can be injected by api
+					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : '$and';
+
+				// search_query_object build
+					$query_object_options = new stdClass();
+						$query_object_options->q 	 				= null;
+						$query_object_options->limit  				= $limit;
+						$query_object_options->offset 				= 0;
+						$query_object_options->section_tipo 		= $search_sections;
+						$query_object_options->tipo 				= $tipo;
+						$query_object_options->logical_operator 	= $operator;
+						$query_object_options->add_select 			= false;
+						$query_object_options->filter_custom 		= !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
+						$query_object_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
+
+					$sqo = common::build_search_query_object($query_object_options);
+
+					// add sqo
+					$search[] = $sqo;
+
+			// typo DDO
+				// build self ddo
+					$ddo = $this->get_structure_context($this->get_component_permissions(), false);
+
+				// add ddo
+					$search[] = $ddo;
+
+		// SHOW
+			// Not used now
+
+
+		$sqo_context->show 		= $show;
+		$sqo_context->search 	= $search;
+
+
+		// fix
+		$this->sqo_context = $sqo_context;
+
 
 		return $sqo_context;
 	}//end get_sqo_context
@@ -2043,7 +2102,7 @@ abstract class common {
 			$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_propiedades(true);
 
 			// source search. If not defined, use fallback to legacy related terms and build one
-				$config_context = component_common::get_config_context($tipo, $external=false);
+				$config_context = component_common::get_config_context($tipo, $external=false, $section_tipo);
 
 			// config_context iteration
 				foreach ($config_context as $source_search_item) {

@@ -25,7 +25,7 @@ class dd_utils_api {
 			'version' 	=>	DEDALO_VERSION,
 			'build'		=>	DEDALO_BUILD
 		];
-		$response->msg 	  = 'Ok. Request done';		
+		$response->msg 	  = 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -57,7 +57,7 @@ class dd_utils_api {
 		$info['host'] 	= to_string(DEDALO_HOSTNAME_CONN);
 
 		$response->result = $info;
-		$response->msg 	  = 'Ok. Request done';		
+		$response->msg 	  = 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -87,7 +87,7 @@ class dd_utils_api {
 
 
 		$response->result = backup::make_backup();
-		$response->msg 	  = 'Ok. Request done';		
+		$response->msg 	  = 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -218,7 +218,7 @@ class dd_utils_api {
 
 
 		$response->result = tools_register::import_tools();
-		$response->msg 	  = 'Ok. Request done';		
+		$response->msg 	  = 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -248,7 +248,7 @@ class dd_utils_api {
 
 
 		$response->result = css::build_structure_css();
-		$response->msg 	  = 'Ok. Request done';		
+		$response->msg 	  = 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -280,7 +280,7 @@ class dd_utils_api {
 
 
 		$response->result = update::update_version();
-		$response->msg 	  = 'Ok. Request done';		
+		$response->msg 	  = 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -338,7 +338,7 @@ class dd_utils_api {
 			$response->msg 		= $sql_query;
 			$response->rows 	= $rows;
 		}
-	
+
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -350,6 +350,7 @@ class dd_utils_api {
 
 		return (object)$response;
 	}//end convert_search_object_to_sql_query
+
 
 
 }//end dd_utils_api
