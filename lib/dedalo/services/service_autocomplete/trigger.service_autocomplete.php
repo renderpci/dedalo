@@ -6,8 +6,6 @@ common::trigger_manager();
 
 
 
-
-
 /**
 * AUTOCOMPLETE_SEARCH
 * Get list of mathed DB results for current string by ajax call
@@ -33,7 +31,7 @@ function autocomplete_search($json_data) {
 				return $response;
 			}
 		}
-	
+
 	/*
 	if (!$search_query_object = json_decode($search_query_object)) {
 		$response->msg = "Trigger Error. Invalid search_query_object";
@@ -43,7 +41,7 @@ function autocomplete_search($json_data) {
 	if(SHOW_DEBUG===true) {
 		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
 		#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); #die();
-	}	
+	}
 
 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component 	 = component_common::get_instance($modelo_name,
@@ -56,7 +54,7 @@ function autocomplete_search($json_data) {
 	$result 	 = (array)$component->autocomplete_search(
 												 $search_query_object,
 												 $divisor);
-	
+
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -71,11 +69,8 @@ function autocomplete_search($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end function autocomplete_search')
 
 
-
-
-?>
