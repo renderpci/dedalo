@@ -8,13 +8,13 @@
 		padding: 0.5em;
 
 		>.content_data {
+			line-height: 1.5em;
 
 			// buttons (css_rows_paginator_div_links)
 			.css_rows_paginator_div_links {
 				display: flex;
 				display: inline;
 				vertical-align: bottom;
-				margin-right: 0.25em;
 
 				button {
 					background-color: transparent;
@@ -78,25 +78,36 @@
 
 
 			// text
-			.css_rows_paginator_info {
+			.paginator_info {
 				display: inline;
-				line-height: 1.5em;
+
+				>* {
+
+				}
+
+				>.page_info {
+					padding-left: 0.25em;
+				}
 
 				>.displayed_records {
+					padding-left: 0.1em;
 					//display: none;
 				}
 
-				// go_to_page input
-				>input#go_to_page {
-					text-align: center;
-					padding: 0.25em;
-					margin-left: 0.5em;
-					width: 6em;
-					border-radius: 0.2em;
-					border: 1px solid #ececec;
-				}
-			}//end .css_rows_paginator_info
+				>.goto_page {
+					padding-left: 0.1em;
 
+					>input#go_to_page {
+						text-align: center;
+						padding: 0.25em;
+						margin-left: 0.5em;
+						width: 6em;
+						border-radius: 0.2em;
+						border: 1px solid #ececec;
+					}
+				}
+
+			}//end .paginator_info
 
 
 		}//end .content_data
@@ -107,13 +118,18 @@
 // wrapper_inspector context overrides
 	.wrapper_inspector {
 
+		.wrapper_paginator {
+			padding-bottom: 1em;
+		}
+
 		.displayed_records {
 			display: none;
 		}
 
-		.go_to_page_text {
+		.goto_page {
 			display: inline-block;
     		clear: left;
+    		padding-top: 0.25em;
 		}
 	}
 

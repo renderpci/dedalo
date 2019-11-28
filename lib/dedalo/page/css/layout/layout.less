@@ -329,10 +329,11 @@
 		}
 
 		&.edit {
-			padding-right: @inspector_width;
+			//padding-right: @inspector_width;
+			width: calc(100vw - 17em);
 
 			&.full_width {
-				padding-right: 0;
+				width: 100%;
 			}
 
 			>.content_data {
@@ -929,13 +930,14 @@
 
 
 // inspector
+	@top_distance : 67px;
 	.inspector {
 		height: 100%;
 		width: @inspector_width;
 		background-color: #fcfcfc;
 		position: fixed;
-		top: 67px;
-		right: 0;
+		top: @top_distance;
+		left: calc(100vw - 15em);
 		border: 1px solid #eee;
 	}
 	.toggle_inspector {
@@ -948,12 +950,14 @@
 		width: 1em;
 		position: fixed;
 		padding: 1em;
-		top: 4.70em;
+		top: @top_distance; // 4.70em;
+		margin-top: 0.45em;
 		right: 0.95em;
+		//left: calc(100vw - 3em);
 		cursor: pointer;
 		z-index: 9999;
-		border: 1px solid #949494;
-		border-radius: 0.12em;
+		//border: 1px solid #949494;
+		//border-radius: 0.12em;
 	}
 
 
