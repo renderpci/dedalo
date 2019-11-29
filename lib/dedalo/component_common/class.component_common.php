@@ -4676,7 +4676,7 @@ abstract class component_common extends common {
 	* GET_CONFIG_CONTEXT
 	* @return object $config_context
 	*/
-	public static function get_config_context($tipo, $external=false) {
+	public static function get_config_context($tipo, $external=false, $section_tipo=null) {
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$properties		= $RecordObj_dd->get_propiedades(true);
@@ -4753,6 +4753,14 @@ abstract class component_common extends common {
 
 					$ar_related_components[] = $current_tipo;
 				}
+			}
+
+			if (!isset($target_section_tipo)) {
+				$target_section_tipo = $section_tipo;
+			}
+
+			if (empty($ar_related_components)) {
+				$ar_related_components = [$tipo];
 			}
 
 			// build config_context_item
