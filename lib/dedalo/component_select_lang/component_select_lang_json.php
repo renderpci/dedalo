@@ -47,10 +47,10 @@
 				
 					$label   	= lang::get_name_from_code($item);
 					$code 		= $item;
-					$value 		= lang::get_lang_locator_from_code($item);
+					$list_value	= lang::get_lang_locator_from_code($item);
 					
 					$item_value = new stdClass();			
-						$item_value->value 	= $value;
+						$item_value->value 	= $list_value;
 						$item_value->label 	= $label;
 						$item_value->code 	= $code;						
 					
