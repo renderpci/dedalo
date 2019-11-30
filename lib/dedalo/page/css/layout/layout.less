@@ -602,7 +602,7 @@
 				>.buttons_container {
 					background-color: #ffffff;
 					flex: 0 1;
-					padding: 0.15em;
+					padding: 0; // 0.15em;
 					border-radius: 0.25em;
 					//position: relative;
 
@@ -1081,6 +1081,43 @@
 		background-position: center;
 		min-height: 3em;
 		min-width: 3em;
+	}
+
+
+
+// component_message
+	.component_message {
+		position: absolute;
+		min-height: 3em;
+		top: -3em;
+		background-color: rgba(228, 8, 8, 0.90);
+		width: 100%;
+		//text-align: right;
+		color: white;
+		padding-right: 1.5em !important;
+		user-select: none;
+		line-height: 1.5em;
+
+		.text {
+			//padding-bottom: 0.5em;
+
+			//&:last-of-type {
+			//	padding-bottom: 0;
+			//}
+		}
+
+		.close {
+			cursor: pointer;
+			width: 1em;
+			height: 1em;
+			text-align: center;
+			position: absolute;
+			right: 0.25em;
+			top: 0;
+			height: 1.5em;
+			// font-weight: bold;
+			margin: 0;
+		}
 	}
 
 
