@@ -1604,7 +1604,8 @@ class diffusion_sql extends diffusion  {
 					//'thesaurus',
 					//'title',
 					'typology',
-					'data_mod' // added 18-09-2019
+					'data_mod', // added 18-09-2019
+					'fons_code'
 				];
 
 			$fields_array = [];
@@ -1903,7 +1904,7 @@ class diffusion_sql extends diffusion  {
 							$current_column_name = RecordObj_dd::get_termino_by_tipo($current_tipo, 'lg-spa', true);
 							$fields_obj = new stdClass();
 								$fields_obj->name  = $current_column_name;
-								$fields_obj->value = trim( strip_tags($current_value) );
+								$fields_obj->value = is_string($current_value) ? trim( strip_tags($current_value) ) : $current_value;
 							$ar_objects[] = $fields_obj;
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
@@ -1913,10 +1914,19 @@ class diffusion_sql extends diffusion  {
 
 					# FILTER_DATE
 						$filter_date = isset($filter_date_data[$lang][0]) ? $filter_date_data[$lang][0] : null;
-						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'filter_date',
-							'field_value' => $filter_date
-						];
+						// if (strpos($filter_date, '|')!==false) {
+							// $ar_filter_date = explode(' | ', $filter_date);
+							// $filter_date = isset($ar_filter_date[0]) ? $ar_filter_date[0] : null;
+						// }
+						if(preg_match('/^[0-9]{4}-[09]{2}-[09]{2}/', $filter_date, $output_array)) {
+							$filter_date = reset($output_array);
+
+							$ar_fields_global[$pseudo_section_id][$lang][] = [
+								'field_name'  => 'filter_date',
+								'field_value' => $filter_date
+							];
+						}
+
 
 					# LINK
 						$link_obj = [
@@ -1933,6 +1943,24 @@ class diffusion_sql extends diffusion  {
 							'field_name'  => 'table',
 							'field_value' => $table_name
 						];
+
+					# fons_code (archive code)
+						/*
+						switch ($table_name) {
+							case 'interview': 			$fons_code = 1; break;
+							case 'biblioteca': 			$fons_code = 12; break;
+							case 'sra': 				$fons_code = 2; break;
+							case 'privacio_llibertat': 	$fons_code = 3; break;
+							case 'deportats': 			$fons_code = 6; break;
+							case 'espais_memoria': 		$fons_code = 4; break;
+							case 'cens_simbologia': 	$fons_code = 5; break;
+							default: $fons_code = null;
+						}
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'fons_code',
+							'field_value' => '["'.$fons_code.'"]'
+						];
+						*/
 				}
 			}//end foreach ($ar_fields as $section_id => $ar_langs) {
 			#dump($ar_fields_global, ' ar_fields_global ++ '.to_string());
@@ -1955,7 +1983,11 @@ class diffusion_sql extends diffusion  {
 		$save = diffusion_mysql::save_record($save_options);
 			#dump($save, ' save ++ '.to_string());
 
+		if (!isset($save->new_id)) {
+			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::DEBUG);
+		}
 		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
+
 
 		return (object)$save;
 	}//end save_global_search_data
@@ -2981,7 +3013,21 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
-	* object_to_string
+	* RETURN_FIXED_VALUE
+	* Fake method to return properties defined fixed value
+	* @return string
+	*/
+	public static function return_fixed_value( $options, $dato ) {
+
+		$value = $options->propiedades->process_dato_arguments->value ?? null;
+
+		return $value;
+	}//end return_fixed_value
+
+
+
+	/**
+	* OBJECT_TO_STRING
 	* @return
 	*/
 	public static function object_to_string( $options, $dato ) {

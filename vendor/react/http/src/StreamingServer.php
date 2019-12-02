@@ -22,60 +22,63 @@ use React\Stream\ReadableStreamInterface;
 use React\Stream\WritableStreamInterface;
 
 /**
- * The `Server` class is responsible for handling incoming connections and then
+ * The advanced `StreamingServer` class is responsible for handling incoming connections and then
  * processing each incoming HTTP request.
  *
- * For each request, it executes the callback function passed to the
- * constructor with the respective [request](#request) object and expects
- * a respective [response](#response) object in return.
+ * Unlike the [`Server`](#server) class, it does not buffer and parse the incoming
+ * HTTP request body by default. This means that the request handler will be
+ * invoked with a streaming request body. Once the request headers have been
+ * received, it will invoke the request handler function. This request handler
+ * function needs to be passed to the constructor and will be invoked with the
+ * respective [request](#request) object and expects a [response](#response)
+ * object in return:
  *
  * ```php
  * $server = new StreamingServer(function (ServerRequestInterface $request) {
  *     return new Response(
  *         200,
- *         array('Content-Type' => 'text/plain'),
+ *         array(
+ *             'Content-Type' => 'text/plain'
+ *         ),
  *         "Hello World!\n"
  *     );
  * });
  * ```
  *
+ * Each incoming HTTP request message is always represented by the
+ * [PSR-7 `ServerRequestInterface`](https://www.php-fig.org/psr/psr-7/#321-psrhttpmessageserverrequestinterface),
+ * see also following [request](#request) chapter for more details.
+ * Each outgoing HTTP response message is always represented by the
+ * [PSR-7 `ResponseInterface`](https://www.php-fig.org/psr/psr-7/#33-psrhttpmessageresponseinterface),
+ * see also following [response](#response) chapter for more details.
+ *
  * In order to process any connections, the server needs to be attached to an
- * instance of `React\Socket\ServerInterface` which emits underlying streaming
- * connections in order to then parse incoming data as HTTP.
+ * instance of `React\Socket\ServerInterface` through the [`listen()`](#listen) method
+ * as described in the following chapter. In its most simple form, you can attach
+ * this to a [`React\Socket\Server`](https://github.com/reactphp/socket#server)
+ * in order to start a plaintext HTTP server like this:
  *
  * ```php
- * $socket = new React\Socket\Server(8080, $loop);
+ * $server = new StreamingServer($handler);
+ *
+ * $socket = new React\Socket\Server('0.0.0.0:8080', $loop);
  * $server->listen($socket);
  * ```
  *
- * See also the [listen()](#listen) method and the [first example](examples) for more details.
+ * See also the [`listen()`](#listen) method and the [first example](examples) for more details.
  *
- * When HTTP/1.1 clients want to send a bigger request body, they MAY send only
- * the request headers with an additional `Expect: 100-continue` header and
- * wait before sending the actual (large) message body.
- * In this case the server will automatically send an intermediary
- * `HTTP/1.1 100 Continue` response to the client.
- * This ensures you will receive the request body without a delay as expected.
- * The [Response](#response) still needs to be created as described in the
- * examples above.
+ * The `StreamingServer` class is considered advanced usage and unless you know
+ * what you're doing, you're recommended to use the [`Server`](#server) class
+ * instead. The `StreamingServer` class is specifically designed to help with
+ * more advanced use cases where you want to have full control over consuming
+ * the incoming HTTP request body and concurrency settings.
  *
- * See also [request](#request) and [response](#response)
- * for more details (e.g. the request data body).
- *
- * The `Server` supports both HTTP/1.1 and HTTP/1.0 request messages.
- * If a client sends an invalid request message, uses an invalid HTTP protocol
- * version or sends an invalid `Transfer-Encoding` in the request header, it will
- * emit an `error` event, send an HTTP error response to the client and
- * close the connection:
- *
- * ```php
- * $server->on('error', function (Exception $e) {
- *     echo 'Error: ' . $e->getMessage() . PHP_EOL;
- * });
- * ```
- *
- * Note that the request object can also emit an error.
- * Check out [request](#request) for more details.
+ * In particular, this class does not buffer and parse the incoming HTTP request
+ * in memory. It will invoke the request handler function once the HTTP request
+ * headers have been received, i.e. before receiving the potentially much larger
+ * HTTP request body. This means the [request](#request) passed to your request
+ * handler function may not be fully compatible with PSR-7. See also
+ * [streaming request](#streaming-request) below for more details.
  *
  * @see Request
  * @see Response
@@ -84,6 +87,7 @@ use React\Stream\WritableStreamInterface;
 final class StreamingServer extends EventEmitter
 {
     private $callback;
+    private $parser;
 
     /**
      * Creates an HTTP server that invokes the given callback for each incoming HTTP request
@@ -98,13 +102,30 @@ final class StreamingServer extends EventEmitter
      */
     public function __construct($requestHandler)
     {
-        if (!is_callable($requestHandler) && !is_array($requestHandler)) {
+        if (!\is_callable($requestHandler) && !\is_array($requestHandler)) {
             throw new \InvalidArgumentException('Invalid request handler given');
-        } elseif (!is_callable($requestHandler)) {
+        } elseif (!\is_callable($requestHandler)) {
             $requestHandler = new MiddlewareRunner($requestHandler);
         }
 
         $this->callback = $requestHandler;
+        $this->parser = new RequestHeaderParser();
+
+        $that = $this;
+        $this->parser->on('headers', function (ServerRequestInterface $request, ConnectionInterface $conn) use ($that) {
+            $that->handleRequest($conn, $request);
+        });
+
+        $this->parser->on('error', function(\Exception $e, ConnectionInterface $conn) use ($that) {
+            $that->emit('error', array($e));
+
+            // parsing failed => assume dummy request and send appropriate error
+            $that->writeError(
+                $conn,
+                $e->getCode() !== 0 ? $e->getCode() : 400,
+                new ServerRequest('GET', '/')
+            );
+        });
     }
 
     /**
@@ -151,83 +172,13 @@ final class StreamingServer extends EventEmitter
      */
     public function listen(ServerInterface $socket)
     {
-        $socket->on('connection', array($this, 'handleConnection'));
-    }
-
-    /** @internal */
-    public function handleConnection(ConnectionInterface $conn)
-    {
-        $uriLocal = $conn->getLocalAddress();
-        if ($uriLocal !== null) {
-            // local URI known, so translate transport scheme to application scheme
-            $uriLocal = strtr($uriLocal, array('tcp://' => 'http://', 'tls://' => 'https://'));
-        }
-
-        $uriRemote = $conn->getRemoteAddress();
-
-        $that = $this;
-        $parser = new RequestHeaderParser($uriLocal, $uriRemote);
-
-        $listener = array($parser, 'feed');
-        $parser->on('headers', function (ServerRequestInterface $request, $bodyBuffer) use ($conn, $listener, $that) {
-            // parsing request completed => stop feeding parser
-            $conn->removeListener('data', $listener);
-
-            $that->handleRequest($conn, $request);
-
-            if ($bodyBuffer !== '') {
-                $conn->emit('data', array($bodyBuffer));
-            }
-        });
-
-        $conn->on('data', $listener);
-        $parser->on('error', function(\Exception $e) use ($conn, $listener, $that) {
-            $conn->removeListener('data', $listener);
-            $that->emit('error', array($e));
-
-            $that->writeError(
-                $conn,
-                $e->getCode() !== 0 ? $e->getCode() : 400
-            );
-        });
+        $socket->on('connection', array($this->parser, 'handle'));
     }
 
     /** @internal */
     public function handleRequest(ConnectionInterface $conn, ServerRequestInterface $request)
     {
-        $contentLength = 0;
-        $stream = new CloseProtectionStream($conn);
-        if ($request->hasHeader('Transfer-Encoding')) {
-            if (strtolower($request->getHeaderLine('Transfer-Encoding')) !== 'chunked') {
-                $this->emit('error', array(new \InvalidArgumentException('Only chunked-encoding is allowed for Transfer-Encoding')));
-                return $this->writeError($conn, 501, $request);
-            }
-
-            // Transfer-Encoding: chunked and Content-Length header MUST NOT be used at the same time
-            // as per https://tools.ietf.org/html/rfc7230#section-3.3.3
-            if ($request->hasHeader('Content-Length')) {
-                $this->emit('error', array(new \InvalidArgumentException('Using both `Transfer-Encoding: chunked` and `Content-Length` is not allowed')));
-                return $this->writeError($conn, 400, $request);
-            }
-
-            $stream = new ChunkedDecoder($stream);
-            $contentLength = null;
-        } elseif ($request->hasHeader('Content-Length')) {
-            $string = $request->getHeaderLine('Content-Length');
-
-            $contentLength = (int)$string;
-            if ((string)$contentLength !== $string) {
-                // Content-Length value is not an integer or not a single integer
-                $this->emit('error', array(new \InvalidArgumentException('The value of `Content-Length` is not valid')));
-                return $this->writeError($conn, 400, $request);
-            }
-
-            $stream = new LengthLimitedStream($stream, $contentLength);
-        }
-
-        $request = $request->withBody(new HttpBodyStream($stream, $contentLength));
-
-        if ($request->getProtocolVersion() !== '1.0' && '100-continue' === strtolower($request->getHeaderLine('Expect'))) {
+        if ($request->getProtocolVersion() !== '1.0' && '100-continue' === \strtolower($request->getHeaderLine('Expect'))) {
             $conn->write("HTTP/1.1 100 Continue\r\n\r\n");
         }
 
@@ -250,12 +201,6 @@ final class StreamingServer extends EventEmitter
             });
         }
 
-        // happy path: request body is known to be empty => immediately end stream
-        if ($contentLength === 0) {
-            $stream->emit('end');
-            $stream->close();
-        }
-
         // happy path: response returned, handle and return immediately
         if ($response instanceof ResponseInterface) {
             return $this->handleResponse($conn, $request, $response);
@@ -271,7 +216,7 @@ final class StreamingServer extends EventEmitter
             function ($response) use ($that, $conn, $request) {
                 if (!$response instanceof ResponseInterface) {
                     $message = 'The response callback is expected to resolve with an object implementing Psr\Http\Message\ResponseInterface, but resolved with "%s" instead.';
-                    $message = sprintf($message, is_object($response) ? get_class($response) : gettype($response));
+                    $message = \sprintf($message, \is_object($response) ? \get_class($response) : \gettype($response));
                     $exception = new \RuntimeException($message);
 
                     $that->emit('error', array($exception));
@@ -281,7 +226,7 @@ final class StreamingServer extends EventEmitter
             },
             function ($error) use ($that, $conn, $request) {
                 $message = 'The response callback is expected to resolve with an object implementing Psr\Http\Message\ResponseInterface, but rejected with "%s" instead.';
-                $message = sprintf($message, is_object($error) ? get_class($error) : gettype($error));
+                $message = \sprintf($message, \is_object($error) ? \get_class($error) : \gettype($error));
 
                 $previous = null;
 
@@ -298,7 +243,7 @@ final class StreamingServer extends EventEmitter
     }
 
     /** @internal */
-    public function writeError(ConnectionInterface $conn, $code, ServerRequestInterface $request = null)
+    public function writeError(ConnectionInterface $conn, $code, ServerRequestInterface $request)
     {
         $response = new Response(
             $code,
@@ -316,10 +261,6 @@ final class StreamingServer extends EventEmitter
             $body->write(': ' . $reason);
         }
 
-        if ($request === null) {
-            $request = new ServerRequest('GET', '/', array(), null, '1.1');
-        }
-
         $this->handleResponse($conn, $request, $response);
     }
 
@@ -334,57 +275,61 @@ final class StreamingServer extends EventEmitter
             return;
         }
 
-        $response = $response->withProtocolVersion($request->getProtocolVersion());
+        $code = $response->getStatusCode();
+        $method = $request->getMethod();
 
-        // assign default "X-Powered-By" header as first for history reasons
+        // assign HTTP protocol version from request automatically
+        $version = $request->getProtocolVersion();
+        $response = $response->withProtocolVersion($version);
+
+        // assign default "X-Powered-By" header automatically
         if (!$response->hasHeader('X-Powered-By')) {
             $response = $response->withHeader('X-Powered-By', 'React/alpha');
-        }
-
-        if ($response->hasHeader('X-Powered-By') && $response->getHeaderLine('X-Powered-By') === ''){
+        } elseif ($response->getHeaderLine('X-Powered-By') === ''){
             $response = $response->withoutHeader('X-Powered-By');
         }
 
-        $response = $response->withoutHeader('Transfer-Encoding');
-
-        // assign date header if no 'date' is given, use the current time where this code is running
+        // assign default "Date" header from current time automatically
         if (!$response->hasHeader('Date')) {
             // IMF-fixdate  = day-name "," SP date1 SP time-of-day SP GMT
             $response = $response->withHeader('Date', gmdate('D, d M Y H:i:s') . ' GMT');
-        }
-
-        if ($response->hasHeader('Date') && $response->getHeaderLine('Date') === ''){
+        } elseif ($response->getHeaderLine('Date') === ''){
             $response = $response->withoutHeader('Date');
         }
 
-        if (!$body instanceof HttpBodyStream) {
-            $response = $response->withHeader('Content-Length', (string)$body->getSize());
-        } elseif (!$response->hasHeader('Content-Length') && $request->getProtocolVersion() === '1.1') {
+        // assign "Content-Length" and "Transfer-Encoding" headers automatically
+        $chunked = false;
+        if (($method === 'CONNECT' && $code >= 200 && $code < 300) || ($code >= 100 && $code < 200) || $code === 204) {
+            // 2xx response to CONNECT and 1xx and 204 MUST NOT include Content-Length or Transfer-Encoding header
+            $response = $response->withoutHeader('Content-Length')->withoutHeader('Transfer-Encoding');
+        } elseif ($body->getSize() !== null) {
+            // assign Content-Length header when using a "normal" buffered body string
+            $response = $response->withHeader('Content-Length', (string)$body->getSize())->withoutHeader('Transfer-Encoding');
+        } elseif (!$response->hasHeader('Content-Length') && $version === '1.1') {
             // assign chunked transfer-encoding if no 'content-length' is given for HTTP/1.1 responses
             $response = $response->withHeader('Transfer-Encoding', 'chunked');
+            $chunked = true;
+        } else {
+            // remove any Transfer-Encoding headers unless automatically enabled above
+            $response = $response->withoutHeader('Transfer-Encoding');
         }
 
-        // HTTP/1.1 assumes persistent connection support by default
-        // we do not support persistent connections, so let the client know
-        if ($request->getProtocolVersion() === '1.1') {
-            $response = $response->withHeader('Connection', 'close');
-        }
-        // 2xx response to CONNECT and 1xx and 204 MUST NOT include Content-Length or Transfer-Encoding header
-        $code = $response->getStatusCode();
-        if (($request->getMethod() === 'CONNECT' && $code >= 200 && $code < 300) || ($code >= 100 && $code < 200) || $code === 204) {
-            $response = $response->withoutHeader('Content-Length')->withoutHeader('Transfer-Encoding');
-        }
-
-        // 101 (Switching Protocols) response uses Connection: upgrade header
-        // persistent connections are currently not supported, so do not use
-        // this for any other replies in order to preserve "Connection: close"
+        // assign "Connection" header automatically
         if ($code === 101) {
+            // 101 (Switching Protocols) response uses Connection: upgrade header
             $response = $response->withHeader('Connection', 'upgrade');
+        } elseif ($version === '1.1') {
+            // HTTP/1.1 assumes persistent connection support by default
+            // we do not support persistent connections, so let the client know
+            $response = $response->withHeader('Connection', 'close');
+        } else {
+            // remove any Connection headers unless automatically enabled above
+            $response = $response->withoutHeader('Connection');
         }
 
         // 101 (Switching Protocols) response (for Upgrade request) forwards upgraded data through duplex stream
         // 2xx (Successful) response to CONNECT forwards tunneled application data through duplex stream
-        if (($code === 101 || ($request->getMethod() === 'CONNECT' && $code >= 200 && $code < 300)) && $body instanceof HttpBodyStream && $body->input instanceof WritableStreamInterface) {
+        if (($code === 101 || ($method === 'CONNECT' && $code >= 200 && $code < 300)) && $body instanceof HttpBodyStream && $body->input instanceof WritableStreamInterface) {
             if ($request->getBody()->isReadable()) {
                 // request is still streaming => wait for request close before forwarding following data from connection
                 $request->getBody()->on('close', function () use ($connection, $body) {
@@ -401,7 +346,7 @@ final class StreamingServer extends EventEmitter
         }
 
         // build HTTP response header by appending status line and header fields
-        $headers = "HTTP/" . $response->getProtocolVersion() . " " . $response->getStatusCode() . " " . $response->getReasonPhrase() . "\r\n";
+        $headers = "HTTP/" . $version . " " . $code . " " . $response->getReasonPhrase() . "\r\n";
         foreach ($response->getHeaders() as $name => $values) {
             foreach ($values as $value) {
                 $headers .= $name . ": " . $value . "\r\n";
@@ -410,14 +355,14 @@ final class StreamingServer extends EventEmitter
 
         // response to HEAD and 1xx, 204 and 304 responses MUST NOT include a body
         // exclude status 101 (Switching Protocols) here for Upgrade request handling above
-        if ($request->getMethod() === 'HEAD' || $code === 100 || ($code > 101 && $code < 200) || $code === 204 || $code === 304) {
+        if ($method === 'HEAD' || $code === 100 || ($code > 101 && $code < 200) || $code === 204 || $code === 304) {
             $body = '';
         }
 
         // this is a non-streaming response body or the body stream already closed?
         if (!$body instanceof ReadableStreamInterface || !$body->isReadable()) {
             // add final chunk if a streaming body is already closed and uses `Transfer-Encoding: chunked`
-            if ($body instanceof ReadableStreamInterface && $response->getHeaderLine('Transfer-Encoding') === 'chunked') {
+            if ($body instanceof ReadableStreamInterface && $chunked) {
                 $body = "0\r\n\r\n";
             }
 
@@ -429,7 +374,7 @@ final class StreamingServer extends EventEmitter
 
         $connection->write($headers . "\r\n");
 
-        if ($response->getHeaderLine('Transfer-Encoding') === 'chunked') {
+        if ($chunked) {
             $body = new ChunkedEncoder($body);
         }
 

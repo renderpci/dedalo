@@ -19,17 +19,17 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->questions[] = new Record($query->name, $query->type, $query->class);
+                $response->qr = true;
+                $response->questions[] = new Query($query->name, $query->type, $query->class);
                 $response->answers[] = new Record($query->name, $query->type, $query->class, 3600, '178.79.169.131');
 
                 return Promise\resolve($response);
             }));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolve('igor.io')->then($this->expectCallableOnceWith('178.79.169.131'));
     }
 
@@ -40,17 +40,17 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->questions[] = new Record($query->name, $query->type, $query->class);
+                $response->qr = true;
+                $response->questions[] = new Query($query->name, $query->type, $query->class);
                 $response->answers[] = new Record($query->name, $query->type, $query->class, 3600, '::1');
 
                 return Promise\resolve($response);
             }));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolveAll('reactphp.org', Message::TYPE_AAAA)->then($this->expectCallableOnceWith(array('::1')));
     }
 
@@ -61,18 +61,18 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->questions[] = new Record($query->name, $query->type, $query->class);
+                $response->qr = true;
+                $response->questions[] = new Query($query->name, $query->type, $query->class);
                 $response->answers[] = new Record($query->name, Message::TYPE_TXT, $query->class, 3600, array('ignored'));
                 $response->answers[] = new Record($query->name, $query->type, $query->class, 3600, '::1');
 
                 return Promise\resolve($response);
             }));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolveAll('reactphp.org', Message::TYPE_AAAA)->then($this->expectCallableOnceWith(array('::1')));
     }
 
@@ -83,20 +83,19 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->questions[] = new Record($query->name, $query->type, $query->class);
+                $response->qr = true;
+                $response->questions[] = new Query($query->name, $query->type, $query->class);
                 $response->answers[] = new Record($query->name, Message::TYPE_CNAME, $query->class, 3600, 'example.com');
                 $response->answers[] = new Record('example.com', $query->type, $query->class, 3600, '::1');
                 $response->answers[] = new Record('example.com', $query->type, $query->class, 3600, '::2');
-                $response->prepare();
 
                 return Promise\resolve($response);
             }));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolveAll('reactphp.org', Message::TYPE_AAAA)->then(
             $this->expectCallableOnceWith($this->equalTo(array('::1', '::2')))
         );
@@ -109,17 +108,17 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->questions[] = new Record('Blog.wyrihaximus.net', $query->type, $query->class);
+                $response->qr = true;
+                $response->questions[] = new Query('Blog.wyrihaximus.net', $query->type, $query->class);
                 $response->answers[] = new Record('Blog.wyrihaximus.net', $query->type, $query->class, 3600, '178.79.169.131');
 
                 return Promise\resolve($response);
             }));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolve('blog.wyrihaximus.net')->then($this->expectCallableOnceWith('178.79.169.131'));
     }
 
@@ -130,11 +129,11 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->questions[] = new Record($query->name, $query->type, $query->class);
+                $response->qr = true;
+                $response->questions[] = new Query($query->name, $query->type, $query->class);
                 $response->answers[] = new Record('foo.bar', $query->type, $query->class, 3600, '178.79.169.131');
 
                 return Promise\resolve($response);
@@ -142,7 +141,7 @@ class ResolverTest extends TestCase
 
         $errback = $this->expectCallableOnceWith($this->isInstanceOf('React\Dns\RecordNotFoundException'));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolve('igor.io')->then($this->expectCallableNever(), $errback);
     }
 
@@ -155,11 +154,11 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->questions[] = new Record($query->name, $query->type, $query->class);
+                $response->qr = true;
+                $response->questions[] = new Query($query->name, $query->type, $query->class);
 
                 return Promise\resolve($response);
             }));
@@ -168,7 +167,7 @@ class ResolverTest extends TestCase
             return ($param instanceof RecordNotFoundException && $param->getCode() === 0 && $param->getMessage() === 'DNS query for igor.io did not return a valid answer (NOERROR / NODATA)');
         }));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolve('igor.io')->then($this->expectCallableNever(), $errback);
     }
 
@@ -212,12 +211,12 @@ class ResolverTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('query')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Query\Query'))
-            ->will($this->returnCallback(function ($nameserver, $query) use ($code) {
+            ->with($this->isInstanceOf('React\Dns\Query\Query'))
+            ->will($this->returnCallback(function ($query) use ($code) {
                 $response = new Message();
-                $response->header->set('qr', 1);
-                $response->header->set('rcode', $code);
-                $response->questions[] = new Record($query->name, $query->type, $query->class);
+                $response->qr = true;
+                $response->rcode = $code;
+                $response->questions[] = new Query($query->name, $query->type, $query->class);
 
                 return Promise\resolve($response);
             }));
@@ -226,22 +225,8 @@ class ResolverTest extends TestCase
             return ($param instanceof RecordNotFoundException && $param->getCode() === $code && $param->getMessage() === $expectedMessage);
         }));
 
-        $resolver = new Resolver('8.8.8.8:53', $executor);
+        $resolver = new Resolver($executor);
         $resolver->resolve('example.com')->then($this->expectCallableNever(), $errback);
-    }
-
-    public function testLegacyExtractAddress()
-    {
-        $executor = $this->createExecutorMock();
-        $resolver = new Resolver('8.8.8.8:53', $executor);
-
-        $query = new Query('reactphp.org', Message::TYPE_A, Message::CLASS_IN);
-        $response = Message::createResponseWithAnswersForQuery($query, array(
-            new Record('reactphp.org', Message::TYPE_A, Message::CLASS_IN, 3600, '1.2.3.4')
-        ));
-
-        $ret = $resolver->extractAddress($query, $response);
-        $this->assertEquals('1.2.3.4', $ret);
     }
 
     private function createExecutorMock()

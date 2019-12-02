@@ -19,8 +19,8 @@
 function dump($val, $var_name=NULL, $arguments=array()){
 
 	$html = '';
-	
-	
+
+
 	// Backtrace info of current execution
 	$bt = debug_backtrace();
 
@@ -33,11 +33,11 @@ function dump($val, $var_name=NULL, $arguments=array()){
 		# FUNCTION
 		if (isset($bt[1]['function']))
 			$html .= PHP_EOL . " Inside method: ".$bt[1]['function'];
-								
+
 		# VAR_NAME
 		if(isset($var_name))
-			$html .= PHP_EOL . " name: <strong>".$var_name."</strong>";	
-		
+			$html .= PHP_EOL . " name: <strong>".$var_name."</strong>";
+
 		# EXPECTED
 		if(isset($expected))
 			$html .= PHP_EOL . " val expected: <em> $expected </em>";
@@ -48,34 +48,37 @@ function dump($val, $var_name=NULL, $arguments=array()){
 		}
 
 		# arguments (optional)
-		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {			
+		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
 			$html .= PHP_EOL . " $key: <em> $value </em>";
 		}
-		
+
 		# VALUE
 		$value_html='';
 		$html .= PHP_EOL . " value: " ;
 		switch (true) {
 			case is_array($val):
-				$value_html .= print_r($val, true);								
+				#$value_html .= print_r($val, true);
+				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				break;
 			case is_object($val):
-				$value_html .= print_r($val,true);
+				#$value_html .= print_r($val,true);
+				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				break;
 			default:
 				if(is_string($val) && $val != strip_tags($val)) {
 					$val = htmlspecialchars($val);
 				}
-				$value_html .= var_export($val,true);
+				#$value_html .= var_export($val,true);
+				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				break;
-		}	
-	
+		}
+
 		$html .= trim($value_html);
 
 		# TYPE
 		$html .= PHP_EOL . " type: ".gettype($val)."";
 
-	
+
 	# NIVEL 2
 
 		# CALLER FUNCTION
@@ -84,18 +87,18 @@ function dump($val, $var_name=NULL, $arguments=array()){
 			$html .= " ". print_r($bt[2]['file'],true);
 			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
 			$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
-		}	
-	
+		}
+
 
 	# PRINT
 	if(SHOW_DEBUG===true) {
-		
-		// print wrap_pre($html);		
+
+		// print wrap_pre($html);
 		// echo "<script>console.log('PHP: ".$html."');</script>";
 
 		$str_json = file_get_contents('php://input');
 		#error_log("++++>>>> ".to_string($str_json));
-		if (!$str_json) {			
+		if (!$str_json) {
 			// not exists call php://input
 			print wrap_pre($html);
 		}
@@ -120,7 +123,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 function wrap_pre($string, $add_header_html=true) {
 	$html='';
 	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
-	if ($add_header_html) {			
+	if ($add_header_html) {
 		$html .= '<!DOCTYPE html>';
 		$html .= '<html lang="en">';
 		$html .= '<head>';
@@ -132,7 +135,7 @@ function wrap_pre($string, $add_header_html=true) {
 	$html .= "<div class=\"icon_warning\"></div>";
 	$html .= stripslashes($string);
 	$html .= "</pre>";
-	if ($add_header_html) {	
+	if ($add_header_html) {
 		$html .= '</body></html>';
 	}
 	return $html;
@@ -167,7 +170,7 @@ function debug_log($info, $level=logger::DEBUG) {
 	/* level ref
 	const DEBUG 	= 100;
 	const INFO 		= 75;
-	const NOTICE 	= 50; 
+	const NOTICE 	= 50;
 	const WARNING 	= 25;
 	const ERROR 	= 10;
 	const CRITICAL 	= 5;
@@ -194,10 +197,10 @@ function file_get_contents_curl($url) {
 
 	# Avoid verify ssl certificates (very slow)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		
+
 	$data = curl_exec($ch);
 	curl_close($ch);
-	
+
 	return $data;
 }//end file_get_contents_curl
 
@@ -206,12 +209,12 @@ function file_get_contents_curl($url) {
 # START_TIME
 function start_time() {
 	$mtime = explode(' ',microtime());
-	
+
 	return $mtime[1]+$mtime[0];
 }
 # EXEC_TIME
 function exec_time($start, $method=NULL, $result=NULL) {
-	
+
 	$end = start_time();
 	$total = $end - $start;
 	$total = $total*1000;
@@ -219,26 +222,26 @@ function exec_time($start, $method=NULL, $result=NULL) {
 		$exec  = sprintf(' Exec in <span style=\'color:red\'>%.3f ms.</span>', $total) ;
 	}else{
 		$exec  = sprintf(' Exec in %.3f ms.', $total) ;
-	}    
+	}
 
 	$final_string = '<b>' . $method . '</b>' . $exec ;
 
 	if(!empty($result))
 	$final_string .= ' Res '.to_string($result) ;
 
-	
+
 	return '<pre>'.$final_string.'</pre>' ;
 }//end exec_time
 # EXEC_TIME_UNIT
 function exec_time_unit($start, $unit='ms', $round=3) {
-	
+
 	$end = start_time();
 	$total = $end - $start;
 	if($unit==='ms') {
-		$total = $total*1000; 
+		$total = $total*1000;
 	}else if($unit==='sec' || $unit==='secs') {
-		$total = $total; 
-	}  
+		$total = $total;
+	}
 	return round($total,3);
 }//end exec_time_unit
 
@@ -254,7 +257,7 @@ function to_string($var=null) {
 
 	if (is_array($var)) {
 		if ( is_string(current($var)) || is_numeric(current($var)) ) {
-			return implode('|', $var);	
+			return implode('|', $var);
 		}else if( is_object( current($var) ) ){
 			foreach ($var as $obj) {
 				$ar_ob[] = $obj;
@@ -264,8 +267,8 @@ function to_string($var=null) {
 		}else if(empty($var)){
 			return 'Array(empty)';
 		}
-		return print_r($var,true);	
-			
+		return print_r($var,true);
+
 	}else if (is_object($var)) {
 		$var = json_encode($var, JSON_PRETTY_PRINT);
 		return $var;
@@ -282,7 +285,7 @@ function to_string($var=null) {
 # GET_LAST_MODIFICATION_DATE : Get last modified file date in all Dedalo files
 # This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret));
 function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=array('/acc/','/backups/')) {
-	
+
 	// Only take into account those files whose extensions you want to show.
 	if (empty($allowedExtensions)) {
 		$allowedExtensions = array(
@@ -292,27 +295,27 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 		  'css'
 		);
 	}
-	
+
 	if (!file_exists($path))
 		return 0;
 
 	foreach ($ar_exclude as $exclude) {
 		if ( strpos($path, $exclude)!==false ) return 0;
-	}    
-	
+	}
+
 	$ar_bits = explode(".", $path);
 	$extension = end($ar_bits);
 	if (is_file($path) && in_array($extension, $allowedExtensions))
 		return filemtime($path);
 	$ret = 0;
-	
+
 	if (is_array(glob($path."/*"))) foreach (glob($path."/*") as $fn)
 	{
 		if (get_last_modification_date($fn,$allowedExtensions,$ar_exclude) > $ret)
-			$ret = get_last_modification_date($fn,$allowedExtensions,$ar_exclude);    
+			$ret = get_last_modification_date($fn,$allowedExtensions,$ar_exclude);
 			// This will return a timestamp, you will have to use date().
 	}
-	
+
 	return $ret;
 }//end get_last_modification_date
 
@@ -324,37 +327,37 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 * @return string $last_modified_file
 */
 function get_last_modified_file($path, $allowed_extensions) {
-	
-	// First we set up the iterator 
+
+	// First we set up the iterator
 		$iterator 			= new RecursiveDirectoryIterator($path);
 		$directory_iterator = new RecursiveIteratorIterator($iterator);
 
-	// Sets a var to receive the last modified filename 
-		$last_modified_file = "";
+	// Sets a var to receive the last modified filename
+		$last_modified_file = null;
 
-	// Then we walk through all the files inside all folders in the base folder 
-		foreach ($directory_iterator as $name => $object) {
-			
+	// Then we walk through all the files inside all folders in the base folder
+		if (!empty($directory_iterator)) foreach ($directory_iterator as $name => $object) {
+
 			$ar_bits = explode(".", $name);
 			$extension = end($ar_bits);
 			if (!in_array($extension, $allowed_extensions)) continue;
 
-			// In the first iteration, we set the $lastModified 
+			// In the first iteration, we set the $lastModified
 			if (empty($last_modified_file)) {
 				$last_modified_file = $name;
 			}else{
 				$date_modified_candidate = filemtime($last_modified_file);
 				$date_modified_current 	 = filemtime($name);
 
-				// If the file we thought to be the last modified was modified before the current one, then we set it to the current 
+				// If the file we thought to be the last modified was modified before the current one, then we set it to the current
 				if ($date_modified_candidate < $date_modified_current) {
 					$last_modified_file = $name;
 				}
 			}
 		}
-	// If the $last_modified_file isn't set, there were no files we throw an exception 
+	// If the $last_modified_file isn't set, there were no files we throw an exception
 		if (empty($last_modified_file)) {
-			throw new Exception("No files in the directory");
+			debug_log(__METHOD__." No files found in directory path: ".to_string($path), logger::ERROR);
 		}
 
 	return $last_modified_file;
@@ -364,7 +367,7 @@ function get_last_modified_file($path, $allowed_extensions) {
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
 function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
-	
+
 	if (!function_exists('openssl_encrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
 
 	$encrypt_method = "AES-256-CBC";
@@ -377,16 +380,16 @@ function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 	return $output;
 }//end dedalo_encrypt_openssl
 function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
-	
+
 	if (!function_exists('openssl_decrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
-		
+
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
 	$secret_iv = DEDALO_ENTITY;
 	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
 	$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
-	
+
 	if ( is_serialized($output) ) {
 		return unserialize($output);
 	}else{
@@ -401,7 +404,7 @@ function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 * IS_SERIALIZED
 */
 function is_serialized($str) {
-	
+
 	return ($str == serialize(false) || @unserialize($str) !== false);
 }//end is_serialized
 
@@ -419,12 +422,12 @@ function encryption_mode() {
 	}
 
 	$current_version = tool_administration::get_current_version_in_db();
-	
+
 	$min_subversion = 22; # real: 22 (see updates.php)
-	if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= $min_subversion) || 
+	if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= $min_subversion) ||
 		($current_version[0] >= 4 && $current_version[1] >= 5) ||
 		 $current_version[0] > 4
-	  ) { 
+	  ) {
 		return 'openssl';
 	}else{
 		debug_log(__METHOD__." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl ".to_string(), logger::WARNING);
@@ -483,7 +486,7 @@ function &array_path(&$array, $path) {
   if ($path) foreach ($path as $index) {
 	$offset =& $offset[$index];
   }
-  
+
   return $offset;
 }//end array_path
 
@@ -499,7 +502,7 @@ function alist ($array) {  //This function prints a text array as an html list.
 	$alist .= "<li>$array[$i]";
   }
   $alist .= "</ul>";
-  
+
   return $alist;
 }//end alist
 
@@ -512,10 +515,10 @@ function alist ($array) {  //This function prints a text array as an html list.
 function array_keys_recursive(array $array) {
 
 	$keys = array();
- 
+
 	foreach ($array as $key => $value) {
 		$keys[] = $key;
- 
+
 		if (is_array($array[$key])) {
 			$keys = array_merge($keys, array_keys_recursive($array[$key]));
 		}
@@ -530,16 +533,16 @@ function array_keys_recursive(array $array) {
 * CLEAN_URL_VARS : Elimina variables no deseadas del query en la url
 */
 function clean_url_vars($current_var=array()) {
-	
+
 	#echo $queryString."<br>";
 	$qs = false ;
-	
+
 	$queryString = $_SERVER['QUERY_STRING']; # like max=10
-	
+
 	$search  = array('&&',	'&=',	'=&',	'??',	);
 	$replace = array('&',	'&',	'&',	'?',	);
 	$queryString = str_replace($search, $replace, $queryString);
-	
+
 	$posAND 	= strpos($queryString, '&');
 	$posEQUAL 	= strpos($queryString, '=');
 
@@ -550,24 +553,24 @@ function clean_url_vars($current_var=array()) {
 	foreach ((array)$current_var as $current_value) {
 		$ar_excluded_vars[] = $current_value;
 	}
-	
+
 	if($posAND !== false) { # query tipo ?m=list&t=dd334&pageNum=3
-		
-		$ar_pares = explode('&', $queryString);		
+
+		$ar_pares = explode('&', $queryString);
 		if(is_array($ar_pares)) foreach ($ar_pares as $par){
-						
+
 			$troz		= @ explode('=',$par) ;
 			if($troz) {
 				$varName	= NULL;
 				if (isset($troz[0])) {
 					$varName = $troz[0];
 				}
-				
+
 				$varValue 	= NULL;
 				if (isset($troz[1])) {
 					$varValue= $troz[1];
 				}
-				
+
 				#if($varName !='pageNum' && $varName !='accion' && $varName !='reset' ){
 				if (!in_array($varName, $ar_excluded_vars)) {
 					$qs .= $varName . '=' . $varValue .'&';
@@ -575,15 +578,15 @@ function clean_url_vars($current_var=array()) {
 			}
 		}
 	}else if($posAND === false && $posEQUAL !== false) { # query tipo ?m=list&t=dd334
-	
-		$qs = $queryString ;				
+
+		$qs = $queryString ;
 	}
-	
+
 	$qs = str_replace($search, $replace, $qs);
-	
+
 	# if last char is & delete it
 	if(substr($qs, -1)=='&') $qs = substr($qs, 0, -1);
-	
+
 	return $qs ;
 }//end clean_url_vars
 
@@ -610,7 +613,7 @@ function sanitize_output($buffer) {
 
 # SANITIZE_QUERY
 function sanitize_query($strQuery) {
-	
+
 	return trim(str_replace("\t", "", $strQuery));
 }
 
@@ -630,7 +633,7 @@ function fix_cascade_config4_var($var_name, $var_default_value) {
 			break;
 		# SESSION
 		case !empty($_SESSION['dedalo4']['config'][$var_name]) :
-			$var_value = $_SESSION['dedalo4']['config'][$var_name]; 
+			$var_value = $_SESSION['dedalo4']['config'][$var_name];
 			break;
 		# DEFAULT
 		default:
@@ -664,9 +667,9 @@ function array_flatten($array) {
 * @return bool()
 */
 function verify_dedalo_prefix_tipos($tipo=null) {
-	
+
 	return true; # Temporal hasta que se valore lo de los prefijos dinámicos de hierarchy
-	
+
 	/*
 	$DEDALO_PREFIX_TIPOS = unserialize(DEDALO_PREFIX_TIPOS);
 
@@ -677,8 +680,8 @@ function verify_dedalo_prefix_tipos($tipo=null) {
 		if ( strpos($tipo, $current_prefix)===0 ) {
 			return true;
 		}
-	}	
-	
+	}
+
 	return false;
 	*/
 }//end verify_dedalo_prefix_tipos
@@ -709,10 +712,10 @@ function build_sorter($key) {
 *	Array of coincidences about search string
 */
 function search_string_in_array($array, $search_string) {
-	
+
 	# Coverts string to "all" combinations of accents like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
 	$string = add_accents($search_string);
-	
+
 	$matches = array();
 	foreach($array as $k=>$v) {
 		$v = mb_strtolower($v);
@@ -814,7 +817,7 @@ function array_get_by_key_r($array, $key, &$results) {
 // netmasks, it is easier to ensure that the binary strings are padded
 // with zeros out to 32 characters - IP addresses are 32 bit numbers
 function decbin32 ($dec) {
-  
+
   return str_pad(decbin($dec), 32, '0', STR_PAD_LEFT);
 }
 
@@ -833,7 +836,7 @@ function decbin32 ($dec) {
 * use one of the above 3 formats.
 */
 function ip_in_range($ip, $range) {
-  
+
   if (strpos($range, '/') !== false) {
 	// $range is in IP/NETMASK format
 	list($range, $netmask) = explode('/', $range, 2);
@@ -887,7 +890,7 @@ function ip_in_range($ip, $range) {
 
 
 function br2nl($string) {
-	
+
 	return str_replace( array('<br>','<br />'), "\n", $string );
 }
 
@@ -906,7 +909,7 @@ function get_top_tipo() {
 			# TOOL / PORTAL MODE
 			$top_tipo = $_SESSION['dedalo4']['config']['top_tipo'];
 			break;
-		
+
 		default:
 			# code...
 			break;
@@ -927,7 +930,7 @@ function get_http_response_code($theURL) {
 		)
 	);
 	$headers = get_headers($theURL);
-	
+
 	return (int)substr($headers[0], 9, 3);
 }//end get_http_response_code
 
@@ -936,17 +939,17 @@ function get_http_response_code($theURL) {
 /**
 * DD_MEMORY_USAGE
 */
-function dd_memory_usage() { 
-	$mem_usage = memory_get_usage(true); 
+function dd_memory_usage() {
+	$mem_usage = memory_get_usage(true);
 	$total='';
-	if ($mem_usage < 1024) 
+	if ($mem_usage < 1024)
 		$total .= $mem_usage." BYTES";
-	elseif ($mem_usage < 1048576) 
+	elseif ($mem_usage < 1048576)
 		$total .= round($mem_usage/1024,2)." KB";
-	else 
+	else
 		$total .= round($mem_usage/1048576,2)." MB";
-		
-	return $total; 
+
+	return $total;
 }//end dd_memory_usage
 
 
@@ -970,7 +973,7 @@ function app_lang_to_tld2($lang) {
 			break;
 		case 'lg-fra':
 			$tld2='fr';
-			break;	
+			break;
 		default:
 			$tld2='es';
 			break;
@@ -1002,7 +1005,7 @@ function str_lreplace($search, $replace, $subject) {
 * @return object
 */
 function cast($destination, $sourceObject) {
-	
+
 	if (is_string($destination)) {
 		$destination = new $destination();
 	}
@@ -1038,7 +1041,7 @@ function log_messages($vars,$level='error') {
 			$html .= "$key => $value";
 		}
 	}elseif (is_object($vars)) {
-		$html .= print_r($vars,true);	
+		$html .= print_r($vars,true);
 	}else{
 		$html .= $vars;
 	}
@@ -1063,7 +1066,7 @@ function notice_to_active_users( $ar_options ) {
 		case 'warning':
 			$msg = "<span class=\"warning notice_to_active_users\">$msg</span>";
 			break;
-		
+
 		default:
 			# code...
 			break;
@@ -1086,7 +1089,7 @@ function get_request_var($var_name) {
 	$var_value = false;
 
 	if(isset($_REQUEST[$var_name]))  {
-		$var_value = $_REQUEST[$var_name];		
+		$var_value = $_REQUEST[$var_name];
 	}else{
 		#get the change modo from portal list to edit
 		$str_json = file_get_contents('php://input');
@@ -1118,7 +1121,7 @@ function safe_xss($value) {
 			$value = strip_tags($value,'<br><strong><em>');
 			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 		}
-	}	
+	}
 	#error_log("value: ".to_string($value));
 
 	return $value;
@@ -1131,9 +1134,9 @@ function safe_xss($value) {
 * @return mixed $value
 */
 function safe_sql_query($sql_query) {
-	
+
 	// WORKING HERE..
-	
+
 	/*
 	if (is_string($value)) {
 
@@ -1143,11 +1146,11 @@ function safe_sql_query($sql_query) {
 			$value = strip_tags($value,'<br><strong><em>');
 			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 		}
-	}	
+	}
 	#error_log("value: ".to_string($value));
 	*/
 
-	return $sql_query;	
+	return $sql_query;
 }//end safe_sql_query
 
 
@@ -1155,7 +1158,7 @@ function safe_sql_query($sql_query) {
 /***
  * Starts a session with a specific timeout and a specific GC probability.
  * @param int $timeout The number of seconds until it should time out.
- * @param int $probability The probability, in int percentage, that the garbage 
+ * @param int $probability The probability, in int percentage, that the garbage
  *        collection routine will be triggered right now.
  * @param string $cookie_path The base path for the cookie.
  */
@@ -1174,7 +1177,7 @@ global $sessiondb;
 		$options->aditional_save_path	= false; # /session_custom_sec
 		$options->session_name			= false;
 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	
+
 	switch ($options->save_handler) {
 		case 'memcached':
 			ini_set('session.save_handler', 'memcached');
@@ -1184,7 +1187,7 @@ global $sessiondb;
 			// Start the session!
 			session_start();
 			break;
-		
+
 		case 'files':
 			$timeout 	 	= $options->timeout_seconds;
 			$probability 	= $options->probability;
@@ -1196,7 +1199,7 @@ global $sessiondb;
 
 			// Set the max lifetime
 			ini_set("session.gc_maxlifetime", $timeout);
-		 
+
 			// Set the session cookie to timeout
 			ini_set("session.cookie_lifetime", $timeout);
 
@@ -1206,14 +1209,14 @@ global $sessiondb;
 
 			if ($options->session_name!==false) {
 				session_name($options->session_name);
-			}		
-		 
+			}
+
 			if ($options->aditional_save_path!==false) {
 				// Change the save path. Sessions stored in the same path
 				// all share the same lifetime; the lowest lifetime will be
 				// used for all. Therefore, for this to work, the session
 				// must be stored in a directory where only sessions sharing
-				// it's lifetime are. Best to just dynamically create on.			
+				// it's lifetime are. Best to just dynamically create on.
 				$path = ini_get("session.save_path") . $options->aditional_save_path;
 				if(!file_exists($path)) {
 					if(!mkdir($path, 0700)) {
@@ -1222,7 +1225,7 @@ global $sessiondb;
 				}
 				ini_set("session.save_path", $path);
 			}
-		 
+
 			// Set the chance to trigger the garbage collection.
 			ini_set("session.gc_probability", $probability);
 			ini_set("session.gc_divisor", 100); // Should always be 100
@@ -1257,8 +1260,8 @@ global $sessiondb;
 
 			session_start();
 			break;
-	}	
- 
+	}
+
 	return true;
 }//end session_start_manager
 
@@ -1275,7 +1278,7 @@ function safe_table( $table ) {
 	if (empty($output_array[0])) {
 		return false;
 	}
-	
+
 	return $table;
 }//end safe_table
 
@@ -1292,7 +1295,7 @@ function safe_lang( $lang ) {
 	if (empty($output_array[0])) {
 		return false;
 	}
-	
+
 	return $lang;
 }//end safe_lang
 
@@ -1309,7 +1312,7 @@ function safe_tipo( $tipo ) {
 	if (empty($output_array[0])) {
 		return false;
 	}
-	
+
 	/*
 	if ( strpos($tipo,',')!==false || strpos($tipo,';')!==false || strpos($tipo,'\'')!==false || strpos($tipo,'"')!==false ) {
 		#exit("bad tipo ".htmlentities($tipo));
@@ -1365,7 +1368,7 @@ function format_size_units($bytes) {
 
 function encodeURIComponent($str) {
     $revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
-    
+
     return strtr(rawurlencode($str), $revert);
 }//end encodeURIComponent
 
@@ -1381,7 +1384,7 @@ function show_msg($msg, $type='ERROR') {
 		case 'WARNING':
 			$msg = '<div style="background-color:orange; color:white; padding:5px">'.$msg.'</div>';
 			break;
-		
+
 		case 'ERROR':
 		default:
 			$msg = '<div style="background-color:red; color:white; padding:5px">'.$msg.'</div>';

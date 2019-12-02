@@ -3204,6 +3204,23 @@ class web_data {
 				if (!empty($json_data->filters->project)) {
 					$ar_filter[] = "project LIKE '%\"".escape_string($json_data->filters->project)."\"%'";
 				}
+				# fons_code. like 68
+				if (!empty($json_data->filters->fons_code)) {
+					if (is_array($json_data->filters->fons_code)) {
+						$ar_fons_code = $json_data->filters->fons_code;
+						$ar_fons_code_query = [];
+						foreach ((array)$ar_fons_code as $key => $value) {
+							$ar_fons_code_query[] = "`fons_code` LIKE '%\"".escape_string($value)."\"%'";
+						}
+						if (!empty($ar_fons_code_query)) {
+							$current_filter_fons_code = '('.implode(' OR ', $ar_fons_code_query).')';
+							#dump($current_filter_fons_code, ' current_filter_fons_code ++ '.to_string($current_filter_fons_code));
+							$ar_filter[] 	= $current_filter_fons_code;
+						}
+					}else{
+						$ar_filter[] = "fons_code LIKE '%\"".escape_string($json_data->filters->fons_code)."\"%'";
+					}
+				}
 				# pub_author . like Joan Porcel
 				if (!empty($json_data->filters->pub_author)) {
 					$ar_filter[] = "pub_author LIKE '%".escape_string($json_data->filters->pub_author)."%'";
@@ -3298,6 +3315,7 @@ class web_data {
 					'prison_municipality',
 					'prison',
 					'project',
+					'fons_code',
 					'pub_author',
 					'pub_editor',
 					'pub_year',

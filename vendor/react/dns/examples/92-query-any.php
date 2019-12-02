@@ -1,21 +1,24 @@
 <?php
 
+// $ php examples/92-query-any.php mailbox.org
+// $ php examples/92-query-any.php _carddav._tcp.mailbox.org
+
 use React\Dns\Model\Message;
 use React\Dns\Model\Record;
 use React\Dns\Query\Query;
-use React\Dns\Query\UdpTransportExecutor;
+use React\Dns\Query\TcpTransportExecutor;
 use React\EventLoop\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
 $loop = Factory::create();
-$executor = new UdpTransportExecutor($loop);
+$executor = new TcpTransportExecutor('8.8.8.8:53', $loop);
 
 $name = isset($argv[1]) ? $argv[1] : 'google.com';
 
 $any = new Query($name, Message::TYPE_ANY, Message::CLASS_IN);
 
-$executor->query('8.8.8.8:53', $any)->then(function (Message $message) {
+$executor->query($any)->then(function (Message $message) {
     foreach ($message->answers as $answer) {
         /* @var $answer Record */
 
@@ -49,14 +52,24 @@ $executor->query('8.8.8.8:53', $any)->then(function (Message $message) {
                 $data = implode(' ', $data);
                 break;
             case Message::TYPE_SRV:
-                // SRV records contains priority, weight, port and target, dump structure here
+                // SRV records contain priority, weight, port and target, dump structure here
                 $type = 'SRV';
                 $data = json_encode($data);
+                break;
+            case Message::TYPE_SSHFP:
+                // SSHFP records contain algorithm, fingerprint type and hex fingerprint value
+                $type = 'SSHFP';
+                $data = implode(' ', $data);
                 break;
             case Message::TYPE_SOA:
                 // SOA records contain structured data, dump structure here
                 $type = 'SOA';
                 $data = json_encode($data);
+                break;
+            case Message::TYPE_CAA:
+                // CAA records contains flag, tag and value
+                $type = 'CAA';
+                $data = $data['flag'] . ' ' . $data['tag'] . ' "' . $data['value'] . '"';
                 break;
             default:
                 // unknown type uses HEX format
