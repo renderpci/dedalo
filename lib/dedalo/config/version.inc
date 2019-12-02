@@ -1619,7 +1619,12 @@
 		to array
 
 
+	Valencia 07-11-2019 5.4.96
+		Rewrite component_email css
 
+
+	Valencia 27-11-2019 5.5.0
+		Change the security policy of the profiles, allowing access to not global admin users
 
 
 
@@ -1643,12 +1648,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.93';
+	$DEDALO_VERSION = '5.5.0';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-10-2019');
+	define('DEDALO_BUILD'	, '27-11-2019');
 
 
 	/*

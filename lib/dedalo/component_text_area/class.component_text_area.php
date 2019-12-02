@@ -1,4 +1,5 @@
 <?php
+require_once(DEDALO_LIB_BASE_PATH .'/media_engine/class.OptimizeTC.php');
 /*
 * CLASS COMPONENT TEXT AREA
 *
@@ -612,30 +613,62 @@ class component_text_area extends component_common {
 		# Search fragment_text
 			# Dato raw from matrix db
 			$dato = $raw_text ;	#parent::get_dato();
-			#if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER) ) {
-			if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER|PREG_OFFSET_CAPTURE) ) {
-				$key_fragment = 3;
-			    foreach($matches as $match) {
-			        if (isset($match[$key_fragment][0])) {
 
-			        	$fragment_text = $match[$key_fragment][0];
+			// remove non index/struct marks to calculate position
+				#$delete_options = new stdClass();
+				#	#$delete_options->deleteTC = false;
+				#	if ($tag_type==='index') {
+				#		$delete_options->deleteIndex = false;
+				#	}
+				#	if ($tag_type==='struct') {
+				#		$delete_options->delete_struct = false;
+				#	}
+				#$dato = TR::deleteMarks($dato, $delete_options);
+
+			#if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER) ) {
+			if( preg_match_all("/$regexp/", $dato, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) ) {
+
+				$fragment_inside_key = 3;
+				$tag_in_pos_key 	 = 1;
+				$tag_out_pos_key 	 = 4;
+
+
+			    foreach($matches as $match) {
+
+			        if (isset($match[$fragment_inside_key][0])) {
+
+			        	$fragment_text = $match[$fragment_inside_key][0];
 
 			        	# Clean fragment_text
 			        	$fragment_text = TR::deleteMarks($fragment_text);
 			        	$fragment_text = self::decode_dato_html($fragment_text);
 
 			        	# tag in position
-			        	$tag_in_pos = $match[0][1];
+			        	#$tag_in_pos = $match[0][1];
+			        	$tag_in_pos = $match[$tag_in_pos_key][1];
 
 			        	# tag out position
-			        	$tag_out_pos = $tag_in_pos + strlen($match[0][0]);
+			        	#$tag_out_pos = $tag_in_pos + strlen($match[0][0]);
+			        	$tag_out_pos = $match[$tag_out_pos_key][1];
 
-			        	return array( $fragment_text, $tag_in_pos, $tag_out_pos );
+			        	# TC . Localizamos los TC apropiados
+						#$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, false, $tag_in_pos, $pos_in_margin=0  );
+						$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, $match[$tag_in_pos_key][0], false, 0 );
+						#$tcout = OptimizeTC::optimize_tcOUT( $raw_text, false, $tag_out_pos, $pos_in_margin=0 );
+						$tcout = OptimizeTC::optimize_tcOUT( $raw_text, $match[$tag_out_pos_key][0], false, 0 );
+
+			        	return [
+			        		$fragment_text,
+			        		$tag_in_pos,
+			        		$tag_out_pos,
+			        		$tcin,
+			        		$tcout
+			        	];
 			        }
 			    }
 			}
 
-		return NULL;
+		return null;
 	}//end get_fragment_text_from_tag
 
 
@@ -1402,12 +1435,13 @@ class component_text_area extends component_common {
 			#$rel_locator 	= component_common::build_locator_from_obj( $rel_locator_obj );
 			$fragment_info	= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
 			$texto 			= $this->get_dato();
+				#dump($fragment_info, ' fragment_info ++ '.to_string());
 
 			# FRAGMENT
 			$diffusion_obj->columns['fragment']	= $fragment_info[0];
 
 			# RELATED
-			$current_related_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($rel_locator_obj->component_tipo, $modelo_name='component_', $relation_type='termino_relacionado');
+			$current_related_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($rel_locator_obj->component_tipo, $modelo_name='component_', $relation_type='termino_relacionado');
 
 			# No related term is present
 			if(empty($current_related_tipo[0])) return $diffusion_obj;
@@ -1422,8 +1456,11 @@ class component_text_area extends component_common {
 					# TC
 					$tag_in_pos  	= $fragment_info[1];
 					$tag_out_pos 	= $fragment_info[2];
-					$tc_in 		 	= OptimizeTC::optimize_tcIN($texto, false, $tag_in_pos, $in_margin=0);
-					$tc_out 	 	= OptimizeTC::optimize_tcOUT($texto, false, $tag_out_pos, $in_margin=100);
+					#$tc_in 		= OptimizeTC::optimize_tcIN($texto, false, $tag_in_pos, $in_margin=0);
+					#$tc_out 	 	= OptimizeTC::optimize_tcOUT($texto, false, $tag_out_pos, $in_margin=100);
+					$tc_in 		 	= $fragment_info[3]; // from previous function result array (get_fragment_text_from_rel_locator)
+					$tc_out 	 	= $fragment_info[4]; // from previous function result array (get_fragment_text_from_rel_locator)
+
 
 					$tcin_secs		= OptimizeTC::TC2seg($tc_in);
 			        $tcout_secs		= OptimizeTC::TC2seg($tc_out);

@@ -12,25 +12,25 @@ abstract class TR {
 
 	# Version. Important!
 	static $version = "1.0.6"; // 14-08-2017
-	
+
 	# html_tags_allowed (note that now is not used to save data)
 	static $html_tags_allowed = '<strong><em><br><br /><img><p>'; // <strong><em><br><img><p><h5><h6><ul><ol><li>
 
 
-	
+
 	/**
 	* GET_MARK_PATTERN
 	* Get unified patterns for marks
 	*/
 	public static function get_mark_pattern($mark, $standalone=true, $id=false, $data=false, $state=false) {
-		
+
 		switch($mark) {
 
 			# TC . Select timecode from tag like '00:01:25.627'
 			case 'tc' :
-					$string = "(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\])";					
-					break;			
-					
+					$string = "(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\])";
+					break;
+
 			# TC_FULL . Select complete tag like '[TC_00:01:25.627_TC]'
 			case 'tc_full' :
 					$string = "(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\])";
@@ -45,7 +45,7 @@ abstract class TR {
 			case 'tc2' :
 					if ($id) {
 						$string = "\[tc2-[a-z]-{$id}-.{0,22}-data:.*?:data\]";
-					}else{					
+					}else{
 						$string = "(\[(tc2)-([a-z]{1})-([0-9]{1,6})-(.{0,22})-data:([0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,3})?):data\])";
 					}
 					break;*/
@@ -60,7 +60,7 @@ abstract class TR {
 						$string = "\[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
 					}
 					break;
-					
+
 			case 'indexIn' :
 					if ($id) {
 						$string = "(\[index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
@@ -82,7 +82,7 @@ abstract class TR {
 					if ($id) {
 						$string = "\[\/{0,1}struct-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
 					}elseif ($state!==false) {
-						$string = "\[\/{0,1}(struct)-{$state}-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";			
+						$string = "\[\/{0,1}(struct)-{$state}-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
 					}else{
 						$string = "\[\/{0,1}(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
 					}
@@ -157,13 +157,13 @@ abstract class TR {
 					if ($id) {
 						$string = "(\[geo-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
 					}else{
-						$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";	
+						$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
 					}
 					break;
-			# GEO_FULL . Select complete tag 
+			# GEO_FULL . Select complete tag
 			case 'geo_full' :
 					$string = "(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])";
-					break;	
+					break;
 
 			# PAGE (pdf) [page-n-3]
 			case 'page' :
@@ -181,11 +181,11 @@ abstract class TR {
 					}else{
 						$string = "(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])";
 					}
-					break;			
+					break;
 
 			# NOTE (transcription annotations) like [note-n-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
 			case 'note' :
-					if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)						
+					if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
 						$string = "(\[note-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
 					}else if($state!==false){
 						$string = "(\[(note)-($state)-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
@@ -199,12 +199,12 @@ abstract class TR {
 					$string = '\<br>';
 					break;
 
-			case 'strong' :	
+			case 'strong' :
 					#$string = '(\<strong\>|\<\/strong\>)';
 					$string = '(\<\/?strong\>)';
 					break;
 
-			case 'em' :		
+			case 'em' :
 					#$string = '(\<em\>|\<\/em\>)';
 					$string = '(\<\/?em\>)';
 					break;
@@ -216,11 +216,11 @@ abstract class TR {
 			default :
 					throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
 		}
-		
+
 		# default mark have in and out slash (pattern standalone)
 		if($standalone) $string = '/'.$string.'/';
-		
-		
+
+
 		return $string;
 	}//end get_mark_pattern
 
@@ -236,7 +236,7 @@ abstract class TR {
 
 		# Temporal (for catch old calls only)
 		if (is_bool($request_options)) {
-			throw new Exception("Error. Only a object is valid for addTagImgOnTheFly options. Update your call to new format please", 1);			
+			throw new Exception("Error. Only a object is valid for addTagImgOnTheFly options. Update your call to new format please", 1);
 		}
 
 		$options = new stdClass();
@@ -254,19 +254,19 @@ abstract class TR {
 			if (is_object($request_options)) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 			}
-		
-		# Hilite		
+
+		# Hilite
 		if($options->hilite===true) {
 			$codeHiliteIn	= "<span class=\"hilite\">";
 			$codeHiliteOut	= "</span>";
 		}else{
 			$codeHiliteIn	= '';
 			$codeHiliteOut	= '';
-		}	
-						
+		}
+
 		# BTN_URL. url path to php script thats render image
 		$btn_url = $options->btn_url;
-		if(defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false) {		
+		if(defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false) {
 			$btn_url = TR_TAGS_CDN;
 		}
 
@@ -276,7 +276,7 @@ abstract class TR {
 		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
 		# INDEX OUT
-		$pattern 	= TR::get_mark_pattern('indexOut');		
+		$pattern 	= TR::get_mark_pattern('indexOut');
 		$text		= preg_replace($pattern, "<img id=\"[/\$2-$3-$4-$6]\" src=\"{$btn_url}/[/\$2-$3-$4-$6]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
@@ -288,14 +288,14 @@ abstract class TR {
 			// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
 			$text	= preg_replace($pattern, "<section id=\"section_$4\" class=\"section_struct text_selectable text_unselectable\" data-type=\"struct\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 		}
-		
+
 		# STRUCT OUT
 		$pattern 	= TR::get_mark_pattern('structOut');
 		if ($options->struct_as_labels===true) {
 			$text		= preg_replace($pattern, "<div class=\"structuration_label stl_out\"> /structuration $4</div>", $text);
 		}else{
 			$text		= preg_replace($pattern, "</section>", $text);
-		}		
+		}
 
 		# REFERENCE IN
 		$pattern 	= TR::get_mark_pattern('referenceIn');
@@ -321,11 +321,11 @@ abstract class TR {
             	return $a;
             },
             $text);*/
-	
+
 		# SVG
 		$pattern 	= TR::get_mark_pattern('svg');
 		preg_match($pattern, $text, $matches);
-		if (!empty($matches)) {			
+		if (!empty($matches)) {
 			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 			#$text		= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
 			$text = preg_replace_callback(
@@ -339,22 +339,22 @@ abstract class TR {
 		        	$_4 = $matches[4];
 		        	$_5 = $matches[5];
 		        	$_6 = $matches[6];
-		        	$_7 = $matches[7];		        		
+		        	$_7 = $matches[7];
 
 		        	# data is a locator encoded as text
 		        	# Restore double quotes from saved safe locator string
 		        	$locator_text = str_replace('\'','"',$_7);
 		        	if($locator = json_decode($locator_text) ) {
-	
+
 		        		$url  = component_svg::get_url_from_locator($locator);
 
 		        		# Replace double quotes for safe management in text editor
 			        	$data = str_replace('"','\'',$_7);
 
 			            $new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
-			            
+
 		        	}
-		        	return $new_text;	        	
+		        	return $new_text;
 		        },
 		        $text
 		    );
@@ -369,7 +369,7 @@ abstract class TR {
 		$pattern 	= TR::get_mark_pattern('geo');
 		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"geo\" />$codeHiliteOut", $text);
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-		
+
 		# PAGE
 		$pattern 	= TR::get_mark_pattern('page');
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
@@ -383,7 +383,7 @@ abstract class TR {
 		$pattern 	= TR::get_mark_pattern('note'); // $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-			
+
 		return (string)$text;
 	}//end addTagImgOnTheFly
 
@@ -417,7 +417,7 @@ abstract class TR {
 			#	dump($text, ' text ++ pattern: '.to_string($pattern));
 			#}
 		}
-		
+
 
 		return $text;
 	}//end addBabelTagsOnTheFly
@@ -426,13 +426,13 @@ abstract class TR {
 
 	/**
 	* DELETEMARKS
-	* clean text to translate	
+	* clean text to translate
 	*/
 	public static function deleteMarks($string, $request_options=null) {
 
 		# Temporal (for catch old calls only)
 		if (is_bool($request_options)) {
-			throw new Exception("Error. Only a object is valid for delete marks options. Update your call to new format please", 1);			
+			throw new Exception("Error. Only a object is valid for delete marks options. Update your call to new format please", 1);
 		}
 
 		$options = new stdClass();
@@ -449,14 +449,14 @@ abstract class TR {
 			if (is_object($request_options)) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 			}
-			
-			
+
+
 		# TC clear
 		if($options->deleteTC===true) {
 			$pattern = TR::get_mark_pattern('tc');
 			$string = preg_replace($pattern, '', $string);	# elliminar los TC
 		}
-		
+
 		# Index clear
 		if($options->deleteIndex===true) {
 			$pattern 	= TR::get_mark_pattern('index');
@@ -509,8 +509,8 @@ abstract class TR {
 		if($options->delete_reference===true) {
 			$pattern 	= TR::get_mark_pattern('reference');
 			$string 	= preg_replace($pattern, '', $string);
-		}		
-	
+		}
+
 
 		return $string ;
 	}//end deleteMarks
@@ -528,7 +528,7 @@ abstract class TR {
 		# Safe data for json
 		if(!is_string($data)) $data = json_encode($data);
 		$data = str_replace('"', "'", $data);
-		
+
 		switch ($type) {
 			case 'indexIn':
 				$tag = '[index-'.$state.'-'.$id.'-'.$label.'-data:'.$data.':data]';
@@ -571,7 +571,7 @@ abstract class TR {
 	}//end match_pattern_index_from_tag
 
 
-	
+
 	# TAG2TYPE
 	public static function tag2type($tag) {
 
@@ -585,23 +585,23 @@ abstract class TR {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
 		$state 			= $match_pattern[2][0];
-		
+
 		return $state;
 	}
 	# CONVERT tag to value
 	public static function tag2value($tag) {
 
-		$match_pattern 	= TR::match_pattern_index_from_tag($tag); 	
-		$value 			= $match_pattern[3][0];
-		
-		return intval($value);		
+		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
+		$value 			= isset($match_pattern[3][0]) ? (int)$match_pattern[3][0] : null;
+
+		return $value;
 	}
 	# CONVERT tag to label
 	public static function tag2label($tag) {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
 		$value 			= $match_pattern[5][0];
-		
+
 		return (string)$value;
 	}//end tag2label
 	/**
@@ -619,10 +619,10 @@ abstract class TR {
 		#$value_string		= preg_replace("'", '"', $string);
 		$value_string		= str_replace("'", '"', $string);
 		$value 				= json_decode($value_string);
-		
-		return $value;		
+
+		return $value;
 	}//end tag2data
-	
+
 
 
 	/**
@@ -630,11 +630,11 @@ abstract class TR {
 	* CONVERT DIVS (div) TO <br />
 	*/
 	private static function convertDiv2br($text) {
-		
+
 		$text = str_replace('<div>','', $text);
 		$text = str_replace('</div>',"<br>\n", $text);
-				
-		return $text ;	
+
+		return $text ;
 	}//end convertDiv2br
 
 
@@ -657,12 +657,12 @@ abstract class TR {
 				trigger_error("Sorry. Type ($type) is not defined");
 				break;
 		}
-		
+
 		return $img;
 	}//end create_text_editor_image_from_tag
 
 
-	
+
 	# ELIMINATE PARAGRPHAS (p) AND CONVERT TO <br />
 	public static function convertParagraph2br($string) {
 
@@ -672,96 +672,96 @@ abstract class TR {
 		if($converted!==false) {
 			$string		= str_replace('V3 CONVERTED',"V3 SAVED ($today) - CONVERTED", $string);
 		}
-		
+
 		if(strpos($string,'<p>')===false) return $string;
-		
-		#$string		= TR::cleanTexGarbageV2($string);		
-				
+
+		#$string		= TR::cleanTexGarbageV2($string);
+
 		# eliminate all hillites
 		$string		= preg_replace("/<p\> {0,2}\<span class\=\"hilite\"\>/"	, ''	, $string);
 		$string		= preg_replace("/\<\/span\> {0,2}\<\/p\>/"				, ''	, $string);
 		$string		= preg_replace("/ {0,2}\<span class\=\"hilite\"\>/"		, ''	, $string);
-		$string		= preg_replace("/\<\/span\> {0,2}/"						, ''	, $string);		
-		
+		$string		= preg_replace("/\<\/span\> {0,2}/"						, ''	, $string);
+
 		# eliminate double <p> or </p>
 		$string		= preg_replace("/\<p\> {0,2}\<p\>/"						, "<p>"		, $string);
 		$string		= preg_replace("/\<\/p\> {0,2}\<\/p\>/"					, "</p>"	, $string);
-		
+
 		# remove all tags except those permitted
 		$string		= strip_tags($string, TR::$html_tags_allowed);	// '<strong><em><br><img><p><h5><h6>'
-		
-		# remove empty paragraphs like <p>&nbsp;</p>		
+
+		# remove empty paragraphs like <p>&nbsp;</p>
 		$string		= str_replace("<p>&nbsp;</p>",'', $string);
 		$string		= str_replace('&nbsp;',' ', $string);
-		$string		= preg_replace("/\<p\>\ {0,2}\<\/p\>/", '', $string);	
-		
+		$string		= preg_replace("/\<p\>\ {0,2}\<\/p\>/", '', $string);
+
 		# common patterns
 		$patternIndexIn	= TR::get_mark_pattern('indexIn',false);
 		$patternIndexOut= TR::get_mark_pattern('indexOut',false);
 		$patternTC		= TR::get_mark_pattern('tc',false);
 		$patternBr		= TR::get_mark_pattern('br',false);
 
-		# </strong></p><h5>[index_003_in]</h5><p><strong>	-->	[index_003_in] 
+		# </strong></p><h5>[index_003_in]</h5><p><strong>	-->	[index_003_in]
 		$string		= preg_replace("/\<\/strong\>\<\/p\>\<h5\>($patternIndexIn|$patternIndexOut)\<\/h5\>\<p\>\<strong\>/", "$1", $string);
-		
-		# </strong></p><p>&nbsp;</p><h5>[index_001_in]</h5><p><span class="hilite"><p>&nbsp;</p><p><strong>	
+
+		# </strong></p><p>&nbsp;</p><h5>[index_001_in]</h5><p><span class="hilite"><p>&nbsp;</p><p><strong>
 		#$string		= preg_replace("/\<\/strong\>\<\/p\>\<h5\>($patternIndexIn|$patternIndexOut)\<\/h5\>\<p\>\<strong\>/", "$1", $string);
 
 		# "</strong></p><h5>"; br;
-		#$string		= str_replace('</strong></p><h5>','</strong>', $string);		
-		
+		#$string		= str_replace('</strong></p><h5>','</strong>', $string);
+
 		#$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexIn|$patternIndexOut)\<\/h5\>\<p\> {0,2}\<strong\>/", "XXXXXXXXXX", $string); #</strong><h5>$1</h5><strong>
-		
+
 		# </strong> </p> <h5> [indexOut] </h5> <p>	-->	</strong> <h5> [indexOut] </h5> <br>
  		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexOut)\<\/h5\>\<p\> {0,2}/", "</strong><h5>$1</h5><br />", $string);
-		
-		# </strong> </p> <h5> [indexOut] </h5> <p> --> </strong> <br> <h5> [indexOut] </h5> 
+
+		# </strong> </p> <h5> [indexOut] </h5> <p> --> </strong> <br> <h5> [indexOut] </h5>
 		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexIn)\<\/h5\>\<p\> {0,2}/", "</strong><br /><h5>$1</h5>", $string);
-		
+
 		# </p></strong><h5>	-->	$1<br />
 		$string		= preg_replace("/\<\/p\> {0,2}(\<\/strong\>|) {0,2}\<h5\>/", '$1<br />', $string);	#$string = str_replace('</p><h5>','<br />', $string);
-		
+
 		# </p><strong><h6>	--> <br />$1	(ver caso cinta 79 TC:00:34:07 en Memoria Oral)
-		$string		= preg_replace("/\<p\> {0,2}(\<strong\>|) {0,2}\<h6\>/", '<br />$1', $string);	
-		
+		$string		= preg_replace("/\<p\> {0,2}(\<strong\>|) {0,2}\<h6\>/", '<br />$1', $string);
+
 		# </h5> <h6>  -->	<br />
 		$string		= preg_replace("/\<\/h5\> {0,2}\<h6\>/", "<br />", $string);
-		
+
 		# </h5><p><strong>	-->	 <br><strong>
-		$string		= str_replace('</h5><p><strong>','<br /><strong>', $string);		
-		
+		$string		= str_replace('</h5><p><strong>','<br /><strong>', $string);
+
 		# </h5><p>	-->	''
 		$string		= str_replace('</h5><p>','', $string);
-		
+
 		# </strong> - </p> - <p>	-->	- </strong><br /> -
 		$string		= preg_replace("/\<\/strong\>(-| |)\<\/p\>(-| |)\<p\>/", '$1</strong><br />$2', $string);
-		
+
 		# <p>	--> ''
 		$string		= str_replace('<p>','', $string);
-		
+
 		# </p>	-->	<br />
 		$string		= str_replace('</p>','<br />', $string);
-				
+
 		# <h6>,</h6>,<h5>,</h5>	--> ''
 		$rp	= array('<h6>','</h6>','<h5>','</h5>');
 		$string		= str_replace($rp,'', $string);
-		
+
 		/*
 		# <br />[indexOut]<br />	-->	<br />[indexOut]
 		$string		= preg_replace("/$patternBr {0,2}($patternIndexOut) {0,2}$patternBr/", "$1<br />", $string);
-		
+
 		# <br />[indexIn]<br />	-->	[indexIn]<br />
 		$string		= preg_replace("/$patternBr {0,2}($patternIndexIn) {0,2}$patternBr/", "<br />$1", $string);
-		
-		
+
+
 		# EXPERIMENTAL ..
 		# br
 		$string	= preg_replace("/ {0,3}$patternBr {0,3}($patternBr|)/", '<br />', $string);
 		*/
-		
-		# develop control					
+
+		# develop control
 		#$string		= "V3 CONVERTED ($today) !!!!!!!!!!!!!!  <br />".$string ;
-		
+
 		return($string) ;
 	}
 
@@ -780,14 +780,14 @@ abstract class TR {
 	*/
 
 
-	
+
 	#
 	# Limpieza del POST del formulario de TR transcripción
 	# Temporalmente habilitamos la función de formateo de TC's para Gerard
 	#
 	public static function limpiezaPOSTtr($string) {
-		
-		# strip slashes (need for text received from tinyMCE)	
+
+		# strip slashes (need for text received from tinyMCE)
 		$string	= trim(stripslashes($string));
 
 		return $string;
@@ -795,72 +795,72 @@ abstract class TR {
 		// No more regex here 17-03-2017
 
 	}//end limpiezaPOSTtr
-	
-	
+
+
 
 	# cleanTexGarbage V3
 	public static function cleanTexGarbage_DEPRECATED($string) {
-		
-		# patterns			
+
+		# patterns
 		$patternIndexIn 	= TR::get_mark_pattern('indexIn',false);
 		$patternIndexOut 	= TR::get_mark_pattern('indexOut',false);
 		$patternTC		 	= TR::get_mark_pattern('tc',false);
 		$patternBr			= TR::get_mark_pattern('br',false);
-		
+
 		# em
 		$string	= preg_replace("/\<em\> {0,3}\<em\>/"					, 	"<em>"		, $string);
 		$string	= preg_replace("/\<\/em\> {0,3}\<\/em\>/"				, 	"<\em>"		, $string);
 		$string	= preg_replace("/\<em\> {0,3}\<\/em\>/"					, 	''			, $string);
 		$string	= preg_replace("/\<em\> {0,3}- {0,3}\<\/em\>/"			, 	'-'			, $string);
-		
+
 		# strong
 		$string	= preg_replace("/\<strong\> {0,3}\<strong\>/"			, 	"<strong>"	, $string);
 		$string	= preg_replace("/\<\/strong\> {0,3}\<\/strong\>/"		, 	"<\strong>"	, $string);
 		$string	= preg_replace("/\<strong\> {0,3}\<\/strong\>/"			, 	''			, $string);
 		$string	= preg_replace("/\<strong\> {0,3}- {0,3}\<\/strong\>/"	, 	'-'			, $string);
-				
+
 		# br
 		#$string	= preg_replace("/ {0,3}$patternBr {0,3}($patternBr|)/"	, 	'<br />'	, $string);
-		
+
 		#$string = str_replace('<br /><br />','<br />', $string);
-		
-		$string = str_replace('’', "'", $string); 
-		
-		return $string ;		
+
+		$string = str_replace('’', "'", $string);
+
+		return $string ;
 	}
-	
-	
+
+
 	# cleanTexGarbage V2
 	public static function cleanTexGarbageV2_DEPRECATED($string) {
-		
+
 		$string = str_replace('<p><span class=\"hilite\"> </span></p>', '', $string);
 		$string = str_replace('<p><span class="hilite"> </span></p>', '', $string);
-		$string = str_replace("<p>-<strong>", '<p><strong>-', $string);	
+		$string = str_replace("<p>-<strong>", '<p><strong>-', $string);
 		$string = str_replace("<p><p>",'<p>', $string);
-		$string = str_replace("</p></p>",'</p>', $string);	
+		$string = str_replace("</p></p>",'</p>', $string);
 		$string = str_replace("<p>\n<p>",'<p>', $string);
 		$string = str_replace("</p>\n</p>",'</p>', $string);
 		$string = str_replace("<p><strong><br /></strong></p>",'', $string);
-		
-				
+
+
 		$string = str_replace("<em>\n<h6>[TC",'<h6>[TC', $string);
 		$string = str_replace("TC]</h6>\n-</em>",'TC]</h6> - ', $string);
 		$string = str_replace("<h6><br />[TC_",'<h6>[TC_', $string);
 		$string = str_replace("_TC]<br /></h6>",'_TC]</h6>', $string);
 		$string = str_replace("<h6><br /></h6>",'', $string);
-		$string = str_replace("<h6></h6>",'', $string);	
+		$string = str_replace("<h6></h6>",'', $string);
 		$string = str_replace("<h5><strong>[",'<h5>[', $string);
 		$string = str_replace("]</strong></h5>",']</h5>', $string);
 		$string = str_replace("<h5><br /></h5>",'', $string);
 		$string = str_replace("<h5></h5>",'', $string);
-		$string = str_replace("</h6>\n_TC]",'</h6>', $string);		
-		
+		$string = str_replace("</h6>\n_TC]",'</h6>', $string);
+
 		# desastres varios (josep frigola)
 		$string = str_replace("<p>[TC_</p>", '', $string);
 		$string = str_replace("<p>_TC]</p>", '', $string);
-		$string = str_replace("<h6>[TC_[TC_</h6>", '', $string); 
-		$string = str_replace("<h6>[TC_</h6>", '', $string); 
-		$string = str_replace("<h6>[TC_<h6>", '<h6>', $string); 
+		$string = str_replace("<h6>[TC_[TC_</h6>", '', $string);
+		$string = str_replace("<h6>[TC_</h6>", '', $string);
+		$string = str_replace("<h6>[TC_<h6>", '<h6>', $string);
 		$string = str_replace("</h6>_TC]</h6>", '</h6>', $string);
 		$string = str_replace("<h6>[<strong>TC_</strong></h6>", '', $string);
 		$string = str_replace("TC_<", '<', $string);
@@ -869,41 +869,41 @@ abstract class TR {
 		$string = str_replace(" style=\"margin-bottom: 0cm;\"", '', $string);
 		$string = str_replace("<h6>[\n<h6>", '<h6>', $string);
 		$string = str_replace("</h6>\n</h6>", '</h6>', $string);
-		
+
 		# otros (Israel memorial 7-4-2011 open office mac)
 		$string = str_replace("</h6>
 </strong></h6>", '</h6>', $string);
 		$string = str_replace("<h6><strong>[
 <h6>[", '<h6>[', $string);
 		$string = str_replace("<h6><strong>[
-<h6>[", '<h6>[', $string);		
-		
-		$string = str_replace("  ", ' ', $string);	
+<h6>[", '<h6>[', $string);
+
+		$string = str_replace("  ", ' ', $string);
 		$string = str_replace("<p>&nbsp;</p>",'', $string);
 		$string = str_replace("&lt;p&gt;&nbsp;&lt;/p&gt;",'', $string);
 		$string = str_replace("<p> </p>",'', $string);
 		$string = str_replace('<p> </p>','', $string);
 		$string = str_replace("<p></p>",' ', $string);
-		
+
 		# reincidencias
 		$string = str_replace("<p>[TC_</p>", '', $string);
-		$string = str_replace("<p>_TC]</p>", '', $string); 
-		$string = str_replace("<h6>[TC_</h6>", '', $string); 
-		$string = str_replace("<h6>[TC_<h6>", '<h6>', $string); 
+		$string = str_replace("<p>_TC]</p>", '', $string);
+		$string = str_replace("<h6>[TC_</h6>", '', $string);
+		$string = str_replace("<h6>[TC_<h6>", '<h6>', $string);
 		$string = str_replace("</h6>_TC]</h6>", '</h6>', $string);
 		$string = str_replace('<h6></h6>','', $string);
-		
-				
+
+
 		# busca regex <strong><h6>[TC_..  ó  <p><strong><h6>[TC_..  e invierte el orden
 		# EN PRUEBAS 11-01-2010
 		$pattern		= array('/(\<p\>\<strong\>\\n)(\<h6\>\[TC..........TC\]\<\/h6\>)/', '/(\<strong\>\\n)(\<h6\>\[TC..........TC\]\<\/h6\>)/');
 		$replacement	= array('$2 $1', '$2 $1');
 		$string 		= preg_replace($pattern, $replacement, $string);
-			
-		return $string ;		
+
+		return $string ;
 	}
-			
-	
+
+
 	# captaciones antiguas de Gerard tienen tc's formato 00,25,12 . Lo formateamos correctamente: <h6>[TC_00:25:12_TC]</h6>
 	public static function formatTC_Memorial2Dedalo($string)
 	{
@@ -914,14 +914,14 @@ abstract class TR {
 		$patterns[] = "/([0-9][0-9]).([0-9][0-9]).([0-9][0-9])/" ;
 		$string 	= addslashes( preg_replace($patterns, '<h6>[TC_$1:$2:$3_TC]</h6>', stripslashes($string) ) );
 		$string 	= stripslashes($string) ;
-		
+
 		#$reemplazarArray = array("<br />", "<br>");
-		#$string = str_replace($reemplazarArray, '<p>', $string); # <-- Temporal	
-			
+		#$string = str_replace($reemplazarArray, '<p>', $string); # <-- Temporal
+
 		$result = $string ;
-		
+
 		return $result  ;
-	}	
+	}
 
 	#Change the format for TC to TC with ms
 	public static function formatTC_to_TCms($string)
@@ -931,57 +931,57 @@ abstract class TR {
 		$pattern 	= '/([0-9][0-9]):([0-9][0-9]):([0-9][0-9])/' ;
 		$string 	= addslashes( preg_replace($pattern, '$1:$2:$3.000', stripslashes($string) ) );
 		$string 	= stripslashes($string) ;
-			
+
 		$result = $string ;
-		
+
 		return $result  ;
-	}	
+	}
 
 	# multipleSpaces2One
 	public static function multipleSpaces2One($string) {
-			
+
 		# utf-8 spaces
 		#$ar = array('&#x20;','&#xA0;' ,'&#X202F;','&#x2003;','&#x2000;','&#x2007;','&#x2001;','&#x2002;','&#x2003;','&#x2004;','&#x2005;','&#x2006;','&#x2007;','&#x2008;','&#x2009;','&#x200A;', '&#x200B;','&#xFEFF;');	#%2C%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0+
 		$string = urlencode($string);
 		# urlencode spaces
 		$ar = array('&nbsp;','%C2%A0');
-		$string = str_replace($ar, ' ', $string );				
-		$string = preg_replace("/\ +/", ' ', $string);	# eliminate doubles spaces over urlencode string		
+		$string = str_replace($ar, ' ', $string );
+		$string = preg_replace("/\ +/", ' ', $string);	# eliminate doubles spaces over urlencode string
 		$string = urldecode($string);
-		
-		# eliminate invisible chars 
+
+		# eliminate invisible chars
 		#$string = preg_replace("/\s+/", ' ', $string);
 		#$string = preg_replace("/\s/", ' ', $string);
-		$string = preg_replace("/\ +/", ' ', $string);				
-		
-		return $string ;	
-	}	
-	
-	
-	
+		$string = preg_replace("/\ +/", ' ', $string);
+
+		return $string ;
+	}
+
+
+
 	# fix posible unions between mark and text like 'casa[TAG] or '[TAG]casa'. Insert a space like 'casa [TAG]' or '[TAG] casa'
 	public static function adjustSpaceBetweenMarkText($string) {
-		
+
 		$pattern[] 			= TR::get_mark_pattern('indexIn',false);
 		$pattern[] 			= TR::get_mark_pattern('indexOut',false);
 		$pattern[] 			= TR::get_mark_pattern('tc',false);
-		
+
 		$patternIndexIn 	= TR::get_mark_pattern('indexIn',false);
 		$patternIndexOut 	= TR::get_mark_pattern('indexOut',false);
 		$patternTC		 	= TR::get_mark_pattern('tc',false);
 		$patternStrong	 	= TR::get_mark_pattern('strong',false);
 		$patternEm	 		= TR::get_mark_pattern('em',false);
-		
+
 		$string				= preg_replace("/ {0,2}($patternIndexIn|$patternIndexOut|$patternTC) {0,2}/", "$1", $string);
 		/*
 		$indexIn 	= TR::get_mark_pattern('indexIn',false);
 		$indexOut 	= TR::get_mark_pattern('indexOut',false);
 		$tc 		= TR::get_mark_pattern('tc',false);
-		
+
 		$string		= preg_replace("/ {0,3}$indexIn {0,3}/", "$1", $string);
 		$string		= preg_replace("/ {0,3}$indexOut {0,3}/", "$1", $string);
 		$string		= preg_replace("/ {0,3}$tc {0,3}/", "$1", $string);
-		*/	
+		*/
 		return($string);
 	}
 
@@ -1002,72 +1002,72 @@ abstract class TR {
 								"[\\\]",
 								"[&]"
 							  );
-		
+
 		foreach($ar_patterns as $pattern)
 		{
 			if(preg_match($pattern, $textoFull)) $ar_errorSX[] = htmlentities($pattern) ;
 		}
-		
+
 		if(sizeof($ar_errorSX))
-		{ 
+		{
 			foreach($ar_errorSX as $key => $valor){
-				 $error .=  $valor. '<br>' ;				
+				 $error .=  $valor. '<br>' ;
 			}
-			$html =  "<span style='color:red'>". substr($error,0,-4) . '</span>';	
-		}		
-		
+			$html =  "<span style='color:red'>". substr($error,0,-4) . '</span>';
+		}
+
 		return $html ;
-	}	
-	
-	
+	}
+
+
 	# Info de los TC e Indexaciones de un texto (transcripción)
 	public static function trInfo($texto)
-	{	  
+	{
 		$fragmentoFull = $texto ;
 		$html = false;
-		
+
 		// TC
 		$pattern = TR::get_mark_pattern('tc');
-		preg_match_all($pattern, $fragmentoFull, $matches);	  	  
-		$nTCs = count($matches[0]);	
-		
+		preg_match_all($pattern, $fragmentoFull, $matches);
+		$nTCs = count($matches[0]);
+
 		// INDEX
 		$pattern = TR::get_mark_pattern('indexIn');
 		preg_match_all($pattern, $fragmentoFull, $matches);
 		$nIndex = count($matches[0]);
-		
+
 		if($nIndex >0) 	$html .= "<div class='h5div'> Index: $nIndex </div>";
-		if($nTCs >0)	$html .= "<div class='h6div'> TC's: $nTCs  </div> "; 
-		
+		if($nTCs >0)	$html .= "<div class='h6div'> TC's: $nTCs  </div> ";
+
 		return $html ;
 	}
-	
+
 	public static function plainText($string, $removeTags=true) {
-			
+
 	}
-	
-	
+
+
 	# clean text for list
-	# prepara el texto para mostrar un extracto en los listados (sin tags ni tc's)	
+	# prepara el texto para mostrar un extracto en los listados (sin tags ni tc's)
 	public static function limpiezaFragmentoEnListados(&$string, $limit=160) {
 		#dump( debug_backtrace() );
-		# dump($string, ' string ++ '.to_string());	
+		# dump($string, ' string ++ '.to_string());
 		$string = str_replace('<br />',' ', $string);
-		
+
 		// Clean ALL html tags
-		$string = strip_tags($string);	
-		
+		$string = strip_tags($string);
+
 		# eliminamos las marcas de tc e indexación
 		$string	= TR::deleteMarks($string);
-		
+
 		# cortamos elegantemente el fragmento
-		return self::truncate_text($string, $limit, $break=" ", $pad="...");		
+		return self::truncate_text($string, $limit, $break=" ", $pad="...");
 	}
-	
-	
+
+
 	/**
 	* TRUNCATE_TEXT
-	* 
+	*
 	*/
 	public static function truncate_text( $string, $limit, $break=" ", $pad="...") {
 
@@ -1100,9 +1100,9 @@ abstract class TR {
 		#$text_clean = htmlspecialchars_decode($text_clean);
 		# Remove Dédalo marks
 		$text_clean = TR::deleteMarks($text_clean);
-		# Remove html tags like strong, br, etc.				
-		$text_clean = strip_tags($text_clean);	
-		# Decode special html chars 	
+		# Remove html tags like strong, br, etc.
+		$text_clean = strip_tags($text_clean);
+		# Decode special html chars
 		#$text_clean = html_entity_decode($text_clean);
 		$text_clean = htmlspecialchars_decode($text_clean);
 
@@ -1110,15 +1110,15 @@ abstract class TR {
 
 
 		# COUNT TOTAL_CHARS
-		$chars_info->total_chars  = mb_strlen($text_clean,'UTF-8'); 	#dump($total_chars, ' $total_chars ++ '.to_string());		
-					
+		$chars_info->total_chars  = mb_strlen($text_clean,'UTF-8'); 	#dump($total_chars, ' $total_chars ++ '.to_string());
+
 		# Remove spaces and breaks
 		$text_clean = str_replace(array("&nbsp;"," ","\n"),"",$text_clean);
 		#$text_clean = preg_replace("/\s/", "", $text_clean);#  &nbsp;
-		
+
 		# COUNT total_chars_no_spaces
 		$chars_info->total_chars_no_spaces = mb_strlen($text_clean,'UTF-8'); #dump($total_chars_no_spaces, ' $total_chars_no_spaces ++ '.to_string());
-		
+
 
 		return (object)$chars_info;
 	}//end get_chars_info
@@ -1130,7 +1130,7 @@ abstract class TR {
 	* @return array $ar_tags_of_type
 	*/
 	public static function get_tags_of_type_in_text($raw_text, $ar_tag_types) {
-		
+
 		$ar_tags_of_type = array();
 
 		foreach ((array)$ar_tag_types as $key => $type) {
@@ -1147,7 +1147,7 @@ abstract class TR {
 							);
 				$ar_tags_of_type[] = (object)$obj;
 			}
-			
+
 		}
 
 
