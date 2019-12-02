@@ -1677,7 +1677,7 @@ class section extends common {
 		}//end foreach($ar_recursive_childrens as $current_terminoID)
 
 		# Cache session store
-		$cache_ar_children_tipo[$cache_uid];
+		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
 		$_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
 
 		if(SHOW_DEBUG===true) {

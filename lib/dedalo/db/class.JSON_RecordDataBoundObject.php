@@ -1,8 +1,8 @@
 <?php
 /**
 * JSON_RecordDataBoundObject
-* 
-* 
+*
+*
 */
 abstract class JSON_RecordDataBoundObject {
 
@@ -48,11 +48,11 @@ abstract class JSON_RecordDataBoundObject {
 
 	# GET_DATO : GET DATO UNIFICADO (JSON)
 	public function get_dato() {
-		if($this->blIsLoaded!==true) {			
+		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
 		#if(!isset($this->dato)) return NULL;
-		return $this->dato;		
+		return $this->dato;
 	}//end get_dato
 
 
@@ -63,7 +63,7 @@ abstract class JSON_RecordDataBoundObject {
 		# Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
 
-		$this->dato = $dato;	
+		$this->dato = $dato;
 	}//end set_dato
 
 
@@ -76,10 +76,10 @@ abstract class JSON_RecordDataBoundObject {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);;
 		}
-		
+
 		# Verify section_tipo
-		if( empty($this->section_tipo) ) {	
-			throw new Exception(__METHOD__." Error Processing Request. section_tipo is mandatory to load data", 1);			
+		if( empty($this->section_tipo) ) {
+			throw new Exception(__METHOD__." Error Processing Request. section_tipo is mandatory to load data", 1);
 		}
 
 		# Not load if $this->section_id is not set
@@ -98,7 +98,7 @@ abstract class JSON_RecordDataBoundObject {
 		if (!$section_tipo = safe_tipo($this->section_tipo)) {
 			die("Bad tipo ".htmlentities($this->section_tipo));
 		}
-	
+
 		# SQL QUERY
 		#$strQuery = 'SELECT "datos" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $this->section_id .' AND "section_tipo" = \''. $this->section_tipo .'\'';
 		$strQuery = 'SELECT "datos" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $section_id .' AND "section_tipo" = \''. $section_tipo .'\'';
@@ -111,7 +111,7 @@ abstract class JSON_RecordDataBoundObject {
 
 		#dump($this->use_cache,'$this->use_cache ID:'.$this->ID." - tipo:$this->tipo");
 
-		# CACHE_MANAGER /**/		
+		# CACHE_MANAGER /**/
 		if( $this->use_cache===true && $this->use_cache_manager===true) { // && cache::exists($strQuery)  // USING CACHE MANAGER
 
 			#$arRow	= json_handler::decode(cache::get($strQuery));
@@ -131,15 +131,15 @@ abstract class JSON_RecordDataBoundObject {
 
 		# WITHOUT QUERY CACHE
 		}else{
-			
+
 			/*
-			# Synchronous query 
+			# Synchronous query
 			$result = pg_query(DBi::_getConnection(), $strQuery);	#or die("Cannot execute query: $strQuery\n". pg_last_error());
 			#$result  = pg_query_params(DBi::_getConnection(), $strQuery, array( $this->section_id, $this->section_tipo ));
 			*/
-			# With prepared statement	
-			$stmtname  = ""; //md5($strQuery); //'search_free_stmt';		
-			$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);				
+			# With prepared statement
+			$stmtname  = ""; //md5($strQuery); //'search_free_stmt';
+			$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
 			if ($statement===false) {
 				if(SHOW_DEBUG===true) {
 					debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
@@ -154,28 +154,28 @@ abstract class JSON_RecordDataBoundObject {
 						throw new Exception("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery", 1);
 					}
 				}
-		
+
 			$arRow = pg_fetch_assoc($result);
 				#dump($arRow,"arRow");
 
-			$dato  = json_handler::decode($arRow['datos']);
-				#dump($datos,"datos");			
+			$dato  = isset($arRow['datos']) ? json_handler::decode($arRow['datos']) : null;
+				#dump($datos,"datos");
 
 			# CACHE RESULTS
-			# Note: Avoid use cache in long imports (memory overloads)		
+			# Note: Avoid use cache in long imports (memory overloads)
 				if( $this->use_cache===true && $this->use_cache_manager===true) {
-					# CACHE_MANAGER			
+					# CACHE_MANAGER
 					cache::set($strQuery, serialize($dato));
 				}else if( $this->use_cache===true ) {
 					# CACHE RUN-IN
 					$ar_JSON_RecordDataObject_load_query_cache[$strQuery] = $dato;
-				}					
-			
+				}
+
 
 			# DEBUG
 			if(SHOW_DEBUG===true) {
-				$total_time_ms = exec_time_unit($start_time,'ms');	
-				#$_SESSION['debug_content'][__METHOD__][] = "". str_replace("\n",'',$strQuery) ." [$total_time_ms ms]";							
+				$total_time_ms = exec_time_unit($start_time,'ms');
+				#$_SESSION['debug_content'][__METHOD__][] = "". str_replace("\n",'',$strQuery) ." [$total_time_ms ms]";
 				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." - LOAD_SLOW_QUERY: $strQuery - records:".count($dato));
 			}
 		}
@@ -210,37 +210,37 @@ abstract class JSON_RecordDataBoundObject {
 
 		# DATOS : JSON ENCODE ALWAYS !!!
 		$datos = json_handler::encode($this->datos);
-		
+
 		# SECTION_ID. Section_id is always int
 		$section_id = intval($this->section_id);
-		
+
 		#
 		# SAVE UPDATE : Record already exists
 		if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true ) {
 
 			# Si no se ha modificado nada, ignoramos la orden de salvar
 			if(!isset($this->arRelationMap['datos'])) return false;
-			
+
 			$strQuery 	= "UPDATE $this->strTableName SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
-			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $section_id, $section_tipo));			
+			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $section_id, $section_tipo));
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump($datos,"strQuery $strQuery , section_id:$section_id, section_tipo:$section_tipo");
 					throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);;
 				}
 				return "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
-			}			
-			
+			}
+
 		#
 		# SAVE INSERT : Record not exists and create one
 		}else{
 
 			switch($this->strTableName) {
-				
+
 				# MATRIX_ACTIVITY INSERT (async pg_send_query)
 				case 'matrix_activity':
 					$strQuery = 'INSERT INTO "'.$this->strTableName.'" (datos) VALUES (\''.$datos.'\') RETURNING section_id';
-					# PG_SEND_QUERY is async query					
+					# PG_SEND_QUERY is async query
 					pg_send_query(DBi::_getConnection(), $strQuery);
 					$result = pg_get_result(DBi::_getConnection()); # RESULT (pg_get_result for pg_send_query is needed)
 
@@ -254,23 +254,23 @@ abstract class JSON_RecordDataBoundObject {
 					}
 					return (int)$section_id;
 					break;
-				
+
 				# DEFAULT INSERT (sync pg_query_params)
 				default:
 
 					if(empty($section_id) || empty($section_tipo)) {
-						#throw new Exception("Error Processing Request. section_id and section_tipo", 1);	
+						#throw new Exception("Error Processing Request. section_id and section_tipo", 1);
 						error_log("Error Processing Request. section_id:$section_id and section_tipo:$section_tipo, table:$this->strTableName - $this->ID");
 					}
-					
+
 					# Insert record datos and receive a new id
 					$strQuery = 'INSERT INTO "'.$this->strTableName.'" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
-													
+
 					$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $datos ));
 
 					if($result===false) {
 						if(SHOW_DEBUG===true) {
-							dump($strQuery,"strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));	
+							dump($strQuery,"strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));
 							throw new Exception("Error Processing Save Insert Request ". pg_last_error(), 1);;
 						}
 						return "Error: sorry an error ocurred on INSERT record. Data is not saved";
@@ -289,8 +289,8 @@ abstract class JSON_RecordDataBoundObject {
 					# Return always current existing or created id
 					return (int)$this->ID;
 					break;
-			}//end switch($this->strTableName)			
-			
+			}//end switch($this->strTableName)
+
 		}//end if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true )
 
 		return false;
@@ -352,11 +352,11 @@ abstract class JSON_RecordDataBoundObject {
 				$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n".$strQuery;
 			}
 		}
-		# $result = pg_query(DBi::_getConnection(), $strQuery);	
+		# $result = pg_query(DBi::_getConnection(), $strQuery);
 
 
-		# With prepared statement	
-		$stmtname  = ""; //md5($strQuery); //'search_free_stmt';		
+		# With prepared statement
+		$stmtname  = ""; //md5($strQuery); //'search_free_stmt';
 		$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
 		if ($statement===false) {
 			if(SHOW_DEBUG===true) {
@@ -364,7 +364,7 @@ abstract class JSON_RecordDataBoundObject {
 				return false;
 			}
 		}
-		
+
 		if ($wait===false) {
 			pg_send_execute(DBi::_getConnection(), $stmtname, array());
 			$result = pg_get_result(DBi::_getConnection());
@@ -380,8 +380,8 @@ abstract class JSON_RecordDataBoundObject {
 			}
 		}
 		#dump($result, 'result', array());
-		#error_log(__METHOD__." --> Called search search_free: $strQuery");		
-		
+		#error_log(__METHOD__." --> Called search search_free: $strQuery");
+
 		/* Reference extract records
 		while ($rows = pg_fetch_assoc($result)) {
 			$ar_records[] = $rows['id'];
@@ -428,8 +428,8 @@ abstract class JSON_RecordDataBoundObject {
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
-		$strQuery_limit 	= '';	
-			
+		$strQuery_limit 	= '';
+
 		if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
 
 			switch(true) {	#"AND dato LIKE  '%\"{$area_tipo}\"%' ";
@@ -465,16 +465,16 @@ abstract class JSON_RecordDataBoundObject {
 				case (strpos($key,':or')!==false):
 									$campo = substr($key, 0, strpos($key,':or'));
 									$strQuery_temp ='';
-									foreach ($value as $value_string) {								
+									foreach ($value as $value_string) {
 										$strQuery_temp .= "$campo = '$value_string' OR ";
 									}
 									$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
 									break;
 
 				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
-				default :					
+				default :
 
-						if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)	
+						if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)
 							$strQuery 	.= "AND $key = $value ";
 						}else{
 							if(SHOW_DEBUG===true) {
@@ -485,7 +485,7 @@ abstract class JSON_RecordDataBoundObject {
 							}
 							$value = pg_escape_string($value);
 							$strQuery 	.= "AND $key = '$value' ";
-						}						
+						}
 						break;
 
 			}#end switch(true)
@@ -516,9 +516,9 @@ abstract class JSON_RecordDataBoundObject {
 		static $ar_RecordDataObject_query_search_cache;
 
 
-		# CACHE_MANAGER : Using external cache manager (like redis) 
-		if( $use_cache===true && $this->use_cache_manager===true) { //  && cache::exists($strQuery) 
-			
+		# CACHE_MANAGER : Using external cache manager (like redis)
+		if( $use_cache===true && $this->use_cache_manager===true) { //  && cache::exists($strQuery)
+
 			$ar_records	= unserialize(cache::get($strQuery));
 			#$ar_records	= json_handler::decode(cache::get($strQuery));
 
@@ -535,19 +535,19 @@ abstract class JSON_RecordDataBoundObject {
 			}
 
 		# DATA IS NOT IN CACHE . Searching real data in DB
-		}else{			
-		
+		}else{
+
 			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
 			if (!$result) {
 				dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
-				throw new Exception("Error Processing Request", 1);				
+				throw new Exception("Error Processing Request", 1);
 			}
-			
+
 			while ($rows = pg_fetch_assoc($result)) {
 				$ar_records[] = $rows['key'];
 			}
-			#dump($ar_records, 'ar_records', array('strQuery'=>$strQuery));	
-		
+			#dump($ar_records, 'ar_records', array('strQuery'=>$strQuery));
+
 
 			# CACHE
 			# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
@@ -563,13 +563,13 @@ abstract class JSON_RecordDataBoundObject {
 				# CACHE RUN-IN
 				$ar_RecordDataObject_query_search_cache[$strQuery] = $ar_records;
 			}
-			
+
 
 			# DEBUG
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
-				#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";				
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".count($ar_records));				
+				#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
+				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".count($ar_records));
 				#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.microtime(1)]=microtime(1);
 			}
 
@@ -582,7 +582,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 	/**
-	* BUILD_PG_FILTER 
+	* BUILD_PG_FILTER
 	*/
 	public static function build_pg_filter($modo,$datos='datos',$tipo,$lang,$value) {
 		switch ($modo) {
@@ -592,18 +592,18 @@ abstract class JSON_RecordDataBoundObject {
 				#$value = pg_escape_literal(stripslashes($value));
 				return "$datos @>'{\"components\":{\"$tipo\":{\"dato\":{\"$lang\":\"$value\"}}}}'::jsonb ";
 				break;
-			
+
 			case 'btree':
 				$type = gettype($value);
 				if(SHOW_DEBUG===true) {
 					#dump($type," type for ".print_r($value,true));
-				}				
+				}
 				switch ($type ) {
 					case 'array':
 						foreach ($value as $key => $ar_value) {
 							if(SHOW_DEBUG===true) {
 								#dump($value," value"); dump($key," key"); dump($ar_value," ar_value");
-							}							
+							}
 							$ar_id_matrix[] = key($ar_value);
 						}
 						$ar_values_string='';
@@ -615,7 +615,7 @@ abstract class JSON_RecordDataBoundObject {
 						return "$datos #>'{components,$tipo,dato,$lang}' ?| array[$ar_values_string] ";
 						break;
 
-					case 'object':					
+					case 'object':
 						#$key = key($value);
 						#$ar_values_string = "'$key'";
 						$ar_values_string='';
@@ -628,18 +628,18 @@ abstract class JSON_RecordDataBoundObject {
 							}
 						}
 						#dump($ar_values_string, ' ar_values_string');
-						return "$datos #>'{components,$tipo,dato,$lang}' ?| array[$ar_values_string] ";						
+						return "$datos #>'{components,$tipo,dato,$lang}' ?| array[$ar_values_string] ";
 						#$value = json_encode($value);
 						#return  "$datos #>'{components,$tipo,dato,$lang}' @> '[$value]'::jsonb ";
 						break;
-					
+
 					default:
 						# ref: datos #>> '{components,rsc24,dato,lg-nolan}' = '114'
 						return "$datos #>>'{components,$tipo,dato,$lang}'='$value'";
 						break;
-				}				
+				}
 				break;
-		}		
+		}
 	}//end build_pg_filter
 
 
@@ -650,13 +650,13 @@ abstract class JSON_RecordDataBoundObject {
 	public static function build_pg_select($modo,$datos='datos',$tipo,$key='dato',$lang) {
 		switch ($modo) {
 			case 'gin':
-				throw new Exception("Error Processing Request. Sorry not implemented...", 1);				
+				throw new Exception("Error Processing Request. Sorry not implemented...", 1);
 				break;
 			case 'btree':
 				# ref: datos#>>'{components, $terminoID_valor, dato, $lang}' as $terminoID_valor
 				return "$datos #>>'{components,$tipo,$key,$lang}' AS $tipo";
 				break;
-		}		
+		}
 	}//end build_pg_select
 
 
@@ -689,12 +689,12 @@ abstract class JSON_RecordDataBoundObject {
 						dump($strQuery,"Delete strQuery");
 						throw new Exception("Error Processing Request (result==false): an error ocurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted", 1);
 					}
-				}				
+				}
 			}
 		}
 		#pg_get_result(DBi::_getConnection()) ;
 		# close connection
-		#DBi::_getConnection()->close();		
+		#DBi::_getConnection()->close();
 	}//end __destruct
 
 
