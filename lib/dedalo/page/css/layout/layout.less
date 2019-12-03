@@ -1090,16 +1090,27 @@
 		position: absolute;
 		min-height: 3em;
 		top: -3em;
-		background-color: rgba(228, 8, 8, 0.90);
 		width: 100%;
 		//text-align: right;
 		color: white;
-		padding-right: 1.5em !important;
+		//padding-right: 1.5em !important;
 		user-select: none;
 		line-height: 1.5em;
 
+		&.error {
+			background-color: rgba(228, 8, 8, 0.90);
+		}
+
+		&.warning {
+			background-color: #ED6223;
+		}
+
+		&.ok {
+			background-color: rgba(10, 150, 74, 0.90);
+		}
+
 		.text {
-			//padding-bottom: 0.5em;
+			padding: 0.5em;
 
 			//&:last-of-type {
 			//	padding-bottom: 0;
@@ -1118,6 +1129,20 @@
 			// font-weight: bold;
 			margin: 0;
 		}
+	}
+
+
+
+// button
+	button {
+		font-size: .9em;
+		background-color: #a6a6a6;
+		border-radius: 0.30em;
+		cursor: pointer;
+		color: #ffff;
+		border: none;
+		padding-left: 0.75em;
+		padding-right: 0.75em;
 	}
 
 
