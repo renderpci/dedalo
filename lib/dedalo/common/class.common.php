@@ -2389,7 +2389,7 @@ abstract class common {
 
 			if( in_array($model, $tool->afected_models)
 				|| ($is_component===true && in_array('all_components', $tool->afected_models))
-				|| in_array($tipo, $tool->afected_tipos)
+				|| (is_array($tool->afected_tipos) && in_array($tipo, $tool->afected_tipos))
 			  ) {
 
 				if (isset($tool->requirement_translatable)) {
