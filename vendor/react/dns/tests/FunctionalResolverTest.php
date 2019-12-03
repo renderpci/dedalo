@@ -47,12 +47,53 @@ class FunctionalTest extends TestCase
     /**
      * @group internet
      */
+    public function testResolveGoogleOverUdpResolves()
+    {
+        $factory = new Factory($this->loop);
+        $this->resolver = $factory->create('udp://8.8.8.8', $this->loop);
+
+        $promise = $this->resolver->resolve('google.com');
+        $promise->then($this->expectCallableOnce(), $this->expectCallableNever());
+
+        $this->loop->run();
+    }
+
+    /**
+     * @group internet
+     */
+    public function testResolveGoogleOverTcpResolves()
+    {
+        $factory = new Factory($this->loop);
+        $this->resolver = $factory->create('tcp://8.8.8.8', $this->loop);
+
+        $promise = $this->resolver->resolve('google.com');
+        $promise->then($this->expectCallableOnce(), $this->expectCallableNever());
+
+        $this->loop->run();
+    }
+
+    /**
+     * @group internet
+     */
     public function testResolveAllGoogleMxResolvesWithCache()
     {
         $factory = new Factory();
         $this->resolver = $factory->createCached('8.8.8.8', $this->loop);
 
         $promise = $this->resolver->resolveAll('google.com', Message::TYPE_MX);
+        $promise->then($this->expectCallableOnceWith($this->isType('array')), $this->expectCallableNever());
+
+        $this->loop->run();
+    }
+    /**
+     * @group internet
+     */
+    public function testResolveAllGoogleCaaResolvesWithCache()
+    {
+        $factory = new Factory();
+        $this->resolver = $factory->createCached('8.8.8.8', $this->loop);
+
+        $promise = $this->resolver->resolveAll('google.com', Message::TYPE_CAA);
         $promise->then($this->expectCallableOnceWith($this->isType('array')), $this->expectCallableNever());
 
         $this->loop->run();
@@ -97,5 +138,75 @@ class FunctionalTest extends TestCase
 
         $promise = $this->resolver->resolve('google.com');
         $promise->then($this->expectCallableNever(), $this->expectCallableOnce());
+    }
+
+    public function testResolveShouldNotCauseGarbageReferencesWhenUsingInvalidNameserver()
+    {
+        if (class_exists('React\Promise\When')) {
+            $this->markTestSkipped('Not supported on legacy Promise v1 API');
+        }
+
+        $factory = new Factory();
+        $this->resolver = $factory->create('255.255.255.255', $this->loop);
+
+        gc_collect_cycles();
+
+        $promise = $this->resolver->resolve('google.com');
+        unset($promise);
+
+        $this->assertEquals(0, gc_collect_cycles());
+    }
+
+    public function testResolveCachedShouldNotCauseGarbageReferencesWhenUsingInvalidNameserver()
+    {
+        if (class_exists('React\Promise\When')) {
+            $this->markTestSkipped('Not supported on legacy Promise v1 API');
+        }
+
+        $factory = new Factory();
+        $this->resolver = $factory->createCached('255.255.255.255', $this->loop);
+
+        gc_collect_cycles();
+
+        $promise = $this->resolver->resolve('google.com');
+        unset($promise);
+
+        $this->assertEquals(0, gc_collect_cycles());
+    }
+
+    public function testCancelResolveShouldNotCauseGarbageReferences()
+    {
+        if (class_exists('React\Promise\When')) {
+            $this->markTestSkipped('Not supported on legacy Promise v1 API');
+        }
+
+        $factory = new Factory();
+        $this->resolver = $factory->create('127.0.0.1', $this->loop);
+
+        gc_collect_cycles();
+
+        $promise = $this->resolver->resolve('google.com');
+        $promise->cancel();
+        $promise = null;
+
+        $this->assertEquals(0, gc_collect_cycles());
+    }
+
+    public function testCancelResolveCachedShouldNotCauseGarbageReferences()
+    {
+        if (class_exists('React\Promise\When')) {
+            $this->markTestSkipped('Not supported on legacy Promise v1 API');
+        }
+
+        $factory = new Factory();
+        $this->resolver = $factory->createCached('127.0.0.1', $this->loop);
+
+        gc_collect_cycles();
+
+        $promise = $this->resolver->resolve('google.com');
+        $promise->cancel();
+        $promise = null;
+
+        $this->assertEquals(0, gc_collect_cycles());
     }
 }
