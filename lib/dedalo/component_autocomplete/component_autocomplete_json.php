@@ -62,14 +62,14 @@
 			case 'edit':
 				$dato 	= $this->get_dato();
 				$value 	= $this->get_dato_paginated();
-				$limit 	= $this->pagination->limit ?? $properties->max_records ?? 10;
+				$limit 	= $this->pagination->limit ?? $properties->max_records ?? 3;
 
 				break;
 
 			case 'list':
 				$dato 	= $this->get_dato();
 				$value 	= $dato;
-				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 10;
+				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 3;
 				break;
 		}
 
