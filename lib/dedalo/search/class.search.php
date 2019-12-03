@@ -327,6 +327,7 @@ class search {
 				$records_data->total = $total;
 				if(SHOW_DEVELOPER===true) {
 					# Info about required time to exec the search
+					$records_data->debug = $records_data->debug ?? new stdClass();
 					$records_data->debug->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
 					# Query to database string
 					$records_data->debug->strQuery = $count_sql_query;
