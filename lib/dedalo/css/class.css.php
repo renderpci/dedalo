@@ -14,13 +14,13 @@ class css {
 	static $mixins_file_path 	= '/common/css/mixins.less';
 
 
-	
-	# CSS LINK CODE . RETURN COMBINATED CSS LINKS FOR INSERT IN HEADER  
+
+	# CSS LINK CODE . RETURN COMBINATED CSS LINKS FOR INSERT IN HEADER
 	public static function get_css_link_code() {
 		global $modo;
-					
-		$html	= '';				
-		
+
+		$html	= '';
+
 		#
 		# COMMON CSS . Insertamos los estilos generales
 
@@ -33,7 +33,7 @@ class css {
 			css::$ar_url_basic[] = BOOTSTRAP_CSS_URL;
 
 			# JQUERY UI css
-			css::$ar_url_basic[] = JQUERY_UI_URL_CSS ;		
+			css::$ar_url_basic[] = JQUERY_UI_URL_CSS ;
 
 			# HTML PAGE css
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/css/html_page.css';
@@ -41,7 +41,7 @@ class css {
 			# GRIDSTER
 			#css::$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/jquery/gridster/jquery.gridster.min.css';
 
-			# COMMON css			
+			# COMMON css
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/common.css';
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/buttons.css';
 
@@ -53,7 +53,7 @@ class css {
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/css/tool_common.css';
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_diffusion/css/tool_diffusion.css';
 
-			# MENU css			
+			# MENU css
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/menu/css/menu.css';
 
 			# AREA css
@@ -63,7 +63,7 @@ class css {
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/button_common/css/button_common.css';
 
 			# SEARCH css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/css/search.css';				
+			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/css/search.css';
 
 			# COMPONENTS common css
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css';
@@ -75,47 +75,47 @@ class css {
 
 				case 'list':
 					break;
-			}		
-						
+			}
+
 
 		# Recorremos los componentes usados por modeloID es decir: root=dd117, etc..
-		$ar_url_elements 		= array();		
+		$ar_url_elements 		= array();
 		$ar_excepciones 		= array('component_autocomplete_ts');
 		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 		foreach($ar_loaded_modelos_name as $modelo_name) {
-			# Load específico del componente actual	
-			if (!in_array($modelo_name, $ar_excepciones)) {		
+			# Load específico del componente actual
+			if (!in_array($modelo_name, $ar_excepciones)) {
 				$ar_url_elements[]	= DEDALO_LIB_BASE_URL . '/'. $modelo_name .'/css/'. $modelo_name .'.css';
-			}		
+			}
 		}
 
-		# eliminamos las duplicidades		
+		# eliminamos las duplicidades
 		$ar_url = array_unique($ar_url_elements);
 
-	
+
 		# Añadimos al final los elementos existentes en css::$ar_url
 		css::$ar_url = array_merge(css::$ar_url_basic, $ar_url_elements, css::$ar_url);
 
-		
+
 		# STRUCTURE CSS
 		if (defined('DEDALO_STRUCTURE_CSS') && DEDALO_STRUCTURE_CSS===true) {
-			$structure_file_path_url = DEDALO_LIB_BASE_URL . css::$structure_file_path;			
+			$structure_file_path_url = DEDALO_LIB_BASE_URL . css::$structure_file_path;
 			css::$ar_url[] 			 = $structure_file_path_url;
-		}		
+		}
 
-		
+
 		# despejamos las url
 		foreach (css::$ar_url as $url) {
-				
+
 			# Si hay algún componente, le insertamos antes el component_common (sólo una vez)
-			if( !isset($added_component_commons) && strpos($url,'component_')!==false ) {				
-				
+			if( !isset($added_component_commons) && strpos($url,'component_')!==false ) {
+
 				# component common functions css
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css' );
 
 				# INSPECTOR css
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/inspector/css/inspector.css' );
-				
+
 				# TOOLS TOOL_TIME_MACHINE css
 				#if(navigator::get_selected('modo')==='tool_time_machine')
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/css/tool_time_machine.css' );
@@ -124,29 +124,29 @@ class css {
 				#if(navigator::get_selected('modo')==='tool_lang') {
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_lang/css/tool_lang.css' );
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_state/css/component_state.css' );
-				#}				
+				#}
 
 				# button delete
-				# En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre				
+				# En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_delete/css/button_delete.css' );
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_stats/css/button_stats.css' );
-				
+
 				$added_component_commons = true;
 			}
-			
+
 
 			# EVITA DUPLICIDADES
 			if(strpos($html,$url)===false) {
 				$html .= self::build_tag($url);
-			}			
+			}
 		}
 
 		# DEBUG CSS OVERRIDE
-		if(SHOW_DEBUG && strpos(DEDALO_HOST, 'debug')!==false) {		
+		if(SHOW_DEBUG && strpos(DEDALO_HOST, 'debug')!==false) {
 			$html .= self::build_tag(DEDALO_LIB_BASE_URL . '/html_page/css/html_page_debug.css');
 		}
 		#dump( htmlentities($html), '$html');
-		
+
 		return $html;
 	}//end get_css_link_code
 
@@ -162,7 +162,7 @@ class css {
 		if (USE_CDN!==false) {
 			$url = USE_CDN . $url;
 		}
-		
+
 		# Add version
 		$url = $url.'?'.DEDALO_VERSION;
 
@@ -170,20 +170,20 @@ class css {
 		$media_attr='';
 		if (!is_null($media)) {
 			$media_attr = " media=\"$media\"";  // Like screen
-		}		
+		}
 
 		if(SHOW_DEBUG===true) {
 			if (strpos($url,'structure.css')!==false || $uncacheable===true) {
 				$url .= '&t=' . start_time();
-			}			
-		}		
+			}
+		}
 
 		$tag = "\n<link href=\"$url\" rel=\"stylesheet\"{$media_attr}\">";
 
 		return $tag;
 	}//edn build_tag
-	
-	
+
+
 
 	/**
 	* BUILD_STRUCTURE_CSS
@@ -193,7 +193,7 @@ class css {
 
 		$response = new stdClass();
 			$response->result = false;
-			$response->msg 	  = null;			
+			$response->msg 	  = null;
 
 		include DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
 		$less = new lessc;
@@ -221,82 +221,87 @@ class css {
 			if (!isset($propiedades->css)) {
 				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
 				continue;
-			}			
+			}
 			$css_obj = $propiedades->css;
 
 			// Debug only
 			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
 			#if(!in_array($terminoID, $ar_term)) continue;
-			
+
 			// css_prefix. get_css_prefix
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
 				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);
-		
 
-			// less line				
+
+			// less line
 				if ($modelo_name==='section') {
-					
+
 					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
 						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
 					}
-				
+
 					// Envolve code into custom wrapper
-					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";					
-	
+					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
+
 				}else{
 
 					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
 						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, false);
 					}
-					
+
 					// Envolve code into custom wrapper
 					$less_line = '.'.$css_prefix.'_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
 
 					// En pruebas (el ampliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
 					if($css_prefix==='wrap_component'){
-						$less_line = '.sgc_edit>' . $less_line;	
+						$less_line = '.sgc_edit>' . $less_line;
 					}
 				}
 
 			// Add line code
 			$less_code[] = $less_line;
-		
+
 		}//end while ($rows = pg_fetch_assoc($result)) {
 		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);
-		$less_code = implode(' ', $less_code);	
+		$less_code = implode(' ', $less_code);
 
-		
+
 		// MXINS. Get mixixns file
 			$file_name = DEDALO_LIB_BASE_PATH . self::$mixins_file_path;
 			if ($mixins_code = file_get_contents($file_name)) {
 				$less_code = $mixins_code.$less_code;
-			}	 
+			}
 
 		// Write final file. Full path
 			$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
-		
+
 		// Format : lessjs (default) | compressed | classic
 			$format = (DEVELOPMENT_SERVER===true) ? 'lessjs' : 'compressed';
 			$less->setFormatter($format);	// lessjs (default) | compressed | classic
-		
-		// Preserve comments : true | false	
+
+		// Preserve comments : true | false
 			$less->setPreserveComments(false);	// true | false
-		
-		// Compile 
+
+		// Compile
 			#$compiled_css = $less->compile( $less_code );
 			try {
 				$compiled_css = $less->compile( $less_code );
 			} catch (exception $e) {
 				debug_log(__METHOD__." Error en compile less: ".$e->getMessage(), logger::ERROR);
 				echo "fatal error: " . $e->getMessage();
+				dump($less_code, ' less_code ++ '.to_string());
+
+				$response->result 	= false;
+				$response->msg 	  	= "Error on compile less_code (1) ".$e->getMessage();
+				return $response;
 			}
 
 		// Delete old version if exists
 			if ( file_exists($file_name) && !unlink($file_name) ) {
 				$response->result 	= false;
-				$response->msg 	  	= "Error on remove old css file ($file_name) ";	
+				$response->msg 	  	= "Error on remove old css file ($file_name) ";
 			}
-		
+
 		// write file
 			if( !$write = file_put_contents($file_name, $compiled_css) ) {
 				$response->result 	= false;
@@ -305,10 +310,10 @@ class css {
 				$file_size = format_size_units( filesize($file_name) );
 				$response->result 	 = true;
 				$response->msg 	  	 = "File css created successful. Size: $file_size";
-				$response->file_path = self::$structure_file_path;				
+				$response->file_path = self::$structure_file_path;
 			}
 			#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
-	
+
 
 		return (object)$response;
 	}//end build_structure_css
@@ -322,13 +327,13 @@ class css {
 	* @return string $less_value
 	*/
 	public static function convert_to_less($selector, $obj_value, $css_prefix, $terminoID, $enclose=false) {
-	
+
 		$less_value  = '';
 
 		if (is_object($obj_value)) {
 
 			// wrap_section_group_div_mdcat2576 wrap_section
-			if( strpos($selector, $css_prefix)===false 
+			if( strpos($selector, $css_prefix)===false
 				//&& ($css_prefix==='wrap_section')
 				&& ($css_prefix==='alias' && $selector==='.wrap_component')===false) {
 				$enclose = true;
@@ -338,7 +343,7 @@ class css {
 			if ($enclose===true) {
 				$less_value .= "\n$selector{";
 			}
-			
+
 			// mixings
 				if (property_exists($obj_value, 'mixin')) {
 					foreach((array)$obj_value->mixin as $mixin_value) {
@@ -346,7 +351,7 @@ class css {
 					}
 				}
 
-			
+
 			// style
 				if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
 					foreach((array)$obj_value->style as $style_key => $style_value) {
@@ -374,12 +379,12 @@ class css {
 	*/
 	public static function get_css_prefix($tipo, $modelo_name) {
 
-		switch (true) {		
+		switch (true) {
 
 			case ($modelo_name === 'section_group_div'):
 				$css_prefix = 'wrap_section_group_div';
 				break;
-			
+
 			case ($modelo_name === 'section_group') :
 				$css_prefix = 'wrap_section_group';
 				break;
@@ -387,7 +392,7 @@ class css {
 			case ($modelo_name === 'section_list') :
 				$css_prefix = 'wrap_section_records';
 				break;
-			
+
 			// section, section_tool
 			case strpos($modelo_name, 'section')===0 :
 				$css_prefix = 'wrap_section';
@@ -396,15 +401,15 @@ class css {
 
 			case ($modelo_name === 'component_alias') :
 				$css_prefix = 'alias';
-				break;				
+				break;
 
 			case strpos($modelo_name, 'component')!==false :
 				$css_prefix = 'wrap_component';
-				break;		
-			
+				break;
+
 			#case strpos($modelo_name, 'section')!==false :
 			#	$css_prefix = 'wrap_section'; // section and section_list
-			#	break;						
+			#	break;
 
 			default:
 				$css_prefix = $tipo;
@@ -416,7 +421,7 @@ class css {
 	}//end get_css_prefix
 
 
-	
-		
+
+
 }//end class
 ?>
