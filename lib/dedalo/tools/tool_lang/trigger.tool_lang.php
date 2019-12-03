@@ -18,7 +18,7 @@ function automatic_translation($json_data) {
 	global $start_time;
 
 	# Write session to unlock session file
-	#session_write_close();
+	session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
