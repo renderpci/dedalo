@@ -1221,29 +1221,28 @@ abstract class backup {
 
 		$data_string = "data=" . json_encode($data);
 
-		// open connection
-		$ch = curl_init();
+		// curl option
+			// $ch = curl_init();
 
-		// set the url, number of POST vars, POST data
-		curl_setopt($ch, CURLOPT_URL, STRUCTURE_SERVER_URL); // LIke http://domain.com/get-post.php
-		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-		#curl_setopt($ch, CURLOPT_HEADER, false);
+			// // set the url, number of POST vars, POST data
+			// curl_setopt($ch, CURLOPT_URL, STRUCTURE_SERVER_URL); // LIke http://domain.com/get-post.php
+			// curl_setopt($ch, CURLOPT_POST, true);
+			// curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+			// curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			// curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
-		# Avoid verify ssl certificates (very slow)
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+			// # Avoid verify ssl certificates (very slow)
+			// curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-		// execute post
-		$result = curl_exec($ch);
-		#debug_log(__METHOD__." result ".to_string($result), logger::DEBUG);
+			// // execute post
+			// $result = curl_exec($ch);
 
-		// close connection
-		curl_close($ch);
+			// // close connection
+			// curl_close($ch);
+
 
 		// file_get_contents option
-		$result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
+			$result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
 
 		return $result;
 	}//end get_remote_data
@@ -1291,11 +1290,11 @@ abstract class backup {
 		file_put_contents( $target_dir .'/'. $obj->name, $result);
 
 		if(SHOW_DEBUG===true) {
-			$fist_line = strtok($result, "\n\r");
-			$total=round(microtime(1)-$start_time,3);
-			debug_log(__METHOD__." Get remote and write str data type:$obj->type - name:$obj->name in secs. $total \n".$fist_line, logger::DEBUG);
-			// Clean memory footprint
-			unset($fist_line); strtok('', '');
+			// $fist_line = strtok($result, "\n\r");
+			// $total=round(microtime(1)-$start_time,3);
+			// debug_log(__METHOD__." Get remote and write str data type:$obj->type - name:$obj->name in secs. $total \n".$fist_line, logger::DEBUG);
+			// // Clean memory footprint
+			// unset($fist_line); strtok('', '');
 		}
 
 

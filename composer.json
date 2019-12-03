@@ -1,7 +1,9 @@
 {
+	"name": "dedalo/v6",
+	"description": "External libraries managed with composer",
     "require": {
         "geoip2/geoip2": "~2.0",
-    	"leafo/lessphp": "0.4.0",
+    	"leafo/lessphp": "0.5.0",
         "react/event-loop": "^1.0",
         "react/http": "^0.8.3",
         "socrata/soda-php": "^1.1",
