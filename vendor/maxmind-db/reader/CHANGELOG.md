@@ -1,6 +1,28 @@
 CHANGELOG
 =========
 
+1.5.0 (2019-09-30)
+------------------
+
+* PHP 5.6 or greater is now required.
+* The C extension now supports PHP 8. Pull request by John Boehr.
+  GitHub #87.
+* A new method, `getWithPrefixLen`, was added to the `Reader` class.
+  This method returns an array containing the record and the prefix
+  length for that record. GitHub #89.
+
+1.4.1 (2019-01-04)
+------------------
+
+* The `maxminddb` extension now returns a string when a `uint32`
+  value is greater than `LONG_MAX`. Previously, the value would
+  overflow. This generally only affects 32-bit machines.  Reported
+  by Remi Collet. GitHub #79.
+* For `uint64` values, the `maxminddb` extension now returns an
+  integer rather than a string when the value is less than or equal
+  to `LONG_MAX`. This more closely matches the behavior of the pure
+  PHP reader.
+
 1.4.0 (2018-11-20)
 ------------------
 
