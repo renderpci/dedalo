@@ -17,12 +17,6 @@
             "type": "dd151",
             "section_id": "1",
             "section_tipo": "dd64",
-            "from_component_tipo": "dd1333"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
             "from_component_tipo": "dd1331"
         },
         {
@@ -33,9 +27,21 @@
         },
         {
             "type": "dd151",
-            "section_id": "22",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1333"
+        },
+        {
+            "type": "dd151",
+            "section_id": "3",
             "section_tipo": "dd1342",
             "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
         },
         {
             "type": "dd151",
@@ -50,13 +56,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 3,
-                            "hour": 19,
-                            "time": 64919301553,
+                            "day": 5,
+                            "hour": 16,
+                            "time": 64919462816,
                             "year": 2019,
                             "month": 11,
-                            "minute": 19,
-                            "second": 13
+                            "minute": 6,
+                            "second": 56
                         }
                     }
                 ]
@@ -69,20 +75,20 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 3,
-                            "hour": 19,
-                            "time": 64919301553,
+                            "day": 5,
+                            "hour": 16,
+                            "time": 64919462816,
                             "year": 2019,
                             "month": 11,
-                            "minute": 19,
-                            "second": 13
+                            "minute": 6,
+                            "second": 56
                         }
                     }
                 ]
             },
             "dataframe": [],
             "valor_list": {
-                "lg-nolan": "2019-11-03"
+                "lg-nolan": "2019-11-05"
             }
         },
         "dd201": {
@@ -90,13 +96,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 17,
-                            "hour": 11,
-                            "time": 64920484632,
+                            "day": 3,
+                            "hour": 19,
+                            "time": 64921980807,
                             "year": 2019,
-                            "month": 11,
-                            "minute": 57,
-                            "second": 12
+                            "month": 12,
+                            "minute": 33,
+                            "second": 27
                         }
                     }
                 ]
@@ -109,25 +115,25 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 17,
-                            "hour": 11,
-                            "time": 64920484632,
+                            "day": 3,
+                            "hour": 19,
+                            "time": 64921980807,
                             "year": 2019,
-                            "month": 11,
-                            "minute": 57,
-                            "second": 12
+                            "month": 12,
+                            "minute": 33,
+                            "second": 27
                         }
                     }
                 ]
             },
             "dataframe": [],
             "valor_list": {
-                "lg-nolan": "2019-11-17"
+                "lg-nolan": "2019-12-03"
             }
         },
         "dd612": {
             "dato": {
-                "lg-eng": "Tool for translate the content to other langs",
+                "lg-eng": "Tool for translate the content to other langs<br>",
                 "lg-spa": "Herramienta de traducción de contenido a otras lenguas"
             },
             "info": {
@@ -135,13 +141,13 @@
                 "modelo": "component_text_area"
             },
             "valor": {
-                "lg-eng": "Tool for translate the content to other langs",
+                "lg-eng": "Tool for translate the content to other langs<br>",
                 "lg-spa": "Herramienta de traducción de contenido a otras lenguas"
             },
             "dataframe": [],
             "valor_list": {
                 "lg-eng": {
-                    "0": "Tool for translate the content to other langs"
+                    "0": "Tool for translate the content to other langs<br><\/br>"
                 },
                 "lg-spa": {
                     "0": "Herramienta de traducción de contenido a otras lenguas"
@@ -150,6 +156,9 @@
         },
         "dd799": {
             "dato": {
+                "lg-cat": [
+                    "Traducció"
+                ],
                 "lg-eng": [
                     "Translation"
                 ],
@@ -162,11 +171,13 @@
                 "modelo": "component_input_text"
             },
             "valor": {
+                "lg-cat": "Traducció",
                 "lg-eng": "Translation",
                 "lg-spa": "Traducción"
             },
             "dataframe": [],
             "valor_list": {
+                "lg-cat": "Traducció",
                 "lg-eng": "Translation",
                 "lg-spa": "Traducción"
             }
@@ -194,7 +205,7 @@
         "dd1327": {
             "dato": {
                 "lg-nolan": [
-                    "1.0.1"
+                    "2.0.0"
                 ]
             },
             "info": {
@@ -203,12 +214,12 @@
             },
             "valor": {
                 "lg-nolan": [
-                    "1.0.1"
+                    "2.0.0"
                 ]
             },
             "dataframe": [],
             "valor_list": {
-                "lg-nolan": "1.0.1"
+                "lg-nolan": "2.0.0"
             }
         },
         "dd1328": {
@@ -233,14 +244,14 @@
         },
         "dd1334": {
             "dato": {
-                "lg-nolan": "[{\"tipo\":\"tool_dev1\",\"tld\":\"tool_dev\",\"model\":\"section_tool\",\"model_tipo\":\"dd125\",\"parent\":\"oh80\",\"order\":1,\"translatable\":false,\"properties\":{\"config\":{\"context_name\":\"section_tool\",\"tool_section_tipo\":\"tool_dev1\",\"top_tipo\":\"oh1\",\"target_section_tipo\":\"rsc167\",\"target_component_tipo\":\"rsc35\",\"target_tool\":\"tool_transcription\"}},\"relations\":null,\"descriptors\":[{\"value\":\"Translation nuevisimo\",\"lang\":\"lg-eng\",\"type\":\"term\"},{\"value\":\"Traducci\\u00f3n entrevistas\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Traducci\\u00f3 d'entrevistes\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"\\u039c\\u03b5\\u03c4\\u03b1\\u03b3\\u03c1\\u03b1\\u03c6\\u03ae \\u03c3\\u03c5\\u03bd\\u03b5\\u03bd\\u03c4\\u03b5\\u03cd\\u03be\\u03b5\\u03b9\\u03c2\",\"lang\":\"lg-ell\",\"type\":\"term\"},{\"value\":\"Tool for translate the content to other langs\",\"lang\":\"lg-eng\",\"type\":\"des\"},{\"value\":\"Herramienta de traducci\\u00f3n de contenido a otras lenguas\",\"lang\":\"lg-spa\",\"type\":\"des\"}]},{\"tipo\":\"tool_dev2\",\"tld\":\"tool_dev\",\"model\":\"section_list\",\"model_tipo\":\"dd91\",\"parent\":\"tool_dev1\",\"order\":1,\"translatable\":false,\"properties\":null,\"relations\":[{\"tipo\":\"rsc21\"},{\"tipo\":\"rsc19\"},{\"tipo\":\"rsc23\"},{\"tipo\":\"rsc263\"},{\"tipo\":\"rsc36\"},{\"tipo\":\"rsc244\"},{\"tipo\":\"rsc35\"}],\"descriptors\":[{\"value\":\"Listado\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Llistat\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"List\",\"lang\":\"lg-eng\",\"type\":\"term\"}]}]"
+                "lg-nolan": "[{\"is_model\":\"no\",\"tipo\":\"tool_dev1\",\"tld\":\"tool_dev\",\"model\":\"section_tool\",\"model_tipo\":\"dd125\",\"parent\":\"oh80\",\"order\":1,\"translatable\":false,\"properties\":{\"context\":{\"context_name\":\"section_tool\",\"tool_section_tipo\":\"tool_dev1\",\"top_tipo\":\"oh1\",\"target_section_tipo\":\"rsc167\",\"target_component_tipo\":\"rsc35\",\"target_tool\":\"tool_transcription\"}},\"relations\":null,\"descriptors\":[{\"value\":\"Trascrizioni interviste\",\"lang\":\"lg-ita\",\"type\":\"term\"},{\"value\":\"Transcription\",\"lang\":\"lg-eng\",\"type\":\"term\"},{\"value\":\"Transcripci\\u00f3n entrevistas\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Transcripci\\u00f3 d'entrevistes\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"\\u039c\\u03b5\\u03c4\\u03b1\\u03b3\\u03c1\\u03b1\\u03c6\\u03ae \\u03c3\\u03c5\\u03bd\\u03b5\\u03bd\\u03c4\\u03b5\\u03cd\\u03be\\u03b5\\u03b9\\u03c2\",\"lang\":\"lg-ell\",\"type\":\"term\"},{\"value\":\"Tool for translate the content to other langs\",\"lang\":\"lg-eng\",\"type\":\"des\"},{\"value\":\"Herramienta de traducci\\u00f3n de contenido a otras lenguas\",\"lang\":\"lg-spa\",\"type\":\"des\"}]},{\"is_model\":\"no\",\"tipo\":\"tool_dev2\",\"tld\":\"tool_dev\",\"model\":\"section_list\",\"model_tipo\":\"dd91\",\"parent\":\"tool_dev1\",\"order\":1,\"translatable\":false,\"properties\":null,\"relations\":[{\"tipo\":\"rsc21\"},{\"tipo\":\"rsc19\"},{\"tipo\":\"rsc23\"},{\"tipo\":\"rsc263\"},{\"tipo\":\"rsc36\"},{\"tipo\":\"rsc244\"},{\"tipo\":\"rsc35\"}],\"descriptors\":[{\"value\":\"Elenco\",\"lang\":\"lg-ita\",\"type\":\"term\"},{\"value\":\"Listado\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Llistat\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"List\",\"lang\":\"lg-eng\",\"type\":\"term\"}]}]"
             },
             "info": {
                 "label": "Ontologia",
                 "modelo": "component_json"
             },
             "valor": {
-                "lg-nolan": "[{\"tipo\":\"tool_dev1\",\"tld\":\"tool_dev\",\"model\":\"section_tool\",\"model_tipo\":\"dd125\",\"parent\":\"oh80\",\"order\":1,\"translatable\":false,\"properties\":{\"config\":{\"context_name\":\"section_tool\",\"tool_section_tipo\":\"tool_dev1\",\"top_tipo\":\"oh1\",\"target_section_tipo\":\"rsc167\",\"target_component_tipo\":\"rsc35\",\"target_tool\":\"tool_transcription\"}},\"relations\":null,\"descriptors\":[{\"value\":\"Translation nuevisimo\",\"lang\":\"lg-eng\",\"type\":\"term\"},{\"value\":\"Traducci\\u00f3n entrevistas\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Traducci\\u00f3 d'entrevistes\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"\\u039c\\u03b5\\u03c4\\u03b1\\u03b3\\u03c1\\u03b1\\u03c6\\u03ae \\u03c3\\u03c5\\u03bd\\u03b5\\u03bd\\u03c4\\u03b5\\u03cd\\u03be\\u03b5\\u03b9\\u03c2\",\"lang\":\"lg-ell\",\"type\":\"term\"},{\"value\":\"Tool for translate the content to other langs\",\"lang\":\"lg-eng\",\"type\":\"des\"},{\"value\":\"Herramienta de traducci\\u00f3n de contenido a otras lenguas\",\"lang\":\"lg-spa\",\"type\":\"des\"}]},{\"tipo\":\"tool_dev2\",\"tld\":\"tool_dev\",\"model\":\"section_list\",\"model_tipo\":\"dd91\",\"parent\":\"tool_dev1\",\"order\":1,\"translatable\":false,\"properties\":null,\"relations\":[{\"tipo\":\"rsc21\"},{\"tipo\":\"rsc19\"},{\"tipo\":\"rsc23\"},{\"tipo\":\"rsc263\"},{\"tipo\":\"rsc36\"},{\"tipo\":\"rsc244\"},{\"tipo\":\"rsc35\"}],\"descriptors\":[{\"value\":\"Listado\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Llistat\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"List\",\"lang\":\"lg-eng\",\"type\":\"term\"}]}]"
+                "lg-nolan": "[{\"is_model\":\"no\",\"tipo\":\"tool_dev1\",\"tld\":\"tool_dev\",\"model\":\"section_tool\",\"model_tipo\":\"dd125\",\"parent\":\"oh80\",\"order\":1,\"translatable\":false,\"properties\":{\"context\":{\"context_name\":\"section_tool\",\"tool_section_tipo\":\"tool_dev1\",\"top_tipo\":\"oh1\",\"target_section_tipo\":\"rsc167\",\"target_component_tipo\":\"rsc35\",\"target_tool\":\"tool_transcription\"}},\"relations\":null,\"descriptors\":[{\"value\":\"Trascrizioni interviste\",\"lang\":\"lg-ita\",\"type\":\"term\"},{\"value\":\"Transcription\",\"lang\":\"lg-eng\",\"type\":\"term\"},{\"value\":\"Transcripci\\u00f3n entrevistas\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Transcripci\\u00f3 d'entrevistes\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"\\u039c\\u03b5\\u03c4\\u03b1\\u03b3\\u03c1\\u03b1\\u03c6\\u03ae \\u03c3\\u03c5\\u03bd\\u03b5\\u03bd\\u03c4\\u03b5\\u03cd\\u03be\\u03b5\\u03b9\\u03c2\",\"lang\":\"lg-ell\",\"type\":\"term\"},{\"value\":\"Tool for translate the content to other langs\",\"lang\":\"lg-eng\",\"type\":\"des\"},{\"value\":\"Herramienta de traducci\\u00f3n de contenido a otras lenguas\",\"lang\":\"lg-spa\",\"type\":\"des\"}]},{\"is_model\":\"no\",\"tipo\":\"tool_dev2\",\"tld\":\"tool_dev\",\"model\":\"section_list\",\"model_tipo\":\"dd91\",\"parent\":\"tool_dev1\",\"order\":1,\"translatable\":false,\"properties\":null,\"relations\":[{\"tipo\":\"rsc21\"},{\"tipo\":\"rsc19\"},{\"tipo\":\"rsc23\"},{\"tipo\":\"rsc263\"},{\"tipo\":\"rsc36\"},{\"tipo\":\"rsc244\"},{\"tipo\":\"rsc35\"}],\"descriptors\":[{\"value\":\"Elenco\",\"lang\":\"lg-ita\",\"type\":\"term\"},{\"value\":\"Listado\",\"lang\":\"lg-spa\",\"type\":\"term\"},{\"value\":\"Llistat\",\"lang\":\"lg-cat\",\"type\":\"term\"},{\"value\":\"List\",\"lang\":\"lg-eng\",\"type\":\"term\"}]}]"
             },
             "dataframe": [],
             "valor_list": {
@@ -249,26 +260,26 @@
         },
         "dd1335": {
             "dato": {
-                "lg-nolan": "{\"translator_engine\":[{\"name\":\"babel\",\"uri\":\"https:\\\/\\\/babel.render.es\\\/babel_engine\\\/\"}]}"
+                "lg-nolan": "\"\""
             },
             "info": {
                 "label": "Propiedades",
                 "modelo": "component_json"
             },
             "valor": {
-                "lg-nolan": "{\"translator_engine\":[{\"name\":\"babel\",\"uri\":\"https:\\\/\\\/babel.render.es\\\/babel_engine\\\/\"}]}"
+                "lg-nolan": "\"\""
             },
             "dataframe": [],
             "valor_list": {
                 "lg-nolan": "WORK IN PROGRESS.."
             }
         },
-        "dd1353": {
+        "dd1350": {
             "dato": {
                 "lg-nolan": "\"\""
             },
             "info": {
-                "label": "objeto procesado",
+                "label": "Afecta a los tipos:",
                 "modelo": "component_json"
             },
             "valor": {
@@ -278,12 +289,30 @@
             "valor_list": {
                 "lg-nolan": "WORK IN PROGRESS.."
             }
+        },
+        "dd1362": {
+            "dato": {
+                "lg-nolan": "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators must be defined in Dédalo \/config\/tools\/config_tool_lang.json file like:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.render.es\/babel_engine\/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');"
+            },
+            "info": {
+                "label": "Dev info",
+                "modelo": "component_text_area"
+            },
+            "valor": {
+                "lg-nolan": "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators must be defined in Dédalo \/config\/tools\/config_tool_lang.json file like:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.render.es\/babel_engine\/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');"
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-nolan": {
+                    "0": "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators must be defined in Dédalo \/config\/tools\/config_tool_lang.json file like:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.<\/br><\/br><\/br><\/br><\/br><\/br>"
+                }
+            }
         }
     },
     "section_id": 1,
-    "created_date": "2019-11-03 19:19:13",
+    "created_date": "2019-11-05 16:06:56",
     "section_tipo": "dd1340",
-    "modified_date": "2019-11-17 11:57:12",
+    "modified_date": "2019-12-03 19:33:27",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",

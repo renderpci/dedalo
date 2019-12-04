@@ -53,7 +53,7 @@ class tools_register {
 					$new_info_object = clone $info_object;
 
 				// ontology from info object
-					$current_ontology = ($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}) ?
+					$current_ontology = (isset($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'})) ?
 						json_decode($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}) :
 						null;
 
@@ -114,7 +114,7 @@ class tools_register {
 
 						// save new record with serialized section_id
 						$created_section_id = tools_register::import_info_object($current_info_object, $section_id_counter);
-						
+
 						// build tool_object (simple)
 						$tool_object = tools_register::parse_tool_object(tools_register::$section_tools_tipo, $created_section_id);
 
@@ -127,8 +127,8 @@ class tools_register {
 																			 'list',
 																			 DEDALO_DATA_NOLAN,
 																			 tools_register::$section_tools_tipo);
-							$component->set_dato($tool_object);					
-							$component->save();	
+							$component->set_dato($tool_object);
+							$component->save();
 					}
 			}
 
@@ -147,14 +147,14 @@ class tools_register {
 	/**
 	* PARSE_TOOL_OBJECT
 	* Build a tool object from section tools register development
-	* 
+	*
 	* @param object $current_info_object
-	*	Full dedalo section data object from one record 
+	*	Full dedalo section data object from one record
 	* @return object $tool_object
 	*	Simple and human readable json object to use with components, sections, areas..
 	*/
 	public static function parse_tool_object($section_tipo, $section_id) {
-		
+
 		$tool_object = new stdClass();
 
 		$tool_object->section_tipo 	= $section_tipo;
@@ -228,7 +228,7 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array');					
+			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array');
 			$tool_object->afected_models = $value;
 
 		// description
@@ -260,7 +260,7 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato() ?? [];				
+			$value 			= $component->get_dato() ?? [];
 			$tool_object->afected_tipos = $value;
 
 		// show in inspector
@@ -274,7 +274,7 @@ class tools_register {
 															 $section_tipo);
 			$dato 			= $component->get_dato();
 			$dato_ref 		= reset($dato)->section_id;
-			$value 			= $dato_ref == '1' ? true : false;				
+			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_inspector = $value;
 
 		// show in component
@@ -288,7 +288,7 @@ class tools_register {
 															 $section_tipo);
 			$dato 			= $component->get_dato();
 			$dato_ref 		= reset($dato)->section_id;
-			$value 			= $dato_ref == '1' ? true : false;				
+			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_component = $value;
 
 		// requirement translatable
@@ -302,7 +302,7 @@ class tools_register {
 															 $section_tipo);
 			$dato 			= $component->get_dato();
 			$dato_ref 		= reset($dato)->section_id;
-			$value 			= $dato_ref == '1' ? true : false;				
+			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->requirement_translatable = $value;
 
 		// ontology
@@ -314,7 +314,7 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato();					
+			$value 			= $component->get_dato();
 			$tool_object->ontology = $value;
 
 
@@ -327,8 +327,13 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato();					
+			$value 			= $component->get_dato();
 			$tool_object->properties = $value;
+
+
+		// config
+			$config_raw = file_get_contents(DEDALO_LIB_BASE_PATH.'/config/tools/config_'.$tool_object->name.'.json');
+			$tool_object->config = ($config_raw!==false) ? json_decode($config_raw) : null;
 
 
 		return $tool_object;

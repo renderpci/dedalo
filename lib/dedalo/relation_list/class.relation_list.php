@@ -17,7 +17,7 @@ class relation_list extends common {
 
 	/**
 	* CONSTRUCT
-	* 
+	*
 	*/
 	public function __construct($tipo, $section_id, $section_tipo, $modo='edit') {
 
@@ -46,12 +46,12 @@ class relation_list extends common {
 		$reference_locator = new locator();
 			$reference_locator->set_section_tipo($this->section_tipo);
 			$reference_locator->set_section_id($this->section_id);
-		
+
 		# Get calculated inverse locators for all matrix tables
 		$inverse_locators = search::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
 
 
-		return (array)$inverse_locators;	
+		return (array)$inverse_locators;
 	}//end get_inverse_references
 
 
@@ -61,7 +61,7 @@ class relation_list extends common {
 	*
 	*/
 	public function get_relation_list_obj($ar_inverse_references, $value_resolved=false){
-		
+
 		$json 			= new stdClass;
 		$ar_context 	= [];
 		$ar_data		= [];
@@ -70,7 +70,7 @@ class relation_list extends common {
 		$ar_relation_components	= [];
 		# loop the locators that call to the section
 		foreach ((array)$ar_inverse_references as $current_locator) {
-			
+
 			$current_section_tipo = $current_locator->from_section_tipo;
 
 			# 1 get the @context
@@ -120,7 +120,7 @@ class relation_list extends common {
 						}
 					}
 				}
-				
+
 			}// end if (!in_array($current_section_tipo, $sections_related )
 
 			# 2 get ar_data
@@ -129,8 +129,8 @@ class relation_list extends common {
 			}else{
 				$current_component 	= null;
 				debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
-			}					
-			$ar_data_result = $this->get_ar_data($current_locator, $current_component, $value_resolved);			
+			}
+			$ar_data_result = $this->get_ar_data($current_locator, $current_component, $value_resolved);
 			$ar_data 		= array_merge($ar_data, $ar_data_result);
 		}// end foreach
 
@@ -145,7 +145,7 @@ class relation_list extends common {
 
 	/**
 	* GET_DATA
-	* 
+	*
 	*/
 	public function get_ar_data($locator, $ar_components, $value_resolved=false){
 
@@ -160,17 +160,17 @@ class relation_list extends common {
 					$current_id->component_tipo		= 'id';
 
 		$data[] = $current_id;
-		
+
 		if($value_resolved===true && isset($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
 					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
 					$current_component	= component_common::get_instance(
-																		$modelo_name, 
-																		$tipo, 
+																		$modelo_name,
+																		$tipo,
 																		$section_id,
-																		'list', 
-																		DEDALO_DATA_LANG, 
+																		'list',
+																		DEDALO_DATA_LANG,
 																		$section_tipo
 																		);
 					$value = $current_component->get_valor();
@@ -185,7 +185,7 @@ class relation_list extends common {
 				}
 			}
 		}
-	
+
 		return $data;
 	}//end get_data
 
@@ -193,20 +193,20 @@ class relation_list extends common {
 
 	/**
 	* GET_JSON
-	* 
+	*
 	*/
-	public function get_json(){
+	public function get_json($request_options=false){
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
-		
-			# Class name is called class (ex. component_input_text), not this class (common)	
+
+			# Class name is called class (ex. component_input_text), not this class (common)
 			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-		
+
 		return $json;
 	}//end get_json
 
