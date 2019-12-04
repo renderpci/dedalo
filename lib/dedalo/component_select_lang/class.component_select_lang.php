@@ -1,11 +1,12 @@
 <?php
+#require_once(dirname(dirname(__FILE__)).'/component_filter/class.component_filter.php');
 /*
 * CLASS COMPONENT_SELECT_LANG
 *
 *
 */
 class component_select_lang extends component_relation_common {
-	
+
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
@@ -34,7 +35,7 @@ class component_select_lang extends component_relation_common {
 		}
 	}//end __construct
 
-	
+
 
 	/*
 	# GET DATO : Format "lg-spa"
@@ -91,7 +92,7 @@ class component_select_lang extends component_relation_common {
 		# Ensures is a real non-associative array (avoid json encode as object)
 		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
-		parent::set_dato( (array)$dato );		
+		parent::set_dato( (array)$dato );
 	}//end set_dato
 	*/
 
@@ -107,7 +108,7 @@ class component_select_lang extends component_relation_common {
 		if (strlen($dato)>2) {
 			return RecordObj_ts::get_termino_by_tipo($dato,DEDALO_APPLICATION_LANG,true);
 		}
-		return $dato;					
+		return $dato;
 	}
 	*/
 
@@ -127,10 +128,10 @@ class component_select_lang extends component_relation_common {
 			return $this->valor;
 		}
 
-		$valor  = null;		
+		$valor  = null;
 		$dato   = $this->get_dato();
 		if (!empty($dato)) {
-			
+
 			# Test dato format (b4 changed to object)
 			if(SHOW_DEBUG) {
 				foreach ($dato as $key => $current_locator) {
@@ -142,13 +143,13 @@ class component_select_lang extends component_relation_common {
 						return $valor;
 					}
 				}
-			}		
+			}
 
 			# Always run ar_all_project_select_langs
 			# $ar_all_project_select_langs = $this->get_ar_all_project_select_langs( $lang );
 			$ar_all_project_select_langs = common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 			foreach ((array)$ar_all_project_select_langs as $lang_code => $lang_name ) {
-				
+
 				$locator = lang::get_lang_locator_from_code( $lang_code );
 				if (locator::in_array_locator( $locator, (array)$dato, $ar_properties=array('section_id','section_tipo') )) {
 					$valor = $lang_name;
@@ -173,7 +174,7 @@ class component_select_lang extends component_relation_common {
 	*	format array( lang_locator => label )
 	*//*
 	public function get_ar_all_project_select_langs( $lang=DEDALO_APPLICATION_LANG ) {
-		
+
 		$section_id  			= $this->get_parent();
 		$section_tipo		 	= $this->get_section_tipo();
 		$section 				= section::get_instance($section_id, $section_tipo);
@@ -183,17 +184,17 @@ class component_select_lang extends component_relation_common {
 		return (array)$ar_all_project_langs;
 	}//end get_ar_all_project_select_langs
 	*/
-	
+
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		
+
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators
 
@@ -201,7 +202,7 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -220,7 +221,7 @@ class component_select_lang extends component_relation_common {
 			return $search_query;
 		}
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-		
+
 		switch (true) {
 			case $comparison_operator=='=':
 				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
@@ -229,7 +230,7 @@ class component_select_lang extends component_relation_common {
 				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
-		
+
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
@@ -260,7 +261,7 @@ class component_select_lang extends component_relation_common {
 				break;
 		}
 
-		return $tipo;		
+		return $tipo;
 	}//end get_related_component_text_area
 
 
@@ -306,7 +307,7 @@ class component_select_lang extends component_relation_common {
 
 					$new_dato = array();
 					$current_locator = locator::lang_to_locator($dato_unchanged);
-					debug_log(__METHOD__." dato_unchanged: $dato_unchanged - current_locator: ".to_string($current_locator), logger::DEBUG);				
+					debug_log(__METHOD__." dato_unchanged: $dato_unchanged - current_locator: ".to_string($current_locator), logger::DEBUG);
 					if (is_object($current_locator)) {
 						# add_object_to_dato is safe for duplicates and object types
 						$new_dato = component_common::add_object_to_dato( $current_locator, $new_dato );
@@ -315,9 +316,9 @@ class component_select_lang extends component_relation_common {
 						# Something is wrong
 						dump($dato_unchanged, ' dato_unchanged ++ [Error en convert lang to locator] '.to_string());
 						debug_log(__METHOD__." Error en convert lang to locator . lang dato_unchanged: ".to_string($dato_unchanged), logger::DEBUG);
-					}					
+					}
 				}
-					
+
 				# Compatibility old dedalo instalations
 				if ($data_changed) {
 					$response = new stdClass();
@@ -329,7 +330,7 @@ class component_select_lang extends component_relation_common {
 				}else{
 					$response = new stdClass();
 						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 
 					return $response;
 				}
@@ -338,7 +339,7 @@ class component_select_lang extends component_relation_common {
 			default:
 				# code...
 				break;
-		}		
+		}
 	}//end update_dato_version
 
 
@@ -359,7 +360,7 @@ class component_select_lang extends component_relation_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-				
+
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 													 $parent,
@@ -367,13 +368,13 @@ class component_select_lang extends component_relation_common {
 													 DEDALO_DATA_NOLAN,
 													 $section_tipo);
 
-		
+
 		# Use already query calculated values for speed
 		#$ar_records   = (array)json_handler::decode($value);
 		#$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-		
-		return  $component->get_valor($lang);	
+
+		return  $component->get_valor($lang);
 	}//end render_list_value
 
 
@@ -388,7 +389,7 @@ class component_select_lang extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-		
+
 		$valor = $this->get_valor( $lang ); # Importante!: Pasar lang como parámetro para indicar en la resolución del get_ar_list_of_values el lenguaje deseado
 		$valor = preg_replace("/<\/?mark>/", "", $valor); # Remove untranslated string tags
 		$diffusion_value = $valor;
@@ -396,7 +397,7 @@ class component_select_lang extends component_relation_common {
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
-	
+
 
 }
 ?>

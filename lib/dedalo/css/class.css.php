@@ -190,6 +190,7 @@ class css {
 	* @return object $response
 	*/
 	public static function build_structure_css() {
+		$start_time=microtime(1);
 
 		$response = new stdClass();
 			$response->result = false;
@@ -202,14 +203,19 @@ class css {
 
 		#
 		# SEARCH . Get all components custom css
-		$ar_prefix = unserialize(DEDALO_PREFIX_TIPOS);
-		$filter = '';
-		foreach ($ar_prefix as $prefix) {
-			$filter .= "\n\"terminoID\" LIKE '$prefix%' ";
-			if ( $prefix != end($ar_prefix) ) {
-				$filter .= "OR ";
-			}
-		}
+		// $ar_prefix = unserialize(DEDALO_PREFIX_TIPOS);
+		// $filter = '';
+		// foreach ($ar_prefix as $prefix) {
+		// 	// $filter .= "\n\"terminoID\" LIKE '$prefix%' ";
+		// 	// if ( $prefix != end($ar_prefix) ) {
+		// 	// 	$filter .= "OR ";
+		// 	// }
+		// }
+		$ar_pairs = array_map(function($prefix){
+			return PHP_EOL . '"terminoID" LIKE \''.$prefix.'%\'';
+		}, unserialize(DEDALO_PREFIX_TIPOS));
+		$filter = implode(' OR ', $ar_pairs);
+
 		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
 		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
@@ -230,6 +236,9 @@ class css {
 
 			// css_prefix. get_css_prefix
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
+				if ($modelo_name==='box elements') {
+					continue;
+				}
 				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);
 
 
@@ -312,7 +321,13 @@ class css {
 				$response->msg 	  	 = "File css created successful. Size: $file_size";
 				$response->file_path = self::$structure_file_path;
 			}
-			#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
+
+
+			if(SHOW_DEBUG===true) {
+				#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
+				$total = exec_time_unit($start_time,'ms')." ms";
+				debug_log(__METHOD__." Total time [build_structure_css] ms: ".$total, logger::DEBUG);
+			}
 
 
 		return (object)$response;
@@ -381,6 +396,10 @@ class css {
 
 		switch (true) {
 
+			case strpos($modelo_name, 'component')!==false :
+				$css_prefix = 'wrap_component';
+				break;
+
 			case ($modelo_name === 'section_group_div'):
 				$css_prefix = 'wrap_section_group_div';
 				break;
@@ -403,8 +422,8 @@ class css {
 				$css_prefix = 'alias';
 				break;
 
-			case strpos($modelo_name, 'component')!==false :
-				$css_prefix = 'wrap_component';
+			case strpos($modelo_name, 'button_')!==false :
+				$css_prefix = 'css_button_generic';
 				break;
 
 			#case strpos($modelo_name, 'section')!==false :
@@ -413,7 +432,7 @@ class css {
 
 			default:
 				$css_prefix = $tipo;
-				debug_log(__METHOD__." Undefined css_prefix from modelo_name: $modelo_name ($tipo)".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Undefined css_prefix from modelo_name: '$modelo_name' ($tipo)".to_string(), logger::ERROR);
 				break;
 		}
 

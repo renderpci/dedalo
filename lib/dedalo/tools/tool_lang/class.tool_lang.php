@@ -59,6 +59,23 @@ class tool_lang { // extends tool_common
 			$options->translator 		= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
+		// config json file . Must be compatible with tool properties translator_engine data
+			// $config = json_decode(file_get_contents(dirname(__FILE__) . '/translators/config.json'));
+			// if ($config===null) {
+			// 	$response->msg 	= "Sorry. 'translators/config.json' file is not valid!"; // error msg
+			// 	return $response;
+			// }
+			// // match config engine name with options translator name
+			// $engine = array_reduce($config->translator_engine, function($carry, $item) use($options){
+			// 	return ($item->name===$options->translator->name) ? $item : $carry;
+			// });
+			// $uri = $engine->uri;
+			// $key = $engine->key;
+
+		// data from options->translator
+			$uri = $options->translator->uri;
+			$key = $options->translator->key;
+
 		// Source text . Get source text from component
 			$model 		= RecordObj_dd::get_modelo_name_by_tipo($options->component_tipo,true);
 			$component	= component_common::get_instance($model,
@@ -76,17 +93,22 @@ class tool_lang { // extends tool_common
 				switch ($options->translator->name) {
 					case 'google_translation':
 						// Not implemented yet
+						$response->msg = "Sorry. '{$options->translator->label}' is not implemented yet"; // error msg
+						return $response;
 						break;
 					case 'babel':
 					default:
 						$translate = babel::translate([
+							'uri' 			=> $uri,
+							'key' 			=> $key,
 							'source_lang' 	=> $options->source_lang,
 							'target_lang' 	=> $options->target_lang,
 							'text' 			=> $value,
 						]);
 						$result	= $translate->result;
 						if ($result===false) {
-							$response->msg 	= $translate->msg; // error msg
+							$msg = strlen($translate->msg)>512 ? substr($translate->msg, 0, 512).'..' : $translate->msg;
+							$response->msg = $msg; // error msg
 							return $response;
 						}
 						break;

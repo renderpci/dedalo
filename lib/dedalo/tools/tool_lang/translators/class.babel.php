@@ -18,14 +18,16 @@ class babel {
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		$options = new stdClass();
-			$options->source_lang 		= null;
-			$options->target_lang 		= null;
-			$options->text 				= null;
+			$options->uri 			= null;
+			$options->key 			= null;
+			$options->source_lang 	= null;
+			$options->target_lang 	= null;
+			$options->text 			= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// babel config
 			$direction 	= self::get_babel_direction($options->source_lang, $options->target_lang);
-			$url 		= DEDALO_TRANSLATOR_URL['babel'];
+			$url 		= $options->uri; // DEDALO_TRANSLATOR_URL['babel'];
 
 
 		// add custom image tags to avoid Apertium change original tags
@@ -33,6 +35,7 @@ class babel {
 
 		// http query vars
 			$fields = [
+				'key' 		=> $options->key,
 				'text' 		=> $source_text,
 				'direction' => $direction
 			];
@@ -41,7 +44,8 @@ class babel {
 			$ch = curl_init();
 
 			curl_setopt($ch, CURLOPT_URL, $url);
-			curl_setopt($ch, CURLOPT_POST, count($fields));
+			#curl_setopt($ch, CURLOPT_POST, count($fields));
+			curl_setopt($ch, CURLOPT_POST, true);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($fields));
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 			$result = curl_exec($ch);

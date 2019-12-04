@@ -5,8 +5,8 @@ require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd.php');
 
 
 class RecordObj_dd_edit extends RecordObj_dd {
-	
-	
+
+
 
 	/**
 	* SAVE
@@ -47,26 +47,26 @@ class RecordObj_dd_edit extends RecordObj_dd {
 
 		#
 		# INSERT
-		# TERMINO ID NOT CREATED : BUILD NEW AND INSERT	
+		# TERMINO ID NOT CREATED : BUILD NEW AND INSERT
 		# Creamos el terminoID a partir del prefijo y el contador contador para el prefijo actual
 		$counter_dato   = self::get_counter_value($this->prefijo);
 		$terminoID		= (string)$this->prefijo . (int)($counter_dato+1);
 			#dump($terminoID," terminoID - prefijo:$this->prefijo");die();
-		
+
 		# Fix terminoID : Important!
 		$this->set_terminoID($terminoID);
-		
+
 		# Set defaults
 		$this->set_tld( (string)$this->prefijo );
 		if(empty($this->norden)) $this->set_norden( (int)1 );
 
 
 		if (!empty($this->terminoID)) {
-			
+
 			$result = parent::Save();
 
 			if ($result) {
-				
+
 				$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);
 					#dump($counter_dato_updated," counter_dato_updated $this->prefijo");
 
@@ -75,15 +75,15 @@ class RecordObj_dd_edit extends RecordObj_dd {
 
 				$value_parent 		= (int)substr($this->parent,  strlen($prefix_parent));
 				$value_terminoID 	= (int)substr($this->terminoID, strlen($prefix_terminoID));
-				
+
 				//if ($value_terminoID<=$value_parent ) {
 				//	dump($value_parent, 	' value_parent for '.$this->parent);
-				//	dump($value_terminoID,  ' value_parent for '.$this->terminoID);					
-				//	throw new Exception("Error Processing Request. Inconsistency detected. parent:$this->parent , terminoID:$this->terminoID", 1);					
-				//}				
+				//	dump($value_terminoID,  ' value_parent for '.$this->terminoID);
+				//	throw new Exception("Error Processing Request. Inconsistency detected. parent:$this->parent , terminoID:$this->terminoID", 1);
+				//}
 
 				#
-				# DESCRIPTORS : finally we create one record in descriptors with this main info				
+				# DESCRIPTORS : finally we create one record in descriptors with this main info
 				$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, 'lg-spa');
 				$RecordObj_descriptors_dd->set_tipo('termino');
 				$RecordObj_descriptors_dd->set_parent($terminoID);
@@ -94,9 +94,9 @@ class RecordObj_dd_edit extends RecordObj_dd {
 
 		return (string)$terminoID;
 	}//end Save
-	
-	
-	
+
+
+
 	/**
 	* UPDATE_COUNTER
 	* @param (string)$tld, (int)$current_value=false
@@ -133,15 +133,16 @@ class RecordObj_dd_edit extends RecordObj_dd {
 	}
 
 
-	
+
 	/**
 	* GET_COUNTER_VALUE
 	*/
 	public static function get_counter_value($tld) {
-		
+
 		$strQuery 		= "SELECT counter FROM \"main_dd\" WHERE tld = '$tld' LIMIT 1";
-		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
-		$counter_value 	= pg_fetch_assoc($result)['counter'];
+		$search			= JSON_RecordDataBoundObject::search_free($strQuery);
+		$result 		= pg_fetch_assoc($search);
+		$counter_value 	= $result['counter'] ?? null;
 
 		if (!$counter_value || is_null($counter_value)) {
 
@@ -153,7 +154,7 @@ class RecordObj_dd_edit extends RecordObj_dd {
 
 		return (int)$counter_value;
 	}//end get_counter_value
-	
+
 
 
 }
