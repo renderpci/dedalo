@@ -32,12 +32,22 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		// Building real value			
-		$value = $this->get_dato();
-		if (!empty($value)) {
-			// process dato ?
-		}//end if (!empty($dato))
+		// Value
+		switch ($modo) {			
+			case 'list':
+				$value 				= $this->get_valor();
+				break;
 
+			case 'edit':
+			default:
+				// Building real value			
+					$value = $this->get_dato();
+					if (!empty($value)) {
+						// process dato ?
+					}//end if (!empty($dato))
+				break;		
+		}
+		
 		// data item
 		$item  = $this->get_data_item($value);
 
