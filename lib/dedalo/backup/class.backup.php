@@ -1290,11 +1290,13 @@ abstract class backup {
 		file_put_contents( $target_dir .'/'. $obj->name, $result);
 
 		if(SHOW_DEBUG===true) {
-			// $fist_line = strtok($result, "\n\r");
-			// $total=round(microtime(1)-$start_time,3);
-			// debug_log(__METHOD__." Get remote and write str data type:$obj->type - name:$obj->name in secs. $total \n".$fist_line, logger::DEBUG);
-			// // Clean memory footprint
-			// unset($fist_line); strtok('', '');
+			$fist_line = strtok($result, "\n\r");
+			$fist_line = str_replace(['\n','\N','\r','\t','  '], ' ', $fist_line);
+			$fist_line = preg_replace('/\s+/', ' ', $fist_line);
+			$total = exec_time_unit($start_time,'ms')." ms";
+			debug_log(__METHOD__." Get remote and write str data type:$obj->type - name:$obj->name in ms: $total \n".substr($fist_line, 0, 250), logger::DEBUG);
+			// Clean memory footprint
+			unset($fist_line); strtok('', '');
 		}
 
 
