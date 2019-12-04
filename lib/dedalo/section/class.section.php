@@ -13,7 +13,7 @@ class section extends common {
 	* CLASS VARS
 	*/
 		# Overwrite __construct var lang passed in this component
-		protected $lang = DEDALO_DATA_NOLAN;
+		protected $lang;
 
 		# FIELDS
 		protected $section_id;
@@ -138,6 +138,7 @@ class section extends common {
 		}
 
 		// Set general vars
+			$this->lang 		= DEDALO_DATA_NOLAN;
 			$this->section_id 	= $section_id;
 			$this->tipo 		= $tipo;
 			$this->modo 		= $modo;

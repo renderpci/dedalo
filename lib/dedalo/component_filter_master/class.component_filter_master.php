@@ -1,4 +1,5 @@
 <?php
+require_once(dirname(dirname(__FILE__)).'/component_filter/class.component_filter.php');
 /*
 * CLASS COMPONENT FILTER MASTER
 *
@@ -12,10 +13,10 @@ class component_filter_master extends component_filter {
 
 
 	/**
-	* __CONSTRUCT	
+	* __CONSTRUCT
 	*/
 	function __construct($tipo=false, $parent=null, $modo='edit', $lang=NULL, $section_tipo=null) {
-		
+
 		// Note that parent is NOT component_common here (is component_filter)
 		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
 
@@ -25,15 +26,15 @@ class component_filter_master extends component_filter {
 		if(!empty($parent)) {
 			$this->caller_id = $parent;
 		}
-		
-		return true;	
+
+		return true;
 	}//end __construct
 
 
 
 	/**
 	* SAVE OVERRIDE
-	* Overwrite component_common method 
+	* Overwrite component_common method
 	*/
 	public function Save() {
 		# Reset cache session IMPORTANT !
@@ -58,7 +59,7 @@ class component_filter_master extends component_filter {
 
 
 	/**
-	* GET AR PROYECTOS SECTION ID 
+	* GET AR PROYECTOS SECTION ID
 	* Devuelve un array de section_id de los proyectos que usan las areas autorizadas (estado 2) al usuario actual
 	* @return $ar_projects_final
 	*	Array formated as id=>project_name  like: [250] => Proyecto de Historia Oral
@@ -92,21 +93,21 @@ class component_filter_master extends component_filter {
 				$ar_proyectos_section_id = array();
 			}else{
 				$dato = $component_filter_master->get_dato();
-				$ar_proyectos_section_id = array_keys($dato);				
-			}			
+				$ar_proyectos_section_id = array_keys($dato);
+			}
 		}
 
 		if (empty($ar_proyectos_section_id)) {
-			
+
 			log_messages("Not projects found. Plese, create one before continue");
 			return $ar_projects_final;
 		}
 
 
 		// Resolve projects names
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true);		
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true);
 		foreach ($ar_proyectos_section_id as $current_section_id) {
-			
+
 			$component = component_common::get_instance($modelo_name,
 														DEDALO_PROJECTS_NAME_TIPO,
 														$current_section_id,
@@ -126,7 +127,7 @@ class component_filter_master extends component_filter {
 			}
 			$ar_projects_final[$current_section_id] = (string)$current_dato;
 		}
-		
+
 		return $ar_projects_final;
 	}//end get_ar_proyectos_section */
 
@@ -151,7 +152,7 @@ class component_filter_master extends component_filter {
 			$update_version = $options->update_version;
 			$dato_unchanged = $options->dato_unchanged;
 			$reference_id 	= $options->reference_id;
-		
+
 
 		$update_version = implode(".", $update_version);
 
@@ -168,7 +169,7 @@ class component_filter_master extends component_filter {
 
 							if (isset($value->section_id) && isset($value->section_tipo)) {
 								# Updated dato (is locator)
-								$filter_locator = $value;					
+								$filter_locator = $value;
 
 							}else{
 								# Old dato Like {"1": 2}
@@ -179,7 +180,7 @@ class component_filter_master extends component_filter {
 									$filter_locator->set_from_component_tipo($options->tipo);
 							}
 							# Add to clean array
-							$ar_locators[] = $filter_locator;				
+							$ar_locators[] = $filter_locator;
 						}
 						# Replace old formatted value with new formatted array of locators
 						$new_dato = $ar_locators;
@@ -194,14 +195,14 @@ class component_filter_master extends component_filter {
 						debug_log(__METHOD__." No project found in $options->section_tipo - $options->tipo - $options->section_id ".to_string(), logger::DEBUG);
 						$response = new stdClass();
 						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 						return $response;
 					}
 				break;
 		}
 	}//end update_dato_version */
-	
 
-	
+
+
 }
 ?>
