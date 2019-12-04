@@ -319,6 +319,22 @@ class component_date extends component_common {
 					}
 					break;
 
+				case 'time':
+					$input_name[$key] 	= $key."_{$tipo}_{$parent}";
+
+					if(!empty($current_dato)) {
+						$dd_date 	= new dd_date($current_dato);
+
+						$separator_time = ':';
+						$hour  	 = isset($dd_date->hour)	? sprintf("%02d", $dd_date->hour)   : '00';
+						$minute  = isset($dd_date->minute)	? sprintf("%02d", $dd_date->minute) : '00';
+						$second  = isset($dd_date->second)	? sprintf("%02d", $dd_date->second) : '00';								
+
+						$ar_valor[$key] = $hour . $separator_time . $minute . $separator_time . $second;
+					}
+					break;
+
+
 				case 'date':
 				default:
 					# Start
