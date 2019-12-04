@@ -6,9 +6,9 @@ class sections extends common {
 
 	/**
 	* CLASS VARS
-	*/ 
+	*/
 		# Overwrite __construct var lang passed in this component
-		protected $lang = DEDALO_DATA_NOLAN;
+		protected $lang;// = DEDALO_DATA_NOLAN;
 
 		# FIELDS
 		protected $ar_locators;
@@ -19,7 +19,7 @@ class sections extends common {
 		protected $modo;
 
 		public $search_query_object;
-	
+
 
 
 	/**
@@ -27,11 +27,11 @@ class sections extends common {
     * Singleton pattern
     * @returns array array of section objects by key
     */
-    public static function get_instance($ar_locators=[], $search_query_object, $caller_tipo=null, $modo='edit', $lang=null) {
+    public static function get_instance($ar_locators=[], $search_query_object, $caller_tipo=null, $modo='edit', $lang=DEDALO_DATA_NOLAN) {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $modo, $lang);
-		
-       
+
+
         return $instance;
     }//end get_instance
 
@@ -48,7 +48,7 @@ class sections extends common {
 
 		if ($search_query_object===false) {
 			throw new Exception("Error: on construct sections : search_query_object is mandatory. ar_locators:$ar_locators, tipo:$caller_tipo, modo:$modo", 1);
-		}	
+		}
 
 		if(SHOW_DEBUG===true) {
 			#$section_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
@@ -72,7 +72,7 @@ class sections extends common {
 	* @return array $ar_records
 	*/
 	public function get_dato() {
-		
+
 		$search 	= new search($this->search_query_object);
 		$rows_data	= $search->search();
 
@@ -89,15 +89,15 @@ class sections extends common {
 	public function get_ar_section_tipo() {
 
 		$this->get_ar_section_tipo = $this->search_query_object->section_tipo;
-		
+
 		return $this->get_ar_section_tipo;
 	}//end get_ar_section_tipo
-	
+
 
 
 	/**
 	* GET_SQO_CONTEXT
-	* @return 
+	* @return
 	*//*
 	public function get_sqo_context() {
 
@@ -112,7 +112,7 @@ class sections extends common {
 
 
 		// Records_html. Render search form html using search.
-		// We know the current record id but we search like a list filtered by id for maintain always the same criterion 
+		// We know the current record id but we search like a list filtered by id for maintain always the same criterion
 			$self_locator = new locator();
 				$self_locator->set_section_tipo($section_tipo);
 				$self_locator->set_section_id($section_id);
@@ -133,7 +133,7 @@ class sections extends common {
 		$sqo_context->show 		= $show;
 		$sqo_context->search 	= [];
 
-		return $sqo_context;		
+		return $sqo_context;
 	}//end get_sqo_context
 	*/
 
