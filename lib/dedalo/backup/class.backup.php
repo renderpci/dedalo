@@ -840,7 +840,7 @@ abstract class backup {
 				$ar_msg[]=$msg;
 
 				// let GC do the memory job
-				time_nanosleep(0, 100000); // 50 ms
+				//time_nanosleep(0, 100000); // 50 ms
 			}#end foreach ($ar_core_tlds as $current_tld)
 
 		#
@@ -968,7 +968,7 @@ abstract class backup {
 					$ar_msg[]=$msg;
 
 				// let GC do the memory job
-				time_nanosleep(0, 100000); // 50 ms
+				//time_nanosleep(0, 100000); // 50 ms
 			}#end foreach
 
 		#

@@ -684,7 +684,7 @@ class tool_administration extends tool_common {
 						#
 						# TIME MACHINE . Update Time_machine component dato
 						/**/
-						$ar_time_machine_obj = tool_time_machine::update_records_in_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo);
+						$ar_time_machine_obj = tool_time_machine::get_ar_component_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo, 0, 0);
 						foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
 							$dato_unchanged = $current_time_machine_obj->get_dato();
 

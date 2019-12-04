@@ -6,7 +6,7 @@
 	Lee todos los registros existentes en la tabla 'matrix_profiles' (son los perfiles de usuarios existentes) y los muestra como
 	una lista de valores seleccionable dentro de la ficha de usuario. Si se selecciona y aplica uno de los valores, se resetean en la ficha de usuario los
 	valores de los componentes definidos en el perfil y se sustituyen por los valores existentes en el registro del perfil seleccionado.
-	
+
 	Componentes que se utilizan:
 
 		- component_security_areas
@@ -19,9 +19,9 @@
 
 
 class component_profile extends component_common {
-	
+
 	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
+	protected $lang; // = DEDALO_DATA_NOLAN;
 
 	protected $ar_select_values;
 
@@ -43,10 +43,10 @@ class component_profile extends component_common {
 		}
 	}
 
-	
+
 	# GET DATO : IS calculated, not get from database
 	public function get_dato() {
-		
+
 		$dato = parent::get_dato();
 
 		if (empty($dato)) {
@@ -63,9 +63,9 @@ class component_profile extends component_common {
 			$dato = $section_profile_id;
 		}
 
-		# 
-		# COMPATIBILITY with previous versions	
-		/*	
+		#
+		# COMPATIBILITY with previous versions
+		/*
 			if ($dato==0) {
 				$user_id = $this->get_parent();
 				$section_profile_id = $this->create_profile_from_user( $user_id );
@@ -76,7 +76,7 @@ class component_profile extends component_common {
 			}
 			#die($section_profile_id);
 			*/
-		
+
 		return (int)$dato;
 	}
 
@@ -85,7 +85,7 @@ class component_profile extends component_common {
 		parent::set_dato( (int)$dato );
 	}
 
-	
+
 	# AR_SELECT_VALUES
 	public function get_ar_select_values() {
 
@@ -110,8 +110,8 @@ class component_profile extends component_common {
 				#dump($component,"component ".DEDALO_APPLICATION_LANG);
 			$name = $component->get_valor(0);
 				#dump($name, ' name '.$strQuery);
-			
-			# Falta de fallback del idioma. Hacer más adelante			
+
+			# Falta de fallback del idioma. Hacer más adelante
 			$this->ar_select_values[$section_id] = $name;
 		}
 
@@ -124,7 +124,7 @@ class component_profile extends component_common {
 
 	/**
 	* GET_VALOR
-	* @return 
+	* @return
 	*/
 	public function get_valor() {
 
@@ -132,7 +132,7 @@ class component_profile extends component_common {
 		if (empty($profile_id)) {
 			return null;
 		}
-		
+
 		$component  = component_common::get_instance('component_input_text',
 													  DEDALO_COMPONENT_NAME_PROFILES_TIPO,
 													  $profile_id,
@@ -141,7 +141,7 @@ class component_profile extends component_common {
 													  DEDALO_SECTION_PROFILES_TIPO);
 			#dump($component,"component ".DEDALO_APPLICATION_LANG);
 		$name = $component->get_valor(0);
-			
+
 		return $name;
 	}#end get_valor
 
@@ -158,7 +158,7 @@ class component_profile extends component_common {
 		if($user_id<1) {
 			return null;
 		}
-		
+
 		# Calculate current user profile id
 		$component_profile = component_common::get_instance('component_profile',
 														  	DEDALO_USER_PROFILE_TIPO,
@@ -178,7 +178,7 @@ class component_profile extends component_common {
 	* @see trigger.component_profile
 	*//*
 	public static function apply_profile__DEPRECATED($selected_option, $current_user_id) {
-		
+
 		$msg='';
 
 			#dump($selected_option, ' selected_option - current_user_id:'.$current_user_id);die();
@@ -191,7 +191,7 @@ class component_profile extends component_common {
 																				 'edit',
 																				 DEDALO_DATA_NOLAN,
 																				 DEDALO_SECTION_PROFILES_TIPO);
-			$security_areas_profiles_dato 		= $component_security_areas_profiles->get_dato();				
+			$security_areas_profiles_dato 		= $component_security_areas_profiles->get_dato();
 			# TARGET (USER)
 			$component_security_areas_users 	= component_common::get_instance('component_security_areas',
 																				DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO,
@@ -258,7 +258,7 @@ class component_profile extends component_common {
 	/**
 	* CREATE_PROFILE_FROM_USER
 	* Transition method from dedalo 4.0.2 to 4.0.3 users data
-	* @return 
+	* @return
 	*//*
 	public function create_profile_from_user_DEACTIVATED( $user_id ) {
 
@@ -270,7 +270,7 @@ class component_profile extends component_common {
 			# Create new profile for this user
 			$section_profile 	= section::get_instance(null, DEDALO_SECTION_PROFILES_TIPO, 'edit');
 			$section_profile_id = $section_profile->Save();
-		}		
+		}
 
 
 		#
@@ -304,7 +304,7 @@ class component_profile extends component_common {
 			$component_text_area->set_dato($description);
 			$component_text_area->Save();
 
-		
+
 		#
 		# PROFILE SECURITY AREAS
 			$user_component_security_areas = component_common::get_instance('component_security_areas',
@@ -364,7 +364,7 @@ class component_profile extends component_common {
 			$user_component_security_tools->Save();
 
 		return $section_profile_id;
-		
+
 	}#end create_profile_from_user
 	*/
 

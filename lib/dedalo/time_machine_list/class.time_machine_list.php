@@ -17,7 +17,7 @@ class time_machine_list extends common {
 
 	/**
 	* CONSTRUCT
-	* 
+	*
 	*/
 	public function __construct($tipo, $section_id, $section_tipo, $modo='edit') {
 
@@ -75,7 +75,7 @@ class time_machine_list extends common {
 		}
 
 		foreach((array)$ar_component_time_machine as $tm_obj) {
-			
+
 			$date					= component_date::timestamp_to_date($tm_obj->get_timestamp(), $seconds=true);
 			$userID					= $tm_obj->get_userID();
 			$mod_user_name			= section::get_user_name_by_userID($userID);
@@ -85,7 +85,7 @@ class time_machine_list extends common {
 			$dato					= $tm_obj->get_dato();
 			$uid 					= $tm_obj->get_identificador_unico();
 			$show_row 		 		= false;
-			
+
 			if(empty($component_tipo)) continue;
 
 			$component_label = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG);
@@ -94,7 +94,7 @@ class time_machine_list extends common {
 			switch ($modelo_name) {
 				case 'component_text_area':
 					$value	= component_text_area::clean_raw_text_for_preview($dato);
-					$value 	= strip_tags($value);					
+					$value 	= strip_tags($value);
 					break;
 				case 'component_state':
 					$value ='';
@@ -105,17 +105,17 @@ class time_machine_list extends common {
 				default:
 					if (!is_string($dato)) {
 						$current_component = component_common::get_instance(
-																	$modelo_name, 
-																	$component_tipo, 
+																	$modelo_name,
+																	$component_tipo,
 																	$this->section_id,
-																	'list', 
+																	'list',
 																	$lang,
 																	$this->section_tipo
 						);
 						$current_component->set_dato($dato);
 						$value = $current_component->get_valor();
 						#$value = json_encode($dato, JSON_UNESCAPED_UNICODE);
-						
+
 					}else{
 						$value = $dato;
 						$value = strip_tags($value);
@@ -126,14 +126,14 @@ class time_machine_list extends common {
 
 			$max_long = 50;
 			if (strlen($value)>$max_long) {
-				$value = mb_substr($value, 0, $max_long) . '..';	
+				$value = mb_substr($value, 0, $max_long) . '..';
 			}
 
 			$lang_label = null;
 			if($lang !== 'lg-nolan'){
 				$lang_label = lang::get_name_from_code($lang);
 			}
-					
+
 			// Row object
 			$row_obj = new stdClass();
 				$row_obj->date 					= $date;
@@ -150,7 +150,7 @@ class time_machine_list extends common {
 				$row_obj->tool_name 			= 'tool_time_machine';
 
 			$ar_data[] = $row_obj;
-			
+
 		}//end foreach((array)$ar_component_time_machine as $tm_obj)
 
 
@@ -171,14 +171,14 @@ class time_machine_list extends common {
 		$json->$context = $ar_context;
 		$json->data 	= $ar_data;
 
-		return (array)$json;	
+		return (array)$json;
 	}//end get_inverse_references
 
 
 
 	/**
 	* GET_DATA
-	* 
+	*
 	*/
 	public function get_ar_data($locator, $ar_components, $value_resolved=false){
 
@@ -193,17 +193,17 @@ class time_machine_list extends common {
 					$current_id->component_tipo		= 'id';
 
 		$data[] = $current_id;
-		
+
 		if($value_resolved===true && isset($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
 					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
 					$current_component	= component_common::get_instance(
-																		$modelo_name, 
-																		$tipo, 
+																		$modelo_name,
+																		$tipo,
 																		$section_id,
-																		'list', 
-																		DEDALO_DATA_LANG, 
+																		'list',
+																		DEDALO_DATA_LANG,
 																		$section_tipo
 																		);
 					$value = $current_component->get_valor();
@@ -218,7 +218,7 @@ class time_machine_list extends common {
 				}
 			}
 		}
-	
+
 		return $data;
 
 	}//end get_data
@@ -227,22 +227,22 @@ class time_machine_list extends common {
 
 	/**
 	* GET_JSON
-	* 
+	*
 	*/
-	public function get_json(){
+	public function get_json($request_options=false){
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
 			#dump(DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php', '++++++++++++++++++++');
-		
-			# Class name is called class (ex. component_input_text), not this class (common)	
+
+			# Class name is called class (ex. component_input_text), not this class (common)
 			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-		
+
 		return $json;
 	}//end get_json
 

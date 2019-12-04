@@ -10,10 +10,10 @@ class web_data {
 
 	// Version. Important!
 		static $version = "1.0.0";  // 05-06-2019
-	
+
 
 	/**
-	* 
+	*
 	* CREATE
 	* @return array $result
 	*/
@@ -39,7 +39,7 @@ class web_data {
 
 		# FIX SECTION TIPO
 		define('SECTION_TIPO', $section_tipo);
-		
+
 		$section = section::get_instance( NULL, $section_tipo );
 
 		# Section save returns the section_id created
@@ -52,7 +52,7 @@ class web_data {
 			$search_options->search_query_object->full_count = true; // Force re-count records
 		}
 
-		
+
 		$response->result 	= $section_id;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -66,13 +66,13 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end create
 
 
 	/**
-	* 
+	*
 	* READ
 	* @return array $result
 	*/
@@ -84,7 +84,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('search_query_object','layout_map');
 			foreach($vars as $name) {
@@ -97,7 +97,7 @@ class web_data {
 				}
 			}
 
-		$layout_map = [			
+		$layout_map = [
 				[
 					'component_tipo' 	=> "oh14",
 					'model' 			=> "component_input_text",
@@ -243,13 +243,13 @@ class web_data {
 				    }
 				  }
 				}
-			'
-		
+			';
+
 
 		$search = new search($search_query_object);
 		$result = $search->search();
-		
-		
+
+
 		$response->result 		= $result;
 		$response->msg 	  		= 'Ok. Request done';
 
@@ -271,16 +271,16 @@ class web_data {
 
 
 	/**
-	* 
+	*
 	* UPDATE
 	* @return array $result
 	*/
 	function update($json_data) {
 	}//end update
 
-	
+
 	/**
-	* 
+	*
 	* DELETE
 	* @return array $result
 	*/
@@ -296,7 +296,7 @@ class web_data {
 
 ////////////// trigger.area_thesaurus.php
 	/**
-	* 
+	*
 	* SEARCH_THESAURUS
 	* @return array $result
 	*/
@@ -321,7 +321,7 @@ class web_data {
 
 		// force search_query_object->select not empty
 			if (empty($search_options->search_query_object->select)) {
-				
+
 				$search_options->search_query_object->select = json_decode('
 				  [
 				    {
@@ -335,7 +335,7 @@ class web_data {
 				      ]
 				    }
 				  ]
-				');		
+				');
 			}
 			#dump( json_encode($search_options, JSON_PRETTY_PRINT), ' search_options ++ '.to_string()); die();
 
@@ -385,7 +385,7 @@ class web_data {
 		}
 
 
-		
+
 		# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
 		$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
 		if ($res_export_structure2->result===false) {
@@ -401,11 +401,11 @@ class web_data {
 		# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end export_str
 
@@ -414,7 +414,7 @@ class web_data {
 ////////////// trigger.button_delete.php
 	/**
 	* DEL
-	* @return 
+	* @return
 	*/
 	function Del($json_data) {
 		global $start_time;
@@ -465,7 +465,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end Del
 
@@ -497,7 +497,7 @@ class web_data {
 
 		# FIX SECTION TIPO
 		define('SECTION_TIPO', $section_tipo);
-		
+
 		$section = section::get_instance( NULL, $section_tipo );
 
 		$options = new stdClass();
@@ -513,7 +513,7 @@ class web_data {
 			$search_options->search_query_object->full_count = true; // Force re-count records
 		}
 
-		
+
 		$response->result 	= $section_id;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -527,7 +527,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end new_record
 
@@ -538,7 +538,7 @@ class web_data {
 	# set vars
 		$vars = array('mode','context_tipo','fecha');
 			foreach($vars as $name) $$name = common::setVar($name);
-		
+
 	# mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
@@ -547,15 +547,15 @@ class web_data {
 		define('SECTION_TIPO', $context_tipo);
 
 
-	# NEW	
+	# NEW
 	if ($mode=='Stats') {
 
 		# DATA VERIFY
 		if(empty($context_tipo) || strlen($context_tipo)<3) exit("Trigger Error: context_tipo is mandatory");
 			#dump($context_tipo,"$fecha");die();
-		
+
 		$diffusion_section = new diffusion_section_stats($context_tipo, $fecha);
-			
+
 		$html = $diffusion_section->get_html();
 		#dump($html,'$html');
 
@@ -570,8 +570,8 @@ class web_data {
 	# set vars
 		$vars = array('mode','component_tipo','component_parent','target_url','lang_filter','ar_prefix_filter','component_pdf_tipo','section_tipo');
 			foreach($vars as $name) $$name = common::setVar($name);
-		
-		
+
+
 	# mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
@@ -580,18 +580,18 @@ class web_data {
 		define('SECTION_TIPO', $section_tipo);
 
 
-	# NEW	
+	# NEW
 	if ($mode==='trigger') {
-		
-		
+
+
 		die();
 	}
 
 
 	# TESAURO PRESENTACION
-	# TESAURO_ALFABETICO_GENERATE_HTML_FILE	
-	if ($mode==='tesauro_presentacion_generate_pdf_file') {	
-		
+	# TESAURO_ALFABETICO_GENERATE_HTML_FILE
+	if ($mode==='tesauro_presentacion_generate_pdf_file') {
+
 		require_once(DEDALO_LIB_BASE_PATH.'/common/class.exec_.php');
 
 		if (empty($target_url)) {
@@ -627,9 +627,9 @@ class web_data {
 															'edit',
 															$lang_filter,
 															$section_tipo);
-		
+
 		$pdf_target_path = $component_pdf->get_pdf_path();
-		
+
 
 		if( strpos($_SERVER['HTTP_HOST'], '8888')!==false ) {
 			$ar_pages[] = 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?lang='.$lang_filter;
@@ -638,30 +638,30 @@ class web_data {
 			$ar_pages[] = 'http://'.$_SERVER['HTTP_HOST'].':8080' . $target_url .'?lang='.$lang_filter;
 		}
 
-		
-		
+
+
 		if(!empty($pdf_target_path)) {
 
 			#
-			# PDF generation		
+			# PDF generation
 			$command  = "/usr/local/bin/wkhtmltopdf --no-stop-slow-scripts --debug-javascript ";
-		
+
 			# Footer page
 			$command .= "--print-media-type ";
 			$command .= "--page-offset -2 ";
 			$command .= "--footer-font-name 'Times' ";
-			$command .= "--footer-font-size 20 ";		
+			$command .= "--footer-font-size 20 ";
 			$command .= "--footer-left '".$title_pagina.": [page]' ";
-			
+
 			$i=0;
-			foreach ($ar_pages as $current_page) {			
+			foreach ($ar_pages as $current_page) {
 				if($i<1){
 					$command  .="cover";
 				}
-				$command .= " $current_page";			
+				$command .= " $current_page";
 				$i++;
 			}
-			
+
 				#dump($command ,'$command ');
 			$command .= " $pdf_target_path";
 			if(SHOW_DEBUG) {
@@ -679,18 +679,18 @@ class web_data {
 				$url = $ar_pages[0];
 				echo "<br>DEBUG: pdf generated from <a href=\"$url\" target=\"_blank\" >$url</a>";
 			}
-		}	
+		}
 
 		exit();
-	}#end if ($mode=='tesauro_presentacion_generate_pdf_file') 
+	}#end if ($mode=='tesauro_presentacion_generate_pdf_file')
 
 
 
 
 
-	# TESAURO_ALFABETICO_GENERATE_HTML_FILE	
+	# TESAURO_ALFABETICO_GENERATE_HTML_FILE
 	if ($mode==='tesauro_alfabetico_generate_html_file') {
-		
+
 		if (empty($target_url)) {
 			die("Error. Empty target_url");
 		}
@@ -716,14 +716,14 @@ class web_data {
 		# Llama a '/dedalo/ts/lib/trigger.ts_works.php' que rendea el html correspondiente
 		$target_url_full = 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?mode=tesauro_alfabetico_html&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter);
 		# Leemos el fichero desde la url (se genera en dedalo3)
-		$html	= file_get_contents($target_url_full);	
+		$html	= file_get_contents($target_url_full);
 		if(!empty($html)) {
 
 			#$component_html_file 	= new component_html_file(NULL,$component_tipo,'edit',$component_parent,DEDALO_DATA_LANG); #$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
 			$component_html_file 	= component_common::get_instance('component_html_file',$component_tipo,$component_parent,'edit',DEDALO_DATA_LANG, $section_tipo);
 			$valor 					= $component_html_file->get_valor();
 
-			$target_file_path 		= DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;	
+			$target_file_path 		= DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;
 			$file_put_contents_res	= file_put_contents($target_file_path, $html);
 			$html_file_url 			= DEDALO_MEDIA_BASE_URL . DEDALO_HTML_FILES_FOLDER .'/'.$valor.'.'.DEDALO_HTML_FILES_EXTENSION;
 
@@ -733,7 +733,7 @@ class web_data {
 			}
 			print "<a href=\"$html_file_url\" target=\"_blank\"> HTML file </a>";
 		}
-		
+
 
 		#
 		# PDF
@@ -744,23 +744,23 @@ class web_data {
 															 $lang_filter,
 															 $section_tipo);
 		$pdf_target_path = $component_pdf->get_pdf_path();
-		
+
 		if(!empty($pdf_target_path)) {
 
 			$target_url_full = 'http://'.$_SERVER['HTTP_HOST'].$target_url.'?mode=tesauro_alfabetico_pdf&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter).'&pdf_target_path='.$pdf_target_path;
 			#$target_url_full = urlencode($target_url_full);
 
 			# leemos el fichero url	.
-			# Realmente no esperamos respuesta, pues el trigger requerido ya guarda el resultado en su sitio. 
-			# Por ello dará error, ero lo ignoraremos, sólo nos interesa la llamada	
+			# Realmente no esperamos respuesta, pues el trigger requerido ya guarda el resultado en su sitio.
+			# Por ello dará error, ero lo ignoraremos, sólo nos interesa la llamada
 			try {
-				$ctx = stream_context_create(array( 
-				    'http' => array( 
+				$ctx = stream_context_create(array(
+				    'http' => array(
 				        'timeout' => 30
 				        )
 				    )
 				);
-				file_get_contents($target_url_full, 0, $ctx);		    
+				file_get_contents($target_url_full, 0, $ctx);
 			} catch (Exception $e) {
 			   # echo 'Caught exception: ',  $e->getMessage(), "\n";
 			}
@@ -778,7 +778,7 @@ class web_data {
 			*/
 			$pdf_url = $component_pdf->get_pdf_url();
 			print "<br><a href=\"$pdf_url\" target=\"_blank\"> PDF file </a>";
-		}	
+		}
 
 		exit();
 	}
@@ -786,7 +786,7 @@ class web_data {
 
 
 
-	# TESAURO_JERARQUICO_GENERATE_HTML_FILE	
+	# TESAURO_JERARQUICO_GENERATE_HTML_FILE
 	if ($mode==='tesauro_jerarquico_generate_html_file') {
 
 		if (empty($target_url)) {
@@ -814,7 +814,7 @@ class web_data {
 		$target_url_full = 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?mode=tesauro_jerarquico_html&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter);
 
 		$html	= file_get_contents($target_url_full);
-		
+
 		if(!empty($html)) {
 
 			$component_html_file 	= component_common::get_instance('component_html_file',
@@ -825,7 +825,7 @@ class web_data {
 																	 $section_tipo);
 			$valor 					= $component_html_file->get_valor();
 
-			$target_file_path 		= DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;	
+			$target_file_path 		= DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;
 			$file_put_contents_res	= file_put_contents($target_file_path, $html);
 			$html_file_url 			= DEDALO_MEDIA_BASE_URL . DEDALO_HTML_FILES_FOLDER .'/'.$valor.'.'.DEDALO_HTML_FILES_EXTENSION;
 
@@ -843,22 +843,22 @@ class web_data {
 		# PDF
 		$component_pdf 	 = component_common::get_instance('component_pdf',$component_pdf_tipo,$component_parent,'edit',$lang_filter,$section_tipo);
 		$pdf_target_path = $component_pdf->get_pdf_path();
-		
+
 		if(!empty($pdf_target_path)) {
 
 			$target_url_full = 'http://'.$_SERVER['HTTP_HOST'].$target_url.'?mode=tesauro_jerarquico_pdf&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter).'&pdf_target_path='.$pdf_target_path;
 
 			# leemos el fichero url	.
-			# Realmente no esperamos respuesta, pues el trigger requerido ya guarda el resultado en su sitio. 
-			# Por ello dará error, pero lo ignoraremos, sólo nos interesa la llamada	
+			# Realmente no esperamos respuesta, pues el trigger requerido ya guarda el resultado en su sitio.
+			# Por ello dará error, pero lo ignoraremos, sólo nos interesa la llamada
 			try {
-				$ctx = stream_context_create(array( 
-				    'http' => array( 
+				$ctx = stream_context_create(array(
+				    'http' => array(
 				        'timeout' => 30
 				        )
 				    )
 				);
-				file_get_contents($target_url_full, 0, $ctx);		    
+				file_get_contents($target_url_full, 0, $ctx);
 			} catch (Exception $e) {
 			   # echo 'Caught exception: ',  $e->getMessage(), "\n";
 			}
@@ -873,7 +873,7 @@ class web_data {
 			require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
 			$command_exc = exec_::exec_command($command);
 			*/
-			$pdf_url = $component_pdf->get_pdf_url();		
+			$pdf_url = $component_pdf->get_pdf_url();
 			print "<br><a href=\"$pdf_url\" target=\"_blank\"> PDF file </a>";
 		}
 
@@ -912,7 +912,7 @@ class web_data {
 
 			$response->msg .= ' Changed dedalo_data_lang to '.$dedalo_data_lang;
 		}
-		
+
 		if (!empty($dedalo_application_lang)) {
 			$dedalo_application_lang = trim( safe_xss($dedalo_application_lang) );
 			# Save in session
@@ -965,8 +965,8 @@ class web_data {
 					return $response;
 				}
 			}
-		
-		
+
+
 		$lang = DEDALO_DATA_LANG;
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$propiedades 	 = $RecordObj_dd->get_propiedades(true);
@@ -981,15 +981,15 @@ class web_data {
 				$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
 			}
 			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
-		
+
 		if(SHOW_DEBUG) {
 			#$ar_related = common::get_ar_related_by_model('section' $tipo);
 			if (empty($ar_terminos_relacionados)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Missing required ar_terminos_relacionados for current component';
 				return $response;
-			}		
+			}
 		}
-		
+
 		// View html page
 		$page_html	= DEDALO_LIB_BASE_PATH .'/component_autocomplete/html/component_autocomplete_new.phtml';
 		ob_start();
@@ -1010,7 +1010,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end function new_element')
 
@@ -1047,11 +1047,11 @@ class web_data {
 			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on json decode ar_data!';
 			return $response;
 		}
-		
-		if (empty($target_section_tipo)) {		
+
+		if (empty($target_section_tipo)) {
 			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty target_section_tipo is not valid!';
 			return $response;
-		}	
+		}
 
 		$referenced_tipo = key($ar_data);
 		if ( !is_object($ar_data) || empty($referenced_tipo) ) {
@@ -1074,7 +1074,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end function submit_new_element')
 
@@ -1140,7 +1140,7 @@ class web_data {
 		}
 
 
-		return (object)$response;	
+		return (object)$response;
 	}//end update_component_related
 
 
@@ -1156,8 +1156,8 @@ class web_data {
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;	
-		
+			$response->msg 		= 'Error. Request failed '.__METHOD__;
+
 		$vars = array('search_query_object','component_tipo','locator');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -1168,14 +1168,14 @@ class web_data {
 					return $response;
 				}
 			}
-		
+
 		// Locator
 			$locator = json_decode($locator);
 
 		// (!) NOTE: search_query_object is not used anymore. Remove all code related with search_query_object here ann javascript when you this is stable this way !
-		
+
 			// Build new filted based on locator
-				/*		
+				/*
 				$filter_section_id = '
 				{
 		            "q": "'.$locator->section_id.'",
@@ -1240,7 +1240,7 @@ class web_data {
 			if ($is_indexable!==true) {
 				continue; // Skip non indable terms
 			}
-			
+
 			$current_locator = new locator();
 				$current_locator->set_section_tipo($row->section_tipo);
 				$current_locator->set_section_id($row->section_id);
@@ -1253,14 +1253,14 @@ class web_data {
 															 'list',
 															 DEDALO_DATA_NOLAN,
 															 $row->section_tipo);
-			
-			$url = $component->get_url();	
+
+			$url = $component->get_url();
 
 
 			$item = new stdClass();
 				$item->url 		= $url . '?' . start_time();
 				$item->locator 	= $current_locator;
-				
+
 
 			$ar_items[] = $item;
 		}
@@ -1345,7 +1345,7 @@ class web_data {
 	*/
 	function Save($json_data) {
 		global $start_time;
-		
+
 		# Write session to unlock session file
 		#session_write_close();
 		#dump($maintenance_mode, ' maintenance_mode ++ '.to_string());
@@ -1366,19 +1366,19 @@ class web_data {
 						return $response;
 					}
 				}
-		
+
 		// dato . json decode try
 			if (!$dato_clean = json_decode($dato)) {
 				$dato_clean = $dato;
 			}
-		
+
 		// caller_dataset check
 			if (!empty($caller_dataset)) {
 				$caller_dataset = json_decode($caller_dataset);
 			}
-		
+
 		// permissions
-			// case tool user admin (user editing self) 
+			// case tool user admin (user editing self)
 				$ar_user_allow_tipos = [
 					DEDALO_USER_PASSWORD_TIPO, // password
 					DEDALO_FULL_USER_NAME_TIPO, // full user name
@@ -1386,21 +1386,21 @@ class web_data {
 					DEDALO_USER_IMAGE_TIPO // image
 				];
 				$user_id = navigator::get_user_id(); // current logged user
-				$is_user_admin_edit = (bool)($section_tipo===DEDALO_SECTION_USERS_TIPO && in_array($tipo, $ar_user_allow_tipos) && $parent==$user_id);		
-			// switch 
+				$is_user_admin_edit = (bool)($section_tipo===DEDALO_SECTION_USERS_TIPO && in_array($tipo, $ar_user_allow_tipos) && $parent==$user_id);
+			// switch
 				if ($is_user_admin_edit===true) {
-					
+
 					$permissions = 2;
-				
+
 				}else{
 					if(isset($caller_dataset->component_tipo)) {
-						# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset	
+						# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset
 						$permissions = common::get_permissions($section_tipo, $caller_dataset->component_tipo);
 					}else{
 						$permissions = common::get_permissions($section_tipo, $tipo);
 					}
 				}
-			// return on insufficient permissions 
+			// return on insufficient permissions
 				if ($permissions<2) {
 					$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
 					debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
@@ -1415,8 +1415,8 @@ class web_data {
 				#throw new Exception("Trigger Error: class: $modelo_name not found", 1);
 				$response->msg = "Trigger Error: Nothing is saved. class: '$modelo_name' not found in Dédalo";
 				return $response;
-			}	
-			
+			}
+
 		// component : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL)
 			$component_obj = component_common::get_instance($modelo_name,
 															$tipo,
@@ -1424,7 +1424,7 @@ class web_data {
 															$modo,
 															$lang,
 															$section_tipo);
-		
+
 		// unique value server check
 			$properties = $component_obj->get_propiedades();
 			if(isset($properties->unique->server_check) && $properties->unique->server_check===true){
@@ -1439,9 +1439,9 @@ class web_data {
 
 		// caller_dataset optional
 			if (!empty($caller_dataset)) {
-				
+
 				# inject component caller_dataset
-				$component_obj->caller_dataset = $caller_dataset;		
+				$component_obj->caller_dataset = $caller_dataset;
 
 				# force to save component
 				$old_dato 	= 'impossible data' . microtime(true);
@@ -1455,13 +1455,13 @@ class web_data {
 		// Assign received dato to component
 			$component_obj->set_dato( $dato_clean );
 
-		// Check if dato is changed 
+		// Check if dato is changed
 		$new_dato	= $component_obj->get_dato();
 
-		// Response . Check if new dato is different of current dato. 
+		// Response . Check if new dato is different of current dato.
 		// (!) Important: use operator '==' to allow compare objects properly
 			if((is_object($new_dato) && $new_dato==$old_dato) || $new_dato===$old_dato){
-				
+
 				$response->result 	= $parent;
 				$response->msg 		= 'Ok. Request done [Save]. Data is not changed. Is not necessary update component db data';
 
@@ -1475,12 +1475,12 @@ class web_data {
 					# Return id
 					$response->result 	= $section_id;
 					$response->msg 		= 'Ok. Request done [Save]';
-				}else{			
+				}else{
 					$response->result 	= false;
 					$response->msg 		= 'Error. Received section_id is invalid [Save] '.json_encode($section_id);
 				}
 			}
-		
+
 
 		# Debug
 		if(SHOW_DEBUG===true) {
@@ -1507,7 +1507,7 @@ class web_data {
 		}
 
 		# Write session to unlock session file
-		#session_write_close();	
+		#session_write_close();
 
 		return (object)$response;
 	}//end Save
@@ -1530,7 +1530,7 @@ class web_data {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// vars 
+		// vars
 			$vars = array('parent','tipo','lang','modo','section_tipo','current_tipo_section','context_name','arguments','top_tipo','top_id');
 				foreach($vars as $name) {
 					$$name = common::setVarData($name, $json_data);
@@ -1542,7 +1542,7 @@ class web_data {
 					}
 				}
 
-		// component 
+		// component
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component_obj 	= component_common::get_instance($modelo_name,
 															 $tipo,
@@ -1565,7 +1565,7 @@ class web_data {
 				$component_obj->set_context($context);
 				#dump($context_name,"context_name");
 			}
-		
+
 		// arguments
 			if (!empty($arguments)) {
 				$component_obj->set_arguments($arguments);
@@ -1576,7 +1576,7 @@ class web_data {
 			if ( $section_tipo===DEDALO_SECTION_USERS_TIPO && $user_id==$parent && $tipo===DEDALO_USER_IMAGE_TIPO ) {
 				$component_obj->permissions = 2;
 			}
-			
+
 		// html. Get component html
 			# $arguments = new stdClass();
 			# 	$arguments->permissions = 1;
@@ -1594,7 +1594,7 @@ class web_data {
 			$response->result 	= $html;
 			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
-		// debug 
+		// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";
@@ -1608,7 +1608,7 @@ class web_data {
 
 				$response->debug = $debug;
 			}
-		
+
 
 		return (object)$response;
 	}//end load_component_by_ajax
@@ -1625,7 +1625,7 @@ class web_data {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// vars 
+		// vars
 			$vars = array('section_id','ar_group','lang','modo','section_tipo');
 				foreach($vars as $name) {
 					$$name = common::setVarData($name, $json_data);
@@ -1643,7 +1643,7 @@ class web_data {
 
 					#dump($ar_recursive_childrens);
 				foreach ($ar_recursive_childrens as $current_tipo) {
-			
+
 					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					$component		= component_common::get_instance($modelo_name,
 																	 $current_tipo,
@@ -1655,7 +1655,7 @@ class web_data {
 					$dato_empty = null;
 					$component->set_dato($dato_empty);
 					$component->Save();
-				}										
+				}
 
 			}
 
@@ -1688,8 +1688,8 @@ class web_data {
 					return $response;
 				}
 			}
-		
-		
+
+
 		# Verify vars
 		if( $dato===false ) {
 			$response->msg .= 'Trigger Error: ('.__FUNCTION__.') Empty dato (is mandatory)';
@@ -1743,10 +1743,10 @@ class web_data {
 		$component_portal->Save();
 		#debug_log(__METHOD__." Saved component portal $section_tipo $portal_tipo $portal_parent with values: ".to_string($dato), logger::DEBUG);
 
-		
+
 		$response->result 	= true;
 		$response->msg 		= "Ok. Request done. Saved $section_tipo $portal_tipo $portal_parent. Received elements: $dato_count. [save]";
-		
+
 		# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
@@ -1797,7 +1797,7 @@ class web_data {
 					return $response;
 				}
 			}
-			
+
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 		$component 		= component_common::get_instance($modelo_name,
 														 $portal_tipo,
@@ -1810,8 +1810,8 @@ class web_data {
 			$add_options->top_tipo 				= $top_tipo;
 			$add_options->top_id 				= $top_id;
 
-		$response = $component->add_new_element($add_options);	
-		
+		$response = $component->add_new_element($add_options);
+
 		# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
@@ -1859,7 +1859,7 @@ class web_data {
 														 'edit',
 														 DEDALO_DATA_NOLAN,
 														 $section_tipo);
-		
+
 		$remove_options = new stdClass();
 			$remove_options->locator 	 = $locator;
 			$remove_options->remove_mode = $remove_mode;
@@ -1885,7 +1885,7 @@ class web_data {
 
 	/**
 	* BUILD_COMPONENT_JSON_DATA
-	* @return object $response 
+	* @return object $response
 	*/
 	function build_component_json_data($json_data) {
 		global $start_time;
@@ -1963,7 +1963,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed [add_children]';
-		
+
 		$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -1975,14 +1975,14 @@ class web_data {
 		// tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo
 		$modelo_name 	= 'component_relation_children';
 		$modo 			= 'edit';
-		$lang 			= DEDALO_DATA_NOLAN;	
+		$lang 			= DEDALO_DATA_NOLAN;
 		$component_relation_children   = component_common::get_instance($modelo_name,
 														  				$tipo,
 														  				$parent,
 														  				$modo,
 														  				$lang,
 														  				$section_tipo);
-		
+
 		$added = (bool)$component_relation_children->make_me_your_children( $target_section_tipo, $target_section_id );
 		if ($added===true) {
 			$component_relation_children->Save();
@@ -2016,7 +2016,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed [remove_children]';
-		
+
 		$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -2028,7 +2028,7 @@ class web_data {
 
 		$modelo_name 	= 'component_relation_children';
 		$modo 			= 'edit';
-		$lang 			= DEDALO_DATA_NOLAN;	
+		$lang 			= DEDALO_DATA_NOLAN;
 		$component_relation_children   = component_common::get_instance($modelo_name,
 														  				$tipo,
 														  				$parent,
@@ -2046,7 +2046,7 @@ class web_data {
 			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 		}
 
-		/* Método eliminando por locator:		
+		/* Método eliminando por locator:
 			$locator = json_decode($locator);
 			$removed = (bool)$component_relation_children->remove_children($locator);
 			if ($removed===true) {
@@ -2081,8 +2081,8 @@ class web_data {
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';	
-		
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
 		$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -2094,8 +2094,8 @@ class web_data {
 				}
 			}
 
-		$add_parent = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id); 
-			
+		$add_parent = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id);
+
 		$response->result 	= $add_parent;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -2109,7 +2109,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 
 		return (object)$response;
 	}//end add_parent
@@ -2126,8 +2126,8 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
-		
+
+
 		$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id','children_component_tipo');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -2135,7 +2135,7 @@ class web_data {
 					exit("Error. ".$$name." is mandatory");
 				}
 			}
-		
+
 		$remove_parent 		= component_relation_parent::remove_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo);
 
 		$response->result 	= $remove_parent;
@@ -2152,7 +2152,7 @@ class web_data {
 			$response->debug = $debug;
 		}
 
-		
+
 		return (object)$response;
 	}//end remove_parent
 
@@ -2169,7 +2169,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -2181,7 +2181,7 @@ class web_data {
 		// tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo
 		$modelo_name 	= 'component_relation_related';
 		$modo 			= 'edit';
-		$lang 			= DEDALO_DATA_NOLAN;	
+		$lang 			= DEDALO_DATA_NOLAN;
 		$component_relation_related    = component_common::get_instance($modelo_name,
 														  				$tipo,
 														  				$parent,
@@ -2222,7 +2222,7 @@ class web_data {
 
 ////////////// trigger.component_security_acces.php
 	/**
-	* SAVE 
+	* SAVE
 	*/
 	function Save($json_data) {
 		global $start_time;
@@ -2230,7 +2230,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		$vars = array('parent','tipo','lang','modo','section_tipo','dato');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
@@ -2240,15 +2240,15 @@ class web_data {
 					exit("Error. ".$$name." is mandatory");
 				}
 			}
-		
+
 		# DATO . JSON DECODE TRY
 		# dump($dato, ' dato ++ '.to_string());
 		if (!$dato_clean = json_decode($dato)) {
 			exit("Trigger Error: dato is not valid");
 		}
-		//dump($dato_clean, ' dato_clean ++ lang: '.to_string($lang)); die();	
-		
-		# COMPONENT : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL) 
+		//dump($dato_clean, ' dato_clean ++ lang: '.to_string($lang)); die();
+
+		# COMPONENT : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL)
 		$modelo_name   = 'component_security_access';
 		$component_obj = component_common::get_instance($modelo_name,
 														$tipo,
@@ -2266,10 +2266,10 @@ class web_data {
 			#dump($dato_clean, ' dato_clean ++ '.to_string());
 			#dump($new_dato, ' new_dato ++ '.to_string());
 			#return false;
-		
+
 		# Assign dato
-		$component_obj->set_dato( $new_dato ); 
-		
+		$component_obj->set_dato( $new_dato );
+
 		# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
 		$section_id = $component_obj->Save();
 
@@ -2306,7 +2306,7 @@ class web_data {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$vars = array('tipo','parent');	
+		$vars = array('tipo','parent');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
 				# DATA VERIFY
@@ -2315,15 +2315,15 @@ class web_data {
 					exit("Error. ".$$name." is mandatory");
 				}
 			}
-		
-		#
-		# SECTION ELEMENTS CHILDREN
-		$ar_ts_childrens = component_security_access::get_ar_ts_childrens_recursive($tipo);	
-			#dump($ar_ts_childrens, ' ar_ts_childrens ++ '.to_string());
-			
 
 		#
-		# DATO_ACCESS	
+		# SECTION ELEMENTS CHILDREN
+		$ar_ts_childrens = component_security_access::get_ar_ts_childrens_recursive($tipo);
+			#dump($ar_ts_childrens, ' ar_ts_childrens ++ '.to_string());
+
+
+		#
+		# DATO_ACCESS
 		$component_security_access = component_common::get_instance('component_security_access',
 																	 DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
 																	 $parent,
@@ -2337,9 +2337,9 @@ class web_data {
 			$access_arguments['dato'] 				= $dato_access;
 			$access_arguments['parent'] 			= $parent;
 			$access_arguments['dato_section_tipo'] 	= $tipo;
-		
+
 		$li_elements_html = component_security_access::walk_ar_elements_recursive($ar_ts_childrens, $access_arguments);
-		
+
 		# Write session to unlock session file
 		session_write_close();
 
@@ -2425,7 +2425,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end update_state_locator
 
@@ -2433,7 +2433,7 @@ class web_data {
 
 ////////////// trigger.component_text_area.php
 	/**
-	* LOAD_TR 
+	* LOAD_TR
 	*/
 	function load_tr($json_data) {
 		global $start_time;
@@ -2466,7 +2466,7 @@ class web_data {
 
 		$html = $component_text_area->get_html();
 
-		
+
 		$response->result 	= $html;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -2497,7 +2497,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('tipo','parent','section_tipo','lang','top_tipo');
 			foreach($vars as $name) {
@@ -2557,7 +2557,7 @@ class web_data {
 
 	/**
 	* SHOW_PERSON_INFO
-	* @return 
+	* @return
 	*/
 	function show_person_info($json_data) {
 		global $start_time;
@@ -2581,7 +2581,7 @@ class web_data {
 		if(!$locator = json_decode($locator)) {
 			return (object)$response;
 		}
-		
+
 		# Label
 		$label = (object)component_text_area::get_tag_person_label($locator);
 
@@ -2657,7 +2657,7 @@ class web_data {
 
 	/**
 	* CREATE_NEW_NOTE
-	* @return 
+	* @return
 	*/
 	function create_new_note($json_data) {
 		global $start_time;
@@ -2665,7 +2665,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('note_number');
 			foreach($vars as $name) {
@@ -2699,7 +2699,7 @@ class web_data {
 
 	/**
 	* SHOW_NOTE_INFO
-	* @return 
+	* @return
 	*/
 	function show_note_info($json_data) {
 		global $start_time;
@@ -2788,7 +2788,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('section_tipo','section_id','lang');
 			foreach($vars as $name) {
@@ -2873,14 +2873,14 @@ class web_data {
 		  },
 		  "value_with_parents": false,
 		  "limit": 1
-		}');	
+		}');
 		$component->set_propiedades( $propiedades );
 		*/
 
 		# Inject custom permissions
 		$component->set_permissions(2);
-		if ($data = json_decode($data)) {		
-			$component->set_dato($data);			
+		if ($data = json_decode($data)) {
+			$component->set_dato($data);
 		}
 		# Component html
 		$response->component_autocomplete_hi_html = $component->get_html();
@@ -2927,16 +2927,16 @@ class web_data {
 			}
 		$ar_locators = json_decode($ar_locators);
 
-		if (is_array($ar_locators)) {		
-		
+		if (is_array($ar_locators)) {
+
 			$result = array();
 			foreach ($ar_locators as $current_string_locator) {
-				
+
 				$locator = json_decode( str_replace("'", '"', $current_string_locator) );
-				if ($locator) {			
+				if ($locator) {
 					# get_struct_note_data from db
 					$struct_note_data = tool_structuration::get_struct_note_data($locator, $lang);
-					if ($struct_note_data->result!==false) {			
+					if ($struct_note_data->result!==false) {
 						$result[$current_string_locator] = (object)$struct_note_data->result;
 					}
 				}
@@ -2986,7 +2986,7 @@ class web_data {
 			}
 
 		$section = section::get_instance($section_id, $section_tipo);
-			
+
 		// Section info
 		$section_info = new stdClass();
 			$section_info->modified_by_userID 	= $section->get_modified_by_userID();
@@ -3031,7 +3031,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 
 		return (object)$response;
 	}//end show_note_info
@@ -3065,7 +3065,7 @@ class web_data {
 		$options = new stdClass();
 			$options->section_id   = $component_parent;
 			$options->section_tipo = $section_tipo;
-			
+
 		$result = (object)hierarchy::generate_virtual_section( $options );
 			#dump($result, ' $result ++ '.to_string());
 
@@ -3106,7 +3106,7 @@ class web_data {
 			$response->debug = $debug;
 		}
 
-		
+
 		return (object)$response;
 	}//end generate_virtual_section
 
@@ -3134,7 +3134,7 @@ class web_data {
 					return $response;
 				}
 			}
-		
+
 
 		$options = new stdClass();
 			$options->section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
@@ -3153,7 +3153,7 @@ class web_data {
 			$response->debug = $debug;
 		}
 
-		
+
 		return (object)$response;
 	}//end update_target_section
 
@@ -3184,8 +3184,8 @@ class web_data {
 					return $response;
 				}
 			}
-		
-		$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];	
+
+		$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];
 		if ($user_id<0) {
 			$full_username 	= "Debug user";
 		}else{
@@ -3202,7 +3202,7 @@ class web_data {
 			$event_element->date  			= date("Y-m-d H:i:s");
 
 		$response = (object)lock_components::update_lock_components_state( $event_element );
-		
+
 		# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
@@ -3220,7 +3220,7 @@ class web_data {
 
 
 ////////////// trigger.login.php
-	# LOGIN	 #################################################################################################################	
+	# LOGIN	 #################################################################################################################
 	function Login($json_data) {
 		global $start_time;
 
@@ -3232,7 +3232,7 @@ class web_data {
 		foreach ($json_data as $key => $value) {
 			$trigger_post_vars[$key] = trim($value); // trim to avoid write space errors
 		}
-		
+
 		# If all is ok, return string 'ok'
 		$response = (object)login::Login( $trigger_post_vars );
 
@@ -3241,7 +3241,7 @@ class web_data {
 
 		# Exit printing result
 		# exit($result);
-		
+
 		#$response->result 	= $result;
 		#$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -3252,14 +3252,14 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end Login
 
 
 
-	# QUIT ###################################################################################################################		
-	function Quit($json_data) {	
+	# QUIT ###################################################################################################################
+	function Quit($json_data) {
 		global $start_time;
 
 		$response = new stdClass();
@@ -3280,7 +3280,7 @@ class web_data {
 
 		// Close script session
 			session_write_close();
-		
+
 		// Response
 			$response->result 	= $result;
 			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
@@ -3293,11 +3293,11 @@ class web_data {
 			// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 				$response->debug = $debug;
 			}
-		
+
 		return (object)$response;
 	}//end Quit()
 
@@ -3317,11 +3317,11 @@ class web_data {
 
 		$vars = array('tipo','section_tipo','section_id','modo','value_resolved','limit','offset','count');
 			foreach($vars as $name) {
-				$$name = common::setVarData($name, $json_data);			
+				$$name = common::setVarData($name, $json_data);
 			}
 
 		$relation_list 		= new relation_list($tipo, $section_id, $section_tipo, $modo='edit');
-		$relation_list->set_value_resolved($value_resolved); 
+		$relation_list->set_value_resolved($value_resolved);
 		$relation_list->set_limit($limit);
 		$relation_list->set_offset($offset);
 		$relation_list->set_count($count);
@@ -3377,7 +3377,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('section_tipo');
 			foreach($vars as $name) {
@@ -3393,7 +3393,7 @@ class web_data {
 
 		$components_from_section = search_development2::get_components_from_section($section_tipo);
 
-		
+
 		$response->result 	= $components_from_section->result;
 		$response->msg 		= $components_from_section->msg;
 
@@ -3420,7 +3420,7 @@ class web_data {
 	*/
 	function load_components($json_data) {
 		global $start_time;
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
@@ -3443,15 +3443,15 @@ class web_data {
 			return $response;
 		}
 
-		
+
 		$html = '';
 		foreach ((array)$components as $key => $component_info) {
-			
+
 			if (empty($component_info->modo)) {
 				# Default
 				$component_info->modo = 'search';
 			}
-		
+
 			$component_tipo = $component_info->component_tipo;
 
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_info->component_tipo,true);
@@ -3478,16 +3478,16 @@ class web_data {
 			}
 
 			# Q_OPERATOR
-			if(isset($component_info->q_operator)) {			
+			if(isset($component_info->q_operator)) {
 				$component->q_operator = $component_info->q_operator;  // Inject q_operator value
 			}
 
 			$component_html = $component->get_html();
-			
+
 			$html .= $component_html;
 		}
-		
-		
+
+
 		$response->result 	= $html;
 		$response->msg 		= 'Ok. Request done';
 
@@ -3514,7 +3514,7 @@ class web_data {
 	*/
 	function get_component_presets($json_data) {
 		global $start_time;
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
@@ -3538,7 +3538,7 @@ class web_data {
 		# Get permissions to allow/disallow buttons
 		$section_tipo 		 	= _PRESETS_LIST_SECTION_TIPO; // Presets list
 		$section_permissions 	= common::get_permissions($section_tipo, $section_tipo);
-		
+
 		$response->result 		= $ar_component_presets;
 		$response->permissions 	= $section_permissions;
 		$response->msg 	  		= 'Ok. Request done';
@@ -3572,7 +3572,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('filter','data_section_tipo','preset_section_id');
 			foreach($vars as $name) {
@@ -3585,7 +3585,7 @@ class web_data {
 				}
 			}
 
-		$presets_section_tipo = _PRESETS_LIST_SECTION_TIPO; // Presets list	
+		$presets_section_tipo = _PRESETS_LIST_SECTION_TIPO; // Presets list
 
 		if (strpos($preset_section_id, DEDALO_SECTION_ID_TEMP)!==false || empty($preset_section_id)) {
 
@@ -3606,8 +3606,8 @@ class web_data {
 																 $presets_section_tipo);
 				$component->set_dato($data_section_tipo); // Like oh1
 				# Save component
-				$component->Save();		
-			
+				$component->Save();
+
 			#
 			# NAME, PUBLIC, DEFAULT (TEMPORAL SECTION)
 			# Propagate all section temp data to the new created real section
@@ -3617,7 +3617,7 @@ class web_data {
 					section::propagate_temp_section_data($temp_section_data, $presets_section_tipo, $parent);
 					#debug_log(__METHOD__." propagate_temp_section_data $temp_data_uid  ".to_string($temp_section_data), logger::DEBUG);
 				}
-		
+
 			/*
 			#
 			# NAME FIELD
@@ -3635,8 +3635,8 @@ class web_data {
 				# Save component
 				$component->Save();
 			*/
-					
-		
+
+
 		}else{
 			$parent  = $preset_section_id;
 		}
@@ -3658,7 +3658,7 @@ class web_data {
 			$result = $component->Save();
 
 
-		#	
+		#
 		# USER
 			$user_id 		= navigator::get_user_id();
 			$component_tipo = 'dd654'; // component_select
@@ -3674,11 +3674,11 @@ class web_data {
 				$user_locator->set_section_id($user_id);
 				$user_locator->set_from_component_tipo($component_tipo);
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-			$component->set_dato( array($user_locator) );		
-			$result[] = $component->Save();	
+			$component->set_dato( array($user_locator) );
+			$result[] = $component->Save();
 
-		
-		
+
+
 		$response->result 		= $result;
 		$response->msg 	  		= 'Ok. Request done (section_id: '.$parent.')';
 
@@ -3711,7 +3711,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('section_id');
 			foreach($vars as $name) {
@@ -3727,11 +3727,11 @@ class web_data {
 		$presets_section_tipo = _PRESETS_LIST_SECTION_TIPO; // Presets list
 
 		$section = section::get_instance($section_id, $presets_section_tipo);
-			
+
 		# Delete section
 		$result = $section->Delete('delete_record');
-		
-		
+
+
 		$response->result 		= $result;
 		$response->msg 	  		= 'Ok. Request done (section_id: $parent)';
 
@@ -3765,7 +3765,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('search_query_object');
 			foreach($vars as $name) {
@@ -3777,12 +3777,12 @@ class web_data {
 					return $response;
 				}
 			}
-		
+
 
 		$search_development2 = new search_development2($search_query_object);
 		$result = $search_development2->search();
-		
-		
+
+
 		$response->result 		= $result;
 		$response->msg 	  		= 'Ok. Request done';
 
@@ -3830,13 +3830,13 @@ class web_data {
 			}
 
 		$user_id = navigator::get_user_id();
-		
+
 		$save_temp_preset = search_development2::save_temp_preset($user_id, $section_tipo, $filter_obj);
 		if ($save_temp_preset===true) {
 			$response->result 	= $save_temp_preset;
 			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 		}
-		
+
 
 		# Debug
 		if(SHOW_DEBUG===true) {
@@ -3867,7 +3867,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('section_tipo');
 			foreach($vars as $name) {
@@ -3884,7 +3884,7 @@ class web_data {
 		$user_id 	 = navigator::get_user_id();
 		$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
 		$temp_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
-		
+
 		$response->result 	= $temp_filter;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -3922,9 +3922,9 @@ class web_data {
 
 		$vars = array('section_tipo','section_id','mode');
 			foreach($vars as $name) {
-				$$name = common::setVarData($name, $json_data);			
+				$$name = common::setVarData($name, $json_data);
 			}
-		
+
 		$search_query_object = [
 			'id' 			=> 'get_datum',
 			'section_tipo' 	=> $section_tipo,
@@ -3942,7 +3942,7 @@ class web_data {
 			#dump($rows_data, ' rows_data ++ '.to_string()); die();
 
 		$ar_list_map = new stdClass();
-			$ar_list_map = [			
+			$ar_list_map = [
 				[
 					'tipo' 	=> "oh14",
 					'model' => "component_input_text",
@@ -3972,7 +3972,7 @@ class web_data {
 					'group' => "rsc76",
 					"section_tipo" => "rsc197"
 				]
-			];	
+			];
 		$datum = section::build_json_rows($rows_data, 'list', $ar_list_map);
 
 		// response
@@ -3989,7 +3989,7 @@ class web_data {
 					}
 				$response->debug = $debug;
 			}
-		
+
 		return (object)$response;
 	}//end get_datum
 
@@ -4005,7 +4005,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('options');
 			foreach($vars as $name) {
@@ -4016,14 +4016,14 @@ class web_data {
 					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.safe_xss($name).' (is mandatory)';
 					return $response;
 				}
-			}	
-		
+			}
+
 		# Received post var 'options' is a json object stringnified. Decode to regenrate original object
 		# $options = json_decode($options);
 		if (!is_object($options)) {
 			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Received data must be a object (options)';
 			return $response;
-		}	
+		}
 
 		if (empty($options->modo)) {
 			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty options->modo (is mandatory)';
@@ -4035,13 +4035,13 @@ class web_data {
 
 		if (!defined('SECTION_TIPO')) {
 			define('SECTION_TIPO', $section_tipo);
-		}	
+		}
 
 
 		$section_records 	= new section_records($section_tipo, $options);
 		$html 				= $section_records->get_html();
-		
-		
+
+
 		#session_write_close();
 
 
@@ -4074,7 +4074,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('search_query_object','result_parse_mode','ar_list_map');
 			foreach($vars as $name) {
@@ -4085,8 +4085,8 @@ class web_data {
 					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.safe_xss($name).' (is mandatory)';
 					return $response;
 				}
-			}	
-		
+			}
+
 		# Received post var 'options' is a json object stringnified. Decode to regenrate original object
 		# $options = json_decode($options);
 			if (!is_object($search_query_object)) {
@@ -4126,7 +4126,7 @@ class web_data {
 					$result = $rows_data->ar_records;
 					break;
 			}
-			
+
 		// search_query_object. Add updated search_query_object
 			$result->search_query_object = $search_query_object;
 
@@ -4136,9 +4136,9 @@ class web_data {
 				$search_options->context = new stdClass();
 					$search_options->context->context_name = 'default';
 				$search_options->search_query_object = $search_query_object;
-			$search_options_id = $search_query_object->section_tipo . '_json'; // section tipo like oh1	
+			$search_options_id = $search_query_object->section_tipo . '_json'; // section tipo like oh1
 			section_records::set_search_options($search_options, $search_options_id);
-			
+
 
 		$response->result 	= $result;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
@@ -4186,7 +4186,7 @@ class web_data {
 					return $response;
 				}
 			}
-		
+
 		/*
 		if (!$search_query_object = json_decode($search_query_object)) {
 			$response->msg = "Trigger Error. Invalid search_query_object";
@@ -4196,7 +4196,7 @@ class web_data {
 		if(SHOW_DEBUG===true) {
 			#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
 			#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); #die();
-		}	
+		}
 
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$component 	 = component_common::get_instance($modelo_name,
@@ -4209,7 +4209,7 @@ class web_data {
 		$result 	 = (array)$component->autocomplete_search(
 													 $search_query_object,
 													 $divisor);
-		
+
 		$response->result 	= $result;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -4224,7 +4224,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 		return (object)$response;
 	}//end function autocomplete_search')
 
@@ -4244,11 +4244,11 @@ class web_data {
 
 		$vars = array('tipo','section_tipo','section_id','modo','value_resolved','limit','offset','count');
 			foreach($vars as $name) {
-				$$name = common::setVarData($name, $json_data);			
+				$$name = common::setVarData($name, $json_data);
 			}
 
 		$time_machine_list 		= new time_machine_list($tipo, $section_id, $section_tipo, $modo='edit');
-		$time_machine_list->set_value_resolved($value_resolved); 
+		$time_machine_list->set_value_resolved($value_resolved);
 		$time_machine_list->set_limit($limit);
 		$time_machine_list->set_offset($offset);
 		$time_machine_list->set_count($count);
@@ -4320,7 +4320,7 @@ class web_data {
 				}
 			}
 
-		
+
 		if($node_type==='hierarchy_node') {
 
 			// Childrens are the same current data
@@ -4356,14 +4356,14 @@ class web_data {
 		if (isset($_SESSION['dedalo4']['config']['thesaurus_view_mode']) && $_SESSION['dedalo4']['config']['thesaurus_view_mode']==='model') {
 			$options->model = true;
 		}
-		
-		try{		
+
+		try{
 
 			$childrens_data = array();
 			foreach ((array)$childrens as $locator) {
-				
+
 				$section_id 		= $locator->section_id;
-				$section_tipo 		= $locator->section_tipo;				
+				$section_tipo 		= $locator->section_tipo;
 
 				$ts_object  		= new ts_object( $section_id, $section_tipo, $options );
 				$childrens_object 	= $ts_object->get_childrens_data();
@@ -4372,19 +4372,19 @@ class web_data {
 				# Add only descriptors
 				#if ($childrens_object->is_descriptor===true) {
 					$childrens_data[] 	= $childrens_object;
-				#}		
+				#}
 			}
 
 			$response->result 	= (array)$childrens_data;
 			$response->msg 		= 'Ok. Request done [get_childrens_data]';
-		
+
 		}catch(Exception $e) {
 
 			$response->result 	= false;
-			$response->msg 		= 'Error. Caught exception: '.$e->getMessage();		
+			$response->msg 		= 'Error. Caught exception: '.$e->getMessage();
 		}
 
-		
+
 
 		# Debug
 		if(SHOW_DEBUG===true) {
@@ -4437,7 +4437,7 @@ class web_data {
 		// section map
 			$section_map = hierarchy::get_section_map_elemets( $section_tipo );
 
-		// set new section component 'is_descriptor' value		
+		// set new section component 'is_descriptor' value
 			if (!isset($section_map['thesaurus']->is_descriptor)) {
 				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
 			}else{
@@ -4479,7 +4479,7 @@ class web_data {
 			if ($modelo_name!=='component_relation_children') {
 				$response->msg = 'Error on create new section from parent. Invalid model: '.$modelo_name.'. Expected: "component_relation_children" ';
 				return $response;
-			}	
+			}
 			$modo 			= 'edit';
 			$lang			= DEDALO_DATA_NOLAN;
 			$component_relation_children = component_common::get_instance($modelo_name,
@@ -4509,7 +4509,7 @@ class web_data {
 						$response->debug = $debug;
 					}
 			}
-			
+
 
 		return (object)$response;
 	}//end add_children
@@ -4643,7 +4643,7 @@ class web_data {
 					return $response;
 				}
 			}
-		
+
 
 		# CHILDRENS . Verify that current term don't have childrens. If yes, stop process.
 		$modelo_name 		= 'component_relation_children';
@@ -4666,9 +4666,9 @@ class web_data {
 		 		return (object)$response;
 		 	}
 		}
-		
 
-		# REFERENCES . Calculate parents and removes references to current section	
+
+		# REFERENCES . Calculate parents and removes references to current section
 		$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, false);
 
 
@@ -4679,8 +4679,8 @@ class web_data {
 		debug_log(__METHOD__." Removed section $section_id, $section_tipo ".to_string(), logger::DEBUG);
 
 		$response->result	= $result;
-		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';	
-		
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
 		# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
@@ -4701,7 +4701,7 @@ class web_data {
 
 	/**
 	* UPDATE_PARENT_DATA
-	* Updates element 
+	* Updates element
 	* @return object $response
 	*/
 	function update_parent_data($json_data) {
@@ -4720,12 +4720,12 @@ class web_data {
 					return false;
 				}
 			}
-		
+
 		# Remove current element as children from previous parent (old parentt)
 			$locator = new locator();
 				$locator->set_section_tipo($old_parent_section_tipo);
 				$locator->set_section_id($old_parent_section_id);
-			$filter   = array($locator);		
+			$filter   = array($locator);
 			$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, $filter);
 			if ($relation_response->result===true) {
 				debug_log(__METHOD__." Removed me as children from old parent  ".to_string(), logger::DEBUG);
@@ -4753,7 +4753,7 @@ class web_data {
 				# All is ok. Result is new created section section_id
 				$response->result 	= true;
 				$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-				
+
 				# Debug
 				if(SHOW_DEBUG===true) {
 					$debug = new stdClass();
@@ -4783,7 +4783,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('section_tipo','section_id','component_tipo');
 			foreach($vars as $name) {
@@ -4814,7 +4814,7 @@ class web_data {
 
 			$response->debug = $debug;
 		}
-		
+
 
 		return (object)$response;
 	}//end show_indexations
@@ -4831,7 +4831,7 @@ class web_data {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		
+
 		# set vars
 		$vars = array('section_tipo','section_id','component_tipo','ar_locators');
 			foreach($vars as $name) {
@@ -4841,7 +4841,7 @@ class web_data {
 					return $response;
 				}
 			}
-		
+
 		#$ar_locators = json_decode($ar_locators);
 		$dato = array();
 		foreach ((array)$ar_locators as $current_locator) {
@@ -4864,7 +4864,7 @@ class web_data {
 		// This action returns the dato parsed with method component_relation_common->set_dato()
 		$component_relation_children->set_dato($dato);
 		$result = $component_relation_children->Save();
-		
+
 
 		$response->result 	= $result;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
