@@ -150,20 +150,20 @@ class component_date extends component_common {
 			$dato 			= $safe_dato;
 		}
 
-		# Remove empy objects
-		$clean_dato = array();
-		foreach ((array)$dato as $key => $value_obj) {
-			$ar_vars = [];
-			if (is_object($value_obj)) {
-				$ar_vars = (array)get_object_vars($value_obj);
-			}
-				//dump($ar_vars, ' ar_vars ++ '.to_string());
-			if(!empty($ar_vars)) {
-				$clean_dato[] = $value_obj;
-			}
-		}
+		// # Remove empy objects
+		// $clean_dato = array();
+		// foreach ((array)$dato as $key => $value_obj) {
+		// 	$ar_vars = [];
+		// 	if (is_object($value_obj)) {
+		// 		$ar_vars = (array)get_object_vars($value_obj);
+		// 	}
+		// 		//dump($ar_vars, ' ar_vars ++ '.to_string());
+		// 	if(!empty($ar_vars)) {
+		// 		$clean_dato[] = $value_obj;
+		// 	}
+		// }
 
-		return parent::set_dato( (array)$clean_dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
