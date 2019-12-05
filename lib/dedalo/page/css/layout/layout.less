@@ -94,8 +94,8 @@
 			background-color: #fce8d2;
 			border-radius: 0.5em;
 			margin: 0.35em;
-			flex: 1 1 32.5%;
-
+			//flex: 1 1 32.5%;
+			flex: 1 1 49%;
 
 			&#search_query_object_test_enviroment {
 				flex: 1 1 100%;
@@ -595,6 +595,14 @@
 				flex-flow: column;
 				align-items: flex-start;
 
+				&.vertical {
+					flex: 1 1 100%;
+					background-color: #a1cccc5c;
+					justify-content: center;
+					flex-flow: unset;
+				}
+
+
 				>.inputs_container {
 					flex: 1 1 auto;
 				}
@@ -631,6 +639,7 @@
 				flex-basis: 100% !important;
 			}
 		}
+
 
 	}//end .wrapper_component
 
@@ -1152,6 +1161,28 @@
 		padding-right: 0.75em;
 	}
 
+
+
+// singular for checking assignaments only
+	.singular {
+
+		&.wrapper_component {
+			background-color: #F0FBA1 !important;
+		}
+		&.label {
+			background-color: #7CFCDD !important;
+			flex: 100% !important;
+		}
+		&.content_data {
+			background-color: #F8CAB7 !important;
+			flex: 0 0 90% !important;
+		}
+
+		&:after {
+			content: "*";
+		}
+
+	}
 
 
 
