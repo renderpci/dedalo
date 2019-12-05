@@ -777,6 +777,7 @@ class section extends common {
 		// tipo. Current section tipo
 			$tipo = $this->get_tipo();
 
+
 			# If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
 			if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo==='real'){
 				$tipo = $this->get_section_real_tipo();
@@ -819,7 +820,10 @@ class section extends common {
 			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtal section don't have table defined
 
 
-		if ($this->section_id >= 1 && $options->forced_create_record===false) { # UPDATE RECORD
+		if ($this->section_id=='-1') {
+			# Nothing to save/create
+
+		}elseif ($this->section_id >= 1 && $options->forced_create_record===false) { # UPDATE RECORD
 
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record trigered by one component
