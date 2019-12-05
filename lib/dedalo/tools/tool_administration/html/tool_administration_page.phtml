@@ -80,7 +80,7 @@
 				if (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) {
 					$url = STRUCTURE_SERVER_URL;
 					$parse = parse_url($url);
-					$from_remote = " from remote: <strong>".$parse['host']."</strong>";
+					$from_remote = " from remote: <strong>".$parse['host']."</strong> ( url: $url - code: ".STRUCTURE_SERVER_CODE." )";
 
 					$html   .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>".$from_remote;
 
@@ -405,7 +405,6 @@
 
 			#
 			# API DOC
-				if(SHOW_DEBUG===true) {
 				$html   .= "<div class=\"panel_option form-inline\"> ";
 
 				// API_WEB_USER_CODE | API_WEB_USER_CODE_MULTIPLE
@@ -427,7 +426,7 @@
 					}
 
 				$html   .= "</div>";#end panel_option
-				}
+
 
 
 			#
@@ -609,18 +608,18 @@
 
 			#
 			# PHP USER
-			if(SHOW_DEBUG===true) {
+			#if(SHOW_DEBUG===true) {
 			$processUser = get_current_user(); // $processUser = posix_getpwuid(posix_geteuid());
 			$html .= tool_administration::show_info( "PHP user",
 													 $processUser,
 													 $processUser
 													);
-			}
+			#}
 
 
 			#
 			# USER_LIMITS
-			if(SHOW_DEBUG===true) {
+			#if(SHOW_DEBUG===true) {
 			$user_limits = shell_exec("ulimit -a");
 			$user_limits .= "-Hn\t\t\t\t     ".shell_exec("ulimit -Hn");
 			$user_limits .= "-Sn\t\t\t\t     ".shell_exec("ulimit -Sn");
@@ -628,16 +627,16 @@
 													 "".$processUser,
 													 $user_limits
 													);
-			}
+			#}
 
 			#
 			# DISK SPACE
-			if(SHOW_DEBUG===true) {
+			#if(SHOW_DEBUG===true) {
 			$html .= tool_administration::show_info( "DISK SPACE",
 													 "DF COMMAND",
 													 shell_exec("df -h")
 													);
-			}
+			#}
 
 			#
 			# MAX_INPUT_VARS
@@ -855,7 +854,7 @@
 
 			#
 			# SECTIONS
-			if(SHOW_DEBUG===true) {
+			#if(SHOW_DEBUG===true) {
 				$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
 				$ar_sections = array();
 				foreach ($ar_section_tipo as $current_section_tipo) {
@@ -866,12 +865,12 @@
 														 count($ar_section_tipo),
 														 $ar_sections
 														);
-			}
+			#}
 
 
 			#
 			# DB TABLES
-			if(SHOW_DEBUG===true) {
+			#if(SHOW_DEBUG===true) {
 				$tables = (array)backup::get_tables();
 				$ar_tables=array();
 				foreach ($tables as $current_table) {
@@ -882,13 +881,13 @@
 														 "",
 														 $ar_tables
 														);
-			}
+			#}
 
 
 
 			#
 			# DB DATA CHECK
-			if(SHOW_DEBUG===true) {
+			#if(SHOW_DEBUG===true) {
 				require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
 				$data_check = new data_check();
 				$response 	= $data_check->check_sequences();
@@ -902,12 +901,12 @@
 														 "",
 														 $response->msg
 														);
-			}
+			#}
 
 
 			#
 			# DB DATA CHECK
-			if(SHOW_DEBUG===true) {
+			#if(SHOW_DEBUG===true) {
 				#require_once(DEDALO_LIB_BASE_PATH.'/db/class.counter.php');
 				$response 	= counter::check_counters();
 				if ($response->result!==true) {
@@ -920,7 +919,7 @@
 														 "",
 														 $response->msg
 														);
-			}
+			#}
 
 
 		$html   .= "</ul>";//end list-group
