@@ -6,6 +6,7 @@
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
+	$properties 		= $this->get_propiedades() ?? new stdClass();
 
 
 
@@ -20,7 +21,15 @@
 				break;
 			
 			default:
-				$context[] = $this->get_structure_context($permissions);
+				$base_context = $this->get_structure_context($permissions);
+
+				$geo_provider = (isset($properties->geo_provider)) ? $properties->geo_provider : DEDALO_GEO_PROVIDER;
+
+				$base_context->geo_provider = $geo_provider;
+
+				$context[] = $base_context;
+
+				
 				break;
 		}
 	}//end if($options->get_context===true)
