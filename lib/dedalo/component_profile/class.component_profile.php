@@ -26,10 +26,10 @@ class component_profile extends component_common {
 	protected $ar_select_values;
 
 
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+	function __construct($tipo=null, $parent=null, $modo='edit', $lang=null, $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
+		$lang = DEDALO_DATA_NOLAN;
 
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
