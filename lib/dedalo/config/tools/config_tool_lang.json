@@ -1,0 +1,16 @@
+{
+  "translator_engine": [
+    {
+      "name": "babel",
+      "label": "Babel",
+      "uri": "https://babel.render.es/babel_engine/",
+      "key": "9Fre!ksadas132aPlsdiugJKAH"
+    },
+    {
+      "name": "google_translation",
+      "label": "Google translator",
+      "uri": "https://google.com/translator",
+      "key": "69Fgsre!kLsMyehdIuyh56JKAH"
+    }
+  ]
+}

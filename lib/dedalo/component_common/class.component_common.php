@@ -281,7 +281,7 @@ abstract class component_common extends common {
 			# LANG : Overwrite var '$lang' with previous component declatarion of '$this->lang'
 			$lang = $this->lang;
 		}elseif ( empty($lang) ) {
-			$msg = __METHOD__.' Valid \'lang\' value is mandatory! Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
+			$msg = __METHOD__.' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
 			$GLOBALS['log_messages'][] = $msg;
 			trigger_error($msg);
 			$lang = DEDALO_DATA_LANG;
