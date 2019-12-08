@@ -187,7 +187,15 @@ class dd_utils_api {
 			$build_structure_css_response = (object)css::build_structure_css();
 			if ($build_structure_css_response->result===false) {
 				debug_log(__METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response), logger::ERROR);
+
+				$response->result 	= false;
+				$response->msg 		= __METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response);
+				return $response;
 			}
+
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
 
 		// Debug
@@ -197,6 +205,7 @@ class dd_utils_api {
 					$debug->request_options = $request_options;
 				$response->debug = $debug;
 			}
+
 
 		return (object)$response;
 	}//end update_structure
@@ -264,7 +273,7 @@ class dd_utils_api {
 
 
 	/**
-	* update_version
+	* UPDATE_VERSION
 	* @return object $response
 	*/
 	public static function update_version($request_options=null) {
@@ -296,7 +305,7 @@ class dd_utils_api {
 
 
 	/**
-	* convert_search_object_to_sql_query
+	* CONVERT_SEARCH_OBJECT_TO_SQL_QUERY
 	* @return object $response
 	*/
 	public static function convert_search_object_to_sql_query($request_options=null) {
@@ -350,6 +359,25 @@ class dd_utils_api {
 
 		return (object)$response;
 	}//end convert_search_object_to_sql_query
+
+
+
+	/**
+	* GET_TIME_MACHILE_LIST
+	* Return an array of records of current section
+	* @return
+	*//* IN PROCESS
+	public function get_time_machile_list($request_options=null) {
+
+		$options = new stdClass();
+			$options->section_tipo = null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+
+
+
+	}//end get_time_machile_list
+	*/
 
 
 
