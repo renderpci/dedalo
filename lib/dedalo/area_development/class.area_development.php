@@ -47,8 +47,10 @@ class area_development extends area {
 				$item->confirm .= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
 				$item->body 	= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
 					'Current: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .
-					'<br>TLD: ' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)) :
+					'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
 					label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
+				$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
+				$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
 				$item->trigger 	= (object)[
 					'dd_api' 	=> 'dd_utils_api',
 					'action' 	 => 'update_structure',

@@ -1739,19 +1739,20 @@ abstract class common {
 						// section case
 						case ($model==='section'):
 
-							$datos = json_decode($current_locator->datos);
+							$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
 
 							// section
 								$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
-								$section->set_dato($datos);
-								$section->set_bl_loaded_matrix_data(true);
-
+								if (!is_null($datos)) {
+									$section->set_dato($datos);
+									$section->set_bl_loaded_matrix_data(true);
+								}
 
 							// get component json
 								$get_json_options = new stdClass();
 									$get_json_options->get_context 	= false;
 									$get_json_options->get_data 	= true;
-								$element_json = $current_component->get_json($get_json_options);
+								$element_json = $section->get_json($get_json_options);
 							break;
 
 						// components case
