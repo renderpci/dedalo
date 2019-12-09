@@ -29,9 +29,9 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 		  main.classList.add("loading")
 
 	// page instance
-	import '../page/js/page.js'
-	import event_manager from '../page/js/page.js'
+	import {event_manager} from '../common/js/event_manager.js'
 	import {get_instance} from '../common/js/instances.js'
+	import {page} from '../page/js/page.js'
 	( async () => {
 		const t0 = performance.now()
 
@@ -65,6 +65,5 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 		})
 
 	})()
-
 </script>
 </html>
