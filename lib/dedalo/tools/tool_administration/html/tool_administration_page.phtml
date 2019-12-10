@@ -37,7 +37,12 @@
 
 		# Check DB config
 		if (empty(DB_BIN_PATH)) {
-			$html   .= "<div class=\"warning\">WARNING. Your DB config DB_BIN_PATH is empty. This can create problems in some servers</div>";
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				// nothing to do
+				$html .= "<div class=\"\">Your DB config 'DEDALO_DB_MANAGEMENT' is false. This disalow some terminal db features like backup and update structure</div>";
+			}else{
+				$html .= "<div class=\"warning\">WARNING. Your DB config DB_BIN_PATH is empty. This can create problems in some servers</div>";
+			}
 		}
 
 		# PANELS
@@ -60,7 +65,12 @@
 			# BACKUP FORCE
 				$html   .= "<div class=\"panel_option\">";
 				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
-				$html   .= "  <a href=\"javascript:;\" data-mode=\"make_backup\" onclick=\"tool_administration.make_backup(this,event)\">".label::get_label('hacer_backup')."</a>";
+				if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+					// Nothing to do
+					$html .= "  <span>Backup</span>";
+				}else{
+					$html .= "  <a href=\"javascript:;\" data-mode=\"make_backup\" onclick=\"tool_administration.make_backup(this,event)\">".label::get_label('hacer_backup')."</a>";
+				}
 				$html   .= " <div class=\"panel_option_subcontent\">";
 				$html   .= "  <div id=\"make_backup_response\"></div>";
 				$html   .= "  <div id=\"last_backup_info\">";
@@ -82,7 +92,12 @@
 					$parse = parse_url($url);
 					$from_remote = " from remote: <strong>".$parse['host']."</strong> ( url: $url - code: ".STRUCTURE_SERVER_CODE." )";
 
-					$html   .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>".$from_remote;
+					if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+						// Nothing to do
+						$html .= "  <span>Structure</span>";
+					}else{
+						$html .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>".$from_remote;
+					}
 
 				}else if (!defined('STRUCTURE_FROM_SERVER') || STRUCTURE_FROM_SERVER===false) {
 					$html   .= " <a> ".label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY." </a>";
