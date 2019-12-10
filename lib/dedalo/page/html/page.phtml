@@ -32,7 +32,7 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 				elements 	: <?php echo json_encode($page_options->page_elements) ?>
 			})
 
-		// page instance render
+		// page instance build and render
 			await page.build()
 			const wrapper_page = await page.render()
 
