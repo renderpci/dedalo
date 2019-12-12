@@ -3,14 +3,19 @@
 
 
 // html inputs
-	input[type="text"], input[type="number"], input[type="url"], textarea, .contenteditable {
+	input[type="text"], input[type="number"], input[type="url"], input[type="password"], input[type="submit"], textarea, .contenteditable {
 		width: 100%;
 		height: 2.5em;
+		font-size: 1em;
 		//margin-bottom: 0.1em;
 		padding: 0.5em;
 		//border: 1px solid #E0E0E0;
 		outline: 1px solid #E0E0E0;
 		border: none;
+
+		&:focus {
+		  outline-offset: 0;
+		}
 	}
 
 
@@ -1118,6 +1123,11 @@
 		user-select: none;
 		line-height: 1.5em;
 
+		// .wrapper_login & {
+		// 	position: relative !important;
+		// 	top: 0 !important;
+		// }
+
 		&.error {
 			background-color: rgba(228, 8, 8, 0.90);
 		}
@@ -1189,6 +1199,101 @@
 		}
 
 	}
+
+
+
+// centered
+	.centered {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+
+
+
+// login
+	.wrapper_login {
+		width: 100%;
+		height: 100%;
+		position: fixed; /* or absolute */
+		margin: -1em;
+
+		// background image
+		&:before {
+			content: "";
+			position: absolute;
+
+			background-image: url(../../themes/default/dedalo_icon_big.png);
+			background-repeat: no-repeat;
+			background-position: 0 top;
+			background-size: 527px 1024px;
+
+			width: 100%;
+			height: 100%;
+			z-index: -1;
+			//-webkit-transform: rotate(30deg);
+			transform: scaleX(-1);
+		}
+
+		>.content_data {
+			//.centered;
+			position: absolute;
+			left: 50%;
+			top: 32%;
+			transform: translate(-50%);
+
+
+			background-color: rgba(243, 243, 243, 0.76);
+			max-width: 24em;
+			padding: 2em;
+			border-radius: 0.5em;
+			//padding-top: 1em;
+			//padding-bottom: 1em;
+
+			>.select_lang {
+				width: 100%;
+				height: 2.5em;
+				font-size: 1em;
+				background-color: #efefef;
+				margin-bottom: 1em;
+			}
+
+			>form {
+				display: flex;
+				flex-wrap: wrap;
+				margin-bottom: 1em;
+
+				>input {
+					flex: 1 1 100%;
+					font-size: 1em !important;
+				}
+
+				>#auth_submit {
+					background-color: #FF9800;
+					color: white;
+					margin-top: 1em;
+					cursor: pointer;
+					border-radius: 0.25em;
+				}
+			}//end form
+
+			>.info {
+				line-height: 1.15em;
+				font-size: 0.8em;
+				opacity: 0.6;
+			}
+
+			>.component_message {
+				position: relative !important;
+				top: 1em !important;
+				margin-bottom: 1.5em;
+				font-size: 0.9em;
+				border-radius: 0.2em;
+			}
+		}
+
+	}//end wrapper_login
 
 
 

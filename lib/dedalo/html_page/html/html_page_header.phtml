@@ -4,14 +4,14 @@
 # Carga el listado del menú de tipo <ul><li></li></ul> generado por el objeto menu
 # que se llama desde el controlador de html_page y se visualiza en 'html_page.phtml'
 if (login::is_logged()) {
-	
+
 	switch (true) {
 		case (DEDALO_DATABASE_CONN==='dedalo4_master' && STRUCTURE_FROM_SERVER===false):
 			$menu_wrapper_css = 'menu_wrapper_debug_master';
 			break;
 		case (SHOW_DEBUG===true && DEDALO_DATABASE_CONN==='dedalo4_development' && DEDALO_ENTITY==='development'):
 			$menu_wrapper_css = 'menu_wrapper_debug_development';
-			break;	
+			break;
 		case (SHOW_DEBUG ):
 			$menu_wrapper_css = 'menu_wrapper_debug';
 			break;
@@ -23,24 +23,24 @@ if (login::is_logged()) {
 			break;
 	}
 
-	
+
 	echo '<div id="menu_wrapper" class="'.$menu_wrapper_css.'">';
 
 		echo '<div id="menu_background" class="menu_background">';
 			#
 			# Quit button
 			#echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
-			echo "<div id=\"quit\" class=\"button off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
+			echo "<div id=\"quit\" class=\"button off link\" title=\"".label::get_label('salir')."\" onclick=\"login.quit()\"></div>";
 
 			# Toggle Menu responsive
 			echo "<div id=\"toggle_menu\" class=\"glyphicons glyphicons-show-lines link\" title=\"".label::get_label('menu')."\" onclick=\"menu.toggle_menu(this)\">=</div>";
 
 			#
-			# Icon Dédalo	
+			# Icon Dédalo
 			echo "<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
-			
 
-			# INSPECTOR : button open / hide sidebar 
+
+			# INSPECTOR : button open / hide sidebar
 			$caller_id = navigator::get_selected('caller_id');
 			if( empty($caller_id) && $mode==='edit' ) {
 				echo '<!-- Inspector toggle button -->';
@@ -54,28 +54,28 @@ if (login::is_logged()) {
 		#
 		# MENU TREE
 		#echo "<div id=\"menu_ul_container\">";
-		echo $menu_html;	
+		echo $menu_html;
 		#echo "</div>";
-		
+
 		# Logged user
 			echo '<div class="button_in_menu logged_user_name" data-section_id="'.navigator::get_user_id().'" ';
 			#if (intval(navigator::get_user_id())>0) {
 				echo 'onclick="tool_common.open_tool_user_admin(this)"';
-			#}			
-			echo '>';				
+			#}
+			echo '>';
 			echo navigator::get_username();
 			if(SHOW_DEBUG===true) {
 				echo ' '.navigator::get_user_id().'';
 			}
-			echo '</div>';	
-		
-		
+			echo '</div>';
+
+
 		#
 		# APPLICATION LANG JUMP
 		$dedalo_aplication_langs_selector_html = html_page::get_dedalo_aplication_langs_selector_html();
 		echo $dedalo_aplication_langs_selector_html;
 
-		
+
 		#
 		# DATA LANG JUMP
 		if(component_security_administrator::is_global_admin( navigator::get_user_id() )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
@@ -83,21 +83,21 @@ if (login::is_logged()) {
 			$dedalo_data_langs_selector_html = html_page::get_dedalo_data_langs_selector_html();
 			echo $dedalo_data_langs_selector_html;
 		}
-	
 
-		
+
+
 		# log messages in debug mode
 		/*
 			if(SHOW_DEBUG===TRUE) {
 				echo "<div class=\"button_in_menu div_log_messages_checkbox\">
-						<input type=\"checkbox\" id=\"log_messages_checkbox\" class=\"button_in_menu\" value=\"1\" > 
+						<input type=\"checkbox\" id=\"log_messages_checkbox\" class=\"button_in_menu\" value=\"1\" >
 						Messages
 					</div>";
 			}
-			*/	
-	
-		
-		
+			*/
+
+
+
 
 		#
 		# SECTION : label
@@ -110,21 +110,21 @@ if (login::is_logged()) {
 				if ($current_modelo_name==='section') {
 					$current_table 	= common::get_matrix_table_from_tipo($section_tipo);
 					$section_name .= " [$current_table]";
-				}				
-			}		
+				}
+			}
 			echo '<!-- Section label -->';
 			if( !empty($section_tipo) && $mode==='list' ) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_list \">$section_name</div>";
 			}else if(!empty($section_tipo)) {
-				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_edit\" title=\"".label::get_label('ir_al_listado')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				
+				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_edit\" title=\"".label::get_label('ir_al_listado')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";
 				echo $section_name;
 				echo ' <span id="current_section_id_label">'.section::$active_section_id.'</span>';
 				echo "</div>";
 
 			}
 		}#end if(!empty($current_selected_area))
-		
-	
+
+
 	echo '</div><!-- /menu_wrapper -->';
 
 
@@ -149,11 +149,11 @@ if (login::is_logged()) {
 			$debug_line_html .= "<span>PHP ".phpversion()." ".ini_get('session.save_handler')." <span>".$processUser['name']."</span></span>";
 
 			#
-			# DATABASE 
+			# DATABASE
 			$debug_line_html .= "<span>DB PGSQL ".pg_version(DBi::_getConnection())['server']." <span>".DEDALO_DATABASE_CONN."</span></span>";
 
 			#
-			# HTTP SERVER 
+			# HTTP SERVER
 			if (function_exists('apache_get_version')) {
 				$apache_version=apache_get_version();
 				if (strlen($apache_version)>86) {
@@ -161,11 +161,11 @@ if (login::is_logged()) {
 				}
 				$debug_line_html .= "<span>HTTP "." <span>". $apache_version ."</span></span>";
 			}
-		
+
 
 			#
 			# INFO LINK
-			$debug_line_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/main/?m=tool_administration&t=".DEDALO_AREA_ROOT_TIPO."&menu=1\">".label::get_label('tool_administration')."</a>"; 
+			$debug_line_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/main/?m=tool_administration&t=".DEDALO_AREA_ROOT_TIPO."&menu=1\">".label::get_label('tool_administration')."</a>";
 
 			#
 			# STRUCTURE LINKS
@@ -173,14 +173,14 @@ if (login::is_logged()) {
 
 					# IMPORT BUTTON (ADMIN)
 					/*
-					if( DEDALO_DATABASE_CONN!=='dedalo4_master' && strpos(DEDALO_HOST, 'localhost')===false ) {	
+					if( DEDALO_DATABASE_CONN!=='dedalo4_master' && strpos(DEDALO_HOST, 'localhost')===false ) {
 						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"common.import_str(this)\">IMPORT</a>";
 					}*/
 
 					# EXPORT BUTTON (ADMIN)
-					if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false 
+					if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false
 						|| (DEDALO_DATABASE_CONN==='dedalo4_development')
-						) { 
+						) {
 						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"common.export_str(this)\">EXPORT</a>";
 					}
 			}//END STRUCTURE LINKS
@@ -196,9 +196,9 @@ if (login::is_logged()) {
 
 			#$menu_wrapper_space_style = 'height:53px';
 			#echo "<div class=\"menu_wrapper_space\" style=\"height:253px\"></div>";
-		}//end if(SHOW_DEVELOPER===true) 
+		}//end if(SHOW_DEVELOPER===true)
 
-	
+
 	# Sólo se usa para ocupar el espacio del mewnu_wrapper ya que este es de posición fija y no ocupa espacio en la página
 	echo '<div class="menu_wrapper_space"></div>';
 

@@ -24,7 +24,7 @@ class dd_object extends stdClass {
 		# tools 			: []
 		# css 				: {}
 
-	static $ar_type_allowed = ['section','component','grouper','button','area','widget'];
+	static $ar_type_allowed = ['section','component','grouper','button','area','widget','login'];
 
 
 
@@ -67,6 +67,8 @@ class dd_object extends stdClass {
 				$type = 'button';
 			}elseif (strpos($model, 'area')===0) {
 				$type = 'area';
+			}elseif ($model==='login') {
+				$type = 'login';
 			}else{
 				$msg = __METHOD__." UNDEFINED model: $model - ".$this->tipo;
 				debug_log($msg, logger::ERROR);
