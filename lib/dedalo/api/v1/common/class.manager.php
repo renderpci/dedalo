@@ -13,11 +13,11 @@ class manager {
 
 	/**
 	* __CONSTRUCT
-	* @return 
+	* @return
 	*/
 	public function __construct() {
 
-			
+
 	}//end __construct
 
 
@@ -27,7 +27,6 @@ class manager {
 	* @return mixed array|object
 	*/
 	public function manage_request( $options ) {
-
 		$api_start_time=microtime(1);
 
 		// options check
@@ -35,7 +34,7 @@ class manager {
 			if (!is_object($options) || !property_exists($options,'action')) {
 				debug_log(__METHOD__." Invalid action var (not found in options) ".to_string(), logger::ERROR);
 				return $dedalo_data;
-			}		
+			}
 
 		// actions
 			$dd_api_type = $options->dd_api ?? 'dd_core_api';
@@ -51,7 +50,7 @@ class manager {
 						$dedalo_data = (object)dd_utils_api::{$options->action}( $options );
 					}
 					break;
-				
+
 				case 'dd_core_api':
 					$dd_core_api = new dd_core_api();
 					if ( !method_exists($dd_core_api, $options->action) ) {
@@ -67,7 +66,7 @@ class manager {
 		if(SHOW_DEBUG===true) {
 			$api_debug = new stdClass();
 				$api_debug->api_exec_time = exec_time_unit($api_start_time,'ms')." ms";
-					
+
 			if (isset($dedalo_data->debug)) {
 				// add to existing debug properties
 				foreach ($api_debug as $key => $value) {
