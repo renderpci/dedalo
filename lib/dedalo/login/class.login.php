@@ -117,7 +117,7 @@ class login extends common {
 				# delay failed output after 2 seconds to prevent brute force attacks
 		        sleep(2);
 				#exit("Error: User $username not exists !");
-				$response->msg = "Error: User not exists or password si invalid!";
+				$response->msg = "Error: User not exists or password is invalid!";
 				error_log("DEDALO LOGIN ERROR : Invalid user or password");
 				return $response;
 			}
