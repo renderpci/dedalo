@@ -363,6 +363,127 @@ class dd_utils_api {
 
 
 	/**
+	* CHANGE_LANG
+	* @return object $response
+	*/
+	public static function change_lang($request_options) {
+		global $start_time;
+
+		$response = new stdClass();
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+
+		// options
+			$options 				= $request_options->options;
+			$dedalo_data_lang 		= $options->dedalo_data_lang ?? null;
+			$dedalo_application_lang= $options->dedalo_application_lang ?? null;
+
+		// dedalo_data_lang
+			if (!empty($dedalo_data_lang)) {
+				$dedalo_data_lang = trim( safe_xss($dedalo_data_lang) );
+				# Save in session
+				$_SESSION['dedalo4']['config']['dedalo_data_lang'] = $dedalo_data_lang;
+
+				$response->msg .= ' Changed dedalo_data_lang to '.$dedalo_data_lang;
+			}
+
+		// dedalo_application_lang
+			if (!empty($dedalo_application_lang)) {
+				$dedalo_application_lang = trim( safe_xss($dedalo_application_lang) );
+				# Save in session
+				$_SESSION['dedalo4']['config']['dedalo_application_lang'] = $dedalo_application_lang;
+
+				$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;
+			}
+
+		session_write_close();
+
+		// Debug
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$debug->options		= $options;
+			$response->debug = $debug;
+
+		debug_log(__METHOD__." response ".to_string($response), logger::DEBUG);
+
+		return (object)$response;
+	}//end change_lang
+
+
+
+	/**
+	* LOGIN
+	* @return object $response
+	*/
+	public static function login($request_options) {
+		global $start_time;
+
+		$options = new stdClass();
+			$options->username = $request_options->options->username;
+			$options->password = $request_options->options->auth;
+
+		$response = (object)login::Login( $options );
+
+		// Close script session
+			session_write_close();
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end login
+
+
+
+	/**
+	* QUIT
+	* @return object $response
+	*/
+	public static function quit($request_options) {
+		global $start_time;
+
+		$response = new stdClass();
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+
+		// Login type . Get before unset session
+			$login_type = isset($_SESSION['dedalo4']['auth']['login_type']) ? $_SESSION['dedalo4']['auth']['login_type'] : 'default';
+
+		// Quit action
+			$result = login::Quit( $request_options->options );
+
+		// Close script session
+			session_write_close();
+
+		// Response
+			$response->result 	= $result;
+			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+			// saml logout
+				if ($login_type==='saml' && defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
+					$response->saml_redirect = SAML_CONFIG['logout_url'];
+				}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+
+				$response->debug = $debug;
+			}
+
+
+		return (object)$response;
+	}//end quit
+
+
+
+	/**
 	* GET_TIME_MACHILE_LIST
 	* Return an array of records of current section
 	* @return
@@ -372,8 +493,6 @@ class dd_utils_api {
 		$options = new stdClass();
 			$options->section_tipo = null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-
 
 
 	}//end get_time_machile_list

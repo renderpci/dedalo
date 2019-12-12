@@ -56,130 +56,110 @@ class login extends common {
 
 	/**
 	* LOGIN
-	* @see Mandatory vars: 'username','password','tipo_login','tipo_username','tipo_password','tipo_active_account'
+	* @see Mandatory vars: 'username','password'
 	* Get post vars and search received user/password in db
 	* @return 'ok' / Error text
 	*/
-	public static function Login( $trigger_post_vars ) {
+	public static function Login( $request_options ) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed [Login]';
 
-		# Test mcrypt lib
-		#if (!function_exists('mcrypt_encrypt')) {
-		#	$response->msg = "Error Processing Request: MCRYPT lib is not available";
-		#	return $response;
-		#}
+		$options = new stdClass();
+			$options->username 	= null;
+			$options->password 	= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		# Mandatory vars
-		$mandatoy_vars = array('username','password','tipo_login','tipo_password','tipo_active_account');
-		foreach ($mandatoy_vars as $var_name) {
-			if ( !array_key_exists($var_name, $trigger_post_vars) ) {
-				#throw new Exception("Error Processing Request: var $var_name is mandatory!", 1);
-				$response->msg = "Error Processing Request: var $var_name is mandatory!";
+		// username
+			$username = trim($options->username);
+			if (empty($username)) {
+				$response->msg = "Error Processing Request: username is empty!";
 				return $response;
 			}
-			if ( empty($trigger_post_vars[$var_name])) {
-				#throw new Exception("Error Processing Request: $var_name is empty!", 1);
-				$response->msg = "Error Processing Request: $var_name is empty!";
+			$username = safe_xss($options->username);
+
+		// password
+			$password = $options->password;
+			if (empty($password) || strlen($password)<8) {
+				$response->msg = "Error Processing Request: password is empty or the lenght is invalid !";
 				return $response;
 			}
-			if ($var_name==='password') {
-				# Untouch var always
-				$$var_name = $trigger_post_vars[$var_name];
-			}else{
-				# Check safe var
-				$$var_name = safe_xss($trigger_post_vars[$var_name]);
+
+		// search username
+			$arguments=array();
+			$arguments["strPrimaryKeyName"] = 'section_id';
+			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
+			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
+
+			$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
+			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+			$user_count 			= count($ar_result);
+
+		// user found in db check
+			if( !is_array($ar_result) || empty($ar_result[0]) ) {
+
+				#
+				# STOP: USERNAME NOT EXISTS
+				#
+				$activity_datos['result'] 	= "deny";
+				$activity_datos['cause'] 	= "user not exist";
+				$activity_datos['username']	= $username;
+
+				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
+				self::login_activity_report(
+					"Denied login attempted by: $username. This user does not exist in the database",
+					NULL,
+					'LOG IN',
+					$activity_datos
+					);
+				# delay failed output after 2 seconds to prevent brute force attacks
+		        sleep(2);
+				#exit("Error: User $username not exists !");
+				$response->msg = "Error: User not exists or password si invalid!";
+				error_log("DEDALO LOGIN ERROR : Invalid user or password");
+				return $response;
 			}
 
-		}
+		// user ambiguous check (more than one with same name case)
+			if( $user_count>1 ) {
 
-		$html='';
+				#
+				# STOP: USERNAME DUPLICATED
+				#
+				$activity_datos['result'] 	= "deny";
+				$activity_datos['cause'] 	= "user duplicated in database";
+				$activity_datos['username']	= $username;
 
-		# Search username
-		$arguments=array();
-		$arguments["strPrimaryKeyName"] = 'section_id';
-		$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
-		$current_data_version = get_current_version_in_db();
-		# Username query
-		$min_subversion = 22;
-		if( $current_data_version[0] >= 5 ||
-			($current_data_version[0] >= 4 && $current_data_version[1] >= 0 && $current_data_version[2] >= $min_subversion) ||
-			($current_data_version[0] >= 4 && $current_data_version[1] >= 5) ||
-			$current_data_version[0] > 4 ) {
-			// Dato of component_input_text is array
-			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode((array)$username,JSON_UNESCAPED_UNICODE);
-		}else{
-			// Dato of component_input_text is string
-			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = $username;
-		}
-		$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-		$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
-		$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
+				self::login_activity_report(
+					"Denied login attempted by: $username. This user exist more than once in the database ".$user_count,
+					NULL,
+					'LOG IN',
+					$activity_datos
+					);
+				# delay failed output after 2 seconds to prevent brute force attacks
+		        sleep(2);
+				#exit("Error: User $username not exists !");
+				$response->msg = "Error: User ambiguous";
+				error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
+				return $response;
+			}
 
+		// password check
+			$user_id = $section_id = reset($ar_result);
 
-		if( !is_array($ar_result) || empty($ar_result[0]) ) {
+			# Search password
+			$password_encrypted = component_password::encrypt_password($password);
+			$component_password = component_common::get_instance('component_password',
+																 DEDALO_USER_PASSWORD_TIPO,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);
+			$password_dato = $component_password->get_dato();
 
-			#
-			# STOP: USERNAME NOT EXISTS
-			#
-			$activity_datos['result'] 	= "deny";
-			$activity_datos['cause'] 	= "user not exist";
-			$activity_datos['username']	= $username;
-
-			# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
-			self::login_activity_report(
-				"Denied login attempted by: $username. This user does not exist in the database",
-				NULL,
-				'LOG IN',
-				$activity_datos
-				);
-			# delay failed output after 2 seconds to prevent brute force attacks
-	        sleep(2);
-			#exit("Error: User $username not exists !");
-			$response->msg = "Error: User not exists or password si invalid!";
-			error_log("DEDALO LOGIN ERROR : Invalid user or password");
-			return $response;
-
-		}else if( count($ar_result)>1 ) {
-
-			#
-			# STOP: USERNAME DUPLICATED
-			#
-			$activity_datos['result'] 	= "deny";
-			$activity_datos['cause'] 	= "user duplicated in database";
-			$activity_datos['username']	= $username;
-
-			# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
-			self::login_activity_report(
-				"Denied login attempted by: $username. This user exist more than once in the database ".count($ar_result),
-				NULL,
-				'LOG IN',
-				$activity_datos
-				);
-			# delay failed output after 2 seconds to prevent brute force attacks
-	        sleep(2);
-			#exit("Error: User $username not exists !");
-			$response->msg = "Error: User ambiguous";
-			error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
-			return $response;
-
-		}else{
-
-			foreach($ar_result as $section_id) {
-
-				$user_id = $section_id;
-
-				# Search password
-				$password_encrypted = component_password::encrypt_password($password);
-				$component_password = component_common::get_instance('component_password',
-																	 DEDALO_USER_PASSWORD_TIPO,
-																	 $section_id,
-																	 'edit',
-																	 DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);
-				$password_dato 		= $component_password->get_dato();
-
+			// password match check
 				if( $password_encrypted!==$password_dato ) {
 
 					#
@@ -200,89 +180,84 @@ class login extends common {
 	        		sleep(2);
 
 					$response->msg = "Error: Wrong password [1]";
-					error_log("DEDALO LOGIN ERROR : Wrong password");
+					error_log("DEDALO LOGIN ERROR : Wrong password [1]");
+					return $response;
+				}//end if( $password_encrypted!==$password_dato )
+
+			// password lenght check
+				if( empty($password_dato) || strlen($password_dato)<8 ) {
+					$response->msg = "Error: Wrong password [2]";
+					error_log("DEDALO LOGIN ERROR : Wrong password [2]");
 					return $response;
 				}
 
-				if( isset($password_dato) && strlen($password_dato) ) {
+		// active account check
+			$active_account = login::active_account_check($section_id);
+			if( $active_account!==true ) {
 
-					// Active account check
-						$active_account = login::active_account_check($section_id);
+				#
+				# STOP : ACCOUNT INACTIVE
+				#
 
-						if( $active_account!==true ) {
-
-							#
-							# STOP : ACCOUNT INACTIVE
-							#
-
-							# LOGIN ACTIVITY REPORT
-							self::login_activity_report(
-								"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
-								NULL,
-								'LOG IN',
-								// activity_datos
-								array(
-									'result' 	=> 'deny',
-									'cause' 	=> 'account inactive',
-									'username' 	=> $username
-								)
-							);
+				# LOGIN ACTIVITY REPORT
+				self::login_activity_report(
+					"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
+					NULL,
+					'LOG IN',
+					// activity_datos
+					array(
+						'result' 	=> 'deny',
+						'cause' 	=> 'account inactive',
+						'username' 	=> $username
+					)
+				);
 
 
-							# delay failed output by 2 seconds to prevent brute force attacks
-							sleep(2);
-							#exit("Error: Account inactive or not defined [1]");
-							$response->msg = "Error: Account inactive or not defined [1]";
-							error_log("DEDALO LOGIN ERROR : Account inactive");
-							return $response;
-						}
+				# delay failed output by 2 seconds to prevent brute force attacks
+				sleep(2);
+				#exit("Error: Account inactive or not defined [1]");
+				$response->msg = "Error: Account inactive or not defined [1]";
+				error_log("DEDALO LOGIN ERROR : Account inactive");
+				return $response;
+			}
 
-					// Is global admin
-						$is_global_admin = component_security_administrator::is_global_admin($user_id);
+		// profile / projects check
+			$is_global_admin = component_security_administrator::is_global_admin($user_id);
+			if($is_global_admin!==true) {
 
-					// Profile / projects check
-						if($is_global_admin!==true) {
+				#
+				# PROFILE
+					$user_have_profile = login::user_have_profile_check($user_id);
+					if ($user_have_profile!==true) {
+						$response->msg = label::get_label('error_usuario_sin_perfil');
+						return $response;
+					}
 
-							#
-							# PROFILE
-								$user_have_profile = login::user_have_profile_check($user_id);
-								if ($user_have_profile!==true) {
-									$response->msg = label::get_label('error_usuario_sin_perfil');
-									return $response;
-								}
+				#
+				# PROJECTS : TEST FILTER MASTER VALUES
+					$user_have_projects = login::user_have_projects_check($user_id);
+					if ($user_have_projects!==true) {
+						$response->msg = label::get_label('error_usuario_sin_proyectos');
+						return $response;
+					}
 
-							#
-							# PROJECTS : TEST FILTER MASTER VALUES
-								$user_have_projects = login::user_have_projects_check($user_id);
-								if ($user_have_projects!==true) {
-									$response->msg = label::get_label('error_usuario_sin_proyectos');
-									return $response;
-								}
+			}//end if(!component_security_administrator::is_global_admin($user_id))
 
-						}//end if(!component_security_administrator::is_global_admin($user_id))
 
-					// Full_username
-						$full_username = login::get_full_username($user_id);
-
-					// Login (all is ok) - init login secuence when all is ok
-						$init_user_login_sequence = login::init_user_login_sequence($user_id, $username, $full_username);
-						if ($init_user_login_sequence->result===false) {
-							# RETURN FALSE
-							$response->result = false;
-							$response->msg 	  = $init_user_login_sequence->msg;
-							$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
-						}else if($init_user_login_sequence->result===true) {
-							# RETURN OK AND RELOAD PAGE
-							$response->result = true;
-							$response->msg 	  = " Login.. ";
-							$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
-						}
-
-				}//end if(isset($ar_password_id[0])
-
-			}#if( is_array($ar_result) ) foreach($ar_result as $section_id)
-
-		}//if( !is_array($ar_result) || count($ar_result)==0 || empty($ar_result[0]) )
+		// Login (all is ok) - init login secuence when all is ok
+			$full_username 				= login::get_full_username($user_id);
+			$init_user_login_sequence 	= login::init_user_login_sequence($user_id, $username, $full_username);
+			if ($init_user_login_sequence->result===false) {
+				# RETURN FALSE
+				$response->result = false;
+				$response->msg 	  = $init_user_login_sequence->msg;
+				$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+			}else if($init_user_login_sequence->result===true) {
+				# RETURN OK AND RELOAD PAGE
+				$response->result = true;
+				$response->msg 	  = " Login.. ";
+				$response->errors = isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
+			}
 
 
 		return (object)$response;
@@ -678,7 +653,7 @@ class login extends common {
 
 		# DEDALO INIT TEST SECUENCE
 		if ($init_test===true) {
-			require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
+			require(DEDALO_LIB_BASE_PATH.'/core/dd_init_test.php');
 			if ($init_response->result===false) {
 				debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
 				// Don't stop here. Only inform user of init error via jasvascript
@@ -1202,5 +1177,78 @@ class login extends common {
 
 
 
+	/**
+	* GET_STRUCTURE_CONTEXT
+	* @return object $dd_object
+	*/
+	public function get_structure_context($permissions=0, $sqo_object=false) {
+
+		// sort vars
+			$model 		  = 'login';
+			$tipo 		  = $this->get_tipo();
+			$translatable = false;
+			$mode 		  = $this->get_modo();
+			$label 		  = $this->get_label();
+			$lang		  = $this->get_lang();
+
+		// properties
+			$properties   = $this->get_propiedades();
+			if (empty($properties)) {
+				$properties = new stdClass();
+			}
+			$properties->login_items = [];
+
+			// login_items
+				$childrens = RecordObj_dd::get_ar_childrens($tipo);
+
+				foreach ($childrens as $children_tipo) {
+
+					$item = (object)[
+						'tipo'   => $children_tipo,
+						'model'  => RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true),
+						'label'  => RecordObj_dd::get_termino_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
+					];
+					$properties->login_items[] = $item;
+				}
+
+
+		// Version : Dedalo version info
+			$properties->info   = [];
+			$properties->info[] = [
+				'type' 	=> 'version',
+				'label' => 'Dédalo version ' . DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
+			];
+			$properties->info[] = [
+				'type' 	=> 'db_user',
+				'label' => (DEDALO_ENTITY==='development')
+					? DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN
+					: ''
+			];
+			$properties->info[] = [
+				'type' 	=> 'db_user',
+				'label' => 'DD version: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO)
+			];
+			$properties->info[] = [
+				'type' 	=> 'db_user',
+				'label' => (DEVELOPMENT_SERVER===true)
+					? DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
+					: ''
+			];
+
+		// dd_object
+			$dd_object = new dd_object((object)[
+				'label' 		=> $label, // *
+				'tipo' 			=> $tipo,
+				'model' 		=> $model, // *
+				'lang' 			=> $lang,
+				'mode' 			=> $mode,
+				'properties' 	=> $properties
+			]);
+
+
+		return $dd_object;
+	}//end get_structure_context
+
+
+
 }//end login
-?>
