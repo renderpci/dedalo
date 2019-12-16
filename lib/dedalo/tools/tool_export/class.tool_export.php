@@ -241,7 +241,6 @@ class tool_export extends tool_common {
 
 							// from_section label
 								if ($h_item->from_section_tipo!==$h_item->section_tipo) {
-									#dump($h_item, 'h_item->from_section_tipo  section_tipo ++ '.to_string($section_tipo));
 
 									$column_name  = '';
 
