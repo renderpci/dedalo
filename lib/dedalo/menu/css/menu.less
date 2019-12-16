@@ -61,7 +61,7 @@ background-color: #FFFF00;
 	background: #2e2e2e;
 
 	font-family: "Oxygen-light", sans-serif;
-	    font-size: 0.84em;
+	font-size: 0.84em;
     line-height: 1.2em;
 	}
 
@@ -89,23 +89,25 @@ background-color: #FFFF00;
 		cursor: pointer;
 	}
 
-	/*-- Quit button --*/
+	// Quit button
 	#menu_wrapper #quit {
 		position: relative;
 		float: left;
-		top: 3px;
-		left: 9px;
+		top: 2px;
+		left: 7px;
 		z-index: 100;
 		color: #fff;
 		transition: color 0s ease-in-out;
-		font-size: 1em;
-		/*background-color:#d4d4d4;
-		background-position: -120px -72px;
-		border-radius: 3px;*/
-		}
-		#menu_wrapper #quit:active {
+		background-image: url(../../themes/default/icons/power-off_white.svg);
+		width: 1em;
+		font-size: 1.25em;
+
+		&:active {
 			color: #7F7F7F;
 		}
+	}
+
+
 	/*-- Toggle button in mobil version --*/
 	#menu_wrapper #toggle_menu {
 		float: left;
