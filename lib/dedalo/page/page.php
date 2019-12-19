@@ -2,9 +2,9 @@
 // PAGE CONTROLLER
 
 // page mode and tipo
-	define('MODE', $_GET['m'] ?? $_GET['mode'] ?? 'list');
-	$tipo = $_GET['t'] ?? $_GET['tipo'] ?? 'test65'; //MAIN_FALLBACK_SECTION;
-
+	define('MODE', $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list') );
+	$tipo 		= $_GET['t'] ?? $_GET['tipo'] ?? 'test65'; //MAIN_FALLBACK_SECTION;
+	$section_id = $_GET['id'] ?? null;
 
 
 // page globals
@@ -196,10 +196,10 @@
 
 				case 'section':
 				default:
-					$page_elements[] = (function() use ($model, $tipo){
+					$page_elements[] = (function() use ($model, $tipo, $section_id){
 
 						$section_tipo 	= $tipo ?? 'test65';
-						$section_id		= null;
+						$section_id		= $section_id ?? null;
 						$lang 	 	 	= DEDALO_DATA_LANG;
 
 						// sqo_context
