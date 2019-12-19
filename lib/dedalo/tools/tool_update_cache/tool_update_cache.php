@@ -10,16 +10,11 @@
 
 
 
-	if(!SHOW_DEBUG) {
-		return ;
-	}
-	
-
 	switch ($this->modo) {
 		case 'button':
 			# Continue
 			break;
-		
+
 		default:
 			return null;
 			break;
@@ -29,4 +24,3 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-?>
