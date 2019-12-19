@@ -274,11 +274,15 @@
 
 
 // PSQL (Agus problem)
-	$path = DB_BIN_PATH . 'psql';
-	$psql = trim(shell_exec('command -v '. $path));
-	if (empty($psql)) {
-		$init_response->msg .= trim('psql not found at: '.$path . PHP_EOL . ' Review your postgres intallation or your db config file');
-		return $init_response;
+	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+		// nothing to do
+	}else{
+		$path = DB_BIN_PATH . 'psql';
+		$psql = trim(shell_exec('command -v '. $path));
+		if (empty($psql)) {
+			$init_response->msg .= trim('psql not found at: '.$path . PHP_EOL . ' Review your postgres intallation or your db config file');
+			return $init_response;
+		}
 	}
 
 

@@ -12,7 +12,7 @@ abstract class backup {
 	# Not use id columns NEVER here
 	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades';
 	public static $descriptors_dd_columns = 'parent, dato, tipo, lang';
-	
+
 	public static $checked_download_str_dir = false;
 
 	/**
@@ -28,21 +28,27 @@ abstract class backup {
 
 		# Force liberate browser session
 			session_write_close();
-		
+
+		if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Skipped request by db config managment '.__METHOD__;
+			return $response;
+		}
+
 		try {
 			# NAME : File name formated as date . (One hour resolution)
 			# $user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';
-			$ar_dd_data_version = tool_administration::get_current_version_in_db();			
-			if($skip_backup_time_range===true) {				
+			$ar_dd_data_version = tool_administration::get_current_version_in_db();
+			if($skip_backup_time_range===true) {
 				$db_name	= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version);
 			}else{
 				$db_name	= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
-			}	
+			}
 
 			$file_path		= DEDALO_LIB_BASE_PATH.'/backup/backups';
 
 			# Backups folder exists verify
-			if( !is_dir($file_path) ) {		
+			if( !is_dir($file_path) ) {
 				if(!mkdir($file_path, 0700, true)) {
 					#throw new Exception(" Error on read or create backup directory. Permission denied");
 					$response->result 	= false;
@@ -63,46 +69,46 @@ abstract class backup {
 				# Time range for backups in hours
 				if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
 					define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
-				}			
+				}
 				$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
 				$current_time_secs 			 = time();
 				$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
 				if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
-					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";					
-					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);					
+					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
+					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 					$response->result 	= true;
 					$response->msg 		= $msg . " ".__METHOD__;
 					return $response;
 				}
 			}
-			
-			
+
+
 			#
 			# Backup file exists (less than an hour apart)
 			$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
 			if (file_exists($mysqlExportPath)) {
-				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";				
-				debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);				
+				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";
+				debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 				$response->result 	= true;
 				$response->msg 		= $msg . " ".__METHOD__;
 				return $response;
 			}
 
 			// Export the database and output the status to the page
-			$command='';	#'sleep 1 ;';	
+			$command='';	#'sleep 1 ;';
 			# $command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
 			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
-			
+
 			if($skip_backup_time_range===true) {
-				
-				$command = 'nice -n 19 '.$command;				
-				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);				
+
+				$command = 'nice -n 19 '.$command;
+				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
 
 				# EXEC DIRECTLY AND WAIT RESULT
 				shell_exec($command);
-			
+
 			}else{
-				
+
 				$command = 'sleep 6s; nice -n 19 '.$command;
 
 				# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
@@ -123,7 +129,7 @@ abstract class backup {
 					}
 
 					# SH FILE GENERATING
-					$fp = fopen($prgfile, "w"); 
+					$fp = fopen($prgfile, "w");
 					fwrite($fp, "#!/bin/bash\n");
 					fwrite($fp, "$command\n");
 					fclose($fp);
@@ -134,9 +140,9 @@ abstract class backup {
 						throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);
 					}
 				}
-				
-				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);				
-				
+
+				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
+
 
 				# RUN DELAYED COMMAND
 				$res = exec_::exec_sh_file($prgfile);
@@ -144,8 +150,8 @@ abstract class backup {
 				#debug_log(__METHOD__." return:  ".to_string($res), logger::DEBUG);
 				#return $res;
 
-			}//end if($skip_backup_time_range===true)	
-					
+			}//end if($skip_backup_time_range===true)
+
 
 			/*
 			# EXEC : Exec command
@@ -173,7 +179,7 @@ abstract class backup {
 		} catch (Exception $e) {
 			$msg = "Sorry $username. ".  $e->getMessage(). "\n";
 			#trigger_error($msg);
-			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);			
+			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
 			$response->result 	= false;
 			$response->msg 		= "Exception: $msg ";
 			return $response;
@@ -181,7 +187,7 @@ abstract class backup {
 
 		# BK Filesize
 		$file_bk_size = "0 MB";
-		if(file_exists($mysqlExportPath)) {			
+		if(file_exists($mysqlExportPath)) {
 			$file_bk_size = format_size_units( filesize($mysqlExportPath) );
 		}
 
@@ -200,26 +206,26 @@ abstract class backup {
 	* @return array $tableList
 	*/
 	public static function get_tables() {
-		
+
 		$strQuery 	= "
-		SELECT * 
-		FROM information_schema.tables 
-		WHERE table_type = 'BASE TABLE' 
-		 AND table_schema = 'public' 
+		SELECT *
+		FROM information_schema.tables
+		WHERE table_type = 'BASE TABLE'
+		 AND table_schema = 'public'
 		ORDER BY table_type, table_name
 		";
 		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 
-		if(!$result) {			
-			$msg = "Failed Search. Data is not found. Please contact with your admin (1)" ;	
+		if(!$result) {
+			$msg = "Failed Search. Data is not found. Please contact with your admin (1)" ;
 			if(SHOW_DEBUG===true) {
 				throw new Exception($msg, 1);
 			}
 			debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 			return false;
 		}
-		$tableList = array();		
-		while($rows = pg_fetch_assoc($result)) {		
+		$tableList = array();
+		while($rows = pg_fetch_assoc($result)) {
 			$tableList[] = $rows['table_name'];
 		}
 
@@ -239,29 +245,29 @@ abstract class backup {
 
 		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
 		switch ($table) {
-			case 'jer_dd':				
+			case 'jer_dd':
 				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
 				$res .= shell_exec($command);
 				break;
-			
+
 			case 'matrix_descriptors_dd':
 				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
 				$res .= shell_exec($command);
 				break;
 
 			case 'matrix_dd':
-				$command = $command_base . " -c \"\copy (SELECT * FROM \"$table\") TO '{$path_file}' \" ";				
+				$command = $command_base . " -c \"\copy (SELECT * FROM \"$table\") TO '{$path_file}' \" ";
 				$res .= shell_exec($command);
 				#debug_log(__METHOD__." matrix_dd copy command ".to_string($command), logger::ERROR);
 				break;
-		}		
+		}
 
 		if (!file_exists($path_file)) {
-			throw new Exception("Error Processing Request. File $path_file not created!", 1);			
+			throw new Exception("Error Processing Request. File $path_file not created!", 1);
 		}
 
 		return (string)$res;
-	}//end copy_to_file	
+	}//end copy_to_file
 
 
 
@@ -281,14 +287,14 @@ abstract class backup {
 		}
 
 		$command_history = array();
-			
+
 		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
       	#$command_base = DB_BIN_PATH.'psql -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U '.DEDALO_USERNAME_CONN.' '.DEDALO_DATABASE_CONN;
 		switch ($table) {
 
 			case 'jer_dd':
 				# DELETE . Remove previous records
-				#$strQuery  = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$tld}%'; "; #pg_query(DBi::_getConnection(), $strQuery);				
+				#$strQuery  = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$tld}%'; "; #pg_query(DBi::_getConnection(), $strQuery);
 				$command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
@@ -319,7 +325,7 @@ abstract class backup {
 			case 'matrix_dd':
 				# DELETE . Remove previous records
 				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
-				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"				
+				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;
@@ -329,14 +335,14 @@ abstract class backup {
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;
-				break;		
+				break;
 		}
 		$res = str_replace("\n",' ',$res);
-		
+
 		#debug_log(__METHOD__." res:$res - command: ".implode('; ',$command_history), logger::DEBUG);
 
 		return (string)$res;
-	}//end copy_from_file	
+	}//end copy_from_file
 
 
 
@@ -355,7 +361,14 @@ abstract class backup {
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';				
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
+
+
+		if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Skipped request by db config managment '.__METHOD__;
+			return $response;
+		}
 
 		#
 		# DB_SYSTEM_CONFIG_VERIFY
@@ -368,11 +381,11 @@ abstract class backup {
 
 		if (empty($db_name)) {
 			$db_name = 'dedalo4_development_str.custom';
-		}	
+		}
 
 		$file_path		 = DEDALO_LIB_BASE_PATH .'/backup/backups_structure/';
 		$mysqlExportPath = $file_path . $db_name . ".backup";
-	
+
 		# Export the database and output the status to the page
 		# '-F c' Output compressed custom format (p = plain, c = custom, d = directory, t = tar)
 		# '-b' inclulde blobs
@@ -386,16 +399,16 @@ abstract class backup {
 		}
 		$command .= '-F c -t "*_dd" -t "*dd_id_seq" ';				// Include tables ( t lowercase ) -t "*_dd" -t "*dd_id_seq"
 		$command .= DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
-		// -T "jer_dd" -T "matrix_descriptors_dd"		
-		
+		// -T "jer_dd" -T "matrix_descriptors_dd"
+
 		# LOW PRIORITY ( nice , at 22:56 , etc)
-		#$command = "nice ".$command ;	
+		#$command = "nice ".$command ;
 		#debug_log(__METHOD__." command  ".to_string($command), logger::DEBUG);
 
-		exec($command.' 2>&1', $output, $worked_result);	
-			#debug_log(__METHOD__." command ".to_string($output)." - ".to_string($worked_result), logger::DEBUG);	
-		
-		$res_html='';		
+		exec($command.' 2>&1', $output, $worked_result);
+			#debug_log(__METHOD__." command ".to_string($output)." - ".to_string($worked_result), logger::DEBUG);
+
+		$res_html='';
 		switch($worked_result){
 			case 0:
 				$label = ($exclude_tables===true) ? 'EXPORT_BASE_STRUCTURE' : 'EXPORT_FULL_STRUCTURE';
@@ -405,12 +418,12 @@ abstract class backup {
 				if(SHOW_DEBUG===true) {
 					#$res_html .= "<pre>$command</pre>";
 					$file_size = "0";
-					if(file_exists($mysqlExportPath)) {					
+					if(file_exists($mysqlExportPath)) {
 						$file_size = format_size_units( filesize($mysqlExportPath) );
 					}
 					$res_html .= "<br>File size: $file_size";
 				}
-				$res_html .= '</div>';				
+				$res_html .= '</div>';
 				$response->result 	= true;
 				$response->msg 		= $res_html;
 				break;
@@ -443,7 +456,7 @@ abstract class backup {
 					$res_html .= "<span class=\"warning\">If you are using pgpass, check config, owner an permissions</span>";
 					$res_html .= "<pre>$command</pre>";
 				}
-				$res_html .= '</div>';	
+				$res_html .= '</div>';
 				$response->result 	= false;
 				$response->msg 		= $res_html;
 				return $response; // Stop execution here
@@ -452,21 +465,21 @@ abstract class backup {
 				$res_html .= $worked_result;
 				$response->result 	= false;
 				$response->msg 		= $res_html;
-		}	
-	
+		}
+
 		#
 		# SAVE_DEDALO_STR_TABLES_DATA
 		# Save partials srt data based on tld to independent files
 		if ($db_name==='dedalo4_development_str.custom' && $response->result===true) {
-			$res_dedalo_str_tables_data = self::save_dedalo_str_tables_data();	
+			$res_dedalo_str_tables_data = self::save_dedalo_str_tables_data();
 			if ($res_dedalo_str_tables_data->result===false) {
 				$response->result 	 = false;
 				$response->msg 		.= $res_dedalo_str_tables_data->msg;
 			}else{
 				#$res_html .= wrap_pre($ar_response_html);
 				$response->msg 		.= $res_dedalo_str_tables_data->msg;
-			}			
-		}		
+			}
+		}
 
 
 		return (object)$response;
@@ -485,7 +498,7 @@ abstract class backup {
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 		= '';		
+			$response->msg 		= '';
 
 		if (!defined('DEDALO_EXTRAS_PATH')) {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
@@ -500,17 +513,17 @@ abstract class backup {
 		$ar_tld=array();
 		$ar_msg=array();
 		while ($rows = pg_fetch_assoc($result)) {
-			
+
 			$current_tld = $rows['tld'];
 			#if ($current_tld!='dd') continue;
 			$msg='';
 			$msg .= "<b>$current_tld</b>";
-		
+
 			if ($current_tld==='dd' || $current_tld==='rsc') {
 				# CORE DEDALO STR
 				$path=DEDALO_LIB_BASE_PATH.'/backup/backups_structure/str_data';
 			}else{
-				# STR EXTRAS				
+				# STR EXTRAS
 				$path=DEDALO_EXTRAS_PATH.'/'.$current_tld.'/str_data';
 			}
 
@@ -544,9 +557,9 @@ abstract class backup {
 					$msg .= "<br>Exported [$tld] $table (<b>".trim($res1)."</b>) - fields: ". str_replace(' ', '', backup::$jer_dd_columns);
 					$msg .= "<br> -> $path_file ";
 				}
-					
+
 			#
-			# MATRIX_DESCRIPTORS_DD				
+			# MATRIX_DESCRIPTORS_DD
 				$table 		= 'matrix_descriptors_dd';
 				$tld 		= $current_tld;
 				$path_file 	= "{$path}/{$table}_{$tld}.copy";
@@ -566,8 +579,8 @@ abstract class backup {
 					$msg .= "<br> -> $path_file ";
 				}
 
-			$ar_msg[] = $msg;	
-			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b> - matrix_descriptors_dd: <b>".trim($res2)."</b>)";			
+			$ar_msg[] = $msg;
+			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b> - matrix_descriptors_dd: <b>".trim($res2)."</b>)";
 		}#end while
 
 
@@ -599,11 +612,11 @@ abstract class backup {
 		# All is ok
 		$response->result 	= true;
 		$response->msg 		= wrap_pre( implode("<hr>", $ar_msg) );
-		
 
-		return (object)$response;		
+
+		return (object)$response;
 	}#end save_dedalo_str_tables_data
-	
+
 
 
 	/**
@@ -618,6 +631,12 @@ abstract class backup {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
+
+		if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Skipped request by db config managment '.__METHOD__;
+			return $response;
+		}
 
 		#
 		# DB_SYSTEM_CONFIG_VERIFY
@@ -634,14 +653,14 @@ abstract class backup {
 
 			# Check remote server status before begins
 			/* ALREADY CHECKED IN TRIGGER, AT BEGINING OF PROCESS
-				$remote_server_status = (int)self::check_remote_server();				
+				$remote_server_status = (int)self::check_remote_server();
 			*/
 
 			# Download once all str files from server
 			$all_str_files = backup::collect_all_str_files();
 			foreach ($all_str_files as $key => $obj) {
 				if($obj->type==="main_file") {
-					$file_path  = STRUCTURE_DOWNLOAD_DIR;				
+					$file_path  = STRUCTURE_DOWNLOAD_DIR;
 					$mysqlImportFilename = $file_path .'/'. $obj->name;
 					break;
 				}
@@ -658,15 +677,15 @@ abstract class backup {
 			# Default path
 			$file_path = DEDALO_LIB_BASE_PATH .'/backup/backups_structure/';
 			$mysqlImportFilename = $file_path . $db_name . ".backup";
-		}				
-		
-		
-		if (!file_exists($mysqlImportFilename)) {			
+		}
+
+
+		if (!file_exists($mysqlImportFilename)) {
 			$response->msg 		.= "<div class=\"error\">Error: source file not found : $mysqlImportFilename</div>";
 			$response->result 	= false;
 			return (object)$response;
 		}
-		
+
 		// Import the database and output the status to the page
 		$command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
 		$command .= '--no-password --clean --no-owner "'.$mysqlImportFilename.'"' ;
@@ -676,9 +695,9 @@ abstract class backup {
 
 		#exec($command,$output,$worked);
 		exec($command.' 2>&1', $output, $worked_result);
-		$res_html='';		
+		$res_html='';
 		switch($worked_result){
-			
+
 			# OK (0)
 			case 0:
 				#$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
@@ -689,13 +708,13 @@ abstract class backup {
 				}
 				$res_html .= '</div>';
 				$response->result 	 = true;
-				$response->msg 		.= $res_html;				
-			
+				$response->msg 		.= $res_html;
+
 				#
 				# LOAD_DEDALO_STR_TABLES_DATA_from_files
 				# Load partials srt data based on tld to independent files
-				#if ($db_name=='dedalo4_development_str.custom') {				
-					$res_str_tables_data_from_files = (object)self::load_dedalo_str_tables_data_from_files();	
+				#if ($db_name=='dedalo4_development_str.custom') {
+					$res_str_tables_data_from_files = (object)self::load_dedalo_str_tables_data_from_files();
 					if ($res_str_tables_data_from_files->result===false) {
 						$response->result 	 = false;
 						$response->msg 		.= $res_str_tables_data_from_files->msg;
@@ -703,32 +722,32 @@ abstract class backup {
 					}else{
 						$response->msg 		.= $res_str_tables_data_from_files->msg;
 					}
-				#}	
+				#}
 				break;
 
 			# ERROR (1)
 			case 1:
 				#$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
 				$res_html .= '<div class="error text-left">';
-				$res_html .= 'There was an error during import. Please make sure the import file is saved in the same folder as this script and check your values:<br/><br/>';				
+				$res_html .= 'There was an error during import. Please make sure the import file is saved in the same folder as this script and check your values:<br/><br/>';
 				$res_html .= '<table>';
 				$res_html .= '<tr><td>DB Name:</td><td><b>' .DEDALO_DATABASE_CONN.'</b></td></tr>';
 				$res_html .= '<tr><td>DB User Name:</td><td><b>' .DEDALO_USERNAME_CONN.'</b></td></tr>';
 				$res_html .= '<tr><td>DB Password:</td><td><b>NOTSHOWN</b></td></tr>';
 				$res_html .= '<tr><td>DB Host Name:</td><td><b>' .DEDALO_HOSTNAME_CONN.'</b></td></tr>';
 				$res_html .= '<tr><td>DB Import Filename:</td><td><b>' .$mysqlImportFilename .'</b></td></tr>';
-				$res_html .= '</table>';				
+				$res_html .= '</table>';
 				if(SHOW_DEBUG===true) {
 					$res_html .= "<pre>$command</pre>";
 				}
 				$res_html .= '</div>';
 				$response->result 	 = false;
 				$response->msg 		.= $res_html;
-				return (object)$response;	
+				return (object)$response;
 				break;
 
 			default:
-				$res_html .= '<div class="error text-left">';		
+				$res_html .= '<div class="error text-left">';
 				$res_html .= "Command response error: ".$worked_result. " (code expected: 0)";
 				if ($worked_result==127) {
 					$res_html .= "<br>Check your DDBB path: DB_BIN_PATH: ".DB_BIN_PATH;
@@ -739,13 +758,13 @@ abstract class backup {
 				$res_html .= '</div>';
 				$response->result 	 = false;
 				$response->msg 		.= $res_html;
-				return (object)$response;	
+				return (object)$response;
 		}
 
 		if ($response->result===false) {
 			$response->msg = 'Error. Request failed '.__METHOD__ ." <br> ".$response->msg;
-		}		
-		
+		}
+
 
 		return (object)$response;
 	}#end import_structure
@@ -766,9 +785,16 @@ abstract class backup {
 			$response->result 	= false;
 			$response->msg 		= '';
 
+
+		if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Skipped request by db config managment '.__METHOD__;
+			return $response;
+		}
+
 		$ar_msg=array();
 
-			
+
 		if (!defined('DEDALO_EXTRAS_PATH')) {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
 			debug_log(__METHOD__." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ", logger::WARNING);
@@ -780,12 +806,12 @@ abstract class backup {
 		}else{
 			$path = DEDALO_LIB_BASE_PATH.'/backup/backups_structure/str_data';
 		}
-		
+
 
 		#
 		# CORE : Load core dedalo str
 		# Iterate 'dd' and 'rsc' tlds
-		#		
+		#
 			$ar_core_tlds = array('dd','rsc');
 			foreach ($ar_core_tlds as $current_tld) {
 
@@ -799,9 +825,9 @@ abstract class backup {
 					$file_name	= $table .'_'.$tld.'.copy';
 					$path_file 	= $path.'/'.$file_name;
 					$res1 		= backup::copy_from_file($table, $path_file, $tld);
-					
+
 					if (empty($res1)) {
-						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";						
+						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
 						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
 						$load_with_errors=true;
 						if(SHOW_DEBUG===true) {
@@ -814,14 +840,14 @@ abstract class backup {
 					}
 
 				#
-				# MATRIX_DESCRIPTORS_DD	
+				# MATRIX_DESCRIPTORS_DD
 					$table 		= 'matrix_descriptors_dd';
 					$tld 		= $current_tld;
-					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';					
+					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
 					$res2 		= backup::copy_from_file($table, $path_file, $tld);
-					
+
 					if (empty($res2)) {
-						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";						
+						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
 						debug_log(__METHOD__." $msg ".to_string($res2), logger::ERROR);
 						$load_with_errors=true;
 						if(SHOW_DEBUG===true) {
@@ -831,17 +857,17 @@ abstract class backup {
 						$response->result 	 = false;
 						$response->msg 		.= $msg;
 						return $response;
-					}					
+					}
 					if(SHOW_DEBUG===true) {
 						$msg .= "<br>Imported dedalo core data";
 						$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>]) ";
-					}				
+					}
 
 				$ar_msg[]=$msg;
 
 				// let GC do the memory job
 				time_nanosleep(0, 100000); // 50 ms
-			}#end foreach ($ar_core_tlds as $current_tld)			
+			}#end foreach ($ar_core_tlds as $current_tld)
 
 		#
 		# LIST OF VALUES PRIVATE
@@ -850,9 +876,9 @@ abstract class backup {
 			$path_file 	= $path.'/'.$table .'.copy';
 			$res3 		= backup::copy_from_file($table, $path_file, null);
 			$msg='';
-			$msg .= "<b>$table</b>";					
+			$msg .= "<b>$table</b>";
 			if (empty($res3)) {
-				$msg .= "<br>Error on import $table. copy_from_file $path_file.";				
+				$msg .= "<br>Error on import $table. copy_from_file $path_file.";
 				debug_log(__METHOD__." $msg ".to_string($res3), logger::ERROR);
 				$load_with_errors=true;
 				if(SHOW_DEBUG===true) {
@@ -862,19 +888,19 @@ abstract class backup {
 				$response->result 	 = false;
 				$response->msg 		.= $msg;
 				return $response;
-			}			
+			}
 			if(SHOW_DEBUG===true) {
 				$msg .= "<br>Imported dedalo core data";
 				$msg .= ' ('.$table.' [<b>'.trim( to_string($res3) ).'</b>] '.$path_file.') ';
 			}
-			
-			$ar_msg[]=$msg;					
+
+			$ar_msg[]=$msg;
 
 
 		#
 		# EXTRAS : Load extras str
 		# Iterate tlds from 'extras' folder
-		#			
+		#
 			#$ar_extras_folders = (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
 			#$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
 			/*
@@ -884,7 +910,7 @@ abstract class backup {
 				$obj->name  = "jer_dd_".$folder_name.".copy";
 				$obj->path  = DEDALO_EXTRAS_PATH .'/'.$folder_name.'/str_data';
 			*/
-			
+
 			#foreach ($ar_extras_folders as $current_dir) {
 			$all_str_files = backup::collect_all_str_files();
 			foreach ($all_str_files as $obj) {
@@ -892,27 +918,27 @@ abstract class backup {
 				if(strpos($obj->type, "extras")===false) {
 					continue; // Skip no extras elements
 				}
-				
+
 				#$current_dir = basename($current_dir);
 				#$path 		 = DEDALO_EXTRAS_PATH .'/'.$current_dir.'/str_data';
 				$path = $obj->path;
 				$msg  ='';
 				$msg .= "<b>$obj->name</b>";
-				
+
 				/*
 				$res1=$res2=0;
-				
+
 				# DEDALO_PREFIX_TIPOS : config tipos verify. 'tipos' not defined in config, will be ignored
 				if (!in_array($current_dir, $DEDALO_PREFIX_TIPOS)) {
 					continue; # Filter load prefix from config 'DEDALO_PREFIX_TIPOS'
-				}				
-				
+				}
+
 				#
 				# JER_DD EXTRAS
 					$table 		= 'jer_dd';
 					$tld 		= $current_dir;
 					$path_file1 = $path.'/'.$table .'_'.$tld.'.copy';
-					$path_file1 = 
+					$path_file1 =
 					$res1 		= backup::copy_from_file($table, $path_file1, $tld);
 
 					if (empty($res1)) {
@@ -924,7 +950,7 @@ abstract class backup {
 						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
 						$load_with_errors=true;
 					}
-				
+
 				#
 				# MATRIX_DESCRIPTORS_DD EXTRAS
 					$table 		= 'matrix_descriptors_dd';
@@ -951,7 +977,7 @@ abstract class backup {
 					$res1 		= backup::copy_from_file($table, $path_file, $tld);
 
 					if (empty($res1)) {
-						$msg .= "<br>Error on import $table {$tld} . copy_from_file $path_file";						
+						$msg .= "<br>Error on import $table {$tld} . copy_from_file $path_file";
 						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
 						$load_with_errors=true;
 
@@ -965,7 +991,7 @@ abstract class backup {
 						$msg .= " ($table {$tld} [<b>".trim($res1)."</b>])";
 						$msg .= "<br> -> $path_file ";
 					}
-					$ar_msg[]=$msg;		
+					$ar_msg[]=$msg;
 
 				// let GC do the memory job
 				time_nanosleep(0, 100000); // 50 ms
@@ -985,7 +1011,7 @@ abstract class backup {
 				}else{
 					$msg .= $consolide_sequence->msg;
 				}
-				
+
 			# SEQUENCE UPDATE (to the last table id)
 				$table 	 ='matrix_descriptors_dd';
 				$consolide_sequence = (object)self::consolide_sequence($table);
@@ -1027,7 +1053,7 @@ abstract class backup {
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
 		$row 	  = pg_fetch_row($result);
 		$last_id  = (int)$row[0];
-		#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id 
+		#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id
 		$sequence_name = $table.'_id_seq';
 		$strQuery = "SELECT setval('$sequence_name', $last_id, true);";
 
@@ -1042,16 +1068,16 @@ abstract class backup {
 			}else{
 				$response->result 	= false;
 				$response->msg 		= "Error on consolidate sequence: $sequence_name - table: $table";
-			}	
+			}
 
-		return (object)$response;			
+		return (object)$response;
 	}//end consolide_sequence
 
 
 
 	/**
 	* DB_SYSTEM_CONFIG_VERIFY
-	* Check current database status to properly configuration 
+	* Check current database status to properly configuration
 	* Test pgpass file existence and permissions
 	* If pgpass if not correctly configurated, die current script showing a error
 	*/
@@ -1063,16 +1089,16 @@ abstract class backup {
 
 		// user bse dir
 			try {
-				
+
 				#$processUser = posix_getpwuid(posix_geteuid());
 				#$base_dir 	 = $processUser['dir'];
 				$base_dir 	 = getenv("HOME");
 				$file 		 = $base_dir.'/.pgpass';
 
-			}catch(Exception $e) {				
+			}catch(Exception $e) {
 				debug_log(__METHOD__."  ".$e->getMessage(), logger::ERROR);
 			}
-		
+
 		#
 		# PGPASS VERIFY
 		if (isset($file)) {
@@ -1095,7 +1121,7 @@ abstract class backup {
 			}
 
 		}else{
-			
+
 			$response->result 	= false;
 			$response->msg 		= 'Error. PHP function posix_getpwuid not exists '.__METHOD__;
 		}
@@ -1107,12 +1133,12 @@ abstract class backup {
 
 	/**
 	* COLLECT_ALL_STR_FILES
-	* Make a http request to server to retrieve the necessary files to updates structure 
+	* Make a http request to server to retrieve the necessary files to updates structure
 	* @return array $ar_files
 	*	Array of objects
 	*/
 	public static function collect_all_str_files() {
-		
+
 		static $ar_files;
 
 		if (isset($ar_files)) {
@@ -1129,7 +1155,7 @@ abstract class backup {
 		$obj = new stdClass();
 			$obj->type = "main_file";
 			$obj->name = "dedalo4_development_str.custom.backup";
-			$obj->path = DEDALO_LIB_BASE_PATH.'/backup/backups_structure';			
+			$obj->path = DEDALO_LIB_BASE_PATH.'/backup/backups_structure';
 		$ar_files[] = $obj;
 
 		# core str file
@@ -1167,7 +1193,7 @@ abstract class backup {
 
 
 
-		# EXTRAS		
+		# EXTRAS
 		$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
 		# Check extras folder coherence with config DEDALO_PREFIX_TIPOS
 		foreach ($DEDALO_PREFIX_TIPOS as $current_prefix) {
@@ -1193,7 +1219,7 @@ abstract class backup {
 			}
 			$ar_extras[] = $base_dir;
 		}
-		
+
 
 		foreach ($ar_extras as $folder_name) {
 			$obj = new stdClass();
@@ -1214,8 +1240,8 @@ abstract class backup {
 
 		# Remote case
 		if ($remote===true) {
-			$target_dir = STRUCTURE_DOWNLOAD_DIR;		
-			foreach ($ar_files as $key => $obj) {				
+			$target_dir = STRUCTURE_DOWNLOAD_DIR;
+			foreach ($ar_files as $key => $obj) {
 				# Download remofe file to local
 				backup::download_remote_structure_file($obj, $target_dir);
 				// Overwrite path to new downloaded files
@@ -1235,7 +1261,7 @@ abstract class backup {
 	* @return string $result
 	*/
 	public static function get_remote_data($data) {
-		
+
 		$data_string = "data=" . json_encode($data);
 
 		// open connection
@@ -1258,9 +1284,9 @@ abstract class backup {
 
 		// close connection
 		curl_close($ch);
-		
+
 		// file_get_contents option
-		$result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
+		#$result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
 
 		return $result;
 	}//end get_remote_data
@@ -1297,7 +1323,7 @@ abstract class backup {
 				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 			}
 			backup::$checked_download_str_dir = true;
-		}		
+		}
 
 		# Delete previous version file if exists
 		if (file_exists($target_dir .'/'. $obj->name)) {
@@ -1314,7 +1340,7 @@ abstract class backup {
 			// Clean memory footprint
 			unset($fist_line); strtok('', '');
 		}
-		
+
 
 		return true;
 	}//end download_remote_structure_file
@@ -1329,7 +1355,7 @@ abstract class backup {
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;		
+			$response->msg 		= 'Error. Request failed '.__METHOD__;
 
 		$data = array(
 				"code" 				=> STRUCTURE_SERVER_CODE,
@@ -1360,7 +1386,7 @@ abstract class backup {
 
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		debug_log(__METHOD__." ".STRUCTURE_SERVER_URL." status code: ".to_string($httpcode), logger::WARNING);
-		
+
 		//close connection
 		curl_close($ch);
 
@@ -1368,19 +1394,19 @@ abstract class backup {
 		switch ($httpcode) {
 			case 200:
 				$response->result 	= true;
-				$msg 	= "Ok. check_remote_server passed successfully (status code: $httpcode)";					
+				$msg 	= "Ok. check_remote_server passed successfully (status code: $httpcode)";
 				break;
 			case 401:
-				$msg 	= "Error. Unauthorized code (status code: $httpcode)";				
+				$msg 	= "Error. Unauthorized code (status code: $httpcode)";
 				break;
 			case 400:
-				$msg 	= "Error. Server has problems collect structure files (status code: $httpcode)";				
-				break;				
+				$msg 	= "Error. Server has problems collect structure files (status code: $httpcode)";
+				break;
 			default:
-				$msg 	= "Error. check_remote_server problem found (status code: $httpcode)";				
+				$msg 	= "Error. check_remote_server problem found (status code: $httpcode)";
 				break;
 		}
-		
+
 		#$response->result = true;
 		#$httpcode = 200; // Force fake 200
 		#$msg = "Ok";
