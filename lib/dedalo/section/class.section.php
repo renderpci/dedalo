@@ -836,7 +836,10 @@ class section extends common {
 			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtal section don't have table defined
 
 
-		if ($this->section_id >= 1 && $options->forced_create_record===false) { # UPDATE RECORD
+		if ($this->section_id=='-1') {
+			# Nothing to save/create
+
+		}elseif ($this->section_id >= 1 && $options->forced_create_record===false) { # UPDATE RECORD
 
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record trigered by one component
