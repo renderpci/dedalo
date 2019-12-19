@@ -13,13 +13,15 @@
 		outline: 1px solid #E0E0E0;
 		border: none;
 		transition: all .5s ease;
-		opacity: 0.8;
+		opacity: 0.75;
 
 		&:focus {
+			@blue : #3b87fd;
+			@orange : #f78a1c;
 			outline-offset: 0;
 			//background-color: #D4F1D1;
-			outline: 1px solid #f78a1c;
-			box-shadow: 0 0 10px #f78a1c; //rgba(26, 154, 245, .5);
+			outline: 1px solid @blue;
+			box-shadow: 0 0 10px @blue; //rgba(26, 154, 245, .5);
 			opacity: 1;
 		}
 	}
@@ -1458,7 +1460,7 @@
 				background-image: url(../../themes/default/icons/underline.svg);
 			}
 			&.replace:before {
-				background-image: url(../../themes/default/icons/exchange.svg);				
+				background-image: url(../../themes/default/icons/exchange.svg);
 			}
 		}
 	}
