@@ -18,23 +18,23 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 <script type="module">
 	const t0 = performance.now()
 
-	const main = document.getElementById("main")
-		  main.classList.add("loading")
-
 	// page instance
 	import {get_instance} from '../common/js/instances.js'
 	( async () => {
 
+		const main = document.getElementById("main")
+		  main.classList.add("loading")
+
 		// page instance
 			const page = await get_instance({
 				model 		: 'page',
-				mode		: <?php echo json_encode($page_options->mode) ?> || 'edit',
+				//mode		: <?php echo json_encode($page_options->mode) ?> || 'edit',
 				elements 	: <?php echo json_encode($page_options->page_elements) ?>
 			})
 
 		// page instance build and render
-			await page.build()
-			const wrapper_page = await page.render()
+			const build 		= await page.build()
+			const wrapper_page 	= await page.render()
 
 		// main add and restore class
 			main.appendChild(wrapper_page)

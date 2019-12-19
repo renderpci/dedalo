@@ -1287,7 +1287,7 @@ abstract class common {
 	                // This is a closing tag.
 
 	                $openingTag = array_pop($tags);
-	                assert($openingTag === $tagName); // check that tags are properly nested.
+					//assert($openingTag === $tagName); // check that tags are properly nested.
 
 	                #print($tag);
 	                $full_text .= $tag;
