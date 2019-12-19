@@ -3010,6 +3010,7 @@ class search_development2 {
 
 					$element = new stdClass();
 						$element->section_group_tipo  		= $section_group_tipo;
+						$element->section_group_model  		= RecordObj_dd::get_modelo_name_by_tipo($section_group_tipo,true);
 						$element->section_group_label  		= $section_group_label;
 						$element->section_tipo  			= $section_tipo;
 						$element->section_label  			= $section_label;
