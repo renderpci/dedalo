@@ -1434,8 +1434,32 @@
 		border-top-left-radius: 0.25em;
 		border-top-right-radius: 0.25em;
 
-		>div {
+		>.button {
 			color: white;
+
+			&:before {
+				content: " ";
+				width: 1em;
+				height: 1em;
+				background-size: contain;
+				background-repeat: no-repeat;
+				margin-right: 0.25em;
+    			padding-right: 1em;
+				vertical-align: text-bottom;
+			}
+
+			&.bold:before {
+				background-image: url(../../themes/default/icons/bold.svg);
+			}
+			&.italic:before {
+				background-image: url(../../themes/default/icons/italic.svg);
+			}
+			&.underline:before {
+				background-image: url(../../themes/default/icons/underline.svg);
+			}
+			&.replace:before {
+				background-image: url(../../themes/default/icons/exchange.svg);				
+			}
 		}
 	}
 
@@ -1558,5 +1582,3 @@
 		  transition: all 0.75s ease;
 		}
 		*/
-
-
