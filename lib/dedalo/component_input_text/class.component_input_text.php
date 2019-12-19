@@ -5,7 +5,7 @@
 * Common components properties and method are inherited of component_common class that are inherited from common class
 */
 class component_input_text extends component_common {
-	
+
 
 
 	/**
@@ -14,12 +14,6 @@ class component_input_text extends component_common {
 	public function get_dato() {
 
 		$dato = parent::get_dato();
-		
-		if(SHOW_DEBUG===true) {
-			#if ( !is_null($dato) && !is_array($dato)  ) {
-				#dump( $dato, "WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent");
-			#}
-		}
 
 		return (array)$dato;
 	}//end get_dato
@@ -42,7 +36,7 @@ class component_input_text extends component_common {
 			$dato_last_character  	= substr($dato_trim, -1);
 
 			if ($dato_first_character==='[' && $dato_last_character===']') {
-				# dato is json encoded 
+				# dato is json encoded
 				$dato = json_handler::decode($dato_trim);
 			}else{
 				# dato is string plain value
@@ -67,7 +61,7 @@ class component_input_text extends component_common {
 			}
 		}
 		$dato = $safe_dato;
-		
+
 		parent::set_dato( (array)$dato );
 	}//end set_dato
 
@@ -80,26 +74,26 @@ class component_input_text extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
-		
+
 		$valor ='';
 
 		$dato = $this->get_dato();
 
-		if(empty($dato)) {			
+		if(empty($dato)) {
 			return (string)$valor;
 		}
-				
-		if ($index==='all') {			
+
+		if ($index==='all') {
 			$ar = array();
 			foreach ($dato as $key => $value) {
 				$value = trim($value);
 				if (!empty($value)) {
-					$ar[] = $value;	
-				}							
+					$ar[] = $value;
+				}
 			}
 			if (count($ar)>0) {
 				$valor = implode(',',$ar);
-			}			
+			}
 		}else{
 			$index = (int)$index;
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
@@ -117,14 +111,14 @@ class component_input_text extends component_common {
 	public function load_tools( $check_lang_tools=true ) {
 
 		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {			
+		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
 			# Allow tool lang on non translatable components
 			$check_lang_tools = false;
 		}
 
 		return parent::load_tools( $check_lang_tools );
-	}//end load_tools 
-	
+	}//end load_tools
+
 
 
 
@@ -144,24 +138,24 @@ class component_input_text extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id=null, $current_locator=null, $caller_component_tipo=null) {
-		
+
 		if (strpos($modo, 'edit')!==false) {
 			$component 			= component_common::get_instance(__CLASS__,
 																 $tipo,
 																 $parent,
 																 $modo,
 																 $lang,
-																 $section_tipo);					
+																 $section_tipo);
 			$value = $component->get_html();
 
-		}else{	
+		}else{
 
 			# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
 			# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
 			# creamos el componente para pedirle el valor en el lenguaje principal.
 			# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
 			#
-			# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config 
+			# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config
 			#
 			# FALLBACK TO MAIN_LANG
 			# dump($value, ' value ++ '.to_string());
@@ -173,21 +167,21 @@ class component_input_text extends component_common {
 															 $parent,
 															 $modo,
 															 DEDALO_DATA_LANG,
-															 $section_tipo); 
+															 $section_tipo);
 
-				#$dato_full = $component->get_dato_full();					
+				#$dato_full = $component->get_dato_full();
 				#$value = component_common::get_value_with_fallback_from_dato_full( $dato_full, true );
-				$value = component_common::extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);							
-			}			
-		
-		}//end if (strpos($modo, 'edit')!==false)	
+				$value = component_common::extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+			}
 
-		
+		}//end if (strpos($modo, 'edit')!==false)
+
+
 		# Add value of current lang to nolan data
 			$RecordObj_dd = new RecordObj_dd($tipo);
 			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
 			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
-				
+
 				$component 			= component_common::get_instance(__CLASS__,
 																	 $tipo,
 																	 $parent,
@@ -213,17 +207,17 @@ class component_input_text extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		if (empty($valor)) {
-			
+
 			$valor = $this->get_valor($lang);
-		
+
 		}else{
 
 			# Add value of current lang to nolan data
 			$propiedades = $this->get_propiedades();
 			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
-				
+
 				$component = $this;
 				$component->set_lang($lang);
 				#$add_value = component_common::extract_component_value_fallback($component);
@@ -239,7 +233,7 @@ class component_input_text extends component_common {
 		}
 
 		return to_string($valor);
-	}//end get_valor_export	
+	}//end get_valor_export
 
 
 
@@ -257,10 +251,10 @@ class component_input_text extends component_common {
 	* @return string $html
 	*/
 	public function get_valor_list_html_to_save() {
-		
+
 		# Get html from current component
-		$html = $this->get_valor();		
-		
+		$html = $this->get_valor();
+
 		return (string)$html;
 	}//end get_valor_list_html_to_save
 
@@ -285,14 +279,14 @@ class component_input_text extends component_common {
 			$update_version = $options->update_version;
 			$dato_unchanged = $options->dato_unchanged;
 			$reference_id 	= $options->reference_id;
-		
+
 
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
 			case '4.0.21':
 				#$dato = $this->get_dato_unchanged();
-				
+
 				# Compatibility old dedalo instalations
 				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
 
@@ -313,10 +307,10 @@ class component_input_text extends component_common {
 					return $response;
 
 				}else{
-					
+
 					$response = new stdClass();
 						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
 				}
 				break;
@@ -328,21 +322,21 @@ class component_input_text extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object
-	*	Edited/parsed version of received object 
+	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql($query_object) {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-		
+
 		#$q = $query_object->q;
 		#if (isset($query_object->type) && $query_object->type==='jsonb') {
 		#	$q = json_decode($q);
-		#}	
+		#}
 
 		# Always set fixed values
 		$query_object->type = 'string';
-		
+
 		$q = pg_escape_string(stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
@@ -407,7 +401,7 @@ class component_input_text extends component_common {
 							$clone->lang 	 = $current_lang;
 
 						$ar_query_object[] = $clone;
-					}			
+					}
 
 					$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
 					*/
@@ -443,12 +437,12 @@ class component_input_text extends component_common {
 
 					$logical_operator ='$or';
 					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $ar_query_object;				
+						$langs_query_json->$logical_operator = $ar_query_object;
 
 				# override
 				$query_object = [$new_query_json, $langs_query_json];
 				break;
-			# IS DIFFERENT			
+			# IS DIFFERENT
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
@@ -504,17 +498,17 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
 				break;
-			# DEFAULT CONTAIN 
+			# DEFAULT CONTAIN
 			default:
 				$operator = '~*';
-				$q_clean  = str_replace('+', '', $q);				
+				$q_clean  = str_replace('+', '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
-				break;			
+				break;
 		}//end switch (true) {
 		#dump($query_object, ' query_object ++ '.to_string());
-	   
+
 
 		return $query_object;
 	}//end resolve_query_object_sql
@@ -527,10 +521,10 @@ class component_input_text extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null	
+			'!*' 	 => 'campo_vacio', // null
 			'=' 	 => 'similar_a',
 			'!=' 	 => 'distinto_de',
 			'-' 	 => 'no_contiene',
@@ -553,7 +547,7 @@ class component_input_text extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang ) {		
+	public function get_diffusion_value( $lang ) {
 
 		# Default behaviour is get value
 		$diffusion_value = $this->get_valor( $lang );
@@ -567,7 +561,7 @@ class component_input_text extends component_common {
 
 		# strip_tags all values (remove untranslate mark elements)
 		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
-		
+
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
@@ -576,10 +570,10 @@ class component_input_text extends component_common {
 
 	/**
 	* GET_STRUCTURE_BUTTONS
-	* @return 
+	* @return
 	*/
 	public function get_structure_buttons($permissions=null) {
-		
+
 
 		return [];
 	}//end get_structure_buttons
