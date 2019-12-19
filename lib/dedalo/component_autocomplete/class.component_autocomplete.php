@@ -1065,5 +1065,4 @@ class component_autocomplete extends component_relation_common {
 
 
 
-}
-?>
+}// component_autocomplete

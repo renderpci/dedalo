@@ -11,22 +11,22 @@ class tool_update_cache {
 	protected $modo;
 	protected $section_list_tipo;
 	protected $matrix_table;
-	public static $debug_response; 
+	public static $debug_response;
 
 
-	
+
 	function __construct( $section_tipo=null, $modo='button' ) {
 
 		if (empty($section_tipo)) {
-			throw new Exception("Error Processing Request. Var section_tipo is empty", 1);			
+			throw new Exception("Error Processing Request. Var section_tipo is empty", 1);
 		}
 		$this->section_tipo = $section_tipo;
-		$this->modo 		= $modo;	
+		$this->modo 		= $modo;
 	}//end __construct
 
 
 
-	/** 
+	/**
 	* HTML
 	* @return string
 	*/
@@ -48,11 +48,11 @@ class tool_update_cache {
 			$response->result 	= false;
 			$response->msg 		= 'Error. update_cache failed';
 
-		if(SHOW_DEBUG!==true) {
-			debug_log(__METHOD__." STOPPED METHOD. TO REVIEW WITH LANG CHANGES BEFORE USE !!!!! ".to_string(), logger::ERROR);
-			$response->msg = " STOPPED METHOD. TO REVIEW WITH LANG CHANGES BEFORE USE !!!!! ";
-			return $response;
-		}		
+		// if(SHOW_DEBUG!==true) {
+		// 	debug_log(__METHOD__." STOPPED METHOD. TO REVIEW WITH LANG CHANGES BEFORE USE !!!!! ".to_string(), logger::ERROR);
+		// 	$response->msg = " STOPPED METHOD. TO REVIEW WITH LANG CHANGES BEFORE USE !!!!! ";
+		// 	return $response;
+		// }
 
 		# Disable logging activity and time machine # !IMPORTANT
 		logger_backend_activity::$enable_log = false;
@@ -63,8 +63,8 @@ class tool_update_cache {
 		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 			$start_time = start_time();
 		}
-		
-		#self::$debug_response .= 'Init tool_update_cache ';		
+
+		#self::$debug_response .= 'Init tool_update_cache ';
 
 
 		#
@@ -83,31 +83,31 @@ class tool_update_cache {
 				# Only section list components
 				$section_list_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, 'section_list', true);
 				if (!isset($section_list_tipo[0])) {
-					throw new Exception("Error Processing Request. Section list not found for $this->section_tipo", 1);			
+					throw new Exception("Error Processing Request. Section list not found for $this->section_tipo", 1);
 				}
 				$this->section_list_tipo = $section_list_tipo[0];
 					#dump($this->section_list_tipo,"this->section_list_tipo ");
-				
+
 				$RecordObj_dd = new RecordObj_dd($this->section_list_tipo);
 				$related_terms= $RecordObj_dd->get_ar_terminos_relacionados($this->section_list_tipo, $cache=true, $simple=true);
 			}
-			
+
 
 		#
 		# RECORDS
 		# Use actual list search options as base to build current search
-			
+
 			# SEARCH_OPTIONS
 				$search_options_id    = $this->section_tipo; // section tipo like oh1
 				$saved_search_options = section_records::get_search_options($search_options_id);
-			
+
 			# SEARCH_QUERY_OBJECT
 				# Use saved search options (deep cloned to avoid propagation of changes !)
 					$search_options 	 = unserialize(serialize($saved_search_options));
 					$search_query_object = $search_options->search_query_object;
 						$search_query_object->limit  = 0;  // unset limit
 						$search_query_object->select = []; // unset select
-			
+
 			# SEARCH
 				$search_develoment2  = new search_development2($search_query_object);
 				$rows_data 		 	 = $search_develoment2->search();
@@ -115,12 +115,12 @@ class tool_update_cache {
 
 		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 			#$time = round( microtime(TRUE) - $partial_time ,4);
-			#debug_log(__METHOD__." - Time ".round( microtime(TRUE) - $start_time ,4)." secs to query - Memory: ".tools::get_memory_usage('pid'));				
+			#debug_log(__METHOD__." - Time ".round( microtime(TRUE) - $start_time ,4)." secs to query - Memory: ".tools::get_memory_usage('pid'));
 		}
 
 		foreach ($rows_data->ar_records as $key => $row) {
-			
-			$section_id = $row->section_id;		
+
+			$section_id = $row->section_id;
 
 			if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 				$partial_time = start_time();
@@ -129,7 +129,7 @@ class tool_update_cache {
 			foreach ($related_terms as $current_component_tipo) {
 
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-				if (strpos($modelo_name, 'component_')===false) {					
+				if (strpos($modelo_name, 'component_')===false) {
 					debug_log(__METHOD__." Skipped element '$modelo_name' tipo: $current_component_tipo (is not a component) ".to_string(), logger::DEBUG);
 					continue;
 				}
@@ -145,23 +145,23 @@ class tool_update_cache {
 				if ($result!==true) {
 					debug_log(__METHOD__." Error on regenerate componet $modelo_name - $current_component_tipo - $this->section_tipo - $section_id ".to_string(), logger::ERROR);
 				}
-				
+
 			}//end foreach ($related_terms as $current_component_tipo)
 
 			if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 				$time    = round( microtime(TRUE) - $partial_time ,4);
-				$n_items = count($related_terms);				
-				debug_log(__METHOD__." - Time $time secs to update section_tipo:$this->section_tipo, section_id:$section_id ($n_items components) ".to_string(), logger::DEBUG);			
+				$n_items = count($related_terms);
+				debug_log(__METHOD__." - Time $time secs to update section_tipo:$this->section_tipo, section_id:$section_id ($n_items components) ".to_string(), logger::DEBUG);
 			}
-			
+
 			#debug_log(__METHOD__." Updated cached of section $this->section_tipo - $section_id ".to_string(), logger::DEBUG);
 		}//end foreach ($records_data->result as $key => $ar_value)
-		
+
 		#sleep(1);
-		
-		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {			
+
+		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 			#$time = round( microtime(TRUE) - $start_time ,4);
-			debug_log(__METHOD__." -- Finish Time ".round( microtime(TRUE) - $start_time ,4)." ms for section_tipo: $this->section_tipo - related_terms:".count($related_terms)." - Memory: ".tools::get_memory_usage('pid'));				
+			debug_log(__METHOD__." -- Finish Time ".round( microtime(TRUE) - $start_time ,4)." ms for section_tipo: $this->section_tipo - related_terms:".count($related_terms)." - Memory: ".tools::get_memory_usage('pid'));
 		}
 
 		# Enable logging activity and time machine # !IMPORTANT
@@ -177,11 +177,11 @@ class tool_update_cache {
 			}
 			$response->components = $ar_components;
 		}
-		
+
 
 		return $response;
 	}//end update_cache
-	
+
 
 
 	/**
@@ -195,18 +195,18 @@ class tool_update_cache {
 	public static function remove_inverse_locators_in_section__DISABLED( $section_tipo ) {
 
 		#trigger_error("DEPRECATED WAY. Please define a direct db way to delete section old relations");
-		
+
 		$ar_section_tipo = explode(',', $section_tipo);
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
 			$current_section_tipo = trim($current_section_tipo);
-			
+
 			# Get section all records
 			$result = section::get_resource_all_section_records_unfiltered($current_section_tipo);
 			while ($rows = pg_fetch_assoc($result)) {
 
 				$current_section_id = $rows['section_id'];
-				
+
 				/*
 				$section 		  = section::get_instance($current_section_id, $current_section_tipo, false);
 				$section->get_dato(); // Force load section data
@@ -223,12 +223,11 @@ class tool_update_cache {
 			}
 
 		}//end foreach ($ar_section_tipo as $current_section_tipo)
-		
-		
+
+
 		return true;
 	}//end remove_inverse_locators_in_section
 
 
 
-}
-?>
+}// tool_update_cache
