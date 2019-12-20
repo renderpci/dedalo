@@ -15,7 +15,7 @@ class dd_elements {
 	* CREA LINEA DE TESAURO CON ICONOS Y TÉRMINO
 	*/
 	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$traducible,$norden) {
-	
+
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
 
@@ -57,7 +57,7 @@ class dd_elements {
 				#}
 			}
 
-			
+
 
 			# Mostrar texto del término
 			$html .= $this->renderTextTermino($terminoID,$termino,$parent,$resalte);
@@ -385,7 +385,7 @@ class dd_elements {
 		$obj .= "onclick=\"$('#m_$terminoID').toggle()\"";
 		$obj .= "></div>";
 
-		$obj .= "\n <span id=\"m_$terminoID\" class=\"btnModelo\">";	
+		$obj .= "\n <span id=\"m_$terminoID\" class=\"btnModelo\">";
 
 		$obj .= $modelo_name ;
 		#$obj .= Tesauro::modelo2text($modelo) ;
@@ -401,10 +401,10 @@ class dd_elements {
 
 		global $mostrar_hijos_title, $ocultar_hijos_title ;
 
-		$obj = "\n <!-- Btn Flecha Mostrar / Ocultar hijos -->";
+		$obj = "<!-- Btn Flecha Mostrar / Ocultar hijos -->";
 		if($children >0)
 		{
-			$obj .= "\n <div onclick=\"dd.ToggleTS('$terminoID','abrir',null,'$parent');\" class=\"divflechaC\" >\n";
+			$obj .= "<div onclick=\"dd.ToggleTS('$terminoID','abrir',null,'$parent');\" class=\"divflechaC\" >";
 			if($desplegado===1)
 			{
 				$displayFlechaDer 	= 'none';
@@ -413,11 +413,12 @@ class dd_elements {
 				$displayFlechaDer	= 'block';
 				$displayFlechaDown	= 'none';
 			}
-			$obj .= "  <img id=\"fopen$terminoID\" src=\"../themes/default/flecha_der.gif\" style=\"display:$displayFlechaDer\" title=\"$mostrar_hijos_title $terminoID\" />";
-			$obj .= "\n  <img id=\"fclose$terminoID\" src=\"../themes/default/flecha_down.gif\" style=\"display:$displayFlechaDown\" title=\"$ocultar_hijos_title\" />";
-			$obj .= "\n </div>\n";
+			$path = DEDALO_LIB_BASE_URL . '/dd/images';
+			$obj .= "<img id=\"fopen$terminoID\" src=\"$path/flecha_der.gif\" style=\"display:$displayFlechaDer\" title=\"$mostrar_hijos_title $terminoID\" />";
+			$obj .= "<img id=\"fclose$terminoID\" src=\"$path/flecha_down.gif\" style=\"display:$displayFlechaDown\" title=\"$ocultar_hijos_title\" />";
+			$obj .= "</div>";
 		}else{
-			$obj .= "\n <div class=\"divflechaC\" ></div>";
+			$obj .= "<div class=\"divflechaC\"></div>";
 		}
 
 		return $obj ;
@@ -459,12 +460,12 @@ class dd_elements {
 
 				$html .= "<li class=\"\" data-tipo=\"$terminoID\" data-modelo=\"$modeloID\">";	#<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
 				#$html .= "<li class=\"\" data-tipo=\"$terminoID\">";
-				
+
 				#$html .= "<span class=\"nOrden\" style=\"margin-left:20px\"> ". intval($key+1) ." </span> ";
 				$html .= " [TR] $termino ";
 				$html .= "<span class=\"terminoIDinList\"> [".$terminoID."] ";
 				$html .= "<div class=\"add_index_btn\" title=\"$ir_al_termino_relacionado_title\" ";
-				#$html .= "<img src=\"../themes/default/icon_go1.png\" title=\"$ir_al_termino_relacionado_title\" class=\"btnGo1\" ";
+				#$html .= "<img src=\"../images/icon_go1.png\" title=\"$ir_al_termino_relacionado_title\" class=\"btnGo1\" ";
 				$html .= "onclick=\"dd.go2termino('$terminoID');\" ";
 				$html .= "></div>";
 				$html .= " <span class=\"listado_tr_modelo_text\">$modelo_text</span> ";
@@ -548,7 +549,7 @@ class dd_elements {
 			// $ob is null because the json cannot be decoded
 			$add_class = 'json_bad_alert';
 		}
-		
+
 		$obj_html  = '';#"\n<!-- DIV PROPIEDADES O INSTRUCCIONES DE USO (DESPLEGABLE) -->\n";
 		$obj_html .= "<div id=\"propiedades_{$terminoID}\" class=\"divLineasInfo div_propiedades none $add_class\" >";
 		#$obj_html .= "[ P ] ";
@@ -557,7 +558,7 @@ class dd_elements {
 		#}else{
 			#$p = json_encode($propiedades);
 			#$propiedades = json_encode($propiedades, JSON_PRETTY_PRINT);
-			$obj_html .= "<pre>$propiedades</pre>"; 
+			$obj_html .= "<pre>$propiedades</pre>";
 		#}
 		$obj_html .= "</div>";
 
