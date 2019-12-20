@@ -7,31 +7,6 @@
 	@color_grey_medium : #e6e6e6; // used in component actibe background
 
 
-// html inputs
-	input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, .contenteditable {
-		width: 100%;
-		height: 2.5em;
-		font-size: 1em;
-		//margin-bottom: 0.1em;
-		padding: 0.5em;
-		//border: 1px solid #E0E0E0;
-		outline: 1px solid #E0E0E0;
-		outline-offset: 0;
-		border: none;
-		border-radius: 3px;
-		transition: all .5s ease;
-		opacity: 0.75;
-
-		// on focus inputs, adds a soft shadow and outline
-		&:focus {
-			//outline-offset: 0;
-			//background-color: #D4F1D1;
-			outline: 1px solid @color_blue;
-			box-shadow: 0 0 10px @color_blue; //rgba(26, 154, 245, .5);
-			opacity: 1;
-		}
-	}
-
 
 // mixins
 	// background_icon function. Receive icon full name like 'bug.svg'
@@ -53,6 +28,40 @@
 			float: right;
 			opacity: 0.7;
 		}
+
+	// hilite (on focus)
+		.hilite(@outline_offset:0) {
+			outline-offset: @outline_offset;
+			outline: 1px solid @color_blue;
+			box-shadow: 0 0 10px @color_blue; //rgba(26, 154, 245, .5);
+			opacity: 1;
+		}
+
+
+
+// html inputs
+	input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, .contenteditable {
+		width: 100%;
+		height: 2.5em;
+		font-size: 1em;
+		//margin-bottom: 0.1em;
+		padding: 0.5em;
+		//border: 1px solid #E0E0E0;
+		outline: 1px solid #E0E0E0;
+		outline-offset: 0;
+		border: none;
+		border-radius: 3px;
+		transition: all .5s ease;
+		opacity: 0.75;
+
+		// on focus inputs, adds a soft shadow and outline
+		&:focus {
+			.hilite;
+		}
+	}
+
+
+
 
 
 
@@ -330,6 +339,13 @@
 // section
 	.wrapper_section {
 
+		>.label {
+			position: absolute;
+			left: 54px;
+			margin-top: 1px;
+			font-size: 1.2em;
+		}
+
 		>.buttons {
 			padding: 1em;
 			width: 100%;
@@ -362,6 +378,7 @@
 		&.edit {
 			//padding-right: @inspector_width;
 			width: calc(100vw - 17em);
+
 
 			&.full_width {
 				width: 100%;
@@ -624,8 +641,15 @@
 
 		&.edit {
 
-			&.component_image {
+			// component_section_id
+			&.component_section_id {
+				flex: 0 0 100%;
+				background-color: #f78a1c;
+				color: white;
+			}
 
+			// component_image
+			&.component_image {
 				img {
 					padding: 0;
 					height: 100%;
@@ -639,7 +663,7 @@
 
 		&.list {
 
-			&.component_image {
+			&.component_image, &.component_av {
 				padding: 0;
 				background-color: #ffffff;
 				text-align: center;
@@ -1488,6 +1512,25 @@
 			}
 		}
 	}
+
+
+
+// posterframe / image
+	.posterframe, .image  {
+		height: 100%;
+		width: 100%;
+		min-height: 14em;
+		background-position: initial;
+		background-size: cover;
+		background-repeat: no-repeat;
+
+		// on focus adds a soft shadow and outline
+		&:focus {
+			.hilite(-1px);
+		}
+	}
+
+
 
 
 
