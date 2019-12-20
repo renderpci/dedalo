@@ -19,7 +19,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -32,12 +32,14 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-			
+
 			// Value
 			$value = $this->get_dato();
-			
+
 			// data item
 			$item  = $this->get_data_item($value);
+				$item->posterframe_url 	= $this->get_posterframe_url(false, false, false);
+				$item->video_url 		= $this->get_video_url(false);
 
 			$data[] = $item;
 
