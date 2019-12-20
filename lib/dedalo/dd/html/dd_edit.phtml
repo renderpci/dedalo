@@ -53,13 +53,13 @@ print js::build_tag(JQUERY_LIB_URL_JS);
 print js::build_tag(JQUERY_UI_URL_JS);
 #print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
 #print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
-print js::build_tag(DEDALO_ROOT_WEB . '/inc/javascript.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/inc/javascript.js');
 print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_common.js');
 print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 
 # Aditional css / js
-	print css::build_tag(DEDALO_ROOT_WEB . '/lib/jsoneditor/jsoneditor.min.css');
-	print js::build_tag(DEDALO_ROOT_WEB . '/lib/jsoneditor/jsoneditor.min.js');
+	print css::build_tag(DEDALO_LIB_BASE_URL . '/dd/jsoneditor/dist/jsoneditor.min.css');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/jsoneditor/dist/jsoneditor.min.js');
 
 ?>
 </head>

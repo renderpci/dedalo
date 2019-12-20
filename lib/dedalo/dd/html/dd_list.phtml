@@ -8,11 +8,17 @@
 <link rel="shortcut icon" href="<?php echo DEDALO_ROOT_WEB ?>/favicon.ico" />
 <?php
 # CSS
-echo trim(css::get_css_link_code());
+	#dump(css::get_css_link_code(), ' css::get_css_link_code() ++ '.to_string());
+	#echo trim(css::get_css_link_code());
+print css::build_tag(DEDALO_LIB_BASE_URL .'/common/css/fonts.css', null, false);
+print css::build_tag(DEDALO_LIB_BASE_URL .'/menu/css/menu.css', null, false);
+#print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/legacy/general.css', null, false);
+print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/dd_page.css', null, false);
+print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/dd_list.css', null, false);
 ?>
 
 <script type="text/javascript">
-	<?php	
+	<?php
 	$page_globals = new stdClass();
 		# version
 		$page_globals->dedalo_version 			= DEDALO_VERSION;
@@ -26,27 +32,39 @@ echo trim(css::get_css_link_code());
 	const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
 
 	// VARS de mensajes de aviso multi-idioma
-	const el_descriptor_tiene_hijos_title 		= '<?php echo msgJS($el_descriptor_tiene_hijos_title) ?>' ;
-	const el_descriptor_tiene_indexaciones_title	= '<?php echo msgJS($el_descriptor_tiene_indexaciones_title) ?>' ;
+	const el_descriptor_tiene_hijos_title 				= '<?php echo msgJS($el_descriptor_tiene_hijos_title) ?>' ;
+	const el_descriptor_tiene_indexaciones_title		= '<?php echo msgJS($el_descriptor_tiene_indexaciones_title) ?>' ;
 	const seguro_que_quiere_borrar_este_termino_title	= '<?php echo msgJS($seguro_que_quiere_borrar_este_termino_title) ?>' ;
-	const hijos_title = '<?php echo msgJS($hijos_title) ?>' ;
+	const hijos_title 									= '<?php echo msgJS($hijos_title) ?>' ;
 
 	// Establecemos una cookie de modo para toda la página
-	const modo 	= '<?php echo $modo ?>';
+	const modo 		= '<?php echo $modo ?>';
 	const accion 	= '<?php echo $accion ?>';
 	const ts_lang	= '<?php echo $ts_lang ?>';
-	const type	= '<?php echo $type ?>';
+	const type		= '<?php echo $type ?>';
 
 	/*
 	* VAR terminoIDresalte es un string viene del get  cuando se hace una búsqueda.
-	* Se le pasa al loop "openTrackedDivs" para que pase en cada ciclo el listado de 
+	* Se le pasa al loop "openTrackedDivs" para que pase en cada ciclo el listado de
 	* terminos a resaltar (tipo 525,632,874)
 	*/
 	const terminoIDresalte = '<?php echo $terminoIDlist ?>';	//alert(terminoIDresalte);
 </script>
 <?php
 # JS
-echo trim(js::get_js_link_code());
+	#dump(js::get_js_link_code(), ' js::get_js_link_code() ++ '.to_string());
+	#echo trim(js::get_js_link_code());
+print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php');
+print js::build_tag(JQUERY_LIB_URL_JS);
+print js::build_tag(JQUERY_UI_URL_JS);
+print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/cookies.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/menu/js/menu.js');
+#print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/inc/javascript.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_common.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_list.js');
+
+
 ?>
 </head>
 
@@ -56,7 +74,7 @@ echo trim(js::get_js_link_code());
 <table >
 
   <?php #if( $head != 'no'){ echo '<tr><td height="77"  valign="top">'; include_once('../inc/header.php'); echo '</td></tr>'; }?>
-	
+
   <tr>
 	<td>
 		<?php print $html_header ?>
@@ -65,15 +83,15 @@ echo trim(js::get_js_link_code());
 
   <tr>
 	<td align="center" valign="top" >
-	<div id="tesauro_content">         
-	
+	<div id="tesauro_content">
+
 	<form id="form1" name="form1" method="post" action="trigger.dd.php" onsubmit="return dd.validate_form(this);">
-				
+
 		<!-- ID -->
 		ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>"">
-		
+
 		<!-- TERMINO -->
-		<?php echo $termino_title ?>		
+		<?php echo $termino_title ?>
 		<?php /*<div class="icon-help" onClick="ts.mostrarInfo(this,event);"></div>*/?>
 		<input type="text" name="termino" id="termino" value="<?php echo $termino ?>" onClick="this.select();">
 
@@ -81,43 +99,43 @@ echo trim(js::get_js_link_code());
 		<?php echo $definicion_title ?>
 		<input type="text" name="def" id="def" value="<?php echo $def ?>" onClick="this.select();">
 
-		<?php 
+		<?php
 		echo ' Model ';
-		include 'dd_select_modelos.php';   
+		include 'dd_select_modelos.php';
 		?>
 
-				
+
 		<!-- SELECT LANG -->
-		<?php echo $idioma_title ?>: 
-		<?php echo $todos_title ?> <input type="radio" name="ts_lang" value="" checked>
-		<?php if($ts_lang) {?>
-		<?php 
-		$lang_name = lang::get_name_from_code( $ts_lang );
-		echo $lang_name;
-		?> 
-		<input type="radio" name="ts_lang" value="<?php echo $ts_lang ?>" checked > 
+			<?php echo $idioma_title ?>:
+			<?php echo $todos_title ?> <input type="radio" name="ts_lang" value="" checked>
+			<?php if($ts_lang) {?>
+			<?php
+			$lang_name = lang::get_name_from_code( $ts_lang );
+			echo $lang_name;
+			?>
+		<input type="radio" name="ts_lang" value="<?php echo $ts_lang ?>" checked >
 		<?php }#if($ts_lang) {?>
-		
-		
+
+
 		<input name="accion" type="hidden" value="searchTSform">
 		<input name="modo" type="hidden" value="<?php echo $modo ?>">
-		
+
 		<input type="submit" name="button" id="button" value=" OK " class="SubmitButon">
-		
+
 		<!-- RESET -->
-		<?php if($modo != 'tesauro_rel_DES') {?>
-		<a href="javascript:reset_window_and_reload();" style="margin-left:12px;font-weight:bold"> Reset </a>  <?php #if(SHOW_DEBUG==true) echo " [$modo]" ?>
-		<?php }#if($modo != 'tesauro_rel') {?>
-		
+			<?php if($modo != 'tesauro_rel_DES') {?>
+			<a href="javascript:reset_window_and_reload();" style="margin-left:12px;font-weight:bold"> Reset </a>  <?php #if(SHOW_DEBUG==true) echo " [$modo]" ?>
+			<?php }#if($modo != 'tesauro_rel') {?>
+
 		<?php /*
 		<a href="javascript:document.location.href='?modo=<?php echo $modo?>&type=<?php echo $type?>';" style="margin-left:6px; margin-right:6px; font-weight:bold"> <?php echo $recargar_title ?> </a>
 		*/ ?>
 
 		<?php echo $idioma_title ?>
 		<?php echo $SelectLangList ; ?>
-		
+
 		<div style="display:inline-block; margin-left:50px;">
-			<?php 
+			<?php
 			if($t=='form')
 			{
 				echo " $total_title: $n";
@@ -125,47 +143,47 @@ echo trim(js::get_js_link_code());
 			}
 			?>
 		</div>
-		
+
 	</form>
-	
-	
-   
-	
-	
+
+
+
+
+
 	<div id="tsTreeLOAD">
-				
-	
-	<?php	
+
+
+	<?php
 	#************************************************
 	#	LISTADO INICIAL
 	#************************************************
-	
-	echo $buildTreeHtml;	
-			
+
+	echo $buildTreeHtml;
+
 	?>
-	</div> 
-	
-	  
+	</div>
+
+
 	<div id="tsTree" style="width:96%;"><!-- AJAX CONTENT trigger.Tesauro.php --></div>
-	
-	
+
+
 	</div><!-- /tesauro_content -->
 	</td>
 	</tr>
-	
-	
-	
+
+
+
 </table>
 </div><!-- fin wrapGeneral -->
 <div class="bottom_separator"></div>
 
 <div class="dd_info_bottom">
-	<?php 
+	<?php
 		# Total dd
 		$strQuery = "SELECT count(*) AS exact_count FROM \"jer_dd\" ";
 		$result   = JSON_RecordObj_matrix::search_free($strQuery);
 		$total_dd = pg_fetch_assoc($result)['exact_count'];
-		
+
 		# Total termns
 		$strQuery = "SELECT count(*) AS exact_count FROM \"matrix_descriptors_dd\" ";
 		$result   = JSON_RecordObj_matrix::search_free($strQuery);
