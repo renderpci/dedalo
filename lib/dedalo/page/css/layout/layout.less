@@ -1,5 +1,10 @@
 // vars
-	@inspector_width : 15em;
+	@inspector_width 	: 15em;
+	@images_base_path 	: '../../themes/default';
+	@color_blue   : #3b87fd; // blue base osc checkbox, radiobuttons, etc
+	@color_orange : #f78a1c; // Dédalo logo orange
+	@color_grey_dark : #949494; // used in section group headers
+	@color_grey_medium : #e6e6e6; // used in component actibe background
 
 
 // html inputs
@@ -11,35 +16,43 @@
 		padding: 0.5em;
 		//border: 1px solid #E0E0E0;
 		outline: 1px solid #E0E0E0;
+		outline-offset: 0;
 		border: none;
+		border-radius: 3px;
 		transition: all .5s ease;
 		opacity: 0.75;
 
+		// on focus inputs, adds a soft shadow and outline
 		&:focus {
-			@blue : #3b87fd;
-			@orange : #f78a1c;
-			outline-offset: 0;
+			//outline-offset: 0;
 			//background-color: #D4F1D1;
-			outline: 1px solid @blue;
-			box-shadow: 0 0 10px @blue; //rgba(26, 154, 245, .5);
+			outline: 1px solid @color_blue;
+			box-shadow: 0 0 10px @color_blue; //rgba(26, 154, 245, .5);
 			opacity: 1;
 		}
 	}
 
 
+// mixins
+	// background_icon function. Receive icon full name like 'bug.svg'
+		.background_icon(@icon_name, @color:"black"){
+			//@base-path:~"./images/@{color}/"; // unused color now
+			background-image: url("@{images_base_path}/icons/@{icon_name}");
+		}
 
-// icon_svg mixing
-	.icon_svg {
-		content: " ";
-		background-image: url(../../themes/default/icons/bug.svg);
-		background-size: contain;
-		background-repeat: no-repeat;
-		background-position: center;
-		width: 1em;
-		height: 1em;
-		float: right;
-		opacity: 0.7;
-	}
+	// icon_svg mixing. Use within :before
+		.icon_svg {
+			content: " ";
+			//background-image: url(../../themes/default/icons/bug.svg);
+			.background_icon('bug.svg');
+			background-size: contain;
+			background-repeat: no-repeat;
+			background-position: center;
+			width: 1em;
+			height: 1em;
+			float: right;
+			opacity: 0.7;
+		}
 
 
 
@@ -161,7 +174,8 @@
 
 				&:before {
 					.icon_svg;
-					background-image: url(../../themes/default/icons/gear.svg);
+					//background-image: url(../../themes/default/icons/gear.svg);
+					.background_icon('gear.svg');
 					margin-left: 1em;
 					filter: invert();
 				}
@@ -179,7 +193,8 @@
 					}
 					&:before {
 						.icon_svg;
-						background-image: url(../../themes/default/icons/arrow-circle-right.svg);
+						//background-image: url(../../themes/default/icons/arrow-circle-right.svg);
+						.background_icon('arrow-circle-right.svg');
 						float: left;
 						margin-right: 0.25em;
 					}
@@ -271,7 +286,8 @@
 
 					>.clean:after {
 						.icon_svg;
-						background-image: url(../../themes/default/icons/eraser.svg);
+						//background-image: url(../../themes/default/icons/eraser.svg);
+						.background_icon('eraser.svg');
 						cursor: pointer;
 					}
 				}
@@ -526,7 +542,8 @@
 
 						>a {
 							//.icon_svg;
-							background-image: url(../../themes/default/icons/edit.svg);
+							//background-image: url(../../themes/default/icons/edit.svg);
+							.background_icon('edit.svg');
 						}
 					}
 
@@ -537,7 +554,8 @@
 
 						>a {
 							//.icon_svg;
-							background-image: url(../../themes/default/icons/trash-o.svg);
+							//background-image: url(../../themes/default/icons/trash-o.svg);
+							.background_icon('trash-o.svg');
 						}
 					}
 				}//end id_column
@@ -568,7 +586,7 @@
 				//border: 1px solid #BFBFBF;
 
 				>.label {
-					background-color: #949494;
+					background-color: @color_grey_dark;
 					//background-image: url('../../themes/default/bg_black.png');
 					color: #ffffff;
 					padding: 1em;
@@ -1041,7 +1059,8 @@
 	}
 	.toggle_inspector {
 		//background-color: #fcfcfc;
-		background-image: url(../../themes/default/icons/reorder.svg);
+		//background-image: url(../../themes/default/icons/reorder.svg);
+		.background_icon('reorder.svg');
 		background-position: center;
 		background-size: 78%;
 		background-repeat: no-repeat;
@@ -1055,7 +1074,7 @@
 		//left: calc(100vw - 3em);
 		cursor: pointer;
 		z-index: 9999;
-		//border: 1px solid #949494;
+		//border: 1px solid @color_grey_dark;
 		//border-radius: 0.12em;
 	}
 
@@ -1179,7 +1198,8 @@
 
 // preload
 	.preload {
-		background-image: url(../../themes/default/icons/preload.svg);
+		//background-image: url(../../themes/default/icons/preload.svg);
+		.background_icon('preload.svg');
 		background-repeat: no-repeat;
 		background-size: contain; // 2em 2em;
 		background-position: center;
@@ -1431,7 +1451,7 @@
 		height: 1.5em;
 		z-index: 9;
 		display: flex;
-		background-color: #949494;
+		background-color: @color_grey_dark;
 		padding: 0;
 		border-top-left-radius: 0.25em;
 		border-top-right-radius: 0.25em;
@@ -1451,16 +1471,20 @@
 			}
 
 			&.bold:before {
-				background-image: url(../../themes/default/icons/bold.svg);
+				//background-image: url(../../themes/default/icons/bold.svg);
+				.background_icon('bold.svg');
 			}
 			&.italic:before {
-				background-image: url(../../themes/default/icons/italic.svg);
+				//background-image: url(../../themes/default/icons/italic.svg);
+				.background_icon('italic.svg');
 			}
 			&.underline:before {
-				background-image: url(../../themes/default/icons/underline.svg);
+				//background-image: url(../../themes/default/icons/underline.svg);
+				.background_icon('underline.svg');
 			}
 			&.replace:before {
-				background-image: url(../../themes/default/icons/exchange.svg);
+				//background-image: url(../../themes/default/icons/exchange.svg);
+				.background_icon('exchange.svg');
 			}
 		}
 	}
