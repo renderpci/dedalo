@@ -1,8 +1,8 @@
-<?php  
+<?php
 /************************************************************************
-	
+
     Dédalo : Intangible Cultural Heritage Management Platform
-	
+
 	Copyright (C) 2011  Authors: Juan Francisco Onielfa, Alejandro Peña
 
     This program is free software: you can redistribute it and/or modify
@@ -17,11 +17,10 @@
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	
+
 	http://www.fmomo.org
 	dedalo@fmomo.org
-	
+
 ************************************************************************/
-header("HTTP/1.1 301 Moved Permanently"); 
-header("Location: main/"); exit();
-?>
+header("HTTP/1.1 301 Moved Permanently");
+header("Location: page/");
