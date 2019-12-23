@@ -1,0 +1,133 @@
+ecologiahumana133	ecologiahumana58	dd18	no	si	si	1	ecologiahumana	si	\N	\N
+ecologiahumana10	ecologiahumana3	dd247	no	si	si	9	ecologiahumana	no	\N	
+ecologiahumana100	ecologiahumana94	dd1229	no	si	si	6	ecologiahumana	si	[{"dd592":"ecologiahumana14"}]	\N
+ecologiahumana101	ecologiahumana94	dd1229	no	si	si	7	ecologiahumana	si	[{"dd592":"ecologiahumana15"}]	\N
+ecologiahumana102	ecologiahumana94	dd1229	no	si	si	8	ecologiahumana	si	[{"dd592":"ecologiahumana16"}]	\N
+ecologiahumana103	ecologiahumana60	dd1229	no	si	si	7	ecologiahumana	si	[{"dd6":"rsc167"}]	\N
+ecologiahumana104	ecologiahumana61	dd1229	no	si	si	6	ecologiahumana	si	[{"dd592":"ecologiahumana14"}]	\N
+ecologiahumana105	ecologiahumana103	dd1231	no	si	si	2	ecologiahumana	si	[{"dd722":"rsc35"}]	\N
+ecologiahumana106	ecologiahumana103	dd1232	no	si	si	3	ecologiahumana	si	[{"dd10":"rsc36"}]	\N
+ecologiahumana107	ecologiahumana71	dd1229	no	si	si	9	ecologiahumana	si	[{"dd592":"ecologiahumana19"}]	\N
+ecologiahumana108	ecologiahumana94	dd1229	no	si	si	9	ecologiahumana	si	[{"dd592":"ecologiahumana20"}]	\N
+ecologiahumana109	ecologiahumana60	dd1229	no	si	si	4	ecologiahumana	si	[{"dd6":"ecologiahumana40"}]	\N
+ecologiahumana11	ecologiahumana8	dd91	no	si	si	1	ecologiahumana	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	
+ecologiahumana110	ecologiahumana109	dd1233	no	si	si	1	ecologiahumana	si	[{"dd57":"ecologiahumana24"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
+ecologiahumana111	ecologiahumana109	dd1231	no	si	si	2	ecologiahumana	si	[{"dd9":"ecologiahumana7"}]	\N
+ecologiahumana112	ecologiahumana109	dd1231	no	si	si	3	ecologiahumana	si	[{"dd10":"ecologiahumana12"}]	\N
+ecologiahumana113	ecologiahumana109	dd1231	no	si	si	4	ecologiahumana	si	[{"dd10":"ecologiahumana17"}]	\N
+ecologiahumana114	ecologiahumana109	dd1229	no	si	si	5	ecologiahumana	si	[{"dd592":"ecologiahumana8"}]	\N
+ecologiahumana115	ecologiahumana109	dd1229	no	si	si	6	ecologiahumana	si	[{"dd592":"ecologiahumana14"}]	\N
+ecologiahumana116	ecologiahumana109	dd1229	no	si	si	7	ecologiahumana	si	[{"dd592":"ecologiahumana15"}]	\N
+ecologiahumana117	ecologiahumana109	dd1229	no	si	si	8	ecologiahumana	si	[{"dd592":"ecologiahumana16"}]	\N
+ecologiahumana118	ecologiahumana109	dd1229	no	si	si	9	ecologiahumana	si	[{"dd592":"ecologiahumana21"}]	\N
+ecologiahumana119	ecologiahumana60	dd1229	no	si	si	5	ecologiahumana	si	[{"dd6":"ecologiahumana44"}]	\N
+ecologiahumana12	ecologiahumana3	dd10	no	si	si	10	ecologiahumana	si	\N	{\r\n  "state": {\r\n    "edit_component": [\r\n      {\r\n        "section_tipo": "dd203",\r\n        "section_id": 0,\r\n        "component_tipo": "dd223"\r\n      }\r\n    ]\r\n  }\r\n}
+ecologiahumana120	ecologiahumana119	dd1233	no	si	si	1	ecologiahumana	si	[{"dd57":"ecologiahumana24"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
+ecologiahumana121	ecologiahumana119	dd1231	no	si	si	2	ecologiahumana	si	[{"dd9":"ecologiahumana7"}]	\N
+ecologiahumana122	ecologiahumana119	dd1231	no	si	si	3	ecologiahumana	si	[{"dd10":"ecologiahumana12"}]	\N
+ecologiahumana123	ecologiahumana119	dd1231	no	si	si	4	ecologiahumana	si	[{"dd10":"ecologiahumana17"}]	\N
+ecologiahumana124	ecologiahumana119	dd1229	no	si	si	5	ecologiahumana	si	[{"dd592":"ecologiahumana8"}]	\N
+ecologiahumana125	ecologiahumana119	dd1229	no	si	si	6	ecologiahumana	si	[{"dd592":"ecologiahumana14"}]	\N
+ecologiahumana126	ecologiahumana119	dd1229	no	si	si	7	ecologiahumana	si	[{"dd592":"ecologiahumana15"}]	\N
+ecologiahumana127	ecologiahumana119	dd1229	no	si	si	8	ecologiahumana	si	[{"dd592":"ecologiahumana16"}]	\N
+ecologiahumana128	ecologiahumana68	dd1231	no	si	si	3	ecologiahumana	si	[{"dd9":"rsc31"}]	\N
+ecologiahumana129	ecologiahumana68	dd1231	no	si	si	4	ecologiahumana	si	[{"dd10":"rsc30"}]	\N
+ecologiahumana130	ecologiahumana68	dd1231	no	si	si	5	ecologiahumana	si	[{"dd9":"rsc23"}]	\N
+ecologiahumana131	ecologiahumana68	dd1233	no	si	si	1	ecologiahumana	si	[{"dd57":"rsc20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
+ecologiahumana84	ecologiahumana80	dd1231	no	si	si	3	ecologiahumana	si	[{"dd9":"rsc140"}]	\N
+ecologiahumana13	ecologiahumana2	dd8	no	si	si	2	ecologiahumana	no	\N	
+ecologiahumana132	ecologiahumana103	dd1233	no	si	si	1	ecologiahumana	si	[{"dd57":"rsc20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
+ecologiahumana14	ecologiahumana13	dd592	no	si	si	1	ecologiahumana	no	[{"dd6":"rsc170"},{"dd57":"rsc20"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	{\r\n  "dragable_connectWith": "ecologiahumana8"\r\n}
+ecologiahumana15	ecologiahumana13	dd592	no	si	si	2	ecologiahumana	no	[{"dd6":"rsc205"},{"dd9":"rsc137"},{"dd530":"rsc139"},{"dd9":"rsc140"},{"dd11":"rsc138"},{"dd9":"rsc141"},{"dd634":"rsc142"},{"dd9":"rsc147"},{"dd1018":"rsc209"},{"dd749":"rsc228"}]	
+ecologiahumana16	ecologiahumana13	dd592	no	si	si	3	ecologiahumana	no	[{"dd6":"rsc167"},{"dd57":"rsc20"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd10":"rsc36"},{"dd722":"rsc35"}]	
+ecologiahumana17	ecologiahumana3	dd10	no	si	si	11	ecologiahumana	si	\N	{\r\n  "state": {\r\n    "edit_component": [\r\n      {\r\n        "section_tipo": "dd203",\r\n        "section_id": 0,\r\n        "component_tipo": "dd223"\r\n      }\r\n    ]\r\n  }\r\n}
+ecologiahumana19	ecologiahumana18	dd592	no	si	si	2	ecologiahumana	no	[{"dd6":"ecologiahumana36"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana2	ecologiahumana1	dd6	no	si	si	1	ecologiahumana	no	\N	
+ecologiahumana20	ecologiahumana18	dd592	no	si	si	3	ecologiahumana	no	[{"dd6":"ecologiahumana40"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana21	ecologiahumana18	dd592	no	si	si	4	ecologiahumana	no	[{"dd6":"ecologiahumana44"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana23	ecologiahumana3	dd846	no	si	si	3	ecologiahumana	no	[{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"}]	{\r\n  "state": {\r\n    "edit_component": [\r\n      {\r\n        "section_tipo": "dd174",\r\n        "section_id": 1,\r\n        "component_tipo": "dd185"\r\n      }\r\n    ]\r\n  }\r\n}
+ecologiahumana24	ecologiahumana3	dd339	no	si	si	2	ecologiahumana	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	
+ecologiahumana30	ecologiahumana1	dd6	no	si	si	3	ecologiahumana	si	[{"dd6":"ecologiahumana2"}]	
+ecologiahumana36	ecologiahumana1	dd6	no	si	si	4	ecologiahumana	no	[{"dd6":"ecologiahumana2"}]	
+ecologiahumana37	ecologiahumana36	dd91	no	si	si	1	ecologiahumana	no	[{"dd846":"ecologiahumana23"},{"dd9":"ecologiahumana5"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana38	ecologiahumana36	dd1129	no	si	si	2	ecologiahumana	si	[{"dd592":"ecologiahumana53"},{"dd592":"ecologiahumana19"},{"dd592":"ecologiahumana21"}]	
+ecologiahumana39	ecologiahumana36	dd524	no	si	si	3	ecologiahumana	si	[{"dd195":"dd196"},{"dd1747":"ecologiahumana4"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana6"},{"dd9":"ecologiahumana7"},{"dd11":"ecologiahumana9"},{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"},{"dd57":"ecologiahumana24"},{"dd10":"ecologiahumana25"},{"dd10":"ecologiahumana26"}]	
+ecologiahumana4	ecologiahumana3	dd1747	no	si	si	1	ecologiahumana	no	\N	
+ecologiahumana40	ecologiahumana1	dd6	no	si	si	5	ecologiahumana	no	[{"dd6":"ecologiahumana2"}]	
+ecologiahumana41	ecologiahumana40	dd91	no	si	si	1	ecologiahumana	si	[{"dd846":"ecologiahumana23"},{"dd9":"ecologiahumana5"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana42	ecologiahumana40	dd1129	no	si	si	2	ecologiahumana	no	[{"dd592":"ecologiahumana53"},{"dd592":"ecologiahumana19"},{"dd592":"ecologiahumana20"}]	
+ecologiahumana43	ecologiahumana40	dd524	no	si	si	3	ecologiahumana	si	[{"dd195":"dd196"},{"dd1747":"ecologiahumana4"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana6"},{"dd9":"ecologiahumana7"},{"dd11":"ecologiahumana9"},{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"},{"dd57":"ecologiahumana24"},{"dd10":"ecologiahumana25"},{"dd10":"ecologiahumana26"}]	
+ecologiahumana44	ecologiahumana1	dd6	no	si	si	6	ecologiahumana	no	[{"dd6":"ecologiahumana2"}]	
+ecologiahumana18	ecologiahumana2	dd8	no	si	si	3	ecologiahumana	no	\N	
+ecologiahumana22	ecologiahumana2	dd8	no	si	si	4	ecologiahumana	no	\N	
+ecologiahumana28	ecologiahumana2	dd524	no	si	si	7	ecologiahumana	si	[{"dd195":"dd196"},{"dd1747":"ecologiahumana4"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana6"},{"dd9":"ecologiahumana7"},{"dd11":"ecologiahumana9"},{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"},{"dd57":"ecologiahumana24"},{"dd10":"ecologiahumana25"},{"dd10":"ecologiahumana26"}]	
+ecologiahumana29	ecologiahumana2	dd181	no	si	si	8	ecologiahumana	no	[{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"}]	
+ecologiahumana25	ecologiahumana22	dd10	no	si	si	1	ecologiahumana	si	\N	
+ecologiahumana26	ecologiahumana22	dd10	no	si	si	2	ecologiahumana	si	\N	
+ecologiahumana34	ecologiahumana52	dd177	no	si	si	3	ecologiahumana	no	\N	
+ecologiahumana31	ecologiahumana30	dd91	no	si	si	1	ecologiahumana	si	[{"dd846":"ecologiahumana23"},{"dd9":"ecologiahumana5"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana32	ecologiahumana30	dd1129	no	si	si	2	ecologiahumana	si	[{"dd592":"ecologiahumana53"},{"dd592":"ecologiahumana20"},{"dd592":"ecologiahumana21"}]	
+ecologiahumana33	ecologiahumana30	dd524	no	si	si	3	ecologiahumana	no	[{"dd195":"dd196"},{"dd1747":"ecologiahumana4"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana6"},{"dd9":"ecologiahumana7"},{"dd11":"ecologiahumana9"},{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"},{"dd10":"ecologiahumana25"},{"dd10":"ecologiahumana26"}]	
+ecologiahumana45	ecologiahumana44	dd91	no	si	si	1	ecologiahumana	no	[{"dd846":"ecologiahumana23"},{"dd9":"ecologiahumana5"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana46	ecologiahumana44	dd1129	no	si	si	2	ecologiahumana	no	[{"dd8":"ecologiahumana18"}]	
+ecologiahumana47	ecologiahumana44	dd524	no	si	si	3	ecologiahumana	no	[{"dd195":"dd196"},{"dd1747":"ecologiahumana4"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana6"},{"dd9":"ecologiahumana7"},{"dd11":"ecologiahumana9"},{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"},{"dd57":"ecologiahumana24"},{"dd10":"ecologiahumana25"},{"dd10":"ecologiahumana26"}]	
+ecologiahumana49	ecologiahumana36	dd181	no	si	si	4	ecologiahumana	no	[{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"}]	
+ecologiahumana5	ecologiahumana3	dd9	no	si	si	4	ecologiahumana	no	\N	
+ecologiahumana50	ecologiahumana40	dd181	no	si	si	4	ecologiahumana	no	[{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"}]	
+ecologiahumana51	ecologiahumana44	dd181	no	si	si	4	ecologiahumana	si	[{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"}]	
+ecologiahumana52	ecologiahumana1	dd6	no	si	si	2	ecologiahumana	no	[{"dd6":"ecologiahumana2"}]	{"aditional_css":"/extras/ecologiahumana/css/pages.css"}
+ecologiahumana53	ecologiahumana18	dd592	no	si	si	1	ecologiahumana	no	[{"dd6":"ecologiahumana30"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana59	ecologiahumana133	dd1743	no	si	si	1	ecologiahumana	si	[{"dd6":"ecologiahumana52"},{"dd6":"ecologiahumana30"},{"dd6":"ecologiahumana36"},{"dd6":"ecologiahumana40"},{"dd6":"ecologiahumana44"},{"dd6":"rsc170"},{"dd6":"rsc167"},{"dd6":"rsc205"}]	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}
+ecologiahumana6	ecologiahumana3	dd9	no	si	si	5	ecologiahumana	si	\N	
+ecologiahumana60	ecologiahumana59	dd1259	no	si	si	1	ecologiahumana	si	\N	
+ecologiahumana61	ecologiahumana60	dd1229	no	si	si	1	ecologiahumana	si	[{"dd6":"ecologiahumana52"}]	
+ecologiahumana62	ecologiahumana61	dd1233	no	si	si	1	ecologiahumana	si	[{"dd57":"ecologiahumana24"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
+ecologiahumana63	ecologiahumana61	dd1231	no	si	si	2	ecologiahumana	si	[{"dd9":"ecologiahumana7"}]	
+ecologiahumana64	ecologiahumana61	dd1231	no	si	si	3	ecologiahumana	si	[{"dd10":"ecologiahumana12"}]	
+ecologiahumana65	ecologiahumana61	dd1231	no	si	si	4	ecologiahumana	si	[{"dd10":"ecologiahumana17"}]	
+ecologiahumana66	ecologiahumana61	dd1229	no	si	si	5	ecologiahumana	si	[{"dd592":"ecologiahumana8"}]	
+ecologiahumana67	ecologiahumana71	dd1229	no	si	si	7	ecologiahumana	si	[{"dd592":"ecologiahumana15"}]	
+ecologiahumana68	ecologiahumana60	dd1229	no	si	si	6	ecologiahumana	si	[{"dd6":"rsc170"}]	
+ecologiahumana69	ecologiahumana68	dd1231	no	si	si	2	ecologiahumana	si	[{"dd749":"rsc29"}]	
+ecologiahumana7	ecologiahumana3	dd9	no	si	si	6	ecologiahumana	si	\N	
+ecologiahumana70	ecologiahumana61	dd1229	no	si	si	9	ecologiahumana	si	[{"dd592":"ecologiahumana53"}]	
+ecologiahumana71	ecologiahumana60	dd1229	no	si	si	2	ecologiahumana	si	[{"dd6":"ecologiahumana30"}]	
+ecologiahumana72	ecologiahumana71	dd1233	no	si	si	1	ecologiahumana	si	[{"dd57":"ecologiahumana24"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
+ecologiahumana73	ecologiahumana71	dd1231	no	si	si	2	ecologiahumana	si	[{"dd9":"ecologiahumana7"}]	
+ecologiahumana74	ecologiahumana71	dd1231	no	si	si	3	ecologiahumana	si	[{"dd10":"ecologiahumana12"}]	
+ecologiahumana75	ecologiahumana71	dd1231	no	si	si	4	ecologiahumana	si	[{"dd10":"ecologiahumana17"}]	
+ecologiahumana76	ecologiahumana71	dd1229	no	si	si	5	ecologiahumana	si	[{"dd592":"ecologiahumana8"}]	
+ecologiahumana77	ecologiahumana71	dd1229	no	si	si	8	ecologiahumana	si	[{"dd592":"ecologiahumana16"}]	
+ecologiahumana78	ecologiahumana71	dd1229	no	si	si	6	ecologiahumana	si	[{"dd592":"ecologiahumana14"}]	\N
+ecologiahumana79	ecologiahumana61	dd1229	no	si	si	8	ecologiahumana	si	[{"dd592":"ecologiahumana16"}]	\N
+ecologiahumana8	ecologiahumana3	dd592	no	si	si	7	ecologiahumana	no	[{"dd6":"rsc170"},{"dd57":"rsc20"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	{\r\n  "dragable_connectWith": "ecologiahumana14"\r\n}
+ecologiahumana80	ecologiahumana60	dd1229	no	si	si	8	ecologiahumana	si	[{"dd6":"rsc205"}]	\N
+ecologiahumana81	ecologiahumana80	dd1231	no	si	si	1	ecologiahumana	si	[{"dd11":"rsc138"}]	\N
+ecologiahumana82	ecologiahumana80	dd1231	no	si	si	4	ecologiahumana	si	[{"dd9":"rsc222"}]	\N
+ecologiahumana83	ecologiahumana80	dd1231	no	si	si	5	ecologiahumana	si	[{"dd9":"rsc223"}]	\N
+ecologiahumana55	ecologiahumana52	dd1129	no	si	si	2	ecologiahumana	si	[{"dd592":"ecologiahumana19"},{"dd592":"ecologiahumana20"},{"dd592":"ecologiahumana21"}]	
+ecologiahumana57	ecologiahumana52	dd181	no	si	si	5	ecologiahumana	no	[{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"}]	
+ecologiahumana48	ecologiahumana30	dd181	no	si	si	4	ecologiahumana	si	[{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"}]	
+ecologiahumana85	ecologiahumana80	dd1231	no	si	si	6	ecologiahumana	si	[{"dd9":"rsc141"}]	\N
+ecologiahumana86	ecologiahumana80	dd1231	no	si	si	7	ecologiahumana	si	[{"dd635":"rsc224"}]	\N
+ecologiahumana87	ecologiahumana80	dd1231	no	si	si	8	ecologiahumana	si	[{"dd9":"rsc219"}]	\N
+ecologiahumana88	ecologiahumana80	dd1231	no	si	si	9	ecologiahumana	si	[{"dd10":"rsc221"}]	\N
+ecologiahumana89	ecologiahumana80	dd1231	no	si	si	10	ecologiahumana	si	[{"dd9":"rsc225"}]	\N
+ecologiahumana9	ecologiahumana3	dd11	no	si	si	8	ecologiahumana	no	[{"dd6":"dd889"},{"dd9":"dd891"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "5",\r\n      "section_tipo": "dd889"\r\n    }\r\n  ]\r\n}
+ecologiahumana90	ecologiahumana80	dd1231	no	si	si	11	ecologiahumana	si	[{"dd749":"rsc228"}]	\N
+ecologiahumana91	ecologiahumana80	dd1231	no	si	si	12	ecologiahumana	si	[{"dd1018":"rsc209"}]	\N
+ecologiahumana92	ecologiahumana80	dd1232	no	si	si	13	ecologiahumana	si	[{"dd10":"rsc210"}]	\N
+ecologiahumana93	ecologiahumana80	dd1231	no	si	si	2	ecologiahumana	si	[{"dd530":"rsc211"}]	\N
+ecologiahumana94	ecologiahumana60	dd1229	no	si	si	3	ecologiahumana	si	[{"dd6":"ecologiahumana36"}]	\N
+ecologiahumana95	ecologiahumana94	dd1233	no	si	si	1	ecologiahumana	si	[{"dd57":"ecologiahumana24"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
+ecologiahumana96	ecologiahumana94	dd1231	no	si	si	2	ecologiahumana	si	[{"dd9":"ecologiahumana7"}]	\N
+ecologiahumana97	ecologiahumana94	dd1231	no	si	si	3	ecologiahumana	si	[{"dd10":"ecologiahumana12"}]	\N
+ecologiahumana98	ecologiahumana94	dd1231	no	si	si	4	ecologiahumana	si	[{"dd10":"ecologiahumana17"}]	\N
+ecologiahumana99	ecologiahumana94	dd1229	no	si	si	5	ecologiahumana	si	[{"dd592":"ecologiahumana8"}]	\N
+ecologiahumana3	ecologiahumana2	dd8	no	si	si	1	ecologiahumana	no	\N	
+ecologiahumana35	ecologiahumana2	dd183	no	si	si	5	ecologiahumana	no	\N	
+ecologiahumana27	ecologiahumana2	dd91	no	si	si	6	ecologiahumana	no	[{"dd846":"ecologiahumana23"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana54	ecologiahumana52	dd91	no	si	si	1	ecologiahumana	no	[{"dd846":"ecologiahumana23"},{"dd9":"ecologiahumana5"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana7"},{"dd10":"ecologiahumana12"},{"dd592":"ecologiahumana8"}]	
+ecologiahumana56	ecologiahumana52	dd524	no	si	si	4	ecologiahumana	si	[{"dd195":"dd196"},{"dd1747":"ecologiahumana4"},{"dd57":"ecologiahumana24"},{"dd9":"ecologiahumana5"},{"dd9":"ecologiahumana6"},{"dd9":"ecologiahumana7"},{"dd11":"ecologiahumana9"},{"dd10":"ecologiahumana12"},{"dd10":"ecologiahumana17"},{"dd10":"ecologiahumana25"},{"dd10":"ecologiahumana26"}]	
+ecologiahumana1	dd69	dd4	no	si	si	3	ecologiahumana	si	\N	
+ecologiahumana58	dd3	dd17	no	si	si	6	ecologiahumana	si	\N	

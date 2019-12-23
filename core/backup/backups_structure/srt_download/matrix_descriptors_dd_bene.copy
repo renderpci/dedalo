@@ -1,0 +1,170 @@
+bene2	Activitats	termino	lg-cat
+bene1	BENE	termino	lg-spa
+bene2	Actividades	termino	lg-spa
+bene3	Identificación	termino	lg-spa
+bene3	Identificació	termino	lg-cat
+bene4	Id	termino	lg-spa
+bene4	Id	termino	lg-cat
+bene5	Título	termino	lg-spa
+bene5	Titol	termino	lg-cat
+bene6	Fecha	termino	lg-spa
+bene6	Data	termino	lg-cat
+bene7	Publicació	termino	lg-cat
+bene7	Publicación	termino	lg-spa
+bene8	Descripción	termino	lg-spa
+bene8	Descripció	termino	lg-cat
+bene9	Entidad	termino	lg-spa
+bene9	Entitat	termino	lg-cat
+bene10	Entidades	termino	lg-spa
+bene10	Entitats	termino	lg-cat
+bene11	Identificación	termino	lg-spa
+bene11	Identificació	termino	lg-cat
+bene12	Id	termino	lg-spa
+bene12	Id	termino	lg-cat
+bene13	Nombre	termino	lg-spa
+bene13	Nom	termino	lg-cat
+bene14	Proyecto	termino	lg-spa
+bene14	Proyecte	termino	lg-cat
+bene15	Listado	termino	lg-spa
+bene15	Llistat	termino	lg-cat
+bene16	Nuevo	termino	lg-spa
+bene16	Nou	termino	lg-cat
+bene17	Borrar	termino	lg-spa
+bene17	Esborrar	termino	lg-cat
+bene18	Tipo de actividad	termino	lg-spa
+bene18	Tipus d'activitat	termino	lg-cat
+bene19	Tipos de actividades	termino	lg-spa
+bene19	Tipus d'activitats	termino	lg-cat
+bene20	Identificación	termino	lg-spa
+bene20	Identificació	termino	lg-cat
+bene21	Id	termino	lg-spa
+bene21	Id	termino	lg-cat
+bene22	Tipo	termino	lg-spa
+bene22	Tipus	termino	lg-cat
+bene23	Proyecto	termino	lg-spa
+bene23	Projecte	termino	lg-cat
+bene24	Listado	termino	lg-spa
+bene24	Llistat	termino	lg-cat
+bene25	Nuevo	termino	lg-spa
+bene25	Nou	termino	lg-cat
+bene26	Borrar	termino	lg-spa
+bene26	Esborrar	termino	lg-cat
+bene27	Proyecto	termino	lg-spa
+bene27	Projecte	termino	lg-cat
+bene28	Listado	termino	lg-spa
+bene29	Nuevo	termino	lg-spa
+bene29	Nou	termino	lg-cat
+bene30	Borrar	termino	lg-spa
+bene30	Esborrar	termino	lg-cat
+bene31	Ubicación	termino	lg-spa
+bene31	Ubicació	termino	lg-cat
+bene32	Ubicaciones	termino	lg-spa
+bene32	Ubicacions	termino	lg-cat
+bene33	Identificación	termino	lg-spa
+bene33	Identificació	termino	lg-cat
+bene34	Id	termino	lg-spa
+bene34	Id	termino	lg-cat
+bene35	Ubicación	termino	lg-spa
+bene35	Ubicació	termino	lg-cat
+bene36	Nuevo	termino	lg-spa
+bene36	Nou	termino	lg-cat
+bene37	Proyecto	termino	lg-spa
+bene37	Projecte	termino	lg-cat
+bene38	Listado	termino	lg-spa
+bene38	Listat	termino	lg-cat
+bene39	Borrar	termino	lg-spa
+bene39	Esborrar	termino	lg-cat
+bene40	Bucle 1	termino	lg-spa
+bene59	Publicación en web	termino	lg-spa
+bene60	web_bene	termino	lg-spa
+bene43	view_mosaic	termino	lg-spa
+bene44	view_mosaic	termino	lg-spa
+bene45	Destacar	termino	lg-spa
+bene45	Destacar	termino	lg-cat
+bene46	Hora	termino	lg-spa
+bene46	Hora	termino	lg-cat
+bene47	Bucle	termino	lg-spa
+bene47	Bucle	termino	lg-cat
+bene61	bucle	termino	lg-spa
+bene62	General	termino	lg-spa
+bene62	General	termino	lg-cat
+bene63	Publicación	termino	lg-spa
+bene49	view_mosaic	termino	lg-spa
+bene63	Publicació	termino	lg-cat
+bene51	view_mosaic	termino	lg-spa
+bene52	Listado	termino	lg-spa
+bene52	Llistat	termino	lg-cat
+bene53	Proyecto	termino	lg-spa
+bene53	Projecte	termino	lg-cat
+bene54	Bucle 2	termino	lg-cat
+bene54	Bucle 2	termino	lg-spa
+bene50	Bucle etnología 2	termino	lg-spa
+bene41	Bucle prehistoria 1	termino	lg-spa
+bene41	Bucle prehistòria 1	termino	lg-cat
+bene48	Bucle etnología 1	termino	lg-spa
+bene48	Bucle etnologia 1	termino	lg-cat
+bene40	Bucle 1	termino	lg-cat
+bene55	Bucles	termino	lg-spa
+bene42	Bucle prehistoria 2	termino	lg-spa
+bene42	Bucle prehistòria 2	termino	lg-cat
+bene50	Bucle etnologia 2	termino	lg-cat
+bene55	Bucles	termino	lg-cat
+bene64	publication	termino	lg-spa
+bene65	bucle_prehistoria_1	termino	lg-spa
+bene56	Nuevo	termino	lg-spa
+bene56	Nou	termino	lg-cat
+bene58	web hall bene	termino	lg-spa
+bene66	bucle_prehistoria_2	termino	lg-spa
+bene67	bucle_etnologia_1	termino	lg-spa
+bene68	bucle_etnologia_2	termino	lg-spa
+bene69	image	termino	lg-spa
+bene70	actividades	termino	lg-spa
+bene71	publication	termino	lg-spa
+bene72	destacar	termino	lg-spa
+bene73	tipo_actividad	termino	lg-spa
+bene74	fecha	termino	lg-spa
+bene75	hora	termino	lg-spa
+bene76	titulo	termino	lg-spa
+bene77	descripcion	termino	lg-spa
+bene78	entidad	termino	lg-spa
+bene79	ubicacion	termino	lg-spa
+bene57	hall_bene	termino	lg-spa
+bene80	fecha_fin	termino	lg-spa
+bene59	Publicació a la web	termino	lg-cat
+bene81	Búsqueda	termino	lg-spa
+bene90	bucle_alfons	termino	lg-spa
+bene91	publication	termino	lg-spa
+bene82	Bucle Alfons Magnànim	termino	lg-spa
+bene82	Bucle Alfons Magnànim	termino	lg-cat
+bene83	General	termino	lg-spa
+bene83	General	termino	lg-cat
+bene84	Publicació	termino	lg-cat
+bene84	Publicación	termino	lg-spa
+bene85	Bucle	termino	lg-spa
+bene85	Bucle	termino	lg-cat
+bene87	view_mosaic	termino	lg-spa
+bene88	Listado	termino	lg-spa
+bene88	Llistat	termino	lg-cat
+bene89	Proyecto	termino	lg-spa
+bene89	Projecte	termino	lg-cat
+bene93	Bucle Area Cultura	termino	lg-spa
+bene93	Bucle Àrea de Cultura	termino	lg-cat
+bene94	view_mosaic	termino	lg-spa
+bene86	Bucles acudim	termino	lg-spa
+bene86	Bucle acudir	termino	lg-cat
+bene96	Bucle area cultura	termino	lg-spa
+bene96	Bucle àrea de cultura	termino	lg-cat
+bene97	General	termino	lg-spa
+bene97	General	termino	lg-cat
+bene98	Publicación	termino	lg-spa
+bene98	Publicació	termino	lg-cat
+bene99	Bucle	termino	lg-spa
+bene99	Bucle	termino	lg-cat
+bene100	Listado	termino	lg-spa
+bene100	Llistat	termino	lg-cat
+bene101	Proyecto	termino	lg-spa
+bene101	Projecte	termino	lg-cat
+bene102	bucle_cultura	termino	lg-spa
+bene103	publication	termino	lg-spa
+bene92	bucle_alfons_1	termino	lg-spa
+bene95	bucle_cultura_1	termino	lg-spa
