@@ -51,7 +51,8 @@
 		outline-offset: 0;
 		border: none;
 		border-radius: 3px;
-		transition: all .5s ease;
+		transition: all .5s ease, padding 0s;
+		//transition: padding 0s;
 		opacity: 0.75;
 
 		// on focus inputs, adds a soft shadow and outline
@@ -59,9 +60,6 @@
 			.hilite;
 		}
 	}
-
-
-
 
 
 
@@ -813,20 +811,6 @@
 			}
 		}
 
-
-		// inside modal
-		//.tool_header {
-		//	background-color: #B2C8F6;
-
-			//>.label {
-//
-			//}
-
-
-		//}
-
-
-
 	}//end tool_container
 
 
@@ -847,6 +831,7 @@
 			}
 		}
 	}
+
 
 
 // header_wrapper_list
@@ -1105,12 +1090,27 @@
 
 
 // input focus show next item (button remove)
-	input:focus ~ .display_none.remove {
-		.display_block;
+	input:focus {
+		padding-right: 1.75em;
+
+		& ~ .remove.display_none {
+			.display_block;
+			position: absolute;
+			right: 0.5em;
+			top: 0.5em;
+			//opacity: 1;
+			//background-color: #fefefe;
+		}
 	}
 
-	.contenteditable:focus ~ .display_none.remove {
-		.display_block;
+	.contenteditable:focus {
+
+		& ~ .display_none.remove {
+			.display_block;
+			position: absolute;
+			right: 0.25em;
+			top: 0.20em;
+		}
 	}
 
 	input:focus ~ .display_none.email_send {
