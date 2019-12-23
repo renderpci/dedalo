@@ -1,0 +1,4957 @@
+dd507	Crear capítulo	termino	lg-spa
+dd507	Crear capítol	termino	lg-cat
+dd507	Create chapter	termino	lg-eng
+dd508	Mostrar/ocultar etiquetas	termino	lg-spa
+dd508	Mostrar/ocultar etiquetes	termino	lg-cat
+dd508	Toggle tags	termino	lg-eng
+dd509	Actualizar vista	termino	lg-spa
+dd509	Actualitzar vista	termino	lg-cat
+dd509	Update view	termino	lg-eng
+dd435	Buscar	termino	lg-spa
+dd403	Atenció	termino	lg-cat
+dd387	έξοδος	termino	lg-ell
+dd1084	Το αρχείο που μεταφορτώθηκε υπερβαίνει το μέγιστο επιτρεπόμενο μέγεθος	termino	lg-ell
+dd397	απόδοση	termino	lg-ell
+dd1085	Το αρχείο που μεταφορτώθηκε ήταν μόνο μερικώς φορτωμένο	termino	lg-ell
+dd832	Si us plau, espereu	termino	lg-cat
+dd399	αφαιρέσει	termino	lg-ell
+dd1086	Δεν υπάρχει αρχείο φορτώθηκε	termino	lg-ell
+dd46	matrix_tools	termino	lg-spa
+dd832	Please wait	termino	lg-eng
+dd483	vacío	termino	lg-spa
+dd483	blank	termino	lg-eng
+dd719	εκκίνηση	termino	lg-ell
+dd1087	προσωρινό φάκελο δεν είναι προσβάσιμο	termino	lg-ell
+dd464	Listado	termino	lg-spa
+dd466	Nuevo	termino	lg-spa
+dd159	Validated	termino	lg-eng
+dd582	Επιλογή κειμένου	termino	lg-ell
+dd1088	Δεν θα μπορούσε να γράψει το αρχείο στο δίσκο	termino	lg-ell
+dd1736	Salvar	termino	lg-spa
+dd583	αυτόματη μετάφραση	termino	lg-ell
+dd1089	Μια επέκταση PHP σταματήσει το upload αρχείου	termino	lg-ell
+dd586	Αντιγραφή στον προορισμό	termino	lg-ell
+dd178	Αρχείο Zotero σωστή επεξεργασία	termino	lg-ell
+dd587	διαδίδονται μάρκες	termino	lg-ell
+dd1213	αρχεία PDF	termino	lg-ell
+dd109	Es reemplaçarà el contingut del camp: %1$s en els %2$s registres trobats actuals, amb el valor: %3$s en l'idioma: %4$s	termino	lg-cat
+dd382	Identification	termino	lg-eng
+dd1047	Latitude	termino	lg-eng
+dd1045	Zoom	termino	lg-eng
+dd613	νέος	termino	lg-ell
+dd1219	γλώσσα πηγής	termino	lg-ell
+dd1046	Longitude	termino	lg-eng
+dd261	Generate shifts visits	termino	lg-eng
+dd118	Tool port replace content	termino	lg-eng
+dd274	etiquetes d'indexación trencades van ser fixades.	termino	lg-cat
+dd275	Por favor revise la posición de las etiquetas azules (borradas accidentalmente)	termino	lg-spa
+dd275	Please review position of blue tags (accidentally deleted)	termino	lg-eng
+dd275	Si us plau revise la posició de les etiquetes blaus (esborrades accidentalment)	termino	lg-cat
+dd276	Etiquetas indexación	termino	lg-spa
+dd152	Cerca	termino	lg-cat
+dd277	Normal	termino	lg-spa
+dd277	Normal	termino	lg-cat
+dd277	Normal	termino	lg-eng
+dd274	etiquetas de indexación rotas fueron arregladas.	termino	lg-spa
+dd278	Borrada	termino	lg-spa
+dd278	Deleted	termino	lg-eng
+dd278	Esborrada	termino	lg-cat
+dd279	Por revisar	termino	lg-spa
+dd101	Toponimia	termino	lg-spa
+dd444	Mover	termino	lg-spa
+dd445	Mover datos de componentes	termino	lg-spa
+dd436	Leer	termino	lg-spa
+dd437	Ruta de carpeta ficheros a importar	termino	lg-spa
+dd437	Files to import path	termino	lg-eng
+dd439	Importar Dédalo csv	termino	lg-spa
+dd439	Import Dédalo csv	termino	lg-eng
+dd706	recuperar	termino	lg-spa
+dd447	Codis de temps	termino	lg-cat
+dd486	Búsqueda	termino	lg-spa
+dd487	component_inverse	termino	lg-spa
+dd484	Importar	termino	lg-spa
+dd484	Importar	termino	lg-cat
+dd484	Import	termino	lg-eng
+dd478	Records filter	termino	lg-eng
+dd478	Filtre de registres	termino	lg-cat
+dd478	Filtro de registros	termino	lg-spa
+dd479	component_filter_records	termino	lg-spa
+dd480	Personas	termino	lg-spa
+dd480	Persons	termino	lg-eng
+dd468	Caducidad de la contraseña	termino	lg-spa
+dd468	Caducitat de la contrasenya	termino	lg-cat
+dd468	Password expiration	termino	lg-eng
+dd761	ακυρώσει	termino	lg-ell
+dd108	Γλώσσα-στόχο	termino	lg-ell
+dd460	Medidas	termino	lg-spa
+dd762	Διαγραφή μόνο τα δεδομένα	termino	lg-ell
+dd110	περιεχόμενα	termino	lg-ell
+dd763	Διαγραφή πλήρες αρχείο	termino	lg-ell
+dd1746	διαδικασία	termino	lg-ell
+dd780	Αφορούν επιλεγμένο κομμάτι	termino	lg-ell
+dd324	εισαγωγή αρχείων	termino	lg-ell
+dd781	Δημιουργία νέου κομματιού με την επιλογή	termino	lg-ell
+dd81	Δημιουργήστε τον εντοπισμό εικόνα	termino	lg-ell
+dd830	Διαγράψτε μόνο το σύνδεσμο	termino	lg-ell
+dd84	δημοσιεύω	termino	lg-ell
+dd831	Διαγράψτε τον πόρο και όλες τις συνδέσεις	termino	lg-ell
+dd276	σελιδοδείκτες	termino	lg-ell
+dd1217	φίλτρο	termino	lg-ell
+dd277	κανονικόςNormal	termino	lg-ell
+dd1726	ισχύουν	termino	lg-ell
+dd278	διαγράφεται	termino	lg-ell
+dd460	Mesures	termino	lg-cat
+dd460	Measurements	termino	lg-eng
+dd461	Identificación	termino	lg-spa
+dd461	Identificació	termino	lg-cat
+dd461	Identify	termino	lg-eng
+dd462	Medida	termino	lg-spa
+dd463	Proyecto	termino	lg-spa
+dd173	Created records	termino	lg-eng
+dd375	Name	termino	lg-eng
+dd175	Directori de destí	termino	lg-cat
+dd175	Target directory	termino	lg-eng
+dd176	File name	termino	lg-eng
+dd187	Original	termino	lg-cat
+dd187	Original	termino	lg-eng
+dd192	Nom complet del fitxer	termino	lg-cat
+dd376	Foundation year	termino	lg-eng
+dd192	Full name of the file	termino	lg-eng
+dd215	Número d'inventari	termino	lg-cat
+dd215	Inventory number	termino	lg-eng
+dd216	Nombre del recurs	termino	lg-cat
+dd216	Number of resource	termino	lg-eng
+dd217	extensió	termino	lg-cat
+dd219	Nom automàtic	termino	lg-cat
+dd219	Automatic Name	termino	lg-eng
+dd220	Pes de l'arxiu	termino	lg-cat
+dd220	File Size	termino	lg-eng
+dd377	List	termino	lg-eng
+dd433	Acrónimo	termino	lg-spa
+dd221	Format incorrecte	termino	lg-cat
+dd221	Wrong format	termino	lg-eng
+dd1064	No és igual	termino	lg-cat
+dd1065	Més gran que	termino	lg-cat
+dd222	Publicació	termino	lg-cat
+dd706	recover	termino	lg-eng
+dd155	Codi del projecte	termino	lg-cat
+dd156	Projecte (nom)	termino	lg-cat
+dd157	Tipologia	termino	lg-cat
+dd158	Llistat de registres	termino	lg-cat
+dd130	Llistat de registres	termino	lg-cat
+dd513	Llistat de relacions	termino	lg-cat
+dd235	Nou perfil	termino	lg-cat
+dd998	Entitat	termino	lg-cat
+dd160	Tots	termino	lg-cat
+dd544	Direcció IP	termino	lg-cat
+dd238	Descripció	termino	lg-cat
+dd1709	Time	termino	lg-eng
+dd407	Image info.	termino	lg-eng
+dd378	New	termino	lg-eng
+dd433	Acronimo	termino	lg-cat
+dd407	Imatge info.	termino	lg-cat
+dd883	General	termino	lg-cat
+dd485	matrix_indexations	termino	lg-spa
+dd885	Projecte	termino	lg-cat
+dd886	Llistat	termino	lg-cat
+dd887	Esborrar	termino	lg-cat
+dd888	Nou	termino	lg-cat
+dd1233	field_enum	termino	lg-spa
+dd379	Delete	termino	lg-eng
+dd433	Acronym	termino	lg-eng
+dd1234	field_date	termino	lg-spa
+dd1235	field_varchar	termino	lg-spa
+dd1236	field_year	termino	lg-spa
+dd1259	database	termino	lg-spa
+dd997	Valor de la llista	termino	lg-cat
+dd999	Llistat d'entitats	termino	lg-cat
+dd1133	Valor de la llista	termino	lg-cat
+dd902	Projecte	termino	lg-cat
+dd926	Projecte	termino	lg-cat
+dd380	Project	termino	lg-eng
+dd946	Projecte	termino	lg-cat
+dd1135	Col·lecció / arxiu	termino	lg-cat
+dd1136	Llistat	termino	lg-cat
+dd1196	Nova Col·lecció / arxiu	termino	lg-cat
+dd943	Valor de la llista	termino	lg-cat
+dd340	Camp en procés de desaparició. Aquest camp es fusiona amb: %s	termino	lg-cat
+dd944	Tipus d'associació / grup	termino	lg-cat
+dd945	Llistat d'associació / grup	termino	lg-cat
+dd330	Id	termino	lg-cat
+dd266	Relacions	termino	lg-cat
+dd169	Dependent de	termino	lg-cat
+dd381	Syndicate	termino	lg-eng
+dd866	Nuevo género	termino	lg-spa
+dd947	Nou Tipus d'associació / grup	termino	lg-cat
+dd923	Valor de la llista	termino	lg-cat
+dd927	Nova categoria laboral / Càrrec	termino	lg-cat
+dd928	Esborrar categoria laboral / Càrrec	termino	lg-cat
+dd899	Valor de la llista	termino	lg-cat
+dd1044	Χαρακτήρες ανά γραμμή	termino	lg-ell
+dd279	από επανεξέταση	termino	lg-ell
+dd1229	table	termino	lg-spa
+dd1230	field_int	termino	lg-spa
+dd1231	field_text	termino	lg-spa
+dd1232	field_mediumtext	termino	lg-spa
+dd900	Lloc de captació	termino	lg-cat
+dd901	Llistat de llocs de captació	termino	lg-cat
+dd707	registro	termino	lg-spa
+dd707	record	termino	lg-eng
+dd709	section_tab	termino	lg-spa
+dd279	To review	termino	lg-eng
+dd863	Hombre/Mujer	termino	lg-spa
+dd1125	Geolocalización	termino	lg-spa
+dd711	tab	termino	lg-spa
+dd714	skip_filterXXX	termino	lg-spa
+dd719	Inicio	termino	lg-spa
+dd719	Beginning	termino	lg-eng
+dd719	Inici	termino	lg-cat
+dd722	component_av	termino	lg-spa
+dd724	Calidad	termino	lg-spa
+dd724	Quality	termino	lg-eng
+dd725	Fichero	termino	lg-spa
+dd725	File	termino	lg-eng
+dd35	Processes	termino	lg-eng
+dd35	Processos	termino	lg-cat
+dd1322	List	termino	lg-eng
+dd726	Tamaño	termino	lg-spa
+dd209	Type of activities	termino	lg-eng
+dd210	Type of activities	termino	lg-eng
+dd211	Filter	termino	lg-eng
+dd213	New Type of activities	termino	lg-eng
+dd726	Size	termino	lg-eng
+dd727	Descargar	termino	lg-spa
+dd727	Download	termino	lg-eng
+dd728	Subir fichero	termino	lg-spa
+dd728	Upload	termino	lg-eng
+dd729	Borrar	termino	lg-spa
+dd1125	Geolocalizació	termino	lg-cat
+dd729	Delete	termino	lg-eng
+dd730	Generar	termino	lg-spa
+dd730	Build	termino	lg-eng
+dd731	Versión	termino	lg-spa
+dd731	Version	termino	lg-eng
+dd214	Delete	termino	lg-eng
+dd212	List	termino	lg-eng
+dd834	Diffusion	termino	lg-eng
+dd836	Filter	termino	lg-eng
+dd734	Procesando	termino	lg-spa
+dd835	yes/no/restricted	termino	lg-eng
+dd837	List	termino	lg-eng
+dd838	New state of Diffusion	termino	lg-eng
+dd862	Gender	termino	lg-eng
+dd863	Gender	termino	lg-eng
+dd864	Filter	termino	lg-eng
+dd865	List	termino	lg-eng
+dd866	New Gender	termino	lg-eng
+dd840	DVD copy	termino	lg-eng
+dd842	Filter	termino	lg-eng
+dd841	DVD copy	termino	lg-eng
+dd843	List	termino	lg-eng
+dd844	New DVD copy	termino	lg-eng
+dd734	Processing	termino	lg-eng
+dd52	component_info	termino	lg-spa
+dd111	Page %s of %s	termino	lg-eng
+dd150	Acabat	termino	lg-cat
+dd223	Procesado textual	termino	lg-spa
+dd232	Edit record	termino	lg-eng
+dd111	Pàgina %s de %s	termino	lg-cat
+dd150	Finish	termino	lg-eng
+dd224	Filtro	termino	lg-spa
+dd324	Importar ficheros	termino	lg-spa
+dd90	Procesos de investigación	termino	lg-spa
+dd159	Validado	termino	lg-spa
+dd226	Listado	termino	lg-spa
+dd324	Importar fitxers	termino	lg-cat
+dd63	Activity	termino	lg-eng
+dd127	Proceso	termino	lg-spa
+dd161	Para revisar	termino	lg-spa
+dd228	Nuevo	termino	lg-spa
+dd324	Import files	termino	lg-eng
+dd348	Publicació a la web	termino	lg-cat
+dd139	Filtro	termino	lg-spa
+dd161	Per revisar	termino	lg-cat
+dd228	Nou	termino	lg-cat
+dd140	Listado	termino	lg-spa
+dd161	For review	termino	lg-eng
+dd228	New	termino	lg-eng
+dd142	Nuevo	termino	lg-spa
+dd159	Validat	termino	lg-cat
+dd203	Processos de tractament textual	termino	lg-cat
+dd90	Processos d'investigació	termino	lg-cat
+dd120	Registros totales	termino	lg-spa
+dd205	Procés	termino	lg-cat
+dd120	Registres totals	termino	lg-cat
+dd998	Entity	termino	lg-eng
+dd315	Atenció: L'usuari %s està usant aquest camp. Espère al fet que l'usuari acabi l'edició.	termino	lg-cat
+dd1727	Προεπισκόπηση εισαγωγής	termino	lg-ell
+dd315	Warning: User %s is using this field. Please, wait for the user to finish editing.	termino	lg-eng
+dd223	Processat textual	termino	lg-cat
+dd120	Total records	termino	lg-eng
+dd997	Entity	termino	lg-eng
+dd174	Procesos generales	termino	lg-spa
+dd95	Search	termino	lg-eng
+dd902	Project	termino	lg-eng
+dd84	Publicar	termino	lg-cat
+dd224	Filtre	termino	lg-cat
+dd121	Páginas totales	termino	lg-spa
+dd174	Processos generals	termino	lg-cat
+dd226	Llistat	termino	lg-cat
+dd121	Pàgines totals	termino	lg-cat
+dd441	section_map	termino	lg-spa
+dd899	Place of capture	termino	lg-eng
+dd1706	Image	termino	lg-eng
+dd174	General Process	termino	lg-eng
+dd121	Total pages	termino	lg-eng
+dd1707	Header	termino	lg-eng
+dd1714	Imagen	termino	lg-spa
+dd1716	Título	termino	lg-spa
+dd1715	Código	termino	lg-spa
+dd42	Acceso y seguridad	termino	lg-spa
+dd136	Áreas	termino	lg-spa
+dd42	Access and security	termino	lg-eng
+dd136	Areas	termino	lg-eng
+dd42	Accés i seguretat	termino	lg-cat
+dd452	Nombre completo	termino	lg-spa
+dd45	Web publication	termino	lg-eng
+dd170	La propagación de la asignación de proyectos es instantánea	def	lg-spa
+dd170	The spread of the project assignment is immediate	def	lg-eng
+dd136	Àrees	termino	lg-cat
+dd774	Permisos	termino	lg-spa
+dd923	Labor Category / Title	termino	lg-eng
+dd1215	Projects	termino	lg-eng
+dd186	Filter	termino	lg-eng
+dd925	List	termino	lg-eng
+dd189	List	termino	lg-eng
+dd202	New	termino	lg-eng
+dd1133	Collection / archive	termino	lg-eng
+dd139	Filter	termino	lg-eng
+dd140	List	termino	lg-eng
+dd1136	List	termino	lg-eng
+dd142	New	termino	lg-eng
+dd1067	Herramientas	termino	lg-spa
+dd774	Permisos	termino	lg-cat
+dd249	Àrea	termino	lg-cat
+dd1719	matrix_users	termino	lg-spa
+dd1720	matrix_projects	termino	lg-spa
+dd1721	matrix_profiles	termino	lg-spa
+dd1727	Previsualització d\\'impresió	termino	lg-cat
+dd1722	button_print	termino	lg-spa
+dd1724	component_profile	termino	lg-spa
+dd384	Editar plantilla	termino	lg-cat
+dd162	Error: L'usuari i la clau introduïdes són correctes però l'usuari actual no està correctament configurat. Si us plau, contacteu amb l'administrador per assignar perfil al seu usuari.	termino	lg-cat
+dd384	Edit template	termino	lg-eng
+dd1727	Print preview	termino	lg-eng
+dd263	Go to profile	termino	lg-eng
+dd1725	Perfil de usuario	termino	lg-spa
+dd338	Generar estructura css	termino	lg-spa
+dd1725	Pre-configuraciones de usuario	def	lg-spa
+dd1725	User profile	termino	lg-eng
+dd1725	User preferences settings	def	lg-eng
+dd1725	Pre-configuracions d\\'usuari	def	lg-cat
+dd1726	Aplicar	termino	lg-spa
+dd1726	Apply	termino	lg-eng
+dd1726	Aplicar	termino	lg-cat
+dd89	Relacionado	termino	lg-spa
+dd1727	Previsualización de importación	termino	lg-spa
+dd116	Previsualización de importación	termino	lg-spa
+dd885	Proyecto	termino	lg-spa
+dd116	Previsualització d\\'importació	termino	lg-cat
+dd234	Profiles	termino	lg-eng
+dd101	Toponimia	termino	lg-cat
+dd101	Toponymy	termino	lg-eng
+dd146	Aplicar i salvar	termino	lg-cat
+dd176	Nom del fitxer	termino	lg-cat
+dd188	Eliminar imatges després de la importació	termino	lg-cat
+dd345	Tipo del componente	termino	lg-spa
+dd943	Type of association / group	termino	lg-eng
+dd165	Error: L'usuari i la clau introduïdes són correctes però l'usuari actual no està correctament configurat. Si us plau, contacteu amb l'administrador per assignar projectes autoritzats al seu usuari.	termino	lg-cat
+dd320	Patrimoni Natural	termino	lg-cat
+dd1734	Mostrar todos	termino	lg-spa
+dd1734	Show all	termino	lg-eng
+dd1734	Mostrar tots	termino	lg-cat
+dd1735	Mostrar filtrados	termino	lg-spa
+dd891	Calidad	termino	lg-spa
+dd423	matrix_hierarchy_main	termino	lg-spa
+dd1735	Show filtered	termino	lg-eng
+dd1735	Mostrar filtrats	termino	lg-cat
+dd1067	Eines	termino	lg-cat
+dd1704	Veure estadístiques	termino	lg-cat
+dd1715		obs	lg-spa
+dd1706	TR Anterior: dd1127	obs	lg-spa
+dd1734	Εμφάνιση όλων	termino	lg-ell
+dd280	και να αποθηκεύσετε το κείμενο	termino	lg-ell
+dd1736	Salvar	termino	lg-cat
+dd1736	Save	termino	lg-eng
+dd1735	Εμφάνιση φιλτραρισμένα	termino	lg-ell
+dd281	έχασε ετικέτες	termino	lg-ell
+dd1736		def	lg-eng
+dd1737	Ir al fragmento	termino	lg-spa
+dd1737	Anar a fragment	termino	lg-cat
+dd1737	Go to fragment	termino	lg-eng
+dd383	Labels	termino	lg-eng
+dd1738	Actualizar caché	termino	lg-spa
+dd1738	Actualitzar cache	termino	lg-cat
+dd1738	Update cache	termino	lg-eng
+dd1739	Ruta de directorio	termino	lg-spa
+dd1739	Ruta de directori	termino	lg-cat
+dd1739	Directory path	termino	lg-eng
+dd1740	Ruta de archivo	termino	lg-spa
+dd1740	Ruta d'arxiu	termino	lg-cat
+dd1740	File Path	termino	lg-eng
+dd22	matrix_list	termino	lg-spa
+dd1308	Research line	termino	lg-eng
+dd243	Automatic transcription	termino	lg-eng
+dd243	Transcripción automática	termino	lg-spa
+dd69	Activitats	termino	lg-cat
+dd1741	tool_import_zotero	termino	lg-spa
+dd1741	Section tool	obs	lg-spa
+dd12	matrix_layout_dd	termino	lg-spa
+dd402	You are not authorized to view this content	termino	lg-eng
+dd586	Copiar a destino	termino	lg-spa
+dd388	Connection failed. Please reload the page after a few seconds	termino	lg-eng
+dd569	Filtre	termino	lg-cat
+dd410	Filtro	termino	lg-spa
+dd1702	import images	termino	lg-eng
+dd799	Etiqueta	termino	lg-spa
+dd222	Publication	termino	lg-eng
+dd222	Publication	termino	lg-fra
+dd1	Dédalo4	termino	lg-fra
+dd119	Reemplazar contenidos	termino	lg-spa
+dd119	Reemplaçar continguts	termino	lg-cat
+dd403	Warning	termino	lg-eng
+dd104	selección	termino	lg-spa
+dd170	Projects	termino	lg-eng
+dd148	Permisos de lectura/escriptura	termino	lg-cat
+dd864	Filtro	termino	lg-spa
+dd148	Read / write permissions	termino	lg-eng
+dd268	Esborrar	termino	lg-cat
+dd268	Delete	termino	lg-eng
+dd237	Name	termino	lg-eng
+dd544	IP address	termino	lg-eng
+dd543	Who	termino	lg-eng
+dd545	What	termino	lg-eng
+dd546	Where	termino	lg-eng
+dd127	Process	termino	lg-eng
+dd1312	List	termino	lg-eng
+dd125	section_tool	termino	lg-spa
+dd547	When	termino	lg-eng
+dd551	Data	termino	lg-eng
+dd64	Yes/No	termino	lg-eng
+dd137	Private lists	termino	lg-eng
+dd368	List	termino	lg-eng
+dd861	Gender	termino	lg-eng
+dd833	Diffusion	termino	lg-eng
+dd741	\N	def	lg-spa
+dd1310	Project	termino	lg-eng
+dd1321	Project	termino	lg-eng
+dd49	Project	termino	lg-eng
+dd99	Process	termino	lg-eng
+dd890	Valor de la lista	termino	lg-spa
+dd168	Verify that the installation data are correct. If they are not, set the information on the Dédalo database preferences (config_db.php)	termino	lg-eng
+dd218	Records being browsed	termino	lg-eng
+dd1077	Duration	termino	lg-eng
+dd1126	Supported extensions	termino	lg-eng
+dd1097	Activity time	termino	lg-eng
+dd338	Build structure css	termino	lg-eng
+dd786	Files audio / video	termino	lg-eng
+dd146	Apply and save	termino	lg-eng
+dd188	Deleting images after import	termino	lg-eng
+dd1082	File uploaded successfully	termino	lg-eng
+dd1071	Who	termino	lg-eng
+dd1083	The uploaded file exceeds the upload_max_filesize directive in php.ini	termino	lg-eng
+dd1084	The uploaded file exceeds the maximum size allowed	termino	lg-eng
+dd1320	Tipología de proyecto	termino	lg-spa
+dd1322	Listado	termino	lg-spa
+dd90	Investigation process	termino	lg-eng
+dd1051	¿Segur?	termino	lg-cat
+dd1063	És Igual que	termino	lg-cat
+dd83	Like	termino	lg-eng
+dd698	Delete	termino	lg-eng
+dd14	Recursos	termino	lg-cat
+dd207	Administració	termino	lg-cat
+dd193	Tools	termino	lg-eng
+dd193	Eines	termino	lg-cat
+dd128	Usuaris	termino	lg-cat
+dd153	Projectes	termino	lg-cat
+dd542	Activity	termino	lg-eng
+dd542	Activitat	termino	lg-cat
+dd134	email	termino	lg-spa
+dd135	Observaciones	termino	lg-spa
+dd1746	procesar	termino	lg-spa
+dd261	Generar turnos de visitas	termino	lg-spa
+dd44	component_calculation	termino	lg-spa
+dd82	matrix_activities	termino	lg-spa
+dd2	dedalo	termino	lg-spa
+dd4	area	termino	lg-spa
+dd6	section	termino	lg-spa
+dd8	section_group	termino	lg-spa
+dd9	component_input_text	termino	lg-spa
+dd10	component_text_area	termino	lg-spa
+dd11	component_select	termino	lg-spa
+dd14	Recursos	termino	lg-spa
+dd50	css_label_grey_bg_50	termino	lg21710
+dd51	Documento	termino	lg-spa
+dd54	Línea de investigación	termino	lg-spa
+dd57	component_radio_button	termino	lg-spa
+dd58	relation_list	termino	lg-spa
+dd62	si/no	termino	lg-spa
+dd64	Si/No	termino	lg-spa
+dd68	Listas de valores	termino	lg-spa
+dd74	component_relation	termino	lg-spa
+dd75	button_trigger	termino	lg-spa
+dd103	search	termino	lg-spa
+dd88	operator	termino	lg-spa
+dd83	Contiene	termino	lg-spa
+dd80	component_check_box	termino	lg-spa
+dd98	Modelo	termino	lg-spa
+dd99	Proceso	termino	lg-spa
+dd107	Reemplazar datos del campo	termino	lg-spa
+dd124	area_tool	termino	lg-spa
+dd129	Información General	termino	lg-spa
+dd97	edit_view	termino	lg-spa
+dd96	Indexación	termino	lg-spa
+dd130	Lista de registros	termino	lg-spa
+dd131	Cuenta activa	termino	lg-spa
+dd132	Usuario	termino	lg-spa
+dd24	Hijos	termino	lg-spa
+dd133	Contraseña	termino	lg-spa
+dd842	Filtro	termino	lg-spa
+dd843	Listado	termino	lg-spa
+dd844	Nuevo estado de la copia DVD	termino	lg-spa
+dd902	Proyecto	termino	lg-spa
+dd926	Proyecto	termino	lg-spa
+dd946	Proyecto	termino	lg-spa
+dd832	Por favor, espere	termino	lg-spa
+dd846	component_state	termino	lg-spa
+dd854	Mostrar Inspector	termino	lg-spa
+dd761	Cancel·lar	termino	lg-cat
+dd1113	Importar ficheros	termino	lg-spa
+dd854	Toggle Inspector	termino	lg-eng
+dd856	modelos	termino	lg-spa
+dd856	models	termino	lg-eng
+dd857	jerarquías	termino	lg-spa
+dd857	hierarchies	termino	lg-eng
+dd858	términos	termino	lg-spa
+dd858	terms	termino	lg-eng
+dd861	Género	termino	lg-spa
+dd862	Valor de la lista	termino	lg-spa
+dd865	Listado de registros	termino	lg-spa
+dd875	Calidad de la cinta original	termino	lg-spa
+dd876	Calidad de la cinta original	termino	lg-spa
+dd448	Imprimir	termino	lg-spa
+dd877	Filtro	termino	lg-spa
+dd878	Listado	termino	lg-spa
+dd879	Valor de la lista	termino	lg-spa
+dd880	Borrar calidad de la cinta original	termino	lg-spa
+dd881	idioma	termino	lg-spa
+dd881	llengua	termino	lg-cat
+dd881	language	termino	lg-eng
+dd882	Profesiones	termino	lg-spa
+dd883	General	termino	lg-spa
+dd884	Profesión	termino	lg-spa
+dd886	list	termino	lg-spa
+dd887	Borrar	termino	lg-spa
+dd888	Nuevo	termino	lg-spa
+dd889	Calidad del contenido	termino	lg-spa
+dd892	Filtro	termino	lg-spa
+dd893	Listado de registros	termino	lg-spa
+dd894	Nueva calidad	termino	lg-spa
+dd895	Borrar calidad	termino	lg-spa
+dd898	Lugar de captación	termino	lg-spa
+dd899	Valor de la lista	termino	lg-spa
+dd900	Lugar de captación	termino	lg-spa
+dd901	Listado de registros	termino	lg-spa
+dd904	component_select_lang	termino	lg-spa
+dd911	Tipología de personas	termino	lg-spa
+dd912	Valor de la lista	termino	lg-spa
+dd915	Listado de registros	termino	lg-spa
+dd922	Categoría Laboral / Cargo	termino	lg-spa
+dd923	Valor de la lista	termino	lg-spa
+dd81	Crear imatge identificativa	termino	lg-cat
+dd924	Categoria Laboral / Cargo	termino	lg-spa
+dd925	Listado de registros	termino	lg-spa
+dd927	Nueva Categoría Laboral / Cargo	termino	lg-spa
+dd928	Borrar Categoría Laboral / Cargo	termino	lg-spa
+dd916	Nueva tipología	termino	lg-spa
+dd942	Tipo de asociación / grupo	termino	lg-spa
+dd943	Valor de la lista	termino	lg-spa
+dd205	Proceso	termino	lg-spa
+dd21	Maquetación	termino	lg-spa
+dd944	Tipo de asociación / grupo	termino	lg-spa
+dd945	Listado de registros	termino	lg-spa
+dd73	No	termino	lg-spa
+dd1019	Operadores de búsqueda	termino	lg-spa
+dd947	Nuevo tipo de asociación / grupo	termino	lg-spa
+dd957	Formato del original AV	termino	lg-spa
+dd147	Components	termino	lg-eng
+dd958	Valor de la lista	termino	lg-spa
+dd959	Formato del original AV	termino	lg-spa
+dd960	Listado de registros	termino	lg-spa
+dd16	matrix_layout	termino	lg-spa
+dd234	Perfils	termino	lg-cat
+dd68	Llistes de valors	termino	lg-cat
+dd254	Eliminar usuari	termino	lg-cat
+dd179	Nou usuari	termino	lg-cat
+dd355	Cultural	termino	lg-eng
+dd69	Activities	termino	lg-eng
+dd255	Username	termino	lg-eng
+dd77	Menor que	termino	lg-cat
+dd1019	Operadors de cerca	termino	lg-cat
+dd356	Natural	termino	lg-eng
+dd692	Activitat	termino	lg-cat
+dd398	sections	termino	lg-eng
+dd93	creat	termino	lg-cat
+dd93	created	termino	lg-eng
+dd94	per usuari	termino	lg-cat
+dd94	by user	termino	lg-eng
+dd421	mes	termino	lg-spa
+dd421	mes	termino	lg-cat
+dd421	month	termino	lg-eng
+dd422	dia	termino	lg-cat
+dd422	day	termino	lg-eng
+dd1214	Título	termino	lg-spa
+dd1215	Proyecto	termino	lg-spa
+dd1216	Formato	termino	lg-spa
+dd452	Full name	termino	lg-eng
+dd23	Layout	termino	lg-cat
+dd26	Projecte	termino	lg-cat
+dd27	Nou	termino	lg-cat
+dd855	Go to list	termino	lg-eng
+dd28	Esborrar maquetació	termino	lg-cat
+dd55	Nou	termino	lg-cat
+dd56	Esborrar	termino	lg-cat
+dd61	Secció	termino	lg-cat
+dd83	Conté	termino	lg-cat
+dd1079	Informació	termino	lg-cat
+dd92	Entre (A...B)	termino	lg-cat
+dd129	Informació General	termino	lg-cat
+dd131	Compte actiu	termino	lg-cat
+dd134	email	termino	lg-cat
+dd240	Accés a zones	termino	lg-cat
+dd361	Permisos	termino	lg-cat
+dd170	Projectes	termino	lg-cat
+dd913	Proyecto	termino	lg-spa
+dd873	El valor ya existe	termino	lg-spa
+dd873	Value already exists	termino	lg-eng
+dd1206	diffusion_mupreva_ficha_fm	termino	lg-spa
+dd1208	Audiovisual	termino	lg-spa
+dd1209	Cabecera	termino	lg-spa
+dd1211	Código	termino	lg-spa
+dd1212	Posterframe	termino	lg-spa
+dd1213	Ficheros PDF	termino	lg-spa
+dd236	General	termino	lg-cat
+dd229	Inici de sessió	termino	lg-cat
+dd21	Layout	termino	lg-cat
+dd25	Llista	termino	lg-cat
+dd1033	Seleccione un idioma de destí	termino	lg-cat
+dd448	Print	termino	lg-eng
+dd399	Llevar	termino	lg-cat
+dd582	Seleccionar text	termino	lg-cat
+dd583	Traducció automàtica	termino	lg-cat
+dd586	Copiar a destí	termino	lg-cat
+dd587	Propagar marques	termino	lg-cat
+dd613	Nou	termino	lg-cat
+dd1015	registres actulitzats	termino	lg-cat
+dd762	Esborrar només dades	termino	lg-cat
+dd763	Esborrar registre complet	termino	lg-cat
+dd830	Esborrar només el vincle	termino	lg-cat
+dd831	Esborrar el recurs i tots els seus vincles	termino	lg-cat
+dd391	Navigació	termino	lg-cat
+dd776	secció	termino	lg-cat
+dd725	Fitxer	termino	lg-cat
+dd784	Id	termino	lg-cat
+dd726	Tamany	termino	lg-cat
+dd727	Descarregar	termino	lg-cat
+dd728	Pujar fitxer	termino	lg-cat
+dd729	Esborrar	termino	lg-cat
+dd730	Generar	termino	lg-cat
+dd731	Versió	termino	lg-cat
+dd734	Processant	termino	lg-cat
+dd217	extension	termino	lg-eng
+dd735	Seleccioneu fotograma en el reproductor i faci clic a «CREAR POSTERFRAME» per crear un fotograma a partir del vídeo	termino	lg-cat
+dd736	Crear	termino	lg-cat
+dd87	No té informació	termino	lg-cat
+dd737	Extensió no vàlida	termino	lg-cat
+dd740	Fitxer pujat amb èxit	termino	lg-cat
+dd340	Field in the process of disappearing. This field merges with: %s	termino	lg-eng
+dd744	El directori no existeix o no és accessible	termino	lg-cat
+dd745	Tancar	termino	lg-cat
+dd746	Recarregar	termino	lg-cat
+dd747	Espere, si us plau...	termino	lg-cat
+dd748	Càrrega d'arxiu completada	termino	lg-cat
+dd753	Insertar	termino	lg-cat
+dd754	Acció	termino	lg-cat
+dd755	Tecla	termino	lg-cat
+dd756	Obrir	termino	lg-cat
+dd757	Eina	termino	lg-cat
+dd1737	Πηγαίνετε στο τεμάχιο	termino	lg-ell
+dd86	Θα διαγράψετε την επιλεγμένη ετικέτα σε όλες τις γλώσσες και όλες τις σχέσεις και την ευρετηρίαση που συνδέονται με αυτό	termino	lg-ell
+dd758	Visualitzarlizar	termino	lg-cat
+dd759	Girar	termino	lg-cat
+dd760	imatge	termino	lg-cat
+dd764	indexació	termino	lg-cat
+dd765	indexacions	termino	lg-cat
+dd766	descriptors	termino	lg-cat
+dd775	etiqueta	termino	lg-cat
+dd854	Mostra Inspector	termino	lg-cat
+dd856	models	termino	lg-cat
+dd857	jerarquies	termino	lg-cat
+dd858	termes	termino	lg-cat
+dd1034	Seleccioneu una etiqueta per indexar	termino	lg-cat
+dd1035	Per crear un nou fragment, simplement seleccioneu un fragment de text i premeu «Nou fragment» baix	termino	lg-cat
+dd1077	Duració	termino	lg-cat
+dd1078	Total	termino	lg-cat
+dd1126	Extensions suportades	termino	lg-cat
+dd590	Recrear totes	termino	lg-cat
+dd588	Total paràgrafs	termino	lg-cat
+dd521	fragment	termino	lg-cat
+dd474	Eines	termino	lg-cat
+dd473	Relacions	termino	lg-cat
+dd400	Sense accés aquí	termino	lg-cat
+dd618	si	termino	lg-cat
+dd619	no	termino	lg-cat
+dd1081	Nova versió	termino	lg-cat
+dd1091	Recuperar component	termino	lg-cat
+dd1092	Recuperar secció	termino	lg-cat
+dd785	Eines	termino	lg-cat
+dd786	Fitxers d'àudio / vídeo	termino	lg-cat
+dd787	Fitxers d'imatge	termino	lg-cat
+dd788	Càrrega d'arxius	termino	lg-cat
+dd789	Indexació	termino	lg-cat
+dd790	Llenguatge	termino	lg-cat
+dd791	Fotograma	termino	lg-cat
+dd792	Relacions	termino	lg-cat
+dd1083	El fitxer carregat excedeix la directiva upload_max_filesize a php.ini	termino	lg-cat
+dd1084	El fitxer carregat excedeix la mida màxima permès	termino	lg-cat
+dd1085	El fitxer carregat va ser només parcialment carregat	termino	lg-cat
+dd1086	Cap arxiu va ser pujat	termino	lg-cat
+dd855	Anar a llistat	termino	lg-cat
+dd442	component_autocomplete_hi	termino	lg-spa
+dd1087	Carpeta temporal no accessible	termino	lg-cat
+dd1088	No s'ha pogut escriure el fitxer al disc	termino	lg-cat
+dd1089	Una extensió de PHP va detenir la càrrega d'arxius	termino	lg-cat
+dd1213	Fitxers PDF	termino	lg-cat
+dd1213	PDF files	termino	lg-eng
+dd105	modificat	termino	lg-cat
+dd104	seleccionat	termino	lg-cat
+dd104	selected	termino	lg-eng
+dd105	modified	termino	lg-eng
+dd1217	filtro	termino	lg-spa
+dd1217	filtre	termino	lg-cat
+dd1217	filter	termino	lg-eng
+dd200	Creat per l&#039;usuari	termino	lg-cat
+dd1020	Tipus de server	termino	lg-cat
+dd199	Data de creació	termino	lg-cat
+dd1080	Download	termino	lg-eng
+dd1090	Upload	termino	lg-eng
+dd1094	Upload complete	termino	lg-eng
+dd1098	Stats	termino	lg-eng
+dd448	Imprimir	termino	lg-cat
+dd1079	Information	termino	lg-eng
+dd787	Image files	termino	lg-eng
+dd108	Target lang	termino	lg-eng
+dd108	Llenguatge de destí	termino	lg-cat
+dd110	Actual content	termino	lg-eng
+dd1119	Tipologia recurs	termino	lg-cat
+dd168	Comproveu que les dades de configuració són correctes. Si no ho són, configurar la informació relativa a la base de dades en les preferències de Dédalo (config_db.php)	termino	lg-cat
+dd152	Find	termino	lg-eng
+dd1070	Adreça IP	termino	lg-cat
+dd1074	Quan	termino	lg-cat
+dd1219	Idioma de origen	termino	lg-spa
+dd1219	Source lang	termino	lg-eng
+dd160	Todos	termino	lg-spa
+dd1219	Llengua d'origen	termino	lg-cat
+dd110	Contingut actual	termino	lg-cat
+dd1220	vista previa	termino	lg-spa
+dd1220	preview	termino	lg-eng
+dd1221	button_import	termino	lg-spa
+dd112	Add files	termino	lg-eng
+dd113	Start upload	termino	lg-eng
+dd114	Cancel upload	termino	lg-eng
+dd115	Files manager	termino	lg-eng
+dd116	Import preview	termino	lg-eng
+dd141	Historical	termino	lg-eng
+dd145	Now	termino	lg-eng
+dd145	Ara	termino	lg-cat
+dd141	Històric	termino	lg-cat
+dd242	Inbentarioa	termino	lg-eus
+dd355	Kulturalak	termino	lg-eus
+dd356	Natural	termino	lg-eus
+dd320	Ondare naturala	termino	lg-eus
+dd349	Materiala	termino	lg-eus
+dd279	A revisar	termino	lg-cat
+dd239	List	termino	lg-eng
+dd330	Id	termino	lg-spa
+dd321	Oondare Jabetza	termino	lg-eus
+dd322	Higigarrien ondarea	termino	lg-eus
+dd354	Ondare artistiko	termino	lg-eus
+dd323	Inmateriala	termino	lg-eus
+dd1060	I	termino	lg-cat
+dd1736	αποθηκεύετε	termino	lg-ell
+dd1061	O	termino	lg-cat
+dd495	Διαγραφή ετικέτας;	termino	lg-ell
+dd1738	ενημερωμένη cache	termino	lg-ell
+dd401	¿Está seguro de borrar este registro?	termino	lg-spa
+dd165	Error: user and password are ok but the current user is not configured properly. Please contact the administrator to assign authorized projects for this user.	termino	lg-eng
+dd165	\N	obs	lg-spa
+dd1134	Projecte	termino	lg-cat
+dd180	New project	termino	lg-eng
+dd180	Nou projecte	termino	lg-cat
+dd996	Entitat	termino	lg-cat
+dd1132	Col·lecció / arxiu	termino	lg-cat
+dd942	Tipus d'associació / grup	termino	lg-cat
+dd922	Categoria laboral / Càrrec	termino	lg-cat
+dd898	Lloc de captació	termino	lg-cat
+dd882	Professions	termino	lg-cat
+dd548	General	termino	lg-cat
+dd543	Qui	termino	lg-cat
+dd545	Què	termino	lg-cat
+dd546	A on	termino	lg-cat
+dd547	Quan	termino	lg-cat
+dd551	Dada	termino	lg-cat
+dd550	Projectes	termino	lg-cat
+dd112	Afegir fitxers	termino	lg-cat
+dd113	Començar la càrrega	termino	lg-cat
+dd114	Cancel · lar la càrrega	termino	lg-cat
+dd115	Gestió d'arxius	termino	lg-cat
+dd160	All	termino	lg-eng
+dd483	buit	termino	lg-cat
+dd1070	IP address	termino	lg-eng
+dd1071	Qui	termino	lg-cat
+dd1072	Què	termino	lg-cat
+dd1073	A on	termino	lg-cat
+dd1075	Projectes	termino	lg-cat
+dd1093	Data	termino	lg-cat
+dd1062	Conté (estricte)	termino	lg-cat
+dd978	Aspect ratio	termino	lg-eng
+dd386	label_root	termino	lg-spa
+dd1078	Total	termino	lg-eng
+dd1	Dédalo4	termino	lg-eus
+dd852	Print	termino	lg-eng
+dd906	tool print	termino	lg-eng
+dd1044	Caracteres por línea	termino	lg-spa
+dd357	area_resource	termino	lg-spa
+dd361	Permisos	termino	lg-spa
+dd700	Guardar	termino	lg-cat
+dd360	Relaciones semánticas	termino	lg-spa
+dd435	Cercar	termino	lg-cat
+dd360	Semantic nodes	termino	lg-eng
+dd360	Relacions semàntiques	termino	lg-cat
+dd184	Calendari	termino	lg-cat
+dd874	Actualitzar caché	termino	lg-cat
+dd852	Impressió	termino	lg-cat
+dd353	semantic_node	termino	lg-spa
+dd1718	Acceso y permisos	termino	lg-spa
+dd350	component_input_text_multi	termino	lg-spa
+dd1718	Acces and permissions	termino	lg-eng
+dd1718	Accés i permisos	termino	lg-cat
+dd351	Patrimonio documental	termino	lg-spa
+dd351	Patrimoni documental	termino	lg-cat
+dd927	New Labor Category / Title	termino	lg-eng
+dd928	Delete Labor Category / Title	termino	lg-eng
+dd898	Place of capture	termino	lg-eng
+dd465	Carcar	termino	lg-cat
+dd200	Created by user	termino	lg-eng
+dd199	Creation date	termino	lg-eng
+dd32	Layout	termino	lg-eng
+dd39	Layout	termino	lg-eng
+dd30	Layout	termino	lg-eng
+dd900	Place of capture	termino	lg-eng
+dd882	Professions	termino	lg-eng
+dd884	Profession	termino	lg-eng
+dd888	New Profession	termino	lg-eng
+dd887	Delete Profession	termino	lg-eng
+dd548	General	termino	lg-eng
+dd965	Esborrar	termino	lg-cat
+dd1117	Tipologia recurs	termino	lg-cat
+dd1317	Llistat	termino	lg-cat
+dd567	Estat Cinta	termino	lg-cat
+dd1118	Valor de la llista	termino	lg-cat
+dd985	Estàndard del Color Audiovisual	termino	lg-cat
+dd985	Estándar del Color Audiovisual	termino	lg-spa
+dd1121	Filtre	termino	lg-cat
+dd1122	Nova tipologia recurs	termino	lg-cat
+dd1123	Esborrar tipologia recurs	termino	lg-cat
+dd1120	Llistat de tipologies recursos	termino	lg-cat
+dd1120	Listado de tipologías recursos	termino	lg-spa
+dd383	Labels	termino	lg-spa
+dd386	Etiquetas, rótulos mensajes de al aplicación etc	def	lg-spa
+dd387	Salir	termino	lg-spa
+dd387	\N	def	lg-spa
+dd388	Error de conexión. Recargue la página pasados unos segundos	termino	lg-spa
+dd389	mensajes en modo 'modal' por encima de los contenidos	def	lg-spa
+dd390	Buttons	termino	lg-spa
+dd435	Search	termino	lg-eng
+dd391	Navigation	termino	lg-spa
+dd568	Valor de la llista	termino	lg-cat
+dd391	Navegación que no son áreas o secciones	def	lg-spa
+dd392	label_group	termino	lg-spa
+dd392	Agrupación de etiquetas	def	lg-spa
+dd392	\N	obs	lg-spa
+dd395	label	termino	lg-spa
+dd395	rótulo 	def	lg-spa
+dd390	Botones que no son componentes en si mismos	def	lg-spa
+dd242	Αποθεμάτων	termino	lg-ell
+dd243	αυτόματη μεταγραφή	termino	lg-ell
+dd397	Volver	termino	lg-spa
+dd387	Quit	termino	lg-eng
+dd397	Back	termino	lg-eng
+dd398	secciones	termino	lg-spa
+dd399	Quitar	termino	lg-spa
+dd399	Remove	termino	lg-eng
+dd570	Estat Cinta	termino	lg-cat
+dd365	Civil states	termino	lg-eng
+dd400	Sin acceso aquí	termino	lg-spa
+dd400	No access here	termino	lg-eng
+dd346	Section tipo	termino	lg-eng
+dd401	Are you sure to delete this record?	termino	lg-eng
+dd402	Usted no está autorizado a ver este contenido	termino	lg-spa
+dd339	component_publication	termino	lg-spa
+dd336	Actualizar	termino	lg-spa
+dd337	Actualizar estructura	termino	lg-spa
+dd316	Desbloquear todos los componentes	termino	lg-spa
+dd326	Importar de BibTex	termino	lg-spa
+dd316	Unlock all components	termino	lg-eng
+dd326	Importar de BibTex	termino	lg-cat
+dd316	Desbloquejar tots els components	termino	lg-cat
+dd326	Import from BibTex	termino	lg-eng
+dd317	Usuarios activos	termino	lg-spa
+dd1048	Importar de Zotero	termino	lg-cat
+dd317	Active users	termino	lg-eng
+dd1048	Import from Zotero	termino	lg-eng
+dd317	Usuaris actius	termino	lg-cat
+dd327	Subtítulos	termino	lg-spa
+dd327	Subtitles	termino	lg-eng
+dd319	Transcripción	termino	lg-spa
+dd327	Subtítols	termino	lg-cat
+dd325	Velocidad de reproducción	termino	lg-spa
+dd325	Velocitat de reproducció	termino	lg-cat
+dd325	Play speed	termino	lg-eng
+dd329	Herramienta de administración	termino	lg-spa
+dd329	Eina d'administració	termino	lg-cat
+dd331	Play/pause tecla	termino	lg-spa
+dd331	Play/pause key	termino	lg-eng
+dd331	Play/pause tecla	termino	lg-cat
+dd332	Auto-rebobinado	termino	lg-spa
+dd332	Auto-rebobinat	termino	lg-cat
+dd332	Auto-rewind	termino	lg-eng
+dd333	Insertar etiqueta	termino	lg-spa
+dd589	Sólo nuevas	termino	lg-spa
+dd333	Inserir etiqueta	termino	lg-cat
+dd333	Insert tag	termino	lg-eng
+dd334	Opciones	termino	lg-spa
+dd334	Opcions	termino	lg-cat
+dd362	matrix_resources	termino	lg-spa
+dd334	Options	termino	lg-eng
+dd335	Importar audio/video	termino	lg-spa
+dd335	Importació àudio / vídeo	termino	lg-cat
+dd335	Import audio / video	termino	lg-eng
+dd266		obs	lg-spa
+dd259	Connexion	termino	lg-fra
+dd255	Nom d'utilisateur	termino	lg-fra
+dd256	Mot de passe	termino	lg-fra
+dd366	Civil status	termino	lg-eng
+dd256	Contraseña	termino	lg-spa
+dd255	Usuario	termino	lg-spa
+dd257	e-mail	termino	lg-fra
+dd132	Nom d'utilisateur	termino	lg-fra
+dd133	Mot de passe	termino	lg-fra
+dd134	e-mail	termino	lg-fra
+dd367	Civil status	termino	lg-eng
+dd1311	Research line	termino	lg-eng
+dd315	Atención: El usuario %s está usando este campo. Por favor, espere a que termine la edición.	termino	lg-spa
+dd315		obs	lg-spa
+dd837	Listado de registros	termino	lg-spa
+dd286	elementos activos	termino	lg-spa
+dd286	elements actius	termino	lg-cat
+dd286	active elements	termino	lg-eng
+dd284	Fichero BibTex procesado correctamente	termino	lg-spa
+dd284	BibTeX file processed successfully	termino	lg-eng
+dd284	Fitxer BibTeX processat correctament	termino	lg-cat
+dd285	Añada el fichero BIBTex y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'	termino	lg-spa
+dd285		obs	lg-spa
+dd186	Filtre	termino	lg-cat
+dd285	Add the BibTeX file and the corresponding PDF files from your hard disk. Once loaded, select 'Import files'	termino	lg-eng
+dd389	Alerts	termino	lg-eng
+dd390	Buttons	termino	lg-eng
+dd391	Navigation	termino	lg-eng
+dd282	Conformar cabeceras	termino	lg-spa
+dd363	DEPRECATED (DEBUG ONLY)	termino	lg-spa
+dd273	deleted index tags was created at beginning of text.	termino	lg-eng
+dd699	Cerca	termino	lg-cat
+dd232	Editar registre	termino	lg-cat
+dd273	etiquetes d'index esborrades van ser creades al començament del text.	termino	lg-cat
+dd273	etiquetas de indexación borradas fueron creadas al comienzo del texto.	termino	lg-spa
+dd964	Nuevo	termino	lg-spa
+dd965	Borrar	termino	lg-spa
+dd966	Borrar Formato del original AV	termino	lg-spa
+dd976	Relación aspecto	termino	lg-spa
+dd976	\N	def	lg-spa
+dd977	Valor de la lista	termino	lg-spa
+dd978	Relación de aspecto	termino	lg-spa
+dd418	días	termino	lg-spa
+dd979	Listado de registros	termino	lg-spa
+dd323	Inmaterial	termino	lg-eng
+dd272	Herramientas	termino	lg-spa
+dd272	Eines	termino	lg-cat
+dd272	Tools	termino	lg-eng
+dd980	Nueva relación de aspecto	termino	lg-spa
+dd349	Material	termino	lg-eng
+dd981	Borrar relación de aspecto	termino	lg-spa
+dd982	Filtro	termino	lg-spa
+dd983	Filtro	termino	lg-spa
+dd349	Material	termino	lg-cat
+dd987	Estándar del Color Audivosiual	termino	lg-spa
+dd162	Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar perfil a su usuario.	termino	lg-spa
+dd162	Error: user and password are ok but the current user is not configured properly. Please contact the administrator to assign profile to this user.	termino	lg-eng
+dd263	Ir al perfil	termino	lg-spa
+dd251	structure_data	termino	lg-spa
+dd253	head	termino	lg-spa
+dd258	body	termino	lg-spa
+dd233	xml	termino	lg-spa
+dd245	rdf	termino	lg-spa
+dd246	rdf:predicate	termino	lg-spa
+dd248	rdf:subject	termino	lg-spa
+dd336	Actualitzar	termino	lg-cat
+dd337	Update structure	termino	lg-eng
+dd250	rdf:object	termino	lg-spa
+dd347	table_alias	termino	lg-spa
+dd1321	Proyecto	termino	lg-spa
+dd340	Campo en proceso de desaparición. Este campo se fusiona con: %s	termino	lg-spa
+dd84	Publicar	termino	lg-spa
+dd203	Procesos de tratamiento de texto	termino	lg-spa
+dd76	mostrar	termino	lg-spa
+dd76	show	termino	lg-eng
+dd76	mostrar	termino	lg-cat
+dd232	Editar registro	termino	lg-spa
+dd111	Página %s de %s	termino	lg-spa
+dd1704	View Statistics	termino	lg-eng
+dd181	state_map	termino	lg-spa
+dd150	Acabado	termino	lg-spa
+dd21	Maquetació	termino	lg-eng
+dd25	List	termino	lg-eng
+dd26	Proyect	termino	lg-eng
+dd29	Nom	termino	lg-cat
+dd30	Maquetació	termino	lg-cat
+dd20	Layout templates	termino	lg-eng
+dd33	Maquetación	termino	lg-spa
+dd33	Layout	termino	lg-eng
+dd38	Nombre	termino	lg-spa
+dd41	Listado	termino	lg-spa
+dd55	New	termino	lg-eng
+dd20	Plantillas de maquetació	termino	lg-cat
+dd67	Sección	termino	lg-spa
+dd1114	Ver ficha existente	termino	lg-spa
+dd1114	Veure fitxa existent	termino	lg-cat
+dd1114	View existing record	termino	lg-eng
+dd1742	component_array	termino	lg-spa
+dd1743	diffusion_element	termino	lg-spa
+dd1040	New empty template	termino	lg-eng
+dd1040	Nueva plantilla vacía	termino	lg-spa
+dd1040	Nova plantilla buida	termino	lg-cat
+dd71	Descripción	termino	lg-spa
+dd71	Descripció	termino	lg-cat
+dd71	Description	termino	lg-eng
+dd403	Atención	termino	lg-spa
+dd961	Nuevo Formato del original AV	termino	lg-spa
+dd963	matrix_dd	termino	lg-spa
+dd986	Valor de la lista	termino	lg-spa
+dd988	Listado de registros	termino	lg-spa
+dd989	Filtro	termino	lg-spa
+dd990	Nuevo estándar de color audiovisual	termino	lg-spa
+dd991	Borrar estándar de color audiovisual	termino	lg-spa
+dd995	Nueva Calidad de la cinta original	termino	lg-spa
+dd996	Entidad	termino	lg-spa
+dd997	Valor de la lista	termino	lg-spa
+dd998	Entidad	termino	lg-spa
+dd1015	updated records	termino	lg-eng
+dd999	Listado de entidades	termino	lg-spa
+dd1134	Proyecto	termino	lg-spa
+dd1017	component_input_text_large	termino	lg-spa
+dd1018	component_pdf	termino	lg-spa
+dd417	años	termino	lg-spa
+dd417	anys	termino	lg-cat
+dd417	years	termino	lg-eng
+dd429	component_relation_parent	termino	lg-spa
+dd430	Hacer copia de seguridad	termino	lg-spa
+dd418	dies	termino	lg-cat
+dd418	days	termino	lg-eng
+dd419	meses	termino	lg-spa
+dd419	mesos	termino	lg-cat
+dd419	months	termino	lg-eng
+dd1021	datos	termino	lg-spa
+dd1060	Y	termino	lg-spa
+dd1061	O	termino	lg-spa
+dd1021	data	termino	lg-eng
+dd1021	dades	termino	lg-cat
+dd1022	guardado	termino	lg-spa
+dd1022	saved	termino	lg-eng
+dd1022	guardat	termino	lg-cat
+dd1024	Difusion	termino	lg-spa
+dd1025	conditional_diffusion	termino	lg-spa
+dd60	Estadísticas	termino	lg-spa
+dd355	Πολιτιστικός	termino	lg-ell
+dd1113	εισαγωγή αρχείων	termino	lg-ell
+dd1028	component_stats	termino	lg-spa
+dd1029	stats_pie	termino	lg-spa
+dd1033	Seleccione un idioma de destino	termino	lg-spa
+dd1033	Please select one target lang	termino	lg-eng
+dd369	New	termino	lg-eng
+dd1034	Seleccione una etiqueta para indexar	termino	lg-spa
+dd1034	Select a tag to index	termino	lg-eng
+dd244	Admin. General	termino	lg-cat
+dd1035	Para crear un nuevo fragmento, simplemente seleccione una parte del texto y pulse «Nuevo fragmento» abajo	termino	lg-spa
+dd1035	To create a new fragment, simply select a text portion and click on the new button below	termino	lg-eng
+dd3	Difusión	termino	lg-spa
+dd5	diffusion	termino	lg-spa
+dd15	Indexaciones en el tesauro	termino	lg-spa
+dd17	diffusion_domain	termino	lg-spa
+dd19	diffusion_section	termino	lg-spa
+dd31	diffusion_head	termino	lg-spa
+dd37	diffusion_row	termino	lg-spa
+dd1036	Relación añadida	termino	lg-spa
+dd1036	Relation added	termino	lg-eng
+dd1036	Relació afegida	termino	lg-cat
+dd1041	diffusion_component	termino	lg-spa
+dd1056	stats_bar	termino	lg-spa
+dd1057	stats_line	termino	lg-spa
+dd1058	button_stats	termino	lg-spa
+dd59	diffusion_section_stats	termino	lg-spa
+dd63	Actividad	termino	lg-spa
+dd1075	Proyectos	termino	lg-spa
+dd1077	Duración	termino	lg-spa
+dd1078	Total	termino	lg-spa
+dd1079	Información	termino	lg-spa
+dd1080	Descarga	termino	lg-spa
+dd1081	Nueva versión	termino	lg-spa
+dd1046	Longitud	termino	lg-spa
+dd1045	Zoom	termino	lg-spa
+dd1082	Archivo subido con éxito	termino	lg-spa
+dd1083	El archivo subido excede la directiva upload_max_filesize en php.ini	termino	lg-spa
+dd1084	El archivo subido excede el tamaño máximo permitido	termino	lg-spa
+dd1085	El archivo subido fue sólo parcialmente cargado	termino	lg-spa
+dd1086	Ningún archivo fue subido	termino	lg-spa
+dd1087	Carpeta temporal no accesible	termino	lg-spa
+dd420	any	termino	lg-cat
+dd1088	No se pudo escribir el archivo en el disco	termino	lg-spa
+dd1089	Una extensión de PHP detuvo la carga de archivos	termino	lg-spa
+dd1090	Carga	termino	lg-spa
+dd1091	Recuperar componente	termino	lg-spa
+dd1092	Recuperar sección	termino	lg-spa
+dd1062	Contiene (estricto)	termino	lg-spa
+dd1064	No es igual que	termino	lg-spa
+dd1093	dato	termino	lg-spa
+dd1094	Carga completada	termino	lg-spa
+dd1095	Eliminar archivo	termino	lg-spa
+dd1097	Actividad horaria	termino	lg-spa
+dd1098	Estadísticas	termino	lg-spa
+dd1065	Mayor que	termino	lg-spa
+dd1063	Es igual que	termino	lg-spa
+dd66	component_geolocation	termino	lg-spa
+dd69	Actividades	termino	lg-spa
+dd1117	Tipología recurso	termino	lg-spa
+dd1118	Valor de la lista	termino	lg-spa
+dd1119	Tipología recurso	termino	lg-spa
+dd1122	Nueva tipología recurso	termino	lg-spa
+dd1123	Borrar tipología recurso	termino	lg-spa
+dd1126	Extensiones soportadas	termino	lg-spa
+dd1129	exclude_elements	termino	lg-spa
+dd1132	Colección / archivo	termino	lg-spa
+dd1133	Valor de la lista	termino	lg-spa
+dd1135	Colección / archivo	termino	lg-spa
+dd1136	List	termino	lg-spa
+dd237	Nom	termino	lg-cat
+dd1049	Crear subtítulos	termino	lg-spa
+dd137	Privadas	termino	lg-spa
+dd242	Inventari	termino	lg-cat
+dd355	Cultural	termino	lg-cat
+dd1002	Entidad	termino	lg-spa
+dd1020	Tipo de servicio	termino	lg-spa
+dd1020	Service type	termino	lg-eng
+dd1070	Dirección IP	termino	lg-spa
+dd1071	Quién	termino	lg-spa
+dd1072	Qué	termino	lg-spa
+dd1073	Dónde	termino	lg-spa
+dd1074	Cuándo	termino	lg-spa
+dd322	Patrimoni Moble	termino	lg-cat
+dd95	Búsqueda	termino	lg-spa
+dd498	Nou	termino	lg-cat
+dd323	Immaterial	termino	lg-cat
+dd166	Registros modificados	termino	lg-spa
+dd257	email	termino	lg-cat
+dd188	Eliminar imágenes tras la importación	termino	lg-spa
+dd1746	process	termino	lg-eng
+dd172	Qué	termino	lg-spa
+dd724	Qualitat	termino	lg-cat
+dd211	Filtro	termino	lg-spa
+dd874	Update cache	termino	lg-eng
+dd93	creado	termino	lg-spa
+dd94	por usuario	termino	lg-spa
+dd105	modificado	termino	lg-spa
+dd420	año	termino	lg-spa
+dd420	year	termino	lg-eng
+dd108	Idioma de destino	termino	lg-spa
+dd110	Contenido actual	termino	lg-spa
+dd112	Añadir ficheros	termino	lg-spa
+dd113	Comenzar la carga	termino	lg-spa
+dd114	Cancelar la carga	termino	lg-spa
+dd323	επουσιώδης	termino	lg-ell
+dd261	Δημιουργήστε βάρδιες επισκέψεις	termino	lg-ell
+dd273	διαγράφεται ετικέτες ευρετηρίαση δημιουργήθηκαν στην αρχή του κειμένου.	termino	lg-ell
+dd93	δημιουργήθηκε	termino	lg-ell
+dd115	Gestión de archivos	termino	lg-spa
+dd138	component_score	termino	lg-spa
+dd141	Histórico	termino	lg-spa
+dd145	Ahora	termino	lg-spa
+dd146	Aplicar y salvar	termino	lg-spa
+dd147	Componentes	termino	lg-spa
+dd152	Buscar	termino	lg-spa
+dd165	Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar proyectos autorizados a su usuario.	termino	lg-spa
+dd167	Proyecto	termino	lg-spa
+dd256	Contrasenya	termino	lg-cat
+dd168	Verifique que los datos de instalación son correctos. Si no lo son, configure la información relativa a la base de datos en las preferencias de Dédalo (config_db.php)	termino	lg-spa
+dd171	Dónde	termino	lg-spa
+dd1051	¿Seguro?	termino	lg-spa
+dd173	Registros creados	termino	lg-spa
+dd175	Directorio de destino	termino	lg-spa
+dd176	Nombre del fichero	termino	lg-spa
+dd187	Original	termino	lg-spa
+dd192	Nombre completo del fichero	termino	lg-spa
+dd209	Valor de la lista	termino	lg-spa
+dd212	Listado	termino	lg-spa
+dd213	Nueva Tipología de actividades	termino	lg-spa
+dd214	Borrar	termino	lg-spa
+dd215	Número de inventario	termino	lg-spa
+dd216	Número del recurso	termino	lg-spa
+dd217	extensión	termino	lg-spa
+dd218	Registros visualizados	termino	lg-spa
+dd219	Nombre automático	termino	lg-spa
+dd220	Tamaño del archivo	termino	lg-spa
+dd221	Formato incorrecto	termino	lg-spa
+dd222	Publicación	termino	lg-spa
+dd210	Exposición, Taller, Curso, Conferencia	def	lg-spa
+dd1709	Tiempo	termino	lg-spa
+dd407	Imagen info.	termino	lg-spa
+dd706	recuperar	termino	lg-cat
+dd707	registre	termino	lg-cat
+dd811	Valor de la lista	termino	lg-spa
+dd589	Només noves	termino	lg-cat
+dd812	Tipologia bibliográfica	termino	lg-spa
+dd815	Filtro	termino	lg-spa
+dd816	Listado	termino	lg-spa
+dd398	seccions	termino	lg-cat
+dd356	Natural	termino	lg-cat
+dd3	Difusió	termino	lg-cat
+dd810	Tipología de bibliografía	termino	lg-spa
+dd696	Entrada	termino	lg-cat
+dd1080	Descàrrega	termino	lg-cat
+dd1090	Càrrega	termino	lg-cat
+dd1094	Càrrega completada	termino	lg-cat
+dd1095	Eliminar arxiu	termino	lg-cat
+dd1097	Activitat horària	termino	lg-cat
+dd1098	Estadístiques	termino	lg-cat
+dd793	Màquina del temps	termino	lg-cat
+dd794	Transcripció	termino	lg-cat
+dd1082	Arxiu pujat amb èxit	termino	lg-cat
+dd255	Usuari	termino	lg-cat
+dd259	Accedir	termino	lg-cat
+dd402	No està autoritzat a veure aquest contingut	termino	lg-cat
+dd401	Està segur d'esborrar aquest registre?	termino	lg-cat
+dd388	Error de connexió. Recarregueu la pàgina passats uns segons	termino	lg-cat
+dd224	Filter	termino	lg-eng
+dd552	No s'han trobat registres	termino	lg-cat
+dd584	Està segur que vol sobre escriure el text?	termino	lg-cat
+dd874	Actualizar caché	termino	lg-spa
+dd738	El pes de l'arxiu és massa gran	termino	lg-cat
+dd742	Seleccione un fitxer	termino	lg-cat
+dd132	Usuari	termino	lg-cat
+dd133	Contrasenya	termino	lg-cat
+dd135	Observacions	termino	lg-cat
+dd825	existent	termino	lg-cat
+dd354	Patrimoni Artístic	termino	lg-cat
+dd182	Proceso general	termino	lg-spa
+dd189	Llistat	termino	lg-cat
+dd122	Procesando... por favor espere	termino	lg-spa
+dd901	List	termino	lg-eng
+dd1714	Image	termino	lg-eng
+dd271	Primera publicació	termino	lg-cat
+dd182	Procés general	termino	lg-cat
+dd202	Nou	termino	lg-cat
+dd697	Logout	termino	lg-eng
+dd698	Borrar	termino	lg-spa
+dd122	Processant ... si us plau espereu	termino	lg-cat
+dd65	Lloc en manteniment. Disculpeu les molèsties	termino	lg-cat
+dd342	tool_administrator	termino	lg-spa
+dd1715	Code	termino	lg-eng
+dd182	General process	termino	lg-eng
+dd139	Filtre	termino	lg-cat
+dd1716	Title	termino	lg-eng
+dd185	Proceso	termino	lg-spa
+dd140	Llistat	termino	lg-cat
+dd123	Ver / descargar PDF	termino	lg-spa
+dd1210	Projects	termino	lg-eng
+dd185	Process	termino	lg-cat
+dd142	Nou	termino	lg-cat
+dd94	χρήστη	termino	lg-ell
+dd106	Serie /nombre d'expedient	termino	lg-cat
+dd123	Veure / descarregar PDF	termino	lg-cat
+dd1208	Audiovisual	termino	lg-eng
+dd185	Process	termino	lg-eng
+dd127	Procés	termino	lg-cat
+dd123	View / download PDF	termino	lg-eng
+dd945	List	termino	lg-eng
+dd1209	Header	termino	lg-eng
+dd186	Filtro	termino	lg-spa
+dd203	Word processing processes	termino	lg-eng
+dd107	Substitueix dades del camp	termino	lg-cat
+dd107	Replace field data	termino	lg-eng
+dd106	Serie / Número de expedient	termino	lg-eng
+dd106	Serie / Número de expediente	termino	lg-spa
+dd263	Ir al perfil	termino	lg-cat
+dd1066	Tiene información	termino	lg-spa
+dd1066	Té informació	termino	lg-cat
+dd336	Update	termino	lg-eng
+dd337	Actualitzar estructura	termino	lg-cat
+dd1066	It has information	termino	lg-eng
+dd126	Expedient	termino	lg-cat
+dd51	Document	termino	lg-cat
+dd32	Maquetació	termino	lg-cat
+dd33	Maquetació	termino	lg-cat
+dd39	Maquetació	termino	lg-cat
+dd49	Projecte	termino	lg-cat
+dd1538	component_html_file	termino	lg-spa
+dd204	component_max_rows	termino	lg-spa
+dd86	It will delete the selected tag in all languages and all the relationships and indexing associated with it	termino	lg-eng
+dd68	List of values	termino	lg-eng
+dd86	Esborrarà l'etiqueta seleccionada en tots els idiomes així com totes les relacions i indexacions associades a ella	termino	lg-cat
+dd274	broken index tags was fixed.	termino	lg-eng
+dd1538	Componente experimental de momento.\nUsado para gestionar los fichero html generados por Dédalo, no del sistema, si no de información que necesita ser guardada en fichero independiente html 	obs	lg-spa
+dd549	List	termino	lg-eng
+dd1072	What	termino	lg-eng
+dd1073	Where	termino	lg-eng
+dd1074	When	termino	lg-eng
+dd1075	Projects	termino	lg-eng
+dd343	Borrar todo el componente de la sección	termino	lg-spa
+dd343	Delete all data of the component in section	termino	lg-eng
+dd1093	Data	termino	lg-eng
+dd550	Projects	termino	lg-eng
+dd550	Proyectos	termino	lg-spa
+dd1703	stats_bar_horizontal	termino	lg-spa
+dd1704	Estadísticas	termino	lg-spa
+dd1061	OR	termino	lg-eng
+dd885	Project	termino	lg-eng
+dd926	Project	termino	lg-eng
+dd946	Project	termino	lg-eng
+dd1134	Project	termino	lg-eng
+dd84	Publish	termino	lg-eng
+dd1065	Greater than	termino	lg-eng
+dd1062	Like (strict)	termino	lg-eng
+dd1064	No like	termino	lg-eng
+dd1710	Geolocalización	termino	lg-spa
+dd1710	Geolocalització	termino	lg-cat
+dd1711	Fecha o rango en formato  DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-spa
+dd1711	Data o rang en format DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-cat
+dd1711	Date o range with format DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-eng
+dd1712	Georeferenciació en format Longitud,Latitud ex. 39.46264,-0.37615	termino	lg-cat
+dd243	Transcripció automàtica	termino	lg-cat
+dd1712	Georeferenciación en formato Longitud,Latitud ex. 39.46264,-0.37615	termino	lg-spa
+dd1712	Geocoding in format longitude,latitude, ex. 39.46264,-0.37615	termino	lg-eng
+dd1713	Mapa	termino	lg-spa
+dd1713	Mapa	termino	lg-cat
+dd1713	Map	termino	lg-eng
+dd1212	Posterframe	termino	lg-eng
+dd189	Listado	termino	lg-spa
+dd886	List	termino	lg-eng
+dd1211	Code	termino	lg-eng
+dd202	Nuevo	termino	lg-spa
+dd226	List	termino	lg-eng
+dd1214	Title	termino	lg-eng
+dd223	Text processing	termino	lg-eng
+dd883	Professions	termino	lg-eng
+dd1216	Format	termino	lg-eng
+dd205	Process	termino	lg-eng
+dd1706	Imagen	termino	lg-spa
+dd1707	Cabecera	termino	lg-spa
+dd438	component_layout	termino	lg-spa
+dd440	box elements	termino	lg-spa
+dd573	Nou estat Cinta	termino	lg-cat
+dd473	Relaciones	termino	lg-spa
+dd473	Relations	termino	lg-eng
+dd474	Herramientas	termino	lg-spa
+dd474	Tools	termino	lg-eng
+dd1210	Projectos	termino	lg-spa
+dd79	component_external	termino	lg-spa
+dd811	Valor de la llista	termino	lg-cat
+dd574	Esborrar estat Cinta	termino	lg-cat
+dd344	Nueva página	termino	lg-spa
+dd208	Type of activities	termino	lg-eng
+dd104	επιλεγμένα	termino	lg-ell
+dd274	σπασμένα σελιδοδείκτες ήταν τοποθετημένα.	termino	lg-ell
+dd208	Tipología de actividades	termino	lg-spa
+dd839	DVD copy	termino	lg-eng
+dd889	Quality of content	termino	lg-eng
+dd692	Activity	termino	lg-eng
+dd1	Dédalo4	termino	lg-eng
+dd785	Tools	termino	lg-eng
+dd40	Difusió	termino	lg-cat
+dd78	Altres responsables	termino	lg-cat
+dd1308	Línea de investigación	termino	lg-spa
+dd1308	Línia d'investigació	termino	lg-cat
+dd1309	Valor de la lista	termino	lg-spa
+dd1310	Projecte	termino	lg-cat
+dd1321	Projecte	termino	lg-cat
+dd1311	Línea de investigación	termino	lg-spa
+dd1311	Línia d'investigació	termino	lg-cat
+dd1312	Listado	termino	lg-spa
+dd99	Procés	termino	lg-cat
+dd1313	Tipología de documento administrativo	termino	lg-spa
+dd1314	Valor de la lista	termino	lg-spa
+dd1310	Proyecto	termino	lg-spa
+dd1315	Tipología de documento administrativo	termino	lg-spa
+dd1316	Filtro	termino	lg-spa
+dd1317	Listado	termino	lg-spa
+dd1319	Valor de la lista	termino	lg-spa
+dd1095	Delete File	termino	lg-eng
+dd1081	New version	termino	lg-eng
+dd1091	Recover component	termino	lg-eng
+dd890	Quality of content	termino	lg-eng
+dd891	Quality	termino	lg-eng
+dd892	Filter	termino	lg-eng
+dd893	List	termino	lg-eng
+dd894	New Quality	termino	lg-eng
+dd895	Delete	termino	lg-eng
+dd1125	Geolocation	termino	lg-eng
+dd735	 Seleccione fotograma en el reproductor y pulse «CREAR POSTERFRAME» para crear un fotograma a partir del video	termino	lg-spa
+dd735	Select frame in player and click button "MAKE POSTERFRAME" to generate new posterframe image from video	termino	lg-eng
+dd383	Rótulos y mensajes del programa	def	lg-spa
+dd735	Select frame in player and click button "MAKE POSTERFRAME" to generate new posterframe image from video	def	lg-eng
+dd736	Crear	termino	lg-spa
+dd736	Make	termino	lg-eng
+dd737	Extensión no válida	termino	lg-spa
+dd737	\N	def	lg-spa
+dd737	Invalid extension	termino	lg-eng
+dd784	Id	termino	lg-spa
+dd451	Indexacions	termino	lg-cat
+dd451	Indexations	termino	lg-eng
+dd738	El tamaño de archivo es demasiado grande	termino	lg-spa
+dd738	File size is too big	def	lg-spa
+dd1019	Search operators	termino	lg-eng
+dd738	File size is too big	termino	lg-eng
+dd739	Seleccione el fichero a subir	termino	lg-spa
+dd739	Select a File to Upload	def	lg-spa
+dd1047	Latitud	termino	lg-spa
+dd739	Select a File to Upload	termino	lg-eng
+dd740	Fichero subido con éxito	termino	lg-spa
+dd740	File uploaded successfully	def	lg-spa
+dd825	existing	termino	lg-eng
+dd740	File uploaded successfully	termino	lg-eng
+dd741	Error al subir el archivo	termino	lg-spa
+dd1747	component_section_id	termino	lg-spa
+dd338	Generar estructura css	termino	lg-cat
+dd1044	Characters per line	termino	lg-eng
+dd1049	Build subtitles	termino	lg-eng
+dd1681	diffusion_murapa_web	termino	lg-spa
+dd383	\N	obs	lg-spa
+dd28	Delete layout	termino	lg-eng
+dd29	Name	termino	lg-eng
+dd56	Delete	termino	lg-eng
+dd513	Relation list	termino	lg-eng
+dd134	email	termino	lg-eng
+dd131	Active account	termino	lg-eng
+dd154	General information	termino	lg-eng
+dd81	Crear imagen identificativa	termino	lg-spa
+dd126	Expedient	termino	lg-eng
+dd345	Component tipo	termino	lg-eng
+dd346	Tipo de la sección	termino	lg-spa
+dd287	Save template	termino	lg-eng
+dd158	List of records	termino	lg-eng
+dd51	Document	termino	lg-eng
+dd265	Is descriptor	termino	lg-eng
+dd266	Relations	termino	lg-eng
+dd155	Project code	termino	lg-eng
+dd40	Diffusion	termino	lg-eng
+dd156	Project (name)	termino	lg-eng
+dd157	Typology	termino	lg-eng
+dd78	Otros responsables	termino	lg-spa
+dd78	Others responsible	termino	lg-eng
+dd53	Person responsible for the project	termino	lg-eng
+dd54	Research line	termino	lg-eng
+dd361	Permissions	termino	lg-eng
+dd240	Access to areas	termino	lg-eng
+dd244	General administrator	termino	lg-eng
+dd1085	The uploaded file was only partially uploaded	termino	lg-eng
+dd1709	Temps	termino	lg-cat
+dd1086	No file was uploaded	termino	lg-eng
+dd1087	Temporary folder not accessible	termino	lg-eng
+dd370	Borrar	termino	lg-spa
+dd365	Estados civiles	termino	lg-spa
+dd465	Find	termino	lg-eng
+dd366	Estado civil	termino	lg-spa
+dd367	Estado civil	termino	lg-spa
+dd1088	Failed to write file to disk	termino	lg-eng
+dd105	τροποποιημένα	termino	lg-ell
+dd275	Παρακαλώ ελέγξτε τη θέση των μπλε ετικέτες (διαγραφεί κατά λάθος)	termino	lg-ell
+dd1089	A PHP extension stopped the file upload	termino	lg-eng
+dd236	General	termino	lg-eng
+dd235	New Profile	termino	lg-eng
+dd238	Description	termino	lg-eng
+dd249	Area	termino	lg-eng
+dd249	Área	termino	lg-spa
+dd774	Permissions	termino	lg-eng
+dd1318	Typology of project	termino	lg-eng
+dd1320	Typology of project	termino	lg-eng
+dd996	Entity	termino	lg-eng
+dd1132	Collection / archive	termino	lg-eng
+dd1135	Collection / archive	termino	lg-eng
+dd1196	New Collection / archive	termino	lg-eng
+dd942	Type of association / group	termino	lg-eng
+dd944	Type of association / group	termino	lg-eng
+dd256	Password	termino	lg-eng
+dd947	New Type of association / group	termino	lg-eng
+dd922	Labor Category / Title	termino	lg-eng
+dd924	Labor Category / Title	termino	lg-eng
+dd825	existente	termino	lg-spa
+dd1092	Recover section	termino	lg-eng
+dd229	Login	termino	lg-eng
+dd1701	Portal	termino	lg-spa
+dd62	yes/no	termino	lg-eng
+dd410	Filter	termino	lg-eng
+dd77	Minor than	termino	lg-eng
+dd999	Entities list	termino	lg-eng
+dd87	Has no information	termino	lg-eng
+dd1	Dédalo4	termino	lg-cat
+dd117	root	termino	lg-spa
+dd1309	Valor de la llista	termino	lg-cat
+dd1319	Valor de la llista	termino	lg-cat
+dd1320	Tipologia de projecte	termino	lg-cat
+dd924	Categoria laboral / Càrrec	termino	lg-cat
+dd1312	Llistat	termino	lg-cat
+dd1322	Llistat	termino	lg-cat
+dd102	area_activity	termino	lg-spa
+dd104	seleccionado	termino	lg-spa
+dd14	Baliabideak	termino	lg-eus
+dd207	Administrazioa	termino	lg-eus
+dd131	Kontu aktiboa	termino	lg-eus
+dd132	Erabiltzailea	termino	lg-eus
+dd133	Pasahitza	termino	lg-eus
+dd134	email-a	termino	lg-eus
+dd135	Behaketak	termino	lg-eus
+dd62	Sí / No	termino	lg-cat
+dd1710	Geolocation	termino	lg-eng
+dd330	Id	termino	lg-eng
+dd1063	Is equal than	termino	lg-eng
+dd1060	&	termino	lg-eng
+dd1309	Value in the list	termino	lg-eng
+dd1319	Value in the list	termino	lg-eng
+dd1701	Portal	termino	lg-eng
+dd1701	Portal	termino	lg-cat
+dd1702	Importar imatges	termino	lg-cat
+dd1744	Por favor, indexe desde una sección de inventario (ej. Historia Oral) y no desde un  recurso	termino	lg-spa
+dd368	Listado	termino	lg-spa
+dd369	Nuevo	termino	lg-spa
+dd1744	Please, index from a section of inventory (eg. Oral History) and not from a resource	termino	lg-eng
+dd86	Borrará la etiqueta seleccionada en todos los idiomas así como todas la relaciones e indexaciones asociadas a ella	termino	lg-spa
+dd495	¿Eliminar etiqueta?	termino	lg-spa
+dd495	Eliminar etiqueta?	termino	lg-cat
+dd495	Delete label?	termino	lg-eng
+dd85	Operadores	termino	lg-spa
+dd1745	Nombre	termino	lg-spa
+dd1745	Nom	termino	lg-cat
+dd1745	Name	termino	lg-eng
+dd472	Nueva página fija	termino	lg-spa
+dd472	New fixed page	termino	lg-eng
+dd344	Nova pàgina	termino	lg-cat
+dd370	Delete	termino	lg-eng
+dd328	Nova pàgina fluïda	termino	lg-cat
+dd328	New fluid page	termino	lg-eng
+dd472	Nova pàgina fixa	termino	lg-cat
+dd469	Tipos de vías	termino	lg-spa
+dd344	New page	termino	lg-eng
+dd287	Salvar plantilla	termino	lg-spa
+dd287	Salvar plantilla	termino	lg-cat
+dd496	Imprimir	termino	lg-spa
+dd496	Imprimir	termino	lg-cat
+dd496	Print	termino	lg-eng
+dd906	Tool imprimir	termino	lg-spa
+dd384	Editar plantilla	termino	lg-spa
+dd254	Delete user	termino	lg-eng
+dd166	τροποποιημένα αρχεία	termino	lg-ell
+dd282	κεφαλίδα μορφή	termino	lg-ell
+dd167	σχέδιο	termino	lg-ell
+dd283	Μέσων φόντο επεξεργασία (ποιότητα: %s ). Αυτή η διαδικασία μπορεί να διαρκέσει, αλλά μπορεί να συνεχίσει να εργάζεται.	termino	lg-ell
+dd172	τι	termino	lg-ell
+dd284	Αρχείο BibTex σωστή επεξεργασία	termino	lg-ell
+dd171	όπου	termino	lg-ell
+dd285	Προσθέστε το αρχείο BibTeX και τα αντίστοιχα αρχεία PDF από το σκληρό σας δίσκο. Μόλις φορτωθεί, επιλέξτε 'Εισαγωγή αρχείων »	termino	lg-ell
+dd941	Añada el fichero JSON de Zotero y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'	termino	lg-spa
+dd371	Proyecto	termino	lg-spa
+dd1002	Entity	termino	lg-eng
+dd196	Section info	termino	lg-eng
+dd178	Zotero file processed successfully	termino	lg-eng
+dd178	Fichero de Zotero procesado correctamente	termino	lg-spa
+dd212	Llistat	termino	lg-cat
+dd222	CMS for web general use	def	lg-spa
+dd3	Root of the diffusion architecture	def	lg-spa
+dd3	Diffusion	termino	lg-eng
+dd1113	importar fitxers	termino	lg-cat
+dd1113	import files	termino	lg-eng
+dd941	Add the Zotero JSON file and the corresponding PDF files from your hard drive. Once loaded, select 'Import files'	termino	lg-eng
+dd70	Estadísticas por sección	termino	lg-spa
+dd43	component_number	termino	lg-spa
+dd1051	You Sure?	termino	lg-eng
+dd966	Esborrar Format de l'original AV	termino	lg-cat
+dd977	Valor de la llista	termino	lg-cat
+dd978	Relació d'aspecte	termino	lg-cat
+dd983	Filtre	termino	lg-cat
+dd979	Llistat de registres	termino	lg-cat
+dd980	Nova relació d'aspecte	termino	lg-cat
+dd981	Esborrar relació d'aspecte	termino	lg-cat
+dd810	Tipologia de bibliografia	termino	lg-cat
+dd879	Valor de la llista	termino	lg-cat
+dd208	Tipologia d'activitats	termino	lg-cat
+dd876	Qualitat de la cinta original	termino	lg-cat
+dd833	Difusió	termino	lg-cat
+dd877	Filtre	termino	lg-cat
+dd839	Còpia DVD	termino	lg-cat
+dd880	Esborrar qualitat de la cinta original	termino	lg-cat
+dd861	Gànere	termino	lg-cat
+dd995	Nova qualitat de la cinta original	termino	lg-cat
+dd889	Qualitat del contingut	termino	lg-cat
+dd878	Llistat	termino	lg-cat
+dd911	Tipologia de persones	termino	lg-cat
+dd119	Replace values	termino	lg-eng
+dd1314	Valor de la llista	termino	lg-cat
+dd957	Format de l'original AV	termino	lg-cat
+dd1315	Tipologia de document administratiu	termino	lg-cat
+dd976	Relació aspecte	termino	lg-cat
+dd1316	Filtre	termino	lg-cat
+dd875	Qualitat de la cinta original	termino	lg-cat
+dd964	Nou	termino	lg-cat
+dd1313	Tipologia de document administratiu	termino	lg-cat
+dd328	Nueva página fluida	termino	lg-spa
+dd321	Patrimoni Immoble	termino	lg-cat
+dd235	Nuevo perfil	termino	lg-spa
+dd812	Tipologia bibliogràfica	termino	lg-cat
+dd571	Llistat	termino	lg-cat
+dd498	Nuevo	termino	lg-spa
+dd500	component_iri	termino	lg-spa
+dd815	Filtre	termino	lg-cat
+dd986	Valor de la llista	termino	lg-cat
+dd521	fragmento	termino	lg-spa
+dd521	fragment	termino	lg-eng
+dd524	search_list	termino	lg-spa
+dd526	section_group_relation	termino	lg-spa
+dd530	component_autocomplete	termino	lg-spa
+dd816	Llistat	termino	lg-cat
+dd613	New	termino	lg-eng
+dd695	New	termino	lg-eng
+dd987	Estàndard del Color Audivosiual	termino	lg-cat
+dd542	Actividad	termino	lg-spa
+dd543	Quién	termino	lg-spa
+dd209	Valor de la llista	termino	lg-cat
+dd989	Filtre	termino	lg-cat
+dd545	Qué	termino	lg-spa
+dd546	Dónde	termino	lg-spa
+dd547	Cuándo	termino	lg-spa
+dd548	General	termino	lg-spa
+dd549	section list	termino	lg-spa
+dd551	Dato	termino	lg-spa
+dd552	No se encontraron registros	termino	lg-spa
+dd552	No records found	termino	lg-eng
+dd210	Tipologia d'activitat	termino	lg-cat
+dd990	Nou estàndard de color audiovisual	termino	lg-cat
+dd567	Estado Cinta	termino	lg-spa
+dd568	 Valor de la lista	termino	lg-spa
+dd569	Filtro	termino	lg-spa
+dd570	Estado Cinta	termino	lg-spa
+dd571	List	termino	lg-spa
+dd173	αρχεία που δημιουργήθηκαν	termino	lg-ell
+dd286	ενεργά στοιχεία	termino	lg-ell
+dd584	¿Está seguro de sobrescribir el texto?	termino	lg-spa
+dd573	Nuevo estado Cinta	termino	lg-spa
+dd210	Tipología de actividad	termino	lg-spa
+dd988	Llistat de registres	termino	lg-cat
+dd574	Borrar estado Cinta	termino	lg-spa
+dd135	Observations	termino	lg-eng
+dd257	Email	termino	lg-eng
+dd397	Tornar	termino	lg-cat
+dd387	Eixir	termino	lg-cat
+dd211	Filtre	termino	lg-cat
+dd991	Esborrar estàndard de color audiovisual	termino	lg-cat
+dd582	Seleccionar texto	termino	lg-spa
+dd582	Select text	termino	lg-eng
+dd583	Traducción automática	termino	lg-spa
+dd583	Automatic translation	termino	lg-eng
+dd693	Llistat	termino	lg-cat
+dd584	Are you sure of overwrite the text?	termino	lg-eng
+dd586	Copy to target	termino	lg-eng
+dd587	Propagar marcas	termino	lg-spa
+dd587	Propagate marks	termino	lg-eng
+dd213	Nova Tipologia d'activitats	termino	lg-cat
+dd588	Total párrafos	termino	lg-spa
+dd588	Total paragraphs	termino	lg-eng
+dd1121	Filtro	termino	lg-spa
+dd81	Create identifying image	termino	lg-eng
+dd589	New only	termino	lg-eng
+dd590	Recrear todas	termino	lg-spa
+dd590	Recreate all	termino	lg-eng
+dd214	Esborrar	termino	lg-cat
+dd592	component_portal	termino	lg-spa
+dd25	Lista	termino	lg-spa
+dd544	Dirección IP	termino	lg-spa
+dd834	Valor de la llista	termino	lg-cat
+dd694	Edit	termino	lg-eng
+dd696	Login	termino	lg-eng
+dd852	Impresión	termino	lg-spa
+dd1702	Importar imágenes	termino	lg-spa
+dd835	Sí / No / Restringit	termino	lg-cat
+dd610	Elementos / Procesos (section_group_portal)	termino	lg-spa
+dd613	Nuevo	termino	lg-spa
+dd836	Filtre	termino	lg-cat
+dd618	si	termino	lg-spa
+dd618	yes	termino	lg-eng
+dd619	no	termino	lg-spa
+dd619	no	termino	lg-eng
+dd837	Llistat de registres	termino	lg-cat
+dd626	matrix_table	termino	lg-spa
+dd627	Matrix tables	termino	lg-spa
+dd628	matrix_activity	termino	lg-spa
+dd549	section list	termino	lg-spa
+dd633	component_ip	termino	lg-spa
+dd838	Nou estat de difusió	termino	lg-cat
+dd634	component_autocomplete_ts	termino	lg-spa
+dd635	component_date	termino	lg-spa
+dd636	Locators	termino	lg-spa
+dd638	locator	termino	lg-spa
+dd639	locator_section_activity	termino	lg-spa
+dd862	Valor de la llista	termino	lg-cat
+dd864	Filtre	termino	lg-cat
+dd925	Llistat de categoria laboral / Càrrec	termino	lg-cat
+dd865	Llistat de registres	termino	lg-cat
+dd884	Professió	termino	lg-cat
+dd866	Nou sexe	termino	lg-cat
+dd863	Home / Dona	termino	lg-cat
+dd100	Tesaurus	termino	lg-cat
+dd840	Valor de la llista	termino	lg-cat
+dd842	Filtre	termino	lg-cat
+dd452	nom complet	termino	lg-cat
+dd843	Llistat	termino	lg-cat
+dd1725	Perfil d'usuari	termino	lg-cat
+dd844	Nou estat de la còpia DVD	termino	lg-cat
+dd154	Informació general	termino	lg-cat
+dd841	No realitzada / Realitzada / Lliurada	termino	lg-cat
+dd54	Línia d'investigació	termino	lg-cat
+dd890	Valor de la llista	termino	lg-cat
+dd891	Qualitat	termino	lg-cat
+dd137	Privades	termino	lg-cat
+dd892	Filtre	termino	lg-cat
+dd893	Llistat de registres	termino	lg-cat
+dd64	Sí / No	termino	lg-cat
+dd894	Nova qualitat	termino	lg-cat
+dd746	Reload	termino	lg-eng
+dd190	Valor de la llista	termino	lg-cat
+dd895	Esborrar qualitat	termino	lg-cat
+dd16		def	lg-spa
+dd695	Nuevo	termino	lg-spa
+dd912	Valor de la llista	termino	lg-cat
+dd372	Partidos políticos	termino	lg-spa
+dd373	Partido político	termino	lg-spa
+dd424	Esta jerarquía no está activa y no se puede generar	termino	lg-spa
+dd696	Entrada	termino	lg-spa
+dd374	Siglas	termino	lg-spa
+dd47	Padre	termino	lg-spa
+dd48	Hijo	termino	lg-spa
+dd755	Tecla	termino	lg-spa
+dd410	Filtre	termino	lg-cat
+dd914	Tipologia de persones	termino	lg-cat
+dd191	Llistat de registres	termino	lg-cat
+dd151	Enlace	termino	lg-spa
+dd92	Entre (A...B)	termino	lg-spa
+dd914	Tipología de personas	termino	lg-spa
+dd699	Búsqueda	termino	lg-spa
+dd699	Search	termino	lg-eng
+dd700	Guardar	termino	lg-spa
+dd700	Save	termino	lg-eng
+dd175	Κατάλογο προορισμού	termino	lg-ell
+dd288	απενεργοποιείται στοιχεία	termino	lg-ell
+dd191	Listado de registros	termino	lg-spa
+dd915	Llistat de registres	termino	lg-cat
+dd916	Nova tipologia	termino	lg-cat
+dd958	Valor de la llista	termino	lg-cat
+dd694	Edició	termino	lg-cat
+dd959	Format de l'original AV	termino	lg-cat
+dd694	\n	def	lg-cat
+dd695	Nou	termino	lg-cat
+dd469	Tipus de via	termino	lg-cat
+dd697	Eixida	termino	lg-cat
+dd698	Eliminar	termino	lg-cat
+dd982	Filtre	termino	lg-cat
+dd960	Llistat de registres	termino	lg-cat
+dd35	Procesos	termino	lg-spa
+dd36	area_publication	termino	lg-spa
+dd40	Difusión	termino	lg-spa
+dd92	Entre (A...B)	termino	lg-spa
+dd77	Menor que	termino	lg-spa
+dd72	operator_root	termino	lg-spa
+dd91	section_list	termino	lg-spa
+dd126	Expediente	termino	lg-spa
+dd128	Usuarios	termino	lg-spa
+dd961	Nou Format de l'original AV	termino	lg-cat
+dd153	Proyectos	termino	lg-spa
+dd163	component_filter_master	termino	lg-spa
+dd743	Leaving this page you will lose unsaved data	def	lg-spa
+dd550	Proyectos (actividad)	termino	lg-spa
+dd692	Actividad	termino	lg-spa
+dd692	Activity	termino	lg-spa
+dd693	Listado	termino	lg-spa
+dd693	List	termino	lg-eng
+dd694	Edición	termino	lg-spa
+dd697	Salida	termino	lg-spa
+dd1001	Id	termino	lg-cat
+dd148	Permisos de lectura/escritura	termino	lg-spa
+dd149	component_security_access	termino	lg-spa
+dd154	Información general	termino	lg-spa
+dd155	Código del proyecto	termino	lg-spa
+dd488	Información del fichero	termino	lg-spa
+dd156	Proyecto (nombre)	termino	lg-spa
+dd157	Tipología	termino	lg-spa
+dd488	Informació del fitxer	termino	lg-cat
+dd158	Lista de registros	termino	lg-spa
+dd488	File information	termino	lg-eng
+dd170	Proyectos	termino	lg-spa
+dd177	button_new	termino	lg-spa
+dd375	Nombre	termino	lg-spa
+dd206	relation_type	termino	lg-spa
+dd39	Maquetación	termino	lg-spa
+dd21	Maquetación	termino	lg-spa
+dd23	Maquetación	termino	lg-spa
+dd26	proyecto	termino	lg-spa
+dd25	Lista	termino	lg-spa
+dd27	Nuevo	termino	lg-spa
+dd28	Borrar maquetación	termino	lg-spa
+dd29	Nombre	termino	lg-spa
+dd30	Maquetación	termino	lg-spa
+dd32	Maquetación	termino	lg-spa
+dd61	Sección	termino	lg-spa
+dd49	Proyecto	termino	lg-spa
+dd55	Nuevo	termino	lg-spa
+dd1746	processar	termino	lg-cat
+dd20	Plantillas de maquetación	termino	lg-spa
+dd56	Borrar	termino	lg-spa
+dd179	Nuevo usuario	termino	lg-spa
+dd184	Calendario	termino	lg-spa
+dd180	Nuevo proyecto	termino	lg-spa
+dd323	Inmaterial	termino	lg-spa
+dd1	\N	def	lg-spa
+dd183	button_delete	termino	lg-spa
+dd190	Valor de la lista	termino	lg-spa
+dd193	Herramientas	termino	lg-spa
+dd218	εμφανίζονται τα αρχεία	termino	lg-ell
+dd289	εξαγωγή	termino	lg-ell
+dd194	tools	termino	lg-spa
+dd195	tools_search	termino	lg-spa
+dd198	button_search	termino	lg-spa
+dd87	No tiene información	termino	lg-spa
+dd207	Administración	termino	lg-spa
+dd225	component_password	termino	lg-spa
+dd227	component_email	termino	lg-spa
+dd229	Inicio de sesión	termino	lg-spa
+dd230	login	termino	lg-spa
+dd231	area_admin	termino	lg-spa
+dd376	Año de fundación	termino	lg-spa
+dd234	Perfiles	termino	lg-spa
+dd236	General	termino	lg-spa
+dd237	Nombre	termino	lg-spa
+dd238	Descripción	termino	lg-spa
+dd92	Between (A...B)	termino	lg-eng
+dd240	Acceso a áreas	termino	lg-spa
+dd241	component_security_areas	termino	lg-spa
+dd242	Inventario	termino	lg-spa
+dd244	Admin. General	termino	lg-spa
+dd247	component_filter	termino	lg-spa
+dd453	Index info	termino	lg-cat
+dd398	τμήματα	termino	lg-ell
+dd290	κατεβάσετε	termino	lg-ell
+dd252	component_security_administrator	termino	lg-spa
+dd776	τμήμα	termino	lg-ell
+dd291	Για να διατηρήσετε τις αλλαγές, δεν κλείσετε αυτό το παράθυρο. Συνδεθείτε με άλλο παράθυρο του browser και στη συνέχεια να επιστρέψει σε αυτό το παράθυρο και να αποθηκεύσετε το περιεχόμενο (πατώντας το κουμπί «Αποθήκευση»)	termino	lg-ell
+dd254	Borrar usuarios	termino	lg-spa
+dd257	Email	termino	lg-spa
+dd377	Listado	termino	lg-spa
+dd303	relation_root	termino	lg-spa
+dd259	Entrar	termino	lg-spa
+dd260	button_send	termino	lg-spa
+dd262	button_login	termino	lg-spa
+dd269	login_username	termino	lg-spa
+dd270	component_active_account	termino	lg-spa
+dd259	Enter	termino	lg-eng
+dd132	Username	termino	lg-eng
+dd133	Password	termino	lg-eng
+dd207	System administration	termino	lg-eng
+dd128	Users	termino	lg-eng
+dd153	Projects	termino	lg-eng
+dd169	Dependiente de	termino	lg-spa
+dd179	New user	termino	lg-eng
+dd129	General information	termino	lg-eng
+dd130	Rows list	termino	lg-eng
+dd14	Resources	termino	lg-eng
+dd302	component_project_langs	termino	lg-spa
+dd305	component_eval_code	termino	lg-spa
+dd23	Maquetació	termino	lg-eng
+dd27	New	termino	lg-eng
+dd61	Section	termino	lg-eng
+dd794	Transcription	termino	lg-eng
+dd109	Se reemplazará el contenido del campo: %1$s en los %2$s registros actuales con el valor: %3$s para el idioma: %4$s	termino	lg-spa
+dd308	desactivo	termino	lg-spa
+dd318	component_html_text	termino	lg-spa
+dd1048	Importar de Zotero	termino	lg-spa
+dd100	Tesauro	termino	lg-spa
+dd793	Time machine	termino	lg-eng
+dd320	Patrimonio Natural	termino	lg-spa
+dd321	Patrimonio Inmueble	termino	lg-spa
+dd322	Patrimonio Mueble	termino	lg-spa
+dd197	Modificado por usuario	termino	lg-spa
+dd199	Fecha de creación	termino	lg-spa
+dd200	Creado por usuario	termino	lg-spa
+dd271	Primera publicación	termino	lg-spa
+dd264	ejemplos	termino	lg-spa
+dd706	ανάκτηση	termino	lg-ell
+dd326	Εισαγωγής BibTex	termino	lg-ell
+dd371	Project	termino	lg-eng
+dd2	\N	def	lg-spa
+dd1	\N	def	lg-eng
+dd707	εγγραφή	termino	lg-ell
+dd319	μεταγραφή	termino	lg-ell
+dd341	area_root	termino	lg-spa
+dd724	ποιότητα	termino	lg-ell
+dd325	Ταχύτητα αναπαραγωγής	termino	lg-ell
+dd349	Material	termino	lg-spa
+dd725	αρχείο	termino	lg-ell
+dd354	Patrimonio Artístico	termino	lg-spa
+dd355	Cultural	termino	lg-spa
+dd356	Natural	termino	lg-spa
+dd372	Political parties	termino	lg-eng
+dd741	Error on upload file	termino	lg-eng
+dd742	Seleccione un fichero	termino	lg-spa
+dd7	dedalo	termino	lg-spa
+dd742	You must select a file	termino	lg-eng
+dd743	Abandonando esta página perderá los datos que no haya salvado	termino	lg-spa
+dd453	Index info	termino	lg-eng
+dd743	Leaving this page you will lose unsaved data	termino	lg-eng
+dd743	Abandonant aquesta pàgina vostè perdrà les dades no salvats	termino	lg-cat
+dd744	El directorio no existe o no es accesible	termino	lg-spa
+dd744	The directory does not exist or is not accessible	termino	lg-eng
+dd745	Cerrar	termino	lg-spa
+dd745	Close	termino	lg-eng
+dd746	Recargar	termino	lg-spa
+dd747	Por favor espere..	termino	lg-spa
+dd747	Please wait..	termino	lg-eng
+dd741	Error al pujar el fitxer!	termino	lg-cat
+dd748	Carga de archivo completada	termino	lg-spa
+dd748	Upload complete	termino	lg-eng
+dd109	Se reemplazará el contenido del campo: %1$s en los %2$s registros actuales, con el valor: %3$s para el idioma: %4$s\n\nWill be replaced the field content : %1$s in %2$s current records, with the value: %3$s in the current lang: %3$s\n\nEs reemplaçarà el contingut del camp: %1$s en els %2$s registres trobats actuals, amb el valor: %3$s en l'idioma: %4$s	obs	lg-spa
+dd1015	registros actualizados	termino	lg-spa
+dd749	component_image	termino	lg-spa
+dd184	Calendar	termino	lg-eng
+dd753	Insertar	termino	lg-spa
+dd753	Insert	termino	lg-eng
+dd754	Acción	termino	lg-spa
+dd754	Action	termino	lg-eng
+dd755	keyboard key	termino	lg-eng
+dd756	Abrir	termino	lg-spa
+dd756	Open	termino	lg-eng
+dd757	Herramienta	termino	lg-spa
+dd757	Tool	termino	lg-eng
+dd758	Visualizar	termino	lg-spa
+dd758	View	termino	lg-eng
+dd759	Rotar	termino	lg-spa
+dd759	Rotate	termino	lg-eng
+dd760	imagen	termino	lg-spa
+dd760	image	termino	lg-eng
+dd761	Cancelar	termino	lg-spa
+dd761	Cancel	termino	lg-eng
+dd762	Borrar sólo datos	termino	lg-spa
+dd762	Delete only data	termino	lg-eng
+dd763	Borrar registro completo	termino	lg-spa
+dd763	Delete data and record	termino	lg-eng
+dd764	indexación	termino	lg-spa
+dd764	indexation	termino	lg-eng
+dd765	indexaciones	termino	lg-spa
+dd765	indexings	termino	lg-eng
+dd766	descriptores	termino	lg-spa
+dd766	descriptors	termino	lg-eng
+dd775	etiqueta	termino	lg-spa
+dd775	tag	termino	lg-eng
+dd776	sección	termino	lg-spa
+dd776	section	termino	lg-eng
+dd777	tesauro	termino	lg-spa
+dd777	thesaurus	termino	lg-eng
+dd777	tesaure	termino	lg-cat
+dd778	ficha	termino	lg-spa
+dd778	record	termino	lg-eng
+dd778	fitxa	termino	lg-cat
+dd779	estado	termino	lg-spa
+dd779	state	termino	lg-eng
+dd779	estat	termino	lg-cat
+dd780	Relacionar fragmento seleccionado	termino	lg-spa
+dd780	Relate selected fragment	termino	lg-eng
+dd780	Relacionar fragment seleccionat	termino	lg-cat
+dd781	Crear nuevo fragmento con selección	termino	lg-spa
+dd781	Create new fragment with the selection	termino	lg-eng
+dd781	Crear nou fragment amb la selecció	termino	lg-cat
+dd783	component_security_tools	termino	lg-spa
+dd266	Relaciones	termino	lg-spa
+dd785	Tools	termino	lg-spa
+dd786	Ficheros de audio/video	termino	lg-spa
+dd787	Ficheros de imagen	termino	lg-spa
+dd788	Carga de archivos	termino	lg-spa
+dd788	Upload files	termino	lg-eng
+dd789	Indexación	termino	lg-spa
+dd789	Indexation	termino	lg-eng
+dd790	Lenguaje	termino	lg-spa
+dd784	Id	termino	lg-eng
+dd784		def	lg-spa
+dd790	Language	termino	lg-eng
+dd791	Fotograma	termino	lg-spa
+dd791	Posterframe	termino	lg-eng
+dd792	Relaciones	termino	lg-spa
+dd792	Relations	termino	lg-eng
+dd793	Máquina del tiempo	termino	lg-spa
+dd794	Transcripción	termino	lg-spa
+dd803	completo	termino	lg-spa
+dd803	full	termino	lg-eng
+dd803	complet	termino	lg-cat
+dd804	modo	termino	lg-spa
+dd804	mode	termino	lg-cat
+dd726	μέγεθος	termino	lg-ell
+dd794	μεταγραφή	termino	lg-ell
+dd727	κατεβάσετε	termino	lg-ell
+dd327	Υπότιτλοι	termino	lg-ell
+dd804	mode	termino	lg-eng
+dd827	recurso	termino	lg-spa
+dd827	recurs	termino	lg-cat
+dd827	resource	termino	lg-eng
+dd830	Borrar sólo el vínculo	termino	lg-spa
+dd830	Delete only link	termino	lg-eng
+dd831	Borrar el recurso y todos sus vínculos	termino	lg-spa
+dd831	Delete resource and all links	termino	lg-eng
+dd833	Difusión	termino	lg-spa
+dd834	Valor de la lista	termino	lg-spa
+dd835	si/no/restringido	termino	lg-spa
+dd836	Filtro	termino	lg-spa
+dd838	Nuevo estado de difusión	termino	lg-spa
+dd839	Copia DVD	termino	lg-spa
+dd373	Politic party	termino	lg-eng
+dd840	Valor de la lista	termino	lg-spa
+dd841	No realizada/Realizada/Entregada	termino	lg-spa
+dd218	Registres visualitzats	termino	lg-cat
+dd166	Registres modificats	termino	lg-cat
+dd166	Modified records	termino	lg-eng
+dd167	Projecte	termino	lg-cat
+dd167	Project	termino	lg-eng
+dd171	A on	termino	lg-cat
+dd728	upload αρχείου	termino	lg-ell
+dd331	Play κουμπί / παύσης	termino	lg-ell
+dd374	Acronym	termino	lg-eng
+dd171	Where	termino	lg-eng
+dd172	Què	termino	lg-cat
+dd172	What	termino	lg-eng
+dd173	Registres creats	termino	lg-cat
+dd280	y guarde el texto	termino	lg-spa
+dd280	and saved text	termino	lg-eng
+dd280	i guarde el text	termino	lg-cat
+dd281	Etiquetas perdidas	termino	lg-spa
+dd281	Missing tags	termino	lg-eng
+dd281	Etiquetes perdudes	termino	lg-cat
+dd53	Persona responsable del proyecto	termino	lg-spa
+dd1049	Crear subtítols	termino	lg-cat
+dd282	Conformar capçaleres	termino	lg-cat
+dd282	Conform headers	termino	lg-eng
+dd283	Procesando media en segundo plano (calidad: %s). Este proceso puede tardar, pero puede continuar trabajando.	termino	lg-spa
+dd283	Processing background media (quality:% s). This may take a while, but you can continue working.	termino	lg-eng
+dd283	Processant el material en segon pla (qualitat:% és). Aquest procés pot portar un temps, però vostè pot continuar treballant.	termino	lg-cat
+dd288	elementos desactivos	termino	lg-spa
+dd404	Nuevo	termino	lg-spa
+dd405	Borrar	termino	lg-spa
+dd291	Para conservar los cambios, NO CIERRE ESTA VENTANA. Inicie sesión en otra ventana del navegador y, a continuación, vuelva a esta ventana y guarde el contenido (presionando el botón 'Guardar')	termino	lg-spa
+dd288	elements desactius	termino	lg-cat
+dd291	To keep the changes, DO NOT CLOSE THIS WINDOW. Log on to another browser window and then return to this window and save the content (pressing the 'Save' button)	termino	lg-eng
+dd53	Persona responsable del projecte	termino	lg-cat
+dd291	Per conservar els canvis, NO TANQUI AQUESTA FINESTRA. Inicieu sessió en una altra finestra del navegador i, a continuació, torneu a aquesta finestra i guardi el contingut (prement el botó 'Guardar')	termino	lg-cat
+dd782	Filters	termino	lg-eng
+dd289	Exportar	termino	lg-spa
+dd289	Exportar	termino	lg-cat
+dd289	Export	termino	lg-eng
+dd292	Tipología de número normalizado	termino	lg-spa
+dd290	descargar	termino	lg-spa
+dd292	Tipologia de nombre normalitzat	termino	lg-cat
+dd290	descarregar	termino	lg-cat
+dd292	Type of standard number	termino	lg-eng
+dd290	download	termino	lg-eng
+dd293	Tipología de número normalizado	termino	lg-spa
+dd294	Proyecto	termino	lg-spa
+dd295	Listado	termino	lg-spa
+dd296	Tipología de número normalizado	termino	lg-spa
+dd297	Nueva tipología de número normalizado	termino	lg-spa
+dd293	Tipologia de nombre normalitzat	termino	lg-cat
+dd296	Tipologia de nombre normalitzat	termino	lg-cat
+dd294	Projecte	termino	lg-cat
+dd295	Llistat	termino	lg-cat
+dd297	Nova tipologia	termino	lg-cat
+dd293	Type of standard number	termino	lg-eng
+dd296	Type of standard number	termino	lg-eng
+dd294	Project	termino	lg-eng
+dd295	Llist	termino	lg-eng
+dd297	New tipology	termino	lg-eng
+dd298	Nueva tipología	termino	lg-spa
+dd298	Nova tipologia	termino	lg-cat
+dd298	New tiplology	termino	lg-eng
+dd285	Afegeixi el fitxer BibTeX i els corresponents fitxers PDF des del seu disc dur. Un cop carregats, escollir 'Importar fitxers'	termino	lg-cat
+dd385	Acronym	termino	lg-eng
+dd299	Public/private	termino	lg-eng
+dd300	Identificación	termino	lg-spa
+dd300	Identificació	termino	lg-cat
+dd300	Identification	termino	lg-eng
+dd301	Proyecto	termino	lg-spa
+dd301	Projecte	termino	lg-cat
+dd301	Project	termino	lg-eng
+dd304	Tipo de entidad	termino	lg-spa
+dd150	τελικού	termino	lg-ell
+dd304	Tipus d'entitat	termino	lg-cat
+dd304	Entity tipology	termino	lg-eng
+dd306	Llistado	termino	lg-spa
+dd393	Name	termino	lg-eng
+dd306	Llistat	termino	lg-cat
+dd306	List	termino	lg-eng
+dd307	Espacio de Color	termino	lg-spa
+dd307	Espai de color	termino	lg-cat
+dd307	Colos space	termino	lg-eng
+dd309	Espacio de color	termino	lg-spa
+dd309	Espai de color	termino	lg-cat
+dd309	Color space	termino	lg-eng
+dd310	Espacio de color	termino	lg-spa
+dd310	Espai de color	termino	lg-cat
+dd310	Color space	termino	lg-eng
+dd311	Proyecto	termino	lg-spa
+dd311	Projecte	termino	lg-cat
+dd311	Project	termino	lg-eng
+dd312	Listado	termino	lg-spa
+dd312	LListat	termino	lg-cat
+dd312	List	termino	lg-eng
+dd313	Nuevo	termino	lg-spa
+dd313	Nou	termino	lg-cat
+dd364	Entidad a cargo	termino	lg-spa
+dd313	New	termino	lg-eng
+dd314	Nuevo	termino	lg-spa
+dd314	Nou	termino	lg-cat
+dd314	New	termino	lg-eng
+dd45	default	termino	lg-spa
+dd364	Entitat a carrec	termino	lg-cat
+dd18	diffusion_group	termino	lg-spa
+dd348	Publicación en la web	termino	lg-spa
+dd45	Publicació a la web	termino	lg-cat
+dd348	Web publication	termino	lg-eng
+dd345	Tipus de component	termino	lg-cat
+dd346	Tipus de la secció	termino	lg-cat
+dd453	Index info	termino	lg-spa
+dd364	Entity responsible	termino	lg-eng
+dd143	section_group_div	termino	lg-spa
+dd268	Borrar	termino	lg-spa
+dd239	lista	termino	lg-spa
+dd239	Llistat	termino	lg-cat
+dd358	Ignorar temporalmente el estado de publicación al publicar	termino	lg-spa
+dd358	Ignore temporarily the publication status when publishing	termino	lg-eng
+dd358	Ignorar temporalment l'estat de publicació en publicar	termino	lg-cat
+dd358		obs	lg-spa
+dd359	Borrar temporales de audio/video	termino	lg-spa
+dd359	Remove sv temporals	termino	lg-eng
+dd359	Esborrar temporals d'àudio / vídeo	termino	lg-cat
+dd378	Nuevo	termino	lg-spa
+dd424	Aquesta jerarquia no está activa i no es pot generar	termino	lg-cat
+dd379	Borrar	termino	lg-spa
+dd424	Current hierarchy is not active and no is possible generate it	termino	lg-eng
+dd380	Proyecto	termino	lg-spa
+dd381	Sindicatos	termino	lg-spa
+dd382	Identificación	termino	lg-spa
+dd385	Siglas	termino	lg-spa
+dd393	Nombre	termino	lg-spa
+dd394	Año de fundación	termino	lg-spa
+dd396	Listado	termino	lg-spa
+dd406	Proyecto	termino	lg-spa
+dd408	Religiones	termino	lg-spa
+dd409	Identificación	termino	lg-spa
+dd411	Nombre	termino	lg-spa
+dd412	Año de fundación	termino	lg-spa
+dd413	Listado	termino	lg-spa
+dd425	matrix_hierarchy	termino	lg-spa
+dd414	Nuevo	termino	lg-spa
+dd415	Borrar	termino	lg-spa
+dd416	Proyecto	termino	lg-spa
+dd426	Altitud	termino	lg-spa
+dd426	Altitud	termino	lg-cat
+dd426	Altitude	termino	lg-eng
+dd394	Foundation year	termino	lg-eng
+dd427	Tipos de relación	termino	lg-spa
+dd428	component_relation_model	termino	lg-spa
+dd100	Thésaurus	termino	lg-fra
+dd100	Thesaurus	termino	lg-eng
+dd242	Inventaire	termino	lg-fra
+dd69	Activités	termino	lg-fra
+dd14	Ressources	termino	lg-fra
+dd35	Processus	termino	lg-fra
+dd207	L'administration du système	termino	lg-fra
+dd777	thésaurus	termino	lg-fra
+dd430	Make backup	termino	lg-eng
+dd430	Fer còpia de seguretat	termino	lg-cat
+dd431	component_relation_related	termino	lg-spa
+dd432	component_relation_index	termino	lg-spa
+dd396	List	termino	lg-eng
+dd404	New	termino	lg-eng
+dd405	Delete	termino	lg-eng
+dd406	Project	termino	lg-eng
+dd408	Religions	termino	lg-eng
+dd409	Identification	termino	lg-eng
+dd411	Name	termino	lg-eng
+dd412	Foundation year	termino	lg-eng
+dd413	List	termino	lg-eng
+dd414	New	termino	lg-eng
+dd415	Delete	termino	lg-eng
+dd416	Project	termino	lg-eng
+dd50	area_thesaurus	termino	lg-spa
+dd365	Estats civils	termino	lg-cat
+dd366	Estat Civil	termino	lg-cat
+dd367	Estat Civil	termino	lg-cat
+dd368	Llistat	termino	lg-cat
+dd369	Nou	termino	lg-cat
+dd370	Esborrar	termino	lg-cat
+dd371	Projece	termino	lg-cat
+dd372	Partits polítics	termino	lg-cat
+dd373	Partit polític	termino	lg-cat
+dd374	Sigles	termino	lg-cat
+dd375	Nom	termino	lg-cat
+dd729	διαγράψετε	termino	lg-ell
+dd332	Αυτόματη επαναφορά	termino	lg-ell
+dd546	όπου	termino	lg-ell
+dd376	Any de fundació	termino	lg-cat
+dd377	Llistat	termino	lg-cat
+dd378	Nou	termino	lg-cat
+dd379	Esborrar	termino	lg-cat
+dd380	Projecte	termino	lg-cat
+dd381	Sindicats	termino	lg-cat
+dd382	Identificació	termino	lg-cat
+dd385	Sigles	termino	lg-cat
+dd393	Nom	termino	lg-cat
+dd394	Any de fundació	termino	lg-cat
+dd396	Llistat	termino	lg-cat
+dd404	Nou	termino	lg-cat
+dd405	Esborrar	termino	lg-cat
+dd406	Projecte	termino	lg-cat
+dd408	Religions	termino	lg-cat
+dd409	Identificació	termino	lg-cat
+dd411	Nom	termino	lg-cat
+dd412	Any de fundació	termino	lg-cat
+dd413	Llistat	termino	lg-cat
+dd414	Nou	termino	lg-cat
+dd415	Esborrar	termino	lg-cat
+dd416	Projecte	termino	lg-cat
+dd144	section_list_thesaurus	termino	lg-spa
+dd605	component_order	termino	lg-spa
+dd352	component_relation_children	termino	lg-spa
+dd434	section_list_thesaurus_indexation	termino	lg-spa
+dd436	Read	termino	lg-eng
+dd436	Llegir	termino	lg-cat
+dd443	matrix_langs	termino	lg-spa
+dd1318	Tipologías de proyecto	termino	lg-spa
+dd1318	Tipologias de projecte	termino	lg-cat
+dd449	Transcripción impresión	termino	lg-spa
+dd449	Transcription print	termino	lg-eng
+dd449	Transcripció impressió	termino	lg-cat
+dd450	Códigos de tiempo	termino	lg-spa
+dd299	Publico/privado	termino	lg-spa
+dd451	Indexaciones	termino	lg-spa
+dd454	Líneas	termino	lg-spa
+dd450	Time codes	termino	lg-eng
+dd450	Codis de temps	termino	lg-cat
+dd454	Línies	termino	lg-cat
+dd730	παράγουν	termino	lg-ell
+dd333	ένθετο ετικέτας	termino	lg-ell
+dd454	Lines	termino	lg-eng
+dd455	Fecha	termino	lg-spa
+dd456	Municipio	termino	lg-spa
+dd455	Data	termino	lg-cat
+dd455	Date	termino	lg-eng
+dd456	Municipi	termino	lg-cat
+dd456	Municipality	termino	lg-eng
+dd457	Entrevista	termino	lg-spa
+dd458	Informantes	termino	lg-spa
+dd457	Entrevista	termino	lg-cat
+dd457	Interview	termino	lg-eng
+dd458	Informants	termino	lg-cat
+dd458	Informants	termino	lg-eng
+dd459	Cabecera	termino	lg-spa
+dd459	Capçalera	termino	lg-cat
+dd459	Header	termino	lg-eng
+dd810	Typology of bibliography	termino	lg-eng
+dd446	Ruta de carpeta ficheros a renombrar	termino	lg-spa
+dd446	Files to rename path	termino	lg-eng
+dd1067	Tools	termino	lg-eng
+dd447	Codigos de tiempo	termino	lg-spa
+dd447	Time codes	termino	lg-eng
+dd444	Move	termino	lg-eng
+dd444	Moure	termino	lg-cat
+dd445	Move component data	termino	lg-eng
+dd445	Moure dades de components	termino	lg-cat
+dd469	Types of tracks	termino	lg-eng
+dd470	Identificación	termino	lg-spa
+dd470	Identificació	termino	lg-cat
+dd470	Identification	termino	lg-eng
+dd471	Tipo de vía	termino	lg-spa
+dd471	Tipus de via	termino	lg-cat
+dd471	Track type	termino	lg-eng
+dd475	Filtro	termino	lg-spa
+dd476	Listado	termino	lg-spa
+dd481	matrix_notes	termino	lg-spa
+dd482	Búsqueda	termino	lg-spa
+dd299	Públic/privat	termino	lg-cat
+dd35	Διεργασίες	termino	lg-ell
+dd731	εκδοχή	termino	lg-ell
+dd334	επιλογές	termino	lg-ell
+dd734	επεξεργασία	termino	lg-ell
+dd335	Εισαγωγής ήχου / βίντεο	termino	lg-ell
+dd735	Επιλέξτε καρέ στο παίκτη και πατήστε "Create POSTERFRAME" για να δημιουργήσετε ένα καρέ από το βίντεο	termino	lg-ell
+dd360	σημασιολογικές σχέσεις	termino	lg-ell
+dd736	δημιουργήσετε	termino	lg-ell
+dd488	πληροφορίες αρχείου	termino	lg-ell
+dd737	Μη έγκυρη Επέκταση	termino	lg-ell
+dd484	ύλη	termino	lg-ell
+dd100	θησαυρός λέξεων	termino	lg-ell
+dd739	Επιλέξτε το αρχείο για να φορτώσετε	termino	lg-ell
+dd436	ανάγνωση	termino	lg-ell
+dd740	Αρχείο φορτώθηκε με επιτυχία	termino	lg-ell
+dd449	εκτύπωση μεταγραφή	termino	lg-ell
+dd101	τοπωνύμια	termino	lg-ell
+dd741	Σφάλμα μεταφόρτωσης αρχείου	termino	lg-ell
+dd448	Εκτύπωση	termino	lg-ell
+dd744	Ο κατάλογος δεν υπάρχει ή δεν είναι προσβάσιμο	termino	lg-ell
+dd480	άνθρωποι	termino	lg-ell
+dd745	κοντά	termino	lg-ell
+dd450	Κωδικός χρόνου	termino	lg-ell
+dd746	επαναφόρτωση	termino	lg-ell
+dd451	τιμαριθμικές αναπροσαρμογές	termino	lg-ell
+dd747	Παρακαλώ περιμένετε ..	termino	lg-ell
+dd453	δείκτης info	termino	lg-ell
+dd748	Upload αρχείου ολοκληρώθηκε	termino	lg-ell
+dd454	γραμμές	termino	lg-ell
+dd753	εισάγετε	termino	lg-ell
+dd550	έργα	termino	lg-ell
+dd455	ημερομηνία	termino	lg-ell
+dd754	δράση	termino	lg-ell
+dd456	δήμος	termino	lg-ell
+dd755	κλειδί	termino	lg-ell
+dd457	συνέντευξη	termino	lg-ell
+dd756	ανοιχτό	termino	lg-ell
+dd458	πληροφοριοδότες	termino	lg-ell
+dd757	εργαλείο	termino	lg-ell
+dd459	κεφάλι	termino	lg-ell
+dd758	φαντάζομαι	termino	lg-ell
+dd1711	Ημερομηνία ή εύρος σε ΗΗ/ΜΜ/ΕΕΕΕ	termino	lg-ell
+dd759	περιστρέψτε	termino	lg-ell
+dd162	Σφάλμα: Το όνομα χρήστη και τον κωδικό πρόσβασης που έχουν εισαχθεί είναι σωστή, αλλά ο τρέχων χρήστης δεν έχει ρυθμιστεί σωστά. Επικοινωνήστε με το διαχειριστή σας για να ορίσετε το προφίλ χρήστη σας.	termino	lg-ell
+dd760	εικόνα	termino	lg-ell
+dd165	Σφάλμα: Το όνομα χρήστη και τον κωδικό πρόσβασης που έχουν εισαχθεί είναι σωστή, αλλά ο τρέχων χρήστης δεν έχει ρυθμιστεί σωστά. Επικοινωνήστε με το διαχειριστή σας για να εκχωρήσετε εξουσιοδοτημένος χρήστης με τα έργα σας.	termino	lg-ell
+dd764	ευρετηρίαση	termino	lg-ell
+dd168	Βεβαιωθείτε ότι τα στοιχεία της εγκατάστασης είναι σωστές. Εάν δεν είναι, ρυθμίστε τις πληροφορίες σχετικά με τις προτιμήσεις της βάσης δεδομένων Δαίδαλος (config_db.php)	termino	lg-ell
+dd765	τιμαριθμικές αναπροσαρμογές	termino	lg-ell
+dd424	Αυτή η ιεραρχία δεν είναι ενεργό και δεν μπορεί να δημιουργήσει	termino	lg-ell
+dd766	περιγραφείς	termino	lg-ell
+dd1051	Είσαι σίγουρος;	termino	lg-ell
+dd775	επιγραφή	termino	lg-ell
+dd388	Σφάλμα σύνδεσης. Επαναφορτίστε την τελευταία σελίδα λίγα δευτερόλεπτα	termino	lg-ell
+dd777	θησαυρός λέξεων	termino	lg-ell
+dd401	Είστε σίγουροι ότι για να διαγράψετε αυτό το ρεκόρ;	termino	lg-ell
+dd778	αρχείο	termino	lg-ell
+dd402	Δεν έχετε δικαίωμα να δείτε αυτό το περιεχόμενο	termino	lg-ell
+dd779	κατάσταση	termino	lg-ell
+dd552	Δεν βρέθηκαν εγγραφές	termino	lg-ell
+dd803	γεμάτος	termino	lg-ell
+dd584	Είστε σίγουροι ότι αντικαταστήσετε το κείμενο;	termino	lg-ell
+dd804	τρόπος	termino	lg-ell
+dd738	Το μέγεθος του αρχείου είναι πολύ μεγάλο	termino	lg-ell
+dd825	υπάρχουσες	termino	lg-ell
+dd742	Επιλέξτε ένα αρχείο	termino	lg-ell
+dd827	πόρος	termino	lg-ell
+dd743	Φεύγοντας από αυτή τη σελίδα θα χάσετε τα δεδομένα που δεν έχετε αποθηκεύσει	termino	lg-ell
+dd854	Εμφάνιση Επιθεωρητής	termino	lg-ell
+dd1033	Επιλέξτε μια γλώσσα-στόχο	termino	lg-ell
+dd856	μοντέλα	termino	lg-ell
+dd1036	σχέσης προστεθεί	termino	lg-ell
+dd857	ιεραρχίες	termino	lg-ell
+dd1744	Παρακαλείστε να αναπροσαρμόζονται από ένα τμήμα των αποθεμάτων (σε. Προφορικής Ιστορίας) και όχι από έναν πόρο	termino	lg-ell
+dd14	Πόροι	termino	lg-ell
+dd858	ονόματα	termino	lg-ell
+dd403	προσοχή	termino	lg-ell
+dd881	γλώσσα	termino	lg-ell
+dd315	Προσοχή: Ο χρήστης %s χρησιμοποιεί αυτό το πεδίο. Παρακαλώ περιμένετε να ολοκληρώσετε την επεξεργασία.	termino	lg-ell
+dd340	Το πεδίο κατά τη διαδικασία της εξαφάνισης. Αυτό το πεδίο συγχωνεύεται με: %s	termino	lg-ell
+dd1021	δεδομένα	termino	lg-ell
+dd73	δεν	termino	lg-ell
+dd1022	επιφυλακτικός	termino	lg-ell
+dd1064	Δεν είναι όπως	termino	lg-ell
+dd1034	Επιλέξτε μια ετικέτα στο ευρετήριο	termino	lg-ell
+dd1060	και	termino	lg-ell
+dd1035	Για να δημιουργήσετε ένα νέο απόσπασμα, απλά επιλέξτε ένα τμήμα του κειμένου και πατήστε το κουμπί "Νέο κομμάτι" παρακάτω	termino	lg-ell
+dd1065	μεγαλύτερη από	termino	lg-ell
+dd69	δραστηριότητες	termino	lg-ell
+dd1077	διάρκεια	termino	lg-ell
+dd1062	Περιέχει (αυστηρή)	termino	lg-ell
+dd222	δημοσίευση	termino	lg-ell
+dd1078	συνολικός	termino	lg-ell
+dd1061	ή	termino	lg-ell
+dd1079	πληροφορίες	termino	lg-ell
+dd1063	Είναι σαν	termino	lg-ell
+dd1126	υποστηριζόμενων επεκτάσεων	termino	lg-ell
+dd77	λιγότερο από	termino	lg-ell
+dd95	έρευνα	termino	lg-ell
+dd1020	τύπος Υπηρεσία	termino	lg-ell
+dd590	αναδημιουργήσουν όλους	termino	lg-ell
+dd83	Περιέχει	termino	lg-ell
+dd589	μόνο νέα	termino	lg-ell
+dd92	Μεταξύ (A...B)	termino	lg-ell
+dd588	Σύνολο των παραγράφων	termino	lg-ell
+dd1066	έχει πληροφορίες	termino	lg-ell
+dd521	τεμάχιο	termino	lg-ell
+dd87	δεν υπάρχουν πληροφορίες	termino	lg-ell
+dd474	εργαλεία	termino	lg-ell
+dd259	εισάγετε	termino	lg-ell
+dd473	σχέσεων	termino	lg-ell
+dd400	Χωρίς πρόσβαση εδώ	termino	lg-ell
+dd618	αν	termino	lg-ell
+dd255	χρήστη	termino	lg-ell
+dd619	όχι	termino	lg-ell
+dd256	κωδικό πρόσβασης	termino	lg-ell
+dd232	Επεξεργασία ρεκόρ	termino	lg-ell
+dd257	Email	termino	lg-ell
+dd76	επίδειξη	termino	lg-ell
+dd65	Συντήρηση του δικτυακού τόπου. Συγγνώμη για την ταλαιπωρία	termino	lg-ell
+dd852	Εκτύπωση	termino	lg-ell
+dd874	ενημερωμένη cache	termino	lg-ell
+dd694	έκδοση	termino	lg-ell
+dd184	ημερολόγιο	termino	lg-ell
+dd695	νέος	termino	lg-ell
+dd1701	πύλη	termino	lg-ell
+dd696	εγγραφή	termino	lg-ell
+dd1740	Διαδρομή αρχείου	termino	lg-ell
+dd697	παραγωγή	termino	lg-ell
+dd118	Αντικαταστήστε εργαλείο το περιεχόμενο της ιστοσελίδας	termino	lg-ell
+dd1095	διαγραφή του αρχείου	termino	lg-ell
+dd119	αντικαταστήσει περιεχόμενο	termino	lg-ell
+dd1098	στατιστική	termino	lg-ell
+dd107	Αντικαταστήστε τα δεδομένα πεδίου	termino	lg-ell
+dd1097	δραστηριότητας του χρόνου	termino	lg-ell
+dd1015	επικαιροποιημένα αρχεία	termino	lg-ell
+dd693	λίστα	termino	lg-ell
+dd832	Παρακαλώ περιμένετε	termino	lg-ell
+dd698	διαγράψετε	termino	lg-ell
+dd109	το περιεχόμενο πεδίο θα πρέπει να αντικατασταθεί ως εξής: %1$s σε o %2$s τρέχουσες εγγραφές με την τιμή: %3$s για τη γλώσσα: %4$s	termino	lg-ell
+dd699	αναζήτησή	termino	lg-ell
+dd109		def	lg-ell
+dd700	αποθηκεύετε	termino	lg-ell
+dd160	όλα	termino	lg-ell
+dd1080	εκκένωση	termino	lg-ell
+dd483	κενό	termino	lg-ell
+dd1081	ξανακάνω	termino	lg-ell
+dd141	ιστορικός	termino	lg-ell
+dd1090	φορτίο	termino	lg-ell
+dd906	εργαλείο εκτύπωσης	termino	lg-ell
+dd1094	φόρτισης τελικού	termino	lg-ell
+dd496	Εκτύπωση	termino	lg-ell
+dd1091	χάνεται συστατικό	termino	lg-ell
+dd384	Επεξεργασία προτύπου	termino	lg-ell
+dd1092	χάνεται τμήμα	termino	lg-ell
+dd1040	Νέα άδειο πρότυπο	termino	lg-ell
+dd287	πρότυπο αποθηκεύετε	termino	lg-ell
+dd1745	όνομα	termino	lg-ell
+dd472	Σταθερή νέα σελίδα	termino	lg-ell
+dd328	Νέα σελίδα ρευστό	termino	lg-ell
+dd344	νέα σελίδα	termino	lg-ell
+dd111	Σελίδα %s από %s	termino	lg-ell
+dd120	συνολικές εγγραφές	termino	lg-ell
+dd121	συνολικές σελίδες	termino	lg-ell
+dd122	Επεξεργασία... παρακαλώ περιμένετε	termino	lg-ell
+dd123	Προβολή / λήψη αρχείου PDF	termino	lg-ell
+dd1048	Εισαγωγής Zotero	termino	lg-ell
+dd1047	γεωγραφικό πλάτος	termino	lg-ell
+dd145	τώρα	termino	lg-ell
+dd1710	γεωεντοπισμός	termino	lg-ell
+dd146	Εφαρμογή και αποθήκευση	termino	lg-ell
+dd426	υψόμετρο	termino	lg-ell
+dd941	Zotero Προσθέστε το αρχείο JSON και τα αντίστοιχα αρχεία PDF από το σκληρό σας δίσκο. Μόλις φορτωθεί, επιλέξτε 'Εισαγωγή αρχείων'	termino	lg-ell
+dd1712	Γεωαναφορά σε μορφή μήκος, γεωγραφικό πλάτος ex. 39.46264, -0.37615	termino	lg-ell
+dd176	Όνομα αρχείου	termino	lg-ell
+dd1713	χάρτης	termino	lg-ell
+dd187	πρωτότυπο	termino	lg-ell
+dd1045	ζουμ	termino	lg-ell
+dd188	Διαγραφή φωτογραφιών μετά την εισαγωγή	termino	lg-ell
+dd1046	μήκος	termino	lg-ell
+dd192	πλήρες όνομα του αρχείου	termino	lg-ell
+dd1709	φορά	termino	lg-ell
+dd215	Αριθμός απογραφής	termino	lg-ell
+dd152	αναζήτησή	termino	lg-ell
+dd216	Resource αριθμό	termino	lg-ell
+dd271	πρώτη δημοσίευση	termino	lg-ell
+dd199	Ημερομηνία δημιουργίας	termino	lg-ell
+dd217	επέκταση	termino	lg-ell
+dd159	επικυρωμένες	termino	lg-ell
+dd219	αυτόματη Όνομα	termino	lg-ell
+dd161	για την αναθεώρηση	termino	lg-ell
+dd220	Μέγεθος αρχείου	termino	lg-ell
+dd263	Πηγαίνετε στο προφίλ	termino	lg-ell
+dd221	δύσμορφος	termino	lg-ell
+dd336	επικαιροποίηση	termino	lg-ell
+dd407	Πληροφορίες εικόνα.	termino	lg-ell
+dd417	ετών	termino	lg-ell
+dd786	Αρχεία ήχου / βίντεο	termino	lg-ell
+dd418	ημέρες	termino	lg-ell
+dd1739	Διαδρομή καταλόγου	termino	lg-ell
+dd419	μήνες	termino	lg-ell
+dd1702	εισαγωγή εικόνων	termino	lg-ell
+dd420	έτος	termino	lg-ell
+dd1220	προεπισκόπηση	termino	lg-ell
+dd421	μήνας	termino	lg-ell
+dd1220	vista previa	termino	lg-cat
+dd422	ημέρα	termino	lg-ell
+dd787	Τα αρχεία εικόνας	termino	lg-ell
+dd422	día	termino	lg-spa
+dd1019	Αναζήτηση Operators	termino	lg-ell
+dd788	Ανεβάστε το αρχείο	termino	lg-ell
+dd1114	Δείτε τα υπάρχοντα ρεκόρ	termino	lg-ell
+dd789	ευρετηρίαση	termino	lg-ell
+dd112	Προσθήκη αρχείων	termino	lg-ell
+dd790	γλώσσα	termino	lg-ell
+dd113	Ξεκινήστε τη φόρτωση	termino	lg-ell
+dd791	φωτόγραμμα	termino	lg-ell
+dd114	Ακύρωση μεταφόρτωσης	termino	lg-ell
+dd792	σχέσεις	termino	lg-ell
+dd115	Διαχείριση αρχείων	termino	lg-ell
+dd793	Μηχανή του χρόνου	termino	lg-ell
+dd116	Προεπισκόπηση εισαγωγής	termino	lg-ell
+dd1082	Αρχείο φορτώθηκε με επιτυχία	termino	lg-ell
+dd1049	Δημιουργία υπότιτλους	termino	lg-ell
+dd1083	Το αρχείο που μεταφορτώθηκε υπερβαίνει την οδηγία upload_max_filesize στο php.ini	termino	lg-ell
+dd35	Prozesuak	termino	lg-eus
+dd100	Tesauroko	termino	lg-eus
+dd489	matrix_structurations	termino	lg-spa
+dd490	Structuration	termino	lg-eng
+dd490	Estructuración	termino	lg-spa
+dd490	Estructuració	termino	lg-cat
+dd490	δόμηση	termino	lg-ell
+dd207	διαχείριση	termino	lg-ell
+dd128	χρήστες	termino	lg-ell
+dd129	γενικές πληροφορίες	termino	lg-ell
+dd330	Αναγν	termino	lg-ell
+dd131	ενεργό λογαριασμό	termino	lg-ell
+dd244	Διαχειριστή. γενικός	termino	lg-ell
+dd452	πλήρες όνομά	termino	lg-ell
+dd1725	Προφίλ του χρήστη	termino	lg-ell
+dd132	χρήστη	termino	lg-ell
+dd468	Λήξης κωδικού πρόσβασης	termino	lg-ell
+dd133	κωδικό	termino	lg-ell
+dd134	email	termino	lg-ell
+dd170	έργα	termino	lg-ell
+dd135	Παρατηρήσεις	termino	lg-ell
+dd478	Αρχεία φίλτρο	termino	lg-ell
+dd254	διαγραφή χρηστών	termino	lg-ell
+dd179	νέος χρήστης	termino	lg-ell
+dd482	έρευνα	termino	lg-ell
+dd234	προφίλ	termino	lg-ell
+dd236	γενικός	termino	lg-ell
+dd237	όνομα	termino	lg-ell
+dd238	περιγραφή	termino	lg-ell
+dd1718	Πρόσβαση και δικαιώματα	termino	lg-ell
+dd249	έκταση	termino	lg-ell
+dd774	δικαιώματα	termino	lg-ell
+dd272	εργαλεία	termino	lg-ell
+dd1067	εργαλεία	termino	lg-ell
+dd235	νέο προφίλ	termino	lg-ell
+dd239	κατάλογος	termino	lg-ell
+dd268	διαγράψετε	termino	lg-ell
+dd153	έργα	termino	lg-ell
+dd154	Επισκόπηση	termino	lg-ell
+dd784	Αναγν	termino	lg-ell
+dd40	μετάδοση	termino	lg-ell
+dd155	Κωδικός έργου	termino	lg-ell
+dd156	Του έργου (όνομα)	termino	lg-ell
+dd157	τυπολογία	termino	lg-ell
+dd54	έρευνα Γραμμή	termino	lg-ell
+dd53	Πρόσωπο που είναι υπεύθυνο για το έργο	termino	lg-ell
+dd78	άλλοι αξιωματούχοι	termino	lg-ell
+dd364	Φορέα που είναι αρμόδιος	termino	lg-ell
+dd71	περιγραφή	termino	lg-ell
+dd126	ρεκόρ	termino	lg-ell
+dd106	Σειρά / αριθμός αρχείου	termino	lg-ell
+dd51	έγγραφο	termino	lg-ell
+dd486	έρευνα	termino	lg-ell
+dd158	Κατάλογος αρχείων	termino	lg-ell
+dd180	νέο έργο	termino	lg-ell
+dd542	δραστηριότητα	termino	lg-ell
+dd548	γενικός	termino	lg-ell
+dd544	διεύθυνση IP	termino	lg-ell
+dd543	που	termino	lg-ell
+dd545	τι	termino	lg-ell
+dd547	όταν	termino	lg-ell
+dd551	δεδομένο	termino	lg-ell
+dd1704	στατιστική	termino	lg-ell
+dd20	Πρότυπα διάταξης	termino	lg-ell
+dd21	σχέδιο	termino	lg-ell
+dd32	σχέδιο	termino	lg-ell
+dd61	τμήμα	termino	lg-ell
+dd29	όνομα	termino	lg-ell
+dd23	επιφάνεια εργασίας	termino	lg-ell
+dd25	λίστα	termino	lg-ell
+dd26	σχέδιο	termino	lg-ell
+dd27	νέος	termino	lg-ell
+dd28	σαφής διάταξη	termino	lg-ell
+dd30	επιφάνεια εργασίας	termino	lg-ell
+dd33	επιφάνεια εργασίας	termino	lg-ell
+dd67	τμήμα	termino	lg-ell
+dd38	όνομα	termino	lg-ell
+dd39	επιφάνεια εργασίας	termino	lg-ell
+dd41	λίστα	termino	lg-ell
+dd49	σχέδιο	termino	lg-ell
+dd55	νέος	termino	lg-ell
+dd56	σαφής διάταξη	termino	lg-ell
+dd68	Λίστες αξία	termino	lg-ell
+dd1318	Τύπους έργων	termino	lg-ell
+dd1308	έρευνα Γραμμή	termino	lg-ell
+dd1132	Συλλογή / αρχείο	termino	lg-ell
+dd922	Κατηγορία εργασίας / Τίτλος	termino	lg-ell
+dd882	επαγγέλματα	termino	lg-ell
+dd942	Τύπος της ένωσης / ομάδας	termino	lg-ell
+dd365	οικογενειακή κατάσταση	termino	lg-ell
+dd898	τόπος απορροής	termino	lg-ell
+dd996	οντότητα	termino	lg-ell
+dd372	τα πολιτικά κόμματα	termino	lg-ell
+dd381	συνδικάτα	termino	lg-ell
+dd408	θρησκείες	termino	lg-ell
+dd1319	αναγνώριση	termino	lg-ell
+dd1309	αναγνώριση	termino	lg-ell
+dd1133	αναγνώριση	termino	lg-ell
+dd923	αναγνώριση	termino	lg-ell
+dd883	αναγνώριση	termino	lg-ell
+dd943	αναγνώριση	termino	lg-ell
+dd366	αναγνώριση	termino	lg-ell
+dd899	αναγνώριση	termino	lg-ell
+dd997	αναγνώριση	termino	lg-ell
+dd373	αναγνώριση	termino	lg-ell
+dd382	αναγνώριση	termino	lg-ell
+dd409	αναγνώριση	termino	lg-ell
+dd1322	λίστα	termino	lg-ell
+dd1312	λίστα	termino	lg-ell
+dd1136	λίστα	termino	lg-ell
+dd925	λίστα	termino	lg-ell
+dd886	λίστα	termino	lg-ell
+dd945	λίστα	termino	lg-ell
+dd368	λίστα	termino	lg-ell
+dd901	λίστα	termino	lg-ell
+dd999	λίστα	termino	lg-ell
+dd377	λίστα	termino	lg-ell
+dd396	λίστα	termino	lg-ell
+dd413	λίστα	termino	lg-ell
+dd1321	σχέδιο	termino	lg-ell
+dd1310	σχέδιο	termino	lg-ell
+dd1134	σχέδιο	termino	lg-ell
+dd926	σχέδιο	termino	lg-ell
+dd885	σχέδιο	termino	lg-ell
+dd946	σχέδιο	termino	lg-ell
+dd371	σχέδιο	termino	lg-ell
+dd902	σχέδιο	termino	lg-ell
+dd380	σχέδιο	termino	lg-ell
+dd406	σχέδιο	termino	lg-ell
+dd416	σχέδιο	termino	lg-ell
+dd414	νέος	termino	lg-ell
+dd404	νέος	termino	lg-ell
+dd378	νέος	termino	lg-ell
+dd369	νέος	termino	lg-ell
+dd947	νέος	termino	lg-ell
+dd888	νέος	termino	lg-ell
+dd927	νέος	termino	lg-ell
+dd1196	νέος	termino	lg-ell
+dd928	διαγράψετε	termino	lg-ell
+dd887	διαγράψετε	termino	lg-ell
+dd370	διαγράψετε	termino	lg-ell
+dd379	διαγράψετε	termino	lg-ell
+dd405	διαγράψετε	termino	lg-ell
+dd415	διαγράψετε	termino	lg-ell
+dd1320	Τύπους έργων	termino	lg-ell
+dd1311	έρευνα Γραμμή	termino	lg-ell
+dd1135	Συλλογή / αρχείο	termino	lg-ell
+dd924	Κατηγορία εργασίας / Τίτλος	termino	lg-ell
+dd884	επάγγελμα	termino	lg-ell
+dd944	Τύπος της ένωσης / ομάδας	termino	lg-ell
+dd367	οικογενειακή κατάσταση	termino	lg-ell
+dd900	τόπος απορροής	termino	lg-ell
+dd433	ακρώνυμο	termino	lg-ell
+dd998	οντότητα	termino	lg-ell
+dd374	ακρώνυμο	termino	lg-ell
+dd375	όνομα	termino	lg-ell
+dd376	έτος ίδρυσης	termino	lg-ell
+dd394	έτος ίδρυσης	termino	lg-ell
+dd412	έτος ίδρυσης	termino	lg-ell
+dd385	ακρώνυμο	termino	lg-ell
+dd393	όνομα	termino	lg-ell
+dd411	όνομα	termino	lg-ell
+dd435	έρευνα	termino	lg-ell
+dd1	Dédalo4 Benimamet 18-03-2017 12:53	termino	lg-ell
+dd499	Proyecto	termino	lg-spa
+dd491	component_relation_struct	termino	lg-spa
+dd1002	Οντότητα	termino	lg-ell
+dd1001	Id	termino	lg-ell
+dd492	Roles de publicaciones	termino	lg-spa
+dd492	publications roles	termino	lg-eng
+dd492	Roles de publicació	termino	lg-cat
+dd492	Οι ρόλοι των δημοσιεύσεων	termino	lg-ell
+dd493	Identificación	termino	lg-spa
+dd493	Identification	termino	lg-eng
+dd493	Identificació	termino	lg-cat
+dd493	αναγνώριση	termino	lg-ell
+dd494	Rol	termino	lg-spa
+dd494	Rol	termino	lg-eng
+dd494	Rol	termino	lg-cat
+dd494	ρόλος	termino	lg-ell
+dd497	Listado	termino	lg-spa
+dd497	List	termino	lg-eng
+dd497	Llistat	termino	lg-cat
+dd497	λίστα	termino	lg-ell
+dd499	Project	termino	lg-eng
+dd499	Projecte	termino	lg-cat
+dd499	σχέδιο	termino	lg-ell
+dd502	Identificación	termino	lg-spa
+dd502	Identification	termino	lg-eng
+dd501	Estados de revisión	termino	lg-spa
+dd501	Review states	termino	lg-eng
+dd501	Estats de revisió	termino	lg-cat
+dd501	Μελών επανεξέτασης	termino	lg-ell
+dd502	Identificació	termino	lg-cat
+dd502	αναγνώριση	termino	lg-ell
+dd503	Estado	termino	lg-spa
+dd503	State	termino	lg-eng
+dd503	Estat	termino	lg-cat
+dd503	κατάσταση	termino	lg-ell
+dd504	Listado	termino	lg-spa
+dd504	List	termino	lg-eng
+dd504	Llistat	termino	lg-cat
+dd504	λίστα	termino	lg-ell
+dd505	Proyecto	termino	lg-spa
+dd505	Project	termino	lg-eng
+dd505	Projecte	termino	lg-cat
+dd505	σχέδιο	termino	lg-ell
+dd506	Estructuración	termino	lg-spa
+dd506	Structuration	termino	lg-eng
+dd506	Estructuració	termino	lg-cat
+dd506	δόμηση	termino	lg-ell
+dd514	Estructuracions info	termino	lg-cat
+dd482	Seearch	termino	lg-eng
+dd510	Vincular recurso	termino	lg-spa
+dd510	Link resource	termino	lg-eng
+dd511	Enfoque	termino	lg-spa
+dd510	Vincular recurs	termino	lg-cat
+dd511	Approach	termino	lg-eng
+dd782	Filtros	termino	lg-spa
+dd782	Filtres	termino	lg-cat
+dd511	Approche	termino	lg-fra
+dd511	Enfocament	termino	lg-cat
+dd507	Δημιουργία κεφαλαίου	termino	lg-ell
+dd508	Εμφάνιση / απόκρυψη ετικετών	termino	lg-ell
+dd512	Estructuraciones	termino	lg-spa
+dd512	Structurations	termino	lg-eng
+dd512	Estructuracions	termino	lg-cat
+dd514	Estructuraciones info	termino	lg-spa
+dd514	Structurations info	termino	lg-eng
+dd509	Ενημέρωση προβολής	termino	lg-ell
+dd515	Desarrollador	termino	lg-spa
+dd515	Developer	termino	lg-eng
+dd515	Developer	termino	lg-cat
+dd515	Προγραμματιστής	termino	lg-ell
+dd515	Used to allow developer users to view some debug info like component model, tipo, etc.	obs	lg-spa
+dd516	Procesos de restauración	termino	lg-spa
+dd516	Restoration processes	termino	lg-eng
+dd516	Processos de restauració	termino	lg-cat
+dd516	Διαδικασίες αποκατάστασης	termino	lg-ell
+dd517	Identificación	termino	lg-spa
+dd517	Identification	termino	lg-eng
+dd517	Identificació	termino	lg-cat
+dd517	αναγνώριση	termino	lg-ell
+dd518	Proceso de restauración	termino	lg-spa
+dd518	Restoration Process	termino	lg-eng
+dd518	Procés de restauració	termino	lg-cat
+dd518	Διαδικασία αποκατάστασης	termino	lg-ell
+dd519	Listado	termino	lg-spa
+dd520	Proyecto	termino	lg-spa
+dd519	List	termino	lg-eng
+dd519	Llistat	termino	lg-cat
+dd519	λίστα	termino	lg-ell
+dd520	Project	termino	lg-eng
+dd520	Projecte	termino	lg-cat
+dd520	σχέδιο	termino	lg-ell
+dd522	Fotografia de perfil	termino	lg-cat
+dd522	Foto de perfil	termino	lg-spa
+dd522	Profile picture	termino	lg-eng
+dd522	Εικόνα προφίλ	termino	lg-ell
+dd523	field_boolean	termino	lg-spa
+dd525	field_decimal	termino	lg-spa
+dd109	Will be replaced the field content : %1$s in %2$s current records, with the value: %3$s in the current lang: %4$s	termino	lg-eng
+dd527	field_datetime	termino	lg-spa
+dd528	Types of measures	termino	lg-eng
+dd529	Identification	termino	lg-eng
+dd532	Filtro	termino	lg-spa
+dd532	Filtre	termino	lg-cat
+dd528	Tipología de medidas	termino	lg-spa
+dd528	Tipologia de medidas	termino	lg-cat
+dd529	Identificación	termino	lg-spa
+dd529	Identificació	termino	lg-cat
+dd531	Tipo de medida	termino	lg-spa
+dd531	Tipus de mesura	termino	lg-cat
+dd531	Type of measure	termino	lg-eng
+dd532	Filtre	termino	lg-eng
+dd533	Listado	termino	lg-spa
+dd533	Llistat	termino	lg-cat
+dd533	List	termino	lg-eng
+dd534	Nuevo	termino	lg-spa
+dd534	Nou	termino	lg-cat
+dd534	New	termino	lg-eng
+dd535	Borrar	termino	lg-spa
+dd535	Delete	termino	lg-eng
+dd535	Esborrar	termino	lg-cat
+dd536	Structuracion	termino	lg-spa
+dd539	Importación imágenes	termino	lg-spa
+dd538	Importación de ficheros	termino	lg-spa
+dd537	Importación a/v	termino	lg-spa
+dd540	Time Machine	termino	lg-spa
+dd541	Source and target langs can't be the same languague	termino	lg-eng
+dd541	Lenguaje de origen y destino NO pueden tener el mismo idioma	termino	lg-spa
+dd541	Llenguatge d0origen i destino NO poden ser el mateix idioma	termino	lg-cat
+dd541	Οι λέξεις προέλευσης και στόχου δεν μπορούν να είναι η ίδια γλώσσα	termino	lg-ell
+dd553	Sincronizando la información con la última versión	termino	lg-spa
+dd553	Sincronitzant l'informació amb l'última versió	termino	lg-cat
+dd553	Synchronizing information with the latest version	termino	lg-eng
+dd553	Συγχρονισμός πληροφοριών με την τελευταία έκδοση	termino	lg-ell
+dd554	Multi-language	termino	lg-eng
+dd554	Multi-lenguaje	termino	lg-spa
+dd554	Multi-llenguatge	termino	lg-cat
+dd578	Αβέβαιη	termino	lg-ell
+dd555	dataframes	termino	lg-eng
+dd556	dataframe_root	termino	lg-spa
+dd557	dataframe_type	termino	lg-spa
+dd559	Marco temporal	termino	lg-spa
+dd559	Temporal frame	termino	lg-eng
+dd560	Marco espacial	termino	lg-spa
+dd560	Spatial frame	termino	lg-eng
+dd561	matrix_dataframe	termino	lg-spa
+dd564	Id	termino	lg-ell
+dd579	text seleccionat	termino	lg-cat
+dd579	Επιλεγμένο κείμενο	termino	lg-ell
+dd563	Identificación	termino	lg-spa
+dd563	Identification	termino	lg-eng
+dd563	Identificació	termino	lg-cat
+dd563	αναγνώριση	termino	lg-ell
+dd564	Id	termino	lg-cat
+dd564	Id	termino	lg-spa
+dd564	Id	termino	lg-eng
+dd566	Peso	termino	lg-spa
+dd566	Pes	termino	lg-cat
+dd566	Weight	termino	lg-eng
+dd566	Βάρος	termino	lg-ell
+dd572	Listado	termino	lg-spa
+dd572	List	termino	lg-eng
+dd572	Llistat	termino	lg-cat
+dd575	Proyecto	termino	lg-spa
+dd575	Projecte	termino	lg-cat
+dd575	Project	termino	lg-eng
+dd572	λίστα	termino	lg-ell
+dd575	σχέδιο	termino	lg-ell
+dd578	Uncertain	termino	lg-eng
+dd576	dataframe	termino	lg-spa
+dd555	Marcos de datos	termino	lg-spa
+dd578	Incierto	termino	lg-spa
+dd578	Incert	termino	lg-cat
+dd558	Incertidumbre	termino	lg-spa
+dd558	Uncertinity	termino	lg-eng
+dd558	Αβεβαιότητα	termino	lg-ell
+dd558	Incertesa	termino	lg-cat
+dd579	Texto seleccionado	termino	lg-spa
+dd579	Selected text	termino	lg-eng
+dd65	Sistema en mantenimiento. Disculpe las molestias	termino	lg-spa
+dd562	Ενεργό πλαίσιο δεδομένων	termino	lg-ell
+dd562	Dataframe active	termino	lg-eng
+dd565	Activo	termino	lg-spa
+dd565	Actiu	termino	lg-cat
+dd565	Active	termino	lg-eng
+dd565	Ενεργός	termino	lg-ell
+dd577	?	termino	lg-spa
+dd65	System under maintenance. Sorry for the inconvenience	termino	lg-eng
+dd419	mois	termino	lg-fra
+dd420	an	termino	lg-fra
+dd421	mois	termino	lg-fra
+dd422	jour	termino	lg-fra
+dd417	années	termino	lg-fra
+dd418	journées	termino	lg-fra
+dd336	Mettre	termino	lg-fra
+dd263	Aller au profil	termino	lg-fra
+dd1709	Temps	termino	lg-fra
+dd152	Chercher	termino	lg-fra
+dd150	Terminé	termino	lg-fra
+dd159	Validé	termino	lg-fra
+dd161	Pour examiner	termino	lg-fra
+dd387	Sortir	termino	lg-fra
+dd719	Accueil	termino	lg-fra
+dd397	Revenir	termino	lg-fra
+dd477	Plantillas web	termino	lg-spa
+dd580	component_json	termino	lg-spa
+dd477	Web templates	termino	lg-eng
+dd151	Link	termino	lg-eng
+dd151	Enllaç	termino	lg-cat
+dd151	Σύνδεσμος	termino	lg-ell
+dd151	Generic relation used by portals, autocomplete, radio buttons,selects..	obs	lg-spa
+dd585		obs	lg-spa
+dd477	Plantilles web	termino	lg-cat
+dd595	Observations	termino	lg-eng
+dd477	Πρότυπα ιστού	termino	lg-ell
+dd595	Observacons	termino	lg-cat
+dd585	General	termino	lg-spa
+dd585	General	termino	lg-eng
+dd585	General	termino	lg-cat
+dd585	Γενικά	termino	lg-ell
+dd591	Id	termino	lg-spa
+dd591	Id	termino	lg-eng
+dd591	Id	termino	lg-cat
+dd591	Id	termino	lg-ell
+dd593	Publicación	termino	lg-spa
+dd593	Publication	termino	lg-eng
+dd593	Publicació	termino	lg-cat
+dd593	Δημοσίευση	termino	lg-ell
+dd594	Nombre	termino	lg-spa
+dd594	Name	termino	lg-eng
+dd594	Nom	termino	lg-cat
+dd594	Όνομα	termino	lg-ell
+dd594	No usar espacios, acentos, ni caracteres no válidos en una url	def	lg-spa
+dd594	Μην χρησιμοποιείτε διαστήματα, τόνους ή μη έγκυρους χαρακτήρες σε μια διεύθυνση URL	def	lg-ell
+dd594	Do not use spaces, accents, or invalid characters in a url	def	lg-eng
+dd594	No fer servir espais, accents, ni caràcters no vàlids en una url	def	lg-cat
+dd595	Observaciones	termino	lg-spa
+dd595	Παρατηρήσεις	termino	lg-ell
+dd595	Información acerca del template	def	lg-spa
+dd595	Πληροφορίες σχετικά με το πρότυπο	def	lg-ell
+dd595	Information about the template	def	lg-eng
+dd595	Informació sobre el template	def	lg-cat
+dd596	Configuración	termino	lg-spa
+dd596	Configuration	termino	lg-eng
+dd596	Configuració	termino	lg-cat
+dd596	Διαμόρφωση	termino	lg-ell
+dd597	List	termino	lg-spa
+dd597	Llistat	termino	lg-cat
+dd597	List	termino	lg-eng
+dd597	Λίστα	termino	lg-ell
+dd598	Nuevo	termino	lg-spa
+dd598	New	termino	lg-eng
+dd598	Nou	termino	lg-cat
+dd598	Νέα	termino	lg-ell
+dd599	Proyecto	termino	lg-spa
+dd599	Project	termino	lg-eng
+dd599	Projecte	termino	lg-cat
+dd599	Έργο	termino	lg-ell
+dd581		obs	lg-spa
+dd600		def	lg-spa
+dd600	template_map	termino	lg-spa
+dd601	publication	termino	lg-spa
+dd603	name	termino	lg-spa
+dd602	data	termino	lg-spa
+dd600	Web templates generic from list of values section "templates" (dd477)	obs	lg-spa
+dd606	Patrimonio documental	termino	lg-spa
+dd617	S'ha sobrepassat el màxim nombre d'ítems per a aquest camp. límit =	termino	lg-cat
+dd608	Sequence (1,3,9,41,...)	termino	lg-eng
+dd616	Renumerar secciones	termino	lg-spa
+dd616	Renumerar seccions	termino	lg-cat
+dd616	Renumerate sections	termino	lg-eng
+dd617	The maximum number of items for this field has been exceeded. Limit =	termino	lg-eng
+dd608	Secuencia (1,3,9,41,...)	termino	lg-spa
+dd617	Έχει ξεπεραστεί ο μέγιστος αριθμός στοιχείων για αυτό το πεδίο. Όριο =	termino	lg-ell
+dd608	Seqüència (1,3,9,41,...)	termino	lg-cat
+dd608	Η ακολουθία (1,3,9,41,...)	termino	lg-ell
+dd617	se ha rebasado el máximo número de items para este campo. Límite =	termino	lg-spa
+dd607	Cambio de orden	termino	lg-spa
+dd620	Unidireccional	termino	lg-spa
+dd620	Unidirectional	termino	lg-eng
+dd467	Bidirectional	termino	lg-eng
+dd621	Multidirectional	termino	lg-eng
+dd621	Multidireccional	termino	lg-spa
+dd467	Bidireccional	termino	lg-spa
+dd612	Descripción	termino	lg-spa
+dd615	field_point	termino	lg-spa
+dd611	publication	termino	lg-spa
+dd614	RECICLAR !!	termino	lg-spa
+dd604	*** RECICLAR VARIOS PREFIJOS **	termino	lg-spa
+dd624	Nombre	termino	lg-spa
+dd624	Name	termino	lg-eng
+dd625	JSON data	termino	lg-spa
+dd629	List	termino	lg-spa
+dd630	Search	termino	lg-spa
+dd631	New	termino	lg-spa
+dd632	Delete	termino	lg-spa
+dd637	General	termino	lg-spa
+dd640	Público	termino	lg-spa
+dd640	Public	termino	lg-eng
+dd640	Públic	termino	lg-cat
+dd641	Default	termino	lg-spa
+dd641	Default	termino	lg-eng
+dd640	Shows for all users	def	lg-eng
+dd640	Se muestra para todos los usuarios	def	lg-spa
+dd642	Section tipo	termino	lg-spa
+dd642	Section tipo	termino	lg-eng
+dd623	Configuraciones de búsquedas	termino	lg-spa
+dd643	matrix	termino	lg-spa
+dd607	Order change	termino	lg-eng
+dd607	Canvi d'ordre	termino	lg-cat
+dd607	Αλλαγή παραγγελίας	termino	lg-ell
+dd644	cambios	termino	lg-spa
+dd644	changes	termino	lg-eng
+dd644	canvis	termino	lg-cat
+dd644	αλλαγές	termino	lg-ell
+dd739	Seleccione el fitxer a pujar	termino	lg-cat
+dd648	Save arguments	termino	lg-eng
+dd645	Nombre indica campo	termino	lg-spa
+dd645	Nom indica camp	termino	lg-cat
+dd645	Name indicates field	termino	lg-eng
+dd645	Το όνομα δηλώνει το πεδίο	termino	lg-ell
+dd647	Mateix nom mateix registre	termino	lg-cat
+dd647	Ίδιο όνομα ίδια εγγραφή	termino	lg-ell
+dd647	Same name same record	termino	lg-eng
+dd646	Nombre indica id	termino	lg-spa
+dd646	Nom indica id	termino	lg-cat
+dd646	Name indicates id	termino	lg-eng
+dd646	Το όνομα δηλώνει την ταυτότητα	termino	lg-ell
+dd647	Mismo nombre mismo registro	termino	lg-spa
+dd648	Salvar argumentos	termino	lg-spa
+dd648	Αποθήκευση παραδειγμάτων	termino	lg-ell
+dd648	Salvar arguments	termino	lg-cat
+dd649	Search presets	termino	lg-eng
+dd649	Configuracions de cerca	termino	lg-cat
+dd649	Προεπιλογές αναζήτησης	termino	lg-ell
+dd651	Campos	termino	lg-spa
+dd651	Fields	termino	lg-eng
+dd581		def	lg-spa
+dd651	Camps	termino	lg-cat
+dd651	Πεδία	termino	lg-ell
+dd650	Opciones de búsqueda	termino	lg-spa
+dd650	Search options	termino	lg-eng
+dd650	Opcions de cerca	termino	lg-cat
+dd650	Επιλογές αναζήτησης	termino	lg-ell
+dd652	y	termino	lg-spa
+dd652	and	termino	lg-eng
+dd652	i	termino	lg-cat
+dd652	και	termino	lg-ell
+dd653	o	termino	lg-spa
+dd653	or	termino	lg-eng
+dd653	o	termino	lg-cat
+dd653	ή	termino	lg-ell
+dd654	Usuario	termino	lg-spa
+dd656	List	termino	lg-spa
+dd654	User	termino	lg-eng
+dd654	Usuari	termino	lg-cat
+dd655	Configuraciones de búsquedas actuales	termino	lg-spa
+dd855	Ir al listado	termino	lg-spa
+dd855	Πηγαίνετε στη λίστα	termino	lg-ell
+dd657	Ir a la página	termino	lg-spa
+dd657	Anar a la pàgina	termino	lg-cat
+dd657	Πηγαίνετε στη σελίδα	termino	lg-ell
+dd657	Go to page	termino	lg-eng
+dd658	Ir al registro	termino	lg-spa
+dd658	Anar al registre	termino	lg-cat
+dd658	Go to record	termino	lg-eng
+dd658	πηγαίνετε στην εγγραφή	termino	lg-ell
+dd663	Distinto de	termino	lg-spa
+dd663	Different from	termino	lg-eng
+dd663	Diferent de	termino	lg-cat
+dd389	Alertas	termino	lg-spa
+dd659	Search operators	termino	lg-eng
+dd663	Διαφορετικά από	termino	lg-deu
+dd664	No contiene	termino	lg-spa
+dd660	Contiene información	termino	lg-spa
+dd660	Περιέχει πληροφορίες	termino	lg-ell
+dd660	It contains information	termino	lg-eng
+dd660	Conté informació	termino	lg-cat
+dd664	No conté	termino	lg-cat
+dd661	Empty	termino	lg-eng
+dd661	Άδειασμα	termino	lg-ell
+dd661	Buit	termino	lg-cat
+dd661	Vacío	termino	lg-spa
+dd662	Similar a	termino	lg-spa
+dd662	Παρόμοια με	termino	lg-ell
+dd662	Similar a	termino	lg-cat
+dd662	Similar to	termino	lg-eng
+dd669	μεταξύ	termino	lg-ell
+dd664	Does not contain	termino	lg-eng
+dd664	Δεν περιέχει	termino	lg-ell
+dd665	Contiene	termino	lg-spa
+dd665	Περιέχει	termino	lg-ell
+dd665	Contains	termino	lg-eng
+dd665	Conté	termino	lg-cat
+dd666	Empieza con	termino	lg-spa
+dd666	Comença amb	termino	lg-cat
+dd666	Begins with	termino	lg-eng
+dd666	Ξεκινήστε με	termino	lg-ell
+dd667	Acaba con	termino	lg-spa
+dd667	Τερματισμός με	termino	lg-ell
+dd667	Finish with	termino	lg-eng
+dd667	Acaba amb	termino	lg-cat
+dd668	Literal	termino	lg-spa
+dd668	Λίγο	termino	lg-ell
+dd668	Literal	termino	lg-cat
+dd668	Literal	termino	lg-eng
+dd669	Entre	termino	lg-spa
+dd669	Entre	termino	lg-cat
+dd669	Between	termino	lg-eng
+dd670	Secuencia	termino	lg-spa
+dd670	Sequeència	termino	lg-cat
+dd670	Sequence	termino	lg-eng
+dd670	Ακολουθία	termino	lg-ell
+dd671	Mayor o igual que	termino	lg-spa
+dd671	Major o igual que	termino	lg-cat
+dd671	Greater than or equal	termino	lg-eng
+dd671	Περισσότερο από ή ίσο με	termino	lg-ell
+dd672	Menor o igual que	termino	lg-spa
+dd672	Menor o igual que	termino	lg-cat
+dd672	Λιγότερο από ή ίσο με	termino	lg-ell
+dd672	Less than or equal to	termino	lg-eng
+dd673	Mayor que	termino	lg-spa
+dd673	Major que	termino	lg-cat
+dd674	Menor que	termino	lg-spa
+dd673	Greater than	termino	lg-eng
+dd673	Περισσότερο από	termino	lg-ell
+dd674	Menor que	termino	lg-cat
+dd674	Less than	termino	lg-eng
+dd674	Λιγότερο από	termino	lg-ell
+dd659	búsquedas	termino	lg-spa
+dd675	Filtro	termino	lg-spa
+dd267	Mapa de la sección	termino	lg-spa
+dd267	Mapa de la secció	termino	lg-cat
+dd267	Section map	termino	lg-eng
+dd265	Es descriptor	termino	lg-spa
+dd265	Es descriptor	termino	lg-cat
+dd24	Fills	termino	lg-cat
+dd169	Dependent of	termino	lg-eng
+dd266	σχέσεις	termino	lg-ell
+dd678	NA	termino	lg-spa
+dd47	father	termino	lg-eng
+dd675	Filter	termino	lg-eng
+dd98	model	termino	lg-eng
+dd96	indexation	termino	lg-eng
+dd96	indexació	termino	lg-cat
+dd96	Ευρετηρίαση	termino	lg-ell
+dd98	model	termino	lg-cat
+dd98	Μοντέλο	termino	lg-ell
+dd48	Γιος	termino	lg-ell
+dd48	fill	termino	lg-cat
+dd48	child	termino	lg-eng
+dd47	pare	termino	lg-cat
+dd47	πατέρας	termino	lg-ell
+dd89	related	termino	lg-eng
+dd89	relacionat	termino	lg-cat
+dd89	σχετίζεται με	termino	lg-ell
+dd675	filtre	termino	lg-cat
+dd675	Φίλτρο	termino	lg-ell
+dd620	Unidireccional	termino	lg-cat
+dd620	Μονοκατευθυντική	termino	lg-ell
+dd467	Αμφίδρομος	termino	lg-ell
+dd467	Bidireccional	termino	lg-cat
+dd621	Multidireccional	termino	lg-cat
+dd621	Πολυδιάστατη	termino	lg-ell
+dd676	Impresión del tesauro	termino	lg-spa
+dd676	Thesaurus print	termino	lg-eng
+dd676	Θησαυρός εκτύπωση	termino	lg-ell
+dd676	Impressió del tesaure	termino	lg-cat
+dd678	NA	termino	lg-cat
+dd678	SN	termino	lg-eng
+dd678	Nota de alcance	def	lg-spa
+dd678	Nota d'abast	def	lg-cat
+dd677	thesauro	termino	lg-spa
+dd678	Scope Note	def	lg-eng
+dd678	Σημείωση περί εμβέλειας	def	lg-ell
+dd678	SH	termino	lg-deu
+dd679	Broader term	def	lg-eng
+dd678	Σε	termino	lg-ell
+dd678	Bereich Hinweis	def	lg-deu
+dd679	Ausgedehnter Begriff	def	lg-deu
+dd679	Término general	def	lg-spa
+dd679	TG	termino	lg-spa
+dd679	BT	termino	lg-eng
+dd679	TG	termino	lg-cat
+dd679	Terme general	def	lg-cat
+dd679	AB	termino	lg-deu
+dd679	Ευρύτερος όρος	def	lg-ell
+dd680	NT	termino	lg-eng
+dd680	ΠΟ	termino	lg-ell
+dd680	Narrowes term	def	lg-eng
+dd680	Término específico	def	lg-spa
+dd680	TE	termino	lg-cat
+dd680	Terme especific	def	lg-cat
+dd680	Περιορισμένος όρος	def	lg-ell
+dd681	ΣΟ	termino	lg-ell
+dd680	TE	termino	lg-spa
+dd681	TR	termino	lg-spa
+dd681	Término relaciondo	def	lg-spa
+dd681	TR	termino	lg-cat
+dd681	Terme rel·lacionat	def	lg-cat
+dd681	RT	termino	lg-eng
+dd681	Related term	def	lg-eng
+dd679	ΕΟ	termino	lg-ell
+dd681	Σχετικός όρος	def	lg-ell
+dd682	UP	termino	lg-spa
+dd682	Use por	def	lg-spa
+dd682	UP	termino	lg-cat
+dd682	Usat per	def	lg-cat
+dd682	USE	termino	lg-eng
+dd682	Use for	def	lg-eng
+dd682	Χρήση για	def	lg-ell
+dd683	Προσθέστε περιεχόμενο στο πεδίο	termino	lg-ell
+dd682	XΓ	termino	lg-ell
+dd118	Tool reemplazar contenidos	termino	lg-spa
+dd683	Añadir contenido al campo	termino	lg-spa
+dd683	Afegir contingut al camp	termino	lg-cat
+dd683	Add content to the field	termino	lg-eng
+dd684	Se añadirá el contenido al campo: %1$s en los %2$s registros actuales con el valor: %3$s para el idioma: %4$s	termino	lg-spa
+dd684	The content will be added to the field:%1$ s in the %2$s current records with the value: %3$ s for the language: %4$s	termino	lg-eng
+dd684	S'afegirà el contingut al camp: %1$s en els %2$s registres actuals amb el valor: %3$s per a l'idioma: %4$s	termino	lg-cat
+dd684	Το περιεχόμενο θα προστεθεί στο πεδίο: %1$s στις τρέχουσες εγγραφές %2$s με την τιμή: %3$s για τη γλώσσα: %4$s	termino	lg-ell
+dd685	Añadir el contenido	termino	lg-spa
+dd685	Add the content	termino	lg-eng
+dd685	Afegir el contigut	termino	lg-cat
+dd685	Προσθέστε το περιεχόμενο	termino	lg-ell
+dd680	BB	termino	lg-deu
+dd681	Verwandter Begriff	def	lg-deu
+dd681	VB	termino	lg-deu
+dd682	Verwenden für	def	lg-deu
+dd682	VF	termino	lg-deu
+dd680	Begrenzter Begriff	def	lg-deu
+dd322	Moveable Heritage	termino	lg-eng
+dd321	Immovable heritage	termino	lg-eng
+dd351	Documental heritage	termino	lg-eng
+dd354	Artistic heritage	termino	lg-eng
+dd686	component_svg	termino	lg-spa
+dd242	Catalogue	termino	lg-eng
+dd164	component_alias	termino	lg-spa
+dd687	Enlace externo	termino	lg-spa
+dd622	Web	termino	lg-spa
+dd622	Web standad for generic websites	obs	lg-spa
+dd688	publication	termino	lg-spa
+dd689	Page name	obs	lg-spa
+dd690	term_id	termino	lg-spa
+dd689	term	termino	lg-spa
+dd691	web_path	termino	lg-spa
+dd691	Relative path in url	obs	lg-spa
+dd701	template_name	termino	lg-spa
+dd702	title	termino	lg-spa
+dd704	body	termino	lg-spa
+dd705	parent	termino	lg-spa
+dd708	childrens	termino	lg-spa
+dd710	norder	termino	lg-spa
+dd712	image	termino	lg-spa
+dd703	abstract	termino	lg-spa
+dd713	Dividir palabras	termino	lg-spa
+dd713	Split words	termino	lg-eng
+dd713	Dividir paraules	termino	lg-cat
+dd713	Διαχωρίστε τις λέξεις	termino	lg-ell
+dd1	Dédalo4 Ruzafa 21-11-2019 09:41	termino	lg-spa
+dd913	Proyecte	termino	lg-cat
+dd577	?	termino	lg-ell
+dd718	Página	termino	lg-spa
+dd873	El valor ja existeix	termino	lg-cat
+dd873	Η τιμή υπάρχει ήδη	termino	lg-ell
+dd715	¡Fallo al guardar!	termino	lg-spa
+dd718	Pàgina	termino	lg-cat
+dd715	Ha fallat el desament!	termino	lg-cat
+dd715	Αποτυχία εξοικονόμησης!	termino	lg-ell
+dd715	Fail to save!	termino	lg-eng
+dd718	Page	termino	lg-eng
+dd718	Σελίδα	termino	lg-ell
+dd716	campo:	termino	lg-spa
+dd716	field:	termino	lg-eng
+dd716	αγρός:	termino	lg-ell
+dd716	camp:	termino	lg-cat
+dd717	Title	termino	lg-eng
+dd717	Títol	termino	lg-cat
+dd717	Τίτλος	termino	lg-ell
+dd717	Título	termino	lg-spa
+dd122	Processing... please wait	termino	lg-eng
+dd720	Cargando...	termino	lg-spa
+dd720	Loading...	termino	lg-eng
+dd720	Carregant...	termino	lg-cat
+dd720	Φόρτωση...	termino	lg-ell
+dd721	Εναλλακτικό πεδίο. Μην χρησιμοποιείτε εκτός εάν ο όρος δεν είναι ομαλοποιημένος. Χρησιμοποιήστε αντ &#039;αυτού: %s	termino	lg-ell
+dd721	Camp alternatiu. No fer servir llevat que el terme no es trobi normalitzat. Utilitzi en el seu lloc:% s	termino	lg-cat
+dd723	Herramienta de descripción	termino	lg-spa
+dd723	Eina de descripció	termino	lg-cat
+dd723	Description tool	termino	lg-eng
+dd723		def	lg-spa
+dd732	Activo	termino	lg-spa
+dd732	Active	termino	lg-eng
+dd750	Activo	termino	lg-spa
+dd562	Marco de dato activo	termino	lg-spa
+dd562	Marc de dada actiu	termino	lg-cat
+dd733	!	termino	lg-spa
+dd577	?	termino	lg-eng
+dd577	?	termino	lg-cat
+dd733	!	termino	lg-eng
+dd733	!	termino	lg-cat
+dd733	!	termino	lg-ell
+dd721	Campo alternativo. No usar salvo que el término no se encuentre normalizado. Utilize en su lugar: %s	termino	lg-spa
+dd721	Alternative field. Do not use unless the term is not normalized. Use instead: %s	termino	lg-eng
+dd751	documents	termino	lg-spa
+dd752	title	termino	lg-spa
+dd767	description	termino	lg-spa
+dd768	document	termino	lg-spa
+dd769	publication	termino	lg-spa
+dd581	time_machine_list	termino	lg-spa
+dd615	Used by Socrata for georef points	obs	lg-spa
+dd773	Información general	termino	lg-spa
+dd770	Desarrollo	termino	lg-spa
+dd770	Development	termino	lg-eng
+dd770	Desenvolupament	termino	lg-cat
+dd771	Documentación	termino	lg-spa
+dd795	Id	termino	lg-spa
+dd796	Difusión	termino	lg-spa
+dd797	Clase	termino	lg-spa
+dd798	Extiende	termino	lg-spa
+dd800	Obsoleto	termino	lg-spa
+dd801	Descripción	termino	lg-spa
+dd806	Detalles de las referencias	termino	lg-spa
+dd802	Versiones	termino	lg-spa
+dd805	Otras Referencias	termino	lg-spa
+dd807	Métodos	termino	lg-spa
+dd808	view_single_line	termino	lg-spa
+dd809	Métodos extendidos	termino	lg-spa
+dd813	Propiedades	termino	lg-spa
+dd814	Proyecto	termino	lg-spa
+dd817	Lista de componentes	termino	lg-spa
+dd818	Nuevo	termino	lg-spa
+dd819	Borrar	termino	lg-spa
+dd821	Métodos	termino	lg-spa
+dd822	Información general	termino	lg-spa
+dd823	Id	termino	lg-spa
+dd824	Difusión	termino	lg-spa
+dd826	Nombre	termino	lg-spa
+dd828	Signatura	termino	lg-spa
+dd829	Resultado	termino	lg-spa
+dd845	Descripción	termino	lg-spa
+dd847	Parámetro de entrada	termino	lg-spa
+dd848	Tipo de dato	termino	lg-spa
+dd609	area_development	termino	lg-spa
+dd820	Nuevo	termino	lg-spa
+dd849	Ejemplo	termino	lg-spa
+dd850	Lista de métodos	termino	lg-spa
+dd851	Proyecto	termino	lg-spa
+dd853	Nuevo	termino	lg-spa
+dd859	Borrar	termino	lg-spa
+dd910	Id	termino	lg-spa
+dd867	Propiedades	termino	lg-spa
+dd868	Información general	termino	lg-spa
+dd869	Id	termino	lg-spa
+dd870	Difusión	termino	lg-spa
+dd871	Nombre	termino	lg-spa
+dd872	Tipo de dato	termino	lg-spa
+dd896	Referencia	termino	lg-spa
+dd897	Descripción	termino	lg-spa
+dd903	Ejemplo	termino	lg-spa
+dd905	Lista de propiedades	termino	lg-spa
+dd907	Proyecto	termino	lg-spa
+dd908	Nuevo	termino	lg-spa
+dd909	Borrar	termino	lg-spa
+dd772	Library	termino	lg-eng
+dd917	Versiones	termino	lg-spa
+dd918	Información general	termino	lg-spa
+dd919	Id	termino	lg-spa
+dd920	Difusión	termino	lg-spa
+dd969	Delete	termino	lg-eng
+dd929	Fecha creación	termino	lg-spa
+dd930	Fecha de baja	termino	lg-spa
+dd931	Referencia	termino	lg-spa
+dd932	Ejemplo	termino	lg-spa
+dd933	Notas de la versión	termino	lg-spa
+dd934	Lista de versiones	termino	lg-spa
+dd935	Nuevo	termino	lg-spa
+dd936	Borrar	termino	lg-spa
+dd937	Proyecto	termino	lg-spa
+dd938	Tipos de datos	termino	lg-spa
+dd939	Informacion general	termino	lg-spa
+dd940	Id	termino	lg-spa
+dd948	Difusión	termino	lg-spa
+dd949	Tipo de dato	termino	lg-spa
+dd950	Descripción	termino	lg-spa
+dd951	Proyecto	termino	lg-spa
+dd952	Lista de tipos de datos	termino	lg-spa
+dd953	Nuevo	termino	lg-spa
+dd954	Borrar	termino	lg-spa
+dd955	view_single_line	termino	lg-spa
+dd921	Versión	termino	lg-spa
+dd956	view_single_line	termino	lg-spa
+dd962	view_single_line	termino	lg-spa
+dd1000	Entats Dédalo	termino	lg-cat
+dd970	Buscar	termino	lg-spa
+dd1000	Entidades Dédalo	termino	lg-spa
+dd1000	Οργανισμοί Dédalo	termino	lg-ell
+dd1000	Dédalo Entities	termino	lg-eng
+dd967	Proyecto	termino	lg-spa
+dd968	Nuevo	termino	lg-spa
+dd968	Nou	termino	lg-cat
+dd968	New	termino	lg-eng
+dd969	Borrar	termino	lg-spa
+dd969	Esborrar	termino	lg-cat
+dd970	Cercar	termino	lg-cat
+dd970	Find	termino	lg-eng
+dd971	Nuevo	termino	lg-spa
+dd971	Nou	termino	lg-cat
+dd972	Borrar	termino	lg-spa
+dd972	Esborrar	termino	lg-cat
+dd973	Buscar	termino	lg-spa
+dd973	Cercar	termino	lg-cat
+dd974	Nuevo	termino	lg-spa
+dd975	Borrar	termino	lg-spa
+dd975	Esborrar	termino	lg-cat
+dd984	Buscar	termino	lg-spa
+dd984	Cecar	termino	lg-cat
+dd992	Borrar	termino	lg-spa
+dd992	Esborrar	termino	lg-cat
+dd993	Buscar	termino	lg-spa
+dd993	Cercar	termino	lg-cat
+dd465	Buscar	termino	lg-spa
+dd465	Αναζήτηση	termino	lg-ell
+dd1002	Entitat	termino	lg-cat
+dd1001	Id	termino	lg-eng
+dd1001	Id	termino	lg-spa
+dd994	Últimos cambios	termino	lg-spa
+dd994	Últims canvis	termino	lg-cat
+dd1003	Identifiación	termino	lg-spa
+dd1003	Identificaicó	termino	lg-cat
+dd1004	URL	termino	lg-spa
+dd1004	URL	termino	lg-cat
+dd1004	URL	termino	lg-eng
+dd1004	URL	termino	lg-ell
+dd1005	Descripción	termino	lg-spa
+dd1005	Descripció	termino	lg-cat
+dd1005	Description	termino	lg-eng
+dd1005	Περιγραφή	termino	lg-ell
+dd1006	Proyecto	termino	lg-spa
+dd1006	Projecte	termino	lg-cat
+dd1008	Nuevo	termino	lg-spa
+dd1007	Acronym	termino	lg-eng
+dd1007	Acrónimo	termino	lg-spa
+dd1007	Ακρωνύμιο	termino	lg-ell
+dd1007	Acrònim	termino	lg-cat
+dd1008	Nou	termino	lg-cat
+dd1008	New	termino	lg-eng
+dd1008	Νέα	termino	lg-ell
+dd1009	Listado	termino	lg-spa
+dd1010	Publication services	termino	lg-eng
+dd1010	Serveis de publicació	termino	lg-cat
+dd860	Borrar	termino	lg-spa
+dd771	Documentation	termino	lg-eng
+dd773	General information	termino	lg-eng
+dd795	Id	termino	lg-eng
+dd796	Diffusion	termino	lg-eng
+dd797	Class	termino	lg-eng
+dd798	Extends	termino	lg-eng
+dd800	Obsolete	termino	lg-eng
+dd801	Description	termino	lg-eng
+dd802	Versions	termino	lg-eng
+dd805	Other References	termino	lg-eng
+dd806	References details	termino	lg-eng
+dd807	Methods	termino	lg-eng
+dd809	Extended methods	termino	lg-eng
+dd813	Properties	termino	lg-eng
+dd814	Project	termino	lg-eng
+dd817	Components list	termino	lg-eng
+dd818	New	termino	lg-eng
+dd819	Delete	termino	lg-eng
+dd821	Methods	termino	lg-eng
+dd822	General information	termino	lg-eng
+dd823	Id	termino	lg-eng
+dd824	Diffusion	termino	lg-eng
+dd826	Name	termino	lg-eng
+dd828	Signature	termino	lg-eng
+dd829	Result	termino	lg-eng
+dd845	Description	termino	lg-eng
+dd847	Input parameter	termino	lg-eng
+dd848	Data type	termino	lg-eng
+dd849	Example	termino	lg-eng
+dd850	Methods list	termino	lg-eng
+dd853	New	termino	lg-eng
+dd859	Delete	termino	lg-eng
+dd867	Properties	termino	lg-eng
+dd868	General information	termino	lg-eng
+dd869	Id	termino	lg-eng
+dd870	Diffusion	termino	lg-eng
+dd871	Name	termino	lg-eng
+dd872	Data type	termino	lg-eng
+dd896	Reference	termino	lg-eng
+dd897	Description	termino	lg-eng
+dd903	Example	termino	lg-eng
+dd905	Properties list	termino	lg-eng
+dd907	Project	termino	lg-eng
+dd908	New	termino	lg-eng
+dd909	Delete	termino	lg-eng
+dd917	Versions	termino	lg-eng
+dd918	General Information	termino	lg-eng
+dd919	Id	termino	lg-eng
+dd920	Diffusion	termino	lg-eng
+dd921	Version	termino	lg-eng
+dd929	Creation date	termino	lg-eng
+dd930	Removed date	termino	lg-eng
+dd931	Reference	termino	lg-eng
+dd932	Example	termino	lg-eng
+dd933	Release notes	termino	lg-eng
+dd937	Project	termino	lg-eng
+dd934	Versions list	termino	lg-eng
+dd935	New	termino	lg-eng
+dd936	Delete	termino	lg-eng
+dd938	Data types	termino	lg-eng
+dd939	General information	termino	lg-eng
+dd940	Id	termino	lg-eng
+dd948	Diffusion	termino	lg-eng
+dd949	Data type	termino	lg-eng
+dd950	Description	termino	lg-eng
+dd951	Project	termino	lg-eng
+dd952	Data types list	termino	lg-eng
+dd953	New	termino	lg-eng
+dd954	Delete	termino	lg-eng
+dd1010	Servicios de publicación	termino	lg-spa
+dd1010	Υπηρεσίες εκδόσεων	termino	lg-ell
+dd1011	Identificación	termino	lg-spa
+dd1011	Identification	termino	lg-eng
+dd1011	Identificació	termino	lg-cat
+dd1012	Id	termino	lg-spa
+dd1012	Id	termino	lg-cat
+dd1012	Id	termino	lg-eng
+dd1012	Id	termino	lg-ell
+dd1013	Nombre	termino	lg-spa
+dd1013	Name	termino	lg-eng
+dd1013	Nom	termino	lg-cat
+dd1013	Ονομα	termino	lg-ell
+dd1014	Base URL	termino	lg-spa
+dd1014	URL base	termino	lg-eng
+dd1014	Base URL	termino	lg-cat
+dd1014	βάση URL	termino	lg-ell
+dd1023	No file	termino	lg-eng
+dd1016	Entidad	termino	lg-spa
+dd1016	Entity	termino	lg-eng
+dd1016	Entitat	termino	lg-cat
+dd1016	Οντότητα	termino	lg-ell
+dd1023	Sin fichero	termino	lg-spa
+dd1023	Sense fitxer	termino	lg-cat
+dd1023	δεν υπάρχει αρχείο	termino	lg-ell
+dd1026	Identificaicón	termino	lg-spa
+dd1026	Identificació	termino	lg-cat
+dd1026	Identification	termino	lg-eng
+dd1026	Ταυτοποίηση	termino	lg-ell
+dd1027	Id	termino	lg-spa
+dd1027	Id	termino	lg-cat
+dd1027	Id	termino	lg-eng
+dd1027	Id	termino	lg-ell
+dd1030	Tipo	termino	lg-spa
+dd1030	Type	termino	lg-eng
+dd1030	Tipus	termino	lg-cat
+dd1030	Τύπος	termino	lg-ell
+dd1031	Proyecto	termino	lg-spa
+dd1031	Project	termino	lg-eng
+dd1031	Projecte	termino	lg-cat
+dd1031	Εργο	termino	lg-ell
+dd1032	Descripción	termino	lg-spa
+dd1032	Description	termino	lg-eng
+dd1032	Descripció	termino	lg-cat
+dd1032	Περιγραφή	termino	lg-ell
+dd1037	Tipo de servicio	termino	lg-spa
+dd1037	Service type	termino	lg-eng
+dd1037	Tipus de server	termino	lg-cat
+dd1037	τύπος Υπηρεσία	termino	lg-ell
+dd1038	Listado	termino	lg-spa
+dd1038	List	termino	lg-eng
+dd820	New	termino	lg-eng
+dd860	Delete	termino	lg-eng
+dd1038	Llistat	termino	lg-cat
+dd1038	Λίστα	termino	lg-ell
+dd1039	Nuevo	termino	lg-spa
+dd1039	New	termino	lg-eng
+dd1039	Nou	termino	lg-cat
+dd1039	Νέος	termino	lg-ell
+dd1043	Listado	termino	lg-spa
+dd1043	List	termino	lg-eng
+dd1043	Llistat	termino	lg-cat
+dd1043	Λίστα	termino	lg-ell
+dd1050	Nuevo	termino	lg-spa
+dd1050	New	termino	lg-eng
+dd1050	Nou	termino	lg-cat
+dd1050	Νέος	termino	lg-ell
+dd1052	Red de entidades	termino	lg-spa
+dd1052	Entities network	termino	lg-eng
+dd1052	Xarxa d&#039;entitats	termino	lg-cat
+dd1052	Δίκτυο οντοτήτων	termino	lg-ell
+dd1053	Código	termino	lg-spa
+dd1053	Code	termino	lg-eng
+dd1053	Codi	termino	lg-cat
+dd1053	Κωδικός	termino	lg-ell
+dd1053	Used to match additional login systems like saml	obs	lg-spa
+dd1054	Id	termino	lg-cat
+dd200	Δημιουργήθηκε από το χρήστη	termino	lg-ell
+dd197	Modified by user	termino	lg-eng
+dd197	Modificat per l&#039;usuari	termino	lg-cat
+dd197	Τροποποιήθηκε από το χρήστη	termino	lg-ell
+dd1055	Publicación	termino	lg-spa
+dd1055	Publicació	termino	lg-cat
+dd201	Modification date	termino	lg-eng
+dd196	Sección info	termino	lg-spa
+dd196	Secció info	termino	lg-cat
+dd196	Πληροφορίες τμήματος	termino	lg-ell
+dd201	Η ημερομηνία τροποποιήθηκε	termino	lg-ell
+dd201	Fecha de modificación	termino	lg-spa
+dd201	Data de modificació	termino	lg-cat
+dd1054	Id	termino	lg-spa
+dd1059	Error. El codi d&#039;usuari no existeix a Dédalo. Contacte amb l&#039;administrador.	termino	lg-cat
+dd1059	Error. El código de usuario no existe en Dédalo. Contacto con el administrador.	termino	lg-spa
+dd1059	Error The user code does not exist in Dédalo. Contact with your administrator.	termino	lg-eng
+dd1059	Σφάλμα Ο κωδικός χρήστη δεν υπάρχει στο Daedalus. Επικοινωνήστε με τον διαχειριστή σας.	termino	lg-ell
+dd1068	Catalogació	termino	lg-cat
+dd1068	Καταλογογράφηση	termino	lg-ell
+dd1068	Cataloging	termino	lg-eng
+dd1068	Catalogación	termino	lg-spa
+dd1069	Preset	termino	lg-eng
+dd1069	προεπιλογή	termino	lg-ell
+dd1069	Config	termino	lg-spa
+dd1069	Config	termino	lg-cat
+dd649	Config. de búsqueda	termino	lg-spa
+dd1096	Web Dédalo	termino	lg-spa
+dd1076	desarrollo	termino	lg-spa
+dd1100	web_dedalo	termino	lg-spa
+dd1099	Documentation	termino	lg-eng
+dd1099	Web pública Dédalo	termino	lg-spa
+dd1101	componentes	termino	lg-spa
+dd1102	metodos	termino	lg-spa
+dd1103	propiedades	termino	lg-spa
+dd1104	versiones	termino	lg-spa
+dd1105	publicacion	termino	lg-spa
+dd1106	obsoleto	termino	lg-spa
+dd1107	clase	termino	lg-spa
+dd1108	extiende	termino	lg-spa
+dd1109	descripcion	termino	lg-spa
+dd1110	version	termino	lg-spa
+dd1111	ref_version	termino	lg-spa
+dd1112	ref_fecha_creacion	termino	lg-spa
+dd1124	detalles_otras_referencias	termino	lg-spa
+dd1127	metodo	termino	lg-spa
+dd1128	ref_metodo_nombre	termino	lg-spa
+dd1179	General information	termino	lg-eng
+dd1180	Id	termino	lg-spa
+dd1181	Difusión	termino	lg-spa
+dd1181	Diffusion	termino	lg-eng
+dd1168	obsoleto	termino	lg-spa
+dd1115	ref_referencia	termino	lg-spa
+dd1116	otras_referencias	termino	lg-spa
+dd1130	ref_metodo_signatura	termino	lg-spa
+dd1131	ref_metodo_descripcion	termino	lg-spa
+dd1137	metodo_extendido	termino	lg-spa
+dd1138	ref_metodo_extendido_nombre	termino	lg-spa
+dd1139	ref_metodo_extendido_signatura	termino	lg-spa
+dd1152	ref_metodo_extendido_descripcion	termino	lg-spa
+dd1153	propiedad	termino	lg-spa
+dd1154	ref_propiedad_nombre	termino	lg-spa
+dd1155	ref_propiedad_tipo_dato	termino	lg-spa
+dd1156	ref_propiedad_descripcion	termino	lg-spa
+dd1157	publicacion	termino	lg-spa
+dd1158	nombre	termino	lg-spa
+dd1159	signatura	termino	lg-spa
+dd1160	resultado	termino	lg-spa
+dd1161	descripcion	termino	lg-spa
+dd1162	parametro_entrada	termino	lg-spa
+dd1163	tipo_dato	termino	lg-spa
+dd1164	ejemplo	termino	lg-spa
+dd1165	publicacion	termino	lg-spa
+dd1166	nombre	termino	lg-spa
+dd1167	tipo_dato	termino	lg-spa
+dd1169	descripcion	termino	lg-spa
+dd1171	publicacion	termino	lg-spa
+dd1173	version	termino	lg-spa
+dd1172	fecha_creacion	termino	lg-spa
+dd1174	fecha_baja	termino	lg-spa
+dd1175	referencia	termino	lg-spa
+dd1176	ejemplo	termino	lg-spa
+dd1177	notas_version	termino	lg-spa
+dd329	Administration tool	termino	lg-eng
+dd1182	Tipo	termino	lg-spa
+dd1182	Type	termino	lg-eng
+dd1179	Información general	termino	lg-spa
+dd1183	Descripción	termino	lg-spa
+dd1183	Description	termino	lg-eng
+dd1184	Proyecto	termino	lg-spa
+dd1184	Project	termino	lg-eng
+dd1185	Lista de tipos de componentes	termino	lg-spa
+dd1185	Component types list	termino	lg-eng
+dd1186	Nuevo	termino	lg-spa
+dd1186	New	termino	lg-eng
+dd1187	Borrar	termino	lg-spa
+dd1187	Delete	termino	lg-eng
+dd1178	Tipologías	termino	lg-spa
+dd1178	Typologies	termino	lg-eng
+dd1188	Tipología	termino	lg-spa
+dd1188	Typology	termino	lg-eng
+dd1189	Modificadores	termino	lg-spa
+dd1189	Modifiers	termino	lg-eng
+dd1190	Herramientas	termino	lg-spa
+dd1190	Tools	termino	lg-eng
+dd1191	tipologia	termino	lg-spa
+dd1192	ts_web	termino	lg-spa
+dd1193	template_map	termino	lg-spa
+dd1194	hierarchy	termino	lg-spa
+dd288	inactive elements	termino	lg-eng
+dd1170	ejemplo_descripcion	termino	lg-spa
+dd1195	Obsoleto	termino	lg-spa
+dd1195	Obsolete	termino	lg-eng
+dd687	External link	termino	lg-eng
+dd687	Generic external relation used by portals, autocomplete, radio buttons,selects..	obs	lg-spa
+dd1196	Nueva Colección / archivo	termino	lg-spa
+dd1197	Ejemplos	termino	lg-spa
+dd1197	Examples	termino	lg-eng
+dd1198	Información general	termino	lg-spa
+dd1198	General information	termino	lg-eng
+dd1199	Lista de ejemplos	termino	lg-spa
+dd1199	Examples list	termino	lg-eng
+dd1200	Nuevo	termino	lg-spa
+dd1200	New	termino	lg-eng
+dd1201	Borrar	termino	lg-spa
+dd1201	Delete	termino	lg-eng
+dd1202	Id	termino	lg-spa
+dd1203	Difusión	termino	lg-spa
+dd1203	Diffusion	termino	lg-eng
+dd1204	Descripción	termino	lg-spa
+dd1204	Description	termino	lg-eng
+dd1205	Descripción ejemplo	termino	lg-spa
+dd1205	Example description	termino	lg-eng
+dd1207	Ejemplos	termino	lg-spa
+dd1207	Examples	termino	lg-eng
+dd1222	view_single_line	termino	lg-spa
+dd271	First publication	termino	lg-eng
+dd1223	Última publicación	termino	lg-spa
+dd1223	Ultima publicació	termino	lg-cat
+dd1223	Last publication	termino	lg-eng
+dd1223	Τελευταία δημοσίευση	termino	lg-ell
+dd1224	Δημοσίευση πρώτου χρήστη	termino	lg-ell
+dd1224	Primera publicación usuario	termino	lg-spa
+dd1224	First publication user	termino	lg-eng
+dd1224	Primera publicación usuari	termino	lg-cat
+dd1225	Última publicación usuario	termino	lg-spa
+dd1225	Τελευταία δημοσίευση χρήστη	termino	lg-ell
+dd1225	Última publicació usuari	termino	lg-cat
+dd1225	Last publication user	termino	lg-eng
+dd1240	Atención: Al cambiar este valor, se eliminará la información contenida en los campos que serán ocultados. ¿Desea continuar?	termino	lg-spa
+dd1226	diffusion_memorial_democratic_web	termino	lg-spa
+dd1227	publicacion	termino	lg-spa
+dd1228	descripcion	termino	lg-spa
+dd1237	ejemplo	termino	lg-spa
+dd1238	referencia	termino	lg-spa
+dd1239	ejemplo	termino	lg-spa
+dd1240	Attention: By changing this value, all the information contained in the fields that will be hidden will be deleted. Are you sure to continue?	termino	lg-eng
+dd1240	Atenció: En canviar aquest valor, s&#039;eliminarà la informació continguda als camps que s&#039;ocultaran. Voleu continuar?	termino	lg-cat
+dd1240	Προσοχή: Με την αλλαγή αυτής της τιμής, οι πληροφορίες που περιέχονται στα πεδία που θα κρύβονται θα διαγραφούν. Θέλετε να συνεχίσετε;	termino	lg-ell
+dd513	Lista de relaciones	termino	lg-spa
+dd1241	Proyectos	termino	lg-spa
+dd1245	List	termino	lg-spa
+dd1246	modo	termino	lg-spa
+dd1242	Tipo	termino	lg-spa
+dd1243	Id	termino	lg-spa
+dd1244	Configuraciones de visualización	termino	lg-spa
+dd1244	Layout map presets	termino	lg-eng
+dd655	Search presets temp	termino	lg-eng
+dd623	Search presets	termino	lg-eng
+dd1246	mode	termino	lg-eng
+dd1247	view	termino	lg-spa
+dd1248	Página X de Y.	termino	lg-spa
+dd1248	Page X of Y.	termino	lg-eng
+dd1248	Pàgina X de Y.	termino	lg-cat
+dd1248	Σελίδα X του Y.	termino	lg-ell
+dd1249	Registros mostrados de X a Y de Z.	termino	lg-spa
+dd1249	Displayed records from X to Y of Z.	termino	lg-eng
+dd1249	Registres mostrats de X a Y de Z.	termino	lg-cat
+dd1249	Οι καταχωρητές που εμφανίζονται από το Χ έως το Υ του Z.	termino	lg-ell
+dd1250	Herramienta de ordenación	termino	lg-spa
+dd1250	Sorting tool	termino	lg-eng
+dd1250	Eina d&#039;ordenació	termino	lg-cat
+dd100	Thesaurus	termino	lg-ita
+dd101	Toponomastica	termino	lg-ita
+dd242	Inventario	termino	lg-ita
+dd355	Culturale	termino	lg-ita
+dd349	Materiale	termino	lg-ita
+dd321	Patrimonio Immobile	termino	lg-ita
+dd322	Patrimonio Mobile	termino	lg-ita
+dd323	Immateriale	termino	lg-ita
+dd356	Naturale	termino	lg-ita
+dd69	Attività	termino	lg-ita
+dd222	Pubblicazione	termino	lg-ita
+dd351	Patrimonio documentario	termino	lg-ita
+dd14	Risorse	termino	lg-ita
+dd35	Processi	termino	lg-ita
+dd207	Amministrazione	termino	lg-ita
+dd770	Elaborazione	termino	lg-ita
+dd3	Diffusione	termino	lg-ita
+dd193	Strumenti	termino	lg-ita
+dd606	Patrimonio documentario	termino	lg-ita
+dd354	Patrimonio artistico	termino	lg-ita
+dd320	Patrimonio Naturale	termino	lg-ita
+dd128	Utenti	termino	lg-ita
+dd129	Informazione Generale	termino	lg-ita
+dd131	Account attivo	termino	lg-ita
+dd244	Amm. Generale	termino	lg-ita
+dd452	Nome completo	termino	lg-ita
+dd1725	Profilo dell&#039; utente	termino	lg-ita
+dd132	Utente	termino	lg-ita
+dd468	Scadenza della password	termino	lg-ita
+dd133	Password	termino	lg-ita
+dd134	E-mail	termino	lg-ita
+dd1053	Codice	termino	lg-ita
+dd515	Sviluppatore	termino	lg-ita
+dd170	Progetti	termino	lg-ita
+dd135	Osservazioni	termino	lg-ita
+dd522	Foto del profilo	termino	lg-ita
+dd782	Filtri	termino	lg-ita
+dd478	Filtro dei registri	termino	lg-ita
+dd42	Accesso e sicurezza	termino	lg-ita
+dd136	Aree	termino	lg-ita
+dd361	Permessi	termino	lg-ita
+dd240	Accesso alle aree	termino	lg-ita
+dd148	Permessi di lettura/scrittura	termino	lg-ita
+dd513	Lista delle relazioni	termino	lg-ita
+dd130	Lista dei registri	termino	lg-ita
+dd254	cancellare utenti	termino	lg-ita
+dd179	Nuovo utente	termino	lg-ita
+dd482	Ricerca	termino	lg-ita
+dd234	Profili	termino	lg-ita
+dd236	Generale	termino	lg-ita
+dd237	Nome	termino	lg-ita
+dd238	Descrizione	termino	lg-ita
+dd1718	Accesso e permessi	termino	lg-ita
+dd249	Area	termino	lg-ita
+dd774	Permessi	termino	lg-ita
+dd272	Strumenti	termino	lg-ita
+dd1067	Strumenti	termino	lg-ita
+dd235	Nuovo profilo	termino	lg-ita
+dd239	Lista	termino	lg-ita
+dd268	Cancellare	termino	lg-ita
+dd465	Cercare	termino	lg-ita
+dd153	Progetti	termino	lg-ita
+dd154	Informazione generale	termino	lg-ita
+dd40	Diffusione	termino	lg-ita
+dd265	Descrittore	termino	lg-ita
+dd155	Codice del progetto	termino	lg-ita
+dd156	Progetto (nome)	termino	lg-ita
+dd157	Tipologia	termino	lg-ita
+dd54	Linea d&#039; indagine	termino	lg-ita
+dd53	Persona responsabile del progetto	termino	lg-ita
+dd78	Altri responsabili	termino	lg-ita
+dd364	Soggetto incaricato	termino	lg-ita
+dd71	Descrizione	termino	lg-ita
+dd126	Dossier	termino	lg-ita
+dd106	Serie / Numero del dossier	termino	lg-ita
+dd51	Documento	termino	lg-ita
+dd266	Relazioni	termino	lg-ita
+dd169	Dipendente da	termino	lg-ita
+dd24	Figli	termino	lg-ita
+dd267	Mappa della sezione	termino	lg-ita
+dd486	Ricerca	termino	lg-ita
+dd158	Lista dei registri	termino	lg-ita
+dd180	Nuovo progetto	termino	lg-ita
+dd994	Ultime modifiche	termino	lg-ita
+dd68	Liste dei valori	termino	lg-ita
+dd137	Private	termino	lg-ita
+dd190	Valore della lista	termino	lg-ita
+dd191	Elenco dei registri	termino	lg-ita
+dd810	Tipologia di bibliografia	termino	lg-ita
+dd811	Valore della lista	termino	lg-ita
+dd611	Pubblicazione	termino	lg-ita
+dd812	Tipologia bibliografica	termino	lg-ita
+dd815	Filtro	termino	lg-ita
+dd298	Nuova tipologia	termino	lg-ita
+dd816	Elenco	termino	lg-ita
+dd208	Tipologia di attività	termino	lg-ita
+dd209	Valore della lista	termino	lg-ita
+dd210	Tipologia di attività	termino	lg-ita
+dd211	Filtro	termino	lg-ita
+dd213	Nuova Tipologia di attività	termino	lg-ita
+dd212	Elenco	termino	lg-ita
+dd833	Diffusione	termino	lg-ita
+dd834	Valore della lista	termino	lg-ita
+dd835	si/no/limitato	termino	lg-ita
+dd836	Filtro	termino	lg-ita
+dd838	Nuovo stato di diffusione	termino	lg-ita
+dd861	Genere	termino	lg-ita
+dd866	Nuovo genere	termino	lg-ita
+dd862	Valore della lista	termino	lg-ita
+dd863	Uomo/Donna	termino	lg-ita
+dd864	Filtro	termino	lg-ita
+dd865	Elenco dei registri	termino	lg-ita
+dd837	Elenco dei registri	termino	lg-ita
+dd840	Valore della lista	termino	lg-ita
+dd842	Filtro	termino	lg-ita
+dd843	Elenco	termino	lg-ita
+dd844	Nuovo stato della copia DVD	termino	lg-ita
+dd889	Qualità del contenuto	termino	lg-ita
+dd890	Valore della lista	termino	lg-ita
+dd891	Qualità	termino	lg-ita
+dd892	Filtro	termino	lg-ita
+dd893	Elenco dei registri	termino	lg-ita
+dd894	Nuova qualità	termino	lg-ita
+dd895	Cancellare qualità	termino	lg-ita
+dd911	Tipologia delle persone	termino	lg-ita
+dd912	Valore della lista	termino	lg-ita
+dd914	Tipologia delle persone	termino	lg-ita
+dd913	Progetto	termino	lg-ita
+dd915	Elenco dei registri	termino	lg-ita
+dd916	Nuova tipologia	termino	lg-ita
+dd957	Formato dell&#039; originale AV	termino	lg-ita
+dd958	Valore della lista	termino	lg-ita
+dd959	Formato dell&#039; originale AV	termino	lg-ita
+dd982	Filtro	termino	lg-ita
+dd960	Elenco dei registri	termino	lg-ita
+dd961	Nuovo Formato dell&#039; originale AV	termino	lg-ita
+dd966	Cancellare Formato dell&#039; originale AV	termino	lg-ita
+dd976	Relazione aspetto	termino	lg-ita
+dd977	Valore della lista	termino	lg-ita
+dd978	Relazione dell&#039; aspetto	termino	lg-ita
+dd983	Filtro	termino	lg-ita
+dd979	Elenco dei registri	termino	lg-ita
+dd980	Nuova relazione dell&#039;aspetto	termino	lg-ita
+dd981	Cancellare relazione dell&#039; aspetto	termino	lg-ita
+dd875	Qualità del nastro originale	termino	lg-ita
+dd879	Valore della lista	termino	lg-ita
+dd876	Qualità del nastro originale	termino	lg-ita
+dd877	Filtro	termino	lg-ita
+dd880	Cancellare qualità del nastro originale	termino	lg-ita
+dd995	Nuova qualità del nastro originale	termino	lg-ita
+dd878	Elenco	termino	lg-ita
+dd1117	Tipologia risorsa	termino	lg-ita
+dd1118	Valore della lista	termino	lg-ita
+dd1119	Tipologia risorsa	termino	lg-ita
+dd1121	Filtro	termino	lg-ita
+dd1122	Nuova tipologia risorsa	termino	lg-ita
+dd1123	Cancellare tipologia risorsa	termino	lg-ita
+dd1120	Elenco delle tipologie risorsa	termino	lg-ita
+dd567	Stato Nastro	termino	lg-ita
+dd568	Valore della lista	termino	lg-ita
+dd570	Stato Nastro	termino	lg-ita
+dd569	Filtro	termino	lg-ita
+dd573	Nuovo stato nastro	termino	lg-ita
+dd574	Cancellare stato nastro	termino	lg-ita
+dd571	Elenco	termino	lg-ita
+dd985	Standard del Colore Audiovisivo	termino	lg-ita
+dd987	Standard del Colore Audiovisivo	termino	lg-ita
+dd986	Valore della lista	termino	lg-ita
+dd989	Filtro	termino	lg-ita
+dd990	Nuovo Standard del Colore Audiovisivo	termino	lg-ita
+dd988	Elenco dei registri	termino	lg-ita
+dd991	Cancellare Standard del Colore Audiovisivo	termino	lg-ita
+dd174	Processi generali	termino	lg-ita
+dd182	Processo generale	termino	lg-ita
+dd185	Processo	termino	lg-ita
+dd186	Filtro	termino	lg-ita
+dd189	Elenco	termino	lg-ita
+dd202	Nuovo	termino	lg-ita
+dd203	Processi del trattamento del testo	termino	lg-ita
+dd205	Processo	termino	lg-ita
+dd223	Processato testuale	termino	lg-ita
+dd224	Filtro	termino	lg-ita
+dd226	Elenco	termino	lg-ita
+dd228	Nuovo	termino	lg-ita
+dd292	Tipologia di numero normalizzato	termino	lg-ita
+dd293	Tipologia di numero normalizzato	termino	lg-ita
+dd296	Tipologia di numero normalizzato	termino	lg-ita
+dd294	Progetto	termino	lg-ita
+dd295	Elenco	termino	lg-ita
+dd297	Nuova Tipologia di numero normalizzato	termino	lg-ita
+dd90	Processi d&#039; indagine	termino	lg-ita
+dd99	Processo	termino	lg-ita
+dd127	Processo	termino	lg-ita
+dd139	Filtro	termino	lg-ita
+dd140	Elenco	termino	lg-ita
+dd142	Nuovo	termino	lg-ita
+dd299	Pubblico/privato	termino	lg-ita
+dd300	Identificazione	termino	lg-ita
+dd304	Tipo d&#039; entità	termino	lg-ita
+dd301	Progetto	termino	lg-ita
+dd306	Elenco	termino	lg-ita
+dd313	Nuovo	termino	lg-ita
+dd307	Spazio del Colore	termino	lg-ita
+dd309	Spazio del Colore	termino	lg-ita
+dd310	Spazio del Colore	termino	lg-ita
+dd311	Progetto	termino	lg-ita
+dd312	Elenco	termino	lg-ita
+dd314	Nuovo	termino	lg-ita
+dd460	Misure	termino	lg-ita
+dd461	Identificazione	termino	lg-ita
+dd462	Misura	termino	lg-ita
+dd463	Progetto	termino	lg-ita
+dd464	Elenco	termino	lg-ita
+dd469	Tipi di vie	termino	lg-ita
+dd470	Identificazione	termino	lg-ita
+dd471	Tipo di via	termino	lg-ita
+dd475	Filtro	termino	lg-ita
+dd476	Elenco	termino	lg-ita
+dd492	Ruoli delle pubblicazioni	termino	lg-ita
+dd493	Identificazione	termino	lg-ita
+dd494	Ruolo	termino	lg-ita
+dd497	Elenco	termino	lg-ita
+dd499	Progetto	termino	lg-ita
+dd501	Stati della revisione	termino	lg-ita
+dd502	Identificazione	termino	lg-ita
+dd504	Elenco	termino	lg-ita
+dd505	Progetto	termino	lg-ita
+dd466	Nuovo	termino	lg-ita
+dd516	Processi di restaurazione	termino	lg-ita
+dd517	Identificazione	termino	lg-ita
+dd518	Processo di restaurazione	termino	lg-ita
+dd519	Elenco	termino	lg-ita
+dd520	Progetto	termino	lg-ita
+dd214	Cancellare	termino	lg-ita
+dd562	Quadro del dato attivo	termino	lg-ita
+dd563	Identificazione	termino	lg-ita
+dd572	Elenco	termino	lg-ita
+dd575	Progetto	termino	lg-ita
+dd498	Nuovo	termino	lg-ita
+dd1318	Tipologie di progetto	termino	lg-ita
+dd1319	Valore della lista	termino	lg-ita
+dd1320	Tipologia di progetto	termino	lg-ita
+dd1321	Progetto	termino	lg-ita
+dd1322	Elenco	termino	lg-ita
+dd971	Nuovo	termino	lg-ita
+dd972	Cancellare	termino	lg-ita
+dd973	Cercare	termino	lg-ita
+dd1241	Projects	termino	lg-eng
+dd1251	Información general	termino	lg-spa
+dd1251	General information	termino	lg-eng
+dd1252	Lista de proyectos	termino	lg-spa
+dd1252	Projects list	termino	lg-eng
+dd1253	Difusión	termino	lg-spa
+dd1253	Diffusion	termino	lg-eng
+dd1254	Nombre	termino	lg-spa
+dd1254	Name	termino	lg-eng
+dd1255	Descripción	termino	lg-spa
+dd1255	Description	termino	lg-eng
+dd927	Nuova Categoria Lavorativa / Responsabile	termino	lg-ita
+dd1256	Web	termino	lg-spa
+dd922	Categoria Lavorativa / Responsabile	termino	lg-ita
+dd923	Valore della lista	termino	lg-ita
+dd924	Categoria Lavorativa / Responsabile	termino	lg-ita
+dd926	Progetto	termino	lg-ita
+dd925	Elenco dei registri	termino	lg-ita
+dd928	Cancellare Categoria Lavorativa / Responsabile	termino	lg-ita
+dd882	Professioni	termino	lg-ita
+dd365	Stati civili	termino	lg-ita
+dd883	Generale	termino	lg-ita
+dd884	Professione	termino	lg-ita
+dd885	Progetto	termino	lg-ita
+dd887	Cancellare	termino	lg-ita
+dd888	Nuovo	termino	lg-ita
+dd886	Elenco	termino	lg-ita
+dd435	Cercare	termino	lg-ita
+dd366	Stato civile	termino	lg-ita
+dd367	Stato civile	termino	lg-ita
+dd368	Elenco	termino	lg-ita
+dd369	Nuovo	termino	lg-ita
+dd370	Cancellare	termino	lg-ita
+dd371	Progetto	termino	lg-ita
+dd372	Partiti politici	termino	lg-ita
+dd373	Partito politico	termino	lg-ita
+dd374	Sigle	termino	lg-ita
+dd375	Nome	termino	lg-ita
+dd376	Anno di fondazione	termino	lg-ita
+dd377	Elenco	termino	lg-ita
+dd378	Nuovo	termino	lg-ita
+dd379	Cancellare	termino	lg-ita
+dd380	Progetto	termino	lg-ita
+dd382	Identificazione	termino	lg-ita
+dd396	Elenco	termino	lg-ita
+dd404	Nuovo	termino	lg-ita
+dd405	Cancellare	termino	lg-ita
+dd406	Progetto	termino	lg-ita
+dd385	Sigle	termino	lg-ita
+dd393	Nome	termino	lg-ita
+dd381	Sindicati	termino	lg-ita
+dd394	Anno di fondazione	termino	lg-ita
+dd408	Religioni	termino	lg-ita
+dd409	Identificazione	termino	lg-ita
+dd411	Nome	termino	lg-ita
+dd413	Elenco	termino	lg-ita
+dd416	Progetto	termino	lg-ita
+dd414	Nuovo	termino	lg-ita
+dd415	Cancellare	termino	lg-ita
+dd412	Anno di fondazione	termino	lg-ita
+dd477	Modelli web	termino	lg-ita
+dd585	Generale	termino	lg-ita
+dd593	Pubblicazione	termino	lg-ita
+dd594	Nome	termino	lg-ita
+dd595	Osservazioni	termino	lg-ita
+dd596	Configurazione	termino	lg-ita
+dd599	Progetto	termino	lg-ita
+dd597	Elenco	termino	lg-ita
+dd1317	Elenco	termino	lg-ita
+dd1136	Elenco	termino	lg-ita
+dd533	Elenco	termino	lg-ita
+dd1312	Elenco	termino	lg-ita
+dd598	Nuovo	termino	lg-ita
+dd964	Nuovo	termino	lg-ita
+dd534	Nuovo	termino	lg-ita
+dd974	Nuovo	termino	lg-ita
+dd968	Nuovo	termino	lg-ita
+dd965	Cancellare	termino	lg-ita
+dd535	Cancellare	termino	lg-ita
+dd975	Cancellare	termino	lg-ita
+dd984	Cercare	termino	lg-ita
+dd992	Cancellare	termino	lg-ita
+dd969	Cancellare	termino	lg-ita
+dd1313	Tipologia di documento amministrativo	termino	lg-ita
+dd1314	Valore della lista	termino	lg-ita
+dd1315	Tipologia di documento amministrativo	termino	lg-ita
+dd1316	Filtro	termino	lg-ita
+dd1132	Collezione / archivio	termino	lg-ita
+dd1133	Valore della lista	termino	lg-ita
+dd1055	Pubblicazione	termino	lg-ita
+dd1135	Collezione / archivio	termino	lg-ita
+dd433	Acronimo	termino	lg-ita
+dd1196	Nuova Collezione / archivio	termino	lg-ita
+dd898	Luogo di raccolta	termino	lg-ita
+dd900	Luogo di raccolta	termino	lg-ita
+dd899	Valore della lista	termino	lg-ita
+dd902	Progetto	termino	lg-ita
+dd901	Elenco dei registri	termino	lg-ita
+dd528	Tipologia di misure	termino	lg-ita
+dd529	Identificazione	termino	lg-ita
+dd531	Tipo di misura	termino	lg-ita
+dd532	Filtro	termino	lg-ita
+dd1308	Linea d&#039;indagine	termino	lg-ita
+dd1309	Valore della lista	termino	lg-ita
+dd1311	Linea d&#039;indagine	termino	lg-ita
+dd1310	Progetto	termino	lg-ita
+dd942	Tipo di associazione / gruppo	termino	lg-ita
+dd944	Tipo di associazione / gruppo	termino	lg-ita
+dd943	Valore della lista	termino	lg-ita
+dd996	Entità	termino	lg-ita
+dd997	Valore della lista	termino	lg-ita
+dd998	Entità	termino	lg-ita
+dd999	Elenco delle entità	termino	lg-ita
+dd967	Progetto	termino	lg-ita
+dd970	Cercare	termino	lg-ita
+dd946	Progetto	termino	lg-ita
+dd945	Elenco dei registri	termino	lg-ita
+dd947	Nuovo tipo di associazione / gruppo	termino	lg-ita
+dd993	Cercare	termino	lg-ita
+dd23	Impaginazione	termino	lg-ita
+dd542	Attività	termino	lg-ita
+dd32	Impaginazione	termino	lg-ita
+dd20	Modelli d&#039; impaginazione	termino	lg-ita
+dd21	Impaginazione	termino	lg-ita
+dd61	Sezione	termino	lg-ita
+dd29	Nome	termino	lg-ita
+dd25	Elenco	termino	lg-ita
+dd26	Progetto	termino	lg-ita
+dd27	Nuovo	termino	lg-ita
+dd28	Cancellare impaginazione	termino	lg-ita
+dd30	Impaginazione	termino	lg-ita
+dd33	Impaginazione	termino	lg-ita
+dd67	Sezione	termino	lg-ita
+dd38	Nome	termino	lg-ita
+dd39	Impaginazione	termino	lg-ita
+dd41	Elenco	termino	lg-ita
+dd55	Nuovo	termino	lg-ita
+dd49	Progetto	termino	lg-ita
+dd56	Cancellare	termino	lg-ita
+dd548	Generale	termino	lg-ita
+dd547	Quando	termino	lg-ita
+dd543	Chi	termino	lg-ita
+dd544	Direzione IP	termino	lg-ita
+dd546	Dove	termino	lg-ita
+dd545	Cosa	termino	lg-ita
+dd551	Dato	termino	lg-ita
+dd550	Progetti	termino	lg-ita
+dd549	Elenco della sezione	termino	lg-ita
+dd95	Ricerca	termino	lg-ita
+dd1704	Statistiche	termino	lg-ita
+dd715	Errore nel salvare!	termino	lg-ita
+dd495	Eliminare etichetta	termino	lg-ita
+dd401	Sei sicuro di cancellare questo registro?	termino	lg-ita
+dd584	Sei sicuro di sovrascrivere il testo	termino	lg-ita
+dd1051	Sicuro	termino	lg-ita
+dd743	Abandonando questa pagina perderai i dati che non hai salvato	termino	lg-ita
+dd756	Aprire	termino	lg-ita
+dd667	Termina	termino	lg-ita
+dd150	Terminato	termino	lg-ita
+dd754	Azione	termino	lg-ita
+dd1007	Acronimo	termino	lg-ita
+dd692	Attività	termino	lg-ita
+dd1097	Attività oraria	termino	lg-ita
+dd565	Attivo	termino	lg-ita
+dd732	Attivo	termino	lg-ita
+dd750	Attivo	termino	lg-ita
+dd336	Aggiornare	termino	lg-ita
+dd1738	Aggiornare	termino	lg-ita
+dd874	Aggiornare	termino	lg-ita
+dd337	Aggiornare struttura	termino	lg-ita
+dd509	Aggiornare vista	termino	lg-ita
+dd145	Adesso	termino	lg-ita
+dd389	Avvisi	termino	lg-ita
+dd426	Altitudine	termino	lg-ita
+dd285	Aggiungere il file BIBTex e i corrispondenti files PDF dal suo disco duro. Una volta caricati, seleziona "Importare files"	termino	lg-ita
+dd941	 Aggiungere il file JSON di Zotero e i corrispondenti files PDF dal suo disco duro. Una volta caricati, seleziona "Importare files"	termino	lg-ita
+dd683	Aggiungere contenuto nel campo	termino	lg-ita
+dd685	Aggiungere il contenuto	termino	lg-ita
+dd112	Aggiungere files	termino	lg-ita
+dd420	Anno	termino	lg-ita
+dd417	Anni	termino	lg-ita
+dd1726	Applicare	termino	lg-ita
+dd146	Applicare e salvare	termino	lg-ita
+dd1082	Archivio caricato con 	termino	lg-ita
+dd403	Attenzione	termino	lg-ita
+dd1240	Attenzione: cambiando questo valore, si eliminerà l'informazione contenuta nei campi che saranno nascosti. Si desidera continuare	termino	lg-ita
+dd315	Attenzione: l'utente sta usando questo campo. Per favore, aspetta che termina la modifica.	termino	lg-ita
+dd332	Auto-riavvolto	termino	lg-ita
+dd1014	base URL	termino	lg-ita
+dd467	Bidirezionale	termino	lg-ita
+dd278	Cancellata	termino	lg-ita
+dd1187	Cancellare	termino	lg-ita
+dd1201	Cancellare	termino	lg-ita
+dd698	Cancellare	termino	lg-ita
+dd729	Cancellare	termino	lg-ita
+dd819	Cancellare	termino	lg-ita
+dd859	Cancellare	termino	lg-ita
+dd860	Cancellare	termino	lg-ita
+dd909	Cancellare	termino	lg-ita
+dd936	Cancellare	termino	lg-ita
+dd954	Cancellare	termino	lg-ita
+dd831	Cancellare la risorsae tutti i suoi collegamenti	termino	lg-ita
+dd763	Cancellare registro completo	termino	lg-ita
+dd762	Cancellare solo dati	termino	lg-ita
+dd830	Cancellare solo il collegamento	termino	lg-ita
+dd359	Cancellare temporanei di audio/video	termino	lg-ita
+dd343	Cancellare tutto il componente della sezione	termino	lg-ita
+dd86	Cancellare l'etichetta selezionata in tutte le lingue così come tutte le relazioni e indicizzazioni associate ad essa	termino	lg-ita
+dd152	Cercare	termino	lg-ita
+dd699	Ricerca	termino	lg-ita
+dd659	Ricerche	termino	lg-ita
+dd390	Buttons	termino	lg-ita
+dd459	Intestazione	termino	lg-ita
+dd184	Calendario	termino	lg-ita
+dd724	Qualità	termino	lg-ita
+dd950	Descrizione	termino	lg-ita
+dd607	Cambio in ordine	termino	lg-ita
+dd644	Cambi	termino	lg-ita
+dd721	Campo alternativo. Non usare salvo che il termine non si trova normalizzato. Utilizza nello stesso luogo:	termino	lg-ita
+dd340	Campo in processo di scomparsa. Questo campo si fonde con: 	termino	lg-ita
+dd716	Campo:	termino	lg-ita
+dd651	Campi	termino	lg-ita
+dd761	Cancellare	termino	lg-ita
+dd114	Cancellare il caricamento	termino	lg-ita
+dd1044	Caratteri per linea	termino	lg-ita
+dd1090	Caricamento	termino	lg-ita
+dd1094	Caricamento completato	termino	lg-ita
+dd748	Caricamento dell'archivio completato	termino	lg-ita
+dd788	Caricamento degli archivi	termino	lg-ita
+dd720	Caricando...	termino	lg-ita
+dd1087	Cartella temporanea non accessibile	termino	lg-ita
+dd1068	Catalogazione	termino	lg-ita
+dd745	Chiudere	termino	lg-ita
+dd797	Classe	termino	lg-ita
+dd447	Codici temporali	termino	lg-ita
+dd450	Codici temporali	termino	lg-ita
+dd113	Iniziare il caricamento	termino	lg-ita
+dd803	Completo	termino	lg-ita
+dd147	Componenti	termino	lg-ita
+dd1069	Config	termino	lg-ita
+dd649	Config. di ricerca	termino	lg-ita
+dd623	Configurazioni delle ricerche	termino	lg-ita
+dd655	Configurazioni delle ricerche attuali	termino	lg-ita
+dd1244	Configurazioni di visualizzazione	termino	lg-ita
+dd282	Formare le intestazioni	termino	lg-ita
+dd110	Contenuto attuale	termino	lg-ita
+dd665	Contiene	termino	lg-ita
+dd83	Contiene	termino	lg-ita
+dd1062	Contiene (rigido)	termino	lg-ita
+dd660	Contiene informazione	termino	lg-ita
+dd256	Password	termino	lg-ita
+dd839	Copia DVD	termino	lg-ita
+dd586	Copiare nella destinazione	termino	lg-ita
+dd93	Creato	termino	lg-ita
+dd200	Creato per utente	termino	lg-ita
+dd736	Creare	termino	lg-ita
+dd507	Creare capitolo	termino	lg-ita
+dd81	Creare immagine identificativa	termino	lg-ita
+dd781	Creare nuovo frammento con selezione	termino	lg-ita
+dd1049	Creare sottotitoli	termino	lg-ita
+dd1021	dati	termino	lg-ita
+dd641	Default	termino	lg-ita
+dd632	Cancellare	termino	lg-ita
+dd363	DEPRECATED (DEBUG ONLY)	termino	lg-ita
+dd316	Sbloccare tutti i componenti	termino	lg-ita
+dd1080	Scaricamento	termino	lg-ita
+dd290	Scaricare	termino	lg-ita
+dd727	Descrizione	termino	lg-ita
+dd1005	Descrizione	termino	lg-ita
+dd1032	Descrizione	termino	lg-ita
+dd1183	Descrizione	termino	lg-ita
+dd1204	Descrizione	termino	lg-ita
+dd1255	Descrizione	termino	lg-ita
+dd801	Descrizione	termino	lg-ita
+dd845	Descrizione	termino	lg-ita
+dd897	Descrizione	termino	lg-ita
+dd1205	Descrizione esempio	termino	lg-ita
+dd766	Descrittori	termino	lg-ita
+dd806	Dettagli dei riferimenti	termino	lg-ita
+dd422	Giorno	termino	lg-ita
+dd418	Giorni	termino	lg-ita
+dd1024	Diffusione	termino	lg-ita
+dd1181	Diffusione	termino	lg-ita
+dd1203	Diffusione	termino	lg-ita
+dd1253	Diffusione	termino	lg-ita
+dd796	Diffusione	termino	lg-ita
+dd824	Diffusione	termino	lg-ita
+dd870	Diffusione	termino	lg-ita
+dd920	Diffusione	termino	lg-ita
+dd948	Diffusione	termino	lg-ita
+dd175	Cartella di destinazione	termino	lg-ita
+dd663	Distinto da	termino	lg-ita
+dd713	Dividere parole	termino	lg-ita
+dd771	Documentazione	termino	lg-ita
+dd171	Dove	termino	lg-ita
+dd1077	Durata	termino	lg-ita
+dd694	Modifica	termino	lg-ita
+dd384	Modificare modella	termino	lg-ita
+dd232	Modificare registro	termino	lg-ita
+dd849	Esempio	termino	lg-ita
+dd903	Esempio	termino	lg-ita
+dd932	Esempio	termino	lg-ita
+dd1197	Esempi	termino	lg-ita
+dd1207	Esempi	termino	lg-ita
+dd1084	L'archivio caricato supera la grandezza massima consentita	termino	lg-ita
+dd1083	L'archivio caricato supera la direttiva upload_max_filesize in php.ini	termino	lg-ita
+dd1085	L'archivio caricato è stato caricato solo parzialmente	termino	lg-ita
+dd744	La cartella non esiste o non è accessibile	termino	lg-ita
+dd738	La grandezza dell'archivio è troppo grande	termino	lg-ita
+dd873	Il valore esiste già	termino	lg-ita
+dd610	Elementi / Processi (section_group_portal)	termino	lg-ita
+dd286	Elementi attivi	termino	lg-ita
+dd288	Elementi disattivi	termino	lg-ita
+dd1095	Eliminare archivio	termino	lg-ita
+dd188	Eliminare immagini dopo l'importazione	termino	lg-ita
+dd257	Email	termino	lg-ita
+dd666	Inizia con	termino	lg-ita
+dd511	Impostazione	termino	lg-ita
+dd151	Collegamento	termino	lg-ita
+dd687	Collegamento esterno	termino	lg-ita
+dd1002	Entità	termino	lg-ita
+dd1016	Entità	termino	lg-ita
+dd1000	Entità Dedalo	termino	lg-ita
+dd696	Entrata	termino	lg-ita
+dd259	Entrata	termino	lg-ita
+dd669	Tra	termino	lg-ita
+dd92	Tra (A...B)	termino	lg-ita
+dd457	Intervista	termino	lg-ita
+dd741	Errore nel caricare l'archivio	termino	lg-ita
+dd388	Errore di connessione. Ricarica la pagina passati alcuni secondi	termino	lg-ita
+dd162	Errore: L'utente e la chiave introdotti sono corretti però l'utente attuale non sta correttamente configurato. Per favore, contatta l'amministratore per assegnare profilo al suo utente.	termino	lg-ita
+dd165	Errore: L'utente e la chiave introdotti sono corretti però l'utente attuale non sta correttamente configurato. Per favore, contatta l'amministratore per assegnare progetti autorizzati al suo utente.	termino	lg-ita
+dd1059	Errore: Il codice dell'utente non esiste in Dedalo. Contatta l'amministratore.	termino	lg-ita
+dd1063	È come	termino	lg-ita
+dd424	Questa gerarchia non è attiva e non si può creare	termino	lg-ita
+dd1098	Statistiche	termino	lg-ita
+dd503	Stato	termino	lg-ita
+dd779	Stato	termino	lg-ita
+dd490	Strutturazione	termino	lg-ita
+dd506	Strutturazione	termino	lg-ita
+dd512	Strutturazioni	termino	lg-ita
+dd514	Strutturazioni info	termino	lg-ita
+dd775	Etichetta	termino	lg-ita
+dd273	Etichette di indicizzazione cancellate furono create all'inizio del testo.	termino	lg-ita
+dd274	Etichette di indicizzazione rotte furono sistemate.	termino	lg-ita
+dd276	Etichette indicizzazione	termino	lg-ita
+dd281	Etichette perse	termino	lg-ita
+dd825	Esistente	termino	lg-ita
+dd289	Esportare	termino	lg-ita
+dd217	Estensione	termino	lg-ita
+dd737	Estensione non valida	termino	lg-ita
+dd1126	Estende	termino	lg-ita
+dd798	Data	termino	lg-ita
+dd455	Data	termino	lg-ita
+dd929	Data creazione	termino	lg-ita
+dd930	Data della cancellazione	termino	lg-ita
+dd199	Data della creazione	termino	lg-ita
+dd201	Data della modificazione	termino	lg-ita
+dd1711	Data o campo in formato DD/MM/YYYY o DD/MM/YYYY - DD/MM/YYYY	termino	lg-ita
+dd778	scheda	termino	lg-ita
+dd725	File	termino	lg-ita
+dd284	File BibTex processato correttamente	termino	lg-ita
+dd178	File di Zotero processato correttamente	termino	lg-ita
+dd740	File caricato con successo	termino	lg-ita
+dd786	Files di audio/video	termino	lg-ita
+dd787	Files di immagine	termino	lg-ita
+dd1213	Files PDF	termino	lg-ita
+dd1217	Filtro	termino	lg-ita
+dd410	Filtro	termino	lg-ita
+dd675	Filtro	termino	lg-ita
+dd221	Formato sbagliato	termino	lg-ita
+dd791	Fotogramma	termino	lg-ita
+dd521	Frammento	termino	lg-ita
+dd637	Generale	termino	lg-ita
+dd730	Generale	termino	lg-ita
+dd338	Creare struttura css	termino	lg-ita
+dd261	Creare turni di visite	termino	lg-ita
+dd1125	Geolocalizzazione	termino	lg-ita
+dd1710	Geolocalizzazione	termino	lg-ita
+dd1712	Georeferenziazione in formato Longitudine, Latitudine ex. 39.46264, -0.37615	termino	lg-ita
+dd115	Gestione degli archivi	termino	lg-ita
+dd1022	Salvato	termino	lg-ita
+dd700	Salvare	termino	lg-ita
+dd430	Creare copia di sicurezza	termino	lg-ita
+dd757	Strumento	termino	lg-ita
+dd329	Strumento d'amministrazione	termino	lg-ita
+dd723	Strumento di descrizione	termino	lg-ita
+dd1250	Strumento di organizzazione	termino	lg-ita
+dd1190	Strumenti	termino	lg-ita
+dd474	Strumenti	termino	lg-ita
+dd48	Figlio	termino	lg-ita
+dd141	Storico	termino	lg-ita
+dd1001	Id	termino	lg-ita
+dd1012	Id	termino	lg-ita
+dd1027	Id	termino	lg-ita
+dd1054	Id	termino	lg-ita
+dd1180	Id	termino	lg-ita
+dd1202	Id	termino	lg-ita
+dd1243	Id	termino	lg-ita
+dd330	Id	termino	lg-ita
+dd564	Id	termino	lg-ita
+dd591	Id	termino	lg-ita
+dd784	Id	termino	lg-ita
+dd795	Id	termino	lg-ita
+dd823	Id	termino	lg-ita
+dd869	Id	termino	lg-ita
+dd910	Id	termino	lg-ita
+dd919	Id	termino	lg-ita
+dd940	Id	termino	lg-ita
+dd1003	Identificazione	termino	lg-ita
+dd1011	Identificazione	termino	lg-ita
+dd1026	Identificazione	termino	lg-ita
+dd881	Lingua	termino	lg-ita
+dd108	lingua di destinazione	termino	lg-ita
+dd1219	lingua d'origine	termino	lg-ita
+dd358	Ignorare temporaneamente lo stato di pubblicazione nel pubblicare	termino	lg-ita
+dd760	Immagine	termino	lg-ita
+dd407	Immagine info.	termino	lg-ita
+dd537	Importazione a/v	termino	lg-ita
+dd538	Importazione dei files	termino	lg-ita
+dd539	Importazione immagini	termino	lg-ita
+dd484	Importare	termino	lg-ita
+dd335	Importare audio/video	termino	lg-ita
+dd326	Importare da BibTex	termino	lg-ita
+dd1048	Importare da Zotero	termino	lg-ita
+dd439	Importare Dedalo csv	termino	lg-ita
+dd1113	Importare files	termino	lg-ita
+dd324	Importare files	termino	lg-ita
+dd1702	Importare immagini	termino	lg-ita
+dd852	Stampa	termino	lg-ita
+dd676	Stampa del thesaurus	termino	lg-ita
+dd448	Stampare	termino	lg-ita
+dd496	Stampare	termino	lg-ita
+dd558	Incertezza	termino	lg-ita
+dd578	Incerto	termino	lg-ita
+dd453	Indice info	termino	lg-ita
+dd764	Indicizzazione	termino	lg-ita
+dd789	Indicizzazione	termino	lg-ita
+dd96	Indicizzazione	termino	lg-ita
+dd451	Indicizzazione	termino	lg-ita
+dd765	Indicizzazioni	termino	lg-ita
+dd1079	Informazione	termino	lg-ita
+dd488	Informazione del file	termino	lg-ita
+dd939	Informazione generale	termino	lg-ita
+dd1179	Informazione generale	termino	lg-ita
+dd1198	Informazione generale	termino	lg-ita
+dd1251	Informazione generale	termino	lg-ita
+dd773	Informazione generale	termino	lg-ita
+dd822	Informazione generale	termino	lg-ita
+dd868	Informazione generale	termino	lg-ita
+dd918	Informazione generale	termino	lg-ita
+dd458	Informatori	termino	lg-ita
+dd719	Inizio	termino	lg-ita
+dd229	Inizio della sessione	termino	lg-ita
+dd753	Inserire	termino	lg-ita
+dd333	Inserire etichetta	termino	lg-ita
+dd657	Andare alla pagina	termino	lg-ita
+dd1737	Andare al frammento	termino	lg-ita
+dd855	Andare all'elenco	termino	lg-ita
+dd263	Andare al profilo	termino	lg-ita
+dd658	Andare al registro	termino	lg-ita
+dd857	Gerarchie	termino	lg-ita
+dd625	JSON data	termino	lg-ita
+dd383	Etichette	termino	lg-ita
+dd1047	Latitudine	termino	lg-ita
+dd436	Leggere	termino	lg-ita
+dd790	Linguaggio	termino	lg-ita
+dd541	Linguaggio d'origine e destinazione NON possono avere la stessa lingua	termino	lg-ita
+dd454	Linee	termino	lg-ita
+dd1245	Elenco	termino	lg-ita
+dd629	Elenco	termino	lg-ita
+dd656	Elenco	termino	lg-ita
+dd817	Elenco dei componenti	termino	lg-ita
+dd1199	Elenco degli esempi	termino	lg-ita
+dd850	Elenco dei metodi	termino	lg-ita
+dd905	Elenco delle proprietà	termino	lg-ita
+dd1252	Elenco dei progetti	termino	lg-ita
+dd1185	Elenco dei tipi di componenti	termino	lg-ita
+dd952	Elenco dei tipi di dati	termino	lg-ita
+dd934	Elenco delle versioni	termino	lg-ita
+dd1009	Elenco	termino	lg-ita
+dd1038	Elenco	termino	lg-ita
+dd1043	Elenco	termino	lg-ita
+dd693	Elenco	termino	lg-ita
+dd668	Letterale	termino	lg-ita
+dd636	Localizzatori	termino	lg-ita
+dd1046	Longitudine	termino	lg-ita
+dd1713	Mappa	termino	lg-ita
+dd793	Macchina del tempo	termino	lg-ita
+dd560	Quadro spaziale	termino	lg-ita
+dd559	Quadro temporale	termino	lg-ita
+dd555	Quadri dei dati	termino	lg-ita
+dd671	Maggiore di	termino	lg-ita
+dd1065	Maggiore di	termino	lg-ita
+dd673	Media	termino	lg-ita
+dd853	Nuovo	termino	lg-ita
+dd672	Minore di	termino	lg-ita
+dd674	Minore di	termino	lg-ita
+dd77	Messaggio di testo	termino	lg-ita
+dd421	mesi	termino	lg-ita
+dd419	metodo	termino	lg-ita
+dd807	Metodi	termino	lg-ita
+dd821	Metodi	termino	lg-ita
+dd809	Metodi diffusi	termino	lg-ita
+dd647	Stesso nome stesso registro	termino	lg-ita
+dd98	Modello	termino	lg-ita
+dd856	Modelli	termino	lg-ita
+dd105	Modificato	termino	lg-ita
+dd197	Modificato per utente	termino	lg-ita
+dd1189	Modificatori	termino	lg-ita
+dd1246	modo	termino	lg-ita
+dd804	modo	termino	lg-ita
+dd76	Mostrare	termino	lg-ita
+dd1735	Mostrare filtrati	termino	lg-ita
+dd854	Mostrare controllore	termino	lg-ita
+dd1734	Mostrare tutti	termino	lg-ita
+dd508	Mostrare/nascondere etichette	termino	lg-ita
+dd444	Muovere	termino	lg-ita
+dd445	Muovere dati dei componenti	termino	lg-ita
+dd554	Multi-linguaggio	termino	lg-ita
+dd621	Multidirezionale	termino	lg-ita
+dd456	Comune	termino	lg-ita
+dd678	NA	termino	lg-ita
+dd391	Navigazione	termino	lg-ita
+dd631	Nuovo	termino	lg-ita
+dd1086	Nessun archivio fu caricato	termino	lg-ita
+dd619	No	termino	lg-ita
+dd73	No	termino	lg-ita
+dd664	Non contiene	termino	lg-ita
+dd1064	Non è uguale a 	termino	lg-ita
+dd841	Non realizzata / realizzata / consegnata	termino	lg-ita
+dd552	Non hanno trovato registri	termino	lg-ita
+dd1088	Impossibile scrivere l'archivio nel disco	termino	lg-ita
+dd87	Non hai informazione	termino	lg-ita
+dd1013	Nome	termino	lg-ita
+dd1254	Nome	termino	lg-ita
+dd1745	Nome	termino	lg-ita
+dd624	Nome	termino	lg-ita
+dd826	Nome	termino	lg-ita
+dd871	Nome	termino	lg-ita
+dd219	Nome automatico	termino	lg-ita
+dd192	Nome completo del file	termino	lg-ita
+dd176	Nome del file	termino	lg-ita
+dd645	Nome indica campo	termino	lg-ita
+dd646	Nome indica id	termino	lg-ita
+dd277	Normale	termino	lg-ita
+dd933	Note della versione	termino	lg-ita
+dd344	Nuova pagina	termino	lg-ita
+dd472	Nuova pagina stabilita	termino	lg-ita
+dd328	Nuova pagina regolare	termino	lg-ita
+dd1040	Nuovo modello vuoto	termino	lg-ita
+dd1081	Nuova versione	termino	lg-ita
+dd1008	Nuovo	termino	lg-ita
+dd1039	Nuovo	termino	lg-ita
+dd1050	Nuovo	termino	lg-ita
+dd1186	Nuovo	termino	lg-ita
+dd1200	Nuovo	termino	lg-ita
+dd613	Nuovo	termino	lg-ita
+dd695	Nuovo	termino	lg-ita
+dd818	Nuovo	termino	lg-ita
+dd820	Nuovo	termino	lg-ita
+dd908	Nuovo	termino	lg-ita
+dd935	Nuovo	termino	lg-ita
+dd953	Nuovo	termino	lg-ita
+dd215	Numero d'inventario	termino	lg-ita
+dd216	Numero della risorsa	termino	lg-ita
+dd1061	O	termino	lg-ita
+dd653	o	termino	lg-ita
+dd1195	Obsoleto	termino	lg-ita
+dd800	Obsoleto	termino	lg-ita
+dd334	Opzioni	termino	lg-ita
+dd650	Opzioni di ricerca	termino	lg-ita
+dd85	Operatori	termino	lg-ita
+dd1019	Operatori della ricerca	termino	lg-ita
+dd187	Originale	termino	lg-ita
+dd805	Altri riferimenti	termino	lg-ita
+dd47	Padre	termino	lg-ita
+dd718	Pagina	termino	lg-ita
+dd111	Pagina %s di %s	termino	lg-ita
+dd1248	Pagina X di Y	termino	lg-ita
+dd121	Pagine totali	termino	lg-ita
+dd291	Per conservare i cambiamenti, NON CHIUDERE QUESTA FINESTRA. Inizia una sessione in un'altra finestra del browser e, successivamente, torna in questa finestra e salva il contenuto (cliccando il pulsante "Salvare")	termino	lg-ita
+dd1035	Per creare un nuovo frammento, semplicemente seleziona una parte del testo e clicca "Nuovo frammento" in basso	termino	lg-ita
+dd161	Per controllare	termino	lg-ita
+dd847	Parametro d' entrata	termino	lg-ita
+dd480	Persone	termino	lg-ita
+dd566	Peso	termino	lg-ita
+dd331	Play / pause tastiera	termino	lg-ita
+dd747	Per favore attenda...	termino	lg-ita
+dd275	Per favore controlla la posizione delle etichette blu (cancellate accidentalmente)	termino	lg-ita
+dd832	Per favore, attenda	termino	lg-ita
+dd1744	Per favore, indicizza da una sezione d'inventario (es. Storia orale) e non da una risorsa	termino	lg-ita
+dd279	Per controllare	termino	lg-ita
+dd94	per utente	termino	lg-ita
+dd1701	Portale	termino	lg-ita
+dd116	Previsualizzazione dell'importazione	termino	lg-ita
+dd1727	Previsualizzazione dell'importazione	termino	lg-ita
+dd271	Prima pubblicazione	termino	lg-ita
+dd1224	Prima pubblicazione utente	termino	lg-ita
+dd734	Processando	termino	lg-ita
+dd283	Processando media in secondo piano (qualità %s). Questo processo può tardare, però può continuare a lavorare.	termino	lg-ita
+dd122	Processando... per favore attenda	termino	lg-ita
+dd1746	Processare	termino	lg-ita
+dd587	Diffondere segnali	termino	lg-ita
+dd813	Proprietà	termino	lg-ita
+dd867	Proprietà	termino	lg-ita
+dd1006	Progetto	termino	lg-ita
+dd1031	Progetto	termino	lg-ita
+dd1134	Progetto	termino	lg-ita
+dd1184	Progetto	termino	lg-ita
+dd167	Progetto	termino	lg-ita
+dd814	Progetto	termino	lg-ita
+dd851	Progetto	termino	lg-ita
+dd907	Progetto	termino	lg-ita
+dd937	Progetto	termino	lg-ita
+dd951	Progetto	termino	lg-ita
+dd1241	Progetti	termino	lg-ita
+dd84	Pubblicare	termino	lg-ita
+dd640	Pubblico	termino	lg-ita
+dd172	Che cosa	termino	lg-ita
+dd399	Eliminare	termino	lg-ita
+dd746	Ricaricare	termino	lg-ita
+dd590	Ricreare tutte	termino	lg-ita
+dd706	Recuperare	termino	lg-ita
+dd1091	Recuperare componente	termino	lg-ita
+dd1092	Recuperare sezione	termino	lg-ita
+dd827	Risorsa	termino	lg-ita
+dd1052	Rete delle entità	termino	lg-ita
+dd119	Sostituire contenuti	termino	lg-ita
+dd107	Sostituire dati del campo	termino	lg-ita
+dd896	Riferimento	termino	lg-ita
+dd931	Riferimento	termino	lg-ita
+dd707	registro	termino	lg-ita
+dd1015	Registri aggiornati	termino	lg-ita
+dd173	Registri creati	termino	lg-ita
+dd166	Registri modificati	termino	lg-ita
+dd1249	Registri mostrati da X a Y di Z.	termino	lg-ita
+dd120	Registri totali	termino	lg-ita
+dd218	Registri visualizzati	termino	lg-ita
+dd1036	Relazione aggiunta	termino	lg-ita
+dd89	Collegato	termino	lg-ita
+dd780	Collegare frammento selezionato	termino	lg-ita
+dd473	Relazioni	termino	lg-ita
+dd792	Relazioni	termino	lg-ita
+dd360	Relazioni semiantiche	termino	lg-ita
+dd616	Rinumerare sezioni	termino	lg-ita
+dd829	Risultato	termino	lg-ita
+dd759	Ruotare	termino	lg-ita
+dd1740	Percorso dell'archivio	termino	lg-ita
+dd437	Percorso della cartella files a importare	termino	lg-ita
+dd446	Percorso della cartella files a rinominare	termino	lg-ita
+dd1739	Percorso della cartella	termino	lg-ita
+dd697	Uscita	termino	lg-ita
+dd387	Uscire	termino	lg-ita
+dd1736	Salvare	termino	lg-ita
+dd648	Salvare argomenti	termino	lg-ita
+dd287	Salvare modello	termino	lg-ita
+dd684	Si aggiungerà il contenuto al campo: %1$s nei %2$s registri attuali con il valore: %3$s per la lingua: %4$s	termino	lg-ita
+dd617	è stato superato il massimo numero di items per questo campo. Limite =	termino	lg-ita
+dd109	Si sostituirà il contenuto del campo: %1$s nei %2$s registri attuali con il valore: %3$s per la lingua: %4$s	termino	lg-ita
+dd630	Ricerca	termino	lg-ita
+dd776	Sezione	termino	lg-ita
+dd196	Info sezione	termino	lg-ita
+dd398	sezioni	termino	lg-ita
+dd642	Tipo sezione	termino	lg-ita
+dd670	Sequenza	termino	lg-ita
+dd608	Sequenza (1,3,9,41,...)	termino	lg-ita
+dd104	Selezione	termino	lg-ita
+dd582	Selezionare testo	termino	lg-ita
+dd739	Seleziona il file da caricare	termino	lg-ita
+dd735	Seleziona fotogramma nel riproduttore e clicca "CREARE POSTERFRAME" per creare un fotogramma a partire dal video	termino	lg-ita
+dd742	Seleziona un file	termino	lg-ita
+dd1033	Seleziona una lingua di destinazione	termino	lg-ita
+dd1034	Seleziona un' etichetta per indicizzare	termino	lg-ita
+dd1010	Servizi di pubblicazioni	termino	lg-ita
+dd618	si	termino	lg-ita
+dd62	si/no	termino	lg-ita
+dd64	Si/No	termino	lg-ita
+dd828	Firma	termino	lg-ita
+dd662	Simile a	termino	lg-ita
+dd400	Senza accesso qui	termino	lg-ita
+dd1023	Senza file	termino	lg-ita
+dd553	Sincronizzando l'informazione con l'ultima versione	termino	lg-ita
+dd65	Sistema in manutenzione. Ci scusiamo per l'inconveniente	termino	lg-ita
+dd589	Solo nuove	termino	lg-ita
+dd536	Strutturazione	termino	lg-ita
+dd728	Caricare file	termino	lg-ita
+dd327	Sottotitoli	termino	lg-ita
+dd726	Grandezza	termino	lg-ita
+dd220	Grandezza dell'archivio	termino	lg-ita
+dd680	TE	termino	lg-ita
+dd755	Tastiera	termino	lg-ita
+dd858	Termini	termino	lg-ita
+dd777	Thesaurus	termino	lg-ita
+dd579	Testo selezionato	termino	lg-ita
+dd679	TG	termino	lg-ita
+dd677	Thesaurus	termino	lg-ita
+dd1709	Tempo	termino	lg-ita
+dd1066	Ha informazione	termino	lg-ita
+dd540	Macchina del tempo	termino	lg-ita
+dd1030	Tipo	termino	lg-ita
+dd1182	Tipo	termino	lg-ita
+dd1242	Tipo	termino	lg-ita
+dd848	Tipo di dato	termino	lg-ita
+dd872	Tipo di dato	termino	lg-ita
+dd949	Tipo di dato	termino	lg-ita
+dd346	Tipo della sezione	termino	lg-ita
+dd1020	Tipo di servizio	termino	lg-ita
+dd1037	Tipo di servizio	termino	lg-ita
+dd345	Tipo di componente	termino	lg-ita
+dd1188	Tipologia	termino	lg-ita
+dd1178	Tipologie	termino	lg-ita
+dd938	Tipi di dati	termino	lg-ita
+dd427	tipi di relazione	termino	lg-ita
+dd717	Titolo	termino	lg-ita
+dd160	Tutti	termino	lg-ita
+dd906	Strumento stampare	termino	lg-ita
+dd118	Strumento sostituire contenuti	termino	lg-ita
+dd342	strumento amministratore	termino	lg-ita
+dd785	Strumenti	termino	lg-ita
+dd1078	Totale	termino	lg-ita
+dd588	Totale paragrafi	termino	lg-ita
+dd681	TR	termino	lg-ita
+dd583	Traduzione automatica	termino	lg-ita
+dd319	Trascrizione	termino	lg-ita
+dd794	Trascrizione	termino	lg-ita
+dd243	Trascrizione automatica	termino	lg-ita
+dd449	Trascrizione stampa	termino	lg-ita
+dd1223	Ultima pubblicazione	termino	lg-ita
+dd1225	Ultima pubblicazione utente	termino	lg-ita
+dd1089	Un'estensione di PHP ha impedito il caricamento degli archivi	termino	lg-ita
+dd620	Unidirezionale	termino	lg-ita
+dd682	UP	termino	lg-ita
+dd1004	URL	termino	lg-ita
+dd402	Non è autorizzato per vedere questo contenuto	termino	lg-ita
+dd255	Utente	termino	lg-ita
+dd654	Utente	termino	lg-ita
+dd317	Utenti attivi	termino	lg-ita
+dd483	Vuoto	termino	lg-ita
+dd661	Vuoto	termino	lg-ita
+dd159	Convalidato	termino	lg-ita
+dd325	Velocità di riproduzione	termino	lg-ita
+dd123	Guarda / scarica PDF	termino	lg-ita
+dd1114	Guarda scheda esistente	termino	lg-ita
+dd168	Verifica che i dati d'installazione sono corretti. Se non lo sono, configura l'informazione relativa alla base dei dati nelle preferenza di Dedalo (config_db.php)	termino	lg-ita
+dd731	Versione	termino	lg-ita
+dd921	Versione	termino	lg-ita
+dd802	Versioni	termino	lg-ita
+dd917	Versioni	termino	lg-ita
+dd510	Associare risorsa	termino	lg-ita
+dd1220	Anteprima	termino	lg-ita
+dd758	Visualizzare	termino	lg-ita
+dd397	Ritornare	termino	lg-ita
+dd1256	Web	termino	lg-ita
+dd1060	E	termino	lg-ita
+dd652	e	termino	lg-ita
+dd280	e salva il testo	termino	lg-ita
+dd1045	Zoom	termino	lg-ita
+dd1257	Imágenes de proyecto	termino	lg-spa
+dd1257	Project images	termino	lg-eng
+dd1258	proyectos	termino	lg-spa
+dd1305	tipo_video	termino	lg-spa
+dd1306	descripcion	termino	lg-spa
+dd1260	publicacion	termino	lg-spa
+dd1261	nombre	termino	lg-spa
+dd1262	web	termino	lg-spa
+dd1263	descripcion	termino	lg-spa
+dd1264	imagenes_proyecto	termino	lg-spa
+dd1265	Videos	termino	lg-spa
+dd1265	Videos	termino	lg-eng
+dd1266	Información general	termino	lg-spa
+dd1266	General information	termino	lg-eng
+dd1267	Lista de videos	termino	lg-spa
+dd1267	Videos list	termino	lg-eng
+dd1268	Nuevo	termino	lg-spa
+dd1268	New	termino	lg-eng
+dd1269	Borrar	termino	lg-spa
+dd1269	Delete	termino	lg-eng
+dd1270	Id	termino	lg-spa
+dd1271	Difusión	termino	lg-spa
+dd1284	Diffusion	termino	lg-eng
+dd1271	Diffusion	termino	lg-eng
+dd1272	Proyecto	termino	lg-spa
+dd1272	Project	termino	lg-eng
+dd1273	Proyecto	termino	lg-spa
+dd1273	Project	termino	lg-eng
+dd1274	Proyecto	termino	lg-spa
+dd1274	Project	termino	lg-eng
+dd1275	Videos	termino	lg-spa
+dd1275	Videos	termino	lg-eng
+dd1276	Nombre	termino	lg-spa
+dd1276	Name	termino	lg-eng
+dd1277	Descripción	termino	lg-spa
+dd1277	Description	termino	lg-eng
+dd1278	Tipos de videos	termino	lg-spa
+dd1278	Video types	termino	lg-eng
+dd1279	Información general	termino	lg-spa
+dd1279	General information	termino	lg-eng
+dd1280	Lista de tipos de videos	termino	lg-spa
+dd1280	Video types list	termino	lg-eng
+dd1281	Nuevo	termino	lg-spa
+dd1281	New	termino	lg-eng
+dd1282	Borrar	termino	lg-spa
+dd1282	Delete	termino	lg-eng
+dd1283	Id	termino	lg-spa
+dd1284	Difusión	termino	lg-spa
+dd1285	Tipo de video	termino	lg-spa
+dd1285	Video type	termino	lg-eng
+dd1286	Descripción	termino	lg-spa
+dd1286	Description	termino	lg-eng
+dd1287	Proyecto	termino	lg-spa
+dd1287	Project	termino	lg-eng
+dd1288	Tipo de video	termino	lg-spa
+dd1288	Video type	termino	lg-eng
+dd1290	Equipo	termino	lg-spa
+dd1289	image	termino	lg-spa
+dd1290	Team	termino	lg-eng
+dd1291	Excluidos	termino	lg-spa
+dd1291	Excluded	termino	lg-eng
+dd1292	Listado	termino	lg-spa
+dd1292	List	termino	lg-eng
+dd1293	equipo	termino	lg-spa
+dd1294	imagen_equipo	termino	lg-spa
+dd1295	nombre	termino	lg-spa
+dd1296	apellidos	termino	lg-spa
+dd1297	profesion	termino	lg-spa
+dd1298	categoria	termino	lg-spa
+dd1299	observaciones	termino	lg-spa
+dd1300	publicacion	termino	lg-spa
+dd1301	ref_propiedad_ejemplo	termino	lg-spa
+dd1302	videos	termino	lg-spa
+dd1303	publicacion	termino	lg-spa
+dd1304	nombre	termino	lg-spa
+dd1307	audiovisual	termino	lg-spa
+dd1	11-11-2015\nname:  HUECOS A REUTILIZAR  ++ \n,,,,,,,,,,,,,,,,,,,,,,,,,\n\n\n\ndd1323,\ndd1324,\ndd1325,\ndd1326,\ndd1327,\ndd1328,\ndd1329,\ndd1330,\ndd1331,\ndd1332,\ndd1333,\ndd1334,\ndd1335,\ndd1336,\ndd1337,\ndd1338,\ndd1339,\ndd1340,\ndd1341,\ndd1342,\ndd1343,\ndd1344,\ndd1345,\ndd1346,\ndd1347,\ndd1348,\ndd1349,\ndd1350,\ndd1351,\ndd1352,\ndd1353,\ndd1354,\ndd1355,\ndd1356,\ndd1357,\ndd1358,\ndd1359,\ndd1360,\ndd1361,\ndd1362,\ndd1363,\ndd1364,\ndd1365,\ndd1366,\ndd1367,\ndd1368,\ndd1369,\ndd1370,\ndd1371,\ndd1372,\ndd1373,\ndd1374,\ndd1375,\ndd1376,\ndd1377,\ndd1378,\ndd1379,\ndd1380,\ndd1381,\ndd1382,\ndd1383,\ndd1384,\ndd1385,\ndd1386,\ndd1387,\ndd1388,\ndd1389,\ndd1390,\ndd1391,\ndd1392,\ndd1393,\ndd1394,\ndd1395,\ndd1396,\ndd1397,\ndd1398,\ndd1399,\ndd1400,\ndd1401,\ndd1402,\ndd1403,\ndd1404,\ndd1405,\ndd1406,\ndd1407,\ndd1408,\ndd1409,\ndd1410,\ndd1411,\ndd1412,\ndd1413,\ndd1414,\ndd1415,\ndd1416,\ndd1417,\ndd1418,\ndd1419,\ndd1420,\ndd1421,\ndd1422,\ndd1423,\ndd1424,\ndd1425,\ndd1426,\ndd1427,\ndd1428,\ndd1429,\ndd1430,\ndd1431,\ndd1432,\ndd1433,\ndd1434,\ndd1435,\ndd1436,\ndd1437,\ndd1438,\ndd1439,\ndd1440,\ndd1441,\ndd1442,\ndd1443,\ndd1444,\ndd1445,\ndd1446,\ndd1447,\ndd1448,\ndd1449,\ndd1450,\ndd1451,\ndd1452,\ndd1453,\ndd1454,\ndd1455,\ndd1456,\ndd1457,\ndd1458,\ndd1459,\ndd1460,\ndd1461,\ndd1462,\ndd1463,\ndd1464,\ndd1465,\ndd1466,\ndd1467,\ndd1468,\ndd1469,\ndd1470,\ndd1471,\ndd1472,\ndd1473,\ndd1474,\ndd1475,\ndd1476,\ndd1477,\ndd1478,\ndd1479,\ndd1480,\ndd1481,\ndd1482,\ndd1483,\ndd1484,\ndd1485,\ndd1486,\ndd1487,\ndd1488,\ndd1489,\ndd1490,\ndd1491,\ndd1492,\ndd1493,\ndd1494,\ndd1495,\ndd1496,\ndd1497,\ndd1498,\ndd1499,\ndd1500,\ndd1501,\ndd1502,\ndd1503,\ndd1504,\ndd1505,\ndd1506,\ndd1507,\ndd1508,\ndd1509,\ndd1510,\ndd1511,\ndd1512,\ndd1513,\ndd1514,\ndd1515,\ndd1516,\ndd1517,\ndd1518,\ndd1519,\ndd1520,\ndd1521,\ndd1522,\ndd1523,\ndd1524,\ndd1525,\ndd1526,\ndd1527,\ndd1528,\ndd1529,\ndd1530,\ndd1531,\ndd1532,\ndd1533,\ndd1534,\ndd1535,\ndd1536,\ndd1537,\ndd1539,\ndd1540,\ndd1541,\ndd1542,\ndd1543,\ndd1544,\ndd1545,\ndd1546,\ndd1547,\ndd1548,\ndd1549,\ndd1550,\ndd1551,\ndd1552,\ndd1553,\ndd1554,\ndd1555,\ndd1556,\ndd1557,\ndd1558,\ndd1559,\ndd1560,\ndd1561,\ndd1562,\ndd1563,\ndd1564,\ndd1565,\ndd1566,\ndd1567,\ndd1568,\ndd1569,\ndd1570,\ndd1571,\ndd1572,\ndd1573,\ndd1574,\ndd1575,\ndd1576,\ndd1577,\ndd1578,\ndd1579,\ndd1580,\ndd1581,\ndd1582,\ndd1583,\ndd1584,\ndd1585,\ndd1586,\ndd1587,\ndd1588,\ndd1589,\ndd1590,\ndd1591,\ndd1592,\ndd1593,\ndd1594,\ndd1595,\ndd1596,\ndd1597,\ndd1598,\ndd1599,\ndd1600,\ndd1601,\ndd1602,\ndd1603,\ndd1604,\ndd1605,\ndd1606,\ndd1607,\ndd1608,\ndd1609,\ndd1610,\ndd1611,\ndd1612,\ndd1613,\ndd1614,\ndd1615,\ndd1616,\ndd1617,\ndd1618,\ndd1619,\ndd1620,\ndd1621,\ndd1622,\ndd1623,\ndd1624,\ndd1625,\ndd1626,\ndd1627,\ndd1628,\ndd1629,\ndd1630,\ndd1631,\ndd1632,\ndd1633,\ndd1634,\ndd1635,\ndd1636,\ndd1637,\ndd1638,\ndd1639,\ndd1640,\ndd1641,\ndd1642,\ndd1643,\ndd1644,\ndd1645,\ndd1646,\ndd1647,\ndd1648,\ndd1649,\ndd1650,\ndd1651,\ndd1652,\ndd1653,\ndd1654,\ndd1655,\ndd1656,\ndd1657,\ndd1658,\ndd1659,\ndd1660,\ndd1661,\ndd1662,\ndd1663,\ndd1664,\ndd1665,\ndd1666,\ndd1667,\ndd1668,\ndd1669,\ndd1670,\ndd1671,\ndd1672,\ndd1673,\ndd1674,\ndd1675,\ndd1676,\ndd1677,\ndd1678,\ndd1705,\ndd1708,\ndd1717,\ndd1723,\ndd1728,\ndd1729,\ndd1730,\ndd1731,\ndd1732,\ndd1733,\ndd1748,\ndd1749,\ndd1750,\ndd1751,\ndd1752,\ndd1753,\ndd1754,\ndd1755,\ndd1756,\ndd1757,\ndd1758,\ndd1759,\ndd1760,\ndd1761,\ndd1762,\ndd1763,\ndd1764,\ndd1765,\ndd1766,\ndd1767,\ndd1768,\ndd1769,\n\n\n\n----------------------------------------------------------------------------------------------------------------------------------\n\n\nname:  DESACTIVOS (MURAPA Museu de la rajoleria de Paiporta) \ndd557,\ndd1140,\ndd1141,\ndd1142,\ndd1143,\ndd1144,\ndd1145,\ndd1146,\ndd1147,\ndd1148,\ndd1149,\ndd1150,\ndd1151,\ndd1153,\ndd1154,\ndd1155,\ndd1156,\ndd1157,\ndd1189,\ndd1197,\ndd1198,\ndd1199,\ndd1200,\ndd1218,\ndd1679,\ndd1680,\ndd1682,\ndd1683,\ndd1684,\ndd1685,\ndd1686,\ndd1687,\ndd1688,\ndd1689,\ndd1690,\ndd1691,\ndd1692,\ndd1693,\ndd1694,\ndd1695,\ndd1696,\ndd1697,\ndd1698,\ndd1699,\ndd1700,	obs	lg-spa
+dd1323	Tools	termino	lg-eng
+dd1340	Desarrollo de herramientas	termino	lg-spa
+dd1340	Tools development	termino	lg-eng
+dd1341	Listado	termino	lg-spa
+dd1324	Registro de herramientas	termino	lg-spa
+dd1324	Tools register	termino	lg-eng
+dd1325	Información	termino	lg-spa
+dd1325	Information	termino	lg-eng
+dd799	Label	termino	lg-eng
+dd1332	Shown in Component	termino	lg-eng
+dd1350	Affect to tipos	termino	lg-eng
+dd1330	Affect to models	termino	lg-eng
+dd1333	Translatable requirement	termino	lg-eng
+dd772	Librería	termino	lg-spa
+dd772	Libreria	termino	lg-ita
+dd1329	Tools allowed	termino	lg-spa
+dd1334	Ontology	termino	lg-eng
+dd1331	Inspector	termino	lg-spa
+dd1354	Activo	termino	lg-spa
+dd1326	Nombre de la herramienta	termino	lg-spa
+dd1333	Traducible	termino	lg-spa
+dd1334	Ontologia	termino	lg-spa
+dd1335	Propiedades	termino	lg-spa
+dd1335	Properties	termino	lg-eng
+dd1341	List	termino	lg-eng
+dd1336	List	termino	lg-eng
+dd1336	Listado	termino	lg-spa
+dd1337	Proyecto	termino	lg-spa
+dd1337	Project	termino	lg-eng
+dd1338	Nuevo	termino	lg-spa
+dd1338	New	termino	lg-eng
+dd1339	Borrar	termino	lg-spa
+dd1339	Delete	termino	lg-eng
+dd1350	Afecta a los tipos:	termino	lg-spa
+dd1323	Herramientas	termino	lg-spa
+dd1342	Target models	termino	lg-eng
+dd1342	Modelos de destino	termino	lg-spa
+dd1343	identificación	termino	lg-spa
+dd1343	Identification	termino	lg-eng
+dd1344	Id	termino	lg-spa
+dd1344	Id	termino	lg-eng
+dd1354	Active	termino	lg-eng
+dd1345	Modelo	termino	lg-spa
+dd1345	Model	termino	lg-eng
+dd1346	Proyecto	termino	lg-spa
+dd1346	Project	termino	lg-eng
+dd1347	Listado	termino	lg-spa
+dd1347	List	termino	lg-eng
+dd1348	Nuevo	termino	lg-spa
+dd1348	New	termino	lg-eng
+dd1349	Borrar	termino	lg-spa
+dd1349	Delete	termino	lg-eng
+dd1351	Id	termino	lg-spa
+dd1351	Id	termino	lg-eng
+dd1352	video	termino	lg-spa
+dd1332	Componente	termino	lg-spa
+dd1326	Tool name	termino	lg-eng
+dd1327	Versión	termino	lg-spa
+dd1327	Version	termino	lg-eng
+dd1331	Shown in inspector	termino	lg-eng
+dd1328	Versión Dédalo mínima	termino	lg-spa
+dd1353	Simple tool object	termino	lg-spa
+dd612	Description	termino	lg-eng
+dd1353	Simple tool object	termino	lg-eng
+dd1330	Afecta a modelos:	termino	lg-spa
+dd1328	Dédalo version minimum	termino	lg-eng
+dd1355	Custom fields	termino	lg-eng
+dd1355	Campos Personalizados	termino	lg-spa
+dd1355	Camps personalitzats	termino	lg-cat
+dd1355	Προσαρμοσμένα πεδία	termino	lg-ell
+dd1356	Desglose	termino	lg-spa
+dd1356	Desglossament	termino	lg-cat
+dd1356	Break down	termino	lg-eng
+dd1356	Επαθε βλάβη	termino	lg-ell
+dd1357	Estándar	termino	lg-spa
+dd1357	Standard	termino	lg-eng
+dd1357	Estàndard	termino	lg-cat
+dd1357	Πρότυπο	termino	lg-ell
+dd1358	Formato	termino	lg-spa
+dd1358	Format	termino	lg-eng
+dd1358	Format	termino	lg-cat
+dd1358	Μορφή	termino	lg-ell
+dd1359	Activar todas las columnas	termino	lg-spa
+dd1359	Activa totes les columnes	termino	lg-cat
+dd1359	Activate all columns	termino	lg-eng
+dd1359	Ενεργοποιήστε όλες τις στήλες	termino	lg-ell
+dd1360	Desactivar todas las columnas	termino	lg-spa
+dd1360	Disable all columns	termino	lg-eng
+dd1360	Desactivar totes les columnes	termino	lg-cat
+dd1360	Απενεργοποιήστε όλες τις στήλες	termino	lg-ell
+dd24	Childrens	termino	lg-eng

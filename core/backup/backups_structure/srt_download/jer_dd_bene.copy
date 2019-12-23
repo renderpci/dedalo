@@ -1,0 +1,103 @@
+bene82	bene1	dd6	no	si	si	6	bene	no	\N	\N
+bene83	bene82	dd8	no	si	si	1	bene	no	\N	\N
+bene81	bene2	dd524	no	si	si	5	bene	si	[{"dd195":"dd196"},{"dd1747":"bene4"},{"dd339":"bene7"},{"dd57":"bene45"},{"dd11":"bene18"},{"dd9":"bene5"},{"dd10":"bene8"},{"dd11":"bene9"},{"dd11":"bene31"}]	\N
+bene84	bene83	dd339	no	si	si	1	bene	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ]\r\n}
+bene85	bene82	dd8	no	si	si	2	bene	no	\N	\N
+bene87	bene86	dd97	no	si	si	1	bene	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "25%",\r\n    "element_height": "180px"\r\n  }\r\n}
+bene58	bene57	dd18	no	si	si	1	bene	si	\N	\N
+bene59	bene58	dd1743	no	si	si	1	bene	si	[{"dd6":"bene2"},{"dd6":"bene10"},{"dd6":"bene19"},{"dd6":"bene32"},{"dd6":"bene47"},{"dd6":"rsc170"}]	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}
+bene60	bene59	dd1259	no	si	si	1	bene	si	\N	\N
+bene61	bene60	dd1229	no	si	si	1	bene	si	[{"dd6":"bene47"}]	\N
+bene62	bene47	dd8	no	si	si	1	bene	si	\N	\N
+bene63	bene62	dd339	no	si	si	1	bene	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ]\r\n}
+bene65	bene61	dd1231	no	si	si	2	bene	si	[{"dd592":"bene41"}]	\N
+bene64	bene61	dd1233	no	si	si	1	bene	si	[{"dd339":"bene63"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+bene66	bene61	dd1231	no	si	si	4	bene	si	[{"dd592":"bene42"}]	\N
+bene67	bene61	dd1231	no	si	si	3	bene	si	[{"dd592":"bene48"}]	\N
+bene88	bene82	dd91	no	si	si	3	bene	no	[{"dd339":"bene84"},{"dd592":"bene86"}]	\N
+bene68	bene61	dd1231	no	si	si	5	bene	si	[{"dd592":"bene50"}]	\N
+bene89	bene82	dd247	no	si	si	4	bene	no	\N	{\r\n  "dato_default": {\r\n    "2": "2"\r\n  }\r\n}
+bene86	bene85	dd592	no	si	si	1	bene	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "max_records": 4,\r\n  "rows_limit": 4,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "350px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "50%",\r\n        "height": "175px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+bene56	bene96	dd177	no	si	si	5	bene	no	\N	\N
+bene69	bene60	dd347	no	si	si	2	bene	si	[{"dd1229":"rsc264"}]	{\r\n  "check_publication_value": false\r\n}
+bene73	bene70	dd1231	no	si	si	3	bene	si	[{"dd11":"bene18"}]	\N
+bene15	bene10	dd91	no	si	si	3	bene	no	[{"dd9":"bene13"}]	\N
+bene74	bene70	dd1234	no	si	si	4	bene	si	[{"dd635":"bene6"}]	{\r\n  "process_dato": "diffusion_sql::split_date_range",\r\n  "process_dato_arguments": {\r\n    "selected_key": 0,\r\n    "selected_date": "start"\r\n  }\r\n}
+bene75	bene70	dd1235	no	si	si	6	bene	si	[{"dd9":"bene46"}]	{\r\n  "varchar": 64\r\n}
+bene90	bene60	dd1229	no	si	si	4	bene	si	[{"dd6":"bene82"}]	\N
+bene16	bene10	dd177	no	si	si	4	bene	no	\N	\N
+bene17	bene10	dd183	no	si	si	5	bene	no	\N	\N
+bene70	bene60	dd1229	no	si	si	3	bene	si	[{"dd6":"bene2"}]	\N
+bene71	bene70	dd1233	no	si	si	1	bene	si	[{"dd339":"bene7"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+bene72	bene70	dd1233	no	si	si	2	bene	si	[{"dd57":"bene45"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+bene76	bene70	dd1235	no	si	si	7	bene	si	[{"dd9":"bene5"}]	{\r\n  "varchar": 1024\r\n}
+bene77	bene70	dd1231	no	si	si	8	bene	si	[{"dd10":"bene8"}]	\N
+bene78	bene70	dd1231	no	si	si	9	bene	si	[{"dd11":"bene9"}]	\N
+bene79	bene70	dd1231	no	si	si	10	bene	si	[{"dd11":"bene31"}]	\N
+bene91	bene90	dd1233	no	si	si	1	bene	si	[{"dd339":"bene84"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+bene80	bene70	dd1234	no	si	si	5	bene	si	[{"dd635":"bene6"}]	{\r\n  "process_dato": "diffusion_sql::split_date_range",\r\n  "process_dato_arguments": {\r\n    "selected_key": 0,\r\n    "selected_date": "end"\r\n  }\r\n}
+bene13	bene11	dd9	no	si	si	2	bene	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}
+bene11	bene10	dd8	no	si	si	1	bene	no	\N	\N
+bene2	bene1	dd6	no	si	si	1	bene	no	\N	\N
+bene12	bene11	dd1747	no	si	si	1	bene	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}
+bene10	bene1	dd6	no	si	si	2	bene	no	[{"dd626":"dd22"}]	\N
+bene14	bene10	dd247	no	si	si	2	bene	no	\N	\N
+bene1	dd69	dd4	no	si	si	4	\N	no	\N	\N
+bene22	bene20	dd9	no	si	si	2	bene	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}
+bene20	bene19	dd8	no	si	si	1	bene	no	\N	\N
+bene21	bene20	dd1747	no	si	si	1	bene	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}
+bene23	bene19	dd247	no	si	si	2	bene	no	\N	\N
+bene24	bene19	dd91	no	si	si	3	bene	si	[{"dd9":"bene22"}]	\N
+bene25	bene19	dd177	no	si	si	4	bene	no	\N	\N
+bene26	bene19	dd183	no	si	si	5	bene	no	\N	\N
+bene19	bene1	dd6	no	si	si	3	bene	no	[{"dd626":"dd22"}]	\N
+bene5	bene3	dd9	no	si	si	7	bene	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    },\r\n    ".css_input_text": {\r\n      "style": {\r\n        "font-size": "18px"\r\n      }\r\n    }\r\n  }\r\n}
+bene28	bene2	dd91	no	si	si	2	bene	no	[{"dd339":"bene7"},{"dd9":"bene5"},{"dd635":"bene6"},{"dd11":"bene9"},{"dd11":"bene18"}]	\N
+bene18	bene3	dd11	no	si	si	4	bene	no	[{"dd6":"bene19"},{"dd9":"bene22"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+bene8	bene3	dd10	no	si	si	8	bene	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}
+bene6	bene3	dd635	no	si	si	5	bene	no	\N	{\r\n  "date_mode": "range",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
+bene7	bene3	dd339	no	si	si	2	bene	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": {\r\n    "section_id": "2",\r\n    "section_tipo": "dd64"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}
+bene9	bene3	dd11	no	si	si	9	bene	no	[{"dd6":"bene10"},{"dd9":"bene13"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+bene3	bene2	dd8	no	si	si	1	bene	no	\N	\N
+bene30	bene2	dd183	no	si	si	4	bene	no	\N	\N
+bene29	bene2	dd177	no	si	si	3	bene	no	\N	\N
+bene92	bene90	dd1231	no	si	si	2	bene	si	[{"dd592":"bene86"}]	\N
+bene4	bene3	dd1747	no	si	si	1	bene	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 125, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}
+bene35	bene33	dd9	no	si	si	2	bene	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}
+bene33	bene32	dd8	no	si	si	1	bene	si	\N	\N
+bene34	bene33	dd1747	no	si	si	1	bene	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}
+bene32	bene1	dd6	no	si	si	4	bene	no	[{"dd626":"dd22"}]	\N
+bene36	bene32	dd177	no	si	si	2	bene	no	\N	\N
+bene37	bene32	dd247	no	si	si	3	bene	no	\N	\N
+bene38	bene32	dd91	no	si	si	4	bene	si	[{"dd9":"bene35"}]	\N
+bene39	bene32	dd183	no	si	si	5	bene	no	\N	\N
+bene31	bene3	dd11	no	si	si	10	bene	no	[{"dd6":"bene32"},{"dd9":"bene35"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+bene27	bene3	dd247	no	si	si	11	bene	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "10em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "2.5em"\r\n      }\r\n    }\r\n  }\r\n}
+bene40	bene55	dd711	no	si	si	1	bene	no	\N	\N
+bene52	bene47	dd91	no	si	si	3	bene	no	[{"dd592":"bene41"},{"dd592":"bene42"},{"dd592":"bene48"},{"dd592":"bene50"}]	\N
+bene47	bene1	dd6	no	si	si	5	bene	no	[{"dd626":"dd22"}]	\N
+bene53	bene47	dd247	no	si	si	4	bene	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  }\r\n}
+bene44	bene42	dd97	no	si	si	1	bene	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "100%",\r\n    "element_height": "180px"\r\n  }\r\n}
+bene93	bene99	dd592	no	si	si	1	bene	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "max_records": 4,\r\n  "rows_limit": 4,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "350px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "50%",\r\n        "height": "175px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+bene45	bene3	dd57	no	si	si	3	bene	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+bene46	bene3	dd9	no	si	si	6	bene	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}
+bene49	bene48	dd97	no	si	si	1	bene	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "100%",\r\n    "element_height": "180px"\r\n  }\r\n}
+bene51	bene50	dd97	no	si	si	1	bene	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "100%",\r\n    "element_height": "180px"\r\n  }\r\n}
+bene43	bene41	dd97	no	si	si	1	bene	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "25%",\r\n    "element_height": "180px"\r\n  }\r\n}
+bene94	bene93	dd97	no	si	si	1	bene	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "25%",\r\n    "element_height": "180px"\r\n  }\r\n}
+bene54	bene55	dd711	no	si	si	2	bene	no	\N	\N
+bene55	bene47	dd709	no	si	si	2	bene	no	\N	\N
+bene42	bene54	dd592	no	si	si	1	bene	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "max_records": 7,\r\n  "rows_limit": 7,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "450px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "33.33%",\r\n        "height": "150px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+bene95	bene102	dd1231	no	si	si	2	bene	si	[{"dd592":"bene93"}]	\N
+bene50	bene54	dd592	no	si	si	2	bene	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "max_records": 7,\r\n  "rows_limit": 7,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "450px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "33.33%",\r\n        "height": "150px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+bene96	bene1	dd6	no	si	si	7	bene	si	\N	\N
+bene97	bene96	dd8	no	si	si	1	bene	no	\N	\N
+bene99	bene96	dd8	no	si	si	2	bene	no	\N	\N
+bene100	bene96	dd91	no	si	si	3	bene	no	[{"dd247":"bene98"},{"dd592":"bene93"}]	\N
+bene101	bene96	dd247	no	si	si	4	bene	no	\N	{\r\n  "dato_default": {\r\n    "3": "2"\r\n  }\r\n}
+bene98	bene97	dd339	no	si	si	1	bene	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ]\r\n}
+bene102	bene60	dd1229	no	si	si	5	bene	si	[{"dd6":"bene96"}]	\N
+bene103	bene102	dd1233	no	si	si	1	bene	si	[{"dd339":"bene98"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+bene41	bene40	dd592	no	si	si	1	bene	no	[{"dd6":"rsc170"},{"dd749":"rsc29"},{"dd1129":"rsc174"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "max_records": 7,\r\n  "rows_limit": 7,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "450px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "33.33%",\r\n        "height": "150px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+bene48	bene40	dd592	no	si	si	2	bene	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "max_records": 7,\r\n  "rows_limit": 7,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "450px"\r\n      }\r\n    },\r\n    ">.content_data >.portal_section >.mosaic_ul >.mosaic_li": {\r\n      "style": {\r\n        "border-left": "solid 1px #dedede",\r\n        "border-top": "solid 1px #dedede",\r\n        "width": "33.33%",\r\n        "height": "150px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+bene57	dd3	dd17	no	si	si	16	bene	si	\N	\N
