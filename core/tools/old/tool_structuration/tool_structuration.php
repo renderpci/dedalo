@@ -101,7 +101,7 @@
 			# AV_PLAYER_URL
 			$reelID = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $section_tipo.'_'.$parent;
 			$av_player_url   = DEDALO_CORE_URL . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality=' . DEDALO_AV_QUALITY_DEFAULT; // rsc35_rsc167_1
-			$posterframe_url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . '/posterframe/' . $reelID .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+			$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . '/posterframe/' . $reelID .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
 			
 
 			$this->component_obj->set_modo('structuration');

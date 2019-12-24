@@ -227,7 +227,7 @@ if($mode=='delete_version') {
 			}
 			
 			# DELETE TEMP SH FILE
-			$tmp_file		= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$reelID.'.sh';	
+			$tmp_file		= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$reelID.'.sh';	
 			if(file_exists($tmp_file)) {
 			$del_sh			= unlink($tmp_file);
 			if(!$del_sh) 	throw new Exception(" Error on delete temp file . Temp file is not deleted");
@@ -235,7 +235,7 @@ if($mode=='delete_version') {
 			
 			# DELETE POSTERFRAME IF MEDIA DELETED IS QUALITY DEFAULT
 			if($quality==$AVObj->get_quality_default()) {
-				$poster_file	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER ."/posterframe/{$reelID}.jpg";
+				$poster_file	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$reelID}.jpg";
 				if(file_exists($poster_file)) {
 					unlink($poster_file);
 				}
@@ -294,7 +294,7 @@ if($mode=='delete_version') {
 if($mode=='file_exists') {
 
 	$file_size = 0;
-	#$file_name = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/' . $quality . '/' . $video_id . '.' . DEDALO_AV_EXTENSION;
+	#$file_name = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/' . $quality . '/' . $video_id . '.' . DEDALO_AV_EXTENSION;
 
 	$reelID = $video_id;
 

@@ -104,7 +104,7 @@ if($mode=='delete_posterframe') {
 	
 	
 	# DELETE POSTERFRAME
-	$poster_file	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER ."/posterframe/{$reelID}.".DEDALO_AV_POSTERFRAME_EXTENSION;
+	$poster_file	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$reelID}.".DEDALO_AV_POSTERFRAME_EXTENSION;
 	if(file_exists($poster_file)) {
 	$del_poster		= unlink($poster_file);
 	if(!$del_poster) exit(" Error on delete posterframe file. Posterframe file is not deleted");

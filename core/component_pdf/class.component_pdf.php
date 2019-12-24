@@ -261,7 +261,7 @@ class component_pdf extends component_common {
 	}
 	public function get_target_dir() {
 		
-		#return DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
+		#return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();
 	}
 	
@@ -276,10 +276,10 @@ class component_pdf extends component_common {
 		$quality 	= DEDALO_PDF_QUALITY_DEFAULT;
 		$pdf_id 	= $this->get_pdf_id();
 		
-		#$file 		= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $quality .'/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
+		#$file 		= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $quality .'/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 		#if(!file_exists($file)) $pdf_id = '0';
 
-		$final_file	= DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER .'/'. $quality .'/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
+		$final_file	= DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER .'/'. $quality .'/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 
 		return $final_file;
 		*/
@@ -316,7 +316,7 @@ class component_pdf extends component_common {
 		}
 		
 		$pdf_id 	= $this->get_pdf_id();
-		$pdf_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $quality . '/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
+		$pdf_path 	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $quality . '/'. $pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 
 		return $pdf_path;
 		*/
@@ -378,7 +378,7 @@ class component_pdf extends component_common {
 			if (!file_exists($media_path)) continue; # Skip
 			
 			# move / rename file
-			#$folder_path_del 	= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $current_quality . '/deleted';
+			#$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $current_quality . '/deleted';
 			$folder_path_del 	= $this->get_target_dir()  . 'deleted';
 
 			# delete folder exists ?
@@ -466,12 +466,12 @@ class component_pdf extends component_common {
 		}
 		
 		$file_name  = $this->get_pdf_id();
-		$thumb_path = DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+		$thumb_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
 		#
 		# THUMB ALREADY EXISTS
 		if (!$force_create && file_exists($thumb_path)) {
-			$url = DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 			# ABSOLUTE (Default false)
 			if ($absolute) {
 				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
@@ -498,7 +498,7 @@ class component_pdf extends component_common {
 
 			if ($result===0) {
 				# All is ok
-				$url = DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+				$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
 				# ABSOLUTE (Default false)
 				if ($absolute) {

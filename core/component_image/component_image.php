@@ -162,7 +162,7 @@
 					#dump($thumb_path, ' thumb_path ++ '.to_string($image_id));
 				
 				# THUMB URL	
-				$thumb_file_url = str_replace(DEDALO_MEDIA_BASE_PATH, DEDALO_MEDIA_BASE_URL, $thumb_path);
+				$thumb_file_url = str_replace(DEDALO_MEDIA_PATH, DEDALO_MEDIA_URL, $thumb_path);
 				# IMAGE_FULL_URL
 				$image_full_url = str_replace('/'.DEDALO_IMAGE_THUMB_DEFAULT.'/', '/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/', $thumb_file_url);
 				break;

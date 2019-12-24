@@ -96,7 +96,7 @@ if(login::is_logged()!==true) {
 									throw new Exception("Error: quality ($quality) not valid", 1);				
 								}
 								# Final target folder
-								$target_folder_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $quality . $this->component_obj->aditional_path ;
+								$target_folder_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . $this->component_obj->aditional_path ;
 									#dump($target_folder_path,'$target_folder_path');
 								
 								break;
@@ -115,7 +115,7 @@ if(login::is_logged()!==true) {
 									throw new Exception("Error: quality ($quality) not valid", 1);				
 								}
 								# Final target folder
-								$target_folder_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . $this->component_obj->initial_media_path . '/'. $quality . $this->component_obj->aditional_path ;
+								$target_folder_path	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $this->component_obj->initial_media_path . '/'. $quality . $this->component_obj->aditional_path ;
 									#dump($target_folder_path, ' target_folder_path');
 								break;
 
@@ -129,7 +129,7 @@ if(login::is_logged()!==true) {
 								$this->component_obj->get_aditional_path();
 								
 								# Final target folder
-								$target_folder_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER . $this->component_obj->initial_media_path . '/'. $this->component_obj->aditional_path ;
+								$target_folder_path	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $this->component_obj->initial_media_path . '/'. $this->component_obj->aditional_path ;
 									#dump($target_folder_path, ' target_folder_path');
 								break;
 
@@ -141,8 +141,8 @@ if(login::is_logged()!==true) {
 								$valid_extensions_json = json_encode(unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED));	
 								
 								# Final target folder
-								#$target_folder_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER ; //.'/'. $quality . $this->component_obj->aditional_path ;
-								$target_folder_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . $this->component_obj->initial_media_path . '/'. $quality . $this->component_obj->aditional_path ;
+								#$target_folder_path	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER ; //.'/'. $quality . $this->component_obj->aditional_path ;
+								$target_folder_path	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . $this->component_obj->initial_media_path . '/'. $quality . $this->component_obj->aditional_path ;
 
 								break;
 

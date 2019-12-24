@@ -852,7 +852,7 @@ class tool_administration extends tool_common {
 
 		$ar_deleted_files=array();
 
-		$dir_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/tmp';
+		$dir_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/tmp';
 
 		$files = glob( $dir_path . '/*' ); // get all file names
 

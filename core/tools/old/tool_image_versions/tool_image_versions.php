@@ -99,7 +99,7 @@
 			
 			$ar_quality			= unserialize(DEDALO_IMAGE_AR_QUALITY);
 
-			$media_base_path 	= DEDALO_MEDIA_BASE_URL . DEDALO_IMAGE_FOLDER 	; //$this->component_obj->get_media_base_path(); //			
+			$media_base_path 	= DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER 	; //$this->component_obj->get_media_base_path(); //			
 			$media_extension 	= DEDALO_IMAGE_EXTENSION ;
 			break;				
 		

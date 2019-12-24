@@ -325,7 +325,7 @@
 					# SAVE PAGES . Save html files to disk
 					$user_id 		 	= $_SESSION['dedalo4']['auth']['user_id'];
 					$print_files_path	= '/print/'.safe_tipo($tipo).'/'.safe_section_id($user_id);
-					$pages_html_temp 	= DEDALO_MEDIA_BASE_PATH . $print_files_path;
+					$pages_html_temp 	= DEDALO_MEDIA_PATH . $print_files_path;
 					if(!file_exists($pages_html_temp)) mkdir($pages_html_temp, 0775,true);
 					
 					# Remove old files in temp folder
@@ -345,7 +345,7 @@
 							$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
 							$header_html_file_name = 'header.html';								
 							file_put_contents($pages_html_temp.'/'.$header_html_file_name, $current_page_complete);
-							$header_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $header_html_file_name.'';
+							$header_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_URL . $print_files_path .'/'. $header_html_file_name.'';
 						}
 						*/														
 						$footer_html = "<div class=\"pagination_info\">". sprintf( label::get_label('number_page_of_total_pages'), "<span class=\"var_pdf_page\">0</span>", "<span class=\"var_pdf_topage\">0</span>"). "</div>";
@@ -356,8 +356,8 @@
 						$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
 						$footer_html_file_name = 'footer.html';
 						file_put_contents($pages_html_temp.'/'.$footer_html_file_name, $current_page_complete);
-						$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $footer_html_file_name.'';
-						//$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/footer_source.html';
+						$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_URL . $print_files_path .'/'. $footer_html_file_name.'';
+						//$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_URL . $print_files_path .'/footer_source.html';
 						
 					
 					#

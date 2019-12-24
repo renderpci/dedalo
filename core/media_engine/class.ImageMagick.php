@@ -44,10 +44,10 @@ class ImageMagick {
 
 		if(empty($f)) throw new Exception("Error Processing Request. Few arguments", 1);
 
-		#if(file_exists(DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f)) unlink(DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f);
+		#if(file_exists(DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f)) unlink(DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f);
 
-		$thumb_file_path 	= DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
-		$thumb_file_url 	= DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
+		$thumb_file_path 	= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
+		$thumb_file_url 	= DEDALO_MEDIA_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
 
 		# FAST METHOD (NOT verify)
 		if(!$verify) return $thumb_file_url;
@@ -57,7 +57,7 @@ class ImageMagick {
 		if (!file_exists( $thumb_file_path )) {
 			
 			# SOURCE FILE
-				$source_base = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/';
+				$source_base = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/';
 				if (strpos($f, $source_base)!==false) {
 					$source = $f;
 				}else{
@@ -68,7 +68,7 @@ class ImageMagick {
 
 				# Target folder exists test	
 				$aditional_path = substr($f, 0, strrpos($f,'/')); 
-				$target_folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$aditional_path;	#dump( $target_folder_path, $f  );return null;
+				$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$aditional_path;	#dump( $target_folder_path, $f  );return null;
 				if( !is_dir($target_folder_path) ) {
 					if(!mkdir($target_folder_path, 0777,true)) {
 						throw new Exception(" Error on read or create directory. Permission denied $target_folder_path");
@@ -163,7 +163,7 @@ class ImageMagick {
 		return $result;
 			
 		/*
-		$prgfile = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp/dd_thumb_'.$mode.'_'.str_replace('/', '_', substr($target_file, strpos($target_file, 'thumbs/')+7) ).'.sh';
+		$prgfile = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp/dd_thumb_'.$mode.'_'.str_replace('/', '_', substr($target_file, strpos($target_file, 'thumbs/')+7) ).'.sh';
 			#dump($prgfile,'$prgfile');
 			#if(file_exists($prgfile)) unlink($prgfile);
 		
@@ -171,7 +171,7 @@ class ImageMagick {
 		if(!file_exists($prgfile)) {
 
 			# Target folder exists test	
-			$target_folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp';
+			$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp';
 			if( !is_dir($target_folder_path) ) {
 				if(!mkdir($target_folder_path, 0777,true)) {
 					throw new Exception(" Error on read or create directory. Permission denied $target_folder_path");

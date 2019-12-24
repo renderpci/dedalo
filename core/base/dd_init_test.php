@@ -104,7 +104,7 @@
 
 // MEDIA folder
 	# Target folder exists test	
-	$folder_path = DEDALO_MEDIA_BASE_PATH;
+	$folder_path = DEDALO_MEDIA_PATH;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
 			$init_response->msg .= trim(" Error on read or create media directory. Permission denied");
@@ -117,7 +117,7 @@
 // MEDIA QUALITY FOLDERS (Important for ffmpeg conversions)
 	$ar_folder = (array)unserialize(DEDALO_AV_AR_QUALITY);
 	foreach ($ar_folder as $quality) {
-		$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER.'/'.$quality;
+		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER.'/'.$quality;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0775,true)) {
 				$init_response->msg .= trim(" Error on read or create media quality [$quality] directory. Permission denied");
@@ -131,7 +131,7 @@
 // MEDIA AV POSTERFRAME
 	/*
 	# Target folder exists test	
-	$folder_path = DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_AV_FOLDER . '/posterframe/deleted';
+	$folder_path = DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/posterframe/deleted';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0777,true)) {
 			$init_response->msg .= trim(" Error on read or create media posterframe deleted directory. Permission denied ");
@@ -144,7 +144,7 @@
 	# Target folder exists test
 	$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
 	foreach ($ar_quality as $quality) {
-		$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . '/'.$quality;
+		$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . '/'.$quality;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0775,true)) {
 				$init_response->msg .= trim(" Error on read or create image $quality deleted directory. Permission denied ");
@@ -158,7 +158,7 @@
 // MEDIA PDF folder
 	# Target folder exists test
 	if(defined('DEDALO_PDF_FOLDER')) {
-	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
+	$folder_path = DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
 			$init_response->msg .= trim(" Error on read or create media pdf default directory. Permission denied ");
@@ -171,7 +171,7 @@
 // MEDIA PDF THUMBS folder
 	# Target folder exists test
 	if(defined('DEDALO_PDF_THUMB_DEFAULT')) {
-	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_THUMB_DEFAULT;
+	$folder_path = DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_THUMB_DEFAULT;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
 			$init_response->msg .= trim(" Error on read or create media pdf default directory. Permission denied ");
@@ -184,7 +184,7 @@
 // MEDIA HTML FILES folder
 	# Target folder exists test	
 	if(defined('DEDALO_HTML_FILES_FOLDER')) {
-	$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_HTML_FILES_FOLDER;
+	$folder_path = DEDALO_MEDIA_PATH.DEDALO_HTML_FILES_FOLDER;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
 			$init_response->msg .= trim(" Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied ");
@@ -197,7 +197,7 @@
 // MEDIA WEB IMAGES folder
 	# Target folder exists test	
 	if(defined('DEDALO_IMAGE_WEB_FOLDER')) {
-	$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
+	$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
 			$init_response->msg .= trim(" Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied ");
@@ -224,7 +224,7 @@
 	# Target folder exists test
 	$ar_quality = (array)unserialize(DEDALO_AV_AR_QUALITY);
 	foreach ($ar_quality as $quality) {
-		$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/'.$quality;
+		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/'.$quality;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0775,true)) {
 				$init_response->msg .= trim(" Error on read or create image $quality directory. Permission denied ");
@@ -237,7 +237,7 @@
 
 // MEDIA AVG
 	# Target folder exists test
-	$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER ;
+	$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER ;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0775,true)) {
 			$init_response->msg .= trim(" Error on read or create avg directory. Permission denied ");
@@ -252,7 +252,7 @@
 	if(defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
 		/*	
 		# Test .htaccess file
-		$htaccess_file = DEDALO_MEDIA_BASE_PATH . '/.htaccess';
+		$htaccess_file = DEDALO_MEDIA_PATH . '/.htaccess';
 		if (!file_exists($htaccess_file)) {
 			$init_response->msg .= trim(" Error on read protect file for av directory. File '.htaccess' not found");
 		}

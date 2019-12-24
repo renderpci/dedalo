@@ -162,8 +162,8 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 		# DESACTIVO: SE RENOMBRARÁN SECUENCIALMENTE LAS IMÁGENES, A PARTIR DEL ÚLTIMO NÚMERO EXISTENETE EN LOS PORTALES DE DESTINO
 		# Warning : Avisa de que la imagen de destino existe ya (puede sobreescribirla o no a elección)
 		$aditional_path		 = tool_import_images::numero_to_local_path($ar_data['numero_inventario'],2);
-		$path_image_original = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/original'. $aditional_path.'/'.$ar_data['numero_inventario'].'-'.$ar_data['numero_recurso'].'.'.DEDALO_IMAGE_EXTENSION;
-		$url_image_original  = DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.'/original'. $aditional_path.'/'.$ar_data['numero_inventario'].'-'.$ar_data['numero_recurso'].'.'.DEDALO_IMAGE_EXTENSION;
+		$path_image_original = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.'/original'. $aditional_path.'/'.$ar_data['numero_inventario'].'-'.$ar_data['numero_recurso'].'.'.DEDALO_IMAGE_EXTENSION;
+		$url_image_original  = DEDALO_MEDIA_URL.DEDALO_IMAGE_FOLDER.'/original'. $aditional_path.'/'.$ar_data['numero_inventario'].'-'.$ar_data['numero_recurso'].'.'.DEDALO_IMAGE_EXTENSION;
 			#dump($path_image_original,'$path_image_original');
 		if ( file_exists($path_image_original) ) {
 			$html .= "<tr class=\"tr_warning\">";
@@ -187,7 +187,7 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 
 			# Como el navegador no mostrará imágenes distintas a jpg, visualizamos la version convertida a jpg
 			if ( strtolower($ar_data['extension'])!=DEDALO_IMAGE_EXTENSION) {
-				$url_image_original_jpg = DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.'/original'. $aditional_path.'/'.$ar_data['numero_inventario'].'-'.$ar_data['numero_recurso'].'.'.DEDALO_IMAGE_EXTENSION;
+				$url_image_original_jpg = DEDALO_MEDIA_URL.DEDALO_IMAGE_FOLDER.'/original'. $aditional_path.'/'.$ar_data['numero_inventario'].'-'.$ar_data['numero_recurso'].'.'.DEDALO_IMAGE_EXTENSION;
 				$html .= "<div class=\"image_source\">";
 				$html .= " <div class=\"image_source_title\"> Versión ".DEDALO_IMAGE_EXTENSION."</div>";
 				$html .= " <a href=\"$url_image_original_jpg\" target=\"_blank\"><img src=\"".$url_image_original_jpg."\"/></a>";

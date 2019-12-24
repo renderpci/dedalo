@@ -90,7 +90,7 @@ class diffusion_rdf extends diffusion {
 
 		// Directory
 			$sub_path    = '/rdf/nomisma/';
-			$folder_path = DEDALO_MEDIA_BASE_PATH . $sub_path;
+			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
 			if (!is_dir($folder_path)) {
 				if(!mkdir($folder_path, 0777, true)) {
 					$response->msg = trim(" Error on read or create directory. Permission denied");
@@ -126,8 +126,8 @@ class diffusion_rdf extends diffusion {
 				$xml_options->xml_tipo 			= $xml_tipo;	// Numisma RDF : modelo_name : xml
 				$xml_options->section_tipo  	= $options->section_tipo; // $target_section_tipo;	// Fichero
 				$xml_options->ar_section_id 	= $ar_section_id;	// Array like [45001,45002,45003];
-				$xml_options->save_to_file_path = DEDALO_MEDIA_BASE_PATH . $sub_path . $rdf_file_name; // Target file	
-				$xml_options->url_file 			= DEDALO_MEDIA_BASE_URL  . $sub_path . $rdf_file_name;
+				$xml_options->save_to_file_path = DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name; // Target file	
+				$xml_options->url_file 			= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
 
 			$response = $this->build_xml_file( $xml_options );
 				#dump($response, ' response ++ '.to_string($options));

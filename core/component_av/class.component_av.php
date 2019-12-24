@@ -188,7 +188,7 @@ class component_av extends component_common {
 		return $this->video_id .'.'. DEDALO_AV_EXTENSION ;
 	}
 	public function get_target_dir() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $this->get_quality() ;
+		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $this->get_quality() ;
 		#return $this->AVObj->get_media_path_abs();
 	}//end get_target_dir
 
@@ -204,7 +204,7 @@ class component_av extends component_common {
 		}
 		$video_id = $this->get_video_id();
 
-		$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
+		$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
 		$name = $video_id .'.'. DEDALO_AV_EXTENSION;
 
 		$video_url = $path . $name;
@@ -224,7 +224,7 @@ class component_av extends component_common {
 		}
 		$video_id 	= $this->get_video_id();
 
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
+		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
 	}//end get_video_path
 
 
@@ -233,7 +233,7 @@ class component_av extends component_common {
 	* GET_POSTERFRAME_PATH
 	*/
 	public function get_posterframe_path() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 	}
 
 
@@ -245,11 +245,11 @@ class component_av extends component_common {
 
 		$video_id 	= $this->get_video_id();
 
-		$posterframe_url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
 
 		# FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
-			$file = DEDALO_MEDIA_BASE_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
+			$file = DEDALO_MEDIA_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 			}
@@ -273,7 +273,7 @@ class component_av extends component_common {
 	* GET_SUBTITLES_PATH
 	*/
 	public function get_subtitles_path( $lang=DEDALO_DATA_LANG ) {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 	}
 
 
@@ -282,7 +282,7 @@ class component_av extends component_common {
 	* GET_SUBTITLES_URL
 	*/
 	public function get_subtitles_url( $lang=DEDALO_DATA_LANG ) {
-		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+		return DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 	}
 
 
@@ -375,7 +375,7 @@ class component_av extends component_common {
 			$quality 	= $this->get_quality();
 			$video_id 	= $this->get_video_id();
 
-			$filename 	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
+			$filename 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
 		}
 
 		if ( !file_exists( $filename )) {
@@ -543,7 +543,7 @@ class component_av extends component_common {
 			if (!file_exists($media_path)) continue; # Skip
 
 			# move / rename file
-			$folder_path_del 	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $current_quality . '/deleted';
+			$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $current_quality . '/deleted';
 
 			# delete folder exists ?
 			if( !is_dir($folder_path_del) ) {
@@ -567,7 +567,7 @@ class component_av extends component_common {
 		$media_path = $this->get_posterframe_path();
 		if (file_exists($media_path)) {
 			# move / rename file
-			$folder_path_del 	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/deleted';
+			$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/deleted';
 
 			# delete folder exists ?
 			if( !is_dir($folder_path_del) ) {
