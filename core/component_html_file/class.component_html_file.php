@@ -165,7 +165,7 @@ class component_html_file extends component_common {
 		return $this->html_file_id .'.'. DEDALO_HTML_FILES_EXTENSION ;
 	}
 	public function get_target_dir() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER ;
+		return DEDALO_MEDIA_PATH . DEDALO_HTML_FILES_FOLDER ;
 	}
 
 	/**
@@ -175,7 +175,7 @@ class component_html_file extends component_common {
 
 		$html_file_id 	= $this->get_html_file_id();
 
-		$final_file	= DEDALO_MEDIA_BASE_URL . DEDALO_HTML_FILES_FOLDER .'/'. $html_file_id .'.'. DEDALO_HTML_FILES_EXTENSION ;
+		$final_file	= DEDALO_MEDIA_URL . DEDALO_HTML_FILES_FOLDER .'/'. $html_file_id .'.'. DEDALO_HTML_FILES_EXTENSION ;
 
 		return $final_file;
 	}
@@ -187,7 +187,7 @@ class component_html_file extends component_common {
 
 		$html_file_id 	= $this->get_html_file_id();
 
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'. $html_file_id .'.'. DEDALO_HTML_FILES_EXTENSION ;
+		return DEDALO_MEDIA_PATH . DEDALO_HTML_FILES_FOLDER .'/'. $html_file_id .'.'. DEDALO_HTML_FILES_EXTENSION ;
 	}
 
 	

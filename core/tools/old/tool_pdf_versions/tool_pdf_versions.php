@@ -48,7 +48,7 @@
 
 					$ar_quality			= unserialize(DEDALO_PDF_AR_QUALITY);					
 
-					$media_base_path 	= DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER;
+					$media_base_path 	= DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER;
 					$media_extension 	= DEDALO_PDF_EXTENSION;
 					break;				
 		

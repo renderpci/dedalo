@@ -574,7 +574,7 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 			#
 			#
 			# IMAGE COPY FILE
-				$target_dir = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $aditional_path ;
+				$target_dir = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $aditional_path ;
 				if (!in_array($target_dir, $ar_verified_paths)) {
 					if( !is_dir($target_dir) ) {
 						$create_dir 	= mkdir($target_dir, 0777,true);
@@ -612,7 +612,7 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 			#
 			#
 			# COPIA ADEMÁS, LA IMAGEN ORIGINAL (JPG) A MODIFICADA. Esto sirve de punto de partida para editarla
-				$target_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/modificada'. $aditional_path ;
+				$target_dir = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/modificada'. $aditional_path ;
 				if (!in_array($target_dir, $ar_verified_paths)) {
 					if( !is_dir($target_dir) ) {						
 						if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory. Permission denied \"$target_dir\" (2)");						

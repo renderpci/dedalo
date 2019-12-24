@@ -33,10 +33,10 @@ class PosterFrameObj extends MediaObj {
 		return 'jpg';
 	}
 	protected function define_media_path() {
-		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . '/posterframe/';
+		return DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . '/posterframe/';
 	}
 	protected function define_media_path_abs() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/posterframe/';
+		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe/';
 	}
 	protected function define_media_path_server() {
 		return $this->get_media_path_server();
@@ -68,7 +68,7 @@ class PosterFrameObj extends MediaObj {
 	
 	
 	public function get_media_path_server() {
-			return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
+			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
 	}	
 	
 	public function set_posterframe($tc) {

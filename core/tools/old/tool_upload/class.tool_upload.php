@@ -58,7 +58,7 @@ class tool_upload extends tool_common {
 		switch ($component_name) {
 			case 'component_av' :
 					$SID 					= $this->component_obj->get_video_id();
-					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/' . $quality;
+					#$folder_path			= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/' . $quality;
 					$this->component_obj->set_quality($quality);
 					$folder_path			= $this->component_obj->get_target_dir();
 						#dump($folder_path,'$folder_path'); die();
@@ -67,23 +67,23 @@ class tool_upload extends tool_common {
 					break;
 			case 'component_image' :
 					$SID 					= $this->component_obj->get_image_id();
-					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . '/' . $quality;
+					#$folder_path			= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . '/' . $quality;
 					$this->component_obj->set_quality($quality);
-					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
+					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
 						#dump($folder_path,'$folder_path'); die();
 					$current_extension 		= DEDALO_IMAGE_EXTENSION;
 					$ar_allowed_extensions 	= unserialize(DEDALO_IMAGE_EXTENSIONS_SUPPORTED);
 					break;
 			case 'component_svg' :
 					$SID 					= $this->component_obj->get_svg_id();					
-					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
+					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
 						#dump($folder_path,'$folder_path'); die();
 					$current_extension 		= DEDALO_SVG_EXTENSION;
 					$ar_allowed_extensions 	= unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED);
 					break;
 			case 'component_pdf' : 
 					$SID 					= $this->component_obj->get_pdf_id();
-					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . '/' . $quality;
+					#$folder_path			= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . $quality;
 					$this->component_obj->set_quality($quality);
 					$folder_path			= $this->component_obj->get_target_dir();
 						#dump($folder_path,'$folder_path'); die();

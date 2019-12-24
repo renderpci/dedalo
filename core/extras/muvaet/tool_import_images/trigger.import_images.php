@@ -330,7 +330,7 @@ if ($mode=='renum_digital') {
 
 					# IMAGE COPY FOLDER VERIFY
 					/* INNECESARIO YA QUE NO CAMBIA
-					$target_dir = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $aditional_path ;
+					$target_dir = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $aditional_path ;
 					if (!in_array($target_dir, $ar_verified_paths)) {
 						if( !is_dir($target_dir) ) {							
 							if( !mkdir($target_dir, 0777,true) ) throw new Exception(" Error on read or create directory. Permission denied \"$target_dir\" (2)");							

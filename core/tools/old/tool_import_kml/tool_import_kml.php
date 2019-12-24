@@ -30,7 +30,7 @@
 					# Fixed target filename
 					$target_file_name = 'kml_uploaded_file.kml';
 					# Fixed target file base path
-					$target_file_path = DEDALO_MEDIA_BASE_PATH . '/import/files';
+					$target_file_path = DEDALO_MEDIA_PATH . '/import/files';
 					# Full file path
 					$file_final_path  = $target_file_path .'/'. $target_file_name;
 

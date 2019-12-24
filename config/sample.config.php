@@ -17,19 +17,39 @@
 
 
 ################################################################
-# DEDALO 4 MAIN VARS
+# DEDALO MAIN VARS
 	define('DEDALO_HOST'			, $_SERVER['HTTP_HOST'] );
 	define('DEDALO_PROTOCOL'		, stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://' );
-
+	
 	# Dedalo paths
-	define('DEDALO_ROOT'			, dirname(dirname(dirname(dirname(__FILE__)))));
-	#define('DEDALO_ROOT_WEB'		, '/'. substr(substr($_SERVER["REQUEST_URI"],1), 0,  strpos(substr($_SERVER["REQUEST_URI"],1), "/")));
-	define('DEDALO_ROOT_WEB'		, explode('/lib/', $_SERVER["REQUEST_URI"])[0]);
+	define('DEDALO_ROOT'			, dirname(dirname(__FILE__)));
+	#define('DEDALO_ROOT_WEB'		, '/'. substr(substr($_SERVER["REQUEST_URI"],1), 0,  strpos(substr($_SERVER["REQUEST_URI"],1), "/")));		
+	define('DEDALO_ROOT_WEB'		, '/'.explode('/', $_SERVER["REQUEST_URI"])[1]);
+	
+	define('DEDALO_CONFIG'			,'config');
+	define('DEDALO_CORE'			,'core');
+	define('DEDALO_LIB'				,'lib');
 
-	define('DEDALO_LIB_BASE_PATH'	, dirname( dirname(__FILE__) ));
-	define('DEDALO_LIB_BASE_URL'	, DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_LIB_BASE_PATH)) . '/'. basename(DEDALO_LIB_BASE_PATH) );
+	#config	
+	define('DEDALO_CONFIG_PATH'		, DEDALO_ROOT.'/'.DEDALO_CONFIG );
 
-	define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
+	#core
+	define('DEDALO_CORE_PATH'		, DEDALO_ROOT.'/core');
+	define('DEDALO_CORE_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_CORE );
+
+	#lib
+	# FAST RESOLUTION :
+	#define('DEDALO_ROOT_WEB'		, '/dedalo4');	# Default 'dedalo' or 'dedalo4'	
+	define('DEDALO_LIB_PATH'		, DEDALO_ROOT.'/lib');
+	define('DEDALO_LIB_URL'			, DEDALO_ROOT_WEB . '/'. DEDALO_LIB );
+
+
+	#define('DEDALO_LIB_EX_BASE_PATH', dirname(dirname( dirname(__FILE__) ))).'/lib';
+	#define('DEDALO_LIB_EX_BASE_URL'	, DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_LIB_EX_BASE_PATH)) . '/'. basename(DEDALO_LIB_EX_BASE_PATH) );
+
+	define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
+	define('DEDALO_EXTRAS_URL'		, DEDALO_CORE_URL . '/extras');
+
 
 	# Dedalo information
 	define('DEDALO_SALT_STRING'		, 'dedalo_cuatro');
@@ -44,7 +64,7 @@
 
 
 ################################################################
-# DEDALO 4 ENTITY
+# DEDALO ENTITY
 	define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	# DEDALO_ENTITY_LABEL . (Showed title of html pages)
 	define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
@@ -63,22 +83,22 @@
 
 ################################################################
 # CORE_FUNCTIONS
-	include(DEDALO_LIB_BASE_PATH . '/core/core_functions.php');
+	include(DEDALO_CORE_PATH . '/core_functions.php');
 
 
 
 ################################################################
 # CONFIG REQUIRE
 	# VERSION
-	include(DEDALO_LIB_BASE_PATH.'/config/version.inc');
+	include(DEDALO_CONFIG_PATH.'/version.inc');
 	# Dedalo str tipos
-	include(DEDALO_LIB_BASE_PATH.'/config/dd_tipos.php');
+	include(DEDALO_CONFIG_PATH.'/dd_tipos.php');
 
 
 
 ################################################################
 # DB : CONEXIÓN CON LA BASE DE DATOS MYSQL
-	include(DEDALO_LIB_BASE_PATH.'/config/config_db.php');
+	include(DEDALO_CONFIG_PATH.'/config_db.php');
 	define('SLOW_QUERY_MS'	, 1200);
 
 
@@ -148,7 +168,7 @@
 
 ################################################################
 # LOADER (AUTO LOAD CALLED CLASSES)
-	include(DEDALO_LIB_BASE_PATH.'/core/class.loader.php');
+	include(DEDALO_CORE_PATH.'/class.loader.php');
 
 
 
@@ -267,27 +287,27 @@
 # LIBS PATH
 
 	# JQUERY JS LIB
-	define('JQUERY_LIB_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');
+	define('JQUERY_LIB_URL_JS'			, DEDALO_LIB_URL . '/jquery/jquery.min.js');
 	# JQUERY UI
-	define('JQUERY_UI_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
-	define('JQUERY_UI_URL_CSS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
+	define('JQUERY_UI_URL_JS'			, DEDALO_LIB_URL . '/jquery/jquery-ui/jquery-ui.min.js');
+	define('JQUERY_UI_URL_CSS'			, DEDALO_LIB_URL . '/jquery/jquery-ui/jquery-ui.min.css');
 	# TABLESORTER
-	define('JQUERY_TABLESORTER_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
+	define('JQUERY_TABLESORTER_JS'		, DEDALO_LIB_URL . '/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
 	# Text editor
-	define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
-	#define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/vendor/tinymce/tinymce/tinymce.min.js');
+	define('TEXT_EDITOR_URL_JS'			, DEDALO_LIB_URL . '/tinymce/js/tinymce/tinymce.min.js');
+	#define('TEXT_EDITOR_URL_JS'			, DEDALO_LIB_URL . '/vendor/tinymce/tinymce/tinymce.min.js');
 	# PAPER
-	define('PAPER_JS_URL' 				, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-core.min.js');
+	define('PAPER_JS_URL' 				, DEDALO_LIB_URL .'/paper/dist/paper-core.min.js');
 	# LEAFLET
-	define('LEAFLET_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
+	define('LEAFLET_JS_URL' 			, DEDALO_LIB_URL .'/leaflet/stable_versions/leaflet.js');
 	# D3
-	define('D3_URL_JS' 					, DEDALO_ROOT_WEB .'/lib/nvd3/lib/d3.v3.min.js');
+	define('D3_URL_JS' 					, DEDALO_LIB_URL .'/nvd3/d3.v3.min.js');
 	# NVD3
-	define('NVD3_URL_JS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
-	define('NVD3_URL_CSS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
+	define('NVD3_URL_JS' 				, DEDALO_LIB_URL .'/nvd3/build/nv.d3.min.js');
+	define('NVD3_URL_CSS' 				, DEDALO_LIB_URL .'/nvd3/build/nv.d3.min.css');
 	# BOOTSTRAP
-	define('BOOTSTRAP_CSS_URL' 			, DEDALO_ROOT_WEB .'/lib/bootstrap/dist/css/bootstrap.min.css');
-	define('BOOTSTRAP_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/bootstrap/dist/js/bootstrap.min.js');
+	define('BOOTSTRAP_CSS_URL' 			, DEDALO_LIB_URL .'/bootstrap/dist/css/bootstrap.min.css');
+	define('BOOTSTRAP_JS_URL' 			, DEDALO_LIB_URL .'/bootstrap/dist/js/bootstrap.min.js');
 	# CDN USE BOOL
 	define('USE_CDN' 					, false);
 
@@ -297,8 +317,8 @@
 # MEDIA CONFIG
 
 	# MEDIA_BASE PATH
-	define('DEDALO_MEDIA_BASE_PATH'		, DEDALO_ROOT 		. '/media');
-	define('DEDALO_MEDIA_BASE_URL'		, DEDALO_ROOT_WEB 	. '/media');
+	define('DEDALO_MEDIA_PATH'		, DEDALO_ROOT 		. '/media');
+	define('DEDALO_MEDIA_URL'		, DEDALO_ROOT_WEB 	. '/media');
 
 
 	#
@@ -324,7 +344,7 @@
 		# FFMPEG PATH
 		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/bin/ffmpeg'); # Like /usr/bin/ffmpeg
 		# FFMPEG SETTINGS
-		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
+		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
 		# FAST START PATH
 		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');	# Like /usr/bin/qt-faststart
 		# DEDALO_AV_FFPROBE_PATH PATH usualmente /usr/bin/ffprobe
@@ -332,10 +352,10 @@
 		# AV STREAMER
 		define('DEDALO_AV_STREAMER'					, NULL);
 		# AV DEDALO_AV_WATERMARK_FILE
-		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
+		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
 
 		# TEXT_SUBTITLES_ENGINE (tool_subtitles)
-		define('TEXT_SUBTITLES_ENGINE'				, DEDALO_LIB_BASE_PATH . '/tools/tool_subtitles');
+		define('TEXT_SUBTITLES_ENGINE'				, DEDALO_CORE_PATH . '/tools/tool_subtitles');
 		# DEDALO_SUBTITLES_FOLDER (tool_subtitles)
 		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
 		# EXTENSION normally vtt
@@ -372,12 +392,12 @@
 		# IMAGE LIB
 		define('DEDALO_IMAGE_LIB'					, true);
 		# IMG FILE
-		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_LIB_BASE_URL . '/media_engine/img.php');
+		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_CORE_URL . '/media_engine/img.php');
 
 		# LIB ImageMagick MAGICK_PATH
 		define('MAGICK_PATH'						, '/usr/bin/'); 	# Like '/usr/bin/';
 		# COLOR_PROFILES_PATH
-		define('COLOR_PROFILES_PATH'				, DEDALO_LIB_BASE_PATH . '/media_engine/lib/color_profiles_icc/');
+		define('COLOR_PROFILES_PATH'				, DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
 
 		define('DEDALO_IMAGE_THUMB_WIDTH'			, 102);	// Default 102
 		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 57);	// Default 57
@@ -469,10 +489,10 @@
 ################################################################
 # TOOLS VARS
 	# TOOL EXPORT
-	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/export/files');
-	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,	DEDALO_MEDIA_BASE_URL  . '/export/files');
+	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/export/files');
+	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,	DEDALO_MEDIA_URL  . '/export/files');
 	# TOOL IMPORT
-	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/import/files');
+	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/import/files');
 
 
 
@@ -538,7 +558,7 @@
 	define('STRUCTURE_FROM_SERVER'		, true); # bool
 	define('STRUCTURE_SERVER_CODE'		, ''); 	 # string like aZdUs7asdasdhRsw4!sp
 	define('STRUCTURE_SERVER_URL'		, ''); 	 # string like https://master.render.es/dedalo/lib/dedalo/extras/str_manager/
-	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
+	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_CORE_PATH . '/backup/backups_structure/srt_download');
 
 
 
@@ -559,7 +579,7 @@
 	$maintenance_mode = false;
 	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
 	if (DEDALO_MAINTENANCE_MODE) {
-		include(DEDALO_LIB_BASE_PATH.'/maintenance/maintenance.php');
+		include(DEDALO_CORE_PATH.'/maintenance/maintenance.php');
 	}
 
 
