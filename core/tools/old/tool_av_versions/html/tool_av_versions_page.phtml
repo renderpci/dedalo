@@ -209,7 +209,7 @@
 			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
 		    		
 		    		$html .= "<td class=\"$td_style\">";
-			    	$tmp_file		 		= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/tmp/'.$quality.'_'.$video_id.'.sh';
+			    	$tmp_file		 		= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/tmp/'.$quality.'_'.$video_id.'.sh';
 			    	$source_quality_file 	= $file_path;	//$this->component_obj->get_video_path($quality);
 
 			    	if( file_exists($tmp_file) ) {	//&& !file_exists($source_quality_file)

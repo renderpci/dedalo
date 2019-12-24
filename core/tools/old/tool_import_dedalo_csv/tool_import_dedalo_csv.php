@@ -38,7 +38,7 @@
 				js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_common/js/dedalo_upload.js';
 				
 				#$target_file_name = 'marc21_uploaded_file.mrc';
-				$target_file_path = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;	//DEDALO_MEDIA_BASE_PATH . '/import/files';
+				$target_file_path = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;	//DEDALO_MEDIA_PATH . '/import/files';
 				#$file_final_path  = $target_file_path .'/'. $target_file_name;
 
 					

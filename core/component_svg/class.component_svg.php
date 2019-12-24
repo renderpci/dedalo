@@ -201,7 +201,7 @@ class component_svg extends component_common {
 		$aditional_path = $this->get_aditional_path();
 		
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		$file_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
 
 		return $file_path;
 	}//end get_file_path
@@ -216,7 +216,7 @@ class component_svg extends component_common {
 
 		$aditional_path = $this->get_aditional_path();
 	
-		$target_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER . $aditional_path;
+		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $aditional_path;
 
 		return $target_dir;
 	}//end get_target_dir
@@ -246,7 +246,7 @@ class component_svg extends component_common {
 		$aditional_path = $this->get_aditional_path();
 		
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		$url 		= DEDALO_MEDIA_BASE_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+		$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
 
 		# ABSOLUTE (Default false)
 		if ($absolute) {

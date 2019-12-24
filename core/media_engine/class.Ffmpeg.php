@@ -111,11 +111,11 @@ class Ffmpeg {
 		# Recorre el array de calidades de mayor a menor hasta que encuentra una que exista
 		if(is_array($ar_quality)) foreach($ar_quality as $quality) {
 			
-			#$file = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
+			#$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
 			
 				#
 				# Search for every possible file whit this name and unknow extension
-				$target_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/{$quality}";
+				$target_dir = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}";
 				if (is_dir($target_dir)) {				
 				
 					if ($handle = opendir($target_dir)) {
@@ -504,7 +504,7 @@ class Ffmpeg {
 		}else{
 			# Deafult case . Paths are extracted from PosterFrameObj
 			$PosterFrameObj	= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
-			$target_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/posterframe';
+			$target_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe';
 			$target_file	= $target_path .'/'. $AVObj->get_name() . '.' . $PosterFrameObj->get_extension();
 		}
 		

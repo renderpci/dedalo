@@ -35,7 +35,7 @@
 	define('__CONTENT_BASE_URL__' 		, 'http://www.mydomain.com');
 
 	// WEB_VIDEO_PATH
-	define('WEB_VIDEO_BASE_URL' 		, DEDALO_MEDIA_BASE_URL .'/'. DEDALO_AV_FOLDER .'/'. DEDALO_AV_QUALITY_DEFAULT );
+	define('WEB_VIDEO_BASE_URL' 		, DEDALO_MEDIA_URL .'/'. DEDALO_AV_FOLDER .'/'. DEDALO_AV_QUALITY_DEFAULT );
 
 
 

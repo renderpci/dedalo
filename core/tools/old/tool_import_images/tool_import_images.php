@@ -38,7 +38,7 @@
 
 					# MEDIA folder
 					# Target folder exists test	
-					$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/temp'.'/files/';
+					$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/temp'.'/files/';
 					if( !is_dir($folder_path) ) {
 						if(!mkdir($folder_path, 0777,true)) {
 							throw new Exception(" Error on read or create TOOL_IMPORT_IMAGES_UPLOAD_DIR directory. Permission denied ");

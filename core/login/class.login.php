@@ -855,7 +855,7 @@ class login extends common {
 			debug_log(__METHOD__." htaccess_text ".to_string($htaccess_text), logger::DEBUG);
 
 			# File .htaccess
-			$htaccess_file = DEDALO_MEDIA_BASE_PATH.'/.htaccess';
+			$htaccess_file = DEDALO_MEDIA_PATH.'/.htaccess';
 			if( !file_put_contents($htaccess_file, $htaccess_text) ){
 				# Remove cookie file (cookie_file.php)
 				unlink($cookie_file);

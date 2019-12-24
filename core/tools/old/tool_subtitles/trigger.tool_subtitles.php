@@ -82,7 +82,7 @@ function build_subtitles_text($json_data) {
 	exit;
 	*/
 	$base_dir 	= DEDALO_SUBTITLES_FOLDER;
-	$target_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . $base_dir ;
+	$target_dir = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . $base_dir ;
 	if( !is_dir($target_dir) ) {
 		if(!mkdir($target_dir, 0777,true)) throw new Exception("Error on read or create directory. Permission denied \"$target_dir\" (1)");						
 	}
@@ -91,7 +91,7 @@ function build_subtitles_text($json_data) {
 	
 	$response->result 	= true;
 	$response->msg 		= 'Ok. Subtitles generated successfully';
-	$response->url 		= DEDALO_MEDIA_BASE_URL .DEDALO_AV_FOLDER. $base_dir .'/'. $filename;
+	$response->url 		= DEDALO_MEDIA_URL .DEDALO_AV_FOLDER. $base_dir .'/'. $filename;
 	
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -147,10 +147,10 @@ function add_subtitle_track_to_video($json_data) {
 		#dump($component_av_related_tipo, ' component_av_related_tipo ++ '.to_string());
 
 
-	$base_dir   = DEDALO_MEDIA_BASE_PATH;
+	$base_dir   = DEDALO_MEDIA_PATH;
 	$target_dir = $base_dir . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER;
 	$filename 	= $component_av_related_tipo.'_'.$section_tipo.'_'.$section_id.'_'.$lang.'.vtt';
-	$url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER .'/'.$filename;
+	$url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER .'/'.$filename;
 	if(file_exists( $target_dir.'/'.$filename )) {
 		$response->result 	 = true;
 		$response->msg 		 = "Ok. Subtitles files found";

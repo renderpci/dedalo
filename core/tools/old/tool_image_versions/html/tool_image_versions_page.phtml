@@ -325,8 +325,8 @@
 				    	
 				    	if( $this->component_obj->get_original($quality,true) ) {
 
-							$source_file = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.$quality . $aditional_path .'/'. $image_id.'.'.$this->component_obj->get_original($quality);
-							$target_file = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.$quality . $aditional_path .'/'. $image_id.'.'.DEDALO_IMAGE_EXTENSION;
+							$source_file = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.$quality . $aditional_path .'/'. $image_id.'.'.$this->component_obj->get_original($quality);
+							$target_file = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.$quality . $aditional_path .'/'. $image_id.'.'.DEDALO_IMAGE_EXTENSION;
 
 							#dump($source_file,'$source_file '.$target_file);
 							$title = "Convert ".$this->component_obj->get_original()." to ".DEDALO_IMAGE_EXTENSION. " (width same quality)";
