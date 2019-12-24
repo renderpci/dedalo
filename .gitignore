@@ -51,16 +51,19 @@ core/extras/*
 !core/extras/muvaet
 
 # vendor ignore all except used public
-vendor/*
-!vendor/maxmind
-!vendor/maxmind-db
-!vendor/react
-!vendor/symfony
-!vendor/ringcentral
-!vendor/geoip2
-!vendor/socrata
-!vendor/composer
-!vendor/leafo
+vendor
+# !vendor/maxmind
+# !vendor/maxmind-db
+# !vendor/react
+# !vendor/symfony
+# !vendor/ringcentral
+# !vendor/geoip2
+# !vendor/socrata
+# !vendor/composer
+# !vendor/leafo
+autoload.php
+composer.json
+composer.lock
 
 # Ignore paths that contain generated content.
 media
