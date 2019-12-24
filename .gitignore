@@ -63,7 +63,7 @@ vendor/*
 !vendor/leafo
 
 # Ignore paths that contain generated content.
-media/*
+media
 media_test
 core/backup/backups
 core/backup/backups/*
@@ -120,3 +120,5 @@ core/common/css/structure.css
 core/common/js/lang/*
 
 
+
+/media
