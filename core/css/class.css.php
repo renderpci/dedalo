@@ -196,7 +196,7 @@ class css {
 			$response->result = false;
 			$response->msg 	  = null;
 
-		include DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
+		include DEDALO_LIB_PATH . '/lessphp/lessc.inc.php';
 		$less = new lessc;
 		$less_code   = [];
 		$less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
