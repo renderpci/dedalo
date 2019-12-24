@@ -1,0 +1,46 @@
+{
+  "name": "vexabc",
+  "version": "0.2.0",
+  "description": "ABC notation parser and renderer for VexFlow",
+  "homepage": "https://github.com/incompleteopus/vexabc/",
+  "author": {
+    "name": "Mikael Nousiainen",
+    "email": "mikael@incompleteopus.net",
+    "url": "https://github.com/incompleteopus/"
+  },
+  "files": [],
+  "main": "src/vexabc",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/incompleteopus/vexabc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/incompleteopus/vexabc/issues"
+  },
+  "licenses" : [
+    {
+      "type" : "MPL 2.0",
+      "url" : "https://github.com/incompleteopus/vexabc/blob/master/LICENSE"
+    }
+  ],
+  "dependencies": {
+    "underscore": "1.5.2"
+  },
+  "devDependencies": {
+    "grunt": ">= 0.4.1",
+    "grunt-contrib-clean": "0.5.0",
+    "grunt-contrib-concat": "0.3.0",
+    "grunt-contrib-jshint": "0.7.1",
+    "grunt-contrib-qunit": "0.3.0",
+    "grunt-contrib-uglify": "0.2.5",
+    "grunt-contrib-watch": "0.5.3",
+    "browserify": "~2.35.1",
+    "grunt-browserify": "~1.2.11",
+    "debowerify": "0.3.0",
+    "grunt-bower-task": "0.3.3",
+    "grunt-peg": "git://github.com/incompleteopus/grunt-peg.git#master"
+  },
+  "engines": {
+    "node": ">= 0.10.0"
+  }
+}

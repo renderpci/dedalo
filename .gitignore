@@ -37,8 +37,9 @@ install/import/hierarchy
 str_data*
 
 # lib ignore all except dedalo
-lib
-!lib/*/dist
+#lib
+#!lib/*/dist
+lib/babel_engine
 
 # extras ignore all except common
 core/extras/*

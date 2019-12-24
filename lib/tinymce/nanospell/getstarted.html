@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+    
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="description" content="">
+      <meta name="author" content="">
+      <title>Installing NanoSpell Spellchecker for TinyMCE - Step By Step Helper</title>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+      <script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+      <link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+      <link href="server/installer/theme.css" rel="stylesheet">
+      <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries --> 
+      <!--[if gt IE 7]>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <![endif]-->
+      <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+      <![endif]-->
+      <script src="server/installer/test.js"></script>
+      <script src="https://tinymce.cachefly.net/4.0/tinymce.min.js"></script>
+   </head>
+   <body>
+      <div class="metacontainer">
+         <div class="container">
+            <div class="brand">
+               <h1>nano<strong>spell</strong></h1>
+            </div>
+         </div>
+         <div class="container">
+            <h2> TinyMCE Spellchecking Plugin Installation Helper</h2>
+            <p class='lead'>This page helps you to ensure that NanoSpell is set-up correctly, de-bugs issues before they arise, and provides customized code samples.  </p>
+            <p><a class="btn btn-default" id='runbtn' href="#results-meta" role="button" onclick="runTests(); return false;">Run The Test &raquo;</a></p>
+         </div>
+      </div>
+  </div>
+      <div class="metacontainer" id='results-meta' style='display:none'>
+         <div class = "container" >
+            <div class="alert alert-danger" id='warn_internet'>
+               <p>This page needs to be running while you are connected to the internet.  Please connect to the internet and re-run the test.</p>
+               <p><small>Your data is never sent to other servers, but we need to load jQuery and Bootstrap libraries from CDN servers to keep the installer package small and lightweight.</small></p>
+            </div>
+            <div class="alert alert-danger"  id='warn_protocol'>
+               <p>For this software to run, it needs to be located on a web server using http:// or https:// protocols.</p>
+               <p><small>Currently you are viewing this page using the file:// protocol.  When your site is  running on a web-server, testing server or localhost - please re-run this page.</small></p>
+            </div>
+            <div id='installer-results'>
+               <p class='lead'>Please select 1 of the 4 server languages which nanospell supports (in the tabs below to the left) - and read the personalized installation guide.</p>
+               <p id='infotop' ></p>
+               <div class='row' >
+                  <div class="col-sm-2"  >
+                     <!-- Nav tabs -->
+                     <ul class="nav nav-pills nav-stacked" style='margin-top:20px;'>
+                        <li>			<a id='tab-php' href="#php" data-toggle="tab">PHP</a></li>
+                        <li>			<a id='tab-net' href="#net" data-toggle="tab">ASP.Net</a></li>
+                        <li>			<a id='tab-asp' href="#asp" data-toggle="tab">ASP</a></li>
+                        <li>			<a id='tab-java' href="#java" data-toggle="tab">Java</a></li>
+                     </ul>
+                  </div>
+                  <!-- Tab panes -->
+                  <div class="col-sm-10"  >
+                     <div class="tab-content">
+                        <div class="tab-pane" id="php">
+                           <h2>Setup NanoSpell using PHP</h2>
+                           <p>This option will instruct NanoSpell to use PHP to perform all of the TinyMCE spellchecking operations.</p>
+                           <hr/>
+                           <div id='php_results'>
+                           </div>
+                           <hr/>
+                           <div  id='php_live' style='display:none'>
+                              <h4>Live Example using PHP</h4>
+                              <textarea style='height:185px'>Helllo Worlb! PHP is working!</textarea>
+                              <hr/>
+                              <h4>Example Code</h4>
+							<p><small>Use javascript code like this when initializing TinyMCE within your pages to add the spellchecker.</small> </p>
+
+                              <pre>tinymce.init({ 
+ selector:'textarea',  
+ external_plugins: { "nanospell": "<span class='dynamic_url_for_plugin'>path/to/nanospell/plugin.js</span>" },
+ nanospell_server:"php"
+});</pre>
+                              <hr/>
+                              <p>Read more about <span class="nano"><span>Nano</span>Spell</span> <a href="http://tinymcespellcheck.com/settings">settings</a> and <a href="http://tinymcespellcheck.com/dictionaries">dictionaries</a></p>
+                           </div>
+                        </div>
+                        <div class="tab-pane" id="net">
+                           <h2>Setup NanoSpell using ASP.Net or Mono</h2>
+                           <p>This option will instruct NanoSpell to use ASP.Net to perform all of the TinyMCE spellchecking operations.</p>
+                           <hr/>
+                           <div id='net_results'>
+                           </div>
+                           <hr/>
+                           <div  id='net_live' style='display:none'>
+                              <h4>Live Example using ASP.Net</h4>
+                             <textarea style='height:185px'>Helllo Worlb! ASP.Net is working!</textarea>
+                              <hr/>
+                              <h4>Example Code</h4>
+							<p><small>Use javascript code like this when initializing TinyMCE within your pages to add the spellchecker.</small> </p>
+
+                              <pre>tinymce.init({ 
+	selector:'textarea',  
+	external_plugins: { "nanospell": "<span class='dynamic_url_for_plugin'>path/to/nanospell/plugin.js</span>" },
+	nanospell_server:"asp.net"
+});	</pre>
+                              <hr/>
+                              <p>Read more about <span class="nano"><span>Nano</span>Spell</span> <a href="http://tinymcespellcheck.com/settings">settings</a> and <a href="http://tinymcespellcheck.com/dictionaries">dictionaries</a></p>
+                           </div>
+                        </div>
+                        <div class="tab-pane" id="asp">
+                           <h2>Setup NanoSpell using ASP VBScript</h2>
+                           <p>This option will instruct NanoSpell to use Microsoft Active Server Pages to perform all of the TinyMCE spellchecking operations.  If ASP.net is an option for you - we always recommend ASP.net over classic asp because it is a faster, more stable language.</p>
+                           <hr/>
+                           <div id='asp_results'>
+                           </div>
+                           <hr/>
+                           <div  id='asp_live' style='display:none'>
+                              <h4>Live Example using ASP</h4>
+                                  <textarea style='height:185px'>Helllo Worlb! ASP Vbscript is working!</textarea>
+                              <hr/>
+                              <h4>Example Code</h4>
+<p><small>Use javascript code like this when initializing TinyMCE within your pages to add the spellchecker.</small> </p>
+                              <pre>tinymce.init({ 
+	selector:'textarea',  
+	external_plugins: { "nanospell": "<span class='dynamic_url_for_plugin'>path/to/nanospell/plugin.js</span>" },
+	nanospell_server:"asp"
+});	</pre>
+                              <hr/>
+                              <p>Read more about <span class="nano"><span>Nano</span>Spell</span> <a href="http://tinymcespellcheck.com/settings">settings</a> and <a href="http://tinymcespellcheck.com/dictionaries">dictionaries</a></p>
+                           </div>
+                        </div>
+                        <div class="tab-pane" id="java">
+                           <h2>Setup NanoSpell using Java</h2>
+                           <p>To install this software on a Java based server we recommend installing the java-php bridge. <a href='http://php-java-bridge.sourceforge.net/pjb/' target='_blank'> http://php-java-bridge.sourceforge.net/pjb/</a>
+                           <p>You may then use the "php" server language to run nanospell.</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+   </body>
+</html>
