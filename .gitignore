@@ -11,6 +11,12 @@ config.json
 server_config_api.php
 json_config.php
 
+# config ignore all except sample files
+config/*
+!config/sample.config.php
+!config/sample.config_db.php
+!config/sample.config_areas.php
+
 # various
 acc
 _acc
@@ -18,7 +24,6 @@ des
 test
 .DS_Store
 .eslintrc
-#.htaccess
 *~
 .htaccess~
 .htaccess~~
@@ -32,21 +37,18 @@ install/import/hierarchy
 str_data*
 
 # lib ignore all except dedalo
-lib/*
-!lib/dedalo
-lib/dedalo/des/*
-lib/dedalo/diffusion/diffusion_index_ts_V40
-lib/dedalo/publication/client_api
-#lib/dedalo/common/js/lang/*
+#lib
+#!lib/*/dist
+lib/babel_engine
 
 # extras ignore all except common
-lib/dedalo/extras/*
-!lib/dedalo/extras/oh
-!lib/dedalo/extras/pci
-!lib/dedalo/extras/str_manager
-!lib/dedalo/extras/mdcat
-!lib/dedalo/extras/numisdata
-!lib/dedalo/extras/muvaet
+core/extras/*
+!core/extras/oh
+!core/extras/pci
+!core/extras/str_manager
+!core/extras/mdcat
+!core/extras/numisdata
+!core/extras/muvaet
 
 # vendor ignore all except used public
 vendor/*
@@ -63,23 +65,23 @@ vendor/*
 # Ignore paths that contain generated content.
 media/*
 media_test
-lib/*/backup/backups
-lib/*/backup/backups/*
-lib/*/backup/users
-lib/*/backup/backups_structure
+core/backup/backups
+core/backup/backups/*
+core/backup/users
+core/backup/backups_structure
 backups
 temp
 write
 template_maps
 tpl
-lib/dedalo/publication/client_api/**/docu/ui/*
-lib/dedalo/tools/tool_layout_print/data/*
-lib/dedalo/tools/tool_layout_print/print_pdf/*
+core/publication/client_api/**/docu/ui/*
+core/tools/tool_layout_print/data/*
+core/tools/tool_layout_print/print_pdf/*
 
 # Automatic created files
 cookie_auth.php
-lib/dedalo/common/css/structure.css
-lib/dedalo/common/js/lang/*
+core/common/css/structure.css
+core/common/js/lang/*
 *.log
 
 # Ignore default text files
@@ -88,35 +90,33 @@ robots.txt
 # Ignore some special files
 koala-config.json
 config.codekit3
+.jsbeautifyrc
 
 # various minified
 # js min
-lib/dedalo/**/*-min.js
+core/**/*-min.js
 
 # js map
-lib/dedalo/**/*-min.js.map
+core/**/*-min.js.map
 
 # css min
-lib/dedalo/**/*-min.css
+core/**/*-min.css
 
 # css map
-# lib/dedalo/**/*.css.map
+# core/**/*.css.map
 
 # saml
-lib/dedalo/login/saml/test_js.html
-lib/dedalo/login/saml/test.php
+core/login/saml/test_js.html
+core/login/saml/test.php
 
 # Drafs
-lib/dedalo/component_date_mod/
-lib/dedalo/component_portal/_versions/
+core/component_date_mod/
+core/component_portal/_versions/
 
 # structure css
-lib/dedalo/common/css/structure.css
+core/common/css/structure.css
 
 # js langs
-lib/dedalo/common/js/lang/*
-
-# .jsbeautifyrc
-.jsbeautifyrc
+core/common/js/lang/*
 
 

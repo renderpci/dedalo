@@ -1,0 +1,6 @@
+/*Customizable style for underlining mis-spelled words*/
+span.nanospell-typo {
+	border:none;
+	cursor: auto;
+	background: url(wiggle.png) repeat-x bottom left;
+	}
