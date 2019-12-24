@@ -8,7 +8,7 @@ var component_autocomplete = new function() {
 
 	'use strict';
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/component_autocomplete/trigger.component_autocomplete.php'
+	this.url_trigger = DEDALO_CORE_URL + '/component_autocomplete/trigger.component_autocomplete.php'
 	this.ajax_container
 	this.tipo
 	this.parent

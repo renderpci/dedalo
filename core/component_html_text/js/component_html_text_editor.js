@@ -31,7 +31,7 @@ var component_html_text_editor = new function() {
 				//editor_height = 307 -70;
 				//break;
 			default :
-				cssFile = DEDALO_LIB_BASE_URL + '/component_html_text/css/' + 'component_html_text_editor_default.css?' + page_globals.dedalo_version
+				cssFile = DEDALO_CORE_URL + '/component_html_text/css/' + 'component_html_text_editor_default.css?' + page_globals.dedalo_version
 		}
 
 		

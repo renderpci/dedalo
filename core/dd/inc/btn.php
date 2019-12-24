@@ -1,5 +1,5 @@
 <?php
-include(dirname(dirname(__FILE__)) .'/lib/dedalo/config/core_functions.php');
+include( DEDALO_CORE_PATH .'/base/core_functions.php');
 
 # set some time Important!
 $myDateTimeZone = 'Europe/Madrid';

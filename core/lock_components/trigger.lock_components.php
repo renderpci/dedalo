@@ -1,7 +1,7 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(__FILE__)).'/config/config.php');
-include(DEDALO_LIB_BASE_PATH.'/lock_components/class.lock_components.php');
+include( DEDALO_CONFIG_PATH.'/config.php');
+include(DEDALO_CORE_PATH.'/lock_components/class.lock_components.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 

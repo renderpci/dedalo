@@ -4,9 +4,9 @@ if(SHOW_DEBUG) {
 	unset($TIMER_IMG); $TIMER_IMG['image_start']=microtime(1);
 }
 */
-#define('DEDALO_LIB_BASE_PATH', dirname( dirname(__FILE__) ));
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
-require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.Thumb.php');
+#define('DEDALO_CORE_PATH', dirname( dirname(__FILE__) ));
+require_once(DEDALO_CONFIG_PATH .'/config.php');
+require_once(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
 
 # Write session to unlock session file
 session_write_close();

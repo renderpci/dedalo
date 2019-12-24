@@ -723,7 +723,7 @@ abstract class common {
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
 	* @return string $html
-	*	Get standar path file "DEDALO_LIB_BASE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
+	*	Get standar path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
 	public function get_html() {
@@ -732,7 +732,7 @@ abstract class common {
 
 			# Class name is called class (ex. component_input_text), not this class (common)
 			ob_start();
-			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
+			include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
 			$html = ob_get_clean();
 
 		if(SHOW_DEBUG===true) {
@@ -1376,7 +1376,7 @@ abstract class common {
 			$called_tipo  = $this->get_tipo();
 
 		// path. Class name is called class (ex. component_input_text), not this class (common)
-			$path = DEDALO_LIB_BASE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
+			$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
 
 		// controller include
 			$json = include( $path );
@@ -1486,7 +1486,7 @@ abstract class common {
 					$tool->section_tipo = $item->section_tipo;
 					$tool->name  		= $item->name;
 					$tool->label 		= $label;
-					$tool->icon 		= DEDALO_LIB_BASE_URL . '/tools/' . $item->name . '/img/icon.svg';
+					$tool->icon 		= DEDALO_CORE_URL . '/tools/' . $item->name . '/img/icon.svg';
 					$tool->show_in_inspector = $item->show_in_inspector;
 					$tool->show_in_component = $item->show_in_component;
 

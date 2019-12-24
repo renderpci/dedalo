@@ -153,8 +153,8 @@ class dd_error {
 		$html .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">';
 		$html .= '<head>';
 		$html .= ' <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-		$html .= ' <link rel="stylesheet" href="'.DEDALO_LIB_BASE_URL.'/common/css/common.css" type="text/css" />';
-		$html .= ' <link rel="stylesheet" href="'.DEDALO_LIB_BASE_URL.'/html_page/css/html_page.css" type="text/css" />';
+		$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/common/css/common.css" type="text/css" />';
+		$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/html_page/css/html_page.css" type="text/css" />';
 		$html .= '</head>';
 		$html .= '<body style="padding:20px">';
 
@@ -163,9 +163,9 @@ class dd_error {
 		if($show_option) {
 			$html .= '
 					<div class="" style="padding:0px">
-					<a href="'.DEDALO_LIB_BASE_URL.'/main/?home" style="padding:5px">Home</a>
+					<a href="'.DEDALO_CORE_URL.'/main/?home" style="padding:5px">Home</a>
 					<a href="javascript:history.go(-1)" style="padding:5px">Back</a> Sorry, an error was found
-					<img src="'.DEDALO_LIB_BASE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />
+					<img src="'.DEDALO_CORE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />
 					</div>';
 		}
 

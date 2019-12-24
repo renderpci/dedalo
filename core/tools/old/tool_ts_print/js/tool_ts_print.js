@@ -6,7 +6,7 @@
 */
 var tool_ts_print = new function() {
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/tools/tool_ts_print/trigger.tool_ts_print.php'
+	this.trigger_url = DEDALO_CORE_URL + '/tools/tool_ts_print/trigger.tool_ts_print.php'
 	
 	this.ts_data
 

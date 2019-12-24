@@ -11,7 +11,7 @@ var tool_cataloging = new function() {
 
 
 	// Local vars
-	this.trigger_tool_cataloging_url = DEDALO_LIB_BASE_URL + '/tools/tool_cataloging/trigger.tool_cataloging.php'
+	this.trigger_tool_cataloging_url = DEDALO_CORE_URL + '/tools/tool_cataloging/trigger.tool_cataloging.php'
 	this.main_object
 	this.new_thesaurus_value
 	this.icon_show

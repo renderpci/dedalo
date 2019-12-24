@@ -8,7 +8,7 @@ var tool_indexation = new function() {
 	
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_indexation/trigger.tool_indexation.php'
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_indexation/trigger.tool_indexation.php'
 
 
 

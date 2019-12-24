@@ -27,7 +27,7 @@
 
 // BACKUPS
 	# Target folder exists test	
-	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/backups';
+	$folder_path = DEDALO_CORE_PATH.'/backup/backups';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backups directory. Permission denied");
@@ -39,7 +39,7 @@
 
 // BACKUPS_STRUCTURE
 	# Target folder exists test	
-	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/backups_structure';
+	$folder_path = DEDALO_CORE_PATH.'/backup/backups_structure';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backups_structure directory. Permission denied");
@@ -51,7 +51,7 @@
 
 // BACKUP_TEMP
 	# Target folder exists test	
-	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/temp';
+	$folder_path = DEDALO_CORE_PATH.'/backup/temp';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backup temp directory. Permission denied");
@@ -63,7 +63,7 @@
 
 // BACKUP USERS DIR
 	# Target folder exists test	
-	$folder_path = DEDALO_LIB_BASE_PATH.'/backup/users';
+	$folder_path = DEDALO_CORE_PATH.'/backup/users';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backup users directory. Permission denied");
@@ -395,7 +395,7 @@
 
 #// LANGS JS (moved to login.php !)
 #	# Generate js files with all labels (in not extist current lang file)
-#	$folder_path = DEDALO_LIB_BASE_PATH.'/common/js/lang';
+#	$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
 #	if( !is_dir($folder_path) ) {
 #		if(!mkdir($folder_path, 0777,true)) {
 #			$init_response->msg .= trim(" Error on read or create js/lang directory. Permission denied");
@@ -406,11 +406,11 @@
 #	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
 #	foreach ($ar_langs as $lang => $label) {
 #		$label_path  = '/common/js/lang/' . $lang . '.js';
-#		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path)) {
+#		if (!file_exists(DEDALO_CORE_PATH.$label_path)) {
 #			$ar_label = label::get_ar_label($lang); // Get all properties
 #				#dump($ar_label, ' ar_label');
 #			
-#			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+#			file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
 #			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 #		}
 #	}
@@ -418,7 +418,7 @@
 
 #// STRUCTURE CSS (moved to login.php !)
 #	# Generate css structure file (in not extist)	
-#	$file_path = DEDALO_LIB_BASE_PATH.'/common/css/structure.css';
+#	$file_path = DEDALO_CORE_PATH.'/common/css/structure.css';
 #	if (!file_exists($file_path)) {
 #	
 #		$response = (object)css::build_structure_css();
@@ -427,7 +427,7 @@
 #
 #
 #// SEQUENCES TEST
-#	require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
+#	require(DEDALO_CORE_PATH.'/db/class.data_check.php');
 #	$data_check = new data_check();
 #	$response 	= $data_check->check_sequences();
 #	if ($response->result!=true) {

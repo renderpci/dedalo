@@ -17,7 +17,7 @@
 	$file_name				= $modo ;
 
 	# Add section group too
-	css::$ar_url[] = DEDALO_LIB_BASE_URL.'/section_group/css/section_group.css';
+	css::$ar_url[] = DEDALO_CORE_URL.'/section_group/css/section_group.css';
 	
 	# LOAD PAGE
 	
@@ -40,7 +40,7 @@
 	}
 	
 	
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

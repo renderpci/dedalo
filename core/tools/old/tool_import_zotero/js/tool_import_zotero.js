@@ -6,7 +6,7 @@
 */ 
 var tool_import_zotero = new function() {
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/tools/tool_import_zotero/trigger.tool_import_zotero.php?top_tipo='+page_globals.top_tipo ;
+	this.trigger_url = DEDALO_CORE_URL + '/tools/tool_import_zotero/trigger.tool_import_zotero.php?top_tipo='+page_globals.top_tipo ;
 
 
 	// READY
@@ -64,7 +64,7 @@ var tool_import_zotero = new function() {
 
 
 		var button_tipo = $(button_obj).data('button_tipo');
-		var url = DEDALO_LIB_BASE_URL + '/tools/tool_import_zotero/html/preview.php?button_tipo='+button_tipo;
+		var url = DEDALO_CORE_URL + '/tools/tool_import_zotero/html/preview.php?button_tipo='+button_tipo;
 		$("#wrap_preview").load(url, function(){
 			//setTimeout(function() {
 				$('html, body').animate({

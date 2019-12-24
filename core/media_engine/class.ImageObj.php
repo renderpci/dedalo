@@ -1,8 +1,8 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.MediaObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Thumb.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageMagick.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 
 
 class ImageObj extends MediaObj {
@@ -173,7 +173,7 @@ class ImageObj extends MediaObj {
 		$w 					= $maxWidht;
 		$h 					= $maxHeight;
 		# 'm','quality','SID','w','h','fx','p','prop'
-		$thumb_url = DEDALO_LIB_BASE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&aditional_path=' .$aditional_path. '&SID=' .$SID. '&external_source='.$external_source. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;  	
+		$thumb_url = DEDALO_CORE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&aditional_path=' .$aditional_path. '&SID=' .$SID. '&external_source='.$external_source. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;  	
 			#dump($thumb_url,'thumb_url');
 
 		return $thumb_url;

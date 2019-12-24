@@ -2,7 +2,7 @@
 # SESSION LIFETIME
 # Set session_duration_hours before load 'config' file (override default value)
 #$session_duration_hours = 18;
-#require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+#require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 
 
@@ -22,8 +22,8 @@
 
 
 	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 	
 
 	switch($modo) {	
@@ -69,8 +69,8 @@
 						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload.css';
 						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload-ui.css';
 
-						css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_common/css/tool_common.css';
-						css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_images/css/tool_import_images.css';
+						css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_common/css/tool_common.css';
+						css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_images/css/tool_import_images.css';
 
 					# CONTEXT
 					$vars = array('context');foreach($vars as $name) $$name = common::setVar($name);
@@ -111,17 +111,17 @@
 								# The File Upload user interface plugin
 								js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/js/jquery.fileupload-ui.js';
 								# The main application script
-								js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_images/js/file_upload_main.js';
+								js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_images/js/file_upload_main.js';
 
 
 							# Include specific process_script
 							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_LIB_BASE_PATH . $this->button_import_propiedades->process_script);
+								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
 							}							
 							
 							# IMAGES UPLOAD MANAGER
 							$button_tipo 		= common::setVar('button_tipo',''); # Needed for build var 'upload_dir_custom'
-							$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_images/trigger.tool_import_images.php?button_tipo='.safe_tipo($button_tipo).'&top_tipo='.TOP_TIPO;
+							$upload_handler_url = DEDALO_CORE_URL . '/tools/tool_import_images/trigger.tool_import_images.php?button_tipo='.safe_tipo($button_tipo).'&top_tipo='.TOP_TIPO;
 							ob_start();
 							include('html/jquery_upload.phtml');
 							$body_html = ob_get_clean();
@@ -133,11 +133,11 @@
 							$body_html='';
 							$context_label = label::get_label('preview_de_importacion');
 
-							js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_images/js/tool_import_images.js';
+							js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_images/js/tool_import_images.js';
 
 							# Include specific process_script
 							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_LIB_BASE_PATH . $this->button_import_propiedades->process_script);
+								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
 							}	
 
 							# formato :
@@ -168,7 +168,7 @@
 							
 
 							$default_target_quality 		= $this->button_import_propiedades->quality;								
-							$process_script 				= DEDALO_LIB_BASE_PATH . $this->button_import_propiedades->process_script;
+							$process_script 				= DEDALO_CORE_PATH . $this->button_import_propiedades->process_script;
 								#dump($process_script);
 							$ar_quality 					= unserialize(DEDALO_IMAGE_AR_QUALITY);
 							
@@ -225,7 +225,7 @@
 	
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

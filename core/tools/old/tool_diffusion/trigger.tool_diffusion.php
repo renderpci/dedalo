@@ -1,8 +1,8 @@
 <?php
 $start_time=microtime(1);
 set_time_limit ( 259200 );  // 3 dias
-include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
-include( DEDALO_LIB_BASE_PATH .'/diffusion/class.diffusion.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
+include( DEDALO_CORE_PATH .'/diffusion/class.diffusion.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 
@@ -226,7 +226,7 @@ function diffusion_complete_dump($json_data) {
 			# Diffusiion classname (diffusion_mysq, diffusion_rdf, etc..)
 			$class_name = $value_obj->class_name;
 
-			include_once(DEDALO_LIB_BASE_PATH .'/diffusion/class.'.$class_name.'.php' );
+			include_once(DEDALO_CORE_PATH .'/diffusion/class.'.$class_name.'.php' );
 
 			$diffusion 	= new $class_name;
 			$de_result 	= $diffusion->diffusion_complete_dump( $diffusion_element_tipo, $resolve_references=true );

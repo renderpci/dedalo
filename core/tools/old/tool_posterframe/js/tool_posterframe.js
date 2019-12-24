@@ -7,7 +7,7 @@
 var tool_posterframe = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_posterframe/trigger.tool_posterframe.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_posterframe/trigger.tool_posterframe.php' ;
 
 
 	/**

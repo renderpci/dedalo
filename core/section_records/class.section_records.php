@@ -76,7 +76,7 @@ class section_records extends common {
 			# Calculate rows from database. Exec search
 			if ( $search_options->modo==='list_tm' ) {
 				// Case time machine uses a different resolution for the search_query_object
-				include(DEDALO_LIB_BASE_PATH . '/search/class.search_tm.php');
+				include(DEDALO_CORE_PATH . '/search/class.search_tm.php');
 				$search = new search_tm($search_options->search_query_object);
 
 			}else{
@@ -104,7 +104,7 @@ class section_records extends common {
 
 		# Include controller
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'.get_called_class().'/'.get_called_class().'.php' );
+		include ( DEDALO_CORE_PATH .'/'.get_called_class().'/'.get_called_class().'.php' );
 		$html = ob_get_clean();
 
 		/*

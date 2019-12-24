@@ -181,7 +181,7 @@ class tool_cataloging {
 		}
 
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
+		include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
 		$html = ob_get_clean();
 		
 
@@ -202,7 +202,7 @@ class tool_cataloging {
 		if(SHOW_DEBUG===true) $start_time = start_time();		
 		
 			# Class name is called class (ex. component_input_text), not this class (common)	
-			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
+			include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");

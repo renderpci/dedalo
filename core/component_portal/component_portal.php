@@ -52,8 +52,8 @@
 
 				#
 				# SEMANTIC NODES JS/CSS ADD
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
+				js::$ar_url[]  = DEDALO_CORE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
+				css::$ar_url[] = DEDALO_CORE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
 				
 
 				$dato 			= $this->get_dato();
@@ -304,7 +304,7 @@
 	}//end switch($modo) 
 	
 	
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

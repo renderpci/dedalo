@@ -1,8 +1,8 @@
 <?php
 $start_time=microtime(1);
 set_time_limit(300);
-include( dirname(dirname(__FILE__)).'/config/config.php');
-include(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
+include(DEDALO_CORE_PATH.'/backup/class.backup.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 

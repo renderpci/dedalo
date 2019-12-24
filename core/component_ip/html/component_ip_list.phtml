@@ -31,7 +31,7 @@
 					#$html_content .= "<span class=\"city_span\">$geoip_info->city</span>" ;
 					$html_content .= '<a href="'.$geoiptoolURL.'" target="_blank">';
 					# Flag (http://cdn.whatismyipaddress.com/images/flags/mx.png)
-					$flag_url 	= DEDALO_LIB_BASE_URL.'/themes/default/flags/'.$geoip_info->code.'.gif';
+					$flag_url 	= DEDALO_CORE_URL.'/themes/default/flags/'.$geoip_info->code.'.gif';
 					$title 		= $geoip_info->continent .' '. $geoip_info->country .' '. $geoip_info->region_name;
 					$html_content .= '<img src="'.$flag_url.'" class="flag_img" title="'.$title.'" />'; 
 					$html_content .= '</a>';

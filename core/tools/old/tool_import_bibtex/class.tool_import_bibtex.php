@@ -84,7 +84,7 @@
 
 
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 #if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
@@ -136,12 +136,12 @@ class tool_import_bibtex extends tool_common {
 			$button_import_obj = new button_import($var_requested, null, $var_requested_t);
 			$propiedades 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
 			if (isset($propiedades->process_script)) {
-				if ( !include_once(DEDALO_LIB_BASE_PATH.$propiedades->process_script) ) {
+				if ( !include_once(DEDALO_CORE_PATH.$propiedades->process_script) ) {
 					throw new Exception("Error Processing Request. Error in button import bibtex config. Wrong process_script path", 1);
 				}
 				tool_import_bibtex::$process_script = $propiedades->process_script;	// Fix current path
 				if(SHOW_DEBUG) {
-					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_LIB_BASE_PATH.$propiedades->process_script);
+					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_CORE_PATH.$propiedades->process_script);
 				}
 			}
 		}
@@ -210,7 +210,7 @@ class tool_import_bibtex extends tool_common {
 	public static function parse_bibex($file=null, $string=null) {		
 		
 		# parser lib
-		require(DEDALO_LIB_BASE_PATH.'/tools/tool_import_bibtex/lib/BibtexParser/BibtexParser.php');
+		require(DEDALO_CORE_PATH.'/tools/tool_import_bibtex/lib/BibtexParser/BibtexParser.php');
 
 		# If input is file, get text content
 		if ($file) {
@@ -218,7 +218,7 @@ class tool_import_bibtex extends tool_common {
 		}
 
 		# parser lib
-		require(DEDALO_LIB_BASE_PATH.'/tools/tool_import_bibtex/lib/class.latex.php');
+		require(DEDALO_CORE_PATH.'/tools/tool_import_bibtex/lib/class.latex.php');
 
 		# Decode latex chars to utf8 BEFORE send to parser lib
 		$string = latex::latex_decode( $string );

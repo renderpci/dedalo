@@ -6,7 +6,7 @@ switch ($m) {
 
 	case 'image':
 		# ImageObj
-		include(DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
+		include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 		$image_id 		= $SID;
 		$ImageObj 		= new ImageObj($image_id, $quality, $aditional_path, $initial_media_path, $external_source);
 		$source 		= $ImageObj->get_local_full_path();
@@ -15,7 +15,7 @@ switch ($m) {
 		if (!$file_exists) {
 			#return null;#exit();
 			$fx = 'crop';
-			$source = DEDALO_LIB_BASE_PATH . '/themes/default/0.jpg';
+			$source = DEDALO_CORE_PATH . '/themes/default/0.jpg';
 		}
 
 
@@ -26,7 +26,7 @@ switch ($m) {
 	case 'posterframe':
 		
 		# PosterFrameObj
-		include(DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
+		include(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 		$reel_id 			= $SID;	
 		$PosterFrameObj		= new PosterFrameObj($reel_id);
 		$source 			= $PosterFrameObj->get_local_full_path();
@@ -34,7 +34,7 @@ switch ($m) {
 
 		if (!file_exists($source)) {
 			$fx = 'crop';
-			$source = DEDALO_LIB_BASE_PATH . '/themes/default/0.jpg';
+			$source = DEDALO_CORE_PATH . '/themes/default/0.jpg';
 		}
 
 		# Thumb obj

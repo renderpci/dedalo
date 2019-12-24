@@ -8,10 +8,10 @@ var component_relation_parent = new function() {
 
 
 	this.save_arguments = {} // End save_arguments
-	this.url_trigger    = DEDALO_LIB_BASE_URL + '/component_relation_parent/trigger.component_relation_parent.php';
+	this.url_trigger    = DEDALO_CORE_URL + '/component_relation_parent/trigger.component_relation_parent.php';
 
 	// autocomplete_trigger_url . For service autocomplete
-	this.autocomplete_trigger_url = DEDALO_LIB_BASE_URL + '/component_autocomplete_hi/trigger.component_autocomplete_hi.php';
+	this.autocomplete_trigger_url = DEDALO_CORE_URL + '/component_autocomplete_hi/trigger.component_autocomplete_hi.php';
 
 
 
@@ -108,7 +108,7 @@ var component_relation_parent = new function() {
 		// context_name
 		const context_name = 'select_parent'
 		
-		const url = DEDALO_LIB_BASE_URL + '/main/?t=' + button_obj.dataset.target_tipo + '&context_name='+context_name+ '&menu=0'
+		const url = DEDALO_CORE_URL + '/main/?t=' + button_obj.dataset.target_tipo + '&context_name='+context_name+ '&menu=0'
 		const strWindowFeatures = "menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes";
 			//strWindowFeatures=null
 		if(parent_selector_window == null || parent_selector_window.closed) {

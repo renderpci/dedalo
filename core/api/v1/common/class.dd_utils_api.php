@@ -178,7 +178,7 @@ class dd_utils_api {
 				$ar_label 	 = label::get_ar_label($lang); // Get all properties
 					#dump($ar_label, ' ar_label');
 
-				file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+				file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
 				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 			}
 
@@ -281,7 +281,7 @@ class dd_utils_api {
 
 		session_write_close();
 
-		include(DEDALO_LIB_BASE_PATH . '/core/update/class.update.php');
+		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -313,7 +313,7 @@ class dd_utils_api {
 
 		session_write_close();
 
-		include(DEDALO_LIB_BASE_PATH . '/core/update/class.update.php');
+		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
 
 		$response = new stdClass();
 			$response->result 	= false;

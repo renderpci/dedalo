@@ -6,7 +6,7 @@
 */
 var area_thesaurus = new function() {
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/area_thesaurus/trigger.area_thesaurus.php'
+	this.trigger_url = DEDALO_CORE_URL + '/area_thesaurus/trigger.area_thesaurus.php'
 	this.root_nodes  = null
 
 	this.model_view

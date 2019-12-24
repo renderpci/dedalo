@@ -3,7 +3,7 @@
 # Set session_duration_hours before load 'config' file (override default value)
 $session_duration_hours = 24;
 
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 if(login::is_logged()!==true) {
 	$string_error = "Auth error: please login";
@@ -16,9 +16,9 @@ if(login::is_logged()!==true) {
 set_time_limit(0);
 
 
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 
 
 # set vars

@@ -6,12 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo DEDALO_ENTITY ?> DD Edit</title>
 <?php
-print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/legacy/general.css',null,false);
-print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/legacy/edit.css',null,false);
-print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/dd_edit.css',null,false);
+print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/general.css',null,false);
+print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/edit.css',null,false);
+print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_edit.css',null,false);
 ?>
 
-<?php #print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php'); ?>
+<?php #print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php'); ?>
 <script type="text/javascript">
 <?php
 $page_globals = new stdClass();
@@ -48,18 +48,18 @@ const trsND = '#relTR,#hermanosTR,#hijosTR,#modeloTR,#usableIndexTR';
 </script>
 <?php
 # JS
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php');
+print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php');
 print js::build_tag(JQUERY_LIB_URL_JS);
 print js::build_tag(JQUERY_UI_URL_JS);
-#print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
-#print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/inc/javascript.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_common.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
+#print js::build_tag(DEDALO_CORE_URL . '/common/js/common.js');
+#print js::build_tag(DEDALO_CORE_URL . '/login/js/login.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/inc/javascript.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_common.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 
 # Aditional css / js
-	print css::build_tag(DEDALO_LIB_BASE_URL . '/dd/jsoneditor/dist/jsoneditor.min.css');
-	print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/jsoneditor/dist/jsoneditor.min.js');
+	print css::build_tag(DEDALO_CORE_URL . '/dd/jsoneditor/dist/jsoneditor.min.css');
+	print js::build_tag(DEDALO_CORE_URL . '/dd/jsoneditor/dist/jsoneditor.min.js');
 
 ?>
 </head>

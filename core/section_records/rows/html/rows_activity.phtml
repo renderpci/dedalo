@@ -106,7 +106,7 @@
 										#dump($current_datos, ' current_datos ++ '.to_string());
 									if(isset($current_datos->tipo) && isset($current_datos->id)) {
 										//logger_backend_activity::$_COMPONENT_DATOS['tipo']
-										$url = DEDALO_LIB_BASE_URL."/main/?t=$current_datos->tipo&id=$current_datos->id&m=edit" ;//$current_datos->url;
+										$url = DEDALO_CORE_URL."/main/?t=$current_datos->tipo&id=$current_datos->id&m=edit" ;//$current_datos->url;
 										$ar_component_resolved[$component_tipo][$valor] .= " <a href=\"$url\" target=\"_blank\">[".$current_datos->tipo.'-'.$current_datos->id.']</a>';
 									}
 								}

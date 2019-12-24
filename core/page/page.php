@@ -136,7 +136,7 @@
 						$menu 		= new menu($mode);
 						$menu_html 	= $menu->get_html();
 						ob_start();
-						include ( DEDALO_LIB_BASE_PATH . '/html_page/html/html_page_header.phtml' );
+						include ( DEDALO_CORE_PATH . '/html_page/html/html_page_header.phtml' );
 						$html = ob_get_clean();
 						break;
 				}

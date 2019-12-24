@@ -5,7 +5,7 @@
 	Export selected records in different formats using section_list as base fields reference
 
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 
 
@@ -921,7 +921,7 @@ class tool_export extends tool_common {
 		$table_html .= "\n</table>";
 
 		if ($standalone) {
-			$css_file = DEDALO_LIB_BASE_URL . '/tools/tool_export/css/tool_export.css';
+			$css_file = DEDALO_CORE_URL . '/tools/tool_export/css/tool_export.css';
 
 			$html .= "<html><head>";
 			$html .= "<link rel=\"stylesheet\" href=\"$css_file\" type=\"text/css\" />";

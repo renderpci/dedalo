@@ -205,7 +205,7 @@
 				$menu 		= new menu($modo);
 				$menu_html 	= $menu->get_html();			
 				ob_start();
-				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() . '/html/' . get_class() . '_header.phtml' );
+				include ( DEDALO_CORE_PATH . '/' . get_class() . '/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
 				break;
 
@@ -225,7 +225,7 @@
 					$menu_html 	= $menu->get_html();	
 				}
 				ob_start();
-				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() . '/html/' . get_class() . '_header.phtml' );
+				include ( DEDALO_CORE_PATH . '/' . get_class() . '/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
 				break;			
 			
@@ -263,7 +263,7 @@
 
 	#
 	# HTML PAGE
-		include(DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '.phtml');
+		include(DEDALO_CORE_PATH . '/' . get_class() .'/html/' . get_class() . '.phtml');
 
 
 ?>

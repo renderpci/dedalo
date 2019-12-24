@@ -8,7 +8,7 @@ var login = new function() {
 
 	'use strict';
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/login/trigger.login.php'
+	this.url_trigger = DEDALO_CORE_URL + '/login/trigger.login.php'
 	this.wrap_login  = []
 
 

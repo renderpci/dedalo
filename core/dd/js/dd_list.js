@@ -9,8 +9,8 @@ var dd = new function() {
 	'use strict';
 
 	
-	this.trigger_url 		 = DEDALO_LIB_BASE_URL + '/dd/trigger.dd.php'
-	this.descriptors_trigger = DEDALO_LIB_BASE_URL + '/dd/trigger.descriptors_dd.php'
+	this.trigger_url 		 = DEDALO_CORE_URL + '/dd/trigger.dd.php'
+	this.descriptors_trigger = DEDALO_CORE_URL + '/dd/trigger.descriptors_dd.php'
 
 	//this.cookieOpenDivs_dd_name = "cookieOpenDivs_dd_" + page_globals.modo
 	
@@ -597,7 +597,7 @@ var dd = new function() {
 		}
 		
 		//alert('terminoID:'+terminoID+' parent:'+parent)	
-		const theUrl 	 = DEDALO_LIB_BASE_URL + "/dd/dd_edit.php?terminoID="+terminoID
+		const theUrl 	 = DEDALO_CORE_URL + "/dd/dd_edit.php?terminoID="+terminoID
 		const editwindow = window.open(theUrl ,'editwindow','status=yes,scrollbars=no,resizable=yes,width=740,height='+screen.height)
 		//if (newwindow) newwindow.moveTo(-10,1);
 		
@@ -819,7 +819,7 @@ var dd = new function() {
 	* Abrir Pop-up de formulario cambio orden 
 	*/
 	this.cambiar_n_orden = function(nordenV, terminoID, padre, termino) {
-		const myurl = DEDALO_LIB_BASE_URL + "/dd/dd_norden.php?nordenV="+nordenV+"&padre="+padre+"&terminoID="+terminoID+"&termino="+termino
+		const myurl = DEDALO_CORE_URL + "/dd/dd_norden.php?nordenV="+nordenV+"&padre="+padre+"&terminoID="+terminoID+"&termino="+termino
 		window.open(myurl,'','status=yes,scrollbars=yes,resizable=yes,width=450,height=200')
 
 		return true

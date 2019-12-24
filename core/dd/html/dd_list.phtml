@@ -10,11 +10,11 @@
 # CSS
 	#dump(css::get_css_link_code(), ' css::get_css_link_code() ++ '.to_string());
 	#echo trim(css::get_css_link_code());
-print css::build_tag(DEDALO_LIB_BASE_URL .'/common/css/fonts.css', null, false);
-print css::build_tag(DEDALO_LIB_BASE_URL .'/menu/css/menu.css', null, false);
-#print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/legacy/general.css', null, false);
-print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/dd_page.css', null, false);
-print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/dd_list.css', null, false);
+print css::build_tag(DEDALO_CORE_URL .'/common/css/fonts.css', null, false);
+print css::build_tag(DEDALO_CORE_URL .'/menu/css/menu.css', null, false);
+#print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/general.css', null, false);
+print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_page.css', null, false);
+print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_list.css', null, false);
 ?>
 
 <script type="text/javascript">
@@ -54,15 +54,15 @@ print css::build_tag(DEDALO_LIB_BASE_URL .'/dd/css/dd_list.css', null, false);
 # JS
 	#dump(js::get_js_link_code(), ' js::get_js_link_code() ++ '.to_string());
 	#echo trim(js::get_js_link_code());
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php');
+print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php');
 print js::build_tag(JQUERY_LIB_URL_JS);
 print js::build_tag(JQUERY_UI_URL_JS);
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/cookies.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/menu/js/menu.js');
-#print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/inc/javascript.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_common.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_list.js');
+print js::build_tag(DEDALO_CORE_URL . '/common/js/cookies.js');
+print js::build_tag(DEDALO_CORE_URL . '/menu/js/menu.js');
+#print js::build_tag(DEDALO_CORE_URL . '/login/js/login.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/inc/javascript.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_common.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_list.js');
 
 
 ?>

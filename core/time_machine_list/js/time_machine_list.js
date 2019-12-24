@@ -45,7 +45,7 @@
 
 var time_machine_list = new function() {
 
-    this.trigger_url = DEDALO_LIB_BASE_URL + '/time_machine_list/trigger.time_machine_list.php'
+    this.trigger_url = DEDALO_CORE_URL + '/time_machine_list/trigger.time_machine_list.php'
     this.time_machine_list_wrap = ''
 
 

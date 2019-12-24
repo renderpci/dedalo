@@ -70,7 +70,7 @@
 	}
 	
 
-	#$page_html	= DEDALO_LIB_BASE_PATH .'/'. $component_name . '/html/' . $component_name . '_' . $file_name . '.phtml';
+	#$page_html	= DEDALO_CORE_PATH .'/'. $component_name . '/html/' . $component_name . '_' . $file_name . '.phtml';
 	$page_html	= dirname(__FILE__) . '/html/' . $component_name . '_' . $file_name . '.phtml';	
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";

@@ -24,8 +24,8 @@ class css {
 		#
 		# COMMON CSS . Insertamos los estilos generales
 
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/fonts.css';
-			#css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/glyphicons.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/common/css/fonts.css';
+			#css::$ar_url_basic[] = DEDALO_CORE_URL . '/common/css/glyphicons.css';
 
 			# BOOTSTRAP css
 			#css::$ar_url_basic[] = BOOTSTRAP_CSS_URL;
@@ -36,42 +36,42 @@ class css {
 			css::$ar_url_basic[] = JQUERY_UI_URL_CSS ;
 
 			# HTML PAGE css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/css/html_page.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/html_page/css/html_page.css';
 
 			# GRIDSTER
 			#css::$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/jquery/gridster/jquery.gridster.min.css';
 
 			# COMMON css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/common.css';
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/buttons.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/common/css/common.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/common/css/buttons.css';
 
 			# COMMON services
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/services/service_autocomplete/css/service_autocomplete.css';
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/relation_list/css/relation_list.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/services/service_autocomplete/css/service_autocomplete.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/relation_list/css/relation_list.css';
 
 			# TOOLS COMMON
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/css/tool_common.css';
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_diffusion/css/tool_diffusion.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_common/css/tool_common.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_diffusion/css/tool_diffusion.css';
 
 			# MENU css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/menu/css/menu.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/menu/css/menu.css';
 
 			# AREA css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/area/css/area.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/area/css/area.css';
 
 			# BUTTONS css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/button_common/css/button_common.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/button_common/css/button_common.css';
 
 			# SEARCH css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/css/search.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/search/css/search.css';
 
 			# COMPONENTS common css
-			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css';
+			css::$ar_url_basic[] = DEDALO_CORE_URL . '/component_common/css/component_common.css';
 
 			switch ($modo) {
 				case 'edit':
-					css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_lang_multi/css/tool_lang_multi.css';
-					css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/time_machine_list/css/time_machine_list.css';
+					css::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_lang_multi/css/tool_lang_multi.css';
+					css::$ar_url_basic[] = DEDALO_CORE_URL . '/time_machine_list/css/time_machine_list.css';
 
 				case 'list':
 					break;
@@ -85,7 +85,7 @@ class css {
 		foreach($ar_loaded_modelos_name as $modelo_name) {
 			# Load específico del componente actual
 			if (!in_array($modelo_name, $ar_excepciones)) {
-				$ar_url_elements[]	= DEDALO_LIB_BASE_URL . '/'. $modelo_name .'/css/'. $modelo_name .'.css';
+				$ar_url_elements[]	= DEDALO_CORE_URL . '/'. $modelo_name .'/css/'. $modelo_name .'.css';
 			}
 		}
 
@@ -99,7 +99,7 @@ class css {
 
 		# STRUCTURE CSS
 		if (defined('DEDALO_STRUCTURE_CSS') && DEDALO_STRUCTURE_CSS===true) {
-			$structure_file_path_url = DEDALO_LIB_BASE_URL . css::$structure_file_path;
+			$structure_file_path_url = DEDALO_CORE_URL . css::$structure_file_path;
 			css::$ar_url[] 			 = $structure_file_path_url;
 		}
 
@@ -111,25 +111,25 @@ class css {
 			if( !isset($added_component_commons) && strpos($url,'component_')!==false ) {
 
 				# component common functions css
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css' );
+				$html .= self::build_tag( DEDALO_CORE_URL . '/component_common/css/component_common.css' );
 
 				# INSPECTOR css
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/inspector/css/inspector.css' );
+				$html .= self::build_tag( DEDALO_CORE_URL . '/inspector/css/inspector.css' );
 
 				# TOOLS TOOL_TIME_MACHINE css
 				#if(navigator::get_selected('modo')==='tool_time_machine')
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/css/tool_time_machine.css' );
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_time_machine/css/tool_time_machine.css' );
 
 				# TOOLS LANG css
 				#if(navigator::get_selected('modo')==='tool_lang') {
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_lang/css/tool_lang.css' );
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_state/css/component_state.css' );
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_lang/css/tool_lang.css' );
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/component_state/css/component_state.css' );
 				#}
 
 				# button delete
 				# En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_delete/css/button_delete.css' );
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_stats/css/button_stats.css' );
+				$html .= self::build_tag( DEDALO_CORE_URL . '/button_delete/css/button_delete.css' );
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/button_stats/css/button_stats.css' );
 
 				$added_component_commons = true;
 			}
@@ -143,7 +143,7 @@ class css {
 
 		# DEBUG CSS OVERRIDE
 		if(SHOW_DEBUG && strpos(DEDALO_HOST, 'debug')!==false) {
-			$html .= self::build_tag(DEDALO_LIB_BASE_URL . '/html_page/css/html_page_debug.css');
+			$html .= self::build_tag(DEDALO_CORE_URL . '/html_page/css/html_page_debug.css');
 		}
 		#dump( htmlentities($html), '$html');
 
@@ -276,13 +276,13 @@ class css {
 
 
 		// MXINS. Get mixixns file
-			$file_name = DEDALO_LIB_BASE_PATH . self::$mixins_file_path;
+			$file_name = DEDALO_CORE_PATH . self::$mixins_file_path;
 			if ($mixins_code = file_get_contents($file_name)) {
 				$less_code = $mixins_code.$less_code;
 			}
 
 		// Write final file. Full path
-			$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
+			$file_name = DEDALO_CORE_PATH . self::$structure_file_path;
 
 		// Format : lessjs (default) | compressed | classic
 			$format = (DEVELOPMENT_SERVER===true) ? 'lessjs' : 'compressed';

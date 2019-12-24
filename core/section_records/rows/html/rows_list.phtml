@@ -340,7 +340,7 @@
 						$html_content .= '</div>';
 						if(SHOW_DEBUG===true) {
 							if (strpos($valor_list, 'thumb_in_list')!==false) {
-								$url = DEDALO_LIB_BASE_URL."/tools/tool_update_cache/trigger.tool_update_cache.php?section_tipo=$section_tipo&mode=update_cache_by_section_id&section_id=$section_id";
+								$url = DEDALO_CORE_URL."/tools/tool_update_cache/trigger.tool_update_cache.php?section_tipo=$section_tipo&mode=update_cache_by_section_id&section_id=$section_id";
 								$html_content .= '<a class="debug_info" href="'.$url.'" target="_blank">Update</a>';
 							}
 						}

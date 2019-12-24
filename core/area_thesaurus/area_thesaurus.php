@@ -35,25 +35,25 @@
 		case 'list':
 
 				// ts_object class
-					include(DEDALO_LIB_BASE_PATH."/ts_object/class.ts_object.php");
+					include(DEDALO_CORE_PATH."/ts_object/class.ts_object.php");
 				
 				// Load necessary js /css elements when we are in thesaurus
 					$element_name = 'ts_object';
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+					css::$ar_url[] = DEDALO_CORE_URL."/$element_name/css/$element_name.css";
+					js::$ar_url[]  = DEDALO_CORE_URL."/$element_name/js/$element_name.js";
 
 					$element_name = 'diffusion_index_ts';
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/$element_name/css/$element_name.css";
-					#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+					css::$ar_url[] = DEDALO_CORE_URL."/diffusion/$element_name/css/$element_name.css";
+					#js::$ar_url[]  = DEDALO_CORE_URL."/$element_name/js/$element_name.js";
 
 					$element_name = 'tool_av_versions';
-					#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/$element_name/css/$element_name.css";
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/$element_name/js/$element_name.js";
+					#css::$ar_url[] = DEDALO_CORE_URL."/tools/$element_name/css/$element_name.css";
+					js::$ar_url[]  = DEDALO_CORE_URL."/tools/$element_name/js/$element_name.js";
 
 					$element_name = 'component_text_area';
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/mce_editor.js";
+					js::$ar_url[]  = DEDALO_CORE_URL."/$element_name/js/mce_editor.js";
 
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_records/css/section_records.css";
+					css::$ar_url[] = DEDALO_CORE_URL."/section_records/css/section_records.css";
 
 				# Components
 					/*$ar_component_name = [
@@ -235,7 +235,7 @@
 					/*
 					if(SHOW_DEBUG===true) {
 						
-						include(DEDALO_LIB_BASE_PATH."/tools/tool_ts_print/class.tool_ts_print.php");
+						include(DEDALO_CORE_PATH."/tools/tool_ts_print/class.tool_ts_print.php");
 						
 						$ts_locator = new locator();
 							$ts_locator->set_section_tipo('ts1');

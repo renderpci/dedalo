@@ -8,7 +8,7 @@ var component_filter_records = new function() {
 
 
 	this.save_arguments = {} // End save_arguments
-	this.url_trigger    = DEDALO_LIB_BASE_URL + '/component_filter_records/trigger.component_filter_records.php';
+	this.url_trigger    = DEDALO_CORE_URL + '/component_filter_records/trigger.component_filter_records.php';
 
 
 

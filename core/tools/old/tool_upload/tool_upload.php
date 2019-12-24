@@ -3,10 +3,10 @@
 # Set session_duration_hours before load 'config' file (override default value)
 $session_duration_hours = 18;
 
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.AVPlayer.php');
 
 
 if(login::is_logged()!==true) {
@@ -34,8 +34,8 @@ if(login::is_logged()!==true) {
 	$file_name	= $modo;
 
 	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 	
 
 	switch($modo) {	
@@ -66,15 +66,15 @@ if(login::is_logged()!==true) {
 					#
 					# CUSTOMIZATIONS OF TOOL
 					if (defined('TOOL_UPLOAD_CUSTOM_PATH')) {
-						$postprocessing_file = DEDALO_LIB_BASE_PATH . TOOL_UPLOAD_CUSTOM_PATH . '/postprocessing/tool_upload_custom.php';
+						$postprocessing_file = DEDALO_CORE_PATH . TOOL_UPLOAD_CUSTOM_PATH . '/postprocessing/tool_upload_custom.php';
 						$js_file 	 		 = TOOL_UPLOAD_CUSTOM_PATH . '/js/tool_upload_custom.js';
 						$css_file 	 		 = TOOL_UPLOAD_CUSTOM_PATH . '/css/tool_upload_custom.css';
 
-						if (file_exists(DEDALO_LIB_BASE_PATH . $js_file)) {
-							js::$ar_url[] = DEDALO_LIB_BASE_URL . $js_file;
+						if (file_exists(DEDALO_CORE_PATH . $js_file)) {
+							js::$ar_url[] = DEDALO_CORE_URL . $js_file;
 						}
-						if (file_exists(DEDALO_LIB_BASE_PATH . $css_file)) {
-							css::$ar_url[] = DEDALO_LIB_BASE_URL . $css_file;
+						if (file_exists(DEDALO_CORE_PATH . $css_file)) {
+							css::$ar_url[] = DEDALO_CORE_URL . $css_file;
 						}
 					}
 					
@@ -193,7 +193,7 @@ if(login::is_logged()!==true) {
 	
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

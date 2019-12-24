@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_BASE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -42,7 +42,7 @@ render_component_image.prototype.list = function(options) {
 		const value 			= data.value
 		const quality 			= "1.5MB"
 		const url_object 		= value.filter(item => item.quality===quality)[0]
-		const url 				= (typeof url_object==="undefined") ? DEDALO_LIB_BASE_URL + "/themes/default/0.jpg" : url_object.url
+		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
 	// image
 		const image = ui.create_dom_element({
@@ -107,7 +107,7 @@ const content_data_edit = async function(self) {
 		const value 			= self.data.value
 		const quality 			= "1.5MB"
 		const url_object 		= value.filter(item => item.quality===quality)[0]
-		const url 				= (typeof url_object==="undefined") ? DEDALO_LIB_BASE_URL + "/themes/default/0.jpg" : url_object.url
+		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
 
 	// image

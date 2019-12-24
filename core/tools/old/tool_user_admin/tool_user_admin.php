@@ -38,17 +38,17 @@
 				];
 
 			// css / js
-				css::$ar_url[] = DEDALO_LIB_BASE_URL . '/tools/' . get_class($this).  '/css/' . get_class($this) . '.css';
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/tools/' . get_class($this).  '/js/' . get_class($this) . '.js';
+				css::$ar_url[] = DEDALO_CORE_URL . '/tools/' . get_class($this).  '/css/' . get_class($this) . '.css';
+				js::$ar_url[]  = DEDALO_CORE_URL . '/tools/' . get_class($this).  '/js/' . get_class($this) . '.js';
 
-				js::$ar_url[] = DEDALO_LIB_BASE_URL."/section/js/section.js";
+				js::$ar_url[] = DEDALO_CORE_URL."/section/js/section.js";
 
 			break;
 	}//end switch	
 
 
 // include file html
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

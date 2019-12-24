@@ -1,5 +1,5 @@
 <?php
-include_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
+include_once(DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php');
 /**
 * RECORDOBJ_TIME_MACHINE
 *

@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-require_once( dirname(dirname(__FILE__)).'/config/config.php');
+require_once( DEDALO_CONFIG_PATH.'/config.php');
 common::trigger_manager();
 
 # IGNORE_USER_ABORT

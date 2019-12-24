@@ -6,7 +6,7 @@ var calendar
 */ 
 var tool_calendar = new function() {
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/tools/tool_calendar/trigger.tool_calendar.php?top_tipo='+page_globals.top_tipo ;
+	this.trigger_url = DEDALO_CORE_URL + '/tools/tool_calendar/trigger.tool_calendar.php?top_tipo='+page_globals.top_tipo ;
 
 
 	// READY

@@ -1,7 +1,7 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 # Old lang vars
-require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
 
 /**
 * LOGIN
@@ -16,7 +16,7 @@ if($is_logged!==true) {
 
 
 #require_once(DEDALO_ROOT . '/inc/funciones.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
+require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
 
 
 # set vars
@@ -62,7 +62,7 @@ if($mode==='loadDescriptorsGrid') {
 			$def 					= $RecordObj->get_dato();
 			$def_id 				= $RecordObj->get_ID();		#dump($RecordObj);
 
-			require(DEDALO_LIB_BASE_PATH . '/dd/html/dd_descriptors_grid.phtml');
+			require(DEDALO_CORE_PATH . '/dd/html/dd_descriptors_grid.phtml');
 		 }
 	}
 

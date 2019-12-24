@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 
@@ -59,7 +59,7 @@ function add_index($json_data) {
 		$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
 
 		ob_start();
-		include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
+		include(DEDALO_CORE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
 		$html .= ob_get_clean();
 	}
 
@@ -133,7 +133,7 @@ function remove_index($json_data) {
 		$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
 
 		ob_start();
-		include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
+		include(DEDALO_CORE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
 		$html .= ob_get_clean();
 	}
 

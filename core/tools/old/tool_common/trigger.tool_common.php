@@ -5,7 +5,7 @@
 header('Content-Type: application/json');
 
 #$session_duration_hours = 72;
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 # Write session to unlock session file
 session_write_close();

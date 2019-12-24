@@ -8,7 +8,7 @@ var component_state = new function() {
 	"use strict";	
 
 	// URL TRIGGER
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/component_state/trigger.component_state.php';
+	this.url_trigger = DEDALO_CORE_URL + '/component_state/trigger.component_state.php';
 	this.ar_charts   = []
 
 

@@ -345,7 +345,7 @@
 			# IMPORT DEDALO CSV FILES
 				$html   .= "<div class=\"panel_option\">";
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
-				$url 	 = DEDALO_LIB_BASE_URL."/main/?m=tool_import_dedalo_csv&t=".DEDALO_AREA_ROOT_TIPO."&menu=1";
+				$url 	 = DEDALO_CORE_URL."/main/?m=tool_import_dedalo_csv&t=".DEDALO_AREA_ROOT_TIPO."&menu=1";
 				$html   .= " <a href=\"$url\" data-mode=\"remove_av_temporals\">".label::get_label('tool_import_dedalo_csv')."</a>";			
 				$html   .= "</div>";#end panel_option
 
@@ -422,7 +422,7 @@
 					}
 					foreach ($api_web_user_code_multiple as $key => $current_element) {
 						$html .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
-						$url   = DEDALO_LIB_BASE_URL."/publication/server_api/v1/docu/ui?code=" . $current_element['code'] .'&db_name='.$current_element['db_name'];
+						$url   = DEDALO_CORE_URL."/publication/server_api/v1/docu/ui?code=" . $current_element['code'] .'&db_name='.$current_element['db_name'];
 						$html .= ' <a href="'.$url.'" target="_blank" data-mode="">API DOC --> '.$current_element['db_name'].'</a> <br>';
 					}								
 
@@ -434,7 +434,7 @@
 			# IMPORT GEONAMES
 				$html   .= "<div class=\"panel_option form-inline\"> ";	
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
-				$url 	 = DEDALO_LIB_BASE_URL."/extras/geonames/import_geonames.php?code=";
+				$url 	 = DEDALO_CORE_URL."/extras/geonames/import_geonames.php?code=";
 				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">DOWNLOAD JSON DATA FROM GEONAMES API</a>";
 				$html   .= "</div>";#end panel_option
 
@@ -443,7 +443,7 @@
 			# NAVIGATE RECORDS
 				$html   .= "<div class=\"panel_option form-inline\"> ";	
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
-				$url 	 = DEDALO_LIB_BASE_URL."/tools/tool_administration/html/navigate_records.php?section_tipo=";
+				$url 	 = DEDALO_CORE_URL."/tools/tool_administration/html/navigate_records.php?section_tipo=";
 				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">Navigate records</a>";
 				$html   .= "</div>";#end panel_option
 
@@ -890,7 +890,7 @@
 			#
 			# DB DATA CHECK
 			if(SHOW_DEBUG===true) {
-				require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
+				require(DEDALO_CORE_PATH.'/db/class.data_check.php');
 				$data_check = new data_check();
 				$response 	= $data_check->check_sequences();
 				if ($response->result!=true) {
@@ -909,7 +909,7 @@
 			#
 			# DB DATA CHECK
 			if(SHOW_DEBUG===true) {
-				#require_once(DEDALO_LIB_BASE_PATH.'/db/class.counter.php');				
+				#require_once(DEDALO_CORE_PATH.'/db/class.counter.php');				
 				$response 	= counter::check_counters();
 				if ($response->result!==true) {
 					#debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
@@ -955,7 +955,7 @@
 			# PHPINFO
 			$html   .= "<li>";
 			$html   .= "<iframe id=\"phpinfo\" ";
-			$html   .= "src=\"".DEDALO_LIB_BASE_URL."/tools/tool_administration/html/phpinfo.php\" ";
+			$html   .= "src=\"".DEDALO_CORE_URL."/tools/tool_administration/html/phpinfo.php\" ";
 			$html   .= "frameborder=\"0\" ";
 			$html   .= "scrolling=\"no\" ";
 			#$html   .= "onload=\"resizeIframe(this)\" ";

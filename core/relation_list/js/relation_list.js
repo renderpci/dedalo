@@ -83,7 +83,7 @@
 */
 var relation_list = new function() {
 
-    this.trigger_url = DEDALO_LIB_BASE_URL + '/relation_list/trigger.relation_list.php'
+    this.trigger_url = DEDALO_CORE_URL + '/relation_list/trigger.relation_list.php'
     this.relation_list_wrap = ''
 
 
@@ -466,7 +466,7 @@ var relation_list = new function() {
       }
 
       // build the url of the related section
-      let url         = DEDALO_LIB_BASE_URL + '/main/?t='+section_tipo+'&id='+section_id+'&menu=no'
+      let url         = DEDALO_CORE_URL + '/main/?t='+section_tipo+'&id='+section_id+'&menu=no'
 
       // set the window options
       let strWindowFeatures   = "menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes";

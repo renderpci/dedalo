@@ -7,7 +7,7 @@
 var tool_relation = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_relation/trigger.tool_relation.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_relation/trigger.tool_relation.php' ;
 
 	// Global var. Set when load fragment info	
 	this.selected_tag;
@@ -22,7 +22,7 @@ var tool_relation = new function() {
 
 		var current_tipo 	= $(button_obj).data('tipo'),
 			caller_tipo 	= $(button_obj).data('caller_tipo'),
-			iframe_src 	 	= DEDALO_LIB_BASE_URL + "/main/?m=list&tipo="+current_tipo+"&caller_id="+caller_id+"&caller_tipo="+caller_tipo+"&context_name=list_into_tool_relation";	//return alert(iframe_src)
+			iframe_src 	 	= DEDALO_CORE_URL + "/main/?m=list&tipo="+current_tipo+"&caller_id="+caller_id+"&caller_tipo="+caller_tipo+"&context_name=list_into_tool_relation";	//return alert(iframe_src)
 
 		// Temporal
 		//if(current_tipo=='dd335') return alert("Option temporarily disabled. Relation to 'Patrimonio Inmaterial' is under construction ")
@@ -136,7 +136,7 @@ var tool_relation = new function() {
 		
 		// AJAX REQUEST
 		$.ajax({
-			url			: DEDALO_LIB_BASE_URL + '/tools/tool_relation/trigger.tool_relation.php',
+			url			: DEDALO_CORE_URL + '/tools/tool_relation/trigger.tool_relation.php',
 			data		: mydata,
 			type		: "POST"
 		})
@@ -193,7 +193,7 @@ var tool_relation = new function() {
 
 		// AJAX REQUEST
 		$.ajax({
-			url			: DEDALO_LIB_BASE_URL + '/tools/tool_relation/trigger.tool_relation.php' ,
+			url			: DEDALO_CORE_URL + '/tools/tool_relation/trigger.tool_relation.php' ,
 			data		: mydata,
 			type		: "POST"
 		})

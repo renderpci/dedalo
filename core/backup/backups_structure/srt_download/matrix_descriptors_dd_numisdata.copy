@@ -70,7 +70,6 @@ numisdata48	Symbols	termino	lg-eng
 numisdata314	Search	termino	lg-eng
 numisdata66	Projeect	termino	lg-eng
 numisdata64	Design	termino	lg-eng
-numisdata65	CNH type	termino	lg-eng
 numisdata241	Period	termino	lg-eng
 numisdata276	Location	termino	lg-eng
 numisdata45	List	termino	lg-eng
@@ -80,18 +79,15 @@ numisdata318	view_mosaic	termino	lg-spa
 numisdata47	Delete	termino	lg-eng
 numisdata49	Identification	termino	lg-eng
 numisdata116	List	termino	lg-eng
-numisdata56	Filter	termino	lg-eng
 numisdata57	New	termino	lg-eng
 numisdata58	Delete	termino	lg-eng
 numisdata59	List	termino	lg-eng
 numisdata14	Identification	termino	lg-eng
 numisdata50	ID	termino	lg-eng
 numisdata24	Description	termino	lg-eng
-numisdata51	Symbol	termino	lg-eng
 numisdata119	List	termino	lg-eng
 numisdata120	New	termino	lg-eng
 numisdata121	Delete	termino	lg-eng
-numisdata54	Group	termino	lg-eng
 numisdata266	Search	termino	lg-eng
 numisdata25	Identification	termino	lg-eng
 numisdata83	Identification	termino	lg-eng
@@ -115,6 +111,10 @@ numisdata44	Project	termino	lg-eng
 numisdata117	New	termino	lg-eng
 numisdata55	Equivalents	termino	lg-eng
 numisdata53	Section map	termino	lg-eng
+numisdata65	Iconography	termino	lg-eng
+numisdata56	Reverser symbol type	termino	lg-eng
+numisdata54	Iconographies	termino	lg-eng
+numisdata51	Obverse symbol type	termino	lg-eng
 numisdata78	Technical information	termino	lg-eng
 numisdata85	Mint	termino	lg-eng
 numisdata122	List	termino	lg-eng
@@ -263,7 +263,7 @@ numisdata213	Map	termino	lg-eng
 numisdata140	Public information	termino	lg-eng
 numisdata221	Project	termino	lg-eng
 numisdata204	catalogo_dato	termino	lg-spa
-numisdata206	numisdata_valencia	termino	lg-spa
+numisdata206	numisdata_vidalvalle	termino	lg-spa
 numisdata21	Proyecto	termino	lg-spa
 numisdata210	ID	termino	lg-spa
 numisdata214	Enlaces	termino	lg-spa
@@ -307,7 +307,6 @@ numisdata47	Borrar	termino	lg-spa
 numisdata48	Símbolos	termino	lg-spa
 numisdata49	Identificación	termino	lg-spa
 numisdata5	Tesoros	termino	lg-spa
-numisdata51	Símbolo	termino	lg-spa
 numisdata57	Nuevo	termino	lg-spa
 numisdata58	Borrar	termino	lg-spa
 numisdata59	Lisado	termino	lg-spa
@@ -333,10 +332,10 @@ numisdata33	Denominaciones	termino	lg-spa
 numisdata38	Diseños	termino	lg-spa
 numisdata39	Diseño anverso	termino	lg-spa
 numisdata23	template_map	termino	lg-spa
-numisdata54	Reutilizar	termino	lg-spa
 numisdata53	Mapa de la sección	termino	lg-spa
 numisdata231	Reutilizar_Mover datos	termino	lg-spa
 numisdata55	Equivalentes	termino	lg-spa
+numisdata51	Tipo símbolo anverso	termino	lg-spa
 numisdata234	IRI	termino	lg-spa
 numisdata221	Proyecto	termino	lg-spa
 numisdata212	Georreferenciación	termino	lg-spa
@@ -415,11 +414,11 @@ numisdata285	ID	termino	lg-spa
 numisdata161	Tipo	termino	lg-spa
 numisdata282	Lugar de hallazgo	termino	lg-spa
 numisdata82	Grupo	termino	lg-spa
-numisdata65	Reutilizar_Indexación	termino	lg-spa
 numisdata86	Nombre	termino	lg-spa
 numisdata9	Fichero	termino	lg-spa
 numisdata298	Web MIB Portugal	termino	lg-spa
 numisdata268	Georreferenciación	termino	lg-spa
+numisdata65	iconografía	termino	lg-spa
 numisdata87	Fecha	termino	lg-spa
 numisdata291	Import finds kml	termino	lg-eng
 numisdata215	URL	termino	lg-eng
@@ -591,7 +590,6 @@ numisdata126	Excluded	termino	lg-eng
 numisdata347	Borrar	termino	lg-spa
 numisdata347	Delete	termino	lg-eng
 numisdata77	Modified 30-05-2017 Paco	obs	lg-spa
-numisdata56	Proyecto	termino	lg-spa
 numisdata40	Leyenda anverso	termino	lg-spa
 numisdata73	Hijos	termino	lg-spa
 numisdata354	Is descriptor	termino	lg-eng
@@ -749,9 +747,9 @@ numisdata456	uri	termino	lg-spa
 numisdata457	bibliografia	termino	lg-spa
 numisdata458	peso	termino	lg-spa
 numisdata472	Rol	termino	lg-spa
-numisdata409	web_numisdata_valencia	termino	lg-spa
+numisdata408	Publicación Vidal Valle	termino	lg-spa
 numisdata406	imagen	termino	lg-spa
-numisdata408	Publicación Valencia	termino	lg-spa
+numisdata409	web_numisdata_vidalvalle	termino	lg-spa
 numisdata459	cuno	termino	lg-spa
 numisdata460	diametro	termino	lg-spa
 numisdata461	tesoro	termino	lg-spa
@@ -1180,7 +1178,6 @@ numisdata582	Liste de relations	termino	lg-fra
 numisdata593	Derniers modifications	termino	lg-fra
 numisdata63	ID	termino	lg-fra
 numisdata64	Type	termino	lg-fra
-numisdata65	Relations	termino	lg-fra
 numisdata66	Projet	termino	lg-fra
 numisdata207	Types de droit	termino	lg-fra
 numisdata131	Types de revers	termino	lg-fra
@@ -1202,11 +1199,12 @@ numisdata58	Éliminer	termino	lg-fra
 numisdata59	Liste	termino	lg-fra
 numisdata387	Recherche	termino	lg-fra
 numisdata595	Derniers modifications	termino	lg-fra
+numisdata65	iconographie	termino	lg-fra
+numisdata407	Web numisdata vidalvalle	termino	lg-spa
 numisdata632	tipos	termino	lg-spa
 numisdata633	cecas	termino	lg-spa
 numisdata634	fichero	termino	lg-spa
 numisdata635	hallazgos	termino	lg-spa
-numisdata407	Web numisdata valencia	termino	lg-spa
 numisdata636	catalogo	termino	lg-spa
 numisdata646	Dirección	termino	lg-spa
 numisdata637	denomination	termino	lg-spa
@@ -1511,12 +1509,12 @@ numisdata668	Mappa della sezione	termino	lg-ita
 numisdata62	Identificazione	termino	lg-ita
 numisdata208	Tipi	termino	lg-ita
 numisdata64	Disgno	termino	lg-ita
-numisdata65	Riutilizzare_Indicizzazione	termino	lg-ita
 numisdata66	Progetto	termino	lg-ita
 numisdata207	Tipi dritto	termino	lg-ita
 numisdata131	Tipi rovescio	termino	lg-ita
 numisdata67	Nuovo	termino	lg-ita
 numisdata587	Ultime modifiche	termino	lg-ita
+numisdata65	Iconografia	termino	lg-ita
 numisdata68	Cancellare	termino	lg-ita
 numisdata69	Elenco	termino	lg-ita
 numisdata378	Ricerche	termino	lg-ita
@@ -1536,8 +1534,6 @@ numisdata386	Ricerca	termino	lg-ita
 numisdata581	Elenco delle relazioni	termino	lg-ita
 numisdata594	Ultime modifiche	termino	lg-ita
 numisdata52	Chiave	termino	lg-ita
-numisdata51	Simbolo	termino	lg-ita
-numisdata56	Progetto	termino	lg-ita
 numisdata49	Identificazione	termino	lg-ita
 numisdata57	Nuovo	termino	lg-ita
 numisdata58	Cancellare	termino	lg-ita
@@ -1626,6 +1622,7 @@ numisdata590	Ultime modifiche	termino	lg-ita
 numisdata12	Principale	termino	lg-ita
 numisdata10	Titolo	termino	lg-ita
 numisdata9	File	termino	lg-ita
+numisdata51	Tipi simbolo dritto	termino	lg-ita
 numisdata118	Elenco	termino	lg-ita
 numisdata21	Progetto	termino	lg-ita
 numisdata116	Elenco	termino	lg-ita
@@ -1688,3 +1685,26 @@ numisdata718	Contromarca	termino	lg-ita
 numisdata718	Contramarca	termino	lg-spa
 numisdata718	Countermarck	termino	lg-eng
 numisdata718	Contremarque	termino	lg-fra
+numisdata54	Iconografías	termino	lg-spa
+numisdata725	Listado	termino	lg-spa
+numisdata65	Iconografia	termino	lg-por
+numisdata725	List	termino	lg-eng
+numisdata719	Identificación	termino	lg-spa
+numisdata719	Identification	termino	lg-eng
+numisdata720	Proyecto	termino	lg-spa
+numisdata720	Project	termino	lg-eng
+numisdata721	Nuevo	termino	lg-spa
+numisdata721	New	termino	lg-eng
+numisdata722	Iconografía	termino	lg-spa
+numisdata722	Iconography	termino	lg-eng
+numisdata723	Id	termino	lg-spa
+numisdata723	Id	termino	lg-eng
+numisdata723	Id	termino	lg-fra
+numisdata723	Id	termino	lg-ita
+numisdata723	Id	termino	lg-por
+numisdata54	Iconografies	termino	lg-fra
+numisdata54	iconografias	termino	lg-ita
+numisdata54	Icnografias	termino	lg-por
+numisdata724	view_single_line	termino	lg-spa
+numisdata56	Tipo símbolo reverso	termino	lg-spa
+numisdata56	Tipi simbolo rovescio	termino	lg-ita

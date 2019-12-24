@@ -16,7 +16,7 @@ var tool_import_dedalo_csv = new function() {
 	this.dir_files_element = null
 	
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_import_dedalo_csv/trigger.tool_import_dedalo_csv.php';
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_import_dedalo_csv/trigger.tool_import_dedalo_csv.php';
 
 	window.addEventListener('load', function() {
 		tool_import_dedalo_csv.get_path()

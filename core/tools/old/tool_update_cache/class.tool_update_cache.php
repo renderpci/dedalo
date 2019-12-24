@@ -32,7 +32,7 @@ class tool_update_cache {
 	*/
 	public function get_html() {
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
+		include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
 		return  ob_get_clean();
 	}//end get_html
 

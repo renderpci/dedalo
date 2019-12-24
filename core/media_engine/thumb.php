@@ -5,7 +5,7 @@
 * No debe pasarse en la variable el path completo, ni la calidad, solo el path adicional y el nombre del archivo con la terminación
 * tipo '/0/0/75-1.jpg' o 'dd720-1'
 */
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( DEDALO_CORE_PATH .'/config.php');
 
 # Write session to unlock session file
 session_write_close();
@@ -23,7 +23,7 @@ if(empty($f)) die("Error. Few arguments");
 # THUMB FILE EXISTS TEST : Redirect to real existing image thumb
 if (!file_exists( DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f )) {
 
-	include( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageMagick.php');
+	include( DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 
 	# SOURCE FILE
 	$source = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/'.$f;
@@ -41,7 +41,7 @@ if (!file_exists( DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path
 	}else{
 		#throw new Exception("Error Processing Request. Sorry, source file from default quality (".DEDALO_IMAGE_QUALITY_DEFAULT.") not found", 1);
 		# URL THUMB FILE
-		$url_thumb_file = DEDALO_LIB_BASE_URL.'/themes/default/0.jpg';
+		$url_thumb_file = DEDALO_CORE_URL.'/themes/default/0.jpg';
 	}	
 }
 

@@ -31,7 +31,7 @@ var component_html_text = new function() {
 
 
 		// Load text editor (tinny)
-			const text_editor_url = DEDALO_LIB_BASE_URL + '/component_html_text/js/component_html_text_editor.js';
+			const text_editor_url = DEDALO_CORE_URL + '/component_html_text/js/component_html_text_editor.js';
 			common.load_script(text_editor_url).then(function(response){
 				// Init tiny editor
 				window.ready(function(){

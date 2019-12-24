@@ -1,5 +1,5 @@
 <?php
-include(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
+include(DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
 /**
 * JSON_RECORDOBJ_MATRIX
 *

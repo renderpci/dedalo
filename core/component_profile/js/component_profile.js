@@ -7,7 +7,7 @@
 */
 var component_profile = new function() {
 
-	this.url_trigger 	= DEDALO_LIB_BASE_URL + '/component_profile/trigger.component_profile.php' ;
+	this.url_trigger 	= DEDALO_CORE_URL + '/component_profile/trigger.component_profile.php' ;
 	this.save_arguments = {}
 
 

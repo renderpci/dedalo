@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))).'/config/config.php');
+require_once( DEDALO_CONFIG_PATH . '/config.php');
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>"); 
 
@@ -14,7 +14,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 	# Viewer custom. Read const dedalo_pdfjs_options to init the reader
 		#$pdf_viewer	= $pdf_viewer_base_path .'/web/viewer-min.js';//'/web/viewer.min.js';
-		$pdf_viewer		= DEDALO_LIB_BASE_URL   .'/component_pdf/viewer/viewer-min.js'; // -min
+		$pdf_viewer		= DEDALO_CORE_URL   .'/component_pdf/viewer/viewer-min.js'; // -min
 ?>
 <!DOCTYPE html>
 <!--

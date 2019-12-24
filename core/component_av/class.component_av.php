@@ -2,10 +2,10 @@
 /*
 * CLASS COMPONENT AV
 */
-include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
-include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
-include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
-include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.OptimizeTC.php');
+include_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+include_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+include_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
+include_once( DEDALO_CORE_PATH . '/media_engine/class.OptimizeTC.php');
 
 class component_av extends component_common {
 
@@ -251,7 +251,7 @@ class component_av extends component_common {
 		if ($test_file===true) {
 			$file = DEDALO_MEDIA_BASE_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
 			if(!file_exists($file)) {
-				$posterframe_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
+				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 			}
 		}
 

@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
 common::trigger_manager();
 
 
@@ -115,7 +115,7 @@ function process_file($json_data) {
 	# Custom potprocessing file	
 	if (!empty(tool_import_zotero::$process_script)) {
 		$ar_section_id = array_keys($process_file);	// Keys are section id of each created/updated record
-		include_once(DEDALO_LIB_BASE_PATH.''.tool_import_zotero::$process_script);
+		include_once(DEDALO_CORE_PATH.''.tool_import_zotero::$process_script);
 		if (function_exists('custom_process')) {
 			custom_process( $ar_section_id );
 		}

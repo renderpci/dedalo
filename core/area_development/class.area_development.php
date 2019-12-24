@@ -93,7 +93,7 @@ class area_development extends area {
 
 
 		// update data version
-			include(DEDALO_LIB_BASE_PATH . '/core/update/class.update.php');
+			include(DEDALO_CORE_PATH . '/base/update/class.update.php');
 			$updates 		= update::get_updates();
 			$update_version = update::get_update_version();
 			if(empty($update_version)) {
@@ -215,7 +215,7 @@ class area_development extends area {
 
 
 		// sequences_state
-			require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
+			require(DEDALO_CORE_PATH.'/db/class.data_check.php');
 			$data_check = new data_check();
 			$response 	= $data_check->check_sequences();
 			$item = new stdClass();
@@ -249,7 +249,7 @@ class area_development extends area {
 				$item->parent 	= $this->tipo;
 				$item->label 	= 'PHP INFO';
 				$item->info 	= null;
-				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_LIB_BASE_URL.'/area_development/html/info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
+				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/html/info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
 			$ar_widgets[] = $item;
 
 

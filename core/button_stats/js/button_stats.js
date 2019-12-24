@@ -7,7 +7,7 @@
 */
 var button_stats = new function() {	
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/button_stats/trigger.button_stats.php';
+	this.trigger_url = DEDALO_CORE_URL + '/button_stats/trigger.button_stats.php';
 
 	
 	// Stats
@@ -113,7 +113,7 @@ var button_stats = new function() {
 	this.Generate = function (button_obj) {
 
 		var fecha 		= $(button_obj).siblings('INPUT.input_stats_date').val(),
-			window_url	= DEDALO_LIB_BASE_URL + '/diffusion/diffusion_section_stats/trigger.diffusion_section_stats.php/?mode=save_stats_data&launcher=dedalo_generate&date='+fecha ,	
+			window_url	= DEDALO_CORE_URL + '/diffusion/diffusion_section_stats/trigger.diffusion_section_stats.php/?mode=save_stats_data&launcher=dedalo_generate&date='+fecha ,	
 			window_name	= "Trigger generate stats";
 
 		if(!confirm("Overwrite any existing versions of processing statistics for date "+fecha+"?")) return false;

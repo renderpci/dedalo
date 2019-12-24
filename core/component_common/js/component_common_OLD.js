@@ -7,7 +7,7 @@ var component_common = new function() {
 
 	"use strict";
 
-	this.url_trigger  = DEDALO_LIB_BASE_URL + '/component_common/trigger.component_common.php';
+	this.url_trigger  = DEDALO_CORE_URL + '/component_common/trigger.component_common.php';
 	this.save_async   = true;	// Default save async
 	this.saving_state = 0;		// Default 0
 
@@ -1635,7 +1635,7 @@ var component_common = new function() {
 				url_vars.model = 1;
 			}	
 			
-		let url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let url  = DEDALO_CORE_URL + '/main/?'
 			url += build_url_arguments_from_vars(url_vars)
 
 		relwindow = window.open(url ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=900,height=650');//resizable
@@ -2093,7 +2093,7 @@ var component_common = new function() {
 		}
 
 		// Component: url of js file
-		let src = DEDALO_LIB_BASE_URL + '/' + component_modelo_name + '/js/' + component_modelo_name + '.js' + '?' + page_globals.dedalo_version			
+		let src = DEDALO_CORE_URL + '/' + component_modelo_name + '/js/' + component_modelo_name + '.js' + '?' + page_globals.dedalo_version			
 			if (USE_CDN!==false) src = USE_CDN + src
 
 
@@ -2591,7 +2591,7 @@ var component_common = new function() {
 			
 			const self = this		
 
-			const source_component_js_url = DEDALO_LIB_BASE_URL + '/'+target+'/js/'+target+'.js';
+			const source_component_js_url = DEDALO_CORE_URL + '/'+target+'/js/'+target+'.js';
 			const js_promise = common.load_script(source_component_js_url).then(function(response){
 				
 				// Inheritance. Copy all methods from component_date

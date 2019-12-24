@@ -1,5 +1,5 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion.php');
+require_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion.php');
 /*
 * CLASS DIFFUSION_rdf
 * Se encarga de gestionar el trasvase de datos desde Dédalo 4 hacia ficheros RDF
@@ -33,7 +33,7 @@ class diffusion_rdf extends diffusion {
 		
 		parent::__construct($options=null);
 
-		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_LIB_BASE_PATH)) .'/'. basename(DEDALO_LIB_BASE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
+		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_EXTRAS_URL;
 	}//end __construct
 
 

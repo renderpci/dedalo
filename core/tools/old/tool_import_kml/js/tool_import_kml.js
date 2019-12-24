@@ -7,7 +7,7 @@
 var tool_import_kml = new function() {
 
 	// Tool triger
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_import_kml/trigger.tool_import_kml.php'
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_import_kml/trigger.tool_import_kml.php'
 	// section tipo of current tool
 	this.section_tipo
 	

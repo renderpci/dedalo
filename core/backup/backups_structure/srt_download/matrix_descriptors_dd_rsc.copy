@@ -420,19 +420,17 @@ rsc93	Género	termino	lg-spa
 rsc93	Gènere	termino	lg-cat
 rsc227	Import from Zotero	termino	lg-eng
 rsc235	Archive / collection	termino	lg-eng
-rsc211	Series / Collections	termino	lg-eng
 rsc222	Copy	termino	lg-eng
 rsc228	Identifying image	termino	lg-eng
 rsc209	Document	termino	lg-eng
 rsc210	Transcript / Description	termino	lg-eng
-rsc212	Series / Collections	termino	lg-eng
 rsc213	Series / Collections	termino	lg-eng
 rsc284	Municipi de defunció	termino	lg-cat
 rsc364	Nuevo	termino	lg-spa
 rsc364	New	termino	lg-eng
 rsc364	Nou	termino	lg-cat
 rsc323	Excluidos carteles EMAKUMEAK	termino	lg-spa
-rsc214	Series / Collections	termino	lg-eng
+rsc212	Series / magazines / collections	termino	lg-eng
 rsc229	Archive / library collection	termino	lg-eng
 rsc230	Archive / library collection	termino	lg-eng
 rsc231	Archive / library collection	termino	lg-eng
@@ -464,7 +462,6 @@ rsc238	Llistat	termino	lg-cat
 rsc245	Qüestionari	termino	lg-cat
 rsc246	Exclosos	termino	lg-cat
 rsc213	Sèries / Col·leccions	termino	lg-cat
-rsc214	Sèries / Col·leccions	termino	lg-cat
 rsc215	Llistat	termino	lg-cat
 rsc254	dossier	termino	lg-cat
 rsc216	Projecte	termino	lg-cat
@@ -477,7 +474,6 @@ rsc234	Llistat	termino	lg-cat
 rsc37	Document	termino	lg-cat
 rsc16	Llistat	termino	lg-cat
 rsc235	Arxiu / Col·lecció	termino	lg-cat
-rsc211	Sèries / Col·leccions	termino	lg-cat
 rsc228	Imatge identificativa	termino	lg-cat
 rsc209	Document	termino	lg-cat
 rsc210	Transcripció / descripció	termino	lg-cat
@@ -486,7 +482,6 @@ rsc133	Llistat relacions	termino	lg-cat
 rsc155	Llistat	termino	lg-cat
 rsc157	Llistat relacions	termino	lg-cat
 rsc169	Llistat	termino	lg-cat
-rsc212	Sèries / Col·leccions	termino	lg-cat
 rsc168	Exclosos	termino	lg-cat
 rsc172	Llistat	termino	lg-cat
 rsc171	Exclosos	termino	lg-cat
@@ -546,6 +541,9 @@ rsc34	Nombre del fichero	termino	lg-spa
 rsc193	Llistat	termino	lg-cat
 rsc37	Documento	termino	lg-spa
 rsc130	Relaciones DES	termino	lg-spa
+rsc212	Sèries / revistes / col·leccions	termino	lg-cat
+rsc214	Sèries / revistes / col·leccions	termino	lg-cat
+rsc214	Series / magazines / collections	termino	lg-eng
 rsc38	Descripción	termino	lg-spa
 rsc39	Partitura	termino	lg-spa
 rsc40	Notación	termino	lg-spa
@@ -714,12 +712,10 @@ rsc192	Excluidos	termino	lg-spa
 rsc193	Listado	termino	lg-spa
 rsc195	Excluidos	termino	lg-spa
 rsc196	Listado	termino	lg-spa
-rsc197	Informantes	termino	lg-spa
 rsc199	Listado	termino	lg-spa
 rsc202	Búsqueda	termino	lg-spa
 rsc204	Administración	termino	lg-spa
 rsc207	Listado	termino	lg-spa
-rsc197	Informants	termino	lg-cat
 rsc75	Informants / Participants / Contactes	termino	lg-cat
 rsc76	Identificació	termino	lg-cat
 rsc85	Nom	termino	lg-cat
@@ -738,7 +734,6 @@ rsc98	Projecte	termino	lg-cat
 rsc99	Observacions	termino	lg-cat
 rsc104	Data de contacte	termino	lg-cat
 rsc129	Publication	termino	lg-eng
-rsc197	Informants	termino	lg-eng
 rsc130	Relacions	termino	lg-cat
 rsc75	Informants / Participants / Contacts	termino	lg-eng
 rsc93	Gender	termino	lg-eng
@@ -762,6 +757,9 @@ rsc92	Municipi de residència	termino	lg-cat
 rsc91	Birth town	termino	lg-eng
 rsc92	Residence town	termino	lg-eng
 rsc203	Persones, grups o comunitats	termino	lg-cat
+rsc197	Personas	termino	lg-spa
+rsc197	Persones	termino	lg-cat
+rsc197	People	termino	lg-eng
 rsc167	Audiovisual	termino	lg-eng
 rsc176	Document	termino	lg-eng
 rsc170	Image	termino	lg-eng
@@ -999,10 +997,7 @@ rsc208	List	termino	lg-spa
 rsc219	Publisher	termino	lg-eng
 rsc209	Documento	termino	lg-spa
 rsc210	Transcripción / descripción	termino	lg-spa
-rsc211	Series / colecciones	termino	lg-spa
-rsc212	Series / colecciones	termino	lg-spa
 rsc213	Series / colecciones	termino	lg-spa
-rsc214	Series / colecciones	termino	lg-spa
 rsc215	Listado	termino	lg-spa
 rsc216	Proyecto	termino	lg-spa
 rsc34	Sin la extensión (como foto_2)	def	lg-spa
@@ -1103,6 +1098,8 @@ rsc215	List	termino	lg-eng
 rsc216	Project	termino	lg-eng
 rsc16	List	termino	lg-eng
 rsc259	Cerca	termino	lg-cat
+rsc212	Series / revistas / colecciones	termino	lg-spa
+rsc214	Series / revistas / colecciones	termino	lg-spa
 rsc226	Cerca	termino	lg-cat
 rsc244	Info	termino	lg-spa
 rsc248	Import BIBTex	termino	lg-eng
@@ -1162,15 +1159,11 @@ rsc205	δημοσιεύσεις	termino	lg-ell
 rsc261	ID	termino	lg-ell
 rsc204	διαχείριση	termino	lg-ell
 rsc279	δημοσίευση	termino	lg-ell
-rsc197	πληροφορητές	termino	lg-ell
 rsc97	χρησιμοποιώντας εικόνα	termino	lg-ell
 rsc85	όνομα	termino	lg-ell
 rsc86	επώνυμα	termino	lg-ell
 rsc283	Επώνυμο (γάμου)	termino	lg-ell
 rsc93	γένος	termino	lg-ell
-rsc194	Personas	termino	lg-spa
-rsc194	People	termino	lg-eng
-rsc194	Άνθρωποι	termino	lg-ell
 rsc182	διοικητική ρεκόρ	termino	lg-ell
 rsc288	οικογενειακή κατάσταση	termino	lg-ell
 rsc185	πληροφορίες	termino	lg-ell
@@ -1205,6 +1198,9 @@ rsc92	Κατοικία πόλη	termino	lg-ell
 rsc284	Θάνατος πόλη	termino	lg-ell
 rsc121	Tipus d&#039;entitat	termino	lg-cat
 rsc250	Depósito Legal	termino	lg-spa
+rsc197	Άνθρωποι	termino	lg-ell
+rsc194	Otras personas	termino	lg-spa
+rsc194	Other people	termino	lg-eng
 rsc81	Λίστα σχέσεις	termino	lg-ell
 rsc82	νέος	termino	lg-ell
 rsc83	διαγράψετε	termino	lg-ell
@@ -1297,7 +1293,6 @@ rsc379	τίτλος	termino	lg-ell
 rsc380	περιγραφή	termino	lg-ell
 rsc304	Υποστηρίξτε την αρχική	termino	lg-ell
 rsc312	Αρχική μορφή	termino	lg-ell
-rsc212	Σειρά / Συλλογές	termino	lg-ell
 rsc229	Αρχείο / Βιβλιογραφική συλλογή	termino	lg-ell
 rsc307	Υποστηρίξτε την αρχική	termino	lg-ell
 rsc306	Αναγν	termino	lg-ell
@@ -1312,6 +1307,7 @@ rsc215	λίστα	termino	lg-ell
 rsc234	λίστα	termino	lg-ell
 rsc308	σχέδιο	termino	lg-ell
 rsc316	σχέδιο	termino	lg-ell
+rsc212	Σειρά / περιοδικά / συλλογές	termino	lg-ell
 rsc216	σχέδιο	termino	lg-ell
 rsc232	σχέδιο	termino	lg-ell
 rsc233	νέος	termino	lg-ell
@@ -1320,7 +1316,6 @@ rsc309	νέος	termino	lg-ell
 rsc310	διαγράψετε	termino	lg-ell
 rsc318	διαγράψετε	termino	lg-ell
 rsc315	Αρχική μορφή	termino	lg-ell
-rsc214	Σειρά / Συλλογές	termino	lg-ell
 rsc231	Αρχείο / Βιβλιογραφική συλλογή	termino	lg-ell
 rsc333	βιβλιογραφία	termino	lg-ell
 rsc334	αναγνώριση	termino	lg-ell
@@ -1366,7 +1361,6 @@ rsc351	Όνομα του συνεδρίου	termino	lg-ell
 rsc352	Δευτεροβάθμια εισόδου - Προσωπικά όνομα	termino	lg-ell
 rsc353	Δευτεροβάθμια εισόδου - Όνομα οντότητας	termino	lg-ell
 rsc354	EntradaΔευτεροβάθμια εισόδου - Όνομα συνέδριο	termino	lg-ell
-rsc211	Σειρά / Συλλογές	termino	lg-ell
 rsc139	Πατρότητα και την ευθύνη	termino	lg-ell
 rsc142	λεπτομέρειες δημοσίευσης	termino	lg-ell
 rsc141	έκδοση	termino	lg-ell
@@ -1423,7 +1417,6 @@ rsc127	διεύθυνση	termino	lg-ell
 rsc301	ταχυδρομικού κώδικα	termino	lg-ell
 rsc128	Επαφή	termino	lg-ell
 rsc365	URI	termino	lg-ell
-rsc384	αριθμό σειράς	termino	lg-ell
 rsc385	DOI	termino	lg-spa
 rsc385	DOI	termino	lg-eng
 rsc385	DOI	termino	lg-cat
@@ -1437,8 +1430,6 @@ rsc387	Descriptors	termino	lg-cat
 rsc387	περιγραφείς	termino	lg-ell
 rsc388	Roles de publicación	termino	lg-spa
 rsc388	Publication roles	termino	lg-eng
-rsc384	Nombre de Sèrie	termino	lg-cat
-rsc384	Serie number	termino	lg-eng
 rsc388	Roles de publicació	termino	lg-cat
 rsc388	Δημοσιεύτηκε Ρόλοι	termino	lg-ell
 rsc389	Identificación	termino	lg-spa
@@ -1484,6 +1475,8 @@ rsc399	Pubicación	termino	lg-spa
 rsc399	Publication	termino	lg-eng
 rsc399	Pubicació	termino	lg-cat
 rsc397	Descriptores entrada secundaria	termino	lg-spa
+rsc384	Número de sèrie / revista / col·lecció	termino	lg-cat
+rsc384	Serie / magazine / collection number	termino	lg-eng
 rsc383	Orden DES	termino	lg-spa
 rsc427	Mapa de componentes	termino	lg-spa
 rsc303	Support of original	termino	lg-eng
@@ -1564,16 +1557,15 @@ rsc458	dead_date	termino	lg-spa
 rsc459	dead_place	termino	lg-spa
 rsc460	dead_id	termino	lg-spa
 rsc461	Nacionalidades	termino	lg-spa
-rsc384	Número de serie	termino	lg-spa
 rsc336	Pàgines	termino	lg-cat
 rsc369	Reference	termino	lg-eng
 rsc369	Referència	termino	lg-cat
 rsc462	Search	termino	lg-spa
 rsc277	path of video file	obs	lg-spa
+rsc384	Número de serie/ revista/ colección	termino	lg-spa
 rsc106	Entidades	termino	lg-spa
 rsc106	Entitats	termino	lg-cat
 rsc106	Οντότητες	termino	lg-ell
-rsc194	Persones	termino	lg-cat
 rsc292	Excluidos MUJER Y MEMORIA - MATERNIDAD ROBADA	termino	lg-spa
 rsc463	Exluidos Emisiones de rádio -MUPI	termino	lg-spa
 rsc35	Audiovisual	termino	lg-spa
@@ -1582,6 +1574,7 @@ rsc35	Audiovisual	termino	lg-cat
 rsc35	οπτικοακουστικών	termino	lg-ell
 rsc464	Excluidos radio MUPI	termino	lg-spa
 rsc469	Nou	termino	lg-cat
+rsc194	Altres persones	termino	lg-cat
 rsc469	New	termino	lg-eng
 rsc469	Νέα	termino	lg-ell
 rsc90	Nacionalitat	termino	lg-cat
@@ -1609,11 +1602,11 @@ rsc469	Nuevo	termino	lg-spa
 rsc470	Projecte	termino	lg-cat
 rsc470	Project	termino	lg-eng
 rsc470	Έργο	termino	lg-ell
-rsc471	Search	termino	lg-spa
 rsc472	Notas	termino	lg-spa
 rsc472	Notes	termino	lg-cat
 rsc472	Notes	termino	lg-eng
 rsc472	Σημειώσεις	termino	lg-ell
+rsc471	Id	termino	lg-spa
 rsc78	Εξωτερικοί πόροι	termino	lg-ell
 rsc78	External resources	termino	lg-eng
 rsc473	Descripción	termino	lg-spa
@@ -2175,16 +2168,16 @@ rsc313	Identificazione	termino	lg-ita
 rsc315	Formato dell&#039; originale	termino	lg-ita
 rsc316	Progetto	termino	lg-ita
 rsc318	Cancellare	termino	lg-ita
-rsc471	Cercare	termino	lg-ita
-rsc212	Serie / collezioni	termino	lg-ita
+rsc471	Id	termino	lg-ita
 rsc213	Serie / collezioni	termino	lg-ita
-rsc214	Serie / collezioni	termino	lg-ita
 rsc216	Progetto	termino	lg-ita
 rsc229	Archivio / collezione bibliografica	termino	lg-ita
 rsc230	Archivio / collezione bibliografica	termino	lg-ita
 rsc231	Archivio / collezione bibliografica	termino	lg-ita
 rsc232	Progetto	termino	lg-ita
 rsc233	Nuovo archivio / collezione	termino	lg-ita
+rsc212	Serie / riviste / collezioni	termino	lg-ita
+rsc214	Serie / riviste / collezioni	termino	lg-ita
 rsc367	Acronimo	termino	lg-ita
 rsc191	Atto di cessione	termino	lg-ita
 rsc73	Atto di cessione	termino	lg-ita
@@ -2459,7 +2452,6 @@ rsc363	Importare marc21	termino	lg-ita
 rsc227	Importare Zotero	termino	lg-ita
 rsc63	Indicizzato	termino	lg-ita
 rsc244	Info	termino	lg-ita
-rsc197	Informatori	termino	lg-ita
 rsc75	Informatori / Partecipanti / Contatti	termino	lg-ita
 rsc602	Rapporto	termino	lg-ita
 rsc185	Rapporti	termino	lg-ita
@@ -2572,7 +2564,6 @@ rsc607	Nuovo	termino	lg-ita
 rsc626	Nuovo	termino	lg-ita
 rsc82	Nuovo	termino	lg-ita
 rsc158	Nuovo documento	termino	lg-ita
-rsc384	Numero di serie	termino	lg-ita
 rsc490	Numero documento	termino	lg-ita
 rsc664	Numero figli	termino	lg-ita
 rsc147	Numero normalizzato	termino	lg-ita
@@ -2595,10 +2586,10 @@ rsc9	Partitura	termino	lg-ita
 rsc391	Persona	termino	lg-ita
 rsc103	Referente	termino	lg-ita
 rsc128	Referente	termino	lg-ita
-rsc194	Persone	termino	lg-ita
 rsc203	Persone, gruppi o comunità	termino	lg-ita
 rsc31	Didascalia	termino	lg-ita
 rsc12	Processato	termino	lg-ita
+rsc194	Altre persone	termino	lg-ita
 rsc152	Processo amministrativo	termino	lg-ita
 rsc551	Processo di restaurazione	termino	lg-ita
 rsc611	Processo di restaurazione	termino	lg-ita
@@ -2659,7 +2650,6 @@ rsc388	Ruoli di pubblicazione	termino	lg-ita
 rsc462	Ricerca	termino	lg-ita
 rsc440	Elenco ricerca	termino	lg-ita
 rsc342	Lista sezione	termino	lg-ita
-rsc211	Serie / collezioni	termino	lg-ita
 rsc87	Soprannome	termino	lg-ita
 rsc303	Supporto dell'originale	termino	lg-ita
 rsc401	Supervisore/a indicizzazione	termino	lg-ita
@@ -2723,3 +2713,15 @@ rsc663	Ricevi informazioni	termino	lg-ita
 rsc663	Λάβετε πληροφορίες	termino	lg-ell
 rsc667	Impresor	termino	lg-spa
 rsc667	Impresor	termino	lg-cat
+rsc211	Series / revistas / colecciones	termino	lg-spa
+rsc211	Series / magazines / collections	termino	lg-eng
+rsc211	Sèries / revistes / col·leccions	termino	lg-cat
+rsc211	Σειρά / περιοδικά / συλλογές	termino	lg-ell
+rsc211	Serie / riviste / collezioni	termino	lg-ita
+rsc384	Numero di serie / rivista / raccolta	termino	lg-ita
+rsc384	Αριθμός σειράς / περιοδικού / συλλογής	termino	lg-ell
+rsc471	Id	termino	lg-eng
+rsc471	Id	termino	lg-cat
+rsc214	Σειρά / περιοδικά / συλλογές	termino	lg-ell
+rsc197	Persone	termino	lg-ita
+rsc194	Αλλοι άνθρωποι	termino	lg-ell

@@ -7,7 +7,7 @@
 */
 var tool_diffusion = new function (){
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_diffusion/trigger.tool_diffusion.php'
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_diffusion/trigger.tool_diffusion.php'
 	this.publishing  = false
 
 

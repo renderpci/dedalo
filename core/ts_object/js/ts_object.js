@@ -9,7 +9,7 @@ var ts_object = new function() {
 	"use strict";
 
 	// class vars
-		this.trigger_url 		= DEDALO_LIB_BASE_URL + '/ts_object/trigger.ts_object.php'
+		this.trigger_url 		= DEDALO_CORE_URL + '/ts_object/trigger.ts_object.php'
 		// Set on update element in DOM (refresh)
 		this.element_to_hilite 	= null;
 		// thesaurus_mode . Defines apperance of thesaurus
@@ -1395,7 +1395,7 @@ var ts_object = new function() {
 			section_tipo = wrap.dataset.section_tipo
 		}		
 		
-		let url = DEDALO_LIB_BASE_URL + '/main/?t='+section_tipo+'&id='+section_id+'&menu=no'
+		let url = DEDALO_CORE_URL + '/main/?t='+section_tipo+'&id='+section_id+'&menu=no'
 		if (area_thesaurus.model_view===true) {
 			url += "&model=1"
 		}

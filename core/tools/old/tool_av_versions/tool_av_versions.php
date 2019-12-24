@@ -19,8 +19,8 @@
 	
 	
 	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 	
 	switch($modo) {	
 		
@@ -47,11 +47,11 @@
 					# Because components are loaded by ajax, we need prepare js/css elements from tool
 					#					
 					# CSS
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/css/$component_name.css";
+						css::$ar_url[] = DEDALO_CORE_URL."/$component_name/css/$component_name.css";
 						
 					#
 					# JS includes
-						js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
+						js::$ar_url[] = DEDALO_CORE_URL."/$component_name/js/$component_name.js";
 
 					# HEADER TOOL
 					$this->set_modo('header');
@@ -72,7 +72,7 @@
 
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}	

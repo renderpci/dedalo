@@ -9,7 +9,7 @@ var component_image_read = new function() {
 
 
 	// URL TRIGGER
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/component_image/trigger.component_image.php';
+	this.url_trigger = DEDALO_CORE_URL + '/component_image/trigger.component_image.php';
 
 	var ar_Papers = {}	
 	//var canvas_obj, context, canX , canY , canXold =0 , canYold =0, mouseIsDown =0, len =0;

@@ -22,7 +22,7 @@ var tool_tr_print = new function() {
 
 	
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_tr_print/trigger.tool_tr_print.php';
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_tr_print/trigger.tool_tr_print.php';
 
 
 	/**

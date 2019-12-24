@@ -570,7 +570,7 @@ abstract class component_common extends common {
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
 	* @return $html
-	*	Get standar path file "DEDALO_LIB_BASE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
+	*	Get standar path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
 	public function get_html() {
@@ -590,16 +590,16 @@ abstract class component_common extends common {
 		switch ($this->modo) {
 			case 'edit':
 				# Now all components call init in edit mode, therefore, is not necessary this snippet
-				#include ( DEDALO_LIB_BASE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
+				#include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
 				break;
 			case 'search':
-				include ( DEDALO_LIB_BASE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
+				include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
 				break;
 			default:
 				# code...
 				break;
 		}
-		include ( DEDALO_LIB_BASE_PATH .'/'. $component_name .'/'. $component_name .'.php' );
+		include ( DEDALO_CORE_PATH .'/'. $component_name .'/'. $component_name .'.php' );
 		$html = ob_get_clean();
 
 
@@ -933,7 +933,7 @@ abstract class component_common extends common {
 
 		$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
 		if ($authorized_tool===true) {
-			require_once(DEDALO_LIB_BASE_PATH . '/tools/'.$tool_name.'/class.'.$tool_name.'.php');
+			require_once(DEDALO_CORE_PATH . '/tools/'.$tool_name.'/class.'.$tool_name.'.php');
 			$tool_obj = new $tool_name($this);
 		}
 

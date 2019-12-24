@@ -3,7 +3,7 @@
 * TOOL_IMPORT_ZOTERO PREVIEW
 *
 */
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( dirname(dirname(__FILE__)) .'/class.tool_import_zotero.php');  # Read constants from here
 
 # Button tipo set

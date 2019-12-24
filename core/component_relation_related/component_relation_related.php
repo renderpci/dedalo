@@ -32,8 +32,8 @@
 					if ($this->get_filter_authorized_record()===false) return null; //($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) 
 
 				// JS/CSS ADD
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_autocomplete/js/component_autocomplete.js";
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete/css/component_autocomplete.css";
+					js::$ar_url[]  = DEDALO_CORE_URL."/component_autocomplete/js/component_autocomplete.js";
+					css::$ar_url[] = DEDALO_CORE_URL."/component_autocomplete/css/component_autocomplete.css";
 
 				// General vars
 					$id_wrapper 		= 'wrapper_'.$identificador_unico;
@@ -251,7 +251,7 @@
 
 	}
 		
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

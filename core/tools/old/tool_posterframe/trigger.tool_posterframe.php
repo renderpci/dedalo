@@ -1,8 +1,8 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");

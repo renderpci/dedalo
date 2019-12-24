@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_BASE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -25,7 +25,7 @@ export const data_manager = function() {
 */
 data_manager.prototype.request = async function(options) {
 
-	this.url 			= options.url || DEDALO_LIB_BASE_URL + '/api/v1/json/'
+	this.url 			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
 	this.method 		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
 	this.mode 			= options.mode || 'cors' // no-cors, cors, *same-origin
 	this.cache 			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached

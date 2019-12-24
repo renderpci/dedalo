@@ -1,7 +1,7 @@
 <?php 
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 # Old lang vars
-require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
 
 /**
 * LOGIN
@@ -21,8 +21,8 @@ if($is_global_admin!==true) {
 }
 
 
-require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd.php');
-require_once(DEDALO_LIB_BASE_PATH . '/dd/d3_functions.php');
+require_once(DEDALO_CORE_PATH . '/dd/class.dd.php');
+require_once(DEDALO_CORE_PATH . '/dd/d3_functions.php');
 
 
 
@@ -153,36 +153,36 @@ if($t==='form' && $n===0) {
 
 
 # CSS
-css::$ar_url[] = DEDALO_LIB_BASE_URL .'/dd/css/dd_list.css';
+css::$ar_url[] = DEDALO_CORE_URL .'/dd/css/dd_list.css';
 
 
 # JS
-js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/common/js/common.js';
-js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/menu/js/menu.js';
-js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/common/js/cookies.js';
-#js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
+js::$ar_url[]  = DEDALO_CORE_URL . '/common/js/common.js';
+js::$ar_url[]  = DEDALO_CORE_URL . '/menu/js/menu.js';
+js::$ar_url[]  = DEDALO_CORE_URL . '/common/js/cookies.js';
+#js::$ar_url[]  = DEDALO_CORE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 #js::$ar_url[]  = DEDALO_ROOT_WEB 	 . '/lib/jquery/AjaxQ-master/ajaxq.js';
 #js::$ar_url[]  = DEDALO_ROOT_WEB 	 . '/lib/jquery/jquery.ajaxQueue.min.js';
 js::$ar_url[]  = DEDALO_ROOT_WEB 	 . '/inc/javascript.js';
-js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js';
-js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/dd/js/dd_common.js';
-js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/dd/js/dd_list.js';
+js::$ar_url[]  = DEDALO_CORE_URL . '/tools/tool_common/js/tool_common.js';
+js::$ar_url[]  = DEDALO_CORE_URL . '/dd/js/dd_common.js';
+js::$ar_url[]  = DEDALO_CORE_URL . '/dd/js/dd_list.js';
 
 
 /*
 print js::build_tag(JQUERY_LIB_URL_JS);
 print js::build_tag(JQUERY_UI_URL_JS);
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
-#print js::build_tag(DEDALO_LIB_BASE_URL .'/component_portal/js/component_portal.js');
-#print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/js/tool_av_versions.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/cookies.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js');
+print js::build_tag(DEDALO_CORE_URL . '/common/js/common.js');
+print js::build_tag(DEDALO_CORE_URL . '/login/js/login.js');
+#print js::build_tag(DEDALO_CORE_URL .'/component_portal/js/component_portal.js');
+#print js::build_tag(DEDALO_CORE_URL .'/tools/tool_av_versions/js/tool_av_versions.js');
+print js::build_tag(DEDALO_CORE_URL . '/common/js/cookies.js');
+print js::build_tag(DEDALO_CORE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js');
 #print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/jquery.ajaxQueue.min.js');
 print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/AjaxQ-master/ajaxq.js');
 #print js::build_tag(DEDALO_ROOT_WEB 	. '/inc/javascript.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_common.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_list.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_common.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_list.js');
 */
 
 
@@ -192,7 +192,7 @@ if(empty($caller_id)) {
 	$menu 		= new menu($modo);
 	$menu_html 	= $menu->get_html();
 }
-$file		 	= DEDALO_LIB_BASE_PATH . '/html_page/html/html_page_header.phtml';
+$file		 	= DEDALO_CORE_PATH . '/html_page/html/html_page_header.phtml';
 ob_start();
 include ( $file );
 $html_header =  ob_get_contents();

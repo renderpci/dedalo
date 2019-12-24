@@ -3,7 +3,7 @@
 * CLASS TOOL_LAYOUT_PRINT
 * Manage presets and layout print
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( DEDALO_ROOT .'/lib/htmLawed/htmLawed.php');
 
 
@@ -1295,7 +1295,7 @@ class tool_layout_print extends tool_common {
 			
 			$request_options = new stdClass();
 				$request_options->page_html = $current_page;
-				#$request_options->js_links  = js::build_tag( DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js?t=".time() );
+				#$request_options->js_links  = js::build_tag( DEDALO_CORE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js?t=".time() );
 			$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
 
 			#dump($current_page, ' current_page'.to_string());

@@ -1,7 +1,7 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(__FILE__)).'/config/config.php');
-include(DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php');
+include( DEDALO_CONFIG_PATH . '/config.php');
+include(DEDALO_CORE_PATH . '/ts_object/class.ts_object.php');
 
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 $options = new stdClass();

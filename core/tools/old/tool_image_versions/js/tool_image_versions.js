@@ -7,8 +7,8 @@
 var tool_image_versions = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_image_versions/trigger.tool_image_versions.php' ;
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/tools/tool_image_versions/trigger.tool_image_versions2.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_image_versions/trigger.tool_image_versions.php' ;
+	this.trigger_url = DEDALO_CORE_URL + '/tools/tool_image_versions/trigger.tool_image_versions2.php' ;
 
 	
 	/**
@@ -236,7 +236,7 @@ var tool_image_versions = new function() {
 			initial_media_path	= $(button_obj).data('initial_media_path'),
 			extension		= $(button_obj).data('extension');
 	
-		//var myurl 		= DEDALO_LIB_BASE_URL + '/component_av/media_engine/media_download.php?image_id='+image_id +'&quality=' + quality ;
+		//var myurl 		= DEDALO_CORE_URL + '/component_av/media_engine/media_download.php?image_id='+image_id +'&quality=' + quality ;
 		var myurl = this.url_trigger + '?mode=download_file&image_id='+image_id +'&quality=' + quality  +'&aditional_path=' + aditional_path + '&initial_media_path=' + initial_media_path + '&parent=' + parent +'&top_tipo='+page_globals.top_tipo ;
 
 		if(typeof extension != 'undefined')	myurl = myurl +'&extension=' + extension

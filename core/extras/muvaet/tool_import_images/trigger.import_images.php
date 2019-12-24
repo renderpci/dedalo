@@ -5,7 +5,7 @@
 	SCRIPT PARA LANZAR A MANO LA IMPORTACIÓN DE CARPETAS
 
 */
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 
 # login test
@@ -462,5 +462,5 @@ if ($mode=='rename_digital_others') {
 #RecordObj_time_machine::$save_time_machine_version = true;
 
 # Load real tool trigger after 
-#require_once( DEDALO_LIB_BASE_PATH .'/tools/calendar/trigger.tool_calendar.php');
+#require_once( DEDALO_CORE_PATH .'/tools/calendar/trigger.tool_calendar.php');
 ?>

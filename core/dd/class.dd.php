@@ -1,10 +1,10 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 /*
 * CLASE DD BASADA EN TESAURO V3
 */
-require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd_elements.php');
+require_once(DEDALO_CORE_PATH . '/dd/class.dd_elements.php');
 #require_once(DEDALO_ROOT.'/jer/class.RecordObj_jer_tipos.php');
 
 

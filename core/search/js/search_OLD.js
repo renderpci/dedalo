@@ -106,7 +106,7 @@ var search = new function() {
 		html_page.loading_content( wrap_div, 1 )
 		
 
-		const url_trigger  = DEDALO_LIB_BASE_URL + '/section_records/trigger.section_records.php'
+		const url_trigger  = DEDALO_CORE_URL + '/section_records/trigger.section_records.php'
 		const trigger_vars = {
 				mode 	 : 'load_rows',
 				//options	 : JSON.stringify(options),	// Important. Convert json object options to string to send by ajax as text
@@ -515,7 +515,7 @@ var search = new function() {
 		const container_id = options.container_id
 
 		// Load js lib dynamically
-			const url = DEDALO_LIB_BASE_URL + '/search/js/paginator.js'
+			const url = DEDALO_CORE_URL + '/search/js/paginator.js'
 			common.load_script(url).then(function(e){					
 		
 				// add event listener to the load_rows, 

@@ -48,7 +48,7 @@ abstract class diffusion  {
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
 	* @return string $html
-	*	Get standar path file "DEDALO_LIB_BASE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
+	*	Get standar path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
 	public function get_html() {
@@ -58,7 +58,7 @@ abstract class diffusion  {
 		# Class name is called class (ex. component_input_text), not this class (common)
 		$class_name	= get_called_class();	#dump($class_name,'$class_name');
 
-		$file = DEDALO_LIB_BASE_PATH .'/diffusion/'. $class_name .'/'. $class_name .'.php' ; 	#dump("$class_name");		
+		$file = DEDALO_CORE_PATH .'/diffusion/'. $class_name .'/'. $class_name .'.php' ; 	#dump("$class_name");		
 	
 		ob_start();
 		include ( $file );
@@ -829,7 +829,7 @@ abstract class diffusion  {
 	*/
 	public static function map_section_id_to_subtitles_url($options, $dato) {
 	
-		require_once(DEDALO_LIB_BASE_PATH . '/tools/tool_subtitles/class.subtitles.php');
+		require_once(DEDALO_CORE_PATH . '/tools/tool_subtitles/class.subtitles.php');
 		
 		$section_id 	= (int)$dato;
 		$lang 			= $options->lang;
@@ -1126,7 +1126,7 @@ abstract class diffusion  {
 
 					// delete
 						if ($table_name!==false) {
-							include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+							include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
 							$result = (bool)diffusion_sql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo);
 							if ($result===true) {
 								$response->result 		= true;

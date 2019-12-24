@@ -7,7 +7,7 @@
 var hierarchy = new function() {
 
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/hierarchy/trigger.hierarchy.php';
+	this.url_trigger = DEDALO_CORE_URL + '/hierarchy/trigger.hierarchy.php';
 
 
 	/**

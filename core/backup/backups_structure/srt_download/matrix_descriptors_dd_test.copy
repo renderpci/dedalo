@@ -23,8 +23,8 @@ test28	checkbox	termino	lg-spa
 test29	autocomplete	termino	lg-spa
 test3	Búsqueda	termino	lg-spa
 test30	autocomplete ts	termino	lg-spa
-test31	av	termino	lg-spa
-test32	number	termino	lg-spa
+test32	text area	termino	lg-spa
+test31	geolocation	termino	lg-spa
 test33	autocomplete ts tree	termino	lg-spa
 test34	input text	termino	lg-spa
 test35	Order	termino	lg-spa
@@ -81,8 +81,8 @@ test55	select	termino	lg-spa
 test22	BOX DESACTIVOS	termino	lg-spa
 test53	svg	termino	lg-spa
 test80	component_autocomplete_hi	termino	lg-spa
-test81	text area img	termino	lg-spa
 test82	image for svg transcription	termino	lg-spa
+test81	av	termino	lg-spa
 test100	Lista Cris	termino	lg-spa
 test101	Asanas	termino	lg-spa
 test102	Foto	termino	lg-spa
@@ -161,8 +161,8 @@ test154	autocomplete HI	termino	lg-spa
 test155	info	termino	lg-spa
 test156	input text large	termino	lg-spa
 test157	calculation	termino	lg-spa
-test160	input text 2	termino	lg-spa
-test161	input text 3	termino	lg-spa
+test160	input text 2 unique	termino	lg-spa
+test161	text area 2	termino	lg-spa
 test162	input text 4	termino	lg-spa
 test163	input text 5	termino	lg-spa
 test159	input text 1	termino	lg-spa

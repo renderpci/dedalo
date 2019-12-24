@@ -199,7 +199,7 @@ var component_select = new function() {
 		let section_tipo = wrapper.dataset.referenced_section_tipo
 			//console.log(section_tipo);
 
-		let window_url	= DEDALO_LIB_BASE_URL + '/main/?t='+section_tipo
+		let window_url	= DEDALO_CORE_URL + '/main/?t='+section_tipo
 		let window_name	= "component_select_window";
 
 		// Open and focus window

@@ -585,7 +585,7 @@ function return2br(dataStr) {
 var relwindow ;
 function abrirTSlist(modo,type) {
 	
-	var theUrl = DEDALO_LIB_BASE_URL + '/ts/ts_list.php?modo=' + modo +'&type=' + type ;
+	var theUrl = DEDALO_CORE_URL + '/ts/ts_list.php?modo=' + modo +'&type=' + type ;
 	relwindow = window.open(theUrl ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=900,height=650');//resizable
 	if (relwindow) relwindow.moveTo(-10,1);
 	if (window.focus) { relwindow.focus() }

@@ -32,7 +32,7 @@ class inspector {
 		if(SHOW_DEBUG) $start_time = start_time();
 
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
+		include ( DEDALO_CORE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 		
 		if(SHOW_DEBUG) {

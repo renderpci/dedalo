@@ -148,7 +148,7 @@ var tool_common = new function() {
 				const section_tipo		= button_obj.dataset.section_tipo
 				const lang				= button_obj.dataset.lang
 				const target_modo 		= 'tool_time_machine'
-				const iframe_src		= DEDALO_LIB_BASE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo+'&lang='+lang +tool_common.add_url_globals
+				const iframe_src		= DEDALO_CORE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo+'&lang='+lang +tool_common.add_url_globals
 
 				// REFRESH_COMPONENTS
 				// Calculate wrapper_id and ad to page global var 'components_to_refresh'
@@ -187,7 +187,7 @@ var tool_common = new function() {
 		const parent		= button_obj.dataset.parent		
 		const section_tipo 	= button_obj.dataset.section_tipo
 		const target_modo 	= 'tool_posterframe'
-		const iframe_src	= DEDALO_LIB_BASE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo +tool_common.add_url_globals
+		const iframe_src	= DEDALO_CORE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo +tool_common.add_url_globals
 		
 		// REFRESH_COMPONENTS
 		// Calculate wrapper_id and ad to page global var 'components_to_refresh'
@@ -240,7 +240,7 @@ var tool_common = new function() {
 		const tipo 			= button_obj.dataset.tipo
 		const section_tipo 	= button_obj.dataset.section_tipo
 		const target_modo 	= 'tool_av_versions'
-		const iframe_src	= DEDALO_LIB_BASE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo +tool_common.add_url_globals
+		const iframe_src	= DEDALO_CORE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo +tool_common.add_url_globals
 
 
 		// REFRESH_COMPONENTS
@@ -293,7 +293,7 @@ var tool_common = new function() {
 		const parent		= button_obj.dataset.parent		
 		const section_tipo 	= button_obj.dataset.section_tipo
 		const target_modo 	= 'tool_image_versions'
-		const iframe_src	= DEDALO_LIB_BASE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo +tool_common.add_url_globals
+		const iframe_src	= DEDALO_CORE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo +tool_common.add_url_globals
 
 		// REFRESH_COMPONENTS
 		// Calculate wrapper_id and ad to page global var 'components_to_refresh'
@@ -349,7 +349,7 @@ var tool_common = new function() {
 		const section_tipo 	= button_obj.dataset.section_tipo
 		const parent_matrix	= button_obj.dataset.parent_matrix
 		const target_modo 	= 'tool_pdf_versions';						
-		const iframe_src	= DEDALO_LIB_BASE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo +tool_common.add_url_globals
+		const iframe_src	= DEDALO_CORE_URL + '/main/?m='+target_modo+'&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo +tool_common.add_url_globals
 
 
 		// REFRESH_COMPONENTS
@@ -409,7 +409,7 @@ var tool_common = new function() {
 				html_page.add_component_to_refresh(wrapper.id)
 			}		
 
-		const window_url		= DEDALO_LIB_BASE_URL + '/main/?m=tool_upload&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo+'&quality='+quality + tool_common.add_url_globals	
+		const window_url		= DEDALO_CORE_URL + '/main/?m=tool_upload&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo+'&quality='+quality + tool_common.add_url_globals	
 		const window_name		= "Tool Upload " + parent + ' ' + tipo +' '+ quality
 		const w_width			= 500
 		const w_height			= 390
@@ -443,10 +443,10 @@ var tool_common = new function() {
 				context_name 	: context_name
 			}; //return console.log(url_vars);
 
-		let url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let url  = DEDALO_CORE_URL + '/main/?'
 			url += build_url_arguments_from_vars(url_vars)
 
-		const window_url	 = url; //DEDALO_LIB_BASE_URL + '/main/?m=tool_transcription&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent+'&context_name='+context_name + tool_common.add_url_globals
+		const window_url	 = url; //DEDALO_CORE_URL + '/main/?m=tool_transcription&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent+'&context_name='+context_name + tool_common.add_url_globals
 		const window_name	 = "Tool Transcription "+tipo+" "+parent
 		const window_options = null		
 		// OPEN_TOOL_MAIN_WINDOW
@@ -486,10 +486,10 @@ var tool_common = new function() {
 				top_id 			: button_obj.dataset.top_id || page_globals.top_id,
 			}; //return console.log(url_vars);
 
-		let url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let url  = DEDALO_CORE_URL + '/main/?'
 			url += build_url_arguments_from_vars(url_vars)
 
-		const window_url	 = url; //DEDALO_LIB_BASE_URL + '/main/?m=tool_indexation&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent +tool_common.add_url_globals
+		const window_url	 = url; //DEDALO_CORE_URL + '/main/?m=tool_indexation&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent +tool_common.add_url_globals
 		const window_name	 = "Tool Indexation "+tipo+' '+parent
 		const window_options = null
 		// OPEN_TOOL_MAIN_WINDOW
@@ -528,7 +528,7 @@ var tool_common = new function() {
 				top_id 			: button_obj.dataset.top_id || page_globals.top_id,
 			}; //return console.log(url_vars);
 
-		let url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let url  = DEDALO_CORE_URL + '/main/?'
 			url += build_url_arguments_from_vars(url_vars)
 			
 		
@@ -578,10 +578,10 @@ var tool_common = new function() {
 				top_id 			: button_obj.dataset.top_id || page_globals.top_id,
 			}; //return console.log(url_vars);
 
-		let url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let url  = DEDALO_CORE_URL + '/main/?'
 			url += build_url_arguments_from_vars(url_vars)
 
-		const window_url	 = url; //DEDALO_LIB_BASE_URL + '/main/?m=tool_lang&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo+'&lang='+lang +tool_common.add_url_globals 	//return alert(iframe_src)
+		const window_url	 = url; //DEDALO_CORE_URL + '/main/?m=tool_lang&t='+tipo+'&parent='+parent+'&section_tipo='+section_tipo+'&lang='+lang +tool_common.add_url_globals 	//return alert(iframe_src)
 		const window_name	 = "Tool Lang "+tipo+" "+parent
 		const window_options = null
 		// OPEN_TOOL_MAIN_WINDOW
@@ -616,12 +616,12 @@ var tool_common = new function() {
 				hierarchy_sections 	: button_obj.dataset.hierarchy_sections
 			}; //return console.log(url_vars);
 
-		let url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let url  = DEDALO_CORE_URL + '/main/?'
 			url += build_url_arguments_from_vars(url_vars)
 			url += tool_common.add_url_globals
 
 		// NOTA: portal_tipo y portal_parent son 't' y 'parent' respectivamente.
-		//var iframe_src = DEDALO_LIB_BASE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo +'&target_section_tipo='+target_section_tipo+ tool_common.add_url_globals; //return alert(iframe_src)
+		//var iframe_src = DEDALO_CORE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo +'&target_section_tipo='+target_section_tipo+ tool_common.add_url_globals; //return alert(iframe_src)
 				
 		// Build modal window
 		const dialog = component_portal.build_select_dialog({
@@ -660,7 +660,7 @@ var tool_common = new function() {
 		const button_tipo			= button_obj.dataset.tipo
 		const target_section_tipo	= button_obj.dataset.target_section_tipo
 
-		const window_url	 = DEDALO_LIB_BASE_URL + '/main/?m=tool_layout_print&t='+target_section_tipo+'&button_tipo='+button_tipo+'&context_name=list' +tool_common.add_url_globals
+		const window_url	 = DEDALO_CORE_URL + '/main/?m=tool_layout_print&t='+target_section_tipo+'&button_tipo='+button_tipo+'&context_name=list' +tool_common.add_url_globals
 		const window_name	 = "Tool print records"
 		const window_options = null
 		// OPEN_TOOL_MAIN_WINDOW
@@ -684,7 +684,7 @@ var tool_common = new function() {
 		switch(options.type) {
 
 			case 'component_av':
-				current_url = DEDALO_LIB_BASE_URL + "/media_engine/av_media_player.php?reelID="+options.reelID+"&quality="+options.quality +tool_common.add_url_globals
+				current_url = DEDALO_CORE_URL + "/media_engine/av_media_player.php?reelID="+options.reelID+"&quality="+options.quality +tool_common.add_url_globals
 				// Note: Window player is auto resize because current dimensions are testimonial only
 				current_window = window.open(current_url,"player_window","width=735,height=535")
 				current_window.focus()				
@@ -692,10 +692,10 @@ var tool_common = new function() {
 
 			case 'component_image':				
 				
-				current_url = DEDALO_LIB_BASE_URL + "/component_image/html/component_image_viewer.php?f="+options.image_full_url
+				current_url = DEDALO_CORE_URL + "/component_image/html/component_image_viewer.php?f="+options.image_full_url
 				/*
 				if(SHOW_DEBUG===true) {
-					var url = DEDALO_LIB_BASE_URL + "/component_image/html/component_image_viewer.php?f="+options.image_full_url
+					var url = DEDALO_CORE_URL + "/component_image/html/component_image_viewer.php?f="+options.image_full_url
 				}else{
 					var url = options.image_full_url + '?t=' + (new Date()).getTime();
 				}
@@ -733,7 +733,7 @@ var tool_common = new function() {
 		const	modo 		= 'tool_replace_component_data'
 
 		// NOTA: portal_tipo y portal_parent son 't' y 'parent' respectivamente.
-		const iframe_src 	= DEDALO_LIB_BASE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo + tool_common.add_url_globals; //return alert(iframe_src)
+		const iframe_src 	= DEDALO_CORE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo + tool_common.add_url_globals; //return alert(iframe_src)
 			
 		const title_div 	= document.createElement('h4')
 		const title 		= get_label.herramienta +": " + get_label.tool_replace_component_data +" (ID: "+parent+")"
@@ -785,7 +785,7 @@ var tool_common = new function() {
 		const	modo 		= 'tool_add_component_data'
 
 		// NOTA: portal_tipo y portal_parent son 't' y 'parent' respectivamente.
-		const iframe_src 	= DEDALO_LIB_BASE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo + tool_common.add_url_globals; //return alert(iframe_src)
+		const iframe_src 	= DEDALO_CORE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo + tool_common.add_url_globals; //return alert(iframe_src)
 			
 		const title_div 	= document.createElement('h4')
 		const title 		= get_label.herramienta +": " + get_label.tool_add_component_data +" (ID: "+parent+")"
@@ -845,7 +845,7 @@ var tool_common = new function() {
 		const label 		= wrapper.querySelector(".css_label")
 
 		// NOTA: portal_tipo y portal_parent son 't' y 'parent' respectivamente.
-		const iframe_src = DEDALO_LIB_BASE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo + tool_common.add_url_globals; //return alert(iframe_src)
+		const iframe_src = DEDALO_CORE_URL + '/main/?m='+modo+'&t='+tipo+'&parent='+parent +'&section_tipo='+section_tipo + tool_common.add_url_globals; //return alert(iframe_src)
 		
 		let	title 	= get_label.herramienta +": " + get_label.tool_lang_multi
 		if(label) title	+= " - " + label.innerHTML
@@ -922,7 +922,7 @@ var tool_common = new function() {
 			}
 
 		// URL
-		let window_url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let window_url  = DEDALO_CORE_URL + '/main/?'
 			window_url += build_url_arguments_from_vars(url_vars)
 			window_url += tool_common.add_url_globals
 		// Window name
@@ -961,7 +961,7 @@ var tool_common = new function() {
 		html_page.add_component_to_refresh(wrapper_id)
 
 		// URL
-		let window_url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let window_url  = DEDALO_CORE_URL + '/main/?'
 			window_url += 'm='+tool_name+'&t='+component_tipo+'&parent='+parent+'&section_tipo='+section_tipo+'&context_name='+context_name 
 			window_url += tool_common.add_url_globals
 		// Window name
@@ -985,7 +985,7 @@ var tool_common = new function() {
 		const	tool_name		= button_obj.dataset.tool_name
 		const	context_name	= button_obj.dataset.context_name
 		
-		const window_url	 	= DEDALO_LIB_BASE_URL + '/main/?m='+tool_name+'&t='+section_tipo+'&context_name='+context_name +tool_common.add_url_globals	
+		const window_url	 	= DEDALO_CORE_URL + '/main/?m='+tool_name+'&t='+section_tipo+'&context_name='+context_name +tool_common.add_url_globals	
 		const window_name	 	= "Tool export "+tool_name
 		const window_options 	= null
 		// OPEN_TOOL_MAIN_WINDOW
@@ -1018,7 +1018,7 @@ var tool_common = new function() {
 				html_page.add_component_to_refresh(wrapper.id)
 			}
 		
-		const window_url	 = DEDALO_LIB_BASE_URL + '/main/?m='+tool_name+'&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent+'&lang='+lang+'&context_name='+context_name +tool_common.add_url_globals	
+		const window_url	 = DEDALO_CORE_URL + '/main/?m='+tool_name+'&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent+'&lang='+lang+'&context_name='+context_name +tool_common.add_url_globals	
 		const window_name	 = "Tool TC "+tool_name
 		const window_options = null
 		// OPEN_TOOL_MAIN_WINDOW
@@ -1051,7 +1051,7 @@ var tool_common = new function() {
 				html_page.add_component_to_refresh(wrapper.id)
 			}		
 
-		const window_url	 = DEDALO_LIB_BASE_URL + '/main/?m='+tool_name+'&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent+'&lang='+lang+'&context_name='+context_name +tool_common.add_url_globals	
+		const window_url	 = DEDALO_CORE_URL + '/main/?m='+tool_name+'&t='+tipo+'&section_tipo='+section_tipo+'&parent='+parent+'&lang='+lang+'&context_name='+context_name +tool_common.add_url_globals	
 		const window_name	 = "Tool TC "+tool_name
 		const window_options = null
 		// OPEN_TOOL_MAIN_WINDOW
@@ -1072,7 +1072,7 @@ var tool_common = new function() {
 		const tool_name		= 'tool_ts_print'
 		const section_tipo	= page_globals.section_tipo
 
-		const window_url	 = DEDALO_LIB_BASE_URL + '/main/?m=' + tool_name + '&t=' + section_tipo
+		const window_url	 = DEDALO_CORE_URL + '/main/?m=' + tool_name + '&t=' + section_tipo
 		const window_name	 = "Tool TC "+tool_name
 		const window_options = null
 
@@ -1101,7 +1101,7 @@ var tool_common = new function() {
 			}
 		
 		// URL
-		let window_url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let window_url  = DEDALO_CORE_URL + '/main/?'
 			window_url += build_url_arguments_from_vars(url_vars)
 			window_url += tool_common.add_url_globals
 		// Window name
@@ -1132,7 +1132,7 @@ var tool_common = new function() {
 			}
 		
 		// URL
-		let window_url  = DEDALO_LIB_BASE_URL + '/main/?'
+		let window_url  = DEDALO_CORE_URL + '/main/?'
 			window_url += build_url_arguments_from_vars(url_vars)
 			//window_url += tool_common.add_url_globals
 		// Window name
@@ -1193,7 +1193,7 @@ var tool_common = new function() {
 		
 		const section_tipo 	= 'dd128'
 		const target_modo 	= 'tool_user_admin'
-		const iframe_src	= DEDALO_LIB_BASE_URL + '/main/?m='+target_modo+'&t='+section_tipo +tool_common.add_url_globals
+		const iframe_src	= DEDALO_CORE_URL + '/main/?m='+target_modo+'&t='+section_tipo +tool_common.add_url_globals
 		
 		// Dialog
 		const title_div = document.createElement("h3")

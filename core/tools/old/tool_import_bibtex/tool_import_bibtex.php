@@ -12,8 +12,8 @@
 
 	
 	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 	switch($modo) {
 
@@ -30,15 +30,15 @@
 					$megas 					= $upload_max_filesize ;		
 					$maxSize 				= intval($megas * 1048576);
 
-					$url_trigger			= DEDALO_LIB_BASE_URL.'/tools/'.get_class($this).'/trigger.'.get_class($this).'.php';
+					$url_trigger			= DEDALO_CORE_URL.'/tools/'.get_class($this).'/trigger.'.get_class($this).'.php';
 
 					# CSS
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_upload/css/tool_upload.css";				
+						css::$ar_url[] = DEDALO_CORE_URL."/tools/tool_upload/css/tool_upload.css";				
 					# JS includes
-						js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_upload/js/tool_upload.js";
+						js::$ar_url[] = DEDALO_CORE_URL."/tools/tool_upload/js/tool_upload.js";
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_upload.phtml' );
+					include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_upload.phtml' );
 					$html_upload = ob_get_clean();	
 					*/
 
@@ -63,8 +63,8 @@
 					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload.css';
 					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload-ui.css';
 
-					css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_common/css/tool_common.css';
-					css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_bibtex/css/tool_import_bibtex.css';
+					css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_common/css/tool_common.css';
+					css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_bibtex/css/tool_import_bibtex.css';
 
 				#
 				# JS includes
@@ -91,12 +91,12 @@
 					# The File Upload user interface plugin
 					js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/js/jquery.fileupload-ui.js';
 					# The main application script
-					js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_bibtex/js/file_upload_main.js';
+					js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_bibtex/js/file_upload_main.js';
 
 				#
 				# IMAGES UPLOAD MANAGER
 				ob_start();
-				include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/upload.php' );
+				include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/html/upload.php' );
 				$html_upload = ob_get_clean();
 
 				break;
@@ -126,7 +126,7 @@
 
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' .get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' .get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

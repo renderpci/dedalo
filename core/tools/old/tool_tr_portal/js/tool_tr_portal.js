@@ -8,7 +8,7 @@ var tool_tr_portal = new function() {
 
 
 	// LOCAL VARS
-	this.trigger_tool_tr_portal_url = DEDALO_LIB_BASE_URL + '/tools/tool_tr_portal/trigger.tool_tr_portal.php'
+	this.trigger_tool_tr_portal_url = DEDALO_CORE_URL + '/tools/tool_tr_portal/trigger.tool_tr_portal.php'
 
 
 

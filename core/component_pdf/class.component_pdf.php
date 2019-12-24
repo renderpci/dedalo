@@ -2,7 +2,7 @@
 /*
 * CLASS COMPONENT PDF
 */
-require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.PdfObj.php');
+require_once(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
 
 class component_pdf extends component_common {
 	

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_BASE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -30,7 +30,7 @@ tool_common.prototype.build = async function(autoload = false) {
 
 
 	// load self style
-		const url = DEDALO_LIB_BASE_URL + "/tools/" + self.model + "/css/" + self.model + ".css"
+		const url = DEDALO_CORE_URL + "/tools/" + self.model + "/css/" + self.model + ".css"
 		await common.prototype.load_style(url)
 
 

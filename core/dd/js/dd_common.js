@@ -49,7 +49,7 @@ function dd_abrirTSlist(modo,type) {
 		return false;
 	}
 	
-	const theUrl = DEDALO_LIB_BASE_URL + '/dd/dd_list.php?modo=' + modo +'&type=' + type ;
+	const theUrl = DEDALO_CORE_URL + '/dd/dd_list.php?modo=' + modo +'&type=' + type ;
 	relwindow = window.open(theUrl ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=900,height=650');//resizable
 	if (relwindow) relwindow.moveTo(-10,1);
 	if (window.focus) { relwindow.focus() }

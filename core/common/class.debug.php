@@ -1,5 +1,5 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.Accessors.php');
+require_once(DEDALO_CORE_PATH . '/common/class.Accessors.php');
 
 
 

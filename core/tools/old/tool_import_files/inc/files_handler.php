@@ -4,8 +4,8 @@
 * This file is called across ajax from /html/jquery_upload.phtml for manage uploaded files in server side
 * Paths vars are defined on invoke class tool_import_files
 */
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH.'/tools/tool_import_files/class.tool_import_files.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH.'/tools/tool_import_files/class.tool_import_files.php');
 require_once( DEDALO_UPLOADER_DIR.'/server/php/UploadHandler.php');
 
 #
@@ -25,7 +25,7 @@ $tool_import_files = new tool_import_files(null);
 
     # SCRIPT_URL
     # URL of server side file handler ( is current scritp :-P url )
-    # This url contain var tipo like: DEDALO_LIB_BASE_URL . '/tools/tool_import_files/inc/files_handler.php?t='.$tipo
+    # This url contain var tipo like: DEDALO_CORE_URL . '/tools/tool_import_files/inc/files_handler.php?t='.$tipo
     # for use folder specific of current user and component tipo
     $script_url = TOOL_IMPORT_FILES_HANDLER_URL;
     

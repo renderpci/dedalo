@@ -9,10 +9,10 @@ var component_relation_related = new function() {
 	'use strict';
 
 	this.save_arguments = {} // End save_arguments
-	this.url_trigger    = DEDALO_LIB_BASE_URL + '/component_relation_related/trigger.component_relation_related.php';
+	this.url_trigger    = DEDALO_CORE_URL + '/component_relation_related/trigger.component_relation_related.php';
 
 	// autocomplete_trigger_url . For service autocomplete
-	this.autocomplete_trigger_url = DEDALO_LIB_BASE_URL + '/component_autocomplete_hi/trigger.component_autocomplete_hi.php';
+	this.autocomplete_trigger_url = DEDALO_CORE_URL + '/component_autocomplete_hi/trigger.component_autocomplete_hi.php';
 
 
 
@@ -213,7 +213,7 @@ var component_relation_related = new function() {
 		// context_name
 		const context_name = 'select_related'
 		
-		const url = DEDALO_LIB_BASE_URL + '/main/?t=' + button_obj.dataset.target_section_tipo + '&context_name='+context_name
+		const url = DEDALO_CORE_URL + '/main/?t=' + button_obj.dataset.target_section_tipo + '&context_name='+context_name
 		const strWindowFeatures = "menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes";
 
 		if(related_selector_window === null || related_selector_window.closed) {
@@ -522,7 +522,7 @@ var component_relation_related = new function() {
 	*/
 	this.open_realated = function(button_obj) {
 
-		let url = DEDALO_LIB_BASE_URL + '/main/?'
+		let url = DEDALO_CORE_URL + '/main/?'
 			url += 'm=edit&'
 			url += 't=' + button_obj.dataset.section_tipo +'&'
 			url += 'id=' + button_obj.dataset.section_id

@@ -65,7 +65,7 @@ class tool_import_files extends tool_common {
 		define('TOOL_IMPORT_FILES_UPLOAD_URL', DEDALO_MEDIA_BASE_URL .$media_folder.'/temp'.'/files/'.'user_'.$user_id.$upload_dir_custom.'/');
 
 		# FILES HANDLER
-		define('TOOL_IMPORT_FILES_HANDLER_URL', DEDALO_LIB_BASE_URL.'/tools/tool_import_files/inc/files_handler.php?t='.$tipo);
+		define('TOOL_IMPORT_FILES_HANDLER_URL', DEDALO_CORE_URL.'/tools/tool_import_files/inc/files_handler.php?t='.$tipo);
 
 		# EXTENSIONS (ARRAY OF VALID EXTENSIONS)
 		$this->valid_extensions = array('jpg',
@@ -174,7 +174,7 @@ class tool_import_files extends tool_common {
 		$ar_data['file_size'] 					= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB
 		
 		$ar_data['image']['image_url'] 			= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
-		$ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
+		$ar_data['image']['image_preview_url']	= DEDALO_CORE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
 
 		# Regeg file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
 		# Format result preg_match '1-2-A.jpg' and 'gato-2-A.jpg'

@@ -52,7 +52,7 @@
 					#dump($matches_tc[1], '$matches_tc[1] ++ '.to_string());
 
 					# TC WRONG
-					require_once(DEDALO_LIB_BASE_PATH.'/media_engine/class.OptimizeTC.php');
+					require_once(DEDALO_CORE_PATH.'/media_engine/class.OptimizeTC.php');
 					$ar_secs 	 = [];
 					$ar_tc_wrong = [];
 					foreach ($matches_tc[1] as $key => $value) {

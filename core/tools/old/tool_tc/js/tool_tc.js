@@ -22,7 +22,7 @@ var tool_tc = new function() {
 
 	
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_tc/trigger.tool_tc.php';
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_tc/trigger.tool_tc.php';
 	
 
 

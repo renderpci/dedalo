@@ -2,7 +2,7 @@
 $start_time=microtime(1);
 set_time_limit ( 345600 );  // 4 dias: 4 * 24 * 3600
 $session_duration_hours = 96;
-include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 

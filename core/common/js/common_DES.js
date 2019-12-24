@@ -1,6 +1,6 @@
 //"use strict";
 // JavaScript Document
-//document.write('<scr'+'ipt src="'+DEDALO_LIB_BASE_URL+'/common/js/detectBrowser.js" async="async" type="text/javascript"></scr'+'ipt>');
+//document.write('<scr'+'ipt src="'+DEDALO_CORE_URL+'/common/js/detectBrowser.js" async="async" type="text/javascript"></scr'+'ipt>');
 
 //======================================================//
 // multi browser compatibility - not all support console
@@ -75,7 +75,7 @@ return current_instance;
 var common = new function() {
 
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/common/trigger.common.php';
+	this.trigger_url = DEDALO_CORE_URL + '/common/trigger.common.php';
 
 
 	// TEST IF IS STRING
@@ -720,9 +720,9 @@ var common = new function() {
 		if( !confirm('\nAre you sure to EXPORT and overwrite structure data in file \n "dedalo4_development_str.custom.backup" ?\n') ) {
 			return false
 		}
-			//window.open(DEDALO_LIB_BASE_URL + "/backup/trigger.db_utils.php?action=export",'Export','width=1000,height=800');
+			//window.open(DEDALO_CORE_URL + "/backup/trigger.db_utils.php?action=export",'Export','width=1000,height=800');
 
-		const trigger = DEDALO_LIB_BASE_URL + "/backup/trigger.db_utils.php"
+		const trigger = DEDALO_CORE_URL + "/backup/trigger.db_utils.php"
 		const trigger_vars = {
 				mode : 'export_str'
 		}

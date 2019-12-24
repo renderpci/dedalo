@@ -23,7 +23,7 @@ var tool_upload = new function() {
 		intervalTimer		= 0;
 
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_upload/trigger.tool_upload.php?top_tipo=' + page_globals.top_tipo + '&section_tipo=' + page_globals.section_tipo;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_upload/trigger.tool_upload.php?top_tipo=' + page_globals.top_tipo + '&section_tipo=' + page_globals.section_tipo;
 
 
 	// READY

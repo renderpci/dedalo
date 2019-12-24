@@ -1,6 +1,6 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 
 
 if(login::is_logged()!==true) {
@@ -26,7 +26,7 @@ $quality_selector_html	= null;
 $ar_valid 				= $ImageObj->get_ar_quality_with_file();	#dump($ar_valid);
 $selectedItem 			= $quality;
 if(sizeof($ar_valid)>1) {
-	$file = DEDALO_LIB_BASE_PATH .'/media_engine/html/image_media_player_quality_selector.phtml';
+	$file = DEDALO_CORE_PATH .'/media_engine/html/image_media_player_quality_selector.phtml';
 	ob_start();
 	include ( $file );
 	$quality_selector_html =  ob_get_contents();
@@ -52,6 +52,6 @@ $recargar_title = 'Recargar';
 		$css_link_code	= css::get_css_link_code();
 
 # LOAD VISTA TEMPLATE CODE
-$page_html	= DEDALO_LIB_BASE_PATH .'/media_engine/html/image_media_player.phtml';
+$page_html	= DEDALO_CORE_PATH .'/media_engine/html/image_media_player.phtml';
 include($page_html);
 ?>

@@ -13,7 +13,7 @@ abstract class page {
 	public static function get_html( $page_options ) {
 		
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/' . get_class() . '.php' );
+		include ( DEDALO_CORE_PATH .'/'. get_class() . '/' . get_class() . '.php' );
 		$html = ob_get_clean();
 
 		return $html;

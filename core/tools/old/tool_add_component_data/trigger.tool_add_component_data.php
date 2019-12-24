@@ -27,7 +27,7 @@ header('Cache-Control: no-cache'); // recommended to prevent caching of event da
 	
 	exit();
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 

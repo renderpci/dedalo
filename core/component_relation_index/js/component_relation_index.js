@@ -132,7 +132,7 @@ var component_relation_index = new function() {
 		// context_name
 		var context_name = 'select_index'
 		
-		var url = DEDALO_LIB_BASE_URL + '/main/?t=' + button_obj.dataset.target_tipo + '&context_name='+context_name
+		var url = DEDALO_CORE_URL + '/main/?t=' + button_obj.dataset.target_tipo + '&context_name='+context_name
 		var strWindowFeatures = "menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes";
 
 		if(index_selector_window == null || index_selector_window.closed) {

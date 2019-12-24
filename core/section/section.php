@@ -152,15 +152,15 @@
 
 
 				// Aditional_css
-					css::$ar_url[] = DEDALO_LIB_BASE_URL . '/section_group/css/section_group.css';
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/section_group/js/section_group.js';
+					css::$ar_url[] = DEDALO_CORE_URL . '/section_group/css/section_group.css';
+					js::$ar_url[]  = DEDALO_CORE_URL . '/section_group/js/section_group.js';
 					if (strpos($context_name, 'portal')!==false) {
-						#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..
-						js::$ar_url[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..
+						#js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..
+						js::$ar_url[] = DEDALO_CORE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..
 					}
 					if (defined('DEDALO_ADITIONAL_CSS') && DEDALO_ADITIONAL_CSS===true && isset($propiedades->aditional_css)) {
 						foreach ((array)$propiedades->aditional_css as $aditional_css_obj) {
-							css::$ar_url[] = DEDALO_LIB_BASE_URL . $aditional_css_obj->path;
+							css::$ar_url[] = DEDALO_CORE_URL . $aditional_css_obj->path;
 						}
 					}
 
@@ -168,15 +168,15 @@
 				// Aditional_js
 					if (isset($propiedades->aditional_js)) {
 						foreach ((array)$propiedades->aditional_js as $aditional_js_obj) {
-							css::$ar_url[] = DEDALO_LIB_BASE_URL . $aditional_js_obj->path;
+							css::$ar_url[] = DEDALO_CORE_URL . $aditional_js_obj->path;
 						}
 					}
 					# DEDALO_LOCK_COMPONENTS JS
 					if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/lock_components/js/lock_components.js";
+						js::$ar_url[]  = DEDALO_CORE_URL."/lock_components/js/lock_components.js";
 					}
 					if ($tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/hierarchy/js/hierarchy.js";
+						js::$ar_url[]  = DEDALO_CORE_URL."/hierarchy/js/hierarchy.js";
 					}
 				break;
 
@@ -238,10 +238,10 @@
 					}
 					# Temporal !
 					if ($tipo==='oh1') {
-						css::$ar_url[] = DEDALO_LIB_BASE_URL . '/extras/oh/widgets/media_icons/css/media_icons.css';
-						css::$ar_url[] = DEDALO_LIB_BASE_URL . '/extras/oh/widgets/descriptors/css/descriptors.css';
+						css::$ar_url[] = DEDALO_CORE_URL . '/extras/oh/widgets/media_icons/css/media_icons.css';
+						css::$ar_url[] = DEDALO_CORE_URL . '/extras/oh/widgets/descriptors/css/descriptors.css';
 
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/extras/oh/widgets/descriptors/js/descriptors.js';
+						js::$ar_url[]  = DEDALO_CORE_URL . '/extras/oh/widgets/descriptors/js/descriptors.js';
 					}
 
 
@@ -272,11 +272,11 @@
 
 
 				// Aditional_css
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/section_records/js/section_records.js';
-					css::$ar_url[] = DEDALO_LIB_BASE_URL . '/section_records/css/section_records.css';
+					js::$ar_url[]  = DEDALO_CORE_URL . '/section_records/js/section_records.js';
+					css::$ar_url[] = DEDALO_CORE_URL . '/section_records/css/section_records.css';
 					if (defined('DEDALO_ADITIONAL_CSS') && DEDALO_ADITIONAL_CSS===true && isset($propiedades->aditional_css)) {
 						foreach ((array)$propiedades->aditional_css as $aditional_css_obj) {
-							css::$ar_url[] = DEDALO_LIB_BASE_URL . $aditional_css_obj->path;
+							css::$ar_url[] = DEDALO_CORE_URL . $aditional_css_obj->path;
 						}
 					}
 				break;
@@ -344,7 +344,7 @@
 
 
 
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	include($page_html);
 
 

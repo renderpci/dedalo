@@ -9,7 +9,7 @@ var component_portal = new function() {
 	'use strict';
 
 	this.portal_objects 		 = []
-	this.url_trigger 			 = DEDALO_LIB_BASE_URL + '/component_portal/trigger.component_portal.php'
+	this.url_trigger 			 = DEDALO_CORE_URL + '/component_portal/trigger.component_portal.php'
 	this.save_arguments 		 = {} // End save_arguments
 	// Fixed when user click on delete icon (open_delete_dialog)
 	this.delete_obj 			 = null;

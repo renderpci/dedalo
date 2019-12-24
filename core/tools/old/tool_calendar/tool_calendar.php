@@ -42,8 +42,8 @@
 	$file_name	= $modo;
 
 	# TOOL CSS / JS MAIN FILES
-	#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	#css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	#js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 	
 
 	switch($modo) {
@@ -54,17 +54,17 @@
 				# CSS includes
 					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/fullcalendar/fullcalendar.min.css';					
 
-					#css::$ar_url[] = DEDALO_LIB_BASE_URL.'/inspector/css/inspector.css';
-					#css::$ar_url[] = DEDALO_LIB_BASE_URL.'/section/css/section.css';
-					#css::$ar_url[] = DEDALO_LIB_BASE_URL.'/section_group/css/section_group.css';
-					#css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_common/css/tool_common.css';	
-					css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/'.$tool_name.'/css/'.$tool_name.'.css';				
+					#css::$ar_url[] = DEDALO_CORE_URL.'/inspector/css/inspector.css';
+					#css::$ar_url[] = DEDALO_CORE_URL.'/section/css/section.css';
+					#css::$ar_url[] = DEDALO_CORE_URL.'/section_group/css/section_group.css';
+					#css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_common/css/tool_common.css';	
+					css::$ar_url[] = DEDALO_CORE_URL.'/tools/'.$tool_name.'/css/'.$tool_name.'.css';				
 					
 					# HOOK CUSTOM TOOL AFTER IF EXISTS
 					if( isset($ar_tool_data['custom_script']) ) {
 						$custom_script = $ar_tool_data['custom_script'] .'/css/'. pathinfo($ar_tool_data['custom_script'])['basename'] .'.css';
-						if ( file_exists(DEDALO_LIB_BASE_PATH . $custom_script) ) {
-							css::$ar_url[] = DEDALO_LIB_BASE_URL . $custom_script;
+						if ( file_exists(DEDALO_CORE_PATH . $custom_script) ) {
+							css::$ar_url[] = DEDALO_CORE_URL . $custom_script;
 						}
 					}
 
@@ -74,14 +74,14 @@
 					js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/fullcalendar/fullcalendar.min.js';
 					js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/fullcalendar/lang-all.js';
 
-					#js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_common/js/tool_common.js';
-					js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/'.$tool_name.'/js/'.$tool_name.'.js';
+					#js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_common/js/tool_common.js';
+					js::$ar_url[] = DEDALO_CORE_URL.'/tools/'.$tool_name.'/js/'.$tool_name.'.js';
 					
 					# HOOK CUSTOM TOOL AFTER IF EXISTS
 					if( isset($ar_tool_data['custom_script']) ) {
 						$custom_script = $ar_tool_data['custom_script'] .'/js/'. pathinfo($ar_tool_data['custom_script'])['basename'] .'.js';
-						if ( file_exists(DEDALO_LIB_BASE_PATH . $custom_script) ) {
-							js::$ar_url[] = DEDALO_LIB_BASE_URL . $custom_script;	
+						if ( file_exists(DEDALO_CORE_PATH . $custom_script) ) {
+							js::$ar_url[] = DEDALO_CORE_URL . $custom_script;	
 						}
 					}
 					
@@ -89,7 +89,7 @@
 				#
 				# PAGE
 				#ob_start();
-				#include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/tool_calendar_page.php' );
+				#include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/html/tool_calendar_page.php' );
 				#$html_upload = ob_get_clean();
 
 				break;
@@ -101,9 +101,9 @@
 	# HOOK CUSTOM TOOL AFTER IF EXISTS
 	if( isset($ar_tool_data['custom_script']) ) {
 		$custom_script = $ar_tool_data['custom_script'] .'/html/'. pathinfo($ar_tool_data['custom_script'])['basename'] .'_'.$file_name.'.phtml';
-		if ( file_exists(DEDALO_LIB_BASE_PATH . $custom_script) ) {			
+		if ( file_exists(DEDALO_CORE_PATH . $custom_script) ) {			
 			ob_start();
-			include (DEDALO_LIB_BASE_PATH . $custom_script);
+			include (DEDALO_CORE_PATH . $custom_script);
 			$custom_script_html = ob_get_clean();
 		}
 	}

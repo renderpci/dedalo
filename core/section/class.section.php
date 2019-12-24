@@ -2,8 +2,8 @@
 /*
 * CLASS SECTION
 */
-include_once(DEDALO_LIB_BASE_PATH . '/search/records_search/class.records_search.php');
-include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
+include_once(DEDALO_CORE_PATH . '/search/records_search/class.records_search.php');
+include_once(DEDALO_CORE_PATH . '/search/records_navigator/class.records_navigator.php');
 
 
 
@@ -1343,7 +1343,7 @@ class section extends common {
 
 		# Load controller
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
+		include ( DEDALO_CORE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 
 

@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once(dirname(__FILE__) .'/updates/updates.php');
 /*
 * CLASS TOOL_ADMINISTRATION - B
@@ -398,7 +398,7 @@ class tool_administration extends tool_common {
 			$response->result 	= false;
 			$response->msg 		= '';
 
-		require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
+		require(DEDALO_CORE_PATH.'/backup/class.backup.php');
 		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
 		$username = $_SESSION['dedalo4']['auth']['username'];
 
@@ -1763,7 +1763,7 @@ class tool_administration extends tool_common {
 	public function get_last_backup_info() {
 
 		// read dir
-			$path 				= DEDALO_LIB_BASE_PATH.'/backup/backups';
+			$path 				= DEDALO_CORE_PATH.'/backup/backups';
 			$allowed_extensions = ['backup'];
 
 		// call to core function

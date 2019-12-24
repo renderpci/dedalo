@@ -7,7 +7,7 @@ var component_order = new function() {
 
 
 	this.save_arguments = {}
-	this.trigger_url 	= DEDALO_LIB_BASE_URL + '/component_order/trigger.component_order.php';
+	this.trigger_url 	= DEDALO_CORE_URL + '/component_order/trigger.component_order.php';
 
 
 

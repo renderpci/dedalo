@@ -7,7 +7,7 @@
 var button_delete = new function() {
 
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/button_delete/trigger.button_delete.php';
+	this.url_trigger = DEDALO_CORE_URL + '/button_delete/trigger.button_delete.php';
 	this.delete_obj  = null
 
 
@@ -355,7 +355,7 @@ var button_delete = new function() {
 			}
 			//return console.log(trigger_vars)
 
-		const url_trigger = DEDALO_LIB_BASE_URL + '/component_text_area/trigger.component_text_area.php';
+		const url_trigger = DEDALO_CORE_URL + '/component_text_area/trigger.component_text_area.php';
 
 
 		// Return a promise of XMLHttpRequest
