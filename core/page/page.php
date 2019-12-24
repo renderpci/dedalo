@@ -91,6 +91,9 @@
 // not logged
 	if (login::is_logged()!==true) {
 
+		// check_basic_system (lang and structure files)
+			check_basic_system();
+
 		// page elements [login]
 			$page_elements = (function() {
 

@@ -1468,3 +1468,48 @@ function get_dedalo_version() {
 }//end get_dedalo_version
 
 
+
+/**
+* CHECK_BASIC_SYSTEM
+* @return object $response
+*/
+function check_basic_system() {
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed';
+
+	// basic system files check
+	// langs js
+		# Generate js files with all labels (if not extist current lang file)
+		$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
+		if( !is_dir($folder_path) ) {
+			if(!mkdir($folder_path, 0777,true)) {
+				$response->msg = 'Error on read or create js/lang directory. Permission denied';
+				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+				return $response;
+			}
+			debug_log(__METHOD__." Created dir: $folder_path ", logger::WARNING);
+		}
+		$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
+		foreach ($ar_langs as $lang => $label) {
+			$label_path  = '/common/js/lang/' . $lang . '.js';
+			if (!file_exists(DEDALO_CORE_PATH.$label_path)) {
+				$ar_label = label::get_ar_label($lang); // Get all properties
+				file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ", logger::WARNING);
+			}
+		}
+	// structure css
+		# Generate css structure file (if not extist)
+		$file_path = DEDALO_CORE_PATH.'/common/css/structure.css';
+		if (!file_exists($file_path)) {
+			$build_structure_css_response = (object)css::build_structure_css();
+			debug_log(__METHOD__." Generated structure css file: $file_path ".$build_structure_css_response->msg, logger::WARNING);
+		}
+
+
+	return $response;
+}//end check_basic_system
+
+
