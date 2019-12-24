@@ -1,0 +1,37 @@
+murapa34	murapa32	dd1231	no	si	si	2	murapa	si	[{"dd530":"murapa21"}]	{\r\n    "data_to_be_used": "dato"\r\n}
+murapa35	murapa32	dd1231	no	si	si	3	murapa	si	[{"dd530":"murapa21"}]	\N
+murapa36	murapa32	dd1231	no	si	si	4	murapa	si	[{"dd592":"murapa23"}]	{\r\n    "data_to_be_used": "dato"\r\n}
+murapa37	murapa32	dd1231	no	si	si	5	murapa	si	[{"dd592":"murapa29"}]	{\r\n    "data_to_be_used": "dato"\r\n}
+murapa23	murapa18	dd592	no	si	si	5	murapa	no	[{"dd6":"rsc176"},{"dd339":"rsc20"},{"dd9":"rsc23"},{"dd10":"rsc38"},{"dd1018":"rsc37"}]	\N
+murapa1	dd3	dd17	no	si	si	18	murapa	si	\N	\N
+murapa24	murapa17	dd177	no	si	si	2	murapa	no	\N	\N
+murapa25	murapa17	dd183	no	si	si	3	murapa	si	\N	\N
+murapa15	murapa4	dd347	no	si	si	11	murapa	si	[{"dd1229":"dd600"}]	\N
+murapa27	murapa23	dd91	no	si	si	1	murapa	si	[{"dd9":"rsc23"},{"dd1018":"rsc37"}]	\N
+murapa28	murapa17	dd524	no	si	si	5	murapa	no	[{"dd1747":"murapa19"}]	\N
+murapa29	murapa18	dd592	no	si	si	6	murapa	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd339":"rsc20"},{"dd9":"rsc23"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	\N
+murapa26	murapa17	dd91	no	si	si	4	murapa	no	[{"dd530":"murapa21"},{"dd592":"murapa23"},{"dd592":"murapa29"}]	\N
+murapa30	murapa29	dd91	no	si	si	1	murapa	no	[{"dd749":"rsc29"}]	\N
+murapa2	murapa1	dd18	no	si	si	1	murapa	si	\N	\N
+murapa4	murapa3	dd1259	no	si	si	1	murapa	si	\N	\N
+murapa13	murapa4	dd347	no	si	si	10	murapa	si	[{"dd1229":"hierarchy65"},{"dd6":"on1"}]	\N
+murapa12	murapa4	dd347	no	si	si	9	murapa	si	[{"dd1229":"hierarchy65"},{"dd6":"dc1"}]	\N
+murapa3	murapa2	dd1743	no	si	si	1	murapa	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}
+murapa5	murapa4	dd347	no	si	si	1	murapa	si	[{"dd6":"ww1"},{"dd1229":"dd622"}]	\N
+murapa6	murapa4	dd347	no	si	si	3	murapa	si	[{"dd1229":"rsc264"}]	{\r\n  "check_publication_value": false\r\n}
+murapa7	murapa4	dd347	no	si	si	4	murapa	si	[{"dd1229":"rsc275"}]	\N
+murapa8	murapa4	dd347	no	si	si	5	murapa	si	[{"dd1229":"oh66"}]	\N
+murapa9	murapa4	dd347	no	si	si	6	murapa	si	[{"dd1229":"rsc267"}]	\N
+murapa10	murapa4	dd347	no	si	si	7	murapa	si	[{"dd1229":"hierarchy79"}]	\N
+murapa11	murapa4	dd347	no	si	si	8	murapa	si	[{"dd1229":"hierarchy65"},{"dd6":"ts1"}]	\N
+murapa14	murapa4	dd347	no	si	si	2	murapa	si	[{"dd1229":"dd600"}]	\N
+murapa16	dd351	dd4	no	si	si	4	murapa	si	\N	\N
+murapa17	murapa16	dd6	no	si	si	1	murapa	no	\N	\N
+murapa18	murapa17	dd8	no	si	si	1	murapa	no	\N	\N
+murapa31	murapa4	dd347	no	si	si	12	murapa	si	[{"dd1229":"dd751"}]	\N
+murapa19	murapa18	dd1747	no	si	si	1	murapa	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "10px"\r\n      }\r\n    }\r\n  }\r\n}
+murapa20	murapa18	dd339	no	si	si	2	murapa	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}
+murapa32	murapa4	dd1229	no	si	si	13	murapa	si	[{"dd6":"murapa17"}]	\N
+murapa22	murapa18	dd247	no	si	si	4	murapa	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "40%",\r\n        "height": "9.9em",\r\n        "float": "right"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "height": "90%"\r\n      }\r\n    }\r\n  }\r\n}
+murapa33	murapa32	dd1233	no	si	si	1	murapa	si	[{"dd339":"murapa20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}
+murapa21	murapa18	dd530	no	si	si	3	murapa	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{\r\n  "source": {\r\n    "divisor": " "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}

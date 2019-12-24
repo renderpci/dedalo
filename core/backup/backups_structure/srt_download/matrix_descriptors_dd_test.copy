@@ -1,0 +1,185 @@
+test75	autocomplete hi limit 1	termino	lg-spa
+test76	autocomplete filter by list	termino	lg-spa
+test1	AREA DE PRUEBAS (TESTS) YYYY	termino	lg-spa
+test10	relation parent	termino	lg-spa
+test11	relation model	termino	lg-spa
+test12	CONFIG EXCLUDE COMPONENT	termino	lg-spa
+test13	Nuevo	termino	lg-spa
+test14	date : period	termino	lg-spa
+test15	Portales	termino	lg-spa
+test16	relation related	termino	lg-spa
+test18	Imagen transcripción	termino	lg-spa
+test19	Box elements	termino	lg-spa
+test2	Called from Administration menu virtual section	obs	lg-spa
+test2	Test section	termino	lg-spa
+test21	Otros	termino	lg-spa
+test17	text area para svg	termino	lg-spa
+test20	Filiación TEST	termino	lg-spa
+test24	matrix_test	termino	lg-spa
+test25	Listado	termino	lg-spa
+test26	Portal standar	termino	lg-spa
+test27	radio button	termino	lg-spa
+test28	checkbox	termino	lg-spa
+test29	autocomplete	termino	lg-spa
+test3	Búsqueda	termino	lg-spa
+test30	autocomplete ts	termino	lg-spa
+test32	text area	termino	lg-spa
+test31	geolocation	termino	lg-spa
+test33	autocomplete ts tree	termino	lg-spa
+test34	input text	termino	lg-spa
+test35	Order	termino	lg-spa
+test36	relation children	termino	lg-spa
+test38	Búsqueda	termino	lg-spa
+test39	date : time	termino	lg-spa
+test4	Varios	termino	lg-spa
+test40	Portal mosaic imagen	termino	lg-spa
+test41	view_mosaic	termino	lg-spa
+test42	Portal mosaic video	termino	lg-spa
+test43	view_mosaic	termino	lg-spa
+test44	Portal single line	termino	lg-spa
+test45	view_single_line	termino	lg-spa
+test46	autocomplete hi tree	termino	lg-spa
+test47	autocomplete hi	termino	lg-spa
+test48	Autocomplete	termino	lg-spa
+test49	autocomplete_ts with parents	termino	lg-spa
+test5	filter	termino	lg-spa
+test50	autocomplete_hi with parents	termino	lg-spa
+test51	Mapa de componentes	termino	lg-spa
+test52	select lang	termino	lg-spa
+test54	publication	termino	lg-spa
+test56	select	termino	lg-spa
+test57	test_table	termino	lg-spa
+test58	publication	termino	lg-spa
+test59	Test diffusion element	termino	lg-spa
+test6	date : range	termino	lg-spa
+test60	web_dedalo	termino	lg-spa
+test61	autocomplete	termino	lg-spa
+test62	autocomplete_hi	termino	lg-spa
+test63	Portal informantes	termino	lg-spa
+test65	Test section	termino	lg-eng
+test65	Test section	termino	lg-spa
+test66	List	termino	lg-spa
+test67	Exclude	termino	lg-spa
+test68	component inverse	termino	lg-spa
+test69	Nótese que el nombre de este alias será usado como el nombre de la tabla, ya que incluye una relación a una sección, por lo que se comportará como una tabla de difusión real excepto porque no posee hijos propios.	obs	lg-spa
+test69	grecia	termino	lg-spa
+test7	relation index	termino	lg-spa
+test70	spain	termino	lg-spa
+test71	iri	termino	lg-spa
+test72	input_text multi	termino	lg-spa
+test74	Reference only. Deploy real element when needed	obs	lg-spa
+test74	Import kml tesoros numisdata test	termino	lg-spa
+test8	date : date	termino	lg-spa
+test9	image	termino	lg-spa
+test73		obs	lg-spa
+test73	Input text	termino	lg-spa
+test64	Portal TEST	termino	lg-spa
+test77	calculation	termino	lg-spa
+test78	TEST RADIO BUTTON	termino	lg-spa
+test37	view_single_line	termino	lg-spa
+test55	select	termino	lg-spa
+test22	BOX DESACTIVOS	termino	lg-spa
+test53	svg	termino	lg-spa
+test80	component_autocomplete_hi	termino	lg-spa
+test82	image for svg transcription	termino	lg-spa
+test81	av	termino	lg-spa
+test100	Lista Cris	termino	lg-spa
+test101	Asanas	termino	lg-spa
+test102	Foto	termino	lg-spa
+test110	Buscar	termino	lg-spa
+test111	Id	termino	lg-spa
+test83	AreaLur	termino	lg-spa
+test84	SeccionLur	termino	lg-spa
+test85	GrupoLur	termino	lg-spa
+test86	Lista Lur	termino	lg-spa
+test87	Nuevo	termino	lg-spa
+test88	Borrar	termino	lg-spa
+test89	Buscar	termino	lg-spa
+test90	Proyecto	termino	lg-spa
+test91	Nombre	termino	lg-spa
+test92	Texto largo	termino	lg-spa
+test92	Long text	termino	lg-eng
+test92	Esto es un texto largo	def	lg-spa
+test92	Very long text	def	lg-eng
+test93	Section Cris	termino	lg-spa
+test94	Cris group	termino	lg-spa
+test95	Nuevo	termino	lg-spa
+test96	Borrar	termino	lg-spa
+test97	Buscar	termino	lg-spa
+test98	Proyecto	termino	lg-spa
+test99	Asanas	termino	lg-spa
+test112	Publicación	termino	lg-spa
+test113	Fondo	termino	lg-spa
+test114	Estado	termino	lg-spa
+test115	Fotografías	termino	lg-spa
+test103	Fosas Lur	termino	lg-spa
+test104	Identificación	termino	lg-spa
+test105	Descripción	termino	lg-spa
+test106	Referencias bibliográficas y documentales	termino	lg-spa
+test107	Nuevo	termino	lg-spa
+test108	Borrar	termino	lg-spa
+test109	Listado	termino	lg-spa
+test116	Id anterior	termino	lg-spa
+test117	Código	termino	lg-spa
+test118	Fecha de creación	termino	lg-spa
+test119	Título	termino	lg-spa
+test120	Inicio publicación	termino	lg-spa
+test121	Difuntos	termino	lg-spa
+test122	Proyecto	termino	lg-spa
+test123	Publicaciones	termino	lg-spa
+test124	Desaparecida	termino	lg-spa
+test125	Bando	termino	lg-spa
+test126	Tipo de fosa	termino	lg-spa
+test127	Número de restos	termino	lg-spa
+test128	Categoría de fosas	termino	lg-spa
+test129	Sub categoría	termino	lg-spa
+test130	Municipio	termino	lg-spa
+test131	Info de georeferenciación	termino	lg-spa
+test132	Georeferenciación	termino	lg-spa
+test133	Notas	termino	lg-spa
+test134	Fuente	termino	lg-spa
+test135	Documentación	termino	lg-spa
+test136	Hospital Militar	termino	lg-spa
+test4	Various	termino	lg-eng
+test137	Listado	termino	lg-spa
+test138	view_mosaic	termino	lg-spa
+test139	Number	termino	lg-spa
+test140	email	termino	lg-spa
+test141	iri	termino	lg-spa
+test142	section id	termino	lg-spa
+test143	ip	termino	lg-spa
+test144	radio button	termino	lg-spa
+test146	check box	termino	lg-spa
+test147	select lang	termino	lg-spa
+test148	publication	termino	lg-spa
+test149	portal	termino	lg-spa
+test150	json	termino	lg-spa
+test151	filter	termino	lg-spa
+test152	filter master	termino	lg-spa
+test153	autocomplete	termino	lg-spa
+test154	autocomplete HI	termino	lg-spa
+test155	info	termino	lg-spa
+test156	input text large	termino	lg-spa
+test157	calculation	termino	lg-spa
+test160	input text 2 unique	termino	lg-spa
+test161	text area 2	termino	lg-spa
+test162	input text 4	termino	lg-spa
+test163	input text 5	termino	lg-spa
+test159	input text 1	termino	lg-spa
+test164	input text 6	termino	lg-spa
+test165	input text 7	termino	lg-spa
+test166	input text 8	termino	lg-spa
+test167	input text 9	termino	lg-spa
+test168	input text 10	termino	lg-spa
+test170	input text 11	termino	lg-spa
+test171	input text 12	termino	lg-spa
+test172	Date range	termino	lg-spa
+test173	Date period	termino	lg-spa
+test145	Date default	termino	lg-spa
+test174	Date time	termino	lg-spa
+test175	image	termino	lg-spa
+test158	section group uno	termino	lg-spa
+test169	section group 2 inside 1	termino	lg-spa
+test79	section group 3 NOT READY	termino	lg-spa
+test176	section group 4	termino	lg-spa
+test177	DESACTIVOS	termino	lg-spa

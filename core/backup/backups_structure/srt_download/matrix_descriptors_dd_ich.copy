@@ -1,0 +1,716 @@
+ich183	Projecte	termino	lg-cat
+ich184	Nuevo	termino	lg-spa
+ich132	listado	termino	lg-spa
+ich178	Llistat	termino	lg-cat
+ich144	Eliminar tipología de participación / ejecución	termino	lg-spa
+ich145	Ámbitos del Patrimonio Cultural Inmaterial	termino	lg-spa
+ich168	DIV	termino	lg-spa
+ich170	Otras fechas	termino	lg-spa
+ich29	Imagen identificativa	termino	lg-spa
+ich171	Tipo de calendario	termino	lg-spa
+ich29	Imatge identificativa	termino	lg-cat
+ich171	Calendari	termino	lg-cat
+ich29	Image identificativa de bé.	def	lg-cat
+ich172	Identificación	termino	lg-spa
+ich172	Identificació	termino	lg-cat
+ich61	Categoria de protección administrativa	obs	lg-spa
+ich173	ID	termino	lg-spa
+ich173	ID	termino	lg-cat
+ich174	Calendario	termino	lg-spa
+ich174	Calendari	termino	lg-cat
+ich175	Proyecto	termino	lg-spa
+ich175	Projecte	termino	lg-cat
+ich176	Nuevo	termino	lg-spa
+ich176	Nou	termino	lg-cat
+ich177	Borrar	termino	lg-spa
+ich38	Periodicidad	termino	lg-spa
+ich20	ID	termino	lg-spa
+ich21	DIV	termino	lg-spa
+ich22	Registro	termino	lg-spa
+ich143	Nueva tipología de participación / ejecución	termino	lg-spa
+ich146	Valor de la lista	termino	lg-spa
+ich148	proyecto	termino	lg-spa
+ich147	Ámbitos de proyecto	termino	lg-spa
+ich151	Patrimonio Cultural Inmaterial	termino	lg-spa
+ich152	Cabecera	termino	lg-spa
+ich153	Imagen identificativa	termino	lg-spa
+ich154	Registro	termino	lg-spa
+ich155	Denominación	termino	lg-spa
+ich156	Ámbito	termino	lg-spa
+ich157	Proyecto	termino	lg-spa
+ich158	Localización	termino	lg-spa
+ich159	Patrimonio Inmaterial	termino	lg-spa
+ich160	Ámbito	termino	lg-spa
+ich161	Tipología	termino	lg-spa
+ich162	Proyecto	termino	lg-spa
+ich163	Idioma	termino	lg-spa
+ich164	Localización	termino	lg-spa
+ich165	Protección	termino	lg-spa
+ich2	Identificación	termino	lg-spa
+ich5	Descripción	termino	lg-spa
+ich3	Marco espacial	termino	lg-spa
+ich6	Salvaguarda	termino	lg-spa
+ich4	Marco temporal	termino	lg-spa
+ich7	Documentación asociada	termino	lg-spa
+ich8	Información técnica	termino	lg-spa
+ich9	ID	termino	lg-spa
+ich12	Listado	termino	lg-spa
+ich13	Búsqueda	termino	lg-spa
+ich14	Listado relaciones	termino	lg-spa
+ich15	Nuevo Bien de PCI	termino	lg-spa
+ich16	Eliminar Bien de PCI	termino	lg-spa
+ich17	Ver estadísticas	termino	lg-spa
+ich18	Imprimir bienes	termino	lg-spa
+ich22	Numeración unívoca y correlativa.	def	lg-spa
+ich92	Acta de consentimiento	termino	lg-spa
+ich125	Listado	termino	lg-spa
+ich22	Este campo se utiliza por parte del Ministerio para identificar bienes con el mismo número de registro de distintas comunidades	obs	lg-spa
+ich23	Tipología de Patrimonio	termino	lg-spa
+ich23	Campo de clasificación tipológica patrimonial.	def	lg-spa
+ich24	Ámbito	termino	lg-spa
+ich24	Ámbitos del Plan Nacional en que se inscribe el bien.	def	lg-spa
+ich25	Otra numeración	termino	lg-spa
+ich95	Observaciones	termino	lg-spa
+ich32	Tipologia	termino	lg-cat
+ich37	Descripció de la georeferenciació	termino	lg-cat
+ich25	Número/s de inventario anteriores o numeraciones para compatibilidad de inventarios.	def	lg-spa
+ich25	Numeración interna que identifica otras numeraciones del inventario	obs	lg-spa
+ich26	Proyecto	termino	lg-spa
+ich26	Proyecto de investigación de Patrimonio Inmaterial	def	lg-spa
+ich27	Denominación	termino	lg-spa
+ich27	Denominación oficial del bien	def	lg-spa
+ich28	Otras denominaciones	termino	lg-spa
+ich28	Denominaciones locales o denominación de la comunidad o grupo	def	lg-spa
+ich29	Imagen identificativa del bien.	def	lg-spa
+ich29	Selección de una imagen significativa que sirva de presentación del bien	obs	lg-spa
+ich30	Comunidad	termino	lg-spa
+ich30	Nombre del grupo o comunidad donde se genera el bien	def	lg-spa
+ich38	Sistema cíclico del bien	def	lg-spa
+ich31	Idioma	termino	lg-spa
+ich31	Se recomienda utilizar la nomenclatura y estructura de TLD de la ISO 639-6	obs	lg-spa
+ich128	Tipologies de PCI	termino	lg-cat
+ich31	Idioma utilizado por la comunidad para la realización / ejecución del bien.	def	lg-spa
+ich32	Tipología	termino	lg-spa
+ich32		obs	lg-spa
+ich33	Resumen de la descripción del bien, aproximación general a la descripción.	def	lg-spa
+ich33	Breve descripción - resumen	termino	lg-spa
+ich93	Investigador/es	termino	lg-spa
+ich33	Esta aproximación ha de contener una descripción completa y resumida que pueda utilizarse en diversos usos	obs	lg-spa
+ich34	Localización	termino	lg-spa
+ich73	Fecha en la que se ha declarado oficialmente el bien como elemento protegido	def	lg-spa
+ich67	Numeració anterior	termino	lg-cat
+ich71	Detalle de la situación administrativa del expediente	def	lg-spa
+ich34	Este campo ha de contener el identificador unívoco que referencia a toda la estructura de localización (municipio, provincia, comarca, país), en algunas regiones, comarcas, parroquias...	def	lg-spa
+ich36	Georeferenciación	termino	lg-spa
+ich74	Equip de recerca	termino	lg-cat
+ich36	Coordenadas donde se desarrolla el bien (correspondencia con ubicación en plano).	def	lg-spa
+ich37	Descripción textual del recorrido	def	lg-spa
+ich39	Datos textuales referentes a la periodicidad	def	lg-spa
+ich39	Descripción de la periodicidad	termino	lg-spa
+ich40	Calendario	termino	lg-spa
+ich108	Vídeo	termino	lg-spa
+ich40	Tipo de calendario usado en la datación: solar, lunar, estacional...	def	lg-spa
+ich41	Fecha de inicio	termino	lg-spa
+ich41	Fecha en la que da comienzo el bien.	def	lg-spa
+ich111	Nombre del lugar de ejecución del elemento/proceso concreto.	def	lg-spa
+ich41	El inventario ha de poder recoger fechas absolutas (01/01/2013) y fechas relativas (primera semana de agosto)	obs	lg-spa
+ich42	Fecha de finalización	termino	lg-spa
+ich42	Fecha en que termina el bien	def	lg-spa
+ich79	Viabilidad de los elementos asociados	termino	lg-spa
+ich60	Documentació administrativa	termino	lg-cat
+ich42	El inventario ha de poder recoger fechas absolutas (01/01/2013) y fechas relativas (primera semana de agosto)	obs	lg-spa
+ich43	Descripción general	termino	lg-spa
+ich43	Campo de descripción amplia del bien.	def	lg-spa
+ich44	Orígenes documentados o atribuidos / historia	termino	lg-spa
+ich32	Normalización tipológica a través de tesauro	def	lg-spa
+ich44	Descripción de los orígenes del bien, ya sean documentados, atribuidos, legendarios, etc. incluida la evolución histórica del bien.	def	lg-spa
+ich45	Dedicación	termino	lg-spa
+ich45	Entidad sobrenatural / simbólica a la que se dedica el bien (advocación, patronazgo, personaje o hecho histórico, mitológico, etc.)	def	lg-spa
+ich46	Organización	termino	lg-spa
+ich86	Consentimiento de la comunidad	termino	lg-spa
+ich46	Modelo organizativo para llevar a cabo la ejecución del bien	def	lg-spa
+ich47	Financiación	termino	lg-spa
+ich47	Modelo de financiación para llevar a cabo la ejecución del bien	def	lg-spa
+ich48	Elementos / Procesos	termino	lg-spa
+ich49	Transmisión	termino	lg-spa
+ich50	Medidas de salvaguarda	termino	lg-spa
+ich51	Protección administrativa	termino	lg-spa
+ich52	Valoración y diagnóstico	termino	lg-spa
+ich53	Procedencia del saber	termino	lg-spa
+ich53		obs	lg-spa
+ich53	Descripción de la procedencia del conocimiento sobre el bien	def	lg-spa
+ich54	Modo de transmisión	termino	lg-spa
+ich54	Descripción del procedimiento de transmisión del bien (padres-hijos, maestro-aprendiz...)	def	lg-spa
+ich55	Fórmula de continuidad	termino	lg-spa
+ich177	Esborrar	termino	lg-cat
+ich55	Descripción de las acciones emprendidas para la continuidad del bien	def	lg-spa
+ich56	Situación socioeconómica de la actividad	termino	lg-spa
+ich124	Proyecto	termino	lg-spa
+ich56	Descripción y valoración de la situación del bien desde el punto de vista socioeconómico	def	lg-spa
+ich57	Transformaciones	termino	lg-spa
+ich57	Descripción de las principales transformaciones que ha sufrido o que está experimentando el bien	def	lg-spa
+ich58	Medidas adoptadas por la comunidad	termino	lg-spa
+ich58	Descripción de las principales medidas adoptadas por el grupo o comunidad para la transmisión, protección, realización, continuidad, difusión... del bien	def	lg-spa
+ich59	Protección	termino	lg-spa
+ich26	Projecte	termino	lg-cat
+ich59	Campo de selección de la situación genérica sobre la protección del bien inventariado.	def	lg-spa
+ich59	Marca si el bien ha sido protegido	obs	lg-spa
+ich60	Documentación administrativa	termino	lg-spa
+ich61	TABS	termino	lg-spa
+ich62	Expediente administrativo	termino	lg-spa
+ich63	Informes	termino	lg-spa
+ich63	Informes que se han producido con motivo de la declaración	def	lg-spa
+ich64	Boletín o Diario Oficial	termino	lg-spa
+ich64	Referencias a las publicaciones en boletines o diarios oficiales de los distintos anuncios relacionados con la protección del bien	def	lg-spa
+ich65	Régimen de protección	termino	lg-spa
+ich65	Régimen de protección general aplicable según la categoría o figura.	def	lg-spa
+ich98	Este elemento tendrá que mostrar los tres campos aunque busque solo en uno	obs	lg-spa
+ich98	Participante / Ejecutante	termino	lg-spa
+ich90	Fecha en la que se creó el registro del bien	def	lg-spa
+ich90	Fecha de elaboración	termino	lg-spa
+ich91	Fecha de actualización	termino	lg-spa
+ich91	Fecha en la que se realiza la última modificación de la ficha, actualizando su contenido	def	lg-spa
+ich92	Documentos y actas realizados en la cesión del consentimiento por parte de la comunidad	def	lg-spa
+ich82	Documental	termino	lg-cat
+ich93	Nombre de los miembros del equipo encargado de la investigación que ha participado en la elaboración y cumplimentación de la ficha de inventario	def	lg-spa
+ich94	Responsable	termino	lg-spa
+ich94	persona que se hace cargo del inventario, supervisándolo, aprobando los datos introducidos, o las actualizaciones realizadas	def	lg-spa
+ich109	Tipología	termino	lg-spa
+ich109	Normaliza y agrupa tipológicamente los elementos y procesos. Habla de «qué tipo» de elemento o proceso se trata. Este campo, junto con el nombre del elemento / proceso, ha de identificarlo. Ejemplos de uso: Actividades productivas: fuentes de energía, objetos producidos... Creencias y rituales festivos: procesión, fiesta patronal... Tradición oral: cuento, leyenda... Representaciones y juegos: indumentaria, decorado, juego de pelota, juego de mesa... Manifestaciones musicales: canción, copla, albaes... Formas de alimentación: materias primas, condimentos, .. Formas de sociabilidad: normativa, estructura...	obs	lg-spa
+ich95	Aclaraciones, necesidades o cualquier otro tipo de información que se considere necesaria sobre el bien inventariado	def	lg-spa
+ich96		def	lg-spa
+ich97	Tipo de participación / ejecución	termino	lg-spa
+ich109	Campo de identificación o tipología del elemento o proceso.	def	lg-spa
+ich98	Nombre de la/s persona/s que realiza/n la tarea, elemento o proceso	def	lg-spa
+ich99	Tipo de participación / ejecución	termino	lg-spa
+ich99	Calidad en la que participa / ejecuta	def	lg-spa
+ich100	Elementos y Procesos	termino	lg-spa
+ich101	Elementos y Procesos	termino	lg-spa
+ich110	Descripción del elemento/ proceso	termino	lg-spa
+ich102	Relaciones	termino	lg-spa
+ich103	Listado	termino	lg-spa
+ich104	Búsqueda	termino	lg-spa
+ich105	Eliminar	termino	lg-spa
+ich106	Nombre del elemento / proceso	termino	lg-spa
+ich63	Informes	termino	lg-cat
+ich64	Butlletí o Diari Oficial	termino	lg-cat
+ich65	Règim de protecció	termino	lg-cat
+ich68	Mesures especials	termino	lg-cat
+ich133	Filter	termino	lg-eng
+ich184	Nou	termino	lg-cat
+ich62	Expedient administratiu	termino	lg-cat
+ich69	Situació de l'expedient	termino	lg-cat
+ich70	Número de l'expedient	termino	lg-cat
+ich71	Estat tramitació	termino	lg-cat
+ich72	Tipologia jurídica	termino	lg-cat
+ich73	Data de disposició	termino	lg-cat
+ich137	Type of participation / performance	termino	lg-eng
+ich136	Typology	termino	lg-eng
+ich138	Description	termino	lg-eng
+ich139	ICH typology	termino	lg-eng
+ich140	Project	termino	lg-eng
+ich143	New type of participation / performance	termino	lg-eng
+ich144	Delete	termino	lg-eng
+ich106	Incluye tanto los componentes como los procedimientos para la preparación, elaboración o ejecución, además de los resultados obtenidos. Ejemplos de uso: Actividades productivas: cortar, limar, moler a noria, nombre de la fuente de energía, cerámica... Creencias y rituales festivos: Pasos, entrega de llaves, tratamientos de sanación... Tradición oral: tipos de comunicación empleada, códigos, significados... Representaciones y juegos: primer acto, aparición del santo, nombre de la indumentaria, decorados, pintar en el suelo, se reparten los equipos... Manifestaciones musicales: preparación, primera estrofa, formaciones instrumentales... Formas de alimentación: materias primas, condimentar, preparar, degustar... Formas de sociabilidad: normas, composición, cargos, funciones...	def	lg-spa
+ich107	Imagen	termino	lg-spa
+ich110	Descripción del elemento / proceso.	def	lg-spa
+ich126	Llistat de relacions	termino	lg-cat
+ich178	Listado	termino	lg-spa
+ich110	Esta campo se completa con la información pormenorizada y descriptiva del elemento o proceso identificado en los dos campos anteriores	obs	lg-spa
+ich111	Espacio	termino	lg-spa
+ich111	Actividades productivas: taller, fragua, molino, horno, puesto de venta... Creencias y rituales festivos: calle, plaza, templo... Representaciones y juegos: plaza, teatro, frontón... Formas de alimentación: cocina, corral, comedor, calle...	obs	lg-spa
+ich112	Descripción del espacio	termino	lg-spa
+ich112	Descripción del espacio donde ocurre el bien.	def	lg-spa
+ich112	Esta campo se completa con la información pormenorizada y descriptiva del espacio identificado en el campo anterior	obs	lg-spa
+ich113	Localización	termino	lg-spa
+ich115	Georreferenciación	termino	lg-spa
+ich115	Puntos de georreferenciación espacial.	def	lg-spa
+ich116	Descripción de la georreferenciación	termino	lg-spa
+ich116	Descripción textual de los datos georreferenciados	def	lg-spa
+ich117	Tiempo	termino	lg-spa
+ich117	Tiempo en el que se desarrolla el elemento / proceso concreto. Puede ser absoluto (15 minutos) o relativo (inmediatamente después)	def	lg-spa
+ich117	Ejemplos: F. Alimentación: 1 hora de cocción, Ritual festivo: a las 10 de la mañana A. productiva: tiempo empleado en recitar la oración, 14 minutos de calentamiento en la fragua...	obs	lg-spa
+ich118	Participación / ejecución	termino	lg-spa
+ich118	Persona/s que realiza/n la tarea, elemento o proceso y su tipología de participación / ejecución	def	lg-spa
+ich119	Descripción de la participación / ejecución	termino	lg-spa
+ich119	Descripción del modelo de participación / ejecución	def	lg-spa
+ich120	Otros participantes	termino	lg-spa
+ich83	Informants	termino	lg-cat
+ich120	Personas que, de manera secundaria, ayudan a la ejecución del elemento / proceso	def	lg-spa
+ich121	Análisis	termino	lg-spa
+ich121	Análisis del elemento o proceso	def	lg-spa
+ich122	Proyecto	termino	lg-spa
+ich126	Listado de relaciones	termino	lg-spa
+ich1	Béns	termino	lg-cat
+ich2	Identificació	termino	lg-cat
+ich19	Estat	termino	lg-cat
+ich20	ID	termino	lg-cat
+ich22	Registre	termino	lg-cat
+ich23	Tipologia de Patrimoni	termino	lg-cat
+ich24	Àmbit	termino	lg-cat
+ich25	Altra numeració	termino	lg-cat
+ich21	DIV	termino	lg-cat
+ich27	Denominació	termino	lg-cat
+ich28	Altres denominacions	termino	lg-cat
+ich30	Comunitat	termino	lg-cat
+ich31	Idioma	termino	lg-cat
+ich33	Breu descripció - resum	termino	lg-cat
+ich3	Marc espacial	termino	lg-cat
+ich34	Localització	termino	lg-cat
+ich36	Georeferenciació	termino	lg-cat
+ich103	Llistat	termino	lg-cat
+ich145	Àmbits del Patrimoni Cultural Immaterial	termino	lg-cat
+ich135	Tipus de participació / execució	termino	lg-cat
+ich146	Valor de la llista	termino	lg-cat
+ich147	Àmbits de projecte	termino	lg-cat
+ich148	Projecte	termino	lg-cat
+ich149	Llistat	termino	lg-cat
+ich129	Tipologia de PCI	termino	lg-cat
+ich132	Llistat	termino	lg-cat
+ich133	Projecte	termino	lg-cat
+ich134	Nova tipologia de PCI	termino	lg-cat
+ich131	Esborrar tipologia	termino	lg-cat
+ich130	Tipologia de PCI	termino	lg-cat
+ich136	Tipologia	termino	lg-cat
+ich137	Tipus de participació / execució	termino	lg-cat
+ich10	PCI - IPCE	termino	lg-spa
+ich1	Bienes	termino	lg-spa
+ich185	Borrar	termino	lg-spa
+ich114	{"dato_default":"3", "js":[{"trigger":{"1":["component_common.show(['dd674'])"],"3":["component_common.hide(['dd674'])"]}}]}	obs	lg-spa
+ich127	view_single_line	termino	lg-spa
+ich96	Participación / ejecución	termino	lg-spa
+ich10	PCI - IPCE	termino	lg-cat
+ich107	Imatge	termino	lg-cat
+ich9	ID	termino	lg-cat
+ich142	Listado de registros	termino	lg-spa
+ich166	Estado	termino	lg-spa
+ich166	Estat	termino	lg-cat
+ich142	List	termino	lg-eng
+ich141	Relation list	termino	lg-eng
+ich132	List	termino	lg-eng
+ich167	Listado	termino	lg-spa
+ich19	Estado	termino	lg-spa
+ich149	Listado	termino	lg-spa
+ich111	Espai	termino	lg-cat
+ich112	Descripció de l'espai	termino	lg-cat
+ich135	Type of participation / performance	termino	lg-eng
+ich128	ICH typology	termino	lg-eng
+ich129	ICH typology	termino	lg-eng
+ich130	ICH typology	termino	lg-eng
+ich134	New ICH typology	termino	lg-eng
+ich131	Delete	termino	lg-eng
+ich138	Descripció	termino	lg-cat
+ich139	Tipologia de PCI	termino	lg-cat
+ich12	Llistat	termino	lg-cat
+ich140	Projecte	termino	lg-cat
+ich14	Llistat relacions	termino	lg-cat
+ich141	Llistat de relacions	termino	lg-cat
+ich18	Imprimir béns	termino	lg-cat
+ich143	Nova tipologia de participació / execució	termino	lg-cat
+ich144	Eliminar tipologia de participació / execució	termino	lg-cat
+ich142	Llistat de registres	termino	lg-cat
+ich150	Llistat	termino	lg-cat
+ich37	Descripción de la georeferenciación	termino	lg-spa
+ich54	Manera de transmissió	termino	lg-cat
+ich150	Listado	termino	lg-spa
+ich87	Restriccions a l'ús de dades inventariades	termino	lg-cat
+ich4	Marc temporal	termino	lg-cat
+ich38	Periodicitat	termino	lg-cat
+ich39	Descripció de la periodicitat	termino	lg-cat
+ich40	Calendari	termino	lg-cat
+ich41	Data d'inici	termino	lg-cat
+ich42	Data d'acabament	termino	lg-cat
+ich5	Descripció	termino	lg-cat
+ich43	Descripció general	termino	lg-cat
+ich44	Orígens documentats o atribuïts / història	termino	lg-cat
+ich45	Dedicació	termino	lg-cat
+ich46	Organització	termino	lg-cat
+ich47	Financiació	termino	lg-cat
+ich48	Elements / Processos	termino	lg-cat
+ich6	Salvaguarda	termino	lg-cat
+ich49	Transmissió	termino	lg-cat
+ich53	Procedència del saber	termino	lg-cat
+ich55	Fòrmula de continuïtat	termino	lg-cat
+ich56	Situació socioeconòmica activitat	termino	lg-cat
+ich57	Transformacions	termino	lg-cat
+ich50	Mesures de salvaguarda	termino	lg-cat
+ich58	Mesures adoptades per la comunitat	termino	lg-cat
+ich51	Protecció administrativa	termino	lg-cat
+ich59	Protecció	termino	lg-cat
+ich52	Valoració i diagnòstic	termino	lg-cat
+ich75	Amenaces per a la transmissió	termino	lg-cat
+ich76	Viabilitat segons els participants	termino	lg-cat
+ich77	Viabilitat segons els investigadors	termino	lg-cat
+ich78	Amenaces per a la realització	termino	lg-cat
+ich79	Viabilitat dels elements associats	termino	lg-cat
+ich7	Documentació associada	termino	lg-cat
+ich80	Audiovisual	termino	lg-cat
+ich81	Gràfica	termino	lg-cat
+ich84	Partitura	termino	lg-cat
+ich85	Bibliografia	termino	lg-cat
+ich8	Informació tècnica	termino	lg-cat
+ich86	Consentiment de la comunitat	termino	lg-cat
+ich88	Participació de la comunitat en la recopilació de dades	termino	lg-cat
+ich89	Idioma de les dades del registre	termino	lg-cat
+ich90	Data d'elaboració	termino	lg-cat
+ich92	Acta de consentiment	termino	lg-cat
+ich93	Investigador/s	termino	lg-cat
+ich94	Responsable	termino	lg-cat
+ich95	Observacions	termino	lg-cat
+ich96	Participació / execució	termino	lg-cat
+ich97	Tipus de participació / execució	termino	lg-cat
+ich98	Participants / Executants	termino	lg-cat
+ich99	Tipus de participació / execució	termino	lg-cat
+ich124	Projectes	termino	lg-cat
+ich100	Elements i Processos	termino	lg-cat
+ich101	Elements i Processos	termino	lg-cat
+ich106	Nom de l'element / procés	termino	lg-cat
+ich108	Vídeo	termino	lg-cat
+ich109	Tipologia	termino	lg-cat
+ich110	Descripció de l'element / procés	termino	lg-cat
+ich113	Localització	termino	lg-cat
+ich115	Georeferenciació	termino	lg-cat
+ich116	Descripció de la georeferenciació	termino	lg-cat
+ich117	Temps	termino	lg-cat
+ich118	Participació / Execució	termino	lg-cat
+ich119	Descripció de la participació / execució	termino	lg-cat
+ich120	Altres participants	termino	lg-cat
+ich121	Anàlisi	termino	lg-cat
+ich122	Projecte	termino	lg-cat
+ich102	Relacions	termino	lg-cat
+ich104	Cerca	termino	lg-cat
+ich105	Esborrar	termino	lg-cat
+ich13	Cerca	termino	lg-cat
+ich15	Nou Bé de PCI	termino	lg-cat
+ich114	Patrimoni relacionat	termino	lg-cat
+ich11	Patrimoni relacionat	termino	lg-cat
+ich16	Esborrar Bé de PCI	termino	lg-cat
+ich17	Veure estadístiques	termino	lg-cat
+ich66	Numeració Nacional Registre de BIC	termino	lg-cat
+ich169	view_single_line	termino	lg-spa
+ich10	Intangible cultural heritage - IPCE	termino	lg-eng
+ich179	περιοδικότητα	termino	lg-ell
+ich171	Ημερολόγιο Τύπος	termino	lg-ell
+ich99	Ejemplo: si es un oficio, la categoría laboral (maestro, oficial de primera...), si es una actuación, el papel que representa, si es una fiesta, el perfil de participante: organizador, amazona...\n\n\nOJO EL COMPONENTE DEBE SER FILTRADO POR EL CAMPO, NO POR UN VALOR: ich32\nantiguo: {"filtered_by_field":{"dd508":"119"}}	obs	lg-spa
+ich133	Proyecto	termino	lg-spa
+ich134	Nueva tipología de PCI	termino	lg-spa
+ich135	Tipo de participación / ejecución	termino	lg-spa
+ich136	Tipología	termino	lg-spa
+ich128	Tipologías de PCI	termino	lg-spa
+ich129	Tipología de PCI	termino	lg-spa
+ich130	Tipología de PCI	termino	lg-spa
+ich131	Borrar tipología	termino	lg-spa
+ich137	Tipo de participación / ejecución	termino	lg-spa
+ich138	Descripción	termino	lg-spa
+ich139	Tipología de PCI	termino	lg-spa
+ich140	proyecto	termino	lg-spa
+ich141	Lista de relaciones	termino	lg-spa
+ich66	número asignado por la Subdirección General de Protección del Patrimonio Histórico del Ministerio de Educación, Cultura y Deporte para el registro de los BIC	def	lg-spa
+ich66	Numeración Nacional Registro de BIC	termino	lg-spa
+ich67	Numeración o código ya existente de otras entidades con legislación	def	lg-spa
+ich67	Numeración anterior	termino	lg-spa
+ich68	medidas particulares de protección para cada bien en concreto que algunas legislaciones de comunidades autónomas tienen previsto promulgar.	def	lg-spa
+ich68	Medidas especiales	termino	lg-spa
+ich77	Viabilidad según los investigadores	termino	lg-spa
+ich69	Situación del expediente	termino	lg-spa
+ich69	Refleja el punto en que se encuentran los procedimientos administrativos de los expedientes de protección.	def	lg-spa
+ich70	Número del expediente	termino	lg-spa
+ich70	Número identificativo unívoco asignado al expediente administrativo generado por la entidad que realiza su gestión	def	lg-spa
+ich71	Estado de la tramitación	termino	lg-spa
+ich72	Tipología jurídica	termino	lg-spa
+ich72	Categoría o figura de protección que se le aplica al bien	def	lg-spa
+ich73	Fecha de disposición	termino	lg-spa
+ich74	Equipo de investigación	termino	lg-spa
+ich74	Recoge el nombre de los miembros del equipo encargado de la investigación que ha dado lugar a la información técnica del expediente (de existir), y también del autor/autores del informe que ha motivado la protección del bien	def	lg-spa
+ich75	Amenazas para la transmisión	termino	lg-spa
+ich75	Análisis de los factores que hacen peligrar la transmisión del bien	def	lg-spa
+ich76	Viabilidad según los participantes	termino	lg-spa
+ich76	reflejar la opinión de la comunidad o grupo sobre la viabilidad del bien, sin mediar la opinión de los investigadores.	def	lg-spa
+ich76	Se recogerá cómo ven desde dentro el presente y futuro, y las posibilidades de seguir llevando a cabo el bien	obs	lg-spa
+ich77	Análisis de la viabilidad desde la óptica del investigador	def	lg-spa
+ich77	Una visión externa al bien que puede coincidir, o no, con la de la comunidad	obs	lg-spa
+ich125	Llistat	termino	lg-cat
+ich78	Amenazas para la realización	termino	lg-spa
+ich78	Análisis de cuáles son los factores que constituyen amenazas para que se pueda desarrollar.	def	lg-spa
+ich91	Data d'actualització	termino	lg-cat
+ich79	Análisis desglosado de la viabilidad de los elementos asociados a la realización del bien.	def	lg-spa
+ich80	Audiovisual	termino	lg-spa
+ich80	Referencia de los archivos audiovisuales registrados y analizados del Bien	def	lg-spa
+ich81	Gráfica	termino	lg-spa
+ich81	Referencia de los archivos gráficos registrados y analizados del Bien	def	lg-spa
+ich82	Documental	termino	lg-spa
+ich82	Referencia de los archivos documentales registrados y analizados del Bien	def	lg-spa
+ich84	Partitura	termino	lg-spa
+ich83	Informantes	termino	lg-spa
+ich83	Referencia de los informantes del Bien	def	lg-spa
+ich85	Bibliografía	termino	lg-spa
+ich85	Referencias bibliográficas del Bien	def	lg-spa
+ich86	Forma en que ha expresado el consentimiento la comunidad para hacer públicos los datos del bien contenidos en el inventario	def	lg-spa
+ich87	Restricciones al uso de datos inventariados	termino	lg-spa
+ich87	Particularidades (de existir) asociadas al uso de los datos contenidos en la ficha	def	lg-spa
+ich87	Limitaciones de algún tipo para la visibilidad de los datos facilitados por las comunidades	obs	lg-spa
+ich88	Participación de la comunidad en la recopilación de datos	termino	lg-spa
+ich88	Implicación de la comunidad en el proceso de inventario, recopilación de datos, elaboración de la información, etc.	def	lg-spa
+ich89	Idioma de los datos del registro	termino	lg-spa
+ich89	Idioma en el que se ha elaborado el inventario	def	lg-spa
+ich179	Tipo de periodicidad	termino	lg-spa
+ich179	Tipus de periodicitat	termino	lg-cat
+ich180	Identificación	termino	lg-spa
+ich180	Identificació	termino	lg-cat
+ich181	ID	termino	lg-spa
+ich181	ID	termino	lg-cat
+ich182	Periodicidad	termino	lg-spa
+ich182	Periodicitat	termino	lg-cat
+ich183	Proyecto	termino	lg-spa
+ich185	Esborrar	termino	lg-cat
+ich186	Listado	termino	lg-spa
+ich186	\N	termino	lg-cat
+ich179	Type of periodicity	termino	lg-eng
+ich171	Calendar Type	termino	lg-eng
+ich128	Τύποι Άυλης Πολιτιστικής Κληρονομιάς	termino	lg-ell
+ich135	Τύπος της συμμετοχής / απόδοσης	termino	lg-ell
+ich181	Αναγν	termino	lg-ell
+ich173	Αναγν	termino	lg-ell
+ich180	αναγνώριση	termino	lg-ell
+ich172	αναγνώριση	termino	lg-ell
+ich129	αναγνώριση	termino	lg-ell
+ich136	αναγνώριση	termino	lg-ell
+ich186	λίστα	termino	lg-ell
+ich178	λίστα	termino	lg-ell
+ich132	λίστα	termino	lg-ell
+ich142	λίστα	termino	lg-ell
+ich183	σχέδιο	termino	lg-ell
+ich175	σχέδιο	termino	lg-ell
+ich133	σχέδιο	termino	lg-ell
+ich140	σχέδιο	termino	lg-ell
+ich143	νέος	termino	lg-ell
+ich134	νέος	termino	lg-ell
+ich176	νέος	termino	lg-ell
+ich184	νέος	termino	lg-ell
+ich185	διαγράψετε	termino	lg-ell
+ich177	διαγράψετε	termino	lg-ell
+ich131	διαγράψετε	termino	lg-ell
+ich144	διαγράψετε	termino	lg-ell
+ich182	περιοδικότητα	termino	lg-ell
+ich174	Ημερολόγιο Τύπος	termino	lg-ell
+ich130	Τύποι Άυλης Πολιτιστικής Κληρονομιάς	termino	lg-ell
+ich137	Τύπος της συμμετοχής / απόδοσης	termino	lg-ell
+ich138	περιγραφή	termino	lg-ell
+ich139	Τύποι Άυλης Πολιτιστικής Κληρονομιάς	termino	lg-ell
+ich187	PCI	termino	lg-cat
+ich187	ICH	termino	lg-eng
+ich187	PCI	termino	lg-spa
+ich188	Últimos cambios	termino	lg-spa
+ich188	Latest changes	termino	lg-eng
+ich188	Darrers canvis	termino	lg-cat
+ich188	Τελευταίες αλλαγές	termino	lg-ell
+ich123	Últimos cambios	termino	lg-spa
+ich123	Darrers canvis	termino	lg-cat
+ich123	Latest changes	termino	lg-eng
+ich11	Patrimonio relacionado	termino	lg-spa
+ich199	DIV id	termino	lg-spa
+ich189	Listado	termino	lg-spa
+ich190	Listado	termino	lg-spa
+ich200	DIV imagen	termino	lg-spa
+ich191	Objectiu de l’activitat/procés/tècnica	termino	lg-cat
+ich191	Objetivo de la actividad/proceso/técnica	termino	lg-spa
+ich192	view_mosaic	termino	lg-spa
+ich193	Significació simbòlica / socioeconòmica	termino	lg-cat
+ich193	Significación simbólica / socioeconómica	termino	lg-spa
+ich194	Precisions a significació simbòlica / socioeconòmica	termino	lg-cat
+ich194	Precisiones a significación simbólica / socioeconómica	termino	lg-spa
+ich195	Listado	termino	lg-spa
+ich196	Listado	termino	lg-spa
+ich197	Uso y función	termino	lg-spa
+ich197	Ús i funció	termino	lg-cat
+ich198	Precisiones al uso y función	termino	lg-spa
+ich198	Precisions ús i funció	termino	lg-cat
+ich201	Descripciones	termino	lg-spa
+ich201	Descripcions	termino	lg-cat
+ich35	Lugar	termino	lg-spa
+ich35	Lloc	termino	lg-cat
+ich35	Campo de identificación del lugar concreto: calle, plaza, iglesia, barrio...	def	lg-spa
+ich35	Camp d&#039;idientificació del lloc on el bé es desenvolupa; Carrer, plaça, Esglèsia, Barri, etc.	def	lg-cat
+ich35	Aquest camp parla del lloc concret del bé, al contrari de la localització que té els nomenclàtors oficials.	obs	lg-spa
+ich114	Patrimonio relacionado	termino	lg-spa
+ich114	Relación numérica unívoca al registro de patrimonio material o inmaterial relacionado.	def	lg-spa
+ich114	Relació amb el registre del patrimoni relacionat material o immaterial de cada element / procés	def	lg-cat
+ich145	Ambiti del Patrimonio Culturale Immateriale	termino	lg-ita
+ich146	Valore della lista	termino	lg-ita
+ich147	Ambiti del progetto	termino	lg-ita
+ich148	Progetto	termino	lg-ita
+ich149	Elenco	termino	lg-ita
+ich187	PCI	termino	lg-ita
+ich179	Tipo di frequenza	termino	lg-ita
+ich172	Identificazione	termino	lg-ita
+ich180	Identificazione	termino	lg-ita
+ich182	Frequenza	termino	lg-ita
+ich183	Progetto	termino	lg-ita
+ich175	Progetto	termino	lg-ita
+ich133	Progetto	termino	lg-ita
+ich140	Progetto	termino	lg-ita
+ich184	Nuovo	termino	lg-ita
+ich176	Nuovo	termino	lg-ita
+ich185	Cancellare	termino	lg-ita
+ich177	Cancellare	termino	lg-ita
+ich186	Elenco	termino	lg-ita
+ich178	Elenco	termino	lg-ita
+ich171	Tipo di calendario	termino	lg-ita
+ich174	Calendario	termino	lg-ita
+ich128	Tipologie di PCI	termino	lg-ita
+ich129	Tipologia di PCI	termino	lg-ita
+ich130	Tipologia di PCI	termino	lg-ita
+ich132	Elenco	termino	lg-ita
+ich134	Nuova tipologia di PCI	termino	lg-ita
+ich131	Cancellare tipologia	termino	lg-ita
+ich135	Tipo di partecipazione / esecuzione	termino	lg-ita
+ich136	Tipologia	termino	lg-ita
+ich137	Tipo di partecipazione / esecuzione	termino	lg-ita
+ich138	Descrizione	termino	lg-ita
+ich139	Tipologia di PCI	termino	lg-ita
+ich141	Lista di relazioni	termino	lg-ita
+ich143	Nuova tipologia di partecipazione / esecuzione	termino	lg-ita
+ich144	Eliminare tipologia di partecipazione / esecuzione	termino	lg-ita
+ich142	Elenco dei registri	termino	lg-ita
+ich92	Modulo di consenso	termino	lg-ita
+ich24	Ambito	termino	lg-ita
+ich78	Minacce per la realizzazione	termino	lg-ita
+ich75	Minacce per la trasmissione	termino	lg-ita
+ich121	Analisi	termino	lg-ita
+ich80	Audiovisivo	termino	lg-ita
+ich85	Bibliografia	termino	lg-ita
+ich1	Beni	termino	lg-ita
+ich64	Bollettino o Diario Ufficiale	termino	lg-ita
+ich33	Breve descrizione - riassunto	termino	lg-ita
+ich104	Ricerca	termino	lg-ita
+ich13	Ricerca	termino	lg-ita
+ich40	Calendario	termino	lg-ita
+ich30	Comunità	termino	lg-ita
+ich86	Consenso della comunità	termino	lg-ita
+ich45	Dedica	termino	lg-ita
+ich27	Denominazione	termino	lg-ita
+ich5	Descrizione	termino	lg-ita
+ich37	Descrizione della georeferenziazione	termino	lg-ita
+ich116	Descrizione della georeferenziazione	termino	lg-ita
+ich119	Descrizione della partecipazione / esecuzione	termino	lg-ita
+ich39	Descrizione della periodicità	termino	lg-ita
+ich110	Descrizione dell'elemento / processo	termino	lg-ita
+ich112	Descrizione dello spazio	termino	lg-ita
+ich43	Descrizione generale	termino	lg-ita
+ich201	Descrizioni	termino	lg-ita
+ich60	Documentazione amministrativa	termino	lg-ita
+ich7	Documentazione associata	termino	lg-ita
+ich82	Documentario	termino	lg-ita
+ich48	Elementi / Processi	termino	lg-ita
+ich100	Elementi e processi	termino	lg-ita
+ich101	Elementi e processi	termino	lg-ita
+ich105	Eliminare	termino	lg-ita
+ich16	Eliminare Bien de PCI	termino	lg-ita
+ich74	Gruppo d' indagine	termino	lg-ita
+ich111	Spazio	termino	lg-ita
+ich166	Stato	termino	lg-ita
+ich19	Stato	termino	lg-ita
+ich71	Stato della gestione	termino	lg-ita
+ich62	Fascicolo amministrativo	termino	lg-ita
+ich91	Data dell'aggiornamento	termino	lg-ita
+ich73	Data della disposizione	termino	lg-ita
+ich90	Data dell'elaborazione	termino	lg-ita
+ich42	Data della finalizzazione	termino	lg-ita
+ich41	Data dell'inizio	termino	lg-ita
+ich47	Finanziamento	termino	lg-ita
+ich55	Formula di continuità	termino	lg-ita
+ich36	Georeferenziazione	termino	lg-ita
+ich115	Georeferenziazione	termino	lg-ita
+ich81	Grafica	termino	lg-ita
+ich173	ID	termino	lg-ita
+ich181	ID	termino	lg-ita
+ich20	ID	termino	lg-ita
+ich9	ID	termino	lg-ita
+ich2	Identificazione	termino	lg-ita
+ich31	Lingua	termino	lg-ita
+ich89	Lingua dei dati del registro	termino	lg-ita
+ich107	Immagine	termino	lg-ita
+ich29	Immagine identificativa	termino	lg-ita
+ich18	Stampare beni	termino	lg-ita
+ich8	Informazione tecnica	termino	lg-ita
+ich83	Informatori	termino	lg-ita
+ich63	Rapporti	termino	lg-ita
+ich93	Intervistatore/i	termino	lg-ita
+ich103	Elenco	termino	lg-ita
+ich12	Elenco	termino	lg-ita
+ich125	Elenco	termino	lg-ita
+ich150	Elenco	termino	lg-ita
+ich167	Elenco	termino	lg-ita
+ich189	Elenco	termino	lg-ita
+ich190	Elenco	termino	lg-ita
+ich195	Elenco	termino	lg-ita
+ich196	Elenco	termino	lg-ita
+ich126	Elenco delle relazioni	termino	lg-ita
+ich14	Elenco relazioni	termino	lg-ita
+ich113	Localizzazione	termino	lg-ita
+ich34	Localizzazione	termino	lg-ita
+ich35	Luogo	termino	lg-ita
+ich3	Quadro spaziale	termino	lg-ita
+ich4	Quadro temporale	termino	lg-ita
+ich58	Misure di salvaguardia	termino	lg-ita
+ich50	misure speciali	termino	lg-ita
+ich68	Minore o uguale di	termino	lg-ita
+ich54	Modo di trasmissione	termino	lg-ita
+ich106	Nome dell'elemento /processo	termino	lg-ita
+ich15	Nuovo Bene del PCI	termino	lg-ita
+ich67	Numerazione precedente	termino	lg-ita
+ich66	Numerazione Nazionale Registro de BIC	termino	lg-ita
+ich70	Numero del fascicolo	termino	lg-ita
+ich191	Obiettivo dell'attività / processo / tecnica	termino	lg-ita
+ich95	Osservazioni	termino	lg-ita
+ich46	Organizzazione	termino	lg-ita
+ich44	Origini documentate o attribuite / storia	termino	lg-ita
+ich25	Altra numerazione	termino	lg-ita
+ich28	Altre denominazioni	termino	lg-ita
+ich170	Altre date	termino	lg-ita
+ich120	Altri partecipanti	termino	lg-ita
+ich118	Partecipazione / esecuzione	termino	lg-ita
+ich96	Partecipazione / esecuzione	termino	lg-ita
+ich88	Partecipazione della comunità nella raccolta dei dati	termino	lg-ita
+ich98	Partecipante / Esecutore	termino	lg-ita
+ich84	Partitura	termino	lg-ita
+ich11	Patrimonio connesso	termino	lg-ita
+ich114	Patrimonio connesso	termino	lg-ita
+ich10	PCI - IPCE	termino	lg-ita
+ich38	Periodicità	termino	lg-ita
+ich194	Chiarimenti sul significato simbolico /socioeconomico	termino	lg-ita
+ich198	Chiarimenti sull'uso e funzione	termino	lg-ita
+ich53	Origine del sapere	termino	lg-ita
+ich59	Protezione	termino	lg-ita
+ich51	Protezione amministrativa	termino	lg-ita
+ich122	Progetto	termino	lg-ita
+ich124	Progetto	termino	lg-ita
+ich26	Progetto	termino	lg-ita
+ich65	Regime di protezione	termino	lg-ita
+ich22	Registro	termino	lg-ita
+ich102	Relazioni	termino	lg-ita
+ich94	Responsabile	termino	lg-ita
+ich87	Restrizioni nell'uso dei dati inventariati	termino	lg-ita
+ich6	Salvaguardia	termino	lg-ita
+ich193	Significato simbolico / socioeconomico	termino	lg-ita
+ich69	Situazione del fascicolo	termino	lg-ita
+ich56	Situazione socioeconomica dell'attività	termino	lg-ita
+ich61	TABS	termino	lg-ita
+ich117	Tempo	termino	lg-ita
+ich97	tipo di partecipazione / esecuzione	termino	lg-ita
+ich99	tipo di partecipazione / esecuzione	termino	lg-ita
+ich109	Tipologia	termino	lg-ita
+ich32	Tipologia	termino	lg-ita
+ich23	Tipologia di Patrimonio	termino	lg-ita
+ich72	Tipologia giuridica	termino	lg-ita
+ich57	Trasformazioni	termino	lg-ita
+ich49	Trasmissione	termino	lg-ita
+ich123	Ultime modifiche	termino	lg-ita
+ich188	Ultime modifiche	termino	lg-ita
+ich197	Uso e funzione	termino	lg-ita
+ich52	Valutazione e diagnosi	termino	lg-ita
+ich17	Guarda statistiche	termino	lg-ita
+ich79	Validità degli elementi associati	termino	lg-ita
+ich77	Validità secondo gli investigatori	termino	lg-ita
+ich76	Validità secondo i partecipanti	termino	lg-ita
+ich108	Video	termino	lg-ita

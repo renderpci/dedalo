@@ -24,4 +24,4 @@
 
 ************************************************************************/
 header("HTTP/1.1 301 Moved Permanently");
-header("Location: lib/dedalo/page/");
+header("Location: core/page/");
