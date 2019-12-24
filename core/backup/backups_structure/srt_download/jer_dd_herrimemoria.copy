@@ -1,0 +1,53 @@
+herrimemoria7	herrimemoria6	dd6	no	si	si	1	herrimemoria	no	[{"dd1229":"herrimemoria15"}]	
+herrimemoria8	herrimemoria3	dd347	no	si	si	3	herrimemoria	si	[{"dd1229":"rsc264"}]	
+herrimemoria9	herrimemoria7	dd8	no	si	si	1	herrimemoria	no	\N	
+herrimemoria34	herrimemoria32	dd1231	no	si	si	3	herrimemoria	si	[{"dd9":"rsc86"}]	
+herrimemoria35	herrimemoria32	dd1231	no	si	si	4	herrimemoria	si	[{"dd9":"rsc87"}]	
+herrimemoria36	herrimemoria32	dd1234	no	si	si	5	herrimemoria	si	[{"dd635":"rsc89"}]	
+herrimemoria10	herrimemoria9	dd318	no	si	si	3	herrimemoria	si	\N	
+herrimemoria12	herrimemoria9	dd75	no	si	si	2	herrimemoria	no	\N	{\r\n  "trigger_url": "/tools/tool_diffusion/trigger.tool_diffusion.php",\r\n  "mode": "diffusion_complete_dump"\r\n}
+herrimemoria15	herrimemoria3	dd1229	no	si	si	1	herrimemoria	si	[{"dd6":"herrimemoria7"}]	
+herrimemoria18	herrimemoria17	dd318	no	si	si	1	herrimemoria	si	\N	
+herrimemoria19	herrimemoria17	dd318	no	si	si	2	herrimemoria	si	\N	
+herrimemoria2	herrimemoria51	dd1743	no	si	si	1	herrimemoria	no	[{"dd6":"herrimemoria7"},{"dd6":"oh1"},{"dd6":"rsc170"},{"dd6":"rsc167"},{"dd6":"rsc197"}]	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}
+herrimemoria21	herrimemoria20	dd318	no	si	si	1	herrimemoria	si	\N	
+herrimemoria22	herrimemoria20	dd318	no	si	si	2	herrimemoria	si	\N	
+herrimemoria24	herrimemoria23	dd318	no	si	si	1	herrimemoria	si	\N	
+herrimemoria3	herrimemoria2	dd1259	no	si	si	1	herrimemoria	si	\N	
+herrimemoria30	herrimemoria3	dd347	no	si	si	4	herrimemoria	si	[{"dd1229":"rsc275"}]	
+herrimemoria31	herrimemoria3	dd347	no	si	si	2	herrimemoria	si	[{"dd1229":"oh66"}]	
+herrimemoria32	herrimemoria4	dd440	no	si	si	7	herrimemoria	si	[{"dd592":"oh24"}]	
+herrimemoria33	herrimemoria32	dd1231	no	si	si	2	herrimemoria	si	[{"dd9":"rsc85"}]	
+herrimemoria17	herrimemoria7	dd8	no	si	si	2	herrimemoria	no	\N	
+herrimemoria20	herrimemoria7	dd8	no	si	si	3	herrimemoria	no	\N	
+herrimemoria11	herrimemoria7	dd247	no	si	si	6	herrimemoria	no	\N	{"dato_default":{"1":"2"}}
+herrimemoria13	herrimemoria7	dd91	no	si	si	7	herrimemoria	no	[{"dd57":"herrimemoria45"},{"dd318":"herrimemoria10"}]	
+herrimemoria14	herrimemoria7	dd177	no	si	si	8	herrimemoria	si	\N	
+herrimemoria25	herrimemoria15	dd1231	no	si	si	3	herrimemoria	si	[{"dd318":"herrimemoria18"}]	
+herrimemoria29	herrimemoria15	dd1231	no	si	si	7	herrimemoria	si	[{"dd318":"herrimemoria24"}]	
+herrimemoria16	herrimemoria15	dd1231	no	si	si	2	herrimemoria	si	[{"dd318":"herrimemoria10"}]	
+herrimemoria26	herrimemoria15	dd1231	no	si	si	4	herrimemoria	si	[{"dd318":"herrimemoria19"}]	
+herrimemoria27	herrimemoria15	dd1231	no	si	si	5	herrimemoria	si	[{"dd318":"herrimemoria21"}]	
+herrimemoria28	herrimemoria15	dd1231	no	si	si	6	herrimemoria	si	[{"dd318":"herrimemoria22"}]	
+herrimemoria37	herrimemoria32	dd1229	no	si	si	6	herrimemoria	si	[{"dd592":"rsc88"}]	
+herrimemoria38	herrimemoria37	dd1231	no	si	si	1	herrimemoria	si	[{"dd749":"rsc29"}]	
+herrimemoria39	herrimemoria37	dd1231	no	si	si	2	herrimemoria	si	[{"dd9":"rsc31"}]	
+herrimemoria4	herrimemoria3	dd440	no	si	si	7	herrimemoria	no	[{"dd6":"oh1"}]	
+herrimemoria40	herrimemoria32	dd1233	no	si	si	1	herrimemoria	si	[{"dd57":"rsc97"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+herrimemoria41	herrimemoria4	dd440	no	si	si	6	herrimemoria	si	[{"dd592":"oh25"}]	
+herrimemoria43	herrimemoria41	dd1232	no	si	si	3	herrimemoria	si	[{"dd10":"rsc36"}]	
+herrimemoria45	herrimemoria9	dd339	no	si	si	1	herrimemoria	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "2",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ]\r\n}
+herrimemoria46	herrimemoria4	dd440	no	si	si	5	herrimemoria	si	[{"dd592":"oh17"}]	
+herrimemoria47	herrimemoria46	dd1231	no	si	si	2	herrimemoria	si	[{"dd749":"rsc29"}]	
+herrimemoria48	herrimemoria3	dd79	no	si	si	6	herrimemoria	si	\N	{\r\n  "diffusion": {\r\n    "thesaurus_ar_prefix": [\r\n      "ts"\r\n    ]\r\n  }\r\n}
+herrimemoria49	herrimemoria46	dd1233	no	si	si	1	herrimemoria	si	[{"dd57":"rsc20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+herrimemoria5	herrimemoria3	dd347	no	si	si	5	herrimemoria	si	[{"dd1229":"rsc267"}]	
+herrimemoria50	herrimemoria41	dd1233	no	si	si	1	herrimemoria	si	[{"dd57":"rsc20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+herrimemoria51	herrimemoria1	dd18	no	si	si	2	herrimemoria	si	\N	\N
+herrimemoria6	dd222	dd4	no	si	si	3	herrimemoria	no	\N	
+herrimemoria44	herrimemoria15	dd1233	no	si	si	1	herrimemoria	no	[{"dd57":"herrimemoria45"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+herrimemoria42	herrimemoria15	dd1231	no	si	si	8	herrimemoria	si	[{"dd318":"herrimemoria53"}]	
+herrimemoria23	herrimemoria7	dd8	no	si	si	4	herrimemoria	no	\N	
+herrimemoria52	herrimemoria7	dd8	no	si	si	5	herrimemoria	si	\N	\N
+herrimemoria53	herrimemoria52	dd318	no	si	si	1	herrimemoria	si	\N	\N
+herrimemoria1	dd3	dd17	no	si	si	5	herrimemoria	si	\N	

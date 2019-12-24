@@ -3,6 +3,8 @@
 
 # Ignore configuration files that may contain sensitive information.
 config4*
+config_db*
+config_areas*
 config.php
 server_config_api.php
 json_config.php

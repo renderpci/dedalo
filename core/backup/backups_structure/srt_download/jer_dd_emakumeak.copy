@@ -1,0 +1,132 @@
+emakumeak35	emakumeak32	dd10	no	si	si	3	emakumeak	si	null	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "75%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak36	emakumeak32	dd442	no	si	si	4	emakumeak	no	\N	{\r\n  "source": {\r\n    "mode": "tree",\r\n    "value": 1\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak38	emakumeak24	dd177	no	si	si	4	emakumeak	no	\N	\N
+emakumeak1	dd351	dd4	no	si	si	3	emakumeak	si	\N	\N
+emakumeak13	emakumeak2	dd8	no	si	si	2	emakumeak	no	\N	\N
+emakumeak14	emakumeak13	dd592	no	si	si	1	emakumeak	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd635":"rsc26"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd749":"rsc29"},{"dd1129":"rsc323"}]	\N
+emakumeak15	emakumeak13	dd592	no	si	si	2	emakumeak	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd635":"rsc26"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd749":"rsc29"},{"dd1129":"rsc323"}]	\N
+emakumeak16	emakumeak13	dd10	no	si	si	3	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "75%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak17	emakumeak13	dd442	no	si	si	4	emakumeak	no	\N	{\r\n  "source": {\r\n    "mode": "tree",\r\n    "value": 1\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak96	dd69	dd4	no	si	si	5	emakumeak	si	\N	\N
+emakumeak2	emakumeak1	dd6	no	si	si	1	emakumeak	no	\N	\N
+emakumeak20	emakumeak2	dd177	no	si	si	4	emakumeak	no	\N	\N
+emakumeak21	emakumeak2	dd183	no	si	si	5	emakumeak	no	\N	\N
+emakumeak22	emakumeak14	dd91	no	si	si	1	emakumeak	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N
+emakumeak3	emakumeak2	dd8	no	si	si	1	emakumeak	no	\N	\N
+emakumeak106	emakumeak97	dd177	no	si	si	2	emakumeak	no	\N	\N
+emakumeak4	emakumeak3	dd1747	no	si	si	1	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak11	emakumeak3	dd530	no	si	si	3	emakumeak	no	[{"dd6":"rsc106"},{"dd9":"rsc116"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "42%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak8	emakumeak3	dd43	no	si	si	6	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "12%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak10	emakumeak3	dd530	no	si	si	8	emakumeak	no	[{"dd6":"rsc106"},{"dd9":"rsc116"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "31%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak7	emakumeak3	dd904	no	si	si	9	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "12%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak5	emakumeak3	dd10	no	si	si	10	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "75%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak18	emakumeak3	dd247	no	si	si	11	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak12	emakumeak3	dd442	no	si	si	7	emakumeak	no	\N	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "57%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak103	emakumeak102	dd97	no	si	si	1	emakumeak	si	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "100%",\r\n    "element_height": "160px"\r\n  }\r\n}
+emakumeak107	emakumeak97	dd183	no	si	si	3	emakumeak	no	\N	\N
+emakumeak97	emakumeak96	dd6	no	si	si	1	emakumeak	no	\N	\N
+emakumeak39	emakumeak24	dd183	no	si	si	5	emakumeak	no	\N	\N
+emakumeak40	emakumeak24	dd524	no	si	si	6	emakumeak	si	[{"dd195":"dd196"},{"dd1747":"emakumeak26"},{"dd530":"emakumeak27"},{"dd635":"emakumeak28"},{"dd442":"emakumeak29"},{"dd9":"emakumeak30"}]	\N
+emakumeak41	emakumeak33	dd91	no	si	si	1	emakumeak	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N
+emakumeak98	emakumeak97	dd8	no	si	si	1	emakumeak	no	\N	\N
+emakumeak42	emakumeak34	dd91	no	si	si	1	emakumeak	si	[{"dd6":"rsc176"},{"dd1018":"rsc37"}]	\N
+emakumeak23	emakumeak2	dd524	no	si	si	6	emakumeak	si	[{"dd195":"dd196"},{"dd1747":"emakumeak4"},{"dd530":"emakumeak11"},{"dd57":"emakumeak9"},{"dd635":"emakumeak6"},{"dd442":"emakumeak12"},{"dd530":"emakumeak10"},{"dd904":"emakumeak7"},{"dd10":"emakumeak5"},{"dd10":"emakumeak16"},{"dd442":"emakumeak17"}]	\N
+emakumeak24	emakumeak1	dd6	no	si	si	2	emakumeak	no	\N	\N
+emakumeak25	emakumeak24	dd8	no	si	si	1	emakumeak	si	\N	\N
+emakumeak34	emakumeak32	dd592	no	si	si	2	emakumeak	no	[{"dd6":"rsc176"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd10":"rsc38"},{"dd1018":"rsc37"}]	\N
+emakumeak87	emakumeak78	dd8	no	si	si	8	emakumeak	si	\N	\N
+emakumeak32	emakumeak24	dd8	no	si	si	2	emakumeak	no	\N	\N
+emakumeak33	emakumeak32	dd592	no	si	si	1	emakumeak	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd635":"rsc26"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd749":"rsc29"},{"dd1129":"rsc323"}]	\N
+emakumeak108	emakumeak97	dd91	no	si	si	4	emakumeak	si	[{"dd339":"emakumeak100"},{"dd9":"emakumeak101"},{"dd592":"emakumeak102"},{"dd10":"emakumeak104"},{"dd635":"emakumeak116"}]	\N
+emakumeak109	emakumeak98	dd500	no	si	si	7	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak117	emakumeak110	dd1234	no	si	si	6	emakumeak	si	[{"dd635":"emakumeak116"}]	\N
+emakumeak110	emakumeak46	dd1229	no	si	si	10	emakumeak	si	[{"dd6":"emakumeak97"}]	\N
+emakumeak111	emakumeak110	dd1233	no	si	si	1	emakumeak	si	[{"dd339":"emakumeak100"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+emakumeak112	emakumeak110	dd1231	no	si	si	2	emakumeak	si	[{"dd9":"emakumeak101"}]	\N
+emakumeak46	emakumeak45	dd1259	no	si	si	1	emakumeak	si	\N	\N
+emakumeak26	emakumeak25	dd1747	no	si	si	1	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak47	emakumeak46	dd347	no	si	si	2	emakumeak	si	[{"dd6":"tsgen1"},{"dd1229":"hierarchy65"}]\r\n	\N
+emakumeak27	emakumeak25	dd530	no	si	si	3	emakumeak	no	[{"dd6":"rsc106"},{"dd9":"rsc116"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "42%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak43	dd3	dd17	no	si	si	17	emakumeak	si	\N	\N
+emakumeak84	emakumeak78	dd10	no	si	si	6	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak48	emakumeak3	dd339	no	si	si	2	emakumeak	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "style": {\r\n        "width": "7%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak6	emakumeak3	dd635	no	si	si	5	emakumeak	no	\N	{ "date_mode": "range",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "18%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak44	emakumeak43	dd18	no	si	si	1	emakumeak	si	\N	\N
+emakumeak29	emakumeak25	dd442	no	si	si	4	emakumeak	no	\N	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak28	emakumeak25	dd635	no	si	si	6	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak9	emakumeak3	dd57	no	si	si	4	emakumeak	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "13%"\r\n      }\r\n    },\r\n    ".content_data99": {\r\n      "style": {\r\n        "width": "120px"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak31	emakumeak25	dd247	no	si	si	7	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak30	emakumeak25	dd9	no	si	si	5	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "60%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak49	emakumeak25	dd339	no	si	si	2	emakumeak	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    "style": {\r\n      "width": "7%"\r\n    }\r\n  }\r\n}
+emakumeak86	emakumeak85	dd91	no	si	si	1	emakumeak	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N
+emakumeak50	emakumeak46	dd1229	no	si	si	3	emakumeak	si	[{"dd6":"emakumeak2"}]	\N
+emakumeak113	emakumeak110	dd1231	no	si	si	3	emakumeak	si	[{"dd10":"emakumeak104"}]	\N
+emakumeak56	emakumeak50	dd1235	no	si	si	5	emakumeak	si	[{"dd635":"emakumeak6"}]	{\r\n  "process_dato": "diffusion_sql::split_date_range",\r\n  "process_dato_arguments": {\r\n    "selected_key": 0,\r\n    "selected_date": "end",\r\n    "date_format": "year"\r\n  },\r\n  "varchar": 16\r\n}
+emakumeak63	emakumeak50	dd1235	no	si	si	12	emakumeak	si	[{"dd592":"emakumeak15"}]	{"varchar": 4000}
+emakumeak54	emakumeak50	dd1231	no	si	si	2	emakumeak	si	[{"dd530":"emakumeak11"}]	\N
+emakumeak52	emakumeak46	dd1229	no	si	si	4	emakumeak	si	[{"dd6":"emakumeak24"}]	\N
+emakumeak53	emakumeak52	dd1233	no	si	si	1	emakumeak	si	[{"dd339":"emakumeak49"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+emakumeak67	emakumeak52	dd1231	no	si	si	2	emakumeak	si	[{"dd530":"emakumeak27"}]	\N
+emakumeak68	emakumeak52	dd1235	no	si	si	3	emakumeak	si	[{"dd442":"emakumeak29"}]	{\r\n  "varchar": 1000\r\n}
+emakumeak69	emakumeak52	dd1231	no	si	si	4	emakumeak	si	[{"dd9":"emakumeak30"}]	\N
+emakumeak71	emakumeak52	dd1235	no	si	si	6	emakumeak	si	[{"dd592":"emakumeak33"}]	{\r\n  "varchar": 4000\r\n}
+emakumeak72	emakumeak52	dd1235	no	si	si	7	emakumeak	si	[{"dd592":"emakumeak34"}]	{"varchar":4000}
+emakumeak73	emakumeak52	dd1231	no	si	si	8	emakumeak	si	[{"dd10":"emakumeak35"}]	\N
+emakumeak75	emakumeak52	dd1231	no	si	si	9	emakumeak	si	[{"dd442":"emakumeak36"}]	\N
+emakumeak74	emakumeak52	dd1231	no	si	si	10	emakumeak	si	[{"dd442":"emakumeak36"}]	{\r\n  "process_dato": "diffusion_sql::map_locator_to_terminoID"\r\n}
+emakumeak77	emakumeak76	dd6	no	si	si	1	emakumeak	si	[{"dd626":"dd425"}]	\N
+emakumeak78	emakumeak77	dd8	no	si	si	1	emakumeak	si	\N	\N
+emakumeak81	emakumeak78	dd9	no	si	si	3	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "55%"\r\n      }\r\n    },\r\n    ".css_input_text": {\r\n      "style": {\r\n        "font-size": "16px"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak80	emakumeak78	dd339	no	si	si	2	emakumeak	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "9%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak79	emakumeak78	dd1747	no	si	si	1	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(44, 145, 206, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak82	emakumeak78	dd247	no	si	si	4	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "28%",\r\n        "height": "5em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "2.5em"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak83	emakumeak78	dd10	no	si	si	5	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak85	emakumeak78	dd592	no	si	si	7	emakumeak	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd749":"rsc29"}]	\N
+emakumeak55	emakumeak50	dd1235	no	si	si	4	emakumeak	si	[{"dd635":"emakumeak6"}]	{\r\n  "process_dato": "diffusion_sql::split_date_range",\r\n  "process_dato_arguments": {\r\n    "selected_key": 0,\r\n    "selected_date": "start",\r\n    "date_format": "year"\r\n  },\r\n  "varchar": 16\r\n}
+emakumeak57	emakumeak50	dd1230	no	si	si	6	emakumeak	si	[{"dd43":"emakumeak8"}]	\N
+emakumeak58	emakumeak50	dd1235	no	si	si	7	emakumeak	si	[{"dd442":"emakumeak12"}]	{"varchar":1000}
+emakumeak59	emakumeak50	dd1235	no	si	si	8	emakumeak	si	[{"dd530":"emakumeak10"}]	{"varchar": 1000}
+emakumeak60	emakumeak50	dd1235	no	si	si	9	emakumeak	si	[{"dd904":"emakumeak7"}]	{"varchar": 128}
+emakumeak61	emakumeak50	dd1231	no	si	si	10	emakumeak	si	[{"dd10":"emakumeak5"}]	\N
+emakumeak62	emakumeak50	dd1235	no	si	si	11	emakumeak	si	[{"dd592":"emakumeak14"}]	{\r\n  "varchar": 4000\r\n}
+emakumeak64	emakumeak50	dd1231	no	si	si	13	emakumeak	si	[{"dd442":"emakumeak17"}]	\N
+emakumeak65	emakumeak50	dd1231	no	si	si	14	emakumeak	si	[{"dd442":"emakumeak17"}]	{\r\n  "process_dato": "diffusion_sql::map_locator_to_terminoID"\r\n}
+emakumeak66	emakumeak46	dd347	no	si	si	5	emakumeak	si	[{"dd1229":"rsc264"}]	{\r\n  "check_publication_value": false\r\n}
+emakumeak92	emakumeak91	dd1233	no	si	si	1	emakumeak	si	[{"dd339":"rsc299"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+emakumeak93	emakumeak91	dd1231	no	si	si	2	emakumeak	si	[{"dd9":"rsc116"}]	\N
+emakumeak94	emakumeak50	dd1235	no	si	si	3	emakumeak	si	[{"dd530":"emakumeak11"}]	{\r\n  "varchar": 2000,\r\n  "info": "'data_to_be_used' indicates what value to use to create the field. It may be 'data', 'value' or 'valor_list'",\r\n  "data_to_be_used": "dato"\r\n}
+emakumeak51	emakumeak50	dd1233	no	si	si	1	emakumeak	si	[{"dd339":"emakumeak48"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+emakumeak88	emakumeak46	dd347	no	si	si	1	emakumeak	si	[{"dd6":"ww1"},{"dd440":"dd622"}]	\N
+emakumeak89	emakumeak46	dd347	no	si	si	6	emakumeak	si	[{"dd1229":"dd600"}]	\N
+emakumeak90	emakumeak46	dd347	no	si	si	7	emakumeak	si	[{"dd6":"hierarchy1"},{"dd1229":"hierarchy79"}]	\N
+emakumeak91	emakumeak46	dd1229	no	si	si	8	emakumeak	si	[{"dd6":"rsc106"}]	\N
+emakumeak95	emakumeak46	dd347	no	si	si	9	emakumeak	si	[{"dd1229":"rsc444"}]	
+emakumeak19	emakumeak2	dd91	no	si	si	3	emakumeak	no	[{"dd339":"emakumeak48"},{"dd9":"emakumeak5"},{"dd635":"emakumeak6"},{"dd43":"emakumeak8"},{"dd530":"emakumeak10"},{"dd634":"emakumeak17"},{"dd592":"emakumeak14"}]	{\r\n  "css": {\r\n    ".th_column_emakumeak48": {\r\n      "_info": "publicación",\r\n      "style": {\r\n        "width": "80px"\r\n      }\r\n    },\r\n    ".th_column_emakumeak14": {\r\n      "_info": "imagen",\r\n      "style": {\r\n        "width": "104px"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak37	emakumeak24	dd91	no	si	si	3	emakumeak	no	[{"dd339":"emakumeak49"},{"dd9":"emakumeak30"},{"dd530":"emakumeak27"},{"dd635":"emakumeak28"},{"dd442":"emakumeak29"},{"dd592":"emakumeak34"},{"dd592":"emakumeak33"}]	{\r\n  "css": {\r\n    ".th_column_emakumeak49": {\r\n      "_info": "publicación",\r\n      "style": {\r\n        "width": "80px"\r\n      }\r\n    },\r\n    ".th_column_emakumeak34": {\r\n      "_info": "documento",\r\n      "style": {\r\n        "width": "104px"\r\n      }\r\n    },\r\n    ".th_column_emakumeak33": {\r\n      "_info": "imagen",\r\n      "style": {\r\n        "width": "104px"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak76	hierarchy56	dd440	no	si	si	12	emakumeak	si	\N	\N
+emakumeak114	emakumeak110	dd1235	no	si	si	4	emakumeak	si	[{"dd592":"emakumeak102"}]	{\r\n  "varchar": 4000\r\n}
+emakumeak115	emakumeak110	dd1231	no	si	si	5	emakumeak	si	[{"dd500":"emakumeak109"}]	\N
+emakumeak105	emakumeak98	dd247	no	si	si	8	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak101	emakumeak98	dd9	no	si	si	3	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "32%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak104	emakumeak98	dd10	no	si	si	5	emakumeak	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "240px"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak102	emakumeak98	dd592	no	si	si	6	emakumeak	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd749":"rsc29"}]	{\r\n  "ar_tools_name": {\r\n    "tool_import_files": {\r\n      "target_component": "rsc29",\r\n      "layout_map": [\r\n        "rsc52",\r\n        "rsc31",\r\n        "rsc23"\r\n      ],\r\n      "target_date": "rsc44"\r\n    }\r\n  },\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "240px"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak99	emakumeak98	dd1747	no	si	si	1	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak118	emakumeak46	dd1229	no	si	si	11	emakumeak	si	[{"dd6":"rsc205"}]	\N
+emakumeak119	emakumeak118	dd1233	no	si	si	1	emakumeak	si	[{"dd339":"rsc281"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}
+emakumeak120	emakumeak118	dd1231	no	si	si	2	emakumeak	si	[{"dd9":"rsc140"}]	\N
+emakumeak121	emakumeak118	dd1234	no	si	si	4	emakumeak	si	[{"dd635":"rsc224"}]	\N
+emakumeak122	emakumeak118	dd1231	no	si	si	5	emakumeak	si	[{"dd9":"rsc223"}]	\N
+emakumeak123	emakumeak118	dd1231	no	si	si	6	emakumeak	si	[{"dd530":"rsc139"}]	\N
+emakumeak124	emakumeak118	dd1235	no	si	si	8	emakumeak	si	[{"dd904":"rsc251"}]	{\r\n  "varchar": 300\r\n}
+emakumeak125	emakumeak118	dd1235	no	si	si	3	emakumeak	si	[{"dd9":"rsc222"}]	{\r\n  "varchar": 1024\r\n}
+emakumeak126	emakumeak118	dd1231	no	si	si	9	emakumeak	si	[{"dd9":"rsc144"}]	\N
+emakumeak127	emakumeak118	dd1231	no	si	si	7	emakumeak	si	[{"dd9":"rsc219"}]	\N
+emakumeak128	emakumeak118	dd1235	no	si	si	10	emakumeak	si	[{"dd1018":"rsc209"}]	{\r\n  "varchar": 2048\r\n}
+emakumeak70	emakumeak52	dd1235	no	si	si	5	emakumeak	si	[{"dd635":"emakumeak28"}]	{\r\n  "process_dato": "diffusion_sql::split_date_range",\r\n  "process_dato_arguments": {\r\n    "selected_key": 0,\r\n    "date_format": "year",\r\n    "selected_date": "start"\r\n  },\r\n  "varchar": 16\r\n}
+emakumeak129	emakumeak118	dd1235	no	si	si	11	emakumeak	si	[{"dd749":"rsc228"}]	{\r\n  "vararchar": 2048\r\n}
+emakumeak130	emakumeak118	dd1231	no	si	si	12	emakumeak	si	[{"dd10":"rsc210"}]	\N
+emakumeak131	emakumeak118	dd1231	no	si	si	13	emakumeak	si	[{"dd442":"rsc387"}]	\N
+emakumeak45	emakumeak44	dd1743	no	si	si	1	emakumeak	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  },\r\n  "publication_schema": {\r\n    "image": "image",\r\n    "foto_identificativa": "image",\r\n    "images": "image",\r\n    "project": "project",\r\n    "imagen_identificativa": "image"\r\n  },\r\n  "publication_schema_info": "Use format {table_name.field_name:target_table} or {field_name:target_table} for multiple map"\r\n}
+emakumeak132	emakumeak118	dd1231	no	si	si	14	emakumeak	si	[{"dd442":"rsc387"}]	{\r\n  "process_dato": "diffusion_sql::map_locator_to_terminoID"\r\n}
+emakumeak116	emakumeak98	dd635	no	si	si	4	emakumeak	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+emakumeak100	emakumeak98	dd339	no	si	si	2	emakumeak	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}

@@ -1,0 +1,113 @@
+oh118	oh1	dd581	no	si	si	15	oh	no	\N	\N
+oh112	oh88	dd1229	no	si	si	6	oh	si	[{"dd6":"dd153"}]	\N
+oh113	oh112	dd1235	no	si	si	2	oh	si	[{"dd9":"dd156"}]	{"varchar":600}
+oh50	oh48	dd1056	no	si	si	2	oh	si	[{"dd904":"oh20"}]	
+oh49	oh48	dd1029	no	si	si	1	oh	si	[{"dd247":"oh22"}]	
+oh1	dd323	dd6	no	si	si	1	oh	si	null	
+oh5	oh1	dd8	no	si	si	4	oh	no		
+oh10	oh1	dd177	no	si	si	9	oh	no		
+oh104	oh66	dd1234	no	si	si	8	oh	no	[{"dd635":"oh29"}]	\N
+oh107	oh66	dd1231	no	si	si	10	oh	no	[{"dd592":"oh25"}]	\N
+oh108	oh66	dd1231	no	si	si	9	oh	si	[{"dd592":"oh17"}]	\N
+oh109	oh66	dd1231	no	si	si	11	oh	si	[{"dd592":"oh24"}]	\N
+oh11	oh1	dd183	no	si	si	10	oh	no		
+oh12	oh1	dd1058	no	si	si	11	oh	no		
+oh13	oh1	dd1722	no	si	si	13	oh	no		
+oh2	oh1	dd8	no	si	si	1	oh	no		
+oh15	oh2	dd9	no	si	si	4	oh	no		{\r\n  "SQL_logical_operators": [\r\n    "OR"\r\n  ],\r\n  "SQL_comparison_operators": [\r\n    "="\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_20",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh19	oh2	dd442	no	si	si	10	oh	no		{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh16	oh2	dd9	no	si	si	7	oh	si		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [],\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh17	oh2	dd592	no	si	si	8	oh	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd634":"rsc65"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd530":"rsc52"},{"dd9":"rsc31"},{"dd749":"rsc29"}]	{\r\n  "dragable_connectWith": "oh26",\r\n  "identifying_image": "rsc29",\r\n  "edit_view_DES": "view_single_line",\r\n  "elements_list_mode999": {\r\n    "rsc29": {\r\n      "mode": "edit"\r\n    }\r\n  }\r\n}
+oh18	oh2	dd530	no	si	si	9	oh	no	[{"dd6":"dd898"},{"dd9":"dd900"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh100	oh66	dd1235	no	si	si	2	oh	si	[{"dd9":"oh14"}]	{"varchar":160}
+oh24	oh3	dd592	no	si	si	1	oh	no	[{"dd6":"rsc197"},{"dd339":"rsc279"},{"dd57":"rsc97"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd635":"rsc89"},{"dd635":"rsc282"},{"dd634":"rsc92"},{"dd530":"rsc94"},{"dd592":"rsc88"}]	
+oh25	oh3	dd592	no	si	si	2	oh	no	[{"dd6":"rsc167"},{"dd57":"rsc20"},{"dd846":"rsc19"},{"dd530":"rsc62"},{"dd10":"rsc36"},{"dd722":"rsc35"}]	
+oh27	oh4	dd592	no	si	si	2	oh	no	[{"dd6":"rsc332"},{"dd9":"rsc336"},{"dd592":"rsc337"}]	{\r\n  "elements_list_mode": {\r\n    "rsc336": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "10%"\r\n    },\r\n    "rsc337": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "auto"\r\n    }\r\n  }\r\n}
+oh28	oh5	dd846	no	si	si	3	oh	no	[{"dd10":"oh23"}]	{\r\n  "state": {\r\n    "edit_component": [\r\n      {\r\n        "section_tipo": "dd174",\r\n        "section_id": 1,\r\n        "component_tipo": "dd185"\r\n      }\r\n    ]\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ]\r\n    }\r\n  }\r\n}
+oh29	oh5	dd635	no	si	si	2	oh	no		{ "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_20",\r\n        ".vertical"\r\n      ]\r\n    }\r\n  }\r\n}
+oh3	oh1	dd8	no	si	si	2	oh	no		
+oh30	oh5	dd8	no	si	si	6	oh	no		
+oh31	oh5	dd8	no	si	si	7	oh	no		
+oh33	oh30	dd57	no	si	si	1	oh	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_33",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh34	oh30	dd57	no	si	si	2	oh	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_33",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh35	oh30	dd57	no	si	si	3	oh	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_33",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh4	oh1	dd8	no	si	si	3	oh	no		
+oh41	oh40	dd31	no	si	si	1	oh	si		
+oh42	oh41	dd308	no	si	si	2	oh	si	[{"dd592":"oh17"}]	{\r\n  "portal_list": [\r\n    "rsc29"\r\n  ]\r\n}
+oh43	oh41	dd1041	no	si	si	3	oh	si	[{"dd9":"oh14"}]	
+oh44	oh41	dd1041	no	si	si	4	oh	si	[{"dd247":"oh22"}]	
+oh45	oh41	dd1041	no	si	si	1	oh	si	[{"dd592":"oh25"}]	{\r\n  "portal_list": [\r\n    "rsc35"\r\n  ]\r\n}
+oh46	oh41	dd1041	no	si	si	5	oh	si	[{"dd592":"oh24"}]	{"portal_list":["rsc85","rsc86"]}
+oh47	oh41	dd1041	no	si	si	6	oh	si	[{"dd634":"oh19"}]	
+oh48	dd70	dd1028	no	si	si	1	oh	si	[{"dd6":"oh1"}]	
+oh51	oh48	dd1056	no	si	si	3	oh	si	[{"dd634":"oh19"}]	
+oh52	oh48	dd1029	no	si	si	4	oh	si	[{"dd592":"oh24"}]	{"stats_look_at":["rsc93"]}
+oh53	oh48	dd1029	no	si	si	5	oh	si	[{"dd592":"oh24"}]	{"stats_look_at":["rsc94"]}
+oh54	oh48	dd1056	no	si	si	6	oh	si	[{"dd592":"oh24"}]	{\r\n    "stats_look_at": ["rsc89"],\r\n    "valor_arguments": "year"\r\n}
+oh55	oh6	dd74	no	si	si	1	oh	no	\N	
+oh56	oh24	dd91	no	si	si	1	oh	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd635":"rsc89"}]	
+oh57	oh25	dd91	no	si	si	3	oh	no	[{"dd6":"rsc167"},{"dd722":"rsc35"}]	
+oh58	oh26	dd91	no	si	si	1	oh	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	
+oh38	oh31	dd10	no	si	si	3	oh	si		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50"\r\n      ],\r\n      "style": {\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+oh39	oh31	dd10	no	si	si	4	oh	si		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n         ".vertical",\r\n        ".width_50"\r\n      ]\r\n    }\r\n  }\r\n}
+oh20	oh2	dd904	no	si	si	5	oh	no		{"css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_20",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n}}
+oh21	oh2	dd11	no	si	si	6	oh	no	[{"dd6":"dd889"},{"dd9":"dd891"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "5",\r\n      "section_tipo": "dd889"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_20",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n}\r\n}
+oh23	oh2	dd10	no	si	si	11	oh	si		{\r\n  "SQL_logical_operators": [\r\n    "AND",\r\n    "OR"\r\n  ],\r\n  "SQL_comparison_operators": [\r\n    "LIKE",\r\n    "=",\r\n    "IS NOT NULL",\r\n    "IS NULL"\r\n  ],\r\n  "state": {\r\n    "edit_component": [\r\n      {\r\n        "section_tipo": "dd203",\r\n        "section_id": 0,\r\n        "component_tipo": "dd223"\r\n      }\r\n    ]\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+oh88	oh63	dd1259	no	si	si	1	oh	no	\N	
+oh40	dd15	dd19	no	si	si	1	oh	si	[{"dd6":"oh1"}]	
+oh26	oh4	dd592	no	si	si	1	oh	no	[{"dd6":"rsc170"},{"dd1129":"rsc171"},{"dd57":"rsc20"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	{\r\n  "dragable_connectWith": "oh17",\r\n  "ar_tools_name": {\r\n    "tool_import_files": {\r\n      "target_component": "rsc29",\r\n      "layout_map": [\r\n        "rsc10",\r\n        "rsc252",\r\n        "rsc20"\r\n      ],\r\n      "target_date": "rsc44",\r\n      "target_filename": "rsc398"\r\n    }\r\n  }\r\n}
+oh22	oh2	dd247	no	si	si	12	oh	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".line_top",\r\n        ".vertical",\r\n        ".width_50"\r\n      ],\r\n      "style": {\r\n        "height": "290px"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "initial"\r\n      }\r\n    }\r\n  }\r\n}
+oh36	oh30	dd592	no	si	si	4	oh	no	[{"dd6":"rsc191"},{"dd9":"rsc161"},{"dd635":"rsc163"},{"dd10":"rsc166"},{"dd1018":"rsc165"}]	
+oh59	oh27	dd91	no	si	si	1	oh	no	[{"dd6":"rsc205"},{"dd9":"rsc140"},{"dd9":"rsc139"},{"dd9":"rsc147"}]	
+oh6	oh1	dd440	no	si	si	5	oh	si	null	
+oh60	oh17	dd91	no	si	si	1	oh	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	
+oh64	oh3	dd592	no	si	si	3	oh	no	[{"dd6":"rsc245"},{"dd9":"rsc161"},{"dd635":"rsc163"},{"dd530":"rsc255"},{"dd10":"rsc166"},{"dd1018":"rsc165"}]	
+oh65	oh64	dd91	no	si	si	1	oh	si	[{"dd6":"rsc245"},{"dd1018":"rsc165"}]	
+oh67	oh66	dd1233	no	si	si	1	oh	si	[{"dd57":"oh32"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "yes",\r\n        "2": "no"\r\n    }\r\n}
+oh68	oh66	dd1231	no	si	si	3	oh	si	[{"dd9":"oh16"}]	
+oh69	oh66	dd1231	no	si	si	4	oh	si	[{"dd10":"oh23"}]	
+oh61	oh36	dd91	no	si	si	1	oh	no	[{"dd6":"rsc191"},{"dd1018":"rsc165"}]	
+oh73	oh48	dd1056	no	si	si	7	oh	si	[{"dd247":"oh22"}]	{"stats_look_at":["dd54"]}
+oh74	oh48	dd1056	no	si	si	8	oh	si	[{"dd247":"oh22"}]	{"stats_look_at":["dd106"]}
+oh75	oh48	dd1056	no	si	si	9	oh	si	[{"dd635":"oh29"}]	{\r\n    "valor_arguments": "year"\r\n}
+oh76	oh5	dd530	no	si	si	4	oh	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{\r\n  "DES_filtered_by": {\r\n    "rsc90": [\r\n      {\r\n        "section_id": "4",\r\n        "section_tipo": "dd911"\r\n      }\r\n    ]\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50"\r\n      ],\r\n      "style": {\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+oh77	oh5	dd57	no	si	si	1	oh	no	[{"dd6":"dd839"},{"dd9":"dd841"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
+oh78	oh5	dd530	no	si	si	5	oh	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50"\r\n      ]\r\n    }\r\n  }\r\n}
+oh79	oh1	dd181	no	si	si	12	oh	no	[{"dd10":"oh23"}]	
+oh8	oh1	dd524	no	si	si	7	oh	no	[{"dd195":"dd196"},{"dd1747":"oh62"},{"dd9":"oh14"},{"dd9":"oh16"},{"dd904":"oh20"},{"dd247":"oh22"},{"dd11":"oh21"},{"dd10":"oh23"},{"dd635":"oh29"},{"dd57":"oh32"},{"dd57":"oh33"},{"dd57":"oh34"},{"dd57":"oh35"},{"dd634":"oh19"},{"dd592":"oh24"},{"dd592":"oh25"}]	
+oh82	oh81	dd91	no	si	si	1	oh	no	[{"dd9":"rsc21"},{"dd846":"rsc19"},{"dd9":"rsc23"},{"dd904":"rsc263"},{"dd10":"rsc36"},{"dd52":"rsc244"},{"dd722":"rsc35"}]	
+oh84	oh83	dd91	no	si	si	1	oh	no	[{"dd9":"rsc21"},{"dd846":"rsc19"},{"dd9":"rsc23"},{"dd904":"rsc263"},{"dd10":"rsc36"},{"dd52":"rsc244"},{"dd722":"rsc35"}]	
+oh70	oh66	dd1230	no	si	si	5	oh	si	[{"dd11":"oh21"}]	{"process_dato":"diffusion_sql::map_quality_to_int"}
+oh86	oh85	dd91	no	si	si	1	oh	no	[{"dd9":"rsc21"},{"dd846":"rsc19"},{"dd9":"rsc23"},{"dd904":"rsc263"},{"dd10":"rsc36"},{"dd722":"rsc35"}]	
+oh81	oh80	dd125	no	si	si	1	oh	no	null	{\r\n  "context": {\r\n    "context_name": "section_tool",\r\n    "tool_section_tipo": "oh81",\r\n    "top_tipo": "oh1",\r\n    "target_section_tipo": "rsc167",\r\n    "target_component_tipo": "rsc35",\r\n    "target_tool": "tool_transcription"\r\n  }\r\n}
+oh83	oh80	dd125	no	si	si	2	oh	no		{\r\n  "context": {\r\n    "context_name": "section_tool",\r\n    "tool_section_tipo": "oh83",\r\n    "top_tipo": "oh1",\r\n    "target_section_tipo": "rsc167",\r\n    "target_component_tipo": "rsc36",\r\n    "target_tool": "tool_indexation"\r\n  }\r\n}
+oh85	oh80	dd125	no	si	si	4	oh	no		{\r\n  "context": {\r\n    "context_name": "section_tool",\r\n    "tool_section_tipo": "oh85",\r\n    "top_tipo": "oh1",\r\n    "target_section_tipo": "rsc167",\r\n    "target_component_tipo": "rsc36",\r\n    "target_tool": "tool_lang"\r\n  }\r\n}
+oh62	oh2	dd1747	no	si	si	1	oh	no	null	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+oh71	oh66	dd1231	no	si	si	6	oh	si	[{"dd634":"oh19"}]	{\r\n  "ts_map999999999999": "political_map"\r\n}
+oh72	oh66	dd1235	no	si	si	7	oh	si	[{"dd904":"oh20"}]	{"varchar":160}
+oh89	oh24	dd353	no	si	si	2	oh	si	\N	{\r\n  "source": {\r\n    "mode": "jer_tipo",\r\n    "value": 7\r\n  }\r\n}
+oh90	oh18	dd440	no	si	si	1	oh	si	\N	{\n  "source": {\n    "mode": "jer_tipo",\n    "value": 7\n  }\n}
+oh91	oh17	dd97	no	si	si	2	oh	no	[{"undefined":"rsc170"},{"undefined":"rsc29"}]	\N
+oh92	oh17	dd97	no	si	si	3	oh	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd634":"rsc65"},{"dd530":"rsc52"},{"dd635":"rsc44"}]	
+oh66	oh88	dd1229	no	si	si	1	oh	no	[{"dd6":"oh1"}]	
+oh94	oh25	dd91	no	si	si	1	oh	no	[{"dd6":"rsc167"},{"dd530":"rsc62"}]	\N
+oh96	oh25	dd91	no	si	si	2	oh	no	[{"dd6":"rsc167"},{"dd530":"rsc63"}]	\N
+oh97	oh66	dd1231	no	si	si	12	oh	si	[{"dd592":"oh26"}]	\N
+oh99	oh98	dd91	no	si	si	1	oh	no	[{"dd9":"rsc21"},{"dd846":"rsc19"},{"dd9":"rsc23"},{"dd904":"rsc263"},{"dd10":"rsc36"},{"dd52":"rsc244"},{"dd722":"rsc35"}]	\N
+oh63	dd348	dd1743	no	si	no	1	oh	si	null	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}
+oh9	oh1	dd58	no	si	si	8	oh	no	[{"dd9":"oh14"},{"dd9":"oh16"}]	
+oh110	oh1	dd441	no	si	si	14	oh	no	\N	{\r\n  "default": {\r\n    "code": "oh14"\r\n  }\r\n}
+oh98	oh80	dd125	no	si	si	3	oh	no	\N	{\r\n  "context": {\r\n    "context_name": "section_tool",\r\n    "tool_section_tipo": "oh98",\r\n    "top_tipo": "oh1",\r\n    "target_section_tipo": "rsc167",\r\n    "target_component_tipo": "rsc36",\r\n    "target_tool": "tool_structuration"\r\n  }\r\n}
+oh37	oh31	dd10	no	si	si	1	oh	si		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50"\r\n      ],\r\n      "style": {\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+oh87	oh31	dd52	no	si	no	2	oh	no	\N	{\r\n  "widgets": [\r\n    {\r\n      "widget_name": "media_icons",\r\n      "widget_info": "Create a simple list of media element icons when default quality file exists. Add direct links to process",\r\n      "widget_path": "/oh/widgets",\r\n      "data_source": {\r\n        "oh25": "rsc35"\r\n      },\r\n      "data_source_list": "oh25",\r\n      "transcription": {\r\n        "process_section_tipo": "oh81",\r\n        "component_tipo": "rsc35",\r\n        "filter_id": "rsc175"\r\n      },\r\n      "indexation": {\r\n        "process_section_tipo": "oh83",\r\n        "component_tipo": "rsc36",\r\n        "filter_id": "rsc175"\r\n      },\r\n      "structuration": {\r\n        "process_section_tipo": "oh98",\r\n        "component_tipo": "rsc36",\r\n        "filter_id": "rsc175"\r\n      },\r\n      "translation": {\r\n        "process_section_tipo": "oh85",\r\n        "component_tipo": "rsc36",\r\n        "filter_id": "rsc175"\r\n      }\r\n    },\r\n    {\r\n      "widget_name": "descriptors",\r\n      "widget_info": "Create a simple list of all descriptors associated to current record. Is the sum of all tapes indexation in oh",\r\n      "widget_path": "/oh/widgets",\r\n      "data_source": {\r\n        "oh25": "rsc36"\r\n      }\r\n    }\r\n  ],\r\n  "widgets DISABLED": [\r\n    {\r\n      "widget_name": "av_duration",\r\n      "widget_info": "Create a simple list of all video/audio duration associated to current record.",\r\n      "widget_path": "/oh/widgets",\r\n      "data_source": {\r\n        "oh25": "rsc35"\r\n      }\r\n    }\r\n  ],\r\n  "show_in_modes": [\r\n    "list",\r\n    "edit"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".width_50"\r\n      ]\r\n    }\r\n  }\r\n}
+oh32	oh2	dd339	no	si	si	2	oh	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "2",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "12%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "width": "120px"\r\n      }\r\n    }\r\n  }\r\n}
+oh114	oh112	dd1233	no	si	si	1	oh	si	[{"dd339":"dd40"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}
+oh115	oh36	dd524	no	si	si	2	oh	no	[{"dd195":"dd196"},{"dd1747":"rsc256"},{"dd9":"rsc161"},{"dd10":"rsc166"},{"dd635":"rsc163"},{"dd530":"rsc255"}]	\N
+oh111	oh66	dd1235	no	si	si	13	oh	si	[{"dd247":"oh22"}]	{\r\n  "varchar": 600,\r\n  "process_dato": "diffusion_sql::map_project_to_section_id"\r\n}
+oh80	dd35	dd4	no	si	si	1	oh	si		
+oh93	oh95	dd524	no	si	si	3	oh	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd57":"rsc97"},{"dd57":"rsc93"},{"dd635":"rsc89"},{"dd635":"rsc282"},{"dd530":"rsc94"},{"dd442":"rsc91"},{"dd442":"rsc284"}]	\N
+oh116	oh88	dd347	no	si	si	9	oh	si	[{"dd6":"dc1"},{"dd1229":"hierarchy65"}]	\N
+oh117	oh88	dd347	no	si	si	10	oh	si	[{"dd6":"on1"},{"dd1229":"hierarchy65"}]	\N
+oh14	oh2	dd9	no	si	si	3	oh	no		{\r\n  "SQL_logical_operators": [\r\n    "AND",\r\n    "OR"\r\n  ],\r\n  "SQL_comparison_operators": [\r\n    "LIKE",\r\n    "=",\r\n    "IS NOT NULL",\r\n    "IS NULL"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_20",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+oh95	dd604	dd524	no	si	si	5	oh	no	[{"dd6":"rsc167"},{"dd530":"rsc62"},{"dd530":"rsc63"}]	\N
+oh7	oh1	dd91	no	si	si	6	oh	no	[{"dd57":"oh32"},{"dd846":"oh28"},{"dd52":"oh87"},{"dd9":"oh14"},{"dd9":"oh16"},{"dd592":"oh24"},{"dd247":"oh22"},{"dd904":"oh20"},{"dd634":"oh19"},{"dd592":"oh25"},{"dd592":"oh17"}]	{\r\n  "_info": "Define width and style of columns in this list. <br>Nota: esto crea estilos de tipo: 'wrap_section_records_oh7 .column_oh35' ",\r\n  "css": {\r\n    ".column_oh87": {\r\n      "_info": "Info",\r\n      "style": {\r\n        "background-color": "rgba(224, 224, 224, 0.439)"\r\n      }\r\n    },\r\n    ".column_oh35": {\r\n      "_info": "Transfer document (Acta de cesión)",\r\n      "style": {\r\n        "width": "35px"\r\n      }\r\n    },\r\n    ".column_oh24": {\r\n      "_info": "Informant",\r\n      "style": {\r\n        "width": "100px",\r\n        "overflow": "hidden"\r\n      }\r\n    },\r\n    ".column_oh25": {\r\n      "_info": "Identyfing image column",\r\n      "style": {\r\n        "width": "104px",\r\n        "overflow": "hidden"\r\n      }\r\n    },\r\n    ".column_oh17": {\r\n      "_info": "Posterframe column",\r\n      "style": {\r\n        "width": "104px",\r\n        "overflow": "hidden"\r\n      }\r\n    }\r\n  },\r\n  "elements_list_mode DES": {\r\n    "oh17": {\r\n      "mode": "edit",\r\n      "column_width": "750px"\r\n    }\r\n  }\r\n}

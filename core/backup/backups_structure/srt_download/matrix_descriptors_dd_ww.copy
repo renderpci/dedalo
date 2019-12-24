@@ -1,0 +1,89 @@
+ww2	Web [m]	termino	lg-spa
+ww3	Listado	termino	lg-spa
+ww4	Listado	termino	lg-spa
+ww6	Excluidos	termino	lg-spa
+ww7	Búsqueda	termino	lg-spa
+ww8	Búsqueda	termino	lg-spa
+ww9	Listado tesauro	termino	lg-spa
+ww5	Section map	termino	lg-spa
+ww1	WEB	termino	lg-spa
+ww10	Web	termino	lg-spa
+ww10	Web	termino	lg-eng
+ww10	Web	termino	lg-cat
+ww11	Página	termino	lg-spa
+ww11	Nombre que aparecerá en el menú	def	lg-spa
+ww11	Page	termino	lg-eng
+ww11	Pàgina	termino	lg-cat
+ww11	Name that will appear in the menu	def	lg-eng
+ww11	Nom que apareixerà al menú	def	lg-cat
+ww12	Este campo se utilizará para definir el nombre del la página dentro de la ruta de la web: utilizar el valor "home" para definir la página "home" en la ruta de la web: 'http://www.museodeprehistoria.es/web/home' Tiene que ser compatible con el formato de URI: sin espacios, sin acentos, etc	def	lg-spa
+ww12	Página URI path	termino	lg-spa
+ww12	Page URI path	termino	lg-eng
+ww12	This field will be used to define the name of the page within the web route: use the value "home" to define the "home" page in the web route: 'http://www.museodeprehistoria.es/ web / home 'It has to be compatible with the URI format: no spaces, no accents, etc.	def	lg-eng
+ww12	Aquest camp s'utilitzarà per definir el nom del la pàgina dins de la ruta del web: utilitzar el valor "home" per definir la pàgina "home" a la ruta del web: 'http://www.museodeprehistoria.es/ web / home 'Ha de ser compatible amb el format d'URI: sense espais, sense accents, etc.	def	lg-cat
+ww12	Pàgina URI path	termino	lg-cat
+ww13	Plantilla	termino	lg-spa
+ww13	Plantilla	termino	lg-cat
+ww13	Template	termino	lg-eng
+ww14	Es descriptor	termino	lg-spa
+ww14	It is descriptor	termino	lg-eng
+ww14	És descriptor	termino	lg-cat
+ww15	General	termino	lg-spa
+ww16	Id	termino	lg-spa
+ww17	Publicación	termino	lg-spa
+ww17	Publication	termino	lg-eng
+ww17	Publicació	termino	lg-cat
+ww18	Título	termino	lg-spa
+ww18	Title	termino	lg-eng
+ww18	Títol	termino	lg-cat
+ww19	Projecto	termino	lg-spa
+ww19	Project	termino	lg-eng
+ww19	Projecte	termino	lg-cat
+ww20	Entradilla	termino	lg-spa
+ww20	Entradilla	termino	lg-cat
+ww21	Cuerpo	termino	lg-spa
+ww21	Body	termino	lg-eng
+ww21	Cos	termino	lg-cat
+ww22	Imagen identificativa	termino	lg-spa
+ww22	Identification image	termino	lg-eng
+ww22	Imatge identificativa	termino	lg-cat
+ww23	Listado	termino	lg-spa
+ww24	Relaciones	termino	lg-spa
+ww25	Nuevo	termino	lg-spa
+ww25	New	termino	lg-eng
+ww25	Nou	termino	lg-cat
+ww26	Delete	termino	lg-eng
+ww26	Eliminar	termino	lg-cat
+ww26	Borrar	termino	lg-spa
+ww27	Hijos	termino	lg-spa
+ww27	Fills	termino	lg-cat
+ww27	Childrens	termino	lg-eng
+ww28	Padre	termino	lg-spa
+ww28	Father	termino	lg-eng
+ww28	Pare	termino	lg-cat
+ww20	Abstract	termino	lg-eng
+ww11	Pagina	termino	lg-ita
+ww12	Pagina URI passaggio	termino	lg-ita
+ww13	Modello	termino	lg-ita
+ww14	Descrittore	termino	lg-ita
+ww15	Generale	termino	lg-ita
+ww17	Pubblicazione	termino	lg-ita
+ww18	Titolo	termino	lg-ita
+ww19	Progetto	termino	lg-ita
+ww20	Introduzione	termino	lg-ita
+ww21	Corpo	termino	lg-ita
+ww22	Immagine identificativa	termino	lg-ita
+ww23	Elenco	termino	lg-ita
+ww24	Relazioni	termino	lg-ita
+ww27	Figli	termino	lg-ita
+ww28	Genitore	termino	lg-ita
+ww5	Mappa della sezione	termino	lg-ita
+ww3	Elenco	termino	lg-ita
+ww7	Ricerca	termino	lg-ita
+ww9	Elenco thesaurus	termino	lg-ita
+ww25	Nuovo	termino	lg-ita
+ww26	Cancellare	termino	lg-ita
+ww4	Elenco	termino	lg-ita
+ww6	Esclusi	termino	lg-ita
+ww8	Ricerca	termino	lg-ita
+ww2	Web [m]	termino	lg-ita

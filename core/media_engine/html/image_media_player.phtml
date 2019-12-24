@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Media Player</title>
+<link rel="shortcut icon" href="/favicon.ico" />
+
+<?php echo $css_link_code ?>
+
+<link rel="stylesheet" href="<?php echo DEDALO_CORE_URL ?>/media_engine/css/av_media_player.css" type="text/css" />
+
+<script>
+ // vars
+ var nivel 			= '<?php if(SHOW_DEBUG) print 10 ?>';
+ var dedalo_application_lang	= '<?php echo DEDALO_APPLICATION_LANG ?>' ;
+ var dedalo_data_lang		= '<?php echo DEDALO_DATA_LANG ?>' ;
+ var dedalo_data_nolan		= '<?php echo DEDALO_DATA_NOLAN ?>' ; 
+ var parent			= '<?php #echo $parent ?>' ; 
+ var modo			= '<?php echo $modo ?>' ;
+ var caller_id			= '<?php #echo $caller_id ?>' ;
+ var caller_tipo		= '<?php #echo $caller_tipo ?>' ; 
+ var DEDALO_CORE_URL	= '<?php echo DEDALO_CORE_URL ?>' ;
+</script>
+<?php echo $js_link_code ?>
+
+</head>
+<body>
+<div id="wrap_image_player">
+
+<?php
+	$html = '';
+
+	#echo $img_url;
+
+	$html .= "<img class=\"image_player\" src=\"$img_url\" />";
+	print $html;
+	
+?>
+
+</div>
+</body>
+</html>
+<script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_CORE_URL ?>/component_common/js/component_common.js"></script>

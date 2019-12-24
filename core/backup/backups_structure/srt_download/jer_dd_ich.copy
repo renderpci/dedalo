@@ -1,0 +1,201 @@
+ich190	ich107	dd91	no	si	si	1	ich	si	[{"dd749":"rsc29"}]	\N
+ich196	ich64	dd91	no	si	si	1	ich	no	[{"dd6":"rsc188"},{"dd1018":"rsc165"}]	\N
+ich158	ich152	dd1041	no	si	si	6	ich	si	[{"dd634":"ich34"}]	
+ich159	dd70	dd1028	no	si	si	7	ich	si	[{"dd6":"ich1"}]	
+ich143	ich135	dd177	no	si	si	3	ich	no	\N	
+ich144	ich135	dd183	no	si	si	4	ich	no	\N	
+ich100	ich10	dd6	no	si	si	2	ich	no	\N	
+ich140	ich136	dd247	no	si	si	1	ich	no	\N	
+ich1	ich10	dd6	no	si	si	1	ich	no	\N	
+ich106	ich199	dd9	no	si	si	3	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich157	ich152	dd1041	no	si	si	5	ich	si	[{"dd247":"ich26"}]	
+ich101	ich100	dd8	no	si	si	1	ich	no	\N	
+ich103	ich100	dd91	no	si	si	5	ich	no	[{"dd9":"ich106"},{"dd9":"ich109"},{"dd10":"ich110"},{"dd592":"ich107"},{"dd592":"ich108"}]	
+ich104	ich100	dd524	no	si	si	6	ich	no	\N	
+ich105	ich100	dd183	no	si	si	7	ich	no	\N	
+ich124	ich97	dd247	no	si	si	3	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}
+ich125	ich96	dd91	no	si	si	2	ich	si	[{"dd530":"ich98"},{"dd530":"ich99"}]	
+ich126	ich96	dd58	no	si	si	3	ich	si	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd9":"rsc87"}]	
+ich129	ich128	dd8	no	si	si	1	ich	no	\N	
+ich130	ich129	dd9	no	si	si	1	ich	si	\N	
+ich131	ich128	dd183	no	si	si	6	ich	no	\N	
+ich132	ich128	dd91	no	si	si	2	ich	si	[{"dd9":"ich130"}]	
+ich133	ich128	dd247	no	si	si	3	ich	no	\N	
+ich134	ich128	dd177	no	si	si	4	ich	no	\N	
+ich137	ich136	dd9	no	si	si	1	ich	si	\N	
+ich138	ich136	dd10	no	si	si	1	ich	si	\N	
+ich139	ich136	dd530	no	si	si	1	ich	no	[{"dd6":"ich128"},{"dd9":"ich130"}]	
+ich146	ich145	dd8	no	si	si	1	ich	no	\N	
+ich147	ich146	dd9	no	si	si	1	ich	si	\N	
+ich148	ich145	dd247	no	si	si	1	ich	no	\N	
+ich149	ich145	dd91	no	si	si	1	ich	no	[{"dd9":"ich147"}]	
+ich150	ich29	dd91	no	si	si	1	ich	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	
+ich152	ich151	dd31	no	si	si	1	ich	si	\N	
+ich153	ich152	dd1041	no	si	si	1	ich	si	[{"dd592":"ich29"}]	{"portal_list":["rsc29"]}
+ich154	ich152	dd1041	no	si	si	2	ich	si	[{"dd9":"ich22"}]	
+ich155	ich152	dd1041	no	si	si	3	ich	si	[{"dd9":"ich27"}]	
+ich156	ich152	dd1041	no	si	si	4	ich	si	[{"dd11":"ich24"}]	
+ich151	dd15	dd19	no	si	si	4	ich	si	[{"dd6":"ich1"}]	
+ich123	ich100	dd581	no	si	si	3	ich	no	\N	
+ich122	ich199	dd247	no	si	si	6	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich127	ich85	dd97	no	si	si	1	ich	no	[{"dd6":"rsc332"},{"dd530":"rsc368"},{"dd9":"rsc336"},{"dd9":"rsc369"}]	
+ich13	ich1	dd524	no	si	si	9	ich	no	[{"dd9":"ich22"},{"dd9":"ich23"},{"dd11":"ich24"},{"dd9":"ich25"},{"dd247":"ich26"},{"dd9":"ich27"},{"dd904":"ich31"},{"dd530":"ich32"},{"dd634":"ich34"},{"dd9":"ich38"},{"dd9":"ich41"},{"dd9":"ich42"},{"dd10":"ich43"},{"dd10":"ich45"},{"dd9":"ich86"},{"dd195":"dd196"}]	
+ich14	ich1	dd58	no	si	si	10	ich	no	[{"dd9":"ich22"},{"dd9":"ich27"}]	
+ich15	ich1	dd177	no	si	si	11	ich	si	\N	
+ich160	ich159	dd1029	no	si	si	1	ich	si	[{"dd11":"ich24"}]	
+ich161	ich159	dd1029	no	si	si	2	ich	si	[{"dd530":"ich32"}]	
+ich162	ich159	dd1056	no	si	si	3	ich	si	[{"dd247":"ich26"}]	
+ich163	ich159	dd1029	no	si	si	4	ich	si	[{"dd904":"ich31"}]	
+ich164	ich159	dd1056	no	si	si	5	ich	si	[{"dd634":"ich34"}]	
+ich165	ich159	dd1029	no	si	si	7	ich	si	[{"dd57":"ich59"}]	
+ich167	ich80	dd91	no	si	si	1	ich	si	[{"dd6":"rsc167"},{"dd722":"rsc35"}]	
+ich169	ich118	dd97	no	si	si	1	ich	si	[{"dd6":"ich96"},{"dd530":"ich98"},{"dd530":"ich99"}]	\N
+ich172	ich171	dd8	no	si	si	1	ich	no	\N	\N
+ich173	ich172	dd1747	no	si	si	1	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+ich174	ich172	dd9	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich175	ich171	dd247	no	si	si	2	ich	no	\N	\N
+ich176	ich171	dd177	no	si	si	3	ich	no	\N	\N
+ich177	ich171	dd183	no	si	si	4	ich	no	\N	\N
+ich178	ich171	dd91	no	si	si	5	ich	no	[{"dd9":"ich174"}]	\N
+ich180	ich179	dd8	no	si	si	1	ich	no	\N	\N
+ich181	ich180	dd1747	no	si	si	1	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+ich182	ich180	dd9	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich183	ich179	dd247	no	si	si	2	ich	no	\N	\N
+ich184	ich179	dd177	no	si	si	3	ich	no	\N	\N
+ich185	ich179	dd183	no	si	si	4	ich	no	\N	\N
+ich186	ich179	dd91	no	si	si	5	ich	si	[{"dd9":"ich182"}]	\N
+ich19	ich8	dd846	no	si	si	8	ich	no	[{"dd10":"ich33"},{"dd10":"ich37"},{"dd10":"ich39"},{"dd10":"ich43"},{"dd10":"ich44"},{"dd10":"ich45"},{"dd10":"ich46"},{"dd10":"ich47"},{"dd10":"ich75"},{"dd10":"ich76"},{"dd10":"ich77"},{"dd10":"ich78"},{"dd10":"ich79"},{"dd10":"ich53"},{"dd10":"ich54"},{"dd10":"ich55"}]	{\r\n  "state": {\r\n    "edit_component": [\r\n      {\r\n        "section_tipo": "dd174",\r\n        "section_id": 1,\r\n        "component_tipo": "dd185"\r\n      }\r\n    ]\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich21	ich4	dd143	no	si	si	1	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_section_group_div": {\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich166	ich200	dd846	no	si	si	1	ich	si	[{"dd10":"ich110"},{"dd10":"ich112"},{"dd10":"ich116"},{"dd10":"ich119"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich89	ich8	dd904	no	si	si	2	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}
+ich90	ich8	dd635	no	si	si	3	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich22	ich168	dd9	no	si	si	2	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "34%"\r\n      }\r\n    }\r\n  }\r\n}
+ich25	ich168	dd9	no	si	si	3	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
+ich23	ich168	dd9	no	si	si	4	ich	no	\N	{\r\n  "dato_default": "PCI",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}
+ich24	ich168	dd11	no	si	si	5	ich	no	[{"dd6":"ich145"},{"dd9":"ich147"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "80%"\r\n      }\r\n    }\r\n  }\r\n}
+ich27	ich168	dd9	no	si	si	7	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich28	ich168	dd9	no	si	si	8	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich168	ich2	dd143	no	si	si	1	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_section_group_div": {\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich17	ich1	dd1058	no	si	si	13	ich	no	\N	
+ich2	ich1	dd8	no	si	si	1	ich	no	\N	
+ich18	ich1	dd1722	no	si	si	14	ich	no	\N	
+ich38	ich21	dd11	no	si	si	2	ich	no	[{"dd6":"ich179"},{"dd9":"ich182"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich40	ich21	dd11	no	si	si	1	ich	no	[{"dd6":"ich171"},{"dd9":"ich174"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich41	ich21	dd635	no	si	si	3	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich42	ich21	dd635	no	si	si	4	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich49	ich61	dd711	no	si	si	1	ich	no	\N	
+ich50	ich61	dd711	no	si	si	2	ich	no	\N	
+ich51	ich61	dd711	no	si	si	3	ich	no	\N	
+ich52	ich61	dd711	no	si	si	4	ich	no	\N	
+ich53	ich49	dd10	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich54	ich49	dd10	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich55	ich49	dd10	no	si	si	3	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich56	ich49	dd10	no	si	si	4	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich57	ich49	dd10	no	si	si	5	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich58	ich50	dd10	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich33	ich2	dd10	no	si	si	3	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear":"left"\r\n      }\r\n    }\r\n  }\r\n}
+ich48	ich5	dd592	no	si	si	7	ich	no	[{"dd6":"ich100"},{"dd9":"ich106"},{"dd9":"ich109"},{"dd10":"ich110"},{"dd9":"ich111"},{"dd9":"ich117"},{"dd592":"ich107"},{"dd592":"ich108"}]	{\r\n  "css": {\r\n    ".portal_section .table_row": {\r\n      "style": {\r\n        "flex-wrap": "wrap"\r\n      }\r\n    }\r\n  }\r\n}
+ich46	ich5	dd10	no	si	si	8	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich47	ich5	dd10	no	si	si	9	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich44	ich5	dd10	no	si	si	3	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%","clear":"left"\r\n      }\r\n    }\r\n  }\r\n}
+ich39	ich4	dd10	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich9	ich199	dd1747	no	si	si	1	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "16%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+ich3	ich1	dd8	no	si	si	2	ich	no	\N	
+ich4	ich1	dd8	no	si	si	3	ich	no	\N	
+ich5	ich1	dd8	no	si	si	4	ich	no	\N	
+ich43	ich5	dd10	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich45	ich5	dd10	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich63	ich60	dd592	no	si	si	5	ich	no	[{"dd6":"rsc185"},{"dd9":"rsc161"},{"dd635":"rsc163"},{"dd10":"rsc166"},{"dd1018":"rsc165"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich64	ich60	dd592	no	si	si	6	ich	no	[{"dd6":"rsc188"},{"dd9":"rsc161"},{"dd635":"rsc163"},{"dd10":"rsc166"},{"dd1018":"rsc165"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich65	ich60	dd9	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich66	ich60	dd9	no	si	si	2	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}
+ich67	ich60	dd9	no	si	si	3	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich68	ich60	dd1017	no	si	si	4	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich69	ich62	dd9	no	si	si	1	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich70	ich62	dd9	no	si	si	2	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}
+ich71	ich62	dd9	no	si	si	3	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich72	ich62	dd9	no	si	si	4	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich73	ich62	dd635	no	si	si	6	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich75	ich52	dd10	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich76	ich52	dd10	no	si	si	3	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich77	ich52	dd10	no	si	si	4	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich78	ich52	dd10	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich79	ich52	dd10	no	si	si	5	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich80	ich7	dd592	no	si	si	1	ich	no	[{"dd6":"rsc167"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd635":"rsc26"},{"dd10":"rsc36"},{"dd722":"rsc35"}]	
+ich81	ich7	dd592	no	si	si	2	ich	no	[{"dd6":"rsc170"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd11":"rsc25"},{"dd635":"rsc26"},{"dd9":"rsc31"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	
+ich82	ich7	dd592	no	si	si	3	ich	no	[{"dd6":"rsc176"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd11":"rsc25"},{"dd10":"rsc38"},{"dd1018":"rsc37"}]	
+ich83	ich7	dd592	no	si	si	4	ich	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd9":"rsc87"},{"dd634":"rsc91"},{"dd530":"rsc94"},{"dd530":"rsc96"},{"dd592":"rsc88"}]	
+ich86	ich8	dd9	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}
+ich87	ich8	dd10	no	si	si	9	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear":"left"\r\n      }\r\n    }\r\n  }\r\n}
+ich88	ich8	dd10	no	si	si	10	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich7	ich1	dd8	no	si	si	6	ich	no	\N	
+ich8	ich1	dd8	no	si	si	7	ich	no	\N	
+ich74	ich62	dd530	no	si	si	5	ich	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd530":"rsc94"},{"dd592":"rsc88"}]	{\r\n  "source": {\r\n    "divisor": ", "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
+ich61	ich6	dd709	no	si	si	1	ich	no	\N	
+ich60	ich51	dd8	no	si	si	2	ich	no	\N	
+ich6	ich1	dd8	no	si	si	5	ich	no	\N	
+ich62	ich51	dd8	no	si	si	3	ich	no	\N	
+ich84	ich7	dd592	no	si	si	5	ich	no	[{"dd6":"rsc179"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd138":"rsc39"},{"dd749":"rsc43"},{"dd722":"rsc42"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich91	ich8	dd635	no	si	si	4	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich92	ich8	dd592	no	si	si	7	ich	no	[{"dd6":"rsc191"},{"dd9":"rsc161"},{"dd635":"rsc163"},{"dd1018":"rsc165"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich95	ich8	dd10	no	si	si	11	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich96	ich10	dd6	no	si	si	3	ich	no	\N	
+ich97	ich96	dd8	no	si	si	1	ich	no	\N	
+ich99	ich97	dd530	no	si	si	2	ich	no	[{"dd6":"ich135"},{"dd9":"ich137"}]	{\r\n  "info": "El valor de ich32 es indirecto. Se calcula en base a un componente remoto con los datos del id_path",\r\n  "filtered_by_field_value": {\r\n    "ich139": "ich32"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
+ich94	ich8	dd530	no	si	si	6	ich	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{\r\n  "source": {\r\n    "divisor": ", "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+ich16	ich1	dd183	no	si	si	12	ich	no	\N	
+ich200	ich101	dd143	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_section_group_div": {\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich201	ich100	dd8	no	si	si	2	ich	si	\N	\N
+ich102	ich100	dd58	no	si	si	4	ich	no	[{"dd9":"ich106"},{"dd9":"ich109"}]	
+ich135	ich187	dd6	no	si	si	4	ich	no	[{"dd626":"dd22"}]	
+ich192	ich29	dd97	no	si	si	2	ich	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "50%",\r\n    "element_height": "185px"\r\n  }\r\n}
+ich12	ich1	dd91	no	si	si	8	ich	no	[{"dd9":"ich22"},{"dd11":"ich24"},{"dd9":"ich27"},{"dd530":"ich32"},{"dd10":"ich33"},{"dd592":"ich29"},{"dd592":"ich80"}]	
+ich199	ich101	dd143	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_section_group_div": {\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich188	ich1	dd581	no	si	si	15	ich	si	\N	\N
+ich10	dd323	dd4	no	si	si	2	ich	no	\N	
+ich145	dd137	dd6	no	si	si	4	ich	no	[{"dd626":"dd963"}]	
+ich187	dd68	dd4	no	si	si	4	ich	no	\N	\N
+ich179	ich187	dd6	no	si	si	1	ich	no	\N	\N
+ich171	ich187	dd6	no	si	si	2	ich	no	\N	\N
+ich128	ich187	dd6	no	si	si	3	ich	no	[{"dd626":"dd22"}]	
+ich20	ich168	dd1747	no	si	si	1	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "16%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+ich31	ich168	dd904	no	si	si	6	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}
+ich26	ich2	dd247	no	si	si	4	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".line_top",\r\n        ".vertical",\r\n        ".width_50"\r\n      ],\r\n      "style": {\r\n        "height": "150px"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "max-height": "initial"\r\n      }\r\n    }\r\n  }\r\n}
+ich30	ich168	dd530	no	si	si	9	ich	no	[{"dd6":"rsc106"},{"dd9":"rsc116"},{"dd9":"rsc118"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich93	ich8	dd530	no	si	si	5	ich	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd9":"rsc87"},{"dd530":"rsc94"},{"dd9":"rsc101"},{"dd227":"rsc102"},{"dd592":"rsc88"}]	{\r\n  "source": {\r\n    "divisor": ", "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}
+ich98	ich97	dd530	no	si	si	1	ich	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd9":"rsc87"}]	{\r\n  "source": {\r\n    "divisor": ", "\r\n  },\r\n  "filtered_by": {\r\n    "rsc90": [\r\n      {\r\n        "section_id": "2",\r\n        "section_tipo": "dd911"\r\n      }\r\n    ]\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
+ich194	ich5	dd10	no	si	si	6	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich107	ich200	dd592	no	si	si	2	ich	no	[{"dd6":"rsc170"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical", ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".portal_table_wraper": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "min-height": "100px",\r\n        "max-height": "150px"\r\n      }\r\n    },\r\n    ".table_rows_list": {\r\n      "style": {\r\n        "width": "99%"\r\n      }\r\n    }\r\n  }\r\n}
+ich108	ich200	dd592	no	si	si	3	ich	no	[{"dd6":"rsc167"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd10":"rsc36"},{"dd722":"rsc35"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical", ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".portal_table_wraper": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "min-height": "100px",\r\n        "max-height": "150px"\r\n      }\r\n    },\r\n    ".table_rows_list": {\r\n      "style": {\r\n        "width": "99%"\r\n      }\r\n    }\r\n  }\r\n}
+ich193	ich5	dd10	no	si	si	5	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+ich115	ich201	dd66	no	si	si	7	ich	no	[{"dd10":"ich116"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "300px"\r\n      }\r\n    },\r\n    ".map_inputs": {\r\n      "style": {\r\n        "width": "80%"\r\n      }\r\n    }\r\n  }\r\n}
+ich114	ich201	dd1017	no	si	si	13	ich	no	null	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "20em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "height": "16em"\r\n      }\r\n    },\r\n    ".css_input_text_large": {\r\n      "style": {\r\n        "min-height": "16em"\r\n      }\r\n    }\r\n  }\r\n}
+ich112	ich201	dd10	no	si	si	3	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}
+ich113	ich201	dd442	no	si	si	5	ich	no	[{"dd66":"ich115"}]	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich111	ich201	dd10	no	si	si	4	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich189	ich108	dd91	no	si	si	1	ich	si	[{"dd722":"rsc35"}]	\N
+ich29	ich2	dd592	no	si	si	2	ich	no	[{"dd6":"rsc170"},{"dd9":"rsc23"},{"dd635":"rsc26"},{"dd9":"rsc31"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	{\r\n  "dragable_connectWith": "ich81",\r\n  "ar_tools_name": {\r\n    "tool_import_files": {\r\n      "target_component": "rsc29",\r\n      "layout_map": [\r\n        "rsc52",\r\n        "rsc31",\r\n        "rsc23"\r\n      ],\r\n      "target_date": "rsc44"\r\n    }\r\n  },\r\n  "edit_view": "view_mosaic",\r\n  "portal_link_open": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    },\r\n    ".mosaic_ul": {\r\n      "style": {\r\n        "overflow": "auto",\r\n        "height": "185px"\r\n      }\r\n    },\r\n    ".mosaic_li": {\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+ich195	ich63	\N	no	si	si	1	ich	\N	[{"dd6":"rsc185"},{"dd1018":"rsc165"}]	\N
+ich197	ich199	dd442	no	si	si	4	ich	no	\N	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      1\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich198	ich199	dd1017	no	si	si	5	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "8em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "height": "4em"\r\n      }\r\n    },\r\n    ".css_input_text_large": {\r\n      "style": {\r\n        "min-height": "4em"\r\n      }\r\n    }\r\n  }\r\n}
+ich34	ich3	dd442	no	si	si	2	ich	no	[{"dd66":"ich36"}]	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich36	ich3	dd66	no	si	si	4	ich	no	[{"dd10":"ich37"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}
+ich37	ich3	dd10	no	si	si	1	ich	si	[{"dd66":"ich36"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}
+ich35	ich3	dd1017	no	si	si	3	ich	no	null	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "15em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "height": "11em"\r\n      }\r\n    },\r\n    ".css_input_text_large": {\r\n      "style": {\r\n        "min-height": "11em"\r\n      }\r\n    }\r\n  }\r\n}
+ich170	ich21	dd1017	no	si	si	5	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%",\r\n        "height": "11em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "height": "7em"\r\n      }\r\n    },\r\n    ".css_input_text_large": {\r\n      "style": {\r\n        "min-height": "7em"\r\n      }\r\n    }\r\n  }\r\n}
+ich11	ich5	dd1017	no	si	si	4	ich	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "20em"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "height": "16em"\r\n      }\r\n    },\r\n    ".css_input_text_large": {\r\n      "style": {\r\n        "min-height": "16em"\r\n      }\r\n    }\r\n  }\r\n}
+ich110	ich201	dd10	no	si	si	1	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+ich117	ich201	dd10	no	si	si	2	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich118	ich201	dd592	no	si	si	8	ich	no	[{"dd6":"ich96"},{"dd530":"ich98"},{"dd530":"ich99"}]	{\r\n  "edit_view": "view_single_line",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear": "left"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  }\r\n}
+ich191	ich201	dd10	no	si	si	11	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich116	ich201	dd10	no	si	si	6	ich	si	[{"dd66":"ich115"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich120	ich201	dd530	no	si	si	9	ich	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd9":"rsc87"}]	{\r\n  "source": {\r\n    "divisor": ", "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich119	ich201	dd10	no	si	si	10	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+ich121	ich201	dd10	no	si	si	12	ich	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}
+ich85	ich7	dd592	no	si	si	6	ich	no	[{"dd6":"rsc332"},{"dd530":"rsc368"},{"dd9":"rsc336"},{"dd9":"rsc369"}]	{\r\n  "elements_list_mode": {\r\n    "rsc336": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "15%"\r\n    },\r\n    "rsc369": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "15%"\r\n    },\r\n    "rsc368": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "70%"\r\n    }\r\n  },\r\n  "edit_view": "view_single_line",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    },\r\n    ".section_id_number": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  },\r\n  "portal_link_open": false\r\n}
+ich136	ich135	dd8	no	si	si	1	ich	no	\N	
+ich141	ich135	dd58	no	si	si	2	ich	si	[{"dd9":"ich137"},{"dd10":"ich138"},{"dd530":"ich139"}]	
+ich142	ich135	dd91	no	si	si	5	ich	no	[{"dd530":"ich139"},{"dd9":"ich137"},{"dd10":"ich138"}]	
+ich59	ich51	dd57	no	si	si	1	ich	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "2",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "js": [\r\n      {\r\n      "type": "trigger",\r\n      "value": {},\r\n      "action": "component_common.hide_section_group",\r\n      "arguments": [\r\n        "ich60",\r\n        "ich62"\r\n      ]\r\n    },\r\n    {\r\n      "type": "trigger",\r\n      "value": {\r\n        "section_id": "1",\r\n        "section_tipo": "dd64",\r\n        "type": "dd151",\r\n        "from_component_tipo": "ich59"\r\n      },\r\n      "action": "component_common.show_section_group",\r\n      "arguments": [\r\n        "ich60",\r\n        "ich62"\r\n      ]\r\n    },\r\n    {\r\n      "type": "trigger",\r\n      "value": {\r\n        "section_id": "2",\r\n        "section_tipo": "dd64",\r\n        "type": "dd151",\r\n        "from_component_tipo": "ich59"\r\n      },\r\n      "action": "component_common.hide_section_group",\r\n      "arguments": [\r\n        "ich60",\r\n        "ich62"\r\n      ]\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+ich32	ich168	dd442	no	si	si	10	ich	no	[{"dd6":"ich128"},{"dd9":"ich130"}]	{\r\n  "source": {\r\n    "mode": "tree",\r\n    "hierarchy_types": [\r\n      1\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
+ich109	ich199	dd442	no	si	si	2	ich	no	\N	{\r\n  "source": {\r\n    "mode": "tree",\r\n    "hierarchy_types": [\r\n      1\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "84%"\r\n      }\r\n    }\r\n  }\r\n}

@@ -1,0 +1,50 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	# ELEMENTOS
+	
+	print '<div class="div_ip_list">';
+		
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch(true) {
+			
+		case $permissions===0	:
+				$html_content .= '';
+				break;
+					
+		case ($permissions>=1)	:
+			
+				$html_content .= "<span class=\"css_span_dato list_ip_dato\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= ">";
+				$html_content .= $dato;
+				$html_content .= "</span>";
+
+				# GEOIP FLAGS : geoip_info
+				if (isset($geoip_info) && is_object($geoip_info)) {
+					
+					#$html_content .= "<span class=\"city_span\">$geoip_info->city</span>" ;
+					$html_content .= '<a href="'.$geoiptoolURL.'" target="_blank">';
+					# Flag (http://cdn.whatismyipaddress.com/images/flags/mx.png)
+					$flag_url 	= DEDALO_CORE_URL.'/themes/default/flags/'.$geoip_info->code.'.gif';
+					$title 		= $geoip_info->continent .' '. $geoip_info->country .' '. $geoip_info->region_name;
+					$html_content .= '<img src="'.$flag_url.'" class="flag_img" title="'.$title.'" />'; 
+					$html_content .= '</a>';
+				}
+				break;
+	}	
+
+	
+	# PRINT HTML	
+	print $html_content;
+
+
+	print '</div><!-- /div_ip_list -->';
+	
+	
+?>
