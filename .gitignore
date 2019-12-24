@@ -6,6 +6,8 @@ config4*
 config_db*
 config_areas*
 config.php
+config_private
+config.json
 server_config_api.php
 json_config.php
 
