@@ -1,0 +1,10 @@
+{
+  "name": "vexabc",
+  "version": "0.2.0",
+  "dependencies": {
+    "underscore": "1.5.2",
+    "jquery": "1.10.2",
+    "bootstrap": "3.0.2",
+    "qunit": "1.12"
+  }
+}
