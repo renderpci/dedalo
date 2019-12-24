@@ -66,8 +66,8 @@
 
 
 	# IMPORT SCRIPT MUPREVA IMAGENES ASOCIADAS 
-	require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
-	require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
+	require_once( DEDALO_CONFIG_PATH.'/config.php');
+	require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 
 	# Login check
 		if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");

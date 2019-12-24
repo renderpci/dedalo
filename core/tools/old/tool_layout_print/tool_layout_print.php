@@ -17,7 +17,7 @@
 	# ADITIONAL_CSS
 		$file_extra_css = DEDALO_EXTRAS_PATH .'/'. DEDALO_ENTITY . '/css/layout_print.css';
 		if (file_exists($file_extra_css)) {
-			css::$ar_url[] = DEDALO_LIB_BASE_URL .'/extras/'. DEDALO_ENTITY . '/css/layout_print.css';
+			css::$ar_url[] = DEDALO_CORE_URL .'/extras/'. DEDALO_ENTITY . '/css/layout_print.css';
 		}
 	
 
@@ -33,8 +33,8 @@
 				case 'list': # List of available templates
 
 					// Aditional css / js 
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+						css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+						js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 					
 					// Templates list 
 
@@ -82,7 +82,7 @@
 
 					// Build html
 						ob_start();
-						include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_list.phtml' );
+						include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_list.phtml' );
 						$html_list = ob_get_clean();
 
 					break;
@@ -100,13 +100,13 @@
 
 
 					# Aditional css / js
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
+					css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+					css::$ar_url[] = DEDALO_CORE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
 					
 					js::$ar_url[] = TEXT_EDITOR_URL_JS;
-					#js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_layout/js/component_layout.js";
-					js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
-					js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/tool_layout_edit.js";						
+					#js::$ar_url[] = DEDALO_CORE_URL."/component_layout/js/component_layout.js";
+					js::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+					js::$ar_url[] = DEDALO_CORE_URL."/tools/tool_layout_print/js/tool_layout_edit.js";						
 					
 					// Section current search (Like oh1)
 						if(SHOW_DEBUG) {
@@ -230,7 +230,7 @@
 					
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_edit.phtml' );
+					include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_edit.phtml' );
 					$html_edit = ob_get_clean();	
 					break;
 
@@ -247,11 +247,11 @@
 
 
 					# Aditional css / js
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_render.css";
+					css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+					css::$ar_url[] = DEDALO_CORE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
+					css::$ar_url[] = DEDALO_CORE_URL."/tools/tool_layout_print/css/tool_layout_render.css";
 					
-					js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+					js::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 					
 					#
@@ -351,8 +351,8 @@
 						$footer_html = "<div class=\"pagination_info\">". sprintf( label::get_label('number_page_of_total_pages'), "<span class=\"var_pdf_page\">0</span>", "<span class=\"var_pdf_topage\">0</span>"). "</div>";
 						$request_options = new stdClass();
 							$request_options->page_html  = $footer_html;	//$result->footer_html;tool_layout_print/css/tool_layout_render.css?15102909
-							$request_options->css_links  = css::build_tag( 'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_render.css" );
-							$request_options->js_links   = js::build_tag(  'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js" );									
+							$request_options->css_links  = css::build_tag( 'http://'.DEDALO_HOST.DEDALO_CORE_URL."/tools/tool_layout_print/css/tool_layout_render.css" );
+							$request_options->js_links   = js::build_tag(  'http://'.DEDALO_HOST.DEDALO_CORE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js" );									
 						$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
 						$footer_html_file_name = 'footer.html';
 						file_put_contents($pages_html_temp.'/'.$footer_html_file_name, $current_page_complete);
@@ -371,7 +371,7 @@
 
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_render.phtml' );
+					include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_render.phtml' );
 					$html_render = ob_get_clean();	
 					break;
 
@@ -387,7 +387,7 @@
 
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' .get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' .get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

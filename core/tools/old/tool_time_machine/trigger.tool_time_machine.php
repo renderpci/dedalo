@@ -1,7 +1,7 @@
 <?php
 $start_time=microtime(1);
 #$TOP_TIPO = 'rsc170';
-include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 

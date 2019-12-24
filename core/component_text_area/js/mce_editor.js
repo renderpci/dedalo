@@ -36,7 +36,7 @@ var mce_editor = new function() {
 			}
 
 		let text_area_wrapper	= component_common.get_wrapper_from_element(text_area_component) // Use let (reasignable)
-		let	cssFile				= DEDALO_LIB_BASE_URL + '/component_text_area/css/' + 'mce_editor_default.css?' + page_globals.dedalo_version
+		let	cssFile				= DEDALO_CORE_URL + '/component_text_area/css/' + 'mce_editor_default.css?' + page_globals.dedalo_version
 		let	editor_height		= parseInt(window.getComputedStyle(text_area_wrapper).height)-60; //126
 		
 		if(!editor_height) {
@@ -106,13 +106,13 @@ var mce_editor = new function() {
 					}else{
 						current_toolbar  = "bold italic undo redo searchreplace pastetext code fullscreen | button_note button_person | button_save"
 					}
-					//cssFile 		 = DEDALO_LIB_BASE_URL + '/component_text_area/css/' + 'mce_editor_tool_transcription.css?' + page_globals.dedalo_version
+					//cssFile 		 = DEDALO_CORE_URL + '/component_text_area/css/' + 'mce_editor_tool_transcription.css?' + page_globals.dedalo_version
 					editor_height 	 = 597 -70								
 					break;
 			/* tool_structuration Not use text editor
 			case 'tool_structuration':
 					current_toolbar  = "bold italic undo redo searchreplace pastetext code fullscreen | button_note button_reference | button_save"
-					cssFile 		 = DEDALO_LIB_BASE_URL + '/component_text_area/css/' + 'mce_editor_tool_transcription.css?' + page_globals.dedalo_version
+					cssFile 		 = DEDALO_CORE_URL + '/component_text_area/css/' + 'mce_editor_tool_transcription.css?' + page_globals.dedalo_version
 					editor_height 	 = 597 -70					
 					break;*/
 			case 'tool_lang':

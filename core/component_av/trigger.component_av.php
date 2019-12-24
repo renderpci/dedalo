@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( dirname(dirname(__FILE__)).'/config/config.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 
@@ -32,7 +32,7 @@ function get_video_streams_info($json_data) {
 		}
 
 	# Ffmpeg functions
-	require_once(DEDALO_LIB_BASE_PATH.'/media_engine/class.Ffmpeg.php');
+	require_once(DEDALO_CORE_PATH.'/media_engine/class.Ffmpeg.php');
 
 	# get_media_streams from av file
 	$media_streams = Ffmpeg::get_media_streams($video_path);

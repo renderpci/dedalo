@@ -132,7 +132,7 @@
 				$html_row .= "</div>";
 			}
 				/*		
-				$url = DEDALO_LIB_BASE_URL . "/main/?m=tool_indexation&t={$diffusion_obj->tipo}&section_tipo={$section_tipo}&parent={$parent}&top_tipo={$section_top_tipo}&top_id={$section_top_id}&tag_id={$tag_id}";
+				$url = DEDALO_CORE_URL . "/main/?m=tool_indexation&t={$diffusion_obj->tipo}&section_tipo={$section_tipo}&parent={$parent}&top_tipo={$section_top_tipo}&top_id={$section_top_id}&tag_id={$tag_id}";
 				$html_row .= "<a href=\"$url\" target=\"_blank\" class=\"tag_id\"
 				data-parent=\"$parent\"
 				data-section_tipo=\"$section_tipo\"
@@ -155,16 +155,16 @@
 
 					# Indexation link
 					if ($type===DEDALO_RELATION_TYPE_STRUCT_TIPO) {
-						$url = DEDALO_LIB_BASE_URL."/main/?m=tool_structuration&t=$diffusion_obj->tipo&section_tipo=$section_tipo&parent=$parent&top_tipo=$section_top_tipo&top_id=$section_top_id&tag_id=$tag_id";
+						$url = DEDALO_CORE_URL."/main/?m=tool_structuration&t=$diffusion_obj->tipo&section_tipo=$section_tipo&parent=$parent&top_tipo=$section_top_tipo&top_id=$section_top_id&tag_id=$tag_id";
 						$html_row .= "<a href=\"$url\" class=\"icon_bs tool_structuration_icon link button_structuration\" target=\"_blank\" title=\"".label::get_label('tool_structuration')."\"></a>";				
 					}else{
-						$url = DEDALO_LIB_BASE_URL."/main/?m=tool_indexation&t=$diffusion_obj->tipo&section_tipo=$section_tipo&parent=$parent&top_tipo=$section_top_tipo&top_id=$section_top_id&tag_id=$tag_id";
+						$url = DEDALO_CORE_URL."/main/?m=tool_indexation&t=$diffusion_obj->tipo&section_tipo=$section_tipo&parent=$parent&top_tipo=$section_top_tipo&top_id=$section_top_id&tag_id=$tag_id";
 						$html_row .= "<a href=\"$url\" class=\"icon_bs tool_indexation_icon link button_indexation\" target=\"_blank\" title=\"".label::get_label('tool_indexation')."\"></a>";				
 					}
 					
 					# Transcription link
 					$related_tipo 	= $diffusion_obj->columns['related_tipo'];
-					$url = DEDALO_LIB_BASE_URL."/main/?m=tool_transcription&t=$related_tipo&section_tipo=$section_tipo&parent=$parent&context_name=component_av&tag_id=$tag_id&top_tipo=$section_top_tipo&top_id=$section_top_id"; 
+					$url = DEDALO_CORE_URL."/main/?m=tool_transcription&t=$related_tipo&section_tipo=$section_tipo&parent=$parent&context_name=component_av&tag_id=$tag_id&top_tipo=$section_top_tipo&top_id=$section_top_id"; 
 					$html_row .= "<a href=\"$url\" class=\"icon_bs tool_transcription_icon link button_indexation_av\" target=\"_blank\" title=\"".label::get_label('tool_transcription')."\"></a>";
 
 					# Video player link
@@ -172,7 +172,7 @@
 					$quality 		= DEDALO_AV_QUALITY_DEFAULT;
 					$tcin_secs 		= isset($diffusion_obj->columns['tcin_secs'])  ? $diffusion_obj->columns['tcin_secs']  : null;
 					$tcout_secs 	= isset($diffusion_obj->columns['tcout_secs']) ? $diffusion_obj->columns['tcout_secs'] : null;	// Like vbegin=287&vend=318 tcout_secs
-					$url = DEDALO_LIB_BASE_URL."/media_engine/av_media_player.php?reelID=$reelID&quality=$quality&top_tipo=$section_top_tipo&top_id=$section_top_id&section_tipo=$section_tipo&vbegin=$tcin_secs&vend=$tcout_secs"; 
+					$url = DEDALO_CORE_URL."/media_engine/av_media_player.php?reelID=$reelID&quality=$quality&top_tipo=$section_top_tipo&top_id=$section_top_id&section_tipo=$section_tipo&vbegin=$tcin_secs&vend=$tcout_secs"; 
 					$html_row .= "<a href=\"$url\" class=\"icon_bs av_video_icon link\" target=\"_blank\" title=\"".label::get_label('fragmento')."\"></a>";
 
 					# Share custom link					

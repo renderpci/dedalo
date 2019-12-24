@@ -19,7 +19,7 @@ var dedalo_upload = new function() {
 
 	this.msg_div = null
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + "/tools/tool_common/trigger.tool_common.php"
+	this.url_trigger = DEDALO_CORE_URL + "/tools/tool_common/trigger.tool_common.php"
 
 	/**
 	* BUILD_UPLOAD_FORM

@@ -45,7 +45,7 @@
 
 	#
 	# DEVELOPMENT 2	- SEARCH2
-		js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/search/js/search2.js';
+		js::$ar_url[]  = DEDALO_CORE_URL . '/search/js/search2.js';
 
 		
 

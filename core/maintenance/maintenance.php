@@ -23,8 +23,8 @@
 
 		
 		# CURRENT CSS / JS MAIN FILES
-		css::$ar_url[] = DEDALO_LIB_BASE_URL."/$cwd/css/".$cwd.".css";
-		#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$cwd/js/".$cwd.".js";
+		css::$ar_url[] = DEDALO_CORE_URL."/$cwd/css/".$cwd.".css";
+		#js::$ar_url[]  = DEDALO_CORE_URL."/$cwd/js/".$cwd.".js";
 
 
 		# JAVASCRIPT LINKS
@@ -35,7 +35,7 @@
 		
 
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. $cwd . '/html/' . $cwd . '.phtml' );
+		include ( DEDALO_CORE_PATH .'/'. $cwd . '/html/' . $cwd . '.phtml' );
 		$html = ob_get_clean();
 
 		#$html = html_page::get_html( $html );

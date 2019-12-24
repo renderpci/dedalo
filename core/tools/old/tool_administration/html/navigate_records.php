@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 /**
 * NAVIGATE RECORDS
 *
@@ -95,7 +95,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php'
 		const ar_records 		= <?php echo json_encode($ar_section_id) ?>;
 		const n_records			= ar_records.length;
 		const section_tipo 		= '<?php echo $section_tipo ?>';
-		const url_base 			= '<?php echo DEDALO_LIB_BASE_URL ?>' + '/main/';		
+		const url_base 			= '<?php echo DEDALO_CORE_URL ?>' + '/main/';		
 		var current_key 		= 0;
 		var enable_navigation   = true;
 		

@@ -1,8 +1,8 @@
 <?php
-#require_once( dirname(dirname(__FILE__)) .'/config/config.php');
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.Accessors.php');
-require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
-require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.OptimizeTC.php');
+#require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once(DEDALO_CORE_PATH . '/common/class.Accessors.php');
+require_once(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+require_once(DEDALO_CORE_PATH . '/media_engine/class.OptimizeTC.php');
 
 	
 define('JWPLAYER_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jwplayer/jwplayer.js');
@@ -13,14 +13,14 @@ define('JWPLAYER_URL_SWF'		, DEDALO_ROOT_WEB . '/lib/jwplayer/player_dedalo.swf'
 define('JWPLAYER_URL_SKIN'		, DEDALO_ROOT_WEB . '/lib/jwplayer/beelden/beelden.xml');
 define('JWPLAYER_CAPTIONATOR_JS', DEDALO_ROOT_WEB . '/lib/captionator/captionator-min.js');
 
-define('PLAYER_SUBTITLES_JS'	, DEDALO_LIB_BASE_URL . '/media_engine/js/player_subtitles.js');
-define('PLAYER_SUBTITLES_CSS'	, DEDALO_LIB_BASE_URL . '/media_engine/css/player_subtitles.css');
+define('PLAYER_SUBTITLES_JS'	, DEDALO_CORE_URL . '/media_engine/js/player_subtitles.js');
+define('PLAYER_SUBTITLES_CSS'	, DEDALO_CORE_URL . '/media_engine/css/player_subtitles.css');
 
 define('MEDIAELEMENT_URL_CSS'	, DEDALO_ROOT_WEB . '/lib/mediaelement/build/mediaelementplayer.min.css');
 define('MEDIAELEMENT_URL_JS'	, DEDALO_ROOT_WEB . '/lib/mediaelement/build/mediaelement-and-player.min.js');
 define('MEDIAELEMENT_URL_SWF'	, DEDALO_ROOT_WEB . '/lib/mediaelement/build/flashmediaelement.swf');
 
-define('AC_QUICKTIME_URL_JS'	, DEDALO_LIB_BASE_URL . '/media_engine/js/AC_QuickTime.js');
+define('AC_QUICKTIME_URL_JS'	, DEDALO_CORE_URL . '/media_engine/js/AC_QuickTime.js');
 
 
 class AVPlayer extends Accessors {

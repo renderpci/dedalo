@@ -7,7 +7,7 @@
 var tool_subtitles = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_subtitles/trigger.tool_subtitles.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_subtitles/trigger.tool_subtitles.php' ;
 
 	
 	//$(function(){

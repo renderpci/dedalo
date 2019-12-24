@@ -1,5 +1,5 @@
 <?php
-#require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+#require_once( DEDALO_CONFIG_PATH .'/config.php');
 /*
 * CLASS REFERENCE_DATO_V47_TO_RELATION_DATO_V48 - C
 *
@@ -253,7 +253,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 		foreach ($ar_models_to_change as $key => $dir_name) {
 
 			# Move old component
-			$old_path = DEDALO_LIB_BASE_PATH . '/' . $dir_name;
+			$old_path = DEDALO_CORE_PATH . '/' . $dir_name;
 			$new_path = $current_upgrade_dir . '/old_removed/' . $dir_name;
 			$result = rename($old_path, $new_path);
 			if ($result!==true) {
@@ -265,7 +265,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 
 			# Move new component
 			$old_path = $current_upgrade_dir  . '/' . $dir_name;
-			$new_path = DEDALO_LIB_BASE_PATH  . '/' . $dir_name;
+			$new_path = DEDALO_CORE_PATH  . '/' . $dir_name;
 			$result = rename($old_path, $new_path);
 			if ($result!==true) {
 				$response->result 	= false;

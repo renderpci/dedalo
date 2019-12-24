@@ -38,7 +38,7 @@
 				
 				// Add library js
 					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/json-logic/logic.js";	
-					#js::$ar_url[] = DEDALO_ROOT_WEB . '/lib/dedalo/extras/mdcat/calculation/mdcat.js'; //DEDALO_LIB_BASE_URL . "/extras/ "+custom.file;
+					#js::$ar_url[] = DEDALO_ROOT_WEB . '/lib/dedalo/extras/mdcat/calculation/mdcat.js'; //DEDALO_CORE_URL . "/extras/ "+custom.file;
 				
 				// Edit vars
 					$valor 			= $this->get_valor();
@@ -112,7 +112,7 @@
 	}
 	
 
-	#$page_html	= DEDALO_LIB_BASE_PATH .'/'. $component_name . '/html/' . $component_name . '_' . $file_name . '.phtml';
+	#$page_html	= DEDALO_CORE_PATH .'/'. $component_name . '/html/' . $component_name . '_' . $file_name . '.phtml';
 	$page_html	= dirname(__FILE__) . '/html/' . $component_name . '_' . $file_name . '.phtml';	
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";

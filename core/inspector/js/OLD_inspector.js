@@ -14,7 +14,7 @@ var inspector = new function() {
 
 
 	this.max_screen_width = 960
-	this.url_trigger 	  = DEDALO_LIB_BASE_URL + '/component_common/trigger.component_common.php'
+	this.url_trigger 	  = DEDALO_CORE_URL + '/component_common/trigger.component_common.php'
 
 
 
@@ -606,7 +606,7 @@ var inspector = new function() {
 	*/
 	this.open_data_link = function(button) {
 		
-		const url = DEDALO_LIB_BASE_URL + "/json/" + page_globals.section_tipo + "/" + page_globals._parent
+		const url = DEDALO_CORE_URL + "/json/" + page_globals.section_tipo + "/" + page_globals._parent
 		window.open(url);
 
 		return true

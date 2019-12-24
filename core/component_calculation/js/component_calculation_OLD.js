@@ -10,7 +10,7 @@ var component_calculation = new function() {
 
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/component_calculation/trigger.component_calculation.php';
+	this.url_trigger = DEDALO_CORE_URL + '/component_calculation/trigger.component_calculation.php';
 
 
 
@@ -53,7 +53,7 @@ var component_calculation = new function() {
 				
 			// Load custom script for do calculations ex: in ../extra/mdcat/calulation/expresos.js
 				if(custom){
-					common.load_script(DEDALO_LIB_BASE_URL +"/extras"+custom.file, {"async":false})
+					common.load_script(DEDALO_CORE_URL +"/extras"+custom.file, {"async":false})
 				}	
 
 			// Load page event

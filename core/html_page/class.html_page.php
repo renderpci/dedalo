@@ -17,7 +17,7 @@ abstract class html_page {
 		if(SHOW_DEBUG===true) $start_time = start_time();		
 		
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/' . get_class() . '.php' );
+		include ( DEDALO_CORE_PATH .'/'. get_class() . '/' . get_class() . '.php' );
 		$html = ob_get_clean();
 
 		# sanitize_output html
@@ -45,7 +45,7 @@ abstract class html_page {
 		
 		# Include controller
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/html/' . get_class() . '_aplication_lang_selector.phtml' );
+		include ( DEDALO_CORE_PATH .'/'. get_class() . '/html/' . get_class() . '_aplication_lang_selector.phtml' );
 		$html = ob_get_contents();
 		ob_get_clean();
 		
@@ -66,7 +66,7 @@ abstract class html_page {
 		
 		# Include controller
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/html/' . get_class() . '_aplication_lang_selector.phtml' );
+		include ( DEDALO_CORE_PATH .'/'. get_class() . '/html/' . get_class() . '_aplication_lang_selector.phtml' );
 		$html = ob_get_contents();
 		ob_get_clean();
 		

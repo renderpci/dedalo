@@ -43,7 +43,7 @@
 
 
 	js::$ar_url[]  = TEXT_EDITOR_URL_JS; # tinyMCE
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/component_html_text/js/component_html_text_editor.js';
+	js::$ar_url[]  = DEDALO_CORE_URL . '/component_html_text/js/component_html_text_editor.js';
 	js::$ar_url[]  = DEDALO_ROOT_WEB."/lib/tinymce/plupload/js/plupload.full.min.js";
 		
 	
@@ -123,7 +123,7 @@
 
 
 
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

@@ -1642,7 +1642,7 @@ class component_portal extends component_relation_common {
 							$ds_value = '';
 							$ds_value .= "<div class=\"td_ds\">";
 							ob_start();
-							include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
+							include(DEDALO_CORE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
 							$ds_value .= ob_get_clean();
 							$ds_value .= "</div>";
 

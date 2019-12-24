@@ -11,7 +11,7 @@ $(function() {
 
 });
 
-const descriptors_trigger = DEDALO_LIB_BASE_URL + '/dd/trigger.descriptors_dd.php';
+const descriptors_trigger = DEDALO_CORE_URL + '/dd/trigger.descriptors_dd.php';
 
 function validar(formObj) {
 
@@ -111,7 +111,7 @@ function closeTesaurus() {
 ********************************/
 function cargarTSrel(terminoID) {
 
-	var myurl 		= DEDALO_LIB_BASE_URL + '/dd/dd_edit_rel.php'
+	var myurl 		= DEDALO_CORE_URL + '/dd/dd_edit_rel.php'
 	var div 		= $('#div_rel');
 	var mydata		= { 'terminoID': terminoID, 'top_tipo':page_globals.top_tipo};
 
@@ -142,7 +142,7 @@ function cargarTSrel(terminoID) {
 */
 function linkTS(terminoID_to_link) {
 
-	var myurl			= DEDALO_LIB_BASE_URL + '/dd/dd_edit_rel.php'
+	var myurl			= DEDALO_CORE_URL + '/dd/dd_edit_rel.php'
 	var div 			= $('#div_rel')
 	var accion			= 'linkTS' ;
 	var terminoIDactual = terminoID ;
@@ -176,7 +176,7 @@ function linkTS(terminoID_to_link) {
 
 function unlinkTS(terminoID_to_unlink, termino) {
 
-	var myurl			= DEDALO_LIB_BASE_URL + '/dd/dd_edit_rel.php'
+	var myurl			= DEDALO_CORE_URL + '/dd/dd_edit_rel.php'
 	var div 			= $('#div_rel') ;
 	var accion			= 'unlinkTS' ;
 	termino 			= my_urldecode(termino);
@@ -254,7 +254,7 @@ function loadDescriptorsGrid( id_focus ) {
 
 	if(typeof id == 'undefined') return alert("global var id is not available : "+id)
 
-	var myurl 		= DEDALO_LIB_BASE_URL + "/dd/dd_descriptors_grid.php" ;
+	var myurl 		= DEDALO_CORE_URL + "/dd/dd_descriptors_grid.php" ;
 	var div			= $('#tbodyDescriptorsGrid');
 	var mode 		= 'loadDescriptorsGrid';
 	var mydata		= { 'mode': mode, 'id': id, 'terminoID':current_terminoID, 'top_tipo':page_globals.top_tipo };// var id is set in page

@@ -1,7 +1,7 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( dirname(__FILE__) .'/class.tool_layout_print.php'); 
-require_once( DEDALO_LIB_BASE_PATH .'/common/class.exec_.php'); 
+require_once( DEDALO_CORE_PATH .'/common/class.exec_.php'); 
 	
 if(login::is_logged()!==true) {
 	$string_error = "Auth error: please login";
@@ -269,7 +269,7 @@ if($mode==='print_pages') {
 	$section_layout_tipo= (string)safe_xss($_GET['template_tipo']);
 	$section_layout_id 	= (string)safe_xss($_GET['template_id']);
 	$ar_css_url 		= array(
-							DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_render.css"
+							DEDALO_CORE_URL."/tools/tool_layout_print/css/tool_layout_render.css"
 						);
 	
 	# Is set in search::get_records_data. NOTE: Only contain records in last visualized list page
@@ -295,7 +295,7 @@ if($mode==='print_pages') {
 
 	#
 	# WRITE TO DISK
-	$path_to_save = DEDALO_LIB_BASE_PATH .'/tools/tool_layout_print/data';
+	$path_to_save = DEDALO_CORE_PATH .'/tools/tool_layout_print/data';
 	$data = new stdClass();
 		$data->template_obj 		= $template_obj;
 		$data->section_layout_dato 	= $section_layout_dato;
@@ -316,8 +316,8 @@ if($mode==='print_pages') {
 
 	# Aditional css / js
 	$tool_name='tool_layout_print';
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
+	css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	css::$ar_url[] = DEDALO_CORE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
 
 	#
 	# HTML FINAL
@@ -342,7 +342,7 @@ if($mode==='print_pages') {
 		$html .= $pages_rendered;		
 		/*
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/tools/tool_layout_print/html/tool_layout_print_render.phtml' );
+		include ( DEDALO_CORE_PATH .'/tools/tool_layout_print/html/tool_layout_print_render.phtml' );
 		$html .= ob_get_clean();
 		*/
 

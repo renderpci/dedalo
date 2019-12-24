@@ -8,7 +8,7 @@ var tool_semantic_nodes = new function() {
 
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_semantic_nodes/trigger.tool_semantic_nodes.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_semantic_nodes/trigger.tool_semantic_nodes.php' ;
 	//this.button_obj  = null;
 
 

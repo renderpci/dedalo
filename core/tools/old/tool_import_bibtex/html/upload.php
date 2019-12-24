@@ -7,7 +7,7 @@
 *
 */
 	# UPLOAD HANDLER URL
-	$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/'.get_called_class().'/html/import_files.php';
+	$upload_handler_url = DEDALO_CORE_URL . '/tools/'.get_called_class().'/html/import_files.php';
 
 
 	echo "<div class=\"info_line import_help\">".label::get_label('import_bibtex_help')."</div>";

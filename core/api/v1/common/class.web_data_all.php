@@ -592,7 +592,7 @@ class web_data {
 	# TESAURO_ALFABETICO_GENERATE_HTML_FILE
 	if ($mode==='tesauro_presentacion_generate_pdf_file') {
 
-		require_once(DEDALO_LIB_BASE_PATH.'/common/class.exec_.php');
+		require_once(DEDALO_CORE_PATH.'/common/class.exec_.php');
 
 		if (empty($target_url)) {
 			die("Error. Empty target_url");
@@ -771,7 +771,7 @@ class web_data {
 				$msg = "Generating pdf file from $target_url_full to $pdf_target_path with command: $command";
 				error_log($msg);
 			}
-			require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
+			require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 			$command_exc = exec_::exec_command($command);
 
 			$pdf_url = $component_pdf->get_pdf_url();
@@ -870,7 +870,7 @@ class web_data {
 				$msg = "Generating pdf file from $html_file_full_url to $pdf_target_path with command: $command";
 				error_log($msg);
 			}
-			require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
+			require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 			$command_exc = exec_::exec_command($command);
 			*/
 			$pdf_url = $component_pdf->get_pdf_url();
@@ -991,7 +991,7 @@ class web_data {
 		}
 
 		// View html page
-		$page_html	= DEDALO_LIB_BASE_PATH .'/component_autocomplete/html/component_autocomplete_new.phtml';
+		$page_html	= DEDALO_CORE_PATH .'/component_autocomplete/html/component_autocomplete_new.phtml';
 		ob_start();
 		include ( $page_html );
 		$html = ob_get_clean();
@@ -1313,7 +1313,7 @@ class web_data {
 			}
 
 		# Ffmpeg functions
-		require_once(DEDALO_LIB_BASE_PATH.'/media_engine/class.Ffmpeg.php');
+		require_once(DEDALO_CORE_PATH.'/media_engine/class.Ffmpeg.php');
 
 		# get_media_streams from av file
 		$media_streams = Ffmpeg::get_media_streams($video_path);
@@ -4280,7 +4280,7 @@ class web_data {
 
 
 ////////////// trigger.ts_object.php
-	include(DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php');
+	include(DEDALO_CORE_PATH.'/ts_object/class.ts_object.php');
 
 	# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 	$options = new stdClass();

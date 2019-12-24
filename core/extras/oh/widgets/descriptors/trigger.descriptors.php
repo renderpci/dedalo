@@ -2,8 +2,8 @@
 $start_time=microtime(1);
 set_time_limit ( 259200 );  // 3 dias
 $session_duration_hours = 72;
-include( dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/component_info/widgets/class.widget.php' );
+include( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/component_info/widgets/class.widget.php' );
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 

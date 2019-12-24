@@ -8,9 +8,9 @@
 <link rel="shortcut icon" href="/favicon.ico" />
 <?php
 print $css_link_code;
-print css::build_tag(DEDALO_LIB_BASE_URL .'/media_engine/css/av_media_player.css');
+print css::build_tag(DEDALO_CORE_URL .'/media_engine/css/av_media_player.css');
 ?>
-<?php #print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php'); ?>
+<?php #print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php'); ?>
 <?php 
 $page_globals = new stdClass();
 	# version
@@ -167,9 +167,9 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 </body>
 </html>
 <?php /*
-<script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_LIB_BASE_URL ?>/component_common/js/component_common.js"></script>
+<script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_CORE_URL ?>/component_common/js/component_common.js"></script>
 */ ?>
 <?php
-print js::build_tag(DEDALO_LIB_BASE_URL . '/media_engine/js/av_media_player_commands.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/media_engine/js/av_media_player.js');
+print js::build_tag(DEDALO_CORE_URL . '/media_engine/js/av_media_player_commands.js');
+print js::build_tag(DEDALO_CORE_URL . '/media_engine/js/av_media_player.js');
 ?>

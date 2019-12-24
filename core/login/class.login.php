@@ -653,7 +653,7 @@ class login extends common {
 
 		# DEDALO INIT TEST SECUENCE
 		if ($init_test===true) {
-			require(DEDALO_LIB_BASE_PATH.'/core/dd_init_test.php');
+			require(DEDALO_CORE_PATH.'/base/dd_init_test.php');
 			if ($init_response->result===false) {
 				debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
 				// Don't stop here. Only inform user of init error via jasvascript
@@ -691,7 +691,7 @@ class login extends common {
 		if( DEDALO_BACKUP_ON_LOGIN ) {
 			# Close script session
 			session_write_close();
-			require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
+			require(DEDALO_CORE_PATH.'/backup/class.backup.php');
 			$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
 			$backup_info = $backup_secuence_response->msg;
 		}else{
@@ -993,7 +993,7 @@ class login extends common {
 	*/
 	public function get_html() {
 
-		$file_include	= DEDALO_LIB_BASE_PATH .'/'. __CLASS__ . '/' . __CLASS__ . '.php' ;
+		$file_include	= DEDALO_CORE_PATH .'/'. __CLASS__ . '/' . __CLASS__ . '.php' ;
 
 		ob_start();
 		include ( $file_include );

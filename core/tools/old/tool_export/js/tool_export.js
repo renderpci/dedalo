@@ -6,7 +6,7 @@
 */ 
 var tool_export = new function() {
 
-	this.url_trigger 	= DEDALO_LIB_BASE_URL + '/tools/tool_export/trigger.tool_export.php?top_tipo='+page_globals.top_tipo ;
+	this.url_trigger 	= DEDALO_CORE_URL + '/tools/tool_export/trigger.tool_export.php?top_tipo='+page_globals.top_tipo ;
 	this.source_columns = {};
 	this.target_columns = {};
 	this.target_ul 		= null;

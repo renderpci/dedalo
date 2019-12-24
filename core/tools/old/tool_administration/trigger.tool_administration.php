@@ -1,7 +1,7 @@
 <?php
 $start_time=microtime(1);
 $session_duration_hours = 72;
-include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+include( DEDALO_CONFIG_PATH .'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 set_time_limit(0);
@@ -48,7 +48,7 @@ function force_unlock_all_components($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	include DEDALO_LIB_BASE_PATH . '/lock_components/class.lock_components.php';
+	include DEDALO_CORE_PATH . '/lock_components/class.lock_components.php';
 
 	$response = (object)lock_components::force_unlock_all_components();
 
@@ -72,7 +72,7 @@ function force_unlock_all_components($json_data) {
 function get_active_users($json_data) {
 	global $start_time;
 
-	include DEDALO_LIB_BASE_PATH . '/lock_components/class.lock_components.php';
+	include DEDALO_CORE_PATH . '/lock_components/class.lock_components.php';
 
 	$response = (object)lock_components::get_active_users();
 
@@ -189,7 +189,7 @@ function update_structure($json_data) {
 			$ar_label 	 = label::get_ar_label($lang); // Get all properties
 				#dump($ar_label, ' ar_label');
 			
-			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
+			file_put_contents( DEDALO_CORE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
 			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 		}
 

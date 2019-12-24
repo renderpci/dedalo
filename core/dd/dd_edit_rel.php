@@ -1,7 +1,7 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 # Old lang vars
-require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
 
 /**
 * LOGIN
@@ -20,8 +20,8 @@ if ($permissions<1) {
 	exit();
 }
 
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
-require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd.php');
+require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php');
+require_once(DEDALO_CORE_PATH . '/dd/class.dd.php');
 #require_once(DEDALO_ROOT . '/inc/funciones.php'); 
 
 

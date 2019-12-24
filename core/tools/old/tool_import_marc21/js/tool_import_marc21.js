@@ -7,7 +7,7 @@
 var tool_import_marc21 = new function() {
 
 	// Tool triger
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_import_marc21/trigger.tool_import_marc21.php'
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_import_marc21/trigger.tool_import_marc21.php'
 	
 
 	/**

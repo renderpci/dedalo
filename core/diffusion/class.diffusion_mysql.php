@@ -1,6 +1,6 @@
 <?php
 // Loads parent class diffusion_sql
-include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_sql.php');
+include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
 /*
 * CLASS DIFFUSION_MYSQL
 * Se encarga de gestionar la comunicación y el trasvase de datos desde Dédalo 4 hacia bases de datos de diffusión

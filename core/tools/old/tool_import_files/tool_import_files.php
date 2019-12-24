@@ -29,9 +29,9 @@
 				css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload.css';
 				css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload-ui.css';
 
-				css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_common/css/tool_common.css';
-				css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_files/css/tool_import_files.css';
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+				css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_common/css/tool_common.css';
+				css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_files/css/tool_import_files.css';
+				css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 
 				# CONTEXT
 				$vars = array('context_name','context'); foreach($vars as $name) $$name = common::setVar($name);
@@ -65,13 +65,13 @@
 							# The File Upload user interface plugin
 							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/js/jquery.fileupload-ui.js';
 							# The main application script
-							js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_files/js/file_upload_main.js';
+							js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_files/js/file_upload_main.js';
 							
-							js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
+							js::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
 						
 						# FILES UPLOAD MANAGER
 						$button_tipo 		= safe_tipo( get_request_var('button_tipo') ); // Core function. Needed for build var 'upload_dir_custom'
-						#$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_files/inc/upload_handler.php?t='.$tipo;
+						#$upload_handler_url = DEDALO_CORE_URL . '/tools/tool_import_files/inc/upload_handler.php?t='.$tipo;
 						$upload_handler_url = TOOL_IMPORT_FILES_HANDLER_URL;
 
 						# file_processor
@@ -162,7 +162,7 @@
 	
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

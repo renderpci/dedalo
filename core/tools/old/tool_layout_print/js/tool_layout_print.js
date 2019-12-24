@@ -6,7 +6,7 @@
 */
 var tool_layout_print = new function() {
 
-	this.trigger_url 		 = DEDALO_LIB_BASE_URL + '/tools/tool_layout_print/trigger.tool_layout_print.php?top_tipo='+page_globals.top_tipo ;
+	this.trigger_url 		 = DEDALO_CORE_URL + '/tools/tool_layout_print/trigger.tool_layout_print.php?top_tipo='+page_globals.top_tipo ;
 	this.layout_html_content = '';
 
 
@@ -64,7 +64,7 @@ var tool_layout_print = new function() {
 		var render_pdf_response 		= document.getElementById('render_pdf_response'),
 			render_pdf_response_debug	= document.getElementById('render_pdf_response_debug')
 
-		var url  	= DEDALO_LIB_BASE_URL + '/tools/tool_layout_print/trigger.tool_layout_print.php'	//this.trigger_url //+ "&mode=render_pdf";	//&render_pdf_data="+render_pdf_data,
+		var url  	= DEDALO_CORE_URL + '/tools/tool_layout_print/trigger.tool_layout_print.php'	//this.trigger_url //+ "&mode=render_pdf";	//&render_pdf_data="+render_pdf_data,
 		var	mydata  = {
 						"mode" 				: "render_pdf",
 						"render_pdf_data" 	: render_pdf_data						
@@ -377,7 +377,7 @@ var tool_layout_print = new function() {
 	*/
 	this.set_mode = function(mode) {
 
-		var filename_css_render = DEDALO_LIB_BASE_URL + '/tools/tool_layout_print/css/tool_layout_render.css'
+		var filename_css_render = DEDALO_CORE_URL + '/tools/tool_layout_print/css/tool_layout_render.css'
 
 		switch(mode) {
 

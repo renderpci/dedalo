@@ -2,33 +2,33 @@
 /*
 	LOADER DEDALO COMPONENTS
 */
-include(DEDALO_LIB_BASE_PATH . '/core/class.Error.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.DBi.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordObj_matrix.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_time_machine.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.json_handler.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.lang.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.filter.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.counter.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.tools.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.label.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.TR.php');
-#include(DEDALO_LIB_BASE_PATH . '/common/class.operator.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.locator.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.dd_date.php');
-include(DEDALO_LIB_BASE_PATH . '/common/class.layout_map.php');# new 12-06-2019
-include(DEDALO_LIB_BASE_PATH . '/common/class.dd_object.php'); # new 12-06-2019
-#include(DEDALO_LIB_BASE_PATH . '/common/class.relation.php');
-include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_common.php');
-include(DEDALO_LIB_BASE_PATH . '/component_relation_common/class.component_relation_common.php');
-include(DEDALO_LIB_BASE_PATH . '/search/class.search.php');
-include(DEDALO_LIB_BASE_PATH . '/api/v1/common/class.dd_core_api.php');
-include(DEDALO_LIB_BASE_PATH . '/api/v1/common/class.dd_utils_api.php');
+include(DEDALO_CORE_PATH . '/base/class.Error.php');
+include(DEDALO_CORE_PATH . '/db/class.DBi.php');
+include(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
+include(DEDALO_CORE_PATH . '/db/class.JSON_RecordObj_matrix.php');
+include(DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php');
+include(DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php');
+include(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
+include(DEDALO_CORE_PATH . '/db/class.json_handler.php');
+include(DEDALO_CORE_PATH . '/common/class.common.php');
+include(DEDALO_CORE_PATH . '/common/class.lang.php');
+include(DEDALO_CORE_PATH . '/common/class.navigator.php');
+include(DEDALO_CORE_PATH . '/common/class.filter.php');
+include(DEDALO_CORE_PATH . '/common/class.counter.php');
+include(DEDALO_CORE_PATH . '/common/class.tools.php');
+include(DEDALO_CORE_PATH . '/common/class.label.php');
+include(DEDALO_CORE_PATH . '/common/class.TR.php');
+#include(DEDALO_CORE_PATH . '/common/class.operator.php');
+include(DEDALO_CORE_PATH . '/common/class.locator.php');
+include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
+include(DEDALO_CORE_PATH . '/common/class.layout_map.php');# new 12-06-2019
+include(DEDALO_CORE_PATH . '/common/class.dd_object.php'); # new 12-06-2019
+#include(DEDALO_CORE_PATH . '/common/class.relation.php');
+include(DEDALO_CORE_PATH . '/component_common/class.component_common.php');
+include(DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_common.php');
+include(DEDALO_CORE_PATH . '/search/class.search.php');
+include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php');
+include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');
 
 
 
@@ -50,15 +50,15 @@ class class_loader {
 		switch (true) {
 
 			case ($className==='tools_register'):
-				$file_path	= DEDALO_LIB_BASE_PATH . '/tool_common/class.tools_register.php';
+				$file_path	= DEDALO_CORE_PATH . '/tool_common/class.tools_register.php';
 				break;
 
 			case (strpos($className, 'tool_')!==false):
-				$file_path	= DEDALO_LIB_BASE_PATH . '/tools/' . $className . '/class.' . $className . '.php';
+				$file_path	= DEDALO_CORE_PATH . '/tools/' . $className . '/class.' . $className . '.php';
 				break;
 
 			case (strpos($className, 'diffusion_')!==false):
-				$file_path	= DEDALO_LIB_BASE_PATH . '/diffusion/' . $className . '/class.' . $className . '.php';
+				$file_path	= DEDALO_CORE_PATH . '/diffusion/' . $className . '/class.' . $className . '.php';
 				break;
 
 			case (strpos($className, 'Smalot')!==false):
@@ -80,12 +80,12 @@ class class_loader {
 				break;
 
 			case (strpos($className, 'Error')!==false):
-				$file_path	= DEDALO_LIB_BASE_PATH . '/config/class.Error.php';
+				$file_path	= DEDALO_CONFIG_PATH . '/class.Error.php';
 				break;
 
 			default:
 				# Folder base dedalo lib
-				$file_path	= DEDALO_LIB_BASE_PATH . '/' . $className . '/class.' . $className . '.php';
+				$file_path	= DEDALO_CORE_PATH . '/' . $className . '/class.' . $className . '.php';
 				break;
 		}
 

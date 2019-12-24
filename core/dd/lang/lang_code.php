@@ -10,7 +10,7 @@ $lang = $_SESSION['lang'] = tools::convert_d4_to_d3_lang(DEDALO_APPLICATION_LANG
 $lang_file = $lang;
 
 
-$lang_path = DEDALO_LIB_BASE_PATH . '/dd/lang/'.$lang_file.'.php';
+$lang_path = DEDALO_CORE_PATH . '/dd/lang/'.$lang_file.'.php';
 
 
 # load lang file

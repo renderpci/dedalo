@@ -1,5 +1,5 @@
 <?php
-#include_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+#include_once( DEDALO_CONFIG_PATH .'/config.php');
 
 /*
 * CLASS TOOL_NOTE

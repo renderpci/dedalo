@@ -7,7 +7,7 @@
 var tool_update_cache = new function() {
 
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_update_cache/trigger.tool_update_cache.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_update_cache/trigger.tool_update_cache.php' ;
 
 
 	/**

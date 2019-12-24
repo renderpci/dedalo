@@ -95,7 +95,7 @@
 					# LOAD MEDIA PLAYER ON IFRAME
 					$reelID 	= $video_id;		#dump($reelID);
 					if(empty($quality)) $quality = DEDALO_AV_QUALITY_DEFAULT;
-					$iframe_url = DEDALO_LIB_BASE_URL . '/media_engine/av_media_player.php?reelID=' . $reelID .'&quality=' . $quality .'&modo=posterframe' ;
+					$iframe_url = DEDALO_CORE_PATH . '/media_engine/av_media_player.php?reelID=' . $reelID .'&quality=' . $quality .'&modo=posterframe' ;
 					$file_name = 'player';
 					break;
 
@@ -109,7 +109,7 @@
 					# LOAD MEDIA PLAYER ON IFRAME
 					$reelID 	= $video_id;		#dump($reelID);
 					if(empty($quality)) $quality = DEDALO_AV_QUALITY_DEFAULT;
-					$iframe_url = DEDALO_LIB_BASE_URL . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality='.$quality;
+					$iframe_url = DEDALO_CORE_PATH . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality='.$quality;
 
 					#
 					# IFRAME SUBTITLES VARS
@@ -145,7 +145,7 @@
 							// Update vars
 							$video_url  	= $this->get_video_url();
 							$quality		= $this->get_quality();
-							$posterframe_url= DEDALO_LIB_BASE_URL.'/themes/default/0_audio.jpg';
+							$posterframe_url= DEDALO_CORE_PATH.'/themes/default/0_audio.jpg';
 						}
 					}
 					#$video_url .= '?&t='.start_time();	# Avoid cache file
@@ -201,7 +201,7 @@
 	}
 
 	
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

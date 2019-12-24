@@ -13,7 +13,7 @@ var search2 = new function() {
 	/**
 	* OBJECT VARS
 	*/
-		this.url_trigger = DEDALO_LIB_BASE_URL + '/search/trigger.search2.php'
+		this.url_trigger = DEDALO_CORE_URL + '/search/trigger.search2.php'
 
 		this.search_presets_section_tipo = "dd623" // Search Presets
 
@@ -2711,7 +2711,7 @@ var search2 = new function() {
 
 						case "json":
 							// Exec database search an get the result rows 
-							const url_trigger  = DEDALO_LIB_BASE_URL + '/section_records/trigger.section_records.php'
+							const url_trigger  = DEDALO_CORE_URL + '/section_records/trigger.section_records.php'
 							const trigger_vars = {
 									mode 	 			: 'search_rows',
 									search_query_object	: search_json_object,
@@ -2815,7 +2815,7 @@ var search2 = new function() {
 					}			
 				 
 				// exec database search an get the result rows 
-					const url_trigger  = DEDALO_LIB_BASE_URL + '/section_records/trigger.section_records.php'
+					const url_trigger  = DEDALO_CORE_URL + '/section_records/trigger.section_records.php'
 					const trigger_vars = {
 							mode 	 			: 'search_rows',
 							search_query_object	: search_json_object,

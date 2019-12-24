@@ -1,7 +1,7 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config.php');
+require_once( dirname(dirname(dirname(__FILE__))).'/config/config.php');
 # Old lang vars
-require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
 
 /**
 * LOGIN
@@ -20,9 +20,9 @@ if($is_global_admin!==true) {
 	exit();
 }
 
-#require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-require_once(DEDALO_LIB_BASE_PATH .'/dd/class.dd.php');
-require_once(DEDALO_LIB_BASE_PATH .'/dd/class.RecordObj_dd_edit.php');
+#require_once(DEDALO_CORE_PATH . '/common/class.navigator.php');
+require_once(DEDALO_CORE_PATH .'/dd/class.dd.php');
+require_once(DEDALO_CORE_PATH .'/dd/class.RecordObj_dd_edit.php');
 /*
 *	TS_CLASS_ACTIONS
 *	ACCIONES SOBRE EL DD
@@ -564,14 +564,14 @@ if($accion==='searchTSform') {
 	
 	# case only select type
 	if( empty($terminoID) && empty($termino) && empty($def) && empty($modelo) && strlen($type)>0) {
-		$url = DEDALO_LIB_BASE_URL . "/dd/dd_list.php?modo={$modo}&type={$type}";
+		$url = DEDALO_CORE_URL . "/dd/dd_list.php?modo={$modo}&type={$type}";
 		header("Location: $url");
 		exit();
 	}
 	
 	# case nothing is received
 	if(empty($terminoID) && empty($termino) && empty($def) && empty($modelo)){
-		header("Location: ".DEDALO_LIB_BASE_URL."/dd/dd_list.php?modo={$modo}");
+		header("Location: ".DEDALO_CORE_URL."/dd/dd_list.php?modo={$modo}");
 		exit();
 	}
 	
@@ -598,9 +598,9 @@ if($accion==='searchTSform') {
 		# cabeceras javascript
 		$html  = $codHeader ;
 		#$html .= js::build_tag(JQUERY_LIB_URL_JS);
-		$html .= js::build_tag(DEDALO_LIB_BASE_URL  . '/common/js/cookies.js');
-		$html .= js::build_tag(DEDALO_LIB_BASE_URL 	. '/dd/js/dd_common.js');
-		#$html .= js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js');
+		$html .= js::build_tag(DEDALO_CORE_URL  . '/common/js/cookies.js');
+		$html .= js::build_tag(DEDALO_CORE_URL 	. '/dd/js/dd_common.js');
+		#$html .= js::build_tag(DEDALO_CORE_URL . '/ts/js/ts_list.js');
 		$html .= "<script type=\"text/javascript\">";
 		
 		$terminosList = $dd->listaDeResultados2cookie($terminoIDlist);		#print_r($terminosList); die("<HR>V4 searchTSform terminosList Stop");		
@@ -609,7 +609,7 @@ if($accion==='searchTSform') {
 		
 		# eliminamos del url "searchTSlist" (para poder recargar la página sin perder los cambios posteriores)
 		# y redireccionamos por javascript a la página general del listado	
-		$url   = DEDALO_LIB_BASE_URL . "/dd/dd_list.php?modo=$modo&terminoIDlist=$terminoIDlist&total=$t&n=$n&max=$max&ts_lang={$ts_lang}" . $getString ;
+		$url   = DEDALO_CORE_URL . "/dd/dd_list.php?modo=$modo&terminoIDlist=$terminoIDlist&total=$t&n=$n&max=$max&ts_lang={$ts_lang}" . $getString ;
 		$html .= "document.location = '$url' ";	
 		$html .= "</script>";
 

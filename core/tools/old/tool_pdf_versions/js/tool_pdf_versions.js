@@ -10,7 +10,7 @@
 var tool_pdf_versions = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_pdf_versions/trigger.tool_pdf_versions.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_pdf_versions/trigger.tool_pdf_versions.php' ;
 
 	/**
 	* CHANGE MEDIA QUALITY	

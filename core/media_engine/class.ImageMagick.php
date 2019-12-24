@@ -2,8 +2,8 @@
 /*
 * CLASS ImageMagick
 */
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
+require_once( DEDALO_CONFIG_PATH . '/config.php');
+require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 
 class ImageMagick {
 	
@@ -85,10 +85,10 @@ class ImageMagick {
 			}else{
 				#throw new Exception("Error Processing Request. Sorry, source file from default quality (".DEDALO_IMAGE_QUALITY_DEFAULT.") not found", 1);
 				# URL THUMB FILE
-				$thumb_file_url = DEDALO_LIB_BASE_URL.'/themes/default/0-thumb.jpg';
+				$thumb_file_url = DEDALO_CORE_URL.'/themes/default/0-thumb.jpg';
 
 				# SOURCE FILE
-				#$source = DEDALO_LIB_BASE_PATH.'/themes/default/0.jpg';
+				#$source = DEDALO_CORE_PATH.'/themes/default/0.jpg';
 				# TARGET FILE
 				#$target = $thumb_file_path;				
 				# CONVERT

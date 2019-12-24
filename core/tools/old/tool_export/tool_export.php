@@ -28,8 +28,8 @@
 		case 'page': # Default called from main page. We will use upload as html file and script
 
 			// tool css / js main files
-				css::$ar_url[] 	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-				js::$ar_url[]  	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+				css::$ar_url[] 	= DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+				js::$ar_url[]  	= DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 			$var_requested 	= common::get_request_var('button_tipo');
 			$button_tipo 	= !empty($var_requested) ? $var_requested : null;
@@ -51,7 +51,7 @@
 						$saved_search_options = section_records::get_search_options( $search_options_id );
 						if (!isset($saved_search_options->search_query_object)) {
 							$msg = '<h3 class="raw_msg">Error. search_query_object is not available.  ';
-							$msg .= '<a href="'.DEDALO_LIB_BASE_URL .'/main/?t=' .$section_tipo .'">Load '.RecordObj_dd::get_termino_by_tipo($section_tipo).' ['.$section_tipo.']</a>';
+							$msg .= '<a href="'.DEDALO_CORE_URL .'/main/?t=' .$section_tipo .'">Load '.RecordObj_dd::get_termino_by_tipo($section_tipo).' ['.$section_tipo.']</a>';
 							$msg .= '</h3>';
 							echo html_page::get_html($msg, true);
 							exit();
@@ -72,7 +72,7 @@
 					$target_list = array();//$this->get_ar_columns();
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_columns.phtml' );
+					include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_columns.phtml' );
 					$page_content_html = ob_get_clean();
 					break;
 
@@ -87,7 +87,7 @@
 
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' .get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' .get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

@@ -1,7 +1,7 @@
 <?php
 // Loads parent class diffusion
-include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion.php');
-include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_sql.php');
+include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion.php');
+include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
 /*
 * CLASS DIFFUSION_SOCRATA
 */

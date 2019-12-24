@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 /**
 * LOGIN
@@ -13,7 +13,7 @@ if($is_logged!==true) {
 }
 
 
-require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd.php');
+require_once(DEDALO_CORE_PATH . '/dd/class.dd.php');
 
 require_once(DEDALO_ROOT . '/Connections/config.php');
 require_once(DEDALO_ROOT . '/inc/funciones.php');

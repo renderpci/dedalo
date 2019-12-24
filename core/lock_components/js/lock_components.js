@@ -7,8 +7,8 @@
 var lock_components = new function() {
 
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/lock_components/trigger.lock_components.php'
-	this.msg_url 	 = DEDALO_LIB_BASE_URL + '/lock_components/msg.lock_components.php'
+	this.trigger_url = DEDALO_CORE_URL + '/lock_components/trigger.lock_components.php'
+	this.msg_url 	 = DEDALO_CORE_URL + '/lock_components/msg.lock_components.php'
 	this.sse_source	
 	
 

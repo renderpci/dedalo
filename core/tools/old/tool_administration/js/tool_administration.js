@@ -16,7 +16,7 @@ var tool_administration = new function() {
 
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_administration/trigger.tool_administration.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_administration/trigger.tool_administration.php' ;
 	this.tid;
 
 

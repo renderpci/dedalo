@@ -25,8 +25,8 @@ class js {
 		# Insertamos las librerías principales	
 
 			# Dédalo enviroment vars
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php';
-			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';	
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/common/js/enviroment.js.php';
+			#js::$ar_url_basic[] = DEDALO_CORE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';	
 
 			# JQUERY LIBS
 			js::$ar_url_basic[] = JQUERY_LIB_URL_JS;
@@ -46,48 +46,48 @@ class js {
 			#js::$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/jquery/gridster/jquery.gridster.min.js';
 
 			# PAGE LIBS
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/html_page.js';
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/keyboard_shortcuts.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/html_page/js/html_page.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/html_page/js/keyboard_shortcuts.js';
 
 			# LOGIN
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/login/js/login.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/login/js/login.js';
 
 			# MENU
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/menu/js/menu.js' ;
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/menu/js/menu.js' ;
 
 			# COMMON LIBS
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/cookies.js';
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/common.js';			
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/common/js/cookies.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/common/js/common.js';			
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_common/js/tool_common.js';
 
 			# JS SERVICES
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/services/service_autocomplete/js/service_autocomplete.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/services/service_autocomplete/js/service_autocomplete.js';
 
 			# component common functions	
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/js/component_common.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/component_common/js/component_common.js';
 	
 			# TOOL_PORTAL
-			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
+			#js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
 			
 			# COMPONENT_PORTAL
-			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js';
+			#js::$ar_url_basic[] = DEDALO_CORE_URL . '/component_portal/js/component_portal.js';
 			
 			# SEARCH		
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/search/js/search.js';
 
 			#RELATION_LIST
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/relation_list/js/relation_list.js';
+			js::$ar_url_basic[] = DEDALO_CORE_URL . '/relation_list/js/relation_list.js';
 			
 
 			switch ($modo) {
 				case 'edit':
-					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js';
-					#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_lang_multi/js/tool_lang_multi.js'; // Not used for now
-					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/time_machine_list/js/time_machine_list.js';
+					js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_indexation/js/tool_indexation.js';
+					#js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_lang_multi/js/tool_lang_multi.js'; // Not used for now
+					js::$ar_url_basic[] = DEDALO_CORE_URL . '/time_machine_list/js/time_machine_list.js';
 
 				case 'list':
-					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/js/tool_time_machine.js';
-					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_update_cache/js/tool_update_cache.js';
+					js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_time_machine/js/tool_time_machine.js';
+					js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_update_cache/js/tool_update_cache.js';
 					break;
 			}
 			
@@ -103,7 +103,7 @@ class js {
 						
 			# Load específico del componente actual
 			if (!in_array($modelo_name, $ar_excepciones)) {
-				js::$ar_url[] 	= DEDALO_LIB_BASE_URL . '/'. $modelo_name .'/js/'. $modelo_name .'.js';				
+				js::$ar_url[] 	= DEDALO_CORE_URL . '/'. $modelo_name .'/js/'. $modelo_name .'.js';				
 			}			
 		}
 
@@ -120,23 +120,23 @@ class js {
 				
 				# inspector functions
 				#if($modo=='edit')
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/inspector/js/inspector.js' );						
+				$html .= self::build_tag( DEDALO_CORE_URL . '/inspector/js/inspector.js' );						
 
 				# component relation .En algunos contextos es necesario el js de component_relation aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre				
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_relation/js/component_relation.js' );
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/component_relation/js/component_relation.js' );
 
 				# button delete .En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre
 				if(navigator::get_selected('modo')==='list') {
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_delete/js/button_delete.js' );
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_stats/js/button_stats.js' );
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_date/js/component_date.js' );
+				$html .= self::build_tag( DEDALO_CORE_URL . '/button_delete/js/button_delete.js' );
+				$html .= self::build_tag( DEDALO_CORE_URL . '/button_stats/js/button_stats.js' );
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/component_date/js/component_date.js' );
 				}				
 
 				# tool common
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js' );				
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_common/js/tool_common.js' );				
 				#$current_context = navigator::get_selected('context');
 				#if (strpos($current_context, 'tool_portal')!==false) {
-				#	$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js' );
+				#	$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_portal/js/tool_portal.js' );
 				#}
 
 				$added_component_commons = true;		
@@ -149,8 +149,8 @@ class js {
 				# Tinymce
 				$html .= self::build_tag( TEXT_EDITOR_URL_JS );				
 				
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_text_area/js/mce_editor.js' );
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js' );						
+				$html .= self::build_tag( DEDALO_CORE_URL . '/component_text_area/js/mce_editor.js' );
+				#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_indexation/js/tool_indexation.js' );						
 				$added_component_text_area_commons = true;		
 			}
 
@@ -159,8 +159,8 @@ class js {
 			#	# Tinymce
 			#	$html .= self::build_tag( TEXT_EDITOR_URL_JS );
 			#	
-			#	$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_html_text/js/component_html_text_editor.js' );
-			#	#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js' );						
+			#	$html .= self::build_tag( DEDALO_CORE_URL . '/component_html_text/js/component_html_text_editor.js' );
+			#	#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_indexation/js/tool_indexation.js' );						
 			#	$added_component_html_text_commons = true;		
 			#}
 				

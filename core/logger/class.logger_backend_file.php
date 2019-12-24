@@ -2,7 +2,7 @@
 /**
 * LOGGER BACKEND FILE CLASS
 */
-require_once( DEDALO_LIB_BASE_PATH .'/logger/class.logger_backend.php' );
+require_once( DEDALO_CORE_PATH .'/logger/class.logger_backend.php' );
 
 class logger_backend_file extends logger_backend  {
 

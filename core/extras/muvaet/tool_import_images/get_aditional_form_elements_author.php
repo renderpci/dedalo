@@ -1,6 +1,6 @@
 <?php
-require_once( dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
-#require_once(DEDALO_LIB_BASE_PATH.'/extras/mupreva/tool_import_images/import_imagenes_catalogo.php');
+require_once( DEDALO_CONFIG_PATH.'/config.php');
+#require_once(DEDALO_CORE_PATH.'/extras/mupreva/tool_import_images/import_imagenes_catalogo.php');
 
 	$html='';
 
@@ -69,7 +69,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php')
 function reload_aditional_form_elements() {
 	$('#wrap_author_select').html(" <em>Updating fotógrafo selection list.. please wait..</em> ");
 	setTimeout(function(){
-		var url = DEDALO_LIB_BASE_URL + "/extras/mupreva/tool_import_images/get_aditional_form_elements_author.php?author_tipo=<?php echo $author_tipo ?>&referenced_section_tipo=<?php echo $referenced_section_tipo ?>";
+		var url = DEDALO_CORE_URL + "/extras/mupreva/tool_import_images/get_aditional_form_elements_author.php?author_tipo=<?php echo $author_tipo ?>&referenced_section_tipo=<?php echo $referenced_section_tipo ?>";
 		//console.log(url);
 		$("#wrap_author_select").load(url+" #wrap_author_select",""); //>*
 	}, 10)

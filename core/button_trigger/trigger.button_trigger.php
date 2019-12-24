@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -30,7 +30,7 @@ if ($mode==='trigger') {
 # TESAURO_ALFABETICO_GENERATE_HTML_FILE	
 if ($mode==='tesauro_presentacion_generate_pdf_file') {	
 	
-	require_once(DEDALO_LIB_BASE_PATH.'/common/class.exec_.php');
+	require_once(DEDALO_CORE_PATH.'/common/class.exec_.php');
 
 	if (empty($target_url)) {
 		die("Error. Empty target_url");
@@ -209,7 +209,7 @@ if ($mode==='tesauro_alfabetico_generate_html_file') {
 			$msg = "Generating pdf file from $target_url_full to $pdf_target_path with command: $command";
 			error_log($msg);
 		}
-		require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
+		require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 		$command_exc = exec_::exec_command($command);
 
 		$pdf_url = $component_pdf->get_pdf_url();
@@ -308,7 +308,7 @@ if ($mode==='tesauro_jerarquico_generate_html_file') {
 			$msg = "Generating pdf file from $html_file_full_url to $pdf_target_path with command: $command";
 			error_log($msg);
 		}
-		require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
+		require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 		$command_exc = exec_::exec_command($command);
 		*/
 		$pdf_url = $component_pdf->get_pdf_url();		

@@ -643,8 +643,8 @@ abstract class subtitles {
 	public static function get_subtitles_url($section_id, $tc_in=false, $tc_out=false, $lang=DEDALO_DATA_LANG) {		
 		
 		// Subtitles url base
-			$TEXT_SUBTITLES_URL_BASE = DEDALO_LIB_BASE_URL . '/publication/server_api/v1/subtitles/';
-			#define('TEXT_SUBTITLES_URL_BASE', DEDALO_LIB_BASE_URL . '/publication/server_api/v1/subtitles/');
+			$TEXT_SUBTITLES_URL_BASE = DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/';
+			#define('TEXT_SUBTITLES_URL_BASE', DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/');
 		
 		// url vars	
 			$url_vars = [];

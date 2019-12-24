@@ -413,7 +413,7 @@ class dd_elements {
 				$displayFlechaDer	= 'block';
 				$displayFlechaDown	= 'none';
 			}
-			$path = DEDALO_LIB_BASE_URL . '/dd/images';
+			$path = DEDALO_CORE_URL . '/dd/images';
 			$obj .= "<img id=\"fopen$terminoID\" src=\"$path/flecha_der.gif\" style=\"display:$displayFlechaDer\" title=\"$mostrar_hijos_title $terminoID\" />";
 			$obj .= "<img id=\"fclose$terminoID\" src=\"$path/flecha_down.gif\" style=\"display:$displayFlechaDown\" title=\"$ocultar_hijos_title\" />";
 			$obj .= "</div>";

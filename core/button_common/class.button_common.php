@@ -54,7 +54,7 @@ class button_common extends common {
 		}
 				
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() . '.php' );
+		include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() . '.php' );
 		$html =  ob_get_clean();		
 
 		if(SHOW_DEBUG===true) {

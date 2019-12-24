@@ -8,7 +8,7 @@ var component_pdf = new function() {
 
 
 	// URL TRIGGER
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/component_pdf/trigger.component_pdf.php';
+	this.url_trigger = DEDALO_CORE_URL + '/component_pdf/trigger.component_pdf.php';
 
 
 
@@ -47,7 +47,7 @@ var component_pdf = new function() {
 			pdf_viewer_url 	= button_obj.dataset.pdf_viewer_url
 
 		//var window_url 	= DEDALO_ROOT_WEB + '/lib/pdfjs/web/dedalo_viewer.html?pdf_url=' + pdf_url
-		var window_url 		= DEDALO_LIB_BASE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
+		var window_url 		= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
 
 		// Windown name
 		var nameWindow 	 = "view_pdf ",

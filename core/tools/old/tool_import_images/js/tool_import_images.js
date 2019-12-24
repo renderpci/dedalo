@@ -3,7 +3,7 @@
 var tool_import_images = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_import_images/trigger.tool_import_images.php?top_tipo='+page_globals.top_tipo ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_import_images/trigger.tool_import_images.php?top_tipo='+page_globals.top_tipo ;
 
 
 

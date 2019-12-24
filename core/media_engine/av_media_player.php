@@ -1,8 +1,8 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.AVPlayer.php');
 
 $share = isset($_GET['share']) ? safe_xss($_GET['share']) : false;
 if ($share) {
@@ -77,7 +77,7 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 			$section_tipo = $locator[1];
 			$section_id = $locator[2];
 
-			header("Location: ".DEDALO_LIB_BASE_URL."/main/?m=tool_upload&t=".$component_tipo."&parent=".$section_id."&section_tipo=".$section_tipo."&quality=original");
+			header("Location: ".DEDALO_CORE_URL."/main/?m=tool_upload&t=".$component_tipo."&parent=".$section_id."&section_tipo=".$section_tipo."&quality=original");
 		}		
 	}
 
@@ -88,7 +88,7 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 	$ar_valid 				= $AVObj->get_ar_quality_with_file();	#dump($ar_valid);
 	$selectedItem 			= $quality;
 	if(sizeof($ar_valid)>1) {
-		$file = DEDALO_LIB_BASE_PATH .'/media_engine/html/av_media_player_quality_selector.phtml';
+		$file = DEDALO_CORE_PATH .'/media_engine/html/av_media_player_quality_selector.phtml';
 		ob_start();
 		include ( $file );
 		$quality_selector_html =  ob_get_contents();
@@ -118,7 +118,7 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 	# CONFIGURE KEYS 
 	$configure_keys_html	= null;
 		/*
-		$file = DEDALO_LIB_BASE_PATH .'/media_engine/html/av_media_player_configure_keys.phtml';
+		$file = DEDALO_CORE_PATH .'/media_engine/html/av_media_player_configure_keys.phtml';
 		ob_start();
 		include ( $file );
 		$configure_keys_html =  ob_get_contents();
@@ -138,6 +138,6 @@ $recargar_title = 'Recargar';
 	$css_link_code	= css::get_css_link_code();
 
 # LOAD VISTA TEMPLATE CODE
-$page_html	= DEDALO_LIB_BASE_PATH .'/media_engine/html/av_media_player.phtml';
+$page_html	= DEDALO_CORE_PATH .'/media_engine/html/av_media_player.phtml';
 include($page_html);
 ?>

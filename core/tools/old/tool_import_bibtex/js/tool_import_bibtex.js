@@ -6,7 +6,7 @@
 */ 
 var tool_import_bibtex = new function() {
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/tools/tool_import_bibtex/trigger.tool_import_bibtex.php?top_tipo='+page_globals.top_tipo ;
+	this.trigger_url = DEDALO_CORE_URL + '/tools/tool_import_bibtex/trigger.tool_import_bibtex.php?top_tipo='+page_globals.top_tipo ;
 
 
 	// READY
@@ -26,7 +26,7 @@ var tool_import_bibtex = new function() {
 	this.load_preview_table = function(button_obj) {
 		
 		var button_tipo = $(button_obj).data('button_tipo');
-		var url = DEDALO_LIB_BASE_URL + '/tools/tool_import_bibtex/html/preview.php?button_tipo='+button_tipo;
+		var url = DEDALO_CORE_URL + '/tools/tool_import_bibtex/html/preview.php?button_tipo='+button_tipo;
 		$("#wrap_preview").load(url, function(){
 			//setTimeout(function() {
 				$('html, body').animate({

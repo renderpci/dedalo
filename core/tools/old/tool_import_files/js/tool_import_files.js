@@ -7,7 +7,7 @@
 var tool_import_files = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_import_files/trigger.tool_import_files.php'
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_import_files/trigger.tool_import_files.php'
 
 
 	/**

@@ -8,7 +8,7 @@ var widget_sum = new function() {
 
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/extras/muvaet/widgets/sum/trigger.sum.php';
+	this.url_trigger = DEDALO_CORE_URL + '/extras/muvaet/widgets/sum/trigger.sum.php';
 
 
 

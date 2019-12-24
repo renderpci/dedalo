@@ -36,7 +36,7 @@
 
 	#
 	# PDF VIEVER URL
-	$pdf_viewer_url 		= DEDALO_LIB_BASE_URL . '/'. get_class($this) . '/html/component_pdf_viewer.php';
+	$pdf_viewer_url 		= DEDALO_CORE_URL . '/'. get_class($this) . '/html/component_pdf_viewer.php';
 
 	#dump($initial_media_path, " initial_media_path ".to_string($pdf_url));
 	#$media_width 	= '97%';
@@ -101,7 +101,7 @@
 	}
 
 	
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

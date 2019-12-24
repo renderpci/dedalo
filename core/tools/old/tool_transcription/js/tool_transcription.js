@@ -8,7 +8,7 @@ var tool_transcription = new function() {
 
 
 	// LOCAL VARS
-	this.trigger_tool_transcription_url = DEDALO_LIB_BASE_URL + '/tools/tool_transcription/trigger.tool_transcription.php'
+	this.trigger_tool_transcription_url = DEDALO_CORE_URL + '/tools/tool_transcription/trigger.tool_transcription.php'
 	this.text_area_obj	= null
 	this.wrap_text_area = null
 

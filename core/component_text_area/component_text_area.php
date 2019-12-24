@@ -46,11 +46,11 @@
 
 
 	# CSS / JS MAIN FILES
-		css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/css/component_autocomplete_hi.css";
-		js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/js/component_autocomplete_hi.js";
+		css::$ar_url[] = DEDALO_CORE_URL."/component_autocomplete_hi/css/component_autocomplete_hi.css";
+		js::$ar_url[]  = DEDALO_CORE_URL."/component_autocomplete_hi/js/component_autocomplete_hi.js";
 
-		js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/mce_editor.js";
-		js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/text_editor.js";
+		js::$ar_url[]  = DEDALO_CORE_URL."/component_text_area/js/mce_editor.js";
+		js::$ar_url[]  = DEDALO_CORE_URL."/component_text_area/js/text_editor.js";
 
 
 	$file_name = $modo;
@@ -68,7 +68,7 @@
 				break;
 
 		case 'tool_structuration':
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/css/text_editor_default.css";
+				css::$ar_url[] = DEDALO_CORE_URL."/component_text_area/css/text_editor_default.css";
 
 		case 'tool_indexation':
 		case 'edit_in_list':
@@ -223,8 +223,8 @@
 				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
 				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);
 
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_publication/css/component_publication.css";
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_publication/js/component_publication.js";
+				css::$ar_url[] = DEDALO_CORE_URL."/component_publication/css/component_publication.css";
+				js::$ar_url[]  = DEDALO_CORE_URL."/component_publication/js/component_publication.js";
 				break;
 
 		case 'edit_note':
@@ -556,7 +556,7 @@
 		default:
 	}
 
-	#$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	#$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	$page_html	= dirname(__FILE__) . '/html/' . $component_name . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";

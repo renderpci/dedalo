@@ -1,13 +1,13 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( dirname(__FILE__) .'/class.tool_calendar.php');  
 /*
 	$tool_name 	  = 'tool_calendar';
 	$ar_tool_data = $_SESSION['dedalo4'][$tool_name]
 	if( isset($ar_tool_data['custom_script']) ) {
 		$custom_class = 'class.'.pathinfo($ar_tool_data['custom_script'])['basename'] .'.php';
-		if (file_exists(DEDALO_LIB_BASE_PATH . $custom_class)) {
-			require_once(DEDALO_LIB_BASE_PATH . $custom_class);
+		if (file_exists(DEDALO_CORE_PATH . $custom_class)) {
+			require_once(DEDALO_CORE_PATH . $custom_class);
 		}	
 	}
 */

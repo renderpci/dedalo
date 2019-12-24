@@ -551,7 +551,6 @@ dd1062	dd85	dd88	no	si	si	5	dd	si	null	{"SQL_operator":"LIKE"}
 dd1066	dd85	dd88	no	si	si	12	dd	no		{"SQL_operator":"IS NOT NULL"}
 dd72	dd195		si	si	si	4	dd	no		
 dd204	dd195	null	si	si	si	1	dd	no		
-dd229	dd193	dd230	no	si	si	4	dd	no		
 dd1095	dd692	dd395	no	si	si	1	dd	si		{"name":"eliminar_archivo"}
 dd1098	dd692	dd395	no	si	si	2	dd	si		{"name":"estadisticas"}
 dd1097	dd692	dd395	no	si	si	3	dd	si		{"name":"actividad_horaria"}
@@ -567,9 +566,10 @@ dd336	dd147	dd395	no	si	si	8	dd	si	\N	{"name":"actualizar"}
 dd196	dd193	dd8	no	si	si	3	dd	si		
 dd1033	dd389	\N	no	si	si	16	dd	si		{"name":"seleccione_un_idioma_de_destino"}
 dd531	dd529	dd9	no	si	si	1	dd	si	\N	\N
-dd460	dd137	dd6	no	si	si	25	dd	no	[{"dd626":"dd963"}]	\N
+dd229	dd193	dd230	no	si	si	4	dd	no		
 dd87	dd85	dd88	no	si	si	13	dd	no		{"SQL_operator":"IS NULL"}
 dd1036	dd389	dd395	no	si	si	17	dd	si		{"name":"relacion_anadida"}
+dd460	dd137	dd6	no	si	si	25	dd	no	[{"dd626":"dd963"}]	\N
 dd1077	dd391	dd395	no	si	si	64	dd	si		{"name":"duracion"}
 dd1078	dd391	dd395	no	si	si	65	dd	si		{"name":"total"}
 dd1079	dd391	dd395	no	si	si	66	dd	si		{"name":"informacion"}
@@ -688,7 +688,6 @@ dd783	dd440	null	si	si	si	3	dd	si
 dd371	dd365	dd247	no	si	si	5	dd	no	\N	\N
 dd100	dd1	dd50	no	si	si	6	dd	si	null	
 dd461	dd460	dd8	no	si	si	1	dd	no	\N	\N
-dd462	dd461	dd9	no	si	si	1	dd	no	\N	\N
 dd463	dd460	dd247	no	si	si	2	dd	no	\N	\N
 dd464	dd460	dd91	no	si	si	3	dd	si	[{"dd9":"dd462"}]	\N
 dd207	dd1	dd231	no	si	si	7	dd	si		
@@ -711,6 +710,7 @@ dd350	dd614	\N	si	si	si	5	dd	no	\N	\N
 dd227	dd440	null	si	si	si	24	dd	no		
 dd605	dd440	null	si	si	si	34	dd	no		
 dd208	dd137	dd6	no	si	si	7	dd	si	[{"dd626":"dd963"}]	
+dd462	dd461	dd9	no	si	si	1	dd	no	\N	\N
 dd32	dd207	dd4	no	si	si	6	dd	no	null	
 dd1015	dd118	dd395	no	si	si	3	dd	si	null	{"name":"registros_actualizados"}
 dd96	dd427	dd206	no	si	si	4	dd	no		
@@ -891,7 +891,7 @@ dd518	dd517	dd9	no	si	si	1	dd	si	\N	\N
 dd1249	dd391	dd395	no	si	si	87	dd	no	\N	{\r\n  "name": "registros_mostrados"\r\n}
 dd519	dd516	dd91	no	si	si	2	dd	no	[{"dd9":"dd518"}]	\N
 dd993	dd942	dd524	no	si	si	6	dd	no	\N	\N
-dd267	dd153	dd441	no	si	si	3	dd	no		{\r\n  "default": {\r\n    "code": "dd155"\r\n  },\r\n  "thesaurus": {\r\n    "term": "dd156",\r\n    "is_descriptor": "dd265",\r\n    "parent": "dd169",\r\n    "is_indexable": false\r\n  }\r\n}
+dd267	dd153	dd441	no	si	si	3	dd	no		{\r\n  "thesaurus": {\r\n    "term": "dd156"\r\n  }\r\n}
 dd994	dd153	dd581	no	si	si	7	dd	no	\N	\N
 dd750	dd733	dd80	no	si	si	1	dd	no	[{"dd6":"dd562"},{"dd9":"dd565"}]	\N
 dd562	dd137	dd6	no	si	si	30	dd	no	[{"dd626":"dd561"}]	\N
@@ -1138,7 +1138,6 @@ dd1301	dd1101	dd1235	no	si	si	25	dd	no	[{"dd592":"dd813"}]	{\r\n  "process_dato"
 dd545	dd548	dd634	no	si	si	5	dd	no		
 dd1054	dd1133	dd1747	no	si	si	1	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
 dd1156	dd1101	dd1231	no	si	si	23	dd	no	[{"dd592":"dd813"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "dd897",\r\n    "component_method": "get_diffusion_value"\r\n  }\r\n}
-dd157	dd154	dd530	no	si	si	5	dd	no	[{"dd6":"dd1318"},{"dd9":"dd1320"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ],\r\n      "style": { "clear": "left"}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n      }\r\n    }\r\n  }\r\n}
 dd1331	dd1325	dd57	no	si	si	10	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
 dd818	dd772	dd177	no	si	si	3	dd	no	\N	\N
 dd716	dd391	dd395	no	si	si	83	dd	si	\N	{\r\n  "name": "field"\r\n}
@@ -1242,6 +1241,7 @@ dd1283	dd1279	dd1747	no	si	si	1	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component
 dd828	dd822	dd9	no	si	si	4	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}
 dd1285	dd1279	dd9	no	si	si	3	dd	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
 dd1176	dd1104	dd1231	no	si	si	6	dd	no	[{"dd580":"dd932"}]	\N
+dd1361	dd1318	dd441	no	si	si	8	dd	no	\N	{\r\n  "thesaurus": {\r\n    "term": "dd1320",\r\n    "is_descriptor": "dd265",\r\n    "is_indexable": false,\r\n    "model": false,\r\n    "parent": "dd169"\r\n  }\r\n}
 dd1177	dd1104	dd1231	no	si	si	7	dd	no	[{"dd10":"dd933"}]	\N
 dd1182	dd1179	dd9	no	si	si	3	dd	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
 dd938	dd771	dd6	no	si	si	5	dd	no	[{"dd626":"dd22"}]	\N
@@ -1260,6 +1260,7 @@ dd800	dd773	dd11	no	si	si	6	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_d
 dd798	dd773	dd11	no	si	si	5	dd	no	[{"dd6":"dd772"},{"dd9":"dd797"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}
 dd805	dd773	dd9	no	si	si	9	dd	no	\N	{\r\n  "multi_value": true,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}
 dd1256	dd1251	dd500	no	si	si	5	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "clear": "left",\r\n        "width": "60%"\r\n      }\r\n    }\r\n  }\r\n}
+dd1362	dd1325	dd10	no	si	si	17	dd	no	\N	\N
 dd1069	dd785	dd395	no	si	si	51	dd	si	\N	{\r\n  "name": "preset"\r\n}
 dd1181	dd1179	dd339	no	si	si	2	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "width": "120px"\r\n      }\r\n    }\r\n  }\r\n}
 dd1191	dd1101	dd1231	no	si	si	24	dd	no	[{"dd11":"dd1188"}]	\N
@@ -1372,6 +1373,7 @@ dd1262	dd1258	dd1231	no	si	si	3	dd	no	[{"dd500":"dd1256"}]	\N
 dd1291	dd1290	dd1129	no	si	si	1	dd	no	[{"dd530":"rsc289"},{"dd530":"rsc290"},{"dd530":"rsc291"},{"dd442":"rsc284"},{"dd9":"rsc283"},{"dd11":"rsc288"},{"dd442":"rsc92"},{"dd442":"rsc91"},{"dd80":"rsc90"},{"dd9":"rsc87"}]	\N
 dd1300	dd1293	dd1233	no	si	si	1	dd	no	[{"dd339":"rsc279"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  }\r\n}
 dd1332	dd1325	dd57	no	si	si	11	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}
+dd157	dd154	dd530	no	si	si	5	dd	no	[{"dd6":"dd1318"},{"dd9":"dd1320"}]	{\r\n  "limit": 1,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "clear": "left"\r\n      }\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
 dd1263	dd1258	dd1231	no	si	si	4	dd	si	[{"dd10":"dd1255"}]	\N
 dd1264	dd1258	dd1235	no	si	si	5	dd	no	[{"dd592":"dd1257"}]	{\r\n  "varchar": 4000\r\n}
 dd1292	dd1290	dd91	no	si	si	2	dd	no	[{"dd339":"rsc279"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd530":"rsc94"},{"dd530":"rsc95"},{"dd9":"rsc101"},{"dd227":"rsc102"},{"dd592":"rsc88"}]	\N

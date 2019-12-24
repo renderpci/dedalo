@@ -84,35 +84,35 @@
 					
 				// additional js / css
 					// css					
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/section/css/section.css";
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/css/component_portal.css";
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+						css::$ar_url[] = DEDALO_CORE_URL."/section/css/section.css";
+						css::$ar_url[] = DEDALO_CORE_URL."/component_portal/css/component_portal.css";
+						css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 					// js
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/search/js/search2.js";
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_portal/js/component_portal.js";
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
+						js::$ar_url[]  = DEDALO_CORE_URL."/search/js/search2.js";
+						js::$ar_url[]  = DEDALO_CORE_URL."/component_portal/js/component_portal.js";
+						js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
 						
 						// render_component js
-							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/js/render_component_input_text.js";
-							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/render_component_portal.js";
-							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/render_component_image.js";
-							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/render_component_text_area.js";
+							js::$ar_url[] = DEDALO_CORE_URL."/component_input_text/js/render_component_input_text.js";
+							js::$ar_url[] = DEDALO_CORE_URL."/component_portal/js/render_component_portal.js";
+							js::$ar_url[] = DEDALO_CORE_URL."/component_image/js/render_component_image.js";
+							js::$ar_url[] = DEDALO_CORE_URL."/component_text_area/js/render_component_text_area.js";
 
 							// test
 								if(SHOW_DEBUG===true) {
-									js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_select/js/render_component_select.js";
+									js::$ar_url[] = DEDALO_CORE_URL."/component_select/js/render_component_select.js";
 								}
 									
 
 					// ts_object 
 						$element_name = 'ts_object';
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+						css::$ar_url[] = DEDALO_CORE_URL."/$element_name/css/$element_name.css";
+						js::$ar_url[]  = DEDALO_CORE_URL."/$element_name/js/$element_name.js";
 
 					// diffusion_index_ts
 						$element_name = 'diffusion_index_ts';
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/$element_name/css/$element_name.css";
-						#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+						css::$ar_url[] = DEDALO_CORE_URL."/diffusion/$element_name/css/$element_name.css";
+						#js::$ar_url[]  = DEDALO_CORE_URL."/$element_name/js/$element_name.js";
 
 			break;
 	}//end switch
@@ -121,7 +121,7 @@
 
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

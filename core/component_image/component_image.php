@@ -47,7 +47,7 @@
 			#
 			# JS includes additionals (!) Moved to init js
 				#js::$ar_url[] = PAPER_JS_URL;
-				#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;			
+				#js::$ar_url[] = DEDALO_CORE_URL . '/component_image/js/component_image_read.js' ;			
 			
 			$id_wrapper 	= 'wrapper_'.$identificador_unico;
 			$component_info = $this->get_component_info('json');
@@ -210,7 +210,7 @@
 				break;
 	}
 
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';	
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';	
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

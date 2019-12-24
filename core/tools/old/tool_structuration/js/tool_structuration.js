@@ -8,7 +8,7 @@ var tool_structuration = new function() {
 
 
 	// LOCAL VARS
-	this.url_trigger 	= DEDALO_LIB_BASE_URL + '/tools/tool_structuration/trigger.tool_structuration.php'
+	this.url_trigger 	= DEDALO_CORE_URL + '/tools/tool_structuration/trigger.tool_structuration.php'
 
 	// Current component vars
 	this.component_tipo = null

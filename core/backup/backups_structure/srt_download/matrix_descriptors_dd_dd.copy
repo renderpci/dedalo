@@ -83,9 +83,9 @@ dd468	Caducitat de la contrasenya	termino	lg-cat
 dd468	Password expiration	termino	lg-eng
 dd761	ακυρώσει	termino	lg-ell
 dd108	Γλώσσα-στόχο	termino	lg-ell
-dd460	Medidas	termino	lg-spa
 dd762	Διαγραφή μόνο τα δεδομένα	termino	lg-ell
 dd110	περιεχόμενα	termino	lg-ell
+dd460	Unidades de Medida	termino	lg-spa
 dd763	Διαγραφή πλήρες αρχείο	termino	lg-ell
 dd1746	διαδικασία	termino	lg-ell
 dd780	Αφορούν επιλεγμένο κομμάτι	termino	lg-ell
@@ -100,12 +100,9 @@ dd1217	φίλτρο	termino	lg-ell
 dd277	κανονικόςNormal	termino	lg-ell
 dd1726	ισχύουν	termino	lg-ell
 dd278	διαγράφεται	termino	lg-ell
-dd460	Mesures	termino	lg-cat
-dd460	Measurements	termino	lg-eng
 dd461	Identificación	termino	lg-spa
 dd461	Identificació	termino	lg-cat
 dd461	Identify	termino	lg-eng
-dd462	Medida	termino	lg-spa
 dd463	Proyecto	termino	lg-spa
 dd173	Created records	termino	lg-eng
 dd375	Name	termino	lg-eng
@@ -193,6 +190,9 @@ dd1229	table	termino	lg-spa
 dd1230	field_int	termino	lg-spa
 dd1231	field_text	termino	lg-spa
 dd1232	field_mediumtext	termino	lg-spa
+dd460	Measurement units	termino	lg-eng
+dd460	Unitats de Mesura	termino	lg-cat
+dd462	Unidad	termino	lg-spa
 dd900	Lloc de captació	termino	lg-cat
 dd901	Llistat de llocs de captació	termino	lg-cat
 dd707	registro	termino	lg-spa
@@ -3261,7 +3261,6 @@ dd713	Dividir palabras	termino	lg-spa
 dd713	Split words	termino	lg-eng
 dd713	Dividir paraules	termino	lg-cat
 dd713	Διαχωρίστε τις λέξεις	termino	lg-ell
-dd1	Dédalo4 Ruzafa 21-11-2019 09:41	termino	lg-spa
 dd913	Proyecte	termino	lg-cat
 dd577	?	termino	lg-ell
 dd718	Página	termino	lg-spa
@@ -3990,9 +3989,7 @@ dd310	Spazio del Colore	termino	lg-ita
 dd311	Progetto	termino	lg-ita
 dd312	Elenco	termino	lg-ita
 dd314	Nuovo	termino	lg-ita
-dd460	Misure	termino	lg-ita
 dd461	Identificazione	termino	lg-ita
-dd462	Misura	termino	lg-ita
 dd463	Progetto	termino	lg-ita
 dd464	Elenco	termino	lg-ita
 dd469	Tipi di vie	termino	lg-ita
@@ -4042,6 +4039,7 @@ dd1255	Descripción	termino	lg-spa
 dd1255	Description	termino	lg-eng
 dd927	Nuova Categoria Lavorativa / Responsabile	termino	lg-ita
 dd1256	Web	termino	lg-spa
+dd460	Unità di misura	termino	lg-ita
 dd922	Categoria Lavorativa / Responsabile	termino	lg-ita
 dd923	Valore della lista	termino	lg-ita
 dd924	Categoria Lavorativa / Responsabile	termino	lg-ita
@@ -4059,6 +4057,7 @@ dd886	Elenco	termino	lg-ita
 dd435	Cercare	termino	lg-ita
 dd366	Stato civile	termino	lg-ita
 dd367	Stato civile	termino	lg-ita
+dd462	Unità	termino	lg-ita
 dd368	Elenco	termino	lg-ita
 dd369	Nuovo	termino	lg-ita
 dd370	Cancellare	termino	lg-ita
@@ -4955,3 +4954,8 @@ dd1360	Disable all columns	termino	lg-eng
 dd1360	Desactivar totes les columnes	termino	lg-cat
 dd1360	Απενεργοποιήστε όλες τις στήλες	termino	lg-ell
 dd24	Childrens	termino	lg-eng
+dd1361	Section map	termino	lg-spa
+dd1362	Dev info	termino	lg-spa
+dd462	Unitat	termino	lg-cat
+dd462	Unit	termino	lg-eng
+dd1	Dédalo4 Ruzafa 19-12-2019 11:50	termino	lg-spa

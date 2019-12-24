@@ -2,7 +2,7 @@
 # SESSION LIFETIME
 # Set session_duration_hours before load 'config' file (override default value)
 #$session_duration_hours = 18;
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 
 
@@ -22,8 +22,8 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 
 
 	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 	
 
 	switch($modo) {	
@@ -57,8 +57,8 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload.css';
 						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload-ui.css';
 
-						css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_common/css/tool_common.css';
-						css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_av/css/tool_import_av.css';
+						css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_common/css/tool_common.css';
+						css::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_av/css/tool_import_av.css';
 
 					# CONTEXT
 					$vars = array('context');foreach($vars as $name) $$name = common::setVar($name);
@@ -99,18 +99,18 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 								# The File Upload user interface plugin
 								js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/js/jquery.fileupload-ui.js';
 								# The main application script
-								js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_av/js/file_upload_main.js';
+								js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_av/js/file_upload_main.js';
 
 
 							# Include specific process_script
 							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_LIB_BASE_PATH . $this->button_import_propiedades->process_script);
+								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
 							}							
 							
 							# IMAGES UPLOAD MANAGER
 							$var_requested 		= get_request_var('button_tipo'); // Core function
 							$button_tipo 		= !empty($var_requested) ? $var_requested : '';	# Needed for build var 'upload_dir_custom'
-							$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_av/trigger.tool_import_av.php?button_tipo='.$button_tipo.'&top_tipo='.TOP_TIPO;
+							$upload_handler_url = DEDALO_CORE_URL . '/tools/tool_import_av/trigger.tool_import_av.php?button_tipo='.$button_tipo.'&top_tipo='.TOP_TIPO;
 							ob_start();
 							include('html/jquery_upload.phtml');
 							$body_html = ob_get_clean();
@@ -122,16 +122,16 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 							$body_html='';
 							$context_label = label::get_label('preview_de_importacion');
 
-							js::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/tool_import_av/js/tool_import_av.js';
+							js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_av/js/tool_import_av.js';
 
 							# Include specific process_script
 							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_LIB_BASE_PATH . $this->button_import_propiedades->process_script);
+								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
 							}
 							
 
 							$default_target_quality 	= $this->button_import_propiedades->quality;								
-							$process_script 			= DEDALO_LIB_BASE_PATH . $this->button_import_propiedades->process_script;
+							$process_script 			= DEDALO_CORE_PATH . $this->button_import_propiedades->process_script;
 								#dump($process_script);
 							$ar_quality 				= unserialize(DEDALO_AV_AR_QUALITY);
 							
@@ -188,7 +188,7 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 	
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

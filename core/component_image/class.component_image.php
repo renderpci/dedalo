@@ -2,7 +2,7 @@
 /*
 * CLASS COMPONENT IMAGE
 */
-require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
+require_once(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 
 class component_image extends component_common {
 	
@@ -428,7 +428,7 @@ class component_image extends component_common {
 					if ($default_add===false) {
 						return false;
 					}
-					$image_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
+					$image_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 				}
 			}		
 

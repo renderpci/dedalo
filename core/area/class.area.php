@@ -194,7 +194,7 @@ class area extends common  {
 	*/
 	public static function area_to_remove($tipo) {
 
-		if( !include(DEDALO_LIB_BASE_PATH . '/config/config_areas.php') ) {
+		if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
 			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empy values as default ".to_string(), logger::ERROR);
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. config4_areas file not found", 1);;

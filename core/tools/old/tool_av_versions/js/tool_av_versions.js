@@ -6,7 +6,7 @@
 var tool_av_versions = new function() {
 
 	
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_av_versions/trigger.tool_av_versions.php';
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_av_versions/trigger.tool_av_versions.php';
 
 
 	$(function() {
@@ -380,7 +380,7 @@ var tool_av_versions = new function() {
 			//return 	console.log(section_tipo);
 						
 
-		//var myurl 		= DEDALO_LIB_BASE_URL + '/component_av/media_engine/media_download.php?video_id='+video_id +'&quality=' + quality ;
+		//var myurl 		= DEDALO_CORE_URL + '/component_av/media_engine/media_download.php?video_id='+video_id +'&quality=' + quality ;
 		var myurl 		= this.url_trigger + '?mode=download_file&video_id='+video_id +'&quality=' + quality +'&tipo=' + tipo +'&section_tipo=' + section_tipo +'&parent=' + parent +'&top_tipo='+page_globals.top_tipo ;
 		
 		if ( !confirm( get_label.descargar + ' ' + video_id + ' ['+quality+']' ) ) return false;
@@ -409,7 +409,7 @@ var tool_av_versions = new function() {
 
 			//return console.log('top_tipo:'+top_tipo+' top_id:'+top_id+' tipo:'+tipo+' parent:'+parent)			
 
-		//var myurl 		= DEDALO_LIB_BASE_URL + '/component_av/media_engine/media_download.php?video_id='+video_id +'&quality=' + quality ;
+		//var myurl 		= DEDALO_CORE_URL + '/component_av/media_engine/media_download.php?video_id='+video_id +'&quality=' + quality ;
 		var myurl = this.url_trigger + '?mode=download_fragment&video_id='+video_id +'&quality=' + quality+'&tc_in=' + tc_in +'&tc_out=' + tc_out +'&watermark=' + watermark +'&tipo=' + tipo +'&parent=' + parent +'&tag_id=' + tag_id +'&top_tipo=' + top_tipo +'&top_id=' + top_id ;
 		
 		if ( !confirm( get_label.descargar + ' ' + video_id + '-' + tag_id + ' ['+quality+']' ) ) return false;
@@ -497,7 +497,7 @@ var tool_av_versions = new function() {
 				
 				if ( confirm('Download ' + received_data) ) {
 					
-					var download_url = DEDALO_LIB_BASE_URL + '/media_engine/fragment_download.php' + '?reelID='+video_id +'&quality='+quality +'&filename=' + filename ;
+					var download_url = DEDALO_CORE_URL + '/media_engine/fragment_download.php' + '?reelID='+video_id +'&quality='+quality +'&filename=' + filename ;
 
 					try{
 						//window.open(download_url,'Download');

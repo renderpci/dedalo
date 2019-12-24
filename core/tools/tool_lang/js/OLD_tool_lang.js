@@ -10,7 +10,7 @@ var tool_lang = new function() {
 
 	// LOCAL VARS
 	this.textarea_lang
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/tools/tool_lang/trigger.tool_lang.php'
+	this.trigger_url = DEDALO_CORE_URL + '/tools/tool_lang/trigger.tool_lang.php'
 	this.last_target_lang
 	
 	// GLOBAL PARAGRAPH INITIAL VALUES

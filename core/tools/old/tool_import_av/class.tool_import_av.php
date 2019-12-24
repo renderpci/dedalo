@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL_IMPORT_AV
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
@@ -145,7 +145,7 @@ class tool_import_av extends tool_common {
 		# Para cada caso será distinto oel patrón regex. Incluiremos la definición de la expresión regular al principio del script
 		# en formato tipo imagenes_mupreva : $regex = "/((\w+)-(\d*)).([a-zAZ]+)\z/";
 		$process=0; 
-		#require(DEDALO_LIB_BASE_PATH . $this->button_import_propiedades->process_script);
+		#require(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
 		#$regex = "/((\w+)-(\d*)).([a-zAZ]+)\z/";
 
 
@@ -167,7 +167,7 @@ class tool_import_av extends tool_common {
 		$ar_data['extension'] 					= $extension;			# JPG (respetamos mayúsculas/minúsculas)		
 		$ar_data['tamano_archivo'] 				= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB		
 		#$ar_data['imagen']['image_url'] 		= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
-		#$ar_data['imagen']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_av/foto_preview.php?f='.$ar_data['file_path'];
+		#$ar_data['imagen']['image_preview_url']	= DEDALO_CORE_URL . '/tools/tool_import_av/foto_preview.php?f='.$ar_data['file_path'];
 		
 		return $ar_data;
 	}

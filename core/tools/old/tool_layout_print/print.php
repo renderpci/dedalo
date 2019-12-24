@@ -5,7 +5,7 @@
 * This script render final document necessary to create the pdf file from DEDALO_PDF_RENDERER (wkhtmltopdf)
 * Is accesible for DEDALO_PDF_RENDERER without login (user data is created from actual logged user)
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( dirname(__FILE__) .'/class.tool_layout_print.php'); 
 
 	#
@@ -95,8 +95,8 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 
 		# Aditional css / js
 		$tool_name='tool_layout_print';
-		css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-		css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
+		css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+		css::$ar_url[] = DEDALO_CORE_URL."/tools/tool_layout_print/css/tool_layout_edit.css";
 
 		#
 		# HTML FINAL
@@ -117,7 +117,7 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 				$html .= implode('', $pages_rendered->ar_pages);		
 				/*
 				ob_start();
-				include ( DEDALO_LIB_BASE_PATH .'/tools/tool_layout_print/html/tool_layout_print_render.phtml' );
+				include ( DEDALO_CORE_PATH .'/tools/tool_layout_print/html/tool_layout_print_render.phtml' );
 				$html .= ob_get_clean();
 				*/
 
@@ -134,7 +134,7 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 		/*
 		#
 		# PDF generation
-		$pdf_target_path  = DEDALO_LIB_BASE_PATH . "/tools/tool_layout_print/print_pdf/".$section_layout_label.'.pdf';
+		$pdf_target_path  = DEDALO_CORE_PATH . "/tools/tool_layout_print/print_pdf/".$section_layout_label.'.pdf';
 		$javascript_delay = 140000;
 		$command  = DEDALO_PDF_RENDERER ;	//. " --no-stop-slow-scripts --debug-javascript --javascript-delay $javascript_delay ";
 		

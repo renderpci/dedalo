@@ -55,7 +55,7 @@ class section_group_div extends common {
 
 		$tab_id 	= 'tab_' . base64_encode($title);		#dump($identificador_unico,'identificador_unico');
 	
-		include( DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . 'dummy' . '.phtml' );
+		include( DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . 'dummy' . '.phtml' );
 	}
 
 

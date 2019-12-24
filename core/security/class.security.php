@@ -9,7 +9,7 @@
 	2 lectura/escritura
 	3 debug
 */
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
+#require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
 
 
 class security {	 
@@ -63,7 +63,7 @@ class security {
 
 
 		# FILENAME_USER_AR_PERMISSIONS_TABLE
-		# $this->filename_user_ar_permissions_table = DEDALO_LIB_BASE_PATH . '/backup/users/user_ar_permissions_table_' . $this->user_id . '.data';		
+		# $this->filename_user_ar_permissions_table = DEDALO_CORE_PATH . '/backup/users/user_ar_permissions_table_' . $this->user_id . '.data';		
 	}//end __construct
 
 	
@@ -134,7 +134,7 @@ class security {
 
 				# Redirect to home
 				#header("HTTP/1.1 301 Moved Permanently");
-				#header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
+				#header("Location: ".DEDALO_CORE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
 				#exit();
 			/*
 			try {

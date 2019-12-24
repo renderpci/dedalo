@@ -1,6 +1,6 @@
 <?php
-#require_once(DEDALO_LIB_BASE_PATH . '/dd/class.RecordObj_dd_edit.php');
-require_once(DEDALO_LIB_BASE_PATH . '/dd/class.ontology.php');
+#require_once(DEDALO_CORE_PATH . '/dd/class.RecordObj_dd_edit.php');
+require_once(DEDALO_CORE_PATH . '/dd/class.ontology.php');
 
 /**
 * ONTOLOGY
@@ -31,7 +31,7 @@ class tools_register {
 			$tipo_version 	= 'dd1327';
 
 		// get the all tools folders
-			$ar_tools = (array)glob(DEDALO_LIB_BASE_PATH . '/tools/*', GLOB_ONLYDIR);
+			$ar_tools = (array)glob(DEDALO_CORE_PATH . '/tools/*', GLOB_ONLYDIR);
 
 
 		// Ontologies. Get the all tools ontologies
@@ -78,7 +78,7 @@ class tools_register {
 					$label   = reset($info_object->components->{$tipo_label}->dato->{'lg-nolan'});
 					$version = reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'});
 					$info_file_processed[] = (object)[
-						'dir'   	=> str_replace(DEDALO_LIB_BASE_PATH, '', $current_dir_tool),
+						'dir'   	=> str_replace(DEDALO_CORE_PATH, '', $current_dir_tool),
 						'label' 	=> $label,
 						'version' 	=> $version
 					];
@@ -332,7 +332,7 @@ class tools_register {
 
 
 		// config
-			$config_raw = file_get_contents(DEDALO_LIB_BASE_PATH.'/config/tools/config_'.$tool_object->name.'.json');
+			$config_raw = file_get_contents(DEDALO_CONFIG_PATH.'/tools/config_'.$tool_object->name.'.json');
 			$tool_object->config = ($config_raw!==false) ? json_decode($config_raw) : null;
 
 

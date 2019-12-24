@@ -1,5 +1,5 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd.php');
+require_once(DEDALO_CORE_PATH . '/dd/class.dd.php');
 
 
 

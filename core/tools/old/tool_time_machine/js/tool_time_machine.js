@@ -7,7 +7,7 @@ var fixed_current_tipo_section 		   	// Set on load_time_machine function
 var tool_time_machine = new function() {
 
 
-	this.trigger_tool_time_machine_url	= DEDALO_LIB_BASE_URL + "/tools/tool_time_machine/trigger.tool_time_machine.php"
+	this.trigger_tool_time_machine_url	= DEDALO_CORE_URL + "/tools/tool_time_machine/trigger.tool_time_machine.php"
 	this.current_id_time_machine 		= null	// Set on load_preview_component loaded html 	
 	
 

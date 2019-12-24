@@ -1,6 +1,6 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.AVPlayer.php');
 
 
 

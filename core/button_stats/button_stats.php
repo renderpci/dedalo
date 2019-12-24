@@ -16,11 +16,11 @@
 
 	# CSS / JS MAIN FILES
 	css::$ar_url[] = NVD3_URL_CSS;
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/diffusion_section_stats/css/diffusion_section_stats.css";	
+	css::$ar_url[] = DEDALO_CORE_URL."/diffusion/diffusion_section_stats/css/diffusion_section_stats.css";	
 	
 	js::$ar_url[]  = D3_URL_JS;
 	js::$ar_url[]  = NVD3_URL_JS;
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/diffusion/diffusion_section_stats/js/diffusion_section_stats.js";
+	js::$ar_url[]  = DEDALO_CORE_URL."/diffusion/diffusion_section_stats/js/diffusion_section_stats.js";
 
 	switch($modo) {		
 						
@@ -35,7 +35,7 @@
 				return null;
 	}
 		
-	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

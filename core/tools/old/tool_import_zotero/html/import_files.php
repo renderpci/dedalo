@@ -1,6 +1,6 @@
 <?php
 $TOP_TIPO=false;
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( dirname(dirname(__FILE__)) .'/class.tool_import_zotero.php');  # Read constants from here
 
 #error_reporting(E_ALL | E_STRICT);
@@ -8,7 +8,7 @@ require(DEDALO_UPLOADER_DIR.'/server/php/UploadHandler.php');
 
 $upload_dir = TOOL_IMPORT_ZOTERO_UPLOAD_DIR;
 $upload_url = TOOL_IMPORT_ZOTERO_UPLOAD_URL;
-$script_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_zotero/html/import_files.php'; # current file url
+$script_url = DEDALO_CORE_URL . '/tools/tool_import_zotero/html/import_files.php'; # current file url
 
 
 # Options

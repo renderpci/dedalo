@@ -35,7 +35,7 @@ class tool_diffusion {
 	*/
 	public function get_html() {
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
+		include ( DEDALO_CORE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
 		return  ob_get_clean();
 	}//end get_html
 
@@ -105,7 +105,7 @@ class tool_diffusion {
 		# Each diffusion element is managed with their own class that extends the main diffusion class
 		$diffusion_class_name = $obj_diffusion_element->class_name;
 
-		require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
+		require_once(DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
 			#dump($diffusion_class_name, '$diffusion_class_name ++ '.to_string()); die();		
 		
 		$options = new stdClass();
@@ -186,7 +186,7 @@ class tool_diffusion {
 		# Each diffusion element is managed with their own class that extends the main diffusion class
 		$diffusion_class_name = $obj_diffusion_element->class_name;
 
-		include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
+		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
 			#dump($diffusion_class_name, '$diffusion_class_name ++ '.to_string());
 		
 		$msg=array();
@@ -258,7 +258,7 @@ class tool_diffusion {
 			# Diffusiion classname (diffusion_mysql, diffusion_rdf, etc..)
 			$class_name = $value_obj->class_name;
 
-			include_once(DEDALO_LIB_BASE_PATH .'/diffusion/class.'.$class_name.'.php' );
+			include_once(DEDALO_CORE_PATH .'/diffusion/class.'.$class_name.'.php' );
 
 			$diffusion 	= new $class_name;
 			$de_result 	= $diffusion->diffusion_complete_dump( $diffusion_element_tipo, $resolve_references=true );
@@ -322,7 +322,7 @@ class tool_diffusion {
 			return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
 		}
 
-		include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
 
 		$ar_diffusion_sections 	= $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
 	
@@ -361,7 +361,7 @@ class tool_diffusion {
 				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database', 'children', true);
 				if (isset($databases[0])) {
 					// Loads parent class diffusion
-					include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+					include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
 					// get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true)
 					$database_name = RecordObj_dd::get_termino_by_tipo($databases[0]);
 					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );

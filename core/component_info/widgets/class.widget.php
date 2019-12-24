@@ -94,8 +94,7 @@ class widget {
 	*/
 	public function get_widget_base_url() {
 
-		$DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_LIB_BASE_PATH)) .'/'. basename(DEDALO_LIB_BASE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
-		$widget_base_url 		= $DEDALO_EXTRAS_BASE_URL . $this->widget_path . '/' . $this->widget_name;
+		$widget_base_url 		= DEDALO_EXTRAS_URL . $this->widget_path . '/' . $this->widget_name;
 
 	   return $widget_base_url;
 	}//end get_base_url

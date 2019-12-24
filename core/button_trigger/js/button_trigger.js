@@ -31,7 +31,7 @@ var button_trigger = new function() {
 			if (typeof propiedades.trigger_url == "undefined") {
 				return alert("[button_trigger.trigger] Error Wrong url data [propiedades]")
 			}else{
-				var trigger_url = DEDALO_LIB_BASE_URL + propiedades.trigger_url;
+				var trigger_url = DEDALO_CORE_URL + propiedades.trigger_url;
 			}
 
 		// Check trigger mode

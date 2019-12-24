@@ -48,7 +48,7 @@ class component_security_tools extends component_common {
 			return self::$ar_tools;
 		}
 
-		$tools_path 	= DEDALO_LIB_BASE_PATH . '/tools';
+		$tools_path 	= DEDALO_CORE_PATH . '/tools';
 		$ar_excluded 	= array('.',
 								'..',
 								'.DS_Store',

@@ -24,4 +24,4 @@
 
 ************************************************************************/
 header("HTTP/1.1 301 Moved Permanently");
-header("Location: v6/core/page/");
+header("Location: core/page/");

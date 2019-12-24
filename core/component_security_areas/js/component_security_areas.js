@@ -15,7 +15,7 @@ var component_security_areas = new function() {
 	this.input_checkbox_admin 		= []
 	this.save_arguments 			= {}
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/component_security_areas/trigger.component_security_areas.php'
+	this.url_trigger = DEDALO_CORE_URL + '/component_security_areas/trigger.component_security_areas.php'
 	
 
 	switch(page_globals.modo) {

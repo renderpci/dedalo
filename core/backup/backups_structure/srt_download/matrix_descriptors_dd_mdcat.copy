@@ -3237,8 +3237,8 @@ mdcat1873	Enviament Identificació Positiva	termino	lg-cat
 mdcat1873	Envío de indentificacion positiva	termino	lg-spa
 mdcat1874	Exhumat a Catalunya	termino	lg-cat
 mdcat1874	Exhumado a Cataluña	termino	lg-spa
-mdcat1875	Nombre fosa	termino	lg-spa
 mdcat1875	Nom fossa	termino	lg-cat
+mdcat1875	Nombre fosa	termino	lg-spa
 mdcat1876	Mapa de fosas	termino	lg-spa
 mdcat1876	Mapa de fossas	termino	lg-cat
 mdcat1877	Exhumado fuera de Catalunya	termino	lg-spa
@@ -3274,10 +3274,10 @@ mdcat1891	Descripcions	termino	lg-cat
 mdcat1892	Datos de la excavación	termino	lg-spa
 mdcat1892	Dades de l&#039;excavació	termino	lg-cat
 mdcat1893	Listado	termino	lg-spa
+mdcat1895	Espacios de memoria	termino	lg-spa
 mdcat1894	RECYCLE MDCAT	termino	lg-spa
 mdcat1894	Nom del pare	termino	lg-cat
-mdcat1895	Nombre de la madre	termino	lg-spa
-mdcat1895	Nom de la mare	termino	lg-cat
+mdcat1895	Espais de memòria	termino	lg-cat
 mdcat1696	Municipio / comarca / provincia	termino	lg-spa
 mdcat1696	Municipi / comarca /provincia	termino	lg-cat
 mdcat1904	Llistat	termino	lg-cat
@@ -6231,7 +6231,6 @@ mdcat3571	DIV Tipo ejército	termino	lg-spa
 mdcat3574	web_mdcat_cost_huma	termino	lg-spa
 mdcat3575	exclude	termino	lg-spa
 mdcat3576	list	termino	lg-spa
-mdcat3592	DIV identificación genética	termino	lg-spa
 mdcat3579	Identificació	termino	lg-cat
 mdcat3577	Edat	termino	lg-cat
 mdcat3580	Id	termino	lg-spa
@@ -6936,3 +6935,5 @@ mdcat3637	fons_code	termino	lg-spa
 mdcat3638	fons_code	termino	lg-spa
 mdcat3639	fons_code	termino	lg-spa
 mdcat3633	fons_code	termino	lg-spa
+mdcat3592	Identificación genética	termino	lg-spa
+mdcat3592	Identificació genètica	termino	lg-cat

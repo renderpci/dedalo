@@ -7,7 +7,7 @@
 var tool_replace_component_data = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_replace_component_data/trigger.tool_replace_component_data.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_replace_component_data/trigger.tool_replace_component_data.php' ;
 
 	/**
 	* REPLACE_DATA

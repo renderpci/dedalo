@@ -10,7 +10,7 @@ var component_security_access = new function() {
 
 	this.security_access_objects = []
 	this.save_arguments 		 = {}
-	this.url_trigger 			 = DEDALO_LIB_BASE_URL + '/component_security_access/trigger.component_security_access.php';
+	this.url_trigger 			 = DEDALO_CORE_URL + '/component_security_access/trigger.component_security_access.php';
 
 
 	/**

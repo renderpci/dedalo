@@ -2,7 +2,7 @@
 /*
 * CLASS LOGGER
 */
-#require_once( dirname(dirname(__FILE__)) . '/config/config.php');
+#require_once( DEDALO_CONFIG_PATH . '/config.php');
 
 class logger {
 
@@ -72,7 +72,7 @@ class logger {
 
 		# Include backend loger
 		$class_name = 'logger_backend_'.$url_data['scheme'];
-		include_once( DEDALO_LIB_BASE_PATH .'/logger/class.' . $class_name . '.php' );
+		include_once( DEDALO_CORE_PATH .'/logger/class.' . $class_name . '.php' );
 
 		if (!class_exists($class_name)) {
 			throw new Exception("No loggin backend available for ".$url_data['scheme'], 1);			

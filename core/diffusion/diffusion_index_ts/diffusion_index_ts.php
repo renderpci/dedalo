@@ -3,7 +3,7 @@
 	if(SHOW_DEBUG) $start_time = start_time();
 	
 	# CONTROLLER
-	require_once(DEDALO_LIB_BASE_PATH .'/media_engine/class.OptimizeTC.php');
+	require_once(DEDALO_CORE_PATH .'/media_engine/class.OptimizeTC.php');
 
 	#$terminoID 				= $this->terminoID;	
 	$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
@@ -70,7 +70,7 @@
 					$ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $propiedades );
 				}
 				#dump($ar_diffusion_obj_head,'ar_diffusion_obj_head '.to_string($current_section_id));
-				include DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_head.phtml';
+				include DEDALO_CORE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_head.phtml';
 				$html_group .= $html_head;
 			
 			#
@@ -88,13 +88,13 @@
 
 				}
 				*/
-				include DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_row.phtml';
+				include DEDALO_CORE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_row.phtml';
 				$html_group .= $html_row;
 
 		}//end foreach ($ar_values as $current_section_id => $ar_head) {		
 		
 
-		include DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_table.phtml';
+		include DEDALO_CORE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_table.phtml';
 	}
 
 	if(SHOW_DEBUG) {
@@ -106,7 +106,7 @@
 	#print "</pre>";	
 
 	/*
-	$page_html	= DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
+	$page_html	= DEDALO_CORE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if (!file_exists($page_html)) {
 		throw new Exception("Error Processing Request. Mode <b>$file_name</b> is not valid! (2) ", 1);		
 	}

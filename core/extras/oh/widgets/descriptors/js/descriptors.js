@@ -8,7 +8,7 @@ var descriptors = new function() {
 
 
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/extras/oh/widgets/descriptors/trigger.descriptors.php';
+	this.trigger_url = DEDALO_CORE_URL + '/extras/oh/widgets/descriptors/trigger.descriptors.php';
 
 
 

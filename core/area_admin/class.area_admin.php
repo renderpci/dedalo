@@ -33,7 +33,7 @@ class area_admin extends area {
 		*/	
 	
 		ob_start();
-		include ( DEDALO_LIB_BASE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
+		include ( DEDALO_CORE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 		
 

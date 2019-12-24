@@ -51,15 +51,15 @@
 				#dump($propiedades, ' propiedades ++ '.to_string());				
 
 			# TOOL CSS / JS MAIN FILES			
-			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+			css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+			js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 
 			# CUSTOM_CSS_FILE_PATH
 			# To specify a custom css file for manage current tool css, create a css file named like 'numisdata201.css' (tool_tipo.css) in tool css dir
-			#$custom_css_file_path = DEDALO_LIB_BASE_PATH.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
+			#$custom_css_file_path = DEDALO_CORE_PATH.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
 			#if (file_exists($custom_css_file_path)) {
-			#	css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
+			#	css::$ar_url[] = DEDALO_CORE_URL.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
 			#}
 
 			# Inverse_code
@@ -75,7 +75,7 @@
 
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}

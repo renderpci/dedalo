@@ -1,5 +1,5 @@
 <?php
-include( dirname(dirname(dirname(__FILE__))).'/config/config.php');
+include( DEDALO_CONFIG_PATH . '/config.php');
 $f = common::setVar('f');
 $page_title = pathinfo($f, PATHINFO_BASENAME);
 # BOOTSTRAP_CSS_URL

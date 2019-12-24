@@ -3,7 +3,7 @@
 # Set session_duration_hours before load 'config' file (override default value)
 $session_duration_hours = 24;
 
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( dirname(__FILE__) .'/class.tool_import_bibtex.php');  # Read constants from here (pass url 'button_tipo' if needed)
 
 if(login::is_logged()!==true) {
@@ -128,7 +128,7 @@ if( $mode=='process_file' ) {
 	# Custom potprocessing file	
 	if (!empty(tool_import_bibtex::$process_script)) {
 		$ar_section_id = array_keys($process_file_result);	// Keys are section id of each created/updated record
-		include_once(DEDALO_LIB_BASE_PATH.''.tool_import_bibtex::$process_script);
+		include_once(DEDALO_CORE_PATH.''.tool_import_bibtex::$process_script);
 		if (function_exists('custom_process')) {
 			custom_process( $ar_section_id );
 		}

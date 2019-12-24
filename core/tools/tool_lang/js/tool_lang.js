@@ -77,7 +77,7 @@ tool_lang.prototype.init = async function(options) {
 
 	self.config				= null // the config will be loaded by the build method in tool_common
 
-	self.trigger_url 		= DEDALO_LIB_BASE_URL + "/tools/tool_lang/trigger.tool_lang.php"
+	self.trigger_url 		= DEDALO_CORE_URL + "/tools/tool_lang/trigger.tool_lang.php"
 
 
 	// set status

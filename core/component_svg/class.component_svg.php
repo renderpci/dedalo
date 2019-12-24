@@ -228,7 +228,7 @@ class component_svg extends component_common {
 	* @return string $url
 	*/
 	public static function get_default_svg_url() {
-		$url = DEDALO_LIB_BASE_URL . '/themes/default/upload.svg';
+		$url = DEDALO_CORE_URL . '/themes/default/upload.svg';
 
 		return $url;
 	}//end get_default_svg_url

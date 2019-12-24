@@ -1,7 +1,7 @@
 <?php
 $start_time=microtime(1);
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
+require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -520,7 +520,7 @@ if($mode=='download_file') {
 	session_write_close();
 
 	# LOAD LIB 
-	require( DEDALO_LIB_BASE_PATH . '/media_engine/lib/download.php' );
+	require( DEDALO_CORE_PATH . '/media_engine/lib/download.php' );
 
 	exit();
 }#end download

@@ -8,7 +8,7 @@
 var tool_add_component_data = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_add_component_data/trigger.tool_add_component_data.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_add_component_data/trigger.tool_add_component_data.php' ;
 
 	/**
 	* ADD_DATA

@@ -12,7 +12,7 @@ var selected_tipo;
 var component_text_area = new function() {
 
 
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/component_text_area/trigger.component_text_area.php';
+	this.url_trigger = DEDALO_CORE_URL + '/component_text_area/trigger.component_text_area.php';
 
 	/*
 	// Prevent bootstrap dialog from blocking focusin
@@ -3500,7 +3500,7 @@ alert("get_tag_label");
 
 		//WORKER TOO NEW!!! is not possible do with canvas elements (09-2017)
 		/*
-		let render_tag = new Worker( DEDALO_LIB_BASE_URL + '/component_text_area/js/render_tag_image.js');
+		let render_tag = new Worker( DEDALO_CORE_URL + '/component_text_area/js/render_tag_image.js');
 
 		render_tag.postMessage({ 	
 								"label": label,

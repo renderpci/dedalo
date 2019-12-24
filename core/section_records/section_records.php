@@ -14,8 +14,8 @@
 	
 	# Add section records self css/js libs
 	$cwd = basename(__DIR__);
-	#css::$ar_url[] = DEDALO_LIB_BASE_URL."/$cwd/css/$cwd.css";
-	#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$cwd/js/$cwd.js";
+	#css::$ar_url[] = DEDALO_CORE_URL."/$cwd/css/$cwd.css";
+	#js::$ar_url[]  = DEDALO_CORE_URL."/$cwd/js/$cwd.js";
 
 
 	# SEARCH_OPTIONS_JSON
@@ -29,7 +29,7 @@
 
 				#
 				# PAGINATOR HTML
-					include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
+					include_once(DEDALO_CORE_PATH . '/search/records_navigator/class.records_navigator.php');
 					$rows_paginator_html= '';
 
 					// CONTEXT
@@ -51,7 +51,7 @@
 				
 				#
 				# ROW HTML
-					include_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');
+					include_once(DEDALO_CORE_PATH . '/section_records/record/class.record.php');
 					$record_html 	= '';
 					$record 		= new record($this, $modo);
 					$record_html	= $record->get_html();
@@ -78,8 +78,8 @@
 				
 
 				# Add list specific controllers
-				#include(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
-				include(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
+				#include(DEDALO_CORE_PATH . '/section_records/rows_header/class.rows_header.php');
+				include(DEDALO_CORE_PATH . '/section_records/rows/class.rows.php');
 				
 				#			
 				# BUTTON DELETE 
@@ -125,13 +125,13 @@
 					#
 					# CSS
 						css::$ar_url[] = NVD3_URL_CSS;
-						css::$ar_url[] = DEDALO_LIB_BASE_URL.'/diffusion/diffusion_section_stats/css/diffusion_section_stats.css';
+						css::$ar_url[] = DEDALO_CORE_URL.'/diffusion/diffusion_section_stats/css/diffusion_section_stats.css';
 
 					#
 					# JS includes
 						js::$ar_url[] = D3_URL_JS;
 						js::$ar_url[] = NVD3_URL_JS;
-						js::$ar_url[] = DEDALO_LIB_BASE_URL.'/diffusion/diffusion_section_stats/js/diffusion_section_stats.js';
+						js::$ar_url[] = DEDALO_CORE_URL.'/diffusion/diffusion_section_stats/js/diffusion_section_stats.js';
 						#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jquery.resizableColumns.min.js';
 						#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/store.js-master/store.min.js';
 				}

@@ -10,7 +10,7 @@
 $start_time=microtime(1);
 
 // Require files
-	require_once( dirname(dirname(dirname(__FILE__))) . '/config/config.php' );
+	require_once( DEDALO_CONFIG_PATH . '/config.php' );
 	require_once( dirname(__FILE__) . '/saml_config.php' );
 	require_once( SAML_SETTINGS_PATH );
 	require_once( TOOLKIT_PATH . '_toolkit_loader.php' );
@@ -106,7 +106,7 @@ $start_time=microtime(1);
 											#$load_logout = file_get_contents_curl(SAML_CONFIG['logout_url']);
 											#$html_content .= '<iframe class="hide" src="'.SAML_CONFIG['logout_url'].'"></iframe>';
 											#$html_content .= '<script>var my_window=window.open("'.SAML_CONFIG['logout_url'].'");</script>';
-											#$html_content .= include( DEDALO_LIB_BASE_PATH . '/login/html/saml_button.phtml');
+											#$html_content .= include( DEDALO_CORE_PATH . '/login/html/saml_button.phtml');
 											$html_content .= '<a type="button" class="btn btn-success btn-block" href="'.DEDALO_ROOT_WEB.'">Dédalo Login</a>';
 											$html_content .= '</div>';											
 										$html_content .= '</div>';

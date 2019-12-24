@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL_IMPORT_ZOTERO
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
@@ -52,12 +52,12 @@ class tool_import_zotero extends tool_common {
 			$button_import_obj = new button_import( safe_xss($_REQUEST['button_tipo']), null, safe_xss($_REQUEST['t']) );
 			$propiedades 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
 			if (isset($propiedades->process_script)) {
-				if ( !include_once(DEDALO_LIB_BASE_PATH.$propiedades->process_script) ) {
+				if ( !include_once(DEDALO_CORE_PATH.$propiedades->process_script) ) {
 					throw new Exception("Error Processing Request. Error in button import zotero config. Wrong process_script path", 1);
 				}
 				tool_import_zotero::$process_script = $propiedades->process_script;	// Fix current path
 				if(SHOW_DEBUG) {
-					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_LIB_BASE_PATH.$propiedades->process_script);
+					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_CORE_PATH.$propiedades->process_script);
 				}
 			}
 		}

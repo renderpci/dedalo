@@ -7,7 +7,7 @@
 var tool_portal = new function() {
 
 	// LOCAL VARS
-	this.url_trigger = DEDALO_LIB_BASE_URL + '/tools/tool_portal/trigger.tool_portal.php' ;
+	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_portal/trigger.tool_portal.php' ;
 
 	// Global var. Set when load fragment info	
 	this.selected_tag;

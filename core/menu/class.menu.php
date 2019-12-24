@@ -120,10 +120,10 @@ class menu extends common {
 						if(SHOW_DEBUG===true) {
 						$tesauro_html = '';
 						$tesauro_html .= '<li class="has-sub menu_li_inactive">';
-						$tesauro_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">TS V3</a>"; // ucfirst(label::get_label('tesauro'))
+						$tesauro_html .= "<a href=\"".DEDALO_CORE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">TS V3</a>"; // ucfirst(label::get_label('tesauro'))
 							$tesauro_html .= '<ul>';
-							$tesauro_html .= "<li><a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">". ucfirst(label::get_label('terminos'))."</a></li>";
-							$tesauro_html .= "<li><a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=modelo_edit&type=all\">". ucfirst(label::get_label('modelos'))." </a></li>";
+							$tesauro_html .= "<li><a href=\"".DEDALO_CORE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">". ucfirst(label::get_label('terminos'))."</a></li>";
+							$tesauro_html .= "<li><a href=\"".DEDALO_CORE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=modelo_edit&type=all\">". ucfirst(label::get_label('modelos'))." </a></li>";
 							$tesauro_html .= "<li><a href=\"".DEDALO_ROOT_WEB."/jer/jer_list.php\">". ucfirst(label::get_label('jerarquias'))."</a></li>";
 							$tesauro_html .= '</ul>';
 						$tesauro_html .= "</li>";
@@ -131,14 +131,14 @@ class menu extends common {
 						}
 						*/
 
-						# STRUCTURE LINK IN MENU.  && file_exists(DEDALO_LIB_BASE_PATH.'/dd')
+						# STRUCTURE LINK IN MENU.  && file_exists(DEDALO_CORE_PATH.'/dd')
 						if( (SHOW_DEBUG===true) ||
 							(DEDALO_ENTITY==='master' && $logged_user_is_global_admin===true && SHOW_DEVELOPER===true)
 						) {
 							// Structure links
 								$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
-									$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
-									$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';
+									$structure_path = DEDALO_CORE_URL.'/dd/dd_list.php?modo=tesauro_edit';
+									$modelo_path 	= DEDALO_CORE_URL.'/dd/dd_list.php?modo=modelo_edit';
 									$menu_structure_html .= self::build_menu_link($structure_path, 'Structure');
 									$menu_structure_html .= '<ul>';
 									$menu_structure_html .= '<li>';
@@ -186,7 +186,7 @@ class menu extends common {
 		#if($tipo == navigator::get_selected('area')) {
 			#$termino= "<span class=\"menu_a_span_hilite\">$termino</span>";
 		#}
-		$path = DEDALO_LIB_BASE_URL .'/page/';
+		$path = DEDALO_CORE_URL .'/page/';
 		$url  = "{$path}?t=$tipo";
 
 		# Redirections when area is a special thesaurus class

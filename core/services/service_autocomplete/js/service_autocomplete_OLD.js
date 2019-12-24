@@ -279,7 +279,7 @@ var service_autocomplete = new function() {
 	this.search_dedalo = function(search_options) {
 		
 		// trigger vars
-			const url_trigger  = DEDALO_LIB_BASE_URL + "/services/service_autocomplete/trigger.service_autocomplete.php"
+			const url_trigger  = DEDALO_CORE_URL + "/services/service_autocomplete/trigger.service_autocomplete.php"
 			const trigger_vars = {
 					mode 	 			: 'autocomplete_search',
 					component_tipo 		: search_options.component_tipo, 

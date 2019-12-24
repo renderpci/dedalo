@@ -1,5 +1,5 @@
 <?php
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
+#require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
 #require_once(DEDALO_ROOT . '/jer/class.Jerarquia.php');
 
 

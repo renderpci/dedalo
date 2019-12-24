@@ -10,7 +10,7 @@ var tool_description = new function() {
 
 
 	// LOCAL VARS
-	this.trigger_tool_description_url = DEDALO_LIB_BASE_URL + '/tools/tool_description/trigger.tool_description.php'
+	this.trigger_tool_description_url = DEDALO_CORE_URL + '/tools/tool_description/trigger.tool_description.php'
 
 
 

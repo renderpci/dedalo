@@ -1,7 +1,7 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 # Old lang vars
-require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
 
 /**
 * LOGIN
@@ -20,11 +20,11 @@ if($is_global_admin!==true) {
 	exit();
 }
 
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd.php');
-require_once(DEDALO_LIB_BASE_PATH . '/dd/d3_functions.php');
+require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php');
+require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
+require_once(DEDALO_CORE_PATH . '/common/class.navigator.php');
+require_once(DEDALO_CORE_PATH . '/dd/class.dd.php');
+require_once(DEDALO_CORE_PATH . '/dd/d3_functions.php');
 
 
 
@@ -48,7 +48,7 @@ $terminoID = trim($terminoID);
 if( !empty($_POST["accion"]) ) {	
 	$html 		= '';
 	$accion		= 'editTS';
-	$edicion 	= require_once(DEDALO_LIB_BASE_PATH . '/dd/trigger.dd.php');  
+	$edicion 	= require_once(DEDALO_CORE_PATH . '/dd/trigger.dd.php');  
 }#fin update
 # ACTUALIZAR LA FICHA  #############################################
 
@@ -117,7 +117,7 @@ $ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();			#dump($ar_paren
 	#$ar_all_langs 	= unserialize(DEDALO_APPLICATION_LANGS);
 	$ar_all_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 
-	$file_include		= DEDALO_LIB_BASE_PATH . '/dd/html/dd_descriptors_grid.phtml';
+	$file_include		= DEDALO_CORE_PATH . '/dd/html/dd_descriptors_grid.phtml';
 	ob_start();			include ( $file_include );
 	$descriptors_tr_html= ob_get_clean();
 
@@ -132,7 +132,7 @@ $ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();			#dump($ar_paren
 	$descriptors_tr_obs_html= ob_get_clean();
 
 
-$page_html = DEDALO_LIB_BASE_PATH . '/dd/html/dd_edit.phtml';
+$page_html = DEDALO_CORE_PATH . '/dd/html/dd_edit.phtml';
 
 # LOAD VISTA TEMPLATE CODE
 require_once($page_html);

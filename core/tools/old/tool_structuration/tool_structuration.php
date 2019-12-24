@@ -31,24 +31,24 @@
 		case 'page':
 
 			# TOOL CSS / JS MAIN FILES
-			css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_tab/css/section_tab.css";
-			css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text_large/css/component_input_text_large.css";
-			#css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_number/css/component_number.css";
-			css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_publication/css/component_publication.css";
-			#css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/css/text_editor_default.css";
-			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+			css::$ar_url[] = DEDALO_CORE_URL."/section_tab/css/section_tab.css";
+			css::$ar_url[] = DEDALO_CORE_URL."/component_input_text_large/css/component_input_text_large.css";
+			#css::$ar_url[] = DEDALO_CORE_URL."/component_number/css/component_number.css";
+			css::$ar_url[] = DEDALO_CORE_URL."/component_publication/css/component_publication.css";
+			#css::$ar_url[] = DEDALO_CORE_URL."/component_text_area/css/text_editor_default.css";
+			css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 							
-			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_input_text_large/js/component_input_text_large.js";
-			#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_number/js/component_number.js";
-			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_publication/js/component_publication.js";
-			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_common/js/split.min.js";
-			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/section_tab/js/section_tab.js";
-			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+			js::$ar_url[]  = DEDALO_CORE_URL."/component_input_text_large/js/component_input_text_large.js";
+			#js::$ar_url[]  = DEDALO_CORE_URL."/component_number/js/component_number.js";
+			js::$ar_url[]  = DEDALO_CORE_URL."/component_publication/js/component_publication.js";
+			js::$ar_url[]  = DEDALO_CORE_URL."/tools/tool_common/js/split.min.js";
+			js::$ar_url[]  = DEDALO_CORE_URL."/section_tab/js/section_tab.js";
+			js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 			#
 			# JS aditional
 				if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/lock_components/js/lock_components.js";
+					js::$ar_url[]  = DEDALO_CORE_URL."/lock_components/js/lock_components.js";
 				}
 
 			if (strpos(TOP_TIPO, 'rsc')===0) {
@@ -90,17 +90,17 @@
 			# Because components are loaded by ajax, we need prepare js/css elements from tool
 			#
 			# CSS
-				#css::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/css/$component_name.css";
+				#css::$ar_url[] = DEDALO_CORE_URL."/$component_name/css/$component_name.css";
 			#
 			# JS includes
-				#js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
+				#js::$ar_url[] = DEDALO_CORE_URL."/$component_name/js/$component_name.js";
 
 			# TESAURO_URL
-			$tesaurus_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
+			$tesaurus_url = DEDALO_CORE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
 
 			# AV_PLAYER_URL
 			$reelID = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $section_tipo.'_'.$parent;
-			$av_player_url   = DEDALO_LIB_BASE_URL . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality=' . DEDALO_AV_QUALITY_DEFAULT; // rsc35_rsc167_1
+			$av_player_url   = DEDALO_CORE_URL . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality=' . DEDALO_AV_QUALITY_DEFAULT; // rsc35_rsc167_1
 			$posterframe_url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . '/posterframe/' . $reelID .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
 			
 
@@ -151,7 +151,7 @@
 
 
 	# INCLUDE FILE HTML
-	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
+	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}	

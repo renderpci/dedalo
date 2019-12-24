@@ -8,7 +8,7 @@ var button_new = new function() {
 
 
 
-	this.trigger_url = DEDALO_LIB_BASE_URL + '/button_new/trigger.button_new.php';
+	this.trigger_url = DEDALO_CORE_URL + '/button_new/trigger.button_new.php';
 
 
 
