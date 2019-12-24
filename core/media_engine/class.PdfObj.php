@@ -47,14 +47,14 @@ class PdfObj extends MediaObj {
 	}
 
 	public function get_media_path() {
-		return DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path . '/';
+		return DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path . '/';
 	}
 	public function get_media_path_abs() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->aditional_path . '/';
+		return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->aditional_path . '/';
 	}	
 	
 	public function get_media_path_server() {
-			return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
+			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
 	}
 
 	# GET DEFAULT QUALITY

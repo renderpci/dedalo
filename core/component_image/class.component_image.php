@@ -1029,9 +1029,9 @@ class component_image extends component_common {
 		$image_deleted = self::get_deleted_image( $quality=DEDALO_IMAGE_THUMB_DEFAULT, $image_id );
 			#dump($image_deleted, ' image_deleted ++ '.to_string());
 
-		$ar_parts 		 = explode(DEDALO_MEDIA_BASE_PATH, $image_deleted);
+		$ar_parts 		 = explode(DEDALO_MEDIA_PATH, $image_deleted);
 		if(!isset($ar_parts[1])) return $image_value;
-		$final_image_url = DEDALO_MEDIA_BASE_URL .$ar_parts[1];
+		$final_image_url = DEDALO_MEDIA_URL .$ar_parts[1];
 			#dump($final_image_url, ' final_image_url ++ '.to_string());
 
 		$final_image_value = str_replace($image_url, $final_image_url, $image_value);
@@ -1054,7 +1054,7 @@ class component_image extends component_common {
 		$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted'; 
 		$image_id 		 = $this->get_image_id();
 
-		#$media_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'.$quality.'/deleted';
+		#$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'.$quality.'/deleted';
 		$file_pattern 	= $folder_path_del.'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
 		$ar_files 		= glob($file_pattern);
 		if(SHOW_DEBUG===true) {

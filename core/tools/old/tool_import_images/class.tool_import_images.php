@@ -13,8 +13,8 @@ if (empty($upload_dir_custom)) {
 }
 
 # TOOL IMPORT IMAGES
-define('TOOL_IMPORT_IMAGES_UPLOAD_DIR'	, DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/' );
-define('TOOL_IMPORT_IMAGES_UPLOAD_URL'	, DEDALO_MEDIA_BASE_URL  . DEDALO_IMAGE_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/');
+define('TOOL_IMPORT_IMAGES_UPLOAD_DIR'	, DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/' );
+define('TOOL_IMPORT_IMAGES_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_IMAGE_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/');
 #dump(TOOL_IMPORT_IMAGES_UPLOAD_DIR, 'TOOL_IMPORT_IMAGES_UPLOAD_DIR');
 
 

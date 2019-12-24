@@ -315,7 +315,7 @@ function import_images_custom() {
 		$dir 				  = $images_dir .'/'. $images_inside_folder;
 		#$dir_target 		  = $dir .'/copy';
 		#$dir_target 		  = '/Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/media_test/media_mdcat/image/original';
-		#$dir_target 		  = DEDALO_MEDIA_BASE_PATH .''. DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL;
+		#$dir_target 		  = DEDALO_MEDIA_PATH .''. DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL;
 
 		
 		$ar_files = tool_common::read_files($dir, $valid_extensions=array('tif'));
@@ -331,7 +331,7 @@ function import_images_custom() {
 
 			$max_items_folder 	  = 1000;
 			$ar_aditional_path 	  = '/'.$max_items_folder*(floor($current_section_id / $max_items_folder));
-			$dir_target 		  = DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL . $ar_aditional_path ;
+			$dir_target 		  = DEDALO_MEDIA_PATH .'/'. DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL . $ar_aditional_path ;
 
 			if (!is_dir($dir_target)) {
 				if(!mkdir($dir_target, 0777, true)) die('Fallo al crear las carpetas... ' . $dir_target);

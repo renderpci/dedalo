@@ -306,7 +306,7 @@ class full_node {
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
-				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
+				$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
 				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 
 				$image_url = $path . $name;
 				break;

@@ -79,7 +79,7 @@ class indexation_node {
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
-				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
+				$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
 				#$path = __WEB_BASE_URL__ . DEDALO_AV_FOLDER .'/posterframe/';
 				#$path = __WEB_BASE_URL__ . '/dedalo/media/av/posterframe/';
 				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $this->locator->section_tipo .'_'. $this->locator->section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 

@@ -723,9 +723,9 @@ class web_data {
 			$component_html_file 	= component_common::get_instance('component_html_file',$component_tipo,$component_parent,'edit',DEDALO_DATA_LANG, $section_tipo);
 			$valor 					= $component_html_file->get_valor();
 
-			$target_file_path 		= DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;
+			$target_file_path 		= DEDALO_MEDIA_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;
 			$file_put_contents_res	= file_put_contents($target_file_path, $html);
-			$html_file_url 			= DEDALO_MEDIA_BASE_URL . DEDALO_HTML_FILES_FOLDER .'/'.$valor.'.'.DEDALO_HTML_FILES_EXTENSION;
+			$html_file_url 			= DEDALO_MEDIA_URL . DEDALO_HTML_FILES_FOLDER .'/'.$valor.'.'.DEDALO_HTML_FILES_EXTENSION;
 
 			if(SHOW_DEBUG) {
 				$msg = "Generating html_file from $target_url_full to $html_file_url";
@@ -825,9 +825,9 @@ class web_data {
 																	 $section_tipo);
 			$valor 					= $component_html_file->get_valor();
 
-			$target_file_path 		= DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;
+			$target_file_path 		= DEDALO_MEDIA_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;
 			$file_put_contents_res	= file_put_contents($target_file_path, $html);
-			$html_file_url 			= DEDALO_MEDIA_BASE_URL . DEDALO_HTML_FILES_FOLDER .'/'.$valor.'.'.DEDALO_HTML_FILES_EXTENSION;
+			$html_file_url 			= DEDALO_MEDIA_URL . DEDALO_HTML_FILES_FOLDER .'/'.$valor.'.'.DEDALO_HTML_FILES_EXTENSION;
 
 			if(SHOW_DEBUG) {
 				$msg = "Generating html_file from $target_url_full to $html_file_url";

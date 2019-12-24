@@ -61,8 +61,8 @@ class tool_import_files extends tool_common {
 		}
 
 		# TOOL IMPORT IMAGES
-		define('TOOL_IMPORT_FILES_UPLOAD_DIR', DEDALO_MEDIA_BASE_PATH.$media_folder.'/temp'.'/files/'.'user_'.$user_id.$upload_dir_custom.'/');
-		define('TOOL_IMPORT_FILES_UPLOAD_URL', DEDALO_MEDIA_BASE_URL .$media_folder.'/temp'.'/files/'.'user_'.$user_id.$upload_dir_custom.'/');
+		define('TOOL_IMPORT_FILES_UPLOAD_DIR', DEDALO_MEDIA_PATH.$media_folder.'/temp'.'/files/'.'user_'.$user_id.$upload_dir_custom.'/');
+		define('TOOL_IMPORT_FILES_UPLOAD_URL', DEDALO_MEDIA_URL .$media_folder.'/temp'.'/files/'.'user_'.$user_id.$upload_dir_custom.'/');
 
 		# FILES HANDLER
 		define('TOOL_IMPORT_FILES_HANDLER_URL', DEDALO_CORE_URL.'/tools/tool_import_files/inc/files_handler.php?t='.$tipo);
@@ -80,7 +80,7 @@ class tool_import_files extends tool_common {
 
 		# BASE FOLDER
 		# Target folder exists adn create test
-		$base_folder_path = DEDALO_MEDIA_BASE_PATH . $media_folder .'/temp'.'/files/';
+		$base_folder_path = DEDALO_MEDIA_PATH . $media_folder .'/temp'.'/files/';
 		if( !is_dir($base_folder_path) ) {
 			if(!mkdir($base_folder_path, 0775,true)) {
 				throw new Exception(" Error on read or create TOOL_IMPORT_IMAGES_UPLOAD_DIR directory. Permission denied ");
@@ -316,7 +316,7 @@ class tool_import_files extends tool_common {
 
 				#
 				# ORIGINAL IMAGE DESIRED STORE
-				$original_path 		= DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path;
+				$original_path 		= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path;
 				$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension); 
 				if( !is_dir($original_path) ) {
 					if(!mkdir($original_path, 0777,true)) {
@@ -331,7 +331,7 @@ class tool_import_files extends tool_common {
 
 				# JPG : la convertimos a jpg si no lo es ya
 				if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
-					$original_file_path_jpg = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+					$original_file_path_jpg = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
 					ImageMagick::convert($original_file_path, $original_file_path_jpg );
 					#chmod($original_file_path, 0777);
 					#chmod($original_file_path_jpg, 0777);
@@ -339,7 +339,7 @@ class tool_import_files extends tool_common {
 
 				# DEFAULT QUALITY
 				# Generate dedalo default quality version (usually 1.5MB) and thumb image
-				# $default_quality_image = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT .'/'. $image_id  .'.'. DEDALO_IMAGE_EXTENSION;				
+				# $default_quality_image = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT .'/'. $image_id  .'.'. DEDALO_IMAGE_EXTENSION;				
 				$source_image 	= $original_file_path;
 				$source_quality = DEDALO_IMAGE_QUALITY_ORIGINAL;
 				$target_quality = DEDALO_IMAGE_QUALITY_DEFAULT;

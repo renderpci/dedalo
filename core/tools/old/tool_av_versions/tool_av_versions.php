@@ -38,7 +38,7 @@
 					
 					$ar_quality			= unserialize(DEDALO_AV_AR_QUALITY);
 
-					$video_base_path 	= DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER 	;			
+					$video_base_path 	= DEDALO_MEDIA_URL . DEDALO_AV_FOLDER 	;			
 					$video_extension 	= DEDALO_AV_EXTENSION;
 
 					$ar_all_files_by_quality = $this->component_obj->get_ar_all_files_by_quality( );
