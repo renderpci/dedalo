@@ -17,6 +17,7 @@ config/*
 !config/sample.config_db.php
 !config/sample.config_areas.php
 !config/dd_tipos.php
+!config/version.inc
 
 # various
 acc
