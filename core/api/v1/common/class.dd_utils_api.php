@@ -7,6 +7,7 @@
 class dd_utils_api {
 
 
+
 	/**
 	* DEDALO_VERSION
 	* @return object $response

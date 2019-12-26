@@ -2,6 +2,7 @@
 require_once(DEDALO_CORE_PATH . '/dd/class.RecordObj_dd_edit.php');
 
 
+
 /**
 * ONTOLOGY
 * Manages structure (ontology) import and export data
@@ -200,7 +201,7 @@ class ontology {
 		return true;
 	}//end clean_structure_data
 
-	
+
 
 	/**
 	* RENUMERATE_TERM_ID
