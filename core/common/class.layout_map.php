@@ -219,6 +219,17 @@ class layout_map {
 				}//end if (!isset($config_context) && !empty($ar_related))
 
 
+			// temporal excluded/changed models
+				$ar_temp_map_models = [
+					// map to => old model
+					'component_autocomplete' =>'component_autocomplete_hi'
+				];
+				$ar_tep_exclude_models = [
+					'component_state',
+					'component_info'
+				];
+
+
 			// layout_map
 				$layout_map = [];
 				foreach ($config_context as $current_section_config) {
@@ -252,6 +263,15 @@ class layout_map {
 
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
+						// temporal map
+							$match_key = array_search($model, $ar_temp_map_models);
+							if (false!==$match_key) {
+								$model = $match_key;
+							}else if (in_array($model, $ar_tep_exclude_models)) {
+								continue;
+							}
+
+
 						// component add
 							$dd_object = new dd_object((object)[
 								'tipo' 			=> $current_tipo,
@@ -281,6 +301,7 @@ class layout_map {
 				}//end foreach ($config_context as $current_section_config)
 
 				if(SHOW_DEBUG===true) {
+					# dump($layout_map, ' layout_map ++ '.to_string());
 					foreach ($layout_map as $current_item) {
 						$current_item->debug_from = 'calculated from section list or related terms';
 					}
