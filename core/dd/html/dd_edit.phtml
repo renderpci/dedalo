@@ -49,8 +49,10 @@ const trsND = '#relTR,#hermanosTR,#hijosTR,#modeloTR,#usableIndexTR';
 <?php
 # JS
 print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php');
-print js::build_tag(JQUERY_LIB_URL_JS);
-print js::build_tag(JQUERY_UI_URL_JS);
+#print js::build_tag(JQUERY_LIB_URL_JS);
+#print js::build_tag(JQUERY_UI_URL_JS);
+print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery.min.js');
+print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery-ui.min.js');
 #print js::build_tag(DEDALO_CORE_URL . '/common/js/common.js');
 #print js::build_tag(DEDALO_CORE_URL . '/login/js/login.js');
 print js::build_tag(DEDALO_CORE_URL . '/dd/inc/javascript.js');
