@@ -47,6 +47,150 @@ class area extends common  {
 	protected function define_modo($modo) {	$this->modo = $modo ; }
 
 
+	/**
+	* GET AREAS RECURSIVE IN JSON FORMAT OF ALL MAJOR AREAS
+	* Iterate all major existing area tipes (area_root,area_resource,area_admin, ...)
+	* and get all tipos of every one mixed in one full ontology json array
+	* Used in menu and security access
+	* @see menu, component_security_access
+	*/
+	public static function get_areas() {
+
+		gc_disable();
+
+		if(SHOW_DEBUG===true) $start_time=microtime(1);
+
+		// if the session has the ar_all_areas return it for speed
+		if (isset($_SESSION['dedalo']['config']['ar_all_areas']) ) {
+			if(SHOW_DEBUG===true) {
+				#return $_SESSION['dedalo']['config']['ar_all_areas'];
+			}else{
+
+			}
+			return $_SESSION['dedalo']['config']['ar_all_areas'];
+		}
+
+		// get the config_areas file to allow and denny some especific areas defined by installation.
+		$this->config_areas = $this->get_config_areas();
+
+		$ar_root_areas = [];
+		# AREAS_ROOT
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_publication')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development')[0];
+
+			$areas = []
+			foreach ($ar_areas as $area_tipo) {
+
+				// remove the areas_deny
+				if(in_array($area_tipo, $this->config_areas->areas_deny)) continue;
+				// get the JSON format of the ontology
+				$areas[]		= ontology::tipo_to_json_item($area_tipo);
+				// get the all children areas and sections of current			
+				$ar_group_areas	= $this->get_ar_children_areas_recursive($area_tipo);
+				// get the JSON format of the ontology for all childrens
+				foreach ($ar_group_areas as $children_area) {
+					$areas[]	= ontology::tipo_to_json_item($children_area);
+				}
+			}
+
+
+		# Store in session for speed
+		$_SESSION['dedalo']['config']['ar_all_areas'] = $areas;
+
+
+		if(SHOW_DEBUG===true) {
+			$total 	= round(microtime(1)-$start_time,3);
+			$n 		= count($areas);
+			debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+		}
+
+		 gc_enable();
+
+		return $areas;
+		
+	}//end get_areas
+
+
+	/**
+	* GET AR CHILDREN AREAS RECURSIVE
+	* Get all children areas (and sections) of current area (example: area_root)
+	* Look structure tesauro for find childrens with valid model name
+	* @param $terminoID
+	*	tipo recursive. Firt tipo is null
+	* @return $ar_ts_children_areas
+	*	array recursive of tesauro structure childrens filtered by acepted model name
+	* @see get_ar_ts_children_areas
+	*/
+	protected function get_ar_children_areas_recursive($terminoID) {		
+
+		$ar_children_areas_recursive	= array();
+		$RecordObj_dd					= new RecordObj_dd($terminoID);				
+		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this(); 
+		
+		if (count($ar_ts_childrens)>0) {
+			
+			foreach ($ar_ts_childrens as $children_terminoID) {
+				
+				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
+				$modelo 		= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
+				$visible		= $RecordObj_dd->get_visible();
+
+				# Test if modelo name is accepted or not (more restrictive)
+				if( $visible!=='no' && in_array($modelo, $this->ar_children_include_modelo_name) && !in_array($modelo, $this->ar_children_exclude_modelo_name) ) {
+								
+					$ar_temp = $this->get_ar_children_areas_recursive($children_terminoID);
+			
+					#if(count($ar_ts_childrens)>0)
+					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
+				}
+
+			}#end foreach					
+			
+			return $ar_children_areas_recursive;
+		}
+		
+		return $ar_children_areas_recursive;
+	}//end get_ar_ts_children_areas_recursive
+
+
+
+	/**
+	* AREA_TO_REMOVE
+	* @return bool
+	*/
+	public static function get_config_areas() {
+
+		if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
+			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empy values as default ".to_string(), logger::ERROR);
+			if(SHOW_DEBUG===true) {
+				throw new Exception("Error Processing Request. config4_areas file not found", 1);;
+			}
+
+			$areas_deny  = array();
+			$areas_allow = array();
+		}
+
+		$config_areas = new stdClass();
+		$config_areas->areas_deny	= $areas_deny;
+		$config_areas->areas_allow	= $areas_allow;
+
+		return $config_areas;
+	}//end area_to_remove
+
+
+
+
+
+
+
+	//////////// OLD WORLD ////////////////
+
 
 	/**
 	* GET ARRAY TS CHILDREN PLAIN OF ALL AREAS
