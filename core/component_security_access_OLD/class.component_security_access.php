@@ -15,13 +15,13 @@ class component_security_access extends component_common {
 	/**
 	* CONSTRUCT
 	*/
-	function __construct($tipo=false, $section_id=null, $mode='edit',  $lang=null, $section_tipo=null) {	#__construct($id=NULL, $tipo=false, $mode='edit', $section_id=NULL, $lang=NULL)
+	function __construct($tipo=false, $parent=null, $modo='edit',  $lang=null, $section_tipo=null) {	#__construct($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=NULL)
 
-		parent::__construct($tipo, $section_id, $mode, $lang=$this->lang, $section_tipo);
+		parent::__construct($tipo, $parent, $modo, $lang=$this->lang, $section_tipo);
 
 		# caller_id from parent var (default)
-		if(!empty($section_id)) {
-			$this->caller_id = $section_id;
+		if(!empty($parent)) {
+			$this->caller_id = $parent;
 		}
 		#dump($id,'id');	#throw new Exception("component_security_access Request", 1);
 		# caller_id is set in main to this obj from request 'caller_id' (is id section parent of current component)
@@ -32,15 +32,15 @@ class component_security_access extends component_common {
 	/**
 	* GET DATO 
 	* @return object $dato
-	* Format [{"tipo":"dd21","parent":"dd20","value":3}]
+	* Format {"dd244":"2"}
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-		if (!is_array($dato) && empty($dato)) {
-			$dato = [];
+		if (!is_object($dato) && empty($dato)) {
+			$dato = new stdClass();
 		}
 
-		return (array)$dato;
+		return (object)$dato;
 	}
 
 
@@ -50,125 +50,64 @@ class component_security_access extends component_common {
 	* @param object $dato
 	*/
 	public function set_dato($dato) {
-		if (!is_array($dato)) {
+		if (!is_object($dato)) {
 			if(empty($dato)) {
-				$dato = [];
+				$dato = new stdClass();
 			}else{
-				$dato = (array)$dato;
+				$dato = (object)$dato;
 			}
 		}
-		parent::set_dato($dato);
+		parent::set_dato((object)$dato);
 	}
 	
 
 
 	/**
-	* GET_CONTEXT
-	* @return 
+	* SAVE OVERRIDE
+	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
 	*/
-	public function get_context() {
+	public function Save() {
 
-		$user_id = navigator::get_user_id();
+		#
+		# OJO: Este dato ($this->dato) es inyectado y lo pasa trigger component_common Save (NO es el dato existente en matrix)
+		# lo asigna así: $component_obj->set_dato( $dato_clean ); 
+		$dato = $this->dato;		
+			if(SHOW_DEBUG===true) {
+				#dump($dato, 'dato received to save (stopped script for debug)'); return null;
+			}
 
-		if($user_id<0){
 
-			$ar_areas = area::get_areas();
-
-		}else{
-
-			$dato = $this->get_dato();
-
-			foreach ($dato as $current_item) {
-					$RecordObj_dd 	= new RecordObj_dd($current_item->tipo);
-					$label 			= $RecordObj_dd->get_label();
-					$parent 		=[];
-				}
-
-					
-
-			
-		}
 		
-	}//end get_context
+		$this->set_dato( $dato ); // Incluiremos los dato '0' para preservar los cambios al propagar
+
+		# A partir de aquí, salvamos de forma estándar
+		$result = parent::Save();
+
+		# reset session permisions table
+		# unset($_SESSION['dedalo4']['auth']['permissions_table']);
+
+			#dump($this->get_dato_unchanged(), ' this->get_dato_unchanged ++ '.to_string($this->dato));
+
+		return $result;
+	}//end Save
 
 
 
-
-	/**
-	* GET ARRAY TIPO ADMIN
-	* @return array $ar_tipo_admin
-	* Devulve el área 'Admin' además de sus hijos
-	* (usado para excluirles las opciones admin en el arbol)
-	*/
-	public static function get_ar_tipo_admin() {
-
-		# STATIC CACHE
-		static $ar_tipo_admin;
-		if(isset($ar_tipo_admin)) return $ar_tipo_admin;
-
-		$ar_result 	= RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='area_admin', $prefijo='dd');
-		$ar_tesauro = array();
-
-		if(!empty($ar_result[0])) {
-			$tipo					= $ar_result[0];
-			$obj 					= new RecordObj_dd($tipo);
-			$ar_childrens_of_this	= $obj->get_ar_childrens_of_this();
-			$ar_tesauro 			= $ar_childrens_of_this;
-			#dump($ar_tesauro);
+	# CLEAN_DATO_FOR_SAVE : Remove values zero like [dd710] => 0 to reduce saved data size
+	private static function clean_dato_for_save($dato) {
+		
+		$clean_dato = new stdClass();
+		
+		foreach ((object)$dato as $element_tipo => $state) {
+			$state = (int)$state;
+			if ( $state>=1 ) {
+				$clean_dato->$element_tipo = $state;
+			}
 		}
-		# Añadimos el propio termino como padre del arbol
-		#array_push($ar_tesauro, $tipo);
-		array_unshift($ar_tesauro, $tipo);
-
-		# STORE CACHE DATA
-		$ar_tipo_admin = $ar_tesauro ;
-
-		#dump($ar_tesauro," ar_tesauro");
-
-		return $ar_tesauro ;
+		return $clean_dato;
 	}
 
-
-	/**
-	* GET_AR_CHILDREN_ELEMENTS
-	* @return array $ar_children_elements
-	*/
-	public static function get_ar_children_elements( $tipo ) {
-		
-		$get_ar_children_elements = array();
-
-		$RecordObj_dd			= new RecordObj_dd($tipo);
-		$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();
-			#dump($ar_ts_childrens, ' ar_ts_childrens ++ '.to_string());
-					
-		foreach ((array)$ar_ts_childrens as $children_terminoID) {				
-			
-			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);								
-			$ar_exclude_modelo		= array('component_security_administrator','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
-			$exclude_this_modelo 	= false;
-			foreach($ar_exclude_modelo as $modelo_exclude) {					
-				if( strpos($modelo_name, $modelo_exclude)!==false ) {
-					$exclude_this_modelo = true;
-					break;	
-				}
-			}
-			
-			if ( $exclude_this_modelo !== true ) {		
-				#$ar_temp = self::get_ar_ts_childrens_recursive($children_terminoID);						
-				$get_ar_children_elements[] = $children_terminoID;				
-			}				
-		}
-
-		return $get_ar_children_elements;
-	}//end get_ar_children_elements
-
-
-
-
-//////////////////////////////////////////// OLD V5 ////////////////////////
-
-
-
+	
 
 	# GET_CALLER_ID
 	public function get_caller_id() {
@@ -473,6 +412,73 @@ class component_security_access extends component_common {
 	}//end create_radio
 
 
+
+	/**
+	* PROPAGATE_AREAS_TO_ACCESS
+	* @param object $areas_to_save
+	*	Contains mixed area an section tipos without suffix -admin
+	* @return bool
+	*/
+	public static function propagate_areas_to_access_DES($areas_to_save, $parent) {
+
+		if (!is_object($areas_to_save)) {
+			trigger_error("Sorry, only objects are accepted as 'areas_to_save' [propagate_areas_to_access]");
+			return false;
+		}
+
+		// COMPONENT_SECURITY_ACCESS
+		$component_security_access = component_common::get_instance('component_security_access',
+																	DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
+																	$parent,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	DEDALO_SECTION_PROFILES_TIPO);
+		$security_access_dato = (object)$component_security_access->get_dato();		
+
+
+		// REMOVE ACCESS VARS WHEN NOT IN RECEIVED AREAS	
+		$rm=0;
+		foreach ($security_access_dato as $section_tipo => $elements) {
+			
+			if (!isset($areas_to_save->$section_tipo)) {
+				unset($security_access_dato->$section_tipo);
+				debug_log(__METHOD__." Removed $section_tipo from access - section tipo: $section_tipo".to_string(), logger::DEBUG);
+				$rm++;
+			}			
+		}
+
+		
+		// ADD AREAS TO ACCESS
+		$add=0;
+		foreach ((object)$areas_to_save as $current_tipo => $permissions) {
+			
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			if ($modelo_name!='section') continue; # Ignore areas and others, only sections are used now
+			if (isset($security_access_dato->$current_tipo)) continue;	// Dato already exists. Nothing to do			
+
+			$security_access_dato->$current_tipo = new stdClass();
+
+			# ALL SHOWABLE ELEMENTS
+			$ar_ts_childrens_plain = self::get_ar_ts_childrens_plain($current_tipo);
+			foreach ((array)$ar_ts_childrens_plain as $children_tipo) {
+				
+				$security_access_dato->$current_tipo->$children_tipo = 2;	// Set all childrens to read/write (2) by default				
+				$add++;				
+			}
+			debug_log(__METHOD__." ADD section: $current_tipo - childres: ".count($ar_ts_childrens_plain), logger::DEBUG);		
+
+		}//end foreach ((array)$areas_to_save as $area_tipo => $permissions)
+		
+
+		// Update and save edited object dato
+		$component_security_access->set_dato($security_access_dato);
+		$component_security_access->Save();
+
+		debug_log(__METHOD__." Propagated areas to access. Added $add elements. Removed sections: $rm".to_string(), logger::DEBUG);		
+	}//end propagate_areas_to_access
+	
+
+	
 	/**
 	* GET_AR_TS_CHILDRENS_PLAIN (RECURSIVE)
 	* @return array $ar_ts_childrens_plain
@@ -534,7 +540,39 @@ class component_security_access extends component_common {
 
 
 
-	
+	/**
+	* GET_AR_CHILDREN_ELEMENTS
+	* @return array $ar_children_elements
+	*/
+	public static function get_ar_children_elements( $tipo ) {
+		
+		$get_ar_children_elements = array();
+
+		$RecordObj_dd			= new RecordObj_dd($tipo);
+		$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();
+			#dump($ar_ts_childrens, ' ar_ts_childrens ++ '.to_string());
+					
+		foreach ((array)$ar_ts_childrens as $children_terminoID) {				
+			
+			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);								
+			$ar_exclude_modelo		= array('component_security_administrator','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+			$exclude_this_modelo 	= false;
+			foreach($ar_exclude_modelo as $modelo_exclude) {					
+				if( strpos($modelo_name, $modelo_exclude)!==false ) {
+					$exclude_this_modelo = true;
+					break;	
+				}
+			}
+			
+			if ( $exclude_this_modelo !== true ) {		
+				#$ar_temp = self::get_ar_ts_childrens_recursive($children_terminoID);						
+				$get_ar_children_elements[] = $children_terminoID;				
+			}				
+		}
+
+		return $get_ar_children_elements;
+	}//end get_ar_children_elements
+
 
 
 	/**
@@ -609,6 +647,26 @@ class component_security_access extends component_common {
 				break;
 		}		
 	}//end update_dato_version
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, NO guardamos nada en 'valor_list'
+	*
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_valor_list_html_to_save() {
+		$html='';
+		
+		return (string)$html;
+	}//end get_valor_list_html_to_save
 
 
 
