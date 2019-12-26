@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 
@@ -29,8 +29,8 @@ function save($json_data) {
 				return $response;
 			}
 		}
-	
-	
+
+
 	# Verify vars
 	if( $dato===false ) {
 		$response->msg .= 'Trigger Error: ('.__FUNCTION__.') Empty dato (is mandatory)';
@@ -84,10 +84,10 @@ function save($json_data) {
 	$component_portal->Save();
 	#debug_log(__METHOD__." Saved component portal $section_tipo $portal_tipo $portal_parent with values: ".to_string($dato), logger::DEBUG);
 
-	
+
 	$response->result 	= true;
 	$response->msg 		= "Ok. Request done. Saved $section_tipo $portal_tipo $portal_parent. Received elements: $dato_count. [save]";
-	
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -138,7 +138,7 @@ function add_new_element($json_data) {
 				return $response;
 			}
 		}
-		
+
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 	$component 		= component_common::get_instance($modelo_name,
 													 $portal_tipo,
@@ -151,8 +151,8 @@ function add_new_element($json_data) {
 		$add_options->top_tipo 				= $top_tipo;
 		$add_options->top_id 				= $top_id;
 
-	$response = $component->add_new_element($add_options);	
-	
+	$response = $component->add_new_element($add_options);
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -200,7 +200,7 @@ function remove_element($json_data) {
 													 'edit',
 													 DEDALO_DATA_NOLAN,
 													 $section_tipo);
-	
+
 	$remove_options = new stdClass();
 		$remove_options->locator 	 = $locator;
 		$remove_options->remove_mode = $remove_mode;
@@ -226,7 +226,7 @@ function remove_element($json_data) {
 
 /**
 * BUILD_COMPONENT_JSON_DATA
-* @return object $response 
+* @return object $response
 */
 function build_component_json_data($json_data) {
 	global $start_time;

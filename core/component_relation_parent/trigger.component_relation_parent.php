@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 
@@ -18,8 +18,8 @@ function add_parent($json_data) {
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';	
-	
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
 	$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
@@ -31,8 +31,8 @@ function add_parent($json_data) {
 			}
 		}
 
-	$add_parent = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id); 
-		
+	$add_parent = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id);
+
 	$response->result 	= $add_parent;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -46,7 +46,7 @@ function add_parent($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 
 	return (object)$response;
 }//end add_parent
@@ -63,8 +63,8 @@ function remove_parent($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
-	
+
+
 	$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id','children_component_tipo');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
@@ -72,7 +72,7 @@ function remove_parent($json_data) {
 				exit("Error. ".$$name." is mandatory");
 			}
 		}
-	
+
 	$remove_parent 		= component_relation_parent::remove_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo);
 
 	$response->result 	= $remove_parent;
@@ -89,7 +89,7 @@ function remove_parent($json_data) {
 		$response->debug = $debug;
 	}
 
-	
+
 	return (object)$response;
 }//end remove_parent
 

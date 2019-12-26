@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( DEDALO_CONFIG_PATH.'/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');;
 include(DEDALO_CORE_PATH.'/lock_components/class.lock_components.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
@@ -37,8 +37,8 @@ function update_lock_components_state($json_data) {
 				return $response;
 			}
 		}
-	
-	$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];	
+
+	$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];
 	if ($user_id<0) {
 		$full_username 	= "Debug user";
 	}else{
@@ -55,7 +55,7 @@ function update_lock_components_state($json_data) {
 		$event_element->date  			= date("Y-m-d H:i:s");
 
 	$response = (object)lock_components::update_lock_components_state( $event_element );
-	
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();

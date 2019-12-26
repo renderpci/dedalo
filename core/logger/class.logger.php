@@ -1,9 +1,8 @@
 <?php
-/*
+/**
 * CLASS LOGGER
+*
 */
-#require_once( DEDALO_CONFIG_PATH . '/config.php');
-
 class logger {
 
 	private $h_log_file;
@@ -13,7 +12,7 @@ class logger {
 	// Se dejan huecos en la numeración para poder añadir posteriormente otros niveles
 	const DEBUG 	= 100;
 	const INFO 		= 75;
-	const NOTICE 	= 50; 
+	const NOTICE 	= 50;
 	const WARNING 	= 25;
 	const ERROR 	= 10;
 	const CRITICAL 	= 5;
@@ -48,8 +47,8 @@ class logger {
 				return 'ERROR';
 				break;
 			case logger::CRITICAL:
-				return 'CRITICAL';				
-				break;			
+				return 'CRITICAL';
+				break;
 			default:
 				return '[unknow]';
 		}
@@ -67,7 +66,7 @@ class logger {
 
 		# Verify connection_string
 		if (!isset($url_data['scheme'])) {
-			throw new Exception("Invalid log connection string ", 1);			
+			throw new Exception("Invalid log connection string ", 1);
 		}
 
 		# Include backend loger
@@ -75,11 +74,11 @@ class logger {
 		include_once( DEDALO_CORE_PATH .'/logger/class.' . $class_name . '.php' );
 
 		if (!class_exists($class_name)) {
-			throw new Exception("No loggin backend available for ".$url_data['scheme'], 1);			
+			throw new Exception("No loggin backend available for ".$url_data['scheme'], 1);
 		}
 
 		$obj_back = new $class_name($url_data);
-		
+
 
 		# manage current backend class
 		logger::manage_backends($log_name, $obj_back);
@@ -95,7 +94,7 @@ class logger {
 	}
 
 	/**
-	* MANAGE BACKENDS 
+	* MANAGE BACKENDS
 	*/
 	private static function manage_backends( $name, logger_backend $obj_back = NULL) {
 
@@ -117,8 +116,8 @@ class logger {
 			$backends[$name] = $obj_back;
 		}
 	}//end manage_backends
-	
-	
+
+
 
 }#end class logger
 ?>

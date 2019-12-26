@@ -1,7 +1,7 @@
 <?php
-/* 
+/*
 
-	En preparación 15-2-2018 
+	En preparación 15-2-2018
 
 */
 die("Stop here!");
@@ -28,7 +28,7 @@ die("Stop here!");
 
 
 # CONFIG
-include(DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 
 
 

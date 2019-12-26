@@ -1,7 +1,7 @@
 <?php
 # CONFIG
 	$start_time=microtime(1);
-	include(DEDALO_CONFIG_PATH . '/config.php');	
+	include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 	#common::trigger_manager();
@@ -16,7 +16,7 @@
 		exit();
 	}
 
-# URL_LOCATOR	
+# URL_LOCATOR
 	if (!isset($_GET['url_locator'])) {
 		$response = new stdClass();
 			$response->result 	= false;
@@ -34,20 +34,20 @@
 		echo json_encode($msg);
 		die();
 	}
-	
+
 	$locator = new locator();
-	
-		# section_tipo	
+
+		# section_tipo
 		$locator->set_section_tipo($ar_parts[0]);
 
 		# section_id
-		$locator->set_section_id($ar_parts[1]);	
+		$locator->set_section_id($ar_parts[1]);
 
 		# component_tipo
 		if (!empty($ar_parts[2])) {
 			$locator->set_component_tipo($ar_parts[2]);
 		}
-		
+
 		# tag_id
 		if (!empty($ar_parts[3])) {
 			$locator->set_tag_id($ar_parts[3]);
@@ -57,7 +57,7 @@
 # SECTION FULL DATO
 	$section = section::get_instance($locator->section_id, $locator->section_tipo);
 	$dato 	 = $section->get_dato();
-	
+
 	switch (true) {
 		case (!empty($locator->tag_id) && !empty($locator->component_tipo)):
 			$data = isset($dato->components->{$locator->component_tipo}) ? $dato->components->{$locator->component_tipo} : null;
