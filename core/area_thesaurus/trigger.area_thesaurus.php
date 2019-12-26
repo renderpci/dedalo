@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
 
@@ -31,7 +31,7 @@ function search_thesaurus($json_data) {
 
 	// force search_query_object->select not empty
 		if (empty($search_options->search_query_object->select)) {
-			
+
 			$search_options->search_query_object->select = json_decode('
 			  [
 			    {
@@ -45,7 +45,7 @@ function search_thesaurus($json_data) {
 			      ]
 			    }
 			  ]
-			');		
+			');
 		}
 		#dump( json_encode($search_options, JSON_PRETTY_PRINT), ' search_options ++ '.to_string()); die();
 
