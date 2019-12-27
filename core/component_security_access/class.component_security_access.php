@@ -199,55 +199,10 @@ class component_security_access extends component_common {
 
 			return $response;
 			break;
-
-			case '4.0.11':					
-				$data_changed=false;
-				if(!empty($dato_unchanged)) {
-
-					$new_dato = new stdClass();
-					foreach ((object)$dato_unchanged as $tipo => $value) {
-
-						if (is_object($value)) {
-							break; // Temporal !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! sólo para datos mezcados 4.0.10 y 4.0.11 en la instalación de desarrollo
-						}
-
-						# Group elements by section
-						$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent', $search_exact=true);
-						if (!empty($ar_terminoID[0])) {
-							$section_tipo = $ar_terminoID[0];
-						
-							if (!isset($new_dato->$section_tipo)) {
-								$new_dato->$section_tipo = new stdClass();
-							}
-							$new_dato->$section_tipo->$tipo = (int)$value; // Convert values to int
-							$data_changed=true;
-						}					
-					}					
-				}
-					
-				# Compatibility old dedalo instalations
-				if ($data_changed) {
-					$response = new stdClass();
-						$response->result =1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-				}else{
-					$response = new stdClass();
-						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
-				}
-				break;
-
 		}		
 	}//end update_dato_version
 
 
-
-
-
-	
 	
 };
 ?>
