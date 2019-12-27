@@ -375,7 +375,6 @@ class hierarchy {
 		hierarchy::create_root_terms( $create_records_options );
 		*/
 
-		
 
 
 		#
@@ -386,7 +385,7 @@ class hierarchy {
 			$permissions_options->section_id 	= $current_hierarchy_section_id;
 			$permissions_options->ar_sections 	= array($default_section_tipo_term, $default_section_tipo_model);
 			
-		hierarchy::set_hierarchy_permissions( $permissions_options );
+		security::set_section_permissions( $permissions_options );
 		
 		return (object)$response;
 	}//end generate_virtual_section
@@ -443,90 +442,6 @@ class hierarchy {
 
 		return true;
 	}//end create_root_terms
-
-
-
-	/**
-	* SET_HIERARCHY_PERMISSIONS
-	* Allow current user access to created default sections
-	* @return bool
-	*/
-	private static function set_hierarchy_permissions( $request_options ) {
-
-		$options = new stdClass();
-			$options->section_tipo 	= null;
-			$options->section_id 	= null;
-			$options->ar_sections 	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		# user_id
-		$user_id 	  = navigator::get_user_id();
-		if (SHOW_DEBUG===true || $user_id<1) {
-			return true;
-		}
-
-		# Profile
-		$profile_id   = component_profile::get_profile_from_user_id( $user_id );
-		$section_id   = $profile_id;		
-		$permissions  = 2;		
-
-
-		#
-		# Security areas
-		$component_security_areas	= component_common::get_instance('component_security_areas',
-																	 DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
-																	 $section_id,
-																	 'edit',
-																	 DEDALO_DATA_NOLAN,
-																	 DEDALO_SECTION_PROFILES_TIPO);
-			$dato_security_areas 	= (object)$component_security_areas->get_dato();
-
-		#
-		# Security access
-		$component_security_access	= component_common::get_instance('component_security_access',
-																	 DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
-																	 $section_id,
-																	 'edit',
-																	 DEDALO_DATA_NOLAN,
-																	 DEDALO_SECTION_PROFILES_TIPO);
-			$dato_security_access 	= (object)$component_security_access->get_dato();
-		
-
-		# Iterate sections (normally like ts1,ts2)
-		foreach ((array)$options->ar_sections as $current_section_tipo) {
-			
-			# Security areas
-			$dato_security_areas->$current_section_tipo = $permissions;
-			
-			
-			# Security access			
-			# Components inside section
-			$real_section = section::get_section_real_tipo_static( $current_section_tipo );
-			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($real_section,
-																					$ar_modelo_name_required=array('component','button','section_group'),
-																					$from_cache=true,
-																					$resolve_virtual=false,
-																					$recursive=true,
-																					$search_exact=false);
-			$dato_security_access->$current_section_tipo = new stdClass();
-			foreach ($ar_children as $children_tipo) {
-				$dato_security_access->$current_section_tipo->$children_tipo = $permissions;
-			}			
-
-		}//end foreach ($ar_sections as $current_section_tipo)
-
-		# Save calculated data once
-		$component_security_areas->set_dato($dato_security_areas);
-		$component_security_areas->Save();
-
-		$component_security_access->set_dato($dato_security_access);
-		$component_security_access->Save();
-
-		# Regenerate permissions table
-		security::reset_permissions_table();
-		
-		return true;
-	}//end set_hierarchy_permissions
 
 
 
