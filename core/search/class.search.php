@@ -1350,7 +1350,7 @@ class search {
 			return $sql_projects_filter_data[$uid];
 		}
 
-		$is_global_admin = (bool)component_security_administrator::is_global_admin($user_id);
+		$is_global_admin = (bool)security::is_global_admin($user_id);
 		if ($is_global_admin!==true) {
 
 			$sql_filter = '';
@@ -2830,7 +2830,7 @@ class search {
 		}
 
 		# is_global_admin filter
-		$is_global_admin = component_security_administrator::is_global_admin( $user_id );
+		$is_global_admin = security::is_global_admin( $user_id );
 		$is_global_admin = false;
 		if ($is_global_admin!==true) {
 			$ar_filter   = [];

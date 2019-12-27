@@ -123,7 +123,7 @@
 						#
 						# DEBUG BUTTONS
 						# Special debug only buttons
-							$is_global_admin = component_security_administrator::is_global_admin( navigator::get_user_id() );
+							$is_global_admin = security::is_global_admin( navigator::get_user_id() );
 							if( (SHOW_DEBUG===true || $is_global_admin) && !isset($_REQUEST['cache_updated']) ) {
 								if( strpos(common::get_request_var('m'), 'tool')!==false ) {
 									# Nothing to show
