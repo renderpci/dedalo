@@ -508,14 +508,16 @@ class login extends common {
 
 		$user_have_profile = false; // Default false
 
-		$component_profile 		  = component_common::get_instance('component_profile',
+		$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
+
+		$component_profile 		  = component_common::get_instance($model,
 																	DEDALO_USER_PROFILE_TIPO,
 																	$section_id,
 																	'list',
 																	DEDALO_DATA_NOLAN,
 																	DEDALO_SECTION_USERS_TIPO);
-		$profile_dato = (int)$component_profile->get_dato();
-		if (!empty($profile_dato) && $profile_dato>0) {
+		$profile_dato = $component_profile->get_dato();
+		if (!empty($profile_dato)) {
 
 			$user_have_profile = true;
 		}

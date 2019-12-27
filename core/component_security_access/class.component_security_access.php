@@ -83,9 +83,6 @@ class component_security_access extends component_common {
 					$label 			= $RecordObj_dd->get_label();
 					$parent 		=[];
 				}
-
-					
-
 			
 		}
 		
@@ -164,6 +161,112 @@ class component_security_access extends component_common {
 
 
 
+	/**
+	* UPDATE_DATO_VERSION
+	* @param array $update_version
+	* @param mixed $dato_unchanged
+	* @return object $response
+	*/
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+
+		$update_version = implode(".", $update_version);
+		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
+
+		switch ($update_version) {
+
+			case '6.0.0':
+
+			// old dato: {"oh1":{"oh2":2}}
+			// new dato :[{"tipo":"oh2","parent":"oh1","value":2}]
+
+			if(!empty($dato_unchanged) && is_object($dato_unchanged)) {
+
+				$new_dato = [];
+				foreach ($dato_unchanged as $current_parent => $current_ar_tipo) {
+					foreach ($current_ar_tipo as $current_tipo => $value) {
+						$current_dato = new stdClass();
+						$current_dato->tipo 	= $current_tipo;
+						$current_dato->parent 	= $current_parent;
+						$current_dato->value 	= $value;
+						$new_dato[] = $current_dato;
+					}
+				}
+
+				$response = new stdClass();
+					$response->result = 1;
+					$response->new_dato = $new_dato;
+					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+			}else{
+				$response = new stdClass();
+					$response->result = 2;
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					return $response;
+				}
+
+			return $response;
+			break;
+
+			case '4.0.11':					
+				$data_changed=false;
+				if(!empty($dato_unchanged)) {
+
+					$new_dato = new stdClass();
+					foreach ((object)$dato_unchanged as $tipo => $value) {
+
+						if (is_object($value)) {
+							break; // Temporal !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! sólo para datos mezcados 4.0.10 y 4.0.11 en la instalación de desarrollo
+						}
+
+						# Group elements by section
+						$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent', $search_exact=true);
+						if (!empty($ar_terminoID[0])) {
+							$section_tipo = $ar_terminoID[0];
+						
+							if (!isset($new_dato->$section_tipo)) {
+								$new_dato->$section_tipo = new stdClass();
+							}
+							$new_dato->$section_tipo->$tipo = (int)$value; // Convert values to int
+							$data_changed=true;
+						}					
+					}					
+				}
+					
+				# Compatibility old dedalo instalations
+				if ($data_changed) {
+					$response = new stdClass();
+						$response->result =1;
+						$response->new_dato = $new_dato;
+						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					return $response;
+				}else{
+					$response = new stdClass();
+						$response->result = 2;
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					return $response;
+				}
+				break;
+
+		}		
+	}//end update_dato_version
+
+
+
+
 
 //////////////////////////////////////////// OLD V5 ////////////////////////
 
@@ -183,15 +286,14 @@ class component_security_access extends component_common {
 	* user_id is received as caller_id
 	* Es una implementación a medida de los valores de areas autorizadas para este usuario
 	* selecciona las que tienen estado 2 y elimina las pseudo-areas 'xxx-admin'
-	* @see component_security_areas::get_ar_authorized_areas_for_user
+	* @see security::get_ar_authorized_areas_for_user
 	*/
 	protected function get_user_authorized_areas() {
 
 		if(SHOW_DEBUG===true) {
 			#$start_time=microtime(1);
 		}
-
-		$user_id = self::get_caller_id();			
+	
 			
 			/*
 			# Verificamos que caller_id es llamado en el contexto 'Admin' es decir,
@@ -226,7 +328,7 @@ class component_security_access extends component_common {
 			*/
 		# Get array of authorized areas for current user id
 			//dump(DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO); die();
-		$ar_authorized_areas_for_user = (array)component_security_areas::get_ar_authorized_areas_for_user($user_id, $mode_result='full', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, DEDALO_SECTION_USERS_TIPO);
+		$ar_authorized_areas_for_user = (array)security::get_ar_authorized_areas_for_user();
 			#dump($ar_authorized_areas_for_user,'ar_authorized_areas_for_user');
 		
 		# Gets something:
@@ -537,79 +639,7 @@ class component_security_access extends component_common {
 	
 
 
-	/**
-	* UPDATE_DATO_VERSION
-	* @param array $update_version
-	* @param mixed $dato_unchanged
-	* @return object $response
-	*/
-	public static function update_dato_version($request_options) {
-
-		$options = new stdClass();
-			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
-			$options->reference_id 		= null;
-			$options->tipo 				= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
-			$reference_id 	= $options->reference_id;
-
-		$update_version = implode(".", $update_version);
-		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
-
-		switch ($update_version) {
-
-			case '4.0.11':					
-				$data_changed=false;
-				if(!empty($dato_unchanged)) {
-
-					$new_dato = new stdClass();
-					foreach ((object)$dato_unchanged as $tipo => $value) {
-
-						if (is_object($value)) {
-							break; // Temporal !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! sólo para datos mezcados 4.0.10 y 4.0.11 en la instalación de desarrollo
-						}
-
-						# Group elements by section
-						$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent', $search_exact=true);
-						if (!empty($ar_terminoID[0])) {
-							$section_tipo = $ar_terminoID[0];
-						
-							if (!isset($new_dato->$section_tipo)) {
-								$new_dato->$section_tipo = new stdClass();
-							}
-							$new_dato->$section_tipo->$tipo = (int)$value; // Convert values to int
-							$data_changed=true;
-						}					
-					}					
-				}
-					
-				# Compatibility old dedalo instalations
-				if ($data_changed) {
-					$response = new stdClass();
-						$response->result =1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-				}else{
-					$response = new stdClass();
-						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
-				}
-				break;
-
-			default:
-				# code...
-				break;
-		}		
-	}//end update_dato_version
-
+	
 
 
 	/**
