@@ -1,6 +1,9 @@
 <?php
 $start_time=microtime(1);
 
+	// header print as json data
+		header('Content-Type: application/json');
+
 	// includes
 		// config dedalo
 		include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
@@ -16,9 +19,6 @@ $start_time=microtime(1);
 			$options = json_decode( $str_json );
 		}
 
-
-	// header print as json data
-		header('Content-Type: application/json');
 
 
 	// manager
@@ -56,10 +56,18 @@ $start_time=microtime(1);
 					$error_obj->msg 	= 'Exception when calling Dédalo API: '. $e->getMessage();
 				$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE);
 
-				if(SHOW_DEBUG===true) {
-					trigger_error($e->getMessage());
-				}
+				trigger_error($e->getMessage());
 			}
 		}
 
+
+		// verify result type
+			$type = gettype($result);
+			if ($type!=='string') {
+				$result = to_string($result);
+				debug_log(__METHOD__." Invalid result type found. Changed to string ! ".to_string(), logger::ERROR);
+			}
+
 		echo $result;
+
+

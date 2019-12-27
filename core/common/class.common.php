@@ -38,6 +38,22 @@ abstract class common {
 	#abstract protected function define_lang();
 	#abstract public function get_html();
 
+
+	// temporal excluded/mapped models
+		public static $ar_temp_map_models = [
+			// map to => old model
+			'component_autocomplete' =>'component_autocomplete_hi',
+			'section_group' 		 =>'section_group_div'
+		];
+		public static $ar_temp_exclude_models = [
+			'component_state',
+			'component_info',
+			'component_pdf',
+			#'component_iri'
+		];
+
+
+
 	# ACCESSORS
 	final public function __call($strFunction, $arArguments) {
 
@@ -1635,7 +1651,19 @@ abstract class common {
 				$current_tipo 			= $dd_object->tipo;
 				$current_section_tipo 	= $dd_object->section_tipo;
 				$mode 					= $dd_object->mode ?? 'list';
-				$model 					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$model 					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+
+
+				// common temporal excluded/mapped models *******
+					// $match_key = array_search($model, common::$ar_temp_map_models);
+					// if (false!==$match_key) {
+					// 	debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+					// 	$model = $match_key;
+					// }else if (in_array($model, common::$ar_temp_exclude_models)) {
+					// 	debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
+					// 	continue;
+					// }
+
 
 				switch (true) {
 					// component case
@@ -1731,7 +1759,7 @@ abstract class common {
 					$dd_object 		= (object)$dd_object;
 					$current_tipo 	= $dd_object->tipo;
 					$mode 			= $dd_object->mode ?? 'list';
-					$model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					$model			= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					$current_lang 	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 
 					switch (true) {
@@ -2312,18 +2340,28 @@ abstract class common {
 
 				$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 
+				// common temporal excluded/mapped models *******
+					$match_key = array_search($model, common::$ar_temp_map_models);
+					if (false!==$match_key) {
+						debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+						$model = $match_key;
+					}else if (in_array($model, common::$ar_temp_exclude_models)) {
+						debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
+						continue;
+					}
+
 				switch (true) {
 					// component case
 					case (strpos($model, 'component_')===0):
 
-						$current_lang 	 = DEDALO_DATA_LANG;
+						$current_lang = DEDALO_DATA_LANG;
 						$element  = component_common::get_instance(	$model,
 																	$element_tipo,
 																	null,
 																	'list',
 																	$current_lang,
 																	$section_tipo);
-				break;
+						break;
 
 					// grouper case
 					case (in_array($model, layout_map::$groupers)):
@@ -2333,6 +2371,7 @@ abstract class common {
 
 					// others case
 					default:
+
 						debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$element_tipo' ".to_string(), logger::WARNING);
 						break;
 				}//end switch (true)
@@ -2356,7 +2395,8 @@ abstract class common {
 						if ($n_sections===1) {
 							$ddo->target_section_tipo = $target_section_tipo;
 						}else{
-							debug_log(__METHOD__." Ignored $model with section tipo: ".to_string($target_section_tipo).' only allowed 1 section_tipo' , logger::DEBUG);
+							#$ddo->target_section_tipo = reset($target_section_tipo);
+							debug_log(__METHOD__." Ignored $element_tipo - $model with section tipo: ".to_string($target_section_tipo).' only allowed 1 section_tipo' , logger::ERROR);
 						}
 					}
 
