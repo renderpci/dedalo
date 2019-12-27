@@ -1,39 +1,44 @@
 <?php
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
-
-
-
-/*
+/**
 * CLASS DATO_V4_TO_SECTION_DATA_V5
+*
+*
 */
 class security_v5_to_v6 {
 
 
+	/**
+	* CONVERT_SECTION_DATO_TO_DATA
+	* @return object $dato
+	*/
 	public static function convert_section_dato_to_data( stdClass $datos_column ) {
 
 		$dato = clone $datos_column;
 
 		$section_tipo = $dato->section_tipo;
 
-		if($section_tipo === DEDALO_SECTION_PROFILES_TIPO){
+		if($section_tipo===DEDALO_SECTION_PROFILES_TIPO){
 
-			$security_acces_dato 	= $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
-			$security_acces_areas 	= $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
-			
+			// security_access / areas
+				$security_acces_dato 	= $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
+				$security_acces_areas 	= $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
 
-			$new_access_dato = [];
-			// change areas dato
-			foreach ($security_acces_areas as $current_tipo => $value) {
-				$current_dato = new stdClass();
-					$current_dato->tipo 	= $current_tipo;
-					$current_dato->parent 	= $current_tipo;
-					$current_dato->type 	= 'area';
-					$current_dato->value 	= $value;
-				$new_access_dato[] = $current_dato;
-			
-			}
-			// change access dato
-			foreach ($security_acces_dato as $current_parent => $current_ar_tipo) {
+				// change areas dato
+				$new_access_dato = [];
+				foreach ($security_acces_areas as $current_tipo => $value) {
+					$current_dato = new stdClass();
+						$current_dato->tipo 	= $current_tipo;
+						$current_dato->parent 	= $current_tipo;
+						$current_dato->type 	= 'area';
+						$current_dato->value 	= $value;
+					$new_access_dato[] = $current_dato;
+				}
+				// change access dato
+				foreach ($security_acces_dato as $current_parent => $current_ar_tipo) {
+					if (empty($current_ar_tipo)) {
+						debug_log(__METHOD__." Empty current_ar_tipo for parent $current_parent in security_acces_dato. IGNORED !".to_string(), logger::ERROR);
+						continue;
+					}
 					foreach ($current_ar_tipo as $current_tipo => $value) {
 						$current_dato = new stdClass();
 							$current_dato->tipo 	= $current_tipo;
@@ -41,54 +46,55 @@ class security_v5_to_v6 {
 							$current_dato->value 	= $value;
 						$new_access_dato[] = $current_dato;
 					}
-			}
+				}
+				// replace data
+				$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_access_dato;
+				// remove unused old value
+				unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
 
-			$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_access_dato;
+			// security tools
+				$security_tools_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
 
-			unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
-
-			$security_tools_dato 	= $dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
-
-			$new_tool_dato =[];
-			foreach ($security_tools_dato as $tool => $value) {
+				$new_tool_dato =[];
+				foreach ($security_tools_dato as $tool => $value) {
 					$current_dato = new stdClass();
 						$current_dato->name 	= $tool;
 						$current_dato->value 	= $value;
 					$new_tool_dato[] = $current_dato;
-			}
+				}
+				// replace data
+				$dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_tool_dato;
 
-			$dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_tool_dato;
+		}else if ($section_tipo===DEDALO_SECTION_USERS_TIPO){
 
-		}else if ($section_tipo === DEDALO_SECTION_USERS_TIPO){
+			// security_administrator
+				$security_admin_dato = $dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? 0;
+				$section_id 		 = ($security_admin_dato===1) ? '1' : '2';
 
-			$security_admin_dato 	= $dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? 0;
+				$current_dato = new locator();
+					$current_dato->set_section_tipo('dd64');
+					$current_dato->set_section_id($section_id);
+					$current_dato->set_from_component_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO);
+					$current_dato->set_type(DEDALO_RELATION_TYPE_LINK);
 
-			$section_id = ($security_admin_dato=== 1 ) ? '1': '2';
+				// remove unused old value
+				unset($dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO});
+				// add to realtions container
+				$dato->relations[] = $current_dato;
 
-			$current_dato = new locator();
-				$current_dato->set_section_tipo('dd64');
-				$current_dato->set_section_id($section_id);
-				$current_dato->set_from_component_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO);
-				$current_dato->set_type(DEDALO_RELATION_TYPE_LINK);
-			
+			// user_profile
+				$security_profile_dato = $dato->components->{DEDALO_USER_PROFILE_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? DEDALO_PROFILE_DEFAULT;
 
-			unset($dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO});
+				$current_profile_dato = new locator();
+					$current_profile_dato->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
+					$current_profile_dato->set_section_id($security_profile_dato);
+					$current_profile_dato->set_from_component_tipo(DEDALO_USER_PROFILE_TIPO);
+					$current_profile_dato->set_type(DEDALO_RELATION_TYPE_LINK);
 
-			$dato->relations[] = $current_dato;
-
-			$security_profile_dato 	= $dato->components->{DEDALO_USER_PROFILE_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? DEDALO_PROFILE_DEFAULT;
-
-			$current_profile_dato = new locator();
-				$current_profile_dato->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
-				$current_profile_dato->set_section_id($security_profile_dato);
-				$current_profile_dato->set_from_component_tipo(DEDALO_USER_PROFILE_TIPO);
-				$current_profile_dato->set_type(DEDALO_RELATION_TYPE_LINK);
-
-
-			unset($dato->components->{DEDALO_USER_PROFILE_TIPO});
-
-			$dato->relations[] = $current_profile_dato;
-			
+				// remove unused old value
+				unset($dato->components->{DEDALO_USER_PROFILE_TIPO});
+				// add to realtions container
+				$dato->relations[] = $current_profile_dato;
 		}
 
 		return $dato;
@@ -98,31 +104,15 @@ class security_v5_to_v6 {
 
 	/**
 	* CONVERT_TABLE_DATA
-	* @return
+	* @return bool true
 	*/
 	public static function convert_table_data($ar_tables=null) {
 
 		if ($ar_tables===null) {
 			// default
 			$ar_tables = [
-				//"matrix",
-				//"matrix_activities",
-				//"matrix_activity",
-				//"matrix_hierarchy",
-				//"matrix_hierarchy_main",
-				//"matrix_langs",
-				//"matrix_layout",
-				//"matrix_list",
-				//"matrix_notes",
 				"matrix_profiles",
-				//"matrix_projects",
-				//"matrix_test",
 				"matrix_users",
-				//"matrix_indexations",
-				//"matrix_structurations",
-				//"matrix_dataframe",
-				//"matrix_dd",
-				//"matrix_layout_dd"
 			];
 		}
 
@@ -197,7 +187,7 @@ class security_v5_to_v6 {
 
 	/**
 	* CONVERT_TABLE_DATA_PROFILES
-	* @return 
+	* @return bool true
 	*/
 	public static function convert_table_data_profiles() {
 
@@ -207,17 +197,18 @@ class security_v5_to_v6 {
 	}//end convert_table_data_profiles
 
 
+
 	/**
 	* CONVERT_TABLE_DATA_USERS
-	* @return 
+	* @return bool true
 	*/
 	public static function convert_table_data_users() {
 
 		self::convert_table_data(["matrix_users"]);
-		
+
 		return true;
 	}//end convert_table_data_users
 
 
+
 }//end class
-?>
