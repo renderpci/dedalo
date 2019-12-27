@@ -33,17 +33,21 @@ export const component_number = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_number.prototype.init 	 		 	= component_common.prototype.init
-	component_number.prototype.render			 	= common.prototype.render
-	component_number.prototype.destroy 	 		 	= common.prototype.destroy
+	// lifecycle
+	component_number.prototype.init 	 			= component_common.prototype.init
+	component_number.prototype.build 	 			= component_common.prototype.build
+	component_number.prototype.render 				= common.prototype.render
 	component_number.prototype.refresh 				= common.prototype.refresh
-	component_number.prototype.save 	 		 	= component_common.prototype.save
-	component_number.prototype.load_data 		 	= component_common.prototype.load_data
-	component_number.prototype.get_value 		 	= component_common.prototype.get_value
-	component_number.prototype.set_value 		 	= component_common.prototype.set_value
-	component_number.prototype.update_data_value 	= component_common.prototype.update_data_value
-	component_number.prototype.update_datum 	 	= component_common.prototype.update_datum
-	component_number.prototype.change_value			= component_common.prototype.change_value
+	component_number.prototype.destroy 	 			= common.prototype.destroy
+
+	// change data
+	component_number.prototype.save 	 			= component_common.prototype.save
+	//component_number.prototype.load_data 			= component_common.prototype.load_data
+	//component_number.prototype.get_value 			= component_common.prototype.get_value
+	//component_number.prototype.set_value 			= component_common.prototype.set_value
+	component_number.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_number.prototype.update_datum 		= component_common.prototype.update_datum
+	component_number.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
 	component_number.prototype.list 		= render_component_number.prototype.list
@@ -53,14 +57,6 @@ export const component_number = function(){
 	component_number.prototype.change_mode 	= component_common.prototype.change_mode
 
 
-/**
-* BUILD
-*/
-component_number.prototype.build = function() {
-
-
-	return true
-}//end build
 
 /**
 * FIX_NUMBER_FORMAT
@@ -74,6 +70,7 @@ component_number.prototype.fix_number_format = function( number ) {
 
 	return Number(new_number)
 }//end fix_number_format
+
 
 
 /**
@@ -99,4 +96,5 @@ component_email.prototype.update_data_value_from_dom = function() {
 	return true
 }//end update_data_value_from_dom
 */
+
 
