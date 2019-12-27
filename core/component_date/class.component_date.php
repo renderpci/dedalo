@@ -298,25 +298,22 @@ class component_date extends component_common {
 					break;
 
 				case 'period':
-					$valor_year	= $valor_month = $valor_day = '';
+				
 					if(!empty($current_dato->period)) {
+					
+						$ar_string_period = [];
+					
 						$dd_date = new dd_date($current_dato->period);
 						# Year
-						$valor_year	= isset($dd_date->year) ? $dd_date->year : '';
+						$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
 						# Month
-						$valor_month= isset($dd_date->month) ? $dd_date->month : '';
+						$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
 						# Day
-						$valor_day	= isset($dd_date->day) ? $dd_date->day : '';
+						$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
+					
+						$ar_valor[$key] = implode(' ',$ar_string_period);
 					}
-					if(!empty($valor_year)) {
-						$ar_valor[$key] .= $valor_year;
-					}
-					if(!empty($valor_month)) {
-						$ar_valor[$key] .= '-'.$valor_month;
-					}
-					if(!empty($valor_day)) {
-						$ar_valor[$key] .= '-'.$valor_day;
-					}
+						
 					break;
 
 				case 'time':
@@ -378,7 +375,7 @@ class component_date extends component_common {
 			}
 		}
 
-		$valor = implode('|',$ar_valor);
+ 		$valor = implode((isset($propiedades->divisor) ? $propiedades->divisor : ' | '),$ar_valor);
 
 		return (string)$valor;
 	}//end get_valor
