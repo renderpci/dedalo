@@ -84,7 +84,7 @@ class area extends common  {
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development')[0];
 
-			$areas = []
+			$areas = [];
 			foreach ($ar_areas as $area_tipo) {
 
 				// remove the areas_deny
