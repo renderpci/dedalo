@@ -110,7 +110,7 @@ class component_filter extends component_relation_common {
 	*/
 	public function get_default_dato_for_user($user_id) {
 
-		$is_global_admin = component_security_administrator::is_global_admin($user_id);
+		$is_global_admin = security::is_global_admin($user_id);
 		if ($is_global_admin===true) {
 			$user_projects 	= null;
 		}else{

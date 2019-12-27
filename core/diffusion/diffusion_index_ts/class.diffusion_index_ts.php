@@ -204,7 +204,7 @@ class diffusion_index_ts extends diffusion {
 
 		#
 		# FILTER RESULT BY USER PROJECTS
-		if( false===component_security_administrator::is_global_admin($user_id) ) {
+		if( false===security::is_global_admin($user_id) ) {
 
 			# USER PROJECTS : All projects that current user can view
 			$ar_user_projects = (array)filter::get_user_projects( $user_id );
@@ -255,7 +255,7 @@ class diffusion_index_ts extends diffusion {
 			#$ar_section_top_tipo = array_filter($ar_section_top_tipo);
 		
 
-		}//end if( ($is_global_admin = component_security_administrator::is_global_admin($user_id))!==true ) {
+		}//end if( ($is_global_admin = security::is_global_admin($user_id))!==true ) {
 		
 		if(SHOW_DEBUG===true) {
 			$total=round(microtime(1)-$start_time,3);

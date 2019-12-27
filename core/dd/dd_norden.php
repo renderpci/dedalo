@@ -13,7 +13,7 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
-$is_global_admin = component_security_administrator::is_global_admin( $_SESSION['dedalo4']['auth']['user_id'] );
+$is_global_admin = security::is_global_admin( $_SESSION['dedalo4']['auth']['user_id'] );
 if($is_global_admin!==true) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");

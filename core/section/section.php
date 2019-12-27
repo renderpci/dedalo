@@ -35,7 +35,7 @@
 
 	# GLOBAL ADMIN. ONLY GLOBAL ADMINS HAVE ACCESS HERE (Removed 27-11-2019)
 		#$ar_restricted_areas = array(DEDALO_SECTION_PROFILES_TIPO);
-		#$is_global_admin = (bool)component_security_administrator::is_global_admin( navigator::get_user_id() );
+		#$is_global_admin = (bool)security::is_global_admin( navigator::get_user_id() );
 		#if (!$is_global_admin && in_array($tipo, $ar_restricted_areas)) {
 		#	echo "<div>".label::get_label('contenido_no_autorizado')."</div>";
 		#	return null;

@@ -158,7 +158,7 @@ class component_security_tools extends component_common {
 		if(SHOW_DEBUG) $start_time = start_time();
 
 		# If user is global admin, return all existing tools
-		$is_global_admin = component_security_administrator::is_global_admin($user_id); 
+		$is_global_admin = security::is_global_admin($user_id); 
 		if ($is_global_admin) {
 			$ar_user_tools = component_security_tools::get_ar_tools();
 			return $ar_user_tools ;
