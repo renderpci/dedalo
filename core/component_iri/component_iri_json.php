@@ -18,7 +18,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
 					$context[] = $this->get_structure_context($permissions);
@@ -38,11 +38,12 @@
 
 		// Value
 		$value = $this->get_dato();
-		
+		$value_json = json_encode($value);
+
 		// data item
 		$item  = $this->get_data_item($value);
-		$item->parent_tipo 			= $this->get_tipo();
-		$item->parent_section_id 	= $this->get_section_id();
+			$item->parent_tipo 			= $this->get_tipo();
+			$item->parent_section_id 	= $this->get_section_id();
 
 		$data[] = $item;
 
