@@ -69,7 +69,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 		load_promises.push( common.prototype.load_style(lib_css_file) )
 
 		await Promise.all(load_promises).then(async function(response){
-			//console.log("JSONEditor:",JSONEditor);
+			
 		})
 
 	// fix non value scenarios
@@ -96,13 +96,13 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 		)
 		function update_value (changed_data) {
 
-			if (date_mode==='range') {
-				// change the value of the current dom element
-				const changed_node_start = wrapper.querySelector('input[data-key="'+changed_data.key+'"][data-role=range_start]')
-				const changed_node_end 	 = wrapper.querySelector('input[data-key="'+changed_data.key+'"][data-role=range_end]')
-				changed_node_start.value = (changed_data.value && changed_data.value.start) ? self.get_dd_timestamp(changed_data.value.start, date_mode): ''
-				changed_node_end.value 	 = (changed_data.value && changed_data.value.end) ? self.get_dd_timestamp(changed_data.value.end, date_mode) 	: ''
-			}
+			//if (date_mode==='range') {
+			//	// change the value of the current dom element
+			//	const changed_node_start = wrapper.querySelector('input[data-key="'+changed_data.key+'"][data-role=range_start]')
+			//	const changed_node_end 	 = wrapper.querySelector('input[data-key="'+changed_data.key+'"][data-role=range_end]')
+			//	changed_node_start.value = (changed_data.value && changed_data.value.start) ? self.get_dd_timestamp(changed_data.value.start, date_mode): ''
+			//	changed_node_end.value 	 = (changed_data.value && changed_data.value.end) ? self.get_dd_timestamp(changed_data.value.end, date_mode) 	: ''
+			//}
 		}
 
 	// add element, subscription to the events
@@ -145,7 +145,6 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 						break;
 
 				}
-
 
 				const changed_data = Object.freeze({
 					action	: 'update',
@@ -211,22 +210,14 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 				return true
 			}
-
-			if (e.target.matches('.button.calendar')) {
-
-				show_calendar(e.target)
-
-				return true
-			}
-
+			
 			if (e.target.matches('.button.close')) {
 				//change mode
-				self.change_mode()
+				self.change_mode('list', true)
 
 				return true
 			}
-		})
-
+		})		
 
 	return wrapper
 }//end edit
@@ -356,21 +347,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 	const input_value_start = (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode)	: ''
 	const input_value_end 	= (current_value && current_value.end) ? self.get_dd_timestamp(current_value.end, date_mode) 		: ''
 
-		const input_start = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'text',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i, role: 'range_start' },
-			value 			: input_value_start,
-			parent 			: inputs_container
-		})
-
-		// button calendar
-		const button_calendar = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button calendar',
-			parent 			: inputs_container
-		})
+		input_element_flatpicker(i, 'range_start', input_value_start, inputs_container)
 
 		// create div
 		const div = ui.create_dom_element({
@@ -385,21 +362,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 			parent 			: inputs_container
 		})
 
-		const input_end = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'text',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i, role: 'range_end' },
-			value 			: input_value_end,
-			parent 			: inputs_container
-		})
-
-		// button calendar
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button calendar',
-			parent 			: inputs_container
-		})
+		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container)
 
 }//end input_element_range
 
@@ -489,6 +452,14 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 		parent 			: inputs_container
 	})
 
+	//flatpickr(input_time, {
+    //	enableTime: true,
+    //	noCalendar: true,
+    //	time_24hr: true,
+    //	dateFormat: "H:i",
+	//	allowInput: true
+	//})
+
 	return true
 }//end input_element_time
 
@@ -502,39 +473,28 @@ const input_element_default = (i, current_value, inputs_container, self) => {
 	const date_mode 	= self.context.properties.date_mode
 	const input_value 	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode) : ''
 
-	// input field
-	const input = ui.create_dom_element({
-		element_type 	: 'input',
-		type 		 	: 'text',
-		class_name 		: 'input_value',
-		dataset 	 	: { key : i },
-		value 		 	: input_value,
-		parent 		 	: inputs_container
-	})
-	flatpickr(input, {
-		dateFormat: "d-m-Y"
-	});
-
-	// button calendar
-	ui.create_dom_element({
-		element_type	: 'div',
-		class_name 		: 'button calendar',
-		parent 			: inputs_container
-	})
+	input_element_flatpicker(i, 'default', input_value, inputs_container)
 
 	return true
 }//end input_element_default
 
 
+const input_element_flatpicker = (i, role_name, input_value, inputs_container) => {
 
-/**
-* SHOW_CALENDAR
-* Show calendar on click
-*/
-const show_calendar = (input_obj) => {
+	// input field
+	const input = ui.create_dom_element({
+		element_type 	: 'input',
+		type 		 	: 'text',
+		class_name 		: 'input_value',
+		dataset 	 	: { key : i, role: role_name },
+		value 		 	: input_value,
+		parent 		 	: inputs_container
+	})
 
-	console.log("show_calendar:",input_obj);
+	flatpickr(input, {
+		dateFormat: "d-m-Y",
+		allowInput: true
+	});
 
-}//end show_calendar
-
-
+	return true
+}
