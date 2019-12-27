@@ -23,6 +23,8 @@ export const component_date = function(){
 	this.parent
 	this.node
 
+	this.separator 		= '-'
+	this.separator_time = ':'
 
 	return true
 }//end component_date
@@ -77,7 +79,20 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 	const second 	= (date.second) ? date.second : 0
 	const ms 		= (date.ms) ? date.ms : 0
 
- 	const datetime 	= new Date(year, month, day, hour, minute, second)
+ 	let datetime 	= new Date(year, month, day, hour, minute, second)
+
+	if (year === 0 && month === 0 && day === 0) {
+	
+		datetime 	= new Date(hour, minute, second)
+
+	} else {
+
+		if (month === 0 && day === 0) {
+			datetime 	= new Date(year)
+		} else {
+			datetime 	= new Date(year, month, day)
+		}
+	}
 
  	//datetime.setMilliseconds(123);
 	//console.log("datetime:",datetime.getMilliseconds());
@@ -120,13 +135,24 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 */
 component_date.prototype.get_locale_value = function () {
 
-	const locale_value = 'es-ES'
-	//const separator  = '-'//dd_date::$separator;
+	let locale_value
+	switch (page_globals.dedalo_data_lang) {
+		case 'lg-eng':	locale_value='en-US'; 	break;
+		case 'lg-spa':	locale_value='es-ES'; 	break;
+		case 'lg-cat':	locale_value='ca'; 		break;
+		
+		default:
+			locale_value = lang_code.substring(3) + "-" + lang_code.substring(3).toUpperCase()
+			break;
+	}
 
-	return locale_value
+// Format date using locale format
+	//const locale_value = get_locale_from_code(page_globals.dedalo_data_lang)
+	//result = result.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
+	console.log("locale_value:",locale_value)
+	return 'es-ES' //locale_value
 
 }//end get_locale_value
-
 
 
 /**
@@ -186,12 +212,12 @@ component_date.prototype.format_date = function (date_value) {
 
 		// Day format
 		if(dd_date.day){
-			res_formatted += self.pad(dd_date.day,2) + component_date.separator
+			res_formatted += self.pad(dd_date.day,2) + self.separator
 		}
 
 		// Month format
 		if(dd_date.month){
-			res_formatted += self.pad(dd_date.month,2) + component_date.separator
+			res_formatted += self.pad(dd_date.month,2) + self.separator
 		}
 
 		// Year format
@@ -325,6 +351,8 @@ component_date.prototype.get_dato_period = function(parentNode) {
 
 	const self = this
 
+	let dato =  {}
+
 	const period_year 	= parentNode.querySelector('input[data-role=period_year]')
 	const period_month 	= parentNode.querySelector('input[data-role=period_month]')
 	const period_day 	= parentNode.querySelector('input[data-role=period_day]')
@@ -338,8 +366,8 @@ component_date.prototype.get_dato_period = function(parentNode) {
 	dd_date.time = self.convert_date_to_seconds(dd_date, 'period')
 
 	// Final dato
-	const dato = (dd_date) ? { "period" : dd_date } : {}
-
+	dato = (dd_date.year || dd_date.month || dd_date.day) ? { "period" : dd_date } : ''
+	
 	return dato
 
 }//end get_dato_period
@@ -375,6 +403,8 @@ component_date.prototype.get_dato_range = function(parentNode) {
 
 			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
 				dato.start = value_formatted_start.dd_date
+
+					console.log("dato.start:",dato.start);
 			}
 		}
 
@@ -394,10 +424,12 @@ component_date.prototype.get_dato_range = function(parentNode) {
 
 			if (value_formatted_end.dd_date && value_formatted_end.dd_date.time) {
 				dato.end = value_formatted_end.dd_date
+
+					console.log("dato.end:",dato.end);
 			}
 		}
 
-	return dato
+	return (dato.start || dato.end) ? dato : ''
 }//end get_dato_range
 
 
@@ -430,6 +462,8 @@ component_date.prototype.get_dato_date = function(value) {
 			// Final dato
 			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
 				dato.start = value_formatted_start.dd_date
+
+					console.log("dato.start:",dato.start);
 			}
 		}
 
@@ -575,11 +609,11 @@ component_date.prototype.format_time = function(options) {
 		}
 		// minute format
 		if(dd_date.minute){
-			res_formatted += component_date.separator_time + this.pad(dd_date.minute,2)
+			res_formatted += self.separator_time + this.pad(dd_date.minute,2)
 		}
 		// second format
 		if(dd_date.second){
-			res_formatted += component_date.separator_time + this.pad(dd_date.second,2)
+			res_formatted += self.separator_time + this.pad(dd_date.second,2)
 		}
 
 	const result = {
