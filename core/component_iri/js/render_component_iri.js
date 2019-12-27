@@ -79,7 +79,7 @@ render_component_iri.prototype.edit = async function(options={
 
 	const self 	= this
 
-	self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+	self.data.value = (self.data.value.length<1) ? [] : self.data.value
 
 	const render_level = options.render_level
 
@@ -111,7 +111,7 @@ render_component_iri.prototype.edit = async function(options={
 		function add_element(changed_data) {
 		// change the value of the current dom element
 			const inputs_container 	= wrapper.querySelector('.inputs_container')
-			input_element(changed_data.key, changed_data.value, inputs_container, self)
+			get_input_element(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
 	//	// remove element, subscription to the events
@@ -283,7 +283,7 @@ render_component_iri.prototype.search = async function() {
 */
 const content_data_edit = async function(self) {
 
-	const value = self.data.value || []
+	const value = self.data.value // || []
 	const mode 	= self.mode
 
 	const fragment = new DocumentFragment()
@@ -299,7 +299,7 @@ const content_data_edit = async function(self) {
 		const inputs_value = value//(value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			input_element(i, inputs_value[i], inputs_container, self)
+			get_input_element(i, inputs_value[i], inputs_container, self)
 		}
 
 	// buttons container
@@ -339,12 +339,13 @@ const content_data_edit = async function(self) {
 
 
 /**
-* INPUT_ELEMENT
+* get_INPUT_ELEMENT
 * @return dom element li
 */
-const input_element = (i, current_value, inputs_container, self) => {
+const get_input_element = (i, current_value, inputs_container, self) => {
 
 	const mode = self.mode
+
 
 	// li
 		const li = ui.create_dom_element({
@@ -396,4 +397,4 @@ const input_element = (i, current_value, inputs_container, self) => {
 	}
 
 	return li
-}//end input_element
+}//end get_input_element
