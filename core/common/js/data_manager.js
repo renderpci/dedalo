@@ -37,6 +37,7 @@ data_manager.prototype.request = async function(options) {
 
 	const handle_errors = function(response) {
 		if (!response.ok) {
+			console.warn("-> handle_errors response:",response);
 			throw Error(response.statusText);
 		}
 		return response;
@@ -55,7 +56,14 @@ data_manager.prototype.request = async function(options) {
 			body		: JSON.stringify(this.body)
 		})
 		.then(handle_errors)
-		.then(response => response.json())// parses JSON response into native Javascript objects
+		.then(response => {
+			//console.log("-> json response 1 ok:",response.body);
+			const json_parsed = response.json().then((result)=>{
+				//console.log("-> json result 2:",result);
+				return result
+			})
+			return json_parsed
+		})// parses JSON response into native Javascript objects
 		.catch(error => {
 			console.error("!!!!! [data_manager.request] ERROR:", error)
 			return {
@@ -64,6 +72,25 @@ data_manager.prototype.request = async function(options) {
 				error 	: error
 			}
 		});
+
+	// const api_response = await fetch(this.url, {
+	// 		method		: this.method,
+	// 		mode		: this.mode,
+	// 		cache		: this.cache,
+	// 		credentials	: this.credentials,
+	// 		headers		: this.headers,
+	// 		redirect	: this.redirect,
+	// 		referrer	: this.referrer,
+	// 		body		: JSON.stringify(this.body)
+	// 	})
+	// if (api_response.status >= 200 && api_response.status <= 299) {
+	// 	const json_response = await api_response.json();
+	// 	console.log("json_response", json_response);
+	// 	return json_response
+	// } else {
+	// 	// Handle errors
+	// 	console.log(api_response.status, api_response.statusText);
+	// }
 
 	return api_response
 }//end request

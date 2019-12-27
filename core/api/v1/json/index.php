@@ -4,10 +4,10 @@ $start_time=microtime(1);
 	// header print as json data
 		header('Content-Type: application/json');
 
+
 	// includes
 		// config dedalo
 		include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
-
 		// json manager
 		include dirname(dirname(__FILE__)) .'/common/class.manager.php';
 
@@ -18,7 +18,6 @@ $start_time=microtime(1);
 		if (!empty($str_json)) {
 			$options = json_decode( $str_json );
 		}
-
 
 
 	// manager
@@ -68,6 +67,8 @@ $start_time=microtime(1);
 				debug_log(__METHOD__." Invalid result type found. Changed to string ! ".to_string(), logger::ERROR);
 			}
 
-		echo $result;
+
+		// output the result json string
+			echo $result;
 
 
