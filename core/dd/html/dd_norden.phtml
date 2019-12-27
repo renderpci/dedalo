@@ -8,26 +8,28 @@
 <?php
 print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/general.css',null,false);
 print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/edit.css',null,false);
-print js::build_tag(JQUERY_LIB_URL_JS);
+#print js::build_tag(JQUERY_LIB_URL_JS);
+print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery.min.js');
+#print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery-ui.min.js');
 ?>
 <script type="text/javascript">
-// vars 
+// vars
 const debe_introducir_title_orden_title = '<?php echo msgJS("$debe_introducir_title N. $orden_title") ?>';
 
 function validar(form1) {
 	if (document.form1.ordenNuevo.value.length < 1)
 	{
      	alert(debe_introducir_title_orden_title);
-	 	form1.ordenNuevo.focus();	
-		  
+	 	form1.ordenNuevo.focus();
+
      	return (false);
-  	}  
-  return (true); 
+  	}
+  return (true);
 }
 
 $(function() {
   $('#ordenNuevo').focus()
-	//onblur="close()"	
+	//onblur="close()"
 }); // FIN domready AJAX  formularios
 
 </script>
@@ -62,7 +64,7 @@ $(function() {
       <td width="87" align="right" nowrap="nowrap">
       <span class="anotacionTexto">
       <?php
-      if(SHOW_DEBUG==true) echo "estaOrdenado: $estaOrdenado" ; 
+      if(SHOW_DEBUG==true) echo "estaOrdenado: $estaOrdenado" ;
       ?>
       </span>
       <input type="hidden" name="terminoID" value="<?php echo $terminoIDget ?>" />
