@@ -99,11 +99,20 @@ abstract class common {
 	* @param string $tipo
 	* @return int $permissions
 	*/
-	public static function get_permissions( $tipo=null, $sub_tipo=null ) {
+	public static function get_permissions( $parent_tipo=null, $tipo=null ) {
 
 		if(login::is_logged()!==true)
 			return 0;
 
+		if( empty($parent_tipo) ) {
+			if(SHOW_DEBUG===true) {
+				dump($parent_tipo,'parent_tipo');
+				throw new Exception("Error Processing Request. get_permissions: parent_tipo is empty", 1);
+			}
+			#die("Error Processing Request. get_permissions: tipo is empty");
+			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
+			return 0;
+		}
 		if( empty($tipo) ) {
 			if(SHOW_DEBUG===true) {
 				dump($tipo,'tipo');
@@ -113,16 +122,7 @@ abstract class common {
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
-		if( empty($sub_tipo) ) {
-			if(SHOW_DEBUG===true) {
-				dump($sub_tipo,'sub_tipo');
-				throw new Exception("Error Processing Request. get_permissions: sub_tipo is empty", 1);
-			}
-			#die("Error Processing Request. get_permissions: sub_tipo is empty");
-			debug_log(__METHOD__." Error Processing Request. get_permissions: sub_tipo is empty ".to_string(), logger::ERROR);
-			return 0;
-		}
-		$permissions = security::get_security_permissions($tipo, $sub_tipo);
+		$permissions = security::get_security_permissions($parent_tipo, $tipo);
 
 
 		return (int)$permissions;
@@ -2307,16 +2307,15 @@ abstract class common {
 		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
 		#$ar_section_tipo = (array)$section_tipo;
 
-		$user_id_logged		 = navigator::get_user_id();
-		$ar_authorized_areas = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, 'full');
-		#dump($ar_authorized_areas, ' ar_authorized_areas ++ '.to_string());
-
 		$context = [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
+			$section_permisions = security::get_security_permissions($section_tipo, $section_tipo);
+			$user_id_logged = navigator::get_user_id();
+
 			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
 				&& $user_id_logged!=DEDALO_SUPERUSER
-				&& (!isset($ar_authorized_areas->$section_tipo) || (int)$ar_authorized_areas->$section_tipo<1)) {
+				&& ((int)$section_permisions<1)) {
 				// user don't have access to current section. skip section
 				continue;
 			}
