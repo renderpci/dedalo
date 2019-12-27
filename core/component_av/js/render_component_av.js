@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_BASE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -40,7 +40,7 @@ render_component_av.prototype.list = async function() {
 
 	// url
 		const posterframe_url 	= data.posterframe_url
-		const url 				= (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_BASE_URL + "/themes/default/0.jpg" : posterframe_url
+		const url 				= (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
 		const image = ui.create_dom_element({
@@ -234,7 +234,7 @@ const content_data_edit = async function(self) {
 
 	// url
 		const posterframe_url 	= self.data.posterframe_url
-		//const url 			= (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_BASE_URL + "/themes/default/0.jpg" : posterframe_url
+		//const url 			= (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 		const video_url 		= self.data.video_url
 			console.log("video_url:",video_url);
 
