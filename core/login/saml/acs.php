@@ -10,7 +10,7 @@
 $start_time=microtime(1);
 
 // Require files
-	require_once( DEDALO_CONFIG_PATH . '/config.php' );
+	require_once(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 	require_once( dirname(__FILE__) . '/saml_config.php' );
 	require_once( SAML_SETTINGS_PATH );
 	require_once( TOOLKIT_PATH . '_toolkit_loader.php' );
@@ -29,7 +29,7 @@ $start_time=microtime(1);
 		));
 
 		if ($response->result===true) {
-			
+
 			$total = exec_time_unit($start_time,'ms')." ms";
 			echo " User was saml logged successfully. ".$total;
 			debug_log(__METHOD__." User was saml logged successfully. ".$total, logger::ERROR);
@@ -43,11 +43,11 @@ $start_time=microtime(1);
 		exit();
 		*/
 
-// login v3.0 
+// login v3.0
 	try {
 		if (isset($_POST['SAMLResponse'])) {
-			    
-			$samlSettings = new OneLogin\Saml2\Settings($saml_settings);        
+
+			$samlSettings = new OneLogin\Saml2\Settings($saml_settings);
 			$samlResponse = new OneLogin\Saml2\Response($samlSettings, $_POST['SAMLResponse']);
 			if ($samlResponse->isValid()) {
 
@@ -71,27 +71,27 @@ $start_time=microtime(1);
 						}
 				}else{
 
-					// Login into Dédalo. Credentials are all coorect, enter as registerd logged user 
-						
+					// Login into Dédalo. Credentials are all coorect, enter as registerd logged user
+
 						// Code. Is mapped from SAML response attribute name defined in config like 'code' => 'urn:oid:1.3.4.1.47.1.5.1.8'
 							$attributes 	= $samlResponse->getAttributes();
 							$code_attr_name = SAML_CONFIG['code'];
 							$code           = $attributes[$code_attr_name];
 							$client_ip 		= common::get_client_ip();
 							error_log("SAMLResponse code: ".print_r($code, true).", client_ip: ".print_r($client_ip, true));
-						
+
 						// Login_SAML
 							$response = login::Login_SAML(array(
 								'code' => $code
 							));
 
 							if ($response->result===true) {
-								
+
 								$total = exec_time_unit($start_time,'ms')." ms"; echo $total;
 								debug_log(__METHOD__." SAML user ".print_r($code, true)." [$client_ip] was logged successfully.  ".$total, logger::ERROR);
 
 								header("Location: ".DEDALO_ROOT_WEB);
-								
+
 							}else{
 
 								#echo $response->msg;
@@ -108,7 +108,7 @@ $start_time=microtime(1);
 											#$html_content .= '<script>var my_window=window.open("'.SAML_CONFIG['logout_url'].'");</script>';
 											#$html_content .= include( DEDALO_CORE_PATH . '/login/html/saml_button.phtml');
 											$html_content .= '<a type="button" class="btn btn-success btn-block" href="'.DEDALO_ROOT_WEB.'">Dédalo Login</a>';
-											$html_content .= '</div>';											
+											$html_content .= '</div>';
 										$html_content .= '</div>';
 
 									$html_content .= '</div>';
@@ -131,13 +131,13 @@ $start_time=microtime(1);
 		echo 'Invalid SAML Response (2): ' . $e->getMessage();
 	}
 
-// login v2.14 
+// login v2.14
 	/*
 	try {
 		if (isset($_POST['SAMLResponse'])) {
-			
-			#$samlSettings = new OneLogin_Saml2_Settings();     
-			$samlSettings = new OneLogin_Saml2_Settings($saml_settings);        
+
+			#$samlSettings = new OneLogin_Saml2_Settings();
+			$samlSettings = new OneLogin_Saml2_Settings($saml_settings);
 			$samlResponse = new OneLogin_Saml2_Response($samlSettings, $_POST['SAMLResponse']);
 			if ($samlResponse->isValid()) {
 
@@ -161,27 +161,27 @@ $start_time=microtime(1);
 						}
 				}else{
 
-					// Login into Dédalo. Credentials are all coorect, enter as registerd logged user 
-						
+					// Login into Dédalo. Credentials are all coorect, enter as registerd logged user
+
 						// Code. Is mapped from SAML response attribute name defined in config like 'code' => 'urn:oid:1.3.4.1.47.1.5.1.8'
 							$attributes 	= $samlResponse->getAttributes();
 							$code_attr_name = SAML_CONFIG['code'];
 							$code           = $attributes[$code_attr_name];
 							$client_ip 		= common::get_client_ip();
 							error_log("SAMLResponse code: ".print_r($code, true).", client_ip: ".print_r($client_ip, true));
-						
+
 						// Login_SAML
 							$response = login::Login_SAML(array(
 								'code' => $code
 							));
 
 							if ($response->result===true) {
-								
+
 								$total = exec_time_unit($start_time,'ms')." ms"; echo $total;
 								debug_log(__METHOD__." User was saml logged successfully.  ".$total, logger::ERROR);
 
 								header("Location: ".DEDALO_ROOT_WEB);
-								
+
 							}else{
 
 								echo $response->msg;

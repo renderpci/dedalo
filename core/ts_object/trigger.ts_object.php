@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-include( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 include(DEDALO_CORE_PATH . '/ts_object/class.ts_object.php');
 
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
@@ -41,7 +41,7 @@ function get_childrens_data($json_data) {
 			}
 		}
 
-	
+
 	if($node_type==='hierarchy_node') {
 
 		// Childrens are the same current data
@@ -77,14 +77,14 @@ function get_childrens_data($json_data) {
 	if (isset($_SESSION['dedalo4']['config']['thesaurus_view_mode']) && $_SESSION['dedalo4']['config']['thesaurus_view_mode']==='model') {
 		$options->model = true;
 	}
-	
-	try{		
+
+	try{
 
 		$childrens_data = array();
 		foreach ((array)$childrens as $locator) {
-			
+
 			$section_id 		= $locator->section_id;
-			$section_tipo 		= $locator->section_tipo;				
+			$section_tipo 		= $locator->section_tipo;
 
 			$ts_object  		= new ts_object( $section_id, $section_tipo, $options );
 			$childrens_object 	= $ts_object->get_childrens_data();
@@ -93,19 +93,19 @@ function get_childrens_data($json_data) {
 			# Add only descriptors
 			#if ($childrens_object->is_descriptor===true) {
 				$childrens_data[] 	= $childrens_object;
-			#}		
+			#}
 		}
 
 		$response->result 	= (array)$childrens_data;
 		$response->msg 		= 'Ok. Request done [get_childrens_data]';
-	
+
 	}catch(Exception $e) {
 
 		$response->result 	= false;
-		$response->msg 		= 'Error. Caught exception: '.$e->getMessage();		
+		$response->msg 		= 'Error. Caught exception: '.$e->getMessage();
 	}
 
-	
+
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -158,7 +158,7 @@ function add_children($json_data) {
 	// section map
 		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
 
-	// set new section component 'is_descriptor' value		
+	// set new section component 'is_descriptor' value
 		if (!isset($section_map['thesaurus']->is_descriptor)) {
 			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
@@ -200,7 +200,7 @@ function add_children($json_data) {
 		if ($modelo_name!=='component_relation_children') {
 			$response->msg = 'Error on create new section from parent. Invalid model: '.$modelo_name.'. Expected: "component_relation_children" ';
 			return $response;
-		}	
+		}
 		$modo 			= 'edit';
 		$lang			= DEDALO_DATA_NOLAN;
 		$component_relation_children = component_common::get_instance($modelo_name,
@@ -230,7 +230,7 @@ function add_children($json_data) {
 					$response->debug = $debug;
 				}
 		}
-		
+
 
 	return (object)$response;
 }//end add_children
@@ -364,7 +364,7 @@ function delete($json_data) {
 				return $response;
 			}
 		}
-	
+
 
 	# CHILDRENS . Verify that current term don't have childrens. If yes, stop process.
 	$modelo_name 		= 'component_relation_children';
@@ -387,9 +387,9 @@ function delete($json_data) {
 	 		return (object)$response;
 	 	}
 	}
-	
 
-	# REFERENCES . Calculate parents and removes references to current section	
+
+	# REFERENCES . Calculate parents and removes references to current section
 	$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, false);
 
 
@@ -400,8 +400,8 @@ function delete($json_data) {
 	debug_log(__METHOD__." Removed section $section_id, $section_tipo ".to_string(), logger::DEBUG);
 
 	$response->result	= $result;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';	
-	
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -422,7 +422,7 @@ function delete($json_data) {
 
 /**
 * UPDATE_PARENT_DATA
-* Updates element 
+* Updates element
 * @return object $response
 */
 function update_parent_data($json_data) {
@@ -441,12 +441,12 @@ function update_parent_data($json_data) {
 				return false;
 			}
 		}
-	
+
 	# Remove current element as children from previous parent (old parentt)
 		$locator = new locator();
 			$locator->set_section_tipo($old_parent_section_tipo);
 			$locator->set_section_id($old_parent_section_id);
-		$filter   = array($locator);		
+		$filter   = array($locator);
 		$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, $filter);
 		if ($relation_response->result===true) {
 			debug_log(__METHOD__." Removed me as children from old parent  ".to_string(), logger::DEBUG);
@@ -474,7 +474,7 @@ function update_parent_data($json_data) {
 			# All is ok. Result is new created section section_id
 			$response->result 	= true;
 			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-			
+
 			# Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
@@ -504,7 +504,7 @@ function show_indexations($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('section_tipo','section_id','component_tipo');
 		foreach($vars as $name) {
@@ -535,7 +535,7 @@ function show_indexations($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 
 	return (object)$response;
 }//end show_indexations
@@ -552,7 +552,7 @@ function save_order($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('section_tipo','section_id','component_tipo','ar_locators');
 		foreach($vars as $name) {
@@ -562,7 +562,7 @@ function save_order($json_data) {
 				return $response;
 			}
 		}
-	
+
 	#$ar_locators = json_decode($ar_locators);
 	$dato = array();
 	foreach ((array)$ar_locators as $current_locator) {
@@ -585,7 +585,7 @@ function save_order($json_data) {
 	// This action returns the dato parsed with method component_relation_common->set_dato()
 	$component_relation_children->set_dato($dato);
 	$result = $component_relation_children->Save();
-	
+
 
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
@@ -611,7 +611,7 @@ function save_order($json_data) {
 * @return object $response
 *//*
 public function link_term($json_data) {
-	
+
 	# set vars
 	$vars = array('section_tipo','section_id');
 		foreach($vars as $name) {
@@ -626,7 +626,7 @@ public function link_term($json_data) {
 
 	$locator = new locator();
 		$locator->set_section_tipo($section_tipo);
-		$locator->set_section_id($section_id);	
+		$locator->set_section_id($section_id);
 }//end link_term
 */
 

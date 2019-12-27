@@ -1,13 +1,13 @@
 <?php
 $TOP_TIPO=false;
 $start_time=microtime(1);
-include( DEDALO_CONFIG_PATH.'/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager( json_decode('{"test_login":false}') );
 
 
 
-# LOGIN	 #################################################################################################################	
+# LOGIN	 #################################################################################################################
 function Login($json_data) {
 	global $start_time;
 
@@ -19,7 +19,7 @@ function Login($json_data) {
 	foreach ($json_data as $key => $value) {
 		$trigger_post_vars[$key] = trim($value); // trim to avoid write space errors
 	}
-	
+
 	# If all is ok, return string 'ok'
 	$response = (object)login::Login( $trigger_post_vars );
 
@@ -28,7 +28,7 @@ function Login($json_data) {
 
 	# Exit printing result
 	# exit($result);
-	
+
 	#$response->result 	= $result;
 	#$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -39,14 +39,14 @@ function Login($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end Login
 
 
 
-# QUIT ###################################################################################################################		
-function Quit($json_data) {	
+# QUIT ###################################################################################################################
+function Quit($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
@@ -67,7 +67,7 @@ function Quit($json_data) {
 
 	// Close script session
 		session_write_close();
-	
+
 	// Response
 		$response->result 	= $result;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
@@ -80,11 +80,11 @@ function Quit($json_data) {
 		// debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 			$response->debug = $debug;
 		}
-	
+
 	return (object)$response;
 }//end Quit()
 

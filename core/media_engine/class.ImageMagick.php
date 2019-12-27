@@ -2,11 +2,11 @@
 /*
 * CLASS ImageMagick
 */
-require_once( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 
 class ImageMagick {
-	
+
 
 	/**
 	* TEST_IMAGE_MAGICK
@@ -23,7 +23,7 @@ class ImageMagick {
 				#dump($rcode,'$rcode');
 				#dump($out,'$out');
 			}
-			throw new Exception("Error Processing Request. ImageMagick lib not found", 1);			
+			throw new Exception("Error Processing Request. ImageMagick lib not found", 1);
 		}else{
 			if($info===true) {
 				return alist($out);
@@ -51,23 +51,23 @@ class ImageMagick {
 
 		# FAST METHOD (NOT verify)
 		if(!$verify) return $thumb_file_url;
-		
+
 
 		# THUMB FILE EXISTS TEST : Redirect to real existing image thumb
 		if (!file_exists( $thumb_file_path )) {
-			
+
 			# SOURCE FILE
 				$source_base = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/';
 				if (strpos($f, $source_base)!==false) {
 					$source = $f;
 				}else{
 					$source = $source_base . $f;
-				}					
-				
-			if (file_exists( $source )) {				
+				}
 
-				# Target folder exists test	
-				$aditional_path = substr($f, 0, strrpos($f,'/')); 
+			if (file_exists( $source )) {
+
+				# Target folder exists test
+				$aditional_path = substr($f, 0, strrpos($f,'/'));
 				$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$aditional_path;	#dump( $target_folder_path, $f  );return null;
 				if( !is_dir($target_folder_path) ) {
 					if(!mkdir($target_folder_path, 0777,true)) {
@@ -76,9 +76,9 @@ class ImageMagick {
 				}
 
 				# TARGET FILE
-				$target = $thumb_file_path;				
-				debug_log(__METHOD__." Creating thumb with target: $thumb_file_path ".to_string(), logger::DEBUG);				
-				
+				$target = $thumb_file_path;
+				debug_log(__METHOD__." Creating thumb with target: $thumb_file_path ".to_string(), logger::DEBUG);
+
 				# CONVERT
 				ImageMagick::dd_thumb($mode, $source, $target, false, $initial_media_path);
 
@@ -90,10 +90,10 @@ class ImageMagick {
 				# SOURCE FILE
 				#$source = DEDALO_CORE_PATH.'/themes/default/0.jpg';
 				# TARGET FILE
-				#$target = $thumb_file_path;				
+				#$target = $thumb_file_path;
 				# CONVERT
 				#ImageMagick::dd_thumb($mode, $source, $target);
-			}	
+			}
 		}
 		#dump($thumb_file_url,'thumb_file_url');
 		#error_log($thumb_file_url);
@@ -116,7 +116,7 @@ class ImageMagick {
 			if(!mkdir($folder_path, 0777,true)) {
 				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
 			}
-		}		
+		}
 
 		# Dimensions (original 102x57)
 		#$dimensions = (string)"102x90";
@@ -128,7 +128,7 @@ class ImageMagick {
 
 			# Like "102x57"
 			$dimensions = $width.'x'.$height.'>';
-			#$dimensions = "200x200>";		
+			#$dimensions = "200x200>";
 		#}
 
 		switch ($mode) {
@@ -145,7 +145,7 @@ class ImageMagick {
 				break;
 		}
 		#$command = 'nice -n 19 '.$command;
-		
+
 
 		# RUN COMMAND
 		#$result = shell_exec($command);
@@ -161,16 +161,16 @@ class ImageMagick {
 		}
 
 		return $result;
-			
+
 		/*
 		$prgfile = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp/dd_thumb_'.$mode.'_'.str_replace('/', '_', substr($target_file, strpos($target_file, 'thumbs/')+7) ).'.sh';
 			#dump($prgfile,'$prgfile');
 			#if(file_exists($prgfile)) unlink($prgfile);
-		
+
 		# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
 		if(!file_exists($prgfile)) {
 
-			# Target folder exists test	
+			# Target folder exists test
 			$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp';
 			if( !is_dir($target_folder_path) ) {
 				if(!mkdir($target_folder_path, 0777,true)) {
@@ -179,24 +179,24 @@ class ImageMagick {
 			}
 
 			# Temp sh file
-			$fp = fopen($prgfile, "w"); 
+			$fp = fopen($prgfile, "w");
 			fwrite($fp, "#!/bin/bash\n");
 			fwrite($fp, "$command\n");
 			fclose($fp);
-			if(!file_exists($prgfile)) {				
-				throw new Exception("Error Processing file. Thumb script file not exists or is not accessible", 1);			
+			if(!file_exists($prgfile)) {
+				throw new Exception("Error Processing file. Thumb script file not exists or is not accessible", 1);
 			}
 			#error_log("Created thumb for $source_file - dimensions:$dimensions");
 		}
-		
+
 		# RUN COMMAND
 		return exec_::exec_sh_file($prgfile);
 		*/
 	}//end dd_thumb
 
 
-	
-	
+
+
 	/**
 	* CREATE ALTERNATE VIDEO OR AUDIO VERSION WITH RECEIVED SETTINGS
 	* @param $AVObj
@@ -240,12 +240,12 @@ class ImageMagick {
 		#
 		if(!isset($flags))$flags='';
 		switch (true) {
-			
+
 			# CMYK to RGB
 			# Si la imagen orgiginal es CMYK, la convertimos a RGB aignándole un perfil de salida para la conversión. Una vez convertida (y flateada en caso de psd)
 			# le eliminamos el perfil orginal (cmyk) para evitar incoherencia con el nuevo espacio de color (rgb)
 			case ( strpos($colorspace_info, 'CMYK')!==false ) :
-			
+
 				# Profile full path
 				$profile_file = COLOR_PROFILES_PATH.'sRGB_Profile.icc';
 
@@ -253,23 +253,23 @@ class ImageMagick {
 				if(!file_exists($profile_file)) throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
 
 				// Remove possible '-thumbnail' flag when profile is used
-				$flags = str_replace('-thumbnail', '', $flags);		
+				$flags = str_replace('-thumbnail', '', $flags);
 
 				# Command flags
-				$profile_source  = '';#'-profile "'.COLOR_PROFILES_PATH.'Generic_CMYK_Profile.icc"';				
+				$profile_source  = '';#'-profile "'.COLOR_PROFILES_PATH.'Generic_CMYK_Profile.icc"';
 				$flags 			.= "-profile \"$profile_file\" -flatten -strip"; #-negate.
 				break;
-			
+
 			# RBG TO RBG
 			default:
 				$flags 			.= " -flatten";
 				break;
 		}
 
-		$flags .= " -quiet "; // Always add 
-		
+		$flags .= " -quiet "; // Always add
 
-		$command = MAGICK_PATH . "convert $source_file_with_layers $flags \"$target_file\" ";	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB 
+
+		$command = MAGICK_PATH . "convert $source_file_with_layers $flags \"$target_file\" ";	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB
 		#$command = 'nice -n 19 '.$command;
 			#if(SHOW_DEBUG) dump($command,'ImageMagick command');
 		debug_log(__METHOD__." Command ".to_string($command), logger::DEBUG);
@@ -295,12 +295,12 @@ class ImageMagick {
 
 	/**
 	* GET_IMAGE_FILE_INFO
-	* @return 
+	* @return
 	*//*
 	public static function get_image_file_info( $source_file ) {
 					# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
 		$commnad = MAGICK_PATH . "convert $source_file json: ";
-	    $output  = json_decode( shell_exec($command) );  
+	    $output  = json_decode( shell_exec($command) );
 	   		#dump($output, ' output ++ '.to_string( $command ));
 
 	   	return $output;
@@ -313,9 +313,9 @@ class ImageMagick {
 	* @return array $ar_layers
 	*/
 	public static function get_layers_file_info( $source_file ) {
-		
+
 		$ar_layers = array();
-		# get the type of TIFF format 
+		# get the type of TIFF format
 		# 1 single image
 		# 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT OAND CONVERT
 		# 3 true layer tiff
@@ -323,13 +323,13 @@ class ImageMagick {
 		$tiff_format  	= shell_exec($command);
 
 		$command = MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
-	    $output  = shell_exec($command); 
+	    $output  = shell_exec($command);
 	   		#dump($output, ' output ++ '.to_string( $command ));
 	    	#debug_log(__METHOD__." COMMAND ".to_string($command), logger::DEBUG);
-	
+
 	   	$output  = trim($output);
 	    $ar_part = explode("\n", $output);
-	    
+
 	    foreach ($ar_part as $key => $value) {
 
 	    	$ar_part2 = explode(":", $value);
@@ -341,7 +341,7 @@ class ImageMagick {
 	    	}else{
 	    		$layer_type = $ar_part2[1];
 	    	}
-	    	
+
 
 	    	$ar_layers[$layer_key] = $layer_type;
 	    }
@@ -351,9 +351,9 @@ class ImageMagick {
 	}//end get_layers_file_info
 
 
-	
-	
 
-	
+
+
+
 }//end ImageMagick
 ?>
