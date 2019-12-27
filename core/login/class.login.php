@@ -222,7 +222,7 @@ class login extends common {
 			}
 
 		// profile / projects check
-			$is_global_admin = component_security_administrator::is_global_admin($user_id);
+			$is_global_admin = security::is_global_admin($user_id);
 			if($is_global_admin!==true) {
 
 				#
@@ -241,7 +241,7 @@ class login extends common {
 						return $response;
 					}
 
-			}//end if(!component_security_administrator::is_global_admin($user_id))
+			}//end if(!security::is_global_admin($user_id))
 
 
 		// Login (all is ok) - init login secuence when all is ok
@@ -352,7 +352,7 @@ class login extends common {
 						}
 
 					// Is global admin
-						$is_global_admin = component_security_administrator::is_global_admin($section_id);
+						$is_global_admin = security::is_global_admin($section_id);
 
 					// Profile / projects check
 						if($is_global_admin!==true) {
@@ -373,7 +373,7 @@ class login extends common {
 									return $response;
 								}
 
-						}//end if(!component_security_administrator::is_global_admin($section_id))
+						}//end if(!security::is_global_admin($section_id))
 
 					// LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
 
@@ -667,7 +667,7 @@ class login extends common {
 		}
 
 		// IS_GLOBAL_ADMIN (before set user session vars)
-			$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)component_security_administrator::is_global_admin($user_id);
+			$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)security::is_global_admin($user_id);
 
 		// IS_DEVELOPER (before set user session vars)
 			$_SESSION['dedalo4']['auth']['is_developer'] 	= (bool)login::is_developer($user_id);

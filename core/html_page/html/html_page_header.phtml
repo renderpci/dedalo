@@ -15,7 +15,7 @@ if (login::is_logged()) {
 		case (SHOW_DEBUG ):
 			$menu_wrapper_css = 'menu_wrapper_debug';
 			break;
-		case ( component_security_administrator::is_global_admin( navigator::get_user_id() ) ):
+		case ( security::is_global_admin( navigator::get_user_id() ) ):
 			$menu_wrapper_css = 'menu_wrapper_global_admin';
 			break;
 		default:
@@ -78,7 +78,7 @@ if (login::is_logged()) {
 
 		#
 		# DATA LANG JUMP
-		if(component_security_administrator::is_global_admin( navigator::get_user_id() )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
+		if(security::is_global_admin( navigator::get_user_id() )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
 
 			$dedalo_data_langs_selector_html = html_page::get_dedalo_data_langs_selector_html();
 			echo $dedalo_data_langs_selector_html;

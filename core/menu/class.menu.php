@@ -31,7 +31,7 @@ class menu extends common {
 		$arguments_tree			= array();
 		$arguments_tree['ul_id']= 'menu';
 
-		if( (bool)component_security_administrator::is_global_admin($user_id_logged) !== true ) {
+		if( (bool)security::is_global_admin($user_id_logged) !== true ) {
 			# Get array of authorized areas for current logged user
 			$ar_authorized_areas 	= security::get_ar_authorized_areas_for_user();
 			$arguments_tree['dato'] = $ar_authorized_areas;
@@ -106,7 +106,7 @@ class menu extends common {
 
 			# THESAURUS ADD MENU MANUAL
 			$user_id_logged 			 = navigator::get_user_id();
-			$logged_user_is_global_admin = (bool)component_security_administrator::is_global_admin($user_id_logged);
+			$logged_user_is_global_admin = (bool)security::is_global_admin($user_id_logged);
 
 			$security = new security();
 			$tesauro_permissions = security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
@@ -241,7 +241,7 @@ class menu extends common {
 		# VERIFY CURRENT LOGGED USER IS GLOBAL ADMIN OR NOT
 		# Testemos si este usuario es administrador global. Si no lo es, ocultaremos las áreas a las que no tiene acceso
 			$user_id_logged 			 = navigator::get_user_id();
-			$logged_user_is_global_admin = component_security_administrator::is_global_admin($user_id_logged);
+			$logged_user_is_global_admin = security::is_global_admin($user_id_logged);
 
 		foreach((array)$ar_structure as $tipo => $value) {
 

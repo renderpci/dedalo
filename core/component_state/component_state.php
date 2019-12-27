@@ -28,7 +28,7 @@
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
 	$user_id_logged  = navigator::get_user_id();
-	$is_global_admin = (bool)component_security_administrator::is_global_admin($user_id_logged);
+	$is_global_admin = (bool)security::is_global_admin($user_id_logged);
 	
 	$file_name = $modo;
 	

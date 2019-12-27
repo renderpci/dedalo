@@ -69,7 +69,7 @@ class component_filter_master extends component_filter {
 		$user_id 			= navigator::get_user_id();
 		$ar_projects_final	= array();
 
-		$logged_user_is_global_admin = (bool)component_security_administrator::is_global_admin( $user_id );
+		$logged_user_is_global_admin = (bool)security::is_global_admin( $user_id );
 
 		if ($logged_user_is_global_admin===true) {
 			# ALL PROJECTS
