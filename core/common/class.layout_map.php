@@ -219,15 +219,11 @@ class layout_map {
 				}//end if (!isset($config_context) && !empty($ar_related))
 
 
-			// temporal excluded/changed models
-				$ar_temp_map_models = [
-					// map to => old model
-					'component_autocomplete' =>'component_autocomplete_hi'
-				];
-				$ar_tep_exclude_models = [
-					'component_state',
-					'component_info'
-				];
+			// check valid config_context
+				if (empty($config_context)) {
+					$config_context = [];
+					#throw new Exception("Error Processing Request. Empty config_context", 1);
+				}
 
 
 			// layout_map
@@ -263,11 +259,14 @@ class layout_map {
 
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
-						// temporal map
-							$match_key = array_search($model, $ar_temp_map_models);
+
+						// common temporal excluded/mapped models *******
+							$match_key = array_search($model, common::$ar_temp_map_models);
 							if (false!==$match_key) {
+								debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
 								$model = $match_key;
-							}else if (in_array($model, $ar_tep_exclude_models)) {
+							}else if (in_array($model, common::$ar_temp_exclude_models)) {
+								debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
 								continue;
 							}
 
