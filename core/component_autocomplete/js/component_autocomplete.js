@@ -133,6 +133,9 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 			self.paginator.refresh()
 		}
 
+	// permissions. calculate and set (used by section records later)
+		self.permissions = self.context.permissions
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
