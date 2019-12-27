@@ -255,7 +255,7 @@ class tool_time_machine extends tool_common {
 		#
 		# Admin of current area
 		$is_admin_of_current_area		= (bool)false;
-		$ar_authorized_areas_for_user 	= component_security_areas::get_ar_authorized_areas_for_user($userID, $mode_result='full');
+		$ar_authorized_areas_for_user 	= security::get_ar_authorized_areas_for_user();
 			#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user - tipo: '. $tipo);
 		foreach ((array)$ar_authorized_areas_for_user as $key => $value) {
 			#if ($key == $tipo.'-admin' && $value == 2) {

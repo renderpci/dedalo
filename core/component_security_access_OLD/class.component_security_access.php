@@ -122,7 +122,7 @@ class component_security_access extends component_common {
 	* user_id is received as caller_id
 	* Es una implementación a medida de los valores de areas autorizadas para este usuario
 	* selecciona las que tienen estado 2 y elimina las pseudo-areas 'xxx-admin'
-	* @see component_security_areas::get_ar_authorized_areas_for_user
+	* @see security::get_ar_authorized_areas_for_user
 	*/
 	protected function get_user_authorized_areas() {
 
@@ -130,7 +130,7 @@ class component_security_access extends component_common {
 			#$start_time=microtime(1);
 		}
 
-		$user_id = self::get_caller_id();			
+		
 			
 			/*
 			# Verificamos que caller_id es llamado en el contexto 'Admin' es decir,
@@ -165,7 +165,7 @@ class component_security_access extends component_common {
 			*/
 		# Get array of authorized areas for current user id
 			//dump(DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO); die();
-		$ar_authorized_areas_for_user = (array)component_security_areas::get_ar_authorized_areas_for_user($user_id, $mode_result='full', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, DEDALO_SECTION_USERS_TIPO);
+		$ar_authorized_areas_for_user = (array)security::get_ar_authorized_areas_for_user();
 			#dump($ar_authorized_areas_for_user,'ar_authorized_areas_for_user');
 		
 		# Gets something:

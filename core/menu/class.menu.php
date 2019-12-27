@@ -33,7 +33,7 @@ class menu extends common {
 
 		if( (bool)component_security_administrator::is_global_admin($user_id_logged) !== true ) {
 			# Get array of authorized areas for current logged user
-			$ar_authorized_areas 	= component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, $mode_result='full');
+			$ar_authorized_areas 	= security::get_ar_authorized_areas_for_user();
 			$arguments_tree['dato'] = $ar_authorized_areas;
 				#dump($ar_authorized_areas,'ar_authorized_areas');
 		}
@@ -299,22 +299,6 @@ class menu extends common {
 
 			# TERMINO (In current data lang with fallback)
 			$termino	 = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
-
-			/*
-			* PROJECTS . REMOVE ADMIN ELEMENTS
-			* En el contexto de edición de 'projects' eliminamos las areas de tipo admin
-			*//*
-			if (isset($arguments_tree['context']) && $arguments_tree['context']=='projects') {
-
-				# Get admin section tipo and childrens
-				$ar_tipo_admin = component_security_areas::get_ar_tipo_admin();		#dump($ar_tipo_admin,'$ar_tipo_admin');
-				if( in_array($tipo, $ar_tipo_admin) ) {
-					# Remove admin element
-					$show = false;
-					break;
-				}
-			}
-			*/
 
 
 			if (!empty($value) && $modelo_name!=='section') {
