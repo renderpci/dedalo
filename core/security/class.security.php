@@ -164,8 +164,23 @@ class security {
 
 		$dato=array();
 
+		$component_security_access = self::get_user_security_access($user_id);
+
+		$dato_access = (array)$component_security_access->get_dato();
+
+		return $dato_access;
+	}//end get_ar_permissions_in_matrix_for_current_user
+
+
+
+	/**
+	* GET_USER_SECURITY_ACCESS
+	* @return component
+	*/
+	private static function get_user_security_access($user_id=false) {
+
 		if ($user_id===false) {
-			# Default behaviour is false (use logged user to calculate permissions)
+		# Default behaviour is false (use logged user to calculate permissions)
 			$user_id = $_SESSION['dedalo4']['auth']['user_id'];
 		}
 
@@ -195,10 +210,9 @@ class security {
 																	DEDALO_DATA_NOLAN,
 																	DEDALO_SECTION_PROFILES_TIPO
 																	);
-		$dato_access = (array)$component_security_access->get_dato();
 
-		return $dato_access;
-	}//end get_ar_permissions_in_matrix_for_current_user
+		return $component_security_access;		
+	}//end get_user_security_access
 
 
 
@@ -301,8 +315,77 @@ class security {
 
 
 		return $is_global_admin;
-		
 	}//end is_global_admin
+
+
+
+	/**
+	* SET_SECTION_PERMISSIONS
+	* Allow current user access to created default sections
+	* @return bool
+	*/
+	private static function set_section_permissions( $request_options ) {
+
+		$options = new stdClass();
+			$options->section_tipo 	= null;
+			$options->section_id 	= null;
+			$options->ar_sections 	= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		# user_id
+		$user_id 	  = navigator::get_user_id();
+		if (SHOW_DEBUG===true || $user_id<1) {
+			return true;
+		}
+
+		# Permissions	
+		$permissions  = 2;
+
+		$component_security_access 		= self::get_user_security_access();
+		$component_security_access_dato = $component_security_access->get_dato();
+
+		# Iterate sections (normally like ts1,ts2)
+		foreach ((array)$options->ar_sections as $current_section_tipo) {
+			
+				$section_permisions = new stdClass();
+					$section_permisions->tipo = $current_section_tipo;
+					$section_permisions->parent = $current_section_tipo;
+					$section_permisions->type = 'area';
+					$section_permisions->value = $permissions;
+
+				$component_security_access_dato[] = $section_permisions;
+			
+		
+			# Components inside section
+			$real_section = section::get_section_real_tipo_static( $current_section_tipo );
+			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($real_section,
+																					$ar_modelo_name_required=array('component','button','section_group'),
+																					$from_cache=true,
+																					$resolve_virtual=false,
+																					$recursive=true,
+																					$search_exact=false);
+
+			foreach ($ar_children as $children_tipo) {
+				$component_permisions = new stdClass();
+					$component_permisions->tipo = $children_tipo;
+					$component_permisions->parent = $current_section_tipo;
+					$component_permisions->value = $permissions;
+
+				$component_security_access_dato[] = $component_permisions;	
+			}			
+
+		}//end foreach ($ar_sections as $current_section_tipo)
+
+		# Save calculated data once
+
+		$component_security_access->set_dato($component_security_access_dato);
+		$component_security_access->Save();
+
+		# Regenerate permissions table
+		security::reset_permissions_table();
+		
+		return true;
+	}//end set_section_permissions
 
 
 }//end class
