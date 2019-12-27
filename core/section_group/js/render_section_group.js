@@ -37,10 +37,17 @@ render_section_group.prototype.edit = async function(options={render_level : 'fu
 			return current_content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper =	ui.component.build_wrapper_edit(self, {
+	// wrapper options
+		const wrapper_options = {
 			content_data : current_content_data
-		})
+		}
+		// properties label set to null, avoid header label is added
+		if (self.context.properties.label===null) {
+			wrapper_options.label = null
+		}
+
+	// wrapper. ui build_edit returns component wrapper
+		const wrapper =	ui.component.build_wrapper_edit(self, wrapper_options)
 
 	// events
 		wrapper.addEventListener("click", (e) => {
