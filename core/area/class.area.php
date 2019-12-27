@@ -292,7 +292,7 @@ class area extends common  {
 
 		# AREA_DEVELOPMENT
 			$ar_ts_childrens_dev 		 		= [];
-			$logged_user_is_global_admin 		= component_security_administrator::is_global_admin(navigator::get_user_id());
+			$logged_user_is_global_admin 		= security::is_global_admin(navigator::get_user_id());
 			if((SHOW_DEBUG===true || SHOW_DEVELOPER===true) && $logged_user_is_global_admin===true) {
 				$ar_current_tipo 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development');
 				if (isset($ar_current_tipo[0])) {

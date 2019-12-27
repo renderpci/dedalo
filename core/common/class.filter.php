@@ -101,7 +101,7 @@ abstract class filter {
 
 		// filter by filter_master
 			$user_id 		 = navigator::get_user_id();
-			$is_global_admin = component_security_administrator::is_global_admin($user_id);
+			$is_global_admin = security::is_global_admin($user_id);
 			if ($is_global_admin===true) {
 				// bypass filter
 				$filter = '';

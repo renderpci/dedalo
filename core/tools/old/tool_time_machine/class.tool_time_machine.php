@@ -247,7 +247,7 @@ class tool_time_machine extends tool_common {
 
 		#
 		# Gloabal admin		
-		$is_global_admin = (bool)component_security_administrator::is_global_admin($userID);
+		$is_global_admin = (bool)security::is_global_admin($userID);
 		if ($is_global_admin===true) {
 			return true;
 		}

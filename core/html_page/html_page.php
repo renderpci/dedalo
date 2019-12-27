@@ -258,7 +258,7 @@
 		}
 
 
-	$is_global_admin = (bool)component_security_administrator::is_global_admin($user_id);
+	$is_global_admin = (bool)security::is_global_admin($user_id);
 
 
 	#

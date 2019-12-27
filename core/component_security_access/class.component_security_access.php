@@ -141,7 +141,7 @@ class component_security_access extends component_common {
 		foreach ((array)$ar_ts_childrens as $children_terminoID) {				
 			
 			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);								
-			$ar_exclude_modelo		= array('component_security_administrator','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+			$ar_exclude_modelo		= array('section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
 			$exclude_this_modelo 	= false;
 			foreach($ar_exclude_modelo as $modelo_exclude) {					
 				if( strpos($modelo_name, $modelo_exclude)!==false ) {
@@ -399,7 +399,7 @@ class component_security_access extends component_common {
 		}
 		
 
-		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+		$ar_exclude_modelo = array('section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
 		foreach((array)$ar_ts_childrens as $children_terminoID) {			
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);			
 			foreach($ar_exclude_modelo as $exclude_modelo) {					

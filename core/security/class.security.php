@@ -169,28 +169,23 @@ class security {
 			$user_id = $_SESSION['dedalo4']['auth']['user_id'];
 		}
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
+		$component_profile_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
 		#
 		# USER PROFILE
-		$component_profile 			= component_common::get_instance($model,
+		$component_profile 			= component_common::get_instance($component_profile_model,
 																  	DEDALO_USER_PROFILE_TIPO,
 																  	(int)$user_id,
 																  	'list',
 																  	DEDALO_DATA_NOLAN,
 																  	DEDALO_SECTION_USERS_TIPO);
 		$profile_dato = $component_profile->get_dato();
-
-		$profile_modelo = get_class($component_profile);
-
 		
 		if (empty($profile_dato)) {
 			return $dato;
 		}
 
-
 		$profile_id = (int)$profile_dato[0]->section_id;
 		
-
 
 		# COMPONENT_SECURITY_ACCESS
 		$component_security_access 	= component_common::get_instance('component_security_access',
@@ -254,6 +249,60 @@ class security {
 
 		return $permissions;
 	}//end get_ar_authorized_areas_for_user
+
+
+
+	/**
+	* IS_GLOBAL_ADMIN
+	* Test if received user is global admin	
+	* @param $user_id
+	*	User id · int · can be the login user or not.
+	* @return bool
+	*/
+	public static function is_global_admin($user_id) {
+
+		$user_id = (int)$user_id;
+
+		# Dedalo superuser case
+		if ($user_id===DEDALO_SUPERUSER) return true;
+	
+		# Empty user_id
+		if ($user_id<1) return false;
+
+		# If request user_id is the same as current logged user, return session value, without acces to component
+		if ( isset($_SESSION['dedalo4']['auth']['user_id']) && $user_id==$_SESSION['dedalo4']['auth']['user_id'] ) {
+			$is_global_admin = isset($_SESSION['dedalo4']['auth']['is_global_admin']) ? $_SESSION['dedalo4']['auth']['is_global_admin'] : false;
+			return (bool)$is_global_admin;
+		}
+
+
+		$security_administrator_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
+		
+		# Resolve from component
+		$component_security_administrator = component_common::get_instance($security_administrator_model,
+																		   DEDALO_SECURITY_ADMINISTRATOR_TIPO,
+																		   $user_id,
+																		   'edit',
+																		   DEDALO_DATA_NOLAN,
+																		   DEDALO_SECTION_USERS_TIPO);
+		$security_administrator_dato = $component_security_administrator->get_dato();
+
+		if (empty($security_administrator_dato)) {
+			return false;
+		}
+
+		$dato= (int)$security_administrator_dato[0]->section_id;
+
+		if ((int)$dato===1) {
+			$is_global_admin = true;
+		}else{
+			$is_global_admin = false;
+		}
+
+
+		return $is_global_admin;
+		
+	}//end is_global_admin
 
 
 }//end class

@@ -2247,7 +2247,6 @@ abstract class common {
 				'component_image',
 				'component_av',
 				'component_pdf',
-				'component_security_administrator',
 				//'component_relation_children',
 				//'component_relation_related',
 				//'component_relation_model',
