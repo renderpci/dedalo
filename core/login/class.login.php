@@ -1251,4 +1251,30 @@ class login extends common {
 
 
 
+	/**
+	* CHECK_INSTALL
+	* @return
+	*//*
+	public function check_install() {
+
+
+		// Test su password
+			$su_default_password = (bool)$this->test_su_default_password();
+
+
+		// Test if superuser psw is default
+			if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $su_default_password===true ) {
+
+				# CSS includes
+				array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
+
+				$page_html	= 'html/' . get_class($this) . '_set_psw.phtml';
+				include($page_html);
+				return;
+			}
+	}//end check_install
+	*/
+
+
+
 }//end login
