@@ -1,10 +1,12 @@
 <?php
 /*
 * CLASS ERROR
+*
+*
 */
-
-
 class dd_error {
+
+
 
 	/**
 	* CATCHABLE ERRORS : captureError
@@ -24,18 +26,18 @@ class dd_error {
 		$error_to_show['debug']  = "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
 		$error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
 
-	   
+
 		if(SHOW_DEBUG===true) {
 			$GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
 		}else{
 			#$GLOBALS['log_messages'][] = $error_to_show['user'];
 		}
-		
+
 
 		# DEDALO FILE LOGGER
 		if ( class_exists('logger') && isset(logger::$obj['error']) ) {
 			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::ERROR, __METHOD__);
-		}        
+		}
 		# PHP-APACHE LOG
 		error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
 
@@ -43,12 +45,11 @@ class dd_error {
 
 
 
-
 	/**
 	* EXCEPTIONS : captureException
 	*/
 	public static function captureException( $exception ) {
-		
+
 		try {
 
 			$message = safe_xss($exception->getMessage());
@@ -56,7 +57,7 @@ class dd_error {
 			$error_to_show['user']   = "<span class='error'>Ops.. [Exception] " . $message ."</span>";
 			$error_to_show['debug']  = "<span class='error'>Ops.. [Exception] " . $message ."</span>";
 			$error_to_show['dump']   = '<pre>' . print_r($exception,true) . '</pre>';
-			
+
 			if(SHOW_DEBUG===true) {
 				$GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
 			}else{
@@ -89,7 +90,7 @@ class dd_error {
 			print safe_xss($log_messages);
 		}
 
-		
+
 		# DEDALO FILE LOGGER
 		if ( isset(logger::$obj['error']) ) {
 			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::CRITICAL, __METHOD__);
@@ -98,7 +99,6 @@ class dd_error {
 		error_log($error_to_show['debug'].$error_to_show['dump']);
 
 	}//end captureException
-
 
 
 
@@ -118,7 +118,7 @@ class dd_error {
 			$error_to_show['debug']  = "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
 			$error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
 
-		   
+
 			if(SHOW_DEBUG===true) {
 				$GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
 			}else{
@@ -139,7 +139,6 @@ class dd_error {
 		error_log($error_to_show['debug'].$error_to_show['dump']);
 
 	}//end captureShutdown
-
 
 
 
@@ -238,5 +237,3 @@ register_shutdown_function( array( 'dd_error', 'captureShutdown' ) );
 	ini_set('error_reporting', E_ALL);
 
 */
-
-?>

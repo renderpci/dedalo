@@ -245,6 +245,87 @@ class component_autocomplete extends component_relation_common {
 
 
 	/**
+	* GET_PROPIEDADES
+	* @return
+	*/
+	public function get_propiedades() {
+
+		$properties = parent::get_propiedades();
+			#dump($properties, ' properties ++ '.to_string($this->tipo));
+
+		// component_autocomplete_hi compatibility
+		$real_model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
+		if ($real_model==='component_autocomplete_hi') {
+			// convert from
+			// {
+			//   "source": {
+			//     "mode": "autocomplete",
+			//     "hierarchy_types": [
+			//       2
+			//     ],
+			//     "hierarchy_sections": []
+			//   },
+			//   "value_with_parents": true,
+			//   "css": {
+			//     ".wrap_component": {
+			//       "mixin": [
+			//         ".vertical",
+			//         ".width_33",
+			//         ".line_top"
+			//       ],
+			//       "style": {
+			//         "clear": "left"
+			//       }
+			//     },
+			//     ".content_data": {
+			//       "style": {}
+			//     }
+			//   }
+			// }
+
+			$source_string = trim('
+			{
+				"config_context": [
+			      {
+			        "type": "internal",
+			        "hierarchy_types": '.(isset($properties->source->hierarchy_types) ? json_encode($properties->source->hierarchy_types) : '[2]').',
+			        "search": [
+			          "hierarchy25"
+			        ],
+			        "select": [
+			          "hierarchy25",
+			          "hierarchy41"
+			        ],
+			        "show": [
+			          "hierarchy25"
+			        ]
+			      }
+				],
+			    "section_to_search": '.(isset($properties->source->hierarchy_sections) ? json_encode($properties->source->hierarchy_sections) : '[]').',
+			    "filter_by_list": [],
+			    "divisor": " | ",
+			    "type_map": {},
+			    "operator": "or",
+			    "records_mode": "list"
+			}
+			');
+			#dump(json_decode($source_string), ' source_string ++ '.to_string($this->tipo));
+
+			$new_properties = new stdClass();
+				$new_properties->source 			= json_decode($source_string);
+				$new_properties->value_with_parents = isset($properties->value_with_parents) ? $properties->value_with_parents : false;
+				$new_properties->css  				= isset($properties->css) ? $properties->css : null;
+
+			$properties = $new_properties;
+		}
+
+
+		return $properties;
+	}//end get_propiedades
+
+
+
+	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
@@ -1220,7 +1301,10 @@ class component_autocomplete extends component_relation_common {
 
 	}//end get_hierarchy_terms_filter
 
+
+
 	//END HIERARCHY LEGACY
+
 
 
 	/**
@@ -1454,8 +1538,11 @@ class component_autocomplete extends component_relation_common {
 			$this->pagination	= $pagination;
 
 
-			return $sqo_context;
-		}//end get_sqo_context
+		return $sqo_context;
+	}//end get_sqo_context
 
-	}
-?>
+
+
+}//end class
+
+

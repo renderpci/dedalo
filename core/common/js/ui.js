@@ -124,7 +124,7 @@ export const ui = {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
-						inner_html 		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ''
+						inner_html 		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + model.substring(10) + ' [' + instance.permissions + ']'
 					})
 					fragment.appendChild(component_label)
 					// css
@@ -1098,7 +1098,7 @@ export const ui = {
 			})
 			button_replace.addEventListener("click", (e)=>{
 				e.stopPropagation()
-					
+
 				//replace_selected_text('nuevooooo')
 				//const editor = document.activeElement.innerHTML
 				//.textContent
@@ -1190,7 +1190,7 @@ export const ui = {
 
 					var innerText = getText(node);
 
-				
+
 					if (typeof innerText[0] === 'string') {
 						// Bridge nested text-node data so that they're
 						// not considered their own contexts:
@@ -1201,7 +1201,7 @@ export const ui = {
 						txt[++i] = innerText;
 						txt[++i] = '';
 					}
-					
+
 				} while (node = node.nextSibling);
 
 				return txt;
