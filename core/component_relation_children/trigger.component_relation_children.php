@@ -1,6 +1,6 @@
 <?php
 $start_time=microtime(1);
-require_once( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 common::trigger_manager();
 
 # IGNORE_USER_ABORT
@@ -18,7 +18,7 @@ function add_children($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed [add_children]';
-	
+
 	$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
@@ -30,14 +30,14 @@ function add_children($json_data) {
 	// tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo
 	$modelo_name 	= 'component_relation_children';
 	$modo 			= 'edit';
-	$lang 			= DEDALO_DATA_NOLAN;	
+	$lang 			= DEDALO_DATA_NOLAN;
 	$component_relation_children   = component_common::get_instance($modelo_name,
 													  				$tipo,
 													  				$parent,
 													  				$modo,
 													  				$lang,
 													  				$section_tipo);
-	
+
 	$added = (bool)$component_relation_children->make_me_your_children( $target_section_tipo, $target_section_id );
 	if ($added===true) {
 		$component_relation_children->Save();
@@ -71,7 +71,7 @@ function remove_children($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed [remove_children]';
-	
+
 	$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
@@ -83,7 +83,7 @@ function remove_children($json_data) {
 
 	$modelo_name 	= 'component_relation_children';
 	$modo 			= 'edit';
-	$lang 			= DEDALO_DATA_NOLAN;	
+	$lang 			= DEDALO_DATA_NOLAN;
 	$component_relation_children   = component_common::get_instance($modelo_name,
 													  				$tipo,
 													  				$parent,
@@ -101,7 +101,7 @@ function remove_children($json_data) {
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
 
-	/* Método eliminando por locator:		
+	/* Método eliminando por locator:
 		$locator = json_decode($locator);
 		$removed = (bool)$component_relation_children->remove_children($locator);
 		if ($removed===true) {

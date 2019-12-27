@@ -1,12 +1,12 @@
 <?php
-require_once( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>"); 
+if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
 // pdfjs paths
 	$pdf_viewer_base_path         = DEDALO_ROOT_WEB .'/lib/pdfjs';
 	$pdf_js                       = $pdf_viewer_base_path .'/build/pdf.min.js';
-	$pdf_worker               		= $pdf_viewer_base_path .'/build/pdf.worker.min.js';	
+	$pdf_worker               		= $pdf_viewer_base_path .'/build/pdf.worker.min.js';
 	$pdf_images 									= $pdf_viewer_base_path .'/web/images/';
 	$pdf_maps 										= $pdf_viewer_base_path .'/web/cmaps/';
 	$pdf_viewer_locale_properties = $pdf_viewer_base_path .'/web/locale/locale.properties';
@@ -56,18 +56,18 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 		<link rel="resource" type="application/l10n" href="<?php echo $pdf_viewer_locale_properties ?>"/>
 
 		<script src="<?php echo $pdf_js ?>"></script>
-		<script>  
+		<script>
 			function getURLParameter(name) {
 				return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null
 			}
 			// pdfjsLib.GlobalWorkerOptions.workerSrc = '<?php echo $pdf_viewer_base_path .'/build/pdf.worker.js' ?>';
-		
+
 		const dedalo_pdfjs_options = {
 			"locale" 							: '<?php echo lang::get_locale_from_code(DEDALO_APPLICATION_LANG) ?>',
 			"imageResourcesPath"	: '<?php echo $pdf_images ?>',
 			"workerSrc" 					: '<?php echo $pdf_worker ?>',
 			"cMapUrl" 						: '<?php echo $pdf_maps ?>',
-			"url" 								: getURLParameter("pdf_url")			
+			"url" 								: getURLParameter("pdf_url")
 		}
 		const SHOW_DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 		if(SHOW_DEBUG===true) {
@@ -144,7 +144,7 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 							<span data-l10n-id="presentation_mode_label">Presentation Mode</span>
 						</button>
 
-						<button id="full_screen" class="secondaryToolbarButton presentationMode visibleLargeView" title="Switch to full screen" tabindex="51" data-l10n-id="presentation_mode" 
+						<button id="full_screen" class="secondaryToolbarButton presentationMode visibleLargeView" title="Switch to full screen" tabindex="51" data-l10n-id="presentation_mode"
 								 onclick="top.component_pdf.toggle_full_pdf_viewer(this, parent.document.getElementById(window.name))">
 							<span data-l10n-id="presentation_mode_label">Full screen</span>
 						</button>
@@ -251,7 +251,7 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 								<button id="presentationMode" class="toolbarButton presentationMode hiddenLargeView" title="Switch to Presentation Mode" tabindex="31" data-l10n-id="presentation_mode">
 									<span data-l10n-id="presentation_mode_label">Presentation Mode</span>
 								</button>
-								<button id="full_screen" class="toolbarButton presentationMode hiddenLargeView" title="Switch to full screen" tabindex="31" data-l10n-id="presentation_mode" 
+								<button id="full_screen" class="toolbarButton presentationMode hiddenLargeView" title="Switch to full screen" tabindex="31" data-l10n-id="presentation_mode"
 								 onclick="top.component_pdf.toggle_full_pdf_viewer(this, parent.document.getElementById(window.name))">
 									<span data-l10n-id="presentation_mode_label">Full screen</span>
 								</button>

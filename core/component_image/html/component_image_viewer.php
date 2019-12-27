@@ -1,5 +1,5 @@
 <?php
-include( DEDALO_CONFIG_PATH . '/config.php');
+include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 $f = common::setVar('f');
 $page_title = pathinfo($f, PATHINFO_BASENAME);
 # BOOTSTRAP_CSS_URL
@@ -12,7 +12,7 @@ $page_title = pathinfo($f, PATHINFO_BASENAME);
 <title><?php echo $page_title ?></title>
 </head>
 <body style="margin:0">
-<?php 
+<?php
 /*
 position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);
 */ ?>
@@ -30,22 +30,22 @@ position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);
 var SHOW_DEBUG = <?php echo json_encode(SHOW_DEBUG) ?>;
 function getBackgroundColor(img) {
 
-	// Image size	
+	// Image size
   	const height = img.height;
   	const width  = img.width;
   		//console.log(height+" - "+width)
 
     const tool_bar_height = (window.outerHeight - window.innerHeight) || 50
-   
+
   	window.resizeTo(width, height+tool_bar_height)
 
   	//document.getElementById('image_container').style.opacity = 1
-  
-    var colorThief = new BackgroundColorTheif();  
+
+    var colorThief = new BackgroundColorTheif();
     var rgb = colorThief.getBackGroundColor( document.getElementById('image_current') );  // document.getElementsByTagName('body')
     if(SHOW_DEBUG===true) {
       console.log('[getBackgroundColor] set background-color = '+rgb);
-    }    
+    }
     document.body.style.backgroundColor = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] +')';
 
   return rgb
@@ -55,11 +55,11 @@ function download_original_image(button_obj, event) {
     event.preventDefault()
     if(SHOW_DEBUG===true) {
       console.log("[download_original_image] event:",event);
-    }     
+    }
 
     let url = '<?php echo $f ?>';
     let default_quality = '<?php echo DEDALO_IMAGE_QUALITY_DEFAULT ?>'
-    
+
     let original_url = url.replace(default_quality, 'original')
         original_url = original_url.split('?')[0]
         //console.log("original_url:",original_url);
