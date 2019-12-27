@@ -74,7 +74,7 @@ class area extends common  {
 		$this->config_areas = $this->get_config_areas();
 
 		$ar_root_areas = [];
-		# AREAS_ROOT
+		// ROOT_AREAS
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_publication')[0];
@@ -84,7 +84,7 @@ class area extends common  {
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development')[0];
 
-			$areas = []
+			$areas = [];
 			foreach ($ar_areas as $area_tipo) {
 
 				// remove the areas_deny
@@ -98,6 +98,8 @@ class area extends common  {
 					$areas[]	= ontology::tipo_to_json_item($children_area);
 				}
 			}
+
+				dump($areas, ' areas ++ '.to_string());
 
 
 		# Store in session for speed
