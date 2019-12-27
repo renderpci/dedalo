@@ -115,6 +115,8 @@ class dd_core_api {
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 				$response->debug = $debug;
+
+					#dump($response, ' $response->result 	= $result; ++ '.to_string());
 			}
 
 
@@ -238,6 +240,7 @@ class dd_core_api {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
+				$result->debug  = $result->debug ?? new stdClass();
 				$result->debug->exec_time = exec_time_unit($start_time,'ms')." ms";
 			}
 

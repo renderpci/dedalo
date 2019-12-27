@@ -346,9 +346,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public function get_modelo_name() {
 
 		// forced models in v6 (while we are using structure v5)
-		if ($this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
+		if ($this->terminoID===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
 			return 'component_radio_button';
-		}elseif ($this->tipo===DEDALO_USER_PROFILE_TIPO) {
+		}elseif ($this->terminoID===DEDALO_USER_PROFILE_TIPO) {
 			return 'component_select';
 		}
 		return $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
