@@ -9,43 +9,43 @@
 
 ?>
 
-<!-- LISTADO DE TERMINOS RELACIONADOS -->      
+<!-- LISTADO DE TERMINOS RELACIONADOS -->
 <div class="textoIndex" style="margin:4px">
 
-	<!-- BTN Abrir Tesauro --> 
-    <input value="<?php echo $terminos_title ?>" class="btnTesauro" onclick="dd_abrirTSlist('tesauro_rel','<?php echo $tipo ?>',this);" type="button">          
-        
-    <?php if($n_terminos_relacionados>0){?>  
-    <div style="color:#000000; font-size:11px; font-weight:bold"><?php echo $terminos_relacionados_title ?>  <?php echo " [".$n_terminos_relacionados."] "; ?></div>  
+	<!-- BTN Abrir Tesauro -->
+    <input value="<?php echo $terminos_title ?>" class="btnTesauro" onclick="dd_abrirTSlist('tesauro_rel','<?php echo $tipo ?>',this);" type="button">
+
+    <?php if($n_terminos_relacionados>0){?>
+    <div style="color:#000000; font-size:11px; font-weight:bold"><?php echo $terminos_relacionados_title ?>  <?php echo " [".$n_terminos_relacionados."] "; ?></div>
     <hr>
-    
+
     <div style="height:80px; overflow:auto; ">
-        <?php 
-		
+        <?php
+
 		if(count($arTR) == 0) {
-		
+
 			$html = "<span style=\"color:grey\">$no_hay_terminos_relacionados_title</span>";
-		
+
 		}else{
 			//print_r($arTR);
-			# recoremos el array		
-			foreach($arTR['termino'] as $key => $termino) {				
-					
+			# recoremos el array
+			foreach($arTR['termino'] as $key => $termino) {
+
 				$terminoID		= $arTR['terminoID'][$key];
-				$terminoNjs		= urlencode($termino);				
-				
-				$html .= "<img src=\"../themes/default/delete.png\" hspace=\"4\" onClick=\"unlinkTS('$terminoID','$terminoNjs')\" title=\"$eliminar_relacion_title\" style=\"cursor:pointer\" />";
+				$terminoNjs		= urlencode($termino);
+
+				$html .= "<img src=\"../dd/images/delete.png\" hspace=\"4\" onClick=\"unlinkTS('$terminoID','$terminoNjs')\" title=\"$eliminar_relacion_title\" style=\"cursor:pointer\" />";
 				$html .= $termino ;
 				$html .= "<span class=\"terminoIDinList\" title=\"ID\"> [ $terminoID ]</span></br>";
-								
+
 			}
 		}
-		echo $html; 
+		echo $html;
 		?>
     </div>
     <?php }#if($ar_terminos_relacionados>0)?>
-    
+
 </div>
-        
-        
-	
+
+
+
