@@ -1396,27 +1396,16 @@ class search {
 					$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
 					$sql_filter .= '((';
 
-					# USER PROFILE
-					# Calculate current user profile id
-					$profile_id = component_profile::get_profile_from_user_id( $user_id );
-
-
-					# Current user profile authorized areas
-					$component_security_areas = component_common::get_instance('component_security_areas',
-																				DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
-																				$profile_id,
-																				'edit',
-																				DEDALO_DATA_NOLAN,
-																				DEDALO_SECTION_PROFILES_TIPO);
-					$security_areas_dato 	  = (object)$component_security_areas->get_dato();
+					$security_areas_dato 	  = security::get_ar_authorized_areas_for_user()
 
 					# Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
 					$ar_area_tipo = [];
-					foreach ($security_areas_dato as $area_tipo => $value) {
-						if ( (int)$value===3 ) {
-							$ar_area_tipo[] = $area_tipo;
+					foreach ($security_areas_dato as $item) {
+						if($item->value ===3){
+							$ar_area_tipo[] = $item->tipo;
 						}
 					}
+
 					if (empty($ar_area_tipo)) {
 						debug_log(__METHOD__." Profile ($profile_id) without data!! ".to_string(), logger::ERROR);
 						$url =  DEDALO_ROOT_WEB ."/main/";

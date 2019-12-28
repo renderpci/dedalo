@@ -71,7 +71,7 @@ $updates->$v = new stdClass();
 		$script_obj->info   		= "Convert dato of some components ( component_profile, component_security_administration), to new standard locator format";
 		$script_obj->script_class   = "security_v5_to_v6";
 		$script_obj->script_method  = "convert_table_data_users";
-		$script_obj->script_vars    = json_encode(['component_security_areas','component_security_access','component_profile','component_security_administration']); // Note that only ONE argument encoded is sended
+		$script_obj->script_vars    = json_encode(['component_profile','component_security_administration']); // Note that only ONE argument encoded is sended
 	$updates->$v->run_scripts[] = $script_obj;
 
 
