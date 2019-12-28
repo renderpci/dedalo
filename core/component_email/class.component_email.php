@@ -289,15 +289,5 @@ class component_email extends component_common {
 		return $ar_operators;
 	}//end search_operators_info
 
-	/**
-	* GET_STRUCTURE_BUTTONS
-	* @return 
-	*/
-	public function get_structure_buttons($permissions=null) {
-		
-
-		return [];
-	}//end get_structure_buttons
-
 }
 ?>
