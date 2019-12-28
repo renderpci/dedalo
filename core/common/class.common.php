@@ -1961,7 +1961,7 @@ abstract class common {
 						$query_object_options->logical_operator 	= $operator;
 						$query_object_options->add_select 			= false;
 						$query_object_options->filter_custom 		= !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
-						$query_object_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
+						$query_object_options->skip_projects_filter = false; // skip_projects_filter true on edit mode
 
 					$sqo = common::build_search_query_object($query_object_options);
 
