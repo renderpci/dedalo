@@ -49,7 +49,8 @@ abstract class common {
 			'component_state',
 			'component_info',
 			'component_pdf',
-			#'component_iri'
+			'component_password',
+			'component_filter_records'
 		];
 
 
