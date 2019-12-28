@@ -183,7 +183,7 @@ export const ui = {
 
 			// tooltip
 				if (mode==="search" && instance.context.search_options_title) {
-					fragment.classList.add("tooltip_toggle")
+					//fragment.classList.add("tooltip_toggle")
 					const tooltip = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tooltip hidden_tooltip',
@@ -199,6 +199,7 @@ export const ui = {
  				// css
 	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
+					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
 				// event click activate component
 					wrapper.addEventListener('click', (e) => {
