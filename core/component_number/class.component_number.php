@@ -364,15 +364,7 @@ class component_number extends component_common {
 		return $diffusion_value;
 	}//end get_diffusion_value
 
-	/**
-	* GET_STRUCTURE_BUTTONS
-	* @return
-	*/
-	public function get_structure_buttons($permissions=null) {
 
-
-		return [];
-	}//end get_structure_buttons
 
 }//end component_number
 ?>

@@ -568,17 +568,5 @@ class component_input_text extends component_common {
 
 
 
-	/**
-	* GET_STRUCTURE_BUTTONS
-	* @return
-	*/
-	public function get_structure_buttons($permissions=null) {
-
-
-		return [];
-	}//end get_structure_buttons
-
-
-
 }//end class component_input_text
 ?>

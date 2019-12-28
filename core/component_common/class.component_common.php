@@ -4814,6 +4814,17 @@ abstract class component_common extends common {
 	}//end get_dato_paginated
 
 
+	/**
+	* GET_STRUCTURE_BUTTONS
+	* @return
+	*/
+	public function get_structure_buttons($permissions=null) {
+
+
+		return [];
+	}//end get_structure_buttons
+
+
 
 }//end class
 

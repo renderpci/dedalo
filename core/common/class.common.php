@@ -2337,7 +2337,10 @@ abstract class common {
 
 			$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_include_elements, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
 
+
 			foreach ($ar_elements as $element_tipo) {
+
+				if($element_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 
 				$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 
