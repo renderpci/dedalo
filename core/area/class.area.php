@@ -31,7 +31,7 @@ class area extends common  {
 		$this->define_modo($modo);
 
 		$this->ar_children_include_modelo_name	= array('area','section','section_tool');
-		$this->ar_children_exclude_modelo_name	= array('login','tools','section_list','filter','component_security_areas');
+		$this->ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
 
 		# common load tesauro data of current obj
 		parent::load_structure_data();

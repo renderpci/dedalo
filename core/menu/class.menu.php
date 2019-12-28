@@ -214,16 +214,6 @@ class menu extends common {
 
 
 	/**
-	* CREATE_CHECKBOX
-	* TEMPORAL .PASAR EN SU MOMENTO A COMPONENT_SECURITY_AREAS
-	*//*
-	public static function create_checkbox($tipo, $termino, $modelo_name=NULL, $arguments_tree) {
-		return component_security_areas::create_checkbox($tipo, $termino, $modelo_name, $arguments_tree) ;
-	}
-	*/
-
-
-	/**
 	* WALK AR_TESAURO RECURSIVE . DEPLOY TS TREE FULL ARRAY	*
 	* Crea un listado <ul><li>termino</li></ul> a partir del array jerárquico dado
 	* @param $ar_structure
@@ -306,7 +296,7 @@ class menu extends common {
 			}
 
 			# AREA ADMIN ELEMENTS diferenciate with class 'global_admin_element'
-			if(isset($arguments_tree['context']) && $arguments_tree['context']==='users' && in_array($tipo, component_security_areas::get_ar_tipo_admin()) )	{
+			if(isset($arguments_tree['context']) && $arguments_tree['context']==='users' && in_array($tipo, component_security_access::get_ar_tipo_admin()) )	{
 				$open_term	= '<li class="global_admin_element">';
 			}
 
