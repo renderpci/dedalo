@@ -1396,7 +1396,7 @@ class search {
 					$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
 					$sql_filter .= '((';
 
-					$security_areas_dato 	  = security::get_ar_authorized_areas_for_user()
+					$security_areas_dato 	  = security::get_ar_authorized_areas_for_user();
 
 					# Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
 					$ar_area_tipo = [];
