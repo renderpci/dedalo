@@ -30,7 +30,7 @@ class area extends common  {
 		$this->define_lang(DEDALO_DATA_LANG);
 		$this->define_modo($modo);
 
-		
+
 		# common load tesauro data of current obj
 		parent::load_structure_data();
 
@@ -58,9 +58,11 @@ class area extends common  {
 
 		//if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		// if the session has the all_areas return it for speed
-		if (isset($_SESSION['dedalo']['ontology']['all_areas']) ) {
 
+
+		// if the session has the all_areas return it for speed
+		if (isset($_SESSION['dedalo']['ontology']['all_areas'])) {
+dump($_SESSION['dedalo']['ontology']['all_areas'], ' $_SESSION[dedalo][ontology] ++ '.to_string());
 			return $_SESSION['dedalo']['ontology']['all_areas'];
 		}
 
@@ -85,7 +87,7 @@ class area extends common  {
 				if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 				// get the JSON format of the ontology
 				$areas[]		= ontology::tipo_to_json_item($area_tipo);
-				// get the all children areas and sections of current			
+				// get the all children areas and sections of current
 				$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 				// get the JSON format of the ontology for all childrens
 				foreach ($ar_group_areas as $children_area) {
@@ -106,7 +108,7 @@ class area extends common  {
 		 //gc_enable();
 
 		return $areas;
-		
+
 	}//end get_areas
 
 
@@ -120,14 +122,14 @@ class area extends common  {
 	*	array recursive of tesauro structure childrens filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
-	protected static function get_ar_children_areas_recursive($terminoID) {		
+	protected static function get_ar_children_areas_recursive($terminoID) {
 
 		$ar_children_areas_recursive	= [];
-		$RecordObj_dd					= new RecordObj_dd($terminoID);				
-		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this(); 
-		
+		$RecordObj_dd					= new RecordObj_dd($terminoID);
+		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this();
+
 		if (count($ar_ts_childrens)>0) {
-			
+
 			foreach ($ar_ts_childrens as $children_terminoID) {
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
@@ -136,11 +138,11 @@ class area extends common  {
 
 				# Test if modelo name is accepted or not (more restrictive)
 				if( $visible!=='no' && in_array($modelo, area::$ar_children_include_modelo_name) && !in_array($modelo, area::$ar_children_exclude_modelo_name) ) {
-					
+
 					$ar_children_areas_recursive[] = $children_terminoID;
-						//			
+						//
 					$ar_temp = self::get_ar_children_areas_recursive($children_terminoID);
-			
+
 					#if(count($ar_ts_childrens)>0)
 					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
 				}
@@ -428,38 +430,38 @@ class area extends common  {
 	*	array recursive of tesauro structure childrens filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
-	protected function get_ar_ts_children_areas_recursive($terminoID) {		
+	protected function get_ar_ts_children_areas_recursive($terminoID) {
 
 		$ar_ts_children_areas_recursive = array();
-		$RecordObj_dd					= new RecordObj_dd($terminoID);				
-		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this(); 
-		
+		$RecordObj_dd					= new RecordObj_dd($terminoID);
+		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this();
+
 		if (count($ar_ts_childrens)>0) {
-			
+
 			foreach ($ar_ts_childrens as $children_terminoID) {
-				
+
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
 				$modelo 		= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
 				$visible		= $RecordObj_dd->get_visible();
 
 				# Test if modelo name is accepted or not (more restrictive)
 				if( $visible!=='no' && in_array($modelo, $this->ar_children_include_modelo_name) && !in_array($modelo, $this->ar_children_exclude_modelo_name) ) {
-								
+
 					$ar_temp = $this->get_ar_ts_children_areas_recursive($children_terminoID);
-			
+
 					#if(count($ar_ts_childrens)>0)
 					$ar_ts_children_areas_recursive[$children_terminoID] = $ar_temp;
 				}
 
-			}#end foreach					
-			
+			}#end foreach
+
 			return $ar_ts_children_areas_recursive;
 		}
-		
+
 		return $ar_ts_children_areas_recursive;
 	}//end get_ar_ts_children_areas_recursive
 
 
-	
+
 }
 ?>
