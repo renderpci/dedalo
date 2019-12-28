@@ -40,15 +40,20 @@
 
 
 // html inputs
-	input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, .contenteditable {
-		width: 100%;
+	input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
+
+		li & {
+			width: 100%;
+			outline: 1px solid #E0E0E0;
+			outline-offset: 0;
+		}
+
 		height: 2.5em;
 		font-size: 1em;
 		//margin-bottom: 0.1em;
 		padding: 0.5em;
 		//border: 1px solid #E0E0E0;
-		outline: 1px solid #E0E0E0;
-		outline-offset: 0;
+
 		border: none;
 		border-radius: 3px;
 		transition: all .5s ease, padding 0s;
@@ -58,6 +63,12 @@
 		// on focus inputs, adds a soft shadow and outline
 		&:focus {
 			.hilite;
+		}
+	}
+
+	select  {
+		li & {
+			margin-right: 0.5em;
 		}
 	}
 

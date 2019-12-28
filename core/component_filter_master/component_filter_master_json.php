@@ -1,5 +1,6 @@
 <?php
 // JSON data component controller
+#include(dirname(dirname(dirname(__FILE__))).'/core/component_filter/component_filter_json.php'); return;
 
 
 
@@ -18,7 +19,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -37,34 +38,19 @@
 			case 'list':
 				$value = $this->get_valor(null,'array');
 				break;
-			
 			case 'edit':
 			default:
 				$value = $this->get_dato();
-				$ar_projects_for_current_section = $this->get_ar_projects_for_current_section();
-				break;			
+				$datalist = $this->get_datalist();
+				break;
 		}
 
 		// data item
-		$item  = $this->get_data_item($value);
+		$item = $this->get_data_item($value);
 
 		// datalist
-		if (isset($ar_projects_for_current_section)) {
-
-			$item->datalist = [];
-			foreach ($ar_projects_for_current_section as $user_project) {
-
-				$project_value = new stdClass();
-					$project_value->section_id 		= $user_project->locator->section_id;
-					$project_value->section_tipo 	= $user_project->locator->section_tipo;
-
-				$project = new stdClass();
-					$project->value 				= $project_value;
-					$project->label 				= $user_project->label;
-					$project->section_id 			= $user_project->locator->section_id;
-
-				$item->datalist[] = $project;
-			}
+		if (isset($datalist)) {
+			$item->datalist = $datalist;
 		}
 
 		$data[] = $item;

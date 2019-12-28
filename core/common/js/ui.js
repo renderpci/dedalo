@@ -124,7 +124,7 @@ export const ui = {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
-						inner_html 		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + model.substring(10) + ' [' + instance.permissions + ']'
+						inner_html 		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
 					})
 					fragment.appendChild(component_label)
 					// css
@@ -183,7 +183,7 @@ export const ui = {
 
 			// tooltip
 				if (mode==="search" && instance.context.search_options_title) {
-					fragment.classList.add("tooltip_toggle")
+					//fragment.classList.add("tooltip_toggle")
 					const tooltip = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tooltip hidden_tooltip',
@@ -199,6 +199,7 @@ export const ui = {
  				// css
 	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
+					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
 				// event click activate component
 					wrapper.addEventListener('click', (e) => {
@@ -375,7 +376,7 @@ export const ui = {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'label',
-						inner_html 		: label + ' [' + instance.lang.substring(3) + ']',
+						inner_html 		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
 						parent 			: fragment
 					})
 				}
