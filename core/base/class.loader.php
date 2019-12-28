@@ -29,6 +29,7 @@ include(DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_
 include(DEDALO_CORE_PATH . '/search/class.search.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');
+include(DEDALO_CORE_PATH . '/dd/class.ontology.php');
 
 
 

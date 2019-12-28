@@ -17,11 +17,11 @@ class area extends common  {
 	protected $norden;
 	protected $label;
 
-	# CHILDREN AREAS CRITERION
-	protected $ar_children_include_modelo_name;
-	protected $ar_children_exclude_modelo_name;
-
 	static $ar_ts_children_all_areas_hierarchized;
+
+	# CHILDREN AREAS CRITERION
+	static $ar_children_include_modelo_name = array('area','section','section_tool');
+	static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
 
 
 	function __construct($tipo, $modo='list') {
@@ -30,9 +30,7 @@ class area extends common  {
 		$this->define_lang(DEDALO_DATA_LANG);
 		$this->define_modo($modo);
 
-		$this->ar_children_include_modelo_name	= array('area','section','section_tool');
-		$this->ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
-
+		
 		# common load tesauro data of current obj
 		parent::load_structure_data();
 
@@ -56,22 +54,18 @@ class area extends common  {
 	*/
 	public static function get_areas() {
 
-		gc_disable();
+		//gc_disable();
 
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+		//if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		// if the session has the ar_all_areas return it for speed
-		if (isset($_SESSION['dedalo']['config']['ar_all_areas']) ) {
-			if(SHOW_DEBUG===true) {
-				#return $_SESSION['dedalo']['config']['ar_all_areas'];
-			}else{
+		// if the session has the all_areas return it for speed
+		if (isset($_SESSION['dedalo']['ontology']['all_areas']) ) {
 
-			}
-			return $_SESSION['dedalo']['config']['ar_all_areas'];
+			return $_SESSION['dedalo']['ontology']['all_areas'];
 		}
 
 		// get the config_areas file to allow and denny some especific areas defined by installation.
-		$this->config_areas = $this->get_config_areas();
+		$config_areas = self::get_config_areas();
 
 		$ar_root_areas = [];
 		// ROOT_AREAS
@@ -85,34 +79,31 @@ class area extends common  {
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development')[0];
 
 			$areas = [];
-			foreach ($ar_areas as $area_tipo) {
+			foreach ($ar_root_areas as $area_tipo) {
 
 				// remove the areas_deny
-				if(in_array($area_tipo, $this->config_areas->areas_deny)) continue;
+				if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 				// get the JSON format of the ontology
 				$areas[]		= ontology::tipo_to_json_item($area_tipo);
 				// get the all children areas and sections of current			
-				$ar_group_areas	= $this->get_ar_children_areas_recursive($area_tipo);
+				$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 				// get the JSON format of the ontology for all childrens
 				foreach ($ar_group_areas as $children_area) {
 					$areas[]	= ontology::tipo_to_json_item($children_area);
 				}
 			}
 
-				dump($areas, ' areas ++ '.to_string());
-
-
 		# Store in session for speed
-		$_SESSION['dedalo']['config']['ar_all_areas'] = $areas;
+		$_SESSION['dedalo']['ontology']['all_areas'] = $areas;
 
 
-		if(SHOW_DEBUG===true) {
-			$total 	= round(microtime(1)-$start_time,3);
-			$n 		= count($areas);
-			debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-		}
+		// if(SHOW_DEBUG===true) {
+		// 	$total 	= round(microtime(1)-$start_time,3);
+		// 	$n 		= count($areas);
+		// 	debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+		// }
 
-		 gc_enable();
+		 //gc_enable();
 
 		return $areas;
 		
@@ -129,36 +120,36 @@ class area extends common  {
 	*	array recursive of tesauro structure childrens filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
-	protected function get_ar_children_areas_recursive($terminoID) {		
+	protected static function get_ar_children_areas_recursive($terminoID) {		
 
-		$ar_children_areas_recursive	= array();
+		$ar_children_areas_recursive	= [];
 		$RecordObj_dd					= new RecordObj_dd($terminoID);				
 		$ar_ts_childrens				= $RecordObj_dd->get_ar_childrens_of_this(); 
 		
 		if (count($ar_ts_childrens)>0) {
 			
 			foreach ($ar_ts_childrens as $children_terminoID) {
-				
+
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
 				$modelo 		= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
 				$visible		= $RecordObj_dd->get_visible();
 
 				# Test if modelo name is accepted or not (more restrictive)
-				if( $visible!=='no' && in_array($modelo, $this->ar_children_include_modelo_name) && !in_array($modelo, $this->ar_children_exclude_modelo_name) ) {
-								
-					$ar_temp = $this->get_ar_children_areas_recursive($children_terminoID);
+				if( $visible!=='no' && in_array($modelo, area::$ar_children_include_modelo_name) && !in_array($modelo, area::$ar_children_exclude_modelo_name) ) {
+					
+					$ar_children_areas_recursive[] = $children_terminoID;
+						//			
+					$ar_temp = self::get_ar_children_areas_recursive($children_terminoID);
 			
 					#if(count($ar_ts_childrens)>0)
 					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
 				}
 
-			}#end foreach					
-			
-			return $ar_children_areas_recursive;
+			}#end foreach
 		}
-		
+
 		return $ar_children_areas_recursive;
-	}//end get_ar_ts_children_areas_recursive
+	}//end get_ar_children_areas_recursive
 
 
 
@@ -179,8 +170,8 @@ class area extends common  {
 		}
 
 		$config_areas = new stdClass();
-		$config_areas->areas_deny	= $areas_deny;
-		$config_areas->areas_allow	= $areas_allow;
+			$config_areas->areas_deny	= $areas_deny;
+			$config_areas->areas_allow	= $areas_allow;
 
 		return $config_areas;
 	}//end area_to_remove
@@ -318,7 +309,7 @@ class area extends common  {
 
 
 		# Store in session for speed
-		$_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
+		// $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
 
 
 		if(SHOW_DEBUG===true) {
