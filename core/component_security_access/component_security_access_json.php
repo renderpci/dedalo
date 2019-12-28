@@ -45,7 +45,8 @@
 				break;
 			case 'edit':
 			default:
-				$value = $this->get_dato();
+				$value 		= $this->get_dato();
+				$datalist 	= $this->get_datalist();
 				break;
 		}
 
@@ -53,6 +54,12 @@
 		$item  = $this->get_data_item($value);
 		$item->parent_tipo 			= $this->get_tipo();
 		$item->parent_section_id 	= $this->get_section_id();
+
+
+		// dataset
+		if (isset($datalist) && isset($datalist->result)) {
+			$item->datalist = $datalist->result;
+		}
 
 		$data[] = $item;
 
