@@ -184,13 +184,18 @@ section.prototype.build = async function(autoload=false) {
 		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
 		self.section_id = self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 
-	// permissions. calculate and set (used by section records later)
-		self.permissions = self.context.find(element => element.model===self.model).permissions
-
 	// Update section mode/label with context declarations
-		const section_context 	= self.context.find(element => element.tipo===self.section_tipo)
-		self.mode 				= section_context.mode
-		self.label 				= section_context.label
+		const section_context 	= self.context.find(element => element.tipo===self.section_tipo) || {
+			mode  		: 'edit',
+			label 		: 'Section without permissions '+self.tipo,
+			permissions : 0
+		}
+		self.mode 	= section_context.mode
+		self.label 	= section_context.label
+
+	// permissions. calculate and set (used by section records later)
+		//const section_self_context = self.context.find(element => element.model===self.model) || {}
+		self.permissions = section_context.permissions || 0
 
 	// pagination update properties
 		self.pagination.limit	= sqo.limit
@@ -221,7 +226,7 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// filter
-		if (!self.filter) {
+		if (!self.filter && self.permissions>0) {
 			const current_filter = new search()
 			current_filter.init({
 				caller : self
@@ -231,7 +236,7 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// inspector
-		if (!self.inspector) {
+		if (!self.inspector && self.permissions) {
 			const current_inspector = new inspector()
 			current_inspector.init({
 				section_tipo 	: self.section_tipo,

@@ -16,18 +16,32 @@ abstract class filter {
 	public static function get_profiles_for_areas($ar_area_tipo) {
 
 		$ar_filter = [];
-		foreach ((array)$ar_area_tipo as $current_area_tipo) {
+		foreach ((array)$ar_area_tipo as $area_tipo) {
 			$profile_sql = '';
-			$profile_sql.= "\n datos#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$current_area_tipo\":3}' ";
-			$profile_sql.= "OR datos#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$current_area_tipo\":2}' ";
-			$ar_filter[] = $profile_sql;
+
+			# old format
+			#$profile_sql.= "\n datos#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$area_tipo\":3}' ";
+			#$profile_sql.= "OR datos#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$area_tipo\":2}' ";
+
+			// Reference:
+			// {
+			//	"tipo": "ich1",
+			//	"type": "area",
+			//	"value": 3,
+			//	"parent": "ich1"
+			// }
+
+			$profile_sql.= 'datos#>\'{components,'.DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":3}]\'';
+			$profile_sql.= ' OR ';
+			$profile_sql.= 'datos#>\'{components,'.DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":2}]\'';
+
+			$ar_filter[] = '('.$profile_sql.')';
 		}
 		$sql_filter = implode(' OR ', $ar_filter);
 
 		#
 		# SEARCH PROFILES WITH CURRENT USER AREAS
 		$profile_sql = 'SELECT section_id FROM "matrix_profiles" WHERE ' . $sql_filter;
-			#dump(null, '$profile_sql ++ '.to_string($profile_sql));
 		$result = JSON_RecordObj_matrix::search_free($profile_sql);
 		$ar_profile_id=array();
 		while ($rows = pg_fetch_assoc($result)) {

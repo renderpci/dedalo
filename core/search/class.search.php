@@ -1389,75 +1389,80 @@ class search {
 				case ($section_tipo===DEDALO_SECTION_USERS_TIPO) :
 
 					# AREAS FILTER
-					if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-						$sql_filter .= "\n-- filter_users_by_profile_areas -- ";
-					}
-					$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id>0 AND ';
-					$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
-					$sql_filter .= '((';
-
-					$security_areas_dato 	  = security::get_ar_authorized_areas_for_user();
-
-					# Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
-					$ar_area_tipo = [];
-					foreach ($security_areas_dato as $item) {
-						if($item->value ===3){
-							$ar_area_tipo[] = $item->tipo;
+						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+							$sql_filter .= "\n-- filter_users_by_profile_areas -- ";
 						}
-					}
+						$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id>0 AND ';
+						$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
+						$sql_filter .= '((';
 
-					if (empty($ar_area_tipo)) {
-						debug_log(__METHOD__." Profile ($profile_id) without data!! ".to_string(), logger::ERROR);
-						$url =  DEDALO_ROOT_WEB ."/main/";
-						header("Location: $url");
-						exit();
-					}
+						// areas. Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
+							$security_areas_dato = security::get_ar_authorized_areas_for_user();
+							$ar_area_tipo = [];
+							foreach ($security_areas_dato as $item) {
+								if($item->value===3){
+									$ar_area_tipo[] = $item->tipo;
+								}
+							}
+							// check empty ar_area_tipo case
+								if (empty($ar_area_tipo)) {
+									debug_log(__METHOD__." Profile ($profile_id) without data!! ", logger::ERROR);
+									header("Location: " . DEDALO_ROOT_WEB);
+									exit();
+								}
 
 					# SEARCH PROFILES WITH CURRENT USER AREAS
-					$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
-					$ar_filter_profile = [];
-					foreach ($ar_profile_id as $current_profile_id) {
-						$ar_filter_profile[] = PHP_EOL . $section_alias.'.'.$datos_container.'#>\'{components,'.DEDALO_USER_PROFILE_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\' = \''.$current_profile_id.'\' ';
-					}
-					$sql_filter .= implode(' OR ', $ar_filter_profile);
-					$sql_filter .= ')';
+						$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
+						$ar_filter_profile = [];
+						foreach ($ar_profile_id as $current_profile_id) {
+							#$ar_filter_profile[] = PHP_EOL . $section_alias.'.'.$datos_container.'#>\'{components,'.DEDALO_USER_PROFILE_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\' = \''.$current_profile_id.'\' ';
+							$search_locator = new locator();
+								$search_locator->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
+								$search_locator->set_section_id($current_profile_id);
+								$search_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+							$ar_filter_profile[] = PHP_EOL . $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
+						}
+						$sql_filter .= implode(' OR ', $ar_filter_profile);
+						$sql_filter .= ')';
 
 					# PROJECTS FILTER
-					$component_filter_master = component_common::get_instance('component_filter_master',
-																			   DEDALO_FILTER_MASTER_TIPO,
-																			   navigator::get_user_id(),
-																			   'list',
-																			   DEDALO_DATA_NOLAN,
-																			   DEDALO_SECTION_USERS_TIPO);
-					$filter_master_dato 	 = (array)$component_filter_master->get_dato();
-					if (empty($filter_master_dato)) {
-						$url =  DEDALO_ROOT_WEB ."/main/";
-						header("Location: $url");
-						exit();
-					}
-					$ar_values_string = '';
-					foreach ($filter_master_dato as $project_section_id => $state) {
-						$ar_values_string .= "'{$project_section_id}'";
-						$ar_values_string .= ',';
-					}
-					$ar_values_string = substr($ar_values_string,0,-1);
-					if(SHOW_DEBUG===true) {
-						$sql_filter .= "\n-- filter_by_projects --";
-					}
-					#$sql_filter .= PHP_EOL . 'AND '.$section_alias.'.'.$datos_container.'#>\'{components,'.DEDALO_FILTER_MASTER_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\' ?| array['.$ar_values_string.']';
-					# Filter by any of user projects
-					$ar_query = [];
-					foreach ((array)$filter_master_dato as $key => $current_project_locator) {
-						$search_locator = new locator();
-							$search_locator->set_section_tipo($current_project_locator->section_tipo);
-							$search_locator->set_section_id($current_project_locator->section_id);
-							$search_locator->set_type($current_project_locator->type);
+						$component_filter_master_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
+						$component_filter_master = component_common::get_instance($component_filter_master_model, // 'component_filter_master',
+																				   DEDALO_FILTER_MASTER_TIPO,
+																				   navigator::get_user_id(),
+																				   'list',
+																				   DEDALO_DATA_NOLAN,
+																				   DEDALO_SECTION_USERS_TIPO);
+						$filter_master_dato 	 = (array)$component_filter_master->get_dato();
+						// check empty ar_area_tipo case
+							if (empty($filter_master_dato)) {
+								debug_log(__METHOD__." Filter master without data!! ", logger::ERROR);
+								header("Location: " . DEDALO_ROOT_WEB);
+								exit();
+							}
+						$ar_values_string = '';
+						foreach ($filter_master_dato as $project_section_id => $state) {
+							$ar_values_string .= "'{$project_section_id}'";
+							$ar_values_string .= ',';
+						}
+						$ar_values_string = substr($ar_values_string,0,-1);
+						if(SHOW_DEBUG===true) {
+							$sql_filter .= "\n-- filter_by_projects --";
+						}
+						#$sql_filter .= PHP_EOL . 'AND '.$section_alias.'.'.$datos_container.'#>\'{components,'.DEDALO_FILTER_MASTER_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\' ?| array['.$ar_values_string.']';
+						# Filter by any of user projects
+						$ar_query = [];
+						foreach ((array)$filter_master_dato as $key => $current_project_locator) {
+							$search_locator = new locator();
+								$search_locator->set_section_tipo($current_project_locator->section_tipo);
+								$search_locator->set_section_id($current_project_locator->section_id);
+								$search_locator->set_type($current_project_locator->type);
 
-						$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
-					}
-					$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
+							$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
+						}
+						$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
 
-					$sql_filter .= ')';
+						$sql_filter .= ')';
 					break;
 				##### DEFAULT #########################################################
 				default:
@@ -1703,11 +1708,11 @@ class search {
 		$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
 
 		# Avoid root user is showed except for root
-		if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO && navigator::get_user_id()!=-1) {
+		#if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO && navigator::get_user_id()!=-1) {
 			#if(SHOW_DEBUG!==true) {
 				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
 			#}
-		}
+		#}
 
 		# Fix values
 		$this->main_where_sql = $main_where_sql;
