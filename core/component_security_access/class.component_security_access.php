@@ -7,7 +7,6 @@
 class component_security_access extends component_common {
 
 
-
 	/**
 	* GET DATO 
 	* @return object $dato
@@ -21,7 +20,6 @@ class component_security_access extends component_common {
 
 		return (array)$dato;
 	}
-
 
 
 	/**
@@ -45,11 +43,14 @@ class component_security_access extends component_common {
 	* GET_CONTEXT
 	* @return 
 	*/
-	public function get_context() {
+	public function get_datalist() {
 
 		$user_id = navigator::get_user_id();
+		$is_global_admin = security::is_global_admin($user_id);
+		$ar_areas = [];
 
-		if($user_id<0){
+
+		if($user_id === DEDALO_SUPERUSER || $is_global_admin=== true){
 
 			$ar_areas = area::get_areas();
 
@@ -57,17 +58,109 @@ class component_security_access extends component_common {
 
 			$dato = $this->get_dato();
 
-			foreach ($dato as $current_item) {
-					$RecordObj_dd 	= new RecordObj_dd($current_item->tipo);
-					$label 			= $RecordObj_dd->get_label();
-					$parent 		=[];
-				}
-			
+			$ar_permisions_areas = array_filter($dato, function($item) {
+				return (isset($item->type) && $item->type==='area') ? $item : null;
+			});
+
+			foreach ($ar_permisions_areas as $item) {
+				$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
+			}	
 		}
-		
+
+		$datalist = new stdClass();
+			$datalist->result = $ar_areas;
+
+		return $datalist;	
 	}//end get_context
 
+	
 
+	/**
+	* GET_CHILDRENS_RECURSIVE . TS TREE FULL FROM PARENT
+	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group que luego
+	* serán recorridos con el walk_ar_elements_recursive
+	* @param string $terminoID
+	* @return array $ar_tesauro
+	*	array recursive of tesauro structure childrens
+	*/
+	public static function get_childrens_recursive($terminoID) {
+
+		if(SHOW_DEBUG===true) {
+			$start_time=microtime(1);
+		}
+		
+		# STATIC CACHE
+		static $ar_stat_data;
+		$terminoID_source = $terminoID;		
+		if(isset($ar_stat_data[$terminoID_source])) return $ar_stat_data[$terminoID_source];	
+		
+		$ar_current[$terminoID] = array();
+
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
+		switch ($modelo_name) {
+			
+			case 'section':
+
+				$section_tipo 			 = $terminoID;
+				$ar_modelo_name_required = array('section_group','section_tab','button_','relation_list','time_machine_list');
+
+				# Real section
+				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
+				$ar_ts_childrens   = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+				
+				# Virtual section too is neccesary (buttons specifics)
+				$ar_ts_childrens_v = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
+				$ar_ts_childrens = array_merge($ar_ts_childrens, $ar_ts_childrens_v);				
+				break;
+			
+			default:
+				# AREAS
+				$RecordObj_dd	 = new RecordObj_dd($terminoID);
+				$ar_ts_childrens = $RecordObj_dd->get_ar_childrens_of_this();				
+				//if (count($ar_ts_childrens)<1) return array();				
+				break;
+		}
+		
+
+		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+		foreach((array)$ar_ts_childrens as $children_terminoID) {			
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);			
+			foreach($ar_exclude_modelo as $exclude_modelo) {					
+				if( strpos($modelo_name, $exclude_modelo)!==false ) {					
+					continue 2;	
+				}
+			}		
+			$ar_temp = self::get_childrens_recursive($children_terminoID);
+
+
+			#
+			# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+			# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+			if (defined('DEDALO_AR_EXCLUDE_COMPONENTS')) {				
+				$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+				foreach ($ar_temp as $current_key => $current_ar_value) {
+					if (in_array($current_key, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+						unset( $ar_temp[$current_key] );
+						debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed security access term $current_key ".to_string(), logger::DEBUG);
+					}
+				}								
+			}
+					
+			$ar_current[$terminoID][$children_terminoID] = $ar_temp;	
+		}
+		
+		$ar_tesauro[$terminoID] = $ar_current[$terminoID];
+		
+		# STORE CACHE DATA
+		$ar_stat_data[$terminoID_source] = $ar_tesauro[$terminoID];
+
+		if(SHOW_DEBUG===true) {
+			$total=round(microtime(1)-$start_time,3);
+			#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);				
+		}
+	
+		return $ar_tesauro[$terminoID];		
+	}//end get_childrens_recursive	
 
 
 	/**
@@ -103,40 +196,6 @@ class component_security_access extends component_common {
 
 		return $ar_tesauro ;
 	}
-
-
-	/**
-	* GET_AR_CHILDREN_ELEMENTS
-	* @return array $ar_children_elements
-	*/
-	public static function get_ar_children_elements( $tipo ) {
-		
-		$get_ar_children_elements = array();
-
-		$RecordObj_dd			= new RecordObj_dd($tipo);
-		$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();
-			#dump($ar_ts_childrens, ' ar_ts_childrens ++ '.to_string());
-					
-		foreach ((array)$ar_ts_childrens as $children_terminoID) {				
-			
-			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);								
-			$ar_exclude_modelo		= array('section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
-			$exclude_this_modelo 	= false;
-			foreach($ar_exclude_modelo as $modelo_exclude) {					
-				if( strpos($modelo_name, $modelo_exclude)!==false ) {
-					$exclude_this_modelo = true;
-					break;	
-				}
-			}
-			
-			if ( $exclude_this_modelo !== true ) {		
-				#$ar_temp = self::get_ar_ts_childrens_recursive($children_terminoID);						
-				$get_ar_children_elements[] = $children_terminoID;				
-			}				
-		}
-
-		return $get_ar_children_elements;
-	}//end get_ar_children_elements
 
 
 
