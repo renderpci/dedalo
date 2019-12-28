@@ -9,7 +9,7 @@ class component_filter_master extends component_filter {
 
 
 	private $user_id;
-	protected $caller_id;
+	// protected $caller_id;
 
 
 	/**
@@ -20,12 +20,12 @@ class component_filter_master extends component_filter {
 		// Note that parent is NOT component_common here (is component_filter)
 		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
 
-		$this->user_id  = $this->get_parent();
+		// $this->user_id  = $this->get_parent();
 
-		# caller_id from parent var (default)
-		if(!empty($parent)) {
-			$this->caller_id = $parent;
-		}
+		// # caller_id from parent var (default)
+		// if(!empty($parent)) {
+		// 	$this->caller_id = $parent;
+		// }
 
 		return true;
 	}//end __construct
@@ -47,7 +47,7 @@ class component_filter_master extends component_filter {
 
 	/**
 	* PROPAGATE_FILTER
-	* Propagate all current filter dato (triggered when save) to component_filters of children portals (recursive)
+	* Catch calls to parent method
 	*/
 	public function propagate_filter() {
 		# Nothing to do
@@ -204,5 +204,4 @@ class component_filter_master extends component_filter {
 
 
 
-}
-?>
+}//end class
