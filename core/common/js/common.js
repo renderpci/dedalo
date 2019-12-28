@@ -28,17 +28,14 @@ export const common = function(){
 * @return bool true
 */
 common.prototype.build = async function(){
-	const t0 = performance.now()
 
 	const self = this
 
 	// status update
 		self.status = 'building'
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			//console.log("+ Time to build",self.model, " ms:", performance.now()-t0);
-		}
+	// permissions. calculate and set (used by section records later)
+		self.permissions = self.context.permissions
 
 	// status update
 		self.status = 'builded'
