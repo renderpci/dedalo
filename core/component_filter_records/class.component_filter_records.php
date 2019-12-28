@@ -4,9 +4,9 @@
 */
 
 
-class component_filter_records extends component_common {	
+class component_filter_records extends component_common {
 
-	
+
 
 	/**
 	* GET DATO
@@ -15,7 +15,7 @@ class component_filter_records extends component_common {
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-	
+
 		/*
 		if (!empty($dato) && !is_array($dato)) {
 			#dump($dato,"dato");
@@ -30,7 +30,7 @@ class component_filter_records extends component_common {
 
 		return (array)$dato;
 	}//end get_dato
-	
+
 
 
 	/**
@@ -44,7 +44,7 @@ class component_filter_records extends component_common {
 		}
 		#if (is_object($dato)) {
 		#	$dato = array($dato);
-		#}		
+		#}
 
 		parent::set_dato( (array)$dato );
 	}//end set_dato
@@ -53,7 +53,7 @@ class component_filter_records extends component_common {
 
 	/**
 	* GET_VALOR
-	* @return 
+	* @return
 	*/
 	public function get_valor() {
 		return json_encode($this->get_dato());
@@ -74,12 +74,83 @@ class component_filter_records extends component_common {
 	* @see class.section.php
 	* @return string $html
 	*/
-	public function get_valor_list_html_to_save() {		
+	public function get_valor_list_html_to_save() {
 		return null;
 	}//end get_valor_list_html_to_save
 
 
-	
+
+	/**
+	* get_datalist
+	* Get the list of authorized sections and resolve label
+	* @return array $sections
+	*/
+	public function get_datalist() {
+
+		// user areas
+		$areas_for_user = security::get_ar_authorized_areas_for_user();
+
+		$sections = [];
+		foreach ($areas_for_user as $key => $area_item) {
+			// ignore no authorized for user
+				if ($area_item->value<2) {
+					continue;
+				}
+			// resolve model
+				$model = RecordObj_dd::get_modelo_name_by_tipo($area_item->tipo,true);
+
+			// ignore non sections (areas)
+			if($model!=='section') continue;
+
+			// object item
+			$sections[] = (object)[
+				'tipo' 			=> $area_item->tipo,
+				'label' 		=> RecordObj_dd::get_termino_by_tipo($area_item->tipo, DEDALO_DATA_LANG, true, true),
+				'permissions' 	=> $area_item->value
+			];
+		}
+
+		// sort by label
+			uasort($sections, function($a, $b) {
+			    return $a->label > $b->label;
+			});
+
+		// regenerate array keys
+			$sections = array_values($sections);
+
+		// // get all structure sections
+		// $ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+		// $ar_sections = array();
+		// $permissions_user = security::get_permissions_table_of_specific_user($parent);
+		// foreach ($ar_section_tipo as $current_section_tipo) {
+		// 	$section_permissions = isset($permissions_user->$current_section_tipo->$current_section_tipo) ? (int)$permissions_user->$current_section_tipo->$current_section_tipo : 0;
+		// 	if ($section_permissions>0) {
+
+		// 		$plain_value = '';
+		// 		if (isset($dato[$current_section_tipo])) {
+		// 			$plain_value = implode(',', (array)$dato[$current_section_tipo]);
+		// 		}
+
+		// 		$current_label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true); //, $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+
+		// 		$data = array(
+		// 			'label' 	  => $current_label,
+		// 			'permissions' => $section_permissions,
+		// 			'plain_value' => $plain_value,
+		// 			);
+		// 		$ar_sections[$current_section_tipo] = $data;
+		// 	}
+		// }
+		// # sort by label
+		// uasort($ar_sections, function($a, $b) {
+		//     return $a['label'] > $b['label'];
+		// });
+
+
+		return $sections;
+	}//end get_datalist
+
+
+
 
 }//end component_filter_records
-?>
