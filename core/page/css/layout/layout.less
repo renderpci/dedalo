@@ -71,6 +71,10 @@
 			margin-right: 0.5em;
 		}
 	}
+	input[type="radio"] {
+		//height: 1.2em;
+		font-size: 1em;
+	}
 
 
 
@@ -1006,6 +1010,7 @@
 				flex: 1 1 50%;
 				flex-wrap: nowrap;
 				line-height: 1em;
+				align-items: center;
 
 				// grouper cases (filter)
 				&.grouper {
@@ -1540,6 +1545,48 @@
 		// on focus adds a soft shadow and outline
 		&:focus {
 			.hilite(-1px);
+		}
+	}
+
+
+
+// components wrapper modifiers
+	.section_record .wrapper_component,
+	.wrapper_tool .wrapper_component {
+
+		&.with_100 {
+			flex: 1 1 100%;
+		}
+
+	}
+
+
+
+// component_filter_records
+	.component_filter_records {
+
+		>.content_data {
+			flex: 1 1 100% !important;
+		}
+
+		ul.inputs_container {
+
+			>li {
+				display: grid;
+    			grid-template-columns: 1fr 2fr 8fr;
+    			outline: 1px solid #eee;
+
+    			&.header_li {
+    				background-color: #5B5B5B;
+    				color: #ffffff;
+    				padding: 1em;
+    			}
+
+    			>span {
+    				padding-left: 1em;
+    				//padding-right: 0.5em;
+    			}
+			}
 		}
 	}
 
