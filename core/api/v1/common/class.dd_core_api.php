@@ -115,8 +115,6 @@ class dd_core_api {
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 				$response->debug = $debug;
-
-					#dump($response, ' $response->result 	= $result; ++ '.to_string());
 			}
 
 
@@ -132,7 +130,8 @@ class dd_core_api {
 	static function save($json_data) {
 		global $start_time;
 
-		session_write_close();
+		//session_write_close();
+
 		// create the default save response
 		$response = new stdClass();
 			$response->result 	= false;
@@ -225,7 +224,7 @@ class dd_core_api {
 	static function count($json_data) {
 		global $start_time;
 
-		session_write_close();
+		////////////session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -261,7 +260,7 @@ class dd_core_api {
 	*/
 	static function get_element_context($json_data){
 
-		session_write_close();
+		//////////session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -320,7 +319,7 @@ class dd_core_api {
 	static function get_section_elements_context($json_data){
 		global $start_time;
 
-		session_write_close();
+		////////session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -364,7 +363,7 @@ class dd_core_api {
 	static function filter_get_editing_preset($json_data){
 		global $start_time;
 
-		session_write_close();
+		//////session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -396,7 +395,7 @@ class dd_core_api {
 	static function filter_set_editing_preset($json_data){
 		global $start_time;
 
-		session_write_close();
+		////session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -429,7 +428,7 @@ class dd_core_api {
 	static function filter_get_user_presets($json_data){
 		global $start_time;
 
-		session_write_close();
+		//session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
