@@ -30,8 +30,6 @@ export const component_security_access = function(){
 
 	this.tools
 
-	this.duplicates = false
-
 	return true
 }//end component_security_access
 

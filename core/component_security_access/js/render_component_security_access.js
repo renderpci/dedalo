@@ -6,6 +6,8 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+
 
 
 
@@ -100,118 +102,20 @@ const add_events = function(self, wrapper) {
 			changed_node.value = changed_data.value
 		}
 
-	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
-		)
-		function add_element(changed_data) {
-			//console.log("-------------- + event add_element changed_data:", changed_data);
-			const inputs_container = wrapper.querySelector('.inputs_container')
-			// add new dom input element
-			input_element(changed_data.key, changed_data.value, inputs_container, self)
-		}
-
-
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', async (e) => {
-			e.stopPropagation()
-
-			// update
-			if (e.target.matches('input[type="text"].input_value')) {
-				
-
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: (e.target.value.length>0) ? e.target.value : null,
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
-
-				return true
-			}
-
-		}, false)
-
 	// click event [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+		// wrapper.addEventListener("mousedown", e => {
+		// 	e.stopPropagation()
 
-			// insert
-				if (e.target.matches('.button.add')) {
+		// 	// change_mode
+		// 		if (e.target.matches('.button.close')) {
 
-					const changed_data = Object.freeze({
-						action	: 'insert',
-						key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
-						value	: null
-					})
-					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('add_element_'+self.id, changed_data)
-					})
+		// 			//change mode
+		// 			self.change_mode('list', false)
 
-					return true
-				}
+		// 			return true
+		// 		}
 
-			// remove
-				if (e.target.matches('.button.remove')) {
-
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: e.target.dataset.key,
-						value	: null,
-						refresh : true
-					})
-					self.change_value({
-						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.value,
-						refresh 	 : true
-					})
-					.then(()=>{
-					})
-
-					return true
-				}
-
-			// change_mode
-				if (e.target.matches('.button.close')) {
-
-					//change mode
-					self.change_mode('list', false)
-
-					return true
-				}
-
-		})
-
-	// keyup event
-		wrapper.addEventListener("keyup", async (e) => {
-			e.stopPropagation()
-
-			if (self.context.properties.unique && e.target.value!=='') {
-				const unique = await self.is_unique(e.target.value)
-				if (typeof unique!=="undefined") {
-					ui.show_message(
-						wrapper,
-						`Warning. Duplicated value '${e.target.value}' in id: ` + unique.section_id,
-						'warning'
-					)
-				}
-			}
-		})
+		// })
 	return true
 }//end add_events
 
@@ -456,10 +360,6 @@ const item_hierarchy = async (options) => {
 	const item 			= options.item
 	const children_item = datalist.find(children_item => children_item.parent === item.tipo)
 
-	// get the label in the current lang but if it is not present get the default lang
-	const aplication_lang_item_label = item.descriptors.find(item_label => item_label.lang === page_globals.dedalo_application_lang && item_label.type === 'term')
-	const item_label = typeof aplication_lang_item_label === 'undefined' ? item.descriptors.find(item_label => item_label.lang === 'lg-spa' && item_label.type === 'term') : aplication_lang_item_label
-
 	// get the item value
 	const item_value 	= value.find(item_value => item_value.tipo === item.tipo)
 
@@ -469,7 +369,6 @@ const item_hierarchy = async (options) => {
 		"value": 2,
 		"parent": item.tipo,
 	}
-
 
 	// li
 		const li = ui.create_dom_element({
@@ -502,7 +401,7 @@ const item_hierarchy = async (options) => {
 		const label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'area_label',
-			inner_html 		: item_label.value,
+			inner_html 		: item.label,
 			parent 			: li
 		})
 
@@ -532,6 +431,38 @@ const item_hierarchy = async (options) => {
 				}
 			})
 
+		}
+
+		if(item.model ==='section'){
+
+			const button_section = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: li
+			})
+
+			button_section.addEventListener("mouseup", async (e) => {
+				e.stopPropagation()
+				// data_manager
+					const current_data_manager = new data_manager()
+
+					const api_response = await current_data_manager.request({
+						body : {
+							action 		: 'ontology_get_childrens_recursive',
+							target_tipo : item.tipo							
+						}
+					})
+
+
+				// render the new items
+					const new_datalist = datalist.concat(api_response.result)
+					level_hierarchy({
+									datalist 		: new_datalist,
+									value 			: value,
+									ul_container	: li,
+									parent_tipo		: item.tipo
+								})
+			})
 		}
 
 }//end item_hierarchy
