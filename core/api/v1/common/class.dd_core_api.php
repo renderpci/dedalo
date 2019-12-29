@@ -94,7 +94,7 @@ class dd_core_api {
 	static function read($json_data) {
 		global $start_time;
 
-		session_write_close();
+		//session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
