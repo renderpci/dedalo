@@ -454,6 +454,38 @@ class dd_core_api {
 
 
 
+	/**
+	* ONTOLOGY_GET_AREAS
+	* @return object $response
+	*/
+	static function ontology_get_childrens_recursive($json_data){
+		global $start_time;
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+			$target_tipo = $json_data->target_tipo;
+
+			$childrens = ontology::get_childrens_recursive($target_tipo);
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = new stdClass();
+					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			}
+
+		$response->result 		= $childrens;
+		$response->msg 	  		= 'Ok. Request done';
+
+		return (object)$response;
+	}//end ontology_get_areas
+
+
+
+
 
 	// private methods ///////////////////////////////////
 

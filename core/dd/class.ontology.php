@@ -57,52 +57,105 @@ class ontology {
 	* @param string $tipo
 	* @return object $item
 	*/
-	public static function tipo_to_json_item($tipo) {
+	public static function tipo_to_json_item($tipo, $request_options=[
+			'tipo' 			=> true,
+			'tld'			=> true,
+			'is_model'		=> true,
+			'model'			=> true,
+			'model_tipo'	=> true,
+			'parent'		=> true,
+			'order'			=> true,
+			'translatable'	=> true,
+			'properties'	=> true,
+			'relations'		=> true,
+			'descriptors'	=> true,
+			'label'			=> false
+			]) {		
+
+		$options = new stdClass();
+			$options->tipo			= false;
+			$options->tld			= false;
+			$options->is_model		= false;
+			$options->model			= false;
+			$options->model_tipo	= false;
+			$options->parent		= false;
+			$options->order			= false;
+			$options->translatable	= false;
+			$options->properties	= false;
+			$options->relations		= false;
+			$options->descriptors	= false;
+			$options->label			= false;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$RecordObj_dd->get_dato();
 
-		// descriptors
-			$strQuery = "SELECT dato, tipo, lang FROM \"matrix_descriptors_dd\" WHERE parent = '$tipo'";
-			$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-			$ar_descriptors = [];
-			while ($row = pg_fetch_assoc($result)) {
+		$item = new stdClass();
 
-				$type = $row['tipo']==='termino' ? 'term' : $row['tipo'];
+			if ($options->tipo===true) {
+				$item->tipo = $tipo;
+			}
+			if ($options->tld===true) {
+				$item->tld = $RecordObj_dd->get_tld();
+			}
+			if ($options->is_model===true) {
+				$item->is_model = $RecordObj_dd->get_esmodelo();
+			}
+			if ($options->model===true) {
+				$item->model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			}
+			if ($options->model_tipo===true) {
+				$item->model_tipo = $RecordObj_dd->get_modelo();
+			}
+			if ($options->parent===true) {
+				$item->parent = $RecordObj_dd->get_parent();
+			}
+			if ($options->order===true) {
+				$item->order = (int)$RecordObj_dd->get_norden();
+			}
+			if ($options->translatable===true) {
+				$item->translatable = $RecordObj_dd->get_traducible()==='si';
+			}
+			if ($options->properties===true) {
+				$item->properties = $RecordObj_dd->get_propiedades(true);
+			}
+			if ($options->relations===true) {
 
-				$ar_descriptors[] = (object)[
-					'value' => $row['dato'],
-					'lang' 	=> $row['lang'],
-					'type' 	=> $type
-				];
+				$current_relations = $RecordObj_dd->get_relaciones();
+				if (!empty($current_relations)) {
+
+					$relations = array_map(function($element){
+						$element = is_array($element) ? (object)$element : $element;
+						$current_obj = new stdClass();
+							$current_obj->tipo = property_exists($element, 'tipo') ? $element->tipo : reset($element);
+		    			return $current_obj;
+		    		}, $current_relations);
+				}
+				$item->relations = $relations ?? null;
+			}
+			if ($options->descriptors===true) {
+					// descriptors
+					$strQuery = "SELECT dato, tipo, lang FROM \"matrix_descriptors_dd\" WHERE parent = '$tipo'";
+					$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+					$ar_descriptors = [];
+					while ($row = pg_fetch_assoc($result)) {
+
+						$type = $row['tipo']==='termino' ? 'term' : $row['tipo'];
+
+						$ar_descriptors[] = (object)[
+							'value' => $row['dato'],
+							'lang' 	=> $row['lang'],
+							'type' 	=> $type
+						];
+					}
+					$item->descriptors = $ar_descriptors;
+				
 			}
 
-		// relations
-			$current_relations = $RecordObj_dd->get_relaciones();
-			if (!empty($current_relations)) {
-
-				$relations = array_map(function($element){
-					$element = is_array($element) ? (object)$element : $element;
-					$current_obj = new stdClass();
-						$current_obj->tipo = property_exists($element, 'tipo') ? $element->tipo : reset($element);
-	    			return $current_obj;
-	    		}, $current_relations);
+			// get terminio by tipo with fallback
+			if ($options->label===true) {
+				$item->label = RecordObj_dd::get_termino_by_tipo($tipo);
 			}
-
-		$item = (object)[
-			'tipo' 			=> $tipo,
-			'tld' 			=> $RecordObj_dd->get_tld(),
-			'is_model' 		=> $RecordObj_dd->get_esmodelo(),
-			'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($tipo,true),
-			'model_tipo' 	=> $RecordObj_dd->get_modelo(),
-			'parent' 		=> $RecordObj_dd->get_parent(),
-			'order' 		=> (int)$RecordObj_dd->get_norden(),
-			'translatable' 	=> $RecordObj_dd->get_traducible()==='si',
-			'properties' 	=> $RecordObj_dd->get_propiedades(true),
-			'relations' 	=> $relations ?? null,
-			'descriptors' 	=> $ar_descriptors
-		];
-		#dump($item, ' item ++ '.PHP_EOL.json_encode($item, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
 		return $item;
 	}//end tipo_to_json_item
@@ -226,6 +279,98 @@ class ontology {
 
 		return $ontology;
 	}//end renumerate_term_id
+
+
+
+
+	/**
+	* GET_CHILDRENS_RECURSIVE . TS TREE FULL FROM PARENT
+	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group 
+	* @param string $terminoID
+	* @return array $ar_tesauro
+	*	array recursive of tesauro structure childrens
+	*/
+	public static function get_childrens_recursive($tipo) {
+
+		if(SHOW_DEBUG===true) {
+			$start_time=microtime(1);
+		}
+		
+		# STATIC CACHE
+		static $childrens_recursive_data;	
+		if(isset($childrens_recursive_data[$tipo])) return $childrens_recursive_data[$tipo];	
+		
+		$ar_elements = [];
+
+		$source_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		switch ($source_model) {
+			
+			case 'section':
+
+				$section_tipo 			 = $tipo;
+				$ar_modelo_name_required = array('section_group','section_tab','button_','relation_list','time_machine_list');
+
+				# Real section
+				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
+				$ar_ts_childrens   = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+				
+				# Virtual section too is neccesary (buttons specifics)
+				$ar_ts_childrens_v = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
+				$ar_ts_childrens = array_merge($ar_ts_childrens, $ar_ts_childrens_v);				
+				break;
+			
+			default:
+				# Areas
+				$RecordObj_dd	 = new RecordObj_dd($tipo);
+				$ar_ts_childrens = $RecordObj_dd->get_ar_childrens_of_this();				
+				break;
+		}
+		
+
+		$ar_exclude_modelo 		= array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+		$ar_exclude_components 	= defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
+		foreach((array)$ar_ts_childrens as $element_tipo) {			
+			
+			// Remove_exclude_models
+				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);			
+				if( in_array($component_model, $ar_exclude_modelo)) {
+					continue ;	
+				}
+			
+			// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp			
+				if (in_array($element_tipo, $ar_exclude_components)) {
+					continue;	
+				}
+
+			// get the ontology json format
+				$ar_elements[]	= ontology::tipo_to_json_item($element_tipo,[
+						'tipo' 			=> true,
+						'tld'			=> false,
+						'is_model'		=> false,
+						'model'			=> true,
+						'model_tipo'	=> false,
+						'parent'		=> true,
+						'order'			=> true,
+						'translatable'	=> false,
+						'properties'	=> false,
+						'relations'		=> false,
+						'descriptors'	=> false,
+						'label'			=> true]);
+
+			$ar_elements = array_merge( $ar_elements, self::get_childrens_recursive($element_tipo));			
+		}
+
+		# STORE CACHE DATA
+		$childrens_recursive_data[$tipo] = $ar_elements;
+
+		if(SHOW_DEBUG===true) {
+			$total=round(microtime(1)-$start_time,3);
+			#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);				
+		}
+	
+		return $ar_elements;		
+	}//end get_childrens_recursive	
+
 
 
 

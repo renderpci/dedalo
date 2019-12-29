@@ -58,11 +58,8 @@ class area extends common  {
 
 		//if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-
-
 		// if the session has the all_areas return it for speed
 		if (isset($_SESSION['dedalo']['ontology']['all_areas'])) {
-dump($_SESSION['dedalo']['ontology']['all_areas'], ' $_SESSION[dedalo][ontology] ++ '.to_string());
 			return $_SESSION['dedalo']['ontology']['all_areas'];
 		}
 
@@ -86,12 +83,36 @@ dump($_SESSION['dedalo']['ontology']['all_areas'], ' $_SESSION[dedalo][ontology]
 				// remove the areas_deny
 				if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 				// get the JSON format of the ontology
-				$areas[]		= ontology::tipo_to_json_item($area_tipo);
+				$areas[]		= ontology::tipo_to_json_item($area_tipo,[
+					'tipo' 			=> true,
+					'tld'			=> false,
+					'is_model'		=> false,
+					'model'			=> true,
+					'model_tipo'	=> false,
+					'parent'		=> true,
+					'order'			=> true,
+					'translatable'	=> false,
+					'properties'	=> false,
+					'relations'		=> false,
+					'descriptors'	=> false,
+					'label'			=> true]);
 				// get the all children areas and sections of current
 				$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 				// get the JSON format of the ontology for all childrens
 				foreach ($ar_group_areas as $children_area) {
-					$areas[]	= ontology::tipo_to_json_item($children_area);
+					$areas[]	= ontology::tipo_to_json_item($children_area,[
+					'tipo' 			=> true,
+					'tld'			=> false,
+					'is_model'		=> false,
+					'model'			=> true,
+					'model_tipo'	=> false,
+					'parent'		=> true,
+					'order'			=> true,
+					'translatable'	=> false,
+					'properties'	=> false,
+					'relations'		=> false,
+					'descriptors'	=> false,
+					'label'			=> true]);
 				}
 			}
 
@@ -187,170 +208,10 @@ dump($_SESSION['dedalo']['ontology']['all_areas'], ' $_SESSION[dedalo][ontology]
 	//////////// OLD WORLD ////////////////
 
 
-	/**
-	* GET ARRAY TS CHILDREN PLAIN OF ALL AREAS
-	* Get ar_ts_children_all_areas_hierarchized and flat keys in one array
-	* @param $include_main_tipo
-	*	bool(true) Optional default true
-	* @see component_security_access - Get all major areas
-	*/
-	public static function get_ar_ts_children_all_areas_plain($include_main_tipo=true) {
-
-		# First retrieve hierarchized list
-		$ar_ts_children_all_areas_hierarchized = area::get_ar_ts_children_all_areas_hierarchized($include_main_tipo);
-
-		# Get all keys recursive to optain a plain array
-		$ar_ts_children_all_areas_plain = array_keys_recursive($ar_ts_children_all_areas_hierarchized);
-
-		return $ar_ts_children_all_areas_plain;
-	}//end get_ar_ts_children_all_areas_plain
 
 
 
-	/**
-	* GET ARRAY TS CHILDREN HIERARCHIZED OF ALL MAJOR AREAS
-	* Iterate all major existing area tipes (area_root,area_resource,area_admin)
-	* and get hierarchycally tipos of every one mixed in one full array calling
-	* this->get_ar_ts_children_areas secuentialment
-	* Used in menu
-	* @param $include_main_tipo
-	*	bool(true) Optional default true
-	* @see menu
-	*/
-	public static function get_ar_ts_children_all_areas_hierarchized($include_main_tipo=true) {
-		gc_disable();
-
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
-
-
-		if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {
-			if(SHOW_DEBUG===true) {
-				#return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
-			}else{
-
-			}
-			return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
-		}
-
-		# AREA_ROOT
-			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
-			$area_root 							= new area_root($current_tipo);
-			$ar_ts_childrens_root 				= $area_root->get_ar_ts_children_areas($include_main_tipo);
-
-		# AREA_ACTIVITY
-			$ar_ts_childrens_activity=array();
-			$ar_area_activity 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity');
-			if (isset($ar_area_activity[0])) {
-				$current_tipo 					= $ar_area_activity[0];
-				$area_activity 					= new area_activity($current_tipo);
-				$ar_ts_childrens_activity 		= $area_activity->get_ar_ts_children_areas($include_main_tipo);
-			}
-
-		# AREA_PUBLICATION
-			$ar_ts_childrens_publication=array();
-			$ar_area_publication 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_publication');
-			if (isset($ar_area_publication[0])) {
-				$current_tipo 				 	= $ar_area_publication[0];
-				$area_publication 			 	= new area_publication($current_tipo);
-				$ar_ts_childrens_publication 	= $area_publication->get_ar_ts_children_areas($include_main_tipo);
-			}
-
-		# AREA_RESOURCE
-			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
-			$area_resource 						= new area_resource($current_tipo);
-			$ar_ts_childrens_resource 			= $area_resource->get_ar_ts_children_areas($include_main_tipo);
-
-		# AREA_TOOLS
-			if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0])) {
-				$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
-				$area_tool 						= new area_tool($current_tipo);
-				$ar_ts_childrens_tools 			= $area_tool->get_ar_ts_children_areas($include_main_tipo);
-			}else{
-				$ar_ts_childrens_tools = array();
-			}
-
-		# AREA_THESAURUS
-			if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0])) {
-				$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
-				$area_thesaurus 				= new area_thesaurus($current_tipo);
-				$ar_ts_childrens_thesaurus 		= $area_thesaurus->get_ar_ts_children_areas($include_main_tipo);
-			}else{
-				$ar_ts_childrens_thesaurus 		= array();
-			}
-
-		# AREA_ADMIN
-			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
-			$area_admin 						= new area_admin($current_tipo);
-			$ar_ts_childrens_admin 				= $area_admin->get_ar_ts_children_areas($include_main_tipo);
-
-		# AREA_DEVELOPMENT
-			$ar_ts_childrens_dev 		 		= [];
-			$logged_user_is_global_admin 		= security::is_global_admin(navigator::get_user_id());
-			if((SHOW_DEBUG===true || SHOW_DEVELOPER===true) && $logged_user_is_global_admin===true) {
-				$ar_current_tipo 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development');
-				if (isset($ar_current_tipo[0])) {
-					$area_development 			= new area_development($ar_current_tipo[0]);
-					$ar_ts_childrens_dev 		= $area_development->get_ar_ts_children_areas($include_main_tipo);
-				}
-
-			}
-
-		# ar_all merged
-		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_tools, $ar_ts_childrens_thesaurus, $ar_ts_childrens_admin, $ar_ts_childrens_dev);
-
-		#
-		# ALLOW DENY AREAS
-		if (SHOW_DEBUG===true) { //  || SHOW_DEVELOPER===true
-			# All elements are accepted
-		}else{
-			# Remove not accepted elements
-
-		}
-		# Remove always for clarity
-		$ar_all = area::walk_recursive_remove($ar_all, 'area::area_to_remove');
-
-
-		# Store in session for speed
-		// $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
-
-
-		if(SHOW_DEBUG===true) {
-			$total 	= round(microtime(1)-$start_time,3);
-			$n 		= count($ar_all);
-			debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-		}
-
-		 gc_enable();
-
-		return $ar_all;
-	}//end get_ar_ts_children_all_areas_hierarchized
-
-
-
-	/**
-	* AREA_TO_REMOVE
-	* @return bool
-	*/
-	public static function area_to_remove($tipo) {
-
-		if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
-			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empy values as default ".to_string(), logger::ERROR);
-			if(SHOW_DEBUG===true) {
-				throw new Exception("Error Processing Request. config4_areas file not found", 1);;
-			}
-
-			$areas_deny  = array();
-			$areas_allow = array();
-		}
-
-		if ( true===in_array($tipo, $areas_deny) && false===in_array($tipo, $areas_allow) ) {
-			return true;
-		}
-
-		return false;
-	}//end area_to_remove
-
-
+	
 
 	/**
 	* http://uk1.php.net/array_walk_recursive implementation that is used to remove nodes from the array.
