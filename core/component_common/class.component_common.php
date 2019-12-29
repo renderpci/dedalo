@@ -4603,7 +4603,7 @@ abstract class component_common extends common {
 		switch ($changed_data->action) {
 			case 'insert':
 			case 'update':
-				// check if the key exist in the $dato if the key exist chage it directly else create all positions with null value for coherence
+				// check if the key exist in the $dato if the key exist chage it directly, else create all positions with null value for coherence
 				if(isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato)){
 					$dato[$changed_data->key] = $changed_data->value;
 				}else{

@@ -95,6 +95,26 @@ class security_v5_to_v6 {
 				unset($dato->components->{DEDALO_USER_PROFILE_TIPO});
 				// add to realtions container
 				$dato->relations[] = $current_profile_dato;
+
+			// component_filter_records
+				$filter_records_dato = $dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
+				if (!empty($filter_records_dato)) {
+					$new_filter_records_dato = [];
+					foreach ($filter_records_dato as $current_section_tipo => $ar_value) {
+
+						$item = new stdClass();
+							$item->tipo  = $current_section_tipo;
+							$item->value = array_map(function($current_section_id){
+								return (int)$current_section_id;
+							}, $ar_value);
+
+						$new_filter_records_dato[] = $item;
+					}
+
+					// replace data
+					$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN}  = $new_filter_records_dato;
+					$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->valor->{DEDALO_DATA_NOLAN} = null;
+				}
 		}
 
 		return $dato;

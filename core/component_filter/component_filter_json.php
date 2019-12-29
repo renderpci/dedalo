@@ -18,7 +18,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -36,7 +36,7 @@
 		switch ($modo) {
 			case 'list':
 				$value = $this->get_valor(null,'array');
-				break;			
+				break;
 			case 'edit':
 			default:
 				$value = $this->get_dato();
@@ -45,7 +45,7 @@
 		}
 
 		// data item
-		$item  = $this->get_data_item($value);
+		$item = $this->get_data_item($value);
 
 		// datalist
 		if (isset($datalist)) {
