@@ -50,7 +50,8 @@ abstract class common {
 			'component_info',
 			'component_pdf',
 			'component_password',
-			'component_filter_records'
+			'component_security_areas'
+			//'component_filter_records'
 		];
 
 

@@ -569,7 +569,7 @@ class section extends common {
 		# VALOR : Actualizamos el valor en el idioma actual
 			switch ($component_modelo_name) {
 				case 'component_security_access':
-				//case 'component_security_areas':
+				case 'component_filter_records':
 				case 'component_security_tools':
 					$component_global_dato->valor->$component_lang = ''; // Don't save valor'
 					break;

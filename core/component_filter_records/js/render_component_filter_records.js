@@ -92,15 +92,15 @@ render_component_filter_records.prototype.edit = async function(options={render_
 const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
-		)
-		function update_value (changed_data) {
-			//console.log("-------------- - event update_value changed_data:", changed_data);
-			// change the value of the current dom element
-			// const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
-			// changed_node.value = changed_data.value.join(',')
-		}
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('update_value_'+self.id, update_value)
+		// )
+		// function update_value (changed_data) {
+		// 	//console.log("-------------- - event update_value changed_data:", changed_data);
+		// 	// change the value of the current dom element
+		// 	// const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
+		// 	//changed_node.value = changed_data.value.join(',')
+		// }
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', async (e) => {
@@ -117,38 +117,20 @@ const add_events = function(self, wrapper) {
 						value 	: validate_value(e.target.value.split(','))
 					  }
 					: null;
-						console.log("value:",value, validate_value(e.target.value.split(',')));
 
-				// search section tipo key if exists
-				//const a = self.data.value.find((item) => { if(item.tipo===e.target.dataset.tipo) return item })
-				const current_values = self.data.value || []
-				const values_length	 = current_values.length
-				let key_found 		 = values_length // default is last (length of arary)
-				for (let i = 0; i < values_length; i++) {
-					if(current_values[i].tipo===section_tipo) {
-						key_found = i;
-						break;
+				// key_found. search section tipo key if exists. Remember: data array keys are differents that inputs keys
+					const current_values = self.data.value || []
+					const values_length	 = current_values.length
+					let key_found 		 = values_length // default is last (length of arary)
+					for (let i = 0; i < values_length; i++) {
+						if(current_values[i].tipo===section_tipo) {
+							key_found = i;
+							break;
+						}
 					}
-				}
-				// // safe number values
-				// 	if (value.value && value.value.length>0) {
-				// 		const safe_values  = []
-				// 		const actual_value = value.value
-				// 		for (let i = 0; i < actual_value.length; i++) {
-				// 			const current_number = parseInt(actual_value[i])
-				// 			if (!isNaN(current_number)) {
-				// 				safe_values.push(current_number)
-				// 			}
-				// 		}
-				// 		if (safe_values.length>0) {
-				// 			value.value = safe_values
-				// 		}
-				// 	}
-
-				return
 
 				const changed_data = Object.freeze({
-					action	: 'update',
+					action	: (value===null) ? 'remove' : 'update',
 					key		: key_found,
 					value	: value
 				})
@@ -157,6 +139,10 @@ const add_events = function(self, wrapper) {
 					refresh 	 : false
 				})
 				.then((save_response)=>{
+					// update safe value in input text
+					if (value) {
+						e.target.value = value.value.join(",")
+					}
 					// event to update the dom elements of the instance
 					//event_manager.publish('update_value_'+self.id, changed_data)
 				})
@@ -315,16 +301,14 @@ const validate_value = (value) => {
 
 	if (value && value.length>0) {
 
-		const actual_value = value // .split(',')
-		for (let i = 0; i < actual_value.length; i++) {
-			const current_number = parseInt(actual_value[i])
-			if (!isNaN(current_number)) {
+		const value_length = value.length
+		for (let i = 0; i < value_length; i++) {
+			const current_number = parseInt(value[i])
+			// if value is valid number and not already included, push it to safe values array
+			if (!isNaN(current_number) && current_number>0 && !safe_values.includes(current_number)) {
 				safe_values.push(current_number)
 			}
 		}
-		// if (safe_values.length>0) {
-		// 	value = safe_values // .join(',')
-		// }
 	}
 
 	return safe_values
@@ -375,6 +359,7 @@ const get_input_element = (i, datalist_item, inputs_container, self) => {
 			class_name 		: 'input_value',
 			dataset 	 	: { key : i, tipo : tipo },
 			value 		 	: input_value_string,
+			placeholder 	: "Comma separated id like 1,2,3",
 			parent 		 	: li
 		})
 		//input.pattern = "[0-9]"
