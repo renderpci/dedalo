@@ -83,10 +83,10 @@ page.prototype.build = async function() {
 	const self = this
 
 	// menu
-	const page_menu = new menu()
-	page_menu.init({menu_data : self.menu_data})
-	page_menu.build()
-	self.menu = page_menu
+	// const page_menu = new menu()
+	// page_menu.init({menu_data : self.menu_data})
+	// page_menu.build()
+	// self.menu = page_menu
 
 	// reset self.ar_instances
 		//self.ar_instances = []
@@ -135,6 +135,7 @@ page.prototype.get_ar_instances = async function(){
 
 		}//end for (let i = 0; i < elements_length; i++)
 
+	console.log("self.ar_instances:",self.ar_instances);
 
 	return self.ar_instances
 }//end get_ar_instances

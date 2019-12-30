@@ -78,7 +78,6 @@
 			$page_options = new StdClass();
 				$page_options->mode  			= 'default';
 				$page_options->page_elements 	= $page_elements;
-				$page_options->menu_data 		= area::get_areas();
 
 		// load base html
 			$page_html = dirname(__FILE__) . '/html/page.phtml';
@@ -127,6 +126,32 @@
 
 // logged
 	if (login::is_logged()===true) {
+
+		$page_elements = [];
+
+		//menu_element
+			$page_elements[] = (function(){
+
+				$menu = new menu();
+
+				// login json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context 	= true;
+						$get_json_options->get_data 	= true;
+					$menu_json = $menu->get_json($get_json_options);
+
+				// element
+					$page_element = new StdClass();
+						$page_element->model 		= 'menu';
+						$page_element->tipo 		= 'dd85';
+						$page_element->mode 		= 'edit';
+						$page_element->lang 		= DEDALO_APPLICATION_LANG;
+						$page_element->sqo_context  = null;
+						$page_element->datum 		= $menu_json;
+
+				return $page_element;
+			})();
+
 
 		// page elements
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);

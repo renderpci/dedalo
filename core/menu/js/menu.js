@@ -16,6 +16,7 @@ export const menu = function(){
 	this.lang
 
 	this.section_lang
+	this.datum
 	this.context
 	this.data
 	this.node
@@ -46,9 +47,12 @@ export const menu = function(){
 menu.prototype.init = function(options) {
 
 	const self = this
+
+	self.datum = options.datum
 	self.node = []
 	self.mode = 'edit'
-	self.data = options.menu_data
+	self.context = self.datum.context
+	self.data = self.datum.data[0]
 
 	// status update
 		self.status = 'initied'
