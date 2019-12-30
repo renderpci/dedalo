@@ -1,4 +1,4 @@
-<?php 
+<?php
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
 # Old lang vars
 require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
@@ -7,7 +7,7 @@ require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
 * LOGIN
 */
 $is_logged	= login::is_logged();
-	
+
 if($is_logged!==true) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -61,7 +61,7 @@ if($modo==='modelo_edit'){
 
 
 # reseteamos las var sesión
-unset($_SESSION['rel']); 
+unset($_SESSION['rel']);
 unset($_SESSION['frg']);
 
 # VARIABLES DE SESION USADAS PARA PASAR LOS VALORES A TESAURO CUANDO SE INDEXA
@@ -90,14 +90,14 @@ foreach($vars as $name)	$$name = common::setVar($name);
 	# LANGS SELECTOR
 	#$ar_all_langs 	= unserialize(DEDALO_APPLICATION_LANGS);
 	$ar_all_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
-		
+
 	$selectedItem 	= $ts_lang;
 
 	$select_html='';
 	$select_html .= "<select name=\"SelectLangList\" id=\"SelectLangList\" class=\"selectProjectLang\" onchange=\"newLang(this.value)\" title=\"Langs\">";
 	$select_html .= "<option value=\"\"></option>";
 	if(is_array($ar_all_langs)) foreach($ar_all_langs as $current_select_lang => $lang_name) {
-		
+
 		$select_html .= "\n <option value=\"$current_select_lang\" ";
 
 		if($selectedItem===$current_select_lang)
@@ -107,7 +107,7 @@ foreach($vars as $name)	$$name = common::setVar($name);
 		#if(SHOW_DEBUG)
 		#$select_html .= " [$current_select_lang]";
 		$select_html .= "</option>";
-		
+
 	}
 	$select_html .= "</select>";
 	$SelectLangList = $select_html;
@@ -120,33 +120,33 @@ foreach($vars as $name)	$$name = common::setVar($name);
 
 #*************************************************
 #	LISTADO INICIAL
-#*************************************************	
+#*************************************************
 $tsInicioList 	= new dd($modo,$type,$ts_lang);
 $buildTreeHtml 	= false ;
 
-if($t==='form' && $n===0) { 
-	
+if($t==='form' && $n===0) {
+
 		$notFoundHtml = "<div style=\"padding:100px; padding-top:150px; padding-bottom:150px; color:red; font-weight:bold\" >";
 		$notFoundHtml .= $no_hay_resultados_coincidentes_title ;
 		$notFoundHtml .= "<br><br>"; ;
-		
+
 		if(isset($_REQUEST['terminoID']))	$notFoundHtml .= " $tesaurus_title ID: ".	safe_xss($_REQUEST['terminoID'])."<br>" ;
 		if(isset($_REQUEST['termino'])) 	$notFoundHtml .= " $termino_title : ".		safe_xss($_REQUEST['termino'])."<br>" ;
 		if(isset($_REQUEST['def'])) 		$notFoundHtml .= " $definicion_title : ".	safe_xss($_REQUEST['def'])."<br>" ;
 		if(isset($_REQUEST['obs'])) 		$notFoundHtml .= " $observaciones_title : ".safe_xss($_REQUEST['obs'])."<br>" ;
-		
+
 		$notFoundHtml .= "</div>" ;
-		
-		$buildTreeHtml = $notFoundHtml ;		
-	
+
+		$buildTreeHtml = $notFoundHtml ;
+
 }else{
 		#
-		# ARBOL Constrimos el arbol a partir del array de los que hay activos 
-		#					
+		# ARBOL Constrimos el arbol a partir del array de los que hay activos
+		#
 		$parentInicialActual 	= 'dd0';
-		#$tipoActual 			= 5;						
-				
-		$buildTreeHtml .= $tsInicioList->buildTree($parentInicial="dd0", $terminoIDActual='', $terminoIDresalte=$terminoIDlist, $header='si');			
+		#$tipoActual 			= 5;
+
+		$buildTreeHtml .= $tsInicioList->buildTree($parentInicial="dd0", $terminoIDActual='', $terminoIDresalte=$terminoIDlist, $header='si');
 
 };//if($t=='form')
 
@@ -186,17 +186,17 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_list.js');
 */
 
 
-# MENU
-$menu_html = NULL;
-if(empty($caller_id)) {
-	$menu 		= new menu($modo);
-	$menu_html 	= $menu->get_html();
-}
-$file		 	= DEDALO_CORE_PATH . '/html_page/html/html_page_header.phtml';
-ob_start();
-include ( $file );
-$html_header =  ob_get_contents();
-ob_get_clean();
+// # MENU
+// $menu_html = NULL;
+// if(empty($caller_id)) {
+// 	$menu 		= new menu($modo);
+// 	$menu_html 	= $menu->get_html();
+// }
+// $file		 	= DEDALO_CORE_PATH . '/html_page/html/html_page_header.phtml';
+// ob_start();
+// include ( $file );
+// $html_header =  ob_get_contents();
+// ob_get_clean();
 
 
 

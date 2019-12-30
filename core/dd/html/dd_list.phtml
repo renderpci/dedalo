@@ -11,7 +11,7 @@
 	#dump(css::get_css_link_code(), ' css::get_css_link_code() ++ '.to_string());
 	#echo trim(css::get_css_link_code());
 print css::build_tag(DEDALO_CORE_URL .'/common/css/fonts.css', null, false);
-print css::build_tag(DEDALO_CORE_URL .'/menu/css/menu.css', null, false);
+#print css::build_tag(DEDALO_CORE_URL .'/menu/css/menu.css', null, false);
 #print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/general.css', null, false);
 print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_page.css', null, false);
 print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_list.css', null, false);
@@ -60,7 +60,7 @@ print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php');
 print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery.min.js');
 print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery-ui.min.js');
 print js::build_tag(DEDALO_CORE_URL . '/common/js/cookies.js');
-print js::build_tag(DEDALO_CORE_URL . '/menu/js/menu.js');
+#print js::build_tag(DEDALO_CORE_URL . '/menu/js/menu.js');
 #print js::build_tag(DEDALO_CORE_URL . '/login/js/login.js');
 print js::build_tag(DEDALO_CORE_URL . '/dd/inc/javascript.js');
 print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_common.js');
@@ -79,18 +79,26 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_list.js');
 
   <tr>
 	<td>
-		<?php print $html_header ?>
+		<div class="header">
+			<h2>Dédalo Ontology</h2>
+		<?php # EXPORT BUTTON (ADMIN)
+			if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false
+				|| (DEDALO_DATABASE_CONN==='dedalo4_development')
+				) {
+				echo "<a href=\"javascript:void(0)\" class=\"\" onclick=\"common.export_str(this)\">EXPORT</a>";
+			}
+		?>
+		</div>
 	</td>
   </tr>
 
   <tr>
 	<td align="center" valign="top" >
 	<div id="tesauro_content">
-
 	<form id="form1" name="form1" method="post" action="trigger.dd.php" onsubmit="return dd.validate_form(this);">
 
 		<!-- ID -->
-		ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>"">
+		ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>">
 
 		<!-- TERMINO -->
 		<?php echo $termino_title ?>
