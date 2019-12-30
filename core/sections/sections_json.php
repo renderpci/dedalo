@@ -58,7 +58,7 @@
 				//$item = $this->get_data_item($value);
 
 				$item = new stdClass();
-					$item->typo 		= 'section';
+					#$item->typo 		= 'section';
 					$item->section_tipo = $ar_section_tipo[0];
 					$item->tipo 		= $ar_section_tipo[0];
 					$item->value 		= $value;
