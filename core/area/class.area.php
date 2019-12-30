@@ -70,7 +70,6 @@ class area extends common  {
 		// ROOT_AREAS
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity')[0];
-			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_publication')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];

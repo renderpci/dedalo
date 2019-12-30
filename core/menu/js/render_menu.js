@@ -30,8 +30,9 @@ render_menu.prototype.edit = async function(options={render_level:'full'}) {
 
 	const fragment = new DocumentFragment()
 
+
 	level_hierarchy({
-						datalist 		: self.data,
+						datalist 		: self.data.tree_datalist,
 						ul_container 	: fragment,
 						parent_tipo		: 'dd1'
 					})

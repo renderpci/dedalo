@@ -28,8 +28,7 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 			const page = await get_instance({
 				model 		: 'page',
 				//mode		: <?php echo json_encode($page_options->mode) ?> || 'edit',
-				elements 	: <?php echo json_encode($page_options->page_elements) ?>,
-				menu_data	: <?php echo json_encode($page_options->menu_data) ?>
+				elements 	: <?php echo json_encode($page_options->page_elements) ?>
 			})
 
 		// page instance build and render

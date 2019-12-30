@@ -29,12 +29,6 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
-	// menu
-	const menu_container = document.getElementById('menu')
-	self.menu.render({render_level:'full'}).then(menu_wrapper => {
-		menu_container.appendChild(menu_wrapper)
-	})
-
 
 	const render_level = options.render_level
 
