@@ -52,7 +52,7 @@ class logger {
 			default:
 				return '[unknow]';
 		}
-	}
+	}//end level_to_string
 
 
 
@@ -82,7 +82,9 @@ class logger {
 
 		# manage current backend class
 		logger::manage_backends($log_name, $obj_back);
-	}
+
+		return true;
+	}//end register
 
 
 
@@ -90,8 +92,11 @@ class logger {
 	* GET INSTANCE
 	*/
 	public static function get_instance($name) {
+
 		return logger::manage_backends($name);
-	}
+	}//end get_instance
+
+
 
 	/**
 	* MANAGE BACKENDS
@@ -119,5 +124,4 @@ class logger {
 
 
 
-}#end class logger
-?>
+}//end class logger
