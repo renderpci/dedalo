@@ -40,7 +40,7 @@ class component_security_access extends component_common {
 
 
 	/**
-	* GET_CONTEXT
+	* GET_DATALIST
 	* @return 
 	*/
 	public function get_datalist() {
@@ -71,7 +71,7 @@ class component_security_access extends component_common {
 			$datalist->result = $ar_areas;
 
 		return $datalist;	
-	}//end get_context
+	}//end get_datalist
 
 
 
