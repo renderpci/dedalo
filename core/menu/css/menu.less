@@ -65,23 +65,30 @@ background-color: #FFFF00;
     line-height: 1.2em;
 
     color: green;
-	}
 
-	.menu_wrapper_debug {
+
+    &.menu_wrapper_debug {
 		background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
 	}
-	.menu_wrapper_debug_development {
+
+	&.menu_wrapper_debug_development {
 		//background: linear-gradient(to bottom, rgba(214,21,0,0.9) 0%,rgba(135,0,13,0.9) 100%) !important; /* W3C */
 		background-color: #a20401 !important;
 	}
-	.menu_wrapper_debug_master {
+
+	&.menu_wrapper_debug_master {
 		//background: linear-gradient(to bottom, rgba(44, 177, 20, 0.8) 0, rgba(12, 115, 34, 0.8) 100%) !important;
 		background: linear-gradient(to bottom, rgba(35, 189, 7, 0.8) 0, rgba(9, 97, 28, 0.8) 100%) !important
 	}
-	.menu_wrapper_global_admin {
+
+	&.menu_wrapper_global_admin {
 		//background-image: url('../../themes/default/dedalo_logo_red.svg');
 		border-top: 1px solid #f78a1c;
 	}
+}
+
+
+
 
 	/*-- Button in menu common --*/
 	#menu_wrapper .button_in_menu {
