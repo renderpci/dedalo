@@ -6,7 +6,7 @@
 	<?php /*<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet"> */?>
 </head>
 <body>
-	<?php echo $html_header ?? '' ?>
+	<div id="menu"></div>
 	<div id="main" class="hide"></div>
 	<div id="debug" class="debug hide"></div>
 </body>
@@ -14,7 +14,6 @@
 var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
 </script>
 <script defer="defer" src="<?php echo DEDALO_CORE_URL ?>/common/js/enviroment.js.php"></script>
-<script defer="defer" src="<?php echo DEDALO_CORE_URL ?>/menu/js/menu.js"></script>
 <script type="module">
 	const t0 = performance.now()
 
@@ -29,7 +28,8 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 			const page = await get_instance({
 				model 		: 'page',
 				//mode		: <?php echo json_encode($page_options->mode) ?> || 'edit',
-				elements 	: <?php echo json_encode($page_options->page_elements) ?>
+				elements 	: <?php echo json_encode($page_options->page_elements) ?>,
+				menu_data	: <?php echo json_encode($page_options->menu_data) ?>
 			})
 
 		// page instance build and render
