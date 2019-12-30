@@ -4,6 +4,7 @@
 
 
 // import
+	import {menu} from '../../menu/js/menu.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../common/js/instances.js'
@@ -61,6 +62,7 @@ page.prototype.init = async function(options) {
 	self.elements 		= options.elements // mixed items types like 'sections', 'tools'..
 	self.status 		= null
 	self.events_tokens	= []
+	self.menu_data 		= options.menu_data
 
 	// launch preload all components files in parallel
 		//import('../../common/js/components_list.js')
@@ -79,6 +81,12 @@ page.prototype.init = async function(options) {
 page.prototype.build = async function() {
 
 	const self = this
+
+	// menu
+	const page_menu = new menu()
+	page_menu.init({menu_data : self.menu_data})
+	page_menu.build()
+	self.menu = page_menu
 
 	// reset self.ar_instances
 		//self.ar_instances = []

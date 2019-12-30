@@ -78,6 +78,7 @@
 			$page_options = new StdClass();
 				$page_options->mode  			= 'default';
 				$page_options->page_elements 	= $page_elements;
+				$page_options->menu_data 		= area::get_areas();
 
 		// load base html
 			$page_html = dirname(__FILE__) . '/html/page.phtml';
@@ -126,26 +127,6 @@
 
 // logged
 	if (login::is_logged()===true) {
-
-		// add page header and menu
-			$html_header = (function($mode) {
-
-			    switch (true) {
-					case (isset($_REQUEST['menu']) && $_REQUEST['menu']==0):
-						$html = '';
-						break;
-					default:
-						# MENU
-						$menu 		= new menu($mode);
-						$menu_html 	= $menu->get_html();
-						ob_start();
-						include ( DEDALO_CORE_PATH . '/html_page/html/html_page_header.phtml' );
-						$html = ob_get_clean();
-						break;
-				}
-
-				return $html;
-			})(MODE);
 
 		// page elements
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
