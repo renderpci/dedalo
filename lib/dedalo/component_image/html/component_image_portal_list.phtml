@@ -6,11 +6,11 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 <?php
 */
 
-	# VISUALIZADOR HTML	
-		
+	# VISUALIZADOR HTML
+
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
-	
+
 	print "<div class=\"wrap_component css_wrap_list_image css_wrap_image_{$modo} wrap_component_{$tipo}\" ";
 	print "id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
@@ -21,36 +21,39 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 	print "data-dato=\"{$valor}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
-	print ">";	
-		
-		
+	print ">";
+
+
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
 		switch(true) {
-				
+
 			case $permissions<1 :
 					$html_contenido .= "";
 					break;
-							
+
 			case ($permissions>=1) :
-					
+
 				if (file_exists($thumb_path) || !empty($external_source)) {
-					
+
 					# CLICK_ACTION
 					$click_action="onclick=\"tool_common.open_player(this,{'type':'component_image','image_full_url':'$image_full_url'});\" ";
 
 					switch ($modo) {
 						case 'portal_list_view_mosaic':
+							// $thumb_file_url = $image_full_url;
+							// $style = "background-image:url('$thumb_file_url')";
+							// $html_contenido .= "<div class=\"div_image_portal_list_view_mosaic\" style=\"$style\" $click_action ";
+							// $html_contenido .= "data-image_id=\"$image_id\" ";
+							// $html_contenido .= "data-parent_matrix=\"$parent\" ";
+							// $html_contenido .= "alt=\"$image_id\" ";
+							// $html_contenido .= "></div>";
+
 							$thumb_file_url = $image_full_url;
-							$style = "background-image:url('$thumb_file_url')";
-							$html_contenido .= "<div class=\"div_image_portal_list_view_mosaic\" style=\"$style\" $click_action ";
-							$html_contenido .= "data-image_id=\"$image_id\" ";
-							$html_contenido .= "data-parent_matrix=\"$parent\" ";
-							$html_contenido .= "alt=\"$image_id\" ";
-							$html_contenido .= "></div>";
+							$html_contenido .= '<img src="'.$image_full_url.'" class="img_image_portal_list_view_mosaic" '.$click_action.'>';
 							break;
-						
-						default:								
+
+						default:
 							$style = "background-image:url('$thumb_file_url')";
 							$html_contenido .= "<div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $click_action ";
 							$html_contenido .= "data-image_id=\"$image_id\" ";
@@ -58,7 +61,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 							$html_contenido .= "alt=\"$image_id\" ";
 							$html_contenido .= "></div>";
 							break;
-					}						
+					}
 
 				}else{
 
@@ -83,9 +86,9 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 						$add_class = 'no_file';
 					}
 
-					# ImageObj			
+					# ImageObj
 					$maxWidht 	= DEDALO_IMAGE_THUMB_WIDTH;
-					$maxHeight 	= DEDALO_IMAGE_THUMB_HEIGHT;					
+					$maxHeight 	= DEDALO_IMAGE_THUMB_HEIGHT;
 					$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
 
 					# IMAGE
@@ -99,25 +102,25 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 					$html_contenido .= "data-lang=\"$lang\" ";
 					$html_contenido .= "alt=\"$image_url\" ";
 					$html_contenido .= "/>";
-				}					
+				}
 
 				#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";
 				#$html_contenido .= "</a>";
-				break;										
+				break;
 		}
 
-		
+
 		# Prepare content to show in page
 		tools::prepare_content($html_contenido);
-		
+
 
 		# PRINT HTML
 		print $html_contenido;
-	
-	
+
+
 	print "</div>"; //wrap
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
-	
+
 ?>
