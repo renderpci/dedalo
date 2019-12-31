@@ -46,17 +46,14 @@ background-color: #FFFF00;
 
 /* MENU WRAPPER
 ------------------------------------------------------- */
-#menu_wrapper {
+.menu_wrapper {
 	z-index: 1002;
 	position: fixed;
 	top: 0px;
 	left:0px;
-	display: block;
-	clear: both;
+	display: flex;
 	width: 100%;
-	min-width: 932px;
-	/*height: 32px;*/
-	height: 29px;
+	height: 2.1em;
 	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 	background: #2e2e2e;
 
@@ -89,61 +86,52 @@ background-color: #FFFF00;
 
 
 
-
-	/*-- Button in menu common --*/
-	#menu_wrapper .button_in_menu {
-		position: relative;
-		float: right;
-		display: inline-block;
-		cursor: pointer;
-	}
-
 	// Quit button
-	#menu_wrapper #quit {
-		position: relative;
-		float: left;
-		top: 2px;
-		left: 7px;
-		z-index: 100;
-		color: #fff;
-		transition: color 0s ease-in-out;
+	.menu_wrapper #quit {
 		background-image: url(../../themes/default/icons/power-off_white.svg);
 		width: 1em;
-		font-size: 1.25em;
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center;
 
 		&:active {
 			color: #7F7F7F;
 		}
 	}
 
-
-	/*-- Toggle button in mobil version --*/
-	#menu_wrapper #toggle_menu {
-		float: left;
-		top: 7px;
-		left: 40px;
-		z-index: 100;
-		color: #ffffff;
-		font-size: 32px;
-		transition: color 0s ease-in-out;
-		display: none;
-		/*background-color:#d4d4d4;
-		background-position: -120px -72px;
-		border-radius: 3px;*/
-		}
-
 	/*-- Dedalo icon top --*/
-	#menu_wrapper .dedalo_icon_top {
-		width: 20px;
-		height: 20px;
-		position: absolute;
-		top: 4px;
-		left: 45px;
+	.menu_wrapper #dedalo_icon_top {
+		width: 1em;
 		background-image: url('../../themes/default/dedalo_logo.svg');
 		background-repeat: no-repeat;
-		background-size: 90%;
+		background-size: contain;
 		background-position: center;
 	}
+
+
+
+	/*-- Button in menu common --*/
+	.menu_wrapper #button_in_menu {
+		position: relative;
+		float: right;
+		display: inline-block;
+		cursor: pointer;
+	}
+
+
+	/*-- Toggle button in mobil version --*/
+	// .menu_wrapper #toggle_inspector {
+	// 	float: left;
+	// 	top: 7px;
+	// 	left: 40px;
+	// 	z-index: 100;
+	// 	color: #ffffff;
+	// 	font-size: 32px;
+	// 	transition: color 0s ease-in-out;
+	// 	display: none;
+	// 	}
+
+
 
 
 
@@ -159,7 +147,7 @@ background-color: #FFFF00;
 		float: left;
 		display: inline-block;
 		margin: 0;
-		margin-left: 49px;
+		//margin-left: 49px;
 		padding: 0;
 		text-align: left;
 
@@ -208,13 +196,15 @@ background-color: #FFFF00;
 
 		// level 2 list
 		ul {
+			-webkit-backdrop-filter: blur(10px);
+			backdrop-filter: blur(10px);
 			background: #fcfcfc;
 			display: none;
 			margin: 0;
 			padding: 0;
 			min-width: 200px;
 			position: absolute;
-			top: 25px;
+			// top: 25px;
 			left: -1px;
 			box-shadow: @menu_box_shadow;
 			/*left: -2px;*/
@@ -233,7 +223,7 @@ background-color: #FFFF00;
 
 		// dropdown
 		li > ul {
-			margin-top: 4px;
+			// margin-top: 4px;
 		}
 
 		ul li {
@@ -254,7 +244,7 @@ background-color: #FFFF00;
 		// level 3+ list
 		ul ul {
 			left: 100%;
-			top: -5px;
+			top: -1px;
 		}
 
 		// active
@@ -345,7 +335,7 @@ background-color: #FFFF00;
 
 	/* LOGGED USERNAME
 	------------------------------------------------------- */
-	#menu_wrapper .logged_user_name {
+	#menu_wrapper #logged_user_name {
 		color: #c9c9c9;
 		float: left;
 		margin-left: 10px;
@@ -373,7 +363,7 @@ background-color: #FFFF00;
 
 	/* APLICATION LANG SELECTOR
 	------------------------------------------------------- */
-	#menu_wrapper .dedalo_aplication_langs_selector {
+	#menu_wrapper #dedalo_aplication_langs_selector {
 		float: left;
 		margin-left: 5px;
 		top: 2px;
