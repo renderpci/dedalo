@@ -206,7 +206,7 @@ const add_events = function(self, wrapper) {
 
 	// dblclick event
 		//wrapper.addEventListener("dblclick", function(e){
-			e.stopPropagation()
+		//	e.stopPropagation()
 		//
 		//	if (self.mode==='edit_in_list') {
 		//		// change mode (from 'edit_in_list' to 'list')
