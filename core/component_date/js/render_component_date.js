@@ -117,7 +117,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// input_value. The standard input for the value of the component
 			if (e.target.matches('input[type="text"]')) {
@@ -164,9 +164,9 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 			}
 		}, false)
 
-	// click event [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+	// click event [click]
+		wrapper.addEventListener("click", e => {
+			// e.stopPropagation()
 
 			// insert
 			if (e.target.matches('.button.add')) {

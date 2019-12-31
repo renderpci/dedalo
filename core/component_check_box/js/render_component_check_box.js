@@ -118,7 +118,7 @@ render_component_check_box.prototype.edit = async function(options={
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// update / remove
 				if (e.target.matches('input[type="checkbox"]')) {
@@ -151,7 +151,7 @@ render_component_check_box.prototype.edit = async function(options={
 
 	// click event
 		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// remove all
 				if (e.target.matches('.button.reset')) {
@@ -200,7 +200,7 @@ render_component_check_box.prototype.edit = async function(options={
 
 	// dblclick event
 		//wrapper.addEventListener("dblclick", function(e){
-		//	e.stopPropagation()
+		// e.stopPropagation()
 		//
 		//	if (self.mode==='edit_in_list') {
 		//		// change mode (from 'edit_in_list' to 'list')
@@ -210,7 +210,7 @@ render_component_check_box.prototype.edit = async function(options={
 
 	// focus event
 		wrapper.addEventListener("focus", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// selected_node. fix selected node
 			self.selected_node = wrapper

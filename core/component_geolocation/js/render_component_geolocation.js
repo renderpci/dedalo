@@ -110,7 +110,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// update
 			if (e.target.matches('input[type="text"].input_value')) {
@@ -149,9 +149,9 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 
 		}, false)
 
-	// click event [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+	// click event [click]
+		wrapper.addEventListener("click", e => {
+			// e.stopPropagation()
 
 			// insert
 				if (e.target.matches('.button.add')) {
@@ -209,7 +209,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 
 	// click event [keyup]
 		wrapper.addEventListener("keyup", async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			if (self.context.properties.unique && e.target.value!=='') {
 				const unique = await self.is_unique(e.target.value)
@@ -249,7 +249,7 @@ render_component_geolocation.prototype.search = async function() {
 
 		// change event, for every change the value in the imputs of the component
 			wrapper.addEventListener('change', (e) => {
-				e.stopPropagation()
+				// e.stopPropagation()
 
 				// input_value. The standard input for the value of the component
 				if (e.target.matches('input[type="text"].input_value')) {

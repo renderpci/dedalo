@@ -91,7 +91,7 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 	// events
 		// click
 			wrapper.addEventListener("click", function(e){
-				e.stopPropagation()
+				// e.stopPropagation()
 
 				// ignore click on paginator
 					//if (e.target.closest('.paginator')) {
@@ -194,7 +194,7 @@ render_component_autocomplete.prototype.list = async function() {
 	// events
 		// dblclick
 			wrapper.addEventListener("dblclick", function(e){
-				e.stopPropagation()
+				// e.stopPropagation()
 
 				// change mode
 				self.change_mode('edit_in_list', true)
