@@ -120,7 +120,7 @@ const add_events = function(self, wrapper) {
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// update
 			if (e.target.matches('input[type="text"].input_value')) {
@@ -144,9 +144,9 @@ const add_events = function(self, wrapper) {
 
 		}, false)
 
-	// click event [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+	// click event [click]
+		wrapper.addEventListener("click", e => {
+			// e.stopPropagation()
 
 			// insert
 				if (e.target.matches('.button.add')) {
@@ -204,7 +204,7 @@ const add_events = function(self, wrapper) {
 
 	// keyup event
 		wrapper.addEventListener("keyup", async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			if (self.context.properties.unique && e.target.value!=='') {
 				const unique = await self.is_unique(e.target.value)
@@ -246,7 +246,7 @@ const content_data_edit = async function(self) {
 		// 	parent 			: fragment
 		// })
 		// //image.style.backgroundImage = "url("+posterframe_url+")"
-		// // image.addEventListener("mousedown", (e)=>{
+		// // image.addEventListener("click", (e)=>{
 		// // 	e.preventDefault()
 		// // 	e.stopPropagation()
 		// // }, true)

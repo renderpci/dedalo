@@ -108,7 +108,7 @@ render_component_number.prototype.edit = async function(options={render_level : 
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// input_value. The standard input for the value of the component
 			if (e.target.matches('input[type="number"].input_value')) {
@@ -132,8 +132,8 @@ render_component_number.prototype.edit = async function(options={render_level : 
 		}, false)
 
 	// click event [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+		wrapper.addEventListener("click", e => {
+			// e.stopPropagation()
 
 			// insert
 			if (e.target.matches('.button.add')) {
@@ -214,7 +214,7 @@ render_component_number.prototype.search = async function() {
 
 		// change event, for every change the value in the imputs of the component
 			wrapper.addEventListener('change', (e) => {
-				e.stopPropagation()
+				// e.stopPropagation()
 
 				// input_value. The standard input for the value of the component
 				if (e.target.matches('input[type="text"].input_value')) {

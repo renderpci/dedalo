@@ -80,7 +80,7 @@ render_component_publication.prototype.edit = async function(options={render_lev
 
 	// change
 		wrapper.addEventListener("change", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			if (e.target.matches('input[type="checkbox"]')) {
 
@@ -113,7 +113,7 @@ render_component_publication.prototype.edit = async function(options={render_lev
 
 	// click event
 		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// change_mode
 				if (e.target.matches('.button.close')) {
@@ -127,7 +127,7 @@ render_component_publication.prototype.edit = async function(options={render_lev
 
 	// focus event
 		wrapper.addEventListener("focus", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// selected_node. fix selected node
 			self.selected_node = wrapper

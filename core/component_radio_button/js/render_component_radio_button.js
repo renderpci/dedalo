@@ -108,7 +108,7 @@ render_component_radio_button.prototype.edit = async function(options={render_le
 
 	// change event, for every change the value in the inputs of the component
 		wrapper.addEventListener('change', (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// update
 				if (e.target.matches('input[type="radio"]')) {
@@ -138,7 +138,7 @@ render_component_radio_button.prototype.edit = async function(options={render_le
 
 	// click event
 		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// remove all
 				if (e.target.matches('.button.reset')) {
@@ -193,7 +193,7 @@ render_component_radio_button.prototype.edit = async function(options={render_le
 
 	// focus event
 		wrapper.addEventListener("focus", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// selected_node. fix selected node
 			self.selected_node = wrapper
