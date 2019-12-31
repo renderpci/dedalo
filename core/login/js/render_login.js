@@ -135,21 +135,25 @@ const content_data = async function(self) {
 
 	// select lang
 		const langs 		= self.data.dedalo_application_langs
-		const select_lang 	= ui.build_select_lang(langs, async (e) => {
-			const lang = e.target.value || null
-			if (lang) {
-				// data_manager api call
-				const api_response = await data_manager.prototype.request({
-					body : {
-						action 	 : 'change_lang',
-						dd_api 	 : 'dd_utils_api',
-						options  : {
-							dedalo_data_lang 		: lang,
-							dedalo_application_lang : lang
+		const select_lang 	= ui.build_select_lang({
+			langs 	 : langs,
+			selected : page_globals.dedalo_application_lang,
+			action 	 : async (e) => {
+				const lang = e.target.value || null
+				if (lang) {
+					// data_manager api call
+					const api_response = await data_manager.prototype.request({
+						body : {
+							action 	 : 'change_lang',
+							dd_api 	 : 'dd_utils_api',
+							options  : {
+								dedalo_data_lang 		: lang,
+								dedalo_application_lang : lang
+							}
 						}
-					}
-				})
-				window.location.reload(false);
+					})
+					window.location.reload(false);
+				}
 			}
 		})
 		fragment.appendChild(select_lang)

@@ -1020,22 +1020,60 @@ export const ui = {
 	/**
 	* BUILD_SELECT_LANG
 	*/
-	build_select_lang : (langs, action) => {
+	build_select_lang : (options) => {
+
+		// options
+			const langs  	= options.langs
+			const selected 	= options.selected || page_globals.dedalo_application_lang
+			const action 	= options.action
 
 		const fragment = new DocumentFragment()
 
-		for (const lang in langs) {
-			const option = ui.create_dom_element({
-				element_type	: 'option',
-				value 			: lang,
-				text_content 	: langs[lang],
-				parent 			: fragment
-			})
-			// selected options set on match
-			if (lang===page_globals.dedalo_application_lang) {
-				option.selected = true
+		// unify format from object to array
+			const ar_langs = (!Array.isArray(langs))
+				// object case (associative array)
+				? (()=>{
+					const ar_langs = []
+					for (const lang in langs) {
+						ar_langs.push({
+							value : lang,
+							label : langs[lang]
+						})
+					}
+					return ar_langs
+				})()
+				// default array of objects case
+				: langs
+
+		// iterate array of langs and create option for each one
+			const ar_langs_lenght = ar_langs.length
+			for (let i = 0; i < ar_langs_lenght; i++) {
+
+				const option = ui.create_dom_element({
+					element_type	: 'option',
+					value 			: ar_langs[i].value,
+					text_content 	: ar_langs[i].label,
+					parent 			: fragment
+				})
+				// selected options set on match
+				if (ar_langs[i].value===selected) {
+					option.selected = true
+				}
 			}
-		}
+
+		// des
+			// for (const lang in langs) {
+			// 	const option = ui.create_dom_element({
+			// 		element_type	: 'option',
+			// 		value 			: lang,
+			// 		text_content 	: langs[lang],
+			// 		parent 			: fragment
+			// 	})
+			// 	// selected options set on match
+			// 	if (lang===reference_lang) {
+			// 		option.selected = true
+			// 	}
+			// }
 
 		const select_lang = ui.create_dom_element({
 			element_type	: 'select',
