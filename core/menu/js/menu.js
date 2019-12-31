@@ -20,6 +20,7 @@ export const menu = function(){
 	this.context
 	this.data
 	this.node
+	this.li_nodes
 
 	return true
 }//end menu
@@ -48,11 +49,12 @@ menu.prototype.init = function(options) {
 
 	const self = this
 
-	self.datum = options.datum
-	self.node = []
-	self.mode = 'edit'
-	self.context = self.datum.context
-	self.data = self.datum.data[0]
+	self.datum 		= options.datum
+	self.node 		= []
+	self.li_nodes 	= []
+	self.mode 		= 'edit'
+	self.context 	= self.datum.context
+	self.data 		= self.datum.data[0]
 
 	// status update
 		self.status = 'initied'

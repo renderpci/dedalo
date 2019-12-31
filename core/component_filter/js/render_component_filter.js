@@ -125,7 +125,7 @@ const add_events = function(self, wrapper) {
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// update / remove
 				if (e.target.matches('input[type="checkbox"]')) {
@@ -158,7 +158,7 @@ const add_events = function(self, wrapper) {
 
 	// click event
 		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// remove all
 				if (e.target.matches('.button.reset')) {
@@ -216,7 +216,7 @@ const add_events = function(self, wrapper) {
 
 	// focus event
 		wrapper.addEventListener("focus", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// selected_node. fix selected node
 			self.selected_node = wrapper
