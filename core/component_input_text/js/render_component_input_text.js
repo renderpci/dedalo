@@ -163,9 +163,9 @@ const add_events = function(self, wrapper) {
 
 		}, false)
 
-	// click event [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+	// click event [click]
+		wrapper.addEventListener("click", e => {
+
 
 			// insert
 				if (e.target.matches('.button.add')) {

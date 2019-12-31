@@ -100,7 +100,7 @@ const add_events = function(self, wrapper) {
 
 	// focus
 		wrapper.addEventListener('focus', async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// store current inner html to compare when blur
 			if (e.target.matches('.input_tex_area')) {
@@ -120,7 +120,7 @@ const add_events = function(self, wrapper) {
 
 	// blur
 		wrapper.addEventListener('blur', async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// store current inner html to compare when blur
 			if (e.target.matches('.input_tex_area')) {
@@ -154,9 +154,9 @@ const add_events = function(self, wrapper) {
 
 		}, true)
 
-	// click [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+	// click [click]
+		wrapper.addEventListener("click", e => {
+			// e.stopPropagation()
 
 			// insert
 				if (e.target.matches('.button.add')) {
@@ -421,7 +421,7 @@ const get_contenteditable_buttons = () => {
 			element_type	: 'div',
 			class_name 		: 'contenteditable_buttons'
 		})
-		contenteditable_buttons.addEventListener("mousedown", (e)=>{
+		contenteditable_buttons.addEventListener("click", (e)=>{
 			e.preventDefault()
 		})
 		contenteditable_buttons.appendChild(fragment)

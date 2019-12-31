@@ -98,7 +98,7 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 
 	// change event, for every change the value in the inputs of the component
 		wrapper.addEventListener('change', (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// update
 				if (e.target.matches('select')) {
@@ -128,7 +128,7 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 
 	// click event
 		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// edit target section
 				if (e.target.matches('.button.edit')) {
@@ -151,7 +151,7 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 
 	// focus event
 		wrapper.addEventListener("focus", e => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// selected_node. fix selected node
 			self.selected_node = wrapper

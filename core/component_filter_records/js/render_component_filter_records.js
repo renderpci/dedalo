@@ -104,7 +104,7 @@ const add_events = function(self, wrapper) {
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			// update
 			if (e.target.matches('input[type="text"].input_value')) {
@@ -152,9 +152,9 @@ const add_events = function(self, wrapper) {
 
 		}, false)
 
-	// click event [mousedown]
-		wrapper.addEventListener("mousedown", e => {
-			e.stopPropagation()
+	// click event [click]
+		wrapper.addEventListener("click", e => {
+			// e.stopPropagation()
 
 			// change_mode
 				if (e.target.matches('.button.close')) {
@@ -168,7 +168,7 @@ const add_events = function(self, wrapper) {
 
 	// keyup event
 		wrapper.addEventListener("keyup", async (e) => {
-			e.stopPropagation()
+			// e.stopPropagation()
 
 			return true
 		})
