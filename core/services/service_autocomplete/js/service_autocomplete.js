@@ -105,7 +105,7 @@ export const service_autocomplete = function() {
 				parent 			: self.searh_container
 			})
 
-		// event change the input value fire the serarch
+		// event input. changes the input value fire the search
 			self.search_input.addEventListener('input', async function(e){
 				const api_response = await self.autocomplete_search(this.value)
 				const options = self.autocomplete_build_options(api_response)
