@@ -1023,9 +1023,10 @@ export const ui = {
 	build_select_lang : (options) => {
 
 		// options
-			const langs  	= options.langs
-			const selected 	= options.selected || page_globals.dedalo_application_lang
-			const action 	= options.action
+			const langs  		= options.langs
+			const selected 		= options.selected || page_globals.dedalo_application_lang
+			const action 		= options.action
+			const class_name	= options.class_name || 'select_lang'
 
 		const fragment = new DocumentFragment()
 
@@ -1077,7 +1078,7 @@ export const ui = {
 
 		const select_lang = ui.create_dom_element({
 			element_type	: 'select',
-			class_name 		: 'select_lang'
+			class_name 		: class_name
 		})
 		select_lang.addEventListener("change", action)
 		select_lang.appendChild(fragment)

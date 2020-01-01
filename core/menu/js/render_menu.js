@@ -100,32 +100,43 @@ render_menu.prototype.edit = async function() {
 			    }
 			});
 
-
-
-
 	// User name(go to list)
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			id 				: 'logged_user_name',
-			parent 			: fragment
+			parent 			: fragment,
+			text_content	: page_globals['username']
 		})
+
+			console.log("page_globals:",page_globals);
 
 
 	// Application_langs_selector
 		const lang_datalist = self.data.langs_datalist
-		const dedalo_aplication_langs_selector = ui.build_select_lang(
-			lang_datalist,
-			change_lang(),
-			page_globals['dedalo_application_lang']
-		)
+		const dedalo_aplication_langs_selector = ui.build_select_lang({
+			langs 		: lang_datalist,
+			action 		: change_lang(),
+			selected	: page_globals['dedalo_application_lang'],
+			class_name 	: 'dedalo_aplication_langs_selector'
+		})
+
+		fragment.appendChild(dedalo_aplication_langs_selector)
 
 
-	// menu dedalo_aplication_langs_selector(go to list)
-		const dedalo_data_langs_selector = ui.build_select_lang(
-			lang_datalist,
-			change_lang(),
-			page_globals['dedalo_data_lang']
-		)
+	// menu dedalo_data_langs_selector(go to list)
+		const lang_datalist_data = lang_datalist.map(item =>{
+			const label =  get_label['data'] || 'data'
+			return {label: label+': '+item.label,
+								value: item.value}
+		})
+		const dedalo_data_langs_selector = ui.build_select_lang({
+			langs 		: lang_datalist_data,
+			action 		: change_lang(),
+			selected	: page_globals['dedalo_data_lang'],
+			class_name	: 'dedalo_aplication_langs_selector'
+		})
+
+		fragment.appendChild(dedalo_data_langs_selector)
 
 
 	// menu button(go to list)
@@ -283,3 +294,12 @@ const close_all_drop_menu = async function(self) {
 
 	return true		
 }//end close_all_drop_menu
+
+
+/**
+* CHANGE_LANG
+*/
+const change_lang = async function(self) {
+
+		console.log("change_lang:");
+}
