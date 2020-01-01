@@ -10,6 +10,10 @@
 // page globals
 	$page_globals = (function($mode) {
 
+		$user_id 		= $_SESSION['dedalo4']['auth']['user_id'] ?? null;
+		$username 		= $_SESSION['dedalo4']['auth']['username'] ?? null;
+		$full_username 	= $_SESSION['dedalo4']['auth']['full_username'] ?? null;
+
 		$obj = new stdClass();
 			# version
 			$obj->dedalo_version = DEDALO_VERSION;
@@ -25,30 +29,30 @@
 			}, unserialize(DEDALO_PROJECTS_DEFAULT_LANGS));
 
 			# parent
-			#$obj->_parent 	= isset($parent) ? (int)$parent : '';
+			#$obj->_parent 						= isset($parent) ? (int)$parent : '';
 			# tipos
-			#$obj->tipo 			= $tipo;
-			#$obj->section_tipo 	= defined('SECTION_TIPO') ? SECTION_TIPO : null;
-			#$obj->section_name 	= defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
+			#$obj->tipo 						= $tipo;
+			#$obj->section_tipo 				= defined('SECTION_TIPO') ? SECTION_TIPO : null;
+			#$obj->section_name 				= defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
 			# top
-			#$obj->top_tipo 		= TOP_TIPO;
-			#$obj->top_id 			= TOP_ID;
+			#$obj->top_tipo 					= TOP_TIPO;
+			#$obj->top_id 						= TOP_ID;
 			# modo
-			$obj->mode 				= isset($mode) ? $mode : null;
+			$obj->mode 							= isset($mode) ? $mode : null;
 			# caller_tipo
-			#$obj->caller_tipo 	= $caller_tipo;
+			#$obj->caller_tipo 					= $caller_tipo;
 			# context_name
-			#$obj->context_name = $context_name;
+			#$obj->context_name 				= $context_name;
 			# tag_id
-			$obj->tag_id 			= isset($_REQUEST["tag_id"]) ? safe_xss($_REQUEST["tag_id"]) : "";
+			$obj->tag_id 						= isset($_REQUEST["tag_id"]) ? safe_xss($_REQUEST["tag_id"]) : "";
 			# user_id
-			$obj->user_id 			= isset($user_id) ? $user_id : null;
+			$obj->user_id 						= $user_id;
 			# username
-			$obj->username 			= isset($username) ? $username : null;
+			$obj->username 						= $username;
 			# full_username
-			$obj->full_username 	= isset($full_username) ? $full_username : null;
+			$obj->full_username 				= $full_username;
 			# is_global_admin
-			#$obj->is_global_admin 	= (bool)$is_global_admin;
+			#$obj->is_global_admin 				= (bool)$is_global_admin;
 			# components_to_refresh
 			$obj->components_to_refresh 		= [];
 			# portal
