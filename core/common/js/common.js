@@ -159,6 +159,8 @@ common.prototype.render = async function(options={render_level:'full'}) {
 
 	// event publish
 		event_manager.publish('render_'+self.id, node)
+			//event_manager
+		event_manager.publish('render_instance', self)
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -219,7 +221,7 @@ common.prototype.refresh = async function() {
 
 	// render
 		if (self.status==='builded') {
-			const node = await self.render({render_level : 'content'})
+			await self.render({render_level : 'content'})
 		}else{
 			console.warn("/// render fail with status:", self.model, self.status);
 			return false
@@ -269,11 +271,16 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 				// remove instances from self ar_instances
 					//const ar_to_destroy = []
 					for (let i = ar_instances_length - 1; i >= 0; i--) {
+						if(self.ar_instances[i].destroyable===false){
+							const destroyed_elements = self.ar_instances.splice(i, 1);
+							continue;
+						} 
 						//console.log("self.ar_instances:",JSON.parse(JSON.stringify(self.ar_instances[i])));
 						// self.ar_instances[i].destroy(true, true, false)
 						const destroyed_elements = self.ar_instances.splice(i, 1)
+
 						//ar_to_destroy.push(destroyed_elements[0])
-						destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+						destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order						
 					}
 
 				// destroy all removed instances
