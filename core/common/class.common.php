@@ -42,16 +42,16 @@ abstract class common {
 	// temporal excluded/mapped models
 		public static $ar_temp_map_models = [
 			// map to => old model
-			'component_autocomplete' =>'component_autocomplete_hi',
-			'section_group' 		 =>'section_group_div'
+			'component_autocomplete' => 'component_autocomplete_hi',
+			'section_group' 		 => 'section_group_div'
 		];
 		public static $ar_temp_exclude_models = [
 			'component_state',
 			'component_info',
 			'component_pdf',
 			'component_password',
-			'component_security_areas'
-			//'component_filter_records'
+			'component_ip',
+			'component_autocomplete_ts' // ?
 		];
 
 
