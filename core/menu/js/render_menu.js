@@ -2,6 +2,7 @@
 
 
 // import
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -58,6 +59,7 @@ render_menu.prototype.edit = async function() {
 						}
 					})
 
+
 	// Quit
 		const quit = ui.create_dom_element({
 			element_type	: 'div',
@@ -65,12 +67,14 @@ render_menu.prototype.edit = async function() {
 			parent 			: fragment
 		})
 	
+
 	// Logo
 		const dedalo_icon = ui.create_dom_element({
 			element_type	: 'div',
 			id 				: 'dedalo_icon_top',
 			parent 			: fragment
 		})
+
 
 	// Hierarchy
 		level_hierarchy({	self			: self,
@@ -100,10 +104,11 @@ render_menu.prototype.edit = async function() {
 			    }
 			});
 
+
 	// User name(go to list)
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'logged_user_name',
+			class_name		: 'logged_user_name',
 			parent 			: fragment,
 			text_content	: page_globals['username']
 		})
@@ -142,14 +147,26 @@ render_menu.prototype.edit = async function() {
 	// menu button(go to list)
 		const section_label = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'section_label',
-			parent 			: fragment
+			class_name		: 'section_label',
+			parent 			: fragment,
 		})
 
-	// menu button(go to list)
+		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
+			self.events_tokens.push(
+				event_manager.subscribe('render_instance', update_section_label)
+			)
+			function update_section_label (instance) {
+				if(instance.model === 'section'|| instance.model === 'area'){
+					// change the value of the current dom element
+					section_label.innerHTML = instance.label
+				}	
+			}
+
+
+	// menu button_toggle_inspector
 		const toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'toggle_inspector',
+			class_name		: 'button_toggle_inspector',
 			parent 			: fragment
 		})
 
@@ -250,12 +267,22 @@ const item_hierarchy = async (options) => {
 		})
 
 
-	// label
-		const label = ui.create_dom_element({
+	// link
+		const link = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'area_label',
 			inner_html 		: item.label,
 			parent 			: li
+		})
+
+		link.addEventListener("click", e => {
+
+			if(self.menu_active===false) {
+				return false
+			}//end if self.menu_active
+			//event_manager
+			event_manager.publish('user_action', {tipo : item.tipo, mode : 'list'})
+
 		})
 
 

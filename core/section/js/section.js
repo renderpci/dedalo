@@ -115,14 +115,6 @@ section.prototype.init = async function(options) {
 		//console.log("[section.init] modified self.sqo_context:", self.sqo_context);
 
 	// events subscription
-		// section_rendered
-			self.events_tokens.push(
-				event_manager.subscribe('section_rendered', (active_section) => {
-					const debug = document.getElementById("debug")
-						  debug.classList.remove("hide")
-				})
-			)
-
 	// status update
 		self.status = 'inited'
 

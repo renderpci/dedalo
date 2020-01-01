@@ -127,113 +127,30 @@
 	}//end if (login::is_logged()!==true)
 
 
-
 // logged
-	if (login::is_logged()===true) {
+	if (login::is_logged()!==true) return null;
 
-		$page_elements = [];
+	$page_elements = [];
 
-		//menu_element
-			$page_elements[] = (function(){
+	// menu get the menu element		
+		$menu_element_required = new stdClass();
+			$menu_element_required->options = (object)[
+				'model' => 'menu'
+			];
+		$page_elements[] = dd_core_api::get_element($menu_element_required)->result;
 
-				$menu = new menu();
+	// section/area . get the section/area/tool element
+		$element_required = new stdClass();
+			$element_required->options = (object)[
+				'model' 	 => null,
+				'tipo' 		 => $tipo,
+				'lang' 		 => DEDALO_DATA_LANG,
+				'mode' 		 => MODE,
+				'section_id' => $section_id
+			];
+		$page_elements[] = dd_core_api::get_element($element_required)->result;
 
-				// login json
-					$get_json_options = new stdClass();
-						$get_json_options->get_context 	= true;
-						$get_json_options->get_data 	= true;
-					$menu_json = $menu->get_json($get_json_options);
-
-				// element
-					$page_element = new StdClass();
-						$page_element->model 		= 'menu';
-						$page_element->tipo 		= 'dd85';
-						$page_element->mode 		= 'edit';
-						$page_element->lang 		= DEDALO_APPLICATION_LANG;
-						$page_element->sqo_context  = null;
-						$page_element->datum 		= $menu_json;
-
-				return $page_element;
-			})();
-
-
-		// page elements
-			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			switch ($model) {
-				case 'area':
-				case 'area_development':
-					$page_elements[] = (function() use ($model, $tipo){
-
-						$page_element = new StdClass();
-							$page_element->model 		= $model;
-							$page_element->tipo  		= $tipo;
-							$page_element->mode 	 	= MODE;
-							$page_element->lang 	 	= DEDALO_DATA_LANG;
-							#$page_element->sqo_context  = $sqo_context;
-
-						return $page_element;
-					})();
-					break;
-
-				case 'section_tool':
-					$page_elements[] = (function() use ($model, $tipo){
-
-						# Configure section from section_tool data
-						$RecordObj_dd = new RecordObj_dd($tipo);
-						$propiedades  = json_decode($RecordObj_dd->get_propiedades());
-
-						#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
-						#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
-
-						$section_tipo 	= $tipo;
-						$section_id		= null;
-						$lang 	 	 	= DEDALO_DATA_LANG;
-
-						// sqo_context
-							$section = section::get_instance($section_id, $section_tipo, MODE);
-							$section->set_lang($lang);
-							$section->config = $propiedades->config;
-							$sqo_context = $section->get_sqo_context();
-
-						$page_element = new StdClass();
-							$page_element->model 		 = 'section';
-							$page_element->section_tipo  = $section_tipo;
-							$page_element->section_id 	 = $section_id;
-							$page_element->mode 	 	 = MODE;
-							$page_element->lang 	 	 = $lang;
-							$page_element->sqo_context   = $sqo_context;
-
-						return $page_element;
-					})();
-					break;
-
-				case 'section':
-				default:
-					$page_elements[] = (function() use ($model, $tipo, $section_id){
-
-						$section_tipo 	= $tipo ?? 'test65';
-						$section_id		= $section_id ?? null;
-						$lang 	 	 	= DEDALO_DATA_LANG;
-
-						// sqo_context
-							$section = section::get_instance($section_id, $section_tipo, MODE);
-							$section->set_lang($lang);
-							$sqo_context = $section->get_sqo_context();
-
-						$page_element = new StdClass();
-							$page_element->model 		 = $model;
-							$page_element->section_tipo  = $section_tipo;
-							$page_element->section_id 	 = $section_id;
-							$page_element->mode 	 	 = MODE;
-							$page_element->lang 	 	 = $lang;
-							$page_element->sqo_context   = $sqo_context;
-
-						return $page_element;
-					})();
-					break;
-			}//end switch ($model)
-
+	// page load all elements
 		$load_page($page_elements);
-	}//end if (login::is_logged()===true)
 
 
