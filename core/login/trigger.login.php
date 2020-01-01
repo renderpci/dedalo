@@ -24,7 +24,7 @@ function Login($json_data) {
 	$response = (object)login::Login( $trigger_post_vars );
 
 	# Close script session
-	#session_write_close();
+	session_write_close();
 
 	# Exit printing result
 	# exit($result);
