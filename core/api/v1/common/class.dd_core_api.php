@@ -308,6 +308,40 @@ class dd_core_api {
 	}//end get_element_context
 
 
+	/**
+	* GET_ELEMENT
+	*
+	* @param object $json_data
+	*
+	* @return object $response
+	*/
+	static function get_element($json_data){
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$options = $json_data->options;
+
+		// vars from json_data
+			$element_required = new stdClass();
+				$element_required->tipo 		= $options->tipo ?? null;
+				$element_required->model 		= $options->model ?? (isset($options->tipo) ? RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true) : null);
+				$element_required->lang 		= $options->lang ?? DEDALO_DATA_LANG;
+				$element_required->mode 		= $options->mode ?? 'list';
+				$element_required->section_id	= $options->section_id ?? null;
+		
+		// element json
+			$element = self::get_page_element( $element_required );
+
+		$response->result 		= $element;
+		$response->msg 	  		= 'Ok. Request done';
+
+		return (object)$response;
+	}//end get_element
+
+
+
 
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
@@ -820,6 +854,130 @@ class dd_core_api {
 		return $clean_context;
 	}//end smart_remove_context_duplicates
 
+
+
+	/**
+	* GET_PAGE_ELEMENT
+	* @return 
+	*/
+	public static function get_page_element($element_required) {
+
+		// logged
+			if (login::is_logged()!==true) return null;
+
+			$tipo 		= $element_required->tipo;
+			$model 		= $element_required->model;
+			$lang 		= $element_required->lang;
+			$mode 		= $element_required->mode;
+			$section_id = $element_required->section_id;
+
+		// page elements
+			switch ($model) {
+
+				case 'menu' :
+					//menu_element
+					$page_element = (function(){
+
+						$menu = new menu();
+
+						// login json
+							$get_json_options = new stdClass();
+								$get_json_options->get_context 	= true;
+								$get_json_options->get_data 	= true;
+							$menu_json = $menu->get_json($get_json_options);
+
+						// element
+							$page_element = new StdClass();
+								$page_element->model 		= 'menu';
+								$page_element->tipo 		= 'dd85';
+								$page_element->mode 		= 'edit';
+								$page_element->lang 		= DEDALO_APPLICATION_LANG;
+								$page_element->sqo_context  = null;
+								$page_element->datum 		= $menu_json;
+
+						return $page_element;
+					})();
+					break;
+
+				case 'area':
+				case 'area_development':
+					$page_element = (function() use ($model, $tipo, $mode){
+
+						$page_element = new StdClass();
+							$page_element->model 		= $model;
+							$page_element->tipo  		= $tipo;
+							$page_element->mode 	 	= $mode;
+							$page_element->lang 	 	= DEDALO_DATA_LANG;
+							#$page_element->sqo_context  = $sqo_context;
+
+						return $page_element;
+					})();
+					break;
+
+				case 'section_tool':
+					$page_element = (function() use ($model, $tipo, $mode){
+
+						# Configure section from section_tool data
+						$RecordObj_dd = new RecordObj_dd($tipo);
+						$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+
+						#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
+						#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
+
+						$section_tipo 	= $tipo;
+						$section_id		= null;
+						$lang 	 	 	= DEDALO_DATA_LANG;
+
+						// sqo_context
+							$section = section::get_instance($section_id, $section_tipo, $mode);
+							$section->set_lang($lang);
+							$section->config = $propiedades->config;
+							$sqo_context = $section->get_sqo_context();
+
+						$page_element = new StdClass();
+							$page_element->model 		 = 'section';
+							$page_element->section_tipo  = $section_tipo;
+							$page_element->section_id 	 = $section_id;
+							$page_element->mode 	 	 = $mode;
+							$page_element->lang 	 	 = $lang;
+							$page_element->sqo_context   = $sqo_context;
+
+						return $page_element;
+					})();
+					break;
+
+				case 'section':
+					$page_element = (function() use ($model, $tipo, $section_id, $mode){
+
+						$section_tipo 	= $tipo ?? 'test65';
+						$section_id		= $section_id ?? null;
+						$lang 	 	 	= DEDALO_DATA_LANG;
+
+						// sqo_context
+							$section = section::get_instance($section_id, $section_tipo, $mode);
+							$section->set_lang($lang);
+							$sqo_context = $section->get_sqo_context();
+
+						$page_element = new StdClass();
+							$page_element->model 		 = $model;
+							$page_element->section_tipo  = $section_tipo;
+							$page_element->section_id 	 = $section_id;
+							$page_element->mode 	 	 = $mode;
+							$page_element->lang 	 	 = $lang;
+							$page_element->sqo_context   = $sqo_context;
+
+						return $page_element;
+					})();
+					break;
+					default:
+						throw new Exception("Error Processing Request", 1);
+						
+			}//end switch ($model)
+
+		
+
+		return $page_element;		
+	}//end get_page_element
 
 
 }//end dd_core_api

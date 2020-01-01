@@ -186,7 +186,12 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 					parent 			: edit_line
 				})
 				.addEventListener("click", function(e){
-					edit_record(this, self)
+					// edit_record(this, self)					
+					event_manager.publish('user_action', {
+						tipo 		: self.section_tipo,
+						section_id 	: self.section_id,
+						mode 		: 'edit'
+					})
 				})
 			}
 		// delete_line
@@ -342,97 +347,97 @@ const get_components_with_subcolumns = () => {
 
 
 
-/**
-* EDIT_RECORD
-* Navigate to selected record in edit mode
-*/
-const edit_record = (button, self) => {
+// /**
+// * EDIT_RECORD
+// * Navigate to selected record in edit mode
+// */
+// const edit_record = (button, self) => {
 
-	// old mode (new url)
-		const url = `?t=${self.section_tipo}&id=${self.section_id}`
-		return window.location.href = url;
+// 	// old mode (new url)
+// 		const url = `?t=${self.section_tipo}&id=${self.section_id}`
+// 		return window.location.href = url;
 
-	// section element
-		const element = {
-			model 		 	: self.caller.model,
-			section_tipo 	: self.section_tipo,
-			section_id 		: self.section_id,
-			mode 			: "edit",
-			lang 			: self.lang,
-			sqo_context 	: {
-				show : [
-					{
-						typo : "sqo",
-						section_tipo : [self.section_tipo],
-						filter : false,
-						filter_by_locators : [
-							{
-								section_tipo : self.section_tipo,
-								section_id : self.section_id
-							}
-	                	],
-						select : [],
-						limit : 1,
-						offset : 0,
-						full_count : false
-					},
-					{
-						typo : "ddo",
-						type : "section",
-						model : "section",
-						tipo : self.section_tipo,
-						section_tipo : self.section_tipo,
-						mode : "edit"
-					}
-				]
-			}
-		}
-		console.log("element:",element);
+// 	// section element
+// 		const element = {
+// 			model 		 	: self.caller.model,
+// 			section_tipo 	: self.section_tipo,
+// 			section_id 		: self.section_id,
+// 			mode 			: "edit",
+// 			lang 			: self.lang,
+// 			sqo_context 	: {
+// 				show : [
+// 					{
+// 						typo : "sqo",
+// 						section_tipo : [self.section_tipo],
+// 						filter : false,
+// 						filter_by_locators : [
+// 							{
+// 								section_tipo : self.section_tipo,
+// 								section_id : self.section_id
+// 							}
+// 	                	],
+// 						select : [],
+// 						limit : 1,
+// 						offset : 0,
+// 						full_count : false
+// 					},
+// 					{
+// 						typo : "ddo",
+// 						type : "section",
+// 						model : "section",
+// 						tipo : self.section_tipo,
+// 						section_tipo : self.section_tipo,
+// 						mode : "edit"
+// 					}
+// 				]
+// 			}
+// 		}
+// 		console.log("element:",element);
 
-	// update page node
-		const update_page = async () => {
+// 	// update page node
+// 		const update_page = async () => {
 
-			// const main = document.getElementById("main")
-			// 	  main.classList.add("loading")
+// 			// const main = document.getElementById("main")
+// 			// 	  main.classList.add("loading")
 
-			// page instance (recycle actual)
-				const page = await get_instance({
-					model : 'page'
-				})
+// 			// page instance (recycle actual)
+// 				const page = await get_instance({
+// 					model : 'page'
+// 				})
 
-				page.elements = [element]
-					console.log("page:",page);
+// 				page.elements = [element]
+// 					console.log("page:",page);
 
-			// page instance build and render
-				//const build 	= await page.build()
-				//const wrapper_page 	= await page.render()
-				const refresh = await page.refresh()
-					console.log("refresh:",refresh);
+// 			// page instance build and render
+// 				//const build 	= await page.build()
+// 				//const wrapper_page 	= await page.render()
+// 				const refresh = await page.refresh()
+// 					console.log("refresh:",refresh);
 
-				if (refresh===true) {
-					const state = {'page_id': page.id}
-					const title = ''
-					const url 	= "?t=test65"//window.location.href
+// 				if (refresh===true) {
+// 					const state = {'page_id': page.id}
+// 					const title = ''
+// 					const url 	= "?t=test65"//window.location.href
 
-					history.pushState(state, title, url)
-				}
+// 					history.pushState(state, title, url)
+// 				}
 
-			// main add and restore class
-				// while (main.firstChild) {
-				// 	main.removeChild(main.firstChild);
-				// }
-				// main.appendChild(wrapper_page)
-		 	// 	main.classList.remove("loading","hide")
+// 			// main add and restore class
+// 				// while (main.firstChild) {
+// 				// 	main.removeChild(main.firstChild);
+// 				// }
+// 				// main.appendChild(wrapper_page)
+// 		 	// 	main.classList.remove("loading","hide")
 
-		}
-		update_page()
-
-
-	return
+// 		}
+// 		update_page()
 
 
-	return false
-}//end edit_record
+// 	return
+
+
+// 	return false
+// }//end edit_record
 
 
 

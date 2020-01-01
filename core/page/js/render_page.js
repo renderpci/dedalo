@@ -29,21 +29,27 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
-
 	const render_level = options.render_level
 
 	// content data
-		const current_content_data = await content_data(self)
+		const current_content_data = content_data(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
+
+	// get menu
+		const menu_node = get_menu(self)
 
 	// wrapper
 		const wrapper_page = document.createElement('div')
 		wrapper_page.classList.add('wrapper_page', self.type)
 
+	
+	// body menu
+		wrapper_page.appendChild(await menu_node)	
+
 	// body content_data
-		wrapper_page.appendChild(current_content_data)
+		wrapper_page.appendChild(await current_content_data)
 
 	// modal box hidden
 		const dd_modal = document.createElement('dd-modal')
@@ -68,17 +74,14 @@ const content_data = async function(self) {
 			  content_data.classList.add("content_data", self.type)
 
 
-	// instances (like section). Instances are returned init and builded
-	const ar_instances = await self.get_ar_instances()
-
 	// add all instance rendered nodes
-		const length = ar_instances.length;
+		const length = self.ar_instances.length;
 		for (let i = 0; i < length; i++) {
 
-			const current_instance = ar_instances[i]
+			const current_instance = self.ar_instances[i]
 
 			//await current_instance.build() (?)
-
+			if(current_instance.model === 'menu') continue;
 			const child_item = await current_instance.render({
 				render_level : 'full'
 			})
@@ -94,5 +97,25 @@ const content_data = async function(self) {
 
 	return content_data
 }//end content_data
+
+
+
+/**
+* GET_MENU
+* @return DOM node get_menu
+*/
+const get_menu = async function(self) {
+
+	const menu_instance = self.ar_instances.find( instance => instance.model === 'menu')
+	if(menu_instance){
+
+		const menu_item = menu_instance.render({
+				render_level : 'full'
+			})
+		return menu_item
+	}
+
+	return null
+}
 
 
