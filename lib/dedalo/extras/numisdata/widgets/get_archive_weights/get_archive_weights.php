@@ -114,7 +114,7 @@
 					
 					}
 
-					$media_weight 	= round((array_sum($weights) / count($weights)),4);
+					$media_weight 	= round((array_sum($weights) / count($weights)),2);
 					$total_elements = count($weights);
 					$max_weight 	= max($weights);
 					$min_weight 	= min($weights);
