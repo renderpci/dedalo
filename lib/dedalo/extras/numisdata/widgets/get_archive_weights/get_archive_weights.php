@@ -108,10 +108,13 @@
 
 						$data_dato = $data->get_dato();
 
-						$weights[] = $data_dato;
+						if(!empty($data_dato)){
+							$weights[] = $data_dato;
+						}
+					
 					}
 
-					$media_weight 	= array_sum($weights) / count($weights);
+					$media_weight 	= round((array_sum($weights) / count($weights)),4);
 					$total_elements = count($weights);
 					$max_weight 	= max($weights);
 					$min_weight 	= min($weights);
