@@ -39,7 +39,7 @@ render_menu.prototype.edit = async function() {
 						if (self.menu_active===true) {
 							close_all_drop_menu(self);
 							self.menu_active = false
-						
+
 						}else{
 							const main_li 	= e.target.parentNode
 							const nodes_li 	= self.li_nodes
@@ -66,7 +66,10 @@ render_menu.prototype.edit = async function() {
 			id 				: 'quit',
 			parent 			: fragment
 		})
-	
+		quit.addEventListener("click", () =>{
+			login.quit()
+		})
+
 
 	// Logo
 		const dedalo_icon = ui.create_dom_element({
@@ -159,7 +162,7 @@ render_menu.prototype.edit = async function() {
 				if(instance.model === 'section'|| instance.model === 'area'){
 					// change the value of the current dom element
 					section_label.innerHTML = instance.label
-				}	
+				}
 			}
 
 
@@ -204,10 +207,10 @@ const level_hierarchy = async (options) => {
 			item_hierarchy({
 							self			: self,
 							datalist 		: datalist,
-							ul_container 	: ul, 
+							ul_container 	: ul,
 							item 			: root_areas[i],
 							})
-		}	
+		}
 }
 
 
@@ -310,7 +313,7 @@ const close_all_drop_menu = async function(self) {
 		console.log("close menu:");
 
 	if (typeof self.li_nodes!=="undefined") {
-		
+
 		const len = self.li_nodes.length
 		for (let i = len - 1; i >= 0; i--) {
 			const li = self.li_nodes[i]
@@ -319,7 +322,7 @@ const close_all_drop_menu = async function(self) {
 		}
 	}
 
-	return true		
+	return true
 }//end close_all_drop_menu
 
 

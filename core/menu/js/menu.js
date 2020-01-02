@@ -69,8 +69,7 @@ menu.prototype.init = function(options) {
 		self.status = 'initied'
 
 	return true
-}
-
+}//end init
 
 
 
@@ -92,3 +91,5 @@ menu.prototype.build = async function(){
 
 	return true
 }//end build
+
+

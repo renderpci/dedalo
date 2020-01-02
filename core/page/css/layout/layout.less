@@ -40,41 +40,7 @@
 
 
 // html inputs
-	input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, .contenteditable {
 
-		li & {
-			width: 100%;
-			outline: 1px solid #E0E0E0;
-			outline-offset: 0;
-		}
-
-		height: 2.5em;
-		font-size: 1em;
-		//margin-bottom: 0.1em;
-		padding: 0.5em;
-		//border: 1px solid #E0E0E0;
-
-		border: none;
-		border-radius: 3px;
-		transition: all .5s ease, padding 0s;
-		//transition: padding 0s;
-		opacity: 0.75;
-
-		// on focus inputs, adds a soft shadow and outline
-		&:focus {
-			.hilite;
-		}
-	}
-
-	select  {
-		li & {
-			margin-right: 0.5em;
-		}
-	}
-	input[type="radio"] {
-		//height: 1.2em;
-		font-size: 1em;
-	}
 
 
 
@@ -110,16 +76,54 @@
 		flex: 0 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'>
 		align-content: flex-start; // maintain items flow from top to bottom
 		//flex: 0 1 auto;
-	}
+
+		input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
+
+			li & {
+				width: 100%;
+				outline: 1px solid #E0E0E0;
+				outline-offset: 0;
+			}
+			font-size: 1em;
+			height: 2.5em;
+			width: 100%;
+			margin-right: 0.5em;
+
+			padding: 0.5em;
+			//border-radius: 3px;
+			border: none;
+			outline: 1px solid #E0E0E0;
+
+			transition: all .5s ease, padding 0s;
+			//transition: padding 0s;
+			opacity: 0.75;
+
+			// on focus inputs, adds a soft shadow and outline
+			&:focus {
+				.hilite;
+			}
+		}
+
+		select  {
+			li & {
+				margin-right: 0.5em;
+			}
+		}
+		input[type="radio"] {
+			//height: 1.2em;
+			font-size: 1em;
+		}
+	}//end .component_base
 
 
 
 // page
 	.wrapper_page {
-		display: grid;
+		//display: grid;
 		padding: 1em;
 		padding-top: 2.1em;
 		width: calc(100vw - 1em);
+		min-height: 100vh;
 	}
 
 
@@ -851,12 +855,12 @@
 
 // header_wrapper_list
 	.header_wrapper_list {
+		position: sticky;
+		top: 2em;
 		background-color: #2c2c2e;
 		color: #efefef;
 		//display: flex;
 		width: 100%;
-		position: sticky;
-		top: 55px;
 		z-index: 1;
 		display: grid;
 		line-height: 1.1em;
@@ -1380,6 +1384,8 @@
 			left: 50%;
 			top: 32%;
 			transform: translate(-50%);
+
+			.component_base;
 
 
 			background-color: rgba(243, 243, 243, 0.76);
