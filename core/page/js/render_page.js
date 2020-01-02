@@ -37,16 +37,16 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 			return current_content_data
 		}
 
-	// get menu
-		const menu_node = get_menu(self)
-
 	// wrapper
 		const wrapper_page = document.createElement('div')
 		wrapper_page.classList.add('wrapper_page', self.type)
 
-	
-	// body menu
-		wrapper_page.appendChild(await menu_node)	
+	// menu
+		const element_menu 	= self.elements.find(item => item.model==='menu')
+		if (typeof element_menu!=='undefined') {
+			const menu_node = get_menu(self)
+			wrapper_page.appendChild(await menu_node)
+		}
 
 	// body content_data
 		wrapper_page.appendChild(await current_content_data)

@@ -44,14 +44,31 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 		})
 		wrapper.appendChild(current_content_data)
 
-
 	// validate browser version
 		validate_browser()
 
 	// events delegated
-		// click event
+		add_events(self, wrapper, current_content_data)
+
+	// autofocus username
+	setTimeout(()=>{
+		const username = wrapper.querySelector("#username")
+		username.focus()
+	},600)
+
+	return wrapper
+}//end edit
+
+
+
+/**
+* ADD_EVENTS
+*/
+const add_events = function(self, wrapper, current_content_data) {
+
+	// click event
 		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
+			//e.stopPropagation()
 
 			// submit form
 				if (e.target.matches('#auth_submit')) {
@@ -113,15 +130,9 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 				}
 		})
 
+	return true
+}//end add_events
 
-
-	setTimeout(()=>{
-		const username = wrapper.querySelector("#username")
-		username.focus()
-	},600)
-
-	return wrapper
-}//end edit
 
 
 
