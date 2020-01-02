@@ -23,12 +23,12 @@
 		}
 		if($min_weight>0) {
 			//$add_label = label::get_label('min', $lang).'min: ';
-			$add_label = 'min: ';
+			$add_label = ' | min: ';
 			$html .= ' <span class="css_date label_range">'.$add_label.'</span> ';
 			$html .= $min_weight;
 		}
 		if($total_elements>0) {
-			$add_label = '  n: ';
+			$add_label = ' | n: ';
 			$html .= ' <span class="css_date label_range">'.$add_label.'</span> ';
 			$html .= $total_elements;
 		}
