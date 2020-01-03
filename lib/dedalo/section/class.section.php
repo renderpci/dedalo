@@ -2621,6 +2621,17 @@ class section extends common {
 	*/
 	public function diffusion_info_propagate_changes() {
 
+		$ar_generic_sections = [
+			DEDALO_SECTION_USERS_TIPO,
+			DEDALO_SECTION_PROJECTS_TIPO,
+			DEDALO_SECTION_PROFILES_TIPO
+		];
+
+		if (in_array($this->tipo, $ar_generic_sections)) {
+			debug_log(__METHOD__." - Ignored diffusion propagate in current generic section: ".to_string($this->tipo), logger::DEBUG);
+			return true;
+		}
+
 		$inverse_locators = $this->get_inverse_locators();
 
 		foreach((array)$inverse_locators as $locator) {
