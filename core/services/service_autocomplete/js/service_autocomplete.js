@@ -135,11 +135,11 @@ export const service_autocomplete = function() {
 		// get the result from the api response
 		const result = api_response.result
 		const data = result.data
-		// get the sections that was serarched
+		// get the sections that was searched
 		const ar_search_sections = self.ar_search_section_tipo
 
-		// get the ar_locator founded
-		const ar_locator = data.find((item)=> item.typo === 'section').value;
+		// get the ar_locator founded in section
+		const ar_locator = data.find((item)=> item.tipo === item.section_tipo).value;
 		const current_section_length = ar_locator.length
 
 		// itterate the sections

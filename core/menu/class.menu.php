@@ -54,7 +54,7 @@ class menu extends common {
 		}
 
 		$tree_datalist = $ar_areas;
-
+		
 		return $tree_datalist;	
 	}//end get_tree_datalist
 
