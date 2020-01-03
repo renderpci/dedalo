@@ -316,6 +316,10 @@
 					}//end switch ($context->name) {
 
 
+					// print only
+						$html_content .= '<div class="print_only">'.$section_id.'</div>';
+
+
 					# DEBUG INFO
 					if(SHOW_DEBUG===true) {
 						#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";

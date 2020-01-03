@@ -2,7 +2,7 @@
 @common_css: "../../common/css";
 
 // Usage
-@import "@{common_css}/library.less"; 
+@import "@{common_css}/library.less";
 
 
 // Buttons
@@ -15,7 +15,7 @@ hr {
 	border: 0;
 }
 /* LINK GLOBAL */
-.link {	
+.link {
 	/*-webkit-transition: all 0.25s ease-in-out;
 	-moz-transition: all 0.25s ease-in-out;*/
 	transition:  background-color 0.25s ease-in-out;
@@ -94,7 +94,7 @@ hr {
 	-moz-user-select: none;
 	-ms-user-select: none;
 	-o-user-select: none;
-	user-select: none;	
+	user-select: none;
 	cursor: not-allowed !important;
 }
 
@@ -116,7 +116,7 @@ hr {
 	  }
 	}
 
-	
+
 /* GRADIENT
 ----------------------------------------- */
 .gradiend_button_1 {
@@ -138,7 +138,7 @@ hr {
 	/*IE6-9*/
 }
 /*-- BG GRADIENT1 (Used for wrap login) --*/
-.bg_gradient1 {		
+.bg_gradient1 {
 	background: rgb(224,224,224); /* Old browsers */
 	background: -moz-linear-gradient(top,  rgba(224,224,224,1) 0%, rgba(247,247,247,1) 32%); /* FF3.6+ */
 	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(224,224,224,1)), color-stop(32%,rgba(247,247,247,1))); /* Chrome,Safari4+ */
@@ -146,7 +146,7 @@ hr {
 	background: -o-linear-gradient(top,  rgba(224,224,224,1) 0%,rgba(247,247,247,1) 32%); /* Opera 11.10+ */
 	background: -ms-linear-gradient(top,  rgba(224,224,224,1) 0%,rgba(247,247,247,1) 32%); /* IE10+ */
 	background: linear-gradient(to bottom,  rgba(224,224,224,1) 0%,rgba(247,247,247,1) 32%); /* W3C */
-	/*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e0e0e0', endColorstr='#f7f7f7',GradientType=0 );  IE6-9 */	 
+	/*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e0e0e0', endColorstr='#f7f7f7',GradientType=0 );  IE6-9 */
 }
 
 
@@ -155,7 +155,7 @@ hr {
 .inspector_div_content,
 .css_section_group_wrap,
 .css_section_list_table td {
-	background-color: #F9F9F9; 
+	background-color: #F9F9F9;
 	background-color: rgba(249, 249, 249, 0.65);
 }
 
@@ -196,7 +196,7 @@ hr {
 	/*
 	background-color:#999999;
 	color: #535353;
-	text-shadow: 0 1px 0px #ccc;	
+	text-shadow: 0 1px 0px #ccc;
 	box-shadow            : 0 1px 1px #444 ;
 	border-radius: 2px;
 	padding-top:0px !important;
@@ -246,10 +246,10 @@ hr {
 	margin: 5px;
 	margin-left: 5px;
 	margin-right: 5px;
-	border-radius: 3px;	
+	border-radius: 3px;
 	word-wrap: break-word;
 	/*-webkit-font-smoothing:none;*/
-	/*	
+	/*
 	box-shadow: inset 0 1px 10px #bfbfbf;
 	*/
 	//text-shadow: 0 -1px 1px #a5a5a5;
@@ -289,15 +289,15 @@ hr {
 	padding: 10px;
 	font-size: 0.9em !important;
 	text-align: left;
-	font-weight: inherit;	
+	font-weight: inherit;
 	width: 95%;
 	text-shadow:none;
 }
 .icon_warning {
 	//background-image: url("../../themes/default/glyphicons-halflings.png");
-	background-image: url("../../themes/default/svg_icons.svg");	
+	background-image: url("../../themes/default/svg_icons.svg");
 	background-position: -144px -120px;
-	background-repeat: no-repeat;	
+	background-repeat: no-repeat;
 	display: inline-block;
 	float: right;
 	width: 14px;
@@ -335,14 +335,14 @@ hr {
 .debug_info {
 	display: none;
 	font-size: 0.8em;
-	font-style: italic;	
+	font-style: italic;
 }
 .debug_sql_time {
 	display:table;
 	margin:15px;
 	margin-bottom:20px;
 	padding:3px;
-	clear: both; 
+	clear: both;
 }
 
 /*-- sin acceso --*/
@@ -363,12 +363,12 @@ hr {
 	word-wrap: break-word;
 }
 
-/* UNTRANSLATED 
+/* UNTRANSLATED
 ----------------------------------------- */
 mark {
 	background-color: transparent;
 	//font-style: italic;
-	//opacity: 0.6;	
+	//opacity: 0.6;
 	//color: #7B99C1 !important;
 	//color: #c4753c !important;
 	color: inherit;
@@ -402,6 +402,9 @@ mark {
 		background-position: center;
 		//background-color: white;
 
+		object-fit: contain;
+    	object-position: center;
+
 		&:hover {
 			cursor: -webkit-zoom-in;
 			cursor: -moz-zoom-in;
@@ -411,7 +414,7 @@ mark {
 
 /* TABLE . General table style for section list and portals
 ----------------------------------------- */
-	.table_portal_rows_list {		
+	.table_portal_rows_list {
 		table-layout: fixed;
 	}
 	table.table_rows_list {
@@ -424,7 +427,7 @@ mark {
 
 		tr {
 			background-color: #F9F9F9;
-			background-color: rgba(249, 249, 249, 0.85);			
+			background-color: rgba(249, 249, 249, 0.85);
 		}
 
 		th {
@@ -441,7 +444,7 @@ mark {
 			//background-color: rgba(238,238,238,0.7);
 			//background-image: url('../../themes/default/tab_header2.jpg');
 			//background-repeat: repeat-x;
-			background-color: #e4e4e4;		
+			background-color: #e4e4e4;
 			//border-bottom: .5px solid #d5d5d5;
 			height: 19px;
 
@@ -488,12 +491,12 @@ mark {
 			}
 		}
 	}//end table_rows_list
-	
-	
-	
+
+
+
 
 	/* ACTIVITY LIST TABLE
-	----------------------------------------- */			
+	----------------------------------------- */
 	.table_rows_list_activity {
 		table-layout: fixed;
 		}
@@ -503,7 +506,7 @@ mark {
 		.table_rows_list_activity td {
 			padding: 2px;
 			padding-bottom: 0;
-		}	
+		}
 		// ID
 		.table_rows_list_activity th:nth-of-type(1) {
 			width: 58px;
@@ -520,12 +523,12 @@ mark {
 		// When (date)
 		.table_rows_list_activity .th_column_dd547 {
 			width: 138px;
-			text-align: right;			
+			text-align: right;
 		}
 		.table_rows_list_activity .td_dd547 {
-			text-align: right;		
+			text-align: right;
 			padding-right: 4px;
-			white-space: nowrap;		
+			white-space: nowrap;
 		}
 		// Who (user)
 		.table_rows_list_activity .th_column_dd543 {
@@ -536,7 +539,7 @@ mark {
 		// ip address
 		.table_rows_list_activity .th_column_dd544 {
 			width: 110px;
-			white-space: nowrap;			
+			white-space: nowrap;
 		}
 		// Where
 		.table_rows_list_activity .th_column_dd546, .table_rows_list_activity .td_dd546 {
@@ -566,7 +569,7 @@ mark {
 		.table_rows_list_activity .th_column_dd550, .table_rows_list_activity .td_dd550 {
 			width: 12%;
 		}
-		
+
 
 
 		/* TD_CSS_SELECTOR
@@ -586,7 +589,7 @@ mark {
 		}
 		.table_rows_list .th_component_image img {
 			/*box-shadow: none;*/
-		}			
+		}
 		.table_rows_list .id_column {
 			text-align: right;
 			/*white-space: nowrap;*/
@@ -609,29 +612,29 @@ mark {
 		.table_rows_list .id_column_buttons {
 			//display: table-cell;
 			//display: table;
-			display: block;			
+			display: block;
 			position: relative;
-			width: 100%;				
+			width: 100%;
 			min-width: 50px;
 			height: 50%;
-			min-height: 32px; // por verificar (estaba desactivo)	
+			min-height: 32px; // por verificar (estaba desactivo)
 			background-repeat: no-repeat;
-			background-position:right 5px top 50%;			
+			background-position:right 5px top 50%;
 			background-color: #EDEDED;
 			background-size: 18px;
 			color: #000000;
-			opacity: 0.8;		
+			opacity: 0.8;
 			}
 			.id_column_buttons:hover {
 				color: #ffffff !important;
 				opacity: 1.0;
 			}
 			.id_column_buttons:active {
-				opacity: 0.4 !important;				
+				opacity: 0.4 !important;
 			}
-			
 
-		.table_rows_list span.section_id_number {				
+
+		.table_rows_list span.section_id_number {
 				font-size: 14px;
 				display:table-cell;
 				//display: block;
@@ -643,13 +646,13 @@ mark {
 
 		/* EDIT
 		--------------------------------------------------------------------- */
-		.table_rows_list a.button_edit {			
+		.table_rows_list a.button_edit {
 			border-bottom: 1px solid #ffffff;
 			background-image: url('../../themes/default/icon_edit.svg');
 			}
 			.table_rows_list a.button_edit:hover {
 				background-color: #67a756;
-				background-image: url('../../themes/default/icon_edit_hover.svg');		
+				background-image: url('../../themes/default/icon_edit_hover.svg');
 			}
 			/* id_column_buttons single line mode
 			--------------------------------------------------------------------- */
@@ -670,7 +673,7 @@ mark {
 					background-color: #bb3249;
 				}
 			}
-			
+
 			.table_rows_list a.button_delete mark.row_debug_info {
 				/*display:table-cell;*/
 				//display:table;
@@ -682,7 +685,7 @@ mark {
 			--------------------------------------------------------------------- */
 			.button_delete.id_column_buttons_single_line {
 				// background-color: #C0E680;
-				display: table-cell;				
+				display: table-cell;
 				min-width: 32px;
 				height: 25px;
 			}
@@ -693,7 +696,7 @@ mark {
 
 		/* ADD RESOURCE (TO PORTAL)
 		--------------------------------------------------------------------- */
-		.table_rows_list a.button_add_resource {			
+		.table_rows_list a.button_add_resource {
 			background-image: url('../../themes/default/icon_add_resource.svg');
 			background-position:right 8px top 50%;
 			background-size: 22px;
@@ -713,11 +716,11 @@ mark {
 			//position: absolute;
 
 			&:hover {
-				background-image: url('../../themes/default/icon_transcription_hover.svg');				
+				background-image: url('../../themes/default/icon_transcription_hover.svg');
 				background-color: @color_trascription;
 			}
 		}
-		
+
 
 		/* BUTTON_TRANSLATION (PROCESSES)
 		--------------------------------------------------------------------- */
@@ -726,10 +729,10 @@ mark {
 			background-position:right 6px top 50%;
 			height: 100%;
 			min-height: 65px;
-			position: absolute;	
+			position: absolute;
 
 			&:hover {
-				background-image: url('../../themes/default/icon_translation_hover.svg');				
+				background-image: url('../../themes/default/icon_translation_hover.svg');
 				background-color: @color_lang;
 			}
 		}
@@ -749,7 +752,7 @@ mark {
 				background-color: @color_indexation;
 			}
 		}
-		
+
 
 		/* BUTTON_STRUCTURATION (PROCESSES)
 		--------------------------------------------------------------------- */
@@ -761,7 +764,7 @@ mark {
 			position: absolute;
 			}
 			.table_rows_list a.button_structuration:hover {
-				background-image: url('../../themes/default/icon_structuration_hover.svg');				
+				background-image: url('../../themes/default/icon_structuration_hover.svg');
 				background-color: @color_structuration;
 			}
 
@@ -804,11 +807,11 @@ mark.row_debug_info {
 
 
 
-		
+
 
 /* LABEL_WARNING (STATE DEPRECATED, ETC)
------------------------------------------ */ 
-	label.label_warning {		
+----------------------------------------- */
+	label.label_warning {
 		}
 		label.label_warning span {
 			//cursor: help;
@@ -830,7 +833,7 @@ mark.row_debug_info {
 
 
 
-/* WRAP_SECTION_GROUP_DIV  
+/* WRAP_SECTION_GROUP_DIV
 ----------------------------------------- */
 .wrap_section_group_div {
 	position: relative;
@@ -859,7 +862,7 @@ mark.row_debug_info {
 
 		//background: url('../../themes/default/spinner.gif') center no-repeat;
 		background: url('../../themes/default/spinner.svg');
-		
+
 		/*
 		font-size: 7px;
 		margin-top: 64px;
@@ -925,7 +928,7 @@ mark.row_debug_info {
 
 
 /* SELECT - CUSTOM_DROPDOWN
-   Custom select apperance 
+   Custom select apperance
 ------------------------------------------------------- */
 select.custom_dropdown {
 	-webkit-appearance: none;
