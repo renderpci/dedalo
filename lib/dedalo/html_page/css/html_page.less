@@ -662,6 +662,9 @@ span.ajax_loading_msg {
 
 
 // PRINT
+	.print_only {
+		display: none;
+	}
 	@media print {
 		body, #main, #content
 		{
@@ -685,6 +688,21 @@ span.ajax_loading_msg {
 		//     -webkit-print-color-adjust: exact !important;   // Chrome, Safari
 		//     color-adjust: exact !important;                 // Firefox*/
 		// }
+		.id_column_buttons {
+			display: none !important;
+		}
+		.print_only {
+			display: inline-block;
+
+			padding: 3px;
+		}
+		.no_print {
+			display: none !important;
+		}
+
+		.css_wrap_rows_search, .section_buttons_container, .debug_line_wrap, #menu_wrapper, .debug_sql_time, .tm_list_wrap, .css_button_generic, .time_to_load_div {
+			.no_print;
+		}
 	}
 
 
