@@ -147,13 +147,20 @@ render_menu.prototype.edit = async function() {
 		fragment.appendChild(dedalo_data_langs_selector)
 
 
-	// menu button(go to list)
+	// spacer
+		const menu_spacer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'menu_spacer',
+			parent 			: fragment
+		})
+
+
+	// section label button (go to list)
 		const section_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_label',
 			parent 			: fragment,
 		})
-
 		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 			self.events_tokens.push(
 				event_manager.subscribe('render_instance', update_section_label)
@@ -164,7 +171,6 @@ render_menu.prototype.edit = async function() {
 					section_label.innerHTML = instance.label
 				}
 			}
-
 
 	// menu button_toggle_inspector
 		const toggle_inspector = ui.create_dom_element({
