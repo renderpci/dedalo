@@ -202,10 +202,21 @@ export const ui = {
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
 				// event click activate component
-					wrapper.addEventListener('click', (e) => {
+					// wrapper.addEventListener('click', (e) => {
+					// 	e.stopPropagation()
+					// 	event_manager.publish('active_component', instance)
+					// })
+
+				// focus event [focusin]
+					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
+
+						// selected_node. fix selected node
+						//self.selected_node = wrapper
+						
 						event_manager.publish('active_component', instance)
 					})
+
 				wrapper.appendChild(fragment)
 
 
