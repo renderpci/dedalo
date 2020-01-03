@@ -117,7 +117,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
-			// e.stopPropagation()
+			//e.stopPropagation()
 
 			// input_value. The standard input for the value of the component
 			if (e.target.matches('input[type="text"]')) {
@@ -128,7 +128,17 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 				switch(date_mode) {
 
 					case 'range':
-						value = self.get_dato_range(e.target.parentNode)
+						const dato_range = self.get_dato_range(e.target.parentNode, e.target.dataset.role)	
+												
+						if (e.target.dataset.role==='range_start') {
+							(dato_range.start === false) ? value = false : value = dato_range
+						}
+
+												
+						if (e.target.dataset.role==='range_end') {							
+							(dato_range.end === false) ? value = false : value = dato_range
+						}
+
 						break;
 
 					case 'period':
@@ -136,37 +146,44 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 						break;
 
 					case 'time':
-						value = (e.target.value.length>0) ? self.get_dato_time(e.target.value) : ''
+						const dato = (e.target.value.length>0) ? self.get_dato_time(e.target.value) : ''
+						if (dato) {
+							e.target.value = dato.res_formatted
+							value = dato.dd_date
+						}
 						break;
 
 					case 'date':
 					default:
 						value = (e.target.value.length>0) ? self.get_dato_date(e.target.value) : ''
 						break;
-
 				}
 
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: value,
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
+				const validated = (value) ? true : false
+				ui.component.error(!validated, e.target)
 
+				if (validated) {
+					const changed_data = Object.freeze({
+						action	: 'update',
+						key		: JSON.parse(e.target.dataset.key),
+						value	: value,
+					})
+					self.change_value({
+						changed_data : changed_data,
+						refresh 	 : false
+					})
+					.then((save_response)=>{
+						// event to update the dom elements of the instance
+						event_manager.publish('update_value_'+self.id, changed_data)
+					})
+				}
 				return true
 			}
 		}, false)
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
+			//e.stopPropagation()
 
 			// insert
 			if (e.target.matches('.button.add')) {
@@ -452,14 +469,6 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 		parent 			: inputs_container
 	})
 
-	//flatpickr(input_time, {
-    //	enableTime: true,
-    //	noCalendar: true,
-    //	time_24hr: true,
-    //	dateFormat: "H:i",
-	//	allowInput: true
-	//})
-
 	return true
 }//end input_element_time
 
@@ -490,11 +499,6 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container) =
 		value 		 	: input_value,
 		parent 		 	: inputs_container
 	})
-
-	flatpickr(input, {
-		dateFormat: "d-m-Y",
-		allowInput: true
-	});
 
 	return true
 }

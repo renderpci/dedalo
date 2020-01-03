@@ -71,7 +71,7 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 
 	const year 		= (date.year) ? date.year : 0
 	//Be aware that month should be monthIndex, an integer value representing the month, beginning with 0 for January to 11 for December
-	const month 	= (date.month && date.month>0) ? date.month -1 : 0
+	const month 	= (date.month && date.month>0) ? date.month : 0
 	const day 		= (date.day && date.day>0) ? date.day : 0
 
 	const hour 		= (date.hour) ? date.hour : 0
@@ -80,18 +80,24 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 	const ms 		= (date.ms) ? date.ms : 0
 
  	let datetime 	= new Date(year, month, day, hour, minute, second)
+ 	let options 	= ''
+ 	let dateString  = ''
 
-	if (year === 0 && month === 0 && day === 0) {
+	if (date_mode === 'time') {
+		
+		options = {hour: '2-digit', minute: '2-digit', second: '2-digit'}
+		options.ms = '2-digit'
 	
-		datetime 	= new Date(hour, minute, second)
-
-	} else {
-
+	} else {	
+	
 		if (month === 0 && day === 0) {
-			datetime 	= new Date(year)
+			dateString 	= year 						
+		} else if(day === 0){
+			dateString 	= dateString.concat(month,self.separator,year)
 		} else {
-			datetime 	= new Date(year, month, day)
+			dateString 	= (locale != 'us') ? dateString.concat(day,self.separator,month,self.separator,year) : dateString.concat(month,self.separator,day,self.separator,year)
 		}
+
 	}
 
  	//datetime.setMilliseconds(123);
@@ -101,11 +107,7 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 
 	//const options_time 	=
 
-	const options = (date_mode === 'time') ? {hour: '2-digit', minute: '2-digit', second: '2-digit'} : {year: 'numeric', month: '2-digit', day: '2-digit'};
-
-	if (date_mode === 'time') {
-		options.ms = '2-digit'
-	}
+	//const options = (date_mode === 'time') ? {hour: '2-digit', minute: '2-digit', second: '2-digit'} : {year: 'numeric', month: '2-digit', day: '2-digit'};
 
 	//padding=true --> 	'2-digit'
 	//padding=false --> 'numeric'
@@ -121,10 +123,13 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 	//							 array($year,$month,$day,$hour,$minute,$second,$ms),
 	//							 $date_format);
 
-	const date_timestamp = (date_mode === 'time') ? datetime.toLocaleTimeString(locale, options) : datetime.toLocaleDateString(locale, options)
-	//datetime.format("dd/MM/yyyy HH:mm:ss sss")
+	if (dateString==='') {
+		dateString = (date_mode === 'time') ? datetime.toLocaleTimeString(locale, options) : datetime.toLocaleDateString(locale, options)
+		//dateFormat(datetime, 'dd-MM-yyyy')
+		//datetime.format("dd/MM/yyyy HH:mm:ss sss")
+	}
 
-	return date_timestamp
+	return dateString
 }//end get_dd_timestamp
 
 
@@ -149,7 +154,6 @@ component_date.prototype.get_locale_value = function () {
 // Format date using locale format
 	//const locale_value = get_locale_from_code(page_globals.dedalo_data_lang)
 	//result = result.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
-	console.log("locale_value:",locale_value)
 	return 'es-ES' //locale_value
 
 }//end get_locale_value
@@ -378,7 +382,7 @@ component_date.prototype.get_dato_period = function(parentNode) {
 * get_dato_RANGE
 * Test data inside input text, verify format and send to parent Save
 */
-component_date.prototype.get_dato_range = function(parentNode) {
+component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
 
 	const self = this
 
@@ -393,8 +397,11 @@ component_date.prototype.get_dato_range = function(parentNode) {
 
 		if (value_formatted_start===false) {
 
-			// Nothing to do
-			console.warn("Invalid date value: ",input_range_start.value)
+			// Nothing to do			
+			if (nodeRole==='range_start') {
+				console.warn("Invalid date value: ",input_range_start.value)
+				dato.start = false 
+			}
 
 		}else{
 
@@ -404,7 +411,8 @@ component_date.prototype.get_dato_range = function(parentNode) {
 			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
 				dato.start = value_formatted_start.dd_date
 
-					console.log("dato.start:",dato.start);
+					console.log("dato.start:",dato.start)
+			
 			}
 		}
 
@@ -412,10 +420,13 @@ component_date.prototype.get_dato_range = function(parentNode) {
 		// Review and format input value
 		const value_formatted_end = self.format_date(input_range_end.value)
 
-		if (value_formatted_start===false) {
+		if (value_formatted_end===false) {
 
 			// Nothing to do
-			console.warn("Invalid date value: ",input_range_end.value)
+			if (nodeRole==='range_end') {
+				console.warn("Invalid date value: ",input_range_end.value)
+				dato.end = false
+			}
 
 		}else{
 
@@ -425,7 +436,8 @@ component_date.prototype.get_dato_range = function(parentNode) {
 			if (value_formatted_end.dd_date && value_formatted_end.dd_date.time) {
 				dato.end = value_formatted_end.dd_date
 
-					console.log("dato.end:",dato.end);
+					console.log("dato.end:",dato.end)
+
 			}
 		}
 
@@ -462,8 +474,6 @@ component_date.prototype.get_dato_date = function(value) {
 			// Final dato
 			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
 				dato.start = value_formatted_start.dd_date
-
-					console.log("dato.start:",dato.start);
 			}
 		}
 
@@ -489,24 +499,28 @@ component_date.prototype.get_dato_time = function(value) {
 		modo  : mode
 	})
 
+	console.log("value_formatted:",value_formatted)
+
 	if (value_formatted===false) {
 
 		// Nothing to do
-		console.warn("Invalid input_date value: ",input_date.value )
-		return false
+		console.warn("Invalid input_date value: ",value )
+		//return false
 
-	}else{
-		// Replaces input value
-		if (mode!=="search") {
-			value = value_formatted.res_formatted
-		}
-
-		// Final dato
-		dato = value_formatted.dd_date
+	//}else{
+	//	// Replaces input value
+	//	if (mode!=="search") {
+	//		value = value_formatted.res_formatted
+	//	}
+//
+//	//	// Final dato
+//	//	dato = value_formatted.dd_date
+	//	value = value_formatted.res_formatted
 
 	}
 
-	return dato
+	return value_formatted
+	//return dato
 }//end get_dato_time
 
 
@@ -517,6 +531,8 @@ component_date.prototype.get_dato_time = function(value) {
 * @return object result
 */
 component_date.prototype.format_time = function(options) {
+
+	const self 		= this
 
 	let current_input_date = options.value // Raw string from input field
 
@@ -627,5 +643,3 @@ component_date.prototype.format_time = function(options) {
 
 	return result
 }//end format_time
-
-
