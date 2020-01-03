@@ -166,6 +166,18 @@ const add_events = function(self, wrapper) {
 	// click event [click]
 		wrapper.addEventListener("click", e => {
 
+				const all_buttons_remove =wrapper.querySelectorAll('.remove')
+					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
+						all_buttons_remove[i].classList.add("display_none")
+					}
+
+
+				if (e.target.matches('input[type="text"]')) {
+					// set the button_remove associated to the input selected to visible
+						const button_remove = e.target.parentNode.querySelector('.remove')
+						button_remove.classList.remove("display_none")
+				}
+
 
 			// insert
 				if (e.target.matches('.button.add')) {
@@ -248,33 +260,25 @@ const add_events = function(self, wrapper) {
 		//	}
 		//})
 
-	// focus event [focusin]
-		/*wrapper.addEventListener("focusin", e => {
-			e.stopPropagation()
+	// // focus event [focusin]
+	// 	wrapper.addEventListener("focusin", e => {
+	// 		// selected_node. fix selected node
+	// 		//self.selected_node = wrapper
 
-			// selected_node. fix selected node
-			self.selected_node = wrapper
-
-			if (e.target.matches('input[type="text"]')) {
-				//e.preventDefault()
-				// set the button_remove associated to the input selected to visible
-			 	const button_remove = e.target.parentNode.querySelector('.remove')
-			 	button_remove.classList.remove("hidden")
-			 	//button_remove.style.visibility='visible';
-			 	//button_remove.style.display='inline-block';
-			 	//button_remove.hidden = false
-			 	event_manager.publish('active_component', self)
-			}
-		})*/
+	// 		if (e.target.matches('input[type="text"]')) {
+	// 			// set the button_remove associated to the input selected to visible
+	// 		 	const button_remove = e.target.parentNode.querySelector('.remove')
+	// 		 	button_remove.classList.remove("display_none")
+	// 		 	//event_manager.publish('active_component', self)
+	// 		}
+	// 	})
 
 
-	// blur event [focusout]
-		/*wrapper.addEventListener("focusout", e => {
-			e.stopPropagation()
-
-			const button_remove = e.target.parentNode.querySelector('.remove')
-			 	button_remove.classList.add("hidden")
-		})*/
+	// // blur event [focusout]
+	// 	wrapper.addEventListener("focusout", e => {
+	// 		const button_remove = e.target.parentNode.querySelector('.remove')
+	// 		 	button_remove.classList.add("display_none")
+	// 	})
 
 	return true
 }//end add_events

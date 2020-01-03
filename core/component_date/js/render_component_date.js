@@ -168,6 +168,18 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
 
+			const all_buttons_remove =wrapper.querySelectorAll('.remove')
+				for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
+					all_buttons_remove[i].classList.add("display_none")
+				}
+
+
+			if (e.target.matches('input[type="text"]')) {
+				// set the button_remove associated to the input selected to visible
+					const button_remove = e.target.parentNode.querySelector('.remove')
+					button_remove.classList.remove("display_none")
+			}
+
 			// insert
 			if (e.target.matches('.button.add')) {
 
