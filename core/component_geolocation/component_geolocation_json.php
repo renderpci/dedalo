@@ -19,7 +19,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$base_context = $this->get_structure_context($permissions);
 
@@ -29,7 +29,7 @@
 
 				$context[] = $base_context;
 
-				
+
 				break;
 		}
 	}//end if($options->get_context===true)
@@ -40,10 +40,13 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-			
+
 			// Value
 			$value = $this->get_dato();
-			
+			if (!is_array($value)) {
+				$value = [$value];
+			}
+
 			// data item
 			$item  = $this->get_data_item($value);
 

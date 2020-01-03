@@ -4,6 +4,7 @@
 class zenon {
 
 
+
 	/**
 	* BUILD_ROW_REQUEST_URL
 	* @return string $url
@@ -17,7 +18,7 @@ class zenon {
 			$options->lang 			= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$lang_value = lang::get_alpha2_from_code($options->lang);		
+		$lang_value = lang::get_alpha2_from_code($options->lang);
 
 		$ar_fields_var = [];
 		foreach ($options->ar_fields as $field) {
@@ -31,4 +32,4 @@ class zenon {
 
 
 
-}
+}//end class

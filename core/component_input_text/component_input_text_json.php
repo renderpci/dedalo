@@ -49,10 +49,16 @@
 				break;
 		}
 
+		if ($this->tipo==='dd551') {
+			$value = [json_encode($value, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT)];
+		}elseif (!is_array($value)) {
+			$value = [$value];
+		}
+
 		// data item
-		$item  = $this->get_data_item($value);
-		$item->parent_tipo 			= $this->get_tipo();
-		$item->parent_section_id 	= $this->get_section_id();
+			$item  = $this->get_data_item($value);
+				$item->parent_tipo 		 = $this->get_tipo();		// (? used)
+ 				$item->parent_section_id = $this->get_section_id();	// (? used)
 
 		$data[] = $item;
 
