@@ -180,14 +180,14 @@ class login extends common {
 	        		sleep(2);
 
 					$response->msg = "Error: Wrong password [1]";
-					error_log("DEDALO LOGIN ERROR : Wrong password [1]");
+					error_log("DEDALO LOGIN ERROR : Wrong password [1] (".DEDALO_ENTITY.")");
 					return $response;
 				}//end if( $password_encrypted!==$password_dato )
 
 			// password lenght check
 				if( empty($password_dato) || strlen($password_dato)<8 ) {
 					$response->msg = "Error: Wrong password [2]";
-					error_log("DEDALO LOGIN ERROR : Wrong password [2]");
+					error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
 					return $response;
 				}
 

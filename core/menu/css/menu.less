@@ -52,7 +52,7 @@ background-color: #FFFF00;
 		left:0px;
 		display: flex;
 		align-items: center;
-		width: 100%;
+		width: calc(100vw - 1em);
 		height: 2.1em;
 		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 		background: #2e2e2e;
@@ -128,24 +128,30 @@ background-color: #FFFF00;
 			}
 
 			>.dedalo_aplication_langs_selector {
-				height: 25px;
-				height: 2em;
+				//height: 25px;
+				//height: 2em;
+				height: auto;
+				line-height: 2em;
 				//font-size: 1em;
 				max-width: 99.9%;
 				//line-height: 1.1em;
 
-				padding: 2px;
-				padding-right: 15px;
-				padding-left: 7px;
+				//padding: 2px;
+				//padding-right: 15px;
+				//padding-left: 7px;
+				padding-bottom: 2px;
 
 				color: #cccccc;
-				border-color: transparent;
+				//border-color: transparent;
+				//border-radius: 3px;
+				border: none;
 
 				cursor: pointer;
+
 				-webkit-appearance: none;
 				-moz-appearance: none;
 				appearance: none;
-				border-radius: 3px;
+
 				background: url('../../themes/default/select_invert.svg');
 				background-position: top 50% right 3px;
 				background-size: 7px 12px;
