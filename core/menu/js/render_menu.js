@@ -4,6 +4,8 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+
 
 
 
@@ -116,14 +118,13 @@ render_menu.prototype.edit = async function() {
 			text_content	: page_globals['username']
 		})
 
-			console.log("page_globals:",page_globals);
-
 
 	// Application_langs_selector
 		const lang_datalist = self.data.langs_datalist
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
+			id 			: 'dd_app_lang',
 			langs 		: lang_datalist,
-			action 		: change_lang(),
+			action 		: change_lang,
 			selected	: page_globals['dedalo_application_lang'],
 			class_name 	: 'dedalo_aplication_langs_selector'
 		})
@@ -138,8 +139,9 @@ render_menu.prototype.edit = async function() {
 								value: item.value}
 		})
 		const dedalo_data_langs_selector = ui.build_select_lang({
+			id 			: 'dd_data_lang',
 			langs 		: lang_datalist_data,
-			action 		: change_lang(),
+			action 		: change_lang,
 			selected	: page_globals['dedalo_data_lang'],
 			class_name	: 'dedalo_aplication_langs_selector'
 		})
@@ -162,6 +164,7 @@ render_menu.prototype.edit = async function() {
 			parent 			: fragment,
 		})
 		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
+			let current_instance
 			self.events_tokens.push(
 				event_manager.subscribe('render_instance', update_section_label)
 			)
@@ -169,8 +172,19 @@ render_menu.prototype.edit = async function() {
 				if(instance.model === 'section'|| instance.model === 'area'){
 					// change the value of the current dom element
 					section_label.innerHTML = instance.label
+					current_instance = instance
 				}
 			}
+			section_label.addEventListener("click", e => {
+					event.stopPropagation();
+					//event_manager
+					if (current_instance.mode === 'edit'){
+						event_manager.publish('user_action', {tipo : current_instance.tipo, mode : 'list'})
+					}
+					self.menu_active = false
+			})
+
+
 
 	// menu button_toggle_inspector
 		const toggle_inspector = ui.create_dom_element({
@@ -335,7 +349,24 @@ const close_all_drop_menu = async function(self) {
 /**
 * CHANGE_LANG
 */
-const change_lang = async function(self) {
+const change_lang = async function(event) {
 
-		console.log("change_lang:");
+	const current_lang 	= event.target.value
+
+	const api_response = await data_manager.prototype.request({
+			body : {
+				action 	 : 'change_lang',
+				dd_api 	 : 'dd_utils_api',
+				options  : {
+					dedalo_data_lang 		: current_lang,
+					dedalo_application_lang : event.target.id==='dd_data_lang' ? null : current_lang
+				}
+			}
+		})
+		window.location.reload(false);
+
+
+	//event_manager.publish('user_action', {lang: current_lang})
+		
+		
 }
