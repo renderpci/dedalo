@@ -124,7 +124,7 @@ const add_events = function(self, wrapper) {
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', async (e) => {
-			e.stopPropagation()
+			//e.stopPropagation()
 
 			// update
 			if (e.target.matches('input[type="text"].input_value')) {
