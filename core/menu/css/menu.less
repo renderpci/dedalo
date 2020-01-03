@@ -44,79 +44,148 @@ background-color: #FFFF00;
 
 
 
-/* MENU WRAPPER
-------------------------------------------------------- */
-.menu_wrapper {
-	z-index: 1002;
-	position: fixed;
-	top: 0px;
-	left:0px;
-	display: flex;
-	width: 100%;
-	height: 2.1em;
-	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
-	background: #2e2e2e;
+// menu_wrapper
+	.menu_wrapper {
+		z-index: 1002;
+		position: fixed;
+		top: 0px;
+		left:0px;
+		display: flex;
+		align-items: center;
+		width: 100%;
+		height: 2.1em;
+		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+		background: #2e2e2e;
 
-	font-family: "Oxygen-light", sans-serif;
-	font-size: 0.84em;
-    line-height: 1.2em;
+		font-family: "Oxygen-light", sans-serif;
+		font-size: 0.84em;
+		color: #ffffff;
+	    line-height: 1.2em;
 
-    color: green;
-
-
-    &.menu_wrapper_debug {
-		background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
-	}
-
-	&.menu_wrapper_debug_development {
-		//background: linear-gradient(to bottom, rgba(214,21,0,0.9) 0%,rgba(135,0,13,0.9) 100%) !important; /* W3C */
-		background-color: #a20401 !important;
-	}
-
-	&.menu_wrapper_debug_master {
-		//background: linear-gradient(to bottom, rgba(44, 177, 20, 0.8) 0, rgba(12, 115, 34, 0.8) 100%) !important;
-		background: linear-gradient(to bottom, rgba(35, 189, 7, 0.8) 0, rgba(9, 97, 28, 0.8) 100%) !important
-	}
-
-	&.menu_wrapper_global_admin {
-		//background-image: url('../../themes/default/dedalo_logo_red.svg');
-		border-top: 1px solid #f78a1c;
-	}
-}
-
-
-
-	// Quit button
-	.menu_wrapper #quit {
-		background-image: url(../../themes/default/icons/power-off_white.svg);
-		width: 1em;
-		background-size: contain;
-		background-repeat: no-repeat;
-		background-position: center;
-
-		&:active {
-			color: #7F7F7F;
+	    &.menu_wrapper_debug {
+			background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
 		}
-	}
 
-	/*-- Dedalo icon top --*/
-	.menu_wrapper #dedalo_icon_top {
-		width: 1em;
-		background-image: url('../../themes/default/dedalo_logo.svg');
-		background-repeat: no-repeat;
-		background-size: contain;
-		background-position: center;
-	}
+		&.menu_wrapper_debug_development {
+			//background: linear-gradient(to bottom, rgba(214,21,0,0.9) 0%,rgba(135,0,13,0.9) 100%) !important; /* W3C */
+			background-color: #a20401 !important;
+		}
+
+		&.menu_wrapper_debug_master {
+			//background: linear-gradient(to bottom, rgba(44, 177, 20, 0.8) 0, rgba(12, 115, 34, 0.8) 100%) !important;
+			background: linear-gradient(to bottom, rgba(35, 189, 7, 0.8) 0, rgba(9, 97, 28, 0.8) 100%) !important
+		}
+
+		&.menu_wrapper_global_admin {
+			//background-image: url('../../themes/default/dedalo_logo_red.svg');
+			border-top: 1px solid #f78a1c;
+		}
+
+		// direct children elements
+		>* {
+			height: 2em;
+			font-size: 1.1em;
+			//background-color: #8EA035 !important;
+			margin-left: 1em;
+			//height: 100%;
+		}
+
+		// quit button
+			>#quit {
+				background-image: url(../../themes/default/icons/power-off_white.svg);
+				width: 1em;
+				background-size: contain;
+				background-repeat: no-repeat;
+				background-position: center;
+
+				&:active {
+					color: #7F7F7F;
+				}
+			}
+
+		// dedalo_icon link
+			>#dedalo_icon_top {
+				width: 1em;
+				background-image: url('../../themes/default/dedalo_logo.svg');
+				background-repeat: no-repeat;
+				background-size: contain;
+				background-position: center;
+			}
+
+			>#menu {
+				//display: none !important;
+			}
+
+
+			>.logged_user_name {
+				color: #c9c9c9;
+				cursor: pointer;
+				line-height: 2em;
+
+				&:hover {
+					color: #F9F9F9;
+				}
+			}
+
+			>.dedalo_aplication_langs_selector {
+				height: 25px;
+				height: 2em;
+				//font-size: 1em;
+				max-width: 99.9%;
+				//line-height: 1.1em;
+
+				padding: 2px;
+				padding-right: 15px;
+				padding-left: 7px;
+
+				color: #cccccc;
+				border-color: transparent;
+
+				cursor: pointer;
+				-webkit-appearance: none;
+				-moz-appearance: none;
+				appearance: none;
+				border-radius: 3px;
+				background: url('../../themes/default/select_invert.svg');
+				background-position: top 50% right 3px;
+				background-size: 7px 12px;
+				background-repeat: no-repeat;
+				//background-color: #373737;
+
+				&.unsync {
+					color: #fdcf39;
+			    	opacity: 0.9;
+				}
+			}
+
+			>.menu_spacer {
+				flex: 1;
+			}
+
+			>.section_label {
+				line-height: 2em;
+			}
+
+			>.button_toggle_inspector {
+				cursor: pointer;
+				width: 2em;
+				height: 1em;
+				margin-right: 1em;
+				background-image: url('../../themes/default/icons/inspector.svg');
+				background-repeat: no-repeat;
+				background-size: contain;
+			}
+
+	}//end .menu_wrapper
 
 
 
-	/*-- Button in menu common --*/
-	.menu_wrapper #button_in_menu {
-		position: relative;
-		float: right;
-		display: inline-block;
-		cursor: pointer;
-	}
+
+
+
+
+
+
 
 
 	/*-- Toggle button in mobil version --*/
@@ -138,18 +207,19 @@ background-color: #FFFF00;
 // menu : Menu tree
 	@menu_bg_color_active : #ffa43d;
 	@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
-
 	#menu {
 		font-family: "Oxygen-light", sans-serif;
 		//font-family: system, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Lucida Grande', "Oxygen-light", sans-serif;
 		//-webkit-font-smoothing: subpixel-antialiased;
 		z-index: 100;
-		float: left;
+		//float: left;
 		display: inline-block;
-		margin: 0;
+		//margin: 0;
 		//margin-left: 49px;
 		padding: 0;
 		text-align: left;
+
+
 
 		// d6
 		//display: block;
@@ -335,18 +405,18 @@ background-color: #FFFF00;
 
 	/* LOGGED USERNAME
 	------------------------------------------------------- */
-	.menu_wrapper .logged_user_name {
-		color: #c9c9c9;
-		float: left;
-		margin-left: 10px;
-		margin-right: 10px;
-		top: 6px;
-		cursor: pointer;
+	// .menu_wrapper .logged_user_name {
+	// 	color: #c9c9c9;
+	// 	float: left;
+	// 	margin-left: 10px;
+	// 	margin-right: 10px;
+	// 	top: 6px;
+	// 	cursor: pointer;
 
-		&:hover {
-			color: #F9F9F9;
-		}
-	}
+	// 	&:hover {
+	// 		color: #F9F9F9;
+	// 	}
+	// }
 
 
 	/*-- Log messages checkbox --
@@ -363,37 +433,7 @@ background-color: #FFFF00;
 
 	/* APLICATION LANG SELECTOR
 	------------------------------------------------------- */
-	.menu_wrapper .dedalo_aplication_langs_selector {
-		float: left;
-		margin-left: 5px;
-		top: 2px;
-		position: relative;
 
-		color: #cccccc;
-		border-color: transparent;
-		line-height: 1.1em;
-		//opacity: 0.8;
-		padding: 2px;
-		cursor: pointer;
-		max-width: 99.9%;
-		-webkit-appearance: none;
-		-moz-appearance: none;
-		appearance: none;
-		border-radius: 3px;
-		background: url('../../themes/default/select_invert.svg');
-		background-position: top 50% right 3px;
-		background-size: 7px 12px;
-		background-repeat: no-repeat;
-		//background-color: #373737;
-		padding-right: 15px;
-		padding-left: 7px;
-		height: 25px;
-		font-size: 0.9em;
-	}
-	.menu_wrapper .dedalo_aplication_langs_selector.unsync {
-		color: #fdcf39;
-    	opacity: 0.9;
-	}
 
 
 
@@ -468,21 +508,21 @@ background-color: #FFFF00;
 
 	/* BUTTON INSPECTOR
 	------------------------------------------------------- */
-	.menu_wrapper .button_toggle_inspector {
-		position: relative;
-		float: right;
-		display: inline-block;
-		cursor: pointer;
-		right: 9px;
-		top: 9px;
-		width: 25px;
-		height: 25px;
-		background-image: url('../../themes/default/icons/inspector.svg');
-		background-repeat: no-repeat;
-		}
-		#button_toggle_inspector .button_toggle_inspector_in_dialog {
-			top: 0px;
-		}
+	// .menu_wrapper .button_toggle_inspector {
+	// 	position: relative;
+	// 	float: right;
+	// 	display: inline-block;
+	// 	cursor: pointer;
+	// 	right: 9px;
+	// 	top: 9px;
+	// 	width: 25px;
+	// 	height: 25px;
+	// 	background-image: url('../../themes/default/icons/inspector.svg');
+	// 	background-repeat: no-repeat;
+	// 	}
+	// 	#button_toggle_inspector .button_toggle_inspector_in_dialog {
+	// 		top: 0px;
+	// 	}
 
 
 
@@ -575,11 +615,11 @@ background-color: #FFFF00;
 		text-align: right;
 	}
 	#menu_wrapper .dedalo_icon_top{
-		width: 30px;
-		height: 30px;
-		position: absolute;
-		top: 5px;
-		left: 50%;
+		// width: 30px;
+		// height: 30px;
+		// position: absolute;
+		// top: 5px;
+		// left: 50%;
 	}
 	#menu_wrapper #quit{
 	    top: 0px;
@@ -683,13 +723,12 @@ background-color: #FFFF00;
 		background-color: #ebebeb;
 	}
 	#menu_wrapper #button_toggle_inspector{
-		//position: absolute;
-		top: 0px;
-		width: 45px;
-		height: 45px;
-		background-position-x: 50%;
-		background-position-y: 50%;
-		background-size: 25px;
+		// top: 0px;
+		// width: 45px;
+		// height: 45px;
+		// background-position-x: 50%;
+		// background-position-y: 50%;
+		// background-size: 25px;
 	}
 
 	#menu li.has-sub::after {

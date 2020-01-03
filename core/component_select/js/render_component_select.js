@@ -73,12 +73,24 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 			content_data : current_content_data
 		})
 
-	// events delegated
+	// add events delegated
+		add_events(self, wrapper)
+
+
+	return wrapper
+}//end edit
+
+
+
+/**
+* ADD_EVENTS
+*/
+const add_events = (self, wrapper) => {
+
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
-
 		function update_value (component) {
 			// change the value of the current dom element
 			const changed_data = component.data.changed_data
@@ -163,8 +175,11 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 			}
 		},true)
 
-	return wrapper
-}//end edit
+
+	return true
+}//end add_events
+
+
 
 /**
 * CONTENT_DATA_EDIT
