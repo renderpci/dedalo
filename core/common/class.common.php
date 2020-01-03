@@ -46,12 +46,20 @@ abstract class common {
 			'section_group' 		 => 'section_group_div'
 		];
 		public static $ar_temp_exclude_models = [
+			'component_security_areas',
 			'component_state',
 			'component_info',
-			'component_pdf',
+			//'component_pdf',
 			'component_password',
 			'component_ip',
-			'component_autocomplete_ts' // ?
+			'component_autocomplete_ts', // ?
+			'component_relation_model',
+			'component_relation_related',
+			'component_relation_children',
+			'component_relation_parent',
+			'component_relation_index',
+			'component_relation_struct',
+			'component_svg'
 		];
 
 
