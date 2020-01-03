@@ -5,6 +5,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 
 
+
 export const component_geolocation = function(){
 
 	this.id
@@ -59,7 +60,6 @@ export const component_geolocation = function(){
 
 
 
-
 /**
 * INIT_MAP
 * load the libraries and specific css
@@ -81,7 +81,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 		await Promise.all(load_promises).then(async function(response){
 			//console.log("JSONEditor:",JSONEditor);
 		})
-		
+
 	// get data
 		const field_lat  	= self.data.value.lat
 		const field_lon  	= self.data.value.lon
@@ -95,7 +95,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 		let map_data = {}
 
 	// dataset data
-		if (typeof self.data.value!=="undefined") {			
+		if (typeof self.data.value!=="undefined") {
 			if (field_lat && field_lon) {
 				map_data = {
 					x	  : field_lat,
@@ -127,52 +127,52 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 		switch( self.context.geo_provider ) {
 
 			case 'OSM':
-				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});		
+				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 				L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 					attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
 					//attribution: '<a href="http://fmomo.org">Dedalo</a>',
 					maxZoom: 19
 				}).addTo(map);
 				break;
-			
+
 			// case 'COULDMADE':
-			// 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});					
+			// 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 			// 	L.tileLayer('http://{s}.tile.cloudmade.com/API-key/997/256/{z}/{x}/{y}.png', {
 			// 		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
 			// 		maxZoom: 18
 			// 	}).addTo(map);
 			// 	break;
-			
+
 			case 'GOOGLE':
-				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});				
+				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 			    const googleLayer = new L.Google('ROADMAP');
-			    //map.addLayer(googleLayer);				    
+			    //map.addLayer(googleLayer);
 			    googleLayer.addTo(map);
 			    break;
 
 			case 'ARCGIS':
-			 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});			 	
+			 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 		        L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
 		        maxZoom: 18,
-		        attribution: 'Tiles &copy; Esri — ' 
-		            + 'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, ' 
-		            + 'Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}).addTo(map);			        
+		        attribution: 'Tiles &copy; Esri — '
+		            + 'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, '
+		            + 'Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}).addTo(map);
 		        break;
 
 			case 'NUMISDATA':
-		     
+
 				// LAYER
 				//var dare 		= new L.TileLayer('http://dare.ht.lu.se/tiles/imperium/{z}/{x}/{y}.png');
 				dare 		= new L.TileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
 					maxZoom: 11
 				});
-				
+
 				arcgis 		= new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-				osm 		= new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});	
+				osm 		= new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
 
 
-				
+
 				// MAP
 				map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 
@@ -181,7 +181,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 									"dare":  dare,
 								    "arcgis": arcgis,
 								    "osm": 	  osm
-								    
+
 								};
 				if(layer_control === false || loaded_document===true) {
 					layer_control = L.control.layers(base_maps).addTo(map);
@@ -192,17 +192,17 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 				});
 				break;
 
-			case 'VARIOUS': 
-				
+			case 'VARIOUS':
+
 				// LAYER
 				//var arcgis 		= new L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 				arcgis 		= new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 				//var cloudmade 	= new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png');
 				//var osm 		= new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-				osm 		= new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');	
-		        //var ggl 	= new L.Google();			        				
+				osm 		= new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+		        //var ggl 	= new L.Google();
 				//var ggl2 	= new L.Google('TERRAIN');
-				
+
 				// MAP
 				map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 
@@ -221,7 +221,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 
 				//layer_control.addBaseLayer(base_maps, "basemaps");
 				//map.addControl(new L.Control.Layers( {'Arcgis':arcgis, 'OSM':osm}, {}));
-				//map.addControl(arcgis);					
+				//map.addControl(arcgis);
 
 				// ADD_DRAW_EDIT_LAYER
 				//self.add_draw_edit_layer(map, tag_id);
@@ -236,7 +236,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 	//self.maps[map_container] = map;
 
 	// map move listeners
-		map.on('dragend', function(e){			
+		map.on('dragend', function(e){
 			// Force refresh map size when map is loaded hidden (section group closed)
 				self.refresh_map(map)
 
@@ -258,7 +258,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 					zoom : map.getZoom()
 				}, map_container)
 		});
-		
+
 	/*
 		// LISTENERS ON CHANGE INPUT VALUES, UPDATE MAP POSITION / ZOOM
 		field_lat.addEventListener("change", function(e){
@@ -292,7 +292,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 			self.refresh_map(map)
 		});
 
-	setTimeout(function(){			
+	setTimeout(function(){
 		self.refresh_map(map)
 		//L.Util.requestAnimFrame(map.invalidateSize,map,!1,map._container);
 	}, 1400)
@@ -300,23 +300,23 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 	//_______________
 
 	// onreadystatechange event complete render_tags
-		document.onreadystatechange = function() {		
+		document.onreadystatechange = function() {
 			if (document.readyState==='complete') {
 				self.render_tags()
 				loaded_document = true
 			}
 		}
-	
+
 	//if (loaded_document===true) {
 	//	self.render_tags();
 	//}
 	/*
 		map.whenReady(function(e){
-			self.refresh_map(map)			
+			self.refresh_map(map)
 		})
 		//load the tags of the component_text_area into the map
-		
-		
+
+
 
 		window.addEventListener("load", function (event) {
 			//self.render_tags()
@@ -343,31 +343,32 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 
 /**
 * UPDATE_INPUT_VALUES
-* @return 
+* @return
 */
 component_geolocation.prototype.update_input_values = function(data, wrapper) {
 
-		// inputs
-			const input_lat  = wrapper.querySelector("input[name=lat]")
-			const input_lon  = wrapper.querySelector("input[name=lon]")
-			const input_zoom = wrapper.querySelector("input[name=zoom]")
+	// inputs
+		const input_lat  = wrapper.querySelector("input[name=lat]")
+		const input_lon  = wrapper.querySelector("input[name=lon]")
+		const input_zoom = wrapper.querySelector("input[name=zoom]")
 
-		// Set values
-			input_lat.value  = data.lat
-			input_lon.value  = data.lon
-			input_zoom.value = data.zoom
+	// Set values
+		input_lat.value  = data.lat
+		input_lon.value  = data.lon
+		input_zoom.value = data.zoom
 
-		return true
-	};//end update_input_values
+	return true
+};//end update_input_values
 
 
 
 /**
 * REFRESH_MAP
-* @return 
+* @return
 */
 component_geolocation.prototype.refresh_map = function(map) {
 	//map._onResize();
 	map.invalidateSize(); // Force refresh map
-};//end refresh_map
+}//end refresh_map
+
 

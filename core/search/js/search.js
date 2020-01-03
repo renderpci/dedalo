@@ -132,8 +132,18 @@ search.prototype.build = async function(){
 				target_section_tipo : self.section_tipo,
 			}
 		})
-		// Set json_filter
-		self.json_filter = JSON.parse(editing_preset.result.json_filter) || {"$and":[]}
+
+	// Set json_filter
+		if (!editing_preset.result) {
+
+			console.warn("Invalid null search editing_preset:", self.section_tipo, editing_preset);
+
+			self.json_filter = {"$and":[]}
+
+		}else{
+
+			self.json_filter = JSON.parse(editing_preset.result.json_filter) || {"$and":[]}
+		}
 
 	// get the section_tipo from editing_preset
 		/*

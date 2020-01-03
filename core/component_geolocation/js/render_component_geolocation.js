@@ -32,6 +32,7 @@ render_component_geolocation.prototype.list = async function() {
 	// Options vars
 		const context 	= self.context
 		const data 		= self.data
+		const value 	= data.value || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -39,7 +40,7 @@ render_component_geolocation.prototype.list = async function() {
 		})
 
 	// Value as string
-		const value_string = data.value.join(' | ')
+		const value_string = value.join(' | ')
 
 	// Set value
 		wrapper.textContent = value_string

@@ -143,13 +143,13 @@ class security {
 	*	Array of all element=>level like array([dd12] => 2,[dd93] => 2,..)
 	*	Include areas and components permissions
 	*/
-	private static function get_ar_permissions_in_matrix_for_current_user($user_id=false) {
+	private static function get_ar_permissions_in_matrix_for_current_user() {
 
 		$dato=array();
 
-		$component_security_access = self::get_user_security_access($user_id);
+		$component_security_access = self::get_user_security_access();
 
-		$dato_access = (array)$component_security_access->get_dato();
+		$dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
 
 		return $dato_access;
 	}//end get_ar_permissions_in_matrix_for_current_user
@@ -160,38 +160,34 @@ class security {
 	* GET_USER_SECURITY_ACCESS
 	* @return component
 	*/
-	private static function get_user_security_access($user_id=false) {
+	private static function get_user_security_access() {
 
-		if ($user_id===false) {
-			# Default behaviour is false (use logged user to calculate permissions)
+		// Default behaviour is false (use logged user to calculate permissions)
 			$user_id = $_SESSION['dedalo4']['auth']['user_id'];
-		}
 
 		// user profile
-			$component_profile_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
-			$component_profile 		 = component_common::get_instance($component_profile_model,
-																	  	DEDALO_USER_PROFILE_TIPO,
-																	  	(int)$user_id,
-																	  	'list',
-																	  	DEDALO_DATA_NOLAN,
-																	  	DEDALO_SECTION_USERS_TIPO);
+			$component_profile_model 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
+			$component_profile 		 	= component_common::get_instance($component_profile_model,
+																	  	 DEDALO_USER_PROFILE_TIPO,
+																	  	 (int)$user_id,
+																	  	 'list',
+																	  	 DEDALO_DATA_NOLAN,
+																	  	 DEDALO_SECTION_USERS_TIPO);
 			$profile_dato = $component_profile->get_dato();
-
 			if (empty($profile_dato)) {
-				return $dato;
+				return false;
 			}
 
 			$profile_id = (int)$profile_dato[0]->section_id;
 
 
 		// component_security_access
-			$component_security_access 	= component_common::get_instance('component_security_access',
+			$component_security_access = component_common::get_instance('component_security_access',
 																		DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
 																		$profile_id,
 																		'edit',
 																		DEDALO_DATA_NOLAN,
-																		DEDALO_SECTION_PROFILES_TIPO
-																		);
+																		DEDALO_SECTION_PROFILES_TIPO);
 
 		return $component_security_access;
 	}//end get_user_security_access
