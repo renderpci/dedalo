@@ -1,20 +1,20 @@
 <?php
-include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
+include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
-// pdfjs paths
-	$pdf_viewer_base_path         = DEDALO_ROOT_WEB .'/lib/pdfjs';
-	$pdf_js                       = $pdf_viewer_base_path .'/build/pdf.min.js';
-	$pdf_worker               		= $pdf_viewer_base_path .'/build/pdf.worker.min.js';
-	$pdf_images 									= $pdf_viewer_base_path .'/web/images/';
-	$pdf_maps 										= $pdf_viewer_base_path .'/web/cmaps/';
-	$pdf_viewer_locale_properties = $pdf_viewer_base_path .'/web/locale/locale.properties';
-	$pdf_viewer_css               = $pdf_viewer_base_path .'/web/viewer.css';
 
-	# Viewer custom. Read const dedalo_pdfjs_options to init the reader
-		#$pdf_viewer	= $pdf_viewer_base_path .'/web/viewer-min.js';//'/web/viewer.min.js';
-		$pdf_viewer		= DEDALO_CORE_URL   .'/component_pdf/viewer/viewer-min.js'; // -min
+// pdfjs paths
+	$pdf_js                       	= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.min.js';
+	$pdf_worker               		= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.worker.min.js';
+	$pdf_images 					= DEDALO_ROOT_WEB .'/lib/pdfjs/web/images/';
+	$pdf_maps 						= DEDALO_ROOT_WEB .'/lib/pdfjs/web/cmaps/';
+	$pdf_viewer_locale_properties 	= DEDALO_ROOT_WEB .'/lib/pdfjs/web/locale/locale.properties';
+	$pdf_viewer_css               	= DEDALO_ROOT_WEB .'/lib/pdfjs/web/viewer.css';
+
+// Viewer custom. Read const dedalo_pdfjs_options to init the reader
+	$pdf_viewer = DEDALO_CORE_URL .'/component_pdf/viewer/viewer.js'; // is not the original file (!)
+
 ?>
 <!DOCTYPE html>
 <!--
@@ -63,15 +63,15 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 			// pdfjsLib.GlobalWorkerOptions.workerSrc = '<?php echo $pdf_viewer_base_path .'/build/pdf.worker.js' ?>';
 
 		const dedalo_pdfjs_options = {
-			"locale" 							: '<?php echo lang::get_locale_from_code(DEDALO_APPLICATION_LANG) ?>',
+			"locale" 				: '<?php echo lang::get_locale_from_code(DEDALO_APPLICATION_LANG) ?>',
 			"imageResourcesPath"	: '<?php echo $pdf_images ?>',
-			"workerSrc" 					: '<?php echo $pdf_worker ?>',
-			"cMapUrl" 						: '<?php echo $pdf_maps ?>',
-			"url" 								: getURLParameter("pdf_url")
+			"workerSrc" 			: '<?php echo $pdf_worker ?>',
+			"cMapUrl" 				: '<?php echo $pdf_maps ?>',
+			"url" 					: getURLParameter("pdf_url")
 		}
 		const SHOW_DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 		if(SHOW_DEBUG===true) {
-				console.log("dedalo_pdfjs_options:",dedalo_pdfjs_options);
+			console.log("dedalo_pdfjs_options:",dedalo_pdfjs_options);
 		}
 		</script>
 		<script src="<?php echo $pdf_viewer ?>"></script>
@@ -438,4 +438,3 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 
 	</body>
 </html>
-
