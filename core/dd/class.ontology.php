@@ -148,13 +148,12 @@ class ontology {
 							'type' 	=> $type
 						];
 					}
-					$item->descriptors = $ar_descriptors;
-				
+					$item->descriptors = $ar_descriptors;				
 			}
 
 			// get terminio by tipo with fallback
 			if ($options->label===true) {
-				$item->label = RecordObj_dd::get_termino_by_tipo($tipo);
+				$item->label = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 			}
 
 		return $item;

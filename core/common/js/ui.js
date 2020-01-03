@@ -202,18 +202,9 @@ export const ui = {
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
 				// event click activate component
-					// wrapper.addEventListener('click', (e) => {
-					// 	e.stopPropagation()
-					// 	event_manager.publish('active_component', instance)
-					// })
-
 				// focus event [focusin]
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
-
-						// selected_node. fix selected node
-						//self.selected_node = wrapper
-						
 						event_manager.publish('active_component', instance)
 					})
 
@@ -1034,6 +1025,7 @@ export const ui = {
 	build_select_lang : (options) => {
 
 		// options
+			const id  			= options.id || null
 			const langs  		= options.langs
 			const selected 		= options.selected || page_globals.dedalo_application_lang
 			const action 		= options.action
@@ -1088,6 +1080,7 @@ export const ui = {
 			// }
 
 		const select_lang = ui.create_dom_element({
+			id 				: id,
 			element_type	: 'select',
 			class_name 		: class_name
 		})
