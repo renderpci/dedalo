@@ -1,91 +1,59 @@
-"use strict"
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
+// imports
+	import {common} from '../../common/js/common.js'
+	import {component_common} from '../../component_common/js/component_common.js'
+	import {render_component_pdf} from '../../component_pdf/js/render_component_pdf.js'
+
+
+
+export const component_pdf = function(){
+
+	this.id
+
+	// element properties declare
+	this.model
+	this.tipo
+	this.section_tipo
+	this.section_id
+	this.mode
+	this.lang
+
+	this.section_lang
+	this.context
+	this.data
+	this.parent
+	this.node
+
+
+	return true
+}//end component_pdf
+
+
+
 /**
-* COMPONENT_PDF CLASS
-*
-*
+* COMMON FUNCTIONS
+* extend component functions from component common
 */
-var component_pdf = new function() {
+// prototypes assign
+	// lifecycle
+	component_pdf.prototype.init 	 			= component_common.prototype.init
+	component_pdf.prototype.build 	 			= component_common.prototype.build
+	component_pdf.prototype.render 				= common.prototype.render
+	component_pdf.prototype.refresh 			= common.prototype.refresh
+	component_pdf.prototype.destroy 	 		= common.prototype.destroy
+
+	// change data
+	component_pdf.prototype.save 	 			= component_common.prototype.save
+	component_pdf.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_pdf.prototype.update_datum 		= component_common.prototype.update_datum
+	component_pdf.prototype.change_value 		= component_common.prototype.change_value
+
+	// render
+	component_pdf.prototype.list 				= render_component_pdf.prototype.list
+	component_pdf.prototype.edit 				= render_component_pdf.prototype.edit
 
 
-	// URL TRIGGER
-	this.url_trigger = DEDALO_CORE_URL + '/component_pdf/trigger.component_pdf.php';
-
-
-
-	/**
-	* INIT
-	* @return 
-	*/
-	this.init = function(options) {
-		
-
-		return true
-	};//end init
-
-
-
-	/**
-	* SELECT_COMPONENT
-	* Overwrite common method
-	* @param object obj_wrap
-	*/
-	this.select_component = function(obj_wrap) {
-
-		obj_wrap.classList.add("selected_wrap");
-		//$(obj_wrap).find('a').first().focus();
-
-		return true
-	};
-	
-
-	/**
-	* OPEN_PDF
-	*/
-	this.open_pdf = function(button_obj) {
-
-		var pdf_url 		= button_obj.dataset.pdf_url,
-			pdf_viewer_url 	= button_obj.dataset.pdf_viewer_url
-
-		//var window_url 	= DEDALO_ROOT_WEB + '/lib/pdfjs/web/dedalo_viewer.html?pdf_url=' + pdf_url
-		var window_url 		= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
-
-		// Windown name
-		var nameWindow 	 = "view_pdf ",
-			media_window = window.open(window_url, nameWindow, 'width=900,height=650');
-			media_window.focus();
-		
-		return false;
-	};//end open_pdf
-
-
-
-	this.load_iframe_url = function(iframe_id,url) {
-		$( document ).ready(function() {
-        	$('#'+iframe_id).attr('src', url)
-    	})
-
-    	return true
-	};
-
-
-
-	/**
-	* TOGGLE_FULL_PDF_VIEWER
-	* @return 
-	*/
-	this.toggle_full_pdf_viewer = function( button_obj, iframe ) {
-		
-		const wrap_div = component_common.get_wrapper_from_element(iframe)
-		
-		if( wrap_div.classList.contains('pdf_viewer_full') ) {
-			wrap_div.classList.remove('pdf_viewer_full')
-		}else{
-			wrap_div.classList.add('pdf_viewer_full')		
-		}
-		
-		return true
-	}//end toggle_full_pdf_viewer
-
-
-
-}; //end component_pdf class

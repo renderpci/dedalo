@@ -18,7 +18,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -31,12 +31,22 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-		
+
 		// Value
-		$value = $this->get_dato();
-			
+		// $value = $this->get_dato();
+		// if (!is_array($value)) {
+		// 	$value = [$value];
+		// }
+		$value = [];
+
+		$pdf_item = new stdClass();
+			$pdf_item->url 	 	= $this->get_pdf_url(false); // $quality=false
+			$pdf_item->quality 	= DEDALO_PDF_QUALITY_DEFAULT;
+
+		$value[] = $pdf_item;
+
 		// data item
-		$item  = $this->get_data_item($value);
+		$item = $this->get_data_item($value);
 
 		$data[] = $item;
 

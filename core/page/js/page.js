@@ -80,19 +80,20 @@ page.prototype.init = async function(options) {
 					options 	: options
 				}
 			})
-			const api_element = api_response.result
-			const elements_to_stay = self.elements.filter(item => item.model !== api_element.model)
-			elements_to_stay.push(api_element)
-			
-			self.elements  = elements_to_stay
 
-			const instances_to_destroy =  self.ar_instances.filter(item => item.model !== api_element.model)
+			const api_element 		= api_response.result
+			const elements_to_stay 	= self.elements.filter(item => item.model!==api_element.model)
+			elements_to_stay.push(api_element)
+
+			self.elements = elements_to_stay
+
+			const instances_to_destroy = self.ar_instances.filter(item => item.model!==api_element.model)
 			for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
 				instances_to_destroy[i].destroyable = false
 			}
 			self.refresh()
 
-			if(options.event_in_history === true) return
+			if(options.event_in_history===true) return;
 
 			const var_uri = Object.entries(options).map(([key, val]) => `${key}=${val}`).join('&');
 
@@ -104,12 +105,12 @@ page.prototype.init = async function(options) {
 			history.pushState(state, title, url)
 		}
 
-
-	window.onpopstate = function(event) {
-		const options = event.state.options
-		options.event_in_history = true
-		event_manager.publish('user_action', options)		
-	};
+	// window onpopstate
+		window.onpopstate = function(event) {
+			const options = event.state.options
+			options.event_in_history = true
+			event_manager.publish('user_action', options)
+		};
 
 
 	// status update
