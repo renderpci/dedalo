@@ -53,6 +53,3 @@ function get_video_streams_info($json_data) {
 
 	return (object)$response;
 }//end get_video_streams_info
-
-
-?>

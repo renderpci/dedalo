@@ -8,69 +8,69 @@
 
 
 // page globals
-	$page_globals = (function($mode) {
+	// $page_globals = (function($mode) {
 
-		$user_id 		= $_SESSION['dedalo4']['auth']['user_id'] ?? null;
-		$username 		= $_SESSION['dedalo4']['auth']['username'] ?? null;
-		$full_username 	= $_SESSION['dedalo4']['auth']['full_username'] ?? null;
+	// 	$user_id 		= $_SESSION['dedalo4']['auth']['user_id'] ?? null;
+	// 	$username 		= $_SESSION['dedalo4']['auth']['username'] ?? null;
+	// 	$full_username 	= $_SESSION['dedalo4']['auth']['full_username'] ?? null;
 
-		$obj = new stdClass();
-			# version
-			$obj->dedalo_version = DEDALO_VERSION;
-			# lang
-			$obj->dedalo_application_lang 		= DEDALO_APPLICATION_LANG;
-			$obj->dedalo_data_lang 				= DEDALO_DATA_LANG;
-			$obj->dedalo_data_nolan 			= DEDALO_DATA_NOLAN;
-			$obj->dedalo_projects_default_langs = array_map(function($current_lang){
-				$lang_obj = new stdClass();
-					$lang_obj->label = lang::get_name_from_code($current_lang);
-					$lang_obj->value = $current_lang;
-				return $lang_obj;
-			}, unserialize(DEDALO_PROJECTS_DEFAULT_LANGS));
+	// 	$obj = new stdClass();
+	// 		# version
+	// 		$obj->dedalo_version = DEDALO_VERSION;
+	// 		# lang
+	// 		$obj->dedalo_application_lang 		= DEDALO_APPLICATION_LANG;
+	// 		$obj->dedalo_data_lang 				= DEDALO_DATA_LANG;
+	// 		$obj->dedalo_data_nolan 			= DEDALO_DATA_NOLAN;
+	// 		$obj->dedalo_projects_default_langs = array_map(function($current_lang){
+	// 			$lang_obj = new stdClass();
+	// 				$lang_obj->label = lang::get_name_from_code($current_lang);
+	// 				$lang_obj->value = $current_lang;
+	// 			return $lang_obj;
+	// 		}, unserialize(DEDALO_PROJECTS_DEFAULT_LANGS));
 
-			# parent
-			#$obj->_parent 						= isset($parent) ? (int)$parent : '';
-			# tipos
-			#$obj->tipo 						= $tipo;
-			#$obj->section_tipo 				= defined('SECTION_TIPO') ? SECTION_TIPO : null;
-			#$obj->section_name 				= defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
-			# top
-			#$obj->top_tipo 					= TOP_TIPO;
-			#$obj->top_id 						= TOP_ID;
-			# modo
-			$obj->mode 							= isset($mode) ? $mode : null;
-			# caller_tipo
-			#$obj->caller_tipo 					= $caller_tipo;
-			# context_name
-			#$obj->context_name 				= $context_name;
-			# tag_id
-			$obj->tag_id 						= isset($_REQUEST["tag_id"]) ? safe_xss($_REQUEST["tag_id"]) : "";
-			# user_id
-			$obj->user_id 						= $user_id;
-			# username
-			$obj->username 						= $username;
-			# full_username
-			$obj->full_username 				= $full_username;
-			# is_global_admin
-			#$obj->is_global_admin 				= (bool)$is_global_admin;
-			# components_to_refresh
-			$obj->components_to_refresh 		= [];
-			# portal
-			$obj->portal_tipo 					= isset($_REQUEST["portal_tipo"]) ? safe_xss($_REQUEST["portal_tipo"]) : null;
-			$obj->portal_parent 				= isset($_REQUEST["portal_parent"]) ? safe_xss($_REQUEST["portal_parent"]) : null;
-			$obj->portal_section_tipo 			= isset($_REQUEST["portal_section_tipo"]) ? safe_xss($_REQUEST["portal_section_tipo"]) : null;
-			# id_path
-			$obj->id_path 						= isset($_REQUEST["id_path"]) ? safe_xss($_REQUEST["id_path"]) : null;
-			# dedalo_protect_media_files
-			$obj->dedalo_protect_media_files 	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
-			# notifications
-			$obj->DEDALO_NOTIFICATIONS 	  		= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
-			$obj->DEDALO_PUBLICATION_ALERT 		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
-			# float_window_features
-			$obj->float_window_features 		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
+	// 		# parent
+	// 		#$obj->_parent 						= isset($parent) ? (int)$parent : '';
+	// 		# tipos
+	// 		#$obj->tipo 						= $tipo;
+	// 		#$obj->section_tipo 				= defined('SECTION_TIPO') ? SECTION_TIPO : null;
+	// 		#$obj->section_name 				= defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
+	// 		# top
+	// 		#$obj->top_tipo 					= TOP_TIPO;
+	// 		#$obj->top_id 						= TOP_ID;
+	// 		# modo
+	// 		$obj->mode 							= isset($mode) ? $mode : null;
+	// 		# caller_tipo
+	// 		#$obj->caller_tipo 					= $caller_tipo;
+	// 		# context_name
+	// 		#$obj->context_name 				= $context_name;
+	// 		# tag_id
+	// 		$obj->tag_id 						= isset($_REQUEST["tag_id"]) ? safe_xss($_REQUEST["tag_id"]) : "";
+	// 		# user_id
+	// 		$obj->user_id 						= $user_id;
+	// 		# username
+	// 		$obj->username 						= $username;
+	// 		# full_username
+	// 		$obj->full_username 				= $full_username;
+	// 		# is_global_admin
+	// 		#$obj->is_global_admin 				= (bool)$is_global_admin;
+	// 		# components_to_refresh
+	// 		$obj->components_to_refresh 		= [];
+	// 		# portal
+	// 		$obj->portal_tipo 					= isset($_REQUEST["portal_tipo"]) ? safe_xss($_REQUEST["portal_tipo"]) : null;
+	// 		$obj->portal_parent 				= isset($_REQUEST["portal_parent"]) ? safe_xss($_REQUEST["portal_parent"]) : null;
+	// 		$obj->portal_section_tipo 			= isset($_REQUEST["portal_section_tipo"]) ? safe_xss($_REQUEST["portal_section_tipo"]) : null;
+	// 		# id_path
+	// 		$obj->id_path 						= isset($_REQUEST["id_path"]) ? safe_xss($_REQUEST["id_path"]) : null;
+	// 		# dedalo_protect_media_files
+	// 		$obj->dedalo_protect_media_files 	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
+	// 		# notifications
+	// 		$obj->DEDALO_NOTIFICATIONS 	  		= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
+	// 		$obj->DEDALO_PUBLICATION_ALERT 		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
+	// 		# float_window_features
+	// 		$obj->float_window_features 		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 
-		return $obj;
-	})(MODE);
+	// 	return $obj;
+	// })(MODE);
 
 
 
@@ -132,7 +132,7 @@
 
 	$page_elements = [];
 
-	// menu get the menu element		
+	// menu get the menu element
 		$menu_element_required = new stdClass();
 			$menu_element_required->options = (object)[
 				'model' => 'menu'

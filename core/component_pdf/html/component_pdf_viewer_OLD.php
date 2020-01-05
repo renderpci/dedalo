@@ -5,15 +5,17 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 // pdfjs paths
-	$pdf_js                       	= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.min.js';
-	$pdf_worker               		= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.worker.min.js';
-	$pdf_images 					= DEDALO_ROOT_WEB .'/lib/pdfjs/web/images/';
-	$pdf_maps 						= DEDALO_ROOT_WEB .'/lib/pdfjs/web/cmaps/';
-	$pdf_viewer_locale_properties 	= DEDALO_ROOT_WEB .'/lib/pdfjs/web/locale/locale.properties';
-	$pdf_viewer_css               	= DEDALO_ROOT_WEB .'/lib/pdfjs/web/viewer.css';
+	$pdf_viewer_base_path         	= DEDALO_ROOT_WEB .'/lib/pdfjs';
+	$pdf_js                       	= $pdf_viewer_base_path .'/build/pdf.js';
+	$pdf_worker               		= $pdf_viewer_base_path .'/build/pdf.worker.js';
+	$pdf_images 					= $pdf_viewer_base_path .'/web/images/';
+	$pdf_maps 						= $pdf_viewer_base_path .'/web/cmaps/';
+	$pdf_viewer_locale_properties 	= $pdf_viewer_base_path .'/web/locale/locale.properties';
+	$pdf_viewer_css               	= $pdf_viewer_base_path .'/web/viewer.css';
 
-// Viewer custom. Read const dedalo_pdfjs_options to init the reader
-	$pdf_viewer = DEDALO_CORE_URL .'/component_pdf/viewer/viewer.js'; // is not the original file (!)
+	# Viewer custom. Read const dedalo_pdfjs_options to init the reader
+		#$pdf_viewer	= $pdf_viewer_base_path .'/web/viewer-min.js';//'/web/viewer.js';
+		$pdf_viewer		= DEDALO_CORE_URL   .'/component_pdf/viewer/viewer.js'; // -min
 
 ?>
 <!DOCTYPE html>
@@ -438,3 +440,4 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 
 	</body>
 </html>
+

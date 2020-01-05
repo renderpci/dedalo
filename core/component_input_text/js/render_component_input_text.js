@@ -32,6 +32,7 @@ render_component_input_text.prototype.list = async function() {
 	// Options vars
 		const context 	= self.context
 		const data 		= self.data
+		const value 	= data.value || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -39,7 +40,7 @@ render_component_input_text.prototype.list = async function() {
 		})
 
 	// Value as string
-		const value_string = data.value.join(self.divisor)
+		const value_string = value.join(self.divisor)
 
 	// Set value
 		wrapper.textContent = value_string

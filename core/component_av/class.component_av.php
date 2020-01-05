@@ -233,8 +233,9 @@ class component_av extends component_common {
 	* GET_POSTERFRAME_PATH
 	*/
 	public function get_posterframe_path() {
+
 		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
-	}
+	}//end get_posterframe_path
 
 
 
