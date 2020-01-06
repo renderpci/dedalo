@@ -1,33 +1,33 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 	$html ='';
-	
+
 	$html .= "<div id=\"get_archive_weights\" class=\"get_archive_weights\">";
-		
+
 		#
 		# SUM_INTERVALS TO TEXT
 		$html .= "<div class=\"sum_weights\">";
-		if($media_weight>0) {
+		if(isset($media_weight) && $media_weight>0) {
 			//$add_label = label::get_label('average', $lang).': ';
 			//$html .= ' <span class="css_date label_range">'.$add_label.'</span> ';
 			$html .= $media_weight;
 		}
 		$html .= "</div>";//end sum_dates_total
 		$html .= "<span class=\"get_archive_weights\">";
-		if($max_weight>0) {
+		if(isset($max_weight) && $max_weight>0) {
 			// $add_label = label::get_label('max', $lang).'max: ';;
 			$add_label = 'max: ';
 			$html .= ' <span class="css_date label_range">'.$add_label .'</span> ';
 			$html .= $max_weight;
 		}
-		if($min_weight>0) {
+		if(isset($min_weight) && $min_weight>0) {
 			//$add_label = label::get_label('min', $lang).'min: ';
 			$add_label = ' | min: ';
 			$html .= ' <span class="css_date label_range">'.$add_label.'</span> ';
 			$html .= $min_weight;
 		}
-		if($total_elements>0) {
+		if(isset($total_elements) && $total_elements>0) {
 			$add_label = ' | n: ';
 			$html .= ' <span class="css_date label_range">'.$add_label.'</span> ';
 			$html .= $total_elements;
@@ -37,5 +37,3 @@
 	$html .= "</div>";
 
 	print $html;
-
-?>
