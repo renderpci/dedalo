@@ -4,7 +4,7 @@
 
 		$widget_name 				 	= $this->widget_name;
 		$modo 						 	= $this->component_info->get_modo();
-		$section_id					 	= $this->component_info->get_parent();		
+		$section_id					 	= $this->component_info->get_parent();
 		$section_tipo 				 	= $this->component_info->get_section_tipo();
 		$data_source 				 	= $this->data_source;
 		$filename 					 	= $modo;
@@ -21,7 +21,7 @@
 				css::$ar_url[] 	 = $widget_base_url ."/css/".$widget_name.".css";
 
 				if($modo==='edit') {
-					js::$ar_url[]    = $widget_base_url ."/js/".$widget_name.".js";	
+					js::$ar_url[]    = $widget_base_url ."/js/".$widget_name.".js";
 				}
 
 				$component_source = array_reduce($data_source, function ($carry, $item){
@@ -51,7 +51,7 @@
 						return 'Empty portal data';
 					}
 
-				
+
 
 				$component_used = array_reduce($data_source, function ($carry, $item){
 
@@ -95,7 +95,8 @@
 
 						$used_dato = $used->get_dato();
 
-						if ($used_dato[0]->section_id === '2') continue;
+						#if ($used_dato[0]->section_id==='2') continue;
+						if (empty($used_dato) || $used_dato[0]->section_id==='2') continue;
 
 
 						$data_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data,true); // Expected portal
@@ -111,14 +112,16 @@
 						if(!empty($data_dato)){
 							$weights[] = $data_dato;
 						}
-					
 					}
 
-					$media_weight 	= round((array_sum($weights) / count($weights)),2);
-					$total_elements = count($weights);
-					$max_weight 	= max($weights);
-					$min_weight 	= min($weights);
-
+					if (!empty($weights)) {
+						$media_weight 	= round((array_sum($weights) / count($weights)),2);
+						$total_elements = count($weights);
+						$max_weight 	= max($weights);
+						$min_weight 	= min($weights);
+					}else{
+						debug_log(__METHOD__." Empty weights. Sum ignored in widget get_archive_weights ".to_string(), logger::DEBUG);
+					}
 				break;
 
 			default:
@@ -128,7 +131,7 @@
 
 
 
-	$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';	
+	$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid widget mode $modo</div>";
 	}
