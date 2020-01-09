@@ -241,7 +241,6 @@ const add_events = function(self, wrapper) {
 const content_data_edit = async function(self) {
 
 	const value = self.data.value
-	const mode 	= self.mode
 
 	const fragment = new DocumentFragment()
 
@@ -283,7 +282,7 @@ const content_data_edit = async function(self) {
 		})
 
 	// button close
-		if(mode==='edit_in_list' && !ui.inside_tool(self)){
+		if(self.mode==='edit_in_list' && !ui.inside_tool(self)){
 			const button_close = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button close',
@@ -292,7 +291,7 @@ const content_data_edit = async function(self) {
 		}
 
 	// button add input
-		if((mode==='edit' || mode==='edit_in_list') && !ui.inside_tool(self)){
+		if((self.mode==='edit' || self.mode==='edit_in_list') && !ui.inside_tool(self)){
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button add',

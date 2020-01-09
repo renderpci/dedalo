@@ -131,7 +131,7 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					make_test(options, 0);
 			});
 
-			describe("delete instance based on options values to create the key: Yes delete", function() {
+			describe("delete instance based on options values to create the key: Yes delete 1", function() {
 				// using value as int
 					const options = {
 						"model" 		: "component_input_text",
@@ -144,7 +144,7 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					make_test(options, 1);
 			});
 
-			describe("delete instance based on options values to create the key: Yes delete", function() {
+			describe("delete instance based on options values to create the key: Yes delete 1", function() {
 				// create instance
 				const options  = {
 					"model"	: "page"

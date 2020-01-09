@@ -60,7 +60,6 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 
 	const self = this
 
-		console.log("self.data:",self.data);
 
 	// fix non value scenarios
 		self.data.value = (!self.data.value || self.data.value.length<1) ? [null] : self.data.value
