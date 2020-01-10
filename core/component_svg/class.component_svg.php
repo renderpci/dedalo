@@ -15,7 +15,7 @@ class component_svg extends component_common {
 	*/
 	public function get_valor() {
 
-		return $this->valor = $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;	
+		return $this->valor = $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
 	}//end get_valor
 
 
@@ -26,15 +26,15 @@ class component_svg extends component_common {
 	* @return string $valor_export
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
-			
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
-		
+
 		$valor 			= $this->get_url(true);
-		
+
 		dump($valor,'$valor ');
 		return $valor;
 	}//end get_valor_export
@@ -54,7 +54,7 @@ class component_svg extends component_common {
 		# Default value
 		$svg_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 
-		
+
 		# CASE REFERENCED NAME : If isset propiedades "svg_id" overwrite name with field ddx content
 		$propiedades = $this->get_propiedades();
 		if (isset($propiedades->svg_id)) {
@@ -75,7 +75,7 @@ class component_svg extends component_common {
 
 		# Fix value
 		$this->svg_id = $svg_id;
-		
+
 
 		return $svg_id;
 	}//end get_svg_id
@@ -90,7 +90,7 @@ class component_svg extends component_common {
 		$component_tipo = $this->tipo;
 		$parent_section = section::get_instance($this->parent,$this->section_tipo);
 		$propiedades 	= $parent_section->get_propiedades();
-			#dump($propiedades," propiedades component_tipo:$component_tipo"); 
+			#dump($propiedades," propiedades component_tipo:$component_tipo");
 			#dump($propiedades->initial_media_path->$component_tipo," ");
 
 		if (isset($propiedades->initial_media_path->$component_tipo)) {
@@ -122,9 +122,9 @@ class component_svg extends component_common {
 		$parent 		= $this->get_parent();
 		$section_tipo 	= $this->get_section_tipo();
 
-		$propiedades = $this->get_propiedades();		
-		if (isset($propiedades->aditional_path) && !empty($parent) ) {			
-			
+		$propiedades = $this->get_propiedades();
+		if (isset($propiedades->aditional_path) && !empty($parent) ) {
+
 			$component_tipo 	= $propiedades->aditional_path;
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 			= component_common::get_instance($component_modelo,
@@ -133,7 +133,7 @@ class component_svg extends component_common {
 																 'edit',
 																 DEDALO_DATA_NOLAN,
 																 $section_tipo);
-			$dato = trim($component->get_valor(0));			
+			$dato = trim($component->get_valor(0));
 
 			# Add / at begin if not exits
 			if ( substr($dato, 0, 1)!=='/' ) {
@@ -156,7 +156,7 @@ class component_svg extends component_common {
 
 				$aditional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
-				# Final dato must be an array to saved into component_input_text 
+				# Final dato must be an array to saved into component_input_text
 				$final_dato = array( $aditional_path );
 				$component->set_dato( $final_dato );
 				$component->Save();
@@ -171,7 +171,7 @@ class component_svg extends component_common {
 
 		}//end if (isset($propiedades->aditional_path) && !empty($parent) )
 
-		# Fix 
+		# Fix
 		$this->aditional_path = $aditional_path;
 
 		return $aditional_path;
@@ -184,7 +184,7 @@ class component_svg extends component_common {
 	* @return string $file_name
 	*/
 	public function get_file_name() {
-		
+
 		$file_name = $this->tipo .'_'. $this->section_tipo .'_'. $this->parent;
 
 		return $file_name;
@@ -199,7 +199,7 @@ class component_svg extends component_common {
 	public function get_file_path() {
 
 		$aditional_path = $this->get_aditional_path();
-		
+
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
 		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
 
@@ -210,12 +210,12 @@ class component_svg extends component_common {
 
 	/**
 	* GET_TARGET_DIR
-	* @return 
+	* @return
 	*/
 	public function get_target_dir() {
 
 		$aditional_path = $this->get_aditional_path();
-	
+
 		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $aditional_path;
 
 		return $target_dir;
@@ -235,26 +235,67 @@ class component_svg extends component_common {
 
 
 
+	// /**
+	// * GET_URL
+	// * @return string $url
+	// * @param bool $absolute
+	// *	Return relative o absolute url. Default false (relative)
+	// */
+	// public function get_url($absolute=false) {
+
+	// 	$aditional_path = $this->get_aditional_path();
+
+	// 	$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
+	// 	$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+
+	// 	# ABSOLUTE (Default false)
+	// 	if ($absolute) {
+	// 		$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+	// 	}
+
+	// 	return $url;
+	// }//end get_url
+
+
+
 	/**
-	* GET_URL
-	* @return string $url
+	* GET_IMAGE_URL
+	* Get image url for current quality
+	* @param string | bool $quality
+	*	optional default (bool)false
+	* @param bool $test_file
+	*	Check if file exists. If not use 0.jpg as output. Default true
 	* @param bool $absolute
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url($absolute=false) {
+	public function get_url($quality=false, $test_file=true, $absolute=false, $default_add=true) {
 
-		$aditional_path = $this->get_aditional_path();
-		
-		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+		// image id
+			$image_id 	= $this->get_svg_id();
 
-		# ABSOLUTE (Default false)
-		if ($absolute) {
-			$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-		}
+		// url
+			$aditional_path = $this->get_aditional_path();
+			$file_name 		= $image_id .'.'. DEDALO_SVG_EXTENSION;
+			$image_url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
 
-		return $url;
-	}//end get_url
+		// File exists test : If not, show '0' dedalo image logo
+			if($test_file===true) {
+				$file = $this->get_file_path();
+				if(!file_exists($file)) {
+					if ($default_add===false) {
+						return false;
+					}
+					$image_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
+				}
+			}
+
+		// Absolute (Default false)
+			if ($absolute===true) {
+				$image_url = DEDALO_PROTOCOL . DEDALO_HOST . $image_url;
+			}
+
+		return $image_url;
+	}//end get_image_url
 
 
 
@@ -263,7 +304,7 @@ class component_svg extends component_common {
 	* @return string $url
 	*/
 	public static function get_url_from_locator($locator) {
-		
+
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
 														 $locator->component_tipo,
@@ -273,7 +314,7 @@ class component_svg extends component_common {
 														 $locator->section_tipo
 														 );
 		$url = $component->get_url();
-	
+
 		return $url;
 	}//end get_url_from_locator
 
@@ -297,9 +338,9 @@ class component_svg extends component_common {
 	* In time machine mode (list_tm) image is always calculated
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+
 		#if ( (empty($value) && $modo==='portal_list') || $modo==='list_tm' || $modo==='portal_list_view_mosaic' || $modo==='edit' || $modo==='edit_in_list') {
-			
+
 			$component	= component_common::get_instance(__CLASS__,
 														 $tipo,
 														 $parent,
@@ -324,12 +365,12 @@ class component_svg extends component_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-		
+
 		$diffusion_value = $this->get_url();
 
 
 		return (string)$diffusion_value;
-	}//end get_diffusion_value	
+	}//end get_diffusion_value
 
 
 
