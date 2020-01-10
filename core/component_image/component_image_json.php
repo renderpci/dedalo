@@ -47,7 +47,7 @@
 		//	}
 		//}
 		$image_item = new stdClass();
-			$image_item->url 	 = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT, false, false, false); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+			$image_item->url 	 = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT, true, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 			$image_item->quality = DEDALO_IMAGE_QUALITY_DEFAULT;
 
 		$value[] = $image_item;

@@ -41,7 +41,7 @@
 
 			// data item
 			$item  = $this->get_data_item($value);
-				$item->posterframe_url 	= $this->get_posterframe_url(false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
+				$item->posterframe_url 	= $this->get_posterframe_url(true, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
 				$item->video_url 		= $this->get_video_url(false);
 
 			$data[] = $item;
