@@ -1,5 +1,7 @@
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 
 
 
@@ -49,7 +51,7 @@ render_inspector.prototype.edit = async function(options={render_level : 'full'}
 		wrapper.appendChild(current_content_data)
 
 	// events
-	//	add_wrapper_events(wrapper, self)
+	//	add_events(wrapper, self)
 
 
 		// console.log("self.caller:",self);
@@ -78,10 +80,10 @@ render_inspector.prototype.edit = async function(options={render_level : 'full'}
 
 
 /**
-* ADD_WRAPPER_EVENTS
+* ADD_EVENTS
 * Attach element generic events to wrapper
 */
-const add_wrapper_events = (wrapper, self) => {
+const add_events = (wrapper, self) => {
 
 	// mousedown
 		wrapper.addEventListener("mousedown", function(e){
@@ -93,7 +95,7 @@ const add_wrapper_events = (wrapper, self) => {
 
 
 	return true
-}//end add_wrapper_events
+}//end add_events
 
 
 
@@ -115,6 +117,41 @@ const content_data = async function(self) {
 			class_name		: 'paginator_container',
 			parent 			: content_data
 		})
+
+	// buttons container
+		const buttons_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_container',
+			parent 			: content_data
+		})
+
+		// button_new section
+			const button_new = ui.button.build_button({
+				class_name 	: "new",
+				label 		: get_label.nuevo || "New"
+			})
+			button_new.addEventListener('click', async (e) => {
+				e.stopPropagation()
+
+				// data_manager
+				const api_response = await data_manager.prototype.request({
+					body : {
+						action 		: 'create',
+						section_tipo: self.section_tipo
+					}
+				})
+				if (api_response.result && api_response.result>0) {
+					// launch event 'user_action' tha page is watching
+					event_manager.publish('user_action', {
+						tipo 			 : self.caller.tipo,
+						mode 			 : self.caller.mode,
+						section_id		 : api_response.result
+					})
+				}
+
+			})
+			buttons_container.appendChild(button_new)
+
 
 	// project container
 		const project_container = ui.create_dom_element({
