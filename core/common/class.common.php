@@ -67,7 +67,7 @@ abstract class common {
 			'component_info',
 			// component_input_text
 			'component_input_text_large',
-			'component_inverse',
+			//'component_inverse',
 			'component_ip',
 			// component_iri
 			// component_json
