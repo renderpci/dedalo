@@ -41,7 +41,7 @@ render_component_inverse.prototype.list = function(options) {
 		const data 				= self.data
 
 	// Value as string
-		const value_string = data.value
+		const value_string = data.value[0].locator.from_section_id
 
 	// Node create
 		const node = ui.create_dom_element({
@@ -68,16 +68,61 @@ render_component_inverse.prototype.edit = function() {
 
 	// content_data
 		const content_data = document.createElement("div")
-		const div_value = ui.create_dom_element({
-			element_type	: 'div',			
-			text_content 	: value,
+
+	// inputs
+		const inputs_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'inputs_container',
 			parent 			: content_data
 		})
 
+	// build values
+		const inputs_value = value
+		const value_length = inputs_value.length
+			console.log("value_length:",value_length);
+		for (let i = 0; i < value_length; i++) {
+			input_element(i, inputs_value[i], inputs_container, self)
+		}
+
 	// ui build_edit returns component wrapper
-		const wrapper =	ui.component.build_wrapper_edit(self, {
+		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : content_data
 		})
 
-	return wrapper
+	return wrapper	
+	
 }//end edit
+
+
+/**
+* INPUT_ELEMENT
+* @return dom element li
+*/
+const input_element = (i, current_value, inputs_container, self) => {
+
+	// li
+		const li = ui.create_dom_element({
+			element_type : 'li',
+			parent 		 : inputs_container
+		})
+
+	// span field section_id from related inverse section
+		const span_section_id = ui.create_dom_element({
+			element_type 	: 'span',
+			class_name 		: 'inverse_show_section_id',
+			dataset 	 	: { key : i },
+			text_node	 	: current_value.locator.from_section_id,
+			parent 		 	: li
+		})
+
+	// span field with other values from related inverse section
+		const span_values = ui.create_dom_element({
+			element_type 	: 'span',
+			class_name 		: 'inverse_show_values',
+			dataset 	 	: { key : i },
+			text_node	 	: current_value.item_values,
+			parent 		 	: li
+		})
+
+	return li
+}//end input_element
