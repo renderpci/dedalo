@@ -740,7 +740,7 @@ export const ui = {
 		*/
 		build_button : (options) => {
 
-			const class_name = 'button' + (options.class_name ? ' '+options.class_name : '')
+			const class_name = 'button' + (options.class_name ? (' ' + options.class_name) : '')
 			const label 	 = options.label || "undefined"
 
 			// button

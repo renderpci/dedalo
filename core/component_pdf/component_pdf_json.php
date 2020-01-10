@@ -40,7 +40,7 @@
 		$value = [];
 
 		$pdf_item = new stdClass();
-			$pdf_item->url 	 	= $this->get_pdf_url(false); // $quality=false
+			$pdf_item->url 	 	= $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT, true); // $quality=false, $test_file=true, $absolute=false, $default_add=false
 			$pdf_item->quality 	= DEDALO_PDF_QUALITY_DEFAULT;
 
 		$value[] = $pdf_item;

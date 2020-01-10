@@ -178,5 +178,3 @@ function open_structuration_selector($json_data) {
 }//end open_structuration_selector
 
 
-
-?>
