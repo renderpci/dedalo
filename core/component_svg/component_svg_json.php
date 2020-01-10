@@ -36,7 +36,7 @@
 			$value = [];
 
 		$svg_item = new stdClass();
-			$svg_item->url 	 	= $this->get_url(false); // $absolute=false
+			$svg_item->url = $this->get_url(false, true, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 
 		$value[] = $svg_item;
 
