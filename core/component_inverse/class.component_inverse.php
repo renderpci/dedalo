@@ -16,7 +16,17 @@ class component_inverse extends component_common {
 	public function get_dato() {
 
 		$section = section::get_instance($this->parent, $this->section_tipo);
-		$dato 	 = $section->get_inverse_locators();
+	
+		$ar_locators = $section->get_inverse_locators();
+	
+			foreach ($ar_locators as $key => $locator_item) {
+
+				$item = new stdClass();
+				$item->locator = $locator_item;					
+				$item->item_values = $this->get_inverse_value($locator_item);
+				
+				$dato[] = $item;
+			}
 
 		return (array)$dato;
 	}//end get_dato

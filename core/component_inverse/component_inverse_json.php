@@ -32,13 +32,13 @@
 
 	if($options->get_data===true && $permissions>0){
 
-
 		// Value
 		$value = $this->get_dato();
-		$dato  = $value[0]->from_section_id;
+		
 		// data item
-		//$item  = $this->get_data_item($value);		
-		$data[] = $this->get_data_item($dato);//$item;
+		$item = $this->get_data_item($value);
+	
+		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)
 
