@@ -44,6 +44,7 @@ inspector.prototype.init = function(options) {
 	self.section_id		= options.section_id
 	self.mode 			= 'edit'
 	self.node 			= []
+	self.caller 		= options.caller
 
 	return true
 }// end init
