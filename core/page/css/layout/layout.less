@@ -41,6 +41,7 @@
 			outline: 1px solid @color_blue;
 			box-shadow: 0 0 10px @color_blue; //rgba(26, 154, 245, .5);
 			opacity: 1;
+			z-index: 1;
 		}
 
 
@@ -87,7 +88,7 @@
 
 			li & {
 				width: 100%;
-				outline: 1px solid #E0E0E0;
+				outline: 1px solid #eeebeb;
 				outline-offset: 0;
 			}
 			font-size: 1em;
@@ -98,7 +99,7 @@
 			padding: 0.5em;
 			//border-radius: 3px;
 			border: none;
-			outline: 1px solid #E0E0E0;
+			outline: 1px solid #eeebeb;
 
 			transition: all .5s ease, padding 0s;
 			//transition: padding 0s;
@@ -664,12 +665,19 @@
 		position: relative;
 
 		&.edit {
+			max-height: 27em;
 
 			// component_section_id
 			&.component_section_id {
 				flex: 0 0 100%;
 				background-color: #f78a1c;
 				color: white;
+
+				.section_id {
+					font-weight: bold;
+					font-size: larger;
+					letter-spacing: 0.05em;
+				}
 			}
 
 			// component_image
@@ -677,8 +685,8 @@
 				img {
 					padding: 0;
 					height: 100%;
-					max-height: 10em;
-					width: auto;
+					//max-height: 10em;
+					width: 100%;
 				}
 			}
 
@@ -687,9 +695,29 @@
 				img {
 					padding: 0;
 					height: 100%;
-					max-height: 10em;
-					width: auto;
+					//max-height: 10em;
+					width: 100%;
 				}
+			}
+
+			// component pdf
+			&.component_pdf {
+				>.content_data {
+					height: 100%;
+				}
+			}
+
+			// component json
+			&.component_json {
+				>.content_data {
+					height: 100%;
+				}
+			}
+
+
+			>.content_data {
+				//height: 100%;
+				max-height: inherit;
 			}
 
 		}//end &.edit
@@ -702,6 +730,7 @@
 				background-color: #ffffff;
 				text-align: center;
 				display: block;
+
 				>img {
 					padding: 0;
 					height: 100%;
@@ -933,8 +962,9 @@
 				}
 				position: absolute;
 				right: 0.5em;
-				top: 0.5em;
-
+				top: .25em;
+    			z-index: 1;
+    			opacity: 0.9;
 			}
 			&.add {
 				.fa-icon;
@@ -1029,6 +1059,8 @@
 			//background-color: #74D6BA;
 			display: flex;
 			flex-wrap: wrap;
+			height: inherit;
+			max-height: inherit;
 
 			>li {
 				//background-color: #D7B274;
@@ -1038,6 +1070,7 @@
 				flex-wrap: nowrap;
 				line-height: 1em;
 				align-items: center;
+				max-height: inherit;
 
 				// grouper cases (filter)
 				&.grouper {
@@ -1566,10 +1599,14 @@
 	.posterframe, .image  {
 		height: 100%;
 		width: 100%;
-		min-height: 14em;
-		background-position: initial;
-		background-size: cover;
+		//min-height: 14em;
+		//background-position: initial;
+		//background-size: cover;
 		background-repeat: no-repeat;
+		background-size: contain;
+		background-position: center;
+		object-fit: contain;
+		object-position: center;
 
 		// on focus adds a soft shadow and outline
 		&:focus {
@@ -1649,7 +1686,7 @@
 
 		.pdf_viewer_frame {
 			width: 100%;
-	    	height: 15em;
+	    	height: 100%;
 		}
 	}//end .component_pdf
 
