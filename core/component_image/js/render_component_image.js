@@ -50,6 +50,7 @@ render_component_image.prototype.list = function(options) {
 			src 			: url,
 			parent 			: wrapper
 		})
+		ui.component.add_image_fallback(image)
 
 	//const image_div = ui.create_dom_element({
 	//	element_type	: "div",
@@ -117,9 +118,7 @@ const content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 		image.setAttribute("tabindex", 0)
-		image.addEventListener("error", (e)=>{
-			image.src = page_globals.fallback_image
-		})
+		ui.component.add_image_fallback(image)
 
 	// tools
 		// if (!ui.inside_tool(self)) {
