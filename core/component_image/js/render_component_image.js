@@ -117,6 +117,9 @@ const content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 		image.setAttribute("tabindex", 0)
+		image.addEventListener("error", (e)=>{
+			image.src = page_globals.fallback_image
+		})
 
 	// tools
 		// if (!ui.inside_tool(self)) {
