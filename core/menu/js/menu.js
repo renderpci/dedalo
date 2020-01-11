@@ -22,6 +22,7 @@ export const menu = function(){
 	this.data
 	this.node
 	this.li_nodes
+	this.ul_nodes
 	this.events_tokens
 
 	this.ar_instances
@@ -59,6 +60,7 @@ menu.prototype.init = function(options) {
 	self.model 			= options.model
 	self.node 			= []
 	self.li_nodes 		= []
+	self.ul_nodes 		= []
 	self.ar_instances 	= []
 	self.mode 			= 'edit'
 	self.context 		= self.datum.context
