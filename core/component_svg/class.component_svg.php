@@ -33,9 +33,8 @@ class component_svg extends component_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$valor 			= $this->get_url(true);
+		$valor = $this->get_url(true);
 
-		dump($valor,'$valor ');
 		return $valor;
 	}//end get_valor_export
 
