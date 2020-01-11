@@ -43,15 +43,23 @@ render_menu.prototype.edit = async function() {
 							self.menu_active = false
 
 						}else{
+							close_all_drop_menu(self);
 							const main_li 	= e.target.parentNode
 							const nodes_li 	= self.li_nodes
 							const len		= nodes_li.length
+
+							const open_id =  main_li.dataset.children
+							const open_ul = document.getElementById(open_id)
+							open_ul.classList.remove("menu_ul_hidden");
+							open_ul.classList.add("menu_ul_displayed");
+							open_ul.style.left = (main_li.getBoundingClientRect().left+'px')
 
 							for (let i = len - 1; i >= 0; i--) {
 								nodes_li[i].classList.add("menu_li_inactive");
 								nodes_li[i].classList.remove("menu_li_active");
 
 								if(nodes_li[i] == main_li){
+									
 									nodes_li[i].classList.add("menu_li_active");
 									nodes_li[i].classList.remove("menu_li_inactive");
 								}
@@ -82,11 +90,19 @@ render_menu.prototype.edit = async function() {
 
 
 	// Hierarchy
+
+		const hierarchy = ui.create_dom_element({
+				element_type	: 'div',
+				id 				: 'menu_hierarchy',
+				parent 			: fragment,
+
+			})
+
 		level_hierarchy({	self			: self,
 							datalist 		: self.data.tree_datalist,
-							ul_container 	: fragment,
-							parent_tipo		: 'dd1',
-							id 				: 'menu'
+							root_ul			: hierarchy,
+							current_tipo	: 'dd1',
+							parent_tipo 	: 'dd1'
 						})
 
 		// document. do global click action on the document body
@@ -185,7 +201,6 @@ render_menu.prototype.edit = async function() {
 			})
 
 
-
 	// menu button_toggle_inspector
 		const toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
@@ -208,18 +223,20 @@ const level_hierarchy = async (options) => {
 
 	const self			= options.self
 	const datalist 		= options.datalist
-	const ul_container 	= options.ul_container
-	const parent_tipo	= options.parent_tipo
+	const root_ul 		= options.root_ul
+	const current_tipo	= options.current_tipo
 
-
-	const root_areas = datalist.filter(item => item.parent === parent_tipo)
+	const root_areas = datalist.filter(item => item.parent === current_tipo)
 
 	// inputs container
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
-			id 				: options.id || '',
-			parent 			: ul_container
+			parent 			: root_ul,
+			id 				: current_tipo 
 		})
+		
+	self.ul_nodes.push(ul)
+
 
 	// values (inputs)
 		const root_areas_length = root_areas.length
@@ -227,8 +244,10 @@ const level_hierarchy = async (options) => {
 			item_hierarchy({
 							self			: self,
 							datalist 		: datalist,
+							root_ul 		: root_ul,
 							ul_container 	: ul,
 							item 			: root_areas[i],
+							current_tipo	: current_tipo
 							})
 		}
 }
@@ -243,8 +262,10 @@ const item_hierarchy = async (options) => {
 	const self			= options.self
 	const datalist 		= options.datalist
 	const ul_container 	= options.ul_container
+	const root_ul 		= options.root_ul
 	const item 			= options.item
 	const children_item = datalist.find(children_item => children_item.parent === item.tipo)
+	const current_tipo  = options.current_tipo
 
 	// li
 		const li = ui.create_dom_element({
@@ -258,43 +279,89 @@ const item_hierarchy = async (options) => {
 	//events
 
 		li.addEventListener("mouseover", e => {
-
+			//e.stopPropagation();
 			if(self.menu_active===false) {
 				return false
 			}//end if self.menu_active
-				const parent_node = e.target.parentNode;
-				const nodes_li 	= parent_node.parentNode.getElementsByTagName('li')
-				// const nodes_li = self.li_nodes
+
+				// get current node mouse is over
+				const active_li = e.target.nodeName === 'A' ? e.target.parentNode : e.target
+				// get all nodes inside ul
+				const nodes_li = ul_container.getElementsByTagName('li')
 				const len		= nodes_li.length
 				for (let i = len - 1; i >= 0; i--) {
+					//desactive all nodes
 					nodes_li[i].classList.add("menu_li_inactive");
 					nodes_li[i].classList.remove("menu_li_active");
-
-					if(nodes_li[i] == parent_node){
+					const close_id = nodes_li[i].dataset.children
+					// close all ul nodes dependent of the current li
+					close_all_childrens(close_id)
+					// check if the active li is the current loop node.
+					if(nodes_li[i] == active_li){
+						// active the current li
 						nodes_li[i].classList.add("menu_li_active");
 						nodes_li[i].classList.remove("menu_li_inactive");
-					}
-				}
-		})
+						// if the active li has childrens
+						const open_id = active_li.dataset.children
+						if(open_id){
+							//get the ul node and active it
+							const open_ul = document.getElementById(open_id)
+
+							open_ul.classList.remove("menu_ul_hidden");
+							open_ul.classList.add("menu_ul_displayed");
+							
+							//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
+							if(active_li.parentNode.id === 'dd1'){
+								open_ul.style.left = (active_li.getBoundingClientRect().left -1 )+'px'
+							}else{
+								// the node is totally visible and don't need move to the top
+								open_ul.style.top = active_li.getBoundingClientRect().top+'px'
+								// normal calculation for the hierarchy menus
+								// get the botton positon of the ul and remove the height of the window
+								const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
+								// if the position is outside of the window (>0)
+									console.log("ul_bottom_dif :               ",ul_bottom_dif);
+								if (ul_bottom_dif>0) {
+										// get the top of the current li and remove the oversize outsize of the window
+										const total_top = active_li.getBoundingClientRect().top - ul_bottom_dif
+										open_ul.style.top = total_top +'px'	
+								}
+								// move the node to the right position of the selected li
+								open_ul.style.left = active_li.getBoundingClientRect().right+'px'
+								
+							}//end if(active_li.parentNode.id === 'dd1')
+							
+							
+
+						}//end if(open_id)
+					}//end if(nodes_li[i] == active_li)
+				}//end for
+		})// end mouseover
 
 		li.addEventListener("mouseout", e => {
-
+			// e.stopPropagation();
 			if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
 				close_all_drop_menu(self);
 			}
-			return true
+			
 			// if(self.menu_active){
 			// 	li.classList.add ('menu_li_inactive')
 			// 	li.classList.remove ('menu_li_active')
 			// }//end if self.menu_active
+
+			return true
 		})
 
 
 	// link
+		const is_fallback = item.label.indexOf('<mark>')
+		const text_fallback = is_fallback === -1 ? '' : 'mark'
+		const label_text = item.label.replace(/(<([^>]+)>)/ig,"");
+		
 		const link = ui.create_dom_element({
 			element_type	: 'a',
-			class_name		: 'area_label',
-			inner_html 		: item.label,
+			class_name		: 'area_label ' + text_fallback,
+			inner_html 		: label_text,
 			parent 			: li
 		})
 
@@ -309,13 +376,15 @@ const item_hierarchy = async (options) => {
 		})
 
 
-
 		if (children_item) {
 			li.classList.add ('has-sub')
+			li.dataset.children		= item.tipo
+			//li.dataset.parent 	= current_tipo
 			level_hierarchy({		self			: self,
 									datalist 		: datalist,
-									ul_container	: li,
-									parent_tipo		: item.tipo
+									root_ul 		: root_ul,
+									current_tipo	: item.tipo,
+									parent_tipo 	: current_tipo
 								})
 
 		}// end children_item
@@ -332,6 +401,20 @@ const close_all_drop_menu = async function(self) {
 
 		console.log("close menu:");
 
+	if (typeof self.ul_nodes!=="undefined") {
+
+		const len = self.ul_nodes.length
+		for (let i = len - 1; i >= 0; i--) {
+			const ul = self.ul_nodes[i]
+			ul.classList.add("menu_ul_hidden");
+			ul.classList.remove("menu_ul_displayed");
+			 // ul.removeAttribute("style")
+			//ul.style.removeProperty('top')
+			// ul.style.top = 'auto'
+			// ul.style.bottom = null
+		}
+	}
+
 	if (typeof self.li_nodes!=="undefined") {
 
 		const len = self.li_nodes.length
@@ -344,6 +427,28 @@ const close_all_drop_menu = async function(self) {
 
 	return true
 }//end close_all_drop_menu
+
+
+const close_all_childrens = async function(tipo){
+
+	
+
+	if(tipo){
+		const close_ul = document.getElementById(tipo)
+			close_ul.classList.remove("menu_ul_displayed");
+			close_ul.classList.add("menu_ul_hidden");
+	
+		const ar_children_nodes = close_ul.childNodes
+		const child_len = ar_children_nodes.length
+
+		for (let i = child_len - 1; i >= 0; i--) {
+			const new_tipo = ar_children_nodes[i].dataset.children
+			close_all_childrens(new_tipo)
+		}
+	}
+
+	return true
+}
 
 
 /**
