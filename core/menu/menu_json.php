@@ -34,7 +34,7 @@
 				foreach (unserialize( DEDALO_APPLICATION_LANGS ) as $key => $value) {
 					$obj_langs = new stdClass();
 						$obj_langs->value 	= $key;
-						$obj_langs->label 	= $value;;
+						$obj_langs->label 	= $value;
 					$langs_datalist[] = $obj_langs;
 				}
 
