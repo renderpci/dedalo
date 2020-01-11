@@ -14,18 +14,18 @@ print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_edit.css',null,false);
 <?php #print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php'); ?>
 <script type="text/javascript">
 <?php
-$page_globals = new stdClass();
-	# version
-	$page_globals->dedalo_version 			= DEDALO_VERSION;
-	# lang
-	$page_globals->dedalo_application_lang 	= DEDALO_APPLICATION_LANG;
-	$page_globals->dedalo_data_lang 		= DEDALO_DATA_LANG;
-	$page_globals->dedalo_data_nolan 		= DEDALO_DATA_NOLAN;
-	# modo
-	$page_globals->modo 					= isset($modo) ? $modo : null;
-?>
-const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
+// $page_globals = new stdClass();
+// 	# version
+// 	$page_globals->dedalo_version 			= DEDALO_VERSION;
+// 	# lang
+// 	$page_globals->dedalo_application_lang 	= DEDALO_APPLICATION_LANG;
+// 	$page_globals->dedalo_data_lang 		= DEDALO_DATA_LANG;
+// 	$page_globals->dedalo_data_nolan 		= DEDALO_DATA_NOLAN;
+// 	# modo
+// 	$page_globals->modo 					= isset($modo) ? $modo : null;
 
+/*const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;*/
+?>
 // vars
 const id = '<?php echo $id ?>',
 	terminoID = '<?php echo $terminoID ?>',

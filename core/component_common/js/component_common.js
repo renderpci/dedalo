@@ -54,11 +54,13 @@ component_common.prototype.init = async function(options) {
 	self.context 	= options.context  		|| null // structure context of current component (include properties, tools, etc.)
 	self.data 	 	= options.data 			|| null // current specific data of this component
 	self.datum 	 	= options.datum  		|| null // global data including dependent data (used in portals, etc.)
-	self.pagination = self.data.pagination 	|| { // pagination info (used in portals, etc.)
-		total : 0,
-		offset: 0,
-		limit : 0
-	}
+	self.pagination = self.data && self.data.pagination
+		? self.data.pagination
+		: { // pagination info (used in portals, etc.)
+			total : 0,
+			offset: 0,
+			limit : 0
+		}
 
 	self.type  = self.context.type 	// tipology of current instance, usually 'component'
 	self.label = self.context.label // label of current component like 'summary'

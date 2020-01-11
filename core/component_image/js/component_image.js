@@ -28,6 +28,8 @@ export const component_image = function(){
 	this.parent
 	this.node
 
+	this.tools
+
 
 	return true
 }//end component_image

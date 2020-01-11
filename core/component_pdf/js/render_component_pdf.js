@@ -96,6 +96,8 @@ const get_content_data_edit = async function(self) {
 		const pdf_url 		= value[0].url || null
 		const viewer_url 	= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
 
+	if (pdf_url) {
+
 	// iframe
 		const iframe = ui.create_dom_element({
 			element_type	: "iframe",
@@ -104,7 +106,7 @@ const get_content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 		iframe.setAttribute('allowfullscreen',true)
-
+	}
 
 	// content_data
 		const content_data = document.createElement("div")
