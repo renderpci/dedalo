@@ -39,12 +39,15 @@ render_component_svg.prototype.list = function(options) {
 		for (let i = 0; i < value_length; i++) {
 
 			const item_value = value[i]
-			const url 		 = (typeof item_value==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : item_value.url
+			const url 		 = item_value.url
 
 			const svg_element = ui.create_dom_element({
 				element_type	: "img",
 				src 			: url,
 				parent 			: fragment
+			})
+			svg_element.addEventListener("error", (e)=>{
+				svg_element.src = page_globals.fallback_image
 			})
 
 			fragment.appendChild(svg_element)
@@ -167,6 +170,9 @@ const get_svg_element = function(item_value) {
 			parent 			: li
 		})
 		image.setAttribute("tabindex", 0)
+		image.addEventListener("error", (e)=>{
+			image.src = page_globals.fallback_image
+		})
 
 
 	return li
