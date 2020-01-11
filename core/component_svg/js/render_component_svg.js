@@ -41,16 +41,14 @@ render_component_svg.prototype.list = function(options) {
 			const item_value = value[i]
 			const url 		 = item_value.url
 
-			const svg_element = ui.create_dom_element({
+			const image = ui.create_dom_element({
 				element_type	: "img",
 				src 			: url,
 				parent 			: fragment
 			})
-			svg_element.addEventListener("error", (e)=>{
-				svg_element.src = page_globals.fallback_image
-			})
+			ui.component.add_image_fallback(image)
 
-			fragment.appendChild(svg_element)
+			fragment.appendChild(image)
 		}
 
 	// wrapper
@@ -170,9 +168,7 @@ const get_svg_element = function(item_value) {
 			parent 			: li
 		})
 		image.setAttribute("tabindex", 0)
-		image.addEventListener("error", (e)=>{
-			image.src = page_globals.fallback_image
-		})
+		ui.component.add_image_fallback(image)
 
 
 	return li

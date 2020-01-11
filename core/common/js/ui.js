@@ -339,7 +339,32 @@ export const ui = {
 			current_node.parentNode.replaceChild(new_node, current_node);
 
 			return current_node
-		}//end regenerate
+		},//end regenerate
+
+
+
+		/**
+		* ADD_IMAGE_FALLBACK
+		* Unified fallback image adds event listener error and changes the image src when event error is triggered
+		*/
+		add_image_fallback : (img_node) => {
+
+			function change_src(item) {
+
+				// set fallback src to the image
+				item.target.src = page_globals.fallback_image
+
+				// remove onerror listener to avoid infinite loop
+				item.target.removeEventListener("error", change_src, true);
+
+				//console.log("item.target:",item.target);
+			}
+
+			img_node.addEventListener("error", change_src, true)
+
+
+			return true
+		}//end add_image_fallback
 
 
 

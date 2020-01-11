@@ -40,7 +40,7 @@ render_component_av.prototype.list = async function() {
 
 	// url
 		const posterframe_url 	= data.posterframe_url
-		const url 				= (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+		const url 				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
 		const image = ui.create_dom_element({
@@ -48,6 +48,7 @@ render_component_av.prototype.list = async function() {
 			src 			: url,
 			parent 			: wrapper
 		})
+		ui.component.add_image_fallback(image)
 
 
 	return wrapper
