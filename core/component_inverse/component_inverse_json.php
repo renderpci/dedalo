@@ -31,13 +31,13 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-			
+
 		// Value
 		$value = $this->get_dato();
 		
 		// data item
-		$item  = $this->get_data_item($value);
-
+		$item = $this->get_data_item($value);
+	
 		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)

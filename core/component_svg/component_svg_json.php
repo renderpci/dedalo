@@ -23,7 +23,7 @@
 				$context[] = $this->get_structure_context($permissions);
 				break;
 		}
-	}//end if($options->get_context===true))
+	}//end if($options->get_context===true)
 
 
 
@@ -32,21 +32,16 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		// Value
-		// $value = $this->get_dato();
-		// if (!is_array($value)) {
-		// 	$value = [$value];
-		// }
-		$value = [];
+		// Available image files
+			$value = [];
 
-		$pdf_item = new stdClass();
-			$pdf_item->url 	 	= $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT, true); // $quality=false, $test_file=true, $absolute=false, $default_add=false
-			$pdf_item->quality 	= DEDALO_PDF_QUALITY_DEFAULT;
+		$svg_item = new stdClass();
+			$svg_item->url = $this->get_url(false, true, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 
-		$value[] = $pdf_item;
+		$value[] = $svg_item;
 
 		// data item
-		$item = $this->get_data_item($value);
+		$item  = $this->get_data_item($value);
 
 		$data[] = $item;
 

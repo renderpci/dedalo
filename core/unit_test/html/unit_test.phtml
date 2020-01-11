@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title></title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<!-- add mocha css, to show results  https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.css | https://unpkg.com/mocha/mocha.css -->
+		<link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css">
+	<!-- add mocha framework code  https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.js | https://unpkg.com/mocha/mocha.js -->
+		<script src="https://unpkg.com/mocha/mocha.js"></script>
+	<script>
+		// minimal setup
+		// mocha.setup({
+		//   ui: 'bdd'
+		// });
+		// Use "tdd" interface, check global leaks, and force all tests to be asynchronous
+		mocha.setup({
+		  ui: 'bdd',
+		  checkLeaks: true,
+		  asyncOnly: true
+		});
+		//mocha.growl(); // <-- Enables web notifications
+	</script>
+	<!-- add chai  https://unpkg.com/chai/chai.js | https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.js -->
+		<script src="https://unpkg.com/chai/chai.js"></script>
+	<script>
+		// chai has a lot of stuff, let's make assert global
+		let assert = chai.assert;
+	</script>
+	<script defer="defer" src="<?php echo DEDALO_CORE_URL ?>/common/js/enviroment.js.php"></script>
+</head>
+<body>
+	<!-- the element with id="mocha" will contain test results -->
+		<div id="mocha"></div>
+
+	<!-- tests file -->
+		<script type="module" src="js/test.js"></script>
+
+	<!-- run tests! -->
+		<script>
+			//mocha.run();
+		</script>
+</body>
+</html>

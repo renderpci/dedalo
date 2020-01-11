@@ -176,7 +176,7 @@
 		}
 
 		//console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
-		//console.log(" ++++++++ instances:",instances)
+		//console.log(" ++++++++ instances:",instances, deleted)
 
 		return deleted
 	}//end delete_instance
@@ -186,14 +186,16 @@
 	/**
 	* KEY_INSTANCES_BUILDER
 	*/
-	const key_instances_builder = function(options){
+	export const key_instances_builder = function(options){
 
 		const order = ['model','tipo','section_tipo','section_id','mode','lang']
 		const key_parts = []
 
 		const l = order.length
 		for (let i = 0; i < l; i++) {
-			if (options.hasOwnProperty(order[i]) && typeof options[order[i]]!=='undefined' && options[order[i]]!==null && options[order[i]].length>0){
+
+			const current_value = options[order[i]] ? options[order[i]].toString() : '';
+			if (options.hasOwnProperty(order[i]) && typeof current_value!=='undefined' && current_value!==null && current_value.length>0){
 				key_parts.push( options[order[i]] )
 			}
 		}
