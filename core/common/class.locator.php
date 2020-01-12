@@ -198,7 +198,15 @@ class locator extends stdClass {
 		
 	}//end set_from_key
 
-
+	/**
+	* SET_TIPO
+	*/
+	public function set_tipo($value) {
+		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid section_top_tipo: $value", 1);
+		}
+		$this->tipo = (string)$value;
+	}// end set_tipo
 
 
 
