@@ -32,47 +32,48 @@ render_menu.prototype.edit = async function() {
 		self.menu_active = false
 		const menu_wrapper = document.createElement("div")
 			  menu_wrapper.classList.add("menu_wrapper")
-			  // click do global click action on the menu items
-				menu_wrapper.addEventListener("click", e => {
-					// first menu items only (when the ul is the main menu)
-						//close all menu items when the menu change to inactive
-						if (self.menu_active===true) {
-							close_all_drop_menu(self);
-							self.menu_active = false
-						}else{
-							//reset all nodes to inactive state
-							close_all_drop_menu(self);
-							// get the main li nodes
-							const main_li 	= e.target.parentNode
-							const nodes_li 	= self.li_nodes
-							const len		= nodes_li.length
-							//get the main ul nodes
-							const open_id =  main_li.dataset.children
-							const open_ul = document.getElementById(open_id)
-							//set the css visibility for the ul
-							open_ul.classList.remove("menu_ul_hidden");
-							open_ul.classList.add("menu_ul_displayed");
-							//move the ul to the left posion of the parent li
-							open_ul.style.left = (main_li.getBoundingClientRect().left+'px')
 
-							for (let i = len - 1; i >= 0; i--) {
-								//inactived all li nodes 
-								nodes_li[i].classList.add("menu_li_inactive");
-								nodes_li[i].classList.remove("menu_li_active");
+	  	// click event do global click action on the menu items
+			menu_wrapper.addEventListener("click", e => {
+				// first menu items only (when the ul is the main menu)
+					//close all menu items when the menu change to inactive
+					if (self.menu_active===true) {
+						close_all_drop_menu(self);
+						self.menu_active = false
+					}else{
+						//reset all nodes to inactive state
+						close_all_drop_menu(self);
+						// get the main li nodes
+						const main_li 	= e.target.parentNode
+						const nodes_li 	= self.li_nodes
+						const len		= nodes_li.length
+						//get the main ul nodes
+						const open_id =  main_li.dataset.children
+						const open_ul = document.getElementById(open_id)
+						//set the css visibility for the ul
+						open_ul.classList.remove("menu_ul_hidden");
+						open_ul.classList.add("menu_ul_displayed");
+						//move the ul to the left posion of the parent li
+						open_ul.style.left = (main_li.getBoundingClientRect().left+'px')
 
-								// active only the selected li node
-								if(nodes_li[i] == main_li){
-									nodes_li[i].classList.add("menu_li_active");
-									nodes_li[i].classList.remove("menu_li_inactive");
-								}
+						for (let i = len - 1; i >= 0; i--) {
+							//inactived all li nodes
+							nodes_li[i].classList.add("menu_li_inactive");
+							nodes_li[i].classList.remove("menu_li_active");
+
+							// active only the selected li node
+							if(nodes_li[i] == main_li){
+								nodes_li[i].classList.add("menu_li_active");
+								nodes_li[i].classList.remove("menu_li_inactive");
 							}
-							event.stopPropagation();
-							self.menu_active = true
-						}// end if (self.menu_active===true)
-					})// end menu_wrapper.addEventListener("click")
+						}
+						event.stopPropagation();
+						self.menu_active = true
+					}// end if (self.menu_active===true)
+				})// end menu_wrapper.addEventListener("click")
 
 
-	// Quit
+	// quit button
 		const quit = ui.create_dom_element({
 			element_type	: 'div',
 			id 				: 'quit',
@@ -83,7 +84,7 @@ render_menu.prototype.edit = async function() {
 		})
 
 
-	// Logo
+	// logo image
 		const dedalo_icon = ui.create_dom_element({
 			element_type	: 'div',
 			id 				: 'dedalo_icon_top',
@@ -91,13 +92,12 @@ render_menu.prototype.edit = async function() {
 		})
 
 
-	// Hierarchy
+	// areas/sections hierarchy list
 		const hierarchy = ui.create_dom_element({
-				element_type	: 'div',
-				id 				: 'menu_hierarchy',
-				parent 			: fragment,
-
-			})
+			element_type	: 'div',
+			id 				: 'menu_hierarchy',
+			parent 			: fragment
+		})
 
 		level_hierarchy({	self			: self,
 							datalist 		: self.data.tree_datalist,
@@ -128,8 +128,20 @@ render_menu.prototype.edit = async function() {
 			    }
 			});
 
+	// ontology link
+		const ontology_link = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'ontology',
+			parent 			: fragment,
+			text_content	: 'Ontology'
+		})
+		ontology_link.addEventListener("click", ()=>{
+			const win = window.open('../dd', '_blank');
+				  win.focus();
+		})
 
-	// User name(go to list)
+
+	// user name link (go to list)
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
@@ -138,7 +150,7 @@ render_menu.prototype.edit = async function() {
 		})
 
 
-	// Application_langs_selector
+	// application lang selector
 		const lang_datalist = self.data.langs_datalist
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
 			id 			: 'dd_app_lang',
@@ -147,15 +159,15 @@ render_menu.prototype.edit = async function() {
 			selected	: page_globals['dedalo_application_lang'],
 			class_name 	: 'dedalo_aplication_langs_selector'
 		})
-
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
 
-	// menu dedalo_data_langs_selector(go to list)
+	// data lang selector
 		const lang_datalist_data = lang_datalist.map(item =>{
-			const label =  get_label['data'] || 'data'
-			return {label: label+': '+item.label,
-								value: item.value}
+			return {
+				label : (get_label['data'] || 'data') + ': ' + item.label,
+				value : item.value
+			}
 		})
 		const dedalo_data_langs_selector = ui.build_select_lang({
 			id 			: 'dd_data_lang',
@@ -164,7 +176,6 @@ render_menu.prototype.edit = async function() {
 			selected	: page_globals['dedalo_data_lang'],
 			class_name	: 'dedalo_aplication_langs_selector'
 		})
-
 		fragment.appendChild(dedalo_data_langs_selector)
 
 
@@ -204,7 +215,7 @@ render_menu.prototype.edit = async function() {
 			})
 
 
-	// menu button_toggle_inspector
+	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button_toggle_inspector',
@@ -214,8 +225,9 @@ render_menu.prototype.edit = async function() {
 
 	menu_wrapper.appendChild(fragment)
 
+
 	return menu_wrapper
-}
+}//end edit
 
 
 /**
@@ -235,9 +247,9 @@ const level_hierarchy = async (options) => {
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
 			parent 			: root_ul,
-			id 				: current_tipo 
+			id 				: current_tipo
 		})
-		
+
 	//store in the instance the new ul node
 	self.ul_nodes.push(ul)
 
@@ -254,7 +266,9 @@ const level_hierarchy = async (options) => {
 							current_tipo	: current_tipo
 							})
 		}
-}
+
+}//end level_hierarchy
+
 
 
 /**
@@ -327,14 +341,14 @@ const item_hierarchy = async (options) => {
 								if (ul_bottom_dif>0) {
 										// get the top of the current li and remove the oversize outsize of the window
 										const total_top = active_li.getBoundingClientRect().top - ul_bottom_dif
-										open_ul.style.top = total_top +'px'	
+										open_ul.style.top = total_top +'px'
 								}
 								// move the node to the right position of the selected li
 								open_ul.style.left = active_li.getBoundingClientRect().right+'px'
-								
+
 							}//end if(active_li.parentNode.id === 'dd1')
-							
-							
+
+
 
 						}//end if(open_id)
 					}//end if(nodes_li[i] == active_li)
@@ -351,14 +365,14 @@ const item_hierarchy = async (options) => {
 		})
 
 
-	// remove the html <mark> sended by the server 
-	// when the label is not in the current language 
+	// remove the html <mark> sended by the server
+	// when the label is not in the current language
 	// and get the label with fallback
 	// and replace it for italic style
 		const is_fallback = item.label.indexOf('<mark>')
 		const text_fallback = is_fallback === -1 ? '' : 'mark'
 		const label_text = item.label.replace(/(<([^>]+)>)/ig,"");
-		
+
 	// a element with the link to the area or section to go
 		const link = ui.create_dom_element({
 			element_type	: 'a',
@@ -439,7 +453,7 @@ const close_all_childrens = async function(tipo){
 		const close_ul = document.getElementById(tipo)
 			close_ul.classList.remove("menu_ul_displayed");
 			close_ul.classList.add("menu_ul_hidden");
-	
+
 		// get the child nodes of the current ul
 		const ar_children_nodes = close_ul.childNodes
 		const child_len = ar_children_nodes.length
@@ -456,27 +470,29 @@ const close_all_childrens = async function(tipo){
 }// end close_all_childrens
 
 
+
 /**
 * CHANGE_LANG
 */
 const change_lang = async function(event) {
 
-	const current_lang 	= event.target.value
+	const current_lang = event.target.value
 
 	const api_response = await data_manager.prototype.request({
-			body : {
-				action 	 : 'change_lang',
-				dd_api 	 : 'dd_utils_api',
-				options  : {
-					dedalo_data_lang 		: current_lang,
-					dedalo_application_lang : event.target.id==='dd_data_lang' ? null : current_lang
-				}
+		body : {
+			action 	 : 'change_lang',
+			dd_api 	 : 'dd_utils_api',
+			options  : {
+				dedalo_data_lang 		: current_lang,
+				dedalo_application_lang : event.target.id==='dd_data_lang' ? null : current_lang
 			}
-		})
-		window.location.reload(false);
-
+		}
+	})
+	window.location.reload(false);
 
 	//event_manager.publish('user_action', {lang: current_lang})
-		
-		
-}
+
+	return api_response
+}//end change_lang
+
+

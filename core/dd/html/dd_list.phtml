@@ -80,14 +80,23 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_list.js');
   <tr>
 	<td>
 		<div class="header">
-			<h2>Dédalo Ontology</h2>
-		<?php # EXPORT BUTTON (ADMIN)
-			if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false
-				|| (DEDALO_DATABASE_CONN==='dedalo4_development')
-				) {
-				echo "<a href=\"javascript:void(0)\" class=\"\" onclick=\"common.export_str(this)\">EXPORT</a>";
-			}
-		?>
+			<h2 class="title">Dédalo Ontology</h2>
+			<?php # EXPORT BUTTON (ADMIN)
+				if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false
+					|| (DEDALO_DATABASE_CONN==='dedalo4_development')
+					) {
+					echo "<a href=\"javascript:void(0)\" class=\"export\" onclick=\"common.export_str(this)\">EXPORT</a>";
+				}
+			?>
+			<div class="spacer"></div>
+			<ul class="select_mode">
+				<li>
+					<a href="../dd/dd_list.php?modo=tesauro_edit">Terms</a>
+				</li>
+				<li>
+					<a href="../dd/dd_list.php?modo=modelo_edit">Models</a>
+				</li>
+			</ul>
 		</div>
 	</td>
   </tr>
