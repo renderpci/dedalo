@@ -66,13 +66,24 @@ $updates->$v = new stdClass();
 	$updates->$v->run_scripts[] = $script_obj;
 
 
-		# Update datos to section_data
+	# Update datos to section_data
 	$script_obj = new stdClass();
 		$script_obj->info   		= "Convert dato of some components ( component_profile, component_security_administration, component_filter_records), to new standard locator format";
 		$script_obj->script_class   = "security_v5_to_v6";
 		$script_obj->script_method  = "convert_table_data_users";
 		$script_obj->script_vars    = json_encode(['component_profile','component_security_administration']); // Note that only ONE argument encoded is sended
 	$updates->$v->run_scripts[] = $script_obj;
+
+	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.activity_v5_to_v6.php');
+	
+	# Update datos to section_data
+	$script_obj = new stdClass();
+		$script_obj->info   		= "Convert the old dato format of some components dd546, dd545( component_autocomplete_ts ), to new standard component_autocomplete format";
+		$script_obj->script_class   = "activity_v5_to_v6";
+		$script_obj->script_method  = "convert_table_data_activity";
+		$script_obj->script_vars    = json_encode(['component_autocomplete_ts']); // Note that only ONE argument encoded is sended
+	$updates->$v->run_scripts[] = $script_obj;
+
 
 
 
