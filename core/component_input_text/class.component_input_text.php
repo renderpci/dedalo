@@ -105,18 +105,6 @@ class component_input_text extends component_common {
 
 
 	/**
-	* GET_VALUE
-	* @return 
-	*/
-	public function get_value() {
-
-		$current_valor .= RecordObj_ts::get_termino_by_tipo($terminoID, $lang, true);
-		
-	}//end get_value
-
-
-
-	/**
 	* LOAD TOOLS
 	*//**/
 	public function load_tools( $check_lang_tools=true ) {
