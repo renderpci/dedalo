@@ -351,7 +351,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}elseif ($this->terminoID===DEDALO_USER_PROFILE_TIPO) {
 			return 'component_select';
 		}elseif ($this->terminoID==='dd546') { // activity where
-			return 'component_autocomplete';
+			return 'component_input_text';
 		}elseif ($this->terminoID==='dd545') { // activity what
 			return 'component_select';
 		}
