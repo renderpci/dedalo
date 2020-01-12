@@ -424,32 +424,6 @@ class dd_date extends stdClass {
 
 
 	/**
-	* CORRECT_DATE
-	* Convert actual date to mktime and set params to corrected values. 
-	* Example: day 31 of month 11, is corrected to day 1 of month 12
-	*//*
-	protected function correct_date() {
-
-		$hour 	= isset($this->hour) ? $this->hour : 0;
-		$minute = isset($this->minute) ? $this->minute : 0;
-		$second = isset($this->second) ? $this->second : 0;
-		$month 	= isset($this->month) ? $this->month : 1;
-		$day 	= isset($this->day) ? $this->day : 1;
-		$year 	= isset($this->year) ? $this->year : 0;
-
-		$time = mktime($hour,$minute,$second,$month,$day,$year);
-		$this->set_year( (int)date('Y',$time) );
-		$this->set_month( (int)date('m',$time) );
-		$this->set_day ( (int)date('d',$time) );
-		$this->set_hour( (int)date('H',$time) );
-		$this->set_minute( (int)date('i',$time) );
-		$this->set_second( (int)date('s',$time) );
-	}//end correct_date
-	*/
-
-
-
-	/**
 	* GET_DATE_WITH_FORMAT
 	* Format a date as is desired
 	* @param string $date
@@ -587,21 +561,6 @@ class dd_date extends stdClass {
 
 		return $unix_timestamp;
 	}//end convert_date_to_unit
-
-
-
-	/**
-	* __DESTRUCT
-	*//*
-	public function __destruct() {
-
-		#$this->correct_date();
-
-		if (!empty($this->errors)) {
-			//trigger_error( to_string($this->errors) );
-			debug_log(__METHOD__." Errors foud in dd_date ".to_string($this), logger::WARNING);
-		}
-	}//end __destruct */
 
 
 
