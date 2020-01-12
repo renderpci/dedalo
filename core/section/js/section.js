@@ -174,7 +174,9 @@ section.prototype.build = async function(autoload=false) {
 	// set context and data to current instance
 		self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
 		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
-		self.section_id = self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+		self.section_id = self.data
+			? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+			: null
 
 	// Update section mode/label with context declarations
 		const section_context 	= self.context.find(element => element.tipo===self.section_tipo) || {
