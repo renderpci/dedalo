@@ -22,15 +22,11 @@ class dd_elements {
 		$html = "<div id=\"divTsIcons$terminoID\" $resalte class=\"divTS\">";
 
 			# Render Buttons
-
-			#print("modo:".$this->modo);
-
 			if($this->modo==='tesauro_edit' || $this->modo==='modelo_edit') {
 
-				if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!=='dedalo4_master' && DEDALO_DATABASE_CONN!=='dedalo4_development' ) {
-					# No buttons are showed
-				}else{
-
+				// if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!=='dedalo4_master' && DEDALO_DATABASE_CONN!=='dedalo4_development' ) {
+				//	No buttons are showed
+				// }else{
 					# Añadir hijo BtnMas
 					$html .= $this->renderBtnMas($terminoID, $hijosD, $parent);
 					# Borrar termino BtnBorrar
@@ -39,8 +35,7 @@ class dd_elements {
 					$html .= $this->renderBtnNorden($terminoID, $parent, $nordenV, $termino, $norden);
 					# Editar termino
 					$html .= $this->renderBtnEditTermino($terminoID);
-				}
-
+				// }
 			}
 
 			if($this->modo==='tesauro_rel') {
@@ -56,7 +51,6 @@ class dd_elements {
 					}
 				#}
 			}
-
 
 
 			# Mostrar texto del término
