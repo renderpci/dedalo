@@ -85,6 +85,7 @@ background-color: #FFFF00;
 		// direct children elements
 		>* {
 			height: @menu_heigth;
+			line-height: @menu_heigth;
 			font-size: 1.1em;
 			//background-color: #8EA035 !important;
 			margin-left: 1em;
@@ -120,18 +121,24 @@ background-color: #FFFF00;
 			>.logged_user_name {
 				color: #c9c9c9;
 				cursor: pointer;
-				line-height: @menu_heigth;
+				//line-height: @menu_heigth;
 
 				&:hover {
 					color: #F9F9F9;
 				}
 			}
 
+			>.ontology {
+				color: #c9c9c9;
+				cursor: pointer;
+				//line-height: @menu_heigth;
+			}
+
 			>.dedalo_aplication_langs_selector {
 				//height: 25px;
 				//height: 2em;
 				height: auto;
-				line-height: @menu_heigth;
+				//line-height: @menu_heigth;
 				//font-size: 1em;
 				max-width: 99.9%;
 				//line-height: 1.1em;
@@ -169,7 +176,7 @@ background-color: #FFFF00;
 			}
 
 			>.section_label {
-				line-height: @menu_heigth;
+				//line-height: @menu_heigth;
 				cursor: pointer;
 				font-weight: bold;
 				margin-right: 1.5em;
@@ -281,7 +288,7 @@ background-color: #FFFF00;
 		}
 
 
-		ul#dd1{			
+		ul#dd1{
 			//font-family: system, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Lucida Grande', "Oxygen-light", sans-serif;
 			//-webkit-font-smoothing: subpixel-antialiased;
 			display: flex;
@@ -293,7 +300,7 @@ background-color: #FFFF00;
 				//margin-left: 49px;
 				padding: 0px;
 				border:none;
-				
+
 				text-align: left;
 
 				&.has-sub::after{
@@ -313,10 +320,10 @@ background-color: #FFFF00;
 				/*padding-bottom: 5px;*/
 			}
 		}
-		
 
 
-	
+
+
 
 		// level 2 list
 		ul:not(#dd1) {
@@ -380,7 +387,7 @@ background-color: #FFFF00;
 		}
 
 		// .menu_overflow::-webkit-scrollbar {
-		//    //This is the magic bit for WebKit 
+		//    //This is the magic bit for WebKit
 		//   display: none;
 		// }
 
