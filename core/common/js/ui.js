@@ -351,13 +351,13 @@ export const ui = {
 
 			function change_src(item) {
 
+				// remove onerror listener to avoid infinite loop (!)
+				item.target.removeEventListener("error", change_src, true);
+
 				// set fallback src to the image
 				item.target.src = page_globals.fallback_image
 
-				// remove onerror listener to avoid infinite loop
-				item.target.removeEventListener("error", change_src, true);
-
-				//console.log("item.target:",item.target);
+				return true
 			}
 
 			img_node.addEventListener("error", change_src, true)
