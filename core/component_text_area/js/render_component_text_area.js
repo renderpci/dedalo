@@ -29,18 +29,24 @@ render_component_text_area.prototype.list = async function() {
 
 	const self = this
 
-	// Value as string
-		const value_string = self.data.value //"component_text_area not finish yet!" //data.value.join(' | ')
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
 
-	// Node create
-		const node = ui.create_dom_element({
-			element_type	: "div",
-			class_name		: self.model + '_list ' + self.tipo,
-			inner_html 		: value_string
+	// wrapper
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : false
 		})
 
+	// Value as string
+		const value_string = value.join(self.divisor)
 
-	return node
+	// Set value
+		wrapper.innerHTML = value_string
+
+
+	return wrapper
 }//end list
 
 

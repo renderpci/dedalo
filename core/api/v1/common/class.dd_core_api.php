@@ -330,7 +330,7 @@ class dd_core_api {
 				$element_required->lang 		= $options->lang ?? DEDALO_DATA_LANG;
 				$element_required->mode 		= $options->mode ?? 'list';
 				$element_required->section_id	= $options->section_id ?? null;
-		
+
 		// element json
 			$element = self::get_page_element( $element_required );
 
@@ -858,7 +858,7 @@ class dd_core_api {
 
 	/**
 	* GET_PAGE_ELEMENT
-	* @return 
+	* @return
 	*/
 	public static function get_page_element($element_required) {
 
@@ -886,14 +886,14 @@ class dd_core_api {
 								$get_json_options->get_data 	= true;
 							$menu_json = $menu->get_json($get_json_options);
 
-						// element
-							$page_element = new StdClass();
-								$page_element->model 		= 'menu';
-								$page_element->tipo 		= 'dd85';
-								$page_element->mode 		= 'edit';
-								$page_element->lang 		= DEDALO_APPLICATION_LANG;
-								$page_element->sqo_context  = null;
-								$page_element->datum 		= $menu_json;
+						$page_element = new StdClass();
+							$page_element->model 		= 'menu';
+							$page_element->type 		= 'menu';
+							$page_element->tipo 		= 'dd85';
+							$page_element->mode 		= 'edit';
+							$page_element->lang 		= DEDALO_APPLICATION_LANG;
+							$page_element->sqo_context  = null;
+							$page_element->datum 		= $menu_json;
 
 						return $page_element;
 					})();
@@ -905,6 +905,7 @@ class dd_core_api {
 
 						$page_element = new StdClass();
 							$page_element->model 		= $model;
+							$page_element->type  		= 'area';
 							$page_element->tipo  		= $tipo;
 							$page_element->mode 	 	= $mode;
 							$page_element->lang 	 	= DEDALO_DATA_LANG;
@@ -936,6 +937,7 @@ class dd_core_api {
 
 						$page_element = new StdClass();
 							$page_element->model 		 = 'section';
+							$page_element->type 		 = 'section';
 							$page_element->section_tipo  = $section_tipo;
 							$page_element->section_id 	 = $section_id;
 							$page_element->mode 	 	 = $mode;
@@ -960,6 +962,7 @@ class dd_core_api {
 
 						$page_element = new StdClass();
 							$page_element->model 		 = $model;
+							$page_element->type 		 = 'section';
 							$page_element->section_tipo  = $section_tipo;
 							$page_element->section_id 	 = $section_id;
 							$page_element->mode 	 	 = $mode;
@@ -971,12 +974,12 @@ class dd_core_api {
 					break;
 					default:
 						throw new Exception("Error Processing Request", 1);
-						
+
 			}//end switch ($model)
 
-		
 
-		return $page_element;		
+
+		return $page_element;
 	}//end get_page_element
 
 

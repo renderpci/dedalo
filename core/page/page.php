@@ -4,7 +4,7 @@
 // page mode and tipo
 	define('MODE', $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list') );
 	$tipo 		= $_GET['t'] ?? $_GET['tipo'] ?? 'test65'; //MAIN_FALLBACK_SECTION;
-	$section_id = $_GET['id'] ?? null;
+	$section_id = $_GET['id'] ?? $_GET['section_id'] ?? null;
 
 
 // page globals

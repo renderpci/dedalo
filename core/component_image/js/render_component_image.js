@@ -50,6 +50,7 @@ render_component_image.prototype.list = function(options) {
 			src 			: url,
 			parent 			: wrapper
 		})
+		ui.component.add_image_fallback(image)
 
 	//const image_div = ui.create_dom_element({
 	//	element_type	: "div",
@@ -109,7 +110,6 @@ const content_data_edit = async function(self) {
 		const url_object 		= value.filter(item => item.quality===quality)[0]
 		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
-
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
@@ -118,7 +118,19 @@ const content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 		image.setAttribute("tabindex", 0)
+		ui.component.add_image_fallback(image)
 
+	// tools
+		// if (!ui.inside_tool(self)) {
+		// 	const tools = self.tools
+		// 	const tools_length = tools.length
+
+		// 	for (let i = 0; i < tools_length; i++) {
+		// 		if(tools[i].show_in_component){
+		// 			buttons_container.appendChild( ui.tool.build_tool_button(tools[i], self) );
+		// 		}
+		// 	}
+		// }
 
 	// content_data
 		const content_data = document.createElement("div")

@@ -72,38 +72,51 @@ page.prototype.init = async function(options) {
 		self.events_tokens.push(
 			event_manager.subscribe('user_action', user_action)
 		)
-		async function user_action (options) {
-			const current_data_manager = new data_manager()
-			const api_response = await current_data_manager.request({
-				body : {
-					action 		: 'get_element',
-					options 	: options
-				}
-			})
+		// user_action fn
+			async function user_action(options) {
+				const current_data_manager = new data_manager()
+				const api_response = await current_data_manager.request({
+					body : {
+						action 		: 'get_element',
+						options 	: options
+					}
+				})
+				// element context from api server result
+					const api_element = api_response.result
 
-			const api_element 		= api_response.result
-			const elements_to_stay 	= self.elements.filter(item => item.model!==api_element.model)
-			elements_to_stay.push(api_element)
+				// elements to stay
+					const base_types = ['section','tool','area']
+					// const elements_to_stay 	= self.elements.filter(item => item.model!==api_element.model)
+					const elements_to_stay 	= self.elements.filter(item => !base_types.includes(item.type))
+						  elements_to_stay.push(api_element)
+					self.elements = elements_to_stay
 
-			self.elements = elements_to_stay
+				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
+					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==api_element.model)
+					const instances_to_destroy = self.ar_instances.filter(item => !base_types.includes(item.type))
+					for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
+						instances_to_destroy[i].destroyable = false
+					}
+					await self.refresh()
 
-			const instances_to_destroy = self.ar_instances.filter(item => item.model!==api_element.model)
-			for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
-				instances_to_destroy[i].destroyable = false
-			}
-			self.refresh()
+				// url history track
+					if(options.event_in_history!==true) {
 
-			if(options.event_in_history===true) return;
+						// options_url : clone options and remove optional 'event_in_history' property
+						const options_url 	= Object.assign({}, options);
+						delete options_url.event_in_history
 
-			const var_uri = Object.entries(options).map(([key, val]) => `${key}=${val}`).join('&');
+						const var_uri 		= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
+						const uri_options	= JSON.parse(JSON.stringify(options))
+						const state 		= {options : uri_options}
+						const title 		= ''
+						const url 			= "?"+var_uri //window.location.href
 
-			const uri_options = JSON.parse(JSON.stringify(options))
-			const state = {options : uri_options}
-			const title = ''
-			const url 	= "?"+var_uri //window.location.href
+						history.pushState(state, title, url)
+					}
 
-			history.pushState(state, title, url)
-		}
+				return true
+			}//end user_action
 
 	// window onpopstate
 		window.onpopstate = function(event) {
@@ -199,5 +212,48 @@ page.prototype.build_element = async function(){
 
 
 }//build_element
+
+
+
+// /**
+// * USER_ACTION
+// */
+// const user_action = async function(self, options) {
+
+// 	const current_data_manager = new data_manager()
+// 	const api_response = await current_data_manager.request({
+// 		body : {
+// 			action 		: 'get_element',
+// 			options 	: options
+// 		}
+// 	})
+
+// 	// elements to stay
+// 		const api_element 		= api_response.result
+// 		const elements_to_stay 	= self.elements.filter(item => item.model!==api_element.model)
+// 			  elements_to_stay.push(api_element)
+// 		self.elements = elements_to_stay
+
+// 	// instances. remove all other instances but current an refresh page
+// 		const instances_to_destroy = self.ar_instances.filter(item => item.model!==api_element.model)
+// 		for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
+// 			instances_to_destroy[i].destroyable = false
+// 		}
+// 		self.refresh()
+
+// 	// url history track
+// 		if(options.event_in_history===true) return;
+
+// 		const var_uri = Object.entries(options).map(([key, val]) => `${key}=${val}`).join('&');
+
+// 		const uri_options	= JSON.parse(JSON.stringify(options))
+// 		const state 		= {options : uri_options}
+// 		const title 		= ''
+// 		const url 			= "?"+var_uri //window.location.href
+
+// 		history.pushState(state, title, url)
+
+// 	return true
+// }//end user_action
 
 

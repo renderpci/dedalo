@@ -200,8 +200,9 @@ class component_av extends component_common {
 	public function get_video_url($quality=false) {
 
 		if($quality===false) {
-		$quality  = $this->get_quality();
+			$quality = $this->get_quality();
 		}
+
 		$video_id = $this->get_video_id();
 
 		$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
