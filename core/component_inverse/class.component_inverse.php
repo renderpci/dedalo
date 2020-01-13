@@ -23,7 +23,11 @@ class component_inverse extends component_common {
 
 				$item = new stdClass();
 				$item->locator = $locator_item;					
-				$item->item_values = $this->get_inverse_value($locator_item);
+				$item->datalist = $this->get_inverse_value($locator_item);
+
+				if (is_null($item->datalist)) {
+					$item->datalist = [];
+				}
 				
 				$dato[] = $item;
 			}
@@ -31,8 +35,8 @@ class component_inverse extends component_common {
 		return (array)$dato;
 	}//end get_dato
 
-
 	
+
 	/**
 	* GET_VALOR
 	* @return string $valor
@@ -203,7 +207,7 @@ class component_inverse extends component_common {
 		if (!isset($ar_look_section_tipo[0])) {
 			return null;
 		}
-		$look_section_tipo = $ar_look_section_tipo[0];		
+		$look_section_tipo = $ar_look_section_tipo[0];	
 		if ($locator->from_section_tipo!==$look_section_tipo) {
 			//debug_log(__METHOD__." Ignored section tipo ".to_string(), logger::DEBUG);
 			return null;
@@ -212,9 +216,9 @@ class component_inverse extends component_common {
 		$ar_value=array();
 		$ar_related = $this->RecordObj_dd->get_relaciones();
 		foreach ($ar_related as $key => $value) {
-			#dump($value, ' value ++ '.to_string()); 
 			$current_tipo = reset($value);
 			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				dump($modelo_name, ' modelo_name ++ '.to_string());
 			if ($modelo_name!=='section') {			
 				# Components
 				$component = component_common::get_instance( $modelo_name,
@@ -223,17 +227,16 @@ class component_inverse extends component_common {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $locator->from_section_tipo);
-				$value = $component->get_valor();
-					#dump($value, ' value ++ '.to_string());
+
+				$list_item = new stdClass();
+				$list_item->label = $component->get_label();					
+				$list_item->value = $component->get_valor();
 				#$ar_value[] = $modelo_name::render_list_value($locator, $current_tipo, $locator->section_id, 'list', DEDALO_DATA_LANG, $locator->from_section_tipo, $locator->section_id);
-				$ar_value[] = $value;
+				$ar_value[] = $list_item;
 			}
 		}
-		#dump($ar_value, ' $ar_value ++ '.$look_section_tipo.' -- '.to_string($locator));
-		$inverse_value = implode('/ ',$ar_value);
-
 		
-		return (string)$inverse_value;	
+		return (array)$ar_value;	
 	}//end get_inverse_value
 
 	

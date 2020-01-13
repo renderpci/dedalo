@@ -79,7 +79,7 @@ render_component_inverse.prototype.edit = function() {
 	// build values
 		const inputs_value = value
 		const value_length = inputs_value.length
-			console.log("value_length:",value_length);
+
 		for (let i = 0; i < value_length; i++) {
 			input_element(i, inputs_value[i], inputs_container, self)
 		}
@@ -115,14 +115,19 @@ const input_element = (i, current_value, inputs_container, self) => {
 			parent 		 	: li
 		})
 
-	// span field with other values from related inverse section
-		const span_values = ui.create_dom_element({
-			element_type 	: 'span',
-			class_name 		: 'inverse_show_values',
-			dataset 	 	: { key : i },
-			text_node	 	: current_value.item_values,
-			parent 		 	: li
-		})
+	// build span fields with other values from related inverse section
+		const span_datalist_length 	= current_value.datalist.length
+
+		for (let j = 0; j < span_datalist_length; j++) {
+			
+			const span_value = ui.create_dom_element({
+				element_type 	: 'span',
+				class_name 		: 'inverse_show_values',
+				text_node	 	: current_value.datalist[j].label.concat(': ', current_value.datalist[j].value),
+				parent 		 	: li
+			})
+
+		}		
 
 	return li
 }//end input_element
