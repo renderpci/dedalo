@@ -17,103 +17,136 @@ class security_v5_to_v6 {
 
 		$section_tipo = $dato->section_tipo;
 
-		if($section_tipo===DEDALO_SECTION_PROFILES_TIPO){
+		if($section_tipo===DEDALO_SECTION_PROFILES_TIPO){	// PROFILES TABLE
 
 			// security_access / areas
-				$security_acces_dato 	= $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
-				$security_acces_areas 	= $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
+				$security_acces_dato 	= $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
+				$security_acces_areas 	= $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}  ?? new stdClass(); // expected object
 
-				// change areas dato
-				$new_access_dato = [];
-				foreach ($security_acces_areas as $current_tipo => $value) {
-					$current_dato = new stdClass();
-						$current_dato->tipo 	= $current_tipo;
-						$current_dato->parent 	= $current_tipo;
-						$current_dato->type 	= 'area';
-						$current_dato->value 	= $value;
-					$new_access_dato[] = $current_dato;
-				}
-				// change access dato
-				foreach ($security_acces_dato as $current_parent => $current_ar_tipo) {
-					if (empty($current_ar_tipo)) {
-						debug_log(__METHOD__." Empty current_ar_tipo for parent $current_parent in security_acces_dato. IGNORED !".to_string(), logger::ERROR);
-						continue;
-					}
-					foreach ($current_ar_tipo as $current_tipo => $value) {
+				if (is_object($security_acces_dato)) {
+
+					// change areas dato
+					$new_access_dato = [];
+					foreach ($security_acces_areas as $current_tipo => $value) {
 						$current_dato = new stdClass();
 							$current_dato->tipo 	= $current_tipo;
-							$current_dato->parent 	= $current_parent;
+							$current_dato->parent 	= $current_tipo;
+							$current_dato->type 	= 'area';
 							$current_dato->value 	= $value;
 						$new_access_dato[] = $current_dato;
 					}
+					// change access dato
+					foreach ($security_acces_dato as $current_parent => $current_ar_tipo) {
+						if (empty($current_ar_tipo)) {
+							debug_log(__METHOD__." Empty current_ar_tipo for parent $current_parent in security_acces_dato. IGNORED !".to_string(), logger::ERROR);
+							continue;
+						}
+						foreach ($current_ar_tipo as $current_tipo => $value) {
+							$current_dato = new stdClass();
+								$current_dato->tipo 	= $current_tipo;
+								$current_dato->parent 	= $current_parent;
+								$current_dato->value 	= $value;
+							$new_access_dato[] = $current_dato;
+						}
+					}
+					// replace data
+					$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_access_dato;
+					// remove unused old value
+					unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
+
+				}else{
+					debug_log(__METHOD__." 'security_acces_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($security_acces_dato).' - value: '.to_string($security_acces_dato), logger::ERROR);
 				}
-				// replace data
-				$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_access_dato;
-				// remove unused old value
-				unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
 
 			// security tools
-				$security_tools_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass();
+				$security_tools_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
 
-				$new_tool_dato =[];
-				foreach ($security_tools_dato as $tool => $value) {
-					$current_dato = new stdClass();
-						$current_dato->name 	= $tool;
-						$current_dato->value 	= $value;
-					$new_tool_dato[] = $current_dato;
+				if (is_object($security_tools_dato)) {
+					$new_tool_dato =[];
+					foreach ($security_tools_dato as $tool => $value) {
+						$current_dato = new stdClass();
+							$current_dato->name 	= $tool;
+							$current_dato->value 	= $value;
+						$new_tool_dato[] = $current_dato;
+					}
+					// replace data
+					$dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_tool_dato;
+				}else{
+					debug_log(__METHOD__." 'security_tools_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($security_tools_dato).' - value: '.to_string($security_tools_dato), logger::ERROR);
 				}
-				// replace data
-				$dato->components->{DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_tool_dato;
 
-		}else if ($section_tipo===DEDALO_SECTION_USERS_TIPO){
+
+		}else if ($section_tipo===DEDALO_SECTION_USERS_TIPO){	// USERS TABLE
 
 			// security_administrator
 				$security_admin_dato = $dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? 0;
 				$section_id 		 = ($security_admin_dato===1) ? '1' : '2';
 
-				$current_dato = new locator();
-					$current_dato->set_section_tipo('dd64');
-					$current_dato->set_section_id($section_id);
-					$current_dato->set_from_component_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO);
-					$current_dato->set_type(DEDALO_RELATION_TYPE_LINK);
+				$new_dato = new locator();
+					$new_dato->set_section_tipo('dd64');
+					$new_dato->set_section_id($section_id);
+					$new_dato->set_from_component_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO);
+					$new_dato->set_type(DEDALO_RELATION_TYPE_LINK);
 
 				// remove unused old value
 				unset($dato->components->{DEDALO_SECURITY_ADMINISTRATOR_TIPO});
-				// add to realtions container
-				$dato->relations[] = $current_dato;
+				// add to relations container if not already exists
+				$found = array_filter($dato->relations, function($item) use($new_dato){
+					if (true===locator::compare_locators($item, $new_dato)) {
+						return $item;
+					}
+				});
+				if (empty($found)) {
+					$dato->relations[] = $new_dato;
+				}else{
+					debug_log(__METHOD__." 'security_admin_dato' already exists in relations. Ignored (maybe is already updated) ", logger::ERROR);
+				}
 
 			// user_profile
 				$security_profile_dato = $dato->components->{DEDALO_USER_PROFILE_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? DEDALO_PROFILE_DEFAULT;
 
-				$current_profile_dato = new locator();
-					$current_profile_dato->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
-					$current_profile_dato->set_section_id($security_profile_dato);
-					$current_profile_dato->set_from_component_tipo(DEDALO_USER_PROFILE_TIPO);
-					$current_profile_dato->set_type(DEDALO_RELATION_TYPE_LINK);
+				$new_dato = new locator();
+					$new_dato->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
+					$new_dato->set_section_id($security_profile_dato);
+					$new_dato->set_from_component_tipo(DEDALO_USER_PROFILE_TIPO);
+					$new_dato->set_type(DEDALO_RELATION_TYPE_LINK);
 
 				// remove unused old value
 				unset($dato->components->{DEDALO_USER_PROFILE_TIPO});
 				// add to realtions container
-				$dato->relations[] = $current_profile_dato;
+				$found = array_filter($dato->relations, function($item) use($new_dato){
+					if (true===locator::compare_locators($item, $new_dato)) {
+						return $item;
+					}
+				});
+				if (empty($found)) {
+					$dato->relations[] = $new_dato;
+				}else{
+					debug_log(__METHOD__." 'security_profile_dato' already exists in relations. Ignored (maybe is already updated) ", logger::ERROR);
+				}
 
 			// component_filter_records
-				$filter_records_dato = $dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
+				$filter_records_dato = $dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null; // expected object or null
 				if (!empty($filter_records_dato)) {
-					$new_filter_records_dato = [];
-					foreach ($filter_records_dato as $current_section_tipo => $ar_value) {
+					if (is_object($filter_records_dato)) {
+						$new_filter_records_dato = [];
+						foreach ($filter_records_dato as $current_section_tipo => $ar_value) {
 
-						$item = new stdClass();
-							$item->tipo  = $current_section_tipo;
-							$item->value = array_map(function($current_section_id){
-								return (int)$current_section_id;
-							}, $ar_value);
+							$item = new stdClass();
+								$item->tipo  = $current_section_tipo;
+								$item->value = array_map(function($current_section_id){
+									return (int)$current_section_id;
+								}, $ar_value);
 
-						$new_filter_records_dato[] = $item;
+							$new_filter_records_dato[] = $item;
+						}
+
+						// replace data
+						$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN}  = $new_filter_records_dato;
+						$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->valor->{DEDALO_DATA_NOLAN} = null;
+					}else{
+						debug_log(__METHOD__." 'filter_records_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($filter_records_dato).' - value: '.to_string($filter_records_dato), logger::ERROR);
 					}
-
-					// replace data
-					$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->dato->{DEDALO_DATA_NOLAN}  = $new_filter_records_dato;
-					$dato->components->{DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO}->valor->{DEDALO_DATA_NOLAN} = null;
 				}
 		}
 

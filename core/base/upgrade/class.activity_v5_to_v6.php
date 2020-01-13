@@ -6,6 +6,7 @@
 */
 class activity_v5_to_v6 {
 
+
 	public static $what_conversion_values = [
 		"dd696"		=>	1,
 		"dd697"		=>	2,
@@ -22,8 +23,9 @@ class activity_v5_to_v6 {
 		"dd1092"	=>	13,
 		"dd1091"	=>	14,
 		"dd1098"	=>	15,
-		"dd1081"	=>	16,
+		"dd1081"	=>	16
 	];
+
 
 
 	/**
@@ -35,29 +37,63 @@ class activity_v5_to_v6 {
 		$dato = clone $datos_column;
 
 		$section_tipo = $dato->section_tipo;
-
 		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO){
 
-			// what (changed to select)
-				$activity_what_dato 	= $dato->components->dd545->dato->{DEDALO_DATA_NOLAN} ?? "";
-				$new_section_id 		= self::$what_conversion_values[$activity_what_dato];
-				
-				// change areas dato
-				$new_what_dato = new locator();
-					$new_what_dato->set_section_tipo('dd42');
-					$new_what_dato->set_section_id($new_section_id);
-					$new_what_dato->set_from_component_tipo('dd545');
-					$new_what_dato->set_type('dd151');
+			// what dd545 (changed to select)
+				$activity_what_dato = $dato->components->dd545->dato->{DEDALO_DATA_NOLAN} ?? null;
+				if (!empty($activity_what_dato)) {
+					if (isset(self::$what_conversion_values[$activity_what_dato])) {
 
-				$dato->relations[] = $new_what_dato;
+						$new_section_id = self::$what_conversion_values[$activity_what_dato];
 
-				unset($dato->components->dd545);
+						// change areas dato
+						$new_what_dato = new locator();
+							$new_what_dato->set_section_tipo('dd42');
+							$new_what_dato->set_section_id($new_section_id);
+							$new_what_dato->set_from_component_tipo('dd545');
+							$new_what_dato->set_type('dd151');
 
-			//where (changed to input_text)
-			$activity_where_dato 	= $dato->components->dd546->dato->{DEDALO_DATA_NOLAN} ?? "";
+						$found = array_filter($dato->relations, function($item) use($new_what_dato){
+							if (true===locator::compare_locators($item, $new_what_dato)) {
+								return $item;
+							}
+						});
+						if (empty($found)) {
+							$dato->relations[] = $new_what_dato;
+						}else{
+							debug_log(__METHOD__." 'security_admin_dato' already exists in relations. Ignored (maybe is already updated) ", logger::ERROR);
+						}
 
-			$dato->components->dd546->dato->{DEDALO_DATA_NOLAN} = [$activity_where_dato];
+						unset($dato->components->dd545);
+
+					}else{
+						dump($activity_what_dato, ' activity_what_dato ++ '.to_string());
+						debug_log(__METHOD__." ERROR ON GET activity_what_dato: '$activity_what_dato' in the array 'what_conversion_values' ++++++++++++++++++++++ ".to_string(), logger::ERROR);
+						// throw new Exception("Error Processing Request", 1);
+					}
+				}
+
+			// where dd546 (changed to input_text) data change format from string to array
+				$activity_where_dato = $dato->components->dd546->dato->{DEDALO_DATA_NOLAN} ?? "";
+				if (!is_array($activity_where_dato)) {
+					$dato->components->dd546->dato->{DEDALO_DATA_NOLAN} = [$activity_where_dato]; // same dato but as array
+				}
+
+			// ip dd544 (data change format from string to array)
+				$activity_ip_dato = $dato->components->dd544->dato->{DEDALO_DATA_NOLAN} ?? "";
+				if (!is_array($activity_ip_dato)) {
+					$dato->components->dd544->dato->{DEDALO_DATA_NOLAN} = [$activity_ip_dato]; // same dato but as array
+				}
+
+
+			// date dd547
+
+
+			// json dd551
+
+
 		}
+
 		return $dato;
 	}//end convert_section_dato_to_data
 
