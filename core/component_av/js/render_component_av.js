@@ -233,49 +233,27 @@ const content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// url
+	// urls
+		// posterframe
 		const posterframe_url 	= self.data.posterframe_url
-		//const url 			= (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+		// media
 		const video_url 		= self.data.video_url
 
-	// image
-		// const image = ui.create_dom_element({
-		// 	element_type	: "img",
-		// 	src 			: url,
-		// 	class_name 		: 'posterframe',
-		// 	parent 			: fragment
-		// })
-		// //image.style.backgroundImage = "url("+posterframe_url+")"
-		// // image.addEventListener("click", (e)=>{
-		// // 	e.preventDefault()
-		// // 	e.stopPropagation()
-		// // }, true)
-		// image.setAttribute("tabindex", 0)
-
-		// const video = build_video_html5({
-		// 	poster 	: posterframe_url,
-		// 	src 	: [video_url],
-		// 	class  	: 'posterframe'
-		// })
-
+	// source tag
 		const source = document.createElement("source")
 			  source.src  = video_url
 			  source.type = "video/mp4"
 
+	// video tag
 		const video = document.createElement("video")
 			  video.poster = posterframe_url
 			  video.controls = true
 			  video.classList.add("posterframe")
 			  video.setAttribute("tabindex", 0)
-
-		video.appendChild(source)
-
-		// <video id="mediaplayer" width="250" poster="<?php echo __WEB_TEMPLATE_WEB__ ?>/assets/images/intro_posterframe.jpg">
-		// 	<source src="<?php echo $video_url ?>" type="video/mp4">
-		// </video>
+			  video.appendChild(source)
 
 
-		fragment.appendChild(video)
+	fragment.appendChild(video)
 
 
 	// content_data
