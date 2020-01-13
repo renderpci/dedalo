@@ -49,6 +49,13 @@
 				break;
 		}
 
+		if ($this->tipo==='dd546') {
+			$first_value = reset($value);
+			$term = RecordObj_dd::get_termino_by_tipo($first_value, DEDALO_DATA_LANG, true, true);
+			$term = strip_tags($term);
+			$value = [$term . ' ['. $first_value."]"];
+		}
+
 		if ($this->tipo==='dd551') {
 			$value = [json_encode($value, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT)];
 		}elseif (!is_array($value)) {

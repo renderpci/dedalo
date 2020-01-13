@@ -214,6 +214,19 @@ class area_development extends area {
 			$ar_widgets[] = $item;
 
 
+		// unit test (alpha)
+			$info = posix_getpwuid(posix_geteuid());
+			$item = new stdClass();
+				$item->id 		= 'unit_test';
+				$item->typo 	= 'widget';
+				$item->tipo 	= $this->tipo;
+				$item->parent 	= $this->tipo;
+				$item->label 	= 'UNIT TEST';
+				$item->info 	= null;
+				$item->body 	= '<a href="../unit_test" target="_blank">Open alpha unit test</a>';
+			$ar_widgets[] = $item;
+
+
 		// sequences_state
 			require(DEDALO_CORE_PATH.'/db/class.data_check.php');
 			$data_check = new data_check();

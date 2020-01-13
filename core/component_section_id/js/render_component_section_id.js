@@ -74,7 +74,7 @@ render_component_section_id.prototype.edit = function() {
 		const content_data = document.createElement("div")
 		const div_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'css_section_id',
+			class_name		: 'section_id',
 			text_content 	: value,
 			parent 			: content_data
 		})

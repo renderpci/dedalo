@@ -38,6 +38,7 @@ background-color: #FFFF00;
 
 // Variables
 @common_css: "../../common/css";
+@menu_heigth: 2em;
 
 // Usage
 @import "@{common_css}/library.less";
@@ -53,7 +54,7 @@ background-color: #FFFF00;
 		display: flex;
 		align-items: center;
 		width: calc(100vw - 1em);
-		height: 2.1em;
+		height: @menu_heigth;
 		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 		background: #2e2e2e;
 
@@ -83,7 +84,8 @@ background-color: #FFFF00;
 
 		// direct children elements
 		>* {
-			height: 2em;
+			height: @menu_heigth;
+			line-height: @menu_heigth;
 			font-size: 1.1em;
 			//background-color: #8EA035 !important;
 			margin-left: 1em;
@@ -119,18 +121,24 @@ background-color: #FFFF00;
 			>.logged_user_name {
 				color: #c9c9c9;
 				cursor: pointer;
-				line-height: 2em;
+				//line-height: @menu_heigth;
 
 				&:hover {
 					color: #F9F9F9;
 				}
 			}
 
+			>.ontology {
+				color: #c9c9c9;
+				cursor: pointer;
+				//line-height: @menu_heigth;
+			}
+
 			>.dedalo_aplication_langs_selector {
 				//height: 25px;
 				//height: 2em;
 				height: auto;
-				line-height: 2em;
+				//line-height: @menu_heigth;
 				//font-size: 1em;
 				max-width: 99.9%;
 				//line-height: 1.1em;
@@ -168,7 +176,7 @@ background-color: #FFFF00;
 			}
 
 			>.section_label {
-				line-height: 2em;
+				//line-height: @menu_heigth;
 				cursor: pointer;
 				font-weight: bold;
 				margin-right: 1.5em;
@@ -242,34 +250,25 @@ background-color: #FFFF00;
 // menu : Menu tree
 	@menu_bg_color_active : #ffa43d;
 	@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
-	#menu {
+	#menu_hierarchy {
 		font-family: "Oxygen-light", sans-serif;
-		//font-family: system, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Lucida Grande', "Oxygen-light", sans-serif;
-		//-webkit-font-smoothing: subpixel-antialiased;
 		z-index: 100;
-		//float: left;
-		display: inline-block;
-		//margin: 0;
-		//margin-left: 49px;
+		//position:relative;
 		padding: 0;
-		text-align: left;
 
-
-
-		// d6
-		//display: block;
-	    //width: 100%;
-	    //background-color: #BD0016;
-	    //height: 30px;
-	    //margin: 0;
-
-		li {
-			margin: 0 2px;
-			padding: 0 0 0px;
-			float: left;
-			position: relative;
-			list-style: none;
+		ul {
+			display: none;
 		}
+
+		li{
+				margin: 0 2px;
+				padding: 0 0 0px;
+				float: left;
+				position: relative;
+				list-style: none;
+
+		}
+
 
 		// link common
 		a {
@@ -282,39 +281,67 @@ background-color: #FFFF00;
 			padding-left: 6px;
 			letter-spacing: 0.7px;
 			font-weight: 300 !important;
-			//font-size: 13px;
 
-			//font-size: 0.84em;
-    		//line-height: 1.2em;
-
-			// On click menu link a
 			&:active {
 				background-color: darken(@menu_bg_color_active, 13%) !important;
 			}
 		}
 
-		// main level link
-		> li > a {
-			padding: 6px;
-			/*padding-bottom: 5px;*/
+
+		ul#dd1{
+			//font-family: system, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Lucida Grande', "Oxygen-light", sans-serif;
+			//-webkit-font-smoothing: subpixel-antialiased;
+			display: flex;
+			//
+			//float: left;
+			li {
+				display: inline-block;
+				//margin: 0;
+				//margin-left: 49px;
+				padding: 0px;
+				border:none;
+
+				text-align: left;
+
+				&.has-sub::after{
+					display: none;
+				}
+			}
+
+
+
+			// main level link
+			> li > a {
+				height: @menu_heigth;
+				padding: 0px;
+				line-height: @menu_heigth;
+				padding-left: 6px;
+				padding-right: 6px;
+				/*padding-bottom: 5px;*/
+			}
 		}
 
+
+
+
+
 		// level 2 list
-		ul {
+		ul:not(#dd1) {
 			-webkit-backdrop-filter: blur(10px);
 			backdrop-filter: blur(10px);
 			background: #fcfcfc;
-			display: none;
 			margin: 0;
 			padding: 0;
 			min-width: 200px;
 			position: absolute;
-			// top: 25px;
-			left: -1px;
+			top: @menu_heigth;
+			// left: -1px;
 			box-shadow: @menu_box_shadow;
 			/*left: -2px;*/
 			border: 1px solid #B4B4B4;
 			border-radius: 4px;
+			max-height: calc(100vh - @menu_heigth);
+			overflow: auto;
 
 			a {
 				color: #4F4F4F;
@@ -352,6 +379,19 @@ background-color: #FFFF00;
 			top: -1px;
 		}
 
+		.menu_ul_displayed{
+			display: block;
+		}
+		.menu_ul_hidden{
+			display: none;
+		}
+
+		// .menu_overflow::-webkit-scrollbar {
+		//    //This is the magic bit for WebKit
+		//   display: none;
+		// }
+
+
 		// active
 		.menu_li_active > a {
 			background: @menu_bg_color_active;
@@ -374,19 +414,19 @@ background-color: #FFFF00;
 		li.has-sub::after {
 			content: " ";
 			display: inline-block;
-		    width: 0;
-		    height: 0;
-		    margin-left: 3px;
-		    vertical-align: middle;
+			width: 0;
+			height: 0;
+			margin-left: 3px;
+			vertical-align: middle;
 
-		  	border-bottom: 5px solid transparent;
-		    border-top: 5px solid transparent;
-		    border-left: 5px solid #000000;
+			border-bottom: 5px solid transparent;
+			border-top: 5px solid transparent;
+			border-left: 5px solid #000000;
 
 			position: absolute;
-		    right: 8px;
-		    top: 9px;
-		    pointer-events: none;
+			right: 8px;
+			top: 9px;
+			pointer-events: none;
 
 		}
 

@@ -19,18 +19,14 @@ class dd_elements {
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
 
-		$html = "<div id=\"divTsIcons$terminoID\" $resalte class=\"divTS\">";
+		$html = '<div id="divTsIcons$terminoID" '.$resalte.' class="divTS">';
 
 			# Render Buttons
-
-			#print("modo:".$this->modo);
-
 			if($this->modo==='tesauro_edit' || $this->modo==='modelo_edit') {
 
-				if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!=='dedalo4_master' && DEDALO_DATABASE_CONN!=='dedalo4_development' ) {
-					# No buttons are showed
-				}else{
-
+				// if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!=='dedalo4_master' && DEDALO_DATABASE_CONN!=='dedalo4_development' ) {
+				//	No buttons are showed
+				// }else{
 					# Añadir hijo BtnMas
 					$html .= $this->renderBtnMas($terminoID, $hijosD, $parent);
 					# Borrar termino BtnBorrar
@@ -39,8 +35,7 @@ class dd_elements {
 					$html .= $this->renderBtnNorden($terminoID, $parent, $nordenV, $termino, $norden);
 					# Editar termino
 					$html .= $this->renderBtnEditTermino($terminoID);
-				}
-
+				// }
 			}
 
 			if($this->modo==='tesauro_rel') {
@@ -58,12 +53,11 @@ class dd_elements {
 			}
 
 
-
 			# Mostrar texto del término
 			$html .= $this->renderTextTermino($terminoID,$termino,$parent,$resalte);
 
 			if($traducible==='no')
-			$html .= " <em>(no traducible)</em>";
+			$html .= ' <em>(no traducible)</em>';
 
 
 			# BUTTON DESPLEGAR TERMINOS RELACIONADOS BtnTR
@@ -92,7 +86,7 @@ class dd_elements {
 			#if($hijosD >0) $html .= $this->renderBtnFlecha($terminoID, $children, $desplegado);
 			if($hijosD >0) $html .= $this->renderBtnFlecha($terminoID, $children, 0, $parent); // $terminoID, $children=0, $desplegado=0, $parent
 
-		$html .= "</div><!-- //divTsIcons$terminoID -->\n";// divTsIcons
+		$html .= '</div>';// divTsIcons
 
 
 			# Render Divs desplegables
@@ -114,10 +108,10 @@ class dd_elements {
 	{
 		global $anyadir_hijo_al_descriptor_title ;
 
-		$obj =  " <!-- Btn Añadir hijo -->";
-		$obj .= " <div class=\"bullet_mas \" title=\"$anyadir_hijo_al_descriptor_title\" ";
-		$obj .= "onClick=\"dd.insertTS('$terminoID','$hijosD','$parent')\" ";
-		$obj .= "></div>";
+		$obj  = '';
+		$obj .= ' <div class="bullet_mas" title="'.$anyadir_hijo_al_descriptor_title.'" ';
+		$obj .= 'onClick="dd.insertTS(\''.$terminoID.'\',\''.$hijosD.'\',\''.$parent.'\')" ';
+		$obj .= '></div>';
 
 		return $obj ;
 	}
@@ -130,10 +124,10 @@ class dd_elements {
 	{
 		global $eliminar_este_descriptor_title ;
 
-		$obj  = "\n <!-- Btn Borrar termino -->";
-		$obj .= "\n <div class=\"icon_delete \" title=\"$eliminar_este_descriptor_title\" ";
+		$obj  = '';
+		$obj .= ' <div class="icon_delete " title="'.$eliminar_este_descriptor_title.'" ';
 		$obj .= "onClick=\"dd.delete_term('divCont$terminoID','$terminoID','$children','$nIndexaciones','$parent','$termino')\" ";
-		$obj .= "></div>";
+		$obj .= '></div>';
 
 		return $obj ;
 	}
@@ -148,22 +142,21 @@ class dd_elements {
 
 		$termino = addslashes($termino);
 
-		$obj = "\n <!-- Btn Mostrar N Orden -->";
+		$obj = '';
 
-		$mostrarNorden = 1;
-
+		$mostrarNorden = 1; // force always
 		if($mostrarNorden===1)
 		{
-			$obj .= "\n <span class=\"nOrden\" title=\"N. $orden_title : $nordenV\">";
+			$obj .= '<span class="nOrden" title="N. '.$orden_title.' : '.$nordenV.'">';
 			$obj .= "<a href=\"javascript:;\" onclick=\"dd.cambiar_n_orden('$nordenV','$terminoID','$parent','$termino');\">";
 			$obj .= $nordenV;
-			if ($nordenV!=$norden) {
-				$obj .= " <span style=\"color:red\">[$norden]</span>";
+			if ((int)$nordenV!==(int)$norden) {
+				$obj .= ' <span style="color:red">['.$norden.']</span>';
 			}else{
-				$obj .= " [$norden]";
+				$obj .= ' ['.$norden.']';
 			}
-			$obj .= "</a>";
-			$obj .= "</span>";
+			$obj .= '</a>';
+			$obj .= '</span>';
 		}
 
         return $obj ;
@@ -176,11 +169,11 @@ class dd_elements {
 	{
 		global $editar_title ;
 
-		$obj = "\n <!-- Btn Editar termino -->";
+		$obj = '';
 
-		$obj .= "\n <div class=\"icon_edit \" title=\"$editar_title\" ";
+		$obj .= ' <div class="icon_edit " title="'.$editar_title.'" ';
 		$obj .= "onclick=\"dd.openTSedit('$terminoID');\" ";
-		$obj .= "></div>";
+		$obj .= '></div>';
 
 		return $obj ;
 	}
@@ -193,11 +186,11 @@ class dd_elements {
 
 		global $anyadir_title, $asociar_descriptor_title ;
 
-		$obj = "\n<!-- Btn Añadir indexación con este termino -->";
+		$obj = '';
 
-		$obj .= "\n <div class=\"add_index_btn \" data-termino_id=\"$terminoID\" data-termino=\"$termino\" title=\"$asociar_descriptor_title $terminoID\" ";
+		$obj .= " <div class=\"add_index_btn \" data-termino_id=\"$terminoID\" data-termino=\"$termino\" title=\"$asociar_descriptor_title $terminoID\" ";
 		$obj .= "onclick=\"dd.add_index_common(this)\" ";
-		$obj .= "></div>";
+		$obj .= '></div>';
 
 		return $obj ;
 	}
@@ -211,11 +204,11 @@ class dd_elements {
 	{
 		global $anyadir_title, $idioma_title ;
 
-		$button_html = "\n<!-- Btn Añadir lenguaje o idioma para este descriptor -->";
+		$button_html = '';
 
-		$button_html .= "\n <div class=\"add_index_btn \" title=\"$anyadir_title $idioma_title [$terminoID]\" ";
+		$button_html .= " <div class=\"add_index_btn \" title=\"$anyadir_title $idioma_title [$terminoID]\" ";
 		$button_html .= "onclick=\"window.opener.newLang('$terminoID');\" ";
-		$button_html .= "></div>";
+		$button_html .= '></div>';
 
 		return $button_html ;
 	}
@@ -227,37 +220,37 @@ class dd_elements {
 
 		global $editar_title ;
 
-		$html = "\n <!-- Text Término -->";
+		$html = '';
 
 		# RESALTE
 		if($resalte===1)	{
-			$html .= "\n <div id=\"textoTermino_{$terminoID}\" class=\"textoTermino resalte\">";
+			$html .= " <div id=\"textoTermino_{$terminoID}\" class=\"textoTermino resalte\">";
 		}else{
-			$html .= "\n <div id=\"textoTermino_{$terminoID}\" class=\"textoTermino\">";
+			$html .= " <div id=\"textoTermino_{$terminoID}\" class=\"textoTermino\">";
 		}
 
 		if($this->ts_lang) {
-			$html .= "\n <span class=\"notas\">";
+			$html .= " <span class=\"notas\">";
 			$html .= "[$this->ts_lang] ";
 			$html .= "</span>";
 		}
 
 		if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!='dedalo4_master' ) {
-			$html .= "\n <span class=\"termino_text\" alt=\"$terminoID\" >";
+			$html .= " <span class=\"termino_text\" alt=\"$terminoID\" >";
 		}else{
-			$html .= "\n <span class=\"termino_text\" alt=\"$terminoID\" ondblclick=\"dd.edit_inline(this)\">";
+			$html .= " <span class=\"termino_text\" alt=\"$terminoID\" ondblclick=\"dd.edit_inline(this)\">";
 		}
 		$html .= $termino;
-		$html .= "</span>";
+		$html .= '</span>';
 
 		# Si se llega a través de un NO descriptor, notificaremos el hecho, notando el termino por el cúál hemos llegado aquí
 		/*
 		* Pendiente: Búsqueda de NO descriptores y remarcado de los mismos en el resultado (como en la párte pública)
 		*/
 		#if($this->noDescripor && $terminoID===$this->terminoIDactual) $obj .= " <span id=\"notaND\">(per $this->noDescripor)</span> ";
-		$html .= "\n <span class=\"terminoIDinList\" alt=\"$terminoID\"> [$terminoID]</span>";
+		$html .= " <span class=\"terminoIDinList\" alt=\"$terminoID\"> [$terminoID]</span>";
 
-		$html .= "\n </div>";
+		$html .= '</div>';
 
 		return $html ;
 	}
@@ -270,11 +263,11 @@ class dd_elements {
 	{
 		global $mostrar_temas_relacionados_title ;
 
-		$obj 		= "\n<!-- Mostrar TR Términos relacionados -->\n";
-		$divDestino = "tr$terminoID";
+		$obj 		= '';
+		$divDestino = 'tr'.$terminoID;
 		$obj 		.= "<div class=\"tesauro_button_show_tr\" data-tipo=\"$divDestino\" title=\"$mostrar_temas_relacionados_title\" ";
 		$obj 		.= "onclick=\"multiToogle('$divDestino','block','none');\" ";
-		$obj 		.= "></div>";
+		$obj 		.= '></div>';
 
 		return $obj ;
 	}
@@ -286,13 +279,13 @@ class dd_elements {
 	{
 		global $mostrar_definicion_title ;
 
-		$obj 		= "\n <!-- Btn Mostrar definicion  -->";
-		$divDestino = "def$terminoID";
+		$obj 		= '';
+		$divDestino = 'def'.$terminoID;
 		if($terminoID)
 		{
-			$obj .= "\n <div class=\"icon-mostrar-def\" title=\"$mostrar_definicion_title\" ";
+			$obj .= ' <div class="icon-mostrar-def" title="'.$mostrar_definicion_title.'" ';
 			$obj .= "onclick=\"multiToogle('$divDestino','block','none');\"";
-			$obj .= "></div>";
+			$obj .= '></div>';
 		}
 
 		return $obj ;
@@ -306,13 +299,13 @@ class dd_elements {
 		global $mostrar_title ;
 		global $observaciones_title;
 
-		$obj 		= "\n <!-- Btn Mostrar observaciones -->";
-		$divDestino = "obs$terminoID";
+		$obj 		= '';
+		$divDestino = 'obs'.$terminoID;
 		if($terminoID)
 		{
-			$obj .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $observaciones_title\" ";
+			$obj .= " <div class=\"mostrar-obs\" title=\"$mostrar_title $observaciones_title\" ";
 			$obj .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
-			$obj .= "></div>";
+			$obj .= '></div>';
 		}
 
 		return $obj ;
@@ -339,7 +332,7 @@ class dd_elements {
 			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $propiedades_title\" ";
 			#$obj_html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
 			#$obj_html .= "></div>";
-			$obj_html 	 .= "\n <div class=\"cuadroU btn_propiedades $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+			$obj_html 	 .= " <div class=\"cuadroU btn_propiedades $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
 		}
 		return $obj_html ;
 	}
@@ -351,10 +344,10 @@ class dd_elements {
 
 		global $mostrar_NO_descriptors_title ;
 
-		$obj = "\n <!-- Btn Mostrar No escriptores -->";
-		$obj .= "\n <div class=\"mostrar-nd\" title=\"$mostrar_NO_descriptors_title\" ";
+		$obj = '';
+		$obj .= " <div class=\"mostrar-nd\" title=\"$mostrar_NO_descriptors_title\" ";
 		$obj .= "onclick=\"multiToogle('nd$terminoID','block','none');\" ";
-		$obj .= "></div>";
+		$obj .= '></div>';
 
 		return $obj ;
 	}
@@ -364,10 +357,9 @@ class dd_elements {
 	*/
 	protected static function renderBtnU($terminoID,$termino,$nIndexaciones)
 	{
-		$html 	 = "\n <!-- Btn Mostrar usados -->";
-		$title 	 = '';#label::get_label('');
+		$html 	 = '';
 		$termino = urlencode($termino);
-		$html 	 .= "\n <div class=\"cuadroU\" title=\"$title\" onclick=\"dd.show_indexations('$terminoID','$termino');\">U:$nIndexaciones</div>";
+		$html 	 .= " <div class=\"cuadroU\" onclick=\"dd.show_indexations('$terminoID','$termino');\">U:$nIndexaciones</div>";
 
 		return $html ;
 	}
@@ -380,16 +372,16 @@ class dd_elements {
 		global $mostrar_title ;
 		global $modelo_title ;
 
-		$obj = "\n <!-- Btn Mostrar modelo -->";
-		$obj .= "\n <div class=\"mostrar-modelo\" title=\"$mostrar_title $modelo_title\" ";
+		$obj = '';
+		$obj .= " <div class=\"mostrar-modelo\" title=\"$mostrar_title $modelo_title\" ";
 		$obj .= "onclick=\"$('#m_$terminoID').toggle()\"";
-		$obj .= "></div>";
+		$obj .= '></div>';
 
-		$obj .= "\n <span id=\"m_$terminoID\" class=\"btnModelo\">";
+		$obj .= " <span id=\"m_$terminoID\" class=\"btnModelo\">";
 
 		$obj .= $modelo_name ;
 		#$obj .= Tesauro::modelo2text($modelo) ;
-		$obj .= "</span>";
+		$obj .= '</span>';
 
 		return $obj ;
 	}
@@ -401,7 +393,7 @@ class dd_elements {
 
 		global $mostrar_hijos_title, $ocultar_hijos_title ;
 
-		$obj = "<!-- Btn Flecha Mostrar / Ocultar hijos -->";
+		$obj = '';
 		if($children >0)
 		{
 			$obj .= "<div onclick=\"dd.ToggleTS('$terminoID','abrir',null,'$parent');\" class=\"divflechaC\" >";
@@ -416,12 +408,12 @@ class dd_elements {
 			$path = DEDALO_CORE_URL . '/dd/images';
 			$obj .= "<img id=\"fopen$terminoID\" src=\"$path/flecha_der.gif\" style=\"display:$displayFlechaDer\" title=\"$mostrar_hijos_title $terminoID\" />";
 			$obj .= "<img id=\"fclose$terminoID\" src=\"$path/flecha_down.gif\" style=\"display:$displayFlechaDown\" title=\"$ocultar_hijos_title\" />";
-			$obj .= "</div>";
+			$obj .= '</div>';
 		}else{
-			$obj .= "<div class=\"divflechaC\"></div>";
+			$obj .= '<div class="divflechaC"></div>';
 		}
 
-		return $obj ;
+		return $obj;
 	}
 
 
@@ -487,59 +479,59 @@ class dd_elements {
 			</ul>
 			*/
 		}
-		$html .= "</ul>";
+		$html .= '</ul>';
 
 		return $html ;
-	}
+	}//end get_html_listadoTR
 
 
 
-	/*
-	crea el div de los términos relacionados.
-	Previamente se habrá verificado que los hay.
+	/**
+	* crea el div de los términos relacionados.
+	* Previamente se habrá verificado que los hay.
 	*/
 	protected static function renderDivTR($terminoID)	{
 
-		$obj  = "\n<!-- DIV LISTADO DE TÉRMINOS RELACIONADOS (TR) -->\n";
+		$obj  = '';
 		$obj .= "<div id=\"tr$terminoID\" class=\"divLineasInfo none tr_div\" >";
 
 		$obj .= self::get_html_listadoTR($terminoID);
 
-		$obj .= "</div>";
+		$obj .= '</div>';
 
 		return $obj ;
 	}
 
-	/*
-	crea el div de la descripcion
+	/**
+	* crea el div de la descripcion
 	*/
 	protected static function renderDivDescripcion($terminoID,$def)
 	{
-		$obj  = "\n<!-- DIV DESCRIPCION DEL TÉRMINO (DESPLEGABLE) -->\n";
+		$obj  = '';
 		$obj .= "<div id=\"def$terminoID\" class=\"divLineasInfo none\" >";
 		$obj .= "[ I ] ";
 		$obj .= "$def "; if($def==='') $obj .= ' definició n/d ' ;
-		$obj .= "</div>";
+		$obj .= '</div>';
 
 		return $obj ;
 	}
 
-	/*
-	crea el div de las observaciones
+	/**
+	* crea el div de las observaciones
 	*/
 	protected static function renderDivObservaciones($terminoID,$obs)
 	{
-		$obj  = "\n<!-- DIV OBSERVACIONES O INSTRUCCIONES DE USO (DESPLEGABLE) -->\n";
-		$obj .= "<div id=\"obs$terminoID\" class=\"divLineasInfo none\" >";
-		$obj .= "[ O ] ";
+		$obj  = '';
+		$obj .= "<div id=\"obs$terminoID\" class=\"divLineasInfo none\">";
+		$obj .= '[ O ] ';
 		$obj .= "$obs "; if(!$obs || $obs==='') $obs .= ' obs n/d ' ;
-		$obj .= "</div>";
+		$obj .= '</div>';
 
 		return $obj ;
 	}
 
-	/*
-	crea el div de las propiedades
+	/**
+	* crea el div de las propiedades
 	*/
 	protected static function renderDiv_propiedades($terminoID,$propiedades)
 	{
@@ -550,7 +542,7 @@ class dd_elements {
 			$add_class = 'json_bad_alert';
 		}
 
-		$obj_html  = '';#"\n<!-- DIV PROPIEDADES O INSTRUCCIONES DE USO (DESPLEGABLE) -->\n";
+		$obj_html  = '';
 		$obj_html .= "<div id=\"propiedades_{$terminoID}\" class=\"divLineasInfo div_propiedades none $add_class\" >";
 		#$obj_html .= "[ P ] ";
 		#if (empty($propiedades)) {
@@ -560,7 +552,7 @@ class dd_elements {
 			#$propiedades = json_encode($propiedades, JSON_PRETTY_PRINT);
 			$obj_html .= "<pre>$propiedades</pre>";
 		#}
-		$obj_html .= "</div>";
+		$obj_html .= '</div>';
 
 		return $obj_html ;
 	}
@@ -588,7 +580,7 @@ class dd_elements {
 				$html .= $this->renderBtnEditTermino($terminoID,$parent);
 			}
 
-			$html .= " [ND] ";
+			$html .= ' [ND] ';
 			#$html .= "<a href=\"javascript:dd.openTSedit('$tsNDID','$parent')\"  title=\"$editar_title\" >";
 			$html .= " <em class=\"terminoIDinList\">$terminoND</em> ";
 			#$html .= "</a>";
@@ -598,30 +590,32 @@ class dd_elements {
 		return $html ;
 	}
 
-	/*
-	crea el div de NO descriptores
+	/**
+	* crea el div de NO descriptores
 	*/
 	protected function renderDivND($terminoID,$hijosND) {
 
-		$obj  = "\n<!-- DIV NO DESCRIPTORES (DESPLEGABLE) -->\n";
+		$obj  = '';
 		$obj .= "<div id=\"nd$terminoID\" class=\"divLineasInfo none\"  >";
 		$obj .= $this->listadoND($terminoID);
-		$obj .= "</div>";
+		$obj .= '</div>';
 
 		return $obj ;
 	}
 
-	/*
-	crea el div de las cintas donde se usa este término
+	/**
+	* crea el div de las cintas donde se usa este término
 	*/
 	protected static function renderDivCintas($terminoID) {
 
-		$obj  = "\n<!-- DIV CINTAS DONDE SE USA: (DESPLEGABLE) -->\n";
+		$obj  = '';
 		$obj .= "<div id=\"u$terminoID\" class=\"divCintas\" > <!-- ajax content load by function: cargarCintas2('u$terminoID','$terminoID') --> </div>";
 
 		return $obj ;
 	}
 
 
-}
-?>
+}//end class
+
+
+

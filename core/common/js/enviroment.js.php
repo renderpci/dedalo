@@ -110,6 +110,7 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 			$obj->DEDALO_PUBLICATION_ALERT 		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
 			# float_window_features
 			#$obj->float_window_features 		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
+			$obj->fallback_image  				= DEDALO_CORE_URL . '/themes/default/0.jpg';
 
 		return $obj;
 	})();

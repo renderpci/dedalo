@@ -46,103 +46,59 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 			// buttons 	 : current_buttons
 		})
 
-	/*
-		// wrapper . section dom container
-			const wrapper = ui.create_dom_element({
-				element_type	: 'section',
-				id 				: self.id,
-				class_name		: self.model + ' ' + self.section_tipo + ' ' + self.mode
-			})
 
-		// elements node
-			const elements = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'elements full_width',
-				parent 			: wrapper
-			})
-			// buttons node
-				const buttons = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'buttons',
-					parent 			: elements
-				})
+	// CSS INJECT
+		// function create_new_CSS_style_sheet() {
+		// 	// Create the <style> tag
+		// 	let style = document.createElement("style");
 
-			// filter node
-				const filter = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'filter',
-					parent 			: elements
-				})
-				await self.filter.render().then(filter_wrapper =>{
-					filter.appendChild(filter_wrapper)
-				})
-			// paginator node
-				const paginator = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'paginator',
-					parent 			: elements
-				})
-				self.paginator.render().then(paginator_wrapper =>{
-					paginator.appendChild(paginator_wrapper)
-				})
+		// 	// Add a media (and/or media query)
+		// 	// style.setAttribute("media", "screen")
+		// 	// style.setAttribute("media", "only screen and (max-width : 1024px)")
 
-		// content_data append
-			wrapper.appendChild(current_content_data)
-		*/
+		// 	// Add the <style> element to the page
+		// 	document.head.appendChild(style);
 
-	/*
-		function create_new_CSS_style_sheet() {
-			// Create the <style> tag
-			let style = document.createElement("style");
+		// 	return style.sheet;
+		// }//end create_new_CSS_sheet
+		// const CSS_style_sheet = create_new_CSS_style_sheet()
 
-			// Add a media (and/or media query)
-			// style.setAttribute("media", "screen")
-			// style.setAttribute("media", "only screen and (max-width : 1024px)")
+		// // inject css from structure
+		// 	const section_context 	= self.context.filter(element => element.tipo===self.section_tipo)[0]
+		// 	const section_css 	  	= section_context.css
+		// 	const css_selector 		= '#test_container>section.' + self.model + '.' + self.tipo + '.' + self.mode
+		// 	let css_properties 		= JSON.stringify(section_css).replace(/,/g, ";")
+		// 		css_properties 		= css_properties.replace(/"/g, "")
 
-			// Add the <style> element to the page
-			document.head.appendChild(style);
+		// 	//CSS_style_sheet.insertRule( '.'+css_selector+'{display: grid;grid-template-columns: 60px repeat('+columns_length+', 1fr);}');
+		// 	//CSS_style_sheet.insertRule(css_selector+"{width:50px !important}");
+		// 	CSS_style_sheet.insertRule(css_selector+css_properties);
 
-			return style.sheet;
-		}//end create_new_CSS_sheet
-		const CSS_style_sheet = create_new_CSS_style_sheet()
+		// 	// ejemplo de conversión:
+		// 		var cssjson = {
+		// 	        "selector-1":{
+		// 	            "property-1":"value-1",
+		// 	            "property-n":"value-n"
+		// 	        }
+		// 	    }
 
-		// inject css from structure
-			const section_context 	= self.context.filter(element => element.tipo===self.section_tipo)[0]
-			const section_css 	  	= section_context.css
-			const css_selector 		= '#test_container>section.' + self.model + '.' + self.tipo + '.' + self.mode
-			let css_properties 		= JSON.stringify(section_css).replace(/,/g, ";")
-				css_properties 		= css_properties.replace(/"/g, "")
-
-			//CSS_style_sheet.insertRule( '.'+css_selector+'{display: grid;grid-template-columns: 60px repeat('+columns_length+', 1fr);}');
-			//CSS_style_sheet.insertRule(css_selector+"{width:50px !important}");
-			CSS_style_sheet.insertRule(css_selector+css_properties);
-
-			// ejemplo de conversión:
-				var cssjson = {
-			        "selector-1":{
-			            "property-1":"value-1",
-			            "property-n":"value-n"
-			        }
-			    }
-
-			    var styleStr = "";
-			    for(var i in cssjson){
-			        styleStr += i + " {\n"
-			        for(var j in cssjson[i]){
-			            styleStr += "\t" + j + ":" + cssjson[i][j] + ";\n"
-			        }
-			        styleStr += "}\n"
-			    }
-			// ejemplo de asignación directa de css
-				Object.assign(
-					document.querySelector('.my-element').style,
-				  {
-				    position: 'relative',
-				    color: 'blue',
-				    background: 'pink'
-				  }
-				)
-		*/
+		// 	    var styleStr = "";
+		// 	    for(var i in cssjson){
+		// 	        styleStr += i + " {\n"
+		// 	        for(var j in cssjson[i]){
+		// 	            styleStr += "\t" + j + ":" + cssjson[i][j] + ";\n"
+		// 	        }
+		// 	        styleStr += "}\n"
+		// 	    }
+		// 	// ejemplo de asignación directa de css
+		// 		Object.assign(
+		// 			document.querySelector('.my-element').style,
+		// 		  {
+		// 		    position: 'relative',
+		// 		    color: 'blue',
+		// 		    background: 'pink'
+		// 		  }
+		// 		)
 
 
 	return wrapper
@@ -164,7 +120,7 @@ const content_data = async function(self) {
 	// add all section_record rendered nodes
 		const ar_section_record_length = ar_section_record.length
 		if (ar_section_record_length===0) {
-			// no records found
+			// no records found case
 			const row_item = no_records_node()
 			fragment.appendChild(row_item)
 		}else{
@@ -252,14 +208,6 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 		if (render_level==='content') {
 			return current_content_data
 		}
-
-	// section dom container
-		// const wrapper = ui.create_dom_element({
-		// 	element_type	: 'section',
-		// 	id 				: self.id,
-		// 	//class_name		: self.model + ' ' + self.tipo + ' ' + self.mode
-		// 	class_name 		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
-		// })
 
 	const fragment = new DocumentFragment()
 
