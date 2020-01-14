@@ -354,6 +354,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return 'component_input_text';
 		}elseif ($this->terminoID==='dd545') { // activity what
 			return 'component_select';
+		}elseif ($this->terminoID==='dd544') { // activity ip
+			return 'component_input_text';
 		}
 		return $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
 	}
