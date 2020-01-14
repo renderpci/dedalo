@@ -157,7 +157,8 @@ class login extends common {
 																 $section_id,
 																 'list',
 																 DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);
-			$password_dato = $component_password->get_dato();
+			$ar_password_dato = $component_password->get_dato();
+			$password_dato = $ar_password_dato[0];
 
 			// password match check
 				if( $password_encrypted!==$password_dato ) {
