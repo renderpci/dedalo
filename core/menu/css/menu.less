@@ -51,10 +51,16 @@ background-color: #FFFF00;
 		position: fixed;
 		top: 0px;
 		left:0px;
+
+		position: sticky;
+
+
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
+
 		width: calc(100vw - 1em);
-		height: @menu_heigth;
+		// height: @menu_heigth;
 		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 		background: #2e2e2e;
 
@@ -179,7 +185,7 @@ background-color: #FFFF00;
 				//line-height: @menu_heigth;
 				cursor: pointer;
 				font-weight: bold;
-				margin-right: 1.5em;
+				margin-right: 1em;
 				padding-top: 1px;
 
 				&:hover {
@@ -218,6 +224,21 @@ background-color: #FFFF00;
 				background-repeat: no-repeat;
 				background-size: contain;
 			}
+
+			>.debug_info_bar {
+				background-color: #3F3F3F;
+				width: 100%;
+				margin: 0;
+				padding: 0;
+				display: flex;
+
+				>* {
+					padding-left: 1em;
+					color: #9d9d9d;
+					font-size: 94%;
+				}
+			}
+
 
 	}//end .menu_wrapper
 

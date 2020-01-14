@@ -131,11 +131,19 @@
 
 // page
 	.wrapper_page {
-		//display: grid;
-		padding: 1em;
-		padding-top: 2.1em;
+		// display: grid;
+		// padding: 1em;
+		// padding-top: 2.1em;
+
+		padding: 0;
+
 		width: calc(100vw - 1em);
 		min-height: 100vh;
+
+		>.content_data {
+			padding: 1em;
+			//padding-top: 2.1em;
+		}
 	}
 
 
@@ -406,7 +414,7 @@
 
 		&.edit {
 			//padding-right: @inspector_width;
-			width: calc(100vw - 17em);
+			width: calc(100vw - 18em);
 
 
 			&.full_width {
@@ -915,6 +923,10 @@
 		//font-weight: bold;
 		//z-index: 1;
 
+		&.with_debug_info_bar {
+			top: 3.9em;
+		}
+
 		>div {
 			//display: flex;
 			//flex: 1 1 100%;
@@ -1137,36 +1149,36 @@
 
 
 // inspector
-	@top_distance : 61px;
+	@top_distance : 72px;
 	.inspector {
 		height: 100%;
 		width: @inspector_width;
 		background-color: #fcfcfc;
 		position: fixed;
 		top: @top_distance;
-		left: calc(100vw - 15em);
+		left: calc(100vw - 16.4em);
 		border: 1px solid #eee;
 	}
-	.toggle_inspector {
-		//background-color: #fcfcfc;
-		//background-image: url(../../themes/default/icons/reorder.svg);
-		.background_icon('reorder.svg');
-		background-position: center;
-		background-size: 78%;
-		background-repeat: no-repeat;
-		height: 1em;
-		width: 1em;
-		position: fixed;
-		padding: 1em;
-		top: @top_distance; // 4.70em;
-		margin-top: 0.45em;
-		right: 0.95em;
-		//left: calc(100vw - 3em);
-		cursor: pointer;
-		z-index: 9999;
-		//border: 1px solid @color_grey_dark;
-		//border-radius: 0.12em;
-	}
+	// .toggle_inspector {
+	// 	//background-color: #fcfcfc;
+	// 	//background-image: url(../../themes/default/icons/reorder.svg);
+	// 	.background_icon('reorder.svg');
+	// 	background-position: center;
+	// 	background-size: 78%;
+	// 	background-repeat: no-repeat;
+	// 	height: 1em;
+	// 	width: 1em;
+	// 	position: fixed;
+	// 	padding: 1em;
+	// 	top: @top_distance; // 4.70em;
+	// 	margin-top: 0.45em;
+	// 	right: 0.95em;
+	// 	//left: calc(100vw - 3em);
+	// 	cursor: pointer;
+	// 	z-index: 9999;
+	// 	//border: 1px solid @color_grey_dark;
+	// 	//border-radius: 0.12em;
+	// }
 
 
 

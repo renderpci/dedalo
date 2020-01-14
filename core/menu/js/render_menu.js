@@ -206,12 +206,12 @@ render_menu.prototype.edit = async function() {
 				}
 			}
 			section_label.addEventListener("click", e => {
-					event.stopPropagation();
-					//event_manager
-					if (current_instance.mode === 'edit'){
-						event_manager.publish('user_action', {tipo : current_instance.tipo, mode : 'list'})
-					}
-					self.menu_active = false
+				event.stopPropagation();
+				// event_manager
+				if (current_instance.mode === 'edit'){
+					event_manager.publish('user_action', {tipo : current_instance.tipo, mode : 'list'})
+				}
+				self.menu_active = false
 			})
 
 
@@ -220,7 +220,15 @@ render_menu.prototype.edit = async function() {
 			element_type	: 'div',
 			class_name		: 'button_toggle_inspector',
 			parent 			: fragment
+		}).addEventListener("click", function(e) {
+			ui.toggle_inspector(e)
 		})
+
+
+	// debug info bar
+		if(SHOW_DEBUG===true) {
+			fragment.appendChild( get_debug_info_bar(self) );
+		}
 
 
 	menu_wrapper.appendChild(fragment)
@@ -228,6 +236,59 @@ render_menu.prototype.edit = async function() {
 
 	return menu_wrapper
 }//end edit
+
+
+
+/**
+* GET_DEBUG_INFO_BAR
+*/
+const get_debug_info_bar = (self) => {
+
+	const debug_info_bar = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'debug_info_bar'
+	})
+
+	const dedalo_version = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dedalo_version',
+		text_content 	: 'Dédalo v. ' + page_globals.dedalo_version,
+		parent 			: debug_info_bar
+	})
+
+	const dedalo_db_name = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dedalo_db_name',
+		text_content 	: 'Database: ' + page_globals.dedalo_db_name,
+		parent 			: debug_info_bar
+	})
+
+	const pg_version = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'pg_version',
+		text_content 	: 'PG v. ' + page_globals.pg_version,
+		parent 			: debug_info_bar
+	})
+
+	const php_version = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'php_version',
+		text_content 	: 'PHP v. ' + page_globals.php_version,
+		parent 			: debug_info_bar
+	})
+
+	const php_memory = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'php_memory',
+		text_content 	: 'PHP memory: ' + page_globals.php_memory,
+		parent 			: debug_info_bar
+	})
+
+
+
+	return debug_info_bar
+}//end get_debug_info_bar
+
 
 
 /**
