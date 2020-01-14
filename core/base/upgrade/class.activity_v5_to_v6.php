@@ -86,7 +86,8 @@ class activity_v5_to_v6 {
 				}
 
 
-			// date dd547
+			// date dd547 (converts timestamp to dd_date)
+				$date_dato = $dato->components->dd545->dato->{DEDALO_DATA_NOLAN} ?? null;
 
 
 			// json dd551
