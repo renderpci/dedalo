@@ -410,14 +410,14 @@ export const ui = {
 
 			// inspector
 				if (instance.inspector) {
-					// icon toggle inspector
-					const toggle = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'toggle_inspector',
-						parent 			: fragment
-					}).addEventListener("click", function(e) {
-						ui.toggle_inspector(e)
-					})
+					// // icon toggle inspector
+					// const toggle = ui.create_dom_element({
+					// 	element_type	: 'div',
+					// 	class_name		: 'toggle_inspector',
+					// 	parent 			: fragment
+					// }).addEventListener("click", function(e) {
+					// 	ui.toggle_inspector(e)
+					// })
 					const inspector = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'inspector',

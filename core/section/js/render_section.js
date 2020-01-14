@@ -311,7 +311,7 @@ render_section.prototype.list_header = async function(){
 	// header_wrapper
 		const header_wrapper = ui.create_dom_element({
 			element_type	: "div",
-			class_name		: "header_wrapper_list"
+			class_name		: "header_wrapper_list" + (SHOW_DEBUG===true ? ' with_debug_info_bar' : '')
 		})
 
 	// id column
