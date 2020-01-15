@@ -2817,7 +2817,14 @@ abstract class component_common extends common {
 
 		if(isset($propiedades->source->search)){
 			foreach ($propiedades->source->search as $current_search) {
-				$ar_terminoID_by_modelo_name[] =  $current_search->section_tipo;
+				$current_section_tipo = $current_search->section_tipo;
+				// check if is available
+				$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+				if ($current_model==='section') {
+					$ar_terminoID_by_modelo_name[] = $current_section_tipo;
+				}else{
+					debug_log(__METHOD__." !!!!!!!!!!! IGNORED NO SECTION element: $current_section_tipo ".to_string($current_model), logger::ERROR);
+				}
 			}
 		}
 
