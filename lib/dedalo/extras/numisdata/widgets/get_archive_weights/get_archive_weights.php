@@ -65,20 +65,31 @@
 				$section_tipo_used 		= $component_used->section_tipo;
 
 
-				$component_data = array_reduce($data_source, function ($carry, $item){
+				$component_data_weights = array_reduce($data_source, function ($carry, $item){
 
-					if ($item->type==='data') {
+					if ($item->type==='data_weights') {
 						return $item;
 					}
 					return $carry;
 				});
 
-				$component_tipo_data 	= $component_data->component_tipo;
-				$section_tipo_data 		= $component_data->section_tipo;
+				$component_tipo_data_weights 	= $component_data_weights->component_tipo;
+
+
+				$component_data_diameter = array_reduce($data_source, function ($carry, $item){
+
+					if ($item->type==='data_diamenter') {
+						return $item;
+					}
+					return $carry;
+				});
+
+				$component_tipo_data_diameter 	= $component_data_diameter->component_tipo;
 
 
 
 				$weights = [];
+				$diameter = [];
 				#get the value of the component using portal dato
 					foreach ($dato as $current_locator) {
 
@@ -98,29 +109,55 @@
 						#if ($used_dato[0]->section_id==='2') continue;
 						if (empty($used_dato) || $used_dato[0]->section_id==='2') continue;
 
-
-						$data_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data,true); // Expected portal
-						$data 				= component_common::get_instance($data_modelo_name,
-																	   $component_tipo_data,
+						//weights
+						$data_weights_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_weights,true); // Expected portal
+						$data_weights				= component_common::get_instance($data_weights_modelo_name,
+																	   $component_tipo_data_weights,
 																	   $section_id,
 																	   'list',
 																	   DEDALO_DATA_NOLAN,
 																	   $section_tipo);
 
-						$data_dato = $data->get_dato();
+						$data_weights_dato 	= $data_weights->get_dato();
+						$data_weights_label = $data_weights->get_label();
 
-						if(!empty($data_dato)){
-							$weights[] = $data_dato;
+						if(!empty($data_weights_dato)){
+							$weights[] = $data_weights_dato;
+						}
+
+						//diameter
+						$data_diameter_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_diameter,true); // Expected portal
+						$data_diameter				= component_common::get_instance($data_diameter_modelo_name,
+																	   $component_tipo_data_diameter,
+																	   $section_id,
+																	   'list',
+																	   DEDALO_DATA_NOLAN,
+																	   $section_tipo);
+
+						$data_diameter_dato = $data_diameter->get_dato();
+						$data_diameter_label = $data_diameter->get_label();
+
+						if(!empty($data_diameter_dato)){
+							$diameter[] = $data_diameter_dato;
 						}
 					}
 
 					if (!empty($weights)) {
-						$media_weight 	= round((array_sum($weights) / count($weights)),2);
-						$total_elements = count($weights);
-						$max_weight 	= max($weights);
-						$min_weight 	= min($weights);
+						$media_weight 			= round((array_sum($weights) / count($weights)),2);
+						$total_elements_weights = count($weights);
+						$max_weight 			= max($weights);
+						$min_weight 			= min($weights);
 					}else{
 						debug_log(__METHOD__." Empty weights. Sum ignored in widget get_archive_weights ".to_string(), logger::DEBUG);
+					}
+
+					if (!empty($diameter)) {
+						$media_diameter				= round((array_sum($diameter) / count($diameter)),2);
+						$total_elements_diameter 	= count($diameter);
+						$max_diameter 				= max($diameter);
+						$min_diameter				= min($diameter);
+					}else{
+						debug_log(__METHOD__." Empty diameter. Sum ignored in widget get_archive_weights ".to_string(), logger::DEBUG);
 					}
 				break;
 
