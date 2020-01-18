@@ -341,7 +341,7 @@ body {
   padding: 0.2em;
 }
 .rows_container > .row_container {
-  grid-template-columns: minmax(100px, 1fr) 160px 160px 85px;
+  grid-template-columns: minmax(75px, 1fr) 160px 160px 85px;
   grid-template-rows: 1fr 1fr 1fr 1fr;
 }
 /*# sourceMappingURL=tool_sort.css.map */
