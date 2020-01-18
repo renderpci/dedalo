@@ -148,7 +148,7 @@ body {
   position: relative;
   align-items: center;
   background-color: #ffffff;
-  padding-right: 60px;
+  padding-right: 40px;
   padding-top: 1px;
   padding-bottom: 1px;
 }
@@ -160,6 +160,27 @@ body {
   z-index: 9;
   outline: 1px solid #cccccc;
   background-color: rgba(249, 249, 249, 0.9);
+}
+.rows_container > .row_container > div:nth-child(-n+4) {
+  grid-column-start: 1;
+}
+.rows_container > .row_container > div:nth-child(n+5) {
+  grid-row-start: 1;
+  grid-row-end: 5;
+}
+.rows_container > .row_container > div:nth-child(5) {
+  grid-column-start: 2;
+}
+.rows_container > .row_container > div:nth-child(6) {
+  grid-column-start: 3;
+}
+.rows_container > .row_container > div:nth-child(7) {
+  grid-column-start: 4;
+  grid-row-end: 3;
+}
+.rows_container > .row_container > div:nth-child(8) {
+  grid-column-start: 4;
+  grid-row-start: 3;
 }
 .rows_container > .row_container > .column_cell {
   flex-direction: column;
@@ -320,6 +341,7 @@ body {
   padding: 0.2em;
 }
 .rows_container > .row_container {
-  grid-template-columns: 50px 25px 1fr 1fr 160px 160px 85px 75px;
+  grid-template-columns: minmax(100px, 1fr) 160px 160px 85px;
+  grid-template-rows: 1fr 1fr 1fr 1fr;
 }
 /*# sourceMappingURL=tool_sort.css.map */
