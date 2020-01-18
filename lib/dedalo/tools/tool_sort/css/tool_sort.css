@@ -142,6 +142,7 @@ body {
 }
 .rows_container {
   overflow: unset !important;
+  min-width: 550px;
 }
 .rows_container > .row_container {
   width: 100%;
