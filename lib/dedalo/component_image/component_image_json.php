@@ -12,7 +12,7 @@
 
 		// Available image files
 			$value = [];
-			
+
 			//$ar_quality = $this->get_ar_image_quality();
 			//foreach ($ar_quality as $quality) {
 			//	$image_url = $this->get_image_url($quality, true, true, false); // ($quality=false, $test_file=true, $absolute=false, $default_add=true)
