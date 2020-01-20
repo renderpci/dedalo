@@ -132,6 +132,9 @@ class tools_register {
 					}
 			}
 
+		// session. Remove previous stored data in session
+			unset($_SESSION['dedalo']['registered_tools']);
+
 
 		// debug
 			if(SHOW_DEBUG===true) {

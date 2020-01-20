@@ -124,16 +124,16 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// button upload
-		if((self.mode==='edit' || self.mode==='edit_in_list') && !ui.inside_tool(self)){
-			const button_upload = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button upload',
-				parent 			: buttons_container
-			})
-			.addEventListener("click", function(e){
-				alert("To tool upload (not implemented yet)");
-			})
-		}
+		// if((self.mode==='edit' || self.mode==='edit_in_list') && !ui.inside_tool(self)){
+		// 	const button_upload = ui.create_dom_element({
+		// 		element_type	: 'span',
+		// 		class_name 		: 'button upload',
+		// 		parent 			: buttons_container
+		// 	})
+		// 	.addEventListener("click", function(e){
+		// 		alert("To tool upload (not implemented yet)");
+		// 	})
+		// }
 
 	// content_data
 		const content_data = document.createElement("div")
