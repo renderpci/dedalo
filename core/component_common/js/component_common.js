@@ -135,6 +135,7 @@ component_common.prototype.init = async function(options) {
 			self.sqo_context.show.push(source)
 		}
 
+
 	// status update
 		self.status = 'inited'
 
@@ -184,7 +185,12 @@ component_common.prototype.build = async function(autoload=false){
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			//console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
+			// console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
+		}
+
+	// build_custom optional
+		if (typeof self.build_custom==='function') {
+			await self.build_custom()
 		}
 
 	// status update
