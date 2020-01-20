@@ -218,7 +218,7 @@ class component_inverse extends component_common {
 		foreach ($ar_related as $key => $value) {
 			$current_tipo = reset($value);
 			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				dump($modelo_name, ' modelo_name ++ '.to_string());
+				//dump($modelo_name, ' modelo_name ++ '.to_string());
 			if ($modelo_name!=='section') {			
 				# Components
 				$component = component_common::get_instance( $modelo_name,

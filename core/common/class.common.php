@@ -73,7 +73,7 @@ abstract class common {
 			// component_json
 			'component_layout',
 			// component_number
-			'component_password',
+			//'component_password',
 			// component_pdf
 			// component_portal
 			// component_publication
