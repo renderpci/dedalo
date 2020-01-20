@@ -9,6 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {common} from '../../common/js/common.js'
+	import {load_tool} from '../../tool_common/js/tool_common.js'
 	import '../../common/js/components_list.js' // launch preload all components files in parallel
 	import {render_page} from './render_page.js'
 
@@ -124,6 +125,12 @@ page.prototype.init = async function(options) {
 			options.event_in_history = true
 			event_manager.publish('user_action', options)
 		};
+
+
+	// observe tool calls
+		self.events_tokens.push(
+			event_manager.subscribe('load_tool', load_tool)
+		)
 
 
 	// status update

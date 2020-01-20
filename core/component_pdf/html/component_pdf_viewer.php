@@ -60,7 +60,7 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 			function getURLParameter(name) {
 				return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null
 			}
-			// pdfjsLib.GlobalWorkerOptions.workerSrc = '<?php echo $pdf_viewer_base_path .'/build/pdf.worker.js' ?>';
+			// pdfjsLib.GlobalWorkerOptions.workerSrc = '<?php echo DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.worker.js' ?>';
 
 		const dedalo_pdfjs_options = {
 			"locale" 				: '<?php echo lang::get_locale_from_code(DEDALO_APPLICATION_LANG) ?>',
