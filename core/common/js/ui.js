@@ -660,19 +660,32 @@ export const ui = {
 		build_tool_button : (tool_object, self) => {
 
 			// button
+				// const tool_button = ui.create_dom_element({
+				// 	element_type	: 'span',
+				// 	class_name 		: 'button tool',
+				// 	style 			: { "background-image": "url('" +tool_object.icon +"')" },
+				// 	dataset			: { tool :tool_object.name },
+				// 	title_label 	: tool_object.label
+				// })
 				const tool_button = ui.create_dom_element({
-					element_type	: 'span',
+					element_type	: 'img',
 					class_name 		: 'button tool',
-					style 			: { "background-image": "url('" +tool_object.icon +"')" },
+					// style 		: { "background-image": "url('" +tool_object.icon +"')" },
+					src 			: tool_object.icon,
 					dataset			: { tool :tool_object.name },
 					title_label 	: tool_object.label
 				})
 
 			// Events
-				tool_button.addEventListener('mouseup', (e) => {
-					e.stopPropagation()
+				tool_button.addEventListener('click', (e) => {
+					e.stopPropagation();
 					//common.prototype.load_tool(self, tool_object)
-					ui.tool.load_tool(self, tool_object)
+					// ui.tool.load_tool(self, tool_object)
+					event_manager.publish('load_tool', {
+						self 		: self,
+						tool_object : tool_object
+					})
+
 				})
 
 			return tool_button
@@ -710,43 +723,7 @@ export const ui = {
 				modal_container._showModal()
 
 			return true
-		},//attach_to_modal
-
-
-
-		/**
-		* LOAD_TOOL
-		* @param tool_object options
-		* @param self instance_caller
-		* @return object tool
-		*/
-		load_tool : async (self, tool_object) => {
-
-			const tool_instance = await get_instance({
-				model 			: tool_object.name,
-				tipo 			: self.tipo,
-				section_tipo 	: self.section_tipo,
-				section_id 		: self.section_id,
-				mode 			: self.mode,
-				lang 			: self.lang,
-				caller 			: self,
-				tool_object		: tool_object
-			})
-
-			// destroy if already loaded (toggle tool)
-				if (tool_instance.status && tool_instance.status!=='init') {
-
-					const destroyed = tool_instance.destroy(true, true, true)
-
-					return false
-				}
-
-			const builded = await tool_instance.build(true)
-
-			tool_instance.render()
-
-			return tool_instance
-		}//end load_tool
+		}//attach_to_modal
 
 
 

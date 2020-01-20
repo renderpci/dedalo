@@ -30,6 +30,9 @@ export const component_image = function(){
 
 	this.tools
 
+	this.file_name
+	this.file_dir
+
 
 	return true
 }//end component_image
@@ -51,8 +54,31 @@ export const component_image = function(){
 	component_image.prototype.set_value 	= component_common.prototype.set_value
 
 	// render
-	component_image.prototype.render 	= common.prototype.render
-	component_image.prototype.list 		= render_component_image.prototype.list
-	component_image.prototype.edit 		= render_component_image.prototype.edit
+	component_image.prototype.render 		= common.prototype.render
+	component_image.prototype.list 			= render_component_image.prototype.list
+	component_image.prototype.edit 			= render_component_image.prototype.edit
+
+
+
+/**
+* BUILD_CUSTOM
+* Is called from component common after common build is finished (!)
+* Useful to append or change custom properties from components
+* Is async always and is waited before set status as 'builded'
+*/
+component_image.prototype.build_custom = async function() {
+
+	const self = this
+
+		console.log("self.context:",self.context);
+
+	// fix useful vars for tool upload
+		self.file_name 			= 'pepet.jpg'
+		self.target_dir 		= '/root/pepet_folder'
+		self.allowed_extensions = self.context.allowed_extensions
+
+
+	return true
+}//end build_custom
 
 

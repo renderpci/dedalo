@@ -1,21 +1,15 @@
 // import
-	//import {config} from '../info.js'
-	//import * as config from '../info.json'
-	import {common} from '../../../common/js/common.js'
-	import {ui} from '../../../common/js/ui.js'
-	import {tool_common} from '../../../tool_common/js/tool_common.js'
-	//import {event_manager} from '../../../common/js/event_manager.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../common/js/instances.js'
+	import {common} from '../../../common/js/common.js'
+	import {tool_common} from '../../../tool_common/js/tool_common.js'
 	import {render_tool_lang, add_component} from './render_tool_lang.js'
 
 
 
 /**
 * TOOL_LANG
-* Tool to translate contents from one language to other in any text component.
-*
-*
+* Tool to translate contents from one language to other in any text component
 */
 export const tool_lang = function () {
 
@@ -44,11 +38,9 @@ export const tool_lang = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_lang.prototype.build 		= tool_common.prototype.build // standard tool build with the info data and css of the tool from server
 	tool_lang.prototype.render 		= common.prototype.render
-	tool_lang.prototype.edit 		= render_tool_lang.prototype.edit
-	tool_lang.prototype.edit_in_list= render_tool_lang.prototype.edit
 	tool_lang.prototype.destroy 	= common.prototype.destroy
+	tool_lang.prototype.edit 		= render_tool_lang.prototype.edit
 
 
 
@@ -59,32 +51,38 @@ tool_lang.prototype.init = async function(options) {
 
 	const self = this
 
-	// set vars
-	self.model				= 'tool_lang'
-	self.tool_section_tipo 	= options.tool_object.section_tipo
-	self.tool_section_id	= options.tool_object.section_id
-	self.mode 				= options.mode
-	self.caller 			= options.caller
-	self.node				= []
-	self.type				= 'tool'
-	self.ar_instances		= []
-	self.events_tokens 		= []
-
-	self.lang 				= page_globals.dedalo_data_lang
-	self.langs 				= page_globals.dedalo_projects_default_langs
-	self.source_lang 		= self.caller.lang
-	self.target_lang 		= null
-
-	self.config				= null // the config will be loaded by the build method in tool_common
-
-	self.trigger_url 		= DEDALO_CORE_URL + "/tools/tool_lang/trigger.tool_lang.php"
+	// set the self specific vars not defined by the generic init (in tool_common)
+		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_lang/trigger.tool_lang.php"
+		self.lang 			= options.lang // page_globals.dedalo_data_lang
+		self.langs 			= page_globals.dedalo_projects_default_langs
+		self.source_lang 	= options.caller.lang
+		self.target_lang 	= null
 
 
-	// set status
-		//self.status = 'initied'
+	// call the generic commom tool init
+		const common_init = tool_common.prototype.init.call(this, options);
 
-	return true
+
+	return common_init
 }//end init
+
+
+
+/**
+* BUILD_CUSTOM
+*/
+tool_lang.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// call generic commom tool build
+		const common_build = tool_common.prototype.build.call(this, autoload);
+
+	// specific actions..
+
+
+	return common_build
+}//end build_custom
 
 
 
