@@ -3,7 +3,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_date} from '../../component_date/js/render_component_date.js'
 
-
+import {event_manager} from '../../common/js/event_manager.js'
 
 export const component_date = function(){
 
@@ -532,7 +532,7 @@ component_date.prototype.get_dato_time = function(value) {
 */
 component_date.prototype.format_time = function(options) {
 
-	const self 		= this
+	const self = this
 
 	let current_input_date = options.value // Raw string from input field
 
@@ -643,3 +643,116 @@ component_date.prototype.format_time = function(options) {
 
 	return result
 }//end format_time
+
+component_date.prototype.set_default_date = function(dateStr) {
+	
+	const self = this
+
+	let value
+
+	const ar_date = (dateStr) ? dateStr.split(self.separator) : [] 
+
+	switch(ar_date.length) {
+
+		case 3:
+			value = new Date(ar_date[2], ar_date[1] - 1 , ar_date[0])
+			break;
+		case 2:
+			value = new Date(ar_date[1], ar_date[0] - 1 , 1)
+			break;
+		case 1:
+			value = new Date(ar_date[0], 0, 1)
+			break;
+		default:
+			value = new Date()
+			break;
+
+	}
+
+	return value
+
+}
+
+
+
+/**
+* GET_EJEMPLO
+*/
+component_date.prototype.get_ejemplo = function() {
+	
+	const self = this
+	/*
+	if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
+		# American format month/day/year
+		$format = 'MM-DD-YYYY';
+	}else{
+		# European format day.month.year
+		$format = 'DD-MM-YYYY';
+	}
+	*/
+	const date_mode = self.context.properties.date_mode
+	let ejemplo = ''
+	
+	if (date_mode === 'time') {
+		ejemplo = ejemplo.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
+	}else{
+		ejemplo = ejemplo.concat('DD',self.separator,'MM',self.separator,'YYYY')
+	}
+	
+	return ejemplo
+}//end get_ejemplo
+
+/**
+* CLOSE_FLATPICKR
+*/
+component_date.prototype.close_flatpickr = function(selectedDates, dateStr, instance) {
+	//instance.set(config.ignoredFocusElements, [document.body])
+	instance.destroy()
+}//end close_flatpickr
+
+/**
+* UPDATE_VALUE_FLATPICKR
+*/
+component_date.prototype.update_value_flatpickr = function(selectedDates, dateStr, instance, component_instance, target) {
+	
+	const self = component_instance
+	const role = target.dataset.role
+	var new_date = ''
+	var new_value
+
+	new_date = new_date.concat(selectedDates[0].getDate(), self.separator, selectedDates[0].getMonth() + 1, self.separator, selectedDates[0].getFullYear())
+	target.value = new_date
+
+	if ((role==='range_start') || (role==='range_end')) {
+			
+		const dato_range = self.get_dato_range(target.parentNode, role)
+		
+		if (role==='range_start') {
+			(dato_range.start === false) ? new_value = false : new_value = dato_range
+		}
+								
+		if (role==='range_end') {							
+			(dato_range.end === false) ? new_value = false : new_value = dato_range
+		}												
+						
+	}
+	
+	if (role==='default') {
+		new_value = (target.value.length>0) ? self.get_dato_date(target.value) : ''
+	}
+		
+	const changed_data = Object.freeze({
+			action	: 'update',
+			key		: JSON.parse(target.dataset.key),
+			value	: new_value,
+		})
+	self.change_value({
+		changed_data : changed_data,
+		refresh 	 : false
+	})
+	.then((save_response)=>{
+		// event to update the dom elements of the instance
+		event_manager.publish('update_value_'+self.id, changed_data)
+	})
+
+}//end update_value_flatpickr
