@@ -12,28 +12,71 @@ class component_password extends component_common {
 	# GET DATO
 	public function get_dato() {
 		$dato = parent::get_dato();
-		return (string)$dato;
+
+		if (!is_array($dato)) {
+			$dato = [$dato];
+		}
+
+		return (array)$dato;
 	}
 
 	# SET_DATO (NO ENCRYTP THIS VAR !)
-	public function set_dato($dato) {
-		parent::set_dato( (string)$dato );
+	public function set_dato($dato) {			
+		parent::set_dato( (array)$dato );
 	}
 	
+	/**
+	* GET_VALOR
+	* Return array dato as comma separated elements string by default
+	* If index var is received, return dato element corresponding to this index if exists
+	* @return string $valor
+	*/
+	public function get_valor($index='all' ) {
+
+		$valor ='';
+
+		$dato = $this->get_dato();
+
+		if(empty($dato)) {
+			return (string)$valor;
+		}
+
+		if ($index==='all') {
+			$ar = array();
+			foreach ($dato as $key => $value) {
+				$value = trim($value);
+				if (!empty($value)) {
+					$ar[] = $value;
+				}
+			}
+			if (count($ar)>0) {
+				$valor = implode(',',$ar);
+			}
+		}else{
+			$index = (int)$index;
+			$valor = isset($dato[$index]) ? $dato[$index] : null;
+		}
+
+		return (string)$valor;
+	}//end get_valor
+
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
 	*/
 	public function Save() {
-
-		if(isset($this->updating_dato) && $this->updating_dato===true) {
+			
+ 		if(isset($this->updating_dato) && $this->updating_dato===true) {
 			# Dato is saved plain (unencrypted) only for updates
 		}else{
 			# Encrypt dato with md5 etc..
-			$this->dato = component_password::encrypt_password($this->dato);		#dump($dato,'dato md5');
+			$dato = $this->dato;
+			foreach ((array)$dato as $key => $value) {
+				# code...
+				$this->dato[$key] = component_password::encrypt_password($value);		#dump($dato,'dato md5');	
+			}
 		}		
 		
-
 		# A partir de aquí, salvamos de forma estándar
 		return parent::Save();
 	}
@@ -106,7 +149,7 @@ class component_password extends component_common {
 					$dato = $section->get_dato();
 					$tipo = DEDALO_USER_PASSWORD_TIPO;
 					$lang = DEDALO_DATA_NOLAN;
-					#dump($dato->components->$tipo->dato->$lang, ' dato');
+
 					$dato->components->$tipo->dato->$lang = $dato->components->$tipo->valor->$lang = dedalo_encrypt_openssl($default);
 
 					$strQuery 	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
