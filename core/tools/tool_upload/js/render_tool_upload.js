@@ -96,6 +96,8 @@ const get_content_data = async function(self) {
 	const allowed_extensions = self.caller.allowed_extensions
 
 
+	console.log("self:",self);
+
 	// form
 		const form = ui.create_dom_element({
 			element_type	: 'form',
@@ -114,8 +116,7 @@ const get_content_data = async function(self) {
 			parent 			: form
 		})
 		input.addEventListener("change", function(e){
-
-			self.upload_file(e)
+			self.upload_file(e, content_data)
 		})
 
 	// label
@@ -129,10 +130,10 @@ const get_content_data = async function(self) {
 	// progress bar
 		fragment.appendChild( get_progress_bar(self) )
 
-	// response
-		const uploadResponse = ui.create_dom_element({
+	// response_container
+		const response_container = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'uploadResponse',
+			class_name		: 'response_container',
 			parent 			: fragment
 		})
 
@@ -212,11 +213,10 @@ const get_content_data = async function(self) {
 	// 		parent 			: components_container
 	// 	})
 
-
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
