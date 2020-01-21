@@ -121,7 +121,8 @@ class component_image extends component_media_common {
 		$this->set_dato($locator);
 
 		# Generate default image quality from original if need
-		$default = $this->generate_default($overwrite=false);
+		$overwrite 	= ($this->quality===$this->get_original_quality()) ? true : false;
+		$default 	= $this->generate_default($overwrite);
 
 		# Generate thumb image quality from default always (if default exits)
 		$thumb 	 = $this->generate_thumb();
@@ -610,14 +611,14 @@ class component_image extends component_media_common {
 	* GENERATE_DEFAULT
 	* @return bool
 	*/
-	public function generate_default($overwrite=false) {
+	public function generate_default($overwrite=true) {
 
 		// vars
 			$image_id 			 = $this->get_id();
 			$aditional_path 	 = $this->get_aditional_path();
 			$initial_media_path  = $this->get_initial_media_path();
 
-		// image_quality_retouched
+		// quality retouched
 			if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
 				# source data (modified is source)
 				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $aditional_path, $initial_media_path);
@@ -625,25 +626,23 @@ class component_image extends component_media_common {
 				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
 			}
 
-		// not original_image_path exists case. Create it
+		// quality original
 			if (!isset($original_image_path) || !file_exists($original_image_path)) {
 				# source data (default quality is source)
 				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
 				$original_image_path = $source_ImageObj->get_local_full_path();
 				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
 			}
-
-		// check original file again
+			// check original file again
 			if (!file_exists($original_image_path)) {
 				debug_log(__METHOD__." Unable locate original_image. File not exists in $original_image_path ".to_string(), logger::ERROR);
 				return false;
 			}
 
-		// thumb. target data (target quality is thumb)
+		// quality default
 			$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
 			$image_default_path  = $ImageObj->get_local_full_path();
-
-		// overwrite or create default quality image version
+			// overwrite or create default quality image version
 			if ($overwrite===true || !file_exists($image_default_path)) {
 				$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );
 			}
@@ -1199,6 +1198,21 @@ class component_image extends component_media_common {
 
 		return $allowed_extensions;
 	}//end get_allowed_extensions
+
+
+
+	/**
+	* GET_ORIGINAL_QUALITY
+	* @return array $allowed_extensions
+	*/
+	public function get_original_quality() {
+
+		$original_quality = defined('DEDALO_IMAGE_QUALITY_ORIGINAL')
+			? DEDALO_IMAGE_QUALITY_ORIGINAL
+			: DEDALO_IMAGE_QUALITY_DEFAULT;
+
+		return $original_quality;
+	}//end get_original_quality
 
 
 
