@@ -6,6 +6,7 @@
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
+	$properties 		= $this->get_propiedades();
 
 
 
@@ -20,7 +21,13 @@
 				break;
 
 			default:
-				$context[] = $this->get_structure_context($permissions);
+				$current_context = $this->get_structure_context($permissions);
+
+				// allowed_extensions
+				$current_context->allowed_extensions = $this->get_allowed_extensions();
+				$current_context->default_target_quality = $this->get_original_quality();
+
+				$context[] = $current_context;
 				break;
 		}
 	}//end if($options->get_context===true))

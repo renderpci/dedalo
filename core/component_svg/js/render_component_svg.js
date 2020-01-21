@@ -123,17 +123,17 @@ const get_content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 
-	// button upload
-		// if((self.mode==='edit' || self.mode==='edit_in_list') && !ui.inside_tool(self)){
-		// 	const button_upload = ui.create_dom_element({
-		// 		element_type	: 'span',
-		// 		class_name 		: 'button upload',
-		// 		parent 			: buttons_container
-		// 	})
-		// 	.addEventListener("click", function(e){
-		// 		alert("To tool upload (not implemented yet)");
-		// 	})
-		// }
+	// tools
+		if (!ui.inside_tool(self)) {
+			const tools 		= self.tools
+			const tools_length 	= tools.length
+
+			for (let i = 0; i < tools_length; i++) {
+				if(tools[i].show_in_component){
+					buttons_container.appendChild( ui.tool.build_tool_button(tools[i], self) );
+				}
+			}
+		}
 
 	// content_data
 		const content_data = document.createElement("div")
