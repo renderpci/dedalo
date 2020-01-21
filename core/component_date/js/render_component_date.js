@@ -62,10 +62,15 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	// load dependences js/css
 		const load_promises = []
 
-		const lib_js_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.js'
+		const lib_js_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
+		//const lib_js_file = DEDALO_ROOT_WEB + '/lib/thedatepicker-master/dist/the-datepicker.js'
+		//const lib_js_file = 'https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.2.3/flatpickr.js'
 		load_promises.push( common.prototype.load_script(lib_js_file) )
 
 		const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
+		//const lib_css_file = DEDALO_ROOT_WEB + '/lib/thedatepicker-master/dist/the-datepicker.css'
+		//const lib_css_file = 'https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.2.3/flatpickr.css'
+
 		load_promises.push( common.prototype.load_style(lib_css_file) )
 
 		await Promise.all(load_promises).then(async function(response){
@@ -118,10 +123,10 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
 			//e.stopPropagation()
-
+			
 			// input_value. The standard input for the value of the component
 			if (e.target.matches('input[type="text"]')) {
-
+					
 				let value
 
 				// build date
@@ -190,13 +195,30 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 					all_buttons_remove[i].classList.add("display_none")
 				}
 
+			const date_mode = self.context.properties.date_mode
 
-			if (e.target.matches('input[type="text"]')) {
+			if (e.target.matches('input[type="text"]') && date_mode != 'period' && date_mode != 'time') {
 				// set the button_remove associated to the input selected to visible
 					const button_remove = e.target.parentNode.querySelector('.remove')
 					button_remove.classList.remove("display_none")
-			}
 
+					const initialValue = e.target.value
+		
+					const datePicker = flatpickr(e.target.parentNode, {
+						allowInput: true,					
+						clickOpens: false,
+						defaultDate: self.set_default_date(e.target.value),
+						dateFormat: 'd-m-Y',///'d' + self.separator + 'm' + self.separator + 'Y',
+						onClose: self.close_flatpickr,							
+						onValueUpdate: function(selectedDates, dateStr, instance){
+            								self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
+        							}		
+					});
+		
+				datePicker.open()
+				return true
+ 			}
+									
 			// insert
 			if (e.target.matches('.button.add')) {
 
@@ -376,7 +398,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 	const input_value_start = (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode)	: ''
 	const input_value_end 	= (current_value && current_value.end) ? self.get_dd_timestamp(current_value.end, date_mode) 		: ''
 
-		input_element_flatpicker(i, 'range_start', input_value_start, inputs_container)
+		input_element_flatpicker(i, 'range_start', input_value_start, inputs_container, self)
 
 		// create div
 		const div = ui.create_dom_element({
@@ -391,7 +413,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 			parent 			: inputs_container
 		})
 
-		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container)
+		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container, self)
 
 }//end input_element_range
 
@@ -419,6 +441,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 		class_name 		: 'input_value',
 		dataset 	 	: { key : i, role: 'period_year' },
 		value 			: year,
+		placeholder 	: 'Y',
 		parent 			: inputs_container
 	})
 
@@ -434,6 +457,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 		class_name 		: 'input_value',
 		dataset 	 	: { key : i, role: 'period_month' },
 		value 			: month,
+		placeholder 	: 'M',
 		parent 			: inputs_container
 	})
 
@@ -448,7 +472,8 @@ const input_element_period = (i, current_value, inputs_container) => {
 		type 			: 'text',
 		class_name 		: 'input_value',
 		dataset 	 	: { key : i, role: 'period_day' },
-		value 			: day,
+		value 			: day,		
+		placeholder 	: 'D',
 		parent 			: inputs_container
 	})
 
@@ -478,6 +503,7 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 		class_name 		: 'input_value',
 		dataset 	 	: { key : i },
 		value 			: input_value,
+		placeholder 	: self.get_ejemplo(),
 		parent 			: inputs_container
 	})
 
@@ -494,23 +520,27 @@ const input_element_default = (i, current_value, inputs_container, self) => {
 	const date_mode 	= self.context.properties.date_mode
 	const input_value 	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode) : ''
 
-	input_element_flatpicker(i, 'default', input_value, inputs_container)
+	input_element_flatpicker(i, 'default', input_value, inputs_container, self)
 
 	return true
 }//end input_element_default
 
 
-const input_element_flatpicker = (i, role_name, input_value, inputs_container) => {
+const input_element_flatpicker = (i, role_name, input_value, inputs_container, self) => {
 
 	// input field
 	const input = ui.create_dom_element({
 		element_type 	: 'input',
 		type 		 	: 'text',
-		class_name 		: 'input_value',
+		class_name 		: 'flatpickr', //'input_value',
 		dataset 	 	: { key : i, role: role_name },
 		value 		 	: input_value,
+		placeholder 	: self.get_ejemplo(),
 		parent 		 	: inputs_container
 	})
 
 	return true
 }
+
+
+
