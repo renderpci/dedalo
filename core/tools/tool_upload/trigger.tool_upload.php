@@ -1,7 +1,6 @@
 <?php
 $start_time=microtime(1);
 include( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
-// include( dirname(__FILE__) .'/class.tool_upload.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 if (isset($_POST['mode']) && $_POST['mode']==='upload_file') {
 	// Note that no header('Content-Type: application/json; charset=utf-8') is applicated here (XMLHttpRequest POST)
@@ -119,7 +118,8 @@ function upload_file($json_data) {
 														 'edit',
 														 DEDALO_DATA_LANG,
 														 $section_tipo);
-		// fix current target quality
+
+		// fix current component target quality (defines the destination directory for the file, like 'original')
 			$component->set_quality($quality);
 
 		// add file
