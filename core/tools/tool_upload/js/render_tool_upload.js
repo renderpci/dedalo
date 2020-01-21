@@ -144,6 +144,13 @@ const get_content_data = async function(self) {
 			inner_html	 	: '<label>Caller component</label>' + self.caller.model,
 			parent 			: info
 		})
+		// target quality
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html	 	: '<label>Target quality</label>' + self.caller.context.default_target_quality,
+			parent 			: info
+		})
+			console.log("self.caller.context:",self.caller.context.default_target_quality);
 		// allowed extensions
 		ui.create_dom_element({
 			element_type	: 'div',
