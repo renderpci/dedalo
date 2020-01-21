@@ -44,19 +44,22 @@ export const component_image = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_image.prototype.init 	 		= component_common.prototype.init
-	// component_image.prototype.build 	 	= component_common.prototype.build
-	component_image.prototype.destroy 	 	= common.prototype.destroy
-	component_image.prototype.save 	 		= component_common.prototype.save
-	component_image.prototype.load_data 	= component_common.prototype.load_data
-	component_image.prototype.load_datum 	= component_common.prototype.load_datum
-	component_image.prototype.get_value 	= component_common.prototype.get_value
-	component_image.prototype.set_value 	= component_common.prototype.set_value
+	// lifecycle
+	component_image.prototype.init 	 			= component_common.prototype.init
+	// component_image.prototype.build 	 		= component_common.prototype.build
+	component_image.prototype.render 			= common.prototype.render
+	component_image.prototype.refresh 			= common.prototype.refresh
+	component_image.prototype.destroy 	 		= common.prototype.destroy
+
+	// change data
+	component_image.prototype.save 	 			= component_common.prototype.save
+	component_image.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_image.prototype.update_datum 		= component_common.prototype.update_datum
+	component_image.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
-	component_image.prototype.render 		= common.prototype.render
-	component_image.prototype.list 			= render_component_image.prototype.list
-	component_image.prototype.edit 			= render_component_image.prototype.edit
+	component_image.prototype.list 				= render_component_image.prototype.list
+	component_image.prototype.edit 				= render_component_image.prototype.edit
 
 
 
