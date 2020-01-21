@@ -645,6 +645,18 @@ class component_pdf extends component_media_common {
 	}//end get_allowed_extensions
 
 
+	/**
+	* GET_ORIGINAL_QUALITY
+	* @return $original_quality
+	*/
+	public function get_original_quality() {
+
+		$original_quality = defined('DEDALO_PDF_QUALITY_ORIGINAL')
+			? DEDALO_PDF_QUALITY_ORIGINAL
+			: DEDALO_PDF_QUALITY_DEFAULT;
+
+		return $original_quality;
+	}//end get_original_quality
 
 
 }

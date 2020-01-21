@@ -415,7 +415,11 @@
 		# DEDALO_PDF_EXTENSIONS_SUPPORTED
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, serialize(['pdf']));
 		# QUALITY DEFAULT normally 'standar'
-		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standar');
+		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standard');
+		# QUALITY ORIGINAL normally 'original'
+		define('DEDALO_PDF_QUALITY_ORIGINAL'		, DEDALO_PDF_QUALITY_DEFAULT);	
+
+
 		# QUALITY FOLDERS ARRAY
 		define('DEDALO_PDF_AR_QUALITY'				, serialize([DEDALO_PDF_QUALITY_DEFAULT]));
 		# MIME normally application/pdf
@@ -448,6 +452,10 @@
 		define('DEDALO_SVG_MIME_TYPE'			, 'image/svg+xml');
 		# DEDALO_SVG_EXTENSIONS_SUPPORTED
 		define('DEDALO_SVG_EXTENSIONS_SUPPORTED', serialize( array('svg') ));
+		# QUALITY DEFAULT normally 'standar'
+		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'standard');
+		# QUALITY ORIGINAL normally 'original'
+		define('DEDALO_SVG_QUALITY_ORIGINAL'		, DEDALO_SVG_QUALITY_DEFAULT);
 
 
 

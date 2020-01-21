@@ -1211,7 +1211,7 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return array $allowed_extensions
+	* @return array $original_quality
 	*/
 	public function get_original_quality() {
 
