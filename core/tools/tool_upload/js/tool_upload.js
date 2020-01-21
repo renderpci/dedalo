@@ -135,14 +135,14 @@ const get_system_info = async function(self) {
 /**
 * UPLOAD_FILE
 */
-tool_upload.prototype.upload_file = async function(e) {
+tool_upload.prototype.upload_file = async function(e, content_data) {
 
 	const self = this
 
-	console.log("upload_file e:",e)
-	console.log("upload_file e.target:",e.target);
-	console.log("upload_file e.target.files:",e.target.files);
-	console.log("size:",e.target.files[0].size);
+	// console.log("upload_file e:",e)
+	// console.log("upload_file e.target:",e.target);
+	// console.log("upload_file e.target.files:",e.target.files);
+	// console.log("size:",e.target.files[0].size);
 
 	// check max file size
 		const file_size_bytes = e.target.files[0].size
@@ -151,21 +151,53 @@ tool_upload.prototype.upload_file = async function(e) {
 			return false
 		}
 
+	// dom elements
+		const response_container = content_data.querySelector(".response_container")
+
+
 	// FormData build
 		const fd = new FormData();
-			  fd.append("mode", "upload_file");
-			  fd.append("patata", "verde");
-			  // fd.append("author", "Dédalo");
-			  // fd.append("name", "Html 5 File API/FormData");
+			  fd.append("mode", 			"upload_file");
+			  fd.append("component_tipo", 	self.caller.tipo);
+			  fd.append("section_tipo", 	self.caller.section_tipo);
+			  fd.append("section_id", 		self.caller.section_id);
+			  fd.append("quality", 			null);
+			  // file
 			  fd.append("fileToUpload", e.target.files[0]);
+
+			  	// console.log("fd:",fd);
+			  	// console.log("self:",self);
+			  	// return;
 
 	try {
 
 		const 	xhr = new XMLHttpRequest();
 
-				// xhr.upload.addEventListener("progress", tool_upload.uploadProgress, false);
+				// progress
+					// xhr.upload.addEventListener("progress", tool_upload.uploadProgress, false);
+					xhr.addEventListener("progress", function(e) {
+						upload_progress(e, content_data)
+					}, false);
 
-				// xhr.addEventListener("load", tool_upload.uploadComplete, false);
+				// load complete event
+					xhr.addEventListener("load", function(e) {
+
+						// parse response string as JSON
+							const response = JSON.parse(e.target.response);
+							if (!response) {
+								console.error("Error in XMLHttpRequest load response. Nothing is received");
+								return false
+							}
+
+						// debug
+							if(SHOW_DEBUG===true) {
+								console.log("upload_file.XMLHttpRequest load response:", response);
+							}
+
+						// print message
+							response_container.innerHTML = response.msg
+
+					}, false);
 
 				// xhr.addEventListener("error", tool_upload.uploadFailed, false);
 
@@ -175,96 +207,157 @@ tool_upload.prototype.upload_file = async function(e) {
 
 				xhr.send(fd);
 
-		intervalTimer = setInterval( tool_upload.updateTransferSpeed, 1000 );
+		// intervalTimer = setInterval( tool_upload.updateTransferSpeed, 1000 );
 
 		// hide button submit
 		// document.getElementById('btn_upload').style.display = 'none';
 
 	}catch(error) {
-		console.error('ERROR uploadFile:')
-		console.error(error)
+		console.error('ERROR uploadFile: ', error);
 	}
 
 
-
+	return true
 }//end upload_file
-
-
 
 
 
 /**
-* UPLOAD_FILE
+* UPLOAD_PROGRESS
 */
-tool_upload.prototype.upload_file9999999 = async function(file) {
+const upload_progress = function(evt, content_data) {
 
-	const self = this
+		console.log("++++++++++++++++++++++ upload_progress evt:",evt);
 
-	uploading = 'si';
-
-	clearInterval(intervalTimer);
-	intervalTimer = 0;
-
-	previousBytesLoaded = 0;
-	document.getElementById('uploadResponse').style.display = 'none'
-	document.getElementById('progressNumber').innerHTML 	= ''
-
-	const progressBar = document.getElementById('progressBar')
-		  progressBar.style.display = 'block'
-		  progressBar.style.width   = '0px'
-
-
-	// If you want to upload only a file along with arbitary data that is not in the form, use this:
-
-		// var fd = new FormData();
-
-		// fd.append("author", "Shiv Kumar");
-
-		// fd.append("name", "Html 5 File API/FormData");
-
-		// fd.append("fileToUpload", document.getElementById('fileToUpload').files[0]);
-
-
-	// If you want to simply post the entire form, use this:
-
-		// var fd = document.getElementById('form_upload').getFormData();
-
-
-	const fd = new FormData(document.getElementById('form_upload'));
-
-	const validacion = tool_upload.validar_formulario();
-	if(validacion!==true) return false;
-
+		return
 
 	try {
 
-		const 	xhr = new XMLHttpRequest();
+		if (evt.lengthComputable) {
 
-				xhr.upload.addEventListener("progress", tool_upload.uploadProgress, false);
+			bytesUploaded = evt.loaded;
 
-				xhr.addEventListener("load", tool_upload.uploadComplete, false);
+			bytesTotal = evt.total;
 
-				xhr.addEventListener("error", tool_upload.uploadFailed, false);
+			let percentComplete = Math.round(evt.loaded * 100 / evt.total);
 
-				xhr.addEventListener("abort", tool_upload.uploadCanceled, false);
+			// bytesTransfered
+				let bytesTransfered = '';
 
-				xhr.open("POST", trigger_url);
+				if (bytesUploaded > 1024*1024)
+					bytesTransfered = (Math.round(bytesUploaded * 100/(1024*1024))/100).toString() + 'MB';
+				else if (bytesUploaded > 1024)
+					bytesTransfered = (Math.round(bytesUploaded * 100/1024)/100).toString() + 'KB';
+				else
+					bytesTransfered = (Math.round(bytesUploaded * 100)/100).toString() + 'Bytes';
 
-				xhr.send(fd);
 
-		intervalTimer = setInterval( tool_upload.updateTransferSpeed, 1000 );
+			document.getElementById('progressNumber').innerHTML = percentComplete.toString() + '%';
+			document.getElementById('progressBar').style.width = (percentComplete * 3.9).toString() + 'px';
+			document.getElementById('transferBytesInfo').innerHTML = bytesTransfered;
 
-		// hide button submit
-		document.getElementById('btn_upload').style.display = 'none';
+			if (percentComplete == 100) {
+
+				if(document.getElementById('progressInfo'))
+				document.getElementById('progressInfo').style.display = 'none';
+
+				const 	uploadResponse 		 		 = document.getElementById('uploadResponse');
+						uploadResponse.innerHTML 	 = '<div class="please_wait blink">'+get_label.por_favor_espere+'</div>';
+						uploadResponse.style.display = 'block';
+
+				// Redimensiona ventana
+				tool_upload.resize_window();
+			}
+
+		}else{
+
+			document.getElementById('progressBar').innerHTML = 'Unable to compute';
+		}
 
 	}catch(error) {
-		console.error('ERROR uploadFile:')
-		console.error(error)
+		console.error('ERROR upload_progress:', error)
 	}
 
-	// tool_upload.resize_window()
-
 	return true
-}//end upload_file
+
+}//end upload_progress
+
+
+
+
+
+// /**
+// * UPLOAD_FILE
+// */
+// tool_upload.prototype.upload_file9999999 = async function(file) {
+
+// 	const self = this
+
+// 	uploading = 'si';
+
+// 	clearInterval(intervalTimer);
+// 	intervalTimer = 0;
+
+// 	previousBytesLoaded = 0;
+// 	document.getElementById('uploadResponse').style.display = 'none'
+// 	document.getElementById('progressNumber').innerHTML 	= ''
+
+// 	const progressBar = document.getElementById('progressBar')
+// 		  progressBar.style.display = 'block'
+// 		  progressBar.style.width   = '0px'
+
+
+// 	// If you want to upload only a file along with arbitary data that is not in the form, use this:
+
+// 		// var fd = new FormData();
+
+// 		// fd.append("author", "Shiv Kumar");
+
+// 		// fd.append("name", "Html 5 File API/FormData");
+
+// 		// fd.append("fileToUpload", document.getElementById('fileToUpload').files[0]);
+
+
+// 	// If you want to simply post the entire form, use this:
+
+// 		// var fd = document.getElementById('form_upload').getFormData();
+
+
+// 	const fd = new FormData(document.getElementById('form_upload'));
+
+// 	const validacion = tool_upload.validar_formulario();
+// 	if(validacion!==true) return false;
+
+
+// 	try {
+
+// 		const 	xhr = new XMLHttpRequest();
+
+// 				xhr.upload.addEventListener("progress", tool_upload.uploadProgress, false);
+
+// 				xhr.addEventListener("load", tool_upload.uploadComplete, false);
+
+// 				xhr.addEventListener("error", tool_upload.uploadFailed, false);
+
+// 				xhr.addEventListener("abort", tool_upload.uploadCanceled, false);
+
+// 				xhr.open("POST", trigger_url);
+
+// 				xhr.send(fd);
+
+// 		intervalTimer = setInterval( tool_upload.updateTransferSpeed, 1000 );
+
+// 		// hide button submit
+// 		document.getElementById('btn_upload').style.display = 'none';
+
+// 	}catch(error) {
+// 		console.error('ERROR uploadFile:')
+// 		console.error(error)
+// 	}
+
+// 	// tool_upload.resize_window()
+
+// 	return true
+// }//end upload_file
 
 

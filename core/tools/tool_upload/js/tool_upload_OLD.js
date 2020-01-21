@@ -1,9 +1,9 @@
 "use strict";
 
-// BASED ON HTLM5 SCRIPT: 
+// BASED ON HTLM5 SCRIPT:
 // http://www.matlus.com/html5-file-upload-with-progress/
 
-// Evaluate 
+// Evaluate
 // JQUERY UPLOAD LIB: http://bclennox.com/extremely-large-file-uploads-with-nginx-passenger-rails-and-jquery
 
 
@@ -13,7 +13,7 @@ var uploading = 'no';
 
 /**
 * TOOL_UPLOAD CLASS
-*/ 
+*/
 var tool_upload = new function() {
 
 	// GLOBAL VARS
@@ -28,7 +28,7 @@ var tool_upload = new function() {
 
 	// READY
 	$(function() {
-		
+
 		switch(page_globals.modo) {
 			case 'tool_upload' :
 			case 'tool_upload_zotero' :
@@ -42,12 +42,12 @@ var tool_upload = new function() {
 
 	// BEFOREUNLOAD
 	window.addEventListener("beforeunload", function (event) {
-		
+
 		switch(page_globals.modo) {
 			case 'tool_upload' :
 				if(uploading!='no') {
-					// cualquiera menos firefox		
-					return get_label.abandonando_esta_pagina ;	
+					// cualquiera menos firefox
+					return get_label.abandonando_esta_pagina ;
 				}
 				break;
 		}
@@ -76,7 +76,7 @@ var tool_upload = new function() {
 		const selector 	= document.getElementById('form_upload')
 		const wo 		= 105
 		const ho 		= 140
-		
+
 		setTimeout ( function () {
 
 			const contentWidth  = selector.offsetWidth  + wo
@@ -84,28 +84,28 @@ var tool_upload = new function() {
 
 			window.moveTo(0,0);
 			window.resizeTo(contentWidth, contentHeight);
-			
+
 			//console.log(contentWidth + ' x ' + contentHeight);
-		}, 100);	   
-	};	
+		}, 100);
+	};
 
 
 
 	// FILE SELECTED
 	this.fileSelected = function() {
-		
-		const self = this	
+
+		const self = this
 
 		// Filed upload dom element (note that this element have an event on input that trigger this function automatically)
 		const fileToUpload = document.getElementById('fileToUpload')
-		
+
 		// Select firs file of set
 		const file = fileToUpload.files[0]
-		
+
 		if(SHOW_DEBUG===true) {
 			console.log("[fileSelected] file:", file);
-		}		
-		
+		}
+
 
 		let fileSize = 0;
 		if (file.size > 1024 * 1024) {
@@ -118,7 +118,7 @@ var tool_upload = new function() {
 		document.getElementById('fileName').innerHTML 		= 'Name: ' + file.name
 		document.getElementById('fileSize').innerHTML 		= 'Size: ' + fileSize
 		document.getElementById('fileType').innerHTML 		= 'Type: ' + file.type
-		
+
 		let time_aprox_min = parseInt( ((file.size / 1024) / 65) / 60 );
 		if( time_aprox_min > 60 ) {
 			let min_resto = (((time_aprox_min /60) - parseInt(time_aprox_min /60)) ) * 60 ;
@@ -126,7 +126,7 @@ var tool_upload = new function() {
 		}else{
 			document.getElementById('progress_info').innerHTML = " ADSL estimated load time: " + time_aprox_min + " Minutes" ;
 		}
-		
+
 		// Resize window
 		tool_upload.resize_window();
 
@@ -142,11 +142,11 @@ var tool_upload = new function() {
 	* UPLOAD FILE
 	*/
 	this.uploadFile = function() {
-		
+
 		uploading = 'si';
-		
+
 		clearInterval(intervalTimer);
-		intervalTimer = 0;		
+		intervalTimer = 0;
 
 		previousBytesLoaded = 0;
 		document.getElementById('uploadResponse').style.display = 'none'
@@ -155,10 +155,10 @@ var tool_upload = new function() {
 		const progressBar = document.getElementById('progressBar')
 			  progressBar.style.display = 'block'
 			  progressBar.style.width   = '0px'
-		
+
 
 		/* If you want to upload only a file along with arbitary data that
-		   is not in the form, use this 
+		   is not in the form, use this
 
 		var fd = new FormData();
 
@@ -174,16 +174,16 @@ var tool_upload = new function() {
 
 		var fd = document.getElementById('form_upload').getFormData();
 		*/
-		
-		const fd = new FormData(document.getElementById('form_upload'));		
-		
+
+		const fd = new FormData(document.getElementById('form_upload'));
+
 		const validacion = tool_upload.validar_formulario();
 		if(validacion!==true) return false;
-		
+
 
 		try {
 
-			const 	xhr = new XMLHttpRequest();        
+			const 	xhr = new XMLHttpRequest();
 
 					xhr.upload.addEventListener("progress", tool_upload.uploadProgress, false);
 
@@ -198,7 +198,7 @@ var tool_upload = new function() {
 					xhr.send(fd);
 
 			intervalTimer = setInterval( tool_upload.updateTransferSpeed, 1000 );
-			
+
 			// hide button submit
 			document.getElementById('btn_upload').style.display = 'none';
 
@@ -218,9 +218,9 @@ var tool_upload = new function() {
 	* UPDATE TRASFER SPEED
 	*/
 	this.updateTransferSpeed = function() {
-		
+
 		try {
-			
+
 			let currentBytes = bytesUploaded;
 
 			let bytesDiff = currentBytes - previousBytesLoaded;
@@ -241,7 +241,7 @@ var tool_upload = new function() {
 			if (bytesDiff > 1024 * 1024)
 
 			  speed = ( Math.round(bytesDiff * 100/(1000*1000)) / 100 ).toString() + 'MBps';
-			
+
 			else if (bytesDiff > 1024)
 
 			  speed =  (Math.round(bytesDiff * 100/1024)/100).toString() + 'KBps';
@@ -256,7 +256,7 @@ var tool_upload = new function() {
 		}catch(error) {
 			console.log('ERROR updateTransferSpeed:')
 			console.log(error);
-		}       
+		}
 
 		return true
 	};//end updateTransferSpeed
@@ -267,7 +267,7 @@ var tool_upload = new function() {
 	* SECONDS TO STRING
 	*/
 	this.secondsToString = function(seconds) {
-		
+
 		const h = Math.floor(seconds / 3600);
 		const m = Math.floor(seconds % 3600 / 60);
 		const s = Math.floor(seconds % 3600 % 60);
@@ -281,9 +281,9 @@ var tool_upload = new function() {
 	* UPLOAD PROGRESS (EVENT)
 	*/
 	this.uploadProgress = function(evt) {
-		
+
 		//console.log(evt);
-		try {	
+		try {
 
 			if (evt.lengthComputable) {
 
@@ -315,7 +315,7 @@ var tool_upload = new function() {
 					const 	uploadResponse 		 		 = document.getElementById('uploadResponse');
 							uploadResponse.innerHTML 	 = '<div class="please_wait blink">'+get_label.por_favor_espere+'</div>';
 							uploadResponse.style.display = 'block';
-					
+
 					// Redimensiona ventana
 					tool_upload.resize_window();
 				}
@@ -337,15 +337,15 @@ var tool_upload = new function() {
 
 	/**
 	* UPLOAD COMPLETE
-	* @param event evt 
+	* @param event evt
 	*/
 	this.uploadComplete = function(evt) {
-		
+
 		if(SHOW_DEBUG===true) {
 			console.log("evt:",evt);
 			console.log("evt.target.response:",evt.target.response);
 			console.log("JSON.parse(evt.target.response):",JSON.parse(evt.target.response));
-		}		
+		}
 
 		clearInterval(intervalTimer);
 
@@ -357,7 +357,7 @@ var tool_upload = new function() {
 				//console.log(response);
 		}catch(err) {
 			uploadResponse.innerHTML = err.message;
-		}		
+		}
 
 		if (!response || !response.html) {
 			// Error. Invalid data
@@ -375,36 +375,36 @@ var tool_upload = new function() {
 
 				const len = response.update_components.length
 				for (let i = 0; i < len; i++) {
-					
+
 					let current_component_tipo = response.update_components[i];
 
-					//window.opener.top.console.log("Recargar "+response.update_components[0]);			
+					//window.opener.top.console.log("Recargar "+response.update_components[0]);
 					let component_related_obj = window.opener.top.$(".wrap_component[data-tipo=" +current_component_tipo+ "]").first();
 						//console.log(component_related_obj);
-					
-					if( component_related_obj.length == 1 ) {					
+
+					if( component_related_obj.length == 1 ) {
 						component_related_obj = component_related_obj[0];
 						window.opener.top.component_common.update_component_by_parent_tipo_lang(component_related_obj.dataset.parent, current_component_tipo);
 						if(SHOW_DEBUG===true) window.opener.top.console.log("->trigger opener update component "+current_component_tipo)
 					}else{
 						if(SHOW_DEBUG===true) window.opener.top.alert("->trigger opener update component ERROR for "+current_component_tipo)
 					}
-				}			
+				}
 			}
 
-		uploadResponse.style.display = 'block';		
+		uploadResponse.style.display = 'block';
 		uploading 	= 'no';
-		
+
 		// hide some upload form elements
 			$('.row, #fileInfo').hide(0);
-		
+
 		// Reload opener window in list mode
-			// NOTE: When we use this class in other contexts (ex. 'tool_import_zotero'), SID is not defined and 
+			// NOTE: When we use this class in other contexts (ex. 'tool_import_zotero'), SID is not defined and
 			// this action is unnecessary and omitted
 			if ( typeof SID!=="undefined" ) {
 
 				// Update opener window component
-				$(function(){		
+				$(function(){
 
 					const video_id 	= SID
 					const ar 		= video_id.split("-")
@@ -412,8 +412,8 @@ var tool_upload = new function() {
 
 					let current_caller_mode = null
 					if (window.opener) {
-						current_caller_mode = get_parameter_value(window.opener.location, 'm');	
-					}				
+						current_caller_mode = get_parameter_value(window.opener.location, 'm');
+					}
 
 					switch(media_type) {
 						case 'image' :
@@ -424,17 +424,17 @@ var tool_upload = new function() {
 							// else, page focus components_to_refresh do the work
 							//if( /tool_/i.test(window.opener.location) ) {
 							if(current_caller_mode!=='edit') {
-								window.opener.location.reload(false);						
+								window.opener.location.reload(false);
 							}
 							break;
 						default:
 							alert("uploadComplete. media_type is not valid : "+media_type)
-					}			
+					}
 
 					// Resize current window again
 					tool_upload.resize_window();
-				});	
-			}				
+				});
+			}
 			//alert( get_label.carga_de_archivo_completada );
 
 		// Close window after x time for convenience (Manolo) only when upload success
@@ -482,38 +482,38 @@ var tool_upload = new function() {
 	* VALIDATE FORM
 	*/
 	this.validar_formulario = function() {
-		
+
 		const fileToUpload   = document.getElementById('fileToUpload')
 		const userfile_value = fileToUpload.value;
-		
+
 		if (userfile_value == -1 || userfile_value==null || userfile_value.length < 1) {
 			alert( get_label.seleccione_un_fichero );
 			form_upload.fileToUpload.focus();
 			return false;
 		}
-	  
-		const valid_extension = tool_upload.valid_extension(userfile_value);	
+
+		const valid_extension = tool_upload.valid_extension(userfile_value);
 		if(valid_extension==false) {
 			const extension_to_test = userfile_value.split('.').pop();
 			alert( get_label.extension_no_valida + ": \n" + extension_to_test );
 			return false;
 		}
-		
+
 		// Only for modern browsers. Detect size on client side
 		if (typeof FileReader !== "undefined" || window.FileReader || fileToUpload.files[0].size) {
-			
+
 			const size = fileToUpload.files[0].size;	//alert(size);
-			
+
 			const size_in_mb		= tool_upload.formatNumber(parseInt(size /1048576));
 			const max_size_in_mb	= tool_upload.formatNumber(parseInt(max_size_bytes /1048576));
-			
+
 			// check file size
-			if(size > max_size_bytes) {			
+			if(size > max_size_bytes) {
 				alert( get_label.fichero_demasiado_grande + " \n\n File size: " + size_in_mb + " MB \n Max size: " +max_size_in_mb + " MB" );
-				return false;	
+				return false;
 			}
-		}	
-	   
+		}
+
 		return true;
 	};//end validar_formulario
 
@@ -525,17 +525,17 @@ var tool_upload = new function() {
 	this.valid_extension = function(id_value) {
 
 		if( typeof id_value == 'undefined' || id_value == '' ) return false;
-		
+
 		const ar_extensions = JSON.parse(valid_extensions_json)
-		
+
 		for (let i = 0; i < ar_extensions.length; i++) {
-			
-			let current_extension = ar_extensions[i]			
+
+			let current_extension = ar_extensions[i]
 			let extension_to_test = id_value.split('.').pop()
-			
+
 			if (current_extension.toLowerCase()==extension_to_test.toLowerCase()) {
 				return true;
-			}			
+			}
 		}
 
 		return false;
@@ -570,7 +570,7 @@ var tool_upload = new function() {
 
 	/**
 	* HANDLE_FILE_SELECT
-	* @return 
+	* @return
 	*/
 	this.drop = function(evt) {
 		evt.stopPropagation();
@@ -578,7 +578,7 @@ var tool_upload = new function() {
 
 		const files = evt.dataTransfer.files; // FileList object.
 
-		if (typeof files[0]!=="undefined") {		
+		if (typeof files[0]!=="undefined") {
 
 			const fileToUpload = document.getElementById('fileToUpload')
 			if (!fileToUpload) {
@@ -590,8 +590,8 @@ var tool_upload = new function() {
 
 			// call fileSelected to start upload
 			this.fileSelected()
-		}			
-	 
+		}
+
 		return true
 	};//end handle_file_select
 
@@ -599,7 +599,7 @@ var tool_upload = new function() {
 
 	/**
 	* DRAG_OVER
-	* @return 
+	* @return
 	*/
 	this.drag_over = function(evt) {
 		evt.stopPropagation();
@@ -608,7 +608,7 @@ var tool_upload = new function() {
 		evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
 
 		evt.target.classList.add('border_drag_over');
-	
+
 		return true
 	};//end drag_over
 
@@ -616,7 +616,7 @@ var tool_upload = new function() {
 
 	/**
 	* DRAG_LEAVE
-	* @return 
+	* @return
 	*/
 	this.drag_leave = function(evt) {
 		evt.stopPropagation();
@@ -628,7 +628,7 @@ var tool_upload = new function() {
 			}
 		}
 
-		return true   
+		return true
 	};//end drag_leave
 
 

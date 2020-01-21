@@ -94,7 +94,7 @@ class tool_upload { // extends tool_common
 	*/
 	public static function error_number_to_text($f_error_number) {
 
-		if( $f_error_number==0 ) {
+		if( $f_error_number===0 ) {
 						# all is ok
 						$f_error_text = label::get_label('archivo_subido_con_exito');
 		}else{

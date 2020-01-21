@@ -3,11 +3,20 @@ $start_time=microtime(1);
 include( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 // include( dirname(__FILE__) .'/class.tool_upload.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
-common::trigger_manager();
+if (isset($_POST['mode']) && $_POST['mode']==='upload_file') {
+	// Note that no header('Content-Type: application/json; charset=utf-8') is applicated here (XMLHttpRequest POST)
+	common::trigger_manager(
+		(object)[
+			'set_json_header' 	=> false,
+			'source' 			=> 'POST'
+		]
+	);
+}else{
+	// default behavior
+	common::trigger_manager();
+}
 
-	// dump(file_get_contents('php://input'), ' file_get_contents(php://input) ++ '.to_string());
-	// dump($_REQUEST, ' _REQUEST ++ '.to_string());
-	// dump($_FILES, ' _FILES ++ '.to_string());
+
 
 /**
 * GET_SYSTEM_INFO
@@ -46,78 +55,90 @@ function get_system_info($json_data) {
 
 
 
-
-
-
 /**
 * UPLOAD_FILE
 * @return object $response
+* Note:
+* XMLHttpRequest can´t be a json 'php://input'. Because this, we receive
+* a _POST and _FILES request and are transformed to a standard call by common::trigger_manager
 */
-// xhr can´t be a json 'php://input'. Because this, we receive
-// a _POST and _FILES request and are transformed to a standard call
-if (isset($_POST['mode']) && $_POST['mode']==='upload_file') {
-
-	$json_data = new stdClass();
-		// files
-		// $json_data->files = $_FILES;
-		// post
-		foreach ($_POST as $key => $value) {
-			$json_data->{$key} = $value;
-		}
-
-	return upload_file($json_data);
-}
 function upload_file($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-
-	// post file (sended across $_FILES)
-		$uploaded_file_name 		= $_FILES["fileToUpload"]['name'];
-		$uploaded_file_type 		= $_FILES["fileToUpload"]['type'];
-		$uploaded_file_temp_name	= $_FILES["fileToUpload"]['tmp_name'];
-		$uploaded_file_size			= $_FILES["fileToUpload"]['size'];
-		$uploaded_file_error		= $_FILES["fileToUpload"]['error'];
-		$uploaded_file_error_text 	= tool_upload::error_number_to_text($uploaded_file_error);
-		$uploaded_file_extension 	= strtolower(pathinfo($uploaded_file_name, PATHINFO_EXTENSION));
+		$response->msg 		= 'Error. '.label::get_label('error_al_subir_el_archivo');
 
 	// set vars
-	$vars = array('file_name','target_dir','component_tipo','section_tipo','section_id','quality');
+	$vars = array('component_tipo','section_tipo','section_id','quality');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			# if ($name==='quality') continue; # Skip non mandatory
+			if ($name==='quality') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
 
-	dump($json_data, ' json_data +++++++++++++++++++++++++++ '.to_string());
-	return $response;
+	// file_data. post file (sended across $_FILES)
+		// Example of received data:
+		// "name": "montaje3.jpg",
+		// "type": "image/jpeg",
+		// "tmp_name": "/private/var/tmp/php6nd4A2",
+		// "error": 0,
+		// "size": 132898
+		$file_data = new stdClass();
+			$file_data->name 		= $_FILES["fileToUpload"]['name'];
+			$file_data->type 		= $_FILES["fileToUpload"]['type'];
+			$file_data->tmp_name 	= $_FILES["fileToUpload"]['tmp_name'];
+			$file_data->error 		= $_FILES["fileToUpload"]['error'];
+			$file_data->size 		= $_FILES["fileToUpload"]['size'];
+			$file_data->extension 	= strtolower(pathinfo($_FILES["fileToUpload"]['name'], PATHINFO_EXTENSION));
+
+		// check for upload server errors
+			$uploaded_file_error		= $_FILES["fileToUpload"]['error'];
+			$uploaded_file_error_text 	= tool_upload::error_number_to_text($uploaded_file_error);
+			if ($uploaded_file_error!==0) {
+				$response->msg .= ' - '.$uploaded_file_error_text;
+				return $response;
+			}
+
+		// check file is available in temp dir
+			if(!file_exists($file_data->tmp_name)) {
+				debug_log(__METHOD__." Error on locate temporary file ".$file_data->tmp_name, logger::ERROR);
+				$response->msg .= "Uploaded file not found in temporary folder";
+				return $response;
+			}
+
+	// component
+		$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component 		= component_common::get_instance($model,
+														 $component_tipo,
+														 $section_id,
+														 'edit',
+														 DEDALO_DATA_LANG,
+														 $section_tipo);
+		// add file
+			$add_file = $component->add_file($file_data);
+			if ($add_file->result===false) {
+				$response->msg = $add_file->msg;
+				return $response;
+			}
+			// dump($add_file, ' add_file ++ '.to_string());
+
+		// postprocessing file (add_file returns final renamed file with path info)
+			$postprocessing = $component->postprocessing_file($add_file->ready);
+			if ($postprocessing->result===false) {
+				$response->msg = 'Upload is complete, but errors occurred on processing file: '.$postprocessing->msg;
+				return $response;
+			}
 
 
-	$source_lang 	= component_text_area::force_change_lang($component_tipo, $section_id, 'lang', $lang, $section_tipo);
-	if ($source_lang===$lang) {
-		$response->msg 		= "Warning. Lang ($lang) and source lang ($source_lang) are the same..";
-		return $response;
-	}
+	// all is ok
+		$response->result 	= true;
+		$response->msg 		= 'Ok. '.label::get_label('fichero_subido_con_exito');
 
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-	$component 		= component_common::get_instance($modelo_name,
-													 $component_tipo,
-													 $section_id,
-													 'list',
-													 $source_lang,
-													 $section_tipo);
-
-	$dato = $component->get_dato();
-	$dato = component_text_area::resolve_titles($dato, $component_tipo, $section_tipo, $section_id, null, $source_lang, true);
-	$dato = TR::addTagImgOnTheFly($dato);
-	$response->result 	= $dato;
-	$response->msg = 'OK. Loaded component source lang ($source_lang)';
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -126,10 +147,14 @@ function upload_file($json_data) {
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
+			$debug->file_data = $file_data;
+			$debug->add_file  = $add_file;
 
 		$response->debug = $debug;
 	}
 
+	// echo json_encode($response);
+	// die();
 
 	return (object)$response;
 }//end upload_file
