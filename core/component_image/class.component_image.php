@@ -557,49 +557,57 @@ class component_image extends component_media_common {
 	*/
 	public function convert_quality( $source_quality, $target_quality ) {
 
-		if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
-			if(SHOW_DEBUG===true) {
-				throw new Exception("Error Processing Request. Wrong target quality: $target_quality", 1);
+		// invalid targets check
+			if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
+				if(SHOW_DEBUG===true) {
+					throw new Exception("Error Processing Request. Wrong target quality: $target_quality", 1);
+				}
+				return false;
 			}
-			return false;
-		}
-		$image_id 			= $this->get_image_id();
-		$aditional_path 	= $this->get_aditional_path();
-		$initial_media_path = $this->get_initial_media_path();
 
-		# Image source
-		$source_ImageObj		= new ImageObj($image_id, $source_quality, $aditional_path, $initial_media_path);
-		$source_image 			= $source_ImageObj->get_local_full_path();		#dump($source_image, ' source_image');
-		$source_pixels_width	= $source_ImageObj->get_image_width();
-		$source_pixels_height	= $source_ImageObj->get_image_height();
-			#dump($source_ImageObj,'ImageObj');
-			#dump($source_image,"source_image $source_pixels_width x $source_pixels_height");
+		// vars
+			$image_id 			= $this->get_image_id();
+			$aditional_path 	= $this->get_aditional_path();
+			$initial_media_path = $this->get_initial_media_path();
 
-		# Image target
-		$target_ImageObj		= new ImageObj($image_id, $target_quality, $aditional_path, $initial_media_path);
-		$target_image 			= $target_ImageObj->get_local_full_path();
-		$ar_target 				= ImageObj::get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality);
-		$target_pixels_width 	= $ar_target[0];
-		$target_pixels_height 	= $ar_target[1];
-			#dump($target_image,"target_image $target_pixels_width x $target_pixels_height");
+		// Image source
+			$source_ImageObj		= new ImageObj($image_id, $source_quality, $aditional_path, $initial_media_path);
+			$source_image 			= $source_ImageObj->get_local_full_path();
+			$image_dimensions 		= $source_ImageObj->get_image_dimensions();
+			$source_pixels_width  	= $image_dimensions[0] ?? null;
+			$source_pixels_height 	= $image_dimensions[1] ?? null;
+			// $source_pixels_width	= $source_ImageObj->get_image_width();
+			// $source_pixels_height	= $source_ImageObj->get_image_height();
+				// dump($source_ImageObj,'ImageObj');
+				// dump($source_image, "source_image - pixels_width: $source_pixels_width x pixels_height: $source_pixels_height");
 
-		# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)
-		$target_dir = $target_ImageObj->get_media_path_abs() ;
-		if( !is_dir($target_dir) ) {
-			if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
-		}
+		// Image target
+			$target_ImageObj		= new ImageObj($image_id, $target_quality, $aditional_path, $initial_media_path);
+			$target_image 			= $target_ImageObj->get_local_full_path();
+			$ar_target 				= ImageObj::get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality);
+			$target_pixels_width 	= $ar_target[0];
+			$target_pixels_height 	= $ar_target[1];
+				#dump($target_image,"target_image $target_pixels_width x $target_pixels_height");
 
-		# AVOID ENLARGE IMAGES
-		if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
-			$target_pixels_width  = $source_pixels_width;
-			$target_pixels_height = $source_pixels_height;
-		}
+		# Target folder verify (EXISTS AND PERMISSIONS)
+			$target_dir = $target_ImageObj->get_media_path_abs() ;
+			if( !is_dir($target_dir) ) {
+				if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
+			}
 
-		if($target_pixels_width<1)  $target_pixels_width  = 720;
-		if($target_pixels_height<1) $target_pixels_height = 720;
+		# Avoid enlarge images
+			if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
+				$target_pixels_width  = $source_pixels_width;
+				$target_pixels_height = $source_pixels_height;
+			}
 
-		$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height ;
-		ImageMagick::convert($source_image, $target_image, $flags);
+		// defaults when no value is available
+			if($target_pixels_width<1)  $target_pixels_width  = 720;
+			if($target_pixels_height<1) $target_pixels_height = 720;
+
+		// convert with ImageMagick command
+			$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height;
+			ImageMagick::convert($source_image, $target_image, $flags);
 
 
 		return true;
