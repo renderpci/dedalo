@@ -103,7 +103,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 
 		$str_json = file_get_contents('php://input');
 		#error_log("++++>>>> ".to_string($str_json));
-		if (!$str_json) {
+		if (!$str_json && empty($_POST)) {
 			// not exists call php://input
 			print wrap_pre($html);
 		}
