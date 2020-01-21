@@ -25,7 +25,7 @@
 
 				// allowed_extensions
 					$current_context->allowed_extensions 	 = $this->get_allowed_extensions();
-					$current_context->default_target_quality = DEDALO_IMAGE_QUALITY_ORIGINAL;
+					$current_context->default_target_quality = $this->get_original_quality();
 
 				$context[] = $current_context;
 				break;
