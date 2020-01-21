@@ -72,13 +72,14 @@ class component_media_common extends component_common {
 			}
 
 		// all is ok
-			$response->result 			= true;
-			$response->msg 				= 'Ok. Request done ['.__METHOD__.'] ';
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
 
 			// uploaded ready file info
-			$response->ready 			= (object)[
-				'full_file_name' => $full_file_name,
-				'full_file_path' => $full_file_path
+			$response->ready 	= (object)[
+				'original_file_name' => $file_data->name,
+				'full_file_name' 	 => $full_file_name,
+				'full_file_path' 	 => $full_file_path
 			];
 
 

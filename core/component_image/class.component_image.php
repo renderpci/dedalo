@@ -612,37 +612,41 @@ class component_image extends component_media_common {
 	*/
 	public function generate_default($overwrite=false) {
 
-		# common data
-		$image_id 			 = $this->get_image_id();
-		$aditional_path 	 = $this->get_aditional_path();
-		$initial_media_path  = $this->get_initial_media_path();
+		// vars
+			$image_id 			 = $this->get_id();
+			$aditional_path 	 = $this->get_aditional_path();
+			$initial_media_path  = $this->get_initial_media_path();
 
+		// image_quality_retouched
+			if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
+				# source data (modified is source)
+				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $aditional_path, $initial_media_path);
+				$original_image_path = $source_ImageObj->get_local_full_path();
+				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
+			}
 
-		if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
-			# source data (modified is source)
-			$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $aditional_path, $initial_media_path);
-			$original_image_path = $source_ImageObj->get_local_full_path();
-			$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
-		}
+		// not original_image_path exists case. Create it
+			if (!isset($original_image_path) || !file_exists($original_image_path)) {
+				# source data (default quality is source)
+				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+				$original_image_path = $source_ImageObj->get_local_full_path();
+				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
+			}
 
-		if (!isset($original_image_path) || !file_exists($original_image_path)) {
-			# source data (default quality is source)
-			$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
-			$original_image_path = $source_ImageObj->get_local_full_path();
-			$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
-		}
+		// check original file again
+			if (!file_exists($original_image_path)) {
+				debug_log(__METHOD__." Unable locate original_image. File not exists in $original_image_path ".to_string(), logger::ERROR);
+				return false;
+			}
 
-		if (!file_exists($original_image_path)) {
-			return false;
-		}
+		// thumb. target data (target quality is thumb)
+			$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+			$image_default_path  = $ImageObj->get_local_full_path();
 
-		# target data (target quality is thumb)
-		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
-		$image_default_path  = $ImageObj->get_local_full_path();
-
-		if ($overwrite===true || !file_exists($image_default_path)) {
-			$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );
-		}
+		// overwrite or create default quality image version
+			if ($overwrite===true || !file_exists($image_default_path)) {
+				$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );
+			}
 
 		return true;
 	}//end generate_default
@@ -691,53 +695,59 @@ class component_image extends component_media_common {
 
 	/**
 	* GENERATE_THUMB
+	* Called on save
 	* @return array url,path of thumb file path OR bool false if default quality file not exts
 	*/
 	public function generate_thumb() {
 
-		# common data
-		$image_id 			 = $this->get_image_id();
-		$aditional_path 	 = $this->get_aditional_path();
-		$initial_media_path  = $this->get_initial_media_path();
+		// common data
+			$image_id 			 = $this->get_image_id();
+			$aditional_path 	 = $this->get_aditional_path();
+			$initial_media_path  = $this->get_initial_media_path();
 
-		# source data (default quality is source)
-		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
-		$default_image_path  = $source_ImageObj->get_local_full_path();
+		// source data (default quality is source)
+			$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+			$default_image_path  = $source_ImageObj->get_local_full_path();
 
-		if (!file_exists($default_image_path)) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Default image quality don't exists. Skip create thumb. ".to_string(), logger::DEBUG);
+		// check default quality image
+			if (!file_exists($default_image_path)) {
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." Default image quality don't exists. Skip create thumb. ".to_string(), logger::ERROR);
+				}
+				return false;
 			}
-			return false;
-		}
 
-		# target data (target quality is thumb)
-		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
-		$image_thumb_path 	 = $ImageObj->get_local_full_path();
-		$image_thumb_url 	 = $ImageObj->get_url();	//$this->get_image_url($quality=DEDALO_IMAGE_THUMB_DEFAULT);
-		if(file_exists($image_thumb_path)) {
-			#unlink($image_thumb_path);
-			$image_thumb_path_des = $image_thumb_path.'_DES';
-			shell_exec("mv $image_thumb_path $image_thumb_path_des");
-		}
+		// old thumb rename
+			$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+			$image_thumb_path 	 = $ImageObj->get_local_full_path();
+			$image_thumb_url 	 = $ImageObj->get_url();	//$this->get_image_url($quality=DEDALO_IMAGE_THUMB_DEFAULT);
+			if(file_exists($image_thumb_path)) {
+				#unlink($image_thumb_path);
+				$image_thumb_path_des = $image_thumb_path.'_DES';
+				shell_exec("mv $image_thumb_path $image_thumb_path_des");
+			}
 
-		# thumb generate
-		$dd_thumb = ImageMagick::dd_thumb('list', $default_image_path, $image_thumb_path, false, $initial_media_path);
+		// thumb generate
+			$dd_thumb = ImageMagick::dd_thumb('list', $default_image_path, $image_thumb_path, false, $initial_media_path);
+
+		// debug
+			debug_log(__METHOD__." dd_thumb function called and executed. ".to_string(), logger::DEBUG);
+
+		// result
+			$result = [
+				'path' => $image_thumb_path,
+				'url'  => $image_thumb_url
+			];
 
 
-		debug_log(__METHOD__." dd_thumb function called and executed. ".to_string(), logger::DEBUG);
-
-
-		return array('path'=>$image_thumb_path,
-					 'url' =>$image_thumb_url,
-					);
+		return $result;
 	}//end generate_thumb
 
 
 
 	/**
 	* GET_THUMB_URL
-	* @return
+	* @return string $image_thumb_url
 	*/
 	public function get_thumb_url() {
 		# common data
@@ -1193,76 +1203,72 @@ class component_image extends component_media_common {
 
 
 	/**
-	* POSTPROCESSING_FILE
+	* PROCESS_UPLOADED_FILE
 	* @param object $file_data
 	*	Data from trigger upload file
 	* @return object $response
 	*/
-	public function postprocessing_file($file_data) {
+	public function process_uploaded_file($file_data) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
 
+		// vars
+			$original_file_name = $file_data->original_file_name; 	// kike "my photo785.jpg"
+			$full_file_name 	= $file_data->full_file_name;		// like "test175_test65_1.jpg"
+			$full_file_path 	= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
 
-		# IMAGEMAGIK . CONVERTIMOS EL ACHIVO AL FORMATO DE TRABAJO DE DEDALO (default is 'JPG')
-		try{
+		// imagemagick. Normalize uploaded image format to Dédalo working format like jpg from tif
+			try {
 
-			// DEFAULT_IMAGE_FORMAT : If uploaded file is not in Dedalo standar format (jpg), is converted,
-			// and original file is conserved (like myfilename.tif)
-			$uploaded_file_path = $file_data->tmp_name;
-			$standard_file_path = self::build_standard_image_format($uploaded_file_path);
+				// default_image_format : If uploaded file is not in Dedalo standar format (jpg), is converted,
+				// and original file is conserved (like myfilename.tif and myfilename.jpg)
+					$standard_file_path = self::build_standard_image_format($full_file_path);
 
-			#
-			# THUMB . Eliminamos el thumb anterior si existiese. Los thumbs se crean automáticamente al solicitarlos (list)
-			#$this->file_obj->thumb_file = $this->build_thumb_file($SID);
 
-			#
-			# TARGET_FILENAME
-			# Save original file name in a component_input_text
-			$propiedades 		 = $this->get_propiedades();
-			$current_section_id  = $this->get_section_id();
-			$target_section_tipo = $this->get_section_tipo();
-			$file_name 			 = $this->file_obj->f_name;	//pathinfo($this->file_obj->f_name, PATHINFO_BASENAME);
+				// target_filename. Save original file name in a component_input_text if defined
+					$properties = $this->get_propiedades();
+					if (isset($properties->target_filename)) {
 
-			if (isset($propiedades->target_filename)) {
-				$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
-				$component_target_filename 	= component_common::get_instance(
-																	$modelo_name_target_filename,
-																	$propiedades->target_filename,
-																	$current_section_id,
-																	'edit',
-																	DEDALO_DATA_NOLAN,
-																	$target_section_tipo
-																	);
-				$component_target_filename->set_dato( $file_name );
-				$component_target_filename->Save();
+						$current_section_id  		= $this->get_section_id();
+						$target_section_tipo 		= $this->get_section_tipo();
+						$model_name_target_filename = RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+						$component_target_filename 	= component_common::get_instance(
+																			$model_name_target_filename,
+																			$properties->target_filename,
+																			$current_section_id,
+																			'edit',
+																			DEDALO_DATA_NOLAN,
+																			$target_section_tipo
+																			);
+						$component_target_filename->set_dato( $original_file_name );
+						$component_target_filename->Save();
+					}
+
+				// custom_postprocessing_image. postprocessing_image_script
+					if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
+						sleep(1);
+						require( POSTPROCESSING_IMAGE_SCRIPT );
+						$result = custom_postprocessing_image($this);
+					}
+
+				// Save component image. Force update data and create default and thumb qualitys
+					$this->Save();
+
+				// all is ok
+					$response->result 	= true;
+					$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+
+			} catch (Exception $e) {
+				$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";
+				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+				$response->msg .= ' - '.$msg;
 			}
-
-			# POSTPROCESSING_IMAGE_SCRIPT
-			if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
-				sleep(1);
-				require( POSTPROCESSING_IMAGE_SCRIPT );
-				$result = custom_postprocessing_image($this);
-					#dump($result, ' result');
-			}
-
-			# Save force update data and create default and thumb qualitys
-			$this->Save();
-
-			// all is ok
-				$response->result 	= true;
-				$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
-
-		} catch (Exception $e) {
-			$msg = 'Exception[postprocessing_file][ImageMagick]: ' .  $e->getMessage() . "\n";
-			debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-			$response->msg .= ' - '.$msg;
-		}
 
 
 		return $response;
-	}//end postprocessing_file
+	}//end process_uploaded_file
 
 
 

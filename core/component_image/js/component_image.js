@@ -45,7 +45,7 @@ export const component_image = function(){
 */
 // prototypes assign
 	component_image.prototype.init 	 		= component_common.prototype.init
-	component_image.prototype.build 	 	= component_common.prototype.build
+	// component_image.prototype.build 	 	= component_common.prototype.build
 	component_image.prototype.destroy 	 	= common.prototype.destroy
 	component_image.prototype.save 	 		= component_common.prototype.save
 	component_image.prototype.load_data 	= component_common.prototype.load_data
@@ -61,24 +61,21 @@ export const component_image = function(){
 
 
 /**
-* BUILD_CUSTOM
-* Is called from component common after common build is finished (!)
-* Useful to append or change custom properties from components
-* Is async always and is waited before set status as 'builded'
+* BUILD
 */
-component_image.prototype.build_custom = async function() {
+component_image.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-		console.log("self.context:",self.context);
+	// call generic component commom build
+		const common_build = component_common.prototype.build.call(this, autoload);
 
-	// fix useful vars for tool upload
-		self.file_name 			= 'pepet.jpg'
-		self.target_dir 		= '/root/pepet_folder'
-		self.allowed_extensions = self.context.allowed_extensions
+	// fix useful vars
+		self.allowed_extensions 	= self.context.allowed_extensions
+		self.default_target_quality = self.context.default_target_quality
 
 
-	return true
+	return common_build
 }//end build_custom
 
 
