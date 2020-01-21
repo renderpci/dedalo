@@ -197,6 +197,20 @@ tool_upload.prototype.upload_file = async function(e, content_data) {
 						// print message
 							response_container.innerHTML = response.msg
 
+						// refresh component
+							self.caller.refresh().then((refresh_reponse)=>{
+
+							})
+
+						// close modal. On close, modal destroy the caller (this tool)
+							setTimeout(()=>{
+								const modal_container = document.querySelector('dd-modal')
+								if (modal_container) {
+									modal_container._closeModal()
+								}
+							}, 5000)
+
+
 					}, false);
 
 				// failed event

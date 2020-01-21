@@ -5,23 +5,43 @@
 	.wrapper_tool.tool_upload {
 
 
+		>.content_data {
+
+			// progressBar
+			#progressBar {
+				height: 10px;
+			    margin: 0;
+			    margin-top: 2em;
+			    margin-bottom: 2em;
+			    background-color: #ff9800;
+
+			    // display: none;
+			}
 
 
-		// system info
-		.info {
-			background-color: #f5f5f5;
-			color: #8c8c8c;
-			>* {
-				display: grid;
-				grid-template-columns: 1fr 5fr;
-				padding: 0.5em;
+			// response_container
+			.response_container {
+				padding-top: 0.5em;
+	    		padding-bottom: 2.5em;
+			}
 
-				>label {
-					padding-right: 2em;
+
+			// system info
+			.info {
+				background-color: #f5f5f5;
+				color: #8c8c8c;
+				>* {
+					display: grid;
+					grid-template-columns: 1fr 5fr;
+					padding: 0.5em;
+
+					>label {
+						padding-right: 2em;
+					}
 				}
 			}
-		}
 
+		}//end content_data
 
 	}//end .wrapper_tool.tool_upload
 
@@ -31,13 +51,3 @@
 
 
 
-// progressBar
-	#progressBar {
-		height: 10px;
-	    margin: 0;
-	    margin-top: 2em;
-	    margin-bottom: 2em;
-	    background-color: #ff9800;
-
-	    // display: none;
-	}
