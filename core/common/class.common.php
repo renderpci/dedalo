@@ -1112,96 +1112,112 @@ abstract class common {
 	*/
 	public static function trigger_manager($request_options=false) {
 
-		$options = new stdClass();
-			$options->test_login = true;
-			$options->source 	 = 'php://input';
-			if($request_options!==false) {
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options parse
+			$options = new stdClass();
+				$options->test_login 		= true;
+				$options->source 	 		= 'php://input';
+				$options->set_json_header 	= true;
+				if($request_options!==false) {
+					foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+				}
+
+		# Set JSON headers for all responses (default)
+			if ($options->set_json_header===true) {
+				#header('Content-Type: application/json');
+				header('Content-Type: application/json; charset=utf-8');
 			}
 
-		# Set JSON headers for all responses
-		#header('Content-Type: application/json');
-		header('Content-Type: application/json; charset=utf-8');
 
 		# JSON_DATA
 		# javascript common.get_json_data sends a stringify json object
 		# this object is getted here and decoded with all ajax request vars
-		if ($options->source==='GET') {
-			#$str_json = json_encode($_GET);
-			// Verify all get vars before json encode
-			$get_obj = new stdClass();
-			foreach ($_GET as $key => $value) {
-				$get_obj->{$key} = safe_xss($value);
+			if ($options->source==='GET') {
+				#$str_json = json_encode($_GET);
+				// Verify all get vars before json encode
+				$get_obj = new stdClass();
+				foreach ($_GET as $key => $value) {
+					$get_obj->{$key} = safe_xss($value);
+				}
+				$str_json = json_encode($get_obj);
+			}elseif ($options->source==='POST') {
+				#$str_json = json_encode($_GET);
+				// Verify all get vars before json encode
+				$get_obj = new stdClass();
+				foreach ($_POST as $key => $value) {
+					$get_obj->{$key} = safe_xss($value);
+				}
+				$str_json = json_encode($get_obj);
+			}else{
+				$str_json = file_get_contents('php://input');
 			}
-			$str_json = json_encode($get_obj);
-		}else{
-			$str_json = file_get_contents('php://input');
-		}
-		if (!$json_data = json_decode($str_json)) {
-			$response = new stdClass();
-				$response->result 	= false;
-				$response->msg 		= "Error on read php://input data";
+			if (!$json_data = json_decode($str_json)) {
+				$response = new stdClass();
+					$response->result 	= false;
+					$response->msg 		= "Error on read php://input data";
 
-			return false;
-		}
+				return false;
+			}
 
 		# DEDALO_MAINTENANCE_MODE
-		$mode = $json_data->mode;
-		if ($mode!=="Save" && $mode!=="Login") {
-			if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
-				debug_log(__METHOD__." Kick user ".to_string(), logger::DEBUG);
+			$mode = $json_data->mode;
+			if ($mode!=="Save" && $mode!=="Login") {
+				if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
+					debug_log(__METHOD__." Kick user ".to_string(), logger::DEBUG);
 
-				# Unset user session login
-				# Delete current Dédalo session
-				unset($_SESSION['dedalo4']['auth']);
+					# Unset user session login
+					# Delete current Dédalo session
+					unset($_SESSION['dedalo4']['auth']);
 
-				# maintenance check
+					# maintenance check
+					$response = new stdClass();
+						$response->result 	= true;
+						$response->msg 		= "Sorry, this site is under maintenace now";
+					echo json_encode($response);
+					#exit();
+					return false;
+				}
+			}
+
+
+		# LOGGED USER CHECK. Can be disabled in options (login case)
+			if($options->test_login===true && login::is_logged()!==true) {
 				$response = new stdClass();
-					$response->result 	= true;
-					$response->msg 		= "Sorry, this site is under maintenace now";
+					$response->result 	= false;
+					$response->msg 		= "Error. Auth error: please login [1]";
 				echo json_encode($response);
 				#exit();
 				return false;
 			}
-		}
-
-
-		# LOGGED USER CHECK. Can be disabled in options (login case)
-		if($options->test_login===true && login::is_logged()!==true) {
-			$response = new stdClass();
-				$response->result 	= false;
-				$response->msg 		= "Error. Auth error: please login [1]";
-			echo json_encode($response);
-			#exit();
-			return false;
-		}
 
 
 		# MODE Verify
-		if(empty($json_data->mode)) {
-			$response = new stdClass();
-				$response->result 	= false;
-				$response->msg 		= "Error. mode is mandatory";
-			echo json_encode($response);
-			#exit();
-			return false;
-		}
+			if(empty($json_data->mode)) {
+				$response = new stdClass();
+					$response->result 	= false;
+					$response->msg 		= "Error. mode is mandatory";
+				echo json_encode($response);
+				#exit();
+				return false;
+			}
 
 
 		# CALL FUNCTION
-		if ( function_exists($json_data->mode) ) {
-			$response = (object)call_user_func($json_data->mode, $json_data);
-			$json_params = null;
-			if(SHOW_DEBUG===true) {
-				$json_params = JSON_PRETTY_PRINT;
+
+			if ( function_exists($json_data->mode) ) {
+
+				$response = (object)call_user_func($json_data->mode, $json_data);
+
+			}else{
+
+				$response = new stdClass();
+					$response->result 	= false;
+					$response->msg 		= 'Error. Request failed. json_data->mode not exists: '.to_string($json_data->mode);
 			}
-			echo json_encode($response, $json_params);
-		}else{
-			$response = new stdClass();
-				$response->result 	= false;
-				$response->msg 		= 'Error. Request failed. json_data->mode not exists: '.to_string($json_data->mode);
-			echo json_encode($response);
-		}
+
+			// echo final string
+				$json_params = (SHOW_DEBUG===true) ? JSON_PRETTY_PRINT : null;
+				echo json_encode($response, $json_params);
+
 
 		return true;
 	}//end trigger_manager
