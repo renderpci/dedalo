@@ -61,7 +61,7 @@ tool_upload.prototype.init = async function(options) {
 
 
 /**
-* BUILD_CUSTOM
+* BUILD
 */
 tool_upload.prototype.build = async function(autoload=false) {
 
@@ -161,7 +161,7 @@ tool_upload.prototype.upload_file = async function(e, content_data) {
 			  fd.append("component_tipo", 	self.caller.tipo);
 			  fd.append("section_tipo", 	self.caller.section_tipo);
 			  fd.append("section_id", 		self.caller.section_id);
-			  fd.append("quality", 			null);
+			  fd.append("quality", 			self.caller.default_target_quality);
 			  // file
 			  fd.append("fileToUpload", e.target.files[0]);
 
@@ -171,9 +171,9 @@ tool_upload.prototype.upload_file = async function(e, content_data) {
 
 	try {
 
-		const 	xhr = new XMLHttpRequest();
+		const xhr = new XMLHttpRequest();
 
-				// progress
+				// progress event
 					// xhr.upload.addEventListener("progress", tool_upload.uploadProgress, false);
 					xhr.addEventListener("progress", function(e) {
 						upload_progress(e, content_data)
@@ -199,13 +199,17 @@ tool_upload.prototype.upload_file = async function(e, content_data) {
 
 					}, false);
 
-				// xhr.addEventListener("error", tool_upload.uploadFailed, false);
+				// failed event
+					// xhr.addEventListener("error", tool_upload.uploadFailed, false);
 
-				// xhr.addEventListener("abort", tool_upload.uploadCanceled, false);
+				// cancel event
+					// xhr.addEventListener("abort", tool_upload.uploadCanceled, false);
 
-				xhr.open("POST", self.trigger_url);
+				// open connection
+					xhr.open("POST", self.trigger_url);
 
-				xhr.send(fd);
+				// send data
+					xhr.send(fd);
 
 		// intervalTimer = setInterval( tool_upload.updateTransferSpeed, 1000 );
 

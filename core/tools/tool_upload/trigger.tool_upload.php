@@ -74,7 +74,7 @@ function upload_file($json_data) {
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			if ($name==='quality') continue; # Skip non mandatory
+			// if ($name==='quality') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -119,6 +119,9 @@ function upload_file($json_data) {
 														 'edit',
 														 DEDALO_DATA_LANG,
 														 $section_tipo);
+		// fix current target quality
+			$component->set_quality($quality);
+
 		// add file
 			$add_file = $component->add_file($file_data);
 			if ($add_file->result===false) {
@@ -128,9 +131,9 @@ function upload_file($json_data) {
 			// dump($add_file, ' add_file ++ '.to_string());
 
 		// postprocessing file (add_file returns final renamed file with path info)
-			$postprocessing = $component->postprocessing_file($add_file->ready);
-			if ($postprocessing->result===false) {
-				$response->msg = 'Upload is complete, but errors occurred on processing file: '.$postprocessing->msg;
+			$process_file = $component->process_uploaded_file($add_file->ready);
+			if ($process_file->result===false) {
+				$response->msg = 'Upload is complete, but errors occurred on processing file: '.$process_file->msg;
 				return $response;
 			}
 
