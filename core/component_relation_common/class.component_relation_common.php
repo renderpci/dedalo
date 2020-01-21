@@ -1,7 +1,7 @@
 <?php
 /*
 * CLASS COMPONENT_RELATION_COMMON
-* Used as common base from all components tha works from section relations data, instead standar component dato
+* Used as common base from all components that works from section relations data, instead standar component dato
 * like component_model, component_parent, etc..
 */
 class component_relation_common extends component_common {
@@ -2086,8 +2086,8 @@ class component_relation_common extends component_common {
 
 				$target_sections[] = $target_section;
 		}
+		// dump($target_sections, ' target_sections ++ '.to_string());
 
-			dump($target_sections, ' target_sections ++ '.to_string());
 		# Fix value
 		$this->target_sections = $target_sections;
 
@@ -2097,4 +2097,3 @@ class component_relation_common extends component_common {
 
 
 }//end component_relation_common
-?>
