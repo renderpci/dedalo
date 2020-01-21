@@ -6,12 +6,12 @@ require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 
 
 class ImageObj extends MediaObj {
-	
+
 	protected $image_id ;			# image_id
 	protected $quality ;			# like 'A2,A4,A0..'
-			
+
 	function __construct($image_id, $quality=false, $aditional_path=false, $initial_media_path, $external_source=false) {
-		
+
 		# SPECIFIC VARS
 		$this->set_image_id($image_id);
 		$this->set_name($image_id);
@@ -26,11 +26,11 @@ class ImageObj extends MediaObj {
 		$this->initial_media_path = $initial_media_path;
 		$this->aditional_path 	  = $aditional_path;
 		$this->external_source 	  = $external_source;
-		
+
 		parent::__construct($image_id);
-	}
-	
-	
+	}//end __construct
+
+
 	# MANDATORY DEFINITIONS
 	protected function define_name(){
 		return $this->image_id ;
@@ -50,45 +50,45 @@ class ImageObj extends MediaObj {
 	protected function define_media_path_server() {
 		return $this->get_media_path_server();
 	}
-	protected function define_mime_type() {	
+	protected function define_mime_type() {
 		return DEDALO_IMAGE_MIME_TYPE;
 	}
-	protected function define_external_source() {	
+	protected function define_external_source() {
 		return $this->external_source;
 	}
-	
+
 	public function get_media_path() {
 		if($this->external_source){
 			$external_parts = pathinfo($this->external_source);
-			$media_path = $external_parts['dirname']. '/';
+			$media_path = $external_parts['dirname'];
 			return $media_path;
 		}else{
-			return DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path . '/';
+			return DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path;
 		}
-		
+
 	}
 	public function get_media_path_abs() {
 		if($this->external_source){
 			$external_parts = pathinfo($this->external_source);
-			$media_path = $external_parts['dirname']. '/';
+			$media_path = $external_parts['dirname'];
 			return $media_path;
 		}else{
-			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->aditional_path . '/';
-		}	
-	}	
+			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . $this->quality . $this->aditional_path;
+		}
+	}
 
 	public function get_media_path_server() {
-			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
+			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path;
 	}
-	
+
 	# GET DEFAULT QUALITY
 	public static function get_quality_default() {
-		return DEDALO_IMAGE_QUALITY_DEFAULT;		
+		return DEDALO_IMAGE_QUALITY_DEFAULT;
 	}
-	
+
 	# GET ARRAY QUALITY OPTIONS
-	public static function get_ar_quality() {			
-		return unserialize(DEDALO_IMAGE_AR_QUALITY);		
+	public static function get_ar_quality() {
+		return unserialize(DEDALO_IMAGE_AR_QUALITY);
 	}
 
 	public function get_target_filename() {
@@ -98,29 +98,30 @@ class ImageObj extends MediaObj {
 		}else{
 			return $this->image_id .'.'. $this->extension ;
 		}
-	}
-	
-	
+	}//end get_target_filename
+
+
+
 	/**
 	* SET QUALITY
-	* Assign the quality received verifying that it exists in the array of qualities defined in config 
+	* Assign the quality received verifying that it exists in the array of qualities defined in config
 	* If it does not exist, assign the default quality
 	*
 	* Asigna la calidad recibida verificando que existe en el array de calidades definido en config
 	* Si no existe, asigna la calidad por defecto
 	*/
 	protected function set_quality($quality) {
-		
+
 		$default	= $this->get_quality_default();
 		$ar_valid 	= $this->get_ar_quality();
-		
+
 		if(empty($quality)) {
 			$this->quality = $default;
 			return $this->quality;
 		}
 		#dump($quality,"QUALITY HERE");
-		#$quality 	= strtolower($quality);			
-		
+		#$quality 	= strtolower($quality);
+
 		if(!is_array($ar_valid)) {
 			throw new Exception("config ar_valid is not defined!", 1);
 		}
@@ -133,31 +134,32 @@ class ImageObj extends MediaObj {
 		$this->quality = $quality;
 
 			#dump($this,$quality);
-		
+
 		return $this->quality;
-	}
-	
-	
-	# QUALITY FOLDERS WITH EXISTING FILES 
+	}//end set_quality
+
+
+
+	# QUALITY FOLDERS WITH EXISTING FILES
 	# Return array whith existing quality files
 	public function get_ar_quality_with_file() {
-		
+
 		$ar_quality 			= self::get_ar_quality();
 		$ar_quality_with_file	= array();
-		 
+
 		if(is_array($ar_quality)) foreach($ar_quality as $quality) {
-			
+
 			$obj = new ImageObj($this->image_id, $quality, $this->aditional_path, $this->initial_media_path);
-			 
+
 			if($obj->get_file_exists()) {
-				 				
+
 				 $ar_quality_with_file[] = $quality ;
-			}			 
-		}		
-		return $ar_quality_with_file ;	
-	}
-	
-	
+			}
+		}
+		return $ar_quality_with_file ;
+	}//end get_ar_quality_with_file
+
+
 	/**
 	* GET_THUMB_URL
 	* Build onthefly image at request size
@@ -173,11 +175,11 @@ class ImageObj extends MediaObj {
 		$w 					= $maxWidht;
 		$h 					= $maxHeight;
 		# 'm','quality','SID','w','h','fx','p','prop'
-		$thumb_url = DEDALO_CORE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&aditional_path=' .$aditional_path. '&SID=' .$SID. '&external_source='.$external_source. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;  	
+		$thumb_url = DEDALO_CORE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&aditional_path=' .$aditional_path. '&SID=' .$SID. '&external_source='.$external_source. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;
 			#dump($thumb_url,'thumb_url');
 
 		return $thumb_url;
-	}
+	}//end get_thumb_url
 
 
 
@@ -201,12 +203,12 @@ class ImageObj extends MediaObj {
 			return false ;
 		}
 
-		try {	
+		try {
 			$ar_info = @getimagesize($filename);
 			if(!$ar_info)	throw new Exception('Unknow image width!') ;
 
-			$width	= $ar_info[0];  
-			$height = $ar_info[1];  
+			$width	= $ar_info[0];
+			$height = $ar_info[1];
 			$type	= $ar_info[2];
 
 			return $ar_info;
@@ -214,7 +216,9 @@ class ImageObj extends MediaObj {
 		} catch (Exception $e) {
 			return false;
 		}
-	}
+	}//end get_image_dimensions
+
+
 
 	/**
 	* GET_IMAGE_WIDTH
@@ -222,7 +226,9 @@ class ImageObj extends MediaObj {
 	public function get_image_width() {
 		$ar_info = $this->get_image_dimensions();
 		if(isset($ar_info[0])) return $ar_info[0];
-	}
+	}//end get_image_width
+
+
 
 	/**
 	* GET_IMAGE_HEIGHT
@@ -230,58 +236,59 @@ class ImageObj extends MediaObj {
 	public function get_image_height() {
 		$ar_info = $this->get_image_dimensions();
 		if(isset($ar_info[1])) return $ar_info[1];
-	}
-	
-	
+	}//end get_image_height
+
+
+
 	/**
 	* PIXEL_TO_CENTIMETRES
 	* @param $quality - dir source of image
 	* @param $dpi - resolution to convert E.g.: 72dpi or 300dpi
-	* Use: 
+	* Use:
 	*	$image = "/User/Dedalo/images/0.jpg";
 	*	$dpi = 300;
 	*	$result = px2cm($image, $dpi);
 	*/
 	public function pixel_to_centimetres($quality, $dpi=DEDALO_IMAGE_PRINT_DPI) {
-		
+
 		$image_path = $this->get_local_full_path();
-			#dump($image,'image');		
+			#dump($image,'image');
 
 	    $size = getimagesize($image_path);
 	    $x = $size[0];
 	    $y = $size[1];
-	    
+
 	    #Convert to centimeter
 	    $h = $x * 2.54 / $dpi;
 	    $l = $y * 2.54 / $dpi;
-	    
+
 	    #Format a number with grouped thousands
 	    $h = number_format($h, 2, ',', ' ');
 	    $l = number_format($l, 2, ',', ' ');
-	    
+
 	    #add size unit
 	    $px2cm[] = $h."cm";
 	    $px2cm[] = $l."cm";
-	    
+
 	    #return array w values
 	    #$px2cm[0] = X
-	    #$px2cm[1] = Y    
+	    #$px2cm[1] = Y
 	    return $px2cm;
-	}
+	}//end pixel_to_centimetres
 
-	
-	
+
+
 	/**
 	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
 	*/
 	public static function get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality) {
-		
+
 		if($source_pixels_width==0 || $source_pixels_height==0) return null;
 
 		# THUMBS. Para generar thumbs, las medidas son fijas
 		if($target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
 			return array($width=102,$height=57);	# Original 102x57
-		}		
+		}
 
 		# Verificamos si la calidad recibida es convertible a número.
 
@@ -298,9 +305,10 @@ class ImageObj extends MediaObj {
 			$width = round($height * $source_ratio) ;
 
 			$result = array($width,$height);
-			
+
 			return $result;
-	}
+	}//end get_target_pixels_to_quality_conversion
+
 
 
 	/**
@@ -308,18 +316,19 @@ class ImageObj extends MediaObj {
 	*/
 	public static function get_megabytes_from_pixels($pixels) {
 		$const = 350000;
-		$total = ($pixels / $const);		
+		$total = ($pixels / $const);
 		return number_format($total, 2, '.', '');
-	}
+	}//end get_megabytes_from_pixels
+
+
 
 	/*
 	# FILE EXISTS
-	public function get_file_exists() {				
+	public function get_file_exists() {
 		$this->media_file_exists = file_exists($this->get_local_full_path());
 		return $this->media_file_exists;
 	}
 	*/
-
 	public function get_file_exists(){
 
 		$source	= $this->get_local_full_path();
@@ -328,7 +337,7 @@ class ImageObj extends MediaObj {
 			return true;
 		}else{
 
-			$ch = curl_init($source);    
+			$ch = curl_init($source);
 			curl_setopt($ch, CURLOPT_NOBODY, true);
 			curl_exec($ch);
 			$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -343,7 +352,9 @@ class ImageObj extends MediaObj {
 		}
 
 		return false;
-		
-	}
-}
-?>
+	}//end get_file_exists
+
+
+}//end class ImageObj
+
+

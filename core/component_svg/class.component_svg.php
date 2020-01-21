@@ -4,7 +4,7 @@
 * Manage specific component input text logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
 */
-class component_svg extends component_common {
+class component_svg extends component_media_common {
 
 
 
@@ -37,6 +37,17 @@ class component_svg extends component_common {
 
 		return $valor;
 	}//end get_valor_export
+
+
+
+	/**
+	* GET_ID
+	* Alias of get_svg_id
+	*/
+	public function get_id() {
+
+		return $this->get_svg_id();
+	}//end get_id
 
 
 
@@ -373,6 +384,20 @@ class component_svg extends component_common {
 
 
 
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() {
+
+		$allowed_extensions = defined('DEDALO_SVG_EXTENSIONS_SUPPORTED')
+			? (is_array(DEDALO_SVG_EXTENSIONS_SUPPORTED) ? DEDALO_SVG_EXTENSIONS_SUPPORTED : unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED))
+			: ['svg'];
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
 
 }//end class component_svg
-?>

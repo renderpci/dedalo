@@ -4,7 +4,7 @@
 */
 require_once(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
 
-class component_pdf extends component_common {
+class component_pdf extends component_media_common {
 
 
 	# file name formated as 'tipo'-'order_id' like dd732-1
@@ -207,7 +207,18 @@ class component_pdf extends component_common {
 	public function get_valor() {
 
 		return $this->valor = $this->get_pdf_id() ;
-	}
+	}//end get_valor
+
+
+
+	/**
+	* GET_ID
+	* Alias of get_pdf_id
+	*/
+	public function get_id() {
+
+		return $this->get_pdf_id();
+	}//end get_id
 
 
 
@@ -620,6 +631,20 @@ class component_pdf extends component_common {
 
 
 
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() {
+
+		$allowed_extensions = is_array(DEDALO_PDF_EXTENSIONS_SUPPORTED)
+			? DEDALO_PDF_EXTENSIONS_SUPPORTED
+			: unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED);
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
 
 }
-?>
