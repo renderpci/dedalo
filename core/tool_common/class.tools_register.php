@@ -133,7 +133,7 @@ class tools_register {
 			}
 
 		// session. Remove previous stored data in session
-			unset($_SESSION['dedalo']['registered_tools']);
+			unset($_SESSION['dedalo4']['registered_tools']);
 
 
 		// debug

@@ -60,11 +60,11 @@ class area extends common  {
 		//if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		// if the session has the all_areas return it for speed
-		$current_session_value = $_SESSION['dedalo']['ontology']['all_areas'] ?? null;
+		$current_session_value = $_SESSION['dedalo4']['ontology']['all_areas'] ?? null;
 		if ($current_session_value && $current_session_value->lang===DEDALO_APPLICATION_LANG) {
-			return $_SESSION['dedalo']['ontology']['all_areas']->data;
-		}else if ($current_session_value!==null) {		
-			unset($_SESSION['dedalo']['ontology']['all_areas']);
+			return $_SESSION['dedalo4']['ontology']['all_areas']->data;
+		}else if ($current_session_value!==null) {
+			unset($_SESSION['dedalo4']['ontology']['all_areas']);
 		}
 
 		// get the config_areas file to allow and denny some especific areas defined by installation.
@@ -123,7 +123,7 @@ class area extends common  {
 			$areas_item = new stdClass();
 				$areas_item->lang = DEDALO_APPLICATION_LANG;
 				$areas_item->data = $areas;
-		$_SESSION['dedalo']['ontology']['all_areas'] = $areas_item;
+		$_SESSION['dedalo4']['ontology']['all_areas'] = $areas_item;
 
 
 		// if(SHOW_DEBUG===true) {
@@ -216,7 +216,7 @@ class area extends common  {
 
 
 
-	
+
 
 	/**
 	* http://uk1.php.net/array_walk_recursive implementation that is used to remove nodes from the array.

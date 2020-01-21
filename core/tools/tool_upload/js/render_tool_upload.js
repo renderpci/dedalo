@@ -91,13 +91,6 @@ const get_content_data = async function(self) {
 	const fragment = new DocumentFragment()
 
 
-	const file_name 		 = self.caller.file_name
-	const target_dir 		 = self.caller.target_dir
-	const allowed_extensions = self.caller.allowed_extensions
-
-
-	console.log("self:",self);
-
 	// form
 		const form = ui.create_dom_element({
 			element_type	: 'form',
@@ -151,22 +144,10 @@ const get_content_data = async function(self) {
 			inner_html	 	: '<label>Caller component</label>' + self.caller.model,
 			parent 			: info
 		})
-		// file_name
-		ui.create_dom_element({
-			element_type	: 'div',
-			inner_html	 	: '<label>Target file name</label>' + file_name,
-			parent 			: info
-		})
-		// target_dir
-		ui.create_dom_element({
-			element_type	: 'div',
-			inner_html	 	: '<label>Target dir</label>' + self.caller.target_dir,
-			parent 			: info
-		})
 		// allowed extensions
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>Allowed extensions</label>' + allowed_extensions.join(", "),
+			inner_html	 	: '<label>Allowed extensions</label>' + self.caller.allowed_extensions.join(", "),
 			parent 			: info
 		})
 		// max upload file size

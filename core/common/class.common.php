@@ -2515,8 +2515,8 @@ abstract class common {
 	*/
 	public function get_registered_tools() {
 
-		if(isset($_SESSION['dedalo']['registered_tools'])) {
-			return $_SESSION['dedalo']['registered_tools'];
+		if(isset($_SESSION['dedalo4']['registered_tools'])) {
+			return $_SESSION['dedalo4']['registered_tools'];
 		}
 
 		$sqo_tool_active = json_decode('{
@@ -2561,7 +2561,7 @@ abstract class common {
 			$registered_tools[] 	= $component->get_dato();
 		}
 
-		$_SESSION['dedalo']['registered_tools'] = $registered_tools;
+		$_SESSION['dedalo4']['registered_tools'] = $registered_tools;
 
 
 		return $registered_tools;
