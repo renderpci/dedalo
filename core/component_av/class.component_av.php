@@ -7,7 +7,7 @@ include_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 include_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 include_once( DEDALO_CORE_PATH . '/media_engine/class.OptimizeTC.php');
 
-class component_av extends component_common {
+class component_av extends component_media_common {
 
 	# Overwrite __construct var lang passed in this component
 	#protected $lang = DEDALO_DATA_LANG;
@@ -148,6 +148,17 @@ class component_av extends component_common {
 
 
 	/**
+	* GET_ID
+	* Alias of get_video_id
+	*/
+	public function get_id() {
+
+		return $this->get_video_id();
+	}//end get_id
+
+
+
+	/**
 	* GET VIDEO ID
 	*/
 	public function get_video_id() {
@@ -167,7 +178,10 @@ class component_av extends component_common {
 
 		return $this->video_id = $video_id;
 	}
-	public function get_av_id() { return $this->get_video_id();	} // Alias of get_video_id()
+	public function get_av_id() {
+
+		return $this->get_video_id();
+	} // Alias of get_video_id()
 
 
 
@@ -733,14 +747,108 @@ class component_av extends component_common {
 	*/
 	public function av_file_exist($quality=false) {
 
-	$video_path = $this->get_video_path($quality);
-	$file_exists = file_exists($video_path);
+		$video_path  = $this->get_video_path($quality);
+		$file_exists = file_exists($video_path);
 
-	return $file_exists;
+		return $file_exists;
+	}//end av_file_exist
 
-	}#end av_file_exist
+
+
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() {
+
+		$allowed_extensions = is_array(DEDALO_AV_EXTENSIONS_SUPPORTED)
+			? DEDALO_AV_EXTENSIONS_SUPPORTED
+			: unserialize(DEDALO_AV_EXTENSIONS_SUPPORTED);
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
+	/**
+	* MOVE_ZIP_FILE
+	* Used to move zip files like compressed dvd
+	* @return object $response
+	*/
+	public static function move_zip_file($tmp_name, $folder_path, $file_id) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
+
+		$zip = new ZipArchive;
+		$res = $zip->open($tmp_name);
+		if ($res!==true) {
+			$response->msg .= "Error on open zip file ! Code: ".to_string($res);
+			return $response;
+		}
+
+		// Create the directories
+		if( !is_dir($folder_path.'/'.$file_id) ) {
+			$ar_folders = [
+				$folder_path .'/'. $file_id,
+				$folder_path .'/'. $file_id . '/VIDEO_TS/',
+				$folder_path .'/'. $file_id . '/AUDIO_TS/'
+			];
+			foreach ($ar_folders as $current_folder) {
+				if(!mkdir($current_folder, 0777)) {
+					$response->msg .= "Error on read or create directory for \"$file_id\" folder. Permission denied ! ($current_folder)";
+					return $response;
+				}
+			}
+		}
+
+		// See al .zip files for located the VIDEO_TS and AUDIO_TS folders
+		for ($i=0; $i < $zip->numFiles; $i++) {
+
+			$current_filename = $zip->getNameIndex($i);
+
+			if(strpos($current_filename,'VIDEO_TS')!==false){
+
+			  	$current_fileinfo = pathinfo($current_filename);
+			  	# Don't copy the original VIDEO_TS in the zip file
+				if ($current_fileinfo['basename']==='VIDEO_TS') {
+					continue;
+				}
+				# Copy al files of the VIDEO_TS zip file into the VIDEO_TS destination file
+				$src 	= $tmp_name.'#'.$current_filename;
+				$target = $folder_path.'/'.$file_id.'/VIDEO_TS/'.$current_fileinfo['basename'];
+				if(!copy('zip://'.$src, $target)) {
+					$response->msg .= "Error on copy zip file: $src";
+					return $response;
+				}
+
+			}else if(strpos($current_filename,'AUDIO_TS')!==false){
+				$current_fileinfo = pathinfo($current_filename);
+				# Don't copy the original AUDIO_TS in the zip file
+				if ($current_fileinfo['basename'] === 'AUDIO_TS') {
+					continue;
+				}
+				// Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file
+				$src 	= $tmp_name.'#'.$current_filename;
+				$target = $folder_path.'/'.$file_id.'/AUDIO_TS/'.$current_fileinfo['basename'];
+				if(!copy('zip://'.$src, $target)) {
+					$response->msg .= "Error on copy zip file: $src";
+					return $response;
+				}
+			}
+		}//end for ($i=0; $i < $zip->numFiles; $i++)
+
+		$zip->close();
+
+		// all is ok
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+
+
+		return $response;
+	}//end move_zip_file
 
 
 
 }//end component_av
-?>
