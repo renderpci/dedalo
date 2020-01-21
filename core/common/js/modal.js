@@ -115,20 +115,38 @@ class Modal extends HTMLElement {
 		// only click over base modal or button close are aceppted
 		if (e.target.matches('.modal') || e.target.matches('.close')) {
 
-			this._modalVisible = false;
-			this._modal.style.display = 'none';
+			// this._modalVisible = false;
+			// this._modal.style.display = 'none';
 
-			// remove caller instance if exists on close
-			if (this.caller_instance) {
-				const destroyed = this.caller_instance.destroy(true, true, true)
+			// // remove caller instance if exists on close
+			// if (this.caller_instance) {
+			// 	const destroyed = this.caller_instance.destroy(true, true, true)
 
-				// clean header
-				const header = this.querySelector("[slot='header']")
-				if (header) {
-					header.remove()
-				}
+			// 	// clean header
+			// 	const header = this.querySelector("[slot='header']")
+			// 	if (header) {
+			// 		header.remove()
+			// 	}
+			// }
+
+			this._closeModal()
+
+		}
+	}
+	_closeModal() {
+
+		this._modalVisible = false;
+		this._modal.style.display = 'none';
+
+		// remove caller instance if exists on close
+		if (this.caller_instance) {
+			const destroyed = this.caller_instance.destroy(true, true, true)
+
+			// clean header
+			const header = this.querySelector("[slot='header']")
+			if (header) {
+				header.remove()
 			}
-
 		}
 	}
 }
