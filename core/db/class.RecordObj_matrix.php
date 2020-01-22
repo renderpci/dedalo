@@ -134,9 +134,9 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		$matrix_table = $this->matrix_table;	
 		
-		#unset($_SESSION['dedalo4']['config']['calculate_ID']);
+		#unset($_SESSION['dedalo']['config']['calculate_ID']);
 		#$idu = $parent.'-'.$tipo.'-'.$lang.'-'.$this->matrix_table;
-		#if(isset($_SESSION['dedalo4']['config']['calculate_ID'][$idu])) return $_SESSION['dedalo4']['config']['calculate_ID'][$idu];
+		#if(isset($_SESSION['dedalo']['config']['calculate_ID'][$idu])) return $_SESSION['dedalo']['config']['calculate_ID'][$idu];
 		
 		$arguments = array();
 		
@@ -161,7 +161,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		if(!empty($id)) {
 			$this->set_ID($id);
-			#if($tipo!=DEDALO_ACTIVITY_SECTION_TIPO) $_SESSION['dedalo4']['config']['calculate_ID'][$idu] = $id;
+			#if($tipo!=DEDALO_ACTIVITY_SECTION_TIPO) $_SESSION['dedalo']['config']['calculate_ID'][$idu] = $id;
 		}		
 
 		#if(SHOW_DEBUG===true) error_log("calculado id:$id from parent:$parent, tipo:$tipo, lang:$lang, table:$this->matrix_table");
@@ -227,7 +227,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		# TEST VALID USER
 		#$userID		= navigator::get_user_id();
-		$userID		= $_SESSION['dedalo4']['auth']['user_id'];
+		$userID		= $_SESSION['dedalo']['auth']['user_id'];
 		if (
 			empty($userID)
 			&& $this->matrix_table != 'matrix_activity' && $this->matrix_table != 'matrix_counter' && $this->matrix_table != 'matrix_stats'

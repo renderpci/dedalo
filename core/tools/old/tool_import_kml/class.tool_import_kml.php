@@ -323,8 +323,8 @@ class tool_import_kml extends tool_common {
 		# TEMP_SECTION_DATA
 		# propagate_temp_section_data
 			$temp_data_uid = $this->temp_section_id;			
-			if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {				
-				$temp_section_data = $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid];
+			if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {				
+				$temp_section_data = $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
 				#$this->propagate_temp_section_data($temp_section_data, $section_tipo, $section_id);
 				section::propagate_temp_section_data($temp_section_data, $section_tipo, $section_id);
 				debug_log(__METHOD__." Propagated temp_section_data ($temp_data_uid) to:  $section_tipo - $section_id ".to_string(), logger::DEBUG);

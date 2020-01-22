@@ -264,7 +264,7 @@
 
 			#
 			# SKIP_PUBLICATION_STATE_CHECK
-				$checked = (isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) && $_SESSION['dedalo4']['config']['skip_publication_state_check']==1) ? 'checked="checked"' : '';
+				$checked = (isset($_SESSION['dedalo']['config']['skip_publication_state_check']) && $_SESSION['dedalo']['config']['skip_publication_state_check']==1) ? 'checked="checked"' : '';
 				$html   .= "<div class=\"panel_option\">";
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
 				$html   .= " <span>".label::get_label('skip_publication_state_check')."</span>";

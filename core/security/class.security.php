@@ -32,14 +32,14 @@ class security {
 	function __construct() {
 
 		// user id check
-			if(empty($_SESSION['dedalo4']['auth']['user_id'])) {
+			if(empty($_SESSION['dedalo']['auth']['user_id'])) {
 				$msg=" <span class='error'> Error: Session user_id is not defined! </span>";
 				if(SHOW_DEBUG===true) {
 					throw new Exception( __METHOD__ . $msg);
 				}
 				die($msg);
 			}else{
-				$this->user_id = $_SESSION['dedalo4']['auth']['user_id'];
+				$this->user_id = $_SESSION['dedalo']['auth']['user_id'];
 			}
 
 		// permissions root check
@@ -67,7 +67,7 @@ class security {
 	*/
 	public static function get_security_permissions( $parent_tipo, $tipo ) {
 
-		if ((int)$_SESSION['dedalo4']['auth']['user_id']===DEDALO_SUPERUSER) {
+		if ((int)$_SESSION['dedalo']['auth']['user_id']===DEDALO_SUPERUSER) {
 			return 3;
 		}
 
@@ -87,7 +87,7 @@ class security {
 	/**
 	* PERMISSIONS TABLE
 	* Calculated once and stored in cache
-	* Optionalment stored in $_SESSION['dedalo4']['auth']['permissions_table']
+	* Optionalment stored in $_SESSION['dedalo']['auth']['permissions_table']
 	*
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
@@ -109,9 +109,9 @@ class security {
 				break;
 
 			# SESSION CACHE (HD)
-			case (isset($_SESSION['dedalo4']['auth']['permissions_table'])):
+			case (isset($_SESSION['dedalo']['auth']['permissions_table'])):
 				#debug_log(__METHOD__." Loaded permissions_table session");
-				$permissions_table = $_SESSION['dedalo4']['auth']['permissions_table'];
+				$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
 				return $permissions_table;
 				break;
 			# FILE DATA
@@ -128,7 +128,7 @@ class security {
 		$permissions_table = self::get_ar_permissions_in_matrix_for_current_user();
 
 		# SESSION CACHED TABLE
-		$_SESSION['dedalo4']['auth']['permissions_table'] = $permissions_table;
+		$_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
 
 		return (array)$permissions_table;
 	}//end get_permissions_table
@@ -163,7 +163,7 @@ class security {
 	private static function get_user_security_access() {
 
 		// Default behaviour is false (use logged user to calculate permissions)
-			$user_id = $_SESSION['dedalo4']['auth']['user_id'];
+			$user_id = $_SESSION['dedalo']['auth']['user_id'];
 
 		// user profile
 			$component_profile_model 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
@@ -220,7 +220,7 @@ class security {
 		// unset static var
 		unset($permissions_table);
 		// unset session var
-		unset($_SESSION['dedalo4']['auth']['permissions_table']);
+		unset($_SESSION['dedalo']['auth']['permissions_table']);
 		// force re-calculate values
 		security::get_permissions_table();
 
@@ -270,8 +270,8 @@ class security {
 			}
 
 		// cached value. If request user_id is the same as current logged user, return session value, without acces to component
-			if ( isset($_SESSION['dedalo4']['auth']['user_id']) && $user_id==$_SESSION['dedalo4']['auth']['user_id'] ) {
-				return isset($_SESSION['dedalo4']['auth']['is_global_admin']) ? $_SESSION['dedalo4']['auth']['is_global_admin'] : false;
+			if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
+				return isset($_SESSION['dedalo']['auth']['is_global_admin']) ? $_SESSION['dedalo']['auth']['is_global_admin'] : false;
 			}
 
 		// Resolve from component

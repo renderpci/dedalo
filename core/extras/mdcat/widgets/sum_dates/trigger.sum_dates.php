@@ -46,8 +46,8 @@ function reset() {
 		$response->msg 		= '';
 
 	$search_options_session_key = 'section_'.$section_tipo;
-	if (isset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key])) {
-		unset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key]);
+	if (isset($_SESSION['dedalo']['config']['sum_total'][$search_options_session_key])) {
+		unset($_SESSION['dedalo']['config']['sum_total'][$search_options_session_key]);
 
 		$response->result 	= true;
 		$response->msg 		= 'Removed session sum_total: '.$search_options_session_key;

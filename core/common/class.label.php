@@ -38,13 +38,13 @@
 
 			# Using php session as cache
 				
-			if( isset($_SESSION['dedalo4']['config']['ar_label'][$lang]) ) {
+			if( isset($_SESSION['dedalo']['config']['ar_label'][$lang]) ) {
 				# Get from session	
-				label::$ar_label[$lang] = $_SESSION['dedalo4']['config']['ar_label'][$lang];		
+				label::$ar_label[$lang] = $_SESSION['dedalo']['config']['ar_label'][$lang];		
 			}else{
 				# Calculate label for current lang and store
 				label::$ar_label[$lang] = self::set_static_label_vars( $lang );	
-				$_SESSION['dedalo4']['config']['ar_label'][$lang] = label::$ar_label[$lang];				
+				$_SESSION['dedalo']['config']['ar_label'][$lang] = label::$ar_label[$lang];				
 			}								
 
 

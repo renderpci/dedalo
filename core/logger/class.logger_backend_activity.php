@@ -135,7 +135,7 @@ class logger_backend_activity extends logger_backend {
 
 
 				# WHO (store user section id_matrix and calculate name on view) ###########################
-					$user_id = isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '-666';
+					$user_id = isset($_SESSION['dedalo']['auth']['user_id']) ? $_SESSION['dedalo']['auth']['user_id'] : '-666';
 					$locator_user_id = new locator();
 						$locator_user_id->set_section_id($user_id);
 						$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);

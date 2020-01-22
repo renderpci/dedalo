@@ -496,7 +496,7 @@ class diffusion_sql extends diffusion  {
 		$ar_data=array();
 		$i=0;
 		$ar_portal_records=array();
-		$skip_publication_state_check = isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) ? isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) : 0;
+		$skip_publication_state_check = isset($_SESSION['dedalo']['config']['skip_publication_state_check']) ? isset($_SESSION['dedalo']['config']['skip_publication_state_check']) : 0;
 		# Records iteration
 		if(!empty($ar_result)) foreach ((array)$ar_result as $records) foreach ($records as $section_tipo => $current_section_id) {	# iteramos por registros
 			#dump($current_section_id, ' current_section_id ++ '.to_string());
@@ -2519,16 +2519,16 @@ class diffusion_sql extends diffusion  {
 
 				$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
 
-				$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'];
+				$current_skip_publication_state_check = $_SESSION['dedalo']['config']['skip_publication_state_check'];
 
 				# Set temporally to skip and force parent publication
-				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
+				$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 
 				tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
 				debug_log(__METHOD__." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) ".to_string(), logger::DEBUG);
 
 				# Restore previous skip_publication_state_check state
-				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
+				$_SESSION['dedalo']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
 
 			}else{
 				#debug_log(__METHOD__." ============ NOT Triggered tool_diffusion::export_record dato: ".to_string($dato), logger::ERROR);

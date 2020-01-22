@@ -89,8 +89,8 @@ require_once( DEDALO_CONFIG_PATH .'/config.php');
 #if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
 # CONSTANTS tool_import_bibtex (used by trigger)
-define('TOOL_IMPORT_BIBTEX_UPLOAD_DIR'	, DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/temp'.'/bibtex_files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].'/' );
-define('TOOL_IMPORT_BIBTEX_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_PDF_FOLDER .'/temp'.'/bibtex_files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].'/' );
+define('TOOL_IMPORT_BIBTEX_UPLOAD_DIR'	, DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/temp'.'/bibtex_files/' .'user_'.$_SESSION['dedalo']['auth']['user_id'].'/' );
+define('TOOL_IMPORT_BIBTEX_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_PDF_FOLDER .'/temp'.'/bibtex_files/' .'user_'.$_SESSION['dedalo']['auth']['user_id'].'/' );
 
 
 

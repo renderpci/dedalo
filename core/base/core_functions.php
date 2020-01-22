@@ -634,11 +634,11 @@ function fix_cascade_config4_var($var_name, $var_default_value) {
 		# REQUEST (GET/POST)
 		case !empty($_REQUEST[$var_name]) :
 			$var_value = trim( safe_xss($_REQUEST[$var_name]) );
-			$_SESSION['dedalo4']['config'][$var_name]= $var_value; # Save in session too
+			$_SESSION['dedalo']['config'][$var_name]= $var_value; # Save in session too
 			break;
 		# SESSION
-		case !empty($_SESSION['dedalo4']['config'][$var_name]) :
-			$var_value = $_SESSION['dedalo4']['config'][$var_name];
+		case !empty($_SESSION['dedalo']['config'][$var_name]) :
+			$var_value = $_SESSION['dedalo']['config'][$var_name];
 			break;
 		# DEFAULT
 		default:
@@ -912,7 +912,7 @@ function get_top_tipo() {
 		case (strpos($req_modo, 'tool_')!==false):
 		case (isset($_REQUEST['context_name'])):
 			# TOOL / PORTAL MODE
-			$top_tipo = $_SESSION['dedalo4']['config']['top_tipo'];
+			$top_tipo = $_SESSION['dedalo']['config']['top_tipo'];
 			break;
 
 		default:

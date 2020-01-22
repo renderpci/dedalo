@@ -4,7 +4,7 @@
 	/*
 	if (SHOW_DEBUG!==true) {
 		# Delete current Dédalo session
-		unset($_SESSION['dedalo4']['auth']);
+		unset($_SESSION['dedalo']['auth']);
 
 		#exit();
 	}*/
@@ -12,10 +12,10 @@
 
 	#
 	# ONLY SHOW WHEN USER IS NOT ADMIN DEDALO_SUPERUSER
-	if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
+	if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']!=DEDALO_SUPERUSER)) {
 		
 		# Delete current Dédalo session
-		unset($_SESSION['dedalo4']['auth']);
+		unset($_SESSION['dedalo']['auth']);
 	
 
 		$cwd = basename(__DIR__);
@@ -46,7 +46,7 @@
 
 
 	# NOTICE TO ADMIN ONLY
-	if ( isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER ) {
+	if ( isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER ) {
 		$GLOBALS['log_messages'][] = "<span class=\"warning\">".label::get_label('sitio_en_mantenimiento')."</span>";
 	}
 	

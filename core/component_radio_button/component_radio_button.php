@@ -25,7 +25,7 @@
 
 	# case is_developer control
 	if ($tipo===DEDALO_USER_DEVELOPER_TIPO) {
-		if($_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER) {
+		if($_SESSION['dedalo']['auth']['user_id']!=DEDALO_SUPERUSER) {
 			$permissions = 1; # Force permissions to read only except for dedalo superuser
 		}
 	}

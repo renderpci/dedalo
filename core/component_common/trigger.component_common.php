@@ -166,10 +166,10 @@ function Save($json_data) {
 	}
 
 	# DEDALO_MAINTENANCE_MODE
-	if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
+	if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']!=DEDALO_SUPERUSER)) {
 		# Unset user session login
 		# Delete current Dédalo session
-		unset($_SESSION['dedalo4']['auth']);
+		unset($_SESSION['dedalo']['auth']);
 
 		$response->maintenance = true;
 	}

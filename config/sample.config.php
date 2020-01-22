@@ -143,7 +143,7 @@
 ################################################################
 # IS_DEVELOPER : Logged user is developer value
 	$show_developer = false;
-	if (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true) {
+	if (isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true) {
 		$show_developer = true;
 	}
 	define('SHOW_DEVELOPER', $show_developer);
@@ -156,8 +156,8 @@
 	if(
 		# SUPERUSER IS LOGGED
 		(
-			isset($_SESSION['dedalo4']['auth']['user_id'])
-			&& 	 ($_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
+			isset($_SESSION['dedalo']['auth']['user_id'])
+			&& 	 ($_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
 		)
 	) {
 		$show_debug = true;

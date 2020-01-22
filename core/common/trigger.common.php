@@ -33,7 +33,7 @@ function change_lang($json_data) {
 	if (!empty($dedalo_data_lang)) {
 		$dedalo_data_lang = trim( safe_xss($dedalo_data_lang) );
 		# Save in session
-		$_SESSION['dedalo4']['config']['dedalo_data_lang'] = $dedalo_data_lang;
+		$_SESSION['dedalo']['config']['dedalo_data_lang'] = $dedalo_data_lang;
 
 		$response->msg .= ' Changed dedalo_data_lang to '.$dedalo_data_lang;
 	}
@@ -41,7 +41,7 @@ function change_lang($json_data) {
 	if (!empty($dedalo_application_lang)) {
 		$dedalo_application_lang = trim( safe_xss($dedalo_application_lang) );
 		# Save in session
-		$_SESSION['dedalo4']['config']['dedalo_application_lang'] = $dedalo_application_lang;
+		$_SESSION['dedalo']['config']['dedalo_application_lang'] = $dedalo_application_lang;
 
 		$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;
 	}

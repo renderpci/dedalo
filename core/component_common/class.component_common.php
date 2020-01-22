@@ -425,8 +425,8 @@ abstract class component_common extends common {
 		# data is saved to session as temporal data
 		if (isset($this->is_temp) && $this->is_temp===true) {
 			$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
-			if (isset($_SESSION['dedalo4']['component_temp_data'][$temp_data_uid])) {
-				$this->dato = $_SESSION['dedalo4']['component_temp_data'][$temp_data_uid];
+			if (isset($_SESSION['dedalo']['component_temp_data'][$temp_data_uid])) {
+				$this->dato = $_SESSION['dedalo']['component_temp_data'][$temp_data_uid];
 			}else{
 				$this->dato = null;
 			}
@@ -702,7 +702,7 @@ abstract class component_common extends common {
 		/*
 		if (isset($this->is_temp) && $this->is_temp===true) {
 			$temp_data_uid = $tipo.'_'.$parent.'_'.$lang.'_'.$section_tipo;
-			$_SESSION['dedalo4']['component_temp_data'][$temp_data_uid] = $dato ;
+			$_SESSION['dedalo']['component_temp_data'][$temp_data_uid] = $dato ;
 			if(SHOW_DEBUG===true) {
 				debug_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
 			}

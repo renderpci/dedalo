@@ -74,7 +74,7 @@ function get_childrens_data($json_data) {
 
 
 	$options = new stdClass();
-	if (isset($_SESSION['dedalo4']['config']['thesaurus_view_mode']) && $_SESSION['dedalo4']['config']['thesaurus_view_mode']==='model') {
+	if (isset($_SESSION['dedalo']['config']['thesaurus_view_mode']) && $_SESSION['dedalo']['config']['thesaurus_view_mode']==='model') {
 		$options->model = true;
 	}
 

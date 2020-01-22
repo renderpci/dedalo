@@ -318,8 +318,8 @@ class tool_diffusion {
 	*/
 	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $class_name) {		
 	
-		if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
-			return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
+		if( isset($_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
+			return $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
 		}
 
 		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
@@ -327,7 +327,7 @@ class tool_diffusion {
 		$ar_diffusion_sections 	= $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
 	
 		# Store in session
-		$_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
+		$_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element

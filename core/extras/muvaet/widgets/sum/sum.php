@@ -29,14 +29,14 @@
 				# dump($data_source, ' data_source ++ '.to_string());
 
 				$search_options_session_key = 'section_'.$section_tipo;
-					#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
-				$current_options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
+					#dump($_SESSION['dedalo']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
+				$current_options = $_SESSION['dedalo']['config']['search_options'][$search_options_session_key];
 
 
-				if (isset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key])) {
+				if (isset($_SESSION['dedalo']['config']['sum_total'][$search_options_session_key])) {
 					
 					# Precalculated value
-					$total = $_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key];
+					$total = $_SESSION['dedalo']['config']['sum_total'][$search_options_session_key];
 				
 				}else{
 					/*
@@ -111,7 +111,7 @@
 						#dump($total, ' total ++ '.to_string());
 
 					# Store for speed
-					$_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key] = $total;	
+					$_SESSION['dedalo']['config']['sum_total'][$search_options_session_key] = $total;	
 				}				
 				
 

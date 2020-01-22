@@ -38,7 +38,7 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 	#
 	# TEMPLATE FROM DATA
 		/*
-		$folder_path 	= dirname(__FILE__).'/data/'.$_SESSION['dedalo4']['auth']['user_id'];
+		$folder_path 	= dirname(__FILE__).'/data/'.$_SESSION['dedalo']['auth']['user_id'];
 		$data_file_name = $folder_path.'/'.$section_layout_tipo.'_'.$section_layout_id.'.data';
 		if ( !$data = file_get_contents($data_file_name)) {
 			if(SHOW_DEBUG) {
@@ -173,7 +173,7 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 	#
 	# AUTOLOGOUT
 	#if ($autologged) {
-		#unset($_SESSION['dedalo4']['auth']);
+		#unset($_SESSION['dedalo']['auth']);
 	#}
 
 #echo "ok ($user_id)";

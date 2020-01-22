@@ -159,15 +159,15 @@ class dd_utils_api {
 
 
 		# Delete session config (force to recalculate)
-		#unset($_SESSION['dedalo4']['config']);
+		#unset($_SESSION['dedalo']['config']);
 
 		# Delete session permissions table (force to recalculate)
-		#unset($_SESSION['dedalo4']['auth']['permissions_table']);
+		#unset($_SESSION['dedalo']['auth']['permissions_table']);
 
 		# Delete all session data except auth
-			foreach ($_SESSION['dedalo4'] as $key => $value) {
+			foreach ($_SESSION['dedalo'] as $key => $value) {
 				if ($key==='auth') continue;
-				unset($_SESSION['dedalo4'][$key]);
+				unset($_SESSION['dedalo'][$key]);
 			}
 
 
@@ -383,7 +383,7 @@ class dd_utils_api {
 			if (!empty($dedalo_data_lang)) {
 				$dedalo_data_lang = trim( safe_xss($dedalo_data_lang) );
 				# Save in session
-				$_SESSION['dedalo4']['config']['dedalo_data_lang'] = $dedalo_data_lang;
+				$_SESSION['dedalo']['config']['dedalo_data_lang'] = $dedalo_data_lang;
 
 				$response->msg .= ' Changed dedalo_data_lang to '.$dedalo_data_lang;
 			}
@@ -392,7 +392,7 @@ class dd_utils_api {
 			if (!empty($dedalo_application_lang)) {
 				$dedalo_application_lang = trim( safe_xss($dedalo_application_lang) );
 				# Save in session
-				$_SESSION['dedalo4']['config']['dedalo_application_lang'] = $dedalo_application_lang;
+				$_SESSION['dedalo']['config']['dedalo_application_lang'] = $dedalo_application_lang;
 
 				$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;
 			}
@@ -453,7 +453,7 @@ class dd_utils_api {
 			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
 
 		// Login type . Get before unset session
-			$login_type = isset($_SESSION['dedalo4']['auth']['login_type']) ? $_SESSION['dedalo4']['auth']['login_type'] : 'default';
+			$login_type = isset($_SESSION['dedalo']['auth']['login_type']) ? $_SESSION['dedalo']['auth']['login_type'] : 'default';
 
 		// Quit action
 			$result = login::Quit( $request_options->options );

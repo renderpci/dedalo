@@ -139,8 +139,8 @@
 					$tag_state 				= TR::tag2state($tag);
 					$caller_id 				= $tag;
 
-					$section_top_tipo 		= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-					$section_top_id			= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];						
+					$section_top_tipo 		= TOP_TIPO;	#$_SESSION['dedalo']['config']['top_tipo'];
+					$section_top_id			= TOP_ID;	#$_SESSION['dedalo']['config']['top_id'];						
 					
 					# LOCATOR
 					$rel_locator = new locator();
@@ -173,8 +173,8 @@
 					$tag 					= $this->selected_tagName;	
 					$tag_value 				= TR::tag2value($tag);
 
-					$section_top_tipo 		= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-					$section_top_id 		= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];
+					$section_top_tipo 		= TOP_TIPO;	#$_SESSION['dedalo']['config']['top_tipo'];
+					$section_top_id 		= TOP_ID;	#$_SESSION['dedalo']['config']['top_id'];
 											
 					
 					# LOCATOR

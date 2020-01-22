@@ -127,13 +127,13 @@ if($mode==='save_template') {
 
 	#
 	# Update session label name
-	$ar_templates_mix = (array)$_SESSION['dedalo4']['config']['ar_templates_mix'];
+	$ar_templates_mix = (array)$_SESSION['dedalo']['config']['ar_templates_mix'];
 	foreach ((array)$ar_templates_mix as $key => $obj_value) {
 		if ($obj_value->section_id==$section_layout_id && 
 			$obj_value->component_layout_tipo==$component_layout_tipo
 			) {
-			$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->label 			  = (string)$layout_label;	# Update session layout_label
-			$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->section_layout_dato = (object)$dato;			# Update session section_layout_dato
+			$_SESSION['dedalo']['config']['ar_templates_mix'][$key]->label 			  = (string)$layout_label;	# Update session layout_label
+			$_SESSION['dedalo']['config']['ar_templates_mix'][$key]->section_layout_dato = (object)$dato;			# Update session section_layout_dato
 			break;
 		}
 	}
@@ -258,7 +258,7 @@ if($mode==='delete_template') {
 if($mode==='print_pages') {	
 
 	# Verify vars set in previous step (context_name=list)
-	if( !isset($_SESSION['dedalo4']['config']['ar_templates_mix']) ||
+	if( !isset($_SESSION['dedalo']['config']['ar_templates_mix']) ||
 		!isset($_GET['template_tipo']) ||
 		!isset($_GET['template_id']) ||
 		!isset($_GET['section_tipo'])
@@ -273,18 +273,18 @@ if($mode==='print_pages') {
 						);
 	
 	# Is set in search::get_records_data. NOTE: Only contain records in last visualized list page
-	if (!isset($_SESSION['dedalo4']['config']['ar_templates_search_options'][$section_tipo])) {
+	if (!isset($_SESSION['dedalo']['config']['ar_templates_search_options'][$section_tipo])) {
 		echo "Please select template"; return ;
 	}
-	$search_options = clone($_SESSION['dedalo4']['config']['ar_templates_search_options'][$section_tipo]);
+	$search_options = clone($_SESSION['dedalo']['config']['ar_templates_search_options'][$section_tipo]);
 	$ar_records		= search::get_records_data($search_options);
 	
 	$tool_layout_print_records = reset($ar_records->result);
 		
-	$ar_templates_mix = (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
+	$ar_templates_mix = (array)$_SESSION['dedalo']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
 
 	$array_key 	  = $section_layout_tipo .'_'. $section_layout_id;
-	$template_obj = clone($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key]);
+	$template_obj = clone($_SESSION['dedalo']['config']['ar_templates_mix'][$array_key]);
 
 	$section_layout_label 	= isset($template_obj->label) ? $template_obj->label : '';
 	$component_layout_tipo 	= $template_obj->component_layout_tipo;

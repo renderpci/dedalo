@@ -260,8 +260,8 @@ function save_preset($json_data) {
 		# NAME, PUBLIC, DEFAULT (TEMPORAL SECTION)
 		# Propagate all section temp data to the new created real section
 			$temp_data_uid = $preset_section_id;
-			if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
-				$temp_section_data = $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid];
+			if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
+				$temp_section_data = $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
 				section::propagate_temp_section_data($temp_section_data, $presets_section_tipo, $parent);
 				#debug_log(__METHOD__." propagate_temp_section_data $temp_data_uid  ".to_string($temp_section_data), logger::DEBUG);
 			}

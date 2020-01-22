@@ -1184,10 +1184,10 @@ class tool_layout_print extends tool_common {
 		#
 		# RECORDS DATA		
 		#$search_options_session_key = 'section_'.$options->section_target_tipo;
-		#if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+		#if (!isset($_SESSION['dedalo']['config']['search_options'][$search_options_session_key])) {
 		#	throw new Exception("Error Processing Request: search_options for $search_options_session_key not found", 1);			
 		#}
-		#$options_search_from_user   = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
+		#$options_search_from_user   = clone($_SESSION['dedalo']['config']['search_options'][$search_options_session_key]);
 		#
 		#	$options_search_from_user->search_options_session_key 	= 'current_edit';
 		#	$options_search_from_user->modo 						= 'edit';

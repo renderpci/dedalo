@@ -15,8 +15,8 @@ $script_url = DEDALO_CORE_URL . '/tools/tool_import_zotero/html/import_files.php
 # Overwrite default options when construct the class
 $options = array(
 		'script_url' => $script_url,	# current file url
-		'upload_dir' => $upload_dir,	# target upload path. Normally DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/temp'.'/files/'.'user_'.$_SESSION['dedalo4']['auth']['user_id'].'/'
-		'upload_url' => $upload_url,	# target url base . Normally DEDALO_MEDIA_URL.DEDALO_PDF_FOLDER.'/temp'.'/files/'.'user_'.$_SESSION['dedalo4']['auth']['user_id'].'/'
+		'upload_dir' => $upload_dir,	# target upload path. Normally DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/temp'.'/files/'.'user_'.$_SESSION['dedalo']['auth']['user_id'].'/'
+		'upload_url' => $upload_url,	# target url base . Normally DEDALO_MEDIA_URL.DEDALO_PDF_FOLDER.'/temp'.'/files/'.'user_'.$_SESSION['dedalo']['auth']['user_id'].'/'
 		'user_dirs' => false,
 		'mkdir_mode' => 0777,
 		'param_name' => 'files',

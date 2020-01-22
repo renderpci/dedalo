@@ -153,7 +153,7 @@ class component_security_tools extends component_common {
 		static $ar_user_tools;		
 		if(isset($ar_user_tools)) return($ar_user_tools);		
 
-		if(isset($_SESSION['dedalo4']['config']['ar_user_tools_by_user'][$user_id])) return $_SESSION['dedalo4']['config']['ar_user_tools_by_user'][$user_id];
+		if(isset($_SESSION['dedalo']['config']['ar_user_tools_by_user'][$user_id])) return $_SESSION['dedalo']['config']['ar_user_tools_by_user'][$user_id];
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
@@ -190,7 +190,7 @@ class component_security_tools extends component_common {
 			$ar_user_tools[] = $tool_name;
 		}			
 
-		$_SESSION['dedalo4']['config']['ar_user_tools_by_user'][$user_id] = $ar_user_tools;
+		$_SESSION['dedalo']['config']['ar_user_tools_by_user'][$user_id] = $ar_user_tools;
 
 		return $ar_user_tools;
 

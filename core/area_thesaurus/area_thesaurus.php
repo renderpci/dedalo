@@ -19,11 +19,11 @@
 		$this->model_view 				= true;
 		$this->target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
 		$this->hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
-		$_SESSION['dedalo4']['config']['thesaurus_view_mode'] = 'model';
+		$_SESSION['dedalo']['config']['thesaurus_view_mode'] = 'model';
 
 	}else{
 
-		$_SESSION['dedalo4']['config']['thesaurus_view_mode'] = 'thesaurus';
+		$_SESSION['dedalo']['config']['thesaurus_view_mode'] = 'thesaurus';
 	}
 
 	$model_view 				= $this->model_view;

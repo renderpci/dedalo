@@ -14,8 +14,8 @@ if (empty($upload_dir_custom)) {
 }
 
 # TOOL IMPORT IMAGES
-define('TOOL_IMPORT_AV_UPLOAD_DIR'	, DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/' );
-define('TOOL_IMPORT_AV_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_AV_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/');
+define('TOOL_IMPORT_AV_UPLOAD_DIR'	, DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo']['auth']['user_id'].$upload_dir_custom.'/' );
+define('TOOL_IMPORT_AV_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_AV_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo']['auth']['user_id'].$upload_dir_custom.'/');
 
 
 class tool_import_av extends tool_common {

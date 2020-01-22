@@ -53,7 +53,7 @@ class records_search extends common {
 		$html =  ob_get_clean();
 
 		# CACHE
-		#$_SESSION['dedalo4']['config']['records_search'][$section_to_cache]['html'] = $html;		
+		#$_SESSION['dedalo']['config']['records_search'][$section_to_cache]['html'] = $html;		
 		
 		return (string)$html;
 	}//end get_html

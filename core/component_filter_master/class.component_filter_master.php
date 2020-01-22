@@ -38,7 +38,7 @@ class component_filter_master extends component_filter {
 	*/
 	public function Save() {
 		# Reset cache session IMPORTANT !
-		unset($_SESSION['dedalo4']['config']['get_user_projects']);
+		unset($_SESSION['dedalo']['config']['get_user_projects']);
 
 		return parent::Save();
 	}//end Save

@@ -60,7 +60,7 @@ function Quit($json_data) {
 		}
 
 	// Login type . Get before unset session
-		$login_type = isset($_SESSION['dedalo4']['auth']['login_type']) ? $_SESSION['dedalo4']['auth']['login_type'] : 'default';
+		$login_type = isset($_SESSION['dedalo']['auth']['login_type']) ? $_SESSION['dedalo']['auth']['login_type'] : 'default';
 
 	// Quit action
 		$result = login::Quit( $trigger_post_vars );

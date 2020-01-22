@@ -84,10 +84,10 @@ function import_str($json_data) {
 	$res = backup::import_structure();
 
 	# Delete session config (force to recalculate)
-	unset($_SESSION['dedalo4']['config']);
+	unset($_SESSION['dedalo']['config']);
 
 	# Delete session permissions table (force to recalculate)
-	unset($_SESSION['dedalo4']['auth']['permissions_table']);
+	unset($_SESSION['dedalo']['auth']['permissions_table']);
 
 	$html .= $res;	
 	#echo wrap_html($html, false);

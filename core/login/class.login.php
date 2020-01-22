@@ -310,7 +310,7 @@ class login extends common {
 
 					// Is already logged check
 						if (login::is_logged()===true) {
-							if ($_SESSION['dedalo4']['auth']['user_id']==$section_id) {
+							if ($_SESSION['dedalo']['auth']['user_id']==$section_id) {
 								# Logged as same user
 								$response->result = true;
 								$response->msg 	  = " User already logged. ";
@@ -564,7 +564,7 @@ class login extends common {
 	*/
 	public static function rest_login( stdClass $options ) {
 		global $rest_config;
-		#unset($_SESSION['dedalo4']);
+		#unset($_SESSION['dedalo']);
 
 		$response = new stdClass();
 
@@ -587,21 +587,21 @@ class login extends common {
 
 		# Is already logged? If yes, return true and no activity log is generated again
 		if (
-			isset($_SESSION['dedalo4']['auth']['user_id']) &&
-			$_SESSION['dedalo4']['auth']['user_id']==$rest_config->user_id &&
-			($_SESSION['dedalo4']['auth']['is_logged']==1)
+			isset($_SESSION['dedalo']['auth']['user_id']) &&
+			$_SESSION['dedalo']['auth']['user_id']==$rest_config->user_id &&
+			($_SESSION['dedalo']['auth']['is_logged']==1)
 		 ) {
 			$response->logged 	= true;
 			$response->msg 		= 'User is already logged';
 			return $response;
 		}
 
-		$_SESSION['dedalo4']['auth']['user_id']		= $rest_config->user_id;
-		$_SESSION['dedalo4']['auth']['username']	= $rest_config->user;
-		$_SESSION['dedalo4']['auth']['is_logged']	= 1;
+		$_SESSION['dedalo']['auth']['user_id']		= $rest_config->user_id;
+		$_SESSION['dedalo']['auth']['username']	= $rest_config->user;
+		$_SESSION['dedalo']['auth']['is_logged']	= 1;
 
 		# CONFIG KEY
-		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+		$_SESSION['dedalo']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
 
 
 		#
@@ -668,22 +668,22 @@ class login extends common {
 		}
 
 		// IS_GLOBAL_ADMIN (before set user session vars)
-			$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)security::is_global_admin($user_id);
+			$_SESSION['dedalo']['auth']['is_global_admin'] = (bool)security::is_global_admin($user_id);
 
 		// IS_DEVELOPER (before set user session vars)
-			$_SESSION['dedalo4']['auth']['is_developer'] 	= (bool)login::is_developer($user_id);
+			$_SESSION['dedalo']['auth']['is_developer'] 	= (bool)login::is_developer($user_id);
 
 		// SESSION : If backup is ok, fix session data
-			$_SESSION['dedalo4']['auth']['user_id']			= $user_id;
-			$_SESSION['dedalo4']['auth']['username']		= $username;
-			$_SESSION['dedalo4']['auth']['full_username'] 	= $full_username;
-			$_SESSION['dedalo4']['auth']['is_logged']		= 1;
+			$_SESSION['dedalo']['auth']['user_id']			= $user_id;
+			$_SESSION['dedalo']['auth']['username']		= $username;
+			$_SESSION['dedalo']['auth']['full_username'] 	= $full_username;
+			$_SESSION['dedalo']['auth']['is_logged']		= 1;
 
 		// CONFIG KEY
-			$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+			$_SESSION['dedalo']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
 
 		// login_type
-			$_SESSION['dedalo4']['auth']['login_type']  = $login_type;
+			$_SESSION['dedalo']['auth']['login_type']  = $login_type;
 
 		# Auth cookie
 		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
@@ -711,7 +711,7 @@ class login extends common {
 
 			# GET ENTITY DIFFUSION TABLES / SECTIONS . Store for speed
 			# $entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
-			# $_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
+			# $_SESSION['dedalo']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__." $e ", logger::CRITICAL);
@@ -867,7 +867,7 @@ class login extends common {
 			}
 		}
 
-		$_SESSION['dedalo4']['auth']['cookie_auth'] = $data;
+		$_SESSION['dedalo']['auth']['cookie_auth'] = $data;
 		# SET COOKIE
 		$cookie_properties = common::get_cookie_properties();
 		#setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
@@ -934,28 +934,28 @@ class login extends common {
 		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
 
 		# NO ESTÁ AUTENTIFICADO
-		if( empty($_SESSION['dedalo4']['auth']['user_id']) ||
-			empty($_SESSION['dedalo4']['auth']['is_logged']) ||
-			$_SESSION['dedalo4']['auth']['is_logged'] !== 1 ||
-			empty($_SESSION['dedalo4']['auth']['salt_secure'])
+		if( empty($_SESSION['dedalo']['auth']['user_id']) ||
+			empty($_SESSION['dedalo']['auth']['is_logged']) ||
+			$_SESSION['dedalo']['auth']['is_logged'] !== 1 ||
+			empty($_SESSION['dedalo']['auth']['salt_secure'])
 			) {
 
 
-			if (empty($_SESSION['dedalo4']['auth']['user_id'])) {
+			if (empty($_SESSION['dedalo']['auth']['user_id'])) {
 
 				# Store current lang for not loose
-				$dedalo_application_lang = isset($_SESSION['dedalo4']['config']['dedalo_application_lang']) ? $_SESSION['dedalo4']['config']['dedalo_application_lang'] : false;
-				$dedalo_data_lang 		 = isset($_SESSION['dedalo4']['config']['dedalo_data_lang']) ? $_SESSION['dedalo4']['config']['dedalo_data_lang'] : false;
+				$dedalo_application_lang = isset($_SESSION['dedalo']['config']['dedalo_application_lang']) ? $_SESSION['dedalo']['config']['dedalo_application_lang'] : false;
+				$dedalo_data_lang 		 = isset($_SESSION['dedalo']['config']['dedalo_data_lang']) ? $_SESSION['dedalo']['config']['dedalo_data_lang'] : false;
 
 				# remove complete session
-				unset($_SESSION['dedalo4']);
+				unset($_SESSION['dedalo']);
 
 				# Restore langs
 				if ($dedalo_application_lang) {
-					$_SESSION['dedalo4']['config']['dedalo_application_lang'] = $dedalo_application_lang;
+					$_SESSION['dedalo']['config']['dedalo_application_lang'] = $dedalo_application_lang;
 				}
 				if ( $dedalo_data_lang) {
-					$_SESSION['dedalo4']['config']['dedalo_data_lang'] 		  = $dedalo_data_lang;
+					$_SESSION['dedalo']['config']['dedalo_data_lang'] 		  = $dedalo_data_lang;
 				}
 			}
 
@@ -964,7 +964,7 @@ class login extends common {
 		# SI ESTÁ UTENTIFICADO
 		}else{
 
-			#if( $_SESSION['dedalo4']['auth']['salt_secure'] != '7PVecu9VSxLHnawfGF2oDCISXvsq2khsOKvPiTJ_D7a_wVaxqQwzRJElPxsecePnFzmrP34RIG0J0ykg3Mbobg,,') {
+			#if( $_SESSION['dedalo']['auth']['salt_secure'] != '7PVecu9VSxLHnawfGF2oDCISXvsq2khsOKvPiTJ_D7a_wVaxqQwzRJElPxsecePnFzmrP34RIG0J0ykg3Mbobg,,') {
 			#	throw new Exception("Error Login: Incorrect security config", 1);
 			#	return false;
 			#}
@@ -1024,8 +1024,8 @@ class login extends common {
 			return false;
 		}
 
-		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
-		$username = $_SESSION['dedalo4']['auth']['username'];
+		$user_id  = $_SESSION['dedalo']['auth']['user_id'];
+		$username = $_SESSION['dedalo']['auth']['username'];
 
 		// LOCK_COMPONENTS. Remove lock_components elements
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
@@ -1051,7 +1051,7 @@ class login extends common {
 
 		// Delete auth cookie
 			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
-				$cookie_auth = (object)$_SESSION['dedalo4']['auth']['cookie_auth'];
+				$cookie_auth = (object)$_SESSION['dedalo']['auth']['cookie_auth'];
 				$ktoday 	 = date("Y_m_d");
 				$kyesterday  = date("Y_m_d",strtotime("-1 day"));
 
@@ -1065,10 +1065,10 @@ class login extends common {
 				}
 			}
 
-		#unset($_SESSION['dedalo4']['auth']);
-		#unset($_SESSION['dedalo4']['config']);
+		#unset($_SESSION['dedalo']['auth']);
+		#unset($_SESSION['dedalo']['config']);
 		$cookie_name = session_name();
-		unset($_SESSION['dedalo4']);
+		unset($_SESSION['dedalo']);
 		#setcookie($cookie_name, null, -1, '/');
 		setcookie($cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 		#unset($_SESSION);
@@ -1151,8 +1151,8 @@ class login extends common {
 		if ($user_id<1) return false;
 
 		# If request user_id is the same as current logged user, return session value, without acces to component
-		#if ( isset($_SESSION['dedalo4']['auth']['user_id']) && $user_id==$_SESSION['dedalo4']['auth']['user_id'] ) {
-			#return (bool)$_SESSION['dedalo4']['auth']['is_developer'];
+		#if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
+			#return (bool)$_SESSION['dedalo']['auth']['is_developer'];
 		#}
 
 		# Resolve from component
