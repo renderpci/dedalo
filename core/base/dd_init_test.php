@@ -432,7 +432,7 @@
 #	$response 	= $data_check->check_sequences();
 #	if ($response->result!=true) {
 #		debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
-#		if(isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER) {
+#		if(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER) {
 #			$init_response->msg .= trim("Error on ".$response->msg);
 #			return $init_response;
 #		}

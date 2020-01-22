@@ -167,15 +167,15 @@ function update_structure($json_data) {
 	
 
 	# Delete session config (force to recalculate)
-	#unset($_SESSION['dedalo4']['config']);
+	#unset($_SESSION['dedalo']['config']);
 
 	# Delete session permissions table (force to recalculate)
-	#unset($_SESSION['dedalo4']['auth']['permissions_table']);
+	#unset($_SESSION['dedalo']['auth']['permissions_table']);
 
 	# Delete all session data except auth
-	foreach ($_SESSION['dedalo4'] as $key => $value) {
+	foreach ($_SESSION['dedalo'] as $key => $value) {
 		if ($key==='auth') continue;
-		unset($_SESSION['dedalo4'][$key]);
+		unset($_SESSION['dedalo'][$key]);
 	}
 
 	#session_write_close();

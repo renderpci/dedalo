@@ -186,7 +186,7 @@
 					$list_line = isset($propiedades->section_config->list_line) ? $propiedades->section_config->list_line : 'double';
 
 				// Section_config
-					$_SESSION['dedalo4']['section_config'][$this->tipo]['list_line'] = $list_line;
+					$_SESSION['dedalo']['section_config'][$this->tipo]['list_line'] = $list_line;
 
 
 				// Rows_list . section list.  Render rows html from section_rows

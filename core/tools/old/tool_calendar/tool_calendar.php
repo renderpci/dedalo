@@ -36,7 +36,7 @@
 	}
 
 	# STORE CURRENT ar_tool_data
-	$_SESSION['dedalo4'][$tool_name][$tipo] = $ar_tool_data;
+	$_SESSION['dedalo'][$tool_name][$tipo] = $ar_tool_data;
 
 
 	$file_name	= $modo;

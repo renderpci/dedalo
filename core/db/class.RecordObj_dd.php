@@ -315,16 +315,16 @@ class RecordObj_dd extends RecordDataBoundObject {
 		static $termino_by_tipo;
 
 		$cache_uid = $terminoID . '_' . $lang . (int)$fallback;
-		#if ($from_cache===true && isset($_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid])) {
+		#if ($from_cache===true && isset($_SESSION['dedalo']['config']['termino_by_tipo'][$cache_uid])) {
 		if (isset($termino_by_tipo[$cache_uid])) {
-			#return $_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid];
+			#return $_SESSION['dedalo']['config']['termino_by_tipo'][$cache_uid];
 			return $termino_by_tipo[$cache_uid];
 		}
 		$tipo 	= 'termino';
 		$result = self::get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback);
 
 		#if($from_cache===true) {
-			#$_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid] = $result;
+			#$_SESSION['dedalo']['config']['termino_by_tipo'][$cache_uid] = $result;
 			$termino_by_tipo[$cache_uid] = $result;
 		#}
 
@@ -368,7 +368,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		$cache_uid = $tipo;
 
-		#if ($from_cache===true && isset($_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo])) {
+		#if ($from_cache===true && isset($_SESSION['dedalo']['config']['modelo_name_by_tipo'][$tipo])) {
 		if (isset($modelo_name_by_tipo[$cache_uid])) {
 			return $modelo_name_by_tipo[$cache_uid];
 		}
@@ -376,7 +376,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$modelo_name  = (string)$RecordObj_dd->get_modelo_name();
 
 		#if($from_cache===true) {
-			#$_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo] = $modelo_name;
+			#$_SESSION['dedalo']['config']['modelo_name_by_tipo'][$tipo] = $modelo_name;
 			$modelo_name_by_tipo[$cache_uid] = $modelo_name;
 		#}
 

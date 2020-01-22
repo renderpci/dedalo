@@ -183,15 +183,15 @@ class section extends common {
 		#
 		# SAVE_HANDLER DIFFERENT TO DATABASE CASE
 		# Sometimes we need use section as temporal element without save real data to database. Is this case
-		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 		if (isset($this->save_handler) && $this->save_handler==='session') {
 
 			if (!isset($this->dato)) {
 
 				$temp_data_uid = $this->tipo.'_'.$this->section_id;
 				# Fix dato as object
-				if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
-					$section_temp_data = clone $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid];
+				if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
+					$section_temp_data = clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
 					$this->dato = $section_temp_data;
 					#$this->bl_loaded_matrix_data = true;
 				}else{
@@ -803,7 +803,7 @@ class section extends common {
 
 		// Save_handler different to database case
 			// Sometimes we need use section as temporal element without save real data to database. Is this case
-			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
 
 				$temp_data_uid 		= $this->tipo.'_'.$this->section_id;
@@ -811,7 +811,7 @@ class section extends common {
 
 				# Set value to session
 				# Always encode and decode data before store in session to avoid problems on unserialize not loaded classes
-				$_SESSION['dedalo4']['section_temp_data'][$temp_data_uid] = json_decode( json_encode($section_temp_data) );
+				$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = json_decode( json_encode($section_temp_data) );
 
 				return $this->section_id;
 			}
@@ -1550,8 +1550,8 @@ class section extends common {
 		if ($from_cache===true) {
 			if (isset($cache_ar_children_tipo[$cache_uid])) {
 				return $cache_ar_children_tipo[$cache_uid];
-			}elseif (isset($_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
-				return $_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid];
+			}elseif (isset($_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
+				return $_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid];
 			}
 		}
 
@@ -1683,7 +1683,7 @@ class section extends common {
 
 		# Cache session store
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
-		$_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
+		$_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$cache_uid.'_'.microtime(1)]=microtime(1);
@@ -2551,7 +2551,7 @@ class section extends common {
 
 			$diffusion_element_data = new stdClass();
 				$diffusion_element_data->date 	 = date('Y-m-d H:i:s');;
-				$diffusion_element_data->user_id = $_SESSION['dedalo4']['auth']['user_id'];
+				$diffusion_element_data->user_id = $_SESSION['dedalo']['auth']['user_id'];
 
 			$dato->diffusion_info->$diffusion_element_tipo = $diffusion_element_data;
 
@@ -3289,7 +3289,7 @@ class section extends common {
 		// Current user locator
 			$user_locator = new locator();
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
-				$user_locator->set_section_id($_SESSION['dedalo4']['auth']['user_id']); // logged user
+				$user_locator->set_section_id($_SESSION['dedalo']['auth']['user_id']); // logged user
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
 		// Current date

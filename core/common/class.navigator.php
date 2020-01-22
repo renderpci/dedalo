@@ -36,14 +36,14 @@ class navigator extends Accessors {
 		# STORE SESSION VARS
 		self::set_session_vars();
 		
-		#if(isset($_SESSION['dedalo4']['auth']['userID_matrix']))
-		#self::$userID_matrix =  $_SESSION['dedalo4']['auth']['userID_matrix'];
+		#if(isset($_SESSION['dedalo']['auth']['userID_matrix']))
+		#self::$userID_matrix =  $_SESSION['dedalo']['auth']['userID_matrix'];
 
-		if(isset($_SESSION['dedalo4']['auth']['user_id']))
-		self::$user_id =  $_SESSION['dedalo4']['auth']['user_id'];
+		if(isset($_SESSION['dedalo']['auth']['user_id']))
+		self::$user_id =  $_SESSION['dedalo']['auth']['user_id'];
 		
-		if(isset($_SESSION['dedalo4']['auth']['username']))
-		self::$username =  $_SESSION['dedalo4']['auth']['username'];					#dump($_SESSION['dedalo4']['auth']['username'],'$_SESSION['dedalo4']['auth']['username']');
+		if(isset($_SESSION['dedalo']['auth']['username']))
+		self::$username =  $_SESSION['dedalo']['auth']['username'];					#dump($_SESSION['dedalo']['auth']['username'],'$_SESSION['dedalo']['auth']['username']');
 		
 		# PAGE CURRENT QUERY STRING
 		#self::$page_query_string	= common::get_page_query_string();
@@ -69,10 +69,10 @@ class navigator extends Accessors {
 	private function get_session_vars() {		
 		
 		foreach(self::$ar_vars as $name) {
-			#eval( "if( isset(\$_SESSION['dedalo4']['config'][\$name]) ) self::\$selected_$name = \$_SESSION['dedalo4']['config'][\$name];" );
-			if ( isset($_SESSION['dedalo4']['config'][$name]) ) {
+			#eval( "if( isset(\$_SESSION['dedalo']['config'][\$name]) ) self::\$selected_$name = \$_SESSION['dedalo']['config'][\$name];" );
+			if ( isset($_SESSION['dedalo']['config'][$name]) ) {
 				$var_name = 'selected_' . $name;
-				self::$$var_name = $_SESSION['dedalo4']['config'][$name];
+				self::$$var_name = $_SESSION['dedalo']['config'][$name];
 			}
 		}
 	}
@@ -81,31 +81,31 @@ class navigator extends Accessors {
 	private function set_session_vars() {
 		/*
 		# CUANDO CAMBIA EL ROOT, SE RESETEA HACIA ABAJO 
-		if( isset($_SESSION['dedalo4']['config']['root']) && self::$selected_root != $_SESSION['dedalo4']['config']['root'] ) {
+		if( isset($_SESSION['dedalo']['config']['root']) && self::$selected_root != $_SESSION['dedalo']['config']['root'] ) {
 			self::$selected_area	= NULL;
 			self::$selected_module	= NULL;
 			self::$selected_section	= NULL;
 			self::$selected_tipo		= NULL;
 		}
 		# CUANDO CAMBIA EL AREA, SE RESETEA HACIA ABAJO 
-		if( isset($_SESSION['dedalo4']['config']['area']) && self::$selected_area != $_SESSION['dedalo4']['config']['area'] ) {
+		if( isset($_SESSION['dedalo']['config']['area']) && self::$selected_area != $_SESSION['dedalo']['config']['area'] ) {
 			self::$selected_module	= NULL;
 			self::$selected_section	= NULL;
 			self::$selected_id		= NULL;
 		}
 		# CUANDO CAMBIA EL MÓDULO, SE RESETEA HACIA ABAJO 
-		if( isset($_SESSION['dedalo4']['config']['module']) && self::$selected_module != $_SESSION['dedalo4']['config']['module']) {
+		if( isset($_SESSION['dedalo']['config']['module']) && self::$selected_module != $_SESSION['dedalo']['config']['module']) {
 			self::$selected_section	= NULL;
 			self::$selected_id		= NULL;
 		}
 		
 		
 		foreach(self::$ar_vars as $name) {
-			eval( "\$_SESSION['dedalo4']['config'][\$name] = self::\$selected_$name ;" );
+			eval( "\$_SESSION['dedalo']['config'][\$name] = self::\$selected_$name ;" );
 		}
 		*/
 		# force reset all
-		#foreach(self::$ar_vars as $name) eval( "\$_SESSION['dedalo4']['config'][\$name] = NULL ;" );		
+		#foreach(self::$ar_vars as $name) eval( "\$_SESSION['dedalo']['config'][\$name] = NULL ;" );		
 	}	
 	
 	
@@ -136,7 +136,7 @@ class navigator extends Accessors {
 		
 		self::$$var_name = $value;
 		
-		#$_SESSION['dedalo4']['config'][$name]	= $value;		
+		#$_SESSION['dedalo']['config'][$name]	= $value;		
 	}
 	
 
@@ -166,15 +166,15 @@ class navigator extends Accessors {
 		$html .="</b> </span>";	
 		
 		$html .= " <span style=\"margin-left:$distancia\"> area:<b>" ;		
-		$html .= $_SESSION['dedalo4']['config']['area'];
+		$html .= $_SESSION['dedalo']['config']['area'];
 		$html .="</b> </span>";	
 		
 		$html .= " <span style=\"margin-left:$distancia\"> module:<b>" ;		
-		$html .= $_SESSION['dedalo4']['config']['module'];
+		$html .= $_SESSION['dedalo']['config']['module'];
 		$html .="</b> </span>";
 		
 		$html .= " <span style=\"margin-left:$distancia\"> section:<b>" ;		
-		$html .= $_SESSION['dedalo4']['config']['section'];
+		$html .= $_SESSION['dedalo']['config']['section'];
 		$html .="</b> </span>";	
 		*/		
 		#$html .= '<hr>';

@@ -118,9 +118,9 @@
 					if (in_array($cache_key, $ar_resolved)) {
 						continue;
 					}
-					if ($use_cache && isset($_SESSION['dedalo4']['config']['av_duration'][$cache_key])) {
+					if ($use_cache && isset($_SESSION['dedalo']['config']['av_duration'][$cache_key])) {
 
-						$duration_secs = $_SESSION['dedalo4']['config']['av_duration'][$cache_key];						
+						$duration_secs = $_SESSION['dedalo']['config']['av_duration'][$cache_key];						
 						#debug_log(__METHOD__." GET DUTARION FROM SESSION $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
 
 					}else{
@@ -138,7 +138,7 @@
 						if (!empty($dato)) {
 							
 							$duration_secs = $dato;
-							if($use_cache) $_SESSION['dedalo4']['config']['av_duration'][$cache_key] = $duration_secs;
+							if($use_cache) $_SESSION['dedalo']['config']['av_duration'][$cache_key] = $duration_secs;
 							#debug_log(__METHOD__." GET DUTARION FROM DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
 						
 						}else{													
@@ -157,7 +157,7 @@
 								if (isset($media_attributes->format->duration)) {
 									$duration_secs = $media_attributes->format->duration;
 
-									if($use_cache) $_SESSION['dedalo4']['config']['av_duration'][$cache_key] = $duration_secs;
+									if($use_cache) $_SESSION['dedalo']['config']['av_duration'][$cache_key] = $duration_secs;
 								}							
 							}//end if (file_exists
 							#debug_log(__METHOD__." GET DUTARION FROM FILE MEDIA_ATTRIBUTES $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);

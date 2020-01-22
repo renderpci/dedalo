@@ -125,9 +125,9 @@ class component_layout extends component_common {
 
 		$cache_uid = $section_tipo.'_'.$modo;
 		/*
-		if ($from_cache && isset($_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid])) {
+		if ($from_cache && isset($_SESSION['dedalo']['config']['get_layout_map_from_section'][$cache_uid])) {
 			error_log("DEBUG INFO ".__METHOD__." From cache $terminoID.$lang");
-			#return $_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid];
+			#return $_SESSION['dedalo']['config']['get_layout_map_from_section'][$cache_uid];
 		}
 		*/
 
@@ -395,7 +395,7 @@ class component_layout extends component_common {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
-		#$_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid] = $layout_map;
+		#$_SESSION['dedalo']['config']['get_layout_map_from_section'][$cache_uid] = $layout_map;
 
 
 		#

@@ -399,8 +399,8 @@ class tool_administration extends tool_common {
 			$response->msg 		= '';
 
 		require(DEDALO_CORE_PATH.'/backup/class.backup.php');
-		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
-		$username = $_SESSION['dedalo4']['auth']['username'];
+		$user_id  = $_SESSION['dedalo']['auth']['user_id'];
+		$username = $_SESSION['dedalo']['auth']['username'];
 
 		$response = (object)backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
 		#debug_log(__METHOD__."  backup_info: $response->msg ".to_string(), logger::DEBUG);
@@ -836,9 +836,9 @@ class tool_administration extends tool_common {
 	*/
 	public static function skip_publication_state_check( bool $value) {
 		if ($value) {
-			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
+			$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 		}else{
-			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 0;
+			$_SESSION['dedalo']['config']['skip_publication_state_check'] = 0;
 		}
 	}//end skip_publication_state_check
 

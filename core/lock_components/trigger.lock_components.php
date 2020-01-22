@@ -38,11 +38,11 @@ function update_lock_components_state($json_data) {
 			}
 		}
 
-	$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];
+	$user_id = (int)$_SESSION['dedalo']['auth']['user_id'];
 	if ($user_id<0) {
 		$full_username 	= "Debug user";
 	}else{
-		$full_username 	= $_SESSION['dedalo4']['auth']['full_username'];
+		$full_username 	= $_SESSION['dedalo']['auth']['full_username'];
 	}
 
 	$event_element = new stdClass();

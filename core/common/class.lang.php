@@ -136,8 +136,8 @@ class lang {
 		}
 
 		$cache_uid = $code.'_'.$lang;
-		if ($from_cache===true && isset($_SESSION['dedalo4']['config']['lang_name_from_code'][$cache_uid])) {
-			return $_SESSION['dedalo4']['config']['lang_name_from_code'][$cache_uid];
+		if ($from_cache===true && isset($_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid])) {
+			return $_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid];
 		}
 
 		# RESOLVE
@@ -176,7 +176,7 @@ class lang {
 		#dump($total=round(microtime(1)-$start_time,3)*1000, '$total=round(microtime(1)-$start_time,3)*1000 ++ '.to_string());
 
 		if($from_cache===true){
-			$_SESSION['dedalo4']['config']['lang_name_from_code'][$cache_uid] = $name;
+			$_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid] = $name;
 		}
 		
 

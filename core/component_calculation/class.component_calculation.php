@@ -186,14 +186,14 @@ class component_calculation extends component_common {
 				case 'all':
 					/*
 						$search_options_session_key = 'section_'.$this->section_tipo.$this->component_tipo;
-							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
-						$current_options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
+							#dump($_SESSION['dedalo']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
+						$current_options = $_SESSION['dedalo']['config']['search_options'][$search_options_session_key];
 
 
-						if (isset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key])) {
+						if (isset($_SESSION['dedalo']['config']['sum_total'][$search_options_session_key])) {
 							
 							# Precalculated value
-							$total = $_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key];
+							$total = $_SESSION['dedalo']['config']['sum_total'][$search_options_session_key];
 
 						}else{
 					*/
@@ -218,7 +218,7 @@ class component_calculation extends component_common {
 						}
 
 						# Store for speed
-						#$_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key] = $total;
+						#$_SESSION['dedalo']['config']['sum_total'][$search_options_session_key] = $total;
 					#}
 					break;
 
@@ -585,14 +585,14 @@ class component_calculation extends component_common {
 			case 'all':
 			
 			#	$search_options_session_key = 'section_'.$this->section_tipo.$this->component_tipo;
-			#		#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
-			#	$current_options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
+			#		#dump($_SESSION['dedalo']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
+			#	$current_options = $_SESSION['dedalo']['config']['search_options'][$search_options_session_key];
 			#
 			#
-			#	if (isset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key])) {
+			#	if (isset($_SESSION['dedalo']['config']['sum_total'][$search_options_session_key])) {
 			#		
 			#		# Precalculated value
-			#		$total = $_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key];
+			#		$total = $_SESSION['dedalo']['config']['sum_total'][$search_options_session_key];
 			#
 			#	}else{
 			
@@ -614,7 +614,7 @@ class component_calculation extends component_common {
 					}
 
 					# Store for speed
-					#$_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key] = $total;
+					#$_SESSION['dedalo']['config']['sum_total'][$search_options_session_key] = $total;
 				#}
 				break;
 
@@ -1023,7 +1023,7 @@ class component_calculation extends component_common {
 	*//*
 	public function get_values_from_component_tipo__OLD($search_options, $data) {
 
-		$search_sesion = $_SESSION['dedalo4']['config']['search_options']['section_'.$search_options->section_tipo];
+		$search_sesion = $_SESSION['dedalo']['config']['search_options']['section_'.$search_options->section_tipo];
 
 
 		$options = clone $search_sesion;		
@@ -1107,7 +1107,7 @@ class component_calculation extends component_common {
 		$traducible 	= $RecordObj_dd->get_traducible();
 		$lang 			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN; 
 
-		if(!isset($_SESSION['dedalo4']['config']['search_options'][$current_section_tipo])) {
+		if(!isset($_SESSION['dedalo']['config']['search_options'][$current_section_tipo])) {
 
 			#$q_op 	 = '$and';
 			#$filter_obj = new stdClass();
@@ -1121,7 +1121,7 @@ class component_calculation extends component_common {
 
 		}else{
 
-			$search_query_object  = clone $_SESSION['dedalo4']['config']['search_options'][$current_section_tipo]->search_query_object;
+			$search_query_object  = clone $_SESSION['dedalo']['config']['search_options'][$current_section_tipo]->search_query_object;
 		}
 		
 			#dump($search_query_object, ' search_query_object ++ '.to_string());

@@ -194,8 +194,8 @@ function import_files($json_data) {
 				$temp_section_tipo = $section_tipo;
 			}
 			$temp_data_uid = $temp_section_tipo .'_'. DEDALO_SECTION_ID_TEMP ;//$temp_id;
-			if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
-				$temp_section_data = $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid];
+			if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
+				$temp_section_data = $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
 				$response->temp_section_data = $temp_section_data;
 			}
 			$response->temp_data_uid = $temp_data_uid;
@@ -301,8 +301,8 @@ function import_files($json_data) {
 		}//end foreach ((array)$ar_data as $key => $value_obj)
 
 	// Reset the temporary section of the components, for empty the fields.
-		if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
-				unset( $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid]);
+		if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
+				unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
 		}
 
 	// Consolidate counter. Set counter value to last section_id in section

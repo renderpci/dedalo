@@ -110,7 +110,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		}
 		
 		# Other tables. Test valid user (fast check only auth->user_id in session)
-		if ( !isset($_SESSION['dedalo4']['auth']['user_id']) ) {
+		if ( !isset($_SESSION['dedalo']['auth']['user_id']) ) {
 			$msg = "Save matrix: valid 'userID' value is mandatory. No data is saved! ";
 			trigger_error($msg);
 			return false;	

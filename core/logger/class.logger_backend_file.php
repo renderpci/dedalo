@@ -75,7 +75,7 @@ class logger_backend_file extends logger_backend  {
 			$time 			= strftime('%x %X', time());
 
 			# User ID matrix
-			$userID 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : 'no logged';
+			$userID 		= isset($_SESSION['dedalo']['auth']['user_id']) ? $_SESSION['dedalo']['auth']['user_id'] : 'no logged';
 
 			# IP (user source ip)
 			$ip 			= isset($_SERVER['REMOTE_ADDR']) ? urldecode($_SERVER['REMOTE_ADDR']) : 'unknow';

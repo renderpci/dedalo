@@ -10,9 +10,9 @@
 // page globals
 	// $page_globals = (function($mode) {
 
-	// 	$user_id 		= $_SESSION['dedalo4']['auth']['user_id'] ?? null;
-	// 	$username 		= $_SESSION['dedalo4']['auth']['username'] ?? null;
-	// 	$full_username 	= $_SESSION['dedalo4']['auth']['full_username'] ?? null;
+	// 	$user_id 		= $_SESSION['dedalo']['auth']['user_id'] ?? null;
+	// 	$username 		= $_SESSION['dedalo']['auth']['username'] ?? null;
+	// 	$full_username 	= $_SESSION['dedalo']['auth']['full_username'] ?? null;
 
 	// 	$obj = new stdClass();
 	// 		# version

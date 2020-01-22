@@ -1161,12 +1161,12 @@ abstract class common {
 		# DEDALO_MAINTENANCE_MODE
 			$mode = $json_data->mode;
 			if ($mode!=="Save" && $mode!=="Login") {
-				if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
+				if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']!=DEDALO_SUPERUSER)) {
 					debug_log(__METHOD__." Kick user ".to_string(), logger::DEBUG);
 
 					# Unset user session login
 					# Delete current Dédalo session
-					unset($_SESSION['dedalo4']['auth']);
+					unset($_SESSION['dedalo']['auth']);
 
 					# maintenance check
 					$response = new stdClass();
@@ -2515,8 +2515,8 @@ abstract class common {
 	*/
 	public function get_registered_tools() {
 
-		if(isset($_SESSION['dedalo4']['registered_tools'])) {
-			return $_SESSION['dedalo4']['registered_tools'];
+		if(isset($_SESSION['dedalo']['registered_tools'])) {
+			return $_SESSION['dedalo']['registered_tools'];
 		}
 
 		$sqo_tool_active = json_decode('{
@@ -2561,7 +2561,7 @@ abstract class common {
 			$registered_tools[] 	= $component->get_dato();
 		}
 
-		$_SESSION['dedalo4']['registered_tools'] = $registered_tools;
+		$_SESSION['dedalo']['registered_tools'] = $registered_tools;
 
 
 		return $registered_tools;

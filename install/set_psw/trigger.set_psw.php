@@ -52,6 +52,6 @@ if($mode==='set_psw') {
 		exit();
 	}	
 	
-	unset($_SESSION['dedalo4']['auth']);
+	unset($_SESSION['dedalo']['auth']);
 
 } #if($mode=='set_psw')

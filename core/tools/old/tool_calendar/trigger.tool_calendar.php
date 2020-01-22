@@ -3,7 +3,7 @@ require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( dirname(__FILE__) .'/class.tool_calendar.php');  
 /*
 	$tool_name 	  = 'tool_calendar';
-	$ar_tool_data = $_SESSION['dedalo4'][$tool_name]
+	$ar_tool_data = $_SESSION['dedalo'][$tool_name]
 	if( isset($ar_tool_data['custom_script']) ) {
 		$custom_class = 'class.'.pathinfo($ar_tool_data['custom_script'])['basename'] .'.php';
 		if (file_exists(DEDALO_CORE_PATH . $custom_class)) {
@@ -53,7 +53,7 @@ if ($mode=='get_events') {
 	#
 	# Tool vars (fixed in cotroller)
 		$tool_name = 'tool_calendar';
-		$tool_vars = (object)$_SESSION['dedalo4'][$tool_name][$options->tipo];
+		$tool_vars = (object)$_SESSION['dedalo'][$tool_name][$options->tipo];
 		if (empty($tool_vars->tipo)) { // Same as $options->tipo
 			exit("Error. tipo is mandatory");
 		}
@@ -227,7 +227,7 @@ function save_one_event( $options ) {
 	#
 	# Tool vars (fixed in cotroller)
 		$tool_name = 'tool_calendar';
-		$tool_vars = (object)$_SESSION['dedalo4'][$tool_name][$options->tipo];	
+		$tool_vars = (object)$_SESSION['dedalo'][$tool_name][$options->tipo];	
 		if (empty($tool_vars->tipo)) { // Same as $options->tipo
 			exit("Error. tipo is mandatory");
 		}
@@ -366,7 +366,7 @@ if ($mode=='delete_event_record') {
 	#
 	# Tool vars (fixed in cotroller)
 		$tool_name = 'tool_calendar';
-		$tool_vars = (object)$_SESSION['dedalo4'][$tool_name][$options->tipo];	
+		$tool_vars = (object)$_SESSION['dedalo'][$tool_name][$options->tipo];	
 		if (empty($tool_vars->tipo)) { // Same as $options->tipo
 			exit("Error. tipo is mandatory");
 		}

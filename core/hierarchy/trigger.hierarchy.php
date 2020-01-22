@@ -58,9 +58,9 @@ function generate_virtual_section($json_data) {
 
 		# Remove structure cache to reconize new structure sections
 		# Delete all session data config except search_options
-		foreach ($_SESSION['dedalo4']['config'] as $key => $value) {
+		foreach ($_SESSION['dedalo']['config'] as $key => $value) {
 			if ($key==='search_options') continue;
-			unset($_SESSION['dedalo4'][$key]);
+			unset($_SESSION['dedalo'][$key]);
 		}
 	}
 

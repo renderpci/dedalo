@@ -134,7 +134,7 @@ class section_records extends common {
 		#$search_options = json_encode($search_options, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES);
 		
 		# Session way
-		$_SESSION['dedalo4']['config']['search_options'][$search_options_id] = $search_options;
+		$_SESSION['dedalo']['config']['search_options'][$search_options_id] = $search_options;
 
 		#debug_log(__METHOD__." saved_search_options $search_options_id ------ : ".json_encode($search_options), logger::DEBUG);
 
@@ -152,7 +152,7 @@ class section_records extends common {
 	public static function get_search_options( $search_options_id ) {
 		
 		# Session way
-		$search_options = isset($_SESSION['dedalo4']['config']['search_options'][$search_options_id]) ? $_SESSION['dedalo4']['config']['search_options'][$search_options_id] : false;
+		$search_options = isset($_SESSION['dedalo']['config']['search_options'][$search_options_id]) ? $_SESSION['dedalo']['config']['search_options'][$search_options_id] : false;
 	#dump($search_options, ' search_options ++ '.to_string($search_options_id));
 		#if(!$search_options = json_decode($search_options)){ $search_options = false; }
 

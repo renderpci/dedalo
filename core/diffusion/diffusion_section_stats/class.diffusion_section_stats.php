@@ -206,9 +206,9 @@ class diffusion_section_stats extends diffusion {
 		$search_options_session_key = 'section_'.$options->section_tipo;
 
 		#SELECT THE SEARCH SESION FROM USER
-		if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+		if (!empty($_SESSION['dedalo']['config']['search_options'][$search_options_session_key])) {
 			
-			$options_search_sesion 	  = (object)$_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
+			$options_search_sesion 	  = (object)$_SESSION['dedalo']['config']['search_options'][$search_options_session_key];
 			$options_search_from_user = clone($options_search_sesion); // Important: clone session object
 		
 			$options_search_from_user->search_options_session_key 	= 'current_edit';

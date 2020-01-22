@@ -64,21 +64,21 @@
 
 						// Store resolved data
 							$ar_templates_mix = array_merge($ar_templates_public, $ar_templates_private);
-							$_SESSION['dedalo4']['config']['ar_templates_mix'] = $ar_templates_mix;
+							$_SESSION['dedalo']['config']['ar_templates_mix'] = $ar_templates_mix;
 
 					// Print_search_options fix
 						#$search_options_session_key = 'section_'.$tipo;
-						#if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+						#if (!isset($_SESSION['dedalo']['config']['search_options'][$search_options_session_key])) {
 						#	throw new Exception("Error Processing Request. current_section_search_options not found", 1);
 						#}
 						# Change some specific print options
-						#$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
+						#$print_search_options = clone($_SESSION['dedalo']['config']['search_options'][$search_options_session_key]);
 						#$print_search_options->limit = 1;
 						#	$print_search_options->modo  = 'list';
 							# layout map full with all section components
 						#	$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);
 						#	$print_search_options->layout_map = array($tipo => $ar_components);						
-						#	$_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo] = (object)$print_search_options;
+						#	$_SESSION['dedalo']['config']['ar_templates_search_options'][$tipo] = (object)$print_search_options;
 
 					// Build html
 						ob_start();
@@ -93,7 +93,7 @@
 				case 'edit': # Edit layout with drag and drop tools
 
 					# Verify vars set in previous step (context_name=list)
-					if( !isset($_SESSION['dedalo4']['config']['ar_templates_mix']) ||
+					if( !isset($_SESSION['dedalo']['config']['ar_templates_mix']) ||
 						!isset($_GET['template_tipo']) ||
 						!isset($_GET['template_id'])
 					  ) throw new Exception("Error Processing Request. Please, got to list and select one option", 1);
@@ -110,9 +110,9 @@
 					
 					// Section current search (Like oh1)
 						if(SHOW_DEBUG) {
-							#dump($_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object, '$_SESSION[search_options] ++ '.to_string());
+							#dump($_SESSION['dedalo']['config']['search_options'][$tipo]->search_query_object, '$_SESSION[search_options] ++ '.to_string());
 						}
-						$section_current_search_query_object = clone $_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object;
+						$section_current_search_query_object = clone $_SESSION['dedalo']['config']['search_options'][$tipo]->search_query_object;
 						// Prepare search_query_object for print purposes
 						$section_current_search_query_object->select 	 = [];
 						$section_current_search_query_object->full_count = false;
@@ -129,10 +129,10 @@
 						#}, (array)$ar_records);
 					/*	
 					# Is set in search::get_records_data. NOTE: Only contain records in last visualized list page
-					if (!isset($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo])) {
+					if (!isset($_SESSION['dedalo']['config']['ar_templates_search_options'][$tipo])) {
 						echo "Please select template"; return ;
 					}
-					$search_options = clone($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo]);
+					$search_options = clone($_SESSION['dedalo']['config']['ar_templates_search_options'][$tipo]);
 					$ar_records		= search::get_records_data($search_options);
 						$tool_layout_print_records = reset($ar_records->result);
 					*/
@@ -167,12 +167,12 @@
 					
 					$section_layout_tipo 	= (string)safe_tipo( safe_xss($_GET['template_tipo']) );
 					$section_layout_id 		= (string)safe_section_id( safe_xss($_GET['template_id']) );
-					$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
+					$ar_templates_mix 		= (array)$_SESSION['dedalo']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
 					
 					$array_key 	  = $section_layout_tipo .'_'. $section_layout_id;
-					if (isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {
+					if (isset($_SESSION['dedalo']['config']['ar_templates_mix'][$array_key])) {
 						// Existing template
-						$template_obj = clone($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key]);
+						$template_obj = clone($_SESSION['dedalo']['config']['ar_templates_mix'][$array_key]);
 					}else{
 						// New blank template
 						$ar_components_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_layout_tipo, 'component_layout', false); #Important cache false							
@@ -220,9 +220,9 @@
 					# INFO STATS
 					/*
 					$search_options_session_key = 'section_'.$tipo;
-					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) 
-						&& isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count)) {
-						$n_records = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count;
+					if (isset($_SESSION['dedalo']['config']['search_options'][$search_options_session_key]) 
+						&& isset($_SESSION['dedalo']['config']['search_options'][$search_options_session_key]->full_count)) {
+						$n_records = $_SESSION['dedalo']['config']['search_options'][$search_options_session_key]->full_count;
 					}
 					*/
 					$n_records 	= isset($n_records) ? $n_records : count($ar_records);
@@ -240,7 +240,7 @@
 				case 'render':
 
 					# Verify vars set in previous step (context_name=list)
-					if( !isset($_SESSION['dedalo4']['config']['ar_templates_mix']) ||
+					if( !isset($_SESSION['dedalo']['config']['ar_templates_mix']) ||
 						!isset($_GET['template_tipo']) ||
 						!isset($_GET['template_id'])
 					  ) throw new Exception("Error Processing Request. Please, got to list and select one option", 1);
@@ -258,11 +258,11 @@
 					# AR_RECORDS
 						/*
 						$search_options_session_key = 'section_'.$tipo;
-						if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+						if (!isset($_SESSION['dedalo']['config']['search_options'][$search_options_session_key])) {
 							echo "Please select template"; return ;
 						}
 						# Change some specific print options
-						$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);							
+						$print_search_options = clone($_SESSION['dedalo']['config']['search_options'][$search_options_session_key]);							
 							$print_search_options->modo = 'list';
 							$print_search_options->limit = false;
 							# layout map full with all section components
@@ -273,9 +273,9 @@
 						*/
 					// Section current search (Like oh1)
 						if(SHOW_DEBUG) {
-							#dump($_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object, '$_SESSION[search_options] ++ '.to_string());
+							#dump($_SESSION['dedalo']['config']['search_options'][$tipo]->search_query_object, '$_SESSION[search_options] ++ '.to_string());
 						}
-						$section_current_search_query_object = clone $_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object;
+						$section_current_search_query_object = clone $_SESSION['dedalo']['config']['search_options'][$tipo]->search_query_object;
 						// Prepare search_query_object for print purposes
 						$section_current_search_query_object->select 	 = [];
 						$section_current_search_query_object->full_count = false;
@@ -292,13 +292,13 @@
 					# TEMPLATE
 						$section_layout_tipo 	= (string)safe_xss($_GET['template_tipo']);
 						$section_layout_id 		= (string)safe_xss($_GET['template_id']);	
-						$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
+						$ar_templates_mix 		= (array)$_SESSION['dedalo']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
 						
 						$array_key = $section_layout_tipo .'_'. $section_layout_id;
-						if (!isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {							
+						if (!isset($_SESSION['dedalo']['config']['ar_templates_mix'][$array_key])) {							
 							throw new Exception("Error Processing Request. Not found ar_templates_mix ", 1);							
 						}
-						$template_obj 			= clone($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key]);					
+						$template_obj 			= clone($_SESSION['dedalo']['config']['ar_templates_mix'][$array_key]);					
 						$section_layout_label 	= isset($template_obj->label) ? $template_obj->label : '';
 						$component_layout_tipo 	= $template_obj->component_layout_tipo;
 
@@ -323,7 +323,7 @@
 						
 					#
 					# SAVE PAGES . Save html files to disk
-					$user_id 		 	= $_SESSION['dedalo4']['auth']['user_id'];
+					$user_id 		 	= $_SESSION['dedalo']['auth']['user_id'];
 					$print_files_path	= '/print/'.safe_tipo($tipo).'/'.safe_section_id($user_id);
 					$pages_html_temp 	= DEDALO_MEDIA_PATH . $print_files_path;
 					if(!file_exists($pages_html_temp)) mkdir($pages_html_temp, 0775,true);
