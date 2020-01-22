@@ -168,6 +168,21 @@ class component_media_common extends component_common {
 
 
 
+	/**
+	* PROCESS_UPLOADED_FILE
+	* Dummy method. Overwrite it when need
+	* @return object $response
+	*/
+	public function process_uploaded_file($file_data) {
+
+		$response = new stdClass();
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done';
+
+		return $response;
+	}//end process_uploaded_file
+
+
 
 
 }//end component_media_common
