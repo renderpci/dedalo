@@ -1,6 +1,11 @@
 <?php
 $start_time=microtime(1);
 include( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
+
+	// dump($_POST, ' _POST ++ '.to_string());
+	// dump(file_get_contents('php://input'), ' file_get_contents(php://input) ++ '.to_string());
+	// dump($_FILES, ' _FILES ++ '.to_string());
+
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 if (isset($_POST['mode']) && $_POST['mode']==='upload_file') {
 	// Note that no header('Content-Type: application/json; charset=utf-8') is applicated here (XMLHttpRequest POST)
@@ -74,7 +79,7 @@ function upload_file($json_data) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
 			// if ($name==='quality') continue; # Skip non mandatory
-			if (empty($$name)) {
+			if (empty($$name) || $$name==='undefined') {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
@@ -137,14 +142,22 @@ function upload_file($json_data) {
 				return $response;
 			}
 
+		// preview url. Usually the thumb image or posterframe
+			$preview_url = $component->get_preview_url();
+
 
 	// all is ok
-		$response->result 	= true;
-		$response->msg 		= 'Ok. '.label::get_label('fichero_subido_con_exito');
+		$response->result 		= true;
+		$response->preview_url 	= $preview_url;
+		$response->msg 			= 'Ok. '.label::get_label('fichero_subido_con_exito');
 
 
 	# Debug
 	if(SHOW_DEBUG===true) {
+
+		// $response->msg .= '<pre>'.json_encode($add_file, JSON_PRETTY_PRINT).'</pre>';
+		// $response->msg .= '<pre>'.json_encode($process_file, JSON_PRETTY_PRINT).'</pre>';
+
 		$debug = new stdClass();
 			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 			foreach($vars as $name) {
