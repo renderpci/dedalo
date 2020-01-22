@@ -33,7 +33,8 @@ class component_json extends component_common {
 
 		// De-Compress dato 
 		#if(!empty($dato)) $dato = json_decode( base64_encode($dato) );
-		$dato = json_decode($dato);
+		//$dato = json_decode($dato);
+		
 		#$dato = unserialize($dato);
 		#dump($dato, ' dato ++ '.to_string());
 
@@ -68,7 +69,8 @@ class component_json extends component_common {
 		}
 
 		// Compress dato to avoid postgresql change index order
-		$dato = json_encode($dato);
+		
+		//$dato = json_encode($dato);
 		#$dato = serialize($dato);
 		//error_log( print_r($dato, true) );
 		
@@ -83,12 +85,61 @@ class component_json extends component_common {
 	*/
 	public function get_valor() {
 		$dato  = $this->get_dato();
-		$valor = json_encode($dato);
+		//$valor = json_encode($dato);
 
 		return $valor;
 	}//end get_valor
 
 
+
+
+/**
+	* UPDATE_DATO_VERSION
+	* @return
+	*/
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+
+
+		$update_version = implode(".", $update_version);
+
+		switch ($update_version) {
+			
+			case '6.0.0':
+
+				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
+
+					$new_dato = json_decode($dato_unchanged);
+				
+					$response = new stdClass();
+					$response->result = 1;
+					$response->new_dato = $new_dato;
+					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					return $response;
+
+				}else{
+					$response = new stdClass();
+					$response->result = 2;
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					return $response;
+				}
+				break;
+		}
+	}
 
 };//end class
 ?>
