@@ -23,7 +23,7 @@
 			default:
 				$current_context = $this->get_structure_context($permissions);
 
-				// allowed_extensions
+				// append additional info
 					$current_context->allowed_extensions 	 = $this->get_allowed_extensions();
 					$current_context->default_target_quality = $this->get_original_quality();
 

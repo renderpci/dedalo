@@ -46,7 +46,7 @@ export const component_image = function(){
 // prototypes assign
 	// lifecycle
 	component_image.prototype.init 	 			= component_common.prototype.init
-	// component_image.prototype.build 	 		= component_common.prototype.build
+	component_image.prototype.build 	 		= component_common.prototype.build
 	component_image.prototype.render 			= common.prototype.render
 	component_image.prototype.refresh 			= common.prototype.refresh
 	component_image.prototype.destroy 	 		= common.prototype.destroy
@@ -63,22 +63,22 @@ export const component_image = function(){
 
 
 
-/**
-* BUILD
-*/
-component_image.prototype.build = async function(autoload=false) {
+// /**
+// * BUILD
+// */
+// component_image.prototype.build = async function(autoload=false) {
 
-	const self = this
+// 	const self = this
 
-	// call generic component commom build
-		const common_build = component_common.prototype.build.call(this, autoload);
+// 	// call generic component commom build
+// 		const common_build = component_common.prototype.build.call(this, autoload);
 
-	// fix useful vars
-		self.allowed_extensions 	= self.context.allowed_extensions
-		self.default_target_quality = self.context.default_target_quality
+// 	// fix useful vars
+// 		// self.allowed_extensions 	= self.context.allowed_extensions
+// 		// self.default_target_quality = self.context.default_target_quality
 
 
-	return common_build
-}//end build_custom
+// 	return common_build
+// }//end build_custom
 
 
