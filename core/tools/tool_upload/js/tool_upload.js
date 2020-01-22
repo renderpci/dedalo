@@ -132,29 +132,6 @@ const get_system_info = async function(self) {
 
 
 
-// /**
-// * FILE_SELECTED
-// */
-// tool_upload.prototype.file_selected = function(file, content_data) {
-
-// 	const self = this
-
-// 	// check max file size
-// 		const file_size_bytes = file.size
-// 		if (file_size_bytes>self.max_size_bytes) {
-// 			alert("Error. File is too big. Max file size is " + Math.floor(self.max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024)));
-// 			return false
-// 		}
-
-
-// 	// exec upload_file
-// 		self.upload_file(file, content_data)
-
-// 	return true
-// }//end file_selected
-
-
-
 /**
 * UPLOAD_FILE
 */
