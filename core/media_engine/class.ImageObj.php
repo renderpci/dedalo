@@ -189,14 +189,16 @@ class ImageObj extends MediaObj {
 	public function get_image_dimensions() {
 
 		if($this->external_source){
-			$filename = $this->external_source;
+
+			$filename 		= $this->external_source;
+
 		}else{
 
-			$image_id 	= $this->image_id;
-			$quality 	= $this->quality;
+			$image_id 		= $this->image_id;
+			$quality 		= $this->quality;
 			$media_path_abs = $this->media_path_abs;
 
-			$filename 	= $media_path_abs . $image_id .'.'. DEDALO_IMAGE_EXTENSION ;
+			$filename 	= $media_path_abs .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
 		}
 
 		if ( !file_exists( $filename )) {
@@ -224,8 +226,11 @@ class ImageObj extends MediaObj {
 	* GET_IMAGE_WIDTH
 	*/
 	public function get_image_width() {
+
 		$ar_info = $this->get_image_dimensions();
 		if(isset($ar_info[0])) return $ar_info[0];
+
+		return false;
 	}//end get_image_width
 
 
@@ -234,8 +239,11 @@ class ImageObj extends MediaObj {
 	* GET_IMAGE_HEIGHT
 	*/
 	public function get_image_height() {
+
 		$ar_info = $this->get_image_dimensions();
 		if(isset($ar_info[1])) return $ar_info[1];
+
+		return false;
 	}//end get_image_height
 
 
@@ -280,33 +288,45 @@ class ImageObj extends MediaObj {
 
 	/**
 	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
+	* @return array $result
 	*/
 	public static function get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality) {
 
-		if($source_pixels_width==0 || $source_pixels_height==0) return null;
+		// check valid pixels
+			if((int)$source_pixels_width===0 || (int)$source_pixels_height===0) {
+				debug_log(__METHOD__." Invalid pixes received. source_pixels_width: '$source_pixels_width' , source_pixels_height: '$source_pixels_height' , target_quality: '$target_quality'  ".to_string(), logger::ERROR);
+				return null;
+			}
 
-		# THUMBS. Para generar thumbs, las medidas son fijas
-		if($target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
-			return array($width=102,$height=57);	# Original 102x57
-		}
+		// thumbs. To generate thumbs, the measurements are fixed
+			if($target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
+				# Default 102x57
+				$result = [
+					DEDALO_IMAGE_THUMB_WIDTH,
+					DEDALO_IMAGE_THUMB_HEIGHT
+				];
 
-		# Verificamos si la calidad recibida es convertible a número.
+		// others. Calculated
+			}else{
 
-		# APROXIMACION ALEX
-			# ratio
-			$source_ratio = $source_pixels_width / $source_pixels_height ;
-				#dump($source_ratio,'$source_ratio');
+				// ratio
+					$source_ratio = (int)$source_pixels_width / (int)$source_pixels_height;
+				// target megabytes
+					$target_megabytes = component_image::convert_quality_to_megabytes($target_quality) * 350000;
+				// height
+					$height = $target_megabytes / $source_ratio;
+					$height = intval(sqrt($height));
+				// width
+					$width = round($height * $source_ratio);
 
-			$target_megabytes 	= component_image::convert_quality_to_megabytes($target_quality) * 350000;
-				#dump($target_megabytes ,"target_megabytes for $target_quality");
-			$height = $target_megabytes / $source_ratio ;
-			$height = intval(sqrt($height));
+				$result = [
+					$width,
+					$height
+				];
+			}
 
-			$width = round($height * $source_ratio) ;
 
-			$result = array($width,$height);
-
-			return $result;
+		return $result;
 	}//end get_target_pixels_to_quality_conversion
 
 
