@@ -87,10 +87,27 @@ class activity_v5_to_v6 {
 
 
 			// date dd547 (converts timestamp to dd_date)
-				$date_dato = $dato->components->dd545->dato->{DEDALO_DATA_NOLAN} ?? null;
+				$date_dato = $dato->components->dd547->dato->{DEDALO_DATA_NOLAN} ?? null;
+				if (!empty($activity_what_dato) && is_string($date_dato)) {
+					$dd_date    = new dd_date();
+					$new_dd_date 	= (object)$dd_date->get_date_from_timestamp( $date_dato );
+
+					$new_date = component_date::add_time($new_dd_date);
+
+					$conversion = new stdClass();
+						$conversion->start = $new_date;
+							
+					$new_dato = [$conversion];
+
+					$dato->components->dd547->dato->{DEDALO_DATA_NOLAN} = $new_dato;
+				}
 
 
 			// json dd551
+				$activity_ip_dato = $dato->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? "";
+				if (!is_array($activity_ip_dato)) {
+					$dato->components->dd551->dato->{DEDALO_DATA_NOLAN} = [$activity_ip_dato]; // same dato but as array
+				}
 
 
 		}
