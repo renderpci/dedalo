@@ -771,6 +771,21 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_ORIGINAL_QUALITY
+	* @return array $original_quality
+	*/
+	public function get_original_quality() {
+
+		$original_quality = defined('DEDALO_AV_QUALITY_ORIGINAL')
+			? DEDALO_AV_QUALITY_ORIGINAL
+			: DEDALO_AV_QUALITY_DEFAULT;
+
+		return $original_quality;
+	}//end get_original_quality
+
+
+
+	/**
 	* MOVE_ZIP_FILE
 	* Used to move zip files like compressed dvd
 	* @return object $response
@@ -848,6 +863,171 @@ class component_av extends component_media_common {
 
 		return $response;
 	}//end move_zip_file
+
+
+
+	/**
+	* GET_PREVIEW_URL
+	* @return string $url
+	*/
+	public function get_preview_url() {
+
+		$preview_url = $this->get_posterframe_url($test_file=true, $absolute=false, $avoid_cache=false);
+
+		return $preview_url;
+	}//end get_preview_url
+
+
+
+	/**
+	* PROCESS_UPLOADED_FILE
+	* @param object $file_data
+	*	Data from trigger upload file
+	* @return object $response
+	*/
+	public function process_uploaded_file($file_data) {
+	dump($file_data, ' file_data ++ '.to_string()); die();
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// vars
+			$original_file_name = $file_data->original_file_name; 	// kike "my video785.mp4"
+			$full_file_name 	= $file_data->full_file_name;		// like "test175_test65_1.mp4"
+			$full_file_path 	= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
+
+
+		#
+		# EXTENSION
+		$file_name 	= pathinfo($this->file_obj->uploaded_file_path, PATHINFO_BASENAME);
+		$file_ext 	= pathinfo($this->file_obj->uploaded_file_path, PATHINFO_EXTENSION);
+		if (empty($file_ext)) {
+			throw new Exception("Error Processing Request. File extension is unknow", 1);
+		}
+		if(SHOW_DEBUG) {
+			#dump($file_ext, ' uploaded_file_path');;
+		}
+
+		$AVObj = new AVObj($SID, $quality);
+
+		#
+		# NOTE: VAR QUALITY IF THE QUALITY SELECTED WHEN USER LOAD UPLOAD TOOL. BY DEFAULT IS ORIGINAL
+		#
+
+		#
+		# AUDIO CASE
+		if ($quality==='audio') {
+			# AUDIO Extensions supported
+			$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
+			if (in_array($file_ext, $ar_audio_only_ext)) {
+				# Audio conversion
+				$Ffmpeg = new Ffmpeg();
+				$Ffmpeg->convert_audio($AVObj, $this->file_obj->uploaded_file_path);
+			}else{
+				throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)", 1);
+			}
+		#
+		# VIDEO CASE
+		}else{
+
+			#
+			# DEDALO_AV_RECOMPRESS_ALL
+			# When config DEDALO_AV_RECOMPRESS_ALL is set to 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
+			if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
+
+				debug_log(__METHOD__." RECOMPRESSING AV PLEASE WAIT.. ".to_string(), logger::DEBUG);
+
+				# If default quality file not exists, generate default quality version now
+				# $target_file  = $AVObj->get_local_full_path(); ???????????????????????????????? SURE ???????
+				$AVObj_target = new AVObj($SID, DEDALO_AV_QUALITY_DEFAULT);
+				$target_file  = $AVObj_target->get_local_full_path();
+				if (!file_exists($target_file)) {
+					$source_file = $this->file_obj->uploaded_file_path;
+					if (!file_exists($source_file)) {
+						debug_log(__METHOD__." ERROR: Source file not exists ($source_file) ".to_string(), logger::WARNING);
+					}
+					/*
+					$source_file2= $source_file.'_original.'.$file_ext;
+					if( !rename($source_file, $source_file2) ) {
+						throw new Exception("Error Processing Request. File $source_file access denied", 1);
+					}
+					*/
+
+					Ffmpeg::convert_to_dedalo_av( $source_file, $target_file );
+					if(SHOW_DEBUG) {
+						#dump($command, ' command');
+					}
+				}//end if (!file_exists($target_file)) {
+			}
+
+			#
+			# POSTERFRAME
+			# Create posterframe of current video if not exists
+			$PosterFrameObj = new PosterFrameObj($SID);
+			if(Ffmpeg::get_ffmpeg_installed_path() && !$PosterFrameObj->get_file_exists()) {
+				$timecode = '00:00:05';
+				$Ffmpeg = new Ffmpeg();
+				$Ffmpeg->create_posterframe($AVObj, $timecode);
+			}
+
+			#
+			# CONFORM HEADERS
+			# Apply qt-faststart to optimize file headers position
+			#$Ffmpeg = new Ffmpeg();
+			#$Ffmpeg->conform_header($AVObj);
+
+
+		}//end if ($quality=='audio') {
+
+
+		#
+		# AUDIO FILES
+		# Audio files generate always a audio file
+		if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
+			$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
+			if (in_array($file_ext, $ar_audio_only_ext)) {
+
+				# Audio conversion
+				$AVObj_target = new AVObj($SID, 'audio');
+				$target_file  = $AVObj_target->get_local_full_path();
+				if (!file_exists($target_file)) {
+					$source_file = $this->file_obj->uploaded_file_path;
+					if (!file_exists($source_file)) {
+						debug_log(__METHOD__." ERROR: Source file not exists ($source_file) 2 ".to_string(), logger::WARNING);
+					}
+					Ffmpeg::convert_to_dedalo_av( $source_file, $target_file );
+					debug_log(__METHOD__." Converted source audio file to 'audio' quality ".to_string(), logger::DEBUG);
+				}//end if (!file_exists($target_file)) {
+
+			}else{
+				#throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality) (2)", 1);
+			}
+		}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
+
+
+		#
+		# TARGET_FILENAME
+		# Save original file name in a component_input_text
+		$propiedades 		 = $this->component_obj->get_propiedades();
+		$current_section_id  = $this->component_obj->get_parent();
+		$target_section_tipo = $this->component_obj->get_section_tipo();
+		$file_name 			 = $this->file_obj->f_name;	//pathinfo($this->file_obj->f_name, PATHINFO_BASENAME);
+
+		if (isset($propiedades->target_filename)) {
+			$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
+			$component_target_filename 	= component_common::get_instance(
+																$modelo_name_target_filename,
+																$propiedades->target_filename,
+																$current_section_id,
+																'edit',
+																DEDALO_DATA_NOLAN,
+																$target_section_tipo
+																);
+			$component_target_filename->set_dato( $file_name );
+			$component_target_filename->Save();
+			debug_log(__METHOD__." Saved original filename: ".to_string($file_name), logger::DEBUG);
+		}
+	}//end process_uploaded_file
 
 
 
