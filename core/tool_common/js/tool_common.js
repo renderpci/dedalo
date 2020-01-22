@@ -102,8 +102,11 @@ tool_common.prototype.build = async function(autoload=false) {
 				const data 					= api_response.result.data
 
 				self.config 		= data.find(item => item.section_id===self.tool_section_id && item.tipo==='dd1353').value; 	console.log("self.config:",self.config);
-				self.label 			= self.config.label.find(item => item.lang===self.lang).value
-				self.description 	= self.config.description.find(item => item.lang===self.lang).value
+				const label 		= self.config.label.find(item => item.lang===self.lang);
+				self.label 			= typeof label!=='undefined' ? label.value : self.model
+				const description	= self.config.description.find(item => item.lang===self.lang)
+				self.description 	= typeof description!=='undefined' ? description.value : null
+
 
 			// debug
 				if(SHOW_DEBUG===true) {
