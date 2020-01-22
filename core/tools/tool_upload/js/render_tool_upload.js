@@ -109,25 +109,42 @@ const get_content_data = async function(self) {
 			parent 			: form
 		})
 		input.addEventListener("change", function(e){
-			self.upload_file(e, content_data)
+			const file = this.files[0]
+			self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 		})
 
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'label',
 			for 			: 'file_to_upload',
-			text_content 	: get_label['seleccione_el_fichero_a_subir'] || 'Select a file to upload',
+			text_content 	: get_label.seleccione_un_fichero || 'Select a file to upload',
 			parent 			: form
 		})
 
-	// progress bar
-		fragment.appendChild( get_progress_bar(self) )
+	// progress_bar_container
+		const progress_bar_container = get_progress_bar(self)
+		fragment.appendChild(progress_bar_container)
 
 	// response_container
 		const response_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'response_container',
 			parent 			: fragment
+		})
+		// response_msg
+		const response_msg = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response_msg',
+			parent 			: response_container
+		})
+		// preview_image
+		const preview_image = ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'preview_image',
+			parent 			: response_container
+		})
+		preview_image.addEventListener("click", function(e){
+			window.open(this.src)
 		})
 
 	// info
@@ -150,11 +167,10 @@ const get_content_data = async function(self) {
 			inner_html	 	: '<label>Target quality</label>' + self.caller.context.default_target_quality,
 			parent 			: info
 		})
-			console.log("self.caller.context:",self.caller.context.default_target_quality);
 		// allowed extensions
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>Allowed extensions</label>' + self.caller.allowed_extensions.join(", "),
+			inner_html	 	: '<label>Allowed extensions</label>' + self.caller.context.allowed_extensions.join(", "),
 			parent 			: info
 		})
 		// max upload file size
@@ -212,61 +228,42 @@ const get_content_data = async function(self) {
 
 
 
-
-
-
-
 /**
 * GET_PROGRESS_BAR
 */
 const get_progress_bar = function(self) {
 
-	var intervalTimer = 0;
-
-	// progress bar
-		const progressIndicator = ui.create_dom_element({
+	// progress_bar_container
+		const progress_bar_container = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'progressIndicator'
+			class_name		: 'progress_bar_container'
 		})
 
-	// progress bar elements
-		const progressNumber = ui.create_dom_element({
+		// progress_info
+		const progress_info = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'progressNumber',
-			parent 			: progressIndicator
-		})
-		const progressBar = ui.create_dom_element({
-			element_type	: 'div',
-			id 				: 'progressBar',
-			parent 			: progressIndicator
-		})
-		const transferSpeedInfo = ui.create_dom_element({
-			element_type	: 'div',
-			id 				: 'transferSpeedInfo',
-			parent 			: progressIndicator
-		})
-		const timeRemainingInfo = ui.create_dom_element({
-			element_type	: 'div',
-			id 				: 'timeRemainingInfo',
-			parent 			: progressIndicator
-		})
-		const transferBytesInfo = ui.create_dom_element({
-			element_type	: 'div',
-			id 				: 'transferBytesInfo',
-			parent 			: progressIndicator
+			class_name		: 'progress_info',
+			parent 			: progress_bar_container
 		})
 
+		// progress_line
+		const progress_line = ui.create_dom_element({
+			element_type	: 'progress',
+			class_name		: 'progress_line',
+			parent 			: progress_bar_container
+		})
+		progress_line.max   = 100;
+		progress_line.value = 0;
 
-	return progressIndicator
+
+	return progress_bar_container
 }//end get_progress_bar
-
-
 
 
 
 /**
 * ADD_COMPONENT
-*/
+
 export const add_component = async (self, component_container, value) => {
 
 	// user select blank value case
@@ -288,7 +285,7 @@ export const add_component = async (self, component_container, value) => {
 
 	return true
 }//end add_component
-
+*/
 
 
 
