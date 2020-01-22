@@ -21,8 +21,12 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium = 1;
 	$updates->$v->update_from_minor  = 4;
 
+
+# UPDATE COMPONENTS
+		$updates->$v->components_update = ['component_json'];	// Force convert from string to array
+
+
 # DATABASE UPDATES
-	/*
 	// alter the null option of the parent colum in jer_dd (NULL is now allowed)
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			ALTER TABLE \"jer_dd\"
@@ -45,16 +49,14 @@ $updates->$v = new stdClass();
 
 		DROP INDEX IF EXISTS \"matrix_tools_expr_idx3\", \"matrix_tools_expr_idx2\", \"matrix_tools_expr_idx1\", \"matrix_tools_expr_idx\", \"matrix_tools_id_idx1\";
 		");
-	*/
+	
 	// drop the old matrix_stat
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			DROP TABLE IF EXISTS \"matrix_stat\" CASCADE;
 		");
 
-	# UPDATE COMPONENTS
-		//$updates->$v->components_update = ['component_security_access'];	// Force convert from string to array
 
-# DATABASE UPDATES
+# DATA INSIDE DATABASE UPDATES
 	require_once( dirname(dirname(__FILE__)) .'/upgrade/class.security_v5_to_v6.php');
 
 	# Update datos to section_data
