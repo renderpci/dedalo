@@ -255,6 +255,24 @@ const content_data_edit = async function(self) {
 
 	fragment.appendChild(video)
 
+	// buttons container
+		const buttons_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'buttons_container',
+			parent 			: fragment
+		})
+
+	// tools
+		if (!ui.inside_tool(self)) {
+			const tools 		= self.tools
+			const tools_length 	= tools.length
+
+			for (let i = 0; i < tools_length; i++) {
+				if(tools[i].show_in_component){
+					buttons_container.appendChild( ui.tool.build_tool_button(tools[i], self) );
+				}
+			}
+		}
 
 	// content_data
 		const content_data = document.createElement("div")
