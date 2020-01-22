@@ -645,6 +645,7 @@ class component_pdf extends component_media_common {
 	}//end get_allowed_extensions
 
 
+
 	/**
 	* GET_ORIGINAL_QUALITY
 	* @return $original_quality
@@ -659,4 +660,18 @@ class component_pdf extends component_media_common {
 	}//end get_original_quality
 
 
-}
+
+	/**
+	* GET_PREVIEW_URL
+	* @return string $url
+	*/
+	public function get_preview_url() {
+
+		$preview_url = DEDALO_CORE_URL . '/themes/default/icons/file-pdf-o.svg';
+
+		return $preview_url;
+	}//end get_preview_url
+
+
+
+}//end class
