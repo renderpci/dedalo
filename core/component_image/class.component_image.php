@@ -1294,4 +1294,18 @@ class component_image extends component_media_common {
 
 
 
+	/**
+	* GET_PREVIEW_URL
+	* @return string $url
+	*/
+	public function get_preview_url() {
+
+		// $preview_url = $this->get_thumb_url();
+		$preview_url = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT, $test_file=true, $absolute=false, $default_add=false);
+
+		return $preview_url;
+	}//end get_preview_url
+
+
+
 }//end class
