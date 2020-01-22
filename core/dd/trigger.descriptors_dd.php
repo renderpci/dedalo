@@ -101,17 +101,17 @@ if($mode=='saveDescriptor') {
 
 
 # EXPORT_ONTOLOGY
-if($mode=='export_ontology') {
+if($mode==='export_ontology') {
 
-	session_write_close();
+	// session_write_close();
 
 	if(empty($terminoID)) die(" Error. Need more data! terminoID:$terminoID ");
 
-	include(dirname(__FILE__) . '/class.ontology.php');
+	// include(dirname(__FILE__) . '/class.ontology.php');
 
 	$response = ontology::export($terminoID);
 
-	echo json_encode($response, JSON_UNESCAPED_UNICODE);
+	echo json_encode($response, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 	exit();
 }//end export_ontology
 
