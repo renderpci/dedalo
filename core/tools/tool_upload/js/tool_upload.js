@@ -141,7 +141,7 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 
 	// check file extension
 		const allowed_extensions = self.caller.context.allowed_extensions
-		const file_extension 	 = file.name.split('.').pop()
+		const file_extension 	 = file.name.split('.').pop().toLowerCase();
 		if (!allowed_extensions.includes(file_extension)) {
 			alert( get_label.extension_no_valida + ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions) );
 			return false
@@ -157,6 +157,10 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 	// elemenmts
 		const progress_info = progress_bar_container.querySelector('.progress_info')
 		const progress_line = progress_bar_container.querySelector('.progress_line')
+		const filedrag 		= content_data.querySelector('.filedrag')
+
+	// hide filedrag
+		filedrag.classList.add("loading_file")
 
 	// FormData build
 		const fd = new FormData();
@@ -222,6 +226,9 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 					preview_image.src = response.preview_url + '?' + (new Date().getTime())
 				}
 
+			// show filedrag
+				filedrag.classList.remove("loading_file")
+
 			// refresh component
 				self.caller.refresh().then((refresh_reponse)=>{
 
@@ -274,5 +281,13 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 
 	return true
 }//end upload_file
+
+
+
+
+
+
+
+
 
 
