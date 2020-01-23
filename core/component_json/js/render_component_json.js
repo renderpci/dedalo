@@ -60,12 +60,8 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 
 	const self = this
 
-		console.log("self.data:",self.data);
-
-
 	// fix non value scenarios
 		self.data.value = (!self.data.value || self.data.value.length<1) ? [null] : self.data.value
-
 
 	const render_level 	= options.render_level
 
@@ -151,8 +147,6 @@ const add_events = function(self, wrapper) {
 
 
 
-
-
 	return true
 }//end add_events
 
@@ -177,11 +171,14 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value = value//(value.length<1) ? [''] : value
+		const inputs_value = value
 		const value_length = inputs_value.length
+		if (value_length>1) {
+			console.warn("More than one value in component_json is not allowed at now. Ignored next values. N values: ",value_length);
+		}
 		for (let i = 0; i < value_length; i++) {
 			get_input_element(i, inputs_value[i], inputs_container, self)
-			break; // only one is used
+			break; // only one is used for the time being
 		}
 
 	// buttons container
@@ -203,7 +200,7 @@ const get_content_data_edit = async function(self) {
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
