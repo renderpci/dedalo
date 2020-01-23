@@ -5,6 +5,7 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -217,6 +218,36 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 			class_name		: 'buttons',
 			parent 			: fragment
 		})
+
+	// button_new section
+		const button_new = ui.button.build_button({
+			class_name 	: "new",
+			label 		: get_label.nuevo || "New"
+		})
+		button_new.addEventListener('click', async (e) => {
+			e.stopPropagation()
+
+			// data_manager
+			const api_response = await data_manager.prototype.request({
+				body : {
+					action 		: 'create',
+					section_tipo: self.section_tipo
+				}
+			})
+			if (api_response.result && api_response.result>0) {
+				// launch event 'user_action' tha page is watching
+				event_manager.publish('user_action', {
+					tipo 			 : self.tipo,
+					mode 			 : self.mode,
+					section_id		 : api_response.result
+				})
+			}
+
+		})
+		buttons.appendChild(button_new)
+
+
+
 
 	// filter node
 		const filter = ui.create_dom_element({
