@@ -31,7 +31,7 @@ abstract class backup {
 
 		try {
 			# NAME : File name formated as date . (One hour resolution)
-			# $user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';
+			# $user_id 		= isset($_SESSION['dedalo']['auth']['user_id']) ? $_SESSION['dedalo']['auth']['user_id'] : '';
 			$ar_dd_data_version = get_current_version_in_db();
 			if($skip_backup_time_range===true) {
 				$db_name	= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version);
@@ -1395,8 +1395,8 @@ abstract class backup {
 			$response->result 	= false;
 			$response->msg 		= '';
 
-		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
-		$username = $_SESSION['dedalo4']['auth']['username'];
+		$user_id  = $_SESSION['dedalo']['auth']['user_id'];
+		$username = $_SESSION['dedalo']['auth']['username'];
 
 		$response = backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
 		#debug_log(__METHOD__."  backup_info: $response->msg ".to_string(), logger::DEBUG);

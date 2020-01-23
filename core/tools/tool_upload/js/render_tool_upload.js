@@ -101,6 +101,7 @@ const get_content_data = async function(self) {
 		form.enctype 	= 'multipart/form-data'
 		form.method 	= 'post'
 
+
 	// input
 		const input = ui.create_dom_element({
 			element_type	: 'input',
@@ -113,11 +114,66 @@ const get_content_data = async function(self) {
 			self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 		})
 
-	// label
-		const label = ui.create_dom_element({
+	// filedrag label
+		const filedrag = ui.create_dom_element({
 			element_type	: 'label',
-			for 			: 'file_to_upload',
-			text_content 	: get_label.seleccione_un_fichero || 'Select a file to upload',
+			class_name 		: 'filedrag',
+			// text_content 	: 'Select a file to upload or drop it here', // get_label.seleccione_un_fichero ||
+			parent 			: form
+		})
+		filedrag.setAttribute("for",'file_to_upload')
+		filedrag.addEventListener("dragover", file_drag_hover, false);
+		filedrag.addEventListener("dragleave", file_drag_hover, false);
+		filedrag.addEventListener("drop", function(e){
+
+			// cancel event and hover styling
+			file_drag_hover(e);
+
+			// fetch FileList object
+			const files = e.target.files || e.dataTransfer.files;
+
+			// process all File objects
+			for (let i = 0; i < files.length; i++) {
+
+				const file = files[i]
+
+				// parse file info
+				// parse_local_file(file);
+
+				// upload
+				self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
+
+				break; // only one is allowed
+			}
+		})
+		// label icon
+		ui.create_dom_element({
+			element_type	: 'img',
+			src				: DEDALO_CORE_URL + '/tools/tool_upload/img/icon.svg',
+			parent 			: filedrag
+		})
+		// label text
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: '',
+			text_content 	: 'Select or drop a file it here',
+			parent 			: filedrag
+		})
+
+	// filedrag
+		// const filedrag = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'filedrag',
+		// 	text_content 	: 'or drop a file here',
+		// 	parent 			: form
+		// })
+
+
+	// file_info
+		const file_info = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'file_info',
+			text_content 	: '',
 			parent 			: form
 		})
 
@@ -262,30 +318,96 @@ const get_progress_bar = function(self) {
 
 
 /**
-* ADD_COMPONENT
+* FILE_DRAG_HOVER
+*/
+const file_drag_hover = function(e) {
+	e.stopPropagation();
+	e.preventDefault();
 
-export const add_component = async (self, component_container, value) => {
-
-	// user select blank value case
-		if (!value) {
-			while (component_container.firstChild) {
-				// remove node from dom (not component instance)
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
-		}
-
-	const component = await self.load_component(value)
-	const node = await component.render()
-
-	while (component_container.firstChild) {
-		component_container.removeChild(component_container.firstChild)
+	if (e.type==="dragover") {
+		e.target.classList.add("hover")
+	}else{
+		e.target.classList.remove("hover")
 	}
-	component_container.appendChild(node)
 
 	return true
-}//end add_component
+}//end file_drag_hover
+
+
+
+/**
+* FILE_SELECT_HANDLER
 */
+const file_select_handler = function(e) {
+
+	// cancel event and hover styling
+	file_drag_hover(e);
+
+	// fetch FileList object
+	const files = e.target.files || e.dataTransfer.files;
+
+	// process all File objects
+	for (let i = 0; i < files.length; i++) {
+
+		const file = files[i]
+
+		// parse file info
+		// parse_local_file(file);
+
+		// upload
+		self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
+
+		break; // only one is allowed
+	}
+
+	return true
+}//end file_select_handler
+
+
+// Removed for the time being (!)
+// // output information
+// function msg_output(msg) {
+// 	// file_info.innerHTML = msg + file_info.innerHTML;
+// 	file_info.innerHTML += msg;
+// }
+
+// // output file information
+// function parse_local_file(file) {
+
+// 	msg_output(
+// 		"<div><span>Name:</span> <strong>" + file.name + "</strong></div>" +
+// 		"<div><span>Type:</span> <strong>" + file.type + "</strong></div>" +
+// 		"<div><span>Size:</span> <strong>" + parseInt(file.size/1024) + "</strong> Kbytes</div>"
+// 	);
+
+// 	// display an image
+// 	if (file.type.indexOf("image") == 0) {
+// 		var reader = new FileReader();
+// 		reader.onload = function(e) {
+// 			msg_output(
+// 				'<div><img src="' + e.target.result + '" /></div>'
+// 			);
+// 		}
+// 		reader.readAsDataURL(file);
+// 	}
+
+// 	// display text
+// 	if (file.type.indexOf("text") == 0) {
+// 		var reader = new FileReader();
+// 		reader.onload = function(e) {
+// 			msg_output(
+// 				"<p><strong>" + file.name + ":</strong></p><pre>" +
+// 				e.target.result.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+// 				"</pre>"
+// 			);
+// 		}
+// 		reader.readAsText(file);
+// 	}
+
+// 	return true
+// }//end parse_local_file
+
+
 
 
 
