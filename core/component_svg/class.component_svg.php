@@ -7,6 +7,7 @@
 class component_svg extends component_media_common {
 
 
+	public $quality;
 
 	/**
 	* GET VALOR
@@ -203,15 +204,30 @@ class component_svg extends component_media_common {
 
 
 	/**
+	* GET QUALITY
+	*/
+	public function get_quality() {
+		if(!isset($this->quality))	return DEDALO_SVG_QUALITY_DEFAULT;
+
+		return $this->quality;
+	}
+
+
+
+	/**
 	* GET_FILE_PATH
 	* @return string $file_path
 	*/
 	public function get_file_path() {
 
+		if(!$this->quality) {
+			$this->quality = $this->get_quality();
+		}
+
 		$aditional_path = $this->get_aditional_path();
 
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . $this->quality . $aditional_path . '/' . $file_name;
 
 		return $file_path;
 	}//end get_file_path
@@ -224,9 +240,14 @@ class component_svg extends component_media_common {
 	*/
 	public function get_target_dir() {
 
-		$aditional_path = $this->get_aditional_path();
+		if(!$this->quality) {
+			$this->quality = $this->get_quality();
+		}
 
-		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $aditional_path;
+		$aditional_path 	= $this->get_aditional_path();
+		$initial_media_path = $this->get_initial_media_path();
+
+		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $this->initial_media_path. '/' . $this->quality . $aditional_path . '/';
 
 		return $target_dir;
 	}//end get_target_dir
@@ -280,17 +301,22 @@ class component_svg extends component_media_common {
 	*/
 	public function get_url($quality=false, $test_file=true, $absolute=false, $default_add=true) {
 
+		// quality fallback to default
+			if(!$quality) $quality = $this->get_quality();
+
 		// image id
 			$image_id 	= $this->get_svg_id();
 
 		// url
-			$aditional_path = $this->get_aditional_path();
-			$file_name 		= $image_id .'.'. DEDALO_SVG_EXTENSION;
-			$image_url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
-
+			$aditional_path 	= $this->get_aditional_path();
+			$initial_media_path = $this->get_initial_media_path();
+			$file_name 			= $image_id .'.'. DEDALO_SVG_EXTENSION;
+			$image_url 			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $aditional_path . '/' . $file_name;
+			
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
 				$file = $this->get_file_path();
+
 				if(!file_exists($file)) {
 					if ($default_add===false) {
 						return false;
