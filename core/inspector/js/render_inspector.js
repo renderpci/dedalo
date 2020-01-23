@@ -160,6 +160,18 @@ const content_data = async function(self) {
 			parent 			: content_data
 		})
 
+	// data_link
+		const data_link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'data_link',
+			text_content 	: 'DATA LINK',
+			parent 			: content_data
+		})
+		data_link.addEventListener("click", (e)=>{
+			e.preventDefault()
+			window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
+		})
+
 
 
 	return content_data
