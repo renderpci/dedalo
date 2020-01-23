@@ -546,6 +546,7 @@
 				//padding: 0;
 				//outline: 1px solid #EAEAEA;
 				word-wrap: break-word;
+				word-break: break-all;
 				overflow: hidden;
 
 				.component_autocomplete & {
@@ -750,6 +751,13 @@
 					height: 100%;
 					max-height: 5em;
 					width: auto;
+					// fit image contains
+					object-fit: contain;
+					object-position: center;
+					// center horizontally
+					position: absolute;
+					left: 50%;
+					transform: translate(-50%);
 				}
 			}
 
