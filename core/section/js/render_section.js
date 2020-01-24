@@ -149,7 +149,7 @@ const content_data = async function(self) {
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type) // ,"nowrap","full_width"
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data

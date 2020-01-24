@@ -9,11 +9,6 @@
 	<div id="main" class="hide"></div>
 	<div id="debug" class="debug hide"></div>
 </body>
-<?php /*
-<script>
-var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
-</script>
-*/ ?>
 <script defer="defer" src="<?php echo DEDALO_CORE_URL ?>/common/js/enviroment.js.php"></script>
 <script type="module">
 	const t0 = performance.now()
@@ -23,7 +18,7 @@ var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_
 	( async () => {
 
 		const main = document.getElementById("main")
-		  main.classList.add("loading")
+		  	  main.classList.add("loading")
 
 		// page instance
 			const page = await get_instance({
