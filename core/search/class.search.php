@@ -65,6 +65,9 @@ class search {
 		# filter_by_locators
 		protected $filter_by_locators;
 
+		# ar_direct_columns. Useful to calculate efficient order sentences
+		public $ar_direct_columns = ['section_id','section_tipo','id'];
+
 
 	/**
 	* __CONSTRUCT
@@ -115,36 +118,37 @@ class search {
 			$this->main_section_tipo_alias = self::trim_tipo($this->main_section_tipo);
 		}
 
-		# matrix_table (for time machine if always fixed, not calculated)
+		# matrix_table (for time machine if always fixed 'matrix_time_machine', not calculated)
 		if (get_class($this)!=='search_tm') {
-			$this->matrix_table  = common::get_matrix_table_from_tipo($this->main_section_tipo);
+			$this->matrix_table = common::get_matrix_table_from_tipo($this->main_section_tipo);
 		}
 
-		# Default select
+		# select default
 		if(!isset($this->search_query_object->select)) {
 			$this->search_query_object->select = [];
 		}
 
+		// filter_by_locators
 		if(isset($this->search_query_object->filter_by_locators)) {
 			$this->filter_by_locators = $this->search_query_object->filter_by_locators;
 		}
 
-		# Default records limit
+		// records limit default
 		if(!isset($this->search_query_object->limit)) {
 			$this->search_query_object->limit = 10;
 		}
 
-		# Default offset
+		// offset default
 		if(!isset($this->search_query_object->offset)) {
 			$this->search_query_object->offset = false;
 		}
 
-		# Default records count
+		// records count default
 		if(!isset($this->search_query_object->full_count)) {
 			$this->search_query_object->full_count = false;
 		}
 
-		#$this->preparsed_search_query_object = false;
+		// parsed default
 		if (!isset($this->search_query_object->parsed)) {
 			$this->search_query_object->parsed = false;
 		}
@@ -434,7 +438,7 @@ class search {
 
 		$path				= $select_object->path;
 		$component_tipo 	= end($path)->component_tipo;
-		if ($component_tipo==='section_id' || $component_tipo==='section_tipo') {
+		if ($component_tipo==='section_id' || $component_tipo==='section_tipo' || $component_tipo==='id') {
 			return $select_object; // No parse section_id
 		}
 		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -862,31 +866,16 @@ class search {
 
 		switch (true) {
 
-		// sql_filter_by_locators
-			case (isset($this->filter_by_locators) && !empty($this->filter_by_locators)):
-
-				$sql_filter_by_locators		 = $this->build_sql_filter_by_locators();
-				$sql_filter_by_locators_order= $this->build_sql_filter_by_locators_order();
-
-				// select
-					$sql_query .= 'SELECT * FROM(';
-					$sql_query .= PHP_EOL . 'SELECT *';
-					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-					$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
-					$sql_query .= PHP_EOL . ') main_select';
-				// order
-					$sql_query .= PHP_EOL . $sql_filter_by_locators_order;
-				// limit
-					$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
-				break;
-
-		// count case
+		// count case (place always at first case)
 			case ($full_count===true):
 				# Only for count
 
+				// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
+				$column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
+
 				# SELECT
 					#$sql_query .= 'SELECT ' . $sql_query_select;
-					$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
+					$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.'.$column_id;
 				# FROM
 					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# join virtual tables
@@ -915,10 +904,36 @@ class search {
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
 					}
-				$sql_query = 'SELECT COUNT(section_id) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+				$sql_query = 'SELECT COUNT('.$column_id.') as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 				if(SHOW_DEBUG===true) {
 					$sql_query = '-- Only for count' . PHP_EOL . $sql_query;
 				}
+				break;
+
+		// sql_filter_by_locators
+			case (isset($this->filter_by_locators) && !empty($this->filter_by_locators)):
+
+				$sql_filter_by_locators		 = $this->build_sql_filter_by_locators();
+				$sql_filter_by_locators_order= empty($this->search_query_object->order)
+					? $this->build_sql_filter_by_locators_order() // only if empty order
+					: 'ORDER BY ' . $this->build_sql_query_order();
+
+				// select
+					$sql_query .= 'SELECT * FROM(';
+					$sql_query .= PHP_EOL . 'SELECT *';
+					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+					$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
+					$sql_query .= PHP_EOL . ') main_select';
+				// order
+					$sql_query .= PHP_EOL . $sql_filter_by_locators_order;
+				// limit
+					$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+				// offset
+					$sql_query .= !empty($this->search_query_object->offset)
+						? ' OFFSET ' . $sql_offset
+						: '';
+
+							dump($sql_query, ' sql_query ++ '.to_string());
 				break;
 
 		// without order
@@ -1592,7 +1607,6 @@ class search {
 	public function build_sql_query_order() {
 
 		$sql_query_order = '';
-		$ar_order 		 = [];
 
 		if (!empty($this->search_query_object->order_custom)) {
 
@@ -1616,12 +1630,15 @@ class search {
 					$ar_custom_query[] 		= 'LEFT JOIN (VALUES '.implode(',', $pairs).') as '.$table.'(ordering_section_tipo, ordering_id, ordering) ON main_select.'.$column_name.'='.$table.'.ordering_id AND main_select.section_tipo='.$table.'.ordering_section_tipo'; // added 21-08-2019
 					$ar_custom_queryorder[] = 'ORDER BY '.$table.'.ordering ASC';
 				}
+				// flat and set
 				$this->sql_query_order_custom = implode(' ', $ar_custom_query) . ' ' . implode(',', $ar_custom_queryorder);
 
 
 		}elseif (!empty($this->search_query_object->order)) {
 
 			// order
+				$ar_order = [];
+				$ar_direct_columns = $this->ar_direct_columns; // ['section_id','section_tipo','id']
 				foreach ($this->search_query_object->order as $order_obj) {
 
 					$direction 		= strtoupper($order_obj->direction);
@@ -1630,9 +1647,10 @@ class search {
 					$component_tipo = $end_path->component_tipo;
 
 
-					if ($component_tipo==='section_id') {
-						# section_id column case
-						$line = 'section_id ' . $direction;
+					if (in_array($component_tipo, $ar_direct_columns)===true) {
+
+						# direct column case
+						$line = $component_tipo . ' ' . $direction;
 
 					}else{
 
@@ -1654,9 +1672,10 @@ class search {
 						#debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);
 					}
 
+
 					$ar_order[] = $line;
 				}
-
+				// flat
 				$sql_query_order = implode(',', $ar_order);
 		}
 
@@ -1702,17 +1721,17 @@ class search {
 		$main_section_tipo_alias = $this->main_section_tipo_alias;
 
 		$ar_sentences = array();
-		foreach ($ar_section_tipo as $current_section_tipo) {
-			$ar_sentences[] = $main_section_tipo_alias.'.section_tipo=\''. $current_section_tipo.'\'';
-		}
-		$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
 
-		# Avoid root user is showed except for root
-		#if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO && navigator::get_user_id()!=-1) {
-			#if(SHOW_DEBUG!==true) {
-				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
-			#}
-		#}
+		// section_tipo
+			foreach ($ar_section_tipo as $current_section_tipo) {
+				$ar_sentences[] = $main_section_tipo_alias.'.section_tipo=\''. $current_section_tipo.'\'';
+			}
+
+		// flat query string
+			$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
+
+		// avoid root user is showed except for root
+			$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
 
 		# Fix values
 		$this->main_where_sql = $main_where_sql;
@@ -1751,7 +1770,7 @@ class search {
 
 	/**
 	* BUILD_SQL_FILTER_BY_LOCATORS
-	* @return string | null
+	* @return string $sql_filter
 	*/
 	public function build_sql_filter_by_locators() {
 
@@ -1760,14 +1779,33 @@ class search {
 		$ar_parts = [];
 		foreach ($this->filter_by_locators as $key => $current_locator) {
 
-			$string_query  = '';
-			$string_query .= '(';
-			$string_query .= $table.'.section_id='.$current_locator->section_id;
-			$string_query .= ' AND ';
-			$string_query .= $table.'.section_tipo=\''.$current_locator->section_tipo.'\'';
-			$string_query .= ')';
+			$ar_current = [];
 
-			$ar_parts[] = $string_query;
+			// section_id (int)
+			$ar_current[] = $table.'.section_id='.$current_locator->section_id;
+
+			// section_tipo (string)
+			$ar_current[] = $table.'.section_tipo=\''.$current_locator->section_tipo.'\'';
+
+			// tipo (string). time machine case (column 'tipo' exists)
+			if (property_exists($current_locator, 'tipo') && !empty($current_locator->tipo)) {
+				if ($this->matrix_table==='matrix_time_machine') {
+					$ar_current[] = $table.'.tipo=\''.$current_locator->tipo.'\'';
+				}else{
+					debug_log(__METHOD__." Ignored property 'tipo' in locator because is only allowed in time machine table.", logger::WARNING);
+				}
+			}
+
+			// lang (string). time machine case (column 'lang' exists)
+			if (property_exists($current_locator, 'lang') && !empty($current_locator->lang)) {
+				if ($this->matrix_table==='matrix_time_machine') {
+					$ar_current[] = $table.'.lang=\''.$current_locator->lang.'\'';
+				}else{
+					debug_log(__METHOD__." Ignored property 'lang' in locator because is only allowed in time machine table.", logger::WARNING);
+				}
+			}
+
+			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
 		}
 
 		$sql_filter = PHP_EOL . implode(' OR ', $ar_parts);
@@ -1776,9 +1814,10 @@ class search {
 	}//end build_sql_filter_by_locators
 
 
+
 	/**
 	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
-	* @return
+	* @return string $string_query
 	*/
 	public function build_sql_filter_by_locators_order() {
 
@@ -1889,7 +1928,7 @@ class search {
 
 
 	/**
-	* BUILD_full_count_SQL_QUERY_SELECT
+	* BUILD_FULL_COUNT_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
 	public function build_full_count_sql_query_select() {
