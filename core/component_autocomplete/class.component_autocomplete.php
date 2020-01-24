@@ -573,7 +573,7 @@ class component_autocomplete extends component_relation_common {
 	}//end get_component_info
 
 
-	///////////////// HIERARCHY LEGACY 
+	///////////////// HIERARCHY LEGACY
 	/**
 	* GET_HIERARCHY_SECTIONS_FROM_TYPES
 	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
@@ -668,7 +668,7 @@ class component_autocomplete extends component_relation_common {
 			}
 		');
 
-		$search = new search($search_query_object);
+		$search = search::get_instance($search_query_object);
 		$result = $search->search();
 			#dump($result, ' result +***************+ '.to_string());
 

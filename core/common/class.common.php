@@ -2497,7 +2497,7 @@ abstract class common {
 				if (isset($tool->requirement_translatable) && $tool->requirement_translatable===true) {
 
 					$is_translatable = $is_component ? ($this->traducible==='no' ? false : true) : false;
-					
+
 					if ($tool->requirement_translatable===$is_translatable) {
 						$tools[] = $tool;
 					}
@@ -2553,7 +2553,7 @@ abstract class common {
 				}
 			}');
 
-		$search = new search($sqo_tool_active);
+		$search = search::get_instance($sqo_tool_active);
 		$result = $search->search();
 
 		$registered_tools = [];

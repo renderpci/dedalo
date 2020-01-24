@@ -15,7 +15,7 @@ function load_rows($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('options');
 		foreach($vars as $name) {
@@ -26,14 +26,14 @@ function load_rows($json_data) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.safe_xss($name).' (is mandatory)';
 				return $response;
 			}
-		}	
-	
+		}
+
 	# Received post var 'options' is a json object stringnified. Decode to regenrate original object
 	# $options = json_decode($options);
 	if (!is_object($options)) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Received data must be a object (options)';
 		return $response;
-	}	
+	}
 
 	if (empty($options->modo)) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty options->modo (is mandatory)';
@@ -45,13 +45,13 @@ function load_rows($json_data) {
 
 	if (!defined('SECTION_TIPO')) {
 		define('SECTION_TIPO', $section_tipo);
-	}	
+	}
 
 
 	$section_records 	= new section_records($section_tipo, $options);
 	$html 				= $section_records->get_html();
-	
-	
+
+
 	#session_write_close();
 
 
@@ -84,7 +84,7 @@ function search_rows($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('search_query_object','result_parse_mode','ar_list_map');
 		foreach($vars as $name) {
@@ -95,8 +95,8 @@ function search_rows($json_data) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.safe_xss($name).' (is mandatory)';
 				return $response;
 			}
-		}	
-	
+		}
+
 	# Received post var 'options' is a json object stringnified. Decode to regenrate original object
 	# $options = json_decode($options);
 		if (!is_object($search_query_object)) {
@@ -114,8 +114,8 @@ function search_rows($json_data) {
 		#$search_query_object->limit = 20;
 
 	// Search against database
-		$search = new search($search_query_object);
-		$rows_data 		 	 = $search->search();
+		$search 	= search::get_instance($search_query_object);
+		$rows_data 	= $search->search();
 
 	// result_parse_mode optional
 		switch ($result_parse_mode) {
@@ -136,7 +136,7 @@ function search_rows($json_data) {
 				$result = $rows_data->ar_records;
 				break;
 		}
-		
+
 	// search_query_object. Add updated search_query_object
 		$result->search_query_object = $search_query_object;
 
@@ -146,9 +146,9 @@ function search_rows($json_data) {
 			$search_options->context = new stdClass();
 				$search_options->context->context_name = 'default';
 			$search_options->search_query_object = $search_query_object;
-		$search_options_id = $search_query_object->section_tipo . '_json'; // section tipo like oh1	
+		$search_options_id = $search_query_object->section_tipo . '_json'; // section tipo like oh1
 		section_records::set_search_options($search_options, $search_options_id);
-		
+
 
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

@@ -1806,7 +1806,7 @@ class component_relation_common extends component_common {
 			}';
 			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
 			$search_query_object = json_decode($search_query_object);
-			$search = new search($search_query_object);
+			$search 			 = search::get_instance($search_query_object);
 			$result 			 = $search->search();
 			#dump($result, ' result ** ++ '.to_string());
 
@@ -1976,7 +1976,7 @@ class component_relation_common extends component_common {
 					$search_query_object->select  		= $select_group;
 
 			// Search
-				$search  	= new search($search_query_object);
+				$search  	= search::get_instance($search_query_object);
 				$rows_data 	= $search->search();
 					#dump($rows_data, ' rows_data ++ '.to_string());
 

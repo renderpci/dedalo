@@ -1471,8 +1471,8 @@ abstract class component_common extends common {
 		if (isset($this->propiedades->filtered_by_search)) {
 
 			$search_query_object = json_decode( json_encode($this->propiedades->filtered_by_search) );
-			$search = new search($search_query_object);
-			$records_data 		 = $search->search();
+			$search 		= search::get_instance($search_query_object);
+			$records_data 	= $search->search();
 				#dump($records_data, ' records_data ++ '.to_string());
 			$ar_current_dato = $records_data->ar_records;
 			/*
@@ -2038,9 +2038,9 @@ abstract class component_common extends common {
 
 
 		// Search
-			$search = new search($search_query_object);
-			$records_data 		 = $search->search();
-			$ar_current_dato 	 = $records_data->ar_records;
+			$search 			= search::get_instance($search_query_object);
+			$records_data 		= $search->search();
+			$ar_current_dato 	= $records_data->ar_records;
 				#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
 				#dump($ar_current_dato, ' ar_current_dato ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
@@ -4184,9 +4184,9 @@ abstract class component_common extends common {
 			}
 
 		// Exec search
-			$search = new search($search_query_object);
-			$rows_data 		 	 = $search->search();
-			$ar_records 		 = $rows_data->ar_records;
+			$search 	= search::get_instance($search_query_object);
+			$rows_data 	= $search->search();
+			$ar_records = $rows_data->ar_records;
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -4424,8 +4424,8 @@ abstract class component_common extends common {
 
 		$search_query_object = self::build_search_query_object($options);
 
-		$search = new search($search_query_object);
-		$response = $search->search();
+		$search 	= search::get_instance($search_query_object);
+		$response 	= $search->search();
 
 		$result = (count($response->ar_records)>0) ?  false : true;
 
@@ -4501,7 +4501,7 @@ abstract class component_common extends common {
 			}';
 			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
 			$search_query_object = json_decode($search_query_object);
-			$search = new search($search_query_object);
+			$search 			 = search::get_instance($search_query_object);
 			$result 			 = $search->search();
 			#dump($result, ' result ** ++ '.to_string());
 
