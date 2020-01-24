@@ -42,18 +42,18 @@
 	if($options->get_data===true && $permissions>0){
 
 		// subdata
-		// default locator build with this section params
-			 $section_id 	= $this->get_section_id();
-			 $section_tipo 	= $this->get_tipo();
+			// default locator build with this section params
+				 $section_id 	= $this->get_section_id();
+				 $section_tipo 	= $this->get_tipo();
 
-			 $locator = new locator();
-			 	$locator->set_section_tipo($section_tipo);
-			 	$locator->set_section_id($section_id);
+				 $locator = new locator();
+				 	$locator->set_section_tipo($section_tipo);
+				 	$locator->set_section_id($section_id);
 
-			 $value = [$locator];
+				 $value = [$locator];
 
-		// subdata add
-			 $data = $this->get_ar_subdata($value);
+			// subdata add
+				 $data = $this->get_ar_subdata($value);
 
 	}// end if $permissions > 0
 

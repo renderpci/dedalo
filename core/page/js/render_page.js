@@ -80,13 +80,15 @@ const content_data = async function(self) {
 
 			const current_instance = self.ar_instances[i]
 
-			//await current_instance.build() (?)
-			if(current_instance.model === 'menu') continue;
-			const child_item = await current_instance.render({
-				render_level : 'full'
-			})
+			// exclude menu already added
+			if(current_instance.model!=='menu') {
 
-			content_data.appendChild(child_item)
+				const child_item = await current_instance.render({
+					render_level : 'full'
+				})
+
+				content_data.appendChild(child_item)
+			}
 		}
 
 	// // content_data
