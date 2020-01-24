@@ -169,7 +169,8 @@ const content_data = async function(self) {
 		})
 		data_link.addEventListener("click", (e)=>{
 			e.preventDefault()
-			window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
+			// window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
+			window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id )
 		})
 
 
