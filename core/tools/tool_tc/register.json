@@ -1,0 +1,256 @@
+{
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "51",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1333"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1331"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 23,
+                            "hour": 18,
+                            "time": 64926383439,
+                            "year": 2020,
+                            "month": 1,
+                            "minute": 30,
+                            "second": 39
+                        }
+                    }
+                ]
+            },
+            "info": {
+                "label": "Fecha de creación",
+                "modelo": "component_date"
+            },
+            "valor": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 23,
+                            "hour": 18,
+                            "time": 64926383439,
+                            "year": 2020,
+                            "month": 1,
+                            "minute": 30,
+                            "second": 39
+                        }
+                    }
+                ]
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-nolan": "2020-01-23"
+            }
+        },
+        "dd201": {
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 23,
+                            "hour": 18,
+                            "time": 64926383833,
+                            "year": 2020,
+                            "month": 1,
+                            "minute": 37,
+                            "second": 13
+                        }
+                    }
+                ]
+            },
+            "info": {
+                "label": "Fecha de modificación",
+                "modelo": "component_date"
+            },
+            "valor": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 23,
+                            "hour": 18,
+                            "time": 64926383833,
+                            "year": 2020,
+                            "month": 1,
+                            "minute": 37,
+                            "second": 13
+                        }
+                    }
+                ]
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-nolan": "2020-01-23"
+            }
+        },
+        "dd612": {
+            "dato": {
+                "lg-eng": [
+                    "Tool to manage the time codes of a transcription."
+                ],
+                "lg-spa": [
+                    "Herramienta para gestionar los códigos de tiempo de una transcripción."
+                ]
+            },
+            "info": {
+                "label": "Descripción",
+                "modelo": "component_text_area"
+            },
+            "valor": {
+                "lg-eng": "Tool to manage the time codes of a transcription.",
+                "lg-spa": "Herramienta para gestionar los códigos de tiempo de una transcripción."
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-eng": {
+                    "0": "Tool to manage the time codes of a transcription."
+                },
+                "lg-spa": {
+                    "0": "Herramienta para gestionar los códigos de tiempo de una transcripción."
+                }
+            }
+        },
+        "dd799": {
+            "dato": {
+                "lg-eng": [
+                    "Time codes"
+                ],
+                "lg-spa": [
+                    "Códigos de tiempo"
+                ]
+            },
+            "info": {
+                "label": "Etiqueta",
+                "modelo": "component_input_text"
+            },
+            "valor": {
+                "lg-eng": "Time codes",
+                "lg-spa": "Códigos de tiempo"
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-eng": "Time codes",
+                "lg-spa": "Códigos de tiempo"
+            }
+        },
+        "dd1326": {
+            "dato": {
+                "lg-nolan": [
+                    "tool_tc"
+                ]
+            },
+            "info": {
+                "label": "Nombre de la herramienta",
+                "modelo": "component_input_text"
+            },
+            "valor": {
+                "lg-nolan": [
+                    "tool_tc"
+                ]
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-nolan": "tool_tc"
+            }
+        },
+        "dd1327": {
+            "dato": {
+                "lg-nolan": [
+                    "2.0.0"
+                ]
+            },
+            "info": {
+                "label": "Versión",
+                "modelo": "component_input_text"
+            },
+            "valor": {
+                "lg-nolan": [
+                    "2.0.0"
+                ]
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-nolan": "2.0.0"
+            }
+        },
+        "dd1328": {
+            "dato": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            },
+            "info": {
+                "label": "Versión Dédalo mínima",
+                "modelo": "component_input_text"
+            },
+            "valor": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            },
+            "dataframe": [],
+            "valor_list": {
+                "lg-nolan": "6.0.0"
+            }
+        }
+    },
+    "section_id": 1,
+    "created_date": "2020-01-23 18:30:39",
+    "section_tipo": "dd1340",
+    "modified_date": "2020-01-23 18:37:13",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd1324",
+    "modified_by_userID": -1,
+    "section_creator_top_tipo": "",
+    "section_creator_portal_tipo": "",
+    "section_creator_portal_section_tipo": ""
+}
