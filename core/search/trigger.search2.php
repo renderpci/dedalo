@@ -26,7 +26,7 @@ function get_components_from_section($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('section_tipo');
 		foreach($vars as $name) {
@@ -42,7 +42,7 @@ function get_components_from_section($json_data) {
 
 	$components_from_section = search::get_components_from_section($section_tipo);
 
-	
+
 	$response->result 	= $components_from_section->result;
 	$response->msg 		= $components_from_section->msg;
 
@@ -69,7 +69,7 @@ function get_components_from_section($json_data) {
 */
 function load_components($json_data) {
 	global $start_time;
-	
+
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed';
@@ -92,15 +92,15 @@ function load_components($json_data) {
 		return $response;
 	}
 
-	
+
 	$html = '';
 	foreach ((array)$components as $key => $component_info) {
-		
+
 		if (empty($component_info->modo)) {
 			# Default
 			$component_info->modo = 'search';
 		}
-	
+
 		$component_tipo = $component_info->component_tipo;
 
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_info->component_tipo,true);
@@ -127,16 +127,16 @@ function load_components($json_data) {
 		}
 
 		# Q_OPERATOR
-		if(isset($component_info->q_operator)) {			
+		if(isset($component_info->q_operator)) {
 			$component->q_operator = $component_info->q_operator;  // Inject q_operator value
 		}
 
 		$component_html = $component->get_html();
-		
+
 		$html .= $component_html;
 	}
-	
-	
+
+
 	$response->result 	= $html;
 	$response->msg 		= 'Ok. Request done';
 
@@ -163,7 +163,7 @@ function load_components($json_data) {
 */
 function get_component_presets($json_data) {
 	global $start_time;
-	
+
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed';
@@ -187,7 +187,7 @@ function get_component_presets($json_data) {
 	# Get permissions to allow/disallow buttons
 	$section_tipo 		 	= _PRESETS_LIST_SECTION_TIPO; // Presets list
 	$section_permissions 	= common::get_permissions($section_tipo, $section_tipo);
-	
+
 	$response->result 		= $ar_component_presets;
 	$response->permissions 	= $section_permissions;
 	$response->msg 	  		= 'Ok. Request done';
@@ -202,7 +202,7 @@ function get_component_presets($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end get_component_presets
 
@@ -220,7 +220,7 @@ function save_preset($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('filter','data_section_tipo','preset_section_id');
 		foreach($vars as $name) {
@@ -233,7 +233,7 @@ function save_preset($json_data) {
 			}
 		}
 
-	$presets_section_tipo = _PRESETS_LIST_SECTION_TIPO; // Presets list	
+	$presets_section_tipo = _PRESETS_LIST_SECTION_TIPO; // Presets list
 
 	if (strpos($preset_section_id, DEDALO_SECTION_ID_TEMP)!==false || empty($preset_section_id)) {
 
@@ -254,8 +254,8 @@ function save_preset($json_data) {
 															 $presets_section_tipo);
 			$component->set_dato($data_section_tipo); // Like oh1
 			# Save component
-			$component->Save();		
-		
+			$component->Save();
+
 		#
 		# NAME, PUBLIC, DEFAULT (TEMPORAL SECTION)
 		# Propagate all section temp data to the new created real section
@@ -265,7 +265,7 @@ function save_preset($json_data) {
 				section::propagate_temp_section_data($temp_section_data, $presets_section_tipo, $parent);
 				#debug_log(__METHOD__." propagate_temp_section_data $temp_data_uid  ".to_string($temp_section_data), logger::DEBUG);
 			}
-	
+
 		/*
 		#
 		# NAME FIELD
@@ -283,8 +283,8 @@ function save_preset($json_data) {
 			# Save component
 			$component->Save();
 		*/
-				
-	
+
+
 	}else{
 		$parent  = $preset_section_id;
 	}
@@ -306,7 +306,7 @@ function save_preset($json_data) {
 		$result = $component->Save();
 
 
-	#	
+	#
 	# USER
 		$user_id 		= navigator::get_user_id();
 		$component_tipo = 'dd654'; // component_select
@@ -322,11 +322,11 @@ function save_preset($json_data) {
 			$user_locator->set_section_id($user_id);
 			$user_locator->set_from_component_tipo($component_tipo);
 			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-		$component->set_dato( array($user_locator) );		
-		$result[] = $component->Save();	
+		$component->set_dato( array($user_locator) );
+		$result[] = $component->Save();
 
-	
-	
+
+
 	$response->result 		= $result;
 	$response->msg 	  		= 'Ok. Request done (section_id: '.$parent.')';
 
@@ -359,7 +359,7 @@ function delete_preset($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('section_id');
 		foreach($vars as $name) {
@@ -375,11 +375,11 @@ function delete_preset($json_data) {
 	$presets_section_tipo = _PRESETS_LIST_SECTION_TIPO; // Presets list
 
 	$section = section::get_instance($section_id, $presets_section_tipo);
-		
+
 	# Delete section
 	$result = $section->Delete('delete_record');
-	
-	
+
+
 	$response->result 		= $result;
 	$response->msg 	  		= 'Ok. Request done (section_id: $parent)';
 
@@ -413,7 +413,7 @@ function search($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('search_query_object');
 		foreach($vars as $name) {
@@ -425,12 +425,12 @@ function search($json_data) {
 				return $response;
 			}
 		}
-	
 
-	$search = new search($search_query_object);
+
+	$search = search::get_instance($search_query_object);
 	$result = $search->search();
-	
-	
+
+
 	$response->result 		= $result;
 	$response->msg 	  		= 'Ok. Request done';
 
@@ -478,13 +478,13 @@ function save_temp_preset($json_data) {
 		}
 
 	$user_id = navigator::get_user_id();
-	
+
 	$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
 	if ($save_temp_preset===true) {
 		$response->result 	= $save_temp_preset;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
-	
+
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -515,7 +515,7 @@ function load_temp_filter($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('section_tipo');
 		foreach($vars as $name) {
@@ -532,7 +532,7 @@ function load_temp_filter($json_data) {
 	$user_id 	 = navigator::get_user_id();
 	$temp_preset = search::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
 	$temp_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
-	
+
 	$response->result 	= $temp_filter;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 

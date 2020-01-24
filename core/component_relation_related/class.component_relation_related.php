@@ -5,14 +5,14 @@
 *
 */
 class component_relation_related extends component_relation_common {
-	
+
 	# relation_type . Determines inverse resolutions and locator format
 	# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
 	# protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
 	protected $relation_type ; // Set on construct from propiedades
 
 	# type of rel (like unidirectional, bidirectional, multidirectional, etc..) This info is inside each locator of current component dato
-	# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default) 
+	# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
 	# DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
 	# DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
@@ -20,7 +20,7 @@ class component_relation_related extends component_relation_common {
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
-	
+
 	# sql query stored for debug only
 	static $get_inverse_related_query;
 
@@ -45,7 +45,7 @@ class component_relation_related extends component_relation_common {
 				$this->relation_type 	 = $propiedades->config_relation->relation_type;
 				$this->relation_type_rel = $propiedades->config_relation->relation_type_rel;
 				break;
-			
+
 			default:
 				$this->relation_type 	 = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
 				$this->relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
@@ -57,7 +57,7 @@ class component_relation_related extends component_relation_common {
 	}//end __construct
 
 
-	
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
@@ -65,7 +65,7 @@ class component_relation_related extends component_relation_common {
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
 		#return "working here! ".__METHOD__;
-	
+
 		if (isset($this->valor)) {
 			return $this->valor;
 		}
@@ -73,7 +73,7 @@ class component_relation_related extends component_relation_common {
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
 		if ($ar_related_terms===false) {
 			$ar_related_terms = $this->RecordObj_dd->get_relaciones();
-			$ar_componets_related = array();			
+			$ar_componets_related = array();
 			foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				if ($modelo_name !== 'section'){
@@ -130,7 +130,7 @@ class component_relation_related extends component_relation_common {
 		return "working here! ".__METHOD__;
 		/*
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
+
 		#dump($relacionados,'$relacionados');
 		if(empty($relacionados)){
 			return $this->lang;
@@ -159,7 +159,7 @@ class component_relation_related extends component_relation_common {
 	public function add_related( $locator ) {
 
 		#dump($locator, ' locator ++ '.to_string()); die();
-		
+
 		if ($locator->section_tipo===$this->section_tipo && $locator->section_id===$this->parent) {
 			debug_log(__METHOD__." Invalid related element (self) ".to_string(), logger::DEBUG);
 			return false;
@@ -171,11 +171,11 @@ class component_relation_related extends component_relation_common {
 		}
 
 		# Add current locator to component dato
-		if (!$add_locator = $this->add_locator_to_dato($locator)) {	
+		if (!$add_locator = $this->add_locator_to_dato($locator)) {
 			return false;
 		}
 
-		
+
 		return true;
 	}//end add_related
 
@@ -189,18 +189,18 @@ class component_relation_related extends component_relation_common {
 	*/
 	public function remove_related( $locator ) {
 
-		# Add current locator to component dato		
+		# Add current locator to component dato
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
 			return false;
 		}
-		
-		return true;	
+
+		return true;
 	}//end remove_related
-	
+
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
@@ -214,7 +214,7 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -233,7 +233,7 @@ class component_relation_related extends component_relation_common {
 			return $search_query;
 		}
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-		
+
 		switch (true) {
 			case $comparison_operator==='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
@@ -242,7 +242,7 @@ class component_relation_related extends component_relation_common {
 				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
-		
+
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
@@ -256,7 +256,7 @@ class component_relation_related extends component_relation_common {
 	/**
 	* GET_DATO_WITH_REFERENCES
 	* return the full dato of the component, the real dato with the calculated references
-	* @return 
+	* @return
 	*/
 	public function get_dato_with_references() {
 
@@ -274,7 +274,7 @@ class component_relation_related extends component_relation_common {
 	/**
 	* GET_CALCULATED_REFERENCES
 	* used for get the references, this function call the the get_references that make the recursive loop of the calculation
-	* @return 
+	* @return
 	*/
 	public function get_calculated_references() {
 
@@ -292,11 +292,11 @@ class component_relation_related extends component_relation_common {
 				$references = [];
 				break;
 		}
-		
+
 		if(SHOW_DEBUG===true) {
 			#dump($references, ' references ++ **** '.to_string());
 		}
-	
+
 		return $references;
 	}//end get_calculated_references
 
@@ -336,7 +336,7 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_INVERSE_RELATED
-	* Get related term to current section	
+	* Get related term to current section
 	* @param int $section_id
 	* @param string $section_tipo
 	* @param string $from_component_tipo
@@ -366,8 +366,8 @@ class component_relation_related extends component_relation_common {
 				*/
 			$filter = ",\"from_component_tipo\":\"$from_component_tipo\"";
 		}
-		
-		$type 	  = DEDALO_RELATION_TYPE_RELATED_TIPO;		
+
+		$type 	  = DEDALO_RELATION_TYPE_RELATED_TIPO;
 		$compare  = "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\",\"type_rel\":\"$type_rel\"".$filter."}";
 
 		# TABLES strQuery
@@ -380,19 +380,19 @@ class component_relation_related extends component_relation_common {
 			// Iterate tables and make union search
 			$ar_query=array();
 			foreach ((array)$ar_tables as $table) {
-				$ar_query[] = "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";				
+				$ar_query[] = "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";
 			}
 			$strQuery .= implode(" UNION ALL ", $ar_query);
 		}
 		// Set order to maintain results stable
 		$strQuery .= " ORDER BY section_id ASC";
-		
-		if(SHOW_DEBUG) {	
+
+		if(SHOW_DEBUG) {
 			component_relation_related::$get_inverse_related_query = $strQuery;
 			#dump($strQuery, ' $strQuery ++ '.to_string()); die();
 		}
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		
+
 		$inverse_related = array();
 		while ($rows = pg_fetch_assoc($result)) {
 
@@ -402,7 +402,7 @@ class component_relation_related extends component_relation_common {
 			if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
 				debug_log(__METHOD__." Error on get related. Related is set at itself as loop. Ignored locator. ($section_id - $section_tipo) ".to_string(), logger::ERROR);
 				continue;
-			}		
+			}
 
 			// Search 'from_tipo' in locators when no is received
 			if (empty($from_component_tipo)) {
@@ -457,7 +457,7 @@ class component_relation_related extends component_relation_common {
 	* @return array $ar_references
 	*/
 	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang) {
-	
+
 		static $ar_resolved = array();
 
 		// reset ar_resolved on first call
@@ -481,7 +481,7 @@ class component_relation_related extends component_relation_common {
 		}
 		$propiedades = json_decode($RecordObj_dd->get_propiedades());
 		$divisor = (isset($propiedades->source->divisor)) ?  $propiedades->source->divisor : ' | ';
-		
+
 		# References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
 			#$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true); // get_class();
@@ -491,7 +491,7 @@ class component_relation_related extends component_relation_common {
 															 'edit',
 															 DEDALO_DATA_NOLAN,
 															 $locator->section_tipo);
-			$ar_result = $ref_component->get_references();			
+			$ar_result = $ref_component->get_references();
 			foreach ($ar_result as $key => $result_locator) {
 				$pseudo_locator = $result_locator->section_tipo .'_'. $result_locator->section_id . '_'. $lang;
 				if (in_array($pseudo_locator, $ar_resolved)) {
@@ -501,10 +501,10 @@ class component_relation_related extends component_relation_common {
 				$ar_resolved[]   = $pseudo_locator; # set as resolved
 			}
 		}
-	
+
 		# Only DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 		if ($type_rel===DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO) {
-					
+
 			# Dato
 			$dato = $ref_component->get_dato();
 			foreach ($dato as $key => $dato_locator) {
@@ -512,7 +512,7 @@ class component_relation_related extends component_relation_common {
 				$pseudo_locator = $dato_locator->section_tipo .'_'. $dato_locator->section_id . '_'. $lang;
 				if (in_array($pseudo_locator, $ar_resolved)) {
 					continue;
-				}	
+				}
 
 				$element = new stdClass();
 					$element->section_tipo 			= $dato_locator->section_tipo;
@@ -521,7 +521,7 @@ class component_relation_related extends component_relation_common {
 					#$element->label 				= ts_object::get_term_by_locator( $dato_locator, DEDALO_DATA_LANG, $from_cache=true);
 					// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=false
 					$element->label 				= self::get_locator_value($dato_locator, DEDALO_DATA_LANG, false, $ar_componets_related, $divisor);
-				
+
 				# Only add dato when is recursion, not at the first call
 				if ($recursion===true) {
 					$ar_references[] = $element;
@@ -533,7 +533,7 @@ class component_relation_related extends component_relation_common {
 				# Recursion (dato)
 				$ar_result 		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true, $lang);
 				$ar_references 	= array_merge($ar_references, $ar_result);
-			}		
+			}
 
 			# References to references
 			foreach ($ar_references as $key => $current_locator) {
@@ -544,8 +544,8 @@ class component_relation_related extends component_relation_common {
 			#dump($ar_resolved, ' ar_resolved ++ '.to_string());
 
 		}//end if ($type_rel===DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO)
-	
-	
+
+
 		return $ar_references;
 	}//end get_references_recursive
 
@@ -560,7 +560,7 @@ class component_relation_related extends component_relation_common {
 
 		$RecordObj_dd = new RecordObj_dd($this->tipo);
 		$ar_related_terms = $RecordObj_dd->get_relaciones();
-		$ar_componets_related = array();			
+		$ar_componets_related = array();
 		foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 			if ($modelo_name !== 'section'){
@@ -580,7 +580,7 @@ class component_relation_related extends component_relation_common {
 			# Add type_rel filter
 			$locator->set_type_rel($type_rel);
 		}
-		
+
 		$locator_json = json_encode($locator);
 
 		# Path
@@ -589,9 +589,9 @@ class component_relation_related extends component_relation_common {
 			$base_path->modelo 			= get_class($this);
 			$base_path->section_tipo 	= $this->section_tipo;
 			$base_path->component_tipo 	= $this->tipo;
-	
+
 		$path = array($base_path);
-		
+
 		# Component path
 		$component_path = ['relations'];
 
@@ -617,7 +617,7 @@ class component_relation_related extends component_relation_common {
 				$select_path->modelo 			= RecordObj_dd::get_modelo_name_by_tipo($thesaurus_map->term,true);
 				$select_path->section_tipo 		= $this->section_tipo;
 				$select_path->component_tipo 	= $thesaurus_map->term;
-		
+
 			$select_path = array($select_path);
 
 			$select_group = new stdClass();
@@ -627,7 +627,7 @@ class component_relation_related extends component_relation_common {
 			$select = [$select_group];
 		}else{
 			$select = array(); // Nothing is selected but section_id, section_tipo columns
-		}		
+		}
 
 		# search_query_object
 		$search_query_object = new stdClass();
@@ -637,11 +637,11 @@ class component_relation_related extends component_relation_common {
 			$search_query_object->select 		= $select;
 			$search_query_object->limit 		= 0;
 			$search_query_object->offset 		= 0;
-			$search_query_object->full_count 	= false;		
+			$search_query_object->full_count 	= false;
 		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' $search_query_object ++ '.to_string()); #die();
 
-		$search = new search($search_query_object);
-		$records_data 		 = $search->search();
+		$search 		= search::get_instance($search_query_object);
+		$records_data 	= $search->search();
 
 		$ar_result = [];
 		foreach ($records_data->ar_records as $key => $row) {
@@ -653,7 +653,7 @@ class component_relation_related extends component_relation_common {
 				$element->from_component_tipo 	= $this->tipo;
 
 			if (isset($thesaurus_map->term) && $term = json_decode($row->{$thesaurus_map->term})) {
-		
+
 				/*$lang = DEDALO_DATA_LANG;
 				switch (true) {
 					case isset($term->$lang):
@@ -671,22 +671,22 @@ class component_relation_related extends component_relation_common {
 			}else{
 				$element->label = '';
 			}
-		
-			$ar_result[]    = $element;				
+
+			$ar_result[]    = $element;
 		}
 		#dump($ar_result, ' ar_result ++ '.to_string());
 		#dump($ar_resolved, ' ar_resolved 11 ++ '.to_string());
 
 
-		return $ar_result;		
+		return $ar_result;
 	}//end get_references
 
-	
+
 
 	/**
 	* ADD_HIERARCHY_SECTIONS_FROM_TYPES
 	* Alias of component_autocomplete_hi::add_hierarchy_sections_from_types
-	* @return 
+	* @return
 	*/
 	public static function add_hierarchy_sections_from_types($hierarchy_types, $hierarchy_sections) {
 
@@ -709,21 +709,21 @@ class component_relation_related extends component_relation_common {
 		# DESECHADO POR PROBLEMAS AL SELECCIONAR EL PRIMERO. EL ORDEN NO ES RESPETADO...
 		# $ar_related_terms = (array)$this->RecordObj_dd->get_relaciones();
 		# 	#dump($ar_related_terms, ' ar_related_terms');
-		# foreach ($ar_related_terms as $related_terms)		
+		# foreach ($ar_related_terms as $related_terms)
 		# foreach ($related_terms as $modelo => $current_tipo) {
 		# 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 		# 	# Get first component only
 		# 	if (strpos($modelo_name, 'component_')!==false) {
 		# 		$tipo_to_search = $current_tipo; break;
 		# 	}
-		# }		
+		# }
 
-		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado'); 
+		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado');
 				#dump($ar_terminoID_by_modelo_name, ' ar_terminoID_by_modelo_name '.$this->tipo.' ');
 		$tipo_to_search = reset($ar_terminoID_by_modelo_name);
 
 		if (!isset($tipo_to_search)) {
-			throw new Exception("Error Processing Request. Inconsistency detect. This component need related component to search always", 1);			
+			throw new Exception("Error Processing Request. Inconsistency detect. This component need related component to search always", 1);
 		}
 		#dump($tipo_to_search, ' tipo_to_search');
 
@@ -739,23 +739,23 @@ class component_relation_related extends component_relation_common {
 	* GET_SEARCH_FIELDS
 	*/
 	public function get_search_fields($search_tipo) {
-		//chenk the recursion 
+		//chenk the recursion
 
 		$current_tipo = $search_tipo;
 		$ar_target_section_tipo = common::get_ar_related_by_model('section',$current_tipo);
 		$target_section_tipo    = reset($ar_target_section_tipo);
 		$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($current_tipo, true, true);
-		
+
 		$search_fields = array();
 		foreach ($ar_terminos_relacionados as $key => $c_tipo) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
 			if ($modelo_name==='section') continue;
-			
+
 			$field = new stdClass();
 				$field->section_tipo 	= $target_section_tipo;
 				$field->component_tipo 	= $c_tipo;
 
-			# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc.. 
+			# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc..
 			if(in_array($modelo_name, component_relation_common::get_components_with_relations())) {
 				$field->search 	= $this->get_search_fields($c_tipo);
 			}
@@ -785,7 +785,7 @@ class component_relation_related extends component_relation_common {
 
 		# $dato_with_references = $this->get_dato_with_references();
 		# 	dump($dato_with_references, ' dato_with_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
-		
+
 		$diffusion_value = $this->get_valor($lang, $format='array');
 		$diffusion_value = implode($separator, $diffusion_value);
 		$diffusion_value = strip_tags($diffusion_value, $separator);
@@ -806,8 +806,8 @@ class component_relation_related extends component_relation_common {
 				}
 				$diffusion_value .= implode($separator, $ar_references);
 			}
-			#dump($diffusion_value, ' diffusion_value ++ '.to_string());	
-		
+			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
+
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
 

@@ -5,7 +5,7 @@
 * Recupera los locators que apuntan al término actual, los agrupa por tipo y los muestra en un listado con diversa información (Código,Proyecto,Título,Municipio,etc)
 */
 class diffusion_index_ts extends diffusion {
-	
+
 	#public $terminoID;
 	public $ar_locators;
 	public $ar_id_section;
@@ -24,7 +24,7 @@ class diffusion_index_ts extends diffusion {
 
 		#if (empty($terminoID)) {
 		#	debug_log(__METHOD__." Error Processing Request. empty terminoID ".to_string($terminoID), logger::DEBUG);
-		#	return false;			
+		#	return false;
 		#}
 
 		$this->section_tipo 	= $section_tipo;
@@ -44,7 +44,7 @@ class diffusion_index_ts extends diffusion {
 	* Specific for thesaurus only
 	*/
 	public function get_ar_diffusion_map_index_ts( $ar_section_top_tipo=array() ) {
-				
+
 		if (isset($this->ar_diffusion_map)) {
 			return $this->ar_diffusion_map;
 		}
@@ -69,7 +69,7 @@ class diffusion_index_ts extends diffusion {
 				# diffusion_section_tipo ar_relateds_terms
 				$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, 'section', 'termino_relacionado');
 					#dump($ar_current_section_tipo,'$ar_current_section_tipo');
-				
+
 				# ar_current_section_tipo : Verify
 				if ( empty($ar_current_section_tipo[0]) ) {
 					if(SHOW_DEBUG===true) {
@@ -79,11 +79,11 @@ class diffusion_index_ts extends diffusion {
 						foreach ($value as $current_modelo => $terminoID) {
 							#echo " $current_modelo - $terminoID ";
 							$RecordObj_dd = new RecordObj_dd($terminoID);
-							$modelo 	  = $RecordObj_dd->get_modelo();	
+							$modelo 	  = $RecordObj_dd->get_modelo();
 							if ($current_modelo!=$modelo) {
-								throw new Exception("Error Processing Request. Inconsistency detected: relation model ($current_modelo) and target real model ($modelo) are differents!", 1);								
+								throw new Exception("Error Processing Request. Inconsistency detected: relation model ($current_modelo) and target real model ($modelo) are differents!", 1);
 							}
-						}						
+						}
 					}
 					$msg  = "Error Processing Request get_ar_diffusion_map_index_ts: diffusion section related is empty. Please configure structure with one true diffusion section related ($diffusion_section_tipo) ";
 					$msg .= "Please check the consistency and model of related term. diffusion_section_tipo:$diffusion_section_tipo must be a section (verify target element too) ";
@@ -93,12 +93,12 @@ class diffusion_index_ts extends diffusion {
 						#dump($current_section_tipo, ' current_section_tipo');
 				}
 				#dump($ar_section_top_tipo, '$ar_section_top_tipo');
-				
-				# IN ARRAY ?					
+
+				# IN ARRAY ?
 				if ( array_key_exists($current_section_tipo, $ar_section_top_tipo) ) {
-					
+
 					#
-					# HEAD 
+					# HEAD
 					$diffusion_head_tipo 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, $modelo_name='diffusion_head', $relation_type='children')[0];
 						#dump($diffusion_section_tipo,'$diffusion_section_tipo');
 					#$ar_diffusion_head_related 	= RecordObj_dd::get_ar_terminos_relacionados($diffusion_head_tipo, $cache=false, $simple=true);
@@ -120,10 +120,10 @@ class diffusion_index_ts extends diffusion {
 
 						$ar_diffusion_map['row'][$current_section_tipo] =  $ar_diffusion_row_related ;
 							#dump($ar_diffusion_map,'$ar_diffusion_map');
-					}					
+					}
 
 				}#end if ( array_key_exists($current_section_tipo, $ar_section_top_tipo) )
-				
+
 			}#end foreach ($ar_diffusion_section as $diffusion_section_tipo
 
 		if(SHOW_DEBUG===true) {
@@ -131,7 +131,7 @@ class diffusion_index_ts extends diffusion {
 			#echo "<span style=\"position:absolute;right:30px;margin-top:-25px\">".exec_time($start_time)."</span>";
 		}
 
-		return $this->ar_diffusion_map = $ar_diffusion_map;		
+		return $this->ar_diffusion_map = $ar_diffusion_map;
 	}//end get_ar_diffusion_map_index_ts
 
 
@@ -139,7 +139,7 @@ class diffusion_index_ts extends diffusion {
 	/**
 	* GET_AR_LOCATORS
 	* Get all indexations (locators) of current termino (terminoID like ts574)
-	* @return array of locator objects $ar_locators 
+	* @return array of locator objects $ar_locators
 	*/
 	public function get_ar_locators() {
 
@@ -176,8 +176,8 @@ class diffusion_index_ts extends diffusion {
 	protected function get_ar_section_top_tipo() {
 
 		$start_time=microtime(1);
-		
-		$ar_section_top_tipo= array();		
+
+		$ar_section_top_tipo= array();
 		$user_id 			= navigator::get_user_id();
 		$ar_locators 		= $this->get_ar_locators();
 
@@ -209,18 +209,18 @@ class diffusion_index_ts extends diffusion {
 			# USER PROJECTS : All projects that current user can view
 			$ar_user_projects = (array)filter::get_user_projects( $user_id );
 				#dump($ar_user_projects, ' ar_user_projects ++ '.to_string());
-						
+
 			# Filter
 			foreach ($ar_section_top_tipo as $section_top_tipo => $ar_values) {
-	
+
 				# COMPONENT FILTER BY SECTION TIPO
 				$section_real_tipo 		= section::get_section_real_tipo_static($section_top_tipo);
-				$component_filter_tipo  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter')[0];				
+				$component_filter_tipo  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter')[0];
 				if (empty($component_filter_tipo)) {
 					if(SHOW_DEBUG===true) {
 						throw new Exception("Error Processing Request. component_filter_tipo not found in section tipo: $section_top_tipo", 1);
 					}
-					continue;	// Skip this				
+					continue;	// Skip this
 				}
 
 				# ar_keys are section_id of current section tipo records
@@ -228,7 +228,7 @@ class diffusion_index_ts extends diffusion {
 					#dump($ar_keys,"ar_keys for $section_top_tipo , $component_filter_tipo");
 
 				foreach ($ar_keys as $current_id_section) {
-					
+
 					$component_filter 	= component_common::get_instance('component_filter',
 																		$component_filter_tipo,
 																		$current_id_section,
@@ -237,33 +237,33 @@ class diffusion_index_ts extends diffusion {
 																		$section_top_tipo
 																		);
 					$component_filter_dato = (array)$component_filter->get_dato();
-	
+
 					$in_user_projects = false;
 					foreach ($ar_user_projects as $user_project_locator) {
 						if (true===locator::in_array_locator($user_project_locator, $component_filter_dato, $ar_properties=['section_id','section_tipo'])) {
 							$in_user_projects = true;
 							break;
 						}
-					}					
+					}
 					if ($in_user_projects===false) {
 						debug_log(__METHOD__." Removed row from thesaurus index_ts list (project not mathc with user projects) ".to_string($ar_section_top_tipo[$section_top_tipo][$current_id_section]), logger::DEBUG);
-						unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);						
+						unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);
 					}
-				}				
+				}
 			}
 			# DELETE EMPTY TOP TIPOS ARRAYS
 			#$ar_section_top_tipo = array_filter($ar_section_top_tipo);
-		
+
 
 		}//end if( ($is_global_admin = security::is_global_admin($user_id))!==true ) {
-		
+
 		if(SHOW_DEBUG===true) {
 			$total=round(microtime(1)-$start_time,3);
 			$slow = 0.125;
 			if ($total>$slow) {
 				dump($total,"SLOW METHOD (>$slow): total secs $total");
-			}			
-		}	
+			}
+		}
 
 		return $ar_section_top_tipo;
 	}//end get_ar_section_top_tipo
@@ -272,30 +272,29 @@ class diffusion_index_ts extends diffusion {
 
 	/**
 	* GET_LIST_DATA
-	* @return 
+	* @return
 	*/
 	public function get_list_data__WORKING_HERE( $section_tipo, $section_tipo_locators ) {
-		
-		/* WORKING HERE
-		
-		# SEARCH_OPTIONS
-			$search_options_id    = $options->section_tipo; // section tipo like oh1
-			$saved_search_options = section_records::get_search_options($search_options_id);
-		
-		# SEARCH_QUERY_OBJECT
-			# Use saved search options (deep cloned to avoid propagation of changes !)
-			$search_options 	 = unserialize(serialize($saved_search_options));
-			$search_query_object = $search_options->search_query_object;
-				$search_query_object->limit   = 0;  // unset limit
-				$search_query_object->offset  = 0;  // unset offset
-				$search_query_object->order   = false;  // unset order
-				$search_query_object->select  = []; // unset select
-		
-		# SEARCH
-			$search_develoment2  = new search($search_query_object);
-			$rows_data 		 	 = $search_develoment2->search(); */
-	}#end get_list_data 
 
+		// WORKING HERE
+
+		// # SEARCH_OPTIONS
+		// 	$search_options_id    = $options->section_tipo; // section tipo like oh1
+		// 	$saved_search_options = section_records::get_search_options($search_options_id);
+
+		// # SEARCH_QUERY_OBJECT
+		// 	# Use saved search options (deep cloned to avoid propagation of changes !)
+		// 	$search_options 	 = unserialize(serialize($saved_search_options));
+		// 	$search_query_object = $search_options->search_query_object;
+		// 		$search_query_object->limit   = 0;  // unset limit
+		// 		$search_query_object->offset  = 0;  // unset offset
+		// 		$search_query_object->order   = false;  // unset order
+		// 		$search_query_object->select  = []; // unset select
+
+		// # SEARCH
+		// 	$search_develoment2  = search::get_instance($search_query_object);
+		// 	$rows_data 		 	 = $search_develoment2->search();
+	}//end get_list_data
 
 
 

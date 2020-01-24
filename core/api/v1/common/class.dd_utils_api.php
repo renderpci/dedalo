@@ -323,10 +323,7 @@ class dd_utils_api {
 
 		if($search_query_object = json_decode($request_options->options)) {
 
-			// search_class. Default is 'search'. 'search_tm' can be used too
-			$search_class = ($search_query_object->class==='search_tm') ? 'search_tm' : 'search';
-
-			$search = new $search_class($search_query_object);
+			$search = search::get_instance($search_query_object);
 
 			// search exec
 				$rows = $search->search();

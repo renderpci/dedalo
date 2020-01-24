@@ -184,7 +184,7 @@ abstract class filter {
 			');
 			#dump( json_encode($search_query_object), ' search_query_object ++ '.to_string());
 
-		$search = new search($search_query_object);
+		$search = search::get_instance($search_query_object);
 		$result = $search->search();
 
 		$ar_projects = [];

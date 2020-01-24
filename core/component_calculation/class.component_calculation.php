@@ -10,11 +10,11 @@ class component_calculation extends component_common {
 
 	/**
 	* GET_DATO
-	* @return 
+	* @return
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-		
+
 		return $dato;
 	}//end get_dato
 
@@ -22,10 +22,10 @@ class component_calculation extends component_common {
 
 	/**
 	* SET_DATO
-	* @return 
+	* @return
 	*/
 	public function set_dato($dato) {
-		
+
 		return parent::set_dato( $dato );
 	}//end set_dato
 
@@ -44,9 +44,9 @@ class component_calculation extends component_common {
 		logger_backend_activity::$enable_log = false;	# Disable logging activity and time machine # !IMPORTANT
 		RecordObj_time_machine::$save_time_machine_version = false; # Disable logging activity and time machine # !IMPORTANT
 
-		# Save		
+		# Save
 		$result = parent::Save();
-		
+
 		# Reactivate
 		logger_backend_activity::$enable_log = true;	# Disable logging activity and time machine # !IMPORTANT
 		RecordObj_time_machine::$save_time_machine_version = true; # Disable logging activity and time machine # !IMPORTANT
@@ -81,7 +81,7 @@ class component_calculation extends component_common {
 				}else{
 					$separator_fields = ' | ';
 				}
-			
+
 			// ar values
 				$ar_values = array();
 				foreach ($valor as $key => $current_value) {
@@ -94,7 +94,7 @@ class component_calculation extends component_common {
 			// value string
 				$valor = implode($separator_fields, $ar_values);
 		}
-		
+
 
 		// debug
 			#if(SHOW_DEBUG===true) {
@@ -105,7 +105,7 @@ class component_calculation extends component_common {
 			#		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
 			#	}
 			#}
-		
+
 		// string and numbers
 			if(!is_array($valor)) return $valor;
 
@@ -124,11 +124,11 @@ class component_calculation extends component_common {
 
 		$formula = false;
 
-		if(!empty($propiedades->formula)){			
+		if(!empty($propiedades->formula)){
 			$formula = $propiedades->formula;
 		}
 
-		return $formula;	
+		return $formula;
 	}//end get_JSON_formula
 
 
@@ -140,7 +140,7 @@ class component_calculation extends component_common {
 	* @return object $data_resolved
 	*/
 	public function resolve_data_for_formula($data) {
-		
+
 		if(!isset($data)) return false;
 
 		$data_resolved = new StdClass();
@@ -154,7 +154,7 @@ class component_calculation extends component_common {
 					$section_tipo = $data->section_tipo ;
 			}
 
-		// set the section id 
+		// set the section id
 			switch ($data->section_id) {
 				case 'current':
 					$section_id = $this->parent;
@@ -191,7 +191,7 @@ class component_calculation extends component_common {
 
 
 						if (isset($_SESSION['dedalo']['config']['sum_total'][$search_options_session_key])) {
-							
+
 							# Precalculated value
 							$total = $_SESSION['dedalo']['config']['sum_total'][$search_options_session_key];
 
@@ -213,7 +213,7 @@ class component_calculation extends component_common {
 							$search_options = new StdClass;
 								$search_options->section_tipo   = $section_tipo;
 								$search_options->component_tipo = $component_tipo;
-							
+
 							$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
 						}
 
@@ -239,15 +239,15 @@ class component_calculation extends component_common {
 
 							$search_options = new StdClass;
 								$search_options->section_tipo   = $section_tipo;
-								$search_options->component_tipo = $component_tipo;							
-							
+								$search_options->component_tipo = $component_tipo;
+
 							if($data->value ==='value'){
 								$data_resolved->{$var_name} = $this->get_values_from_component_tipo($search_options, $data);
 									#dump($data_resolved, ' data_resolved'.to_string());
 							}else if($data->value ==='sum'){
 								$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
 							}
-							
+
 						}
 					break;
 
@@ -255,10 +255,10 @@ class component_calculation extends component_common {
 					$section_id = $data->section_id;
 					break;
 			}
-	
+
 		// filter true
 			if (isset($data->filter) && $data->filter===true) {
-				
+
 				$section_id = $this->parent;
 				foreach ($data->components as $current_component) {
 
@@ -266,7 +266,7 @@ class component_calculation extends component_common {
 					$var_name 		= $current_component->var_name;
 					$options 		= isset($current_component->options) ? $current_component->options : null;
 
-					// Component (component_json) where is stored source data, a json search_query_object 
+					// Component (component_json) where is stored source data, a json search_query_object
 						$component 			= new RecordObj_dd($component_tipo);
 						$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$lang 				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
@@ -277,29 +277,29 @@ class component_calculation extends component_common {
 																			 $lang,
 																			 $this->section_tipo);
 						$dato = $current_componet->get_dato();
-						$dato = is_array($dato) ? $dato : [$dato]; // Array always						
-		
+						$dato = is_array($dato) ? $dato : [$dato]; // Array always
+
 						if (empty($dato) || !isset($dato[0]->data)) {
 							continue; // Skip empty
-						}					
+						}
 
 						// exec_dato_filter_data
 							$result = [];
 							foreach ((array)$dato as $dato_item) {
 								$result[] = self::exec_dato_filter_data($dato_item);
-							}					
+							}
 
 					/* old way
-						$ar_result = array();	
+						$ar_result = array();
 						foreach ((array)$ar_filter_search as $filter_search) {
 							if(empty($filter_search)) continue;	# Skip
 							#dump($filter_search, ' filter_search ++ '.to_string());
 							$result = new StdClass;
-							
+
 							$search_base 	= search::get_records_data($filter_search->search_base);
 							$search_table 	= $filter_search->search_map->search_base;
 							$search_map 	= $filter_search->search_map;
-							
+
 							$result->search_name 	= $search_map->search_name;
 							$result->search_layer 	= $search_map->search_layer;
 							$result->search_type 	= $search_map->search_type;
@@ -314,14 +314,14 @@ class component_calculation extends component_common {
 										if($value_test = json_decode($value)){
 											$value = $value_test;
 										}
-										
+
 										if($field == 'section_id'){
 											#$result_base->$search_table->$field= new StdClass;
 											$result_base->$search_table[] = (int)$value;
 										}
 
 										if(isset($search_map->$field) && !empty($value)){
-											
+
 											switch ($search_map->$field->dato) {
 												case 'locator':
 													foreach ((array)$value as $current_locator) {
@@ -346,7 +346,7 @@ class component_calculation extends component_common {
 															 			if (isset($search_map->$key_field)){
 															 				$map_field_name = $search_map->$key_field->name;
 																			$current_field_value = json_decode($current_field_value);
-																		
+
 															 				switch (isset($search_map->$key_field->action)) {
 															 					case 'convert_to_term_id':
 																 					if(!isset($current_field_value)){
@@ -381,7 +381,7 @@ class component_calculation extends component_common {
 												default:
 													# code...
 													break;
-											}												
+											}
 										}//end if(isset($search_map->$field))
 									}
 								$result->data[] = $result_base;
@@ -390,7 +390,7 @@ class component_calculation extends component_common {
 							$ar_result[] = $result;
 						}*/
 
-					
+
 					// Add dato object properties
 						/*$result = new StdClass();
 						foreach ($dato as $key => $value) {
@@ -408,7 +408,7 @@ class component_calculation extends component_common {
 						$data_resolved->{$var_name} = $result;
 
 				}//end foreach ($data->component_tipo as $component_tipo)
-					
+
 			}//end if (isset($data->filter) && $data->filter===true)
 			#dump($data->filter, ' data->filter ++ '.to_string()); die();
 
@@ -417,9 +417,9 @@ class component_calculation extends component_common {
 				case isset($data->true) && isset($data->true->ar_locators):
 
 					$ar_locators = json_decode( str_replace("'", '"', $data->true->ar_locators) );
-					
+
 					$options = new stdClass();
-						$options->lang 				= DEDALO_DATA_LANG;	
+						$options->lang 				= DEDALO_DATA_LANG;
 						$options->data_to_be_used 	= 'valor';
 						$options->ar_locators 		= $ar_locators;
 						$options->separator_rows 	= isset($data->true->separator_rows) ? $data->true->separator_rows : false;
@@ -438,9 +438,9 @@ class component_calculation extends component_common {
 			switch (true) {
 				case isset($data->false) && isset($data->false->ar_locators):
 					$ar_locators = json_decode( str_replace("'", '"', $data->false->ar_locators) );
-					
+
 					$options = new stdClass();
-						$options->lang 				= DEDALO_DATA_LANG;	
+						$options->lang 				= DEDALO_DATA_LANG;
 						$options->data_to_be_used 	= 'valor';
 						$options->ar_locators 		= $ar_locators;
 						$options->separator_rows 	= isset($data->false->separator_rows) ? $data->false->separator_rows : false;
@@ -458,7 +458,7 @@ class component_calculation extends component_common {
 		//set the filter
 		// NEED TO BE DEFINED
 		#dump($data_resolved, ' data_resolved ++ '.to_string());
-		
+
 		return $data_resolved;
 	}//end resolve_data_for_formula
 
@@ -469,17 +469,17 @@ class component_calculation extends component_common {
 	* @return array $ar_result
 	*/
 	public static function exec_dato_filter_data($dato_item) {
-			
+
 		$ar_search_query_object = !is_array($dato_item->data) ? [$dato_item->data] : $dato_item->data; // Always array
-		
+
 		// Exec search with search_query_object
 			$ar_result = [];
 			foreach ($ar_search_query_object as $search_query_object) {
 
 				// Search
-					$search = new search($search_query_object);
-					$search_data 		 = $search->search();
-					$ar_records 		 = $search_data->ar_records;
+					$search 		= search::get_instance($search_query_object);
+					$search_data 	= $search->search();
+					$ar_records 	= $search_data->ar_records;
 
 				// Result map. If result_map exists, parse result rows
 					$result_map = isset($search_query_object->result_map) ? $search_query_object->result_map : false;
@@ -487,12 +487,12 @@ class component_calculation extends component_common {
 
 						$ar_rows_mapped = [];
 						foreach ($ar_records as $key => $row) {
-					
+
 							$new_row = new stdClass();
 							foreach ($result_map as $map_item) {
 
 								if (isset($row->{$map_item->column})) {
-									
+
 									// Process value
 										$value = $row->{$map_item->column};
 										if ($value_decoded = json_decode($value)) {
@@ -532,18 +532,18 @@ class component_calculation extends component_common {
 					$result->{$key} = $value; # literal
 				}
 			}
-	
-		return $result;	
+
+		return $result;
 	}//end exec_dato_filter_data
 
 
 
 	/**
 	* RESOLVE_DATA_FOR_FORMULA__DEPRECATED
-	* @return 
+	* @return
 	*//*
 	public function resolve_data_for_formula__DEPRECATED($data) {
-	
+
 		if(!isset($data)) return false;
 
 		$data_resolved = new StdClass;
@@ -583,19 +583,19 @@ class component_calculation extends component_common {
 				break;
 
 			case 'all':
-			
+
 			#	$search_options_session_key = 'section_'.$this->section_tipo.$this->component_tipo;
 			#		#dump($_SESSION['dedalo']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
 			#	$current_options = $_SESSION['dedalo']['config']['search_options'][$search_options_session_key];
 			#
 			#
 			#	if (isset($_SESSION['dedalo']['config']['sum_total'][$search_options_session_key])) {
-			#		
+			#
 			#		# Precalculated value
 			#		$total = $_SESSION['dedalo']['config']['sum_total'][$search_options_session_key];
 			#
 			#	}else{
-			
+
 					foreach ($data->component_tipo as $component_tipo) {
 						$component 		= new RecordObj_dd($component_tipo);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -609,7 +609,7 @@ class component_calculation extends component_common {
 						$search_options = new StdClass;
 							$search_options->section_tipo   = $section_tipo;
 							$search_options->component_tipo = $component_tipo;
-						
+
 						$data_resolved->$component_tipo = $this->get_sum_from_component_tipo($search_options);
 					}
 
@@ -618,7 +618,7 @@ class component_calculation extends component_common {
 				#}
 				break;
 
-			case 'search_session':				
+			case 'search_session':
 
 				foreach ($data->component_tipo as $component_tipo) {
 						$component 		= new RecordObj_dd($component_tipo);
@@ -632,15 +632,15 @@ class component_calculation extends component_common {
 
 						$search_options = new StdClass;
 							$search_options->section_tipo   = $section_tipo;
-							$search_options->component_tipo = $component_tipo;							
-						
+							$search_options->component_tipo = $component_tipo;
+
 						if($data->value ==='value'){
 							$data_resolved->$component_tipo = $this->get_values_from_component_tipo($search_options, $data);
 								#dump($data_resolved, ' data_resolved'.to_string());
 						}else if($data->value ==='sum'){
 							$data_resolved->$component_tipo = $this->get_sum_from_component_tipo($search_options);
 						}
-						
+
 					}
 				break;
 
@@ -673,19 +673,19 @@ class component_calculation extends component_common {
 																		$lang,
 																		$this->section_tipo);
 						$ar_filter_search 	= $current_componet->get_dato();
-						
+
 						$ar_result = array();
-	
+
 						if(is_array($ar_filter_search)) foreach ($ar_filter_search as $filter_search) {
-							$result = new StdClass;	
+							$result = new StdClass;
 							if(empty($filter_search )){
 								continue;
 							}
-							
+
 							$search_base = search::get_records_data($filter_search->search_base);
 							$search_table = $filter_search->search_map->search_base;
 							$search_map = $filter_search->search_map;
-							
+
 							$result->search_name = $search_map->search_name;
 							$result->search_layer = $search_map->search_layer;
 							$result->search_type = $search_map->search_type;
@@ -700,7 +700,7 @@ class component_calculation extends component_common {
 										if($value_test = json_decode($value)){
 											$value = $value_test;
 										}
-										
+
 										if($field == 'section_id'){
 											#$result_base->$search_table->$field= new StdClass;
 											$result_base->$search_table[] = (int)$value;
@@ -733,7 +733,7 @@ class component_calculation extends component_common {
 																	 			if (isset($search_map->$key_field)){
 																	 				$map_field_name = $search_map->$key_field->name;
 																					$current_field_value = json_decode($current_field_value);
-																				
+
 																	 				switch (isset($search_map->$key_field->action)) {
 																	 					case 'convert_to_term_id':
 																		 					if(!isset($current_field_value)){
@@ -761,7 +761,7 @@ class component_calculation extends component_common {
 
 													case 'text_area':
 														$map_field_name = $search_map->$field->name;
-														
+
 														if (isset($search_map->$field->action)) {
 															$result_base->$map_field_name = call_user_func($search_map->$field->action,$value);
 														}
@@ -771,7 +771,7 @@ class component_calculation extends component_common {
 														break;
 												}
 
-												
+
 											}
 										}
 									}
@@ -793,9 +793,9 @@ class component_calculation extends component_common {
 			case isset($data->true) && isset($data->true->ar_locators):
 
 				$ar_locators = json_decode( str_replace("'", '"', $data->true->ar_locators) );
-				
+
 				$options = new stdClass();
-					$options->lang 				= DEDALO_DATA_LANG;	
+					$options->lang 				= DEDALO_DATA_LANG;
 					$options->data_to_be_used 	= 'valor';
 					$options->ar_locators 		= $ar_locators;
 					$options->separator_rows 	= isset($data->true->separator_rows) ? $data->true->separator_rows : false;
@@ -814,9 +814,9 @@ class component_calculation extends component_common {
 		switch (true) {
 			case isset($data->false) && isset($data->false->ar_locators):
 				$ar_locators = json_decode( str_replace("'", '"', $data->false->ar_locators) );
-				
+
 				$options = new stdClass();
-					$options->lang 				= DEDALO_DATA_LANG;	
+					$options->lang 				= DEDALO_DATA_LANG;
 					$options->data_to_be_used 	= 'valor';
 					$options->ar_locators 		= $ar_locators;
 					$options->separator_rows 	= isset($data->false->separator_rows) ? $data->false->separator_rows : false;
@@ -833,7 +833,7 @@ class component_calculation extends component_common {
 
 		//set the filter
 		// NEED TO BE DEFINED
-		
+
 		return $data_resolved;
 	}//end resolve_data_for_formula__DEPRECATED
 	*/
@@ -842,16 +842,16 @@ class component_calculation extends component_common {
 
 	/**
 	* APPLY_FORMULA
-	* @return 
+	* @return
 	*/
 	public function preprocess_formula() {
 		$formula 	= $this->get_JSON_formula();
 			//dump($formula, ' formula ++ '.to_string());
-		
+
 		foreach ($formula as $current_formula) {
 			$data 		= $this->resolve_data_for_formula($current_formula->data);
 			//$rules 		= $current_formula->rules;
-		
+
 			$preprocess_formula 		= new StdClass;
 			$preprocess_formula->data 	= $data;
 			if(isset($current_formula->rules) ){
@@ -892,7 +892,7 @@ class component_calculation extends component_common {
 
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO
-	* @return 
+	* @return
 	*//*
 	public function get_sum_from_component_tipo__DEPECATED($search_options) {
 
@@ -909,14 +909,14 @@ class component_calculation extends component_common {
 			$options->query_wrap 		 = "\n SELECT SUM( CAST( a.datos#>>'{components, $search_options->component_tipo, dato, lg-nolan}' AS REAL )) AS total";
 			$options->query_wrap 		.= "\n FROM \"$search_options->matrix_table\" a";
 			$options->query_wrap 		.= " WHERE a.id IN (%s);";
-		
+
 		$rows_data = search::get_records_data($options);
 			#dump($rows_data, ' $rows_data ++ '.to_string());
 
 		$total = isset($rows_data->result[0][0]['total']) ? $rows_data->result[0][0]['total'] : 0;
 			#dump($total, ' total ++ '.to_string());
 
-		return $total;		
+		return $total;
 	}//end get_sum_from_component_tipo
 	*/
 
@@ -924,14 +924,14 @@ class component_calculation extends component_common {
 
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO
-	* @return 
+	* @return
 	*/
 	public function get_sum_from_component_tipo($search_options) {
 
-		#dump($search_options, ' search_options ++ '.to_string());		
+		#dump($search_options, ' search_options ++ '.to_string());
 
 		$current_section_tipo 	= $search_options->section_tipo;
-		$current_tipo 		  	= $search_options->component_tipo;	
+		$current_tipo 		  	= $search_options->component_tipo;
 		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 		$RecordObj_dd 	= new RecordObj_dd($current_tipo);
@@ -974,7 +974,7 @@ class component_calculation extends component_common {
 		                        "component_tipo": "'.$current_tipo.'",
 		                        "modelo": "'.$modelo_name.'",
 		                        "name": "Sum",
-		                        "lang": "'.$lang.'"	
+		                        "lang": "'.$lang.'"
 		                    }
 		                ]
 		            }'.$section_id_filter.'
@@ -989,7 +989,7 @@ class component_calculation extends component_common {
 		                    "modelo": "'.$modelo_name.'",
 		                    "name": "Sum",
 		                    "selector": "dato",
-		                    "lang": "'.$lang.'"	            		
+		                    "lang": "'.$lang.'"
 		                }
 		            ]
 		        }
@@ -1000,14 +1000,14 @@ class component_calculation extends component_common {
 
 
 		# Search records
-		$search = new search($search_query_object);
-		$search_result 		 = $search->search();
-		$ar_records 		 = $search_result->ar_records;
+		$search 		= search::get_instance($search_query_object);
+		$search_result 	= $search->search();
+		$ar_records 	= $search_result->ar_records;
 
 		$ar_values = [];
-		foreach ($ar_records as $key => $row) {			
+		foreach ($ar_records as $key => $row) {
 			$value = $row->{$current_tipo};
-			$ar_values[] = (int)$value; 
+			$ar_values[] = (int)$value;
 		}
 
 		$total = array_sum($ar_values);
@@ -1019,17 +1019,17 @@ class component_calculation extends component_common {
 
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO
-	* @return 
+	* @return
 	*//*
 	public function get_values_from_component_tipo__OLD($search_options, $data) {
 
 		$search_sesion = $_SESSION['dedalo']['config']['search_options']['section_'.$search_options->section_tipo];
 
 
-		$options = clone $search_sesion;		
+		$options = clone $search_sesion;
 
 		#$options = new stdClass();
-			$options->section_tipo 		= $search_options->section_tipo;			
+			$options->section_tipo 		= $search_options->section_tipo;
 			#$options->section_real_tipo = $current_options->section_real_tipo;
 			#$options->json_field 		= $current_options->json_field;
 			$options->modo 				= 'list';
@@ -1060,14 +1060,14 @@ class component_calculation extends component_common {
 						$options->filter_by_search->$search_name = $current_value;
 							#dump($options->filter_by_search, ' options->filter_by_search'.to_string());
 					}
-				}					
+				}
 			}
 
 			$options->sql_columns 		= "a.id";
 			$options->query_wrap 		 = "\n SELECT a.datos#>>'{components, $search_options->component_tipo, dato, lg-nolan}' AS value ";
 			$options->query_wrap 		.= "\n FROM \"$search_options->matrix_table\" a";
 			$options->query_wrap 		.= "\n WHERE a.id IN (%s);";
-		
+
 			#dump($options, ' options'.to_string());
 		$rows_data = search::get_records_data($options);
 			#dump($rows_data, ' $rows_data ++ '.to_string()); #die();
@@ -1080,11 +1080,11 @@ class component_calculation extends component_common {
 			}
 		}
 		#$value = isset($rows_data->result[0][0]['value']) ? $rows_data->result[0][0]['value'] : '';
-			#dump($value, ' value ++ '.to_string()); 
+			#dump($value, ' value ++ '.to_string());
 			#die();
 
 
-		return $value;		
+		return $value;
 	}//end get_sum_from_component_tipo
 	*/
 
@@ -1092,7 +1092,7 @@ class component_calculation extends component_common {
 
 	/**
 	* GET_VALUES_FROM_COMPONENT_TIPO
-	* @return 
+	* @return
 	*/
 	public function get_values_from_component_tipo($search_options, $data) {
 
@@ -1105,7 +1105,7 @@ class component_calculation extends component_common {
 
 		$RecordObj_dd 	= new RecordObj_dd($current_tipo);
 		$traducible 	= $RecordObj_dd->get_traducible();
-		$lang 			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN; 
+		$lang 			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		if(!isset($_SESSION['dedalo']['config']['search_options'][$current_section_tipo])) {
 
@@ -1123,7 +1123,7 @@ class component_calculation extends component_common {
 
 			$search_query_object  = clone $_SESSION['dedalo']['config']['search_options'][$current_section_tipo]->search_query_object;
 		}
-		
+
 			#dump($search_query_object, ' search_query_object ++ '.to_string());
 
 		# Select
@@ -1132,14 +1132,14 @@ class component_calculation extends component_common {
 		$element = new stdClass();
 			$element->path = $path;
 			$element->component_path = ["components",$current_tipo,"dato",$lang];
-		
+
 		$select[] = $element;
 
 		$search_query_object->select 	 = $select;
 		$search_query_object->limit  	 = 0;
 		$search_query_object->offset 	 = 0;
 		$search_query_object->parsed 	 = false;
-		$search_query_object->full_count = false;		
+		$search_query_object->full_count = false;
 
 
 		# Filter element optional
@@ -1147,16 +1147,16 @@ class component_calculation extends component_common {
 
 			$q_op 	 = '$and';
 			$q_op_or = '$or';
-			
+
 			if (!empty($search_query_object->filter)) {
-			
+
 				$current_filter = json_decode(json_encode($search_query_object->filter));
 
 				$filter_obj = new stdClass();
 					$filter_obj->{$q_op} = [$current_filter];
-				
+
 				$search_query_object->filter = $filter_obj;
-			}			
+			}
 
 			$component_filter_dato = $data->component_filter_dato;
 			foreach ($component_filter_dato as $search) {
@@ -1165,7 +1165,7 @@ class component_calculation extends component_common {
 					$path    = search::get_query_path($current_component_tipo, $current_section_tipo, false);
 					$element = new stdClass();
 						$element->path = $path;
-						$element->q    = $q;					
+						$element->q    = $q;
 
 					if (isset($search_query_object->filter->{$q_op})) {
 						$search_query_object->filter->{$q_op}[] = $element;
@@ -1177,20 +1177,20 @@ class component_calculation extends component_common {
 						$current_filter = json_decode(json_encode($search_query_object->filter));
 						if (isset($current_filter->{$q_op_or}) && !empty($current_filter->{$q_op_or})) {
 							$filter_element->{$q_op}[] = $current_filter;
-						}					
+						}
 
 						$search_query_object->filter = $filter_element;
-					}					
+					}
 				}
-			}					
+			}
 		}
 		#dump($search_query_object, ' search_query_object ++ '.to_string()); #exit();
 		#dump(null, ' search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT)); exit();
-		
+
 		# Search records
-		$search = new search($search_query_object);
-		$search_result 		 = $search->search();
-		$ar_records 		 = $search_result->ar_records;
+		$search 		= search::get_instance($search_query_object);
+		$search_result 	= $search->search();
+		$ar_records 	= $search_result->ar_records;
 
 
 		$ar_values = [];
@@ -1218,7 +1218,7 @@ class component_calculation extends component_common {
 		$q = $query_object->q;
 		$q = pg_escape_string(stripslashes($q));
 
-	
+
 
         switch (true) {
         	# IS NULL
@@ -1234,7 +1234,7 @@ class component_calculation extends component_common {
 	    			$clone->q_parsed = '\'.*""\'';
 
 				$logical_operator = '$or';
-    			$new_query_json = new stdClass;    			
+    			$new_query_json = new stdClass;
 	    			$new_query_json->$logical_operator = [$query_object, $clone];
     			# override
     			$query_object = $new_query_json ;
@@ -1255,13 +1255,13 @@ class component_calculation extends component_common {
 
 
 				$logical_operator ='$and';
-    			$new_query_json = new stdClass;    			
-    				$new_query_json->$logical_operator = [$query_object, $clone];    
+    			$new_query_json = new stdClass;
+    				$new_query_json->$logical_operator = [$query_object, $clone];
 
 				# override
     			$query_object = $new_query_json ;
 				break;
-			# IS DIFFERENT			
+			# IS DIFFERENT
 			case (strpos($q, '!=')===0):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
@@ -1284,8 +1284,8 @@ class component_calculation extends component_common {
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
-				break;	
-			# CONTAIN				
+				break;
+			# CONTAIN
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
@@ -1324,9 +1324,9 @@ class component_calculation extends component_common {
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
-				break;			
-		}//end switch (true) {		
-       
+				break;
+		}//end switch (true) {
+
 
         return $query_object;
 	}//end resolve_query_object_sql
@@ -1339,10 +1339,10 @@ class component_calculation extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null	
+			'!*' 	 => 'campo_vacio', // null
 			'=' 	 => 'similar_a',
 			'!=' 	 => 'distinto_de',
 			'-' 	 => 'no_contiene',
@@ -1373,13 +1373,13 @@ class component_calculation extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
+
 		try{
 			$clean_value = json_decode($value);
 		}catch(Exception $e){
 			$clean_value = $value;
-		} 
-		
+		}
+
 		return $clean_value;
 	}//end render_list_value
 
@@ -1396,7 +1396,7 @@ class component_calculation extends component_common {
 	*/
 	public function get_valor_list_html_to_save() {
 		$valor = $this->get_valor();
-		
+
 		return $valor;
 	}//end get_valor_list_html_to_save
 
@@ -1419,7 +1419,7 @@ class component_calculation extends component_common {
 		}
 
 		return to_string($valor);
-	}//end get_valor_export	
+	}//end get_valor_export
 
 
 

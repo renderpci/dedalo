@@ -10,7 +10,7 @@ class section_records extends common {
 	public $tipo;
 	# search_options include the search_query_object
 	public $search_options;
-	
+
 	public $button_delete;
 	public $button_delete_permissions = 0;
 
@@ -23,11 +23,11 @@ class section_records extends common {
 
 
 	function __construct($tipo, $search_options) {
-		
+
 		# Modo
 		$this->tipo = $tipo;
 		if (empty($search_options->modo)) {
-			throw new Exception("Error Processing Request", 1);			
+			throw new Exception("Error Processing Request", 1);
 			trigger_error("Error: search_options->modo in mandatory to create a section_records");
 		}
 
@@ -48,13 +48,13 @@ class section_records extends common {
 		$html='';
 
 		$start_time=microtime(1); // Used later in phtml for statistics
-		
+
 		#
-		# SAVE_HANDLER . Is defined in section and injected in this->search_options sended to current class		
+		# SAVE_HANDLER . Is defined in section and injected in this->search_options sended to current class
 		if (isset($this->search_options->save_handler) && $this->search_options->save_handler==='session') {
-					
+
 			// to_review 14-2-2018
-			# Mimic database result	with a placebo records_data 				
+			# Mimic database result	with a placebo records_data
 			$ar_data = array();
 
 			$row = new stdClass();
@@ -62,16 +62,17 @@ class section_records extends common {
 				$row->section_tipo 	= $this->search_options->search_query_object->section_tipo;
 
 			$ar_data[] = $row;
-			
+
 			$records_data = new stdClass();
 				$records_data->ar_records = $ar_data;
-				#$records_data->search_query_object = null;		
-		
-		}else{		
-		#
-		# DEFAULT CASE (save_handler is 'database')	
+				#$records_data->search_query_object = null;
 
-			$search_options = $this->search_options;			
+		}else{
+		#
+		# DEFAULT CASE (save_handler is 'database')
+
+			$search_options 	 = $this->search_options;
+			$search_query_object = $search_options->search_query_object;
 
 			# Calculate rows from database. Exec search
 			if ( $search_options->modo==='list_tm' ) {
@@ -81,9 +82,9 @@ class section_records extends common {
 
 			}else{
 				// Comom case
-				$search = new search($search_options->search_query_object);
-								
-			}			
+				$search = search::get_instance($search_query_object);
+
+			}
 			$records_data = $search->search();
 
 			#
@@ -96,7 +97,7 @@ class section_records extends common {
 			// Fix search search_query_object_preparse for debug
 			$this->search_query_object_preparse = $search->search_query_object_preparse;
 
-			#debug_log(__METHOD__." this->search_options **** ".json_encode($this->search_options), logger::DEBUG);						
+			#debug_log(__METHOD__." this->search_options **** ".json_encode($this->search_options), logger::DEBUG);
 		}
 
 		# Fix records_data
@@ -108,7 +109,7 @@ class section_records extends common {
 		$html = ob_get_clean();
 
 		/*
-		# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)	
+		# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 		logger::$obj['activity']->log_message(
 				'SEARCH',
 				logger::INFO,
@@ -117,7 +118,7 @@ class section_records extends common {
 				$activity_dato = ''
 			);
 		*/
-		
+
 		return (string)$html;
 	}//end get_html
 
@@ -132,7 +133,7 @@ class section_records extends common {
 	public static function set_search_options( $search_options, $search_options_id ) {
 
 		#$search_options = json_encode($search_options, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES);
-		
+
 		# Session way
 		$_SESSION['dedalo']['config']['search_options'][$search_options_id] = $search_options;
 
@@ -150,7 +151,7 @@ class section_records extends common {
 	* @return object $search_options | false
 	*/
 	public static function get_search_options( $search_options_id ) {
-		
+
 		# Session way
 		$search_options = isset($_SESSION['dedalo']['config']['search_options'][$search_options_id]) ? $_SESSION['dedalo']['config']['search_options'][$search_options_id] : false;
 	#dump($search_options, ' search_options ++ '.to_string($search_options_id));
@@ -158,7 +159,7 @@ class section_records extends common {
 
 		return $search_options;
 	}//end get_search_options
-	
+
 
 
 }//end section_records

@@ -334,7 +334,7 @@ class component_filter extends component_relation_common {
 				    "filter": null
 				}
 			');
-			$current_search = new search($sqo);
+			$current_search = search::get_instance($sqo);
 			$search_result  = $current_search->search();
 
 		// typology groupers
@@ -809,7 +809,7 @@ class component_filter extends component_relation_common {
 			}';
 			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
 			$search_query_object = json_decode($search_query_object);
-			$search = new search($search_query_object);
+			$search 			 = search::get_instance($search_query_object);
 			$result 			 = $search->search();
 			#dump($result, ' result ** ++ '.to_string());
 
