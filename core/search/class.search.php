@@ -69,6 +69,24 @@ class search {
 		public $ar_direct_columns = ['section_id','section_tipo','id'];
 
 
+
+	/**
+	* GET_INSTANCE
+	* @return class instance
+	*/
+	public static function get_instance($search_query_object) {
+
+		# Accepted objects json encoded too
+		if (is_string($search_query_object)) {
+			$search_query_object = json_decode($search_query_object);
+		}
+
+		$search_class = (isset($search_query_object->class) && $search_query_object->class==='search_tm') ? 'search_tm' : 'search';
+
+		return new $search_class($search_query_object);
+	}//end get_instance
+
+
 	/**
 	* __CONSTRUCT
 	*/
@@ -84,10 +102,10 @@ class search {
 	*/
 	public function set_up($search_query_object) {
 
-		# Accepted objects json encoded too
-		if (is_string($search_query_object)) {
-			$search_query_object = json_decode($search_query_object);
-		}
+		// # Accepted objects json encoded too
+		// if (is_string($search_query_object)) {
+		// 	$search_query_object = json_decode($search_query_object);
+		// }
 
 		if (SHOW_DEVELOPER===true && (!isset($this->search_query_object->parsed) || $this->search_query_object->parsed===false)) {
 			# Set and fix class property search_query_object
