@@ -314,8 +314,6 @@ class dd_utils_api {
 
 		session_write_close();
 
-		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
-
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -323,9 +321,12 @@ class dd_utils_api {
 
 		set_time_limit ( 259200 );  // 3 days
 
-		if($search_query_object = $request_options->options) {
+		if($search_query_object = json_decode($request_options->options)) {
 
-			$search = new search($search_query_object);
+			// search_class. Default is 'search'. 'search_tm' can be used too
+			$search_class = ($search_query_object->class==='search_tm') ? 'search_tm' : 'search';
+
+			$search = new $search_class($search_query_object);
 
 			// search exec
 				$rows = $search->search();
@@ -484,20 +485,21 @@ class dd_utils_api {
 
 
 
-	/**
-	* GET_TIME_MACHILE_LIST
-	* Return an array of records of current section
-	* @return
-	*//* IN PROCESS
-	public function get_time_machile_list($request_options=null) {
+	// /**
+	// * GET_TIME_MACHILE_LIST
+	// * Return an array of records of current section
+	// * @return
+	// */
+	// public function get_time_machile_list($request_options=null) {
 
-		$options = new stdClass();
-			$options->section_tipo = null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	// 	$options = new stdClass();
+	// 		$options->section_tipo = null;
+	// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
-	}//end get_time_machile_list
-	*/
+
+	// }//end get_time_machile_list
+
 
 
 
