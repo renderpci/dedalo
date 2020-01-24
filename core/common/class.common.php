@@ -2494,16 +2494,28 @@ abstract class common {
 				|| (is_array($tool->afected_tipos) && in_array($tipo, $tool->afected_tipos))
 			  ) {
 
-				if (isset($tool->requirement_translatable)) {
+				if (isset($tool->requirement_translatable) && $tool->requirement_translatable===true) {
+
 					$is_translatable = $is_component ? ($this->traducible==='no' ? false : true) : false;
+					
 					if ($tool->requirement_translatable===$is_translatable) {
 						$tools[] = $tool;
 					}
+
 				}else{
 					$tools[] = $tool;
 				}
+
+
 			}
 		}
+
+
+
+		if ($model==='component_text_area' && $tool->name==='tool_tc') {
+			dump($tool, ' tool ++ '.to_string());
+		}
+
 
 		return $tools;
 	}//end get_tools
