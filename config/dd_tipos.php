@@ -7,7 +7,7 @@ define('DEDALO_TESAURO_TIPO'							, 'dd100');
 define('DEDALO_MEDIA_AREA_TIPO'							, 'rsc1');
 define('DEDALO_AREA_ROOT_TIPO'							, 'dd242');
 
-# Activity 
+# Activity
 define('DEDALO_ACTIVITY_SECTION_TIPO'					, 'dd542');
 define('DEDALO_ACTIVITY_WHEN'							, 'dd547'); // component_date
 
@@ -178,6 +178,11 @@ define('DEDALO_SERVICES_SECTION_TIPO'					, 'dd1010');
 # TOOLS REGISTER
 define('DEDALO_REGISTER_TOOLS_SECTION_TIPO'				, 'dd1324');
 
+# section info
+define('DEDALO_SECTION_INFO_MODIFIED_BY_USER'			, 'dd197');
+define('DEDALO_SECTION_INFO_MODIFIED_DATE'				, 'dd201');
+
+
 if (!defined('DEDALO_PROTOCOL')) {
 	define('DEDALO_PROTOCOL', 'http://');
 }
@@ -185,20 +190,20 @@ if (!defined('DEDALO_PROTOCOL')) {
 
 
 # TOP_TIPO
-if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {	
+if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {
 	define('TOP_TIPO', $request_var_top_tipo);
 }else if ( false !== ($request_var_t = get_request_var('t')) ) {
 	define('TOP_TIPO', $request_var_t);
 }else if ( false !== ($request_var_t = get_request_var('json')) ) {
 	if ($json_obj = json_decode($request_var_t)) {
 		if (isset($json_obj->section_tipo)) {
-			define('TOP_TIPO', $json_obj->section_tipo);	
+			define('TOP_TIPO', $json_obj->section_tipo);
 		}
-	}	
+	}
 }else if (isset($TOP_TIPO)) {
-	define('TOP_TIPO', $TOP_TIPO);	
+	define('TOP_TIPO', $TOP_TIPO);
 }else{
-	define('TOP_TIPO', false);	
+	define('TOP_TIPO', false);
 }
 # TOP_ID
 if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
