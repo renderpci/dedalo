@@ -27,21 +27,16 @@ function change_all_timecodes($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-	$vars = array('tipo','section_tipo','parent','lang','offset_seconds','save');
+	$vars = array('tipo','section_tipo','parent','lang','offset_seconds');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			if ($name==='save') continue; # Skip non mandatory
+			# DATA VERIFY			
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
-
-	if (is_string($save)) {
-		$save = json_decode($save);
-	}
-
+	
 	$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 	$component_obj 	 = component_common::get_instance($modelo_name,
 													  $tipo,
@@ -51,7 +46,7 @@ function change_all_timecodes($json_data) {
 													  $section_tipo);
 
 	$tool_tc  = new tool_tc($component_obj);
-	$response = (object)$tool_tc ->change_all_timecodes( $offset_seconds, $save );
+	$response = (object)$tool_tc ->change_all_timecodes($offset_seconds);
 
 	# Debug
 	if(SHOW_DEBUG===true) {
