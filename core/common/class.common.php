@@ -2557,8 +2557,9 @@ abstract class common {
 
 		$registered_tools = [];
 		foreach ($result->ar_records as $record) {
-			$section = section::get_instance($record->section_id, $record->section_tipo);
-			$section_dato = json_decode($record->datos);
+
+			$section 		= section::get_instance($record->section_id, $record->section_tipo);
+			$section_dato 	= json_decode($record->datos);
 			$section->set_dato($section_dato);
 			$section->set_bl_loaded_matrix_data(true);
 
@@ -2570,7 +2571,10 @@ abstract class common {
 															'list',
 															DEDALO_DATA_NOLAN,
 															$record->section_tipo);
-			$registered_tools[] 	= $component->get_dato();
+			$dato = $component->get_dato();
+			foreach ((array)$dato as $current_value) {
+				$registered_tools[] = $current_value;
+			}
 		}
 
 		$_SESSION['dedalo']['registered_tools'] = $registered_tools;
