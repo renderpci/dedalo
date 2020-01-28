@@ -12,7 +12,7 @@ class component_select extends component_relation_common {
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
-	
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
@@ -20,16 +20,20 @@ class component_select extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
 
-		if (isset($this->valor)) {			
+		if (isset($this->valor)) {
 			return $this->valor;
 		}
-		
+
 		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return $this->valor = null;
-		}			
-			
-		# Test dato format (b4 changed to object)		
+
+		// case user id root
+			if (isset($dato[0])
+				&& $dato[0]->section_tipo===DEDALO_SECTION_USERS_TIPO
+				&& $dato[0]->section_id==='-1') {
+				return 'root';
+			}
+
+		# Test dato format (b4 changed to object)
 		foreach ($dato as $key => $current_value) {
 			if (!is_object($current_value)) {
 				if(SHOW_DEBUG) {
@@ -38,12 +42,12 @@ class component_select extends component_relation_common {
 				trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->section_tipo - $this->tipo - $this->parent .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
 				return $this->valor = null;
 			}
-		}		
+		}
 
-		$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual		
+		$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual
 		$ar_values = [];
 		foreach ($ar_list_of_values->result as $key => $item) {
-			
+
 			$locator = $item->value;
 
 			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
@@ -52,7 +56,7 @@ class component_select extends component_relation_common {
 		}
 
 		# Set value
-		$this->valor = implode(', ', $ar_values);			
+		$this->valor = implode(', ', $ar_values);
 
 		return $this->valor;
 	}//end get_valor
@@ -67,7 +71,7 @@ class component_select extends component_relation_common {
 	public function get_valor_lang(){
 
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
+
 		#dump($relacionados,'$relacionados');
 		if(empty($relacionados)){
 			return $this->lang;
@@ -76,7 +80,7 @@ class component_select extends component_relation_common {
 		$termonioID_related = array_values($relacionados[0])[0];
 		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
 
-		if($RecordObjt_dd->get_traducible() === 'no'){
+		if($RecordObjt_dd->get_traducible()==='no'){
 			$lang = DEDALO_DATA_NOLAN;
 		}else{
 			$lang = DEDALO_DATA_LANG;
@@ -84,7 +88,7 @@ class component_select extends component_relation_common {
 
 		return $lang;
 	}//end get_valor_lang
-	
+
 
 
 	/**
@@ -103,7 +107,7 @@ class component_select extends component_relation_common {
 	* @return string $list_value
 	*//*
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
@@ -111,7 +115,7 @@ class component_select extends component_relation_common {
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
-		
+
 		# Use already query calculated values for speed
 		$ar_records = is_string($value) ? (array)json_handler::decode($value) : (array)$value;
 		$component->set_dato($ar_records);
@@ -165,7 +169,7 @@ class component_select extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-	
+
 		$diffusion_value = $this->get_valor($lang);
 		$diffusion_value = strip_tags($diffusion_value);
 
@@ -176,7 +180,7 @@ class component_select extends component_relation_common {
 
 	/**
 	* GET_DIFFUSION_DATO
-	* @return 
+	* @return
 	*/
 	public function get_diffusion_dato() {
 
@@ -250,7 +254,7 @@ class component_select extends component_relation_common {
 
 		return $controller_data;
 	}//end get_controller_data
-	
+
 
 }//end class
 ?>
