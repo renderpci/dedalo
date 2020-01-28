@@ -101,6 +101,62 @@ class dd_core_api {
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		$context = $json_data->context;
+			// dump($context, ' context 1 ++ '.to_string());
+
+		// test 'test159'
+			$context99 = json_decode('
+				[
+				  {
+				    "typo": "sqo",
+				    "id": "a",
+				    "mode": "tm",
+				    "section_tipo": [
+				      "test65"
+				    ],
+				    "filter_by_locators": [{
+				        "section_tipo": "test65",
+				        "section_id": "1",
+				        "tipo": "test159",
+				        "lang": "lg-eng"
+				      }],
+				    "full_count": true,
+				    "limit": 10,
+				    "offset": 0,
+				    "order": [{
+				        "direction": "DESC",
+				        "path": [{
+				            "component_tipo": "id"
+				          }]
+				      }]
+				  },
+				  {
+				    "model": "component_input_text",
+				    "tipo": "test159",
+				    "section_tipo": "test65",
+				    "mode": "list",
+				    "parent": "test158",
+				    "typo": "ddo",
+				    "type": "component",
+				    "label": "Input text X",
+				    "debug_from": "calculated from section list or related terms"
+				  },
+				  {
+				    "typo": "source",
+				    "action": "search",
+				    "model": "section",
+				    "tipo": "test65",
+				    "section_tipo": "test65",
+				    "section_id": null,
+				    "mode": "tm",
+				    "lang": "lg-eng",
+				    "pagination": {
+				      "total": {},
+				      "offset": 0
+				    }
+				  }
+				]
+			');
+			// dump($context, ' context 2 ++ '.to_string());
 
 		$json_rows = self::build_json_rows($context);
 
@@ -230,10 +286,10 @@ class dd_core_api {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$sqo = $json_data->sqo;
+		$search_query_object = $json_data->sqo;
 
 		// search
-			$search	= new search($sqo);
+			$search	= search::get_instance($search_query_object);
 			$total	= $search->count();
 			$result	= $total;
 
@@ -266,16 +322,21 @@ class dd_core_api {
 
 		// vars from json_data
 			$source 		= $json_data->source;
-				$tipo 			= $source->tipo;
-				$section_tipo 	= $source->section_tipo;
-				$model 			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$lang 			= $source->lang ?? DEDALO_DATA_LANG;
-				$mode 			= $source->mode ?? 'list';
+
+			$tipo 			= $source->tipo;
+			$section_tipo 	= $source->section_tipo;
+			$model 			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$lang 			= $source->lang ?? DEDALO_DATA_LANG;
+			$mode 			= $source->mode ?? 'list';
 
 		// build element
 			switch ($model) {
 				case 'section':
 					$element 		= section::get_instance(null, $section_tipo);
+					break;
+
+				case 'section_tm':
+					$element 		= section_tm::get_instance(null, $section_tipo);
 					break;
 
 				case 'component':
@@ -306,12 +367,13 @@ class dd_core_api {
 	}//end get_element_context
 
 
+
 	/**
 	* GET_ELEMENT
 	* @param object $json_data
 	* @return object $response
 	*/
-	static function get_element($json_data){
+	public static function get_element($json_data){
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -320,15 +382,18 @@ class dd_core_api {
 		$options = $json_data->options;
 
 		// vars from json_data
-			$element_required = new stdClass();
-				$element_required->tipo 		= $options->tipo ?? null;
-				$element_required->model 		= $options->model ?? (isset($options->tipo) ? RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true) : null);
-				$element_required->lang 		= $options->lang ?? DEDALO_DATA_LANG;
-				$element_required->mode 		= $options->mode ?? 'list';
-				$element_required->section_id	= $options->section_id ?? null;
+			$required_element = new stdClass();
+				$required_element->tipo 		= $options->tipo ?? null;
+				$required_element->model 		= $options->model ?? (isset($options->tipo) ? RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true) : null);
+				$required_element->lang 		= $options->lang ?? DEDALO_DATA_LANG;
+				$required_element->mode 		= $options->mode ?? 'list';
+				$required_element->section_id	= $options->section_id ?? null;
+
+				$required_element->component_tipo 	= $options->component_tipo ?? null;
+				$required_element->tm 				= $options->tm ?? null;
 
 		// element json
-			$element = self::get_page_element( $element_required );
+			$element = self::get_page_element( $required_element );
 
 		$response->result 		= $element;
 		$response->msg 	  		= 'Ok. Request done';
@@ -342,25 +407,25 @@ class dd_core_api {
 	* GET_PAGE_ELEMENT
 	* Creates a full ready page element from basic vars (tipo, model, lang, mode, section_id)
 	* Before building the page element object, verify that the user is logged in. If not, return 'null'
-	* @param object $element_required
+	* @param object $required_element
 	* @return object $page_element
 	*/
-	public static function get_page_element($element_required) {
+	private static function get_page_element($required_element) {
 
 		// logged
 			if (login::is_logged()!==true) return null;
 
-			$tipo 		= $element_required->tipo;
-			$model 		= $element_required->model;
-			$lang 		= $element_required->lang;
-			$mode 		= $element_required->mode;
-			$section_id = $element_required->section_id;
+			$tipo 			= $required_element->tipo;
+			$model 			= $required_element->model;
+			$lang 			= $required_element->lang;
+			$mode 			= $required_element->mode;
+			$section_id 	= $required_element->section_id;
+			$component_tipo = $required_element->component_tipo ?? null;
 
 		// page elements
 			switch ($model) {
 
 				case 'menu' :
-					//menu_element
 					$page_element = (function(){
 
 						$menu = new menu();
@@ -434,11 +499,9 @@ class dd_core_api {
 					break;
 
 				case 'section':
-					$page_element = (function() use ($model, $tipo, $section_id, $mode){
+					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
 
-						$section_tipo 	= $tipo ?? 'test65';
-						$section_id		= $section_id ?? null;
-						$lang 	 	 	= DEDALO_DATA_LANG;
+						$section_tipo = $tipo;
 
 						// sqo_context
 							$section = section::get_instance($section_id, $section_tipo, $mode);
@@ -457,6 +520,7 @@ class dd_core_api {
 						return $page_element;
 					})();
 					break;
+
 					default:
 						throw new Exception("Error Processing Request", 1);
 
@@ -656,8 +720,7 @@ class dd_core_api {
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
-	private static function build_json_rows($sqo_context) {
-
+	private static function build_json_rows($base_context) {
 		$start_time=microtime(1);
 
 		// default result
@@ -667,14 +730,14 @@ class dd_core_api {
 
 
 		// ar_dd_objects . Array of all dd objects in requested context
-			$ar_dd_objects = array_filter($sqo_context, function($item) {
+			$ar_dd_objects = array_filter($base_context, function($item) {
 				 if($item->typo==='ddo') return $item;
 			});
 			// set as static to allow external access
 			dd_core_api::$ar_dd_objects = $ar_dd_objects;
 
 		// ddo_source
-			$ddo_source = array_reduce($sqo_context, function($carry, $item){
+			$ddo_source = array_reduce($base_context, function($carry, $item){
 				if (isset($item->typo) && $item->typo==='source') {
 					return $item;
 				}
@@ -692,7 +755,7 @@ class dd_core_api {
 			$offset 		= $ddo_source->pagination->offset ?? null;
 
 		// sqo
-			$search_query_object = array_reduce($sqo_context, function($carry, $item){
+			$search_query_object = array_reduce($base_context, function($carry, $item){
 				if (isset($item->typo) && $item->typo==='sqo') {
 					return $item;
 				}
@@ -705,14 +768,18 @@ class dd_core_api {
 
 				switch ($action) {
 
-					case 'search':
+					case 'search': // example. get section records in list or edit mode, search in autocomplete service
 
 						// sections
 							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
 
+							if ($mode==='tm') {
+								$element->set_base_context($base_context); // inject whole context
+							}
+
 						break;
 
-					case 'get_data':
+					case 'get_data': // example: paginate a component portal or component autocomplete
 
 						if (strpos($model, 'component')===0) {
 
@@ -760,8 +827,8 @@ class dd_core_api {
 						case 'search':
 							/*
 								// search
-									$search = new search($current_sqo);
-									$rows_data 			 = $search->search();
+									$search 	= search::get_instance($search_query_object);
+									$rows_data 	= $search->search();
 
 								// section. generated the self section_data
 								foreach ($current_sqo->section_tipo as $current_section_tipo) {

@@ -57,6 +57,7 @@ export const section_record = function() {
 	section_record.prototype.destroy	= common.prototype.destroy
 	section_record.prototype.render 	= common.prototype.render
 	section_record.prototype.list 		= render_section_record.prototype.list
+	section_record.prototype.tm			= render_section_record.prototype.list
 	section_record.prototype.edit 		= render_section_record.prototype.edit
 
 

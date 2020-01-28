@@ -11,10 +11,10 @@ class component_json extends component_common {
 	protected $lang = DEDALO_DATA_NOLAN;
 
 
-	
+
 	# CONSTRUCT
 	public function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-		
+
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
@@ -31,15 +31,15 @@ class component_json extends component_common {
 		// Compressed dato to avoid postgresql change index order
 		$dato = parent::get_dato();
 
-		// De-Compress dato 
+		// De-Compress dato
 		#if(!empty($dato)) $dato = json_decode( base64_encode($dato) );
 		//$dato = json_decode($dato);
-		
+
 		#$dato = unserialize($dato);
 		#dump($dato, ' dato ++ '.to_string());
 
-		if(!empty($dato) && !is_object($dato) && !is_array($dato)) {			
-			trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));			
+		if(!empty($dato) && !is_object($dato) && !is_array($dato)) {
+			trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));
 			$dato = new stdClass();
 		}
 
@@ -59,7 +59,7 @@ class component_json extends component_common {
 				if (!$dato = json_decode($dato)) {
 					trigger_error("Error. Only valid JSON is accepted as dato");
 					return false;
-				}			
+				}
 			}
 
 			if(!is_object($dato) && !is_array($dato)) {
@@ -69,11 +69,11 @@ class component_json extends component_common {
 		}
 
 		// Compress dato to avoid postgresql change index order
-		
+
 		//$dato = json_encode($dato);
 		#$dato = serialize($dato);
 		//error_log( print_r($dato, true) );
-		
+
 		parent::set_dato( $dato );
 	}//end set_dato
 
@@ -81,11 +81,13 @@ class component_json extends component_common {
 
 	/**
 	* GET_VALOR
-	* @return 
+	* @return
 	*/
 	public function get_valor() {
 		$dato  = $this->get_dato();
 		//$valor = json_encode($dato);
+
+		$valor = $dato;
 
 		return $valor;
 	}//end get_valor
@@ -117,13 +119,13 @@ class component_json extends component_common {
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
-			
+
 			case '6.0.0':
 
 				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
 
 					$new_dato = json_decode($dato_unchanged);
-				
+
 					$response = new stdClass();
 					$response->result = 1;
 					$response->new_dato = $new_dato;

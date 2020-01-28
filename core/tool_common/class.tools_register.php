@@ -53,9 +53,9 @@ class tools_register {
 					$new_info_object = clone $info_object;
 
 				// ontology from info object
-					$current_ontology = (isset($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'})) ?
-						json_decode($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}) :
-						null;
+					$current_ontology = (isset($info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}))
+						? $info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}
+						: null;
 
 				if(!empty($current_ontology)){
 
@@ -64,11 +64,11 @@ class tools_register {
 					$ar_ontologies[] = $new_ontology;
 
 					// update ontology
-					$new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'} = json_encode($new_ontology);
+					$new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'} = $new_ontology;
 
 				}else{
 
-					debug_log(__METHOD__." The current register.json don't have ontology modificator ".to_string(), logger::ERROR);
+					debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
 				}
 
 				// add info_objects_parsed
@@ -127,7 +127,7 @@ class tools_register {
 																			 'list',
 																			 DEDALO_DATA_NOLAN,
 																			 tools_register::$section_tools_tipo);
-							$component->set_dato($tool_object);
+							$component->set_dato([$tool_object]);
 							$component->save();
 					}
 			}
@@ -138,7 +138,7 @@ class tools_register {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Imported $counter ontology items from dirs: ".json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), logger::DEBUG);
+				debug_log(__METHOD__." Imported ".($counter+1)." ontology items from dirs: ".json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), logger::DEBUG);
 			}
 
 
@@ -304,7 +304,7 @@ class tools_register {
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
 			$dato 			= $component->get_dato();
-			$dato_ref 		= reset($dato)->section_id;
+			$dato_ref 		= empty($dato) ? '0' : (reset($dato)->section_id);
 			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->requirement_translatable = $value;
 
@@ -334,9 +334,9 @@ class tools_register {
 			$tool_object->properties = $value;
 
 
-		// config
-			$config_raw = file_get_contents(DEDALO_CONFIG_PATH.'/tools/config_'.$tool_object->name.'.json');
-			$tool_object->config = ($config_raw!==false) ? json_decode($config_raw) : null;
+		// // config
+		// 	$config_raw = file_get_contents(DEDALO_CONFIG_PATH.'/tools/config_'.$tool_object->name.'.json');
+		// 	$tool_object->config = ($config_raw!==false) ? json_decode($config_raw) : null;
 
 
 		return $tool_object;

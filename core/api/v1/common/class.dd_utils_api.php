@@ -110,7 +110,7 @@ class dd_utils_api {
 	public static function update_structure($request_options=null) {
 		global $start_time;
 
-		session_write_close();
+		// session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -220,8 +220,6 @@ class dd_utils_api {
 	public static function register_tools($request_options=null) {
 		global $start_time;
 
-		session_write_close();
-
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -250,7 +248,7 @@ class dd_utils_api {
 	public static function build_structure_css($request_options=null) {
 		global $start_time;
 
-		session_write_close();
+		// session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -280,7 +278,7 @@ class dd_utils_api {
 	public static function update_version($request_options=null) {
 		global $start_time;
 
-		session_write_close();
+		// session_write_close();
 
 		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
 
@@ -312,7 +310,7 @@ class dd_utils_api {
 	public static function convert_search_object_to_sql_query($request_options=null) {
 		global $start_time;
 
-		session_write_close();
+		// session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;
