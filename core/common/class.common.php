@@ -2511,7 +2511,6 @@ abstract class common {
 		}
 
 
-
 		if ($model==='component_text_area' && $tool->name==='tool_tc') {
 			dump($tool, ' tool ++ '.to_string());
 		}
@@ -2542,10 +2541,10 @@ abstract class common {
 				            "q_operator": null,
 				            "path": [
 				                {
-				                    "section_tipo": "dd1324",
-				                    "component_tipo": "dd1354",
-				                    "modelo": "component_radio_button",
-				                    "name": "Active"
+									"section_tipo": "dd1324",
+									"component_tipo": "dd1354",
+									"modelo": "component_radio_button",
+									"name": "Active"
 				                }
 				            ]
 				        }
