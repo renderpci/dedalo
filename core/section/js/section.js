@@ -56,6 +56,7 @@ export const section = function() {
 // prototypes assign
 	section.prototype.edit 			= render_section.prototype.edit
 	section.prototype.list 			= render_section.prototype.list
+	section.prototype.tm 			= render_section.prototype.list
 	section.prototype.list_header 	= render_section.prototype.list_header
 	section.prototype.render 		= common.prototype.render
 	section.prototype.destroy 		= common.prototype.destroy
@@ -179,7 +180,7 @@ section.prototype.build = async function(autoload=false) {
 			: null
 
 	// Update section mode/label with context declarations
-		const section_context 	= self.context.find(element => element.tipo===self.section_tipo) || {
+		const section_context = self.context.find(element => element.tipo===self.section_tipo) || {
 			mode  		: 'edit',
 			label 		: 'Section without permissions '+self.tipo,
 			permissions : 0
@@ -279,11 +280,12 @@ section.prototype.get_ar_instances = async function(){
 
 			const current_section_id 	= value[i].section_id
 			const current_section_tipo 	= value[i].section_tipo
-			const current_data			= self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+			const current_data			= (self.mode==='tm')
+				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
 			const current_context 		= self.context
 
-			// section_record
-				const current_section_record = await instances.get_instance({
+			const instance_options = {
 					model 			: 'section_record',
 					tipo 			: current_section_tipo,
 					section_tipo	: current_section_tipo,
@@ -294,7 +296,14 @@ section.prototype.get_ar_instances = async function(){
 					data			: current_data,
 					datum 			: self.datum,
 					caller 			: self
-				})
+			}
+
+			if (self.mode==='tm') {
+				instance_options.matrix_id = value[i].matrix_id
+			}
+
+			// section_record
+				const current_section_record = await instances.get_instance(instance_options)
 
 				await current_section_record.build(true)
 

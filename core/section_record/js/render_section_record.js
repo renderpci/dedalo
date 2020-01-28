@@ -157,7 +157,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			id 				: self.id,
-			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
 
 	const fragment = new DocumentFragment()
@@ -186,7 +186,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 					parent 			: edit_line
 				})
 				.addEventListener("click", function(e){
-					// edit_record(this, self)					
+					// edit_record(this, self)
 					event_manager.publish('user_action', {
 						tipo 		: self.section_tipo,
 						section_id 	: self.section_id,
