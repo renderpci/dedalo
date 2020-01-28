@@ -127,7 +127,7 @@ class tools_register {
 																			 'list',
 																			 DEDALO_DATA_NOLAN,
 																			 tools_register::$section_tools_tipo);
-							$component->set_dato($tool_object);
+							$component->set_dato([$tool_object]);
 							$component->save();
 					}
 			}
@@ -304,7 +304,7 @@ class tools_register {
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
 			$dato 			= $component->get_dato();
-			$dato_ref 		= reset($dato)->section_id;
+			$dato_ref 		= empty($dato) ? '0' : (reset($dato)->section_id);
 			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->requirement_translatable = $value;
 
