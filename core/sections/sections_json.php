@@ -6,7 +6,7 @@
 // component configuration vars
 	$ar_section_tipo	= $this->get_ar_section_tipo();
 	$modo				= $this->get_modo();
-
+	$section_class 		= ($modo==='tm') ? 'section_tm' : 'section';
 
 
 // context
@@ -22,7 +22,11 @@
 			default:
 				foreach ((array)$ar_section_tipo as $current_section_tipo) {
 
-					$section = section::get_instance(null, $current_section_tipo, $modo);
+					$section = $section_class::get_instance(null, $current_section_tipo, $modo);
+
+					if ($modo==='tm') {
+						$section->set_base_context( $this->get_base_context() ); // inject full context
+					}
 
 					// get the JSON context of the related component
 						$section_options = new stdClass();
@@ -43,19 +47,23 @@
 
 	if($options->get_data===true){
 
+		// dato is the full result of a search using the search_query_object
 		$dato = $this->get_dato();
 
 		if (!empty($dato)) {
 
 			// data item
-				$value = array_map(function($item){
+				$value = array_map(function($item) use($modo){
 					$locator = new stdClass();
 						$locator->section_tipo 	= $item->section_tipo;
 						$locator->section_id 	= $item->section_id;
+
+						if($modo==='tm'){
+						$locator->matrix_id 	= $item->id;
+						}
+
 					return $locator;
 				}, $dato);
-
-				//$item = $this->get_data_item($value);
 
 				$item = new stdClass();
 					#$item->typo 		= 'section';
@@ -65,23 +73,33 @@
 
 				$data[] = $item;
 
+			// subdata
+				foreach ($dato as $current_record) {
 
-			foreach ($dato as $current_record) {
+					$section_id   	= $current_record->section_id;
+					$section_tipo 	= $current_record->section_tipo;
+					// $datos			= isset($current_record->datos) ? json_decode($current_record->datos) : null;
 
-				$section_id   	= $current_record->section_id;
-				$section_tipo 	= $current_record->section_tipo;
-				$datos			= json_decode($current_record->datos);
+					$section 		= $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
 
-				$section = section::get_instance($section_id,$section_tipo, $modo, $cache=true);
+					if ($modo==='tm') {
+						$section->set_record($current_record); // inject whole db record as var
+					}
 
-				// get the JSON context of the related component
-					$section_options = new stdClass();
-						$section_options->get_context	= false;
-						$section_options->get_data 	 	= true;
-					$section_json = $section->get_json($section_options);
+					// inject datos
+						// if (!is_null($datos)) {
+							// $section->set_dato($datos);
+							// $section->set_bl_loaded_matrix_data(true);
+						// }
 
-				$data = array_merge($data, $section_json->data);
-			}
+					// get the JSON context of the related component
+						$section_options = new stdClass();
+							$section_options->get_context	= false;
+							$section_options->get_data 	 	= true;
+						$section_json = $section->get_json($section_options);
+
+					$data = array_merge($data, $section_json->data);
+				}//end foreach ($dato as $current_record)
 
 		}//end if (!empty($dato))
 
