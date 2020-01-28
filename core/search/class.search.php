@@ -81,16 +81,17 @@ class search {
 			$search_query_object = json_decode($search_query_object);
 		}
 
-		$search_class = (isset($search_query_object->class) && $search_query_object->class==='search_tm') ? 'search_tm' : 'search';
+		$search_class = (isset($search_query_object->mode) && $search_query_object->mode==='tm') ? 'search_tm' : 'search';
 
 		return new $search_class($search_query_object);
 	}//end get_instance
 
 
+
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($search_query_object) {
+	private function __construct($search_query_object) {
 		# Set up class minim vars
 		$this->set_up($search_query_object);
 	}//end __construct

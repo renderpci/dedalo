@@ -37,6 +37,7 @@ component_common.prototype.init = async function(options) {
 	self.tipo 			= options.tipo // structure tipo of current component like 'dd345'
 	self.section_tipo 	= options.section_tipo // structure tipo like 'oh1'
 	self.section_id 	= options.section_id // record section_id like 1
+	self.matrix_id 		= options.matrix_id || null // record matrix_id like 1 (list_tm mode only)
 	self.mode 			= options.mode // current component mode like 'edit'
 	self.lang 			= options.lang // current component lang like 'lg-nolan'
 
