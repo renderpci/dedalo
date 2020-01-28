@@ -4,7 +4,7 @@ require_once(DEDALO_CORE_PATH.'/media_engine/class.OptimizeTC.php');
 /*
 * CLASS TOOL_TC
 */
-class tool_tc extends tool_common {
+class tool_tc {//extends tool_common {
 	
 	protected $component_obj;
 
@@ -29,7 +29,7 @@ class tool_tc extends tool_common {
 	* Apply a offset timecode to all timecode tags in the transcription
 	* @return object $response
 	*/
-	public function change_all_timecodes( $offset_seconds) {
+	public function change_all_timecodes($offset_seconds) {
 		
 		$response = new stdClass();
 			$response->result 	= false;
@@ -40,9 +40,10 @@ class tool_tc extends tool_common {
 		# Get all timecodes
 		$pattern = TR::get_mark_pattern($mark='tc',$standalone=false);
 		# Search math patern tags
-		preg_match_all($pattern,  $raw_text,  $matches_tc, PREG_PATTERN_ORDER);
-			#dump($matches_tc,"matches_tc ".to_string($pattern)); 
-
+		//TODO - Currently $raw_text is array instead of string, review this function
+		//			first index is currently selected so it can work	
+		preg_match_all($pattern,  $raw_text[0],  $matches_tc, PREG_PATTERN_ORDER);
+			
 		$ar_final=array();
 		foreach ($matches_tc[1] as $key => $current_tc) {
 
@@ -63,11 +64,9 @@ class tool_tc extends tool_common {
 			# reverse array order
 			$ar_final = array_reverse($ar_final,true);
 		}
-		#dump($ar_final, ' ar_final ++ '.to_string());
 		
 		$raw_text = str_replace(array_keys($ar_final), array_values($ar_final), $raw_text);
-			#dump($response->result, ' response->result ++ '.to_string());		
-
+		
 		$this->component_obj->set_dato($raw_text);
 		$this->component_obj->Save();
 
@@ -99,13 +98,15 @@ class tool_tc extends tool_common {
 	* FORMAT_TEXT_FOR_TOOL
 	* @return 
 	*/
-	public static function format_text_for_tool( $raw_text ) {
-		
-		$raw_text = TR::addTagImgOnTheFly($raw_text);
+	public static function format_text_for_tool($raw_text) {
+
+		//Currently (v6) raw_text contains an array instead of a string as in previous versions
+		foreach ($raw_text as $key => $text) {
+			$text = TR::addTagImgOnTheFly($text);
+		}		
 
 		return $raw_text;
 	}//end format_text_for_tool
-
 
 
 

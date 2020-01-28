@@ -102,7 +102,7 @@ const content_data_edit = async function(self) {
 	//Language selection and time codes management container
 		const tc_management_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'automatic_translation_container',
+			class_name 		: 'offset_management_container',
 			parent 			: components_container
 		})
 
@@ -151,7 +151,7 @@ const content_data_edit = async function(self) {
 		  })
 
 	//response div
-	const response_div = ui.create_dom_element({
+		const response_div = ui.create_dom_element({
 			id				: 'response_div',
 			element_type	: 'div',
 			class_name 		: 'response_div',
@@ -202,6 +202,7 @@ const lang_selector = function(langs, selected_lang, class_name='') {
 
 	// components container
 		const select = ui.create_dom_element({
+			id				: 'tc_lang',
 			element_type	: 'select',
 			class_name 		: class_name
 		})

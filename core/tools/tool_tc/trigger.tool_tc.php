@@ -1,17 +1,8 @@
 <?php
 $start_time=microtime(1);
-set_time_limit ( 259200 );  // 3 dias
-$session_duration_hours = 72;
-include( DEDALO_CONFIG_PATH.'/config.php');
+include( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
-
-# Disable logging activity and time machine # !IMPORTANT
-logger_backend_activity::$enable_log = false;
-#RecordObj_time_machine::$save_time_machine_version = false;
-
-# Write session to unlock session file
-session_write_close();
 
 
 
@@ -26,8 +17,10 @@ function change_all_timecodes($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+
 	# set vars
-	$vars = array('tipo','section_tipo','parent','lang','offset_seconds');
+		$vars = array('component_tipo','section_tipo','section_id','lang','offset_seconds');
+		
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY			
@@ -36,16 +29,18 @@ function change_all_timecodes($json_data) {
 				return $response;
 			}
 		}
-	
-	$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+		
+
+	$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 	$component_obj 	 = component_common::get_instance($modelo_name,
-													  $tipo,
-													  $parent,
+													  $component_tipo,
+													  $section_id,
 													  'edit',
 													  $lang,
 													  $section_tipo);
-
+	
 	$tool_tc  = new tool_tc($component_obj);
+
 	$response = (object)$tool_tc ->change_all_timecodes($offset_seconds);
 
 	# Debug

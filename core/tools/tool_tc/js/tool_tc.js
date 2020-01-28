@@ -4,6 +4,7 @@
 	import {common} from '../../../common/js/common.js'
 	import {tool_common} from '../../../tool_common/js/tool_common.js'
 	import {render_tool_tc, add_component} from './render_tool_tc.js'
+	import {ui} from '../../../common/js/ui.js'
 
 
 
@@ -137,67 +138,148 @@ tool_tc.prototype.load_component = async function(lang) {
 tool_tc.prototype.change_all_time_codes = async function(save) {
 	//this.change_all_timecodes = function( button_obj, save ) {
 
-	var response_div 		= document.getElementById('response_div')
-	var tc_target_content 	= document.getElementById('tc_target_content')
-	var tc_offset 	 		= document.getElementById('tc_offset')
-	
-	response_div.innerHTML  = ''
+	const self = this
+
+	const wrapper	= document.querySelector('.components_container')
+	const tc_offset = document.getElementById('tc_offset')
+	//response_div.innerHTML  = ''
 	
 	if (tc_offset.value==='' || tc_offset.value===null) {
-		//alert('Ops.. Empty tc offset value')
-		response_div.innerHTML  = '<span style=\"color:red\">Ops.. Empty tc offset value</span>'
+		//response_div.innerHTML  = '<span style=\"color:red\">Ops.. Empty tc offset value</span>'
+		const error_empty_offset = 'Ops.. Empty tc offset'
+		ui.show_message(wrapper, get_label['error_empty_offset'] || error_empty_offset, 'error', 'response_div', true)
+
 		tc_offset.focus()
 		return false
 	}
 
 	if (save===true) {
-		if( !confirm(get_label.seguro) )  return false;	
-		//TODO - change the code to call the trigger only in case save===true 
-			//var trigger_vars = {
-			//		mode 			: 'change_all_timecodes',
-			//		tipo 			: tc_offset.dataset.tipo,
-			//		section_tipo 	: tc_offset.dataset.section_tipo,
-			//		parent 			: parseInt(tc_offset.dataset.parent),
-			//		lang 			: tc_offset.dataset.lang,
-			//		offset_seconds 	: parseInt(tc_offset.value),
-			//		save 			: save,	
-			//}
-			////return console.log("[tool_tc.change_all_timecodes] trigger_vars",trigger_vars);
-		
-			//html_page.loading_content( tc_content_right, 1 );
-		
-			//// Return a promise of XMLHttpRequest
-			//var js_promise = common.get_json_data(this.url_trigger, trigger_vars).then(function(response) {
-			//		if(SHOW_DEBUG===true) {
-			//			console.log("[tool_tc.change_all_timecodes]",response)
-			//		}
-		
-			//		if (response===null) {
-			//			response_div.innerHTML  = "<span style=\"color:red\">Error on change timecode tags</span>";							
-			//		}else{							
-		
-			//			// msg
-			//			response_div.innerHTML  = response.msg;
-		
-			//			// Reloads page
-			//			if (save===true) {
-			//				tc_content_right.innerHTML  = "Reloading.."
-			//				window.location.href 		= window.location.href
-			//			}else{
-			//				// result text
-			//				tc_content_right.innerHTML 	= response.result
-			//			}
-			//		}
-		
-			//		html_page.loading_content( tc_content_right, 0 );												
-			//})
 
-				//return js_promise
+		return self.add_and_save_time_code_offset(wrapper, tc_offset.value)
+
 	} else {
-			console.log("tc_target_content:",tc_target_content)
-			alert("preview")
 
+		//Changes only preview, don't updates the DB
+			const tc_target_content = document.getElementById('tc_target_content')
+			const ar_images 		= tc_target_content.querySelectorAll('.tc')
+				
+			for (let i = 0; i < ar_images.length; i++) {
+
+				const ar_image_string 	= ar_images[i].src.split('/')
+				const tc_image_string 	= ar_image_string[ar_image_string.length - 1]
+				const new_tc_image_time	= self.add_time_code_offset(tc_image_string, tc_offset.value) 
+			
+				ar_images[i].src = ar_images[i].src.replace(tc_image_string, new_tc_image_time)
+			}
+					
+			const msg = 'Total tc tags changed: ' + ar_images.length
+
+			ui.show_message(wrapper, msg, 'ok' , 'response_div', true)	
 	}
 
 	return true
 }//end change_all_time_codes
+
+
+
+/**
+* ADD_TIME_CODE_OFFSET
+*/
+tool_tc.prototype.add_time_code_offset = function (tc_tag, offset) {
+
+	tc_tag = tc_tag.replace('[TC_','').replace('_TC]','')
+	
+	const ar_tag_tc 	= tc_tag.split(':')
+	const ar_seconds 	= ar_tag_tc[2].split('.')
+
+	const hours 	= (ar_tag_tc[0])	? Number(ar_tag_tc[0])	: 0
+	const minutes 	= (ar_tag_tc[1]) 	? Number(ar_tag_tc[1]) 	: 0
+	const seconds 	= (ar_seconds[0]) 	? Number(ar_seconds[0])	: 0
+	const mseconds 	= (ar_seconds[1]) 	? ar_seconds[1]			: 0
+
+	const total_secs = (hours * 3600) + (minutes * 60) + seconds + Number(offset)
+	
+	const new_hours 	= parseInt(total_secs / 3600)
+	const new_minutes 	= parseInt((total_secs % 3600) / 60)
+	const new_seconds	= total_secs - (new_hours * 3600 + new_minutes * 60)
+
+	const new_tag = '[TC_'.concat(new_hours.toString().padStart(2, '0'), ':', new_minutes.toString().padStart(2, '0'), ':', new_seconds.toString().padStart(2, '0'), '.', mseconds, '_TC]')
+
+	return new_tag
+}//end add_time_code_offset
+
+/**
+* ADD_AND_SAVE_TIME_CODE_OFFSET
+*/
+tool_tc.prototype.add_and_save_time_code_offset = async function (wrapper, offset) {
+	
+	const self = this
+
+	if (!confirm(get_label.seguro))  return false;	
+
+	const tc_lang 	= document.getElementById('tc_lang')
+		
+	const body = {
+		url 			: self.trigger_url,
+		mode 			: 'change_all_timecodes',
+		component_tipo	: self.caller.tipo,
+		section_tipo  	: self.caller.section_tipo,
+		section_id 		: self.caller.section_id,
+		lang 			: tc_lang.value,
+		offset_seconds 	: offset
+	}
+
+	const handle_errors = function(response) {
+		if (!response.ok) {
+			throw Error(response.statusText);
+		}
+		return response;
+	}
+
+	const trigger_response = await fetch(
+ 		self.trigger_url,
+ 		{
+			method		: 'POST',
+			mode		: 'cors',
+			cache		: 'no-cache',
+			credentials	: 'same-origin',
+			headers		: {'Content-Type': 'application/json'},
+			redirect	: 'follow',
+			referrer	: 'no-referrer',
+			body		: JSON.stringify(body)
+		})
+		.then(handle_errors)
+		.then(response => response.json()) // parses JSON response into native Javascript objects
+		.catch(error => {
+			console.error("!!!!! REQUEST ERROR: ",error)
+			return {
+				result 	: false,
+				msg 	: error.message,
+				error 	: error
+			}
+		});
+
+	//trigger_fetch.then((trigger_response)=>{
+		// user messages
+			const msg_type = (trigger_response.result===false) ? 'error' : 'ok'
+			//if (trigger_response.result===false) {
+				//ui.show_message(buttons_container, trigger_response.msg, msg_type)					
+				ui.show_message(wrapper, trigger_response.msg, msg_type , 'response_div', true)	
+
+				//response_div.innerHTML  = trigger_response.msg
+			//}
+
+		// reload target content
+			const target_component_container = self.node[0].querySelector('.target_component_container')
+			add_component(self, target_component_container, tc_lang.value)
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				console.log("trigger_response:",trigger_response);
+			}
+	//})
+
+	console.log("trigger_response:",trigger_response);
+
+	return trigger_response		
+}//end add_and_save_time_code_offset
