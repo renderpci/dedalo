@@ -85,6 +85,7 @@ const content_data_edit = async function(self) {
 	const ar_section_record = await self.get_ar_instances()
 
 	const fragment = new DocumentFragment()
+	const is_inside_tool = ui.inside_tool(self)
 
 
 	// ul inputs contaniner
@@ -118,6 +119,9 @@ const content_data_edit = async function(self) {
 			class_name 		: 'button change_mode',
 			parent 			: buttons_container
 		})
+		
+	// tools
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
 		const content_data = document.createElement("div")
