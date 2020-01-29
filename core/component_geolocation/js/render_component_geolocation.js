@@ -98,7 +98,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 			//console.log("-------------- + event add_element changed_data:", changed_data);
 			const inputs_container = wrapper.querySelector('.inputs_container')
 			// add new dom input element
-			input_element(changed_data.key, changed_data.value, inputs_container, self)
+			get_input_element(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
 	// remove element, subscription to the events
@@ -317,7 +317,7 @@ const content_data_edit = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// inputs
-		input_element(value, fragment, self)
+		get_input_element(value, fragment, self)
 
 
 	// buttons container
@@ -358,7 +358,7 @@ const content_data_edit = async function(self) {
 
 	// content_data
 		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data","nowrap")
+			  content_data.classList.add("content_data")
 			  content_data.appendChild(fragment)
 
 
@@ -368,12 +368,10 @@ const content_data_edit = async function(self) {
 
 
 /**
-* INPUT_ELEMENT
+* GET_INPUT_ELEMENT
 * @return dom element li
 */
-const input_element = (value, content_data, self) => {
-
-	const mode = self.mode
+const get_input_element = (value, content_data, self) => {
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
@@ -382,7 +380,7 @@ const input_element = (value, content_data, self) => {
 			parent 			: content_data
 		})
 
-	//Latitude
+	// latitude
 		// li_lat
 			const li_lat = ui.create_dom_element({
 				element_type : 'li',
@@ -390,23 +388,23 @@ const input_element = (value, content_data, self) => {
 			})
 
 		// label field latitude
-			const label_lat = ui.create_dom_element({
-				element_type 	: 'span',
+			ui.create_dom_element({
+				element_type 	: 'label',
 				text_content 	: get_label['latitud'],
 				parent 		 	: li_lat
 			})
 
 		// input field latitude
-			const input_lat = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type 	: 'input',
 				type 		 	: 'text',
-				class_name 		: 'geo_active_input',
+				class_name 		: 'geo_active_input lat',
 				dataset 	 	: { name : 'lat' },
 				value 		 	: value.lat,
 				parent 		 	: li_lat
 			})
 
-	//Longitude
+	// longitude
 		// li_lon
 			const li_lon = ui.create_dom_element({
 				element_type : 'li',
@@ -414,23 +412,23 @@ const input_element = (value, content_data, self) => {
 			})
 
 		// label field longitude
-			const label_lon = ui.create_dom_element({
-				element_type 	: 'span',
+			ui.create_dom_element({
+				element_type 	: 'label',
 				text_content 	: get_label['longitud'],
 				parent 		 	: li_lon
 			})
 
 		// input field longitude
-			const input_lon = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type 	: 'input',
 				type 		 	: 'text',
-				class_name 		: 'geo_active_input',
+				class_name 		: 'geo_active_input lon',
 				dataset 	 	: { name : 'lon' },
 				value 		 	: value.lon,
 				parent 		 	: li_lon
 			})
 
-	//Zoom
+	// zoom
 		// li_zoom
 			const li_zoom = ui.create_dom_element({
 				element_type : 'li',
@@ -438,23 +436,23 @@ const input_element = (value, content_data, self) => {
 			})
 
 		// label field zoom
-			const label_zoom = ui.create_dom_element({
-				element_type 	: 'span',
+			ui.create_dom_element({
+				element_type 	: 'label',
 				text_content 	: get_label['mapa_zoom'],
 				parent 		 	: li_zoom
 			})
 
 		// input field zoom
-			const input_zoom = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type 	: 'input',
 				type 		 	: 'text',
-				class_name 		: 'geo_active_input',
+				class_name 		: 'geo_active_input zoom',
 				dataset 	 	: { name : 'zoom' },
 				value 		 	: value.zoom,
 				parent 		 	: li_zoom
 			})
 
-	//Altitude
+	// altitude
 		// li_alt
 			const li_alt = ui.create_dom_element({
 				element_type : 'li',
@@ -462,23 +460,24 @@ const input_element = (value, content_data, self) => {
 			})
 
 		// label field altitude
-			const label_alt = ui.create_dom_element({
-				element_type 	: 'span',
+			ui.create_dom_element({
+				element_type 	: 'label',
 				text_content 	: get_label['altitude'],
 				parent 		 	: li_alt
 			})
 
 		// input field altitude
-			const input_alt = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type 	: 'input',
 				type 		 	: 'text',
-				class_name 		: 'input_altitude',
+				class_name 		: 'altitude',
 				dataset 	 	: { name : 'alt' },
 				value 		 	: value.alt,
 				parent 		 	: li_alt
 			})
 
+
 	return inputs_container
-}//end input_element
+}//end get_input_element
 
 

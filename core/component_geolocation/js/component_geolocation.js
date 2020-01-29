@@ -1,8 +1,7 @@
 // imports
-	import {common,create_source} from '../../common/js/common.js'
+	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_geolocation} from '../../component_geolocation/js/render_component_geolocation.js'
-	import {data_manager} from '../../common/js/data_manager.js'
 
 
 
@@ -82,48 +81,46 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 		load_promises.push( common.prototype.load_style(lib_css_file) )
 
 		await Promise.all(load_promises).then(async function(response){
-			//console.log("JSONEditor:",JSONEditor);
+			// console.log("response:",response);
 		})
 
 	// defaults
 		const default_lat 	= 39.462571
 		const default_lon 	= -0.376295
 		const default_zoom 	= 16
+		const default_alt 	= 0
 
 	// get data
 		const field_lat  	= self.data.value.lat || default_lat
 		const field_lon  	= self.data.value.lon || default_lon
 		const field_zoom 	= self.data.value.zoom || default_zoom
-		const field_alt 	= self.data.value.alt
+		const field_alt 	= self.data.value.alt || default_alt
 		const map_refresh	= map_container.querySelector('#map_refresh')
 		const map_fixed		= map_container.querySelector('#map_fixed')
 		//self.related_tipo 	= map_container.dataset.related_tipo
 
-	// map_data : defaults Define main map element default data. Default value is Ruzafa headquarters
-		let map_data = {
-			x	 : 39.462571,
-			y	 : -0.376295,
-			zoom : 16,
-			alt  : 16
-		}
-
-	// dataset data
-		if (typeof self.data.value!=="undefined" ) {
-			map_data = {
+	// map_data
+		const map_data = (typeof self.data.value!=="undefined")
+			? {
 				x	  : field_lat,
 				y	  : field_lon,
 				zoom  : field_zoom,
 				alt   : field_alt,
-			}
-		}
+			  }
+			: {
+				x	 : default_lat,
+				y	 : default_lon,
+				zoom : default_zoom,
+				alt  : default_alt
+			 }
 
-	let map 			= ''
+	let map 			= null
 	let layer_control	= false
 
-	let arcgis 			= ''
-	let osm  			= ''
-	let base_maps 		= ''
-	let dare 			= ''
+	let arcgis 			= null
+	let osm  			= null
+	let dare 			= null
+	let base_maps 		= {}
 
 
 	// Add layer to map
@@ -190,7 +187,7 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 				}
 
 				map.on('overlayadd', function(e) {
-				  	self.init_draw_editor( ar_FeatureGroup[e.name],e.name)
+				  	self.init_draw_editor(ar_FeatureGroup[e.name], e.name)
 				})
 				break;
 
@@ -198,17 +195,17 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 
 				// LAYER
 				//var arcgis 		= new L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-				arcgis 		= new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 				//var cloudmade 	= new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png');
 				//var osm 		= new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-				osm 		= new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+				osm = new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
 		        //var ggl 	= new L.Google();
 				//var ggl2 	= new L.Google('TERRAIN');
 
 				// MAP
 				map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 
-				// LAYER SELECTOR
+				// layer selector
 				base_maps = {
 					arcgis  : arcgis,
 					osm 	: osm
@@ -230,6 +227,8 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 				break;
 		}//end switch(self.context.geo_provider)
 
+
+
 	// disable zoom handlers
 	map.scrollWheelZoom.disable();
 	// disable tap handler, if present.
@@ -239,27 +238,35 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 
 	// map move listeners
 		map.on('dragend', function(e){
-			// Force refresh map size when map is loaded hidden (section group closed)
-				self.refresh_map(map)
-
 			// Update input values
-				self.update_input_values({
-					lat  : map.getCenter().lat,
-					lon  : map.getCenter().lng,
-					zoom : map.getZoom()
-				}, wrapper)
+			self.update_input_values({
+				lat  : map.getCenter().lat,
+				lon  : map.getCenter().lng,
+				zoom : map.getZoom()
+			}, wrapper)
 		});
 		map.on('zoomend', function(e){
-			// Force refresh map size when map is loaded hidden (section group closed)
-			//	self.refresh_map(map)
-
 			// Update input values
-				self.update_input_values({
-					lat  : map.getCenter().lat,
-					lon  : map.getCenter().lng,
-					zoom : map.getZoom()
-				}, wrapper)
+			self.update_input_values({
+				lat  : map.getCenter().lat,
+				lon  : map.getCenter().lng,
+				zoom : map.getZoom()
+			}, wrapper)
 		});
+
+		// map ready event
+		map.whenReady(function(e){
+			// force refresh map (apply 'invalidateSize')
+			const current_map = this
+			setTimeout(()=>{
+				// console.log("e:",this);
+				// map.invalidateSize();
+				self.refresh_map(current_map)
+			}, 20)
+		});
+
+
+		// map.setView([51.505, -0.09], 13);
 
 	/*
 		// LISTENERS ON CHANGE INPUT VALUES, UPDATE MAP POSITION / ZOOM
@@ -332,12 +339,17 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 		}
 		*/
 	const section_group   = map_container.parentNode
-	const observer_config = { attributeFilter: [ 'style' ], attributes: true, childList: false, subtree: false };
-	const observer 		  = new MutationObserver(function(mutationList){
-		//console.log(mutationList)
+	const observer_config = {
+		attributeFilter : ['style'],
+		attributes 		: true,
+		childList 		: false,
+		subtree 		: false
+	}
+	const observer = new MutationObserver(function(mutationList){
 		self.refresh_map(map)
-	});
+	})
 	observer.observe(section_group, observer_config)
+
 
 	return true
 }//end init_map
