@@ -162,6 +162,7 @@ const get_content_data_edit = async function(self) {
 	const mode 	= self.mode
 
 	const fragment = new DocumentFragment()
+	const is_inside_tool = ui.inside_tool(self)
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
@@ -189,7 +190,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// button close
-		if(mode==='edit_in_list' && !ui.inside_tool(self)){
+		if(mode==='edit_in_list' && !is_inside_tool){
 			const button_close = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button close',
@@ -197,6 +198,9 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
+	// tools
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+			
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type, "nowrap")
