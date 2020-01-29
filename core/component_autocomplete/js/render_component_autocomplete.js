@@ -216,6 +216,7 @@ const content_data_edit = async function(self) {
 
 
 	const fragment = new DocumentFragment()
+	const is_inside_tool = ui.inside_tool(self)
 
 
 	// inputs contaniner
@@ -242,6 +243,9 @@ const content_data_edit = async function(self) {
 			class_name 		: 'buttons_container',
 			parent 			: fragment
 		})
+
+	// tools
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
 		const content_data = document.createElement("div")
