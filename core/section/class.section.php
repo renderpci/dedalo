@@ -2,8 +2,8 @@
 /*
 * CLASS SECTION
 */
-include_once(DEDALO_CORE_PATH . '/search/records_search/class.records_search.php');
-include_once(DEDALO_CORE_PATH . '/search/records_navigator/class.records_navigator.php');
+// include_once(DEDALO_CORE_PATH . '/search/records_search/class.records_search.php');
+// include_once(DEDALO_CORE_PATH . '/search/records_navigator/class.records_navigator.php');
 
 
 
@@ -3242,8 +3242,8 @@ class section extends common {
 		$ar_tipos = array(
 			array('name'=>'created_by_user', 'tipo'=>'dd200', 'model'=>'component_select'),
 			array('name'=>'created_date', 	 'tipo'=>'dd199', 'model'=>'component_date'),
-			array('name'=>'modified_by_user','tipo'=>'dd197', 'model'=>'component_select'),
-			array('name'=>'modified_date', 	 'tipo'=>'dd201', 'model'=>'component_date')
+			array('name'=>'modified_by_user','tipo'=>DEDALO_SECTION_INFO_MODIFIED_BY_USER, 'model'=>'component_select'), 	// 'dd197'
+			array('name'=>'modified_date', 	 'tipo'=>DEDALO_SECTION_INFO_MODIFIED_DATE, 'model'=>'component_date') 			// 'dd201'
 		);
 
 		return $ar_tipos;
@@ -3260,8 +3260,8 @@ class section extends common {
 		$ar_tipos = array(
 			'dd200',
 			'dd199',
-			'dd197',
-			'dd201'
+			DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+			DEDALO_SECTION_INFO_MODIFIED_DATE
 		);
 
 		return $ar_tipos;

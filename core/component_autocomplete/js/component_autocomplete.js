@@ -138,7 +138,7 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
+			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			//console.log("component_autocomplete self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}

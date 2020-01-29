@@ -29,6 +29,8 @@ class manager {
 	public function manage_request( $options ) {
 		$api_start_time=microtime(1);
 
+		// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
+
 		// options check
 			$dedalo_data = null;
 			if (!is_object($options) || !property_exists($options,'action')) {

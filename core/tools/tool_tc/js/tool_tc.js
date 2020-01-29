@@ -143,7 +143,7 @@ tool_tc.prototype.change_all_time_codes = async function(save) {
 	const wrapper	= document.querySelector('.components_container')
 	const tc_offset = document.getElementById('tc_offset')
 	//response_div.innerHTML  = ''
-	
+
 	if (tc_offset.value==='' || tc_offset.value===null) {
 		//response_div.innerHTML  = '<span style=\"color:red\">Ops.. Empty tc offset value</span>'
 		const error_empty_offset = 'Ops.. Empty tc offset'
@@ -162,19 +162,19 @@ tool_tc.prototype.change_all_time_codes = async function(save) {
 		//Changes only preview, don't updates the DB
 			const tc_target_content = document.getElementById('tc_target_content')
 			const ar_images 		= tc_target_content.querySelectorAll('.tc')
-				
+
 			for (let i = 0; i < ar_images.length; i++) {
 
 				const ar_image_string 	= ar_images[i].src.split('/')
 				const tc_image_string 	= ar_image_string[ar_image_string.length - 1]
-				const new_tc_image_time	= self.add_time_code_offset(tc_image_string, tc_offset.value) 
-			
+				const new_tc_image_time	= self.add_time_code_offset(tc_image_string, tc_offset.value)
+
 				ar_images[i].src = ar_images[i].src.replace(tc_image_string, new_tc_image_time)
 			}
-					
+
 			const msg = 'Total tc tags changed: ' + ar_images.length
 
-			ui.show_message(wrapper, msg, 'ok' , 'response_div', true)	
+			ui.show_message(wrapper, msg, 'ok' , 'response_div', true)
 	}
 
 	return true
@@ -188,7 +188,7 @@ tool_tc.prototype.change_all_time_codes = async function(save) {
 tool_tc.prototype.add_time_code_offset = function (tc_tag, offset) {
 
 	tc_tag = tc_tag.replace('[TC_','').replace('_TC]','')
-	
+
 	const ar_tag_tc 	= tc_tag.split(':')
 	const ar_seconds 	= ar_tag_tc[2].split('.')
 
@@ -198,7 +198,7 @@ tool_tc.prototype.add_time_code_offset = function (tc_tag, offset) {
 	const mseconds 	= (ar_seconds[1]) 	? ar_seconds[1]			: 0
 
 	const total_secs = (hours * 3600) + (minutes * 60) + seconds + Number(offset)
-	
+
 	const new_hours 	= parseInt(total_secs / 3600)
 	const new_minutes 	= parseInt((total_secs % 3600) / 60)
 	const new_seconds	= total_secs - (new_hours * 3600 + new_minutes * 60)
@@ -208,17 +208,19 @@ tool_tc.prototype.add_time_code_offset = function (tc_tag, offset) {
 	return new_tag
 }//end add_time_code_offset
 
+
+
 /**
 * ADD_AND_SAVE_TIME_CODE_OFFSET
 */
 tool_tc.prototype.add_and_save_time_code_offset = async function (wrapper, offset) {
-	
+
 	const self = this
 
-	if (!confirm(get_label.seguro))  return false;	
+	if (!confirm(get_label.seguro))  return false;
 
 	const tc_lang 	= document.getElementById('tc_lang')
-		
+
 	const body = {
 		url 			: self.trigger_url,
 		mode 			: 'change_all_timecodes',
@@ -263,8 +265,8 @@ tool_tc.prototype.add_and_save_time_code_offset = async function (wrapper, offse
 		// user messages
 			const msg_type = (trigger_response.result===false) ? 'error' : 'ok'
 			//if (trigger_response.result===false) {
-				//ui.show_message(buttons_container, trigger_response.msg, msg_type)					
-				ui.show_message(wrapper, trigger_response.msg, msg_type , 'response_div', true)	
+				//ui.show_message(buttons_container, trigger_response.msg, msg_type)
+				ui.show_message(wrapper, trigger_response.msg, msg_type , 'response_div', true)
 
 				//response_div.innerHTML  = trigger_response.msg
 			//}
@@ -281,5 +283,7 @@ tool_tc.prototype.add_and_save_time_code_offset = async function (wrapper, offse
 
 	console.log("trigger_response:",trigger_response);
 
-	return trigger_response		
+	return trigger_response
 }//end add_and_save_time_code_offset
+
+

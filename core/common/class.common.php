@@ -2344,7 +2344,7 @@ abstract class common {
 				'component_info',
 				'component_state',
 				'section_tab',
-				'component_json',
+				'component_json'
 			];
 			$options->ar_include_elements 		= [
 				'component',

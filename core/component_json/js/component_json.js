@@ -71,12 +71,12 @@ component_json.prototype.init_editor = async function() {
 	// load dependences js/css
 		const load_promises = []
 
+		const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
+		load_promises.push( common.prototype.load_style(lib_css_file) )
+
 		const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
 		load_promises.push( load_promise )
 		//self.JSONEditor = JSONEditor
-
-		const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
-		load_promises.push( common.prototype.load_style(lib_css_file) )
 
 		await Promise.all(load_promises).then(async function(response){
 			//console.log("JSONEditor:",JSONEditor);
