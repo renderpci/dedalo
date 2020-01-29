@@ -2,7 +2,7 @@
 @common_css: "../../common/css";
 
 // Usage
-@import "@{common_css}/library.less"; 
+@import "@{common_css}/library.less";
 
 
 //@elements_over_z_index : 1000;
@@ -20,7 +20,7 @@
 
 
 
-/* FIELDS 
+/* FIELDS
 -------------------------------------------------- */
 	.geolocation_text {
 		font-size: 14px;
@@ -37,7 +37,7 @@
 		border-color: #333333;
 		margin-left: 5px;
 	}
-	/* altitude 
+	/* altitude
 	-------------------------------------------------- */
 	.map_inputs	.input_altitude {
 		width: 28px;
@@ -66,53 +66,58 @@
 
 
 
-/* MAP 
+/* MAP
 -------------------------------------------------- */
 	.leaflet_map {
 		position: relative;
 		width: 100%;
 		height: 100%;
-		min-height: 300px;	
+		min-height: 300px;
 		margin: 0;
 		padding: 0;
 		padding-bottom: 5px;
-		}
+		z-index: 1;
+
 		.leaflet-control-zoom a {
 			font-size: initial !important;
 			font-weight: bold;
 		}
-		.map_inputs {
-			-webkit-touch-callout: none;
-		    -webkit-user-select: none;
-		    -khtml-user-select: none;
-		    -moz-user-select: none;
-		    -ms-user-select: none;
-		    user-select: none;
-			position: absolute;
-			top: 10px;
-			left: 50px;
-			//right: 50px;
-			background-color: rgb(255, 255, 255);
-			padding: 5px;
-			border-radius: 4px;
-			//max-width: 660px;
-			//box-shadow: 0 1px 5px rgba(0,0,0,0.65);
-			z-index: @elements_over_z_index;
-			// From new leaflet 1.0 (removed shadow and add solid line around)
-			  border: 2px solid rgba(0,0,0,0.2);
-	  		  background-clip: padding-box;	
-			
-			}
-			.map_inputs span:not(:nth-of-type(1)) {
-				padding-left: 5px;
-			}
-			.map_inputs  input[name="zoom"] {
-				width:28px;
-				text-align: center;
-			}
 
 
-/* PLAYER container (Transcription) 
+	}//end .leaflet_map
+
+	.map_inputs {
+		-webkit-touch-callout: none;
+	    -webkit-user-select: none;
+	    -khtml-user-select: none;
+	    -moz-user-select: none;
+	    -ms-user-select: none;
+	    user-select: none;
+		position: absolute;
+		top: 10px;
+		left: 50px;
+		//right: 50px;
+		background-color: rgb(255, 255, 255);
+		padding: 5px;
+		border-radius: 4px;
+		//max-width: 660px;
+		//box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+		z-index: @elements_over_z_index;
+		// From new leaflet 1.0 (removed shadow and add solid line around)
+		  border: 2px solid rgba(0,0,0,0.2);
+  		  background-clip: padding-box;
+
+		}
+		.map_inputs span:not(:nth-of-type(1)) {
+			padding-left: 5px;
+		}
+		.map_inputs  input[name="zoom"] {
+			width:28px;
+			text-align: center;
+		}
+
+
+/* PLAYER container (Transcription)
 -------------------------------------------------- */
 	.leaflet_map_player {
 		padding: 0;
@@ -129,7 +134,7 @@
 		.leaflet_map_player .leaflet_map {
 			min-height: 605px;
 		}
-	
+
 
 /* MAP FULL SCREEN
 -------------------------------------------------- */
@@ -141,7 +146,7 @@
 		top: 0;
 		left: 0;
 		width: 100%;
-		height: 100%;		
+		height: 100%;
 	}
 
 
