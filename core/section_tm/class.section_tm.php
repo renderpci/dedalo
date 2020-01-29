@@ -149,14 +149,14 @@ class section_tm extends common {
 		// modification user id
 			// prepend element to context
 			$item = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
 				'model' 		=> 'component_select',
 				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
 				'section_tipo'	=> $this->tipo,
 				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
 				'mode'			=> 'list',
-				'parent'		=> $this->tipo,
-				'typo'			=> 'ddo',
-				'type'			=> 'component'
+				'parent'		=> $this->tipo
 			];
 			array_unshift($context, $item);
 
@@ -164,14 +164,29 @@ class section_tm extends common {
 		// modification date
 			// prepend element to context
 			$item = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
 				'model' 		=> 'component_date',
 				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
 				'section_tipo'	=> $this->tipo,
 				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
 				'mode'			=> 'list',
-				'parent'		=> $this->tipo,
+				'parent'		=> $this->tipo
+			];
+			array_unshift($context, $item);
+
+
+		// matrix id
+			// prepend element to context
+			$item = (object)[
 				'typo'			=> 'ddo',
-				'type'			=> 'component'
+				'type'			=> 'component',
+				'model' 		=> 'component_section_id',
+				'tipo'			=> 'section_id',
+				'section_tipo'	=> $this->tipo,
+				'label'			=> 'matrix ID',
+				'mode'			=> 'list',
+				'parent'		=> $this->tipo
 			];
 			array_unshift($context, $item);
 
@@ -298,7 +313,50 @@ class section_tm extends common {
 			//     "matrix_id": "1427170"
 			// }
 
+			$data[] = $current_item;
 
+
+		// matrix ID
+			// $user_id_tipo = DEDALO_SECTION_INFO_MODIFIED_BY_USER; // 'dd197' Modified by user
+
+			// // dato
+			// $locator = new locator();
+			// 	$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+			// 	$locator->set_section_id($user_id);
+			// 	$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+			// $component_dato = [$locator];
+
+			// $modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($user_id_tipo,true); // select
+			// $component 		= component_common::get_instance($modelo_name,
+			// 												 $user_id_tipo,
+			// 												 $section_id,
+			// 												 'list',
+			// 												 DEDALO_DATA_NOLAN,
+			// 												 $section_tipo);
+			// $component->set_dato($component_dato);
+
+			// // get component json
+			// 	$get_json_options = new stdClass();
+			// 		$get_json_options->get_context 	= false;
+			// 		$get_json_options->get_data 	= true;
+			// 	$element_json = $component->get_json($get_json_options);
+
+			// // edit section_id to match section locator data item
+			// 	$current_item = reset($element_json->data);
+			// 		$current_item->matrix_id = $current_record->id;
+
+			$current_item = (object)[
+				'section_id' 			=> $section_id,
+				'section_tipo' 			=> $section_tipo,
+				'tipo' 					=> 'section_id',
+				'lang' 					=> DEDALO_DATA_NOLAN,
+				'from_component_tipo' 	=> null,
+				'value' 				=> $current_record->id,
+				'debug_model' 			=> 'component_section_id',
+				'debug_label' 			=> 'matrix ID',
+				'debug_mode' 			=> 'list',
+				'matrix_id' 			=> $current_record->id
+			];
 
 			$data[] = $current_item;
 
