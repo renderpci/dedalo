@@ -259,6 +259,8 @@ const content_data_edit = async function(self) {
 	const value = self.data.value
 	const mode 	= self.mode
 
+	const is_inside_tool = ui.inside_tool(self)
+
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data","nowrap")
@@ -301,6 +303,9 @@ const content_data_edit = async function(self) {
 				parent 			: buttons_container
 			})
 		}
+
+	// tools
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	return content_data
 }//end render_content_data

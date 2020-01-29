@@ -932,6 +932,26 @@ export const ui = {
 		return false
 	},//end inside_tool
 
+	
+
+	/**
+	* ADD_TOOLS
+	* Adds all the existent tools for the selected component
+	* @return bool
+	*/
+	add_tools : function(self, buttons_container) {
+
+		const tools = self.tools
+		const tools_length = tools.length
+
+		for (let i = 0; i < tools_length; i++) {
+			if(tools[i].show_in_component){
+				buttons_container.appendChild(ui.tool.build_tool_button(tools[i], self))
+			}
+		}
+		
+	},//end add_tools
+
 
 
 	/**
