@@ -10,7 +10,7 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_GEOLOCATION
 * Manages the component's logic and apperance in client side
 */
 export const render_component_geolocation = function() {
@@ -75,6 +75,9 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : current_content_data
 		})
+
+	//init the map with the wrapper
+		self.init_map(wrapper)
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
@@ -353,14 +356,10 @@ const content_data_edit = async function(self) {
 		})
 
 
-		//init the map with the wrapper
-		self.init_map(map_container)
-
-
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data","nowrap")
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
