@@ -74,6 +74,16 @@ render_component_number.prototype.edit = async function(options={render_level : 
 			content_data : current_content_data
 		})
 
+	// add events
+		add_events(self, wrapper)
+
+	return wrapper
+}//end edit		
+
+/**
+* ADD_EVENTS
+*/
+const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
@@ -186,8 +196,8 @@ render_component_number.prototype.edit = async function(options={render_level : 
 			}
 		})
 
-	return wrapper
-}//end edit
+	return true
+}//end add_events
 
 
 
@@ -259,17 +269,14 @@ const content_data_edit = async function(self) {
 	const value = self.data.value
 	const mode 	= self.mode
 
-	const is_inside_tool = ui.inside_tool(self)
-
-	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data","nowrap")
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name 		: 'inputs_container',
-			parent 			: content_data
+			parent 			: fragment
 		})
 
 	// build values
@@ -283,7 +290,7 @@ const content_data_edit = async function(self) {
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'buttons_container',
-			parent 			: content_data
+			parent 			: fragment
 		})
 
 	// button close input
@@ -306,6 +313,11 @@ const content_data_edit = async function(self) {
 
 	// tools
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+
+	// content_data
+		const content_data = document.createElement("div")
+			  content_data.classList.add("content_data", self.type, "nowrap")
+		content_data.appendChild(fragment)
 
 	return content_data
 }//end render_content_data
