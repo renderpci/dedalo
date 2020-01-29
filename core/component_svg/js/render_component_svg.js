@@ -97,8 +97,8 @@ render_component_svg.prototype.edit = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	const fragment = new DocumentFragment()
-	const is_inside_tool = ui.inside_tool(self)
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// value (array)
 		const value = self.data.value || []

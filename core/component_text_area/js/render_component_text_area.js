@@ -248,9 +248,8 @@ const content_data_edit = async function(self) {
 
 	const value = self.data.value
 
-	const fragment = new DocumentFragment()
-
-	const is_inside_tool = ui.inside_tool(self)
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// init the editor with the wrapper
 		// const editor = ui.create_dom_element({
