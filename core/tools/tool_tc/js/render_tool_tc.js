@@ -67,7 +67,7 @@ const content_data_edit = async function(self) {
 
 	// source lang select
 		const source_select_lang = lang_selector(self.langs, self.source_lang, 'source_lang')
-			
+
 	//TODO - Add offset input text, preview button and apply button
 
 	// source
@@ -113,7 +113,7 @@ const content_data_edit = async function(self) {
 			id				: 'tc_offset',
 			element_type 	: 'input',
 			type 		 	: 'text',
-			class_name 		: 'input_value',			
+			class_name 		: 'input_value',
 			parent 		 	: tc_management_container
 		})
 
@@ -129,8 +129,8 @@ const content_data_edit = async function(self) {
 		  	//TODO - add code to preview offset in the right part of the screen
 		  	//alert("Add some code to show offset calculation in the right part of the screen")
 		  		self.change_all_time_codes(false)
-		  	
-		  		components_container.classList.remove("loading")		  	
+
+		  		components_container.classList.remove("loading")
 		  })
 
 	// apply button
@@ -146,7 +146,7 @@ const content_data_edit = async function(self) {
 		  		//alert("Add some code to save offset to DB")
 		  		self.change_all_time_codes(true)
 		  		//class.tool_tc.php --> call the function with true value to save
-		  		//public function change_all_timecodes( $offset_seconds, $save=false )		  
+		  		//public function change_all_timecodes( $offset_seconds, $save=false )
 		  		components_container.classList.remove("loading")
 		  })
 
@@ -157,7 +157,7 @@ const content_data_edit = async function(self) {
 			class_name 		: 'response_div',
 			parent 			: tc_management_container
 		})
- 
+
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
@@ -233,3 +233,5 @@ const lang_selector = function(langs, selected_lang, class_name='') {
 
 	return select
 }//end lang_selector
+
+

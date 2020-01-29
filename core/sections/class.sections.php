@@ -15,9 +15,13 @@ class sections extends common {
 		protected $ar_section_tipo;
 		protected $dato;
 
-		# STATE
+		# modo
 		protected $modo;
 
+		# context. Full context
+		public $base_context;
+
+		# search_query_object
 		public $search_query_object;
 
 
@@ -61,6 +65,7 @@ class sections extends common {
 			$this->caller_tipo 			= $caller_tipo;
 			$this->modo 				= $modo;
 			$this->lang 				= $lang;
+
 
 		return true;
 	}//end __construct

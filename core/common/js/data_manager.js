@@ -116,7 +116,7 @@ data_manager.prototype.section_load_data = async function(sqo_context) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			api_response.then((response)=>{
-				console.log(`+ Time to section_load_data ${response.debug.exec_time} [data_manager.section_load_data] response:`, response, `sqo_context:`, sqo_context);
+				console.log(`__Time to section_load_data ${response.debug.exec_time} [data_manager.section_load_data] response:`, response, `sqo_context:`, sqo_context);
 			})
 		}
 

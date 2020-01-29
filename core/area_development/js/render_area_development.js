@@ -6,13 +6,13 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {common} from '../../common/js/common.js'
+	// import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* RENDER_AREA_development
+* RENDER_AREA_DEVELOPMENT
 * Manages the area apperance in client side
 */
 export const render_area_development = function() {
@@ -106,7 +106,7 @@ const content_data = async function(self) {
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -174,7 +174,7 @@ const build_widget = (item, self) => {
 							options 	: item.trigger.options
 						}
 					})
-					console.log("api_response:",api_response);
+					// console.log("api_response:",api_response);
 
 					print_response(body_response, api_response)
 
@@ -209,8 +209,8 @@ const build_widget = (item, self) => {
 					const js_promise = self[func].apply(self, [{
 						...item,
 						...func_options,
-						body_response:body_response,
-						print_response:print_response
+						body_response  : body_response,
+						print_response : print_response
 					}])
 				}
 			//})

@@ -1,3 +1,5 @@
+
+
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -134,15 +136,15 @@ search.prototype.build = async function(){
 		})
 
 	// Set json_filter
-		if (!editing_preset.result) {
+		if (!editing_preset.result || !editing_preset.result.json_filter) {
 
-			console.warn("Invalid null search editing_preset:", self.section_tipo, editing_preset);
+			console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, editing_preset);
 
 			self.json_filter = {"$and":[]}
 
 		}else{
 
-			self.json_filter = JSON.parse(editing_preset.result.json_filter) || {"$and":[]}
+			self.json_filter = editing_preset.result.json_filter
 		}
 
 	// get the section_tipo from editing_preset
