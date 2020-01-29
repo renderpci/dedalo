@@ -64,18 +64,29 @@ render_component_publication.prototype.edit = async function(options={render_lev
 	const datalist 	= self.data.datalist || []
 
 	// content_data
-		const content_data = await content_data_edit(self)
+		const current_content_data = await content_data_edit(self)
 		if (render_level==='content') {
-			return content_data
+			return current_content_data
 		}
-
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : current_content_data
 		})
 
+	// add events
+		add_events(self, wrapper)
 
+
+	return wrapper
+}//end edit
+
+
+
+/**
+* ADD_EVENTS
+*/
+const add_events = function(self, wrapper) {
 	// events delegated
 
 	// change
@@ -139,8 +150,8 @@ render_component_publication.prototype.edit = async function(options={render_lev
 			}
 		},true)
 
-	return wrapper
-}//end edit
+	return true
+}//end add_events
 
 
 
@@ -155,17 +166,14 @@ const content_data_edit = async function(self) {
 
 	const value = self.data.value || []
 
-	const is_inside_tool = ui.inside_tool(self)
-
-	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data")
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// inputs_container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name 		: 'inputs_container',
-			parent 			: content_data
+			parent 			: fragment
 		})
 
 	// build values
@@ -179,7 +187,7 @@ const content_data_edit = async function(self) {
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'buttons_container',
-			parent 			: content_data
+			parent 			: fragment
 		})
 
 	// button close input
@@ -193,6 +201,11 @@ const content_data_edit = async function(self) {
 
 	// tools
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+
+	// content_data
+		const content_data = document.createElement("div")
+			  content_data.classList.add("content_data", self.type, "nowrap")
+		content_data.appendChild(fragment)
 
 	return content_data
 }//end content_data_edit
