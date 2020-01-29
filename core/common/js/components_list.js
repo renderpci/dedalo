@@ -56,6 +56,7 @@
 	import '../../component_text_area/js/render_component_text_area.js'
 
 // utils
- 	import '../../search/js/paginator.js'
+ 	import '../../paginator/js/paginator.js'
+ 	import '../../search/js/search.js'
  	import '../../services/service_autocomplete/js/service_autocomplete.js'
  	import '../../login/js/login.js'

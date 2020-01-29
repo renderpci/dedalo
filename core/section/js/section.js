@@ -8,7 +8,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {common,create_source} from '../../common/js/common.js'
-	import {paginator} from '../../search/js/paginator.js'
+	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {ui} from '../../common/js/ui.js'
