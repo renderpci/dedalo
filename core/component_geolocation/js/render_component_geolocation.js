@@ -315,6 +315,7 @@ const content_data_edit = async function(self) {
 	const mode 	= self.mode
 
 	const fragment = new DocumentFragment()
+	const is_inside_tool = ui.inside_tool(self)
 
 	// inputs
 		get_input_element(value, fragment, self)
@@ -328,7 +329,7 @@ const content_data_edit = async function(self) {
 		})
 
 	// button close
-		if(mode==='edit_in_list' && !ui.inside_tool(self)){
+		if(mode==='edit_in_list' && !is_inside_tool){
 			const button_close = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button close',
@@ -337,16 +338,7 @@ const content_data_edit = async function(self) {
 		}
 
 	// tools
-		if (!ui.inside_tool(self)) {
-			const tools = self.tools
-			const tools_length = tools.length
-
-			for (let i = 0; i < tools_length; i++) {
-				if(tools[i].show_in_component){
-					buttons_container.appendChild( ui.tool.build_tool_button(tools[i], self) );
-				}
-			}
-		}
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// map container
 		const map_container = ui.create_dom_element({

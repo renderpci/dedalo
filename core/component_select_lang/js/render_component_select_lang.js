@@ -179,6 +179,7 @@ const content_data_edit = async function(self) {
 	const mode 	= self.mode
 
 	const fragment = new DocumentFragment()
+	const is_inside_tool = ui.inside_tool(self)
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
@@ -215,6 +216,9 @@ const content_data_edit = async function(self) {
 					parent 			: buttons_container
 				})
 		}
+
+	// tools
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
 		const content_data = document.createElement("div")

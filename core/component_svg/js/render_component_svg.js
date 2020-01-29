@@ -98,6 +98,7 @@ render_component_svg.prototype.edit = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
+	const is_inside_tool = ui.inside_tool(self)
 
 	// value (array)
 		const value = self.data.value || []
@@ -124,16 +125,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// tools
-		if (!ui.inside_tool(self)) {
-			const tools 		= self.tools
-			const tools_length 	= tools.length
-
-			for (let i = 0; i < tools_length; i++) {
-				if(tools[i].show_in_component){
-					buttons_container.appendChild( ui.tool.build_tool_button(tools[i], self) );
-				}
-			}
-		}
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
 		const content_data = document.createElement("div")
