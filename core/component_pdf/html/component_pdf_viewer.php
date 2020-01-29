@@ -13,7 +13,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 	$pdf_viewer_css               	= DEDALO_ROOT_WEB .'/lib/pdfjs/web/viewer.css';
 
 // Viewer custom. Read const dedalo_pdfjs_options to init the reader
-	$pdf_viewer = DEDALO_CORE_URL .'/component_pdf/viewer/viewer.js'; // is not the original file (!)
+	$pdf_viewer = DEDALO_CORE_URL .'/component_pdf/viewer/viewer-min.js'; // is not the original file (!)
 
 ?>
 <!DOCTYPE html>
@@ -71,7 +71,7 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 		}
 		const SHOW_DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 		if(SHOW_DEBUG===true) {
-			console.log("dedalo_pdfjs_options:",dedalo_pdfjs_options);
+			// console.log("dedalo_pdfjs_options:",dedalo_pdfjs_options);
 		}
 		</script>
 		<script src="<?php echo $pdf_viewer ?>"></script>
