@@ -166,9 +166,9 @@ common.prototype.render = async function(options={render_level:'full'}) {
 		if(SHOW_DEBUG===true) {
 			const total = performance.now()-t0
 			if (total>100) {
-				console.warn("+ Time to render ms:", self.model, self.section_tipo, self.tipo, total);
+				console.warn("__Time to render ms:", self.model, self.section_tipo, self.tipo, total);
 			}else{
-				console.log("+ Time to render ms:", self.model, self.section_tipo, self.tipo, total);
+				console.log("__Time to render ms:", self.model, self.section_tipo, self.tipo, total);
 			}
 		}
 
@@ -265,22 +265,27 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 			const do_delete_dependences = async function() {
 
 				const ar_instances_length = self.ar_instances.length
-				//if (ar_instances_length<1) {
-				//	console.warn("Ignored empty ar_instances dependences ", self);
-				//}
+
+				if(SHOW_DEBUG===true) {
+					if (ar_instances_length<1) {
+						// console.warn("[common.destroy.delete_dependences] Ignored empty ar_instances as dependences ", self);
+					}
+				}
+
 				// remove instances from self ar_instances
 					//const ar_to_destroy = []
 					for (let i = ar_instances_length - 1; i >= 0; i--) {
+							console.log("self.ar_instances[i].destroyable:",self.ar_instances[i].destroyable);
 						if(self.ar_instances[i].destroyable===false){
 							const destroyed_elements = self.ar_instances.splice(i, 1);
 							continue;
-						} 
+						}
 						//console.log("self.ar_instances:",JSON.parse(JSON.stringify(self.ar_instances[i])));
 						// self.ar_instances[i].destroy(true, true, false)
 						const destroyed_elements = self.ar_instances.splice(i, 1)
 
 						//ar_to_destroy.push(destroyed_elements[0])
-						destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order						
+						destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
 					}
 
 				// destroy all removed instances

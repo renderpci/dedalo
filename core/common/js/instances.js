@@ -188,7 +188,7 @@
 	*/
 	export const key_instances_builder = function(options){
 
-		const order = ['model','tipo','section_tipo','section_id','mode','lang']
+		const order = ['model','tipo','section_tipo','section_id','mode','lang','matrix_id']
 		const key_parts = []
 
 		const l = order.length

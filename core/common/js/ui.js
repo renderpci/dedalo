@@ -932,7 +932,7 @@ export const ui = {
 		return false
 	},//end inside_tool
 
-	
+
 
 	/**
 	* ADD_TOOLS
@@ -949,7 +949,7 @@ export const ui = {
 				buttons_container.appendChild(ui.tool.build_tool_button(tools[i], self))
 			}
 		}
-		
+
 	},//end add_tools
 
 
@@ -970,7 +970,7 @@ export const ui = {
 		const place_mode 		= options.place_mode || 'replace' // like 'add' | 'replace'
 
 		if (!target_instance) {
-			console.error("Error on get target instance:", options);
+			console.error("[ui.place_element] Error on get target instance:", options);
 			return false
 		}
 

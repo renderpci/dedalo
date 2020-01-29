@@ -88,7 +88,6 @@
 		flex: 0 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'>
 		align-content: flex-start; // maintain items flow from top to bottom
 		//flex: 0 1 auto;
-		overflow: auto;
 
 		input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
 
@@ -679,6 +678,11 @@
 	.wrapper_component {
 		position: relative;
 
+		&.active {
+			// box-shadow: 3px 5px 8px 1px #c6c6c6;
+			z-index: 1;
+		}
+
 		&.edit {
 			max-height: 27em;
 
@@ -695,10 +699,19 @@
 				}
 			}
 
+			// component_check_box
+			&.component_check_box {
+
+				>.content_data {
+					overflow: auto;
+				}
+			}
+
 			// component_image
 			&.component_image {
 				img {
 					padding: 0;
+					flex: 1;
 					// height: 100%;
 					// max-height: 10em;
 					// width: 100%;
@@ -821,13 +834,22 @@
 					// background-color: #BDFF69;
 					flex: 0 1 1em;
 					padding: 0; // 0.15em;
-					border-radius: 0.25em;
+					// border-radius: 0.25em;
 					//position: relative;
 
 					// 2
 					position: absolute;
 					top: 0;
-					right: 0;
+					// right: 0;
+
+					// 3
+					left: 100%;
+					z-index: 1;
+					background-color: #f78a1c;
+					height: 100%;
+					box-shadow: 3px 0px 8px 0px #ccc;
+					border-top-right-radius: 0.25em;
+					border-bottom-right-radius: 0.25em;
 
 
 					>*{

@@ -271,8 +271,10 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 		})
 
 	// list_header_node
-		const list_header_node = await self.list_header()
-		fragment.appendChild(list_header_node)
+		if (ar_section_record.length>0) {
+			const list_header_node = await self.list_header()
+			fragment.appendChild(list_header_node)
+		}
 
 	// content_data append
 		fragment.appendChild(current_content_data)
