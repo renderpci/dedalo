@@ -42,14 +42,6 @@ render_tool_time_machine.prototype.edit = async function (options={render_level:
 			content_data : current_content_data
 		})
 
-	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: wrapper
-	// 	})
-
-
 	// tool_container
 		//const tool_container = document.getElementById('tool_container')
 		//if(tool_container!==null){
@@ -87,7 +79,6 @@ render_tool_time_machine.prototype.edit = async function (options={render_level:
 */
 const content_data_edit = async function(self) {
 
-
 	const fragment = new DocumentFragment()
 
 	// section
@@ -115,7 +106,7 @@ const content_data_edit = async function(self) {
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -123,28 +114,28 @@ const content_data_edit = async function(self) {
 
 
 
-/**
-* ADD_COMPONENT
-*/
-export const add_component = async (self, component_container, value) => {
+// /**
+// * ADD_COMPONENT
+// */
+// export const add_component = async (self, component_container, value) => {
 
-	// user select blank value case
-		if (!value) {
-			while (component_container.firstChild) {
-				// remove node from dom (not component instance)
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
-		}
+// 	// user select blank value case
+// 		if (!value) {
+// 			while (component_container.firstChild) {
+// 				// remove node from dom (not component instance)
+// 				component_container.removeChild(component_container.firstChild)
+// 			}
+// 			return false
+// 		}
 
-	const component = await self.load_component(value)
-	const node = await component.render()
+// 	const component = await self.load_component(value)
+// 	const node = await component.render()
 
-	while (component_container.firstChild) {
-		component_container.removeChild(component_container.firstChild)
-	}
-	component_container.appendChild(node)
+// 	while (component_container.firstChild) {
+// 		component_container.removeChild(component_container.firstChild)
+// 	}
+// 	component_container.appendChild(node)
 
-	return true
-}//end add_component
+// 	return true
+// }//end add_component
 

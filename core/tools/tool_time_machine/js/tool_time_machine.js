@@ -3,7 +3,7 @@
 	import {get_instance, delete_instance} from '../../../common/js/instances.js'
 	import {common} from '../../../common/js/common.js'
 	import {tool_common} from '../../../tool_common/js/tool_common.js'
-	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
+	import {render_tool_time_machine} from './render_tool_time_machine.js'
 
 
 
@@ -50,11 +50,12 @@ tool_time_machine.prototype.init = async function(options) {
 
 	const self = this
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_time_machine/trigger.tool_time_machine.php"
-
 	// call the generic commom tool init
 		const common_init = tool_common.prototype.init.call(this, options);
+
+	// set the self specific vars not defined by the generic init (in tool_common)
+		self.trigger_url = DEDALO_CORE_URL + "/tools/tool_time_machine/trigger.tool_time_machine.php"
+
 
 	return common_init
 }//end init
@@ -69,8 +70,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	const self = this
 
 	// call generic commom tool build
-		const common_build = tool_common.prototype.build.call(this, autoload);
-
+		const common_build = tool_common.prototype.build.call(self, autoload);
 
 	// specific actions..
 		// const base_context 			= get_base_context(self)
@@ -131,6 +131,18 @@ const get_base_context = (self) => {
 			label 			: self.caller.label
 		}
 
+	// section
+		const section = {
+			typo 			: "ddo",
+			type 			: "section",
+			model 			: "section",
+			tipo 			: self.caller.section_tipo,
+			section_tipo 	: self.caller.section_tipo,
+			mode 			: "tm",
+			parent 			: null,
+			label 			: null
+		}
+
 	// source
 		const source = {
 			typo 			: "source",
@@ -147,7 +159,7 @@ const get_base_context = (self) => {
 			}
 		}
 
-	const base_context = [sqo, component, source]
+	const base_context = [sqo, component, source, section]
 
 	return base_context
 }//end get_base_context
@@ -183,9 +195,15 @@ tool_time_machine.prototype.load_section = async function() {
 			]
 		}
 	})
-		console.log("section_instance:",section_instance);
+
+	// save instance (neede for destroy later)
+		self.ar_instances.push(section_instance)
 
 	await section_instance.build(false)
+
+	if(SHOW_DEBUG===true) {
+		console.log("[tool_time_machine.load_section] section_instance:", section_instance);
+	}
 
 	// // set current tool as component caller (to check if component is inside tool or not)
 	// 	component_instance.caller = this
