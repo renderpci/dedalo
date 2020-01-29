@@ -52,31 +52,34 @@ export const area_development = function() {
 /**
 * INIT_JSON_EDITOR
 */
-area_development.prototype.init_json_editor = async function(request_options) {
+area_development.prototype.init_json_editor = async function(widget_object) {
 
 	const self = this
 
-	const editor_id 	 = request_options.editor_id
-	const trigger 		 = request_options.trigger
-	const body_response  = request_options.body_response
-	const print_response = request_options.print_response
+	const editor_id 	 = widget_object.editor_id
+	const trigger 		 = widget_object.trigger
+	const body_response  = widget_object.body_response
+	const print_response = widget_object.print_response
+
 
 	// load dependences js/css
 		const load_promises = []
 
-		const lib_js_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.js'
-		load_promises.push( common.prototype.load_script(lib_js_file) )
-
 		const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
 		load_promises.push( common.prototype.load_style(lib_css_file) )
+
+		// const lib_js_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.js'
+		// load_promises.push( common.prototype.load_script(lib_js_file) )
+		const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
+		load_promises.push( load_promise )
 
 		const load_all = await Promise.all(load_promises).then(async function(response){
 			//console.log("JSONEditor:",response);
 		})
 
-	const editor_text_area 	= document.getElementById(editor_id)
-		// Hide real data container
-		editor_text_area.style.display = "none"
+	const editor_text_area = document.getElementById(editor_id)
+		  // Hide real data container
+		  editor_text_area.style.display = "none"
 
 	const result_div = document.getElementById("convert_search_object_to_sql_query_response")
 

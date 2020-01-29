@@ -61,19 +61,20 @@
 	}//end if (login::is_logged()!==true)
 
 
+
 // logged
 	if (login::is_logged()!==true) return null;
 
 	$page_elements = [];
 
-	// menu get the menu element
+	// menu. Get the mandatory menu element
 		$menu_element_required = new stdClass();
 			$menu_element_required->options = (object)[
 				'model' => 'menu'
 			];
 		$page_elements[] = dd_core_api::get_element($menu_element_required)->result;
 
-	// section/area . get the section/area/tool element
+	// section/area/tool. Get the page element from get url vars
 		$element_required = new stdClass();
 			$element_required->options = (object)[
 				'model' 	 => null,

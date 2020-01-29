@@ -2972,7 +2972,10 @@ class search {
 		$filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
 
 		// Find existing preset
-		$strQuery = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.' WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL.'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL.'LIMIT 1;';
+		$strQuery  = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
+		$strQuery .= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
+		$strQuery .= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
+		$strQuery .= 'LIMIT 1;';
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 		if (!is_resource($result)) {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");

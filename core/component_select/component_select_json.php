@@ -18,7 +18,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -29,9 +29,9 @@
 
 // data
 	$data = [];
-	
+
 	if($options->get_data===true && $permissions>0){
-		
+
 		// Value
 		switch ($modo) {
 			case 'list':
@@ -46,7 +46,7 @@
 
 		// data item
 		$item  = $this->get_data_item($value);
-			
+
 		// dataset
 		if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 			$item->datalist = $ar_list_of_values->result;
