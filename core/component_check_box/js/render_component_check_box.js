@@ -227,8 +227,6 @@ render_component_check_box.prototype.edit = async function(options={
 
 
 
-
-
 /**
 * CONTENT_DATA_EDIT
 * @return
@@ -240,6 +238,7 @@ const content_data_edit = async function(self) {
 	const mode 		= self.mode
 
 	const fragment = new DocumentFragment()
+	const is_inside_tool = ui.inside_tool(self)
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
@@ -283,6 +282,9 @@ const content_data_edit = async function(self) {
 				class_name 		: 'button reset',
 				parent 			: buttons_container
 			})
+
+	// tools
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
 		const content_data = document.createElement("div")
