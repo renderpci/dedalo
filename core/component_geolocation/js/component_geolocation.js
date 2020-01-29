@@ -65,9 +65,12 @@ export const component_geolocation = function(){
 * load the libraries and specific css
 */
 var loaded_document = false
-component_geolocation.prototype.init_map = async function( map_container ) {
+component_geolocation.prototype.init_map = async function(wrapper) {
 
 	const self = this
+
+	// map_container
+		const map_container = wrapper.querySelector(".leaflet_map")
 
 	// load dependences js/css
 		const load_promises = []
@@ -82,35 +85,35 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 			//console.log("JSONEditor:",JSONEditor);
 		})
 
+	// defaults
+		const default_lat 	= 39.462571
+		const default_lon 	= -0.376295
+		const default_zoom 	= 16
+
 	// get data
-		const field_lat  	= self.data.value.lat
-		const field_lon  	= self.data.value.lon
-		const field_zoom 	= self.data.value.zoom
+		const field_lat  	= self.data.value.lat || default_lat
+		const field_lon  	= self.data.value.lon || default_lon
+		const field_zoom 	= self.data.value.zoom || default_zoom
 		const field_alt 	= self.data.value.alt
 		const map_refresh	= map_container.querySelector('#map_refresh')
 		const map_fixed		= map_container.querySelector('#map_fixed')
 		//self.related_tipo 	= map_container.dataset.related_tipo
 
-	// map_data : defaults Define main map element default data
-		let map_data = {}
+	// map_data : defaults Define main map element default data. Default value is Ruzafa headquarters
+		let map_data = {
+			x	 : 39.462571,
+			y	 : -0.376295,
+			zoom : 16,
+			alt  : 16
+		}
 
 	// dataset data
-		if (typeof self.data.value!=="undefined") {
-			if (field_lat && field_lon) {
-				map_data = {
-					x	  : field_lat,
-					y	  : field_lon,
-					zoom  : field_zoom,
-					alt   : field_alt,
-				}
-			}
-		}else{
-			// Defaul value Ruzafa
+		if (typeof self.data.value!=="undefined" ) {
 			map_data = {
-				x	 : 39.462571,
-				y	 : -0.376295,
-				zoom : 16,
-				alt  : 16
+				x	  : field_lat,
+				y	  : field_lon,
+				zoom  : field_zoom,
+				alt   : field_alt,
 			}
 		}
 
@@ -124,7 +127,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 
 
 	// Add layer to map
-		switch( self.context.geo_provider ) {
+		switch(self.context.geo_provider) {
 
 			case 'OSM':
 				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -136,12 +139,12 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 				break;
 
 			// case 'COULDMADE':
-			// 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
-			// 	L.tileLayer('http://{s}.tile.cloudmade.com/API-key/997/256/{z}/{x}/{y}.png', {
-			// 		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
-			// 		maxZoom: 18
-			// 	}).addTo(map);
-			// 	break;
+				// 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				// 	L.tileLayer('http://{s}.tile.cloudmade.com/API-key/997/256/{z}/{x}/{y}.png', {
+				// 		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
+				// 		maxZoom: 18
+				// 	}).addTo(map);
+				// 	break;
 
 			case 'GOOGLE':
 				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -172,24 +175,23 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 				osm 		= new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
 
 
-
 				// MAP
 				map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 
 				// LAYER SELECTOR
 				base_maps = {
-									"dare":  dare,
-								    "arcgis": arcgis,
-								    "osm": 	  osm
+					dare 	:  dare,
+					arcgis 	: arcgis,
+					osm 	: osm
 
-								};
-				if(layer_control === false || loaded_document===true) {
+				}
+				if(layer_control===false || loaded_document===true) {
 					layer_control = L.control.layers(base_maps).addTo(map);
 				}
 
 				map.on('overlayadd', function(e) {
 				  	self.init_draw_editor( ar_FeatureGroup[e.name],e.name)
-				});
+				})
 				break;
 
 			case 'VARIOUS':
@@ -226,7 +228,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 				// ADD_DRAW_EDIT_LAYER
 				//self.add_draw_edit_layer(map, tag_id);
 				break;
-		}
+		}//end switch(self.context.geo_provider)
 
 	// disable zoom handlers
 	map.scrollWheelZoom.disable();
@@ -245,7 +247,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 					lat  : map.getCenter().lat,
 					lon  : map.getCenter().lng,
 					zoom : map.getZoom()
-				}, map_container)
+				}, wrapper)
 		});
 		map.on('zoomend', function(e){
 			// Force refresh map size when map is loaded hidden (section group closed)
@@ -256,7 +258,7 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 					lat  : map.getCenter().lat,
 					lon  : map.getCenter().lng,
 					zoom : map.getZoom()
-				}, map_container)
+				}, wrapper)
 		});
 
 	/*
@@ -341,34 +343,38 @@ component_geolocation.prototype.init_map = async function( map_container ) {
 }//end init_map
 
 
+
 /**
 * UPDATE_INPUT_VALUES
-* @return
+* @return bool true
 */
 component_geolocation.prototype.update_input_values = function(data, wrapper) {
 
 	// inputs
-		const input_lat  = wrapper.querySelector("input[name=lat]")
-		const input_lon  = wrapper.querySelector("input[name=lon]")
-		const input_zoom = wrapper.querySelector("input[name=zoom]")
+		const input_lat  = wrapper.querySelector("input[data-name='lat']")
+		const input_lon  = wrapper.querySelector("input[data-name='lon']")
+		const input_zoom = wrapper.querySelector("input[data-name='zoom']")
 
-	// Set values
+	// Set values to inputs
 		input_lat.value  = data.lat
 		input_lon.value  = data.lon
 		input_zoom.value = data.zoom
 
 	return true
-};//end update_input_values
+}//end update_input_values
 
 
 
 /**
 * REFRESH_MAP
-* @return
+* @return bool true
 */
 component_geolocation.prototype.refresh_map = function(map) {
+
 	//map._onResize();
 	map.invalidateSize(); // Force refresh map
+
+	return true
 }//end refresh_map
 
 
