@@ -82,6 +82,7 @@ tool_common.prototype.build = async function(autoload=false) {
 					return false
 				}
 
+				// tool source for component json that stores full tool config
 				const source = {
 					typo			: "source",
 					action			: 'get_data',
@@ -101,16 +102,16 @@ tool_common.prototype.build = async function(autoload=false) {
 				const api_response 			= await current_data_manager.section_load_data(sqo_context.show)
 				const data 					= api_response.result.data
 
-				self.config 		= data.find(item => item.section_id===self.tool_section_id && item.tipo==='dd1353').value; 	console.log("self.config:",self.config);
+				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo==='dd1353').value
+				self.config 		= simple_tool_object[0];
 				const label 		= self.config.label.find(item => item.lang===self.lang);
 				self.label 			= typeof label!=='undefined' ? label.value : self.model
 				const description	= self.config.description.find(item => item.lang===self.lang)
 				self.description 	= typeof description!=='undefined' ? description.value : null
 
-
 			// debug
 				if(SHOW_DEBUG===true) {
-					console.log("[tool_lang.build] api_response:",api_response);
+					console.log("[tool_common.build] api_response:", api_response);
 				}
 		}
 
@@ -118,7 +119,7 @@ tool_common.prototype.build = async function(autoload=false) {
 		if(SHOW_DEBUG===true) {
 			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
 		}
-			console.log("[build common]:",self.model);
+
 
 	// status update
 		self.status = 'builded'
