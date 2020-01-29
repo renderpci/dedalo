@@ -250,6 +250,7 @@ const content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	const is_inside_tool = ui.inside_tool(self)
 
 	// init the editor with the wrapper
 		// const editor = ui.create_dom_element({
@@ -276,7 +277,7 @@ const content_data_edit = async function(self) {
 		const inputs_value = value // is array
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i], self)
+			const input_element = get_input_element(i, inputs_value[i], self, is_inside_tool)
 			inputs_container.appendChild(input_element)
 		}
 
@@ -288,7 +289,7 @@ const content_data_edit = async function(self) {
 		})
 
 	// button close
-		if(self.mode==='edit_in_list' && !ui.inside_tool(self)){
+		if(self.mode==='edit_in_list' && !is_inside_tool){
 			const button_close = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button close',
@@ -297,7 +298,7 @@ const content_data_edit = async function(self) {
 		}
 
 	// button add input
-		if((self.mode==='edit' || self.mode==='edit_in_list') && !ui.inside_tool(self)){
+		if((self.mode==='edit' || self.mode==='edit_in_list') && !is_inside_tool){
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button add',
@@ -306,16 +307,7 @@ const content_data_edit = async function(self) {
 		}
 
 	// tools
-		if (!ui.inside_tool(self)) {
-			const tools = self.tools
-			const tools_length = tools.length
-
-			for (let i = 0; i < tools_length; i++) {
-				if(tools[i].show_in_component){
-					buttons_container.appendChild( ui.tool.build_tool_button(tools[i], self) );
-				}
-			}
-		}
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)		
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -334,7 +326,7 @@ const content_data_edit = async function(self) {
 * GET_INPUT_ELEMENT
 * @return dom element li
 */
-const get_input_element = (i, current_value, self) => {
+const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	const mode = self.mode
 
@@ -366,7 +358,7 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// button remove
-		if((mode==='edit' || 'edit_in_list') && !ui.inside_tool(self)){
+		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'div',
 				class_name 		: 'button remove display_none',
