@@ -9,7 +9,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_autocomplete} from '../../component_autocomplete/js/render_component_autocomplete.js'
-	import {paginator} from '../../search/js/paginator.js'
+	import {paginator} from '../../paginator/js/paginator.js'
 
 
 
