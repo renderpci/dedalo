@@ -317,7 +317,7 @@ class component_date extends component_common {
 					break;
 
 				case 'time':
-					$input_name[$key] 	= $key."_{$tipo}_{$parent}";
+					//$input_name[$key] 	= $key."_{$tipo}_{$parent}";
 
 					if(!empty($current_dato)) {
 						$dd_date 	= new dd_date($current_dato);
