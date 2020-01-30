@@ -59,28 +59,13 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	const self = this
 	const date_mode = self.context.properties.date_mode || 'date'
 
-	// load dependences js/css
-		const load_promises = []
-
-		const lib_js_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
-		//const lib_js_file = DEDALO_ROOT_WEB + '/lib/thedatepicker-master/dist/the-datepicker.js'
-		//const lib_js_file = 'https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.2.3/flatpickr.js'
-		load_promises.push( common.prototype.load_script(lib_js_file) )
-
-		const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
-		//const lib_css_file = DEDALO_ROOT_WEB + '/lib/thedatepicker-master/dist/the-datepicker.css'
-		//const lib_css_file = 'https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.2.3/flatpickr.css'
-
-		load_promises.push( common.prototype.load_style(lib_css_file) )
-
-		await Promise.all(load_promises).then(async function(response){
-			
-		})
-
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	const render_level = options.render_level
+
+	// load
+	await self.init_editor()//editor)
 
 	// content_data
 		const current_content_data = await content_data_edit(self)
