@@ -31,15 +31,15 @@ abstract class subtitles {
 			$options->sourceText  					= null;		# clean text fragment without <p>, [TC], [INDEX] tags
 			$options->sourceText_unrestricted  		= null;
 			$options->total_ms 						= null;		# total of miliseconds (tcout-tcin)
-			$options->maxCharLine 					= 144;		# max number of char for subtitle line. Default 144			
+			$options->maxCharLine 					= 144;		# max number of char for subtitle line. Default 144
 			$options->type 							= 'srt';	# File type: srt or xml
 			$options->show_debug    				= false;	# Default false
 			$options->advice_text_subtitles_title  	= null;  	# Text like "Automatic translation"
 			$options->tc_in_secs 					= false;	# Optional subtitles filter from in tc
 			$options->tc_out_secs   				= false;	# Optional subtitles filter from out tc
-			
+
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-						
+
 		// Set static vars
 			$maxCharLine = $options->maxCharLine;
 			subtitles::$maxCharLine = $maxCharLine;
@@ -56,10 +56,10 @@ abstract class subtitles {
 
 		// Clean text from non tc tags
 			if (is_null($options->sourceText_unrestricted)) {
-				$clean_sourceText_unrestricted = $clean_sourceText = subtitles::clean_text_for_subtitles($options->sourceText);			
+				$clean_sourceText_unrestricted = $clean_sourceText = subtitles::clean_text_for_subtitles($options->sourceText);
 			}else{
 				$clean_sourceText_unrestricted = subtitles::clean_text_for_subtitles($options->sourceText_unrestricted);
-				$clean_sourceText 			   = subtitles::clean_text_for_subtitles($options->sourceText);			
+				$clean_sourceText 			   = subtitles::clean_text_for_subtitles($options->sourceText);
 			}
 
 		// Global char time in seconds (float)
@@ -77,11 +77,11 @@ abstract class subtitles {
 
 		#
 		# CREATE FILE
-		#			
+		#
 			$srt 		  				 = '';
 			$type 		  				 = $options->type; // 'srt';
 			$advice_text_subtitles_title = $options->advice_text_subtitles_title;
-				
+
 			$i=1; foreach($ar_lines as $key => $line) {
 
 				// tcin
@@ -103,7 +103,7 @@ abstract class subtitles {
 					$text 	= trim($text);
 					// Remove tag <br> at end and beginning of text
 					$text 	= preg_replace('/^(<\/?br>)|(<\/?br>)$/i', '', $text);
-				
+
 					$text_final = $text;
 
 				#
@@ -121,7 +121,7 @@ abstract class subtitles {
 				#
 				# TC_OUT
 				# Normalmente, la línea siguiente (en el array de líneas) será un tag tc de tipo [TC_00:01:08_TC]
-				# Si no lo fuera (la última línea por ejemplo), lo suplantaremos son un cálculo fijo				
+				# Si no lo fuera (la última línea por ejemplo), lo suplantaremos son un cálculo fijo
 					if (!empty($ar_lines[$key+1]['tcin'])) {
 
 						$tcout 	= $ar_lines[$key+1]['tcin'];
@@ -135,7 +135,7 @@ abstract class subtitles {
 							#dump($tcout_final_secs, 'tcout_final_secs', array());
 
 						# Format as tc like '00:01:03.765'
-						$tcout_final_formated 	= OptimizeTC::seg2tc($tcout_final_secs);	
+						$tcout_final_formated 	= OptimizeTC::seg2tc($tcout_final_secs);
 
 						# tcout
 						$tcout = $tcout_final_formated;
@@ -143,7 +143,7 @@ abstract class subtitles {
 					}
 
 				#
-				# LINE				
+				# LINE
 					# ADVICE_TEXT_SUBTITLES_TITLE
 					# Añadimos un rótulo previo al primero, desde tc 0 hasta el comienzo del primer fragmento
 					if ($i===1 && !empty($options->advice_text_subtitles_title)) {
@@ -153,7 +153,7 @@ abstract class subtitles {
 						$srt .= "\n";
 						$i++;
 					}
-					
+
 					# vtt line number
 					$srt .= "$i\n";
 					# vtt line tcs
@@ -162,14 +162,14 @@ abstract class subtitles {
 					$srt .= $text_final."\n";
 					# vtt line break
 					$srt .= "\n";
-					
+
 			$i++; }#foreach($ar_lines as $key => $line)
 
 			$srt = "WEBVTT\n\n".$srt;
 
 			# ENCODING
-			#$srt = mb_convert_encoding($srt, 'UTF-8', 'auto');	
-			
+			#$srt = mb_convert_encoding($srt, 'UTF-8', 'auto');
+
 
 			return (string)$srt;
 	}//end build_subtitles_text
@@ -191,16 +191,16 @@ abstract class subtitles {
 	* @return array $fragment_ar_lines
 	*/
 	public static function build_fragment($ar_lines, $tc_in_secs, $tc_out_secs) {
-		
+
 		$fragment_ar_lines = [];
 
 		$tc_in_secs = (int)$tc_in_secs;
 		$tc_out_secs= (int)$tc_out_secs ;
-	
+
 		foreach ($ar_lines as $key => $line) {
-			
+
 			$tc = (int)OptimizeTC::TC2seg($line['tcin']);
-			
+
 			// Skip lines before tc_in_secs
 				if ( $tc < $tc_in_secs ) {
 					continue; # Skip
@@ -234,21 +234,21 @@ abstract class subtitles {
 	*/
 	public static function get_ar_lines($text) {
 
-		# Explode text by tc pattern		
+		# Explode text by tc pattern
 		#$tcPattern 	= "/(\[TC_[0-9]{2}:[0-9]{2}:[0-9]{2}\.?[0-9]{3}?_TC\])/";
-		
+
 		#$tcPattern 	= TR::get_mark_pattern('tc_full',$standalone=true);
-		
+
 		// Allow old codes like [TC_00:00:03_TC]
 			$tcPattern 	= "/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\]|\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}_TC\])/";
-		
+
 		$ar_fragments	= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
 		#preg_match_all("/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/", $text, $ar_fragments, PREG_SET_ORDER);
 			#dump($ar_fragments,'$ar_fragments - '); die();
 
 		$ar_fragments_formated = array();
 		if (is_array($ar_fragments)) foreach ($ar_fragments as $key => $value) {
-			
+
 			# echo "<br>$key - $value";
 			if(!preg_match($tcPattern, $value)) {
 				# Es un texto
@@ -261,7 +261,7 @@ abstract class subtitles {
 				}else{
 					$tcin 	= null;
 				}
-				
+
 				#$tcout 	= $ar_fragments[$key+1];
 				if (isset($ar_fragments[$key+1])) {
 					$tcout 	= $ar_fragments[$key+1];
@@ -275,13 +275,13 @@ abstract class subtitles {
 						$tcin_value  = substr($tcin, 4,8);
 						$tcout_value = substr($tcout, 4,8);
 
-						if ( OptimizeTC::TC2seg($tcout_value) < OptimizeTC::TC2seg($tcin_value) ) {				
-							
+						if ( OptimizeTC::TC2seg($tcout_value) < OptimizeTC::TC2seg($tcin_value) ) {
+
 							# Seconds +3
 							$next_tcout_secs 			= OptimizeTC::TC2seg($tcin_value) + 3;
 
-							# Format as tc like '00:01:03'			
-							$next_tcout_formated 	= OptimizeTC::seg2tc($next_tcout_secs);	
+							# Format as tc like '00:01:03'
+							$next_tcout_formated 	= OptimizeTC::seg2tc($next_tcout_secs);
 
 							# Rebuilded tc out
 							$tcout = '[TC_'. $next_tcout_formated .'_TC]';
@@ -289,10 +289,10 @@ abstract class subtitles {
 								#echo " Changed tcout: $tcout from tcin $tcin <br>";
 						}
 						*/
-				
+
 				$ar_fragments_formated[] = array('tcin'	 => $tcin,
 												 'tcout' => $tcout,
-												 'text'  => $text,											
+												 'text'  => $text,
 												);
 			}//end if(!preg_match($tcPattern, $value))
 		}
@@ -307,14 +307,14 @@ abstract class subtitles {
 
 			$ar_final[] = subtitles::fragment_split($text, $tcin, $tcout);
 		}
-		#dump($ar_final,'ar_final en get_ar_lines'); die();			
-		
+		#dump($ar_final,'ar_final en get_ar_lines'); die();
+
 		# Plain formated
 		$ar_final_formated = array();
-		foreach ($ar_final as $key => $ar_value) {			
+		foreach ($ar_final as $key => $ar_value) {
 			foreach ($ar_value as $key2 => $value) {
 				$ar_final_formated[] = $value;
-			}						
+			}
 		}
 		#dump($ar_final_formated,'$ar_final_formated');
 
@@ -338,11 +338,11 @@ abstract class subtitles {
 		$ar_lines 				= array();
 		$refPos					= 0;
 		$offsetSecs 			= OptimizeTC::TC2seg($tcin); 	#dump($offsetSecs, ' offsetSecs');
-		$maxCharLine 			= subtitles::$maxCharLine;		
+		$maxCharLine 			= subtitles::$maxCharLine;
 		$current_charTime 		= subtitles::$charTime; // miliseconds
 
 		# calculate duration of char (secs)
-		# hay un cálculo general, pero para optimizar la aproximación se calcula con los tc's de fragmento actual si tiene tc's 
+		# hay un cálculo general, pero para optimizar la aproximación se calcula con los tc's de fragmento actual si tiene tc's
 		#dump($current_charTime, 'current_charTime GLOBAL', array());
 		if(!empty($tcin) && !empty($tcout)) {
 
@@ -358,42 +358,42 @@ abstract class subtitles {
 					#$current_charTime= (float)$this->full_char_time_ms/1000; // Fallback to general chartime
 					$current_charTime=0;
 				}
-			}			
+			}
 		}
 		#dump($current_charTime, 'current_charTime AFTER', array()); die();
 
 		$reference_text = $text;
 		#$reference_text = strip_tags($reference_text);
-		#$reference_text = utf8_decode($text);			
+		#$reference_text = utf8_decode($text);
 
 		$i=0; do{
-			# Primera linea			
 
-			$current_line = mb_substr( $text, $refPos, $maxCharLine );
-			
+			// Primera línea
+				$current_line = mb_substr( $text, $refPos, $maxCharLine );
+
 			// remove start and end spaces
 				$current_line = trim($current_line);
-			
+
 			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
 			$line_length = subtitles::text_lenght($current_line);
 
 			// exception on large words
-				#dump(strpos($current_line, " "), 'strpos current_line ++ line_length: '.$line_length.' - maxCharLine: '.to_string($maxCharLine));	
+				#dump(strpos($current_line, " "), 'strpos current_line ++ line_length: '.$line_length.' - maxCharLine: '.to_string($maxCharLine));
 				#if (strpos($current_line, " ")===false) {
 				#	error_log("*************************** NOT FOUND SPACE !");
 				#	$current_line = substr_replace($current_line," ", floor($line_length/2), 0);
-				#	$line_length++;					
+				#	$line_length++;
 				#}
 				#error_log("line_length: $line_length - maxCharLine: $maxCharLine - current_line: '$current_line' ");
 
-			if($line_length < $maxCharLine) {
+			if($line_length < ($maxCharLine -0)) {
 
 				$lastLine = true;
 				$spacePos = $line_length;
-					#dump($lastLine, ' LASTLINE .........................................................');		
+					#dump($lastLine, ' LASTLINE .........................................................');
 			}else{
 				#dump(strrpos($current_line, '. '), 'strrpos($current_line, '. ')');
-				
+
 				#if ( strrpos($current_line, '. ') >0 ) {
 				#	$spacePos = strrpos($current_line, '. ')+1;
 				#	#$spacePos 	= mb_strlen($current_line) - $last_appear;
@@ -401,8 +401,8 @@ abstract class subtitles {
 				#	$spacePos = strrpos($current_line, ' '); # Localiza el último espacio
 				#	#$spacePos 	 = mb_strlen($current_line) - $last_appear;
 				#}
-				
-				$spacePos = mb_strrpos($current_line, ' '); # Localiza el último espacio
+
+				$spacePos = mb_strrpos($current_line, " "); # Localiza el último espacio
 					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
 
 				// no spaces found
@@ -412,10 +412,10 @@ abstract class subtitles {
 			}
 
 			# save fragment text line
-			$current_line_cut = ''.trim( mb_substr($text, $refPos,  $spacePos) );			
-				#dump($current_line_cut, "current_line_cut $refPos, $spacePos");	
+			$current_line_cut = ''.trim( mb_substr($text, $refPos,  $spacePos) );
+				#dump($current_line_cut, "current_line_cut $refPos, $spacePos");
 
-			
+
 			// bold an italic
 				#añadimos negritas e itálicas al principio de un párrafo que tiene continuidad en las negritas o itálicas, el parrafo anterior no acaba y transpasaomos la etiqueta
 				$current_line_cut	= $siguiente_linea_add_b .=$current_line_cut;
@@ -423,7 +423,7 @@ abstract class subtitles {
 
 				#comprobamos si las negritas tienen continuidad en más de una línea
 				$numero_br = str_replace('<b>',  '<b>',  $current_line_cut, $br_in);
-				$numero_br = str_replace('</b>', '</b>', $current_line_cut, $br_out);					
+				$numero_br = str_replace('</b>', '</b>', $current_line_cut, $br_out);
 
 				if ($br_in>$br_out){
 					//echo "necesita un br $br_in $br_out";
@@ -431,8 +431,8 @@ abstract class subtitles {
 					$siguiente_linea_add_b = '<b>';
 				}else{
 					$siguiente_linea_add_b = '';
-				}				
-			
+				}
+
 				#comprobamos si las itálicas tienen continuidad en más de una línea
 				$numero_br = str_replace('<i>',  '<i>',  $current_line_cut, $br_in);
 				$numero_br = str_replace('</i>', '</i>', $current_line_cut, $br_out);
@@ -443,34 +443,33 @@ abstract class subtitles {
 					$siguiente_linea_add_i = '<i>';
 				}else{
 					$siguiente_linea_add_i = '';
-				}			
-			
-			
-			# PROVISIONAL : El formateo de negritas y itálicas falla en ocasiones. Para asegurarnos de que no haya errores de forma en html revisamos 
+				}
+
+
+			# PROVISIONAL : El formateo de negritas y itálicas falla en ocasiones. Para asegurarnos de que no haya errores de forma en html revisamos
 			# el resultado final de la línea para depurar el número y posicionamiento de las etiquetas
 			#if(SHOW_DEBUG) {
 				$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'b');
 				$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'i');
-			#}			
+			#}
 
 			$ar_lines[$i]['text'] = trim($current_line_cut);
-			
+
 			#$current_tcin_secs	  = $offsetSecs - ($this->tcin);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
-			$current_tcin_secs	  = $offsetSecs;			
+			$current_tcin_secs	  = $offsetSecs;
 			$ar_lines[$i]['tcin'] = OptimizeTC::ms_format($current_tcin_secs);
 
 			$duracion_linea = $spacePos * $current_charTime;
-			$offsetSecs += $duracion_linea ;	
+			$offsetSecs += $duracion_linea ;
 				#dump($duracion_linea,"duracion_linea offsetSecs: $offsetSecs -  spacePos: $spacePos - current_charTime: $current_charTime");
-						
+
 			# add refPos for next iteration
 			$refPos += $spacePos;
-			
+
 			$i++;
 		}while ($lastLine===false);
 
-		#dump($ar_lines, ' ar_lines ++ '.to_string());		
-		#die();
+		#dump($ar_lines, ' ar_lines ++ '.to_string()); die();
 		#dump($ar_lines, 'ar_lines', array());
 
 		return (array)$ar_lines ;
@@ -488,7 +487,7 @@ abstract class subtitles {
 		$global_charTime=0;
 		# count number of char
 		$n_char = subtitles::text_lenght( $sourceText );
-		
+
 		# charTime in secs
 		if($total_ms>0 && $n_char>0) {
 			$global_charTime = $total_ms / $n_char;
@@ -516,7 +515,7 @@ abstract class subtitles {
 	* @return string $line_string
 	*/
 	public static function revise_tag_in_line($line_string, $tag_name) {
-		
+
 		$line_string = str_replace('</'.$tag_name.'>'.'<'.$tag_name.'>', '', $line_string);
 		$line_string = str_replace('</'.$tag_name.'> <'.$tag_name.'>', ' ', $line_string);
 		$line_string = str_replace('<'.$tag_name.'>'.'</'.$tag_name.'>', '', $line_string);
@@ -529,21 +528,21 @@ abstract class subtitles {
 			#dump(htmlspecialchars($line_string), "OPEN $open_tag_count - CLOSE $close_tag_count" );
 
 		if ($open_tag_count!=$close_tag_count) {
-			#throw new Exception("Error Processing Request $open_tag_count - $close_tag_count", 1);	
+			#throw new Exception("Error Processing Request $open_tag_count - $close_tag_count", 1);
 			if(SHOW_DEBUG) {
 				#trigger_error("ERROR: revise_tag_in_line -> No se correspondían las etiquetas '$tag_name' : $open_tag_count/$close_tag_count - ".htmlspecialchars($line_string));
 			}
 
 			if ($open_tag_count > $close_tag_count) {
 				$n_etiquetas_to_add = $open_tag_count - $close_tag_count;
-				for ($i=0; $i <$n_etiquetas_to_add ; $i++) { 
+				for ($i=0; $i <$n_etiquetas_to_add ; $i++) {
 					$line_string = $line_string . '</'.$tag_name.'>';
 				}
 			}
 			else
 			if ($close_tag_count > $open_tag_count) {
 				$n_etiquetas_to_add = $close_tag_count - $open_tag_count;
-				for ($i=0; $i <$n_etiquetas_to_add ; $i++) { 
+				for ($i=0; $i <$n_etiquetas_to_add ; $i++) {
 					$line_string = '<'.$tag_name.'>'.$line_string;
 				}
 			}
@@ -566,20 +565,20 @@ abstract class subtitles {
 		# CONVERT ENCODING (Traducciones mal formadas provinientes de Babel)
 		html_entity_decode($string);
 
-		$string	= strip_tags($string, '<br><strong><em>');	
-		#$string	= strip_tags($string, '<br>');					# remove html tags (em and strong tags)	
+		$string	= strip_tags($string, '<br><strong><em>');
+		#$string	= strip_tags($string, '<br>');					# remove html tags (em and strong tags)
 
-		$string = str_replace('<br />', " ", $string);				# convert br to ' '	
+		$string = str_replace('<br />', " ", $string);				# convert br to ' '
 		$string = str_replace('<strong>', '<b>', $string);
 		$string = str_replace('</strong>', '</b>', $string);
 		$string = str_replace('<em>', '<i>', $string);
 		$string = str_replace('</em>', '</i>', $string);
 		$string = str_replace(['&nbsp;'], [' '], $string);
-		
+
 		$options = new stdClass();
 			$options->deleteTC = false;
 		$string = TR::deleteMarks($string, $options);	# delete some marks
-		
+
 		return $string;
 	}//end clean_text_for_subtitles
 
@@ -594,7 +593,7 @@ abstract class subtitles {
 		# return with no change if string is shorter than $limit
 		$str_len = subtitles::text_lenght($string);  // strlen($string)
 		if($str_len <= $limit) return $string;
-		
+
 		$string = mb_substr($string, 0, $limit);
 
 		if(false !== ($breakpoint = mb_strrpos($string, $break))) {
@@ -614,10 +613,10 @@ abstract class subtitles {
 	public static function trim_text($string) {
 		$firstChar = substr($string,0,1);
 		if($firstChar=="\r"|| $firstChar=="\n")	$string = substr($string,1);
-		
+
 		$lastChar = substr($string,-1);
 		if($lastChar=="\r" || $lastChar=="\n")	$string = substr($string,0,-1);
-		
+
 		return trim($string) ;
 	}//end trim_text
 
@@ -629,7 +628,7 @@ abstract class subtitles {
 	* @return int | false $text_lenght
 	*/
 	public static function text_lenght($text) {
-		
+
 		#$text_lenght = strlen($text);
 		$text_lenght = mb_strlen($text, '8bit');
 		#$text_lenght = iconv_strlen($text);
@@ -643,13 +642,13 @@ abstract class subtitles {
 	* GET_SUBTITLES_URL
 	* @return string $subtitles_url
 	*/
-	public static function get_subtitles_url($section_id, $tc_in=false, $tc_out=false, $lang=DEDALO_DATA_LANG) {		
-		
+	public static function get_subtitles_url($section_id, $tc_in=false, $tc_out=false, $lang=DEDALO_DATA_LANG) {
+
 		// Subtitles url base
 			$TEXT_SUBTITLES_URL_BASE = DEDALO_LIB_BASE_URL . '/publication/server_api/v1/subtitles/';
 			#define('TEXT_SUBTITLES_URL_BASE', DEDALO_LIB_BASE_URL . '/publication/server_api/v1/subtitles/');
-		
-		// url vars	
+
+		// url vars
 			$url_vars = [];
 
 			$url_vars[] = 'section_id=' . $section_id;
@@ -666,11 +665,11 @@ abstract class subtitles {
 				$url_vars[] = 'tc_out=' . $tc_out;
 			}
 
-		$subtitles_url = $TEXT_SUBTITLES_URL_BASE . '?' . implode('&', $url_vars); 
+		$subtitles_url = $TEXT_SUBTITLES_URL_BASE . '?' . implode('&', $url_vars);
 
 		return $subtitles_url;
 	}//end get_subtitles_url
-	
+
 
 
 
