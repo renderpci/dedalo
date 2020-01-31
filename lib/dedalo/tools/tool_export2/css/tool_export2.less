@@ -222,8 +222,8 @@
 		display: none;
 		padding: 20px;
 
-		position: sticky;
-    	top: 90vh;
+		//position: sticky;
+    	//top: 90vh;
 
 		&:before {
 			content: " ";
@@ -281,8 +281,149 @@
 // tool_title
 	.tool_title {
 		margin: 0;
-		padding: 40px;
+		padding: 1em;
 	}
+
+
+.wrap_tool {
+	//font-size: 1.2em;
+	display: flex;
+
+	>#list_selector {
+		background-color: #ececec;
+		width: 50%;
+		padding: 1em;
+
+		// .columns_list
+		.columns_list_DES {
+			padding: 0;
+			//background-color: #EAF4CC;
+			display: flex;
+
+			//.target_container & {
+			//	background-color: #EC4019 !important;
+			//	color: violet;
+			//	padding: 5em;
+			//}
+
+			>.section_list_div {
+
+				>.section_label {
+					background-color: #404040;
+					color: #ffffff;
+					padding: 0.25em;
+					padding-top: 0.5em;
+					padding-bottom: 0.5em;
+					padding-left: 0.5em;
+				}
+
+				>ul {
+
+					>li {
+						padding: 0.25em;
+						padding-left: 0.5em;
+						outline: 1px solid #d4d4d4;
+						background-color: beige;
+						margin-top: 1px;
+						padding-right: 0.5em;
+
+						&.selected {
+							background-color: #83F3A9;
+						}
+
+						&.have_childrens {
+							//cursor: pointer;
+							//&:hover {
+							//	background-color: #F3E3A0;
+							//}
+						}
+
+						>.arrow_down {
+							float: right;
+							&:before {
+								content: " > ";
+								display: inline-block;
+								height: 1em;
+								width: 1em;
+								padding-left: 0.5em;
+								font-weight: bold;
+								cursor: pointer;
+
+							}
+						}
+					}
+				}//end ul
+
+			}//end section_list_div
+
+
+			>.target_container {
+				//background-color: #EDB6C1;
+
+				.section_label { // inside target_container
+					&:before {
+						content: "x";
+						width: 1em;
+						height: 1em;
+						float: right;
+						cursor: pointer;
+						margin-left: 0.5em;
+					}
+				}
+			}
+
+		}//end .columns_list
+
+	}//end >#list_selector
+
+
+	>#list_target {
+		background-color: #c3c3c3;
+		width: 50%;
+		padding: 1em;
+
+		>#list_target_ul {
+			//background-color: #D0ACFA;
+			height: 100%;
+
+			>li {
+				padding: 4px;
+				border-right: 1px solid #a5a5a5;
+				-moz-user-select: none;
+				-khtml-user-select: none;
+				-webkit-user-select: none;
+				user-select: none;
+
+				background-color: #f6f6f6;
+				border-bottom: .5px solid #666;
+
+				>.name {
+					font-weight: bold;
+				}
+
+				>.close {
+					font-size: 1.3em;
+					width: 1em;
+					height: 1em;
+					float: right;
+					cursor: pointer;
+					margin-left: 0.5em;
+				}
+			}
+		}
+	}
+
+
+	>#tool_buttons {
+		background-color: #ececec;
+		width: 50%;
+		padding: 1em;
+	}
+
+}//end .wrap_tool
+
+
+
 
 
 
