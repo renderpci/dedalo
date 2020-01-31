@@ -214,10 +214,8 @@ const content_data_edit = async function(self) {
 
 	const ar_section_record = await self.get_ar_instances()
 
-
-	const fragment = new DocumentFragment()
-	const is_inside_tool = ui.inside_tool(self)
-
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// inputs contaniner
 		const inputs_container = ui.create_dom_element({

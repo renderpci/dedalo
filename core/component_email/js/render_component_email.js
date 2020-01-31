@@ -312,8 +312,8 @@ const content_data_edit = async function(self) {
 	const value = self.data.value
 	const mode 	= self.mode
 
-	const fragment = new DocumentFragment()
-	const is_inside_tool = ui.inside_tool(self)
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
