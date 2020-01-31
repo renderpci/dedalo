@@ -6,25 +6,25 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 
 
 class tool_upload extends tool_common {
-	
+
 	# media component
 	protected $component_obj ;
 
 	# file_obj container of util file vars
 	public $file_obj;
 
-	
+
 	/**
 	* __CONSTRUCT
 	* @param $component_obj object
 	* @param $modo string (optional)
 	*/
 	public function __construct($component_obj, $modo='button') {
-		
+
 		# Fix current media component
 		$this->component_obj = $component_obj;
 			#dump($component_obj, ' component_obj');
-		
+
 		# Fix modo
 		$this->modo = $modo;
 
@@ -49,7 +49,7 @@ class tool_upload extends tool_common {
 			$response->result 			 = 0;
 			$response->html 			 = null;
 			$response->update_components = [];
-			
+
 
 		# Current component name
 		$component_name = get_class( $this->component_obj );
@@ -75,13 +75,13 @@ class tool_upload extends tool_common {
 					$ar_allowed_extensions 	= unserialize(DEDALO_IMAGE_EXTENSIONS_SUPPORTED);
 					break;
 			case 'component_svg' :
-					$SID 					= $this->component_obj->get_svg_id();					
+					$SID 					= $this->component_obj->get_svg_id();
 					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
 						#dump($folder_path,'$folder_path'); die();
 					$current_extension 		= DEDALO_SVG_EXTENSION;
 					$ar_allowed_extensions 	= unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED);
 					break;
-			case 'component_pdf' : 
+			case 'component_pdf' :
 					$SID 					= $this->component_obj->get_pdf_id();
 					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . '/' . $quality;
 					$this->component_obj->set_quality($quality);
@@ -91,13 +91,13 @@ class tool_upload extends tool_common {
 					$ar_allowed_extensions 	= unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED);
 					break;
 		}
-		
-				
+
+
 
 		# VARS : Verify
 		if(!$SID) 		exit('Error SID not defined (1)');
-		if(!$quality) 	exit('Error: quality not defined (1)');	
-		
+		if(!$quality) 	exit('Error: quality not defined (1)');
+
 			#dump($_FILES["fileToUpload"],'$_FILES["fileToUpload"]');
 
 		# VERIFICAMOS SI EL ARCHIVO ES VÁLIDO
@@ -118,21 +118,21 @@ class tool_upload extends tool_common {
 			return (string)$is_valid_extension; // msg html
 		}
 
-		# NOMBRE_ARCHIVO : Nombre final del archivo	
-		$nombre_archivo = $SID . '.' . $f_extension ;		
+		# NOMBRE_ARCHIVO : Nombre final del archivo
+		$nombre_archivo = $SID . '.' . $f_extension ;
 
-		# LOG UPLOAD BEGINS			
+		# LOG UPLOAD BEGINS
 			$tipo 			= $this->component_obj->get_tipo();
-			$parent 		= $this->component_obj->get_parent();			
-			$file_size_mb 	= round( ($f_size/1024)/1024 , 2 );			
-			
+			$parent 		= $this->component_obj->get_parent();
+			$file_size_mb 	= round( ($f_size/1024)/1024 , 2 );
+
 			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'UPLOAD',
 				logger::INFO,
 				$tipo,
 				NULL,
-				array(	"msg"				=> "Upload file start",					
+				array(	"msg"				=> "Upload file start",
 						"tipo"				=> $tipo,
 						"parent"			=> $parent,
 						"top_id"			=> TOP_ID,
@@ -143,21 +143,21 @@ class tool_upload extends tool_common {
 						"file_size_mb" 		=> $file_size_mb
 					)
 			);
-			
+
 
 		# Verificamos que NO hay ya un fichero anterior con ese nombre. Si lo hay, lo renombramos y movemos a deleted files
 		# Recorremos todas las extensiones válidas (recordar que los ficheros de tipo 'tif', etc. se guardan también)
 		$this->rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions );
-		
+
 		# Add / if need
 		if(substr($folder_path, -1)!='/') $folder_path .= '/';
 
-		$this->file_obj->uploaded_file_path = $folder_path . $nombre_archivo;	
-	
+		$this->file_obj->uploaded_file_path = $folder_path . $nombre_archivo;
+
 		# DEBUG MSG
 		debug_log(__METHOD__." Uploading file $component_name - quality: $quality - path: ".$this->file_obj->uploaded_file_path .to_string(), logger::DEBUG);
 
-		# Move temp uploaded file to final dir 
+		# Move temp uploaded file to final dir
 		if(file_exists($f_temp_name)) {
 
 			$fileUploadOK =0;
@@ -182,7 +182,7 @@ class tool_upload extends tool_common {
 					for ($i=0; $i < $zip->numFiles; $i++) {
 
 						$filename = $zip->getNameIndex($i);
-						  
+
 						if(strpos($filename,'VIDEO_TS')!== false){
 
 						  	$fileinfo = pathinfo($filename);
@@ -202,7 +202,7 @@ class tool_upload extends tool_common {
 							if ($fileinfo['basename'] === 'AUDIO_TS') {
 								continue;
 							}
-							#Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file					        
+							#Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file
 					        copy("zip://".$f_temp_name.'#'.$filename, $folder_path.$SID.'/AUDIO_TS/'.$fileinfo['basename']);
 					        $fileUploadOK = 1;
 
@@ -211,36 +211,36 @@ class tool_upload extends tool_common {
 						}
 					}
 					$zip->close();
-			 
+
 				}
 
 			}else{
 
 				$move_file = (bool)move_uploaded_file($f_temp_name, $this->file_obj->uploaded_file_path);
 				if (!$move_file) {
-					$msg = "File $f_temp_name exists. Error on move to: " . $this->file_obj->uploaded_file_path ; 
+					$msg = "File $f_temp_name exists. Error on move to: " . $this->file_obj->uploaded_file_path ;
 					trigger_error($msg);
 				}
 			}
 		}else{
 			$msg = "Error[upload_trigger]: temporal file $f_temp_name not exists. I can't move the file to final location.";
 			trigger_error($msg);
-			exit($msg);	
+			exit($msg);
 		}
 		//dump($fileUploadOK, ' fileUploadOK'.to_string());
 
-		
+
 		$html ='';
-			
+
 		#
 		# ERROR : FILE NOT FOUND
-		if( !file_exists($this->file_obj->uploaded_file_path) && $fileUploadOK == 0 ) {		
-			
+		if( !file_exists($this->file_obj->uploaded_file_path) && $fileUploadOK == 0 ) {
+
 			$fileUploadOK = 0;	# ERROR	NUMBER
 
 			$msg = "Error[upload_trigger]: ". label::get_label('error_al_subir_el_archivo') .' '. label::get_label('el_directorio_no_existe') .' [1]';
 			trigger_error($msg);
-			
+
 
 			$html .= "<!-- UPLOAD MSG ERROR -->";
 			$html .= "<div class=\"uploadMsg\">";
@@ -255,14 +255,14 @@ class tool_upload extends tool_common {
 			$response->result 	= 0; # result set to false
 
 			$time_sec 	= exec_time_unit($start_time,'sec');
-			
+
 			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'UPLOAD',
 				logger::INFO,
 				$tipo,
 				NULL,
-				array(	"msg"				=> "Error on upload file",						
+				array(	"msg"				=> "Error on upload file",
 						"tipo"				=> $tipo,
 						"parent"			=> $parent,
 						"top_id"			=> TOP_ID,
@@ -279,16 +279,16 @@ class tool_upload extends tool_common {
 		#
 		# OK : FILE FOUND
 		}else{
-			
+
 			$fileUploadOK = 1;	# OK
-			
+
 			# AJUSTAMOS LOS PERMISOS
 			/*
 				try{
 					$ajust_permissions = chmod($this->file_obj->uploaded_file_path, 0775);
 					if (!$ajust_permissions) {
 						$msg = "Error[upload_trigger]: Error on set permissions [2]";
-						trigger_error($msg);		
+						trigger_error($msg);
 					}
 				} catch (Exception $e) {
 					$msg = 'Exception[upload_trigger][SET_PERMISSIONS]: ' . $e->getMessage() . "\n";
@@ -296,7 +296,7 @@ class tool_upload extends tool_common {
 				}
 				*/
 
-			
+
 			$html .= "<!-- UPLOAD MSG OK -->";
 			$html .= " <div class=\"uploadMsg\">";
 			$html .= " <div class=\"uploadMsg_ok\">";
@@ -308,7 +308,7 @@ class tool_upload extends tool_common {
 					if(SHOW_DEBUG) {
 						$html .= " MB:$file_size_mb";
 					}
-				}				
+				}
 			}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
 
 
@@ -322,13 +322,13 @@ class tool_upload extends tool_common {
 					$html .= "</div>";
 				}
 
-			$html .= "</div>";			
-									
-				
+			$html .= "</div>";
+
+
 			# FILE EXISTS BUT ERROR OCURRED
-			if($f_error>0) $html .= "Error {$f_error}: $f_error_text. Notify this error to your administrator<br />";				
-			
-			$html .= " <a class=\"cerrar_link\" onclick=\"tool_upload.cerrar()\">".label::get_label('cerrar')."</a>";			
+			if($f_error>0) $html .= "Error {$f_error}: $f_error_text. Notify this error to your administrator<br />";
+
+			$html .= " <a class=\"cerrar_link\" onclick=\"tool_upload.cerrar()\">".label::get_label('cerrar')."</a>";
 			$html .= "\n</div>";
 
 			$response->result 	= 1; # result set to true
@@ -341,7 +341,7 @@ class tool_upload extends tool_common {
 				logger::INFO,
 				$tipo,
 				NULL,
-				array(	"msg"				=> "Upload file complete",						
+				array(	"msg"				=> "Upload file complete",
 						"tipo"				=> $tipo,
 						"parent"			=> $parent,
 						"top_id"			=> TOP_ID,
@@ -358,7 +358,7 @@ class tool_upload extends tool_common {
 
 		# Save component refresh 'valor_list'
 		$this->component_obj->Save();
-		
+
 		$response->html = $html;
 
 		return $response;
@@ -378,21 +378,21 @@ class tool_upload extends tool_common {
 
 		// Get remote file
 			try {
-				
+
 				$content = file_get_contents($imageurl);
-			
+
 			} catch (Exception $e) {
-			    
+
 			    debug_log(__METHOD__." Error: ".$e->getMessage(), logger::ERROR);
 			    $response->msg .= ' Exception: ' . $e->getMessage();
 			}
- 		
+
 		// Save to local
 			if ($content!==false) {
 
 				debug_log(__METHOD__." File downloaded successfully ".to_string(), logger::DEBUG);
 
-				$put_contents = file_put_contents($local_store, $content);		
+				$put_contents = file_put_contents($local_store, $content);
 				if($put_contents!==false && file_exists($local_store)){
 
 					debug_log(__METHOD__." File write successfully ".to_string(), logger::DEBUG);
@@ -400,8 +400,8 @@ class tool_upload extends tool_common {
 					$response->result = true;
 					$response->msg 	  = 'Ok. File download and written successfully [load_image_from_url]';
 				}
-			}			
-		
+			}
+
 		return (object)$response;
    }//end load_image_from_url
 
@@ -442,8 +442,8 @@ class tool_upload extends tool_common {
 	* @param $ar_allowed_extensions array
 	*/
 	protected function rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions ) {	//$SID, $folder_path, $nombre_archivo, $curent_allowed_extension, $ar_allowed_extensions
-	
-		
+
+
 		# DELETED FOLDER : Verificamos / creamos el directorio "deleted"
 		if(!file_exists($folder_path . "/deleted")) {
 			if(!mkdir($folder_path."/deleted", 0777,true)) {
@@ -462,18 +462,18 @@ class tool_upload extends tool_common {
 			}
 			if(file_exists($current_possible_file)) {
 					//dump($current_possible_file, ' current_possible_file'.to_string());
-				$file_to_move_renamed = $folder_path . '/deleted/'. $SID . '_deleted_'. $dateMovement . '.' . $current_allowed_extension ;			
+				$file_to_move_renamed = $folder_path . '/deleted/'. $SID . '_deleted_'. $dateMovement . '.' . $current_allowed_extension ;
 				rename($current_possible_file, $file_to_move_renamed);
 			}
 		}
 
 		if(is_dir($folder_path.'/'.$SID)) {
-			$file_to_move_renamed = $folder_path . '/deleted/'. $SID . '_deleted_'. $dateMovement ;			
+			$file_to_move_renamed = $folder_path . '/deleted/'. $SID . '_deleted_'. $dateMovement ;
 			rename($folder_path.'/'.$SID , $file_to_move_renamed);
 		}
 	}
-	
-	
+
+
 	/**
 	* VALIDATE_EXTENSION
 	* @param string $f_extension like 'mp4'
@@ -502,15 +502,15 @@ class tool_upload extends tool_common {
 	/**
 	* POSTPROCESSING_FILE
 	* @param $component_name string (modelo name like component_av)
-	* @param $SID string 
+	* @param $SID string
 	* @param $quality string
 	*/
 	protected function postprocessing_file($component_name, $SID, $quality, $response) {
 		$result=null;
 
 		switch ($component_name) {
-			case 'component_av' : 
-					# FFMPEG 
+			case 'component_av' :
+					# FFMPEG
 					try{
 
 						#
@@ -518,7 +518,7 @@ class tool_upload extends tool_common {
 						$file_name 	= pathinfo($this->file_obj->uploaded_file_path, PATHINFO_BASENAME);
 						$file_ext 	= pathinfo($this->file_obj->uploaded_file_path, PATHINFO_EXTENSION);
 						if (empty($file_ext)) {
-							throw new Exception("Error Processing Request. File extension is unknow", 1);							
+							throw new Exception("Error Processing Request. File extension is unknow", 1);
 						}
 						if(SHOW_DEBUG) {
 							#dump($file_ext, ' uploaded_file_path');;
@@ -529,7 +529,7 @@ class tool_upload extends tool_common {
 						#
 						# NOTE: VAR QUALITY IF THE QUALITY SELECTED WHEN USER LOAD UPLOAD TOOL. BY DEFAULT IS ORIGINAL
 						#
-	
+
 						#
 						# AUDIO CASE
 						if ($quality==='audio') {
@@ -552,7 +552,7 @@ class tool_upload extends tool_common {
 							if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
 
 								debug_log(__METHOD__." RECOMPRESSING AV PLEASE WAIT.. ".to_string(), logger::DEBUG);
-								
+
 								# If default quality file not exists, generate default quality version now
 								# $target_file  = $AVObj->get_local_full_path(); ???????????????????????????????? SURE ???????
 								$AVObj_target = new AVObj($SID, DEDALO_AV_QUALITY_DEFAULT);
@@ -565,30 +565,30 @@ class tool_upload extends tool_common {
 									/*
 									$source_file2= $source_file.'_original.'.$file_ext;
 									if( !rename($source_file, $source_file2) ) {
-										throw new Exception("Error Processing Request. File $source_file access denied", 1);									
+										throw new Exception("Error Processing Request. File $source_file access denied", 1);
 									}
 									*/
-									
+
 									Ffmpeg::convert_to_dedalo_av( $source_file, $target_file );
 									if(SHOW_DEBUG) {
 										#dump($command, ' command');
 									}
-								}//end if (!file_exists($target_file)) {							
+								}//end if (!file_exists($target_file)) {
 							}
 
 							#
 							# POSTERFRAME
-							# Create posterframe of current video if not exists	
-							$PosterFrameObj = new PosterFrameObj($SID);		
+							# Create posterframe of current video if not exists
+							$PosterFrameObj = new PosterFrameObj($SID);
 							if(Ffmpeg::get_ffmpeg_installed_path() && !$PosterFrameObj->get_file_exists()) {
 								$timecode = '00:00:05';
-								$Ffmpeg = new Ffmpeg(); 
+								$Ffmpeg = new Ffmpeg();
 								$Ffmpeg->create_posterframe($AVObj, $timecode);
 							}
 
 							#
 							# CONFORM HEADERS
-							# Apply qt-faststart to optimize file headers position						
+							# Apply qt-faststart to optimize file headers position
 							#$Ffmpeg = new Ffmpeg();
 							#$Ffmpeg->conform_header($AVObj);
 
@@ -602,7 +602,7 @@ class tool_upload extends tool_common {
 						if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
 							$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
 							if (in_array($file_ext, $ar_audio_only_ext)) {
-								
+
 								# Audio conversion
 								$AVObj_target = new AVObj($SID, 'audio');
 								$target_file  = $AVObj_target->get_local_full_path();
@@ -610,7 +610,7 @@ class tool_upload extends tool_common {
 									$source_file = $this->file_obj->uploaded_file_path;
 									if (!file_exists($source_file)) {
 										debug_log(__METHOD__." ERROR: Source file not exists ($source_file) 2 ".to_string(), logger::WARNING);
-									}									
+									}
 									Ffmpeg::convert_to_dedalo_av( $source_file, $target_file );
 									debug_log(__METHOD__." Converted source audio file to 'audio' quality ".to_string(), logger::DEBUG);
 								}//end if (!file_exists($target_file)) {
@@ -618,11 +618,11 @@ class tool_upload extends tool_common {
 							}else{
 								#throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality) (2)", 1);
 							}
-						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {	
+						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
 
 
 						#
-						# TARGET_FILENAME 
+						# TARGET_FILENAME
 						# Save original file name in a component_input_text
 						$propiedades 		 = $this->component_obj->get_propiedades();
 						$current_section_id  = $this->component_obj->get_parent();
@@ -632,26 +632,26 @@ class tool_upload extends tool_common {
 						if (isset($propiedades->target_filename)) {
 							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
 							$component_target_filename 	= component_common::get_instance(
-																				$modelo_name_target_filename, 
-																				$propiedades->target_filename, 
+																				$modelo_name_target_filename,
+																				$propiedades->target_filename,
 																				$current_section_id,
 																				'edit',
-																				DEDALO_DATA_NOLAN, 
+																				DEDALO_DATA_NOLAN,
 																				$target_section_tipo
 																				);
 							$component_target_filename->set_dato( $file_name );
 							$component_target_filename->Save();
 							debug_log(__METHOD__." Saved original filename: ".to_string($file_name), logger::DEBUG);
-						}											
+						}
 
 					} catch (Exception $e) {
 						$msg = 'Exception[upload_trigger][FFMPEG]: ' .  $e->getMessage() . "\n";
 						trigger_error($msg);
-					}					
+					}
 					break;
 
-			case 'component_image' : 
-					# IMAGEMAGIK . CONVERTIMOS EL ACHIVO AL FORMATO DE TRABAJO DE DEDALO (default is 'JPG')		
+			case 'component_image' :
+					# IMAGEMAGIK . CONVERTIMOS EL ACHIVO AL FORMATO DE TRABAJO DE DEDALO (default is 'JPG')
 					try{
 
 						$this->file_obj->aditional_path = $this->component_obj->get_aditional_path();
@@ -659,13 +659,13 @@ class tool_upload extends tool_common {
 						#
 						# DEFAULT_IMAGE_FORMAT : If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
 						$this->file_obj->default_format_file = component_image::build_standar_image_format($this->file_obj->uploaded_file_path);
-						
+
 						#
 						# THUMB . Eliminamos el thumb anterior si existiese. Los thumbs se crean automáticamente al solicitarlos (list)
 						#$this->file_obj->thumb_file = $this->build_thumb_file($SID);
 
 						#
-						# TARGET_FILENAME 
+						# TARGET_FILENAME
 						# Save original file name in a component_input_text
 						$propiedades 		 = $this->component_obj->get_propiedades();
 						$current_section_id  = $this->component_obj->get_parent();
@@ -675,11 +675,11 @@ class tool_upload extends tool_common {
 						if (isset($propiedades->target_filename)) {
 							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
 							$component_target_filename 	= component_common::get_instance(
-																				$modelo_name_target_filename, 
-																				$propiedades->target_filename, 
+																				$modelo_name_target_filename,
+																				$propiedades->target_filename,
 																				$current_section_id,
 																				'edit',
-																				DEDALO_DATA_NOLAN, 
+																				DEDALO_DATA_NOLAN,
 																				$target_section_tipo
 																				);
 							$component_target_filename->set_dato( $file_name );
@@ -692,7 +692,7 @@ class tool_upload extends tool_common {
 							require( POSTPROCESSING_IMAGE_SCRIPT );
 							$result = custom_postprocessing_image($this);
 								#dump($result, ' result');
-						}						
+						}
 
 						# Save force update data and create default and thumb qualitys
 						$this->component_obj->Save();
@@ -702,7 +702,7 @@ class tool_upload extends tool_common {
 						trigger_error($msg);
 					}
 					break;
-					
+
 			case 'component_pdf' :
 
 					#
@@ -714,17 +714,17 @@ class tool_upload extends tool_common {
 					$ar_related_component_text_area_tipo = $this->component_obj->get_related_component_text_area_tipo();
 						#dump($ar_related_component_text_area_tipo, ' ar_related_component_text_area_tipo ++ '.$this->component_obj->get_tipo().to_string());
 					if (!empty($ar_related_component_text_area_tipo)) {
-						
+
 						$related_component_text_area_tipo = reset($ar_related_component_text_area_tipo);
-						$target_pdf_path 				  = $this->component_obj->get_pdf_path();						
+						$target_pdf_path 				  = $this->component_obj->get_pdf_path();
 
 						try {
 							$options = new stdClass();
 								$options->path_pdf 	 = (string)$target_pdf_path;	# full source pdf file path
 								#$options->first_page = (int)$pagina_inicial;		# number of first page. default is 1
-							$response = (object)tool_transcription::get_text_from_pdf( $options );								
+							$response = (object)tool_transcription::get_text_from_pdf( $options );
 								#debug_log(__METHOD__." tool_transcription response ".to_string($response), logger::DEBUG);
-								
+
 							if( $response->result!=='error' && strlen($response->original)>2  ) {
 
 								$component_text_area = component_common::get_instance('component_text_area',
@@ -737,7 +737,7 @@ class tool_upload extends tool_common {
 								$component_text_area->Save();
 							}
 
-						} catch (Exception $e) {						  
+						} catch (Exception $e) {
 						    debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
 						}
 
@@ -750,5 +750,5 @@ class tool_upload extends tool_common {
 	}#end postprocessing_file
 
 
-	
+
 }
