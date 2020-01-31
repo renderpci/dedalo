@@ -102,8 +102,8 @@ render_component_image.prototype.edit = async function(options) {
 */
 const content_data_edit = async function(self) {
 
-	const fragment = new DocumentFragment()
-	const is_inside_tool = ui.inside_tool(self)
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// url
 		const value 			= self.data.value

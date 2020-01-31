@@ -231,8 +231,8 @@ const add_events = function(self, wrapper) {
 */
 const content_data_edit = async function(self) {
 
-	const fragment = new DocumentFragment()
-	const is_inside_tool = ui.inside_tool(self)
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
 
 	// urls
 		// posterframe

@@ -57,6 +57,43 @@ export const component_date = function(){
 
 
 
+
+/**
+* INIT_editor
+* load the libraries and specific css
+*/
+component_date.prototype.init_editor = async function() {
+
+	const self = this	
+
+	// flatpickr calendar
+		const flatpickr_instance = await get_flatpickr()
+
+	return flatpickr_instance
+}//end init_editor
+
+
+
+const get_flatpickr = async () => {
+
+// load dependences js/css
+	const load_promises = []
+
+	const lib_js_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
+	load_promises.push( common.prototype.load_script(lib_js_file) )
+
+	const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
+
+	load_promises.push( common.prototype.load_style(lib_css_file) )
+
+	await Promise.all(load_promises).then(async function(response){
+		
+	})
+
+}
+
+
+
 /**
 * GET_DD_TIMESTAMP
 * Format default 'Y-m-d H:i:s'
