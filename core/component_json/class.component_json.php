@@ -31,13 +31,6 @@ class component_json extends component_common {
 		// Compressed dato to avoid postgresql change index order
 		$dato = parent::get_dato();
 
-		// De-Compress dato
-		#if(!empty($dato)) $dato = json_decode( base64_encode($dato) );
-		//$dato = json_decode($dato);
-
-		#$dato = unserialize($dato);
-		#dump($dato, ' dato ++ '.to_string());
-
 		if(!empty($dato) && !is_object($dato) && !is_array($dato)) {
 			trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));
 			$dato = new stdClass();
@@ -67,12 +60,6 @@ class component_json extends component_common {
 				return false;
 			}
 		}
-
-		// Compress dato to avoid postgresql change index order
-
-		//$dato = json_encode($dato);
-		#$dato = serialize($dato);
-		//error_log( print_r($dato, true) );
 
 		parent::set_dato( $dato );
 	}//end set_dato
