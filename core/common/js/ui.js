@@ -230,6 +230,7 @@ export const ui = {
 			const tipo 			= instance.tipo 	// like 'rsc26'
 			const mode 			= instance.mode 	// like 'edit'
 			const autoload 		= typeof options.autoload==="undefined" ? false : options.autoload
+			const edit_in_list 	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
@@ -238,14 +239,16 @@ export const ui = {
  				})
 
  			// event dblclick change component mode
-				wrapper.addEventListener("dblclick", function(e){
+ 			if(edit_in_list){
+
+ 				wrapper.addEventListener("dblclick", function(e){
 					e.stopPropagation()
 
 					// change mode (from 'list' to 'edit_in_list')
 					instance.change_mode('edit_in_list', autoload)
 				})
-
-
+ 			}
+				
 			return wrapper
 		},//end build_wrapper_list
 

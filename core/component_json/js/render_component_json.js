@@ -39,11 +39,33 @@ render_component_json.prototype.list = function() {
 			autoload : false
 		})
 
-	// Value as string
-		const value_string = JSON.stringify(data.value)
-
 	// Set value
-		wrapper.textContent = value_string
+		if(self.section_tipo === 'dd542'){
+
+			const value_len = data.value.length
+			const node = []
+			for (var i = 0; i < value_len; i++) {
+				const value_map = new Map(Object.entries(data.value[i]))
+
+				for (let [key, value] of value_map) {
+					node.push(key+ ": " +value)
+				}
+			}
+			wrapper.innerHTML = node.join('<br>')
+			wrapper.addEventListener('click', async (e) => {
+				e.stopPropagation()
+				wrapper.classList.toggle('show_full')
+			})
+
+		}else{
+			// Value as string
+			const list_show_key = self.context.properties.list_show_key || 'msg'
+			const value_string = (typeof data.value[0][list_show_key] !== 'undefined') 
+					? data.value[0][list_show_key] 
+					: JSON.stringify(data.value).substring(0,100)+" ..."
+			wrapper.textContent = value_string
+		}
+		
 
 
 	return wrapper
