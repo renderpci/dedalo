@@ -275,7 +275,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 				// remove instances from self ar_instances
 					//const ar_to_destroy = []
 					for (let i = ar_instances_length - 1; i >= 0; i--) {
-							console.log("self.ar_instances[i].destroyable:",self.ar_instances[i].destroyable);
+
 						if(self.ar_instances[i].destroyable===false){
 							const destroyed_elements = self.ar_instances.splice(i, 1);
 							continue;

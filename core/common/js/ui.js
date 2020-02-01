@@ -946,7 +946,7 @@ export const ui = {
 
 		for (let i = 0; i < tools_length; i++) {
 			if(tools[i].show_in_component){
-				buttons_container.appendChild(ui.tool.build_tool_button(tools[i], self))
+				buttons_container.appendChild( ui.tool.build_tool_button(tools[i], self) )
 			}
 		}
 
@@ -1172,8 +1172,6 @@ export const ui = {
 				console.log("editor:",contenteditable_buttons.target);
 					//console.log("editor:",editor);
 
-
-
 				ui.do_search('palabras',contenteditable_buttons.target)
 
 				ui.do_command('insertText', 'nuevoooooXXX')
@@ -1197,12 +1195,19 @@ export const ui = {
 
 	/**
 	* DO_COMMAND
+	* Exec document 'execCommand' https://developer.mozilla.org/en-US/docs/Web/API/Document/execCommand
+	* Obsolete (!)
 	*/
 	do_command : (command, val) => {
 		document.execCommand(command, false, (val || ""));
 	},
 
 
+
+	/**
+	* DO_SEARCH
+	* Unfinished function (!)
+	*/
 	do_search : (search_text, contenteditable) =>{
 		//get the regext
 
@@ -1237,7 +1242,7 @@ export const ui = {
 		// 	return wholeWord ? '\\b' + escapedText + '\\b' : escapedText;
 		// };
 
-		function getText(node) {
+			function getText(node) {
 
 				// if node === text_node (3), text inside an Element or Attr. don't has other nodes and return the full data
 				if (node.nodeType === Node.TEXT_NODE) {
@@ -1271,65 +1276,64 @@ export const ui = {
 				} while (node = node.nextSibling);
 
 				return txt;
-
 			}
-	}
-
-
-	/**
-	* EXEC_SCRIPTS_INSIDE
-	* @return js promise
-	*//*
-	exec_scripts_inside( element ) {
-			console.log("context:",context);
-
-		const scripts 		 = Array.prototype.slice.call(element.getElementsByTagName("script"))
-		const scripts_length = scripts.length
-		if (scripts_length<1) return false
-
-		const js_promise = new Promise((resolve, reject) => {
-
-			const start = new Date().getTime()
-
-			for (let i = 0; i < scripts_length; i++) {
-
-				if(SHOW_DEBUG===true) {
-					var partial_in = new Date().getTime()
-				}
-
-				if (scripts[i].src!=="") {
-					const tag 	  = document.createElement("script")
-						  tag.src = scripts[i].src
-					document.getElementsByTagName("head")[0].appendChild(tag)
-
-				}else{
-					//eval(scripts[i].innerHTML);
-					console.log(scripts[i].innerHTML); //continue;
-
-					// Encapsulate code in a function and execute as well
-					const my_func = new Function(scripts[i].innerHTML)
-						//console.log("my_func:",my_func); continue;
-						my_func() // Exec
-				}
-
-				if(SHOW_DEBUG===true) {
-					const end  	= new Date().getTime()
-					const time 	= end - start
-					const partial = end - partial_in
-					//console.log("->insertAndExecute: [done] "+" - script time: " +time+' ms' + ' (partial:'+ partial +')')
-				}
-			}
-
-		});//end js_promise
-
-
-		return js_promise;
-	}//end exec_scripts_inside
-	*/
+	}//end do_search
 
 
 
-}// ui
+	// /**
+	// * EXEC_SCRIPTS_INSIDE
+	// * @return js promise
+	// */
+	// exec_scripts_inside( element ) {
+	// 	console.log("context:",context);
+
+	// 	const scripts 		 = Array.prototype.slice.call(element.getElementsByTagName("script"))
+	// 	const scripts_length = scripts.length
+	// 	if (scripts_length<1) return false
+
+	// 	const js_promise = new Promise((resolve, reject) => {
+
+	// 		const start = new Date().getTime()
+
+	// 		for (let i = 0; i < scripts_length; i++) {
+
+	// 			if(SHOW_DEBUG===true) {
+	// 				var partial_in = new Date().getTime()
+	// 			}
+
+	// 			if (scripts[i].src!=="") {
+	// 				const tag 	  = document.createElement("script")
+	// 					  tag.src = scripts[i].src
+	// 				document.getElementsByTagName("head")[0].appendChild(tag)
+
+	// 			}else{
+	// 				//eval(scripts[i].innerHTML);
+	// 				console.log(scripts[i].innerHTML); //continue;
+
+	// 				// Encapsulate code in a function and execute as well
+	// 				const my_func = new Function(scripts[i].innerHTML)
+	// 					//console.log("my_func:",my_func); continue;
+	// 					my_func() // Exec
+	// 			}
+
+	// 			if(SHOW_DEBUG===true) {
+	// 				const end  	= new Date().getTime()
+	// 				const time 	= end - start
+	// 				const partial = end - partial_in
+	// 				//console.log("->insertAndExecute: [done] "+" - script time: " +time+' ms' + ' (partial:'+ partial +')')
+	// 			}
+	// 		}
+
+	// 	});//end js_promise
+
+
+	// 	return js_promise;
+	// }//end exec_scripts_inside
+
+
+
+}//end  ui
 
 
 
