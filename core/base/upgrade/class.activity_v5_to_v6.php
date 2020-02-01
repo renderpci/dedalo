@@ -73,11 +73,13 @@ class activity_v5_to_v6 {
 					}
 				}
 
+
 			// where dd546 (changed to input_text) data change format from string to array
 				$activity_where_dato = $dato->components->dd546->dato->{DEDALO_DATA_NOLAN} ?? "";
 				if (!is_array($activity_where_dato)) {
 					$dato->components->dd546->dato->{DEDALO_DATA_NOLAN} = [$activity_where_dato]; // same dato but as array
 				}
+
 
 			// ip dd544 (data change format from string to array)
 				$activity_ip_dato = $dato->components->dd544->dato->{DEDALO_DATA_NOLAN} ?? "";
