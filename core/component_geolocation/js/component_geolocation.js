@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -16,10 +21,11 @@ export const component_geolocation = function(){
 	this.section_id
 	this.mode
 	this.lang
-
 	this.section_lang
+
 	this.context
 	this.data
+
 	this.parent
 	this.node
 
@@ -68,9 +74,6 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 
 	const self = this
 
-	// map_container
-		const map_container = wrapper.querySelector(".leaflet_map")
-
 	// load dependences js/css
 		const load_promises = []
 
@@ -83,6 +86,9 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 		await Promise.all(load_promises).then(async function(response){
 			// console.log("response:",response);
 		})
+
+	// map_container
+		const map_container = wrapper.querySelector(".leaflet_map")
 
 	// defaults
 		const default_lat 	= 39.462571
@@ -160,17 +166,15 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 		        break;
 
 			case 'NUMISDATA':
-
 				// LAYER
 				//var dare 		= new L.TileLayer('http://dare.ht.lu.se/tiles/imperium/{z}/{x}/{y}.png');
-				dare 		= new L.TileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
+				dare = new L.TileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
 					maxZoom: 11
 				});
 
-				arcgis 		= new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-				osm 		= new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
-
+				osm = new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
 
 				// MAP
 				map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -180,7 +184,6 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 					dare 	:  dare,
 					arcgis 	: arcgis,
 					osm 	: osm
-
 				}
 				if(layer_control===false || loaded_document===true) {
 					layer_control = L.control.layers(base_maps).addTo(map);
@@ -192,7 +195,6 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 				break;
 
 			case 'VARIOUS':
-
 				// LAYER
 				//var arcgis 		= new L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
@@ -254,7 +256,7 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 			}, wrapper)
 		});
 
-		// map ready event
+	// map ready event
 		map.whenReady(function(e){
 			// force refresh map (apply 'invalidateSize')
 			const current_map = this

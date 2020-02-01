@@ -11,23 +11,27 @@
 
 
 
-
 export const component_json = function(){
 
+	this.id
+
+	this.model
 	this.tipo
 	this.section_tipo
 	this.section_id
 	this.mode
 	this.lang
 	this.section_lang
-	this.model
 
 	this.context
 	this.data
+
 	this.parent
 	this.node
-	this.id
 
+	this.tools
+
+	return true
 }//end component_json
 
 
@@ -46,9 +50,6 @@ export const component_json = function(){
 
 	// change data
 	component_json.prototype.save 	 			= component_common.prototype.save
-	//component_json.prototype.load_data 			= component_common.prototype.load_data
-	//component_json.prototype.get_value 			= component_common.prototype.get_value
-	//component_json.prototype.set_value 			= component_common.prototype.set_value
 	component_json.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_json.prototype.update_datum 		= component_common.prototype.update_datum
 	component_json.prototype.change_value 		= component_common.prototype.change_value
@@ -67,6 +68,8 @@ export const component_json = function(){
 * @return
 */
 component_json.prototype.init_editor = async function() {
+
+	const self = this
 
 	// load dependences js/css
 		const load_promises = []
