@@ -605,13 +605,14 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					q_operator 				= component_instance.data.q_operator
 				}
 			}
-
+			
 			// Add component
 			if (mode==="search") {
 				// Add only if not empty
-				if ( (q && q.length>0 && q!=='[]') || (q_operator && q_operator.length>0) ) {
+				if ( (q && q[0] && q[0].length>0) || (q_operator && q_operator.length>0) ) { // 
+
 					// If empty q but not q_operator, set q as 'only_operator' for avoid send empty q value
-					if( (!q || q.length===0 || q==='[]') && (q_operator && q_operator.length>0) ) {
+					if( (!q || q[0].length===0) && (q_operator && q_operator.length>0) ) {
 						q = "only_operator"
 					}
 					query_group[operator].push({

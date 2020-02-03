@@ -2983,11 +2983,13 @@ class search {
 		}
 		while ($rows = pg_fetch_assoc($result)) {
 			$section_id  = $rows['section_id'];
-			$json_filter = $rows['json_filter'];
+			$json_filter = json_decode($rows['json_filter']);
+
+
 
 			$preset_obj = new stdClass();
 				$preset_obj->section_id  = (int)$section_id;
-				$preset_obj->json_filter = (string)json_decode($json_filter); // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
+				$preset_obj->json_filter = reset($json_filter); // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
 			break; // Only one expected
 		}
 		#debug_log(__METHOD__." preset_id: $preset_id ".PHP_EOL.to_string($strQuery), logger::DEBUG);
@@ -3031,7 +3033,7 @@ class search {
 															 'edit',
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo);
-			$component->set_dato($filter_object);
+			$component->set_dato([$filter_object]);
 			#$component->save_to_database = false;
 			$result[] = $component->Save();
 
