@@ -4,6 +4,7 @@ class Modal extends HTMLElement {
 		this._modalVisible = false;
 		this._modal;
 		this.caller_instance;
+		this.on_close;
 		this.attachShadow({ mode: 'open' });
 		this.shadowRoot.innerHTML = `
 		<style>
@@ -80,6 +81,20 @@ class Modal extends HTMLElement {
 			button {
 				display: none;
 			}
+
+			.modal_big {
+				padding: 0;
+				z-index: 9999;
+			}
+			.modal_big > .modal-content {
+				width: 99.9%;
+				height: 99.8%;
+			}
+			.modal_big .modal-body {
+				height: 100%;
+				/*max-height: 77vh;*/
+				max-height: 88%;
+			}
 		</style>
 		<button>Open Modal</button>
 		<div class="modal">
@@ -109,6 +124,14 @@ class Modal extends HTMLElement {
 	_showModal() {
 		this._modalVisible = true;
 		this._modal.style.display = 'block';
+		if (this._modal.classList.contains("modal_big")) {
+			this._modal.classList.remove("modal_big")
+		}
+	}
+	_showModalBig() {
+		this._modalVisible = true;
+		this._modal.style.display = 'block';
+		this._modal.classList.add("modal_big")
 	}
 	_hideModal(e) {
 		e.stopPropagation();
@@ -130,7 +153,6 @@ class Modal extends HTMLElement {
 			// }
 
 			this._closeModal()
-
 		}
 	}
 	_closeModal() {
@@ -138,16 +160,22 @@ class Modal extends HTMLElement {
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
 
-		// remove caller instance if exists on close
-		if (this.caller_instance) {
-			const destroyed = this.caller_instance.destroy(true, true, true)
-
-			// clean header
-			const header = this.querySelector("[slot='header']")
-			if (header) {
-				header.remove()
+		// exec optional on-close
+			if (typeof this.on_close==="function") {
+				this.on_close()
 			}
-		}
+
+		// remove caller instance if exists on close
+			if (this.caller_instance) {
+				// destroy recursivelly
+				const destroyed = this.caller_instance.destroy(true, true, true)
+
+				// clean header
+				const header = this.querySelector("[slot='header']")
+				if (header) {
+					header.remove()
+				}
+			}
 	}
 }
 customElements.define('dd-modal',Modal);
