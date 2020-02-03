@@ -698,7 +698,7 @@ export const ui = {
 		* Insert tool html into a modal box
 		* @return dom element tool_button
 		*/
-		attach_to_modal : (wrapper, self) => {
+		attach_to_modal : (wrapper, self, size="normal") => {
 
 			// modal tool container
 				const modal_container = document.querySelector('dd-modal')
@@ -720,7 +720,14 @@ export const ui = {
 				modal_container.appendChild(wrapper) 	// append tool html to modal
 
 			// show modal
-				modal_container._showModal()
+				switch(size) {
+					case "big" :
+						modal_container._showModalBig()
+						break;
+					default :
+						modal_container._showModal()
+				}
+
 
 			return true
 		}//attach_to_modal
