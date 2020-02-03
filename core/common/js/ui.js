@@ -248,7 +248,7 @@ export const ui = {
 					instance.change_mode('edit_in_list', autoload)
 				})
  			}
-				
+
 			return wrapper
 		},//end build_wrapper_list
 
@@ -701,15 +701,20 @@ export const ui = {
 		* Insert tool html into a modal box
 		* @return dom element tool_button
 		*/
-		attach_to_modal : (wrapper, self) => {
+		attach_to_modal : (wrapper, self, size="normal") => {
 
 			// modal tool container
 				const modal_container = document.querySelector('dd-modal')
 					  modal_container.caller_instance = self // set current tool instance as modal caller_instance
+					  modal_container.on_close = function(e) {
+					  		event_manager.publish('modal_close', e)
+					  }
 
 			// header . move tool header to modal header and insert in slot
 				const tool_header = wrapper.querySelector('.tool_header')
 					  tool_header.slot = "header"
+
+
 
 				//const actual_header = modal_container.querySelector('.tool_header')
 				//if (actual_header) {
@@ -723,7 +728,32 @@ export const ui = {
 				modal_container.appendChild(wrapper) 	// append tool html to modal
 
 			// show modal
-				modal_container._showModal()
+				switch(size) {
+					case "big" :
+						modal_container._showModalBig();
+
+						// hide contents to avoid double scrollbars
+							const content_data_page = document.querySelector(".content_data.page")
+								  content_data_page.classList.add("display_none")
+							const menu_wrapper = document.querySelector(".content_data.page")
+								  menu_wrapper.classList.add("display_none")
+							const debug_div = document.getElementById("debug")
+								  if(debug_div) debug_div.classList.add("display_none")
+
+						event_manager.subscribe('modal_close', () => {
+							content_data_page.classList.remove("display_none")
+							menu_wrapper.classList.remove("display_none")
+							if(debug_div) debug_div.classList.remove("display_none")
+						})
+						break;
+					default :
+						modal_container._showModal()
+				}
+
+				// modal_container.addEventListener("_hideModal", function(e){
+						// console.log("+++++++++++e:",e);
+				// })
+
 
 			return true
 		}//attach_to_modal
