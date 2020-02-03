@@ -184,41 +184,40 @@ class section extends common {
 		# SAVE_HANDLER DIFFERENT TO DATABASE CASE
 		# Sometimes we need use section as temporal element without save real data to database. Is this case
 		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
-		if (isset($this->save_handler) && $this->save_handler==='session') {
+			if (isset($this->save_handler) && $this->save_handler==='session') {
 
-			if (!isset($this->dato)) {
+				if (!isset($this->dato)) {
 
-				$temp_data_uid = $this->tipo.'_'.$this->section_id;
-				# Fix dato as object
-				if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-					$section_temp_data = clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
-					$this->dato = $section_temp_data;
-					#$this->bl_loaded_matrix_data = true;
-				}else{
+					$temp_data_uid = $this->tipo.'_'.$this->section_id;
+					# Fix dato as object
+					if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
+						$section_temp_data = clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
+						$this->dato = $section_temp_data;
+						#$this->bl_loaded_matrix_data = true;
+					}else{
 
-					$this->dato = new stdClass();
+						$this->dato = new stdClass();
+					}
+
 				}
 
+				return $this->dato;
+			}//end if (isset($this->save_handler) && $this->save_handler==='session')
+
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				#$start_time = start_time();
+				#global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 			}
 
-			return $this->dato;
-		}
+		// Cache dato
+			// static $section_dato_static;
+			// if(isset($section_dato_static[$this->section_id])) {
+			// 	#trigger_error("Cacheado dato in section $this->section_id ($this->tipo)");
+			// 	#return($section_dato_static[$this->section_id]);
+			// }
 
-
-		if(SHOW_DEBUG===true) {
-			#$start_time = start_time();
-			#global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-		# CACHE DATO
-		/*
-		static $section_dato_static;
-
-		if(isset($section_dato_static[$this->section_id])) {
-			#trigger_error("Cacheado dato in section $this->section_id ($this->tipo)");
-			#return($section_dato_static[$this->section_id]);
-		}
-		*/
 
 		if( empty($this->section_id) || (abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
 
@@ -234,49 +233,52 @@ class section extends common {
 			#return $initial_dato;
 		}
 
-		if( $this->bl_loaded_matrix_data!==true ) {
-		# Experimental (si ya se ha intentado cargar pero con sin section_id, y ahora se hace con section_id, lo volvemos a intentar)
-		#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->section_id)<1) ) {
+		// is not loaded
+			if($this->bl_loaded_matrix_data!==true) {
+			# Experimental (si ya se ha intentado cargar pero con sin section_id, y ahora se hace con section_id, lo volvemos a intentar)
+			#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->section_id)<1) ) {
 
-			#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-			if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo==='real'){
-				$tipo = $this->get_section_real_tipo();
-			}else{
-				$tipo = $this->tipo;
-			}
-
-			$section_tipo 			= $this->tipo;
-			$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
-			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
-
-			$dato = $JSON_RecordObj_matrix->get_dato();
-
-			# Fix dato as object
-			$this->dato = (object)$dato;
-
-			/* modificar esta verificación. con secciones virtuales no funciona..
-			if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
-				if(SHOW_DEBUG===true) {
-					dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
+				#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
+				if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo==='real'){
+					$tipo = $this->get_section_real_tipo();
+				}else{
+					$tipo = $this->tipo;
 				}
-				throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
+
+				$section_tipo 			= $this->tipo;
+				$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
+				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
+
+				$dato = $JSON_RecordObj_matrix->get_dato();
+
+				# Fix dato as object
+				$this->dato = (object)$dato;
+
+				/* modificar esta verificación. con secciones virtuales no funciona..
+				if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
+					if(SHOW_DEBUG===true) {
+						dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
+					}
+					throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
+				}
+				*/
+
+				// set as loaded
+				$this->bl_loaded_matrix_data = true;
+
+				// cache dato
+					// trigger_error("Loaded dato in section $this->section_id ($this->tipo)");
+					// $section_dato_static[$this->section_id] = $this->dato;
+
+				#debug_log(__METHOD__." LOADED DATA FROM DB ++++ ".to_string($this->tipo), logger::ERROR);
+			}//end if($this->bl_loaded_matrix_data!==true)
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				#$start_time = start_time();
+				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 			}
-			*/
 
-			$this->bl_loaded_matrix_data = true;
-
-			# CACHE DATO
-			/*
-			trigger_error("Loaded dato in section $this->section_id ($this->tipo)");
-			$section_dato_static[$this->section_id] = $this->dato;
-			*/
-			#debug_log(__METHOD__." LOADED DATA FROM DB ++++ ".to_string($this->tipo), logger::ERROR);
-		}
-
-		if(SHOW_DEBUG===true) {
-			#$start_time = start_time();
-			#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
 
 		return $this->dato;
 	}//end get_dato
@@ -484,12 +486,13 @@ class section extends common {
 
 	/**
 	* SET_COMPONENT_DIRECT_DATO
-	* @return
+	* @param object $component_obj
+	* @return object $this->dato
 	*/
-	public function set_component_direct_dato( $component_obj ) {
+	public function set_component_direct_dato($component_obj) {
 
-		$dato = $this->get_dato();
-
+		// section dato
+			$dato = $this->get_dato();
 			if (!is_object($dato)) {
 				$dato = $this->dato = new stdClass();
 				#if(SHOW_DEBUG===true) {
@@ -500,110 +503,110 @@ class section extends common {
 				#throw new Exception("Error Processing Request. Section Dato is not object", 1);
 			}
 
-			#if (!isset($dato->components)) {
-			#	$dato->components = new stdClass();
-			#}
-
-		$component_tipo 		= $component_obj->get_tipo();
-		$component_lang 		= $component_obj->get_lang();
-		$component_valor_lang 	= $component_obj->get_valor_lang();
-		$component_modelo_name 	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$component_traducible 	= $component_obj->get_traducible();
+		// component sort vars
+			$component_tipo 		= $component_obj->get_tipo();
+			$component_lang 		= $component_obj->get_lang();
+			$component_valor_lang 	= $component_obj->get_valor_lang();
+			$component_modelo_name 	= get_class($component_obj);
+			$component_traducible 	= $component_obj->get_traducible();
 
 		# SELECT COMPONENT IN SECTION DATO
-		if (isset($dato->components->$component_tipo)) {
-			# Si el dato del componente existe en la sección, lo seccionamos
-			$component_global_dato = $dato->components->$component_tipo;
+		if (isset($dato->components->{$component_tipo})) {
+
+			// component dato already exists in section object. Only select it
+				$component_global_dato = $dato->components->{$component_tipo};
+
 		}else{
-			# Si no existe, lo creamos con la información actual
-			#$obj_global 						= new stdClass();
-			#$obj_global->$component_tipo 		= new stdClass();
-			#$component_global_dato 			= new stdClass();
-			#$component_global_dato				= $obj_global->$component_tipo;
 
-			$component_global_dato 				= new stdClass();
+			// component dato NOT exists in section object. We build a new one with current info
+				#$obj_global 						= new stdClass();
+				#$obj_global->$component_tipo 		= new stdClass();
+				#$component_global_dato 			= new stdClass();
+				#$component_global_dato				= $obj_global->$component_tipo;
 
-			# INFO : Creamos la info del componente actual
-			$component_global_dato->info 		= new stdClass();
-				$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
-				$component_global_dato->info->modelo= $component_modelo_name;
+				$component_global_dato = new stdClass();
 
-			$component_global_dato->dato		= new stdClass();
-			$component_global_dato->valor		= new stdClass();
-			$component_global_dato->valor_list	= new stdClass();
-			$component_global_dato->dataframe	= new stdClass();
+					// INFO : Creamos la info del componente actual
+						$component_global_dato->info 		= new stdClass();
+							$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
+							$component_global_dato->info->modelo= $component_modelo_name;
+
+					$component_global_dato->dato		= new stdClass();
+					// $component_global_dato->valor		= new stdClass();
+					// $component_global_dato->valor_list	= new stdClass();
+					$component_global_dato->dataframe	= new stdClass();
 		}
 
 
 		# DATO OBJ
-		if (!isset($component_global_dato->dato->$component_lang)) {
-			$component_global_dato->dato->$component_lang = new stdClass();
+			if (!isset($component_global_dato->dato->{$component_lang})) {
+				$component_global_dato->dato->{$component_lang} = new stdClass();
 			}
 
 		# VALOR OBJ
-		if (!isset($component_global_dato->valor)) {
-			$component_global_dato->valor = new stdClass();
-			}
-			if (!isset($component_global_dato->valor->$component_lang)) {
-				$component_global_dato->valor->$component_lang = new stdClass();
-			}
+			// if (!isset($component_global_dato->valor)) {
+			// 	$component_global_dato->valor = new stdClass();
+			// }
+			// if (!isset($component_global_dato->valor->$component_lang)) {
+			// 	$component_global_dato->valor->$component_lang = new stdClass();
+			// }
 
 		# VALOR LIST OBJ
-		if (!isset($component_global_dato->valor_list)) {
-			$component_global_dato->valor_list = new stdClass();
-			}
-			if (!isset($component_global_dato->valor_list->$component_lang)) {
-				$component_global_dato->valor_list->$component_lang = new stdClass();
-			}
+			// if (!isset($component_global_dato->valor_list)) {
+			// 	$component_global_dato->valor_list = new stdClass();
+			// }
+			// if (!isset($component_global_dato->valor_list->$component_lang)) {
+			// 	$component_global_dato->valor_list->$component_lang = new stdClass();
+			// }
 
 		# DATAFRAME  OBJ
-		if (!isset($component_global_dato->dataframe)) {
-			$component_global_dato->dataframe = new stdClass();
+			if (!isset($component_global_dato->dataframe)) {
+				$component_global_dato->dataframe = new stdClass();
 			}
 
 		#
 		# DATO : Actualizamos el dato en el idioma actual
-			$component_global_dato->dato->$component_lang = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+			$component_global_dato->dato->{$component_lang} = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 
 		#
 		# VALOR : Actualizamos el valor en el idioma actual
-			switch ($component_modelo_name) {
-				case 'component_security_access':
-				case 'component_filter_records':
-				case 'component_security_tools':
-					$component_global_dato->valor->$component_lang = ''; // Don't save valor'
-					break;
+			// switch ($component_modelo_name) {
+			// 	case 'component_security_access':
+			// 	case 'component_filter_records':
+			// 	case 'component_security_tools':
+			// 		$component_global_dato->valor->$component_lang = ''; // Don't save valor'
+			// 		break;
 
-				default:
-					if($component_lang===$component_valor_lang && $component_traducible==='si') {
-						$component_global_dato->valor->$component_lang = $component_obj->get_valor();
-					}else{
-						$component_global_dato->valor->$component_lang = $component_obj->get_dato_unchanged();
-					}
-					break;
-			}
+			// 	default:
+			// 		if($component_lang===$component_valor_lang && $component_traducible==='si') {
+			// 			$component_global_dato->valor->$component_lang = $component_obj->get_valor();
+			// 		}else{
+			// 			$component_global_dato->valor->$component_lang = $component_obj->get_dato_unchanged();
+			// 		}
+			// 		break;
+			// }
 
 		#
 		# VALOR LIST : Actualizamos el Html del componente en modo list
-			if(SHOW_DEBUG===true) $start_time = microtime(true);
+			// if(SHOW_DEBUG===true) $start_time = microtime(true);
 
-			# valor_list is dato for some components
+			// # valor_list is dato for some components
 
-			# Every component have a method to return value to save in json container 'valor_list'
-			# (if not, they use component common defined method)
-			$html = $component_obj->get_valor_list_html_to_save();
+			// # Every component have a method to return value to save in json container 'valor_list'
+			// # (if not, they use component common defined method)
+			// $html = $component_obj->get_valor_list_html_to_save();
 
-			if(SHOW_DEBUG===true) {
-				$total=round(microtime(true)-$start_time,3);
-				if ($total>1000) {
-					debug_log(__METHOD__." SLOW Time To Generate list html of ".RecordObj_dd::get_termino_by_tipo($component_tipo,null,true)." [$component_tipo]: ". $total );
-				}
-			}
-			if($component_lang === $component_valor_lang ){
-				$component_global_dato->valor_list->$component_lang = $html;
-			}else{
-				$component_global_dato->valor_list->$component_lang = $component_obj->get_dato_unchanged();
-			}
+			// if(SHOW_DEBUG===true) {
+			// 	$total=round(microtime(true)-$start_time,3);
+			// 	if ($total>1000) {
+			// 		debug_log(__METHOD__." SLOW Time To Generate list html of ".RecordObj_dd::get_termino_by_tipo($component_tipo,null,true)." [$component_tipo]: ". $total );
+			// 	}
+			// }
+			// if($component_lang === $component_valor_lang ){
+			// 	$component_global_dato->valor_list->$component_lang = $html;
+			// }else{
+			// 	$component_global_dato->valor_list->$component_lang = $component_obj->get_dato_unchanged();
+			// }
 
 		#
 		# DATO_SEARCH
@@ -627,15 +630,17 @@ class section extends common {
 
 		#
 		# REPLACE COMPONENT PORTION OF GLOBAL OBJECT :  Actualizamos todo el componente en el objeto global
-		if (!isset($dato->components->$component_tipo)) {
-			if (!isset($dato->components)) {
-				$dato->components = new stdClass();
+			if (!isset($dato->components->{$component_tipo})) {
+				if (!isset($dato->components)) {
+					$dato->components = new stdClass();
+				}
+				$dato->components->{$component_tipo} = new stdClass();
 			}
-			$dato->components->$component_tipo = new stdClass();
-		}
-		$dato->components->$component_tipo = $component_global_dato;
+			$dato->components->{$component_tipo} = $component_global_dato;
 
-		$this->set_dato($dato);
+		// update section full data object
+			$this->set_dato($dato);
+
 
 		return $this->dato;
 	}//end set_component_direct_dato
