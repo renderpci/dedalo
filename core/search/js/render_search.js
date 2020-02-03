@@ -577,6 +577,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 			component_tipo 	: last_item.component_tipo,
 			model 			: last_item.modelo,
 			section_id 		: null,
+			mode 			: 'search',
 			value 			: current_value,
 			q_operator 		: q_operator || null,
 			path 			: path

@@ -66,7 +66,7 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 	const render_level 	= options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const current_content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -295,7 +295,10 @@ render_component_input_text.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = await content_data_edit(self)
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	const content_data = await get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -362,10 +365,10 @@ render_component_input_text.prototype.search = async function() {
 
 
 /**
-* CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const value = self.data.value
 	const mode 	= self.mode
@@ -384,7 +387,7 @@ const content_data_edit = async function(self) {
 		const inputs_value = value//(value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			input_element(i, inputs_value[i], inputs_container, self, is_inside_tool)
+			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
 		}
 
 	// buttons container
@@ -422,7 +425,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -430,7 +433,7 @@ const content_data_edit = async function(self) {
 * INPUT_ELEMENT
 * @return dom element li
 */
-const input_element = (i, current_value, inputs_container, self, is_inside_tool) => {
+const get_input_element_edit = (i, current_value, inputs_container, self, is_inside_tool) => {
 
 	const mode = self.mode
 
@@ -439,18 +442,6 @@ const input_element = (i, current_value, inputs_container, self, is_inside_tool)
 			element_type : 'li',
 			parent 		 : inputs_container
 		})
-
-	// q operator (search only)
-		if(mode==='search'){
-			const q_operator = self.data.q_operator
-			const input_q_operator = ui.create_dom_element({
-				element_type 	: 'input',
-				type 		 	: 'text',
-				value 		 	: q_operator,
-				class_name 		: 'q_operator',
-				parent 		 	: li
-			})
-		}
 
 	// input field
 		const input = ui.create_dom_element({
@@ -476,4 +467,65 @@ const input_element = (i, current_value, inputs_container, self, is_inside_tool)
 	return li
 }//end input_element
 
+
+
+/**
+* GET_CONTENT_DATA_SEARCH
+* @return DOM node content_data
+*/
+const get_content_data_search = async function(self) {
+
+	const value = self.data.value
+	const mode 	= self.mode
+
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
+
+	// values (inputs)
+		const inputs_value = value//(value.length<1) ? [''] : value
+		const value_length = inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			get_input_element_search(i, inputs_value[i], fragment, self)
+		}
+
+	// content_data
+		const content_data = document.createElement("div")
+			  content_data.classList.add("content_data", self.type, "nowrap")
+		content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_search
+
+
+/**
+* GET_INPUT_ELEMENT_SEARCH
+* @return dom element input
+*/
+const get_input_element_search = (i, current_value, inputs_container, self) => {
+
+	// q operator (search only)
+		const q_operator = self.data.q_operator
+		const input_q_operator = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			value 		 	: q_operator,
+			class_name 		: 'q_operator',
+			parent 		 	: inputs_container
+		})
+		
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			class_name 		: 'input_value',
+			dataset 	 	: { key : i },
+			value 		 	: current_value,
+			parent 		 	: inputs_container
+		})
+
+
+	return input
+}//end get_input_element_search
 
