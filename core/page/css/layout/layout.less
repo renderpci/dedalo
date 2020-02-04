@@ -681,6 +681,9 @@
 		&.active {
 			// box-shadow: 3px 5px 8px 1px #c6c6c6;
 			z-index: 1;
+			.buttons_container {
+				display: block !important;
+			}
 		}
 
 		&.edit {
@@ -830,6 +833,7 @@
 				}
 
 				>.buttons_container {
+					display: none;
 					background-color: #ffffff;
 					// background-color: #BDFF69;
 					flex: 0 1 1em;
@@ -845,12 +849,11 @@
 					// 3
 					left: 100%;
 					z-index: 1;
-					background-color: #f78a1c;
+					background-color: #ffa03f;
 					height: 100%;
-					box-shadow: 3px 0px 8px 0px #ccc;
+					box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 					border-top-right-radius: 0.25em;
 					border-bottom-right-radius: 0.25em;
-
 
 					>*{
 						//margin: 0.365em;
@@ -984,7 +987,7 @@
 // buttons with icons
 	.button {
 		display: none;
-		color: #a2a2a2;
+		color: #ffffff;
 		cursor: pointer;
 		background-repeat: no-repeat;
 		background-position: center;
@@ -996,7 +999,7 @@
 		margin-top: 0.25em;
 		margin-bottom: 0.25em;
 
-		.active &, &.link {
+		//.active &, &.link {
 
 			//height: 1em;
 			opacity: 0.7;
@@ -1103,7 +1106,7 @@
 				.build_button("upload.svg");
 			}
 
-		}//end .active &, &.link
+		//}//end .active &, &.link
 	}//end .button
 
 
