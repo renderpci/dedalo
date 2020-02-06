@@ -3624,8 +3624,8 @@ class web_data {
 										$ar_field = array_values($ar_field); # Reset keys
 										if (!empty($ar_field) && !empty($ar_field[0]->value)) {
 											# Existe valor de fecha_inicio
-											$ar_filter[$current_name][] = '(CAST(`fecha_fin` AS INT) <= '.$current_value.')';
-
+											// $ar_filter[$current_name][] = '(CAST(`fecha_fin` AS INT) <= '.$current_value.')';
+											$ar_filter[$current_name][] = '((`fecha_fin` IS null AND CAST(`fecha_inicio` AS INT) <= '.$current_value.') OR CAST(`fecha_fin` AS INT) <= '.$current_value.')';
 										}else{
 											# No hay fecha de inicio
 											$ar_filter[$current_name][] = '(`fecha_fin` = '.$current_value.')';
