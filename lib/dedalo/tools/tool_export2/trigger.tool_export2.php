@@ -31,76 +31,99 @@ function export_data($json_data) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
-		}		
+		}
 
-	$tool_export  = new tool_export($section_tipo,'edit',$data_format);
+	// component paths data are the old 'columns'
+		$ar_paths = $columns;
 
-	// layout_map
-		$layout_map = tool_export::columns_to_layout_map($columns, $section_tipo);
-		if (empty($layout_map)) {			
-			$response->msg = "Error: layout_map is empty";
+	$tool_export2 = new tool_export2($section_tipo, 'edit', $data_format);
+
+	// columns
+		if (empty($columns)) {
+			$response->msg = "Error: columns var is empty";
 			return $response;
 		}
 
 	// data_format
 		$response->data_format = $data_format;
-	
-	// Get records to export
-		$records = $tool_export->get_records( $layout_map );
-		#dump($records, ' records ++ '.to_string());		
 
-	// Result parsed as final string
-		$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);		
-		#dump(dd_memory_usage(), ' dd_memory_usage fin export_to ++ '.to_string());
-		#error_log($result_string);
+	// Get records to export
+		// formated an resolved columns from paths
+			$columns = $tool_export2->get_columns($ar_paths, $section_tipo);
+			#dump($columns, ' columns ++ '.to_string()); #die();
+		// records from exec current search query object in session
+			$records  = $tool_export2->get_records();
+			#dump($records, ' records ++ '.to_string()); die();
+		// parse records data and resolve deep inside relations
+			$parsed = $tool_export2->parse_records($records, $ar_paths);
+			#dump($parsed, ' parsed ++ '.to_string()); die();
+		// rows. build multirows from records data
+			$rows = $tool_export2->create_rows_from_parsed();
+			dump($rows, ' rows ++ '.to_string());
+			#die();
+		// rows. build multirows from records data
+			#$rows = $tool_export2->create_rows($parsed, $records, $columns);
+			#dump($rows, ' rows ++ '.to_string());
+
+	// csv string. Result is parsed as final string
+		$result_string = $tool_export2->build_file($columns, $rows);
 
 	// Write result to file (UTF8)
-		$write_result = $tool_export->write_result( $result_string );
+		$write_result = $tool_export2->write_result( $result_string );
 		#dump($write_result, ' write_result ++ '.to_string());
-	
-	
+
+
+	#// Result parsed as final string
+	#	$result_string = $tool_export2->export_to('csv', $records, $encoding, $section_tipo);
+	#	#dump(dd_memory_usage(), ' dd_memory_usage fin export_to ++ '.to_string());
+	#	#error_log($result_string);
+	#
+	#// Write result to file (UTF8)
+	#	$write_result = $tool_export2->write_result( $result_string );
+	#	#dump($write_result, ' write_result ++ '.to_string());
+
 	if ($write_result->result===true ) {
 
 		// html table. Get csv file as table
-			$table = tool_export::read_csv_file_as_table( $write_result->path, true, null, false );
+			$table = tool_export2::read_csv_file_as_table( $write_result->path, true, null, false );
 
 		// Build excel version (ISO-8859-1)
 		// Write result to file (excel ISO-8859-1)
 			if ($data_format!=='dedalo') {
-				$change_encodig_to_ISO  = $tool_export->change_encoding_from_uft8($result_string,'ISO-8859-1');
-				$write_result_ISO 		= $tool_export->write_result($change_encodig_to_ISO, 'excel_','csv');
+				$change_encodig_to_ISO  = $tool_export2->change_encoding_from_uft8($result_string,'ISO-8859-1');
+				$write_result_ISO 		= $tool_export2->write_result($change_encodig_to_ISO, 'excel_','csv');
 
 				// ADD UTF8 with BOM
 				$export_str_data = chr(239) . chr(187) . chr(191) . $table;
-				$write_result_HTML 		= $tool_export->write_result($export_str_data, 'html_','html');
+				$write_result_HTML 		= $tool_export2->write_result($export_str_data, 'html_','html');
 			}
-		
-		// response 
+
+		// response
 			$response->result 	= true;						// E.g. 'ok'
 			$response->table 	= $table; 					// Table is created reading exported file
 			$response->msg 		= $write_result->msg;		// E.g. 'Exported successfully'
 			$response->url 		= $write_result->url; 		// E.g. 'http://mydomain/path/file.csv'
-			
+
 			if ($data_format!=='dedalo') {
-				
+
 				// excel version
-					$change_encodig_to_ISO  = $tool_export->change_encoding_from_uft8($result_string,'ISO-8859-1');
+					$change_encodig_to_ISO  = $tool_export2->change_encoding_from_uft8($result_string,'ISO-8859-1');
 					// BOM. Prepend utf8 BOM for easy read from excel
 					$export_str_data 		= chr(239) . chr(187) . chr(191) . $change_encodig_to_ISO;
-					$write_result_ISO 		= $tool_export->write_result($export_str_data, 'excel_','csv');
+					$write_result_ISO 		= $tool_export2->write_result($export_str_data, 'excel_','csv');
 					$response->url_excel 	= $write_result_ISO->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
-				
+
 				// html for excel version
 					// BOM. Prepend utf8 BOM for easy read from excel
 					$export_str_data 		= chr(239) . chr(187) . chr(191) . $table;
-					$write_result_HTML 		= $tool_export->write_result($export_str_data, 'html_','html');			
+					$write_result_HTML 		= $tool_export2->write_result($export_str_data, 'html_','html');
 					$response->url_html 	= $write_result_HTML->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
 			}
 
 	}else{
-		
+
 		// response
-			$response->msg 		= 'Error on write file: '.$write_result->msg;		
+			$response->msg 		= 'Error on write file: '.$write_result->msg;
 	}
 
 
@@ -120,5 +143,3 @@ function export_data($json_data) {
 }//end export_data
 
 
-
-?>
