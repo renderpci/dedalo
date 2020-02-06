@@ -84,12 +84,14 @@ robots.txt
 koala-config.json
 config.codekit3
 
-# various minified
+# various minified except the pdf viewer
 # js min
 lib/dedalo/**/*-min.js
+!lib/dedalo/component_pdf/viewer
 
-# js map
+# js map except the pdf viewer
 lib/dedalo/**/*-min.js.map
+!lib/dedalo/component_pdf/viewer
 
 # css min
 lib/dedalo/**/*-min.css
