@@ -59,7 +59,7 @@ background-color: #FFFF00;
 		align-items: center;
 		flex-wrap: wrap;
 
-		width: calc(100vw - 1em);
+		width: calc(100vw - 1.08em);
 		// height: @menu_heigth;
 		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 		background: #2e2e2e;
@@ -105,9 +105,10 @@ background-color: #FFFF00;
 				background-size: contain;
 				background-repeat: no-repeat;
 				background-position: center;
+				cursor: pointer;
 
 				&:active {
-					color: #7F7F7F;
+					opacity: 0.4 !important;
 				}
 			}
 
@@ -118,6 +119,7 @@ background-color: #FFFF00;
 				background-repeat: no-repeat;
 				background-size: contain;
 				background-position: center;
+				cursor: pointer;
 			}
 
 			>#menu {
@@ -126,6 +128,7 @@ background-color: #FFFF00;
 
 			>.logged_user_name {
 				color: #c9c9c9;
+				cursor: pointer;
 				cursor: pointer;
 				//line-height: @menu_heigth;
 
@@ -353,6 +356,8 @@ background-color: #FFFF00;
 			backdrop-filter: blur(10px);
 			background: #fcfcfc;
 			margin: 0;
+			margin-left: 1px;
+			margin-top: -1px;
 			padding: 0;
 			min-width: 175px;
 			position: absolute;
@@ -362,6 +367,7 @@ background-color: #FFFF00;
 			/*left: -2px;*/
 			border: 1px solid #B4B4B4;
 			border-radius: 4px;
+			border-top-left-radius: 0;
 			max-height: calc(100vh - @menu_heigth);
 			overflow: auto;
 

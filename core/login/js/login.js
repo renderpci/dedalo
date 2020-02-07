@@ -107,7 +107,7 @@ login.prototype.build = async function() {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
+			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 		}
 
 	// status update
@@ -121,7 +121,7 @@ login.prototype.build = async function() {
 /**
 * QUIT
 */
-const quit = async function() {
+export const quit = async function() {
 
 	// data_manager api call
 		const api_response = await data_manager.prototype.request({
@@ -157,8 +157,8 @@ const quit = async function() {
 
 
 // expose login functions to window
-	window.login = {
-		quit : quit
-	}
+	// window.login = {
+	// 	quit : quit
+	// }
 
 
