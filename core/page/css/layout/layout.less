@@ -1545,6 +1545,7 @@
 					margin-top: 1em;
 					cursor: pointer;
 					border-radius: 0.25em;
+					height: unset;
 
 					.preload {
 						min-height: 1.50em;
@@ -1553,9 +1554,12 @@
 			}//end form
 
 			>.info {
-				line-height: 1.15em;
 				font-size: 0.8em;
 				opacity: 0.6;
+
+				display: grid;
+				grid-template-columns: 1fr 2fr;
+				line-height: 1.3em;
 			}
 
 			>.component_message {
