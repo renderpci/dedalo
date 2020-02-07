@@ -1,12 +1,18 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {quit} from '../../login/js/login.js'
 
 
 
 /**
-* render_menu
+* RENDER_MENU
 * Manages the component's logic and apperance in client side
 */
 export const render_menu = function() {
@@ -25,64 +31,24 @@ render_menu.prototype.edit = async function() {
 
 	const self = this
 
+	// menu_active. set the first state of the menu
+		self.menu_active = false
+
 	const fragment = new DocumentFragment()
 
 	// menu_wrapper
-		// set the first state of the menu
-		self.menu_active = false
 		const menu_wrapper = document.createElement("div")
 			  menu_wrapper.classList.add("menu_wrapper")
 
-	  	// click event do global click action on the menu items
-			menu_wrapper.addEventListener("click", e => {
-				// first menu items only (when the ul is the main menu)
-					//close all menu items when the menu change to inactive
-					if (self.menu_active===true) {
-						close_all_drop_menu(self);
-						self.menu_active = false
-					}else{
-						//reset all nodes to inactive state
-						close_all_drop_menu(self);
-						// get the main li nodes
-						const main_li 	= e.target.parentNode
-						const nodes_li 	= self.li_nodes
-						const len		= nodes_li.length
-						//get the main ul nodes
-						const open_id =  main_li.dataset.children
-						const open_ul = document.getElementById(open_id)
-						//set the css visibility for the ul
-						open_ul.classList.remove("menu_ul_hidden");
-						open_ul.classList.add("menu_ul_displayed");
-						//move the ul to the left posion of the parent li
-						open_ul.style.left = (main_li.getBoundingClientRect().left+'px')
-
-						for (let i = len - 1; i >= 0; i--) {
-							//inactived all li nodes
-							nodes_li[i].classList.add("menu_li_inactive");
-							nodes_li[i].classList.remove("menu_li_active");
-
-							// active only the selected li node
-							if(nodes_li[i] == main_li){
-								nodes_li[i].classList.add("menu_li_active");
-								nodes_li[i].classList.remove("menu_li_inactive");
-							}
-						}
-						event.stopPropagation();
-						self.menu_active = true
-					}// end if (self.menu_active===true)
-				})// end menu_wrapper.addEventListener("click")
-
-
-	// quit button
-		const quit = ui.create_dom_element({
+	// quit_button
+		const quit_button = ui.create_dom_element({
 			element_type	: 'div',
 			id 				: 'quit',
 			parent 			: fragment
 		})
-		quit.addEventListener("click", () =>{
-			login.quit()
+		quit_button.addEventListener("click", () => {
+			quit()
 		})
-
 
 	// logo image
 		const dedalo_icon = ui.create_dom_element({
@@ -91,22 +57,62 @@ render_menu.prototype.edit = async function() {
 			parent 			: fragment
 		})
 
-
 	// areas/sections hierarchy list
 		const hierarchy = ui.create_dom_element({
 			element_type	: 'div',
 			id 				: 'menu_hierarchy',
 			parent 			: fragment
 		})
+		// render first level (root)
+		level_hierarchy({
+			self			: self,
+			datalist 		: self.data.tree_datalist,
+			root_ul			: hierarchy,
+			current_tipo	: 'dd1',
+			parent_tipo 	: 'dd1'
+		})
 
-		level_hierarchy({	self			: self,
-							datalist 		: self.data.tree_datalist,
-							root_ul			: hierarchy,
-							current_tipo	: 'dd1',
-							parent_tipo 	: 'dd1'
-						})
+		// click . Manages global click action on the menu items
+			hierarchy.addEventListener("click", e => {
+				// first menu items only (when the ul is the main menu)
 
-		// document. do global click action on the document body
+				//close all menu items when the menu change to inactive
+				if (self.menu_active===true) {
+					close_all_drop_menu(self);
+					self.menu_active = false
+				}else{
+					//reset all nodes to inactive state
+					close_all_drop_menu(self);
+					// get the main li nodes
+					const main_li 	= e.target.parentNode
+					const nodes_li 	= self.li_nodes
+					const len		= nodes_li.length
+					//get the main ul nodes
+					const open_id =  main_li.dataset.children
+					const open_ul = document.getElementById(open_id)
+					//set the css visibility for the ul
+					open_ul.classList.remove("menu_ul_hidden");
+					open_ul.classList.add("menu_ul_displayed");
+					//move the ul to the left posion of the parent li
+					open_ul.style.left = (main_li.getBoundingClientRect().left+'px')
+
+					for (let i = len - 1; i >= 0; i--) {
+						//inactived all li nodes
+						nodes_li[i].classList.add("menu_li_inactive");
+						nodes_li[i].classList.remove("menu_li_active");
+
+						// active only the selected li node
+						if(nodes_li[i] == main_li){
+							nodes_li[i].classList.add("menu_li_active");
+							nodes_li[i].classList.remove("menu_li_inactive");
+						}
+					}
+					event.stopPropagation();
+					self.menu_active = true
+				}// end if (self.menu_active===true)
+			})
+
+		// mousedown. document. do global click action on the document body
 			document.addEventListener('mousedown', function(event) {
 				event.stopPropagation();
 				// if the menu is inactive nothing to do
@@ -117,8 +123,9 @@ render_menu.prototype.edit = async function() {
 			    if (event.target.tagName.toLowerCase()!=='a') {
 					close_all_drop_menu(self);
 			    }
-			});
-			// set the escape key to close al menu nodes
+			})
+
+		// keydown. set the escape key to close al menu nodes
 			document.addEventListener('keydown', (event) => {
 				if(self.menu_active===false) {
 					return false
@@ -126,7 +133,7 @@ render_menu.prototype.edit = async function() {
 			    if (event.key==='Escape') {
 					close_all_drop_menu(self);
 			    }
-			});
+			})
 
 	// ontology link
 		const ontology_link = ui.create_dom_element({

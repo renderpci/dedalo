@@ -384,12 +384,12 @@
 		}
 
 		>.buttons {
-			padding: 1em;
+			padding: 0;
 			width: 100%;
-			background-color: #f5f2e8;
-			margin-top: 0.5em;
-			margin-bottom: 0.5em;
-			border-radius: 0.25em;
+			// background-color: #f5f2e8;
+			// margin-top: 0.5em;
+			// margin-bottom: 0.5em;
+			// border-radius: 0.25em;
 			display: flex;
     		flex-direction: row-reverse;
 
@@ -402,6 +402,8 @@
 				padding-top: 0.5em;
 				padding-bottom: 0.5em;
 				border-radius: 0.25em;
+				margin: 0.5em;
+				height: auto;
 
 				&:hover {
 					color: #000000;
@@ -1543,6 +1545,7 @@
 					margin-top: 1em;
 					cursor: pointer;
 					border-radius: 0.25em;
+					height: unset;
 
 					.preload {
 						min-height: 1.50em;
@@ -1551,9 +1554,12 @@
 			}//end form
 
 			>.info {
-				line-height: 1.15em;
 				font-size: 0.8em;
 				opacity: 0.6;
+
+				display: grid;
+				grid-template-columns: 1fr 2fr;
+				line-height: 1.3em;
 			}
 
 			>.component_message {
@@ -1746,6 +1752,11 @@
 	    	height: 100%;
 		}
 	}//end .component_pdf
+
+
+
+// modal
+
 
 
 
