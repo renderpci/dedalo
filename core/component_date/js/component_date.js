@@ -425,8 +425,11 @@ component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
 
 	let dato =  {}
 
-	const input_range_start = parentNode.querySelector('input[data-role=range_start]')
-	const input_range_end	= parentNode.querySelector('input[data-role=range_end]')
+	// wrapper div that contains both divs for start and end date
+	const wrapper_node = parentNode.parentNode.parentNode
+
+	const input_range_start = wrapper_node.querySelector('input[data-role=range_start]')
+	const input_range_end	= wrapper_node.querySelector('input[data-role=range_end]')
 
 	// START
 		// Review and format input value
@@ -447,9 +450,7 @@ component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
 
 			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
 				dato.start = value_formatted_start.dd_date
-
-					console.log("dato.start:",dato.start)
-			
+		
 			}
 		}
 
@@ -495,7 +496,7 @@ component_date.prototype.get_dato_date = function(value) {
 	let dato = {}
 
 	// START
-		let value_formatted_start = self.format_date(value)
+		const value_formatted_start = self.format_date(value)
 
 		if (value_formatted_start===false) {
 
@@ -535,8 +536,6 @@ component_date.prototype.get_dato_time = function(value) {
 		value : value,
 		modo  : mode
 	})
-
-	console.log("value_formatted:",value_formatted)
 
 	if (value_formatted===false) {
 
@@ -743,8 +742,9 @@ component_date.prototype.get_ejemplo = function() {
 * CLOSE_FLATPICKR
 */
 component_date.prototype.close_flatpickr = function(selectedDates, dateStr, instance) {
-	//instance.set(config.ignoredFocusElements, [document.body])
+	            						
 	instance.destroy()
+
 }//end close_flatpickr
 
 /**
@@ -754,12 +754,13 @@ component_date.prototype.update_value_flatpickr = function(selectedDates, dateSt
 	
 	const self = component_instance
 	const role = target.dataset.role
+	
 	var new_date = ''
 	var new_value
 
 	new_date = new_date.concat(selectedDates[0].getDate(), self.separator, selectedDates[0].getMonth() + 1, self.separator, selectedDates[0].getFullYear())
-	target.value = new_date
-
+	target.parentNode.previousSibling.value = new_date
+	
 	if ((role==='range_start') || (role==='range_end')) {
 			
 		const dato_range = self.get_dato_range(target.parentNode, role)
@@ -775,7 +776,7 @@ component_date.prototype.update_value_flatpickr = function(selectedDates, dateSt
 	}
 	
 	if (role==='default') {
-		new_value = (target.value.length>0) ? self.get_dato_date(target.value) : ''
+		new_value = (target.value.length>0) ? self.get_dato_date(new_date) : ''
 	}
 		
 	const changed_data = Object.freeze({
