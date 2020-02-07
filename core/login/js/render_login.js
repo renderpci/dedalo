@@ -235,9 +235,25 @@ const content_data = async function(self) {
 	// info
 		const info = ui.create_dom_element({
 			element_type : 'div',
-			class_name 	 : "info",
-			inner_html	 : self.context.properties.info.map( item => item.label ).join("<br>")
+			class_name 	 : "info"
 		})
+		const info_data 		= self.context.properties.info || []
+		const info_data_length 	= info_data.length
+		for (let j = 0; j < info_data_length; j++) {
+
+			const item = info_data[j]
+
+			ui.create_dom_element({
+				element_type : 'span',
+				text_content : item.label,
+				parent 		 : info
+			})
+			ui.create_dom_element({
+				element_type : 'span',
+				text_content : item.value,
+				parent 		 : info
+			})
+		}
 		fragment.appendChild(info)
 
 	// content_data

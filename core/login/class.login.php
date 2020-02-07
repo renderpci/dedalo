@@ -1218,22 +1218,31 @@ class login extends common {
 		// Version : Dedalo version info
 			$properties->info   = [];
 			$properties->info[] = [
+				'type' 	=> 'dedalo_entity',
+				'label' => 'Dédalo entity',
+				'value' => DEDALO_ENTITY
+			];
+			$properties->info[] = [
 				'type' 	=> 'version',
-				'label' => 'Dédalo version ' . DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
+				'label' => 'Dédalo version',
+				'value' => DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
 			];
 			$properties->info[] = [
 				'type' 	=> 'db_user',
-				'label' => (DEDALO_ENTITY==='development')
+				'label' => 'DB user',
+				'value' => (DEDALO_ENTITY==='development')
 					? DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN
 					: ''
 			];
 			$properties->info[] = [
 				'type' 	=> 'db_user',
-				'label' => 'DD version: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO)
+				'label' => 'DD version',
+				'value' => RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO)
 			];
 			$properties->info[] = [
 				'type' 	=> 'db_user',
-				'label' => (DEVELOPMENT_SERVER===true)
+				'label' => 'DB info',
+				'value' => (DEVELOPMENT_SERVER===true)
 					? DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
 					: ''
 			];
