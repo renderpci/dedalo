@@ -942,12 +942,18 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public function get_diffusion_value($lang=null) {
 
-		$this->valor = null;
+		// force recalculate for each lang
+			$this->valor = null;
+			$this->set_lang($lang);
 
-		$this->set_lang($lang);
+		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ')
+		$value = $this->get_valor($lang, 'array');
 
-		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = strip_tags($diffusion_value);
+		$diffusion_value_clean = array_map(function($item){
+			return strip_tags($item);
+		}, $value);
+
+		$diffusion_value = implode(' | ', $diffusion_value_clean);
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
