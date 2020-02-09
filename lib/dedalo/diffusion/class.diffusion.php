@@ -1262,6 +1262,22 @@ abstract class diffusion  {
 		return true;
 	}//end update_publication_data
 
+
+	/**
+	* GET_PUBLICATION_UNIX_TIMESTAMP
+	* @return 
+	*/
+	public static function get_publication_unix_timestamp() {
+		static $publication_ux_tm;
+
+		if (isset($publication_ux_tm)) {
+			return $publication_ux_tm;
+		}
+		
+		$publication_ux_tm = time();		
+		
+		return $publication_ux_tm;
+	}//end get_publication_unix_timestamp
 	
 
 }//end class
