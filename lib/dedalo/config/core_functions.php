@@ -411,7 +411,7 @@ function is_serialized($str) {
 
 /**
 * ENCRYPTION_MODE
-* @return string
+* @return string $current_encryption_mode
 *	Return current crypt mode to use looking current Dédalo version
 */
 function encryption_mode() {
@@ -421,18 +421,16 @@ function encryption_mode() {
 		return ENCRYPTION_MODE;
 	}
 
-	$current_version = tool_administration::get_current_version_in_db();
+	$current_version = tool_administration::get_current_version_in_db(); // like 4.9.5
 
-	$min_subversion = 22; # real: 22 (see updates.php)
-	if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= $min_subversion) ||
-		($current_version[0] >= 4 && $current_version[1] >= 5) ||
-		 $current_version[0] > 4
-	  ) {
-		return 'openssl';
-	}else{
-		debug_log(__METHOD__." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl ".to_string(), logger::WARNING);
-		return 'mcrypt';
-	}
+	$min_subversion  = 22; # real: 22 (see updates.php)
+
+	$current_encryption_mode = ($current_version[0]==4 && $current_version[1]==0 && $current_version[2]<$min_subversion)
+		? 'mcrypt'
+		: 'openssl';
+
+
+	return $current_encryption_mode;
 }//end encryption_mode
 
 
