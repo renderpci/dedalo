@@ -713,15 +713,12 @@ export const ui = {
 			// header . move tool header to modal header and insert in slot
 				const tool_header = wrapper.querySelector('.tool_header')
 					  tool_header.slot = "header"
-
-
-
-				//const actual_header = modal_container.querySelector('.tool_header')
-				//if (actual_header) {
-				//	actual_header.replaceWith(tool_header)
-				//}else{
-					modal_container.appendChild(tool_header)
-				//}
+					//const actual_header = modal_container.querySelector('.tool_header')
+					//if (actual_header) {
+					//	actual_header.replaceWith(tool_header)
+					//}else{
+						modal_container.appendChild(tool_header)
+					//}
 
 			// body. add tool wrapper to modal body and insert in slot
 				wrapper.slot = 'body'
