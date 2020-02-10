@@ -81,7 +81,7 @@ render_component_text_area.prototype.edit = async function(options={render_level
 		add_events(self, wrapper)
 
 	// defaultParagraphSeparator for contenteditable
-		document.execCommand("defaultParagraphSeparator", false, "p");
+		// document.execCommand("defaultParagraphSeparator", false, "p");
 
 
 	return wrapper
@@ -106,77 +106,75 @@ const add_events = function(self, wrapper) {
 		}
 
 	// focus
-		wrapper.addEventListener('focus', async (e) => {
-			// e.stopPropagation()
+		// wrapper.addEventListener('focus', async (e) => {
+		// 	// e.stopPropagation()
 
-			// store current inner html to compare when blur
-			if (e.target.matches('.input_tex_area')) {
+		// 	// store current inner html to compare when blur
+		// 	if (e.target.matches('.input_tex_area')) {
 
-				// store current contenteditable content
-					e.target.data_orig = e.target.innerHTML;
+		// 		// store current contenteditable content
+		// 			e.target.data_orig = e.target.innerHTML;
 
-				// contenteditable_buttons. use existing contenteditable_buttons or create a fresh one if not
-					const contenteditable_buttons = document.querySelector(".contenteditable_buttons") || ui.get_contenteditable_buttons()
-						  contenteditable_buttons.target = e.target // set current contenteditable as target
-					e.target.parentNode.appendChild(contenteditable_buttons)
+		// 		// contenteditable_buttons. use existing contenteditable_buttons or create a fresh one if not
+		// 			const contenteditable_buttons = document.querySelector(".contenteditable_buttons") || ui.get_contenteditable_buttons()
+		// 				  contenteditable_buttons.target = e.target // set current contenteditable as target
+		// 			e.target.parentNode.appendChild(contenteditable_buttons)
 
-				return true
-			}
+		// 		return true
+		// 	}
 
-		}, true)
+		// }, true)
 
 	// blur
-		wrapper.addEventListener('blur', async (e) => {
-			// e.stopPropagation()
+		// wrapper.addEventListener('blur', async (e) => {
+		// 	// e.stopPropagation()
 
-			// store current inner html to compare when blur
-			if (e.target.matches('.input_tex_area')) {
+		// 	// store current inner html to compare when blur
+		// 	if (e.target.matches('.input_tex_area')) {
 
-				// remove existing contenteditable_buttons
-					const contenteditable_buttons = document.querySelector(".contenteditable_buttons")
-					if (contenteditable_buttons) contenteditable_buttons.remove()
+		// 		// remove existing contenteditable_buttons
+		// 			const contenteditable_buttons = document.querySelector(".contenteditable_buttons")
+		// 			if (contenteditable_buttons) contenteditable_buttons.remove()
 
-				// save changes if content is different
-					const changed = e.target.innerHTML!==e.target.data_orig
-					if (changed===true) {
+		// 		// save changes if content is different
+		// 			const changed = e.target.innerHTML!==e.target.data_orig
+		// 			if (changed===true) {
 
-						const value = e.target.innerHTML
+		// 				const value = e.target.innerHTML
 
-						const changed_data = Object.freeze({
-							action	: 'update',
-							key		: JSON.parse(e.target.dataset.key),
-							value	: value
-						})
-						self.change_value({
-							changed_data : changed_data,
-							refresh 	 : false
-						})
-						.then((save_response)=>{
-							// event to update the dom elements of the instance
-							event_manager.publish('update_value_'+self.id, changed_data)
-						})
-					}
-				return true
-			}
+		// 				const changed_data = Object.freeze({
+		// 					action	: 'update',
+		// 					key		: JSON.parse(e.target.dataset.key),
+		// 					value	: value
+		// 				})
+		// 				self.change_value({
+		// 					changed_data : changed_data,
+		// 					refresh 	 : false
+		// 				})
+		// 				.then((save_response)=>{
+		// 					// event to update the dom elements of the instance
+		// 					event_manager.publish('update_value_'+self.id, changed_data)
+		// 				})
+		// 			}
+		// 		return true
+		// 	}
 
-		}, true)
+		// }, true)
 
 	// click [click]
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
-
 
 				const all_buttons_remove =wrapper.querySelectorAll('.remove')
 					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
 						all_buttons_remove[i].classList.add("display_none")
 					}
 
-
-				if (e.target.matches('.contenteditable')) {
-					// set the button_remove associated to the input selected to visible
-						const button_remove = e.target.parentNode.querySelector('.remove')
-						button_remove.classList.remove("display_none")
-				}
+				// if (e.target.matches('.contenteditable')) {
+				// 	// set the button_remove associated to the input selected to visible
+				// 		const button_remove = e.target.parentNode.querySelector('.remove')
+				// 		button_remove.classList.remove("display_none")
+				// }
 
 			// insert
 				if (e.target.matches('.button.add')) {
@@ -298,21 +296,21 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// button add input
-		if((self.mode==='edit' || self.mode==='edit_in_list') && !is_inside_tool){
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: buttons_container
-			})
-		}
+		// if((self.mode==='edit' || self.mode==='edit_in_list') && !is_inside_tool){
+		// 	const button_add_input = ui.create_dom_element({
+		// 		element_type	: 'span',
+		// 		class_name 		: 'button add',
+		// 		parent 			: buttons_container
+		// 	})
+		// }
 
 	// tools
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
 		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+			  content_data.classList.add("content_data", self.type)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -376,14 +374,15 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 
 	// button remove
-		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
-			const button_remove = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button remove display_none',
-				dataset			: { key : i },
-				parent 			: li
-			})
-		}
+		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
+		// 	const button_remove = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name 		: 'button remove display_none',
+		// 		dataset			: { key : i },
+		// 		parent 			: li
+		// 	})
+		// }
+
 
 	return li
 }//end get_input_element

@@ -52,9 +52,6 @@ export const component_input_text = function(){
 
 	// change data
 	component_input_text.prototype.save 	 			= component_common.prototype.save
-	//component_input_text.prototype.load_data 			= component_common.prototype.load_data
-	//component_input_text.prototype.get_value 			= component_common.prototype.get_value
-	//component_input_text.prototype.set_value 			= component_common.prototype.set_value
 	component_input_text.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_input_text.prototype.update_datum 		= component_common.prototype.update_datum
 	component_input_text.prototype.change_value 		= component_common.prototype.change_value
