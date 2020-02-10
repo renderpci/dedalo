@@ -8,32 +8,6 @@
 	import {ui} from '../../../common/js/ui.js'
 	import {observe_changes} from '../../../common/js/utils.js'
 	import {common} from '../../../common/js/common.js'
-	// import tinymce from '../../../../lib/tinymce/js/tinymce/tinymce.min.js';
-
-
-
-// class DDTiny extends HTMLElement {
-// 	connectedCallback() {
-// 		const self = this
-
-// 		const textarea = document.createElement('textarea')
-
-// 		this.appendChild(textarea)
-// 		this.attachShadow({ mode: 'open' })
-// 		this.shadowRoot.innerHTML = `
-// 			<style>
-// 			</style>
-// 			<slot>Editor ${this.id}</slot>
-// 		`
-// 		tinymce.init({
-// 			target 				   : textarea,
-// 			init_instance_callback : (editor) =>{
-// 		  		self.id = editor.id
-// 			}
-// 		})
-// 	}
-// }
-// customElements.define('dd-tiny', DDTiny)
 
 
 
@@ -44,45 +18,65 @@
 export const service_tinymce = function() {
 
 
-	this.caller
-	this.container
-	this.key
-	this.options
-	this.editor
+
+	// self vars
+		this.caller
+		this.container
+		this.key
+		this.options
+		this.editor
+
 
 
 	/**
 	* INIT
-	* @return
 	*/
-	this.init2 = async function (caller, container, options) {
+	this.init = async function (caller, container, options) {
 
-		// container.attachShadow({mode: 'open'})
+		const self = this
 
-		const header = document.createElement('div');
-		const shadowRoot = header.attachShadow({mode: 'open'});
-		const textarea = document.createElement('textarea');
-		shadowRoot.appendChild(textarea)
-		textarea.innerHTML = "123"
-		// shadowRoot.innerHTML = '<h1>Hello Shadow DOM</h1>'; // Could also use appendChild().
+		// fix vars
+			this.caller 	= caller
+			this.container 	= container
+			this.options 	= options
+			this.key 		= options.key
 
-		tinymce.init({
-			target : textarea,
-			init_instance_callback : (editor) =>{
-					console.log("editor:",editor);
+		// editor options
+			const toolbar = options.editor_config.toolbar
+				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_person button_save"
+			const plugins = options.editor_config.plugins
+				|| ["paste","image","print","searchreplace","code","fullscreen","noneditable"] // "wordcount"
+
+		// dd-tiny dom element (cusmtomHTML element)
+			const dd_tinny = document.createElement('dd-tiny')
+
+		// dd-tiny options (to config editor)
+			dd_tinny.options = {
+				// called when tinymce editor is ready
+				onsetup_editor  : this.onsetup_editor.bind(this),
+				value  	 		: options.value,
+				toolbar  		: toolbar,
+				plugins 		: plugins
 			}
-		})
-		container.appendChild(header)
 
-	};//end init
+		// add to dom
+			container.appendChild(dd_tinny)
+
+
+		return true
+	}//end init
+
 
 
 	/**
 	* SAVE
-	* Trigger save_value against caller
+	* Trigger save_value against caller sending key and value
+	* @param string previous_value
+	*	Used to compare changes in editor value.
+	*	Current svaed value for current key data
 	* @return bool
 	*/
-	this.save = function(actual_value) {
+	this.save = function(previous_value) {
 
 		const self = this
 
@@ -96,11 +90,8 @@ export const service_tinymce = function() {
 
 		const value = editor.getContent({format:'raw'})
 
-			console.log("actual_value:",actual_value);
-				console.log("value:",value);
-
 		// no changes in value found
-		if (actual_value===value) {
+		if (previous_value===value) {
 			return false
 		}
 
@@ -115,7 +106,9 @@ export const service_tinymce = function() {
 	* ADD_EDITOR_BUTTONS
 	* @return array buttons_added
 	*/
-	this.add_editor_buttons = function(editor) {
+	this.add_editor_buttons = function() {
+
+		const editor = this.editor
 
 		const custom_buttons 		= this.options.editor_config.custom_buttons
 		const custom_buttons_length = custom_buttons.length
@@ -128,120 +121,6 @@ export const service_tinymce = function() {
 		}
 
 		return custom_buttons
-
-		// const config = this.options.editor_config
-		// const buttons_added = []
-		// let button_name
-
-		// // button_person
-		// 	button_name = "button_person"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			tooltip: 'Add person',
-		// 			image:  '../themes/default/icons/person.svg',
-		// 			onclick: function(evt) {
-		// 				component_text_area.load_tags_person() //ed, evt, text_area_component
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// // button_geo
-		// 	button_name = "button_geo"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			tooltip: 'Add georef',
-		// 			image:  '../themes/default/icons/geo.svg',
-		// 			onclick: function(evt) {
-		// 				component_text_area.load_tags_geo(ed, evt, text_area_component) //ed, evt, text_area_component
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// // button_note
-		// 	button_name = "button_note"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			tooltip: 'Add note',
-		// 			image:  '../themes/default/icons/note.svg',
-		// 			onclick: function(evt) {
-		// 				component_text_area.create_new_note(ed, evt, text_area_component)
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// // button_reference
-		// 	button_name = "button_reference"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			tooltip: 'Add reference',
-		// 			image:  '../themes/default/icons/reference.svg',
-		// 			onclick: function(evt) {
-		// 				component_text_area.create_new_reference(ed, evt, text_area_component)
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// // button_delete_structuration
-		// 	button_name = "button_delete_structuration"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			tooltip: 'Delete structuration',
-		// 			text: "Delete chapter",
-		// 			onclick: function(evt) {
-		// 				tool_lang.delete_structuration(ed, evt, text_area_component)
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// // button_add_structuration
-		// 	button_name = "button_add_structuration"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			tooltip: 'Add structuration',
-		// 			text: "Add chapter",
-		// 			onclick: function(evt) {
-		// 				tool_lang.add_structuration(ed, evt, text_area_component)
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// // button_change_structuration
-		// 	button_name = "button_change_structuration"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			tooltip: 'Change structuration',
-		// 			text: "Change chapter",
-		// 			onclick: function(evt) {
-		// 				tool_lang.change_structuration(ed, evt, text_area_component)
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// // button_save
-		// 	button_name = "button_save"
-		// 	if (config.toolbar.indexOf(button_name)!==-1) {
-		// 		editor.addButton(button_name, {
-		// 			text: get_label.salvar,
-		// 			tooltip: get_label.salvar,
-		// 			icon: false,
-		// 			onclick: function(evt) {
-		// 				// SAVE COMMAND
-		// 				// It will get dirty if the user has made modifications to the contents
-		// 				//ed.setDirty(true);	// Force dirty state
-		// 				mce_editor.save_command(ed, evt, text_area_component);
-		// 			}
-		// 		})
-		// 		buttons_added.push(button_name)
-		// 	}
-
-		// return buttons_added
 	};//end add_editor_buttons
 
 
@@ -264,7 +143,7 @@ export const service_tinymce = function() {
 		// editor.setContent("<small>"+ self.caller.id + "</small><hr>" + self.options.value);
 
 		// additional buttons
-			this.add_editor_buttons(editor)
+			this.add_editor_buttons()
 
 
 		// focus event
@@ -352,38 +231,8 @@ export const service_tinymce = function() {
 	/**
 	* INIT
 	*/
-	this.init = async function (caller, container, options) {
+	this.init__OLD = async function (caller, container, options) {
 
-		const self = this
-
-		// fix vars
-			this.caller 	= caller
-			this.container 	= container
-			this.options 	= options
-			this.key 		= options.key
-
-		// editor options
-			const toolbar = options.editor_config.toolbar
-				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_person button_save"
-			const plugins = options.editor_config.plugins
-				|| ["paste","image","print","searchreplace","code","fullscreen","noneditable"]// "wordcount"
-
-		// dd-tiny dom element (cusmtomHTML element)
-			const dd_tinny = document.createElement('dd-tiny')
-
-		// dd-tiny options (to config editor)
-			dd_tinny.options = {
-				// called when tinymce editor is ready
-				onsetup_editor  : this.onsetup_editor.bind(this),
-				value  	 		: options.value,
-				toolbar  		: toolbar,
-				plugins 		: plugins
-			}
-		// add to dom
-			container.appendChild(dd_tinny)
-
-
-		return true
 
 		// useful but not used
 			// // await until element dd-tiny changes id attribute (changed when tinnymc is ready)
@@ -531,8 +380,6 @@ export const service_tinymce = function() {
 
 
 			return
-
-
 
 
 
@@ -1270,6 +1117,33 @@ export const service_tinymce = function() {
 		});//end tinymce.init(
 
 	}//end this.init
+
+
+
+	/**
+	* INIT
+	* @return
+	*/
+	// this.init2 = async function (caller, container, options) {
+
+	// 	// container.attachShadow({mode: 'open'})
+
+	// 	const header = document.createElement('div');
+	// 	const shadowRoot = header.attachShadow({mode: 'open'});
+	// 	const textarea = document.createElement('textarea');
+	// 	shadowRoot.appendChild(textarea)
+	// 	textarea.innerHTML = "123"
+	// 	// shadowRoot.innerHTML = '<h1>Hello Shadow DOM</h1>'; // Could also use appendChild().
+
+	// 	tinymce.init({
+	// 		target : textarea,
+	// 		init_instance_callback : (editor) =>{
+	// 				console.log("editor:",editor);
+	// 		}
+	// 	})
+	// 	container.appendChild(header)
+
+	// };//end init
 
 
 

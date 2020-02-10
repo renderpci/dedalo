@@ -358,10 +358,8 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// })
 
 	// service_tinymce
-		function get_service() {
-			return current_service;
-		}
-		// config editor
+		const get_service = () => { return current_service; }
+		// editor_config
 		const editor_config   		 = {}
 		editor_config.plugins 		 = ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
 		editor_config.toolbar 		 = "bold italic underline undo redo searchreplace pastetext code fullscreen | button_person | button_save"
@@ -375,8 +373,6 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			key 			: i,
 			editor_config 	: editor_config
 		})
-
-
 
 
 	// button remove
@@ -547,14 +543,14 @@ const get_custom_events = (self, i, get_service) => {
 	custom_events.focus = (evt, options) => {
 
 		event_manager.publish('active_component', self)
-	}
+	}//end focus
 
 	custom_events.blur = (evt, options) => {
 		// save. service save function calls current component save_value()
 			const actual_value 	= self.data.value[i]
 			const service 		= get_service()
 			service.save(actual_value)
-	}
+	}//end blur
 
 	custom_events.click = (evt, options) => {
 		// img : click on img
@@ -677,10 +673,10 @@ const get_custom_events = (self, i, get_service) => {
 	}//end click
 
 	custom_events.MouseUp = (evt, options) => {
-		console.log("options.selection:",options.selection);
+		// console.log("options.selection:",options.selection);
 		// CREATE_FRAGMENT_COMMAND
 		// mce_editor.create_fragment_command(ed,evt,text_area_component)
-	}
+	}//end MouseUp
 
 	custom_events.KeyUp = (evt, options) => {
 		console.log("KeyUp evt.keyCode:",evt.keyCode,evt.key);
