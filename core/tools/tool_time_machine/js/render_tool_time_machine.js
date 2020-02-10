@@ -57,7 +57,7 @@ render_tool_time_machine.prototype.edit = async function (options={render_level:
 		//}
 
 	// modal container
-		ui.tool.attach_to_modal(wrapper, self)
+		ui.tool.attach_to_modal(wrapper, self, 'big')
 
 	// events
 		// click
