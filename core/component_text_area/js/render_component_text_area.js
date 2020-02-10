@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 
 
 
@@ -66,14 +67,14 @@ render_component_text_area.prototype.edit = async function(options={render_level
 	const render_level 	= options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
 
 	// add events
@@ -241,10 +242,10 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* CONTENT_DATA_EDIT
+* get_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const value = self.data.value
 
@@ -306,7 +307,7 @@ const content_data_edit = async function(self) {
 		}
 
 	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)		
+		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -315,7 +316,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -329,7 +330,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	const mode = self.mode
 
-	// li
+	// li container
 		const li = ui.create_dom_element({
 			element_type : 'li'
 		})
@@ -347,13 +348,29 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		}
 
 	// input contenteditable
-		const input = ui.create_dom_element({
-			element_type 	: 'div',
-			class_name 		: 'input_tex_area contenteditable',
-			dataset 	 	: { key : i },
-			inner_html 		: current_value,
-			contenteditable : true,
-			parent 		 	: li
+		// const input = ui.create_dom_element({
+		// 	element_type 	: 'div',
+		// 	class_name 		: 'input_tex_area contenteditable',
+		// 	dataset 	 	: { key : i },
+		// 	inner_html 		: current_value,
+		// 	contenteditable : true,
+		// 	parent 		 	: li
+		// })
+
+	// service_tinymce
+		// config editor
+		const editor_config   		 = {}
+		editor_config.plugins 		 = ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
+		editor_config.toolbar 		 = "bold italic underline undo redo searchreplace pastetext code fullscreen | button_person | button_save"
+		editor_config.custom_buttons = get_custom_buttons(self, i)
+		editor_config.custom_events  = get_custom_events(self, i)
+
+		// init editor
+		const current_service = new service_tinymce()
+		current_service.init(self, li, {
+			value 			: current_value,
+			key 			: i,
+			editor_config 	: editor_config
 		})
 
 	// button remove
@@ -368,6 +385,349 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	return li
 }//end get_input_element
+
+
+
+/**
+* GET_CUSTOM_BUTTONS
+* @param instance self
+* @param int i
+*	self data element from array of values
+* @return array custom_buttons
+*/
+const get_custom_buttons = (self, i) => {
+
+	// custom_buttons
+	const custom_buttons = []
+
+	let button_name
+
+	// button_person
+		button_name = "button_person"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Add person',
+				image:  '../themes/default/icons/person.svg',
+				onclick: function(evt) {
+					alert("Adding person !");
+					// component_text_area.load_tags_person() //ed, evt, text_area_component
+				}
+			}
+		})
+
+	// button_geo
+		button_name = "button_geo"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Add georef',
+				image:  '../themes/default/icons/geo.svg',
+				onclick: function(evt) {
+					alert("Adding georef !");
+					// component_text_area.load_tags_geo(ed, evt, text_area_component) //ed, evt, text_area_component
+				}
+			}
+		})
+
+	// button_note
+		button_name = "button_note"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Add note',
+				image:  '../themes/default/icons/note.svg',
+				onclick: function(evt) {
+					alert("Adding note !");
+					// component_text_area.create_new_note(ed, evt, text_area_component)
+				}
+			}
+		})
+
+	// button_reference
+		button_name = "button_reference"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Add reference',
+				image:  '../themes/default/icons/reference.svg',
+				onclick: function(evt) {
+					alert("Adding reference !");
+					// component_text_area.create_new_reference(ed, evt, text_area_component)
+				}
+			}
+		})
+
+
+	// button_delete_structuration
+		button_name = "button_delete_structuration"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Delete structuration',
+				text: "Delete chapter",
+				onclick: function(evt) {
+					alert("Deleting structuration !");
+					// tool_lang.delete_structuration(ed, evt, text_area_component)
+				}
+			}
+		})
+
+	// button_add_structuration
+		button_name = "button_add_structuration"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Add structuration',
+				text: "Add chapter",
+				onclick: function(evt) {
+					alert("Adding structuration !");
+					// tool_lang.add_structuration(ed, evt, text_area_component)
+				}
+			}
+		})
+
+	// button_change_structuration
+		button_name = "button_change_structuration"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Change structuration',
+				text: "Change chapter",
+				onclick: function(evt) {
+					alert("Changing structuration !");
+					// tool_lang.change_structuration(ed, evt, text_area_component)
+				}
+			}
+		})
+
+	// button_save
+		button_name = "button_save"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				text: get_label.salvar,
+				tooltip: get_label.salvar,
+				icon: false,
+				onclick: function(evt) {
+
+					console.log("evt:",evt);
+					console.log("this:",this);
+
+
+
+					const isDirty = this.isDirty()
+					if (isDirty===true) {
+
+						const key 	= i
+						const value = this.getContent({format:'raw'})
+
+						// check value is different form actual
+						const actual_value = self.data.value[i]
+						if (value===actual_value) {
+							if(SHOW_DEBUG===true) {
+								console.log("No real changes are made it in value. Save ignored");
+							}
+							return
+						}
+						self.save_value(key, value)
+					}
+				}
+			}
+		})
+
+
+	return custom_buttons
+}//end get_custom_buttons
+
+
+
+/**
+* GET_CUSTOM_EVENTS
+* @param instance self
+* @param int i
+*	self data element from array of values
+* @return object custom_events
+*/
+const get_custom_events = (self, i) => {
+
+	const custom_events = {}
+
+	custom_events.focus = (evt, options) => {
+		event_manager.publish('active_component', self)
+	}
+
+	custom_events.blur = (evt, options) => {
+		if (options.isDirty===true) {
+			// check value is different form actual
+			const actual_value = self.data.value[i]
+			if (options.value===actual_value) {
+				if(SHOW_DEBUG===true) {
+					console.log("No real changes are made it in value. Save ignored");
+				}
+				return
+			}
+			self.save_value(options.key, options.value)
+		}
+	}
+
+	custom_events.click = (evt, options) => {
+		// img : click on img
+		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
+			switch(evt.target.className) {
+
+				case 'tc':
+					// Video goto timecode by tc tag
+					const timecode = evt.target.dataset.data
+					// component_text_area.goto_time(timecode);
+					alert("Click on image/reference tc "+timecode);
+					break;
+
+				case 'indexIn' :
+				case 'indexOut' :
+					var tipo 			= text_area_component.dataset.tipo
+					var	lang 			= text_area_component.dataset.lang
+					var	section_tipo 	= text_area_component.dataset.section_tipo
+					var	parent 			= text_area_component.dataset.parent
+
+					switch(page_globals.modo) {
+
+						case 'edit' :
+							// INSPECTOR : Show info about indexations in inspector
+							tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
+
+							// RELATIONS
+							//component_text_area.load_relation(tag, tipo, parent, section_tipo);
+							//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
+
+							// PORTAL SELECT FRAGMENT FROM TAG BUTTON
+							if (page_globals.context_name=='list_into_tool_portal') {
+								// Show hidden button link_fragmet_to_portal and configure to add_resource
+								component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
+							}
+							break;
+
+						case 'tool_indexation' :
+							// Show info about in tool relation window
+							component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
+							break;
+					}
+					// mask_tags on click image index
+					mce_editor.mask_tags(ed, evt);
+					break;
+
+				case 'svg' :
+					// not defined yet
+					break;
+
+				case 'draw' :
+					// Load draw editor
+					switch(page_globals.modo) {
+
+						case 'tool_transcription' :
+							if (typeof component_image==="undefined") {
+								console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
+							}else{
+								component_image.load_draw_editor(tag_obj);
+							}
+							break;
+
+						case 'edit' :
+							var canvas_id = text_area_component.dataset.canvas_id;
+							if (typeof component_image_read!=="undefined") {
+								component_image_read.load_draw_editor_read(tag_obj, canvas_id);
+							}else{
+								console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
+							}
+							break;
+					}
+					break;
+
+				case 'geo' :
+					// Load geo editor
+					switch(page_globals.modo) {
+						case 'edit' :
+						case 'tool_transcription' :
+							if (typeof component_geolocation==="undefined") {
+								console.warn("[mde_editor.image_command] component_geolocation class is not avilable. Ignored geo action");
+							}else{
+								component_geolocation.load_geo_editor(tag_obj);
+							}
+							break;
+					}
+					break;
+
+				case 'person':
+					// Show person info
+					component_text_area.show_person_info( ed, evt, text_area_component )
+					break;
+				case 'note':
+					// Show note info
+					component_text_area.show_note_info( ed, evt, text_area_component )
+					break;
+				case 'reference':
+					if(evt.altKey===true){
+						// Select all node to override content
+						ed.selection.select(ed.selection.getNode())
+					}else{
+						// Show reference info
+						component_text_area.show_reference_info( ed, evt, text_area_component )
+					}
+					break;
+				default:
+					// nothing to do here
+					break;
+			}//end switch
+		}else if(evt.target.nodeName==='LABEL') {
+			// Fix text area selection values
+			if (page_globals.modo==='tool_lang') {
+				component_text_area.show_structuration_info(ed, evt, text_area_component)
+			}
+		}else{
+			// Sets styles on all paragraphs in the currently active editor
+			// if (ed.dom.select('img').length>0) {
+			// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
+			// }
+		}//end click on img
+	}
+
+	custom_events.MouseUp = (evt, options) => {
+		console.log("options.selection:",options.selection);
+		// CREATE_FRAGMENT_COMMAND
+		// mce_editor.create_fragment_command(ed,evt,text_area_component)
+	}
+
+
+	custom_events.KeyUp = (evt, options) => {
+		console.log("KeyUp evt.keyCode:",evt.keyCode,evt.key);
+		return
+		switch(context_name) {
+			case 'component_av':
+				// Send keys for tool_transcription (F2, ESC, etc..)
+				component_text_area.av_editor_key_up(evt);
+				break;
+			case 'component_image':
+				// 114 : Key F2 Write draw tag in text
+				var tag_insert_key_cookie = get_localStorage('tag_insert_key')
+				var tag_insert_key = tag_insert_key_cookie ? tag_insert_key_cookie : 113; // Default 113 'F2'
+				if(evt.keyCode==tag_insert_key) {
+					mce_editor.write_tag('draw', ed, evt, text_area_component)
+				}
+				break;
+			case 'component_geolocation':
+				// 115 : Key F2 Write geo tag in text
+				var tag_insert_key_cookie = get_localStorage('tag_insert_key')
+				var tag_insert_key = tag_insert_key_cookie ? tag_insert_key_cookie : 113; // Default 113 'F2'
+				if(evt.keyCode==tag_insert_key) {
+					mce_editor.write_tag('geo', ed, evt, text_area_component)
+				}
+				break;
+		}//end switch(context_name)
+	}//end KeyUp
+
+
+	return custom_events
+}//end get_custom_events
 
 
 

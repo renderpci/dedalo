@@ -1,4 +1,10 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_text_area} from '../../component_text_area/js/render_component_text_area.js'
@@ -69,6 +75,38 @@ component_text_area.prototype.init_editor = async function( editor ) {
 
 	return editor_instance
 }//end init_editor
+
+
+
+/**
+* SAVE_VALUE
+* Saves individual value based on element key
+* @param int key
+*	defined in container dataset key
+* @param string value
+*	value from active text editor
+*/
+component_text_area.prototype.save_value = async function(key, value) {
+
+	const self = this
+
+	const changed_data = Object.freeze({
+		action	: 'update',
+		key		: key,
+		value	: (value.length>0) ? value : null,
+	})
+	self.change_value({
+		changed_data : changed_data,
+		refresh 	 : false
+	})
+	.then((save_response)=>{
+		// event to update the dom elements of the instance
+		event_manager.publish('update_value_'+self.id, changed_data)
+	})
+
+	return true
+}//end save_value
+
 
 
 
