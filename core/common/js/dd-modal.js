@@ -1,4 +1,4 @@
-class Modal extends HTMLElement {
+class DDModal extends HTMLElement {
 	constructor() {
 		super();
 		this._modalVisible = false;
@@ -118,7 +118,7 @@ class Modal extends HTMLElement {
 	}
 	disconnectedCallback() {
 		this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
-		this.shadowRoot.querySelector(".close").removeEventListener('click', this._hideModal);
+		this.shadowRoot.querySelector(".close").removeEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('click', this._hideModal.bind(this));
 	}
 	_showModal() {
@@ -178,4 +178,4 @@ class Modal extends HTMLElement {
 			}
 	}
 }
-customElements.define('dd-modal',Modal);
+customElements.define('dd-modal',DDModal);
