@@ -60,6 +60,8 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 
 		$obj = new stdClass();
 			# version
+			$obj->dedalo_entity 				= DEDALO_ENTITY;
+			# version
 			$obj->dedalo_version 				= DEDALO_VERSION;
 			# lang
 			$obj->dedalo_application_lang 		= DEDALO_APPLICATION_LANG;

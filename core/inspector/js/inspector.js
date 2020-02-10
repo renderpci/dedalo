@@ -40,6 +40,8 @@ inspector.prototype.init = function(options) {
 
 	const self = this
 
+	self.id 			= 'inspector_' + options.section_tipo
+	self.model 			= 'inspector'
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
 	self.mode 			= 'edit'

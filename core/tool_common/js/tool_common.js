@@ -132,9 +132,12 @@ tool_common.prototype.build = async function(autoload=false) {
 
 /**
 * LOAD_TOOL
+*
 * @param tool_object options
 * @param self instance_caller
+*
 * @return instance tool
+*
 * Called by page observe event (init)
 * To load tool, don't call directly, publish event as
 *	event_manager.publish('load_tool', {

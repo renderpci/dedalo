@@ -83,7 +83,7 @@ common.prototype.render = async function(options={render_level:'full'}) {
 		})
 
 	// result_node render based in render_level
-		const result_node = (async () => {
+		const result_node = await (async () => {
 
 			// render_level
 			switch(render_level) {
@@ -158,8 +158,7 @@ common.prototype.render = async function(options={render_level:'full'}) {
 		self.status = 'rendered'
 
 	// event publish
-		event_manager.publish('render_'+self.id, node)
-			//event_manager
+		event_manager.publish('render_'+self.id, result_node)
 		event_manager.publish('render_instance', self)
 
 	// debug
@@ -450,7 +449,7 @@ common.prototype.load_script = async function(src) {
 			}
 
 		// DOM tag
-			const element 	= document.createElement("script")
+			const element = document.createElement("script")
 			element.setAttribute("defer", "defer");
 
 			//element.onload  = resolve(element)
