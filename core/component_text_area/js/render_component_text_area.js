@@ -358,12 +358,15 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// })
 
 	// service_tinymce
+		function get_service() {
+			return current_service;
+		}
 		// config editor
 		const editor_config   		 = {}
 		editor_config.plugins 		 = ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
 		editor_config.toolbar 		 = "bold italic underline undo redo searchreplace pastetext code fullscreen | button_person | button_save"
-		editor_config.custom_buttons = get_custom_buttons(self, i)
-		editor_config.custom_events  = get_custom_events(self, i)
+		editor_config.custom_buttons = get_custom_buttons(self, i, get_service)
+		editor_config.custom_events  = get_custom_events(self, i, get_service)
 
 		// init editor
 		const current_service = new service_tinymce()
@@ -372,6 +375,9 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			key 			: i,
 			editor_config 	: editor_config
 		})
+
+
+
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -395,10 +401,14 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 *	self data element from array of values
 * @return array custom_buttons
 */
-const get_custom_buttons = (self, i) => {
+const get_custom_buttons = (self, i, get_service) => {
 
 	// custom_buttons
 	const custom_buttons = []
+
+	// const editor = get_editor()
+
+
 
 	let button_name
 
@@ -458,7 +468,6 @@ const get_custom_buttons = (self, i) => {
 			}
 		})
 
-
 	// button_delete_structuration
 		button_name = "button_delete_structuration"
 		custom_buttons.push({
@@ -510,28 +519,10 @@ const get_custom_buttons = (self, i) => {
 				tooltip: get_label.salvar,
 				icon: false,
 				onclick: function(evt) {
-
-					console.log("evt:",evt);
-					console.log("this:",this);
-
-
-
-					const isDirty = this.isDirty()
-					if (isDirty===true) {
-
-						const key 	= i
-						const value = this.getContent({format:'raw'})
-
-						// check value is different form actual
-						const actual_value = self.data.value[i]
-						if (value===actual_value) {
-							if(SHOW_DEBUG===true) {
-								console.log("No real changes are made it in value. Save ignored");
-							}
-							return
-						}
-						self.save_value(key, value)
-					}
+					// save. service save function calls current component save_value()
+						const actual_value 	= self.data.value[i]
+						const service 		= get_service()
+						service.save(actual_value)
 				}
 			}
 		})
@@ -549,26 +540,20 @@ const get_custom_buttons = (self, i) => {
 *	self data element from array of values
 * @return object custom_events
 */
-const get_custom_events = (self, i) => {
+const get_custom_events = (self, i, get_service) => {
 
 	const custom_events = {}
 
 	custom_events.focus = (evt, options) => {
+
 		event_manager.publish('active_component', self)
 	}
 
 	custom_events.blur = (evt, options) => {
-		if (options.isDirty===true) {
-			// check value is different form actual
-			const actual_value = self.data.value[i]
-			if (options.value===actual_value) {
-				if(SHOW_DEBUG===true) {
-					console.log("No real changes are made it in value. Save ignored");
-				}
-				return
-			}
-			self.save_value(options.key, options.value)
-		}
+		// save. service save function calls current component save_value()
+			const actual_value 	= self.data.value[i]
+			const service 		= get_service()
+			service.save(actual_value)
 	}
 
 	custom_events.click = (evt, options) => {
@@ -689,14 +674,13 @@ const get_custom_events = (self, i) => {
 			// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
 			// }
 		}//end click on img
-	}
+	}//end click
 
 	custom_events.MouseUp = (evt, options) => {
 		console.log("options.selection:",options.selection);
 		// CREATE_FRAGMENT_COMMAND
 		// mce_editor.create_fragment_command(ed,evt,text_area_component)
 	}
-
 
 	custom_events.KeyUp = (evt, options) => {
 		console.log("KeyUp evt.keyCode:",evt.keyCode,evt.key);

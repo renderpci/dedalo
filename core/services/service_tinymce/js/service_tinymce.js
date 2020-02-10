@@ -77,6 +77,39 @@ export const service_tinymce = function() {
 	};//end init
 
 
+	/**
+	* SAVE
+	* Trigger save_value against caller
+	* @return bool
+	*/
+	this.save = function(actual_value) {
+
+		const self = this
+
+		const editor = self.editor
+		const key 	 = self.key
+
+		// no user interactions case
+		if (editor.isDirty()!==true) {
+			return false
+		}
+
+		const value = editor.getContent({format:'raw'})
+
+			console.log("actual_value:",actual_value);
+				console.log("value:",value);
+
+		// no changes in value found
+		if (actual_value===value) {
+			return false
+		}
+
+		self.caller.save_value(key, value)
+
+		return true
+	};//end save
+
+
 
 	/**
 	* ADD_EDITOR_BUTTONS
