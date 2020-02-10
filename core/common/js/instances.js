@@ -62,7 +62,7 @@
 
 					// element file import path
 						const base_path = model.indexOf('tool_') !== -1 ? '../../tools/' : '../../'
-						const path = base_path + model + '/js/' + model + '.js'
+						const path = base_path + model + '/js/' + model + '.js' + '?v=' + page_globals.dedalo_version
 
 					// import element mod file once (and wait until finish)
 						const current_element = await import(path)
