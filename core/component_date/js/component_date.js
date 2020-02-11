@@ -64,7 +64,7 @@ export const component_date = function(){
 */
 component_date.prototype.init_editor = async function() {
 
-	const self = this	
+	const self = this
 
 	// flatpickr calendar
 		const flatpickr_instance = await get_flatpickr()
@@ -87,7 +87,7 @@ const get_flatpickr = async () => {
 	load_promises.push( common.prototype.load_style(lib_css_file) )
 
 	await Promise.all(load_promises).then(async function(response){
-		
+
 	})
 
 }
@@ -121,14 +121,14 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
  	let dateString  = ''
 
 	if (date_mode === 'time') {
-		
+
 		options = {hour: '2-digit', minute: '2-digit', second: '2-digit'}
 		options.ms = '2-digit'
-	
-	} else {	
-	
+
+	} else {
+
 		if (month === 0 && day === 0) {
-			dateString 	= year 						
+			dateString 	= year
 		} else if(day === 0){
 			dateString 	= dateString.concat(month,self.separator,year)
 		} else {
@@ -179,11 +179,13 @@ component_date.prototype.get_locale_value = function () {
 
 	let locale_value
 	switch (page_globals.dedalo_data_lang) {
+
 		case 'lg-eng':	locale_value='en-US'; 	break;
 		case 'lg-spa':	locale_value='es-ES'; 	break;
 		case 'lg-cat':	locale_value='ca'; 		break;
-		
+
 		default:
+			const lang_code = page_globals.dedalo_data_lang
 			locale_value = lang_code.substring(3) + "-" + lang_code.substring(3).toUpperCase()
 			break;
 	}
@@ -408,7 +410,7 @@ component_date.prototype.get_dato_period = function(parentNode) {
 
 	// Final dato
 	dato = (dd_date.year || dd_date.month || dd_date.day) ? { "period" : dd_date } : ''
-	
+
 	return dato
 
 }//end get_dato_period
@@ -437,10 +439,10 @@ component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
 
 		if (value_formatted_start===false) {
 
-			// Nothing to do			
+			// Nothing to do
 			if (nodeRole==='range_start') {
 				console.warn("Invalid date value: ",input_range_start.value)
-				dato.start = false 
+				dato.start = false
 			}
 
 		}else{
@@ -450,7 +452,7 @@ component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
 
 			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
 				dato.start = value_formatted_start.dd_date
-		
+
 			}
 		}
 
@@ -681,12 +683,12 @@ component_date.prototype.format_time = function(options) {
 }//end format_time
 
 component_date.prototype.set_default_date = function(dateStr) {
-	
+
 	const self = this
 
 	let value
 
-	const ar_date = (dateStr) ? dateStr.split(self.separator) : [] 
+	const ar_date = (dateStr) ? dateStr.split(self.separator) : []
 
 	switch(ar_date.length) {
 
@@ -715,7 +717,7 @@ component_date.prototype.set_default_date = function(dateStr) {
 * GET_EJEMPLO
 */
 component_date.prototype.get_ejemplo = function() {
-	
+
 	const self = this
 	/*
 	if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
@@ -728,13 +730,13 @@ component_date.prototype.get_ejemplo = function() {
 	*/
 	const date_mode = self.context.properties.date_mode
 	let ejemplo = ''
-	
+
 	if (date_mode === 'time') {
 		ejemplo = ejemplo.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
 	}else{
 		ejemplo = ejemplo.concat('DD',self.separator,'MM',self.separator,'YYYY')
 	}
-	
+
 	return ejemplo
 }//end get_ejemplo
 
@@ -742,7 +744,7 @@ component_date.prototype.get_ejemplo = function() {
 * CLOSE_FLATPICKR
 */
 component_date.prototype.close_flatpickr = function(selectedDates, dateStr, instance) {
-	            						
+
 	instance.destroy()
 
 }//end close_flatpickr
@@ -751,34 +753,34 @@ component_date.prototype.close_flatpickr = function(selectedDates, dateStr, inst
 * UPDATE_VALUE_FLATPICKR
 */
 component_date.prototype.update_value_flatpickr = function(selectedDates, dateStr, instance, component_instance, target) {
-	
+
 	const self = component_instance
 	const role = target.dataset.role
-	
+
 	var new_date = ''
 	var new_value
 
 	new_date = new_date.concat(selectedDates[0].getDate(), self.separator, selectedDates[0].getMonth() + 1, self.separator, selectedDates[0].getFullYear())
 	target.parentNode.previousSibling.value = new_date
-	
+
 	if ((role==='range_start') || (role==='range_end')) {
-			
+
 		const dato_range = self.get_dato_range(target.parentNode, role)
-		
+
 		if (role==='range_start') {
 			(dato_range.start === false) ? new_value = false : new_value = dato_range
 		}
-								
-		if (role==='range_end') {							
+
+		if (role==='range_end') {
 			(dato_range.end === false) ? new_value = false : new_value = dato_range
-		}												
-						
+		}
+
 	}
-	
+
 	if (role==='default') {
 		new_value = (target.value.length>0) ? self.get_dato_date(new_date) : ''
 	}
-		
+
 	const changed_data = Object.freeze({
 			action	: 'update',
 			key		: JSON.parse(target.dataset.key),
