@@ -30,12 +30,16 @@ class DDTiny extends HTMLElement {
 
 		this._init_editor()
 	}
-	disconnectedCallback() {
-		console.log("desconnected : dd-tiny !!!!!!!!!!!!!");
-	}
+	// disconnectedCallback() {
+	// 	console.log("desconnected : dd-tiny !!!!!!!!!!!!!");
+	// }
 	_init_editor() {
 		// console.log("this.options:",this.options);
 		const self = this
+
+		// container size
+			const container_height = this.options.container.offsetHeight;
+			console.log("+++++++++ container_height:",container_height);
 
 		// options params
 			const value 	= this.options.value
@@ -62,7 +66,7 @@ class DDTiny extends HTMLElement {
 				menubar 				: this.options.menubar || false,
 				// statusbar. allows you to specify whether or not TinyMCE should
 				// display the status bar at the bottom of the editor. (true|false)
-				statusbar 				: this.options.statusbar || false,
+				// statusbar 				: this.options.statusbar || false,
 				// skin_url. enables you to specify the location of the skin file
 				skin_url 				: this.options.skin_url || DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/skins/lightgray",
 				// theme_url. enables you to specify the location of the theme file
@@ -76,9 +80,9 @@ class DDTiny extends HTMLElement {
 				// automatically it will instead produce br elements and Shift+Enter will produce a p.
 				forced_root_block 		: false,
 				// width. Set the width of the editor in pixels
-				width 					: this.options.width || null,
+					// width 					: this.options.width || null,
 				// height. sets the height of the editable area in pixels.
-				height 					: this.options.height || null,
+					// height 					: container_height - 56, //this.options.height || null,
 				// content_css
 				content_css 			: this.options.content_css || DEDALO_CORE_URL + '/component_text_area/css/' + 'mce_editor_default.css?' + page_globals.dedalo_version,
 				// body_class
@@ -101,6 +105,8 @@ class DDTiny extends HTMLElement {
 				init_instance_callback 	: (editor) => {
 					// update dd-tiny element id with new editor id
 			  		self.id = editor.id
+			  		// call to function onsetup_editor to delegate the setup
+			  		// self.options.init_instance_callback_editor(editor)
 				}
 			})
 	}

@@ -22,6 +22,7 @@ export const service_tinymce = function() {
 	// self vars
 		this.caller
 		this.container
+		this.dd_tinny
 		this.key
 		this.options
 		this.editor
@@ -43,24 +44,31 @@ export const service_tinymce = function() {
 
 		// editor options
 			const toolbar = options.editor_config.toolbar
-				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_person button_save"
+				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_save"
 			const plugins = options.editor_config.plugins
 				|| ["paste","image","print","searchreplace","code","fullscreen","noneditable"] // "wordcount"
 
 		// dd-tiny dom element (cusmtomHTML element)
-			const dd_tinny = document.createElement('dd-tiny')
+			const dd_tinny = document.createElement('dd-tiny');
+				  dd_tinny.style.opacity = 0 // on init the editor, will be set to 1
+
+		// store
+			self.dd_tinny = dd_tinny
 
 		// dd-tiny options (to config editor)
 			dd_tinny.options = {
 				// called when tinymce editor is ready
-				onsetup_editor  : this.onsetup_editor.bind(this),
-				value  	 		: options.value,
-				toolbar  		: toolbar,
-				plugins 		: plugins
+				onsetup_editor  		: this.onsetup_editor.bind(this),
+				// init_instance_callback_editor  : this.init_instance_callback_editor.bind(this),
+				value  	 				: options.value,
+				toolbar  				: toolbar,
+				plugins 				: plugins,
+				container 				: container
 			}
 
 		// add to dom
 			container.appendChild(dd_tinny)
+
 
 
 		return true
@@ -122,6 +130,28 @@ export const service_tinymce = function() {
 
 		return custom_buttons
 	};//end add_editor_buttons
+
+
+
+	/**
+	* init_instance_callback_editor
+	* @return
+	*/
+	// this.init_instance_callback_editor = function(editor) {
+
+	// 	const self = this
+
+	// 		console.log("editor:",editor);
+
+	// 		// container size
+	// 		const container_height = self.container.offsetHeight;
+	// 			console.log("container_height:",container_height);
+
+	// 		var positionInfo = self.container.getBoundingClientRect();
+	// 		var height = positionInfo.height;
+	// 			console.log("height:",height);
+
+	// };//end init_instance_callback_editor
 
 
 
@@ -215,11 +245,32 @@ export const service_tinymce = function() {
 			})//end KeyPress
 
 
-		// KEY UP EVENT
+		// KeyUp
 			editor.on('KeyUp', function(evt) {
 				if (custom_events.KeyUp) {
 					custom_events.KeyUp(evt, {})
 				}
+			})
+
+
+		// init
+			editor.on('init', function(evt) {
+
+				const container_height  = self.dd_tinny.offsetHeight; // self.container
+
+				const toolbar			= self.dd_tinny.querySelector('.mce-toolbar-grp') // mce-toolbar-grp mce-container mce-panel mce-stack-layout-item mce-first
+				const toolbar_height 	= toolbar ? toolbar.offsetHeight : 0
+
+				const statusbar 		= self.dd_tinny.querySelector('.mce-statusbar') // mce-statusbar mce-container mce-panel mce-stack-layout-item mce-last
+				const statusbar_height  = statusbar ? statusbar.offsetHeight : 0
+
+				const h = container_height - toolbar_height - statusbar_height - 3
+
+				// resize editor to adjust height of container
+				editor.theme.resizeTo ('100%', h)
+
+				// show dd-tiny after resize
+				self.dd_tinny.style.opacity = 1
 			})
 
 
