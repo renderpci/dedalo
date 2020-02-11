@@ -111,7 +111,7 @@ export const service_tinymce = function() {
 		const editor = this.editor
 
 		const custom_buttons 		= this.options.editor_config.custom_buttons
-		const custom_buttons_length = custom_buttons.length
+		const custom_buttons_length = (custom_buttons) ? custom_buttons.length : 0 
 		for (let i = 0; i < custom_buttons_length; i++) {
 
 			const options = custom_buttons[i].options
