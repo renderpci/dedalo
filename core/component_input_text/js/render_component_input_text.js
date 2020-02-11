@@ -420,8 +420,8 @@ const get_content_data_edit = async function(self) {
 
 	// content_data
 		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+			  content_data.classList.add("content_data", self.type)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -496,6 +496,7 @@ const get_content_data_search = async function(self) {
 
 	return content_data
 }//end get_content_data_search
+
 
 
 /**
