@@ -360,7 +360,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// editor_config
 		const editor_config   		 = {}
 		editor_config.plugins 		 = ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
-		editor_config.toolbar 		 = "bold italic underline undo redo searchreplace pastetext code fullscreen | button_person | button_save"
+		editor_config.toolbar 		 = "bold italic underline undo redo searchreplace pastetext code fullscreen | button_save"
 		editor_config.custom_buttons = get_custom_buttons(self, i, get_service)
 		editor_config.custom_events  = get_custom_events(self, i, get_service)
 

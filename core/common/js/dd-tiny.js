@@ -10,24 +10,6 @@ class DDTiny extends HTMLElement {
 		`;
 	}
 	connectedCallback() {
-
-		// const self = this
-		// tinymce.init({
-		// 	id : 'patata',
-		// 	target 				   : textarea,
-		// 	init_instance_callback : (editor) =>{
-		//   		self.id = editor.id
-		// 	}
-		// })
-		// // Creates a new editor instance
-		// var ed = new tinymce.Editor(textarea, {
-		// 	target : textarea,
-		// 	init_instance_callback : (editor) =>{
-		// 		self.id = editor.id
-		// 	}
-		// }, tinymce.EditorManager);
-		// ed.render();
-
 		this._init_editor()
 	}
 	// disconnectedCallback() {
@@ -37,12 +19,8 @@ class DDTiny extends HTMLElement {
 		// console.log("this.options:",this.options);
 		const self = this
 
-		// container size
-			const container_height = this.options.container.offsetHeight;
-			console.log("+++++++++ container_height:",container_height);
-
 		// options params
-			const value 	= this.options.value
+			const value = this.options.value
 
 		// textarea base element
 			const textarea = document.createElement('textarea')
@@ -68,9 +46,11 @@ class DDTiny extends HTMLElement {
 				// display the status bar at the bottom of the editor. (true|false)
 				// statusbar 				: this.options.statusbar || false,
 				// skin_url. enables you to specify the location of the skin file
-				skin_url 				: this.options.skin_url || DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/skins/lightgray",
+				skin_url 				: this.options.skin_url
+					|| DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/skins/lightgray",
 				// theme_url. enables you to specify the location of the theme file
-				theme_url 				: this.options.theme_url || DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/themes/modern/theme.min.js?" +page_globals.dedalo_version,
+				theme_url 				: this.options.theme_url
+					|| DEDALO_ROOT_WEB + "/lib/tinymce/js/tinymce/themes/modern/theme.min.js?" +page_globals.dedalo_version,
 				// entity_encoding. Allows you to get XML escaped content out of TinyMCE.
 				// By setting this option to xml, posted content will be converted to an XML
 				// string escaping characters such as <, >, ", and & to <, >, ", and &.
@@ -82,9 +62,10 @@ class DDTiny extends HTMLElement {
 				// width. Set the width of the editor in pixels
 					// width 					: this.options.width || null,
 				// height. sets the height of the editable area in pixels.
-					// height 					: container_height - 56, //this.options.height || null,
+					// height 					: this.options.height || null,
 				// content_css
-				content_css 			: this.options.content_css || DEDALO_CORE_URL + '/component_text_area/css/' + 'mce_editor_default.css?' + page_globals.dedalo_version,
+				content_css 			: this.options.content_css
+					|| DEDALO_CORE_URL + '/component_text_area/css/mce_editor_default.css?' + page_globals.dedalo_version,
 				// body_class
 				body_class 				: this.options.body_class || null,
 				// relative_urls. If this option is set to true, all URLs returned from the MCFileManager will be relative from the specified

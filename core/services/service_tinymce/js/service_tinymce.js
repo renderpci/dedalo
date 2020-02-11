@@ -119,7 +119,7 @@ export const service_tinymce = function() {
 		const editor = this.editor
 
 		const custom_buttons 		= this.options.editor_config.custom_buttons
-		const custom_buttons_length = (custom_buttons) ? custom_buttons.length : 0 
+		const custom_buttons_length = (custom_buttons) ? custom_buttons.length : 0
 		for (let i = 0; i < custom_buttons_length; i++) {
 
 			const options = custom_buttons[i].options
@@ -167,7 +167,7 @@ export const service_tinymce = function() {
 		// fix vars
 			this.editor = editor
 
-		const custom_events = this.options.editor_config.custom_events
+		const custom_events = this.options.editor_config.custom_events || {}
 
 		// set value to editor
 		// editor.setContent("<small>"+ self.caller.id + "</small><hr>" + self.options.value);
