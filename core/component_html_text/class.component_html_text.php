@@ -10,18 +10,52 @@ class component_html_text extends component_common {
 	# GET DATO : Format "Hello world"
 	public function get_dato() {
 		$dato = parent::get_dato();
-		return (string)$dato;
+		return (array)$dato;
 	}
 
 
 
 	# SET_DATO
 	public function set_dato($dato) {			
-		if ($dato==='""') {
-			$dato = "";
+		// if ($dato==='""') {
+		// 	$dato = "";
+		// }
+
+		if (is_string($dato)) { # Tool Time machine case, dato is string
+
+			//check the dato for determinate the original format and if the $dato is correct.
+			$dato_trim				= trim($dato);
+			$dato_first_character 	= substr($dato_trim, 0, 1);
+			$dato_last_character  	= substr($dato_trim, -1);
+
+			if ($dato_first_character==='[' && $dato_last_character===']') {
+				# dato is json encoded
+				$dato = json_handler::decode($dato_trim);
+			}else{
+				# dato is string plain value
+				$dato = array($dato);
+				#debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
+			}
 		}
 
-		parent::set_dato( (string)$dato );
+		if(SHOW_DEBUG===true) {
+			if (!is_array($dato)) {
+				debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
+			}
+			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
+		}
+
+		$safe_dato=array();
+		foreach ((array)$dato as $key => $value) {
+			if (!is_string($value)) {
+				$safe_dato[] = to_string($value);
+			}else{
+				$safe_dato[] = $value;
+			}
+		}
+		$dato = $safe_dato;
+
+		parent::set_dato( (array)$dato );
 	}
 
 
@@ -77,7 +111,7 @@ class component_html_text extends component_common {
 				$dato = parent::get_dato();	
 				#dump($dato,'dato');
 
-				$dato = $this->clean_text($dato);
+				//$dato = $this->clean_text($dato);
 					#dump($dato ,'$dato ');				
 				break;
 		}		
@@ -91,13 +125,21 @@ class component_html_text extends component_common {
 	* CLEAN_TEXT
 	* Anclaje para futuros preprocesados del texto. De momento sólo haremos un trim
 	*/
-	public function clean_text($string){
+	public function clean_text($string){//($dato){
 
 		# Desactivo porque elimina el '<mar>'
 		#$string = filter_var($string, FILTER_UNSAFE_RAW );	# FILTER_SANITIZE_STRING
 		#$string = stripslashes($string);
 
-		return trim($string);
+		// $clean_dato=array();
+		// foreach ((array)$dato as $key => $value) {
+		// 	$clean_dato [] = trim($value);
+		// }
+		
+		// $dato = $clean_dato;
+
+		// return (array)$dato;//trim($string);
+		return $string;
 	}//end clean_text
 
 
