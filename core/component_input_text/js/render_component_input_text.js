@@ -109,7 +109,7 @@ const add_events = function(self, wrapper) {
 			//console.log("-------------- + event add_element changed_data:", changed_data);
 			const inputs_container = wrapper.querySelector('.inputs_container')
 			// add new dom input element
-			input_element(changed_data.key, changed_data.value, inputs_container, self)
+			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
 	// remove element, subscription to the events
@@ -513,7 +513,7 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 			class_name 		: 'q_operator',
 			parent 		 	: inputs_container
 		})
-		
+
 
 	// input field
 		const input = ui.create_dom_element({

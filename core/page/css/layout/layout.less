@@ -6,6 +6,8 @@
 	@color_grey_dark : #949494; // used in section group headers
 	@color_grey_medium : #e6e6e6; // used in component actibe background
 
+	@media_max_height : 27em;
+
 
 // general styles
 
@@ -52,7 +54,6 @@
 
 
 // html inputs
-
 
 
 
@@ -145,6 +146,7 @@
 			//padding-top: 2.1em;
 		}
 	}
+
 
 
 // area
@@ -299,12 +301,12 @@
 					overflow: auto;
 
 					padding: 0;
-    				margin: 0;
-    				border: none;
+					margin: 0;
+					border: none;
 
-    				>* {
-    					padding: 0.5em;
-    				}
+					>* {
+						padding: 0.5em;
+					}
 
 
 					//* {
@@ -348,7 +350,7 @@
 			margin-bottom: 0.5em;
 			border-radius: 0.25em;
 			display: flex;
-    		flex-direction: row-reverse;
+			flex-direction: row-reverse;
 
 			>.button {
 				background-color: #FD891D;
@@ -391,7 +393,7 @@
 			// margin-bottom: 0.5em;
 			// border-radius: 0.25em;
 			display: flex;
-    		flex-direction: row-reverse;
+			flex-direction: row-reverse;
 
 			>.button {
 				background-color: #FD891D;
@@ -565,17 +567,17 @@
 					//align-self: flex-start;
 					//display: table;
 					padding-left: 0.25em;
-			    	padding-right: 0.5em;
+					padding-right: 0.5em;
 
 					@height_line : 1.2em;
 
 					>div {
 						flex: 1 1 100%;
-			   			display: flex;
-			   			flex-wrap: wrap;
-			   			align-items: center;
-			   			justify-content: flex-end;
-			   			min-height: @height_line;
+						display: flex;
+						flex-wrap: wrap;
+						align-items: center;
+						justify-content: flex-end;
+						min-height: @height_line;
 					}
 
 					a {
@@ -594,8 +596,8 @@
 
 						>span {
 							display: inline-block;
-			    			font-size: @height_line + 0.02;
-			    			//height: @height_line;
+							font-size: @height_line + 0.02;
+							//height: @height_line;
 						}
 
 						>a {
@@ -689,7 +691,7 @@
 		}
 
 		&.edit {
-			max-height: 27em;
+			// max-height: 27em;
 
 			// component_section_id
 			&.component_section_id {
@@ -706,7 +708,6 @@
 
 			// component_check_box
 			&.component_check_box {
-
 				>.content_data {
 					overflow: auto;
 				}
@@ -714,6 +715,7 @@
 
 			// component_image
 			&.component_image {
+				max-height: @media_max_height;
 				img {
 					padding: 0;
 					flex: 1;
@@ -723,8 +725,14 @@
 				}
 			}
 
+			// component_av
+			&.component_av {
+				max-height: @media_max_height;
+			}
+
 			// component_svg
 			&.component_svg {
+				max-height: @media_max_height;
 				img.image {
 					padding: 0;
 					height: 100%;
@@ -735,6 +743,7 @@
 
 			// component pdf
 			&.component_pdf {
+				max-height: @media_max_height;
 				>.content_data {
 					height: 100%;
 				}
@@ -742,11 +751,19 @@
 
 			// component json
 			&.component_json {
+				max-height: @media_max_height;
 				>.content_data {
 					height: 100%;
 				}
 			}
 
+			// component_text_area
+			&.component_text_area {
+				>.content_data {
+					// min-height: @media_max_height;
+					// background-color: #BEF0FA;
+				}
+			}
 
 			>.content_data {
 				//height: 100%;
@@ -1023,8 +1040,8 @@
 				position: absolute;
 				right: 0.5em;
 				top: .25em;
-    			z-index: 1;
-    			opacity: 0.9;
+				z-index: 1;
+				opacity: 0.9;
 			}
 			&.add {
 				.fa-icon;
@@ -1144,11 +1161,11 @@
 					}
 
 					>.grouper_label {
-				    	width: 100%;
-				    	padding-top: 0.25em;
-				    	padding-bottom: 0.25em;
-				    	opacity: 0.7;
-				    	font-size: 0.80em;
+						width: 100%;
+						padding-top: 0.25em;
+						padding-bottom: 0.25em;
+						opacity: 0.7;
+						font-size: 0.80em;
 					}
 
 					input {
@@ -1605,8 +1622,8 @@
 		&:focus {
 			//padding-top: 2em;
 			//margin-top: 1.5em;
-		    //border: 1px solid #1a9af5;
-		    //outline: 0px solid transparent;
+			//border: 1px solid #1a9af5;
+			//outline: 0px solid transparent;
 		}
 	}// .input_tex_area
 
@@ -1634,7 +1651,7 @@
 				background-size: contain;
 				background-repeat: no-repeat;
 				margin-right: 0.25em;
-    			padding-right: 1em;
+				padding-right: 1em;
 				vertical-align: text-bottom;
 			}
 
@@ -1703,19 +1720,19 @@
 
 			>li {
 				display: grid;
-    			grid-template-columns: 1fr 2fr 8fr;
-    			outline: 1px solid #eee;
+				grid-template-columns: 1fr 2fr 8fr;
+				outline: 1px solid #eee;
 
-    			&.header_li {
-    				background-color: #5B5B5B;
-    				color: #ffffff;
-    				padding: 1em;
-    			}
+				&.header_li {
+					background-color: #5B5B5B;
+					color: #ffffff;
+					padding: 1em;
+				}
 
-    			>span {
-    				padding-left: 1em;
-    				//padding-right: 0.5em;
-    			}
+				>span {
+					padding-left: 1em;
+					//padding-right: 0.5em;
+				}
 			}
 		}
 	}
@@ -1736,7 +1753,7 @@
 			border: 1px solid #3883fa;
 			color: #3883fa;
 		}
-    	z-index: 1;
+		z-index: 1;
 
 		.jsoneditor {
 			//min-height: 30vh;
@@ -1749,7 +1766,7 @@
 
 		.pdf_viewer_frame {
 			width: 100%;
-	    	height: 100%;
+			height: 100%;
 		}
 	}//end .component_pdf
 
@@ -1763,11 +1780,67 @@
 // dd-tiny
 	dd-tiny {
 		width: 100%;
+		height: 100%;
+		// background-color: #F76CE4;
+		// height: 650px;
+		// border-bottom: 1px solid #ffffff;
+		// margin-bottom: 1em;
+		transition: opacity 0.115s ease-in-out;
+		// min-height: 27em;
+		min-height: @media_max_height;
 
-		.mce-branding-powered-by {
-		    display: none;
+
+		.mce-container {
+			// display: none !important;
+
+			.mce-branding-powered-by {
+				display: none;
+			}
+
+			iframe {
+				// height: 100%;
+				// min-height: 100% !important;
+				// display: none !important;
+			}
+
 		}
+
+
+
+
+
+
+
+		// // Container, container body, iframe
+		// .mce-tinymce, .mce-container-body {
+		// 	min-height: 100% !important;
+		// }
+		// // Container body
+		// .mce-container-body {
+		// 	position: absolute;
+		// 	bottom: 0;
+		// 	left: 0;
+		// 	right: 0;
+		// }
+		// // Editing area
+		// .mce-container-body .mce-edit-area {
+		// 	position: absolute;
+		// 	top: 30px;
+		// 	bottom: 30px; // 37px;
+		// 	left: 0;
+		// 	right: 0;
+		// }
+		// // Footer
+		// .mce-tinymce .mce-statusbar {
+		// 	position: absolute;
+		// 	bottom: 0;
+		// 	left: 0;
+		// 	right: 0;
+		// }
 	}
+	// tinymce overwrite
+
+
 
 
 
@@ -1782,16 +1855,16 @@
 		//align-self: flex-start;
 		display: table;
 		padding-left: 0.25em !important;
-    	padding-right: 0.5em !important;
+		padding-right: 0.5em !important;
 
 		@height_line : 1.2em;
 
 		>* {
 			flex: 1 1 100%;
-   			display: flex;
-   			align-items: center;
-   			justify-content: flex-end;
-   			height: @height_line;
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			height: @height_line;
 		}
 
 		a {
@@ -1811,8 +1884,8 @@
 
 			>span {
 				display: inline-block;
-    			font-size: @height_line + 0.02;
-    			//height: @height_line;
+				font-size: @height_line + 0.02;
+				//height: @height_line;
 			}
 
 			>a {
