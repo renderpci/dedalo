@@ -32,13 +32,21 @@
 
 	if($options->get_data===true && $permissions>0){
 			
-			// Value
-			$value = $this->get_dato();
-			
-			// data item
-			$item  = $this->get_data_item($value);
+		// Value
+		switch ($modo) {
+			case 'list':
+				$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				break;
+			case 'edit':
+			default:
+				$value = $this->get_dato();
+				break;
+		}
+		
+		// data item
+		$item  = $this->get_data_item($value);
 
-			$data[] = $item;
+		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)
 
