@@ -364,7 +364,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		if ($model==='component_input_text_large') {
 			$model='component_input_text';
 		}
-		return
+
+		return $model;
 	}
 
 	# GET MODELO NAME BY TIPO (STATIC)
