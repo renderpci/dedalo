@@ -90,6 +90,9 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 */
 const add_events = function(self, wrapper) {
 
+	const multi_line 	= self.context.properties.multi_line || 'false'
+	const element_type 	= (multi_line === true) ? 'textarea' :'input[type="text"]'
+
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
@@ -128,7 +131,7 @@ const add_events = function(self, wrapper) {
 			//e.stopPropagation()
 
 			// update
-			if (e.target.matches('input[type="text"].input_value')) {
+			if (e.target.matches(element_type + '.input_value')) {
 				//console.log("++update e.target:",JSON.parse(JSON.stringify(e.target.dataset.key)));
 				//console.log("++update e.target value:",JSON.parse(JSON.stringify(e.target.value)));
 
@@ -173,7 +176,7 @@ const add_events = function(self, wrapper) {
 					}
 
 
-				if (e.target.matches('input[type="text"]')) {
+				if (e.target.matches(element_type)) {
 					// set the button_remove associated to the input selected to visible
 						const button_remove = e.target.parentNode.querySelector('.remove')
 						button_remove.classList.remove("display_none")
@@ -293,7 +296,7 @@ const add_events = function(self, wrapper) {
 */
 render_component_input_text.prototype.search = async function() {
 
-	const self 	= this
+	const self 			= this
 
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
@@ -435,7 +438,9 @@ const get_content_data_edit = async function(self) {
 */
 const get_input_element_edit = (i, current_value, inputs_container, self, is_inside_tool) => {
 
-	const mode = self.mode
+	const mode 		 	= self.mode
+	const multi_line 	= self.context.properties.multi_line || false
+	const element_type 	= (multi_line === true) ? 'textarea' :'input'
 
 	// li
 		const li = ui.create_dom_element({
@@ -445,13 +450,14 @@ const get_input_element_edit = (i, current_value, inputs_container, self, is_ins
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: 'input',
-			type 		 	: 'text',
+			element_type 	: element_type,			
 			class_name 		: 'input_value',
 			dataset 	 	: { key : i },
 			value 		 	: current_value,
 			parent 		 	: li
 		})
+
+		if (!multi_line) input.type = 'text'
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
