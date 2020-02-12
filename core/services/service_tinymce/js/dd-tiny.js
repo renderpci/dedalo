@@ -2,6 +2,7 @@ class DDTiny extends HTMLElement {
 	constructor() {
 		super();
 		this.options
+		this.editor
 		this.attachShadow({ mode: 'open' })
 		this.shadowRoot.innerHTML = `
 			<style>
@@ -12,9 +13,10 @@ class DDTiny extends HTMLElement {
 	connectedCallback() {
 		this._init_editor()
 	}
-	// disconnectedCallback() {
-	// 	console.log("desconnected : dd-tiny !!!!!!!!!!!!!");
-	// }
+	disconnectedCallback() {
+		// removes tinymce instance from memory
+		this.editor.destroy()
+	}
 	_init_editor() {
 		// console.log("this.options:",this.options);
 		const self = this
@@ -81,13 +83,13 @@ class DDTiny extends HTMLElement {
 				setup 	 				: (editor) => {
 					// call to function onsetup_editor to delegate the setup
 			  		self.options.onsetup_editor(editor)
+			  		// store instance link
+					self.editor = editor
 				},
 				// callback. called when editor is ready
 				init_instance_callback 	: (editor) => {
 					// update dd-tiny element id with new editor id
 			  		self.id = editor.id
-			  		// call to function onsetup_editor to delegate the setup
-			  		// self.options.init_instance_callback_editor(editor)
 				}
 			})
 	}

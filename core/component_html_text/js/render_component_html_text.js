@@ -284,7 +284,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		const get_service = () => { return current_service; }
 		// editor_config
 		const editor_config   		 = {}
-		editor_config.pluginsplugins = [
+		editor_config.plugins 		 = [
 							"advlist autolink lists link image charmap print preview hr anchor pagebreak",
 							"searchreplace wordcount visualblocks visualchars code fullscreen",
 							"insertdatetime nonbreaking save table contextmenu directionality",
@@ -292,11 +292,11 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 							]
 		editor_config.toolbar 		 = [
 							"bold italic undo redo searchreplace | cut copy paste pastetext | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist outdent indent table",
-							"link image | fontsizeselect | print preview fullscreen | code | upload "
+							"link image | fontsizeselect | print preview fullscreen | code | button_upload"
 							]
-		//editor_config.custom_buttons = get_custom_buttons(self, i, get_service)
+		editor_config.custom_buttons = get_custom_buttons(self, i, get_service)
 		editor_config.custom_events  = get_custom_events(self, i, get_service)
-
+		
 		// init editor
 		const current_service = new service_tinymce()
 		current_service.init(self, li, {
@@ -318,6 +318,43 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 	return li
 
 }//end input_element
+
+
+
+/**
+* GET_CUSTOM_BUTTONS
+* @param instance self
+* @param int i
+*	self data element from array of values
+* @return array custom_buttons
+*/
+const get_custom_buttons = (self, i, get_service) => {
+
+	// custom_buttons
+	const custom_buttons = []
+
+	// const editor = get_editor()
+
+	let button_name
+
+	// button_upload
+		button_name = "button_upload"
+		custom_buttons.push({
+			name 	: button_name,
+			options : {
+				tooltip: 'Insert image desde disco',
+				image:  '../themes/default/icons/upload.svg',
+				onclick: function(evt) {
+					alert("Inserting image !");
+					// component_text_area.load_tags_person() //ed, evt, text_area_component
+					//id 		: 'upload-'+html_text_id
+				}
+			}
+		})
+
+	
+	return custom_buttons
+}//end get_custom_buttons
 
 
 
