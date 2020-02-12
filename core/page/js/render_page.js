@@ -6,7 +6,6 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import '../../common/js/dd-modal.js'
-	import '../../common/js/dd-tiny.js'
 
 
 /**
