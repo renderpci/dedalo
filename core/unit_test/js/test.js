@@ -153,12 +153,76 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 			});
 		});
 
+	// delete_instance
+		describe("instances : lifecycle", function(){
 
+			// using value as int
+			const options = {
+				"model" 		: "component_input_text",
+				"tipo"  		: "test159",
+				"section_tipo" 	: "test65",
+				"section_id" 	: 5,
+				"mode" 			: "edit",
+				"lang" 			: "lg-eng",
+				"context" 		: {permissions: 1}
+				//"datum"			: {data:[]}
+			}
 
+			function make_test (options, property, expected, stage) {
+				//it(`${JSON.stringify(property)} => Init: ${expected}`, async function() {
+				it(`${JSON.stringify(property)} => Init: ${expected}`, async function() {
 
+					const new_instance = await get_instance(options)
 
+					if (stage ==='build') {
+						console.log("new_instance:",new_instance);
+						await new_instance.build(true)
+					}
 
+					switch (property) {
+					 	case 'status':
+					     	assert.equal(new_instance.status, expected)
+					     	break;
+					    case 'lang':
+					 		assert.equal(new_instance.lang, expected)
+					     	break;
+					    case 'permissions':
+					 		assert.equal(new_instance.permissions, expected)
+					     	break;
+					    case 'properties':
+					 		assert.notEqual(new_instance.permissions, expected)
+					     	break;
+				     	case 'typo':
+					 		assert.notEqual(new_instance.permissions, expected)
+					     	break;
 
+					    default:
+					 		assert.equal(new_instance.status, expected)
+					     	break;
+					}
+
+			    });
+			}
+
+			describe("init instance based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
+				
+					make_test(options, 'status', 'inited', 'init')
+					make_test(options, 'lang', options.lang, 'init')
+					make_test(options, 'permissions', null, 'init')
+					
+			});
+
+			describe("build instance based on options values to create a component instance: status = builded and permissions = 1", function() {
+				
+					make_test(options, 'status', 'builded', 'build')
+					make_test(options, 'permissions', options.context.permissions, 'build')
+
+					make_test(options, 'properties', null, 'build')
+					make_test(options, 'typo', null, 'build')
+					
+			});
+
+		});
 
 
 // exec mocha
