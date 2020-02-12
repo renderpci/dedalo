@@ -18,6 +18,7 @@
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
 
 	import {render_page} from './render_page.js'
+	import '../../services/service_tinymce/js/dd-tiny.js'
 
 
 
