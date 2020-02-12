@@ -12,6 +12,7 @@
 	import {load_tool} from '../../tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	import {render_page} from './render_page.js'
+	import '../../services/service_tinymce/js/dd-tiny.js'
 
 
 

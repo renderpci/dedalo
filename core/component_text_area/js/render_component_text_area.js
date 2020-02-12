@@ -372,7 +372,6 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			editor_config 	: editor_config
 		})
 
-
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 		// 	const button_remove = ui.create_dom_element({
