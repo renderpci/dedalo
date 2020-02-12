@@ -212,53 +212,56 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 
 	const fragment = new DocumentFragment()
 
-	// buttons node
-		const buttons = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons',
-			parent 			: fragment
-		})
 
-	// button_new section
+	// buttons
 		if (self.mode!=='tm') {
-			const button_new = ui.button.build_button({
-				class_name 	: "new",
-				label 		: get_label.nuevo || "New"
-			})
-			button_new.addEventListener('click', async (e) => {
-				e.stopPropagation()
 
-				// data_manager
-				const api_response = await data_manager.prototype.request({
-					body : {
-						action 		: 'create',
-						section_tipo: self.section_tipo
-					}
+			// buttons node
+				const buttons = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'buttons',
+					parent 			: fragment
 				})
-				if (api_response.result && api_response.result>0) {
-					// launch event 'user_action' tha page is watching
-					event_manager.publish('user_action', {
-						tipo 			 : self.tipo,
-						mode 			 : 'edit',
-						section_id		 : api_response.result
+
+			// button_new section
+				const button_new = ui.button.build_button({
+					class_name 	: "new",
+					label 		: get_label.nuevo || "New"
+				})
+				button_new.addEventListener('click', async (e) => {
+					e.stopPropagation()
+
+					// data_manager
+					const api_response = await data_manager.prototype.request({
+						body : {
+							action 		: 'create',
+							section_tipo: self.section_tipo
+						}
 					})
-				}
+					if (api_response.result && api_response.result>0) {
+						// launch event 'user_action' tha page is watching
+						event_manager.publish('user_action', {
+							tipo 			 : self.tipo,
+							mode 			 : 'edit',
+							section_id		 : api_response.result
+						})
+					}
 
-			})
-			buttons.appendChild(button_new)
-		}
+				})
+				buttons.appendChild(button_new)
 
-	// search filter node
-		if (self.mode!=='tm') {
-			const filter = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'filter',
-				parent 			: fragment
-			})
-			await self.filter.render().then(filter_wrapper =>{
-				filter.appendChild(filter_wrapper)
-			})
-		}
+			// search filter node
+				const filter = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'filter',
+					parent 			: fragment
+				})
+				await self.filter.render().then(filter_wrapper =>{
+					filter.appendChild(filter_wrapper)
+				})
+
+		}//end if (self.mode!=='tm')
+
 
 	// paginator node
 		const paginator_div = ui.create_dom_element({
