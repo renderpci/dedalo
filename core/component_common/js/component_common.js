@@ -355,6 +355,8 @@ component_common.prototype.update_datum = async function(api_response) {
 	const self = this
 
 	//const changed_data = self.data.changed_data
+	//on building if datum is not created, creation is needed
+		if (!self.datum) self.datum = {data:[]}
 
 	// remove the component old data in general datum (from down to top array items)
 		const datum_data_length = self.datum.data.length
