@@ -48,6 +48,7 @@ background-color: #FFFF00;
 // menu_wrapper
 	.menu_wrapper {
 		// z-index: 1002;
+		// z-index: 2;
 		z-index: 1;
 		position: fixed;
 		top: 0px;
@@ -91,7 +92,7 @@ background-color: #FFFF00;
 
 		// direct children elements
 		>* {
-			height: @menu_heigth;
+			min-height: @menu_heigth;
 			line-height: @menu_heigth;
 			font-size: 1.1em;
 			//background-color: #8EA035 !important;
@@ -213,6 +214,7 @@ background-color: #FFFF00;
 					.icon_svg;
 					.background_icon('list_white.svg');
 					height: 100%;
+					height: 2em;
 					float: left;
 					margin-right: 0.4em;
 					//margin-top: -1px;
@@ -227,6 +229,7 @@ background-color: #FFFF00;
 				background-image: url('../../themes/default/icons/inspector.svg');
 				background-repeat: no-repeat;
 				background-size: contain;
+				background-position: center;
 			}
 
 			>.debug_info_bar {
@@ -277,12 +280,13 @@ background-color: #FFFF00;
 	@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
 	#menu_hierarchy {
 		font-family: "Oxygen-light", sans-serif;
-		z-index: 100;
+		z-index: 9999;
 		//position:relative;
 		padding: 0;
 
 		ul {
 			display: none;
+			z-index: inherit;
 		}
 
 		li{
@@ -328,6 +332,7 @@ background-color: #FFFF00;
 				border:none;
 
 				text-align: left;
+
 
 				&.has-sub::after{
 					display: none;
