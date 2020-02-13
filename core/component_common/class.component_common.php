@@ -418,6 +418,22 @@ abstract class component_common extends common {
 			return $this->dato_resolved;
 		}
 
+		// time machine mode case
+			if ($this->modo==='tm') {
+
+				if (empty($this->matrix_id)) {
+					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
+					return false;
+				}
+
+				// tm dato. Note that no lang or section_id is needed, only matrix_id
+				$dato_tm = component_common::get_component_tm_dato($this->tipo, $this->section_tipo, $this->matrix_id);
+				// inject dato to component
+				$this->dato_resolved = $dato_tm;
+
+				return $this->dato_resolved;
+			}
+
 		/*
 		#
 		# IS TEMP CASE
@@ -484,7 +500,6 @@ abstract class component_common extends common {
 			#$this->bl_loaded_matrix_data = true;
 			return null;
 		}
-
 
 		if( $this->bl_loaded_matrix_data!==true ) {
 			# Experimental (si ya se ha intentado cargar pero con sin id, y ahora se hace con id, lo volvemos a intentar)
@@ -4826,6 +4841,50 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_COMPONENT_TM_DATO
+	* @return array $tm_dato
+	*/
+	public static function get_component_tm_dato($tipo, $section_tipo, $matrix_id) {
+
+		// search query object
+			$sqo = json_decode('{
+			  "mode": "tm",
+			  "section_tipo": [
+			    "'.$section_tipo.'"
+			  ],
+			  "filter_by_locators": [
+			    {
+			      "matrix_id": "'.$matrix_id.'",
+			      "section_tipo": "'.$section_tipo.'",
+			      "tipo": "'.$tipo.'"
+			    }
+			  ],
+			  "order": [
+			    {
+			      "direction": "DESC",
+			      "path": [
+			        {
+			          "component_tipo": "id"
+			        }
+			      ]
+			    }
+			  ]
+			}');
+
+		$search = search::get_instance($sqo);
+		$result = $search->search();
+			#dump($result, ' result ++ '.to_string());
+
+		$record = reset($result->ar_records);
+
+		$tm_dato = !empty($record)
+			? json_decode($record->dato)
+			: [];
+
+		return $tm_dato;
+	}//end get_component_tm_dato
+
+
+
 }//end class
-
-
