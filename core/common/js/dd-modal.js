@@ -93,7 +93,7 @@ class DDModal extends HTMLElement {
 			.modal_big .modal-body {
 				height: 100%;
 				/*max-height: 77vh;*/
-				max-height: 88%;
+				/*max-height: 88%;*/
 			}
 		</style>
 		<button>Open Modal</button>
