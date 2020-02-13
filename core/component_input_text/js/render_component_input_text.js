@@ -90,7 +90,7 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 */
 const add_events = function(self, wrapper) {
 
-	const multi_line 	= self.context.properties.multi_line || 'false'
+	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty(multi_line)) ? self.context.properties.multi_line : 'false'
 	const element_type 	= (multi_line === true) ? 'textarea' :'input[type="text"]'
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
@@ -439,7 +439,7 @@ const get_content_data_edit = async function(self) {
 const get_input_element_edit = (i, current_value, inputs_container, self, is_inside_tool) => {
 
 	const mode 		 	= self.mode
-	const multi_line 	= self.context.properties.multi_line || false
+	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty(multi_line)) ? self.context.properties.multi_line : 'false'
 	const element_type 	= (multi_line === true) ? 'textarea' :'input'
 
 	// li
