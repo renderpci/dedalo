@@ -327,7 +327,10 @@ class component_date extends component_common {
 						$minute  = isset($dd_date->minute)	? sprintf("%02d", $dd_date->minute) : '00';
 						$second  = isset($dd_date->second)	? sprintf("%02d", $dd_date->second) : '00';								
 
-						$ar_valor[$key] = $hour . $separator_time . $minute . $separator_time . $second;
+				case 'date_time':
+					if(isset($current_dato->start)) {
+						$dd_date 		= new dd_date($current_dato->start);
+						$ar_valor[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
 					}
 					break;
 
