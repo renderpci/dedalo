@@ -59,7 +59,6 @@ export const service_tinymce = function() {
 			dd_tinny.options = {
 				// called when tinymce editor is ready
 				onsetup_editor  		: this.onsetup_editor.bind(this),
-				// init_instance_callback_editor  : this.init_instance_callback_editor.bind(this),
 				value  	 				: options.value,
 				toolbar  				: toolbar,
 				plugins 				: plugins,
@@ -134,28 +133,6 @@ export const service_tinymce = function() {
 
 
 	/**
-	* init_instance_callback_editor
-	* @return
-	*/
-	// this.init_instance_callback_editor = function(editor) {
-
-	// 	const self = this
-
-	// 		console.log("editor:",editor);
-
-	// 		// container size
-	// 		const container_height = self.container.offsetHeight;
-	// 			console.log("container_height:",container_height);
-
-	// 		var positionInfo = self.container.getBoundingClientRect();
-	// 		var height = positionInfo.height;
-	// 			console.log("height:",height);
-
-	// };//end init_instance_callback_editor
-
-
-
-	/**
 	* ONSETUP_EDITOR
 	* callback when tinymce is ready
 	* @return true
@@ -169,8 +146,6 @@ export const service_tinymce = function() {
 
 		const custom_events = this.options.editor_config.custom_events || {}
 
-		// set value to editor
-		// editor.setContent("<small>"+ self.caller.id + "</small><hr>" + self.options.value);
 
 		// additional buttons
 			this.add_editor_buttons()
