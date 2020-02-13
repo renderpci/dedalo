@@ -102,6 +102,9 @@ class dd_core_api {
 
 		$context = $json_data->context;
 			// dump($context, ' context 1 ++ '.to_string());
+			// if (isset($context[0]->model) && $context[0]->model==='component_text_area') {
+			// 	dump($context, ' context 2 component_html_text ++ '.to_string());
+			// }
 
 		// test 'test159'
 			$context99 = json_decode('
@@ -790,6 +793,13 @@ class dd_core_api {
 																		  $mode,
 																		  $lang,
 																		  $section_tipo);
+
+								if ($mode==='tm') {
+									// set matrix_id value to component to allow it search dato in
+									// matrix_time_machine component function 'get_dato' will be
+									// overwrited to get time machine dato instead the real dato
+									$element->matrix_id = $ddo_source->matrix_id;
+								}
 						}else{
 
 							// others (area, etc.)
