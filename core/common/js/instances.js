@@ -103,7 +103,15 @@
 		return instance
 	}// end get_instance
 
+	/**
+	* GET_ALL_INSTANCES
+	* Get all the instances from memory 
+	*/
+	export const get_all_instances = function() {
 
+		return instances
+
+	}// end get_all_instances
 
 	/**
 	* DELETE_INSTANCE
