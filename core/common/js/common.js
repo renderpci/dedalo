@@ -58,8 +58,8 @@ common.prototype.render = async function(options={render_level:'full'}) {
 
 	const self = this
 
-	const render_mode 	= self.mode
-	const render_level 	= options.render_level
+	const render_mode 	= options.render_mode  || self.mode
+	const render_level 	= options.render_level || 'full'
 
 	// status update
 		self.status = 'rendering'
