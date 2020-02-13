@@ -900,7 +900,7 @@ export const ui = {
 			element.src = src;
 		}
 
-		if (type) {
+		if (type && element_type!=='textarea') {
 			element.type = type;
 		}
 
