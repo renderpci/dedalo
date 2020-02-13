@@ -247,14 +247,20 @@ class component_date extends component_common {
 		$valor			= '';
 		$date_mode 		= $this->get_date_mode();
 		foreach ($ar_dato as $key => $current_dato) {
-			$ar_valor[$key] ='';
+
+			$ar_valor[$key] = ''; // default
+
+			if(empty($current_dato)) {
+				continue;
+			}
+
 			switch ($date_mode) {
 
 				case 'range':
 					# Start
 					$valor_start = '';
 					if(isset($current_dato->start)) {
-						$dd_date	= new dd_date($current_dato->start);
+						$dd_date = new dd_date($current_dato->start);
 						/*
 						$valor_start= isset($propiedades->method->get_valor_local)
 									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) )
@@ -298,11 +304,10 @@ class component_date extends component_common {
 					break;
 
 				case 'period':
-				
 					if(!empty($current_dato->period)) {
-					
+
 						$ar_string_period = [];
-					
+
 						$dd_date = new dd_date($current_dato->period);
 						# Year
 						$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
@@ -310,22 +315,20 @@ class component_date extends component_common {
 						$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
 						# Day
 						$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
-					
-						$ar_valor[$key] = implode(' ',$ar_string_period);
+
+						$ar_valor[$key] = implode(' ', $ar_string_period);
 					}
-						
 					break;
 
 				case 'time':
-					//$input_name[$key] 	= $key."_{$tipo}_{$parent}";
-
-					if(!empty($current_dato)) {
-						$dd_date 	= new dd_date($current_dato);
-
-						$separator_time = ':';
-						$hour  	 = isset($dd_date->hour)	? sprintf("%02d", $dd_date->hour)   : '00';
-						$minute  = isset($dd_date->minute)	? sprintf("%02d", $dd_date->minute) : '00';
-						$second  = isset($dd_date->second)	? sprintf("%02d", $dd_date->second) : '00';								
+					$dd_date = new dd_date($current_dato);
+					// $hour  	 = isset($dd_date->hour)	? sprintf("%02d", $dd_date->hour)   : '00';
+					// $minute  = isset($dd_date->minute)	? sprintf("%02d", $dd_date->minute) : '00';
+					// $second  = isset($dd_date->second)	? sprintf("%02d", $dd_date->second) : '00';
+					// $separator_time = ':';
+					// $ar_valor[$key] = $hour . $separator_time . $minute . $separator_time . $second;
+					$ar_valor[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
+					break;
 
 				case 'date_time':
 					if(isset($current_dato->start)) {
@@ -334,21 +337,20 @@ class component_date extends component_common {
 					}
 					break;
 
-
 				case 'date':
 				default:
 					# Start
 					$valor_start = '';
 					if(isset($current_dato->start)) {
-						$dd_date	= new dd_date($current_dato->start);
+						$dd_date = new dd_date($current_dato->start);
 
 						if(isset($current_dato->start->day)) {
-							$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
+							$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
 						}else{
-							$valor_start = $dd_date->get_dd_timestamp("Y-m");
+							$valor_start = $dd_date->get_dd_timestamp('Y-m');
 							if(isset($current_dato->start->month)) {
 							}else{
-								$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
+								$valor_start = $dd_date->get_dd_timestamp('Y', $padding=false);
 							}
 						}
 
@@ -378,7 +380,7 @@ class component_date extends component_common {
 			}
 		}
 
- 		$valor = implode((isset($propiedades->divisor) ? $propiedades->divisor : ' | '),$ar_valor);
+ 		$valor = implode((isset($propiedades->divisor) ? $propiedades->divisor : ' | '), $ar_valor);
 
 		return (string)$valor;
 	}//end get_valor
@@ -990,8 +992,8 @@ class component_date extends component_common {
 		}
 
 		# Date
-		# the calculation of the seconds for the end of the period always need to be seconds -1 
-		# ex: year 2000 in seconds is: start = 64281600000 end = 64313740800 -1 or 64313740799 
+		# the calculation of the seconds for the end of the period always need to be seconds -1
+		# ex: year 2000 in seconds is: start = 64281600000 end = 64313740800 -1 or 64313740799
 		# because 64313740800 = 2001
 		if (isset($dd_date->day)) {
 
