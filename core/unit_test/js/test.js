@@ -1,5 +1,5 @@
 // test.js
-import {get_instance, key_instances_builder, delete_instance} from '../../common/js/instances.js'
+import {get_instance, key_instances_builder, delete_instance, get_all_instances} from '../../common/js/instances.js'
 import {page} from '../../page/js/page.js'
 import {component_input_text} from '../../component_input_text/js/component_input_text.js'
 import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
@@ -186,36 +186,63 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 
 					const new_instance = await get_instance(options)
 
-					if (stage ==='build' || stage === 'render') {
+					if (stage ==='build' || stage === 'render' || stage === 'destroy') {
 						await new_instance.build(true)
 
 						if (stage === 'render') {
 							await new_instance.render()
+
 						}
+						if (stage === 'destroy') {
 
+							const instance_id 	= new_instance.id
+							//const instance_key 	= options.key || key_instances_builder(options, true)
+							const instances 	= get_all_instances()
+							
+							// console.log("instances:",instances)
+							// 	console.log("instance_id:",instance_id)
+							// 		console.log("instance_key:",instance_key);
+							
+							const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
+							await new_instance.destroy()
+							const found_instance_after_destroy = instances.filter(instance => instance.id===instance_id)
+
+							// console.log("found_instance_before_destroy:",found_instance_before_destroy)
+							// console.log("found_instance_after_destroy:",found_instance_after_destroy)
+
+							//assert.equal(found_instance_before_destroy.length, 1)
+							assert.equal(found_instance_after_destroy.length, 0)
+
+							return false
+
+						}
 					}
 
-					switch (property) {
-					 	case 'status':
-					     	assert.equal(new_instance.status, expected)
-					     	break;
-					    case 'lang':
-					 		assert.equal(new_instance.lang, expected)
-					     	break;
-					    case 'permissions':
-					 		assert.equal(new_instance.permissions, expected)
-					     	break;
-					    case 'properties':
-					 		assert.notEqual(new_instance.permissions, expected)
-					     	break;
-				     	case 'typo':
-					 		assert.notEqual(new_instance.permissions, expected)
-					     	break;
+					if (property) {
+						switch (property) {
+						 	case 'status':
+						     	assert.equal(new_instance.status, expected)
+						     	break;
+						    case 'lang':
+						 		assert.equal(new_instance.lang, expected)
+						     	break;
+						    case 'permissions':
+						 		assert.equal(new_instance.permissions, expected)
+						     	break;
+						    case 'properties':
+						 		assert.notEqual(new_instance.permissions, expected)
+						     	break;
+					     	case 'typo':
+						 		assert.notEqual(new_instance.permissions, expected)
+						     	break;
 
-					    default:
-					 		assert.equal(new_instance.status, expected)
-					     	break;
+						    default:
+						 		assert.equal(new_instance.status, expected)
+						     	break;
+						}
 					}
+
+					await new_instance.destroy()
 
 			    });
 			}
@@ -267,6 +294,17 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					
 			});
 
+			describe("destroy instance based on existing instance", function() {
+								
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {
+						make_test(options[i], 'instance', 'destroy', 'destroy')
+					})
+				}
+					
+			});
+
 		});
 
 
@@ -308,6 +346,8 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					}else{
 						assert.notEqual(new_instance.data.value[0], old_value)
 					}
+
+					await new_instance.destroy()
 
 			    });
 				
