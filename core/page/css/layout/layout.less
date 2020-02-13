@@ -95,6 +95,7 @@
 		flex: 0 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'>
 		align-content: flex-start; // maintain items flow from top to bottom
 		//flex: 0 1 auto;
+		z-index: auto; // (!) important to allow fullscreen configs like tinymce
 
 		input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
 
@@ -555,7 +556,7 @@
 			}
 
 			>div {
-				height: 100%;
+				height: auto;
 				//display: inline-block;
 				padding: 1em;
 				//padding-left: 1em;
@@ -619,7 +620,13 @@
 							//.icon_svg;
 							//background-image: url(../../themes/default/icons/edit.svg);
 							.background_icon('edit.svg');
+
+							&.tm_preview {
+								.background_icon('eye.svg');
+							}
 						}
+
+
 					}
 
 					>.delete_line {
@@ -1055,7 +1062,7 @@
 		display: grid;
 		line-height: 1.1em;
 		//font-weight: bold;
-		//z-index: 1;
+		z-index: 1;
 
 		&.with_debug_info_bar {
 			top: 3.9em;
@@ -1851,6 +1858,10 @@
 
 		.mce-container {
 			// display: none !important;
+
+			// div.mce-fullscreen {
+			    // z-index: 1;
+			// }
 
 			.mce-branding-powered-by {
 				display: none;
