@@ -378,6 +378,11 @@ export const create_source = function(self, action){
 		pagination		: self.pagination
 	}
 
+	// matrix_id optional (used in time machine mode)
+		if (true===self.hasOwnProperty('matrix_id') && self.matrix_id) {
+			source.matrix_id = self.matrix_id
+		}
+
 	return source
 }//end create_source
 
