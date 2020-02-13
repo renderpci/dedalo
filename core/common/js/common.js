@@ -58,8 +58,8 @@ common.prototype.render = async function(options={render_level:'full'}) {
 
 	const self = this
 
-	const render_mode 	= self.mode
-	const render_level 	= options.render_level
+	const render_mode 	= options.render_mode  || self.mode
+	const render_level 	= options.render_level || 'full'
 
 	// status update
 		self.status = 'rendering'
@@ -377,6 +377,11 @@ export const create_source = function(self, action){
 		lang 			: self.lang,
 		pagination		: self.pagination
 	}
+
+	// matrix_id optional (used in time machine mode)
+		if (true===self.hasOwnProperty('matrix_id') && self.matrix_id) {
+			source.matrix_id = self.matrix_id
+		}
 
 	return source
 }//end create_source

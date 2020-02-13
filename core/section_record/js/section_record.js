@@ -43,6 +43,8 @@ export const section_record = function() {
 	this.ar_instances
 	this.caller
 
+	this.matrix_id
+
 	return true
 }//end section
 
@@ -93,6 +95,8 @@ section_record.prototype.init = async function(options) {
 	self.label 			= null
 
 	self.caller 		= options.caller || null
+
+	self.matrix_id 		= options.matrix_id || null
 
 	// events subscription
 		// event active (when user focus in dom)
