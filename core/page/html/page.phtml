@@ -2,21 +2,21 @@
 <html>
 <head>
 	<title></title>
-	<link href="<?php echo DEDALO_CORE_URL ?>/page/css/main.css?v=<?php echo DEDALO_VERSION ?>" rel="stylesheet">
+	<link href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>" rel="stylesheet">
 	<?php /*<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet"> */?>
 </head>
 <body>
 	<div id="main" class="hide"></div>
 	<div id="debug" class="debug hide"></div>
 </body>
-<script rel="preload" defer="defer" src="<?php echo DEDALO_CORE_URL ?>/common/js/enviroment.js.php"></script>
-<script defer="defer" src="<?php echo DEDALO_ROOT_WEB ?>/lib/tinymce/js/tinymce/tinymce.min.js"></script>
-<link rel="modulepreload" href="<?php echo DEDALO_CORE_URL ?>/common/js/components_list.js?v=<?php echo DEDALO_VERSION ?>">
+<script rel="preload" defer="defer" src="../common/js/enviroment.js.php"></script>
+<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
+<link rel="modulepreload" href="../common/js/components_list.js?v=<?php echo DEDALO_VERSION ?>">
 <script type="module">
 	const t0 = performance.now()
 
 	// page instance
-	import {get_instance} from '../common/js/instances.js?v=<?php echo DEDALO_VERSION ?>'
+	import {get_instance} from '../common/js/instances.js'
 	( async () => {
 
 		const main = document.getElementById("main")
@@ -26,7 +26,7 @@
 			const page = await get_instance({
 				model 		: 'page',
 				//mode		: <?php echo json_encode($page_options->mode) ?> || 'edit',
-				elements 	: <?php echo json_encode($page_options->page_elements) ?>
+				elements 	: <?php echo json_encode($page_options->page_elements, JSON_UNESCAPED_UNICODE) ?>
 			})
 
 		// page instance build and render

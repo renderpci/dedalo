@@ -1,5 +1,5 @@
 // test.js
-import {get_instance, key_instances_builder, delete_instance} from '../../common/js/instances.js'
+import {get_instance, key_instances_builder, delete_instance, get_all_instances} from '../../common/js/instances.js'
 import {page} from '../../page/js/page.js'
 import {component_input_text} from '../../component_input_text/js/component_input_text.js'
 import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
@@ -22,7 +22,31 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 
 	// });
 
+// Define components that will be tested
+	const options_input_text = {
+		"model" 		: "component_input_text",
+		"tipo"  		: "test159",
+		"section_tipo" 	: "test65",
+		"section_id" 	: 5,
+		"mode" 			: "edit",
+		"lang" 			: "lg-eng",
+		"context" 		: {permissions: 1, tipo: 'test159', model: 'component_input_text', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
+		//"datum"			: {data:[]}
+	}
 
+	const options_number = {
+		"model" 		: "component_number",
+		"tipo"  		: "test139",
+		"section_tipo" 	: "test65",
+		"section_id" 	: 5,
+		"mode" 			: "edit",
+		"lang" 			: "lg-eng",
+		"context" 		: {permissions: 1, tipo: 'test139', model: 'component_number', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
+	}
+
+	const options = []
+	options.push(options_input_text)
+	options.push(options_number)
 
 // instances
 	// key_instances_builder
@@ -153,9 +177,206 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 			});
 		});
 
+	// test lifecycle functions for any component instance
+		describe("instances : lifecycle", function(){	
+
+			function make_test (options, property, expected, stage) {
+				//it(`${JSON.stringify(property)} => Init: ${expected}`, async function() {
+				it(`${JSON.stringify(property)} => Init ${options.model}: ${expected}`, async function() {
+
+					const new_instance = await get_instance(options)
+
+					if (stage ==='build' || stage === 'render' || stage === 'destroy') {
+						await new_instance.build(true)
+
+						if (stage === 'render') {
+							await new_instance.render()
+
+						}
+						if (stage === 'destroy') {
+
+							const instance_id 	= new_instance.id
+							//const instance_key 	= options.key || key_instances_builder(options, true)
+							const instances 	= get_all_instances()
+							
+							// console.log("instances:",instances)
+							// 	console.log("instance_id:",instance_id)
+							// 		console.log("instance_key:",instance_key);
+							
+							const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
+							await new_instance.destroy()
+							const found_instance_after_destroy = instances.filter(instance => instance.id===instance_id)
+
+							// console.log("found_instance_before_destroy:",found_instance_before_destroy)
+							// console.log("found_instance_after_destroy:",found_instance_after_destroy)
+
+							//assert.equal(found_instance_before_destroy.length, 1)
+							assert.equal(found_instance_after_destroy.length, 0)
+
+							return false
+
+						}
+					}
+
+					if (property) {
+						switch (property) {
+						 	case 'status':
+						     	assert.equal(new_instance.status, expected)
+						     	break;
+						    case 'lang':
+						 		assert.equal(new_instance.lang, expected)
+						     	break;
+						    case 'permissions':
+						 		assert.equal(new_instance.permissions, expected)
+						     	break;
+						    case 'properties':
+						 		assert.notEqual(new_instance.permissions, expected)
+						     	break;
+					     	case 'typo':
+						 		assert.notEqual(new_instance.permissions, expected)
+						     	break;
+
+						    default:
+						 		assert.equal(new_instance.status, expected)
+						     	break;
+						}
+					}
+
+					await new_instance.destroy()
+
+			    });
+			}
+
+			
+			describe("init instance based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
+				
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {
+			
+						make_test(options[i], 'status', 'inited', 'init')
+						make_test(options[i], 'lang', options[i].lang, 'init')
+						make_test(options[i], 'permissions', null, 'init')
+
+					})
+			
+				}				
+			});
+			
+
+			describe("build instance based on options values to create a component instance: status = builded and permissions = 1", function() {
+				
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {
+
+						make_test(options[i], 'status', 'builded', 'build')
+						make_test(options[i], 'permissions', options[i].context.permissions, 'build')
+	
+						make_test(options[i], 'properties', null, 'build')
+						make_test(options[i], 'typo', null, 'build')
+
+					})
+
+				}
+					
+			});
 
 
+			describe("render instance based on options values to create a component instance: status = builded and permissions = 1", function() {
+				
+				for (let i = 0; i < options.length; i++) {
 
+					describe(options[i].model, function() {
+						make_test(options[i], 'status', 'rendered', 'render')
+					})
+				}
+					
+			});
+
+			describe("destroy instance based on existing instance", function() {
+								
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {
+						make_test(options[i], 'instance', 'destroy', 'destroy')
+					})
+				}
+					
+			});
+
+		});
+
+
+	// test change data functions for any component instance
+		describe("instances : change data", function(){
+
+			function make_test (options, equals) {
+
+				const test_title = (equals===true) ? `${options.model} => Save new_value = old_value + 1`: `${options.model} => Save new_value != old_value`
+		
+				it(test_title, async function() {
+
+					const old_instance = await get_instance(options)
+					await old_instance.build(true)
+	
+					const old_value = old_instance.data.value[0]
+					const new_value = old_value + 1
+					//const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
+		
+					const changed_data = Object.freeze({
+						action	: 'update',
+						key		: 0,
+						value	: new_value,
+					})
+					
+					await old_instance.change_value({
+						changed_data : changed_data,
+						refresh 	 : false
+					})
+											
+					await old_instance.destroy()
+
+					const new_instance = await get_instance(options)
+						
+					await new_instance.build(true)
+						
+					if (equals===true) {
+						assert.equal(new_instance.data.value[0], new_value)
+					}else{
+						assert.notEqual(new_instance.data.value[0], old_value)
+					}
+
+					await new_instance.destroy()
+
+			    });
+				
+				
+			}
+
+			describe("save data equals", function() {
+				
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {
+						make_test(options[i], true)
+					})
+				}
+					
+			});
+
+			describe("save data NOT equals", function() {
+				
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {						
+						make_test(options[i], false)
+					})
+				}
+					
+			});
+
+		});
 
 
 

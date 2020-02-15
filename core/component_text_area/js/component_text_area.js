@@ -56,6 +56,7 @@ export const component_text_area = function(){
 	component_text_area.prototype.list 			= render_component_text_area.prototype.list
 	component_text_area.prototype.edit 			= render_component_text_area.prototype.edit
 	component_text_area.prototype.edit_in_list	= render_component_text_area.prototype.edit
+	component_text_area.prototype.tm 			= render_component_text_area.prototype.edit // time machine render alias of edit
 	component_text_area.prototype.search 		= render_component_text_area.prototype.search
 	component_text_area.prototype.change_mode 	= component_common.prototype.change_mode
 
@@ -97,48 +98,48 @@ component_text_area.prototype.save_value = async function(key, value) {
 */
 // const get_prosemirror = async (editor) => {
 
-// 	// load dependences js/css
-// 		const load_promises = []
+	// 	// load dependences js/css
+	// 		const load_promises = []
 
-// 		const lib_js_file = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/prosemirror.js'
-// 		load_promises.push( common.prototype.load_script(lib_js_file) )
-// 		//await common.prototype.load_script(lib_js_file)
+	// 		const lib_js_file = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/prosemirror.js'
+	// 		load_promises.push( common.prototype.load_script(lib_js_file) )
+	// 		//await common.prototype.load_script(lib_js_file)
 
-// 		//const lib_js_file_require = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/require-pm.js'
-// 		//load_promises.push( common.prototype.load_script(lib_js_file_require) )
-// 		//await load_promises.push( common.prototype.load_script(lib_js_file_require) )
+	// 		//const lib_js_file_require = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/require-pm.js'
+	// 		//load_promises.push( common.prototype.load_script(lib_js_file_require) )
+	// 		//await load_promises.push( common.prototype.load_script(lib_js_file_require) )
 
-// 		// const lib_js_file_index = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/index.js'
-// 		// load_promises.push( common.prototype.load_script(lib_js_file_index) )
-// 		// //await common.prototype.load_script(lib_js_file_index)
+	// 		// const lib_js_file_index = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/index.js'
+	// 		// load_promises.push( common.prototype.load_script(lib_js_file_index) )
+	// 		// //await common.prototype.load_script(lib_js_file_index)
 
-// 		const lib_css_file = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/css/editor.css'
-// 		load_promises.push( common.prototype.load_style(lib_css_file) )
+	// 		const lib_css_file = DEDALO_ROOT_WEB + '/lib/prosemirror/dist/css/editor.css'
+	// 		load_promises.push( common.prototype.load_style(lib_css_file) )
 
-// 		await Promise.all(load_promises).then(async function(response){
-// 			console.log("get_prosemirror load files response:",response);
-// 		})
+	// 		await Promise.all(load_promises).then(async function(response){
+	// 			console.log("get_prosemirror load files response:",response);
+	// 		})
 
-// 	// init
-// 		// // source value base content
-// 		// 	const mySchema = new ProseMirror.Schema({
-// 		// 	  nodes: ProseMirror.addListNodes(ProseMirror.basicSchema.spec.nodes, "paragraph block*", "block"),
-// 		// 	  marks: ProseMirror.basicSchema.spec.marks
-// 		// 	})
-// 		// 	const base_content = document.createElement("div")
-// 		//  	base_content.innerHTML = "Patata <b>verde</b> y <i>roja</i>"
+	// 	// init
+	// 		// // source value base content
+	// 		// 	const mySchema = new ProseMirror.Schema({
+	// 		// 	  nodes: ProseMirror.addListNodes(ProseMirror.basicSchema.spec.nodes, "paragraph block*", "block"),
+	// 		// 	  marks: ProseMirror.basicSchema.spec.marks
+	// 		// 	})
+	// 		// 	const base_content = document.createElement("div")
+	// 		//  	base_content.innerHTML = "Patata <b>verde</b> y <i>roja</i>"
 
-// 		// plugins
-// 			const plugins = ProseMirror.exampleSetup({ schema: ProseMirror.basicSchema });
+	// 		// plugins
+	// 			const plugins = ProseMirror.exampleSetup({ schema: ProseMirror.basicSchema });
 
-// 		// view
-// 			const view = new ProseMirror.EditorView(editor, {
-// 			    state: ProseMirror.EditorState.create({
-// 			        schema: ProseMirror.basicSchema,
-// 			        //doc: ProseMirror.DOMParser.fromSchema(mySchema).parse(base_content),
-// 			        plugins: plugins
-// 			    })
-// 			});
+	// 		// view
+	// 			const view = new ProseMirror.EditorView(editor, {
+	// 			    state: ProseMirror.EditorState.create({
+	// 			        schema: ProseMirror.basicSchema,
+	// 			        //doc: ProseMirror.DOMParser.fromSchema(mySchema).parse(base_content),
+	// 			        plugins: plugins
+	// 			    })
+	// 			});
 
-// 	return view
+	// 	return view
 // }//end get_prosemirror

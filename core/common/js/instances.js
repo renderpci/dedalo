@@ -62,7 +62,7 @@
 
 					// element file import path
 						const base_path = model.indexOf('tool_') !== -1 ? '../../tools/' : '../../'
-						const path = base_path + model + '/js/' + model + '.js' + '?v=' + page_globals.dedalo_version
+						const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
 
 					// import element mod file once (and wait until finish)
 						const current_element = await import(path)
@@ -103,7 +103,15 @@
 		return instance
 	}// end get_instance
 
+	/**
+	* GET_ALL_INSTANCES
+	* Get all the instances from memory 
+	*/
+	export const get_all_instances = function() {
 
+		return instances
+
+	}// end get_all_instances
 
 	/**
 	* DELETE_INSTANCE

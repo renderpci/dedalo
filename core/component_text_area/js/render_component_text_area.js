@@ -11,7 +11,7 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_TEXT_AREA
 * Manage the components logic and appearance in client side
 */
 export const render_component_text_area = function() {
