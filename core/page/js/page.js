@@ -4,6 +4,10 @@
 
 
 // import
+	// custom html elements
+	import '../../common/js/dd-modal.js'
+	import '../../services/service_tinymce/js/dd-tiny.js'
+	// others
 	import {menu} from '../../menu/js/menu.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -11,6 +15,8 @@
 	import {common} from '../../common/js/common.js'
 	import {load_tool} from '../../tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
+	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
+
 	import {render_page} from './render_page.js'
 	import '../../services/service_tinymce/js/dd-tiny.js'
 
@@ -132,6 +138,21 @@ page.prototype.init = async function(options) {
 		self.events_tokens.push(
 			event_manager.subscribe('load_tool', load_tool)
 		)
+
+
+	// BEFOREUNLOAD (EVENT)
+		window.addEventListener("beforeunload", function (event) {
+			event.preventDefault();
+
+			document.activeElement.blur()
+
+			// 		const confirmationMessage = "Leaving tool transcription page.. ";
+			// 		event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
+			// 		// return confirmationMessage;				// Gecko, WebKit, Chrome <34
+
+			return null
+
+		}, false)//end beforeunload
 
 
 	// status update

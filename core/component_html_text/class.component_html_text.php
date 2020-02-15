@@ -16,7 +16,7 @@ class component_html_text extends component_common {
 
 
 	# SET_DATO
-	public function set_dato($dato) {			
+	public function set_dato($dato) {
 		// if ($dato==='""') {
 		// 	$dato = "";
 		// }
@@ -65,11 +65,11 @@ class component_html_text extends component_common {
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
 	*/
 	public function Save( $update_all_langs_tags_state=true ) {
-		
+
 		# Dato current assigned
 		$dato_current 	= $this->dato;
 
-		# Clean dato 
+		# Clean dato
 		$dato_clean 	= $this->clean_text($dato_current);
 
 		# Set dato again (cleaned)
@@ -83,7 +83,7 @@ class component_html_text extends component_common {
 
 
 	/**
-	* GET DATO DEFAULT 
+	* GET DATO DEFAULT
 	* Overwrite common_function
 	*/
 	public function get_dato_default_lang() {
@@ -98,23 +98,23 @@ class component_html_text extends component_common {
 	* GET VALOR
 	* Overwrite common_function
 	*/
-	public function get_valor() {			
-		
+	public function get_valor() {
+
 		switch ($this->modo) {
 			case 'dummy':
 			case 'diffusion':
 				#$dato = $this->get_dato();
-				$dato = parent::get_dato();		
+				$dato = parent::get_dato();
 				break;
-			
+
 			default:
-				$dato = parent::get_dato();	
+				$dato = parent::get_dato();
 				#dump($dato,'dato');
 
 				//$dato = $this->clean_text($dato);
-					#dump($dato ,'$dato ');				
+					#dump($dato ,'$dato ');
 				break;
-		}		
+		}
 
 		return $dato;
 	}//end get_valor
@@ -135,7 +135,7 @@ class component_html_text extends component_common {
 		// foreach ((array)$dato as $key => $value) {
 		// 	$clean_dato [] = trim($value);
 		// }
-		
+
 		// $dato = $clean_dato;
 
 		// return (array)$dato;//trim($string);
@@ -149,7 +149,7 @@ class component_html_text extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
+
     	# Always set fixed values
 		$query_object->type = 'string';
 
@@ -170,7 +170,7 @@ class component_html_text extends component_common {
 	    			$clone->q_parsed = '\'.*""\'';
 
 				$logical_operator = '$or';
-    			$new_query_json = new stdClass;    			
+    			$new_query_json = new stdClass;
 	    			$new_query_json->$logical_operator = [$query_object, $clone];
     			# override
     			$query_object = $new_query_json ;
@@ -191,13 +191,13 @@ class component_html_text extends component_common {
 
 
 				$logical_operator ='$and';
-    			$new_query_json = new stdClass;    			
-    				$new_query_json->$logical_operator = [$query_object, $clone];    
+    			$new_query_json = new stdClass;
+    				$new_query_json->$logical_operator = [$query_object, $clone];
 
 				# override
     			$query_object = $new_query_json ;
 				break;
-			# IS DIFFERENT			
+			# IS DIFFERENT
 			case (strpos($q, '!=')===0):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
@@ -220,8 +220,8 @@ class component_html_text extends component_common {
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
-				break;	
-			# CONTAIN				
+				break;
+			# CONTAIN
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
@@ -260,9 +260,9 @@ class component_html_text extends component_common {
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
-				break;			
-		}//end switch (true) {		
-       
+				break;
+		}//end switch (true) {
+
 
         return $query_object;
 	}//end resolve_query_object_sql
@@ -273,10 +273,10 @@ class component_html_text extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null	
+			'!*' 	 => 'campo_vacio', // null
 			'=' 	 => 'similar_a',
 			'!=' 	 => 'distinto_de',
 			'-' 	 => 'no_contiene',
@@ -290,6 +290,6 @@ class component_html_text extends component_common {
 	}//end search_operators_info
 
 
-	
+
 }//end component_html_text
 ?>

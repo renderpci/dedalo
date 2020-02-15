@@ -90,7 +90,7 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 */
 const add_events = function(self, wrapper) {
 
-	const multi_line 	= self.context.properties.multi_line || 'false'
+	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : 'false'
 	const element_type 	= (multi_line === true) ? 'textarea' :'input[type="text"]'
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
@@ -100,7 +100,7 @@ const add_events = function(self, wrapper) {
 		function update_value (changed_data) {
 			//console.log("-------------- - event update_value changed_data:", changed_data);
 			// change the value of the current dom element
-			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
+			const changed_node = wrapper.querySelector(element_type + '[data-key="'+changed_data.key+'"]')
 			changed_node.value = changed_data.value
 		}
 
@@ -439,7 +439,7 @@ const get_content_data_edit = async function(self) {
 const get_input_element_edit = (i, current_value, inputs_container, self, is_inside_tool) => {
 
 	const mode 		 	= self.mode
-	const multi_line 	= self.context.properties.multi_line || false
+	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : 'false'
 	const element_type 	= (multi_line === true) ? 'textarea' :'input'
 
 	// li
@@ -450,14 +450,13 @@ const get_input_element_edit = (i, current_value, inputs_container, self, is_ins
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: element_type,			
+			element_type 	: element_type,
+			type 		 	: 'text',		
 			class_name 		: 'input_value',
 			dataset 	 	: { key : i },
 			value 		 	: current_value,
 			parent 		 	: li
 		})
-
-		if (!multi_line) input.type = 'text'
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){

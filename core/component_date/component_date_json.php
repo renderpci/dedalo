@@ -18,7 +18,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -33,26 +33,26 @@
 	if($options->get_data===true && $permissions>0){
 
 		// Value
-		switch ($modo) {			
+		switch ($modo) {
 			case 'list':
-				$value 				= $this->get_valor();
+				$value = $this->get_valor();
 				break;
 
 			case 'edit':
 			default:
-				// Building real value			
+				// Building real value
 					$value = $this->get_dato();
 					if (!empty($value)) {
 						// process dato ?
 					}//end if (!empty($dato))
-				break;		
+				break;
 		}
-		
+
 		// data item
 		$item  = $this->get_data_item($value);
 
 		$data[] = $item;
-			
+
 	}//end if $permissions>0
 
 

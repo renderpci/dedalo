@@ -8,12 +8,18 @@
 
 	@media_max_height : 27em;
 
+	// break points
+	@width_break_point_1 : 960px;
+
+
 
 // general styles
 
 	.mark{
 		font-style: italic;
 	}
+
+
 
 // mixins
 	// background_icon function. Receive icon full name like 'bug.svg'
@@ -49,11 +55,11 @@
 			box-shadow: 0 0 10px @color_blue; //rgba(26, 154, 245, .5);
 			opacity: 1;
 			z-index: 1;
+
+			&.input_value {
+				padding-right: 2em;
+			}
 		}
-
-
-
-// html inputs
 
 
 
@@ -89,6 +95,7 @@
 		flex: 0 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'>
 		align-content: flex-start; // maintain items flow from top to bottom
 		//flex: 0 1 auto;
+		z-index: auto; // (!) important to allow fullscreen configs like tinymce
 
 		input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
 
@@ -383,6 +390,11 @@
 			left: 54px;
 			margin-top: 1px;
 			font-size: 1.2em;
+
+			@media screen and (max-width: @width_break_point_1) {
+				position: initial;
+				margin-bottom: 1em;
+			}
 		}
 
 		>.buttons {
@@ -419,6 +431,10 @@
 		&.edit {
 			//padding-right: @inspector_width;
 			width: calc(100vw - 18em);
+
+			@media screen and (max-width: @width_break_point_1) {
+				width: 100%;
+			}
 
 
 			&.full_width {
@@ -540,7 +556,7 @@
 			}
 
 			>div {
-				height: 100%;
+				height: auto;
 				//display: inline-block;
 				padding: 1em;
 				//padding-left: 1em;
@@ -604,7 +620,13 @@
 							//.icon_svg;
 							//background-image: url(../../themes/default/icons/edit.svg);
 							.background_icon('edit.svg');
+
+							&.tm_preview {
+								.background_icon('eye.svg');
+							}
 						}
+
+
 					}
 
 					>.delete_line {
@@ -715,24 +737,76 @@
 
 			// component_image
 			&.component_image {
-				max-height: @media_max_height;
-				img {
-					padding: 0;
-					flex: 1;
-					// height: 100%;
-					// max-height: 10em;
-					// width: 100%;
+				>.content_data {
+					max-height: @media_max_height;
+
+					// image
+					.image  {
+						height: 100%;
+						// height: auto;
+						max-height: 100%;
+						// width: 100%;
+						max-width: 100%;
+						//min-height: 14em;
+						//background-position: initial;
+						//background-size: cover;
+						background-repeat: no-repeat;
+						background-size: contain;
+						background-position: center;
+						object-fit: contain;
+						object-position: center;
+
+						// on focus adds a soft shadow and outline
+						&:focus {
+							.hilite(-1px);
+						}
+					}
+
+					img {
+						padding: 0;
+						flex: 1;
+						// height: 100%;
+						// max-height: 10em;
+						// width: 100%;
+					}
 				}
 			}
 
 			// component_av
 			&.component_av {
-				max-height: @media_max_height;
+				>.content_data {
+					max-height: @media_max_height;
+					height: 100%;
+
+					// posterframe
+					.posterframe  {
+						// height: 100%;
+						max-height: 100%;
+						// width: 100%;
+						max-width: 100%;
+						//min-height: 14em;
+						//background-position: initial;
+						//background-size: cover;
+						background-repeat: no-repeat;
+						background-size: contain;
+						background-position: center;
+						object-fit: contain;
+						object-position: center;
+						align-self: center;
+
+						// on focus adds a soft shadow and outline
+						&:focus {
+							.hilite(-1px);
+						}
+					}
+				}
 			}
 
 			// component_svg
 			&.component_svg {
-				max-height: @media_max_height;
+				>.content_data {
+					max-height: @media_max_height;
+				}
 				img.image {
 					padding: 0;
 					height: 100%;
@@ -743,17 +817,18 @@
 
 			// component pdf
 			&.component_pdf {
-				max-height: @media_max_height;
+				min-height: 50em;
 				>.content_data {
 					height: 100%;
+
 				}
 			}
 
 			// component json
 			&.component_json {
-				max-height: @media_max_height;
 				>.content_data {
 					height: 100%;
+					max-height: @media_max_height;
 				}
 			}
 
@@ -838,6 +913,12 @@
 				flex-wrap: wrap;
 				//flex-flow: column;
 				align-items: flex-start;
+
+				@media screen and (max-width: @width_break_point_1) {
+					flex: 1 1 100%;
+				}
+
+
 
 				&.vertical {
 					flex: 1 1 100%;
@@ -977,11 +1058,11 @@
 		color: #efefef;
 		//display: flex;
 		width: 100%;
-		z-index: 1;
+		// z-index: 1;
 		display: grid;
 		line-height: 1.1em;
 		//font-weight: bold;
-		//z-index: 1;
+		z-index: 1;
 
 		&.with_debug_info_bar {
 			top: 3.9em;
@@ -1006,7 +1087,7 @@
 // buttons with icons
 	.button {
 		display: none;
-		color: #ffffff;
+		color: #4c4c4c; // not set as white
 		cursor: pointer;
 		background-repeat: no-repeat;
 		background-position: center;
@@ -1218,6 +1299,12 @@
 		top: @top_distance;
 		left: calc(100vw - 16.4em);
 		border: 1px solid #eee;
+
+		@media screen and (max-width: @width_break_point_1) {
+			width: 100%;
+			left: 0;
+			position: initial;
+		}
 	}
 	// .toggle_inspector {
 	// 	//background-color: #fcfcfc;
@@ -1472,7 +1559,6 @@
 		&:after {
 			content: "*";
 		}
-
 	}
 
 
@@ -1676,27 +1762,6 @@
 
 
 
-// posterframe / image
-	.posterframe, .image  {
-		height: 100%;
-		max-width: 100%;
-		//min-height: 14em;
-		//background-position: initial;
-		//background-size: cover;
-		background-repeat: no-repeat;
-		background-size: contain;
-		background-position: center;
-		object-fit: contain;
-		object-position: center;
-
-		// on focus adds a soft shadow and outline
-		&:focus {
-			.hilite(-1px);
-		}
-	}
-
-
-
 // components wrapper modifiers
 	.section_record .wrapper_component,
 	.wrapper_tool .wrapper_component {
@@ -1738,6 +1803,7 @@
 	}
 
 
+
 // component_json
 	.component_json {
 
@@ -1761,6 +1827,7 @@
 	}
 
 
+
 // component pdf
 	.component_pdf {
 
@@ -1773,7 +1840,6 @@
 
 
 // modal
-
 
 
 
@@ -1793,18 +1859,17 @@
 		.mce-container {
 			// display: none !important;
 
+			// div.mce-fullscreen {
+			    // z-index: 1;
+			// }
+
 			.mce-branding-powered-by {
 				display: none;
 			}
 
 			iframe {
-				// height: 100%;
-				// min-height: 100% !important;
-				// display: none !important;
 			}
-
 		}
-
 
 
 
@@ -1906,7 +1971,6 @@
 		}
 	}//end id_column
 	*/
-
 
 
 
