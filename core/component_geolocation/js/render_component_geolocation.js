@@ -76,9 +76,6 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 			content_data : current_content_data
 		})
 
-	//init the map with the wrapper
-		self.init_map(wrapper)
-
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
@@ -317,8 +314,15 @@ const content_data_edit = async function(self) {
 	const fragment 			= new DocumentFragment()
 	const is_inside_tool 	= ui.inside_tool(self)
 
+	// inputs container
+		const inputs_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'inputs_container',
+			parent 			: fragment
+		})
+
 	// inputs
-		get_input_element(value, fragment, self)
+		get_input_element(value, inputs_container, self)
 
 
 	// buttons container
@@ -340,14 +344,6 @@ const content_data_edit = async function(self) {
 	// tools
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
-	// map container
-		const map_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'leaflet_map',
-			parent 			: fragment
-		})
-
-
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data")
@@ -365,25 +361,26 @@ const content_data_edit = async function(self) {
 */
 const get_input_element = (value, content_data, self) => {
 
+
+	// li
+		const li = ui.create_dom_element({
+			element_type : 'li',
+			parent 		 : content_data
+		})
+
 	// inputs container
 		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: content_data
+			element_type : 'div',
+			parent 		 : li
 		})
 
 	// latitude
-		// li_lat
-			const li_lat = ui.create_dom_element({
-				element_type : 'li',
-				parent 		 : inputs_container
-			})
 
 		// label field latitude
 			ui.create_dom_element({
 				element_type 	: 'label',
 				text_content 	: get_label['latitud'],
-				parent 		 	: li_lat
+				parent 		 	: inputs_container
 			})
 
 		// input field latitude
@@ -393,21 +390,16 @@ const get_input_element = (value, content_data, self) => {
 				class_name 		: 'geo_active_input lat',
 				dataset 	 	: { name : 'lat' },
 				value 		 	: value.lat,
-				parent 		 	: li_lat
+				parent 		 	: inputs_container
 			})
 
 	// longitude
-		// li_lon
-			const li_lon = ui.create_dom_element({
-				element_type : 'li',
-				parent 		 : inputs_container
-			})
 
 		// label field longitude
 			ui.create_dom_element({
 				element_type 	: 'label',
 				text_content 	: get_label['longitud'],
-				parent 		 	: li_lon
+				parent 		 	: inputs_container
 			})
 
 		// input field longitude
@@ -417,21 +409,16 @@ const get_input_element = (value, content_data, self) => {
 				class_name 		: 'geo_active_input lon',
 				dataset 	 	: { name : 'lon' },
 				value 		 	: value.lon,
-				parent 		 	: li_lon
+				parent 		 	: inputs_container
 			})
 
 	// zoom
-		// li_zoom
-			const li_zoom = ui.create_dom_element({
-				element_type : 'li',
-				parent 		 : inputs_container
-			})
 
 		// label field zoom
 			ui.create_dom_element({
 				element_type 	: 'label',
 				text_content 	: get_label['mapa_zoom'],
-				parent 		 	: li_zoom
+				parent 		 	: inputs_container
 			})
 
 		// input field zoom
@@ -441,21 +428,15 @@ const get_input_element = (value, content_data, self) => {
 				class_name 		: 'geo_active_input zoom',
 				dataset 	 	: { name : 'zoom' },
 				value 		 	: value.zoom,
-				parent 		 	: li_zoom
+				parent 		 	: inputs_container
 			})
 
 	// altitude
-		// li_alt
-			const li_alt = ui.create_dom_element({
-				element_type : 'li',
-				parent 		 : inputs_container
-			})
-
 		// label field altitude
 			ui.create_dom_element({
 				element_type 	: 'label',
 				text_content 	: get_label['altitude'],
-				parent 		 	: li_alt
+				parent 		 	: inputs_container
 			})
 
 		// input field altitude
@@ -465,11 +446,23 @@ const get_input_element = (value, content_data, self) => {
 				class_name 		: 'altitude',
 				dataset 	 	: { name : 'alt' },
 				value 		 	: value.alt,
-				parent 		 	: li_alt
+				parent 		 	: inputs_container
 			})
 
 
-	return inputs_container
+	// map container
+		const map_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'leaflet_map',
+			parent 			: li
+		})
+
+	//init the map with the wrapper
+		self.init_map(map_container)
+
+
+
+	return li
 }//end get_input_element
 
 
