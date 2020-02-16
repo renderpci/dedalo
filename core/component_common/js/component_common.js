@@ -101,7 +101,7 @@ component_common.prototype.init = async function(options) {
 
 			if(perform){
 				self.events_tokens.push(
-					event_manager.subscribe(component_tipo + event, self[perform].bind(self))
+					event_manager.subscribe(event +'_'+ component_tipo, self[perform].bind(self))
 				)
 			}
 		}

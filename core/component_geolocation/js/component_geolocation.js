@@ -4,6 +4,7 @@
 
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_geolocation} from '../../component_geolocation/js/render_component_geolocation.js'
@@ -410,7 +411,7 @@ component_geolocation.prototype.load_geo_editor = function(tag, all_tags) {
 	}
 
 	if(SHOW_DEBUG===true) {
-		console.log("[component_geolocation.load_geo_editor] tag:",tag);;
+		//console.log("[component_geolocation.load_geo_editor] tag:",tag);;
 	}	
 
 	// TAG : Get all information of the selected tag
@@ -796,27 +797,19 @@ component_geolocation.prototype.save_draw_data = function() {
 			}
 			current_draw_data = current_draw_data.replace(/"/g, '\'') //replaceAll('"', '\'', current_draw_data)
 
-		const new_data_obj = {
-			data : current_draw_data
-		}	
 
 		const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
 
-		const related_tipo = JSON.parse(this.related_tipo)[0]
-			if(related_tipo.length <= 0 ){
-				console.error("[component_geolocation.save_draw_data] Error on locate this.related_tipo");
-				return false
-			}
-
 		const tag_data = {
-			component_tipo 	: related_tipo,
 			type 			: tag_obj.dataset.type,
 			tag_id 			: tag_obj.dataset.tag_id,
-			id 				: tag_obj.id
+			id 				: tag_obj.id,
+			dataset			: {data:current_draw_data},
+			save 			: true
 		}
 
 		// UPDATE_TAG
-		component_text_area.update_tag( tag_data, new_data_obj, true);
+		event_manager.publish('geo_change_tag' +'_'+ self.tipo, tag_data)
 
 		return true
 	};//end save_draw_data

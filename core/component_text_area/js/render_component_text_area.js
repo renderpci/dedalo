@@ -626,7 +626,7 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'geo' :
 					// Load geo editor
-					event_manager.publish(self.tipo+'click_tag_geo', tag_obj)
+					event_manager.publish('click_tag_geo' +'_'+ self.tipo, tag_obj)
 					
 					break;
 
