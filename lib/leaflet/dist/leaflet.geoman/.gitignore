@@ -1,0 +1,9 @@
+npm-debug.log
+.DS_Store
+/node_modules/
+/bower_components/
+/.idea/
+/dist/
+\.source*
+/cypress/screenshots
+/cypress/videos

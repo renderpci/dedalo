@@ -25,6 +25,10 @@ export const component_geolocation = function(){
 
 	this.context
 	this.data
+	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
+	// We need a temporary value for the all current values of the inputs (lat, lon, zoom, alt)
+	// to will be used for save it when the user clicks on the save button
+	this.current_value = []
 
 	this.parent
 	this.node
@@ -116,15 +120,12 @@ component_geolocation.prototype.init = async function(options) {
 	return common_init
 }//end init
 
-
-
-
 /**
-* INIT_MAP
+* get_MAP
 * load the libraries and specific css
 */
 
-component_geolocation.prototype.init_map = async function(map_container) {
+component_geolocation.prototype.get_map = async function(map_container, value) {
 
 	const self = this
 
@@ -135,13 +136,17 @@ component_geolocation.prototype.init_map = async function(map_container) {
 		const default_alt 	= 0
 
 	// get data
-		const field_lat  	= self.data.value.lat || default_lat
-		const field_lon  	= self.data.value.lon || default_lon
-		const field_zoom 	= self.data.value.zoom || default_zoom
-		const field_alt 	= self.data.value.alt || default_alt
+		const key 			= JSON.parse(map_container.dataset.key)
+		const field_lat  	= value.lat 	|| default_lat
+		const field_lon  	= value.lon 	|| default_lon
+		const field_zoom 	= value.zoom 	|| default_zoom
+		const field_alt 	= value.alt 	|| default_alt
+
+	// update teh current_value
+		self.current_value[key] = JSON.parse(JSON.stringify(self.data.value[key]))
 
 	// map_data
-		const map_data = (typeof self.data.value!=="undefined")
+		const map_data = (typeof value!=="undefined")
 			? {
 				x	  : field_lat,
 				y	  : field_lon,
@@ -155,6 +160,7 @@ component_geolocation.prototype.init_map = async function(map_container) {
 				alt  : default_alt
 			 }
 
+				console.log("map_data:",map_data);
 	// new map vars			
 		let arcgis 			= null
 		let osm  			= null
@@ -173,14 +179,6 @@ component_geolocation.prototype.init_map = async function(map_container) {
 					maxZoom: 19
 				}).addTo(self.map);
 				break;
-
-			// case 'COULDMADE':
-				// 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
-				// 	L.tileLayer('http://{s}.tile.cloudmade.com/API-key/997/256/{z}/{x}/{y}.png', {
-				// 		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
-				// 		maxZoom: 18
-				// 	}).addTo(map);
-				// 	break;
 
 			case 'GOOGLE':
 				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -279,7 +277,7 @@ component_geolocation.prototype.init_map = async function(map_container) {
 				lat  : self.map.getCenter().lat,
 				lon  : self.map.getCenter().lng,
 				zoom : self.map.getZoom()
-			}, map_container.parentNode)
+			},map_container)
 		});
 		self.map.on('zoomend', function(e){
 			// Update input values
@@ -287,7 +285,7 @@ component_geolocation.prototype.init_map = async function(map_container) {
 				lat  : self.map.getCenter().lat,
 				lon  : self.map.getCenter().lng,
 				zoom : self.map.getZoom()
-			}, map_container.parentNode)
+			},map_container)
 		});
 
 	// map ready event
@@ -300,24 +298,6 @@ component_geolocation.prototype.init_map = async function(map_container) {
 				self.refresh_map(current_map)
 			}, 20)
 		});
-
-
-		// map.setView([51.505, -0.09], 13);
-
-	/*
-		// LISTENERS ON CHANGE INPUT VALUES, UPDATE MAP POSITION / ZOOM
-		field_lat.addEventListener("change", function(e){
-		//	map.panTo(new L.LatLng(field_lat.value, field_lon.value));
-		});
-		field_lon.addEventListener("change", function(e){
-		//	map.panTo(new L.LatLng(field_lat.value, field_lon.value));
-		});
-		field_zoom.addEventListener("change", function(e){
-		//	map.setZoom(field_zoom.value);
-		});
-		*/
-	// button map_refresh. click event
-
 
 
 	// onreadystatechange event complete render_tags
@@ -363,7 +343,7 @@ component_geolocation.prototype.init_map = async function(map_container) {
 	observer.observe(section_group, observer_config)
 
 	return true
-}//end init_map
+}//end get_map
 
 
 
@@ -371,17 +351,31 @@ component_geolocation.prototype.init_map = async function(map_container) {
 * UPDATE_INPUT_VALUES
 * @return bool true
 */
-component_geolocation.prototype.update_input_values = function(data, li_container) {
+component_geolocation.prototype.update_input_values = function(data, map_container) {
+
+	const self = this
+
+	const key 	= map_container.dataset.key
+	const li 	= map_container.parentNode
 
 	// inputs
-		const input_lat  = li_container.querySelector("input[data-name='lat']")
-		const input_lon  = li_container.querySelector("input[data-name='lon']")
-		const input_zoom = li_container.querySelector("input[data-name='zoom']")
+		const input_lat		= li.querySelector("input[data-name='lat']")
+		const input_lon		= li.querySelector("input[data-name='lon']")
+		const input_zoom	= li.querySelector("input[data-name='zoom']")
+		const input_alt		= li.querySelector("input[data-name='alt']")
 
 	// Set values to inputs
 		input_lat.value  = data.lat
 		input_lon.value  = data.lon
 		input_zoom.value = data.zoom
+
+	//get the value from alt input
+		data.alt = JSON.parse(input_alt.value)
+
+	//set the current value
+		self.current_value[key] = data
+
+		//self.node[data.key].dispatchEvent(new Event('change')); //Event('change',{ 'bubbles': true })
 
 	return true
 }//end update_input_values
@@ -404,7 +398,7 @@ component_geolocation.prototype.refresh_map = function(map) {
 
 /**
 * LOAD_GEO_EDITOR
-* Load all data information odf the current selected tag. Init the edditor if it is not loaded.
+* Load all data information of the current selected tag. Init the edditor if it is not loaded.
 * Carga los datos al pulsar sobre la etiqueta. Inicializa el editor de no estar ya inicializado
 */
 component_geolocation.prototype.load_geo_editor = function(tag, all_tags) {
@@ -414,11 +408,9 @@ component_geolocation.prototype.load_geo_editor = function(tag, all_tags) {
 	if (typeof all_tags==="undefined") {
 		all_tags = false
 	}
-	// MODE VERIFY : Only allow mode 'tool_transcription'
-	//if(page_globals.modo!=='tool_transcription') return null;
 
 	if(SHOW_DEBUG===true) {
-		//console.log("[component_geolocation.load_geo_editor] tag:",tag);;
+		console.log("[component_geolocation.load_geo_editor] tag:",tag);;
 	}	
 
 	// TAG : Get all information of the selected tag
@@ -558,9 +550,10 @@ component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
 	const tagState 		= tag_obj.dataset.state
 	const capaId 		= tag_obj.dataset.tag_id
 	const dirty_data 	= tag_obj.dataset.data			
-	const data 			= dirty_data.replace(/'/g, '"')	//data 		= replaceAll('\'','"',data); // restore quotes "
+	const data 			= dirty_data.replace(/'/g, '"')
 
-	const dato = JSON.parse(data)
+	// if the tag is empty we can't parse it.
+	const dato = (data) ? JSON.parse(data) : data
 
 	const parts_of_tag = {
 		capaId 	 : capaId,
@@ -715,7 +708,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 			
 			//var type  	= e.layerType
 			var	layer 	= e.layer
-			var	content = self.getPopupContent(layer)
+			var	content = self.get_popup_content(layer)
 
 			if (content!==null) {
                 layer.bindPopup(content);
@@ -736,7 +729,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 			editable_FeatureGroup.addLayer(layer);
 
 			// Update draw_data
-			draw_data = editable_FeatureGroup;
+			self.draw_data = editable_FeatureGroup;
 
 			//save the draw_data
 			self.save_draw_data();
@@ -745,13 +738,13 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
 		map.on(L.Draw.Event.EDITED, function (e) {	// Triggered when layers in the FeatureGroup, initialised with the plugin, have been edited and saved.						
 			// Update draw_data
-			draw_data = editable_FeatureGroup;
+			self.draw_data = editable_FeatureGroup;
 			// Save draw_data
 			self.save_draw_data();
 		});
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
 		map.on(L.Draw.Event.DELETED, function (e) {	// Triggered when layers have been removed (and saved) from the FeatureGroup.
-			draw_data = editable_FeatureGroup;
+			self.draw_data = editable_FeatureGroup;
 			// Save draw_data
 			self.save_draw_data();
 		});
@@ -786,3 +779,44 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 	return true
 }//end init_draw_editor
 
+
+
+/**
+* SAVE_DRAW_DATA
+*/
+component_geolocation.prototype.save_draw_data = function() {
+	
+		const self = this
+
+		if(!self.draw_data) return false;
+
+		let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
+			if(SHOW_DEBUG===true) {	
+				console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
+			}
+			current_draw_data = current_draw_data.replace(/"/g, '\'') //replaceAll('"', '\'', current_draw_data)
+
+		const new_data_obj = {
+			data : current_draw_data
+		}	
+
+		const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
+
+		const related_tipo = JSON.parse(this.related_tipo)[0]
+			if(related_tipo.length <= 0 ){
+				console.error("[component_geolocation.save_draw_data] Error on locate this.related_tipo");
+				return false
+			}
+
+		const tag_data = {
+			component_tipo 	: related_tipo,
+			type 			: tag_obj.dataset.type,
+			tag_id 			: tag_obj.dataset.tag_id,
+			id 				: tag_obj.id
+		}
+
+		// UPDATE_TAG
+		component_text_area.update_tag( tag_data, new_data_obj, true);
+
+		return true
+	};//end save_draw_data
