@@ -907,8 +907,10 @@ class search {
 					$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
 					if (!empty($sql_filter)) {
 						$sql_query .= $sql_filter;
-					}elseif (!empty($sql_filter_by_locators)) {
-						$sql_query .= $sql_filter_by_locators;
+					}
+					if (!empty($this->filter_by_locators)) {
+						$sql_filter_by_locators = $this->build_sql_filter_by_locators();
+						$sql_query .= PHP_EOL. 'AND '.$sql_filter_by_locators;
 					}
 					#if (!empty($sql_projects_filter)) {
 					#	$sql_query .= $sql_projects_filter;
@@ -925,7 +927,8 @@ class search {
 					}
 				$sql_query = 'SELECT COUNT('.$column_id.') as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 				if(SHOW_DEBUG===true) {
-					$sql_query = '-- Only for count' . PHP_EOL . $sql_query;
+					$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
+					#debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::DEBUG);
 				}
 				break;
 
@@ -951,8 +954,6 @@ class search {
 					$sql_query .= !empty($this->search_query_object->offset)
 						? ' OFFSET ' . $sql_offset
 						: '';
-
-							dump($sql_query, ' sql_query ++ '.to_string());
 				break;
 
 		// without order
@@ -1180,7 +1181,7 @@ class search {
 		$sql_query .= ';' . PHP_EOL;
 
 		#dump(null, ' sql_query ++ '.to_string($sql_query)); die();
-		#debug_log(__METHOD__." SQL QUERY: ".to_string($sql_query), logger::DEBUG);
+		debug_log(__METHOD__." SQL QUERY: ".PHP_EOL.to_string($sql_query), logger::DEBUG);
 		#debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 
@@ -1793,6 +1794,10 @@ class search {
 	*/
 	public function build_sql_filter_by_locators() {
 
+		if (empty($this->filter_by_locators)) {
+			return '';
+		}
+
 		$table = $this->main_section_tipo_alias;
 
 		$ar_parts = [];
@@ -1801,28 +1806,41 @@ class search {
 			$ar_current = [];
 
 			// section_id (int)
-			$ar_current[] = $table.'.section_id='.$current_locator->section_id;
+				if (property_exists($current_locator, 'section_id') && !empty($current_locator->section_id)) {
+					$ar_current[] = $table.'.section_id='.$current_locator->section_id;
+				}
 
 			// section_tipo (string)
-			$ar_current[] = $table.'.section_tipo=\''.$current_locator->section_tipo.'\'';
+				if (property_exists($current_locator, 'section_tipo') && !empty($current_locator->section_tipo)) {
+					$ar_current[] = $table.'.section_tipo=\''.$current_locator->section_tipo.'\'';
+				}
 
 			// tipo (string). time machine case (column 'tipo' exists)
-			if (property_exists($current_locator, 'tipo') && !empty($current_locator->tipo)) {
-				if ($this->matrix_table==='matrix_time_machine') {
-					$ar_current[] = $table.'.tipo=\''.$current_locator->tipo.'\'';
-				}else{
-					debug_log(__METHOD__." Ignored property 'tipo' in locator because is only allowed in time machine table.", logger::WARNING);
+				if (property_exists($current_locator, 'tipo') && !empty($current_locator->tipo)) {
+					if ($this->matrix_table==='matrix_time_machine') {
+						$ar_current[] = $table.'.tipo=\''.$current_locator->tipo.'\'';
+					}else{
+						debug_log(__METHOD__." Ignored property 'tipo' in locator because is only allowed in time machine table.", logger::WARNING);
+					}
 				}
-			}
 
 			// lang (string). time machine case (column 'lang' exists)
-			if (property_exists($current_locator, 'lang') && !empty($current_locator->lang)) {
-				if ($this->matrix_table==='matrix_time_machine') {
-					$ar_current[] = $table.'.lang=\''.$current_locator->lang.'\'';
-				}else{
-					debug_log(__METHOD__." Ignored property 'lang' in locator because is only allowed in time machine table.", logger::WARNING);
+				if (property_exists($current_locator, 'lang') && !empty($current_locator->lang)) {
+					if ($this->matrix_table==='matrix_time_machine') {
+						$ar_current[] = $table.'.lang=\''.$current_locator->lang.'\'';
+					}else{
+						debug_log(__METHOD__." Ignored property 'lang' in locator because is only allowed in time machine table.", logger::WARNING);
+					}
 				}
-			}
+
+			// matrix_id (int). time machine case (column 'id' exists and is used)
+				if (property_exists($current_locator, 'matrix_id') && !empty($current_locator->matrix_id)) {
+					if ($this->matrix_table==='matrix_time_machine') {
+						$ar_current[] = $table.'.id='.$current_locator->matrix_id;
+					}else{
+						debug_log(__METHOD__." Ignored property 'matrix_id' in locator because is only allowed in time machine table.", logger::WARNING);
+					}
+				}
 
 			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
 		}
@@ -1955,7 +1973,7 @@ class search {
 		$sql_query_select = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
 
 		return $sql_query_select;
-	}//end build_full_count_sql_query_select
+	}//end
 
 
 
@@ -3182,7 +3200,11 @@ class search {
 		WHERE section_tipo = \''.$options->section_tipo.'\'
 		GROUP BY '.$options->column_tipo.'
 		ORDER BY count
-		';
+		;';
+
+		if(SHOW_DEBUG===true) {
+			$strQuery = '-- static search_count ' . PHP_EOL . $strQuery;
+		}
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
 		if (!is_resource($result)) {
