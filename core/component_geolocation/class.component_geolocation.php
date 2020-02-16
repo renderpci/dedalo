@@ -11,26 +11,26 @@ class component_geolocation extends component_common {
 
 
 	# COMPONENT_GEOLOCATION COSNTRUCT
-	function __construct($tipo, $parent=null, $modo='edit', $lang=NULL, $section_tipo=null) {
+	function __construct($tipo, $section_id=null, $modo='edit', $lang=NULL, $section_tipo=null) {
 		
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
-		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		# Build the component
+		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
-		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
+		# Dato verification, if the dato is empty, build the standard view of the map 
 		$dato = $this->get_dato();
 
-		# Si se pasa un id vacío (desde class.section es lo normal), se verifica si existe en matrix y si no, se crea un registro que se usará en adelante
+		# if the section_id is not empty and the dato is empty create the basic and standart dato
 		$need_save=false;
-		if((!isset($dato->lat) || !isset($dato->lon)) && $this->parent>0) {
+		if((!isset($dato[0]->lat) || !isset($dato[0]->lon)) && $this->parent>0) {
 			#####################################################################################################
 			# DEFAULT VALUES
 			# Store section dato as array(key=>value)
 			$dato_new = new stdClass();	
-				$dato_new->lat		= '39.462571';
-				$dato_new->lon		= '-0.376295';	# Calle Denia
+				$dato_new->lat		= 39.462571;
+				$dato_new->lon		= -0.376295;	# Calle Denia
 				$dato_new->zoom		= 12;
 				$dato_new->alt		= 16;
 				#$dato_new->coordinates	= array();
@@ -38,7 +38,7 @@ class component_geolocation extends component_common {
 			######################################################################################################
 			
 			# Dato
-			$this->set_dato($dato_new);
+			$this->set_dato([$dato_new]);
 			$need_save=true;
 		}
 
@@ -48,7 +48,7 @@ class component_geolocation extends component_common {
 
 		if ($need_save===true) {
 			$result = $this->Save();
-			# debug_log(__METHOD__."  Added default component_geolocation data $parent with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
+			# debug_log(__METHOD__."  Added default component_geolocation data $section_id with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
 		}
 
 		
@@ -63,10 +63,15 @@ class component_geolocation extends component_common {
 	}
 
 
-	# GET DATO : Format {"center":"39.462571, -0.376295","zoom":17}
+	# GET DATO : Format [{lat: 39.462571354311095, lon: -0.3763031959533692, zoom: 15, alt: 16}]
 	public function get_dato() {
 		$dato = parent::get_dato();
-		return (object)$dato;
+
+		if (!is_array($dato)) {
+			$dato = [$dato];
+		}
+		
+		return (array)$dato;
 	}
 
 	# SET_DATO
@@ -77,11 +82,11 @@ class component_geolocation extends component_common {
 			$dato = json_decode($dato);
 		}
 
-		if (!isset($dato->zoom)) {
-			$dato->zoom = "12";
-		}
+		// if (!isset($dato->zoom)) {
+		// 	$dato->zoom = 12;
+		// }
 
-		parent::set_dato( (object)$dato );
+		parent::set_dato( (array)$dato );
 	}
 
 

@@ -32,11 +32,11 @@
 		margin-left: 3px;
 	}
 
-	.map_inputs	.geolocation_separator {
-		border-left: 1px solid;
-		border-color: #333333;
-		margin-left: 5px;
-	}
+	// .map_inputs	.geolocation_separator {
+	// 	border-left: 1px solid;
+	// 	border-color: #333333;
+	// 	margin-left: 5px;
+	// }
 	/* altitude
 	-------------------------------------------------- */
 	.map_inputs	.input_altitude {
@@ -44,24 +44,42 @@
 	    text-align: center;
 	}
 
-	.map_inputs	.save_geolocation {
+	.map_inputs	.map_save {
 		padding: 3px;
 		padding-bottom: 3px;
+		border-left: 1px solid;
+		border-right: 1px solid;
+		border-color: #333333;
 		}
-		.map_inputs	.save_geolocation:active {
-			background-color: #808080;
-			color: #FFFFFF;
+		.map_inputs	.map_save:active {
+			//background-color: #808080;
+			color: #fe8000;
 		}
 
-	.map_inputs	.glyphicon-refresh {
-		width: 23px;
-		height: 16px;
-		margin-right: 0;
-		line-height: 16px;
+	.map_inputs	.map_reload {
+		.build_button('reload.svg');
+		width: 1.2em;
+		height: 1.2em;
 		}
-		.map_inputs	.glyphicon-refresh:active {
-			background-color: #808080;
-			color: #FFFFFF;
+		.map_inputs	.map_reload:hover {
+			opacity: 1;
+		}
+		.map_inputs	.map_reload:active {
+			opacity: 1;
+			background: #fe8000;
+		}
+
+	.map_inputs	.map_full_screen {
+		.build_button('full_screen.svg');
+		width: 1.2em;
+		height: 1.2em;
+		}
+		.map_inputs	.map_full_screen:hover {
+			opacity: 1;
+		}
+		.map_inputs	.map_full_screen:active {
+			opacity: 1;
+			background-color: #fe8000;
 		}
 
 
@@ -78,12 +96,15 @@
 	    -ms-user-select: none;
 	    user-select: none;
 		position: absolute;
-		top: 10px;
-		left: 50px;
-		//right: 50px;
+		top: 0.55em;
+		left: 3em;
+		margin-right: 6em;
 		background-color: rgb(255, 255, 255);
-		padding: 5px;
+		padding: 0.4em;
 		border-radius: 4px;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
 		//max-width: 660px;
 		//box-shadow: 0 1px 5px rgba(0,0,0,0.65);
 		z-index: @elements_over_z_index;
@@ -122,18 +143,7 @@
 
 /* MAP FULL SCREEN
 -------------------------------------------------- */
-	.map_full {
-		z-index: 10002;
-	}
-	.map_full > .content_data {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-	}
-
-
+	
 
 .leaflet-top,
 .leaflet-bottom {
@@ -159,25 +169,41 @@
 			ul.inputs_container {
 				display: flex;
 		    	flex-wrap: nowrap;
-		    	padding-bottom: 0.5em;
 
 		    	>li {
 		    		flex: 1 1 auto;
+		    		flex-direction: column;
 
-		    		>label {
-		    			margin-right: 0.5em;
-		    		}
+		    		&.map_full{
+						z-index: 2;
+						position: fixed;
+						display: block;
+						top: 0;
+						left: 0;
+						width: 100%;
+						height: 100%;
+					}
 
-		    		>input {
+		    		>div {
+						display: : flex;
+					
 
-		    			&.zoom {
-		    				width: 2em;
-		    			}
+						>label {
+							margin-right: 0.5em;
+						}
 
-		    			&.altitude {
-		    				width: 2em;
-		    			}
-		    		}
+						>input {
+							width: 5.7em;
+
+							&.zoom {
+								width: 2em;
+							}
+
+							&.altitude {
+								width: 2em;
+							}
+						}
+					}
 		    	}
 			}
 
@@ -186,7 +212,7 @@
 				position: relative;
 				width: 100%;
 				height: 100%;
-				min-height: 300px;
+				min-height: 320px;
 				margin: 0;
 				padding: 0;
 				padding-bottom: 5px;
@@ -194,8 +220,8 @@
 
 				background-color: #d9d0c9;
 				max-height: 100%;
-				min-height: unset;
-				height: 23em;
+				// min-height: unset;
+				// height: 23em;
 
 				.leaflet-control-zoom a {
 					font-size: initial !important;
