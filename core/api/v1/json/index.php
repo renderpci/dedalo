@@ -63,8 +63,12 @@ $start_time=microtime(1);
 		// verify result type
 			$type = gettype($result);
 			if ($type!=='string') {
-				$result = to_string($result);
-				debug_log(__METHOD__." Invalid result type found. Changed to string ! ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Invalid result type found. Changed to string ! ".to_string($result), logger::ERROR);
+
+				$error_obj = new stdClass();
+					$error_obj->result 	= false;
+					$error_obj->msg 	= 'Error when calling Dédalo API. Invalid result!';
+				$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE);
 			}
 
 
