@@ -58,8 +58,11 @@
 						$locator->section_tipo 	= $item->section_tipo;
 						$locator->section_id 	= $item->section_id;
 
+					// tm case
 						if($modo==='tm'){
-						$locator->matrix_id 	= $item->id;
+							$locator->matrix_id = $item->id;
+							$locator->timestamp = $item->timestamp;
+							$locator->state 	= $item->state;
 						}
 
 					return $locator;

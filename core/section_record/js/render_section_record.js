@@ -175,11 +175,32 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 				class_name 		: 'edit_line',
 				parent 			: id_column
 			})
+			// section id
 			const section_id_info = ui.create_dom_element({
 				element_type	: 'span',
 				text_content 	: self.section_id,
 				parent 			: edit_line
 			})
+			// button time machine
+			if (self.mode==='tm') {
+				const edit_button = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'tm_preview',
+					parent 			: edit_line
+				})
+				.addEventListener("click", function(e){
+					// edit_record(this, self)
+					event_manager.publish('tm_edit_record', {
+						tipo 		: self.section_tipo,
+						section_id 	: self.section_id,
+						matrix_id 	: self.matrix_id,
+						date 		: self.modification_date || null,
+						mode 		: 'tm'
+					})
+						console.log("self:",self);
+				})
+			}
+			// button edit
 			if (permissions>0) {
 				const edit_button = ui.create_dom_element({
 					element_type	: 'a',

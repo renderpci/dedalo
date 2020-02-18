@@ -333,7 +333,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 					}
 
 				// delete_instance
-					const result = await delete_instance({
+					const instance_options = {
 						id				: self.id,
 						model 			: self.model,
 						tipo 			: self.tipo,
@@ -341,7 +341,12 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 						section_id 		: self.section_id,
 						mode 			: self.mode,
 						lang 			: self.lang
-					})
+					}
+					// time machine case
+					if (self.matrix_id) {
+						instance_options.matrix_id = self.matrix_id
+					}
+					const result = await delete_instance(instance_options)
 
 				return result
 			}

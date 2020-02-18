@@ -143,52 +143,63 @@ class section_tm extends common {
 	*/
 	public function get_context() {
 
-		// base context is injected in sections josn controller
-		$context = $this->get_base_context();
-
-		// modification user id
-			// prepend element to context
-			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model' 		=> 'component_select',
-				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
-			];
-			array_unshift($context, $item);
+		// base context is injected in sections josn controller.
+		// Called for the first time, it does not contain fixed elements.
+			$context = $this->get_base_context();
 
 
-		// modification date
-			// prepend element to context
-			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model' 		=> 'component_date',
-				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
-			];
-			array_unshift($context, $item);
+		// check already defined fixed elements
+			$found_fixed_elements = array_filter($context, function($element){
+				if (isset($element->tipo) && $element->tipo===DEDALO_SECTION_INFO_MODIFIED_BY_USER) {
+					return $element;
+				}
+			});
+			if (empty($found_fixed_elements)) {
+
+				// modification user id
+					// prepend element to context
+					$item = (object)[
+						'typo'			=> 'ddo',
+						'type'			=> 'component',
+						'model' 		=> 'component_select',
+						'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+						'section_tipo'	=> $this->tipo,
+						'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+						'mode'			=> 'list',
+						'parent'		=> $this->tipo
+					];
+					array_unshift($context, $item);
 
 
-		// matrix id
-			// prepend element to context
-			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model' 		=> 'component_section_id',
-				'tipo'			=> 'section_id',
-				'section_tipo'	=> $this->tipo,
-				'label'			=> 'matrix ID',
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
-			];
-			array_unshift($context, $item);
+				// modification date
+					// prepend element to context
+					$item = (object)[
+						'typo'			=> 'ddo',
+						'type'			=> 'component',
+						'model' 		=> 'component_date',
+						'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
+						'section_tipo'	=> $this->tipo,
+						'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
+						'mode'			=> 'list',
+						'parent'		=> $this->tipo
+					];
+					array_unshift($context, $item);
+
+
+				// matrix id
+					// prepend element to context
+					$item = (object)[
+						'typo'					=> 'ddo',
+						'type'					=> 'component',
+						'model' 				=> 'component_section_id',
+						'tipo'					=> 'test142',//	'section_id',
+						'section_tipo'			=> $this->tipo,
+						'label'					=> 'matrix ID',
+						'mode'					=> 'list',
+						'parent'				=> $this->tipo
+					];
+					array_unshift($context, $item);
+			}
 
 
 		return (array)$context;
@@ -348,9 +359,9 @@ class section_tm extends common {
 			$current_item = (object)[
 				'section_id' 			=> $section_id,
 				'section_tipo' 			=> $section_tipo,
-				'tipo' 					=> 'section_id',
+				'tipo' 					=> 'test142', //	'section_id',
 				'lang' 					=> DEDALO_DATA_NOLAN,
-				'from_component_tipo' 	=> null,
+				'from_component_tipo' 	=> 'test142', // null,
 				'value' 				=> $current_record->id,
 				'debug_model' 			=> 'component_section_id',
 				'debug_label' 			=> 'matrix ID',

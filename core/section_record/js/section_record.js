@@ -73,7 +73,7 @@ section_record.prototype.init = async function(options) {
 
 	const self = this
 
-	// Options vars
+	// options vars
 	self.model 			= options.model
 	self.tipo 			= options.tipo
 	self.section_tipo 	= options.section_tipo
@@ -91,12 +91,14 @@ section_record.prototype.init = async function(options) {
 	self.events_tokens	= []
 	self.ar_instances	= []
 
-	self.type 			= self.model
-	self.label 			= null
+	self.type 				= self.model
+	self.label 				= null
 
-	self.caller 		= options.caller || null
+	self.caller 			= options.caller || null
 
-	self.matrix_id 		= options.matrix_id || null
+	self.matrix_id 			= options.matrix_id || null
+
+	self.modification_date 	= options.modification_date || null
 
 	// events subscription
 		// event active (when user focus in dom)
@@ -181,8 +183,7 @@ section_record.prototype.get_ar_instances = async function(){
 			const current_context 	= items[i]
 			const current_data 		= self.get_component_data(current_context.tipo)
 
-			// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
-				const current_instance = await instances.get_instance({
+				const instance_options = {
 					model 			: current_context.model,
 					tipo 			: current_context.tipo,
 					section_tipo 	: current_context.section_tipo,
@@ -196,7 +197,14 @@ section_record.prototype.get_ar_instances = async function(){
 					data 			: current_data,
 					datum 			: self.datum,
 					sqo_context 	: current_context.sqo_context
-				})
+				}
+
+				if (self.matrix_id) {
+					instance_options.matrix_id = self.matrix_id
+				}
+
+			// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
+				const current_instance = await instances.get_instance(instance_options)
 
 				if(!current_instance || typeof current_instance.build!=='function'){
 					console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
