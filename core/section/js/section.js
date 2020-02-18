@@ -299,12 +299,13 @@ section.prototype.get_ar_instances = async function(){
 			}
 
 			if (self.mode==='tm') {
-				instance_options.matrix_id = value[i].matrix_id
+				instance_options.matrix_id 			= value[i].matrix_id
+				instance_options.modification_date 	= value[i].timestamp
+				// instance_options.state 			= value[i].state
 			}
 
-			// section_record
+			// section_record. init and build
 				const current_section_record = await instances.get_instance(instance_options)
-
 				await current_section_record.build(true)
 
 			// add
