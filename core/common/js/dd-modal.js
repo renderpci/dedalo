@@ -70,11 +70,9 @@ class DDModal extends HTMLElement {
 				font-weight: normal;
 				font-size: 1.4em;
 			}
-
 			.modal-body {
 				padding: 2px 16px;
 				margin: 20px 2px;
-				max-height: 80vh;
 				overflow: auto;
 			}
 
@@ -87,13 +85,11 @@ class DDModal extends HTMLElement {
 				z-index: 9999;
 			}
 			.modal_big > .modal-content {
-				width: 99.9%;
-				height: 99.8%;
+				width: 99.79%;
+				min-height: 99.8%;
 			}
 			.modal_big .modal-body {
 				height: 100%;
-				/*max-height: 77vh;*/
-				/*max-height: 88%;*/
 			}
 		</style>
 		<button>Open Modal</button>
