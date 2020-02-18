@@ -108,12 +108,19 @@ section.prototype.init = async function(options) {
 	self.id_column_width 	= '7em'
 	self.permissions 		= null
 
-	// source. add to sqo_context
+	// source. add to sqo_context if not exists. Be careful not to add a source element twice
 		if (self.sqo_context && self.sqo_context.show) {
-			const source = create_source(self,'search')
-			self.sqo_context.show.push(source)
+			const current_source = self.sqo_context.show.find(element => element.typo==='source')
+			if (current_source) {
+				console.warn("Source alredy exists. Skipped source creation for sqo_context",current_source)
+			}else{
+				const source = create_source(self,'search')
+				self.sqo_context.show.push(source)
+				if(SHOW_DEBUG===true) {
+					console.warn("Added created 'source' element to sqo_context.show on init section",source)
+				}
+			}
 		}
-		//console.log("[section.init] modified self.sqo_context:", self.sqo_context);
 
 	// events subscription
 
@@ -146,15 +153,6 @@ section.prototype.build = async function(autoload=false) {
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// const sleep = function() {
-			// 	return new Promise(resolve => {
-			// 	    setTimeout(() => {
-			// 	      resolve(true);
-			// 	    }, 1000);
-			// 	  });
-			// }
-			// await sleep()
-
 			const current_data_manager = new data_manager()
 
 			// count rows
@@ -163,10 +161,11 @@ section.prototype.build = async function(autoload=false) {
 					self.pagination.total	= (current_sqo.full_count && current_sqo.full_count>0) ? current_sqo.full_count : current_data_manager.count(current_sqo)
 					//console.log("[section.build] self.pagination.total:",self.pagination.total);
 				}
+					console.log("self:",self);
 
 			// get context and data
 				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
-					//console.log("[section.build] api_response++++:",api_response);
+					console.log("[section.build] api_response +++++++++++++++++++++++++++++:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -198,6 +197,7 @@ section.prototype.build = async function(autoload=false) {
 	// pagination update properties
 		self.pagination.limit	= sqo.limit
 		self.pagination.offset	= sqo.offset
+		self.pagination.total	= self.pagination.total || sqo.full_count || 0
 
 	// paginator
 		if (!self.paginator) {

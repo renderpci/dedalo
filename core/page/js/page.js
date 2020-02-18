@@ -82,13 +82,10 @@ page.prototype.init = async function(options) {
 		)
 		// user_action fn
 			async function user_action(options) {
-				const current_data_manager = new data_manager()
-				const api_response = await current_data_manager.request({
-					body : {
-						action 		: 'get_element',
-						options 	: options
-					}
-				})
+
+				const current_data_manager 	= new data_manager()
+				const api_response 			= await current_data_manager.get_page_element(options)
+
 				// element context from api server result
 					const api_element = api_response.result
 
