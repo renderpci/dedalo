@@ -9,11 +9,16 @@
 
 		>.content_data {
 			line-height: 1.5em;
+			width: 100%;
+			display: flex;
 
-			// buttons (css_rows_paginator_div_links)
-			.css_rows_paginator_div_links {
+			> * {
+				align-self: center;
+			}
+
+			// buttons (nav_buttons)
+			.nav_buttons {
 				display: flex;
-				display: inline;
 				vertical-align: bottom;
 
 				button {
@@ -76,13 +81,11 @@
 					cursor: default;
 					opacity: 0.1 !important;
 				}
-			}//end .css_rows_paginator_div_links
-
+			}//end .nav_buttons
 
 
 			// text
 			.paginator_info {
-				display: inline;
 
 				>* {
 
@@ -109,7 +112,6 @@
 						border: 1px solid #ececec;
 					}
 				}
-
 			}//end .paginator_info
 
 
