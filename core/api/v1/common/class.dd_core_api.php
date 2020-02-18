@@ -340,7 +340,10 @@ class dd_core_api {
 					break;
 
 				case $model==='section_tm':
-					$element 		= section_tm::get_instance(null, $section_tipo);
+					$section_id 	= $source->section_id;
+					$element 		= section_tm::get_instance($section_id, $section_tipo);
+					// set base_context (source)
+					$element->set_base_context([$source]); // inject whole source
 					break;
 
 				case strpos($model, 'component')!==false:
@@ -480,6 +483,29 @@ class dd_core_api {
 
 						// sqo_context
 							$section = section::get_instance($section_id, $section_tipo, $mode);
+							$section->set_lang($lang);
+							$sqo_context = $section->get_sqo_context();
+
+						$page_element = new StdClass();
+							$page_element->model 		 = $model;
+							$page_element->type 		 = 'section';
+							$page_element->section_tipo  = $section_tipo;
+							$page_element->section_id 	 = $section_id;
+							$page_element->mode 	 	 = $mode;
+							$page_element->lang 	 	 = $lang;
+							$page_element->sqo_context   = $sqo_context;
+
+						return $page_element;
+					})();
+					break;
+
+				case 'section_tm':
+					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
+
+						$section_tipo = $tipo;
+
+						// sqo_context
+							$section = section_tm::get_instance($section_id, $section_tipo, $mode);
 							$section->set_lang($lang);
 							$sqo_context = $section->get_sqo_context();
 

@@ -81,11 +81,60 @@ const content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// section
-		const section = await self.load_section()
 
-		const section_node = await section.render()
-		fragment.appendChild(section_node)
+	const tm_date = new Date();
+
+	// current_component_container
+		const current_component_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'current_component_container disabled_component',
+			parent 			: fragment
+		})
+		await add_component(self, current_component_container, self.caller.lang, get_label['ahora'], 'edit', null)
+
+	// preview_component_container
+		const preview_component_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'preview_component_container disabled_component',
+			parent 			: fragment
+		})
+		// set
+		self.preview_component_container = preview_component_container
+
+
+	// tool_bar
+		const tool_bar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'tool_bar',
+			parent 			: fragment
+		})
+		// lang selector
+			if (self.caller.lang!=='lg-nolan') {
+				ui.create_dom_element({
+					element_type	: 'label',
+					text_content 	: get_label['idioma'],
+					parent 			: tool_bar
+				})
+				const lang_selector = get_lang_selector(self.langs, self.lang)
+				lang_selector.addEventListener('change', async (e) => {
+					e.stopPropagation()
+
+					const lang = e.target.value
+					if (lang!==self.lang) {
+						self.lang = lang
+						self.caller.lang = lang
+						self.refresh()
+					}
+				})
+				tool_bar.appendChild(lang_selector)
+			}
+		// button apply
+			self.button_apply = ui.create_dom_element({
+				element_type	: 'button',
+				class_name 		: 'button_apply hide',
+				text_content    : get_label['aplicar_y_salvar'] || 'Apply and save',
+				parent 			: tool_bar
+			})
 
 	// section container
 		// const section_container = ui.create_dom_element({
@@ -93,6 +142,11 @@ const content_data_edit = async function(self) {
 		// 	class_name 		: 'section_container',
 		// 	parent 			: fragment
 		// })
+
+	// section list
+		const section 		= await self.load_section()
+		const section_node 	= await section.render()
+		fragment.appendChild(section_node)
 
 
 	// buttons container
@@ -114,28 +168,82 @@ const content_data_edit = async function(self) {
 
 
 
-// /**
-// * ADD_COMPONENT
-// */
-// export const add_component = async (self, component_container, value) => {
+/**
+* GET_LANG_SELECTOR
+*/
+const get_lang_selector = function(langs, selected_lang, class_name='') {
 
-// 	// user select blank value case
-// 		if (!value) {
-// 			while (component_container.firstChild) {
-// 				// remove node from dom (not component instance)
-// 				component_container.removeChild(component_container.firstChild)
-// 			}
-// 			return false
-// 		}
+	// components container
+		const select = ui.create_dom_element({
+			element_type	: 'select',
+			class_name 		: class_name
+		})
 
-// 	const component = await self.load_component(value)
-// 	const node = await component.render()
+		const option = ui.create_dom_element({
+				element_type	: 'option',
+				value 			: null,
+				text_content 	: '',
+				parent 			: select
+			})
 
-// 	while (component_container.firstChild) {
-// 		component_container.removeChild(component_container.firstChild)
-// 	}
-// 	component_container.appendChild(node)
+		const length = langs.length
+		for (let i = 0; i < length; i++) {
 
-// 	return true
-// }//end add_component
+			const lang = langs[i]
+			const option = ui.create_dom_element({
+				element_type	: 'option',
+				value 			: lang.value,
+				text_content 	: lang.label,
+				parent 			: select
+			})
+
+			// selected options set on match
+			if (lang.value === selected_lang) {
+				option.selected = true
+			}
+		}
+
+	return select
+}//end get_lang_selector
+
+
+
+/**
+* ADD_COMPONENT
+*/
+export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
+
+	// user select blank lang_value case
+		if (!lang_value) {
+			while (component_container.firstChild) {
+				// remove node from dom (not component instance)
+				component_container.removeChild(component_container.firstChild)
+			}
+			return false
+		}
+
+	const component = await self.load_component(lang_value, mode, matrix_id)
+
+	// render node
+	const node = await component.render({
+		render_mode : 'edit'
+	})
+
+	while (component_container.firstChild) {
+		component_container.removeChild(component_container.firstChild)
+	}
+	component_container.appendChild(node)
+
+	// label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'time_label',
+			text_content 	: label,
+			parent 			: component_container
+		})
+
+
+	return true
+}//end add_component
+
 
