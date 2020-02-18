@@ -89,6 +89,25 @@ component_common.prototype.init = async function(options) {
 				})
 			)
 
+
+	// events subscription
+	const observe = self.context.properties.observe || null;
+	if(observe){
+
+		for (let i = observe.length - 1; i >= 0; i--) {
+			const component_tipo 	= observe[i].component_tipo
+			const event 			= observe[i].event
+			const perform 			= observe[i].perform || null
+
+			if(perform){
+				self.events_tokens.push(
+					event_manager.subscribe(event +'_'+ component_tipo, self[perform].bind(self))
+				)
+			}
+		}
+	}
+		
+
 	// component_save (when user change component value) every component is looking if the own the instance was changed.
 		/*
 		self.events_tokens.push(

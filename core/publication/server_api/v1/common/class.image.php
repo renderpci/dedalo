@@ -69,7 +69,7 @@ class image {
 		if ($this->description_with_images===true) {			
 
 			$options = new stdClass();
-				$options->btn_url = $this->btn_url; //__CONTENT_BASE_URL__ . '/dedalo/inc/btn.php';
+				$options->tag_url = $this->tag_url; //__CONTENT_BASE_URL__ . '/core/component_text_area/tag.php';
 			$this->description_with_images = TR::addTagImgOnTheFly($description_raw, $options);
 		}
 		

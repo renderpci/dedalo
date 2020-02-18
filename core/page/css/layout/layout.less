@@ -23,19 +23,27 @@
 
 // mixins
 	// background_icon function. Receive icon full name like 'bug.svg'
-		.background_icon(@icon_name, @color:"black"){
+		.background_icon(@icon_name){
 			//@base-path:~"./images/@{color}/"; // unused color now
-			background-image: url("@{images_base_path}/icons/@{icon_name}");
+			// background-image: url("@{images_base_path}/icons/@{icon_name}");
+			mask: url("@{images_base_path}/icons/@{icon_name}");
+			-webkit-mask: url("@{images_base_path}/icons/@{icon_name}");
+					mask-size: contain;
+			-webkit-mask-size: contain;
+					mask-repeat: no-repeat;
+			-webkit-mask-repeat: no-repeat;
+					mask-position: center;			
+			-webkit-mask-position: center;
 		}
 
 	// icon_svg mixing. Use within :before
 		.icon_svg {
 			content: " ";
 			//background-image: url(../../themes/default/icons/bug.svg);
-			.background_icon('bug.svg');
-			background-size: contain;
-			background-repeat: no-repeat;
-			background-position: center;
+			// .background_icon('bug.svg');
+			// background-size: contain;
+			// background-repeat: no-repeat;
+			// background-position: center;
 			width: 1em;
 			height: 1em;
 			float: right;
@@ -43,9 +51,10 @@
 		}
 
 	// build_button
-		.build_button(@icon_name, @color:"black") {
+		.build_button(@icon_name, @color:black) {
 			.icon_svg;
-			.background_icon(@icon_name, @color);
+			.background_icon(@icon_name);
+			background: @color;
 		}
 
 	// hilite (on focus)
@@ -918,7 +927,9 @@
 					flex: 1 1 100%;
 				}
 
-
+				>ul {
+					height: 100%;
+				}
 
 				&.vertical {
 					flex: 1 1 100%;
