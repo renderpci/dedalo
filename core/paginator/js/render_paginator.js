@@ -120,7 +120,7 @@ const content_data = async function(self) {
 		const paginator_div_links = ui.create_dom_element({
 			element_type	: 'div',
 			parent			: content_data,
-			class_name		: 'css_rows_paginator_div_links'
+			class_name		: 'nav_buttons'
 		})
 
 		// first . create the paginator_first
