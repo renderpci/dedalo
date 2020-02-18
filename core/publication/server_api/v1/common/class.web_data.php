@@ -3790,7 +3790,7 @@ class web_data {
 		$options = new stdClass();
 			$options->section_id				= false;
 			$options->lang 						= WEB_CURRENT_LANG_CODE;
-			$options->btn_url 					= __CONTENT_BASE_URL__ . '/dedalo/inc/btn.php';
+			$options->tag_url 					= __CONTENT_BASE_URL__ . '/core/component_text_area/tag.php';
 			$options->description_with_images 	= true;
 			$options->description_clean 		= true;
 			$options->add_notes 				= true;

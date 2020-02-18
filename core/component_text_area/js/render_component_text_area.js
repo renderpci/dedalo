@@ -551,10 +551,12 @@ const get_custom_events = (self, i, get_service) => {
 	}//end blur
 
 	custom_events.click = (evt, options) => {
+
 		// img : click on img
 		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
+			const tag_obj = evt.target
 			switch(evt.target.className) {
-
+				
 				case 'tc':
 					// Video goto timecode by tc tag
 					const timecode = evt.target.dataset.data
@@ -624,17 +626,11 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'geo' :
 					// Load geo editor
-					switch(page_globals.modo) {
-						case 'edit' :
-						case 'tool_transcription' :
-							if (typeof component_geolocation==="undefined") {
-								console.warn("[mde_editor.image_command] component_geolocation class is not avilable. Ignored geo action");
-							}else{
-								component_geolocation.load_geo_editor(tag_obj);
-							}
-							break;
-					}
+					event_manager.publish('click_tag_geo' +'_'+ self.tipo, tag_obj)
+					
 					break;
+
+
 
 				case 'person':
 					// Show person info

@@ -119,78 +119,9 @@ const add_events = function(self, wrapper) {
 			input_element(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', async (e) => {
-			// e.stopPropagation()
-
-			// update
-			if (e.target.matches('input[type="text"].input_value')) {
-
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: (e.target.value.length>0) ? e.target.value : null,
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
-
-				return true
-			}
-
-		}, false)
-
 	// click event [click]
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
-
-			// insert
-				if (e.target.matches('.button.add')) {
-
-					const changed_data = Object.freeze({
-						action	: 'insert',
-						key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
-						value	: null
-					})
-					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('add_element_'+self.id, changed_data)
-					})
-
-					return true
-				}
-
-			// remove
-				if (e.target.matches('.button.remove')) {
-
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: e.target.dataset.key,
-						value	: null,
-						refresh : true
-					})
-					self.change_value({
-						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.value,
-						refresh 	 : true
-					})
-					.then(()=>{
-					})
-
-					return true
-				}
 
 			// change_mode
 				if (e.target.matches('.button.close')) {
@@ -201,22 +132,6 @@ const add_events = function(self, wrapper) {
 					return true
 				}
 
-		})
-
-	// keyup event
-		wrapper.addEventListener("keyup", async (e) => {
-			// e.stopPropagation()
-
-			if (self.context.properties.unique && e.target.value!=='') {
-				const unique = await self.is_unique(e.target.value)
-				if (typeof unique!=="undefined") {
-					ui.show_message(
-						wrapper,
-						`Warning. Duplicated value '${e.target.value}' in id: ` + unique.section_id,
-						'warning'
-					)
-				}
-			}
 		})
 
 
@@ -252,6 +167,15 @@ const content_data_edit = async function(self) {
 			  video.classList.add("posterframe")
 			  video.setAttribute("tabindex", 0)
 			  video.appendChild(source)
+
+	// keyup event
+		video.addEventListener("timeupdate", async (e) => {
+			// e.stopPropagation()
+
+				console.log("aqui:");
+
+		})
+
 
 
 	fragment.appendChild(video)

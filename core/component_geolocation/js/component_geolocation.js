@@ -4,6 +4,7 @@
 
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_geolocation} from '../../component_geolocation/js/render_component_geolocation.js'
@@ -25,13 +26,35 @@ export const component_geolocation = function(){
 
 	this.context
 	this.data
+	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
+	// We need a temporary value for the all current values of the inputs (lat, lon, zoom, alt)
+	// to will be used for save it when the user clicks on the save button
+	this.current_value = []
 
 	this.parent
 	this.node
 
 	this.tools
 
-	this.duplicates = false
+	this.duplicates 	= false
+	this.events_tokens
+
+	this.ar_tag_loaded 	= []
+	this.map 			= null
+	this.layer_control	= false
+	
+
+	//draw editor vars
+	this.draw_data 		= null
+	this.drawControl
+	this.draw_editor_is_initated = false
+	this.editable_FeatureGroup
+	this.ar_FeatureGroup = []
+	this.draw_state
+	this.current_editable_FeatureGroup_id
+
+	//global state of the document
+	this.loaded_document = false
 
 	return true
 }//end component_geolocation
@@ -43,7 +66,6 @@ export const component_geolocation = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_geolocation.prototype.init 	 			= component_common.prototype.init
 	component_geolocation.prototype.build 	 			= component_common.prototype.build
 	component_geolocation.prototype.render 				= common.prototype.render
 	component_geolocation.prototype.destroy 	 		= common.prototype.destroy
@@ -65,30 +87,48 @@ export const component_geolocation = function(){
 
 
 
+
 /**
-* INIT_MAP
-* load the libraries and specific css
+* INIT
 */
-var loaded_document = false
-component_geolocation.prototype.init_map = async function(wrapper) {
+component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
-	// load dependences js/css
-		const load_promises = []
+	// call the generic commom tool init
+		const common_init = component_common.prototype.init.call(this, options);
 
-		const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
-		load_promises.push( common.prototype.load_script(lib_js_file) )
+	// set the self specific libraries and variables not defined by the generic init 
+		// load dependences js/css
+			const load_promises = []
 
-		const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
-		load_promises.push( common.prototype.load_style(lib_css_file) )
+			const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
+			load_promises.push( common.prototype.load_script(lib_js_file) )
 
-		await Promise.all(load_promises).then(async function(response){
-			// console.log("response:",response);
-		})
+			const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
+			load_promises.push( common.prototype.load_style(lib_css_file) )
 
-	// map_container
-		const map_container = wrapper.querySelector(".leaflet_map")
+			await Promise.all(load_promises).then(async function(response){
+
+				const draw_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.js'
+				common.prototype.load_script(draw_lib_js_file) 
+
+				const draw_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.css'
+				common.prototype.load_style(draw_lib_css_file)
+			
+			})
+
+	return common_init
+}//end init
+
+/**
+* get_MAP
+* load the libraries and specific css
+*/
+
+component_geolocation.prototype.get_map = async function(map_container, value) {
+
+	const self = this
 
 	// defaults
 		const default_lat 	= 39.462571
@@ -97,16 +137,17 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 		const default_alt 	= 0
 
 	// get data
-		const field_lat  	= self.data.value.lat || default_lat
-		const field_lon  	= self.data.value.lon || default_lon
-		const field_zoom 	= self.data.value.zoom || default_zoom
-		const field_alt 	= self.data.value.alt || default_alt
-		const map_refresh	= map_container.querySelector('#map_refresh')
-		const map_fixed		= map_container.querySelector('#map_fixed')
-		//self.related_tipo 	= map_container.dataset.related_tipo
+		const key 			= JSON.parse(map_container.dataset.key)
+		const field_lat  	= value.lat 	|| default_lat
+		const field_lon  	= value.lon 	|| default_lon
+		const field_zoom 	= value.zoom 	|| default_zoom
+		const field_alt 	= value.alt 	|| default_alt
+
+	// update teh current_value
+		self.current_value[key] = JSON.parse(JSON.stringify(self.data.value[key]))
 
 	// map_data
-		const map_data = (typeof self.data.value!=="undefined")
+		const map_data = (typeof value!=="undefined")
 			? {
 				x	  : field_lat,
 				y	  : field_lon,
@@ -120,49 +161,40 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 				alt  : default_alt
 			 }
 
-	let map 			= null
-	let layer_control	= false
-
-	let arcgis 			= null
-	let osm  			= null
-	let dare 			= null
-	let base_maps 		= {}
+				console.log("map_data:",map_data);
+	// new map vars			
+		let arcgis 			= null
+		let osm  			= null
+		let dare 			= null
+		let base_maps 		= {}
 
 
 	// Add layer to map
 		switch(self.context.geo_provider) {
 
 			case 'OSM':
-				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 				L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 					attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
 					//attribution: '<a href="http://fmomo.org">Dedalo</a>',
 					maxZoom: 19
-				}).addTo(map);
+				}).addTo(self.map);
 				break;
 
-			// case 'COULDMADE':
-				// 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
-				// 	L.tileLayer('http://{s}.tile.cloudmade.com/API-key/997/256/{z}/{x}/{y}.png', {
-				// 		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
-				// 		maxZoom: 18
-				// 	}).addTo(map);
-				// 	break;
-
 			case 'GOOGLE':
-				map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 			    const googleLayer = new L.Google('ROADMAP');
 			    //map.addLayer(googleLayer);
-			    googleLayer.addTo(map);
+			    googleLayer.addTo(self.map);
 			    break;
 
 			case 'ARCGIS':
-			 	map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+			 	self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 		        L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
 		        maxZoom: 18,
 		        attribution: 'Tiles &copy; Esri — '
 		            + 'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, '
-		            + 'Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}).addTo(map);
+		            + 'Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}).addTo(self.map);
 		        break;
 
 			case 'NUMISDATA':
@@ -177,7 +209,7 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 				osm = new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
 
 				// MAP
-				map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 
 				// LAYER SELECTOR
 				base_maps = {
@@ -185,12 +217,12 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 					arcgis 	: arcgis,
 					osm 	: osm
 				}
-				if(layer_control===false || loaded_document===true) {
-					layer_control = L.control.layers(base_maps).addTo(map);
+				if(self.layer_control===false || self.loaded_document===true) {
+					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
 
-				map.on('overlayadd', function(e) {
-				  	self.init_draw_editor(ar_FeatureGroup[e.name], e.name)
+				self.map.on('overlayadd', function(e) {
+				  	self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
 				})
 				break;
 
@@ -205,22 +237,22 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 				//var ggl2 	= new L.Google('TERRAIN');
 
 				// MAP
-				map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 
 				// layer selector
 				base_maps = {
 					arcgis  : arcgis,
 					osm 	: osm
 				}
-				if(layer_control===false || loaded_document===true) {
-					layer_control = L.control.layers(base_maps).addTo(map);
+				if(self.layer_control===false || self.loaded_document===true) {
+					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
 
-				map.on('overlayadd', function(e) {
-				  	self.init_draw_editor(ar_FeatureGroup[e.name], e.name)
+				self.map.on('overlayadd', function(e) {
+				  	self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
 				});
 
-				//layer_control.addBaseLayer(base_maps, "basemaps");
+				//self.layer_control.addBaseLayer(base_maps, "basemaps");
 				//map.addControl(new L.Control.Layers( {'Arcgis':arcgis, 'OSM':osm}, {}));
 				//map.addControl(arcgis);
 
@@ -232,32 +264,33 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 
 
 	// disable zoom handlers
-	map.scrollWheelZoom.disable();
+	self.map.scrollWheelZoom.disable();
 	// disable tap handler, if present.
-	if (map.tap) map.tap.disable();
+	if (self.map.tap) self.map.tap.disable();
 	// Add to maps array
 	//self.maps[map_container] = map;
 
 	// map move listeners
-		map.on('dragend', function(e){
+		self.map.on('dragend', function(e){
+
 			// Update input values
 			self.update_input_values({
-				lat  : map.getCenter().lat,
-				lon  : map.getCenter().lng,
-				zoom : map.getZoom()
-			}, wrapper)
+				lat  : self.map.getCenter().lat,
+				lon  : self.map.getCenter().lng,
+				zoom : self.map.getZoom()
+			},map_container)
 		});
-		map.on('zoomend', function(e){
+		self.map.on('zoomend', function(e){
 			// Update input values
 			self.update_input_values({
-				lat  : map.getCenter().lat,
-				lon  : map.getCenter().lng,
-				zoom : map.getZoom()
-			}, wrapper)
+				lat  : self.map.getCenter().lat,
+				lon  : self.map.getCenter().lng,
+				zoom : self.map.getZoom()
+			},map_container)
 		});
 
 	// map ready event
-		map.whenReady(function(e){
+		self.map.whenReady(function(e){
 			// force refresh map (apply 'invalidateSize')
 			const current_map = this
 			setTimeout(()=>{
@@ -268,57 +301,15 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 		});
 
 
-		// map.setView([51.505, -0.09], 13);
-
-	/*
-		// LISTENERS ON CHANGE INPUT VALUES, UPDATE MAP POSITION / ZOOM
-		field_lat.addEventListener("change", function(e){
-		//	map.panTo(new L.LatLng(field_lat.value, field_lon.value));
-		});
-		field_lon.addEventListener("change", function(e){
-		//	map.panTo(new L.LatLng(field_lat.value, field_lon.value));
-		});
-		field_zoom.addEventListener("change", function(e){
-		//	map.setZoom(field_zoom.value);
-		});
-		*/
-	// button map_refresh. click event
-
-	//_______________
-	/*
-		map_refresh.addEventListener("click", function(e){
-			let lat_log = new L.LatLng(field_lat.value, field_lon.value)
-			let zoom 	= parseInt(field_zoom.value);
-			map.setView(lat_log, zoom, {animation: true});
-			//map.panTo(lat_log)
-			//map.setZoom(field_zoom.value)
-			self.refresh_map(map)
-		});
-	// button map_fixed. click event Save
-		map_fixed.addEventListener("click", function(e){
-			field_lat.value  = map.getCenter().lat;
-			field_lon.value  = map.getCenter().lng;
-			field_zoom.value = map.getZoom();
-			self.Save(map_container)
-			self.refresh_map(map)
-		});
-
-	setTimeout(function(){
-		self.refresh_map(map)
-		//L.Util.requestAnimFrame(map.invalidateSize,map,!1,map._container);
-	}, 1400)
-	*/
-	//_______________
-
 	// onreadystatechange event complete render_tags
 		document.onreadystatechange = function() {
 			if (document.readyState==='complete') {
 				self.render_tags()
-				loaded_document = true
+				self.loaded_document = true
 			}
 		}
 
-	//if (loaded_document===true) {
+	//if (self.loaded_document===true) {
 	//	self.render_tags();
 	//}
 	/*
@@ -348,13 +339,12 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 		subtree 		: false
 	}
 	const observer = new MutationObserver(function(mutationList){
-		self.refresh_map(map)
+		self.refresh_map(self.map)
 	})
 	observer.observe(section_group, observer_config)
 
-
 	return true
-}//end init_map
+}//end get_map
 
 
 
@@ -362,17 +352,31 @@ component_geolocation.prototype.init_map = async function(wrapper) {
 * UPDATE_INPUT_VALUES
 * @return bool true
 */
-component_geolocation.prototype.update_input_values = function(data, wrapper) {
+component_geolocation.prototype.update_input_values = function(data, map_container) {
+
+	const self = this
+
+	const key 	= map_container.dataset.key
+	const li 	= map_container.parentNode
 
 	// inputs
-		const input_lat  = wrapper.querySelector("input[data-name='lat']")
-		const input_lon  = wrapper.querySelector("input[data-name='lon']")
-		const input_zoom = wrapper.querySelector("input[data-name='zoom']")
+		const input_lat		= li.querySelector("input[data-name='lat']")
+		const input_lon		= li.querySelector("input[data-name='lon']")
+		const input_zoom	= li.querySelector("input[data-name='zoom']")
+		const input_alt		= li.querySelector("input[data-name='alt']")
 
 	// Set values to inputs
 		input_lat.value  = data.lat
 		input_lon.value  = data.lon
 		input_zoom.value = data.zoom
+
+	//get the value from alt input
+		data.alt = JSON.parse(input_alt.value)
+
+	//set the current value
+		self.current_value[key] = data
+
+		//self.node[data.key].dispatchEvent(new Event('change')); //Event('change',{ 'bubbles': true })
 
 	return true
 }//end update_input_values
@@ -392,3 +396,420 @@ component_geolocation.prototype.refresh_map = function(map) {
 }//end refresh_map
 
 
+
+/**
+* LOAD_GEO_EDITOR
+* Load all data information of the current selected tag. Init the edditor if it is not loaded.
+* Carga los datos al pulsar sobre la etiqueta. Inicializa el editor de no estar ya inicializado
+*/
+component_geolocation.prototype.load_geo_editor = function(tag, all_tags) {
+
+	const self = this
+
+	if (typeof all_tags==="undefined") {
+		all_tags = false
+	}
+
+	if(SHOW_DEBUG===true) {
+		//console.log("[component_geolocation.load_geo_editor] tag:",tag);;
+	}	
+
+	// TAG : Get all information of the selected tag
+	const parts_of_tag = self.get_parts_of_tag(tag);
+
+	var data 	= parts_of_tag.data
+	var	capaId 	= parts_of_tag.capaId
+
+	// ar_tag_loaded : store current tag
+		self.ar_tag_loaded[capaId] = tag;
+	
+	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
+	if( self.map.hasLayer(self.ar_FeatureGroup[capaId])===false ) {		
+
+		if(!all_tags){
+			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
+				if(self.ar_FeatureGroup[i]){
+					self.ar_FeatureGroup[i].clearLayers();
+					self.layer_control.removeLayer(self.ar_FeatureGroup[i]) 
+				}
+			}
+		}
+
+		// Create a new FeatureGroup
+		self.ar_FeatureGroup[capaId] = new L.FeatureGroup();
+		self.ar_FeatureGroup[capaId].addTo(self.map);
+
+		self.layer_control.addOverlay(self.ar_FeatureGroup[capaId], capaId);							  	
+
+	}else{
+		// Condfirm our write
+		//if( !confirm("Discard changes?") ) return;
+		//remove all layers
+
+		if(!all_tags){
+			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
+				if(self.ar_FeatureGroup[i]){
+					self.ar_FeatureGroup[i].clearLayers();
+					self.layer_control.removeLayer(self.ar_FeatureGroup[i]) 
+				}
+			}
+		}
+		self.layer_control.addOverlay( self.ar_FeatureGroup[capaId], capaId);	
+		// FEATUREGROUP RESET : Remove the all data layers for re-created with the new data that come with the loaded tag.		
+		self.ar_FeatureGroup[capaId].clearLayers();	//delete self.ar_FeatureGroup[capaId];
+	}		
+
+	// LAYERS : Load layers from tag data
+	if (typeof data!=="undefined" && data!=="undefined" && data!=="") {
+		
+		L.geoJson( JSON.parse(data), { 
+			//For each Feature load all layer data of the tag
+	    	onEachFeature: function (feature, data_layer) {
+	    		if(data_layer){
+
+	    			// PopupContent. get the popup information
+						const content = self.get_popup_content(data_layer);
+							if (content) {
+								data_layer.bindPopup(content);
+							}
+
+		            // Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
+						data_layer.on('click', function(e) {
+							if(self.draw_state==="delete"){
+								self.ar_FeatureGroup[capaId].removeLayer(e.layer);
+								return;
+	            			}
+	            			// change all features and layers for activate or deactivate the edit mode.
+	            			const FeatureGroup_length = self.ar_FeatureGroup.length;
+							for (var i = FeatureGroup_length - 1; i >= 1; i--) {
+								if(self.ar_FeatureGroup[i]){
+									if(self.ar_FeatureGroup[i]===self.ar_FeatureGroup[capaId]){
+										//All layers and features to desactive and change to blue color
+										self.ar_FeatureGroup[capaId].eachLayer(function (layer){
+											layer.editing.disable();
+									    	if(!(layer instanceof L.Marker)){
+										    	layer.setStyle({color: '#31df25'});
+										    }
+									    });
+									}else{
+										//The layers of the actual feature disable and change to green color
+										self.ar_FeatureGroup[i].eachLayer(function(layer) {
+											layer.editing.disable();
+											if(!(layer instanceof L.Marker)){
+												layer.setStyle({color: '#3388ff'});
+											}											
+										});
+									}
+								}
+							}
+							// current layer activate and change to pink color
+							//e.target.editing.enable();
+							if(!(e.target instanceof L.Marker)){
+								e.target.setStyle({color: '#97009C'});
+							}else{
+								console.log("NOt e.target instanceof L.Marker ",);
+							}
+							//activate the feature (for save)
+							//self.init_draw_editor( self.ar_FeatureGroup[capaId], capaId )
+						 });
+						
+					// addLayer
+						// console.log("self.ar_FeatureGroup[capaId]:",self.ar_FeatureGroup[capaId]); // , "data_layer", data_layer, "capaId",capaId
+						self.ar_FeatureGroup[capaId].addLayer(data_layer)
+		    	}
+			}
+		})
+		
+	};
+
+
+	//map.addControl(L.Control.Layers.addOverlay( self.ar_FeatureGroup[capaId], capaId));
+	// DRAW_EDITOR : Init draw editor and pass current FeatureGroup
+	self.init_draw_editor( self.ar_FeatureGroup[capaId], capaId )
+
+	// OVERLAY : Lo añadimos al map ovelay (Adds an overlay (checkbox entry) with the given name to the control)
+	//current_overlay = L.tileLayer(self.ar_FeatureGroup[capaId]);
+	//L.control.layers({},{'current_overlay':current_overlay}).addTo(map);
+
+	// CURRENT_EDITABLE_FEATUREGROUP_ID : Fijamos como current editable el FeatureGroup actual
+	self.current_editable_FeatureGroup_id = capaId;
+}//end load_geo_editor
+
+
+
+/**
+* GET_PARTS_OF_TAG
+*/
+component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
+
+	const type = tag_obj.dataset.type
+		if (type!=='geo'){
+			alert("invalid tag here!!!!")
+			return false
+		}
+
+	const tagState 		= tag_obj.dataset.state
+	const capaId 		= tag_obj.dataset.tag_id
+	const dirty_data 	= tag_obj.dataset.data			
+	const data 			= dirty_data.replace(/'/g, '"')
+
+	// if the tag is empty we can't parse it.
+	const dato = (data) ? JSON.parse(data) : data
+
+	const parts_of_tag = {
+		capaId 	 : capaId,
+		tagState : tagState,
+		data 	 : data
+	}
+
+	return parts_of_tag
+}//end get_parts_of_tag
+
+
+
+/**
+* GET_POPUP_CONTENT
+* @return 
+* 	Generate popup content based on layer type
+*	Returns HTML string, or null if unknown object
+*/
+component_geolocation.prototype.get_popup_content = function(layer) {
+
+	const sefl = this
+
+    // Marker - add lat/long
+    if (layer instanceof L.Marker) {
+        return this.str_lat_lng(layer.getLatLng());
+    // Circle - lat/long, radius
+    } else if (layer instanceof L.Circle) {
+        var center = layer.getLatLng(),
+            radius = layer.getRadius();
+        return "Center: "+this.str_lat_lng(center)+"<br />"
+              +"Radius: "+this.round_coordinate(radius, 2)+" m";
+    // Rectangle/Polygon - area
+    } else if (layer instanceof L.Polygon) {
+        var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
+            area = L.GeometryUtil.geodesicArea(latlngs);
+        return "Area: "+L.GeometryUtil.readableArea(area, true);
+    // Polyline - distance
+    } else if (layer instanceof L.Polyline) {
+        var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
+            distance = 0;
+        if (latlngs.length < 2) {
+            return "Distance: N/A";
+        } else {
+            for (var i = 0; i < latlngs.length-1; i++) {
+                distance += latlngs[i].distanceTo(latlngs[i+1]);
+            }
+            return "Distance: "+this.round_coordinate(distance, 2)+" m";
+        }
+    }
+    return null;
+};//end get_popup_content
+
+
+
+
+/**
+* STR_LAT_LNG
+* @return 
+* 	Helper method to format LatLng object (x.xxxxxx, y.yyyyyy)
+*/
+component_geolocation.prototype.str_lat_lng = function(latlng) {
+
+	const self = this
+
+	return "("+self.round_coordinate(latlng.lat, 6)+", "+self.round_coordinate(latlng.lng, 6)+")";
+};//end str_lat_lng
+
+
+
+/**
+* ROUND_COORDINATE
+* @return 
+* 	add pop up information to the draw
+*	Truncate value based on number of decimals
+*/
+component_geolocation.prototype.round_coordinate = function(num, len) {
+
+	return Math.round(num*(Math.pow(10, len)))/(Math.pow(10, len));
+};//end round_coordinate
+
+
+
+/*
+* INIT_DRAW_EDITOR
+* @see https://github.com/Leaflet/Leaflet.draw/issues/66
+*/
+component_geolocation.prototype.init_draw_editor = function( current_editable_FeatureGroup, capa_id ) {
+		
+	const self = this
+	const map 						= self.map
+	const draw_editor_is_initated 	= self.draw_editor_is_initated	
+
+	self.current_editable_FeatureGroup_id 	= capa_id;
+	self.editable_FeatureGroup 			 	= current_editable_FeatureGroup;
+	const editable_FeatureGroup				= self.editable_FeatureGroup 
+
+	// DRAW CONTROL REMOVE : Si ya existe, lo eliminamos para poder crearlo de nuevo y que haya sólo uno activo
+		if (self.drawControl) {
+			self.drawControl.remove(map)
+		}
+
+	// DRAW CONTROL ///////////////////////////////////////////////////
+	// El editor se inicaliza cada vez y recibe el FeatureGroup recién cargado como parámetro (ver https://github.com/Leaflet/Leaflet.draw/issues/66)
+	self.drawControl = new L.Control.Draw({
+		position: 'topright',
+		draw: {
+			polyline: {
+				metric: true,
+				shapeOptions: {
+					color: '#31df25'
+				}
+			},
+			polygon: {
+				allowIntersection: false,
+				showArea: true,
+				drawError: {
+					color: '#31df25',
+					timeout: 1000
+				},
+				shapeOptions: {
+					color: '#31df25'
+				}
+			},
+			circle: {
+				shapeOptions: {
+					color: '#31df25'
+				}
+			},
+			rectangle: {
+				shapeOptions: {
+					color: '#31df25'
+				}
+			},
+			marker: true
+		},
+		edit: {
+			featureGroup: editable_FeatureGroup,
+			remove: true,
+		}
+	});
+	map.addControl(self.drawControl);
+		
+		// DRAW HANDLERS //////////////////////////////////////////////
+		// !!IMPORTANTE : El editor se inicializa cada vez, pero los manejadores sólo una
+		if(draw_editor_is_initated===true) {
+			//console.log('draw_editor_is_initated. returning');
+			return false;
+		}
+
+		// Listenre for object created - bind popup to layer, add to feature group
+		map.on(L.Draw.Event.CREATED, function (e) {	// Triggered when a new vector or marker has been created.
+			
+			//var type  	= e.layerType
+			var	layer 	= e.layer
+			var	content = self.get_popup_content(layer)
+
+			if (content!==null) {
+                layer.bindPopup(content);
+            }
+            //listener fired when the layer is selected.
+            layer.on('click', function(e) {
+            	if(self.draw_state==="delete"){
+					editable_FeatureGroup.removeLayer(e.layer);
+					return;
+            	}else{
+					//e.target.editing.enable();
+            	}
+			})
+
+			/*if (type === 'marker') {
+				layer.bindPopup('A popup!');
+			}*/
+			editable_FeatureGroup.addLayer(layer);
+
+			// Update draw_data
+			self.draw_data = editable_FeatureGroup;
+
+			//save the draw_data
+			self.save_draw_data();
+			
+		});
+		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
+		map.on(L.Draw.Event.EDITED, function (e) {	// Triggered when layers in the FeatureGroup, initialised with the plugin, have been edited and saved.						
+			// Update draw_data
+			self.draw_data = editable_FeatureGroup;
+			// Save draw_data
+			self.save_draw_data();
+		});
+		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
+		map.on(L.Draw.Event.DELETED, function (e) {	// Triggered when layers have been removed (and saved) from the FeatureGroup.
+			self.draw_data = editable_FeatureGroup;
+			// Save draw_data
+			self.save_draw_data();
+		});
+		// Listener for change the mode of the draw (trash button in the editor)
+		map.on(L.Draw.Event.DELETESTART, function (e) {	
+			self.draw_state = "delete";
+		});
+		// Listener for exit of the "delete mode" of the draw editor (close or save options of the trash button in the editor)
+		map.on(L.Draw.Event.DELETESTOP, function (e) {	
+			self.draw_state = "";
+		});
+		// Listerner to the map for change the edit mode the all layer of the all features (change the state and color)
+		map.on('click', function(e){
+			self.draw_state ="";
+			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
+				if(self.ar_FeatureGroup[i]){
+					self.ar_FeatureGroup[i].eachLayer(function(layer) {
+						layer.editing.disable();
+						if(!(layer instanceof L.Marker)){
+							layer.setStyle({color: '#3388ff'});
+						}
+						
+					})
+				}
+			}
+		})
+
+		
+	// DRAW_EDITOR_IS_INITATED : Fija la variable a global a true (default is false) para evitar duplicidades
+	//draw_editor_is_initated = true;
+
+	return true
+}//end init_draw_editor
+
+
+
+/**
+* SAVE_DRAW_DATA
+*/
+component_geolocation.prototype.save_draw_data = function() {
+	
+		const self = this
+
+		if(!self.draw_data) return false;
+
+		let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
+			if(SHOW_DEBUG===true) {	
+				console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
+			}
+			current_draw_data = current_draw_data.replace(/"/g, '\'') //replaceAll('"', '\'', current_draw_data)
+
+
+		const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
+
+		const tag_data = {
+			type 			: tag_obj.dataset.type,
+			tag_id 			: tag_obj.dataset.tag_id,
+			id 				: tag_obj.id,
+			dataset			: {data:current_draw_data},
+			save 			: true
+		}
+
+		// UPDATE_TAG
+		event_manager.publish('geo_change_tag' +'_'+ self.tipo, tag_data)
+
+		return true
+	};//end save_draw_data
