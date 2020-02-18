@@ -312,10 +312,11 @@ class dd_core_api {
 
 	/**
 	* GET_ELEMENT_CONTEXT
+	* Used by search.get_component(source) calling data_manager
 	* @param object $json_data
 	* @return object $response
 	*/
-	static function get_element_context($json_data){
+	public static function get_element_context($json_data){
 
 		//////////session_write_close();
 
@@ -333,16 +334,16 @@ class dd_core_api {
 			$mode 			= $source->mode ?? 'list';
 
 		// build element
-			switch ($model) {
-				case 'section':
+			switch (true) {
+				case $model==='section':
 					$element 		= section::get_instance(null, $section_tipo);
 					break;
 
-				case 'section_tm':
+				case $model==='section_tm':
 					$element 		= section_tm::get_instance(null, $section_tipo);
 					break;
 
-				case 'component':
+				case strpos($model, 'component')!==false:
 				default:
 					$element 		= component_common::get_instance($model,
 																	 $tipo,
@@ -372,58 +373,29 @@ class dd_core_api {
 
 
 	/**
-	* GET_ELEMENT
-	* @param object $json_data
+	* GET_PAGE_ELEMENT
+	* Creates a full ready page element from basic vars (tipo, model, lang, mode, section_id)
+	* @param object $options
 	* @return object $response
 	*/
-	public static function get_element($json_data){
+	public static function get_page_element($request) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$options = $json_data->options;
+		// set options from request
+			if (!$options = $request->options) {
+				return $response;
+			}
 
-		// vars from json_data
-			$required_element = new stdClass();
-				$required_element->tipo 		= $options->tipo ?? null;
-				$required_element->model 		= $options->model ?? (isset($options->tipo) ? RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true) : null);
-				$required_element->lang 		= $options->lang ?? DEDALO_DATA_LANG;
-				$required_element->mode 		= $options->mode ?? 'list';
-				$required_element->section_id	= $options->section_id ?? null;
-
-				$required_element->component_tipo 	= $options->component_tipo ?? null;
-				$required_element->tm 				= $options->tm ?? null;
-
-		// element json
-			$element = self::get_page_element( $required_element );
-
-		$response->result 		= $element;
-		$response->msg 	  		= 'Ok. Request done';
-
-		return (object)$response;
-	}//end get_element
-
-
-
-	/**
-	* GET_PAGE_ELEMENT
-	* Creates a full ready page element from basic vars (tipo, model, lang, mode, section_id)
-	* Before building the page element object, verify that the user is logged in. If not, return 'null'
-	* @param object $required_element
-	* @return object $page_element
-	*/
-	private static function get_page_element($required_element) {
-
-		// logged
-			if (login::is_logged()!==true) return null;
-
-			$tipo 			= $required_element->tipo;
-			$model 			= $required_element->model;
-			$lang 			= $required_element->lang;
-			$mode 			= $required_element->mode;
-			$section_id 	= $required_element->section_id;
-			$component_tipo = $required_element->component_tipo ?? null;
+		// vars
+			$tipo 			= $options->tipo ?? null;
+			$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
+			$lang 			= $options->lang ?? DEDALO_DATA_LANG;
+			$mode 			= $options->mode ?? 'list';
+			$section_id 	= $options->section_id ?? null;
+			$component_tipo = $options->component_tipo ?? null;
 
 		// page elements
 			switch ($model) {
@@ -524,14 +496,19 @@ class dd_core_api {
 					})();
 					break;
 
-					default:
-						throw new Exception("Error Processing Request", 1);
+				default:
+					#throw new Exception("Error Processing Request", 1);
+					$response->msg = 'Error. model not found: '.$model;
+					return $response;
 
 			}//end switch ($model)
 
 
+		$response->result 	= $page_element;
+		$response->msg 	  	= 'Ok. Request done';
 
-		return $page_element;
+
+		return (object)$response;
 	}//end get_page_element
 
 
@@ -740,13 +717,22 @@ class dd_core_api {
 			dd_core_api::$ar_dd_objects = $ar_dd_objects;
 
 		// ddo_source
-			$ddo_source = array_reduce($base_context, function($carry, $item){
-				if (isset($item->typo) && $item->typo==='source') {
-					return $item;
-				}
-				return $carry;
+			// $ddo_source = array_reduce($base_context, function($carry, $item){
+			// 	if (isset($item->typo) && $item->typo==='source') {
+			// 		return $item;
+			// 	}
+			// 	return $carry;
+			// });
+			$ar_source = array_filter($base_context, function($item) {
+				 if($item->typo==='source') return $item;
 			});
+			if (count($ar_source)!==1) {
+				throw new Exception("Error Processing Request. Invalid number of 'source' items in context. Only one is allowed", 1);
+				return $result;
+			}
+			$ddo_source = reset($ar_source);
 
+			// from source vars
 			$action 		= $ddo_source->action;
 			$mode 			= $ddo_source->mode;
 			$lang 			= $ddo_source->lang ?? null;

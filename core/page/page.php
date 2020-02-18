@@ -70,20 +70,31 @@
 	// menu. Get the mandatory menu element
 		$menu_element_required = new stdClass();
 			$menu_element_required->options = (object)[
-				'model' => 'menu'
+				'model' 	=> 'menu',
+				'lang' 		=> DEDALO_DATA_LANG
 			];
-		$page_elements[] = dd_core_api::get_element($menu_element_required)->result;
+		$page_elements[] = dd_core_api::get_page_element($menu_element_required)->result;
 
 	// section/area/tool. Get the page element from get url vars
 		$element_required = new stdClass();
 			$element_required->options = (object)[
-				'model' 	 => null,
+				'model' 	 => RecordObj_dd::get_modelo_name_by_tipo($tipo, true),
 				'tipo' 		 => $tipo,
 				'lang' 		 => DEDALO_DATA_LANG,
 				'mode' 		 => MODE,
 				'section_id' => $section_id
 			];
-		$page_elements[] = dd_core_api::get_element($element_required)->result;
+		$page_elements[] = dd_core_api::get_page_element($element_required)->result;
+
+
+		// $a = dd_core_api::get_page_element($element_required)->result;
+		// 	dump($a, ' a get_page_element ++ '.to_string());
+
+		// $obj = new stdClass();
+		// 	$obj->source = $element_required->options;
+		// 	$obj->source->section_tipo = 'test65';
+		// $b = dd_core_api::get_element_context($obj)->result;
+		// 	dump($b, ' b get_element_context ++ '.to_string());
 
 	// page load all elements
 		$load_page($page_elements);

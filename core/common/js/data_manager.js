@@ -182,32 +182,54 @@ data_manager.prototype.count = async function(sqo) {
 
 /**
 * GET_ELEMENT_CONTEXT
-* Generic section data loader
-* @param object context
+* Resolves full element context based on minimal source vars
+* Like:
+*	source = {
+*		model: "component_input_text"
+*		tipo: "test159"
+*		section_tipo: "test65"
+*		section_id: null
+*		mode: "search"
+*	}
+* @param object source
 * @return promise api_response
-*//*
+*/
 data_manager.prototype.get_element_context = async function(source) {
 
-	// data_manager
+	// api request
 		const api_response = await this.request({
 			body : {
-				source 	: source,
-				action 	: 'get_element_context'
+				action 	: 'get_element_context',
+				source 	: source
 			}
 		})
 
-	const total = api_response.result.total
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("??????????????????? [data_manager.get_element_context] total for source:", total, source, api_response.result.debug.exec_time);
-				alert("77");
-		}
-
-
-	return total
+	return api_response
 }//end get_element_context
+
+
+
+
+/**
+* GET_PAGE_ELEMENT
+* Get full page element
+* @param object options
+* @return promise api_response
 */
+data_manager.prototype.get_page_element = async function(options) {
+
+	// api request
+		const api_response = await this.request({
+			body : {
+				action 	: 'get_page_element',
+				options : options
+			}
+		})
+
+
+	return api_response
+}//end get_page_element
 
 
 
