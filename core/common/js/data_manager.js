@@ -163,8 +163,8 @@ data_manager.prototype.count = async function(sqo) {
 	// data_manager
 		const api_response = await this.request({
 			body : {
-				sqo 	: sqo,
-				action 	: 'count'
+				action 	: 'count',
+				sqo 	: sqo
 			}
 		})
 
