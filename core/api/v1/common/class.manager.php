@@ -31,6 +31,14 @@ class manager {
 
 		// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
 
+		// logged
+			if ($options->action!=='login' && login::is_logged()!==true) {
+				$response = new stdClass();
+					$response->result 	= false;
+					$response->msg 		= 'Error. user is not logged !';
+				return $response;
+			}
+
 		// options check
 			$dedalo_data = null;
 			if (!is_object($options) || !property_exists($options,'action')) {
