@@ -157,6 +157,10 @@
 			for(let key in options) {
 
 				const value = options[key]
+				if (value===null) {
+					continue; // ignore null options
+				}
+
 				if (item[key]===value) {
 					result = true
 				}else{
