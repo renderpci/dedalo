@@ -160,6 +160,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
 
+
 	const fragment = new DocumentFragment()
 
 
@@ -249,6 +250,11 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 				console.error("Undefined current_instance:", current_instance, i, ar_instances);
 				continue;
 			}
+
+			// modification date . generic component
+				// if (current_instance.tipo==='dd201') {
+				// 	self.modification_date = current_instance.data.value
+				// }
 
 			const current_instance_node = await current_instance.render()
 

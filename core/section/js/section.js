@@ -116,6 +116,8 @@ section.prototype.init = async function(options) {
 		//console.log("[section.init] modified self.sqo_context:", self.sqo_context);
 
 	// events subscription
+
+
 	// status update
 		self.status = 'inited'
 
@@ -137,6 +139,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// status update
 		self.status = 'building'
+
 
 	const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
 
@@ -198,6 +201,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// paginator
 		if (!self.paginator) {
+
 			const current_paginator = new paginator()
 			current_paginator.init({
 				caller : self

@@ -122,7 +122,7 @@ class dd_core_api {
 				        "tipo": "test159",
 				        "lang": "lg-eng"
 				      }],
-				    "full_count": true,
+				    "full_count": false,
 				    "limit": 10,
 				    "offset": 0,
 				    "order": [{

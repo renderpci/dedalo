@@ -111,7 +111,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					console.log("[tool_common.build] api_response:", api_response);
+					// console.log("[tool_common.build] api_response:", api_response);
 				}
 		}
 
