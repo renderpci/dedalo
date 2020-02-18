@@ -471,12 +471,7 @@ search.prototype.get_component = async function(options) {
 			mode 			: 'search'
 	}
 	const current_data_manager 	= new data_manager()
-	const api_response 			= await current_data_manager.request({
-		body : {
-			action : "get_element_context",
-			source : source
-		}
-	})
+	const api_response 			= await current_data_manager.get_element_context(source)
 
 	// debug
 		if(SHOW_DEBUG===true) {
