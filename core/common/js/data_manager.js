@@ -99,7 +99,7 @@ data_manager.prototype.request = async function(options) {
 
 /**
 * SECTION_LOAD_DATA
-* Generic section data loader
+* Generic section data loader (API read)
 * @param object context
 * @return promise api_response
 */
@@ -108,8 +108,8 @@ data_manager.prototype.section_load_data = async function(sqo_context) {
 	// data_manager
 		const api_response = this.request({
 			body : {
-				context : sqo_context,
-				action 	: 'read'
+				action 	: 'read',
+				context : sqo_context
 			}
 		})
 
@@ -122,33 +122,6 @@ data_manager.prototype.section_load_data = async function(sqo_context) {
 
 	return api_response
 }//end section_load_data
-
-
-
-/**
-* AREA_LOAD_DATA
-* Generic area data loader
-* @param object context
-* @return promise api_response
-*//*
-data_manager.prototype.area_load_data = async function(basic_context) {
-
-	// data_manager
-		const api_response = this.request({
-			body : {
-				context : basic_context,
-				action 	: 'read'
-			}
-		})
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[data_manager.area_load_data] api_response for sqo_context:", api_response, sqo_context);
-		}
-
-	return api_response
-}//end area_load_data
-*/
 
 
 
@@ -209,8 +182,6 @@ data_manager.prototype.get_element_context = async function(source) {
 }//end get_element_context
 
 
-
-
 /**
 * GET_PAGE_ELEMENT
 * Get full page element
@@ -230,6 +201,33 @@ data_manager.prototype.get_page_element = async function(options) {
 
 	return api_response
 }//end get_page_element
+
+
+
+/**
+* AREA_LOAD_DATA
+* Generic area data loader
+* @param object context
+* @return promise api_response
+*//*
+data_manager.prototype.area_load_data = async function(basic_context) {
+
+	// data_manager
+		const api_response = this.request({
+			body : {
+				context : basic_context,
+				action 	: 'read'
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("[data_manager.area_load_data] api_response for sqo_context:", api_response, sqo_context);
+		}
+
+	return api_response
+}//end area_load_data
+*/
 
 
 

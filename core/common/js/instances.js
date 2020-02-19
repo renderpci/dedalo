@@ -105,7 +105,7 @@
 
 	/**
 	* GET_ALL_INSTANCES
-	* Get all the instances from memory 
+	* Get all the instances from memory
 	*/
 	export const get_all_instances = function() {
 
