@@ -59,20 +59,19 @@ tool_common.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
+	// component_json simple_tool_object
+		const simple_tool_object_tipo = 'dd1353'
+
 
 	// load self style
-		const url = DEDALO_CORE_URL + "/tools/" + self.model + "/css/" + self.model + ".css"
-		await common.prototype.load_style(url)
+		const tool_css_url = DEDALO_CORE_URL + "/tools/" + self.model + "/css/" + self.model + ".css"
+		common.prototype.load_style(tool_css_url)
 
 
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// sqo_context
-				// create the sqo_context
-				const sqo_context = {show: []}
-				// create the own show ddo element
-
+			// mandatory varzs check
 				if (!self.tool_section_tipo || self.tool_section_tipo.lenght<2) {
 					console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_tipo:", self.tool_section_tipo);
 					return false
@@ -81,6 +80,9 @@ tool_common.prototype.build = async function(autoload=false) {
 					console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_id:", self.tool_section_id);
 					return false
 				}
+
+			// sqo_context. Create the basic sqo_context
+				const sqo_context = {show: []}
 
 				// tool source for component json that stores full tool config
 				const source = {
@@ -102,16 +104,17 @@ tool_common.prototype.build = async function(autoload=false) {
 				const api_response 			= await current_data_manager.section_load_data(sqo_context.show)
 				const data 					= api_response.result.data
 
-				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo==='dd1353').value
-				self.config 		= simple_tool_object[0];
-				const label 		= self.config.label.find(item => item.lang===self.lang);
-				self.label 			= typeof label!=='undefined' ? label.value : self.model
-				const description	= self.config.description.find(item => item.lang===self.lang)
-				self.description 	= typeof description!=='undefined' ? description.value : null
+			// config set
+				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
+				self.config 				= simple_tool_object[0];
+				const label 				= self.config.label.find(item => item.lang===self.lang);
+				self.label 					= typeof label!=='undefined' ? label.value : self.model
+				const description			= self.config.description.find(item => item.lang===self.lang)
+				self.description 			= typeof description!=='undefined' ? description.value : null
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					// console.log("[tool_common.build] api_response:", api_response);
+					console.log("[tool_common.build] api_response:", api_response);
 				}
 		}
 

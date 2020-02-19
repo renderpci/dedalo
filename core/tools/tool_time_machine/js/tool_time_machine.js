@@ -104,7 +104,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 		// 	console.log("+++++ api_response.result:",api_response.result);
 
 	// section_tm. get section full context
-		const current_data_manager 	= new data_manager()
+		const current_data_manager = new data_manager()
 		const source = {
 			typo 		 : 'source',
 			tipo 		 : self.caller.tipo,
@@ -117,7 +117,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				offset : 0
 			}
 		}
-		const element_context = await current_data_manager.get_element_context(source)
+		const element_context 	= await current_data_manager.get_element_context(source)
 		self.section_tm_context = element_context.result
 
 
@@ -130,85 +130,85 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 * GET_BASE_CONTEXT
 * Create a base context for section_tm
 */
-const get_base_context = (self) => {
+// const get_base_context = (self) => {
 
-	const mode = "tm"
+// 	const mode = "tm"
 
-	// sqo
-		const sqo = {
-			typo 	: "sqo",
-			id 		: "tmp",
-			mode 	: mode,
-			section_tipo: [
-				self.caller.section_tipo
-			],
-			filter_by_locators: [{
-				section_tipo : self.caller.section_tipo,
-				section_id 	 : self.caller.section_id,
-				tipo 		 : self.caller.tipo,
-				lang 		 : self.caller.lang
-			}],
-			full_count: true,
-			limit: 10,
-			offset: 0,
-			order: [{
-				direction : "DESC",
-				path	  : [{
-					component_tipo: "id"
-				}]
-			}]
-		}
+// 	// sqo
+// 		const sqo = {
+// 			typo 	: "sqo",
+// 			id 		: "tmp",
+// 			mode 	: mode,
+// 			section_tipo: [
+// 				self.caller.section_tipo
+// 			],
+// 			filter_by_locators: [{
+// 				section_tipo : self.caller.section_tipo,
+// 				section_id 	 : self.caller.section_id,
+// 				tipo 		 : self.caller.tipo,
+// 				lang 		 : self.caller.lang
+// 			}],
+// 			full_count: true,
+// 			limit: 10,
+// 			offset: 0,
+// 			order: [{
+// 				direction : "DESC",
+// 				path	  : [{
+// 					component_tipo: "id"
+// 				}]
+// 			}]
+// 		}
 
-	// component
-		const component = {
-			typo 			: "ddo",
-			type 			: "component",
-			model 			: self.caller.model,
-			tipo 			: self.caller.tipo,
-			section_tipo 	: self.caller.section_tipo,
-			mode 			: "list",
-			parent 			: self.caller.section_tipo,
-			label 			: self.caller.label
-		}
+// 	// component
+// 		const component = {
+// 			typo 			: "ddo",
+// 			type 			: "component",
+// 			model 			: self.caller.model,
+// 			tipo 			: self.caller.tipo,
+// 			section_tipo 	: self.caller.section_tipo,
+// 			mode 			: "list",
+// 			parent 			: self.caller.section_tipo,
+// 			label 			: self.caller.label
+// 		}
 
-	// section
-		const section = {
-			typo 			: "ddo",
-			type 			: "section",
-			model 			: "section_tm",
-			tipo 			: self.caller.section_tipo,
-			section_tipo 	: self.caller.section_tipo,
-			mode 			: "tm",
-			parent 			: null,
-			label 			: null
-		}
+// 	// section
+// 		const section = {
+// 			typo 			: "ddo",
+// 			type 			: "section",
+// 			model 			: "section_tm",
+// 			tipo 			: self.caller.section_tipo,
+// 			section_tipo 	: self.caller.section_tipo,
+// 			mode 			: "tm",
+// 			parent 			: null,
+// 			label 			: null
+// 		}
 
-	// source
-		const source = {
-			typo 			: "source",
-			action 			: "search",
-			model 			: "section_tm",
-			tipo 			: self.caller.section_tipo,
-			section_tipo 	: self.caller.section_tipo,
-			section_id 		: null,
-			mode 			: mode,
-			lang 			: self.caller.lang,
-			pagination 		: {
-			  total  : {},
-			  offset : 0
-			}
-		}
+// 	// source
+// 		const source = {
+// 			typo 			: "source",
+// 			action 			: "search",
+// 			model 			: "section_tm",
+// 			tipo 			: self.caller.section_tipo,
+// 			section_tipo 	: self.caller.section_tipo,
+// 			section_id 		: null,
+// 			mode 			: mode,
+// 			lang 			: self.caller.lang,
+// 			pagination 		: {
+// 			  total  : {},
+// 			  offset : 0
+// 			}
+// 		}
 
-	const base_context = [
-		sqo,
-		component,
-		section,
-		source
-	]
+// 	const base_context = [
+// 		sqo,
+// 		component,
+// 		section,
+// 		source
+// 	]
 
 
-	return base_context
-}//end get_base_context
+// 	return base_context
+// }//end get_base_context
 
 
 
@@ -219,22 +219,10 @@ tool_time_machine.prototype.load_section = async function() {
 
 	const self = this
 
-	// base_context. Creates a special time_machine section context to get correct data
-	// and set to section instance
-		// const base_context 			= get_base_context(self);
-		// const current_data_manager 	= new data_manager()
-		// const api_response 			= await current_data_manager.section_load_data(base_context)
-		// if(SHOW_DEBUG===true) {
-		// 	console.log("[tool_time_machine load_section] api_response:",api_response);
-		// }
+	// show . Builded in build_custom self.section_tm_context
+		const show = self.section_tm_context
 
-		// // context resolved (all ddo elements)
-		// const full_context = api_response.result.context
-		// 	console.log("full_context:",full_context);
-
-		const full_context = self.section_tm_context
-
-	// section instance
+	// section instance (regular section)
 		const section_instance = await get_instance({
 			model 			: "section",
 			tipo 			: self.caller.section_tipo,
@@ -244,33 +232,30 @@ tool_time_machine.prototype.load_section = async function() {
 			lang 			: self.caller.lang,
 			section_lang 	: self.caller.lang,
 			type 			: "section",
-			// context 		: api_response.result.context,
-			// data 			: api_response.result.data,
-			// datum 			: api_response.result,
 			sqo_context 	: {
-				// show : [ base_context.find(element => element.typo==='sqo') ]
-				show : full_context
+				show : show
 			}
 		})
 
-	// save instance (necessary to destroy later)
+	// save section instance (necessary to destroy later)
 		self.ar_instances.push(section_instance)
 
-	// build with autoload as false (avoid auto )
+	// build with autoload as true
 		await section_instance.build(true)
 
-	if(SHOW_DEBUG===true) {
-		console.log("[tool_time_machine.load_section] section_instance:", section_instance);
-	}
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("[tool_time_machine.load_section] section_instance:", section_instance);
+		}
 
 	// // set current tool as component caller (to check if component is inside tool or not)
-	// 	component_instance.caller = this
+		section_instance.caller = this
 
-	// // add
-	// 	const instance_found = self.ar_instances.find( el => el===component_instance )
-	// 	if (component_instance!==self.caller && typeof instance_found==="undefined") {
-	// 		self.ar_instances.push(component_instance)
-	// 	}
+	// add
+		const instance_found = self.ar_instances.find( el => el===section_instance )
+		// if (section_instance!==self.caller && typeof instance_found==="undefined") {
+			self.ar_instances.push(section_instance)
+		// }
 
 
 	return section_instance
