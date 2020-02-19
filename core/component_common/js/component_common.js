@@ -91,10 +91,12 @@ component_common.prototype.init = async function(options) {
 
 
 	// events subscription
-	const observe = self.context.properties.observe || null;
+	const observe = typeof self.context.properties!=="undefined"
+		? (self.context.properties.observe || null)
+		: null
 	if(observe){
-
-		for (let i = observe.length - 1; i >= 0; i--) {
+		const l = observe.length
+		for (let i = l - 1; i >= 0; i--) {
 			const component_tipo 	= observe[i].component_tipo
 			const event 			= observe[i].event
 			const perform 			= observe[i].perform || null
@@ -106,7 +108,7 @@ component_common.prototype.init = async function(options) {
 			}
 		}
 	}
-		
+
 
 	// component_save (when user change component value) every component is looking if the own the instance was changed.
 		/*
