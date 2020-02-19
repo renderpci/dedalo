@@ -250,12 +250,6 @@ class component_iri extends component_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
 		$valor = $this->get_valor($lang);
 		$valor = strip_tags($valor); // Removes the span tag used in list mode
 		/*
@@ -268,6 +262,7 @@ class component_iri extends component_common {
 		if(SHOW_DEBUG===true) {
 			#return "DATE: ".$valor;
 		}
+		
 		return (string)$valor;
 	}//end get_valor_export
 
@@ -413,47 +408,66 @@ class component_iri extends component_common {
 		$q = pg_escape_string(stripslashes($q));
 
         switch (true) {
-        	/*
+        	
 				case ($q==='!*'):
-					$operator = 'IS NULL';
+					// $operator = 'IS NULL';
 					$q_clean  = '';
-					$query_object->operator = $operator;
-	    			$query_object->q_parsed	= $q_clean;
-	    			$query_object->unaccent = false;
+					$path_end 		= end($query_object->path);
+					$component_tipo = $path_end->component_tipo;
+					$RecordObj_dd   = new RecordObj_dd($component_tipo);
+					$lang 		= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
-	    			$clone = clone($query_object);
-		    			$clone->operator = '=';
-		    			$clone->q_parsed = "'[]'";
+	    			$query1 = clone($query_object);
+						$query1->operator 	= ' ';
+						$query1->q_parsed 	= 'IS NULL';
+						$query1->format		= 'typeof';
+						$query1->lang 		= $lang;
+
+					$query2 = clone($query_object);
+						$query2->operator 	= '=';
+						$query2->q_parsed	= '\'[]\'';
+						$query2->type 		= 'string';
+						$query2->lang 		= $lang;
 
 					$logical_operator = '$or';
-	    			$new_query_json = new stdClass;
-		    			$new_query_json->$logical_operator = [$query_object, $clone];
-	    			# override
-	    			$query_object = $new_query_json ;
+
+					$new_query_json = new stdClass();
+						$new_query_json->$logical_operator = [$query1, $query2];
+
+					$query_object = $new_query_json;
+
 					break;
 				case ($q==='*'):
-					$operator = 'IS NOT NULL';
-					$q_clean  = '';
-					$query_object->operator = $operator;
-	    			$query_object->q_parsed	= $q_clean;
-	    			$query_object->unaccent = false;
+					$path_end 		= end($query_object->path);
+					$component_tipo = $path_end->component_tipo;
+					$RecordObj_dd   = new RecordObj_dd($component_tipo);
+					$lang 		= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
-	    			$clone = clone($query_object);
-		    			$clone->operator = '!=';
-		    			$clone->q_parsed = "'[]'";
+					$query1 = clone($query_object);
+						$query1->operator 	= ' ';
+						$query1->q_parsed 	= 'IS NOT NULL';
+						$query1->format		= 'typeof';
+						$query1->lang 		= $lang;
 
-					$logical_operator ='$or';
-	    			$new_query_json = new stdClass;
-	    				$new_query_json->$logical_operator = [$query_object, $clone];
-	    			# override
-	    			$query_object = $new_query_json ;
+					$query2 = clone($query_object);
+						$query2->operator 	= '!=';
+						$query2->q_parsed	= '\'[]\'';
+						$query2->type 		= 'string';
+						$query2->lang 		= $lang;
+
+					$logical_operator = '$and';
+
+					$new_query_json = new stdClass();
+						$new_query_json->$logical_operator = [$query1, $query2];
+
+					$query_object = $new_query_json;
 					break;
-				# IS DIFFERENT
+			/*	# IS DIFFERENT
 				case (strpos($q, '!=')===0):
 					$operator = '!=';
 					$q_clean  = str_replace($operator, '', $q);
 					$query_object->operator = '!~';
-	    			$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
+	    			$query_object->q_parsed = '\'.*\[{"iri":.*"'.$q_clean.'".*}\]\'';
 	    			$query_object->unaccent = false;
 					break;
 				# IS EQUAL
