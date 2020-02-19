@@ -86,16 +86,6 @@
 			];
 		$page_elements[] = dd_core_api::get_page_element($element_required)->result;
 
-
-		// $a = dd_core_api::get_page_element($element_required)->result;
-		// 	dump($a, ' a get_page_element ++ '.to_string());
-
-		// $obj = new stdClass();
-		// 	$obj->source = $element_required->options;
-		// 	$obj->source->section_tipo = 'test65';
-		// $b = dd_core_api::get_element_context($obj)->result;
-		// 	dump($b, ' b get_element_context ++ '.to_string());
-
 	// page load all elements
 		$load_page($page_elements);
 
