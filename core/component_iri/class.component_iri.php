@@ -252,8 +252,6 @@ class component_iri extends component_common {
 		
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
 		$valor = $this->get_valor($lang);
