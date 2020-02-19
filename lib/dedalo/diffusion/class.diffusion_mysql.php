@@ -101,10 +101,11 @@ class diffusion_mysql extends diffusion_sql  {
 		$table_name 	= $table_data['table_name'];	# nombre tabla
 		$ar_fields 		= $table_data['ar_fields'];		# campos de la tabla
 		$engine 		= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
+		$table_type		= $table_data['table_type'];	# table type: default | tm
 
 		#
 		# DROP (default is true)
-			if($drop) {
+			if($drop===true) {
 				$sql_query  = (string)'';
 				$sql_query .= "DROP TABLE IF EXISTS `$database_name`.`$table_name` ; ";
 				#
@@ -118,7 +119,7 @@ class diffusion_mysql extends diffusion_sql  {
 			$sql_query  = (string)'';
 			$sql_query .= "\nCREATE TABLE `$database_name`.`$table_name` (";
 			$sql_query .= self::generate_fields($ar_fields);
-			$sql_query .= self::generate_keys($ar_fields);
+			$sql_query .= self::generate_keys($ar_fields, $table_type);
 			switch ($engine) {
 				case 'InnoDB':
 					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
@@ -281,7 +282,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* @return string $sql_query
 	* @see diffusion_mysql::create_table
 	*/
-	private static function generate_keys($ar_fields) {
+	private static function generate_keys($ar_fields, $table_type = 'default') {
 
 		$sql_query 	= '';
 		$pref 		= 'field_';
@@ -297,6 +298,7 @@ class diffusion_mysql extends diffusion_sql  {
 			$field_name 	= $ar_data['field_name'];
 			$field_type 	= $ar_data['field_type'];
 			$field_options 	= $ar_data['field_options'];
+
 
 			if ($field_name==='tld' ) $is_thesaurus = true;
 
@@ -317,12 +319,14 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 		$sql_query = substr($sql_query, 0,-1); # Eliminamos la coma final
 
+		$adtional_keys = $table_type==='tm' ? ',`dd_tm`' : '';
+
 		#
 		# CONSTRAIN
 		if (isset($is_thesaurus)) {
-			$sql_query = "\nUNIQUE KEY `section_id_lang_tld_constrain` (`section_id`,`lang`,`tld`)," . $sql_query; // Prepend constrain
+			$sql_query = "\nUNIQUE KEY `section_id_lang_tld_constrain` (`section_id`,`lang`,`tld`".$adtional_keys.")," . $sql_query; // Prepend constrain
 		}else{
-			$sql_query = "\nUNIQUE KEY `section_id_lang_constrain` (`section_id`,`lang`)," . $sql_query; // Prepend constrain
+			$sql_query = "\nUNIQUE KEY `section_id_lang_constrain` (`section_id`,`lang`".$adtional_keys.")," . $sql_query; // Prepend constrain
 		}
 
 		#
@@ -494,7 +498,18 @@ class diffusion_mysql extends diffusion_sql  {
 										  'table_name' 		=> $table_name,
 										  'engine' 			=> $engine,
 										  'ar_fields' 		=> $create_table_ar_fields['ar_fields'],
-										  ));
+										  'table_type' 		=> 'default',
+										  ), true);
+
+				if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
+					#create the BBDD clone version for store all publications versions (time marks with unix time stamp)
+					self::create_table( array('database_name' 	=> $database_name,
+											  'table_name' 		=> 'tm_'.$table_name,
+											  'engine' 			=> $engine,
+											  'ar_fields' 		=> $create_table_ar_fields['ar_fields'],
+											  'table_type' 		=> 'tm',
+											  ), false);
+				}// end if DEDALO_DIFFUSION_TM
 			}
 			$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
 		}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
@@ -506,21 +521,13 @@ class diffusion_mysql extends diffusion_sql  {
 			# Iterate one or more records
 			#$ar_fields 	= $options->record_data['ar_fields'][$section_id];
 				#dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));	continue;
-
-			# First, delete current record in all langs if exists
-				if ($options->delete_previous===true) {
+			
+			# if it don't work with versions, delete current record in all langs if exists
+			if ($options->delete_previous===true) {
 					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
 					$response->msg[] = $delete_result->msg;
-				}
-
-			#
-			# IS_PUBLICABLE : Skip non publicable records
-			/* ESTO VIENE YA FILTRADO DESDE DIFFUSION_SQL
-			if ( (bool)self::is_publicable($section_id, $ar_fields)!==true ) {
-				debug_log(__METHOD__." Skipped record $section_id from table $table_name (publication=no)".to_string(), logger::DEBUG);
-				continue; // Skip publish records widh value of field 'publication' as 'no'
 			}
-			*/
+			
 
 			# Create records . Iterate langs
 			foreach ($ar_fields as $lang => $fields) {
@@ -542,11 +549,23 @@ class diffusion_mysql extends diffusion_sql  {
 					$ar_field_value[] = $field_value;
 				}
 
-				# Insert mysql record
-				#$strQuery = "INSERT INTO `$database_name`.`$table_name` VALUES (NULL,".implode(',', $ar_field_value).");";
+				# Insert mysql record				
+				# if the difusion_versions is active we store all changes
+				if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
+
+					$strQuery_tm = "INSERT INTO `$database_name`.`tm_{$table_name}` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
+
+					$result = self::exec_mysql_query( $strQuery_tm, 'tm_'.$table_name, $database_name );
+					if (!$result) {
+						#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
+						$response->result = false;
+						$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
+						return (object)$response;
+					}
+				}
+				
 				$strQuery = "INSERT INTO `$database_name`.`$table_name` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
 
-				#$result   = DBi::_getConnection_mysql()->query( $strQuery );
 				$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 					if (!$result) {
 						#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
@@ -982,7 +1001,6 @@ class diffusion_mysql extends diffusion_sql  {
 
 		return (object)$response;
 	}//end create_publication_schema_table
-
 
 
 
