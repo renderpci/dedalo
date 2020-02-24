@@ -169,7 +169,7 @@ render_component_iri.prototype.edit = async function(options={
 				})
 				self.change_value({
 					changed_data : changed_data,
-					refresh 	 : false
+					refresh 	 : true
 				})
 				.then((save_response)=>{
 					// event to update the dom elements of the instance
@@ -283,7 +283,7 @@ render_component_iri.prototype.search = async function() {
 */
 const content_data_edit = async function(self) {
 
-	const value = self.data.value // || []
+	const value = self.data.value
 	const mode 	= self.mode
 
 	const fragment 			= new DocumentFragment()
@@ -297,7 +297,7 @@ const content_data_edit = async function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value = value//(value.length<1) ? [''] : value
+		const inputs_value = (value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			get_input_element(i, inputs_value[i], inputs_container, self)
