@@ -1639,6 +1639,8 @@
 		Fix component_html_text_editor css to show properly in tool_lang
 
 
+	Valencia 24-02-2020 5.5.18
+		Added cookie dedalo_logged on login to check user login status from same domain web
 
 
 	WORK IN PROGRESS
@@ -1660,7 +1662,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.17b';
+	$DEDALO_VERSION = '5.5.18';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
