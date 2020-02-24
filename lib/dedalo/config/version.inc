@@ -1630,8 +1630,14 @@
 	Valencia 16-12-2019 5.5.4
 		Fix tool export issue when more than one portal share the same section
 
+
 	Valencia 19-02-2020 5.5.16
 		Fix the search of component_iri and his export dato
+
+
+	Valencia 24-02-2020 5.5.17
+		Fix component_html_text_editor css to show properly in tool_lang
+
 
 
 
@@ -1654,12 +1660,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.16';
+	$DEDALO_VERSION = '5.5.17b';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-02-2020');
+	define('DEDALO_BUILD'	, '24-02-2020');
 
 
 	/*

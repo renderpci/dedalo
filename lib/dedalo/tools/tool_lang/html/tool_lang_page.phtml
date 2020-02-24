@@ -1,9 +1,9 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
 	$html    = "<!-- TOOL LANG PAGE [tipo:$tipo parent:$parent] -->";
-		
+
 	$html   .= "<div class=\"wrap_tool_lang_page\" >";
 
 
@@ -37,7 +37,7 @@
 
 		# TOP_ID SELECTOR
 		if (isset($inverse_locators) && is_array($inverse_locators)) {
-			
+
 			$html .= "<div class=\"top_id_selector\">";
 
 			$html .= "<label>".label::get_label('enfoque')."</label> : ";
@@ -51,10 +51,10 @@
 			$html .= "</select>";
 
 			$html .= "<script>";
-			$html .= "{$tool_name}.update_top_id(document.getElementById('top_id_selector'));";			
+			$html .= "{$tool_name}.update_top_id(document.getElementById('top_id_selector'));";
 			$html .= "</script>";
 
-			$html .= "</div>";//end top_id_selector	
+			$html .= "</div>";//end top_id_selector
 		}
 
 		#
@@ -69,22 +69,22 @@
 
 		# CONTENT TITLE
 		#$html 	.= "<div class=\"css_tool_label text_shadow_inset\">TOOL LANG page</div>";
-		
+
 		# TOP DIV
 		$html 	.= "<div id=\"tool_lang_top\">";
-		
+
 			# DIV SOURCE COMPONENT
 			$html 	.= "<div id=\"tool_lang_component_source\">";
-			$html   .= "<!-- TOOL LANG SOURCE COMPONENT [tipo:$tipo parent:$parent] -->";				
+			$html   .= "<!-- TOOL LANG SOURCE COMPONENT [tipo:$tipo parent:$parent] -->";
 			$html 	.= "<div class=\"css_tool_label text_shadow_inset\">".label::get_label('idioma_de_origen')."</div>";
 
 						# SOURCE LANG SELECTOR
-			$html   .= "<div class=\"selector_source_lang text_shadow_inset\">";	
+			$html   .= "<div class=\"selector_source_lang text_shadow_inset\">";
 			$html   .= $selector_source_lang_html;
 			$html   .= "</div>";
 
-			$html   .= "<div id=\"wrap_tool_lang_component_source\">";	
-			$html   .= $component_obj_source_html;	
+			$html   .= "<div id=\"wrap_tool_lang_component_source\">";
+			$html   .= $component_obj_source_html;
 			$html   .= "</div>"; //css_wrap_tool_lang
 
 
@@ -95,68 +95,68 @@
 
 			#media video
 			$html .= "<iframe id=\"videoFrame\" name=\"videoFrame\" class=\"media_frame\" src=\"\"></iframe>"; // {$av_player_url}
-			
+
 
 			# DIV TARGET COMPONENT
-			$html 	.= "<div id=\"tool_lang_component_target\">";			
-			$html   .= "<!-- TOOL LANG TARGET COMPONENT [tipo:$tipo parent:$parent] -->";			
+			$html 	.= "<div id=\"tool_lang_component_target\">";
+			$html   .= "<!-- TOOL LANG TARGET COMPONENT [tipo:$tipo parent:$parent] -->";
 			$html 	.= "<div class=\"css_tool_label text_shadow_inset\">".label::get_label('idioma_de_destino')."</div>";
 
 			# TARGET LANG SELECTOR
-			$html   .= "<div class=\"selector_target_lang text_shadow_inset\">";	
+			$html   .= "<div class=\"selector_target_lang text_shadow_inset\">";
 			$html   .= $selector_target_lang_html;
 			if (SHOW_DEBUG===TRUE) {
 			$html   .= "<span class=\"debug_info\">[last_target_lang: $this->last_target_lang]</span>";
-			}			
+			}
 			$html   .= "</div>";
 
 
-			$html   .= "<div id=\"wrap_tool_lang_component_target\">";		
-			$html   .= $component_obj_target_html;	
+			$html   .= "<div id=\"wrap_tool_lang_component_target\">";
+			$html   .= $component_obj_target_html;
 			$html   .= "</div>"; //css_wrap_tool_lang
 
 			# nParagrapsRight
 			$html .= "<div class=\"nParagrapsRight_div text_shadow_inset\">".label::get_label("total_parrafos").":<span id=\"nParagrapsRight\">1</span></div>";
-			
-			$html .= "</div><!-- /tool_lang_component_target -->";
-		
-		$html 	.= "</div><!-- /tool_lang_top -->";
+
+			$html .= "</div>";
+
+		$html 	.= "</div>";
 
 
 		# SELECTORS DIV
 		$html 	.= "<div class=\"tool_lang_selectors\">";
 
-			
-
-			
 
 
-		$html 	.= "</div><!-- /tool_lang_selectors -->";
+
+
+
+		$html 	.= "</div>";
 
 
 		# OPTIONS DIV
-		if ($permissions>=2) {		
+		if ($permissions>=2) {
 		$html 	.= "<div class=\"tool_lang_options\">";
-		
-			
+
+
 			# SOURCE OPTIONS
-			$html   .= "<div class=\"source_options\">";	
-				
-							
+			$html   .= "<div class=\"source_options\">";
+
+
 				# SELECT TEXT
 				#$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.select_source_text()\">".label::get_label("selecionar_texto")."</div>";
 
 				# RELOAD SOURCE COMPONENT
 				#$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.reload_source_component()\">Reload source_component</div>";
 
-				# COPY SOURCE TEXT TO TARGET 
+				# COPY SOURCE TEXT TO TARGET
 				$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.copy_source_text_to_target(this)\">".label::get_label("copiar_a_destino")."</div>";
 
 				# TRADUCCIÓN AUTOMÁTICA
 				$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.automatic_translation(this)\">".label::get_label("traduccion_automatica")."</div>";
 
 
-			$html   .= "</div><!-- /source_options -->";
+			$html   .= "</div>";
 
 
 			# TARGET OPTIONS
@@ -173,22 +173,22 @@
 				$html .= "</div>";
 
 				$html .= "<div id=\"propagate_marks_btn\" class=\"css_button_generic\" onclick=\"tool_lang.propagate_marks(this)\">".label::get_label("propagar_marcas")."</div>";
-							
-			$html   .= "</div><!-- /target_options -->"; 
 
-		
-		$html 	.= "</div><!-- /tool_lang_options -->";
+			$html   .= '</div>';
+
+
+		$html 	.= '</div>';
 		}#end if ($permissions>=2)
 
-	
-	
-	$html   .= "</div><!-- /wrap_tool_lang_page -->"; //page wrap	
 
 
-	
+	$html   .= '</div>'; //page wrap
+
+
+
 	# INSPECTOR LOG TOOL_LANG ()
 	$html 	.= "<div id=\"inspector_log\" class=\"tool_inspector_log\"> </div>";
-	
+
 
 	# Init tool
 	$html .= "<script>";
@@ -196,5 +196,5 @@
 	$html .= "</script>";
 
 	print $html;
-		
-?>
+
+
