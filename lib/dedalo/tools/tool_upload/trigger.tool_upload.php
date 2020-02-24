@@ -65,4 +65,4 @@ if( $mode==='upload_file' ) {
 
 
 
-die("Sorry. Mode ($mode) not supported")
+die("Sorry. Mode ($mode) not supported");
