@@ -1643,6 +1643,13 @@
 		Added cookie dedalo_logged on login to check user login status from same domain web
 
 
+	Valencia 25-02-2020 5.5.19
+		Fix free_node pregMatchCapture bug where all matches had been computed. Now only global matches are used (iterate only first level)
+
+
+
+
+
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
 					on search fix appearance issue with results css
@@ -1662,12 +1669,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.18';
+	$DEDALO_VERSION = '5.5.19';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-02-2020');
+	define('DEDALO_BUILD'	, '25-02-2020');
 
 
 	/*
