@@ -27,10 +27,10 @@ class free_node {
 		if (!isset($locator->section_top_id) || !isset($locator->section_id) || !isset($locator->tag_id)) {
 			return false;
 		}
-		
-		return new free_node($term_id, $locator, $request_options);    	
+
+		return new free_node($term_id, $locator, $request_options);
 	}//end get_ts_term_instance */
-	
+
 
 
 	/**
@@ -42,7 +42,7 @@ class free_node {
 
 		foreach ($request_options as $key => $value) {
 			$this->$key = $value;
-		}		
+		}
 	}//end __construct
 
 
@@ -94,7 +94,7 @@ class free_node {
 	public static function get_row_interview_data( $av_section_id, $lang ) {
 
 		$ar_fields = array('*'); 	//array('section_id',code,title,abstract,country,autonomous_community,province,comarca);
-		
+
 		$options = new stdClass();
 			$options->table 		 = (string)TABLE_INTERVIEW;
 			$options->ar_fields 	 = $ar_fields;
@@ -119,10 +119,10 @@ class free_node {
 
 	/**
 	* GET_FREE_FRAGMENTs
-	* @return 
+	* @return
 	*/
 	public function get_free_fragments( $q, $raw_text ) {
-		
+
 		$q 			= trim($q);
 		$q 			= stripslashes($q);
 		$first_char = substr($q, 0, 1);
@@ -135,7 +135,7 @@ class free_node {
 				$ar_word = array( substr($q, 1, -1) );
 				break;
 			case ( strpos($q, " ")!==false ) :
-				$ar_word = explode(" ", $q);				
+				$ar_word = explode(" ", $q);
 				break;
 			default:
 				$ar_word = array( $q );
@@ -144,7 +144,7 @@ class free_node {
 
 		# REMOVE_RESTRICTED_TEXT
 		$raw_text_sure = web_data::remove_restricted_text( $raw_text, $this->av_section_id );
-			#dump($raw_text_sure, ' $raw_text_sure ++ '.to_string()); 
+			#dump($raw_text_sure, ' $raw_text_sure ++ '.to_string());
 		#$raw_text_sure = $raw_text;
 
 		$delete_options =new stdClass();
@@ -157,7 +157,7 @@ class free_node {
 			$delete_options->delete_note   		= true;
 			$delete_options->delete_struct 		= true;
 			$delete_options->delete_reference 	= true;
-		$raw_text_sure = TR::deleteMarks($raw_text_sure, $delete_options); // Force delete  tags 
+		$raw_text_sure = TR::deleteMarks($raw_text_sure, $delete_options); // Force delete  tags
 		$raw_text_sure = html_entity_decode($raw_text_sure);
 
 		$reel_fragments = array();
@@ -169,7 +169,7 @@ class free_node {
 			}
 		}
 		#dump($reel_fragments, ' reel_fragments ++ '.to_string());
-		
+
 		return $reel_fragments;
 	}//end get_free_fragments
 
@@ -179,7 +179,7 @@ class free_node {
 	* FIND_WORD_IN_TEXT
 	* Find word in text and return array witch hilighted fragment and associated thesaurus
 	* @return array
-	*/	
+	*/
 	protected function find_word_in_text($word, $raw_text, $av_section_id, $n_chars, $limit, $match_select=false) {
 
 		$lang = $this->lang;
@@ -191,12 +191,12 @@ class free_node {
 		# We make it an insensitive pattern to accents
 		$word_pattern = self::word_to_pattern($word);
 			#dump($word_pattern, ' word_pattern ++ '.to_string());
-		
+
 		// Remove double returns (<br>)
 		$pattern_br	= TR::get_mark_pattern('br',false);
 		$raw_text	= preg_replace("/ {0,3}$pattern_br {0,3}($pattern_br|)/", '<br />', $raw_text);
-			#dump($raw_text, ' raw_text ++ '.to_string());		
-		
+			#dump($raw_text, ' raw_text ++ '.to_string());
+
 		// Use special multibyte configuration of preg_match_all
 		$match_capture = self::pregMatchCapture($matchAll=true, $word_pattern, $raw_text, $offset=0);
 		#preg_match_all($word_pattern, $raw_text, $match_capture, PREG_OFFSET_CAPTURE, $offset=0);
@@ -204,7 +204,7 @@ class free_node {
 		$mathches = $match_capture;
 
 		$i=1;foreach ((array)$mathches[0] as $key => $ar_value) {
-			
+
 			if ($match_select!==false && $i!==(int)$match_select) {
 				$i++;
 				continue;	// Skip not desired matches
@@ -218,18 +218,18 @@ class free_node {
 			$fragment_obj = new stdClass();
 				$fragment_obj->word  = $word;
 				$fragment_obj->match = $i;
-		
+
 			# VIDEO FRAGMENT
 			if ($this->video_fragment===true) {
-				
-				# TEXT_BEFORE . Buscamos el último <br /> anterior a word_position en el texto anterior							
+
+				# TEXT_BEFORE . Buscamos el último <br /> anterior a word_position en el texto anterior
 					$pInArray 			= self::str_pos_all($text_before,'<br />');
 					$n_paragraphs 		= 4 ;
 					$inicioParrafoPos 	= isset($pInArray[count($pInArray)-$n_paragraphs-1]) ? $pInArray[count($pInArray)-$n_paragraphs-1] : 0 ;
 					$fragment_before 	= mb_substr($text_before, $inicioParrafoPos );
 						#dump($fragment_before, ' fragment_before ++ '.to_string());
 
-				# TEXT_AFTER . Buscamos el primer </p> posterior  a palabraPos						
+				# TEXT_AFTER . Buscamos el primer </p> posterior  a palabraPos
 					$pOutArray 			= self::str_pos_all($text_after,'<br />');
 					$n_paragraphs 		= 5 ;
 
@@ -244,15 +244,15 @@ class free_node {
 
 				# TC . Localizamos los TC apropiados
 					# $texto, $indexIN, $inicioPos='', $in_margin=100
-					$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, null, (int)$inicioParrafoPos, $in_margin=0 );					
+					$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, null, (int)$inicioParrafoPos, $in_margin=0 );
 					$tcout = OptimizeTC::optimize_tcOUT( $raw_text, null, (int)$word_position + $finalParrafoPos  ); // -120
-					
+
 					#$tcin = '00:49:22.333';
 					#$tcin = '00:50:17.157';
 
 				# FRAGMENT
 					$fragm = trim($fragment_before . $fragment_after);
-					
+
 					# remark_word
 					$fragm = free_node::remark_word( $word_pattern, $fragm );
 
@@ -261,14 +261,14 @@ class free_node {
 						#$options->deleteIndex = true;
 					#$fragm = TR::deleteMarks($fragm, $options);
 					$fragm = TR::deleteMarks($fragm); // Force delete all tags
-					
+
 					# Elimina el primer br del fragment
 					if(mb_strpos($fragm,'<br />')===0) 	$fragm = mb_substr($fragm, 6, mb_strlen($fragm));
 					# Elimina el último br del fragmento
-					if(mb_substr($fragm, mb_strlen($fragm)-6)=='<br />' ) $fragm = mb_substr($fragm, 0, -6);				
-				
-					
-				# FRAGMENT_TERMS . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta palabra				
+					if(mb_substr($fragm, mb_strlen($fragm)-6)=='<br />' ) $fragm = mb_substr($fragm, 0, -6);
+
+
+				# FRAGMENT_TERMS . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta palabra
 					#$fragment_terms = self::get_fragment_terms( $av_section_id, $text_before, $text_after, $this->lang );
 						#dump( $fragment_terms , " fragment_terms ++++ i:$i key:$key ".to_string($word));
 
@@ -293,13 +293,13 @@ class free_node {
 				$fragm = free_node::format_fagment_for_list( $word_position, $n_chars, $text_before, $text_after );
 				# remark_word
 				$fragm = free_node::remark_word( $word_pattern, $fragm );
-				$fragment_obj->list_fragment = $fragm;	
+				$fragment_obj->list_fragment = $fragm;
 			}//end if ($this->list_fragment===true)
 
 
 			# FRAGMENT_TERMS
 			if ($this->fragment_terms===true) {
-				# FRAGMENT_TERMS . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta palabra				
+				# FRAGMENT_TERMS . Sacamos todas las indexaciones y tesauros asociados que incluyen a esta palabra
 				$fragment_terms = self::get_fragment_terms( $av_section_id, $text_before, $text_after, $this->lang );
 					#dump( $fragment_terms , " fragment_terms ++++ i:$i key:$key ".to_string($word));
 				$fragment_obj->terms = (array)$fragment_terms;
@@ -312,8 +312,8 @@ class free_node {
 			if($match_select===false && $i>=$limit) break;
 
 		$i++;}//end foreach ($mathches as $key => $ar_value)
-					
-		
+
+
 		return (array)$ar_word_fragment;
 	}//end find_word_in_text
 
@@ -340,7 +340,7 @@ class free_node {
 		$ajusteNchar = 30;
 		$in			 = floor( $word_position - floor($n_chars/2) ) - $ajusteNchar;		if($in<0) $in=0;
 		$out		 = $n_chars + ($ajusteNchar*2);
-		
+
 		$fragment = $text_before . $text_after;
 		# eliminamos las marcas de tc e indexación
 		$fragment = TR::deleteMarks($fragment);
@@ -351,7 +351,7 @@ class free_node {
 		$fragment = str_replace('<br />',' ', $fragment);
 		// Clean ALL html tags
 		$fragment = strip_tags($fragment);
-			
+
 
 		$fragment = '.. ' . mb_substr($fragment, $ajusteNchar, mb_strlen($fragment)-($ajusteNchar*2)) . ' ..';
 
@@ -366,7 +366,7 @@ class free_node {
 	* @return string $string
 	*/
 	public static function remark_word( $word_pattern, $string ) {
-			
+
 		$string = preg_replace($word_pattern, "<mark>$1</mark>", $string);
 			#dump($string, ' string ++ '.to_string($word_pattern));
 		return $string;
@@ -377,12 +377,12 @@ class free_node {
 	/**
 	* GET_FRAGMENT_TERMS
 	* Search index tags intersected with current word position
-	* @return 
+	* @return
 	*/
 	public static function get_fragment_terms( $av_section_id, $fragment_before, $fragment_after, $lang ) {
 		#dump($fragment_before, ' fragment_before ++ '.to_string());
 
-		# FRAGMENT AFTER . Find index out tags on fragment_after text. 
+		# FRAGMENT AFTER . Find index out tags on fragment_after text.
 		# For speed, is used fragment_after because normally is more short than fragment_before, but the result is the same
 		$indexIn_pattern  = TR::get_mark_pattern('indexIn', $standalone=true, $id=false, $data=false);
 		$indexOut_pattern = TR::get_mark_pattern('indexOut', $standalone=true, $id=false, $data=false);
@@ -392,12 +392,12 @@ class free_node {
 			#dump($indexIn_mathches, ' indexIn_mathches ++ '.to_string($indexIn_pattern));
 
 		preg_match_all($indexOut_pattern, $fragment_after, $indexOut_mathches);
-			#dump($indexOut_mathches, ' indexOut matches ++ '.to_string($indexOut_pattern));		
+			#dump($indexOut_mathches, ' indexOut matches ++ '.to_string($indexOut_pattern));
 
 		$tag_number_key = 4;
 		if (empty($indexIn_mathches[$tag_number_key]) || empty($indexOut_mathches[$tag_number_key])) {
 			return array();
-		}		
+		}
 		$ar_indexIn_tag_id 	= $indexIn_mathches[$tag_number_key];
 		$ar_indexOut_tag_id = $indexOut_mathches[$tag_number_key];
 			#dump($ar_indexIn_tag_id, ' ar_indexIn_tag_id ++ '.to_string());
@@ -433,8 +433,8 @@ class free_node {
 				#if($term_id===TERM_ID_RESTRICTED) continue;
 				$term 		= $value[FIELD_TERM];
 				$ar_termns[$term_id] = $term;
-			}			
-		
+			}
+
 		}//end if (!empty($indexOut_mathches[0])) foreach ($indexOut_mathches as $key => $value) {
 		#dump($ar_termns, ' ar_termns ++ '.to_string($options->sql_filter));
 
@@ -476,6 +476,8 @@ class free_node {
 					);
 				}
 				$result[] = $positions;
+
+				break; // only first pregMatch level
 			}
 			if (!$matchAll) {
 				$result = $result[0];
@@ -492,48 +494,51 @@ class free_node {
 	* Convierte la palabra de búsqueda en un patrón insensible a los acentos y mayúsculas
 	* @param string $word
 	* @return string pattern|false
-	*/	
+	*/
 	public static function word_to_pattern( $word ) {
-		
+
 		$result = false;
-		
-		$search	= array("/a|á|à|ä/i", 
-						"/e|é|è|ë/i", 
-						"/i|í|ì|ï/i", 
-						"/o|ó|ò|ö/i", 
+
+		// change * (zero or more) by + (one or more)
+		$word = str_replace('*', '+', $word);
+
+		$search	= array("/a|á|à|ä/i",
+						"/e|é|è|ë/i",
+						"/i|í|ì|ï/i",
+						"/o|ó|ò|ö/i",
 						"/u|ú|ù|ü/i",
 						"/n|ñ/i"
 						) ;
-		$repace	= array("(a|á|Á|à|À|ä|Ä)", 
+		$repace	= array("(a|á|Á|à|À|ä|Ä)",
 						"(e|é|É|è|È|ë|Ë)",
-						"(i|í|Í|ì|Ì|ï|Ï)", 
+						"(i|í|Í|ì|Ì|ï|Ï)",
 						"(o|ó|Ó|ò|Ò|ö|Ö)",
 						"(u|ú|Ú|ù|Ù|ü|Ü)",
 						"(ñ|Ñ|n|N)"
 						) ;
-		
+
 		$pattern = preg_replace($search, $repace, $word);
-		
+
 		if($pattern) $result = '/('. $pattern .')/i' ;
-		
+
 		return $result;
 	}//end word_to_pattern
 
 
 
-	/** 
-	* STR_POS_ALL				
+	/**
+	* STR_POS_ALL
 	*  Find all occurrences of a needle in a haystack
 	*  @param string $haystack
 	*  @param string $needle
-	*  @return array or false 
+	*  @return array or false
 	*/
 	public static function str_pos_all($haystack,$needle) {
-	 
+
 		  $s=0;
-		  $i=0;	 
-		  while (is_integer($i)){		 
-			  $i = mb_strpos($haystack,$needle,$s);		 
+		  $i=0;
+		  while (is_integer($i)){
+			  $i = mb_strpos($haystack,$needle,$s);
 			  if (is_integer($i)) {
 				  $aStrPos[] = $i;
 				  $s = $i+mb_strlen($needle);
@@ -551,10 +556,10 @@ class free_node {
 
 	/**
 	* GET_IMAGE_URL
-	* @return string 
+	* @return string
 	*/
 	public function get_image_url() {
-	
+
 		$image_url = null;	//'../images/bg_foto_search_free.png'; // Default
 
 		switch (true) {
@@ -563,14 +568,14 @@ class free_node {
 				if (isset($this->image[0])) {
 					$identify_image_url = $this->image[0][FIELD_IMAGE];
 					$image_url = $identify_image_url;
-				}				
+				}
 				break;
-			
+
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
 				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
-				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 
+				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 				$image_url = $path . $name;
 				break;
 		}
@@ -578,7 +583,7 @@ class free_node {
 		return $image_url;
 	}//end get_image_url
 
-	
+
 
 }//end class free_node
 ?>

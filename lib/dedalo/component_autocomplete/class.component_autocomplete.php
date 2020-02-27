@@ -950,7 +950,7 @@ class component_autocomplete extends component_relation_common {
 		$value = $this->get_valor($lang, 'array');
 
 		$diffusion_value_clean = array_map(function($item){
-			return strip_tags($item);
+			return strip_tags($item->label);
 		}, $value);
 
 		$diffusion_value = implode(' | ', $diffusion_value_clean);

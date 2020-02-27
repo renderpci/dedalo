@@ -2183,6 +2183,11 @@ class search_development2 {
 		# search_object_unaccent: true, false
 		$search_object_unaccent = isset($search_object->unaccent) ? $search_object->unaccent : false;
 
+		# search operator
+		if (!isset($search_object->operator)) {
+			$search_object->operator = 'OR';
+		}
+
 		# safe operator
 		$safe_operator = $search_object->operator==='OR_LINK' ? 'OR' : $search_object->operator;
 
