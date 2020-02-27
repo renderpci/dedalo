@@ -5,19 +5,66 @@
 @import "@{common_css}/library.less";
 
 
+// content_html
+	.content_html {
+		// height: 100%;
+		// min-height: 100vh;
+
+		.wrap_tool_lang_page {
+			// background-color: #CAFF67;
+			height: 100vh;
+
+			display: grid;
+			// grid-template-rows: 30px auto 40px 60px;
+			grid-template-rows: 30px 1fr 1fr 1fr;
+
+			// header_tool
+			.header_tool {
+				// background-color: #EAAEEA;
+			}
+
+			// tool_lang_top. component container
+			#tool_lang_top {
+				// background-color: #41FEEC;
+
+				>#tool_lang_component_source, >#tool_lang_component_target {
+					// background-color: #CECEFC;
+					width: 49.8%;
+					float: left;
+					display: block;
+					padding: 5px;
+
+					// height: 100%;
+    				// padding-bottom: 5em;
+
+
+    				// wrap_tool_lang_component_source
+					#wrap_tool_lang_component_source, #wrap_tool_lang_component_target {
+						height: 100%;
+
+					}
+				}
+			}
+
+			// selectors .
+			.tool_lang_selectors {
+				// background-color: #EAD76B;
+			}
+
+			// buttons container
+			.tool_lang_options {
+				// background-color: #E97A8B
+			}
+		}
+	}
+
+
 .tool_lang_icon {
 	background-image: url(../../../themes/default/icon_translation_hover.svg);
 	background-color: @color_lang;
 }
 
 
-#wrap_tool_lang_component_source {
-
-	// For text editor as read only
-	/*
-	max-height: 450px;
-    overflow: scroll;*/
-}
 
 
 
@@ -25,8 +72,8 @@
 --------------------------------------------------------- */
 	#section_tab_1:checked ~ #section_tab_1_content,
 	#section_tab_2:checked ~ #section_tab_2_content
-	{ 
-		display: block; 
+	{
+		display: block;
 	}
 	.common_line {
 		float: left;
@@ -54,16 +101,10 @@
 
 
 /* PAGE */
-.wrap_tool_lang_page {	
+.wrap_tool_lang_page {
 	min-height: 500px;
 }
-#tool_lang_component_source, #tool_lang_component_target
-{
-	width: 49%;
-	float: left;
-	display: block;
-	padding: 5px;
-}
+
 /* LEFT SOURCE CONTENT */
 #tool_lang_component_source {
 	/*background-color: #c2fdac;*/
@@ -74,7 +115,7 @@
 }
 
 /* AV IFRAME
-------------------------------------------- */	
+------------------------------------------- */
 .media_frame {
 	width: 49%;
 	height: 500px;
@@ -107,7 +148,7 @@
 }
 
 /* -- OPTIONS -- */
-.tool_lang_options {	
+.tool_lang_options {
 	width: 100%;
 	display: block;
 	position: relative;
@@ -143,7 +184,7 @@
 DIV.nParagrapsLeft_div {
 	float: right;
 	padding: 4px;
-	padding-left: 6px;	
+	padding-left: 6px;
 }
 #nParagrapsLeft, #nParagrapsRight {
 	padding: 2px;
@@ -157,7 +198,7 @@ DIV.nParagrapsLeft_div {
 }
 DIV.nParagrapsRight_div {
 	float: right;
-	padding: 4px;	
+	padding: 4px;
 }
 .nParagrapsRight_red {
 	background-color: @color_label_error;
@@ -189,7 +230,7 @@ DIV.nParagrapsRight_div {
 		-webkit-user-select: none;  /* Chrome all / Safari all */
 		-moz-user-select: none;     /* Firefox all */
 		-ms-user-select: none;      /* IE 10+ */
-		user-select: none;          /* Likely future */  
+		user-select: none;          /* Likely future */
 	}
 
 
@@ -332,7 +373,7 @@ DIV.nParagrapsRight_div {
 
 
 .lang_info_debug {
-	top: -30px; 
+	top: -30px;
 }
 
 
