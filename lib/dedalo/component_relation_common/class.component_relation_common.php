@@ -1065,7 +1065,7 @@ class component_relation_common extends component_common {
 				$query_object->q_parsed = $q_clean;
 				break;
 			# IS NULL
-			case ($q_operator==='='):
+			case ($q_operator==='!*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
 					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
@@ -1107,9 +1107,10 @@ class component_relation_common extends component_common {
 	public function search_operators_info() {
 
 		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'=' 	 => 'vacio',
-			'!=' 	 => 'distinto_de',
+			'*'		=> 'no_vacio', // not null
+			'!*'	=> 'vacio',
+			'!='	=> 'distinto_de',
+			'='		=> 'similar_a',
 		];
 
 		return $ar_operators;

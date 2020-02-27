@@ -31,7 +31,15 @@
 		
 		case 'page':
 
-			$valor 			= $this->component_obj->get_valor();
+			if ($traducible==='no') {
+				$propiedades = $this->component_obj->get_propiedades();
+				if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+					$lang = DEDALO_DATA_NOLAN;
+					$this->component_obj->set_lang(DEDALO_DATA_NOLAN);
+				}
+			}
+
+			$valor 			= $this->component_obj->get_valor($lang);
 			$total_records 	= (int)$this->search_options->search_query_object->full_count;
 			break;
 		
