@@ -48,7 +48,6 @@ if ($mode==='replace_data') {
 	$vars = array('json_data');
 		foreach($vars as $name) $$name = common::setVar($name);
 
-	
 	if (isset($json_data)) {
 		$data = json_decode($json_data);	
 		foreach ($data as $key => $value) {
@@ -85,8 +84,24 @@ if ($mode==='replace_data') {
 	$tipo 			= (string)$component_tipo;
 	$section_tipo 	= (string)$section_tipo;
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_obj  = component_common::get_instance($modelo_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 
+	$RecordObj_dd 	= new RecordObj_dd($tipo);
+	$traducible 	= $RecordObj_dd->get_traducible();
+
+	$lang = DEDALO_DATA_LANG;
+
+	if ($traducible==='no') {
+		$propiedades = $RecordObj_dd->get_propiedades(true);
+		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+			$lang = DEDALO_DATA_NOLAN;
+		}
+	}
+
+	// $tipo 			= (string)$component_tipo;
+	// $section_tipo 	= (string)$section_tipo;
+	// $modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component_obj  = component_common::get_instance($modelo_name, $tipo, $parent, 'list', $lang, $section_tipo);
+	
 	
 
 	$tool_replace_component_data = new tool_replace_component_data($component_obj);

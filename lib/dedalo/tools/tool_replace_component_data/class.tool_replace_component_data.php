@@ -43,15 +43,15 @@ class tool_replace_component_data extends tool_common {
 	* @return array $ar_records (all searched an changed records)
 	*/
 	public function propagate_data() {
-		
+
 		# Source component dato
 		$source_dato 	= $this->component_obj->get_dato();
 
 		$tipo 			= $this->component_obj->get_tipo();
-		$section_tipo 	= $this->component_obj->get_section_tipo();
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$lang 			= $this->component_obj->get_traducible()==='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG ;
-	
+		$section_tipo 	= $this->component_obj->get_section_tipo();		
+		// $lang 		= $this->component_obj->get_traducible()==='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+		$lang 			= $this->component_obj->get_lang();
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 
 		# Records to change
 		$this->search_options->search_query_object->limit 	= false;
@@ -74,7 +74,7 @@ class tool_replace_component_data extends tool_common {
 			$parent = $row->section_id;
 
 			$component_obj = component_common::get_instance($modelo_name, $tipo, $parent, 'list', $lang, $section_tipo);
-				#dump($component, ' component'.to_string());
+				
 			if ($component_obj->get_dato()!==$source_dato) {
 				$component_obj->set_dato($source_dato);
 				$component_obj->Save();				

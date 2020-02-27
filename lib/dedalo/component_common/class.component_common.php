@@ -501,7 +501,6 @@ abstract class component_common extends common {
 				}
 				$section = section::get_instance($this->parent, $this->section_tipo);
 
-
 			# Fix dato
 			# El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.
 			$lang_fallback=false;
