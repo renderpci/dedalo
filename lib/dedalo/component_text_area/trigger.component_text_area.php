@@ -430,7 +430,7 @@ function show_reference_info($json_data) {
 
 	$component_tipo = DEDALO_TS_REFERENCES_COMPONENT_TIPO;
 	$section_tipo 	= DEDALO_TS_REFERENCES_SECTION_TIPO;
-	$modelo_name 	= 'component_autocomplete_hi';	//RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true); // 'component_autocomplete_hi'
 	$component 		= component_common::get_instance($modelo_name,
 													 $component_tipo,
 													 $temp_id,
@@ -447,17 +447,17 @@ function show_reference_info($json_data) {
 	  },
 	  "value_with_parents": false,
 	  "limit": 1
-	}');	
+	}');
 	$component->set_propiedades( $propiedades );
 	*/
 
 	# Inject custom permissions
 	$component->set_permissions(2);
-	if ($data = json_decode($data)) {		
-		$component->set_dato($data);			
+	if ($data = json_decode($data)) {
+		$component->set_dato($data);
 	}
 	# Component html
-	$response->component_autocomplete_hi_html = $component->get_html();
+	$response->component_html = $component->get_html();
 
 	$response->result 	= true;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
