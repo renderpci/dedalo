@@ -1,5 +1,5 @@
 <?php
-include(dirname(dirname(__FILE__)) .'/lib/dedalo/config/core_functions.php');
+
 
 # set some time Important!
 $myDateTimeZone = 'Europe/Madrid';
@@ -19,11 +19,78 @@ if (strpos($_SERVER["REQUEST_URI"],'[/index')!==false) {
 	die("Need text!");
 }
 
-$text = safe_xss($text);
 
-# Text to show
-$text = trim(stripslashes(urldecode($text)));
-$text = strip_tags($text, '');
+
+// image case
+	if (strpos($text,'[image-')!==false) {
+
+		include(dirname(dirname(__FILE__)) .'/lib/dedalo/config/config4.php');
+
+		$text = urldecode($text);
+		$text = safe_xss($text);
+
+		// image from component
+			preg_match('/{.+}/', $text, $output_array);
+			if (empty($output_array)) {
+				debug_log(__METHOD__." Image tag invalid (ignored) ".to_string($text), logger::ERROR);
+				die();
+			}
+
+			$locator_restored = str_replace('&#039;', '"', $output_array[0]);
+			if ($locator = json_decode($locator_restored)) {
+				// print_r($locator);
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo, true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $locator->component_tipo,
+																 $locator->section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $locator->section_tipo);
+
+				// get url $quality=false, $test_file=true, $absolute=false, $default_add=true
+				// $component->get_image_url($quality=false, $test_file=true, $absolute=false, $default_add=true);
+				$image_path = $component->get_image_path($quality=false);
+
+				// $file_raw = file_get_contents($image_path);
+			}
+
+
+		// die();
+
+
+		header("Cache-Control: private, max-age=10800, pre-check=10800");
+		header("Pragma: private");
+		header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
+
+		# No cache header
+		#header("Cache-Control: no-cache, must-revalidate");
+
+		# Output to browser
+		header('Content-Type: image/jpg;');
+
+		// if (isset($file_raw)) {
+		// 	echo $file_raw;
+		// }
+		$thumb = new Thumb($image_path);
+		$thumb->resize(200, 'width');
+		$thumb->show();
+
+		die();
+	}
+
+
+
+// normal mode
+	include(dirname(dirname(__FILE__)) .'/lib/dedalo/config/core_functions.php');
+
+	$text = safe_xss($text);
+
+	# Text to show
+	$text = trim(stripslashes(urldecode($text)));
+	$text = strip_tags($text, '');
+
+
 
 #
 # TAG TYPE
@@ -48,7 +115,7 @@ switch (true) {
 		$state 	= $matches[2][0];
 
 		if(strpos($text_original,'/')!==false) {
-			# mode [/index-u-6]	
+			# mode [/index-u-6]
 			$text 		= " $n";
 			$imgBase 	= "../images/btn_base/indexOut-{$state}-x2.png";
 		}else{
@@ -91,8 +158,8 @@ switch (true) {
 		$text_original 	= $text;
 		preg_match_all($pattern, $text, $matches);
 		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
-		$text			= $matches[3][0];	
-		$state 			= $matches[2][0];		
+		$text			= $matches[3][0];
+		$state 			= $matches[2][0];
 		$imgBase 		= "../images/btn_base/page-{$state}-x2.png";
 		break;
 	case (strpos($text,'[person-')!==false):
@@ -125,7 +192,7 @@ switch (true) {
 		$state 	= $matches[2][0];
 
 		if(strpos($text_original,'/')!==false) {
-			# mode [/reference-u-6]	
+			# mode [/reference-u-6]
 			$text 		= " $n";
 			$imgBase 	= "../images/btn_base/referenceOut-{$state}-x2.png";
 		}else{
@@ -183,7 +250,7 @@ switch($type) {
 					$font_size 	= ($font_size *2)+2; // as 18
 
 					if($state=='n') $colorText	= $white ;
-					break;	
+					break;
 
 	case 'svg':		$colorText	= $white ;
 					$colorBG 	= $black ;
@@ -212,7 +279,7 @@ switch($type) {
 					$colorBG 	= $black ;
 					$font_size 	= ($font_size *2)+2;
 					break;
-	
+
 	case 'person':	$colorText	= $black ;
 					$colorBG 	= $black ;
 					#$maxchar 	= 160 ;
@@ -237,8 +304,8 @@ switch($type) {
 imageAlphaBlending($im, true);
 imageSaveAlpha($im, true);
 
-# Making Image Transparent 
-#imagecolortransparent($im,$colorBG); 
+# Making Image Transparent
+#imagecolortransparent($im,$colorBG);
 
 # FONT FILES . Path to our font file
 $path_fonts = dirname(dirname(__FILE__)) . '/lib/dedalo/themes/default/fonts';
@@ -271,7 +338,7 @@ switch ($type) {
 	case 'note':
 		$offsetX = 0;
 		$offsetY = 0;
-		break;	
+		break;
 }
 
 # CUSTOM OFFSET FOR MAC DEVELOPMENT
@@ -316,15 +383,15 @@ if($text!==false) {
 	# Get Bounding Box Size
 	$bbox = imagettfbbox($font_size, $angle, $fontfile, $text ); //( float $size , float $angle , string $fontfile , string $text )
 
-	
+
 	// Get your Text Width and Height
 	$text_width  = abs($bbox[2])-abs($bbox[0]);
-	$text_height = abs($bbox[7])-abs($bbox[1]);	
+	$text_height = abs($bbox[7])-abs($bbox[1]);
 
 	// Calculate coordinates of the text
 	$x = ($image_width/2)  - ($text_width/2) 	+ $offsetX ;
-	$y = ($image_height/2) - ($text_height/2);	// + $offsetY ;	
-	
+	$y = ($image_height/2) - ($text_height/2);	// + $offsetY ;
+
 	//calculate y baseline
 	$y = $baseline = abs($font_size/2 - ($image_height) )+ $offsetY ;
 
@@ -342,23 +409,23 @@ if($text!==false) {
 	print_r($text);
 	print_r($font_size);
 	print_r($angle);
-	var_dump($bbox); 
+	var_dump($bbox);
 	echo "</pre>";
 	die();
 */
 
-	
+
 	# This is our cordinates for X and Y
 	#$x = $bbox[0] + $centroXimg  - ($bbox[2] / 2)	+ $offsetX ;
-	#$y = $bbox[1] + $centroYimg  - ($bbox[6] / 2)	+ $offsetY ; 	
-		
+	#$y = $bbox[1] + $centroYimg  - ($bbox[6] / 2)	+ $offsetY ;
+
 	# Write it text1
 	# Add the text
-	$imgText  = imagettftext($im, $font_size , $angle, $x, $y, $colorText, $fontfile, $text );	
+	$imgText  = imagettftext($im, $font_size , $angle, $x, $y, $colorText, $fontfile, $text );
 				# Verify if it failed
 				if ($imgText===false) {
 					imagestring($im, 1, 5, 5, "Error $text1", 0);
-				}	
+				}
 }//end if($text!==false) {
 
 
@@ -381,4 +448,5 @@ imagepng($im);
 
 # On finish destroy
 imagedestroy($im);
-?>
+
+

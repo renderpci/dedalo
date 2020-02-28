@@ -11,7 +11,7 @@ abstract class TR {
 
 
 	# Version. Important!
-	static $version = "1.0.6"; // 14-08-2017
+	static $version = "1.0.7"; // 28-02-2020
 
 	# html_tags_allowed (note that now is not used to save data)
 	static $html_tags_allowed = '<strong><em><br><br /><img><p>'; // <strong><em><br><img><p><h5><h6><ul><ol><li>
@@ -189,9 +189,18 @@ abstract class TR {
 						$string = "(\[note-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
 					}else if($state!==false){
 						$string = "(\[(note)-($state)-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
-						}else{
-							$string = "(\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
-						}
+					}else{
+						$string = "(\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}
+					break;
+
+			# IMAGE (internal image from resources) like [image-d-1-label-data:{"section_tipo":"rsc170","section_id":"1","component_tipo":"rsc29"}:data]
+			case 'image' :
+					if ($id) {
+						$string = "(\[image-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					}else{
+						$string = "(\[(image)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}
 					break;
 
 			# OTHERS
@@ -248,6 +257,7 @@ abstract class TR {
 			$options->pageEditable 		= false;
 			$options->personEditable 	= false;
 			$options->noteEditable 		= false;
+			$options->imageEditable 	= false;
 			$options->struct_as_labels	= false;
 			$options->btn_url			= '../../../inc/btn.php';
 			$options->force_tr_tags_cdn	= false;
@@ -384,6 +394,12 @@ abstract class TR {
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
+		# IMAGE
+		$pattern 	= TR::get_mark_pattern('image'); // $string = "(\[image-([a-z])-(.+)-data:.*?:data\])";
+		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"image\" />$codeHiliteOut", $text);
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$7]\" class=\"image\" data-type=\"image\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+
+
 		return (string)$text;
 	}//end addTagImgOnTheFly
 
@@ -406,6 +422,7 @@ abstract class TR {
 						 'page',
 						 'person',
 						 'note',
+						 'image',
 						 'reference',
 						 //'strong','em',
 			);
@@ -444,6 +461,7 @@ abstract class TR {
 			$options->delete_page 		= true;
 			$options->delete_person 	= true;
 			$options->delete_note   	= true;
+			$options->delete_image  	= true;
 			$options->delete_struct 	= true;
 			$options->delete_reference 	= true;
 			if (is_object($request_options)) {
@@ -496,6 +514,12 @@ abstract class TR {
 		# Note clear
 		if($options->delete_note===true) {
 			$pattern 	= TR::get_mark_pattern('note');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		# image clear
+		if($options->delete_image===true) {
+			$pattern 	= TR::get_mark_pattern('image');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
