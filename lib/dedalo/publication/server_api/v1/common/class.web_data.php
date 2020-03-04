@@ -7,8 +7,9 @@ include(dirname(__FILE__).'/class.video_view_data.php');
 include(dirname(__FILE__).'/class.map.php');
 include(dirname(__FILE__).'/class.image.php');
 include(dirname(__FILE__).'/class.notes.php');
-include(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/media_engine/class.OptimizeTC.php');
-require_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php');
+include(DEDALO_LIB_BASE_PATH.'/media_engine/class.OptimizeTC.php');
+include(DEDALO_LIB_BASE_PATH.'/common/class.TR.php');
+require_once(DEDALO_LIB_BASE_PATH.'/tools/tool_subtitles/class.subtitles.php');
 /**
 * WEB_DATA
 * Manage web source data with mysql
@@ -2033,10 +2034,11 @@ class web_data {
 		public static function get_thesaurus_autocomplete( $request_options ) {
 
 			$options = new stdClass();
-				$options->q 					 = false;
-				$options->limit 		 		 = 25;
-				$options->table 	 	 		 = TABLE_THESAURUS;
-				$options->lang 				 	 = WEB_CURRENT_LANG_CODE;
+				$options->q 		= false;
+				$options->limit 	= 25;
+				$options->table 	= TABLE_THESAURUS;
+				$options->lang 		= WEB_CURRENT_LANG_CODE;
+				$options->format 	= 'simple'; // simple | full
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$field_term = FIELD_TERM;
@@ -2050,7 +2052,7 @@ class web_data {
 
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $options->table;
-					$sd_options->ar_fields  = array($field_term );
+					$sd_options->ar_fields  = array($field_term, 'term_id');
 					$sd_options->sql_filter = "`$field_term` LIKE '%".$options->q."%'";
 					$sd_options->order 	 	= $field_term ." ASC";
 					$sd_options->lang 	 	= $options->lang ;
@@ -2059,8 +2061,15 @@ class web_data {
 				$search_data	= (object)web_data::get_rows_data( $sd_options );
 
 				$result = array();
-				foreach ((array)$search_data->result as $ar_value) foreach ($ar_value as $key => $value) {
-					$result[] = $value;
+				if ($options->format==='full') {
+					foreach ((array)$search_data->result as $item) {
+						$result[] = (object)$item; // set whole item as object value
+					}
+				}else{
+					foreach ((array)$search_data->result as $item) {
+						$value = $item[$field_term]; // select only the term as string value
+						$result[] = $value;
+					}
 				}
 
 				$response = new stdClass();
@@ -2358,6 +2367,7 @@ class web_data {
 				$ar_indexation_node[] = $indexation_node;
 			}
 			#debug_log(__METHOD__." ar_indexation_node ".to_string($ar_indexation_node), logger::DEBUG);
+			#dump($ar_indexation_node, ' ar_indexation_node ++ '.to_string()); die();
 
 			$response = new stdClass();
 				$response->result 	= $ar_indexation_node;

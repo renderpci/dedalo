@@ -1651,6 +1651,12 @@
 		Fix the replace_tool for work with no-lang when the component has the with_lang_versions in true
 
 
+	Valencia 04-03-2020 5.5.30
+		Makes more easy to separate the Publication API from Dédalo application
+
+
+
+
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
 					on search fix appearance issue with results css
@@ -1670,12 +1676,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.20';
+	$DEDALO_VERSION = '5.5.30';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '27-02-2020');
+	define('DEDALO_BUILD'	, '04-03-2020');
 
 
 	/*
