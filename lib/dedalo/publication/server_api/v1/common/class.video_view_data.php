@@ -55,7 +55,7 @@ class video_view_data {
 			$row_interview = $this->get_row_interview( $av_section_id, $interview_id );
 				#dump($row_interview, ' $row_interview ++ '."av_section_id:$av_section_id, interview_id:$interview_id".to_string()); die();
 
-			# If interview is empy, stop get data 
+			# If interview is empy, stop get data
 			if (empty($row_interview->result)) {
 				$response = new stdClass();
 					$response->result 	= false;
@@ -97,7 +97,7 @@ class video_view_data {
 		# INFORMANT DATA
 			#$ar_informant  = (array)json_decode( reset($row_interview->result)[FIELD_INFORMANT] );
 			#$row_informant = !empty($ar_informant) ? $this->get_row_informant( reset($row_interview->result)['section_id'], $ar_informant ) : false;
-						
+
 			# vars
 			/*
 			$informant 	= '';
@@ -126,7 +126,7 @@ class video_view_data {
 			$image_url  = $this->get_image_url($image_data, $av_section_id);
 
 		#
-		# FRAGMENT DATA 
+		# FRAGMENT DATA
 		# Create fragment and tesaurus associated
 			$options = new stdClass();
 				$options->tag_id 			 	= $tag_id;
@@ -137,16 +137,16 @@ class video_view_data {
 				$options->margin_seconds_in  	= null;
 				$options->margin_seconds_out 	= null;
 				$options->raw_text 			 	= $raw_text;
-				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment 
+				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment
 				$options->indexation_terms 		= true; # If true, calculate all terms used in this indexation
-			$fragments_obj = web_data::build_fragment( $options );				
-				#dump($fragments_obj, ' fragments_obj ++ '.to_string( )); #die();		
+			$fragments_obj = web_data::build_fragment( $options );
+				#dump($fragments_obj, ' fragments_obj ++ '.to_string( )); #die();
 
 			# Remove TC tags
 			if (isset($fragments_obj->fragm)) {
 				$fragments_obj->fragm = TR::deleteMarks($fragments_obj->fragm);
 			}
-			
+
 
 		#
 		# TS_TERM DATA
@@ -159,7 +159,7 @@ class video_view_data {
 		#
 		# SUBTITLES
 			#if ($this->add_subtitles===true) {
-			#	$this->subtitles = $this->get_subtitles();				
+			#	$this->subtitles = $this->get_subtitles();
 			#}
 
 		#
@@ -178,15 +178,15 @@ class video_view_data {
 
 		# Add to object	self
 			$this->result 			= true;
-			$this->interview_id 	= $interview_id;	
-			$this->av_section_id 	= $av_section_id;	
+			$this->interview_id 	= $interview_id;
+			$this->av_section_id 	= $av_section_id;
 			#$this->video_url 		= $fragments_obj->video_url;
 			$this->image_url 		= $image_url;
 			#$this->tcin 			= $fragments_obj->tcin;
 			#$this->tcout 			= $fragments_obj->tcout;
 			#$this->tc_offset 		= 0;
 			$this->terms 			= array();//$fragments_obj->terms;
-			$this->informant 		= $informant;			
+			$this->informant 		= $informant;
 			$this->summary 			= $summary;
 			$this->interview_date 	= $interview_date;
 			$this->interview_code 	= $interview_code;
@@ -200,13 +200,13 @@ class video_view_data {
 				$options->deleteTC 	  = true ;
 				$options->deleteIndex = true ;
 			#$this->fragment 				= $fragments_obj->fragment;	//TR::deleteMarks($fragments_obj->fragment); //$fragments_obj->fragm;
-			$this->fragments 				= array($fragments_obj);	
+			$this->fragments 				= array($fragments_obj);
 			$this->ar_restricted_fragments 	= $ar_restricted_fragments;
-			$this->raw_text 				= $raw_text;	
+			$this->raw_text 				= $raw_text;
 			$this->raw_text_unrestricted   	= $raw_text_unrestricted;
 
 
-		return true;		
+		return true;
 	}//end load_thesaurus_video_view_data
 
 
@@ -218,13 +218,13 @@ class video_view_data {
 	public function get_subtitles($av_section_id) {
 
 		$ar_subtitles = array();
-		
+
 		// Get all diffusion langs
 		$ar_langs = unserialize(DEDALO_DIFFUSION_LANGS);
 		foreach ($ar_langs as $current_lang) {
 
 			$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $av_section_id .'_'. $current_lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
-			
+
 			$file_full_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER . '/' . $name;
 			if (!file_exists($file_full_path)) {
 				# Force create file ??
@@ -254,7 +254,7 @@ class video_view_data {
 	* @return object $rows_data
 	*/
 	public function get_row_interview( $av_section_id, $interview_section_id=false ) {
-		
+
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_INTERVIEW;
 			$options->ar_fields 	= array('*');
@@ -266,14 +266,14 @@ class video_view_data {
 				$options->sql_filter = (string)"audiovisual LIKE '%\"$av_section_id\"%'" . PUBLICACION_FILTER_SQL;
 			}
 
-			// AND lang = '".$options->lang."' 
-			// AND lang = '".$options->lang."' 
+			// AND lang = '".$options->lang."'
+			// AND lang = '".$options->lang."'
 
 			# Resolve only some needed portals
 			$options->resolve_portals_custom = json_decode('{
 				"image" 	:"image",
 				"informant" :"informant"
-			}');	
+			}');
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
 				#dump($rows_data, ' rows_data ++ '.to_string());
@@ -296,7 +296,7 @@ class video_view_data {
 			$options->lang 			= $this->lang;
 			$options->order 		= null;
 			$options->limit 		= 1;
-			
+
 			$rows_data = (object)web_data::get_rows_data( $options );
 
 		return $rows_data;
@@ -321,9 +321,9 @@ class video_view_data {
 			$options->ar_fields 	= array(FIELD_NAME,FIELD_SURNAME,FIELD_BIRTHDATE,FIELD_BIRTHPLACE);
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->order 		= null;
-			$options->sql_filter 	= (string)$filter . PUBLICACION_FILTER_SQL;			
+			$options->sql_filter 	= (string)$filter . PUBLICACION_FILTER_SQL;
 
-			$rows_data	= (object)web_data::get_rows_data( $options );			
+			$rows_data	= (object)web_data::get_rows_data( $options );
 
 		return $rows_data;
 	}#end get_row_informant
@@ -334,16 +334,16 @@ class video_view_data {
 	* GET_ROW_IMAGE
 	* @return object $rows_data
 	*//*
-	public function get_row_image( $interview_section_id, $ar_image ) {	
+	public function get_row_image( $interview_section_id, $ar_image ) {
 
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_IMAGE;
 			$options->ar_fields 	= array(FIELD_IMAGE);
 			$options->sql_filter 	= (string)'section_id = '. reset($ar_image);
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			$options->order 		= null;				
+			$options->order 		= null;
 			#$options->limit 		= 1;
-			
+
 			$rows_data	= (object)web_data::get_rows_data( $options );
 
 		return $rows_data;
@@ -353,10 +353,10 @@ class video_view_data {
 
 	/**
 	* GET_IMAGE_URL
-	* @return string 
+	* @return string
 	*/
 	public function get_image_url($image_data, $av_section_id) {
-	
+
 		$image_url = null;	//'../images/bg_foto_search_free.png'; // Default
 
 		switch (true) {
@@ -365,14 +365,14 @@ class video_view_data {
 				if (isset($image_data[0])) {
 					$identify_image_url = $image_data[0][FIELD_IMAGE];
 					$image_url = $identify_image_url;
-				}				
+				}
 				break;
-			
+
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
 				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
-				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 
+				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $av_section_id .'.jpg';
 				$image_url = $path . $name;
 				break;
 		}
@@ -380,7 +380,7 @@ class video_view_data {
 
 		return $image_url;
 	}//end get_image_url
-	
+
 
 
 
