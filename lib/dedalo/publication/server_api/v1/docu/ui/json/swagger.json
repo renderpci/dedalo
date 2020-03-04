@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.9",
-    "title" : "Dédalo Web REST API 1.0.9",
+    "version" : "1.0.10",
+    "title" : "Dédalo Web REST API 1.0.10",
     "description" : "Builds Public Dédalo data for publication. <br>Use this online tool to test your data and remember always write your <i>Auth code</i> when executes a try call.<br> <strong>This API is focused to Oral History archives and is for general pourposes.<br>If you need special features or custom results, you are wellcome to join API develop team contacting with the source developers (aka Alex&Paco)</strong> in webmaster@render.es",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -148,7 +148,27 @@
     "/tables_info" : {
       "get" : {
         "summary" : "Info about tables schema",
-        "description" : "Get complete info about current disposable tables and columns.",
+        "description" : "Get complete info about current available tables and columns.",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
+        } ],
+        "tags" : [ "Info" ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful response",
+            "schema" : {
+              "$ref" : "#/definitions/table_list"
+            }
+          }
+        }
+      }
+    },
+    "/publication_schema" : {
+      "get" : {
+        "summary" : "Info about automatic portal resolution map",
+        "description" : "Get complete info about current publication_schema.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -255,7 +275,7 @@
         }, {
           "name" : "map",
           "in" : "query",
-          "description" : "json representation of array ob objects like [{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}] Default is false",
+          "description" : "json representation of array ob objects like [{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}]",
           "required" : false,
           "type" : "string",
           "format" : "string"
@@ -538,6 +558,13 @@
           "type" : "string",
           "default" : "term"
         }, {
+          "name" : "format",
+          "in" : "query",
+          "description" : "Result format ('full' for object including term_id and 'simple' for term plain text). Default is 'simple'",
+          "required" : false,
+          "type" : "string",
+          "default" : "simple"
+        }, {
           "name" : "limit",
           "in" : "query",
           "description" : "Max number of records returned. Undefined uses default of 25",
@@ -588,7 +615,7 @@
         }, {
           "name" : "combine",
           "in" : "query",
-          "description" : "Optional combined result mode. Options: false | combined | cumulative. Default is false. When is set to combine, only indexations with intersections are returned",
+          "description" : "Experimental (!). Optional combined result mode. Options: false | combined. Default is false. When is set to combine, only indexations with intersections are returned",
           "type" : "string",
           "default" : false
         } ],
@@ -642,7 +669,7 @@
     "/thesaurus_video_view_data" : {
       "post" : {
         "summary" : "Video player data",
-        "description" : "Gets data ued to view video fragment",
+        "description" : "Deprecated (!). Gets data needed to build video fragment",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -695,7 +722,8 @@
           "name" : "term_id",
           "in" : "query",
           "description" : "Term id to get data like ts1_1",
-          "type" : "string"
+          "type" : "string",
+          "required" : true
         }, {
           "name" : "recursive",
           "in" : "query",
@@ -739,7 +767,8 @@
           "name" : "term_id",
           "in" : "query",
           "description" : "Term id to get data like ts1_2",
-          "type" : "string"
+          "type" : "string",
+          "required" : true
         }, {
           "name" : "recursive",
           "in" : "query",
