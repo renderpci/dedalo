@@ -24,7 +24,7 @@
 	define('DEDALO_AV_QUALITY_DEFAULT' 						, '404');
 	define('DEDALO_AV_FOLDER' 								, '/av');
 	define('DEDALO_AV_POSTERFRAME_EXTENSION' 				, 'jpg');
-	define('SHOW_DEBUG'	, true);
+	define('SHOW_DEBUG'										, false);
 	# Video components resources
 	define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
 	define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
