@@ -6,30 +6,7 @@
 
 
 ################################################################
-# DB
-	define('MYSQL_DEDALO_HOSTNAME_CONN'	, 'localhost');
-	define('MYSQL_DEDALO_USERNAME_CONN'	, 'XXXX');
-	define('MYSQL_DEDALO_PASSWORD_CONN'	, 'XXXX');
-	define('MYSQL_DEDALO_DATABASE_CONN'	, 'web_XXXX');
-	define('MYSQL_DEDALO_DB_PORT_CONN'	, null);
-	define('MYSQL_DEDALO_SOCKET_CONN'	, '');
-	include API_ROOT .'/common/class.DBi.php';
 
-
-
-// Dedalo constants. They are needed because the API uses some references and Dédalo config file is not available here.
-	define('DEDALO_LIB_BASE_PATH'							, dirname(dirname(dirname(API_ROOT))) );
-	define('DEDALO_LIB_BASE_URL'							, '/dedalo/lib/dedalo');
-	define('DEDALO_MEDIA_BASE_URL'							, '/dedalo/media');
-	define('DEDALO_AV_QUALITY_DEFAULT' 						, '404');
-	define('DEDALO_AV_FOLDER' 								, '/av');
-	define('DEDALO_AV_POSTERFRAME_EXTENSION' 				, 'jpg');
-	define('SHOW_DEBUG'										, false);
-	# Video components resources
-	define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
-	define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
-	define('DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO'	, 'rsc54');
-	define('DEDALO_COMPONENT_RESOURCES_TR_TIPO'				, 'rsc36');
 
 
 
@@ -39,8 +16,7 @@
 	// API_WEB_USER_CODE . Verification user code (must be identical in config of client and server)
 	if (isset($skip_api_web_user_code_verification) && $skip_api_web_user_code_verification===true) {
 		# Ignore api code verification
-	}else{
-		// API_WEB_USER_CODE
+
 		define('API_WEB_USER_CODE', 'xxxxxxxxxxxxxxxxxxxxxx');
 		if (empty($code)) {
 			echo json_encode("Sorry. Empty user code");
