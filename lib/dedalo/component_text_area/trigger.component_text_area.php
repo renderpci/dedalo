@@ -7,7 +7,7 @@ common::trigger_manager();
 
 
 /**
-* LOAD_TR 
+* LOAD_TR
 */
 function load_tr($json_data) {
 	global $start_time;
@@ -40,7 +40,7 @@ function load_tr($json_data) {
 
 	$html = $component_text_area->get_html();
 
-	
+
 	$response->result 	= $html;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -71,7 +71,7 @@ function load_tags_person($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('tipo','parent','section_tipo','lang','top_tipo');
 		foreach($vars as $name) {
@@ -131,7 +131,7 @@ function load_tags_person($json_data) {
 
 /**
 * SHOW_PERSON_INFO
-* @return 
+* @return
 */
 function show_person_info($json_data) {
 	global $start_time;
@@ -155,7 +155,7 @@ function show_person_info($json_data) {
 	if(!$locator = json_decode($locator)) {
 		return (object)$response;
 	}
-	
+
 	# Label
 	$label = (object)component_text_area::get_tag_person_label($locator);
 
@@ -231,7 +231,7 @@ function person_used($json_data) {
 
 /**
 * CREATE_NEW_NOTE
-* @return 
+* @return
 */
 function create_new_note($json_data) {
 	global $start_time;
@@ -239,7 +239,7 @@ function create_new_note($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('note_number');
 		foreach($vars as $name) {
@@ -273,7 +273,7 @@ function create_new_note($json_data) {
 
 /**
 * SHOW_NOTE_INFO
-* @return 
+* @return
 */
 function show_note_info($json_data) {
 	global $start_time;
@@ -362,7 +362,7 @@ function delete_note($json_data) {
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 	# set vars
 	$vars = array('section_tipo','section_id','lang');
 		foreach($vars as $name) {
@@ -430,7 +430,7 @@ function show_reference_info($json_data) {
 
 	$component_tipo = DEDALO_TS_REFERENCES_COMPONENT_TIPO;
 	$section_tipo 	= DEDALO_TS_REFERENCES_SECTION_TIPO;
-	$modelo_name 	= 'component_autocomplete_hi';	//RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true); // 'component_autocomplete_hi'
 	$component 		= component_common::get_instance($modelo_name,
 													 $component_tipo,
 													 $temp_id,
@@ -447,17 +447,17 @@ function show_reference_info($json_data) {
 	  },
 	  "value_with_parents": false,
 	  "limit": 1
-	}');	
+	}');
 	$component->set_propiedades( $propiedades );
 	*/
 
 	# Inject custom permissions
 	$component->set_permissions(2);
-	if ($data = json_decode($data)) {		
-		$component->set_dato($data);			
+	if ($data = json_decode($data)) {
+		$component->set_dato($data);
 	}
 	# Component html
-	$response->component_autocomplete_hi_html = $component->get_html();
+	$response->component_html = $component->get_html();
 
 	$response->result 	= true;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
@@ -501,16 +501,16 @@ function set_section_titles($json_data) {
 		}
 	$ar_locators = json_decode($ar_locators);
 
-	if (is_array($ar_locators)) {		
-	
+	if (is_array($ar_locators)) {
+
 		$result = array();
 		foreach ($ar_locators as $current_string_locator) {
-			
+
 			$locator = json_decode( str_replace("'", '"', $current_string_locator) );
-			if ($locator) {			
+			if ($locator) {
 				# get_struct_note_data from db
 				$struct_note_data = tool_structuration::get_struct_note_data($locator, $lang);
-				if ($struct_note_data->result!==false) {			
+				if ($struct_note_data->result!==false) {
 					$result[$current_string_locator] = (object)$struct_note_data->result;
 				}
 			}
@@ -560,7 +560,7 @@ function show_structuration_info($json_data) {
 		}
 
 	$section = section::get_instance($section_id, $section_tipo);
-		
+
 	// Section info
 	$section_info = new stdClass();
 		$section_info->modified_by_userID 	= $section->get_modified_by_userID();
@@ -605,7 +605,7 @@ function show_structuration_info($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 
 	return (object)$response;
 }//end show_note_info

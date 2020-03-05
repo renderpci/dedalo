@@ -7,8 +7,9 @@ include(dirname(__FILE__).'/class.video_view_data.php');
 include(dirname(__FILE__).'/class.map.php');
 include(dirname(__FILE__).'/class.image.php');
 include(dirname(__FILE__).'/class.notes.php');
-include(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/media_engine/class.OptimizeTC.php');
-require_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php');
+include(DEDALO_LIB_BASE_PATH.'/media_engine/class.OptimizeTC.php');
+include(DEDALO_LIB_BASE_PATH.'/common/class.TR.php');
+require_once(DEDALO_LIB_BASE_PATH.'/tools/tool_subtitles/class.subtitles.php');
 /**
 * WEB_DATA
 * Manage web source data with mysql
@@ -134,41 +135,46 @@ class web_data {
 				$db_name 			= isset($sql_options->db_name) ? $sql_options->db_name : false;
 				$sql_options->conn 	= web_data::get_db_connection($db_name);
 
-			// table verifications and clean
-				if (empty($sql_options->table) || empty($sql_options->conn)) {
+			// connection check
+				if (empty($sql_options->conn)) {
 					$response->result = false;
-					$response->msg    = "Empty options->table or connexion ";
+					$response->msg    = "Empty connection";
 					return $response;
 				}
-				$ar_tables = !is_array($sql_options->table) ? (array)explode(',', $sql_options->table) : (array)$sql_options->table;
-				$ar_tables = array_map("trim", $ar_tables);
+
+			// table check
+				if ( empty($sql_options->table) && empty($sql_options->sql_fullselect) ) {
+					$response->result = false;
+					$response->msg    = "Empty options->table ";
+					return $response;
+				}
 
 			#dump($sql_options, ' sql_options ++ '.to_string());
 			#dump(json_encode($sql_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ' sql_options->resolve_portal ++ '.to_string());
 
-			if ($sql_options->section_id!==false) {
-				if (empty($sql_options->sql_filter)) {
-					$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id;
-				}else{
-					$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id . " AND " . $sql_options->sql_filter;
+			// section_id filter
+				if ($sql_options->section_id!==false) {
+					if (empty($sql_options->sql_filter)) {
+						$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id;
+					}else{
+						$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id . " AND " . $sql_options->sql_filter;
+					}
 				}
-			}
 
-			# Convert text ar_fields to array
-			if (!is_array($sql_options->ar_fields)) {
-				$sql_options->ar_fields = explode(',', $sql_options->ar_fields );
-				$sql_options->ar_fields = array_map("trim", $sql_options->ar_fields);
-			}
+			// fields. Convert text ar_fields to array
+				if (!is_array($sql_options->ar_fields)) {
+					$sql_options->ar_fields = explode(',', $sql_options->ar_fields );
+					$sql_options->ar_fields = array_map("trim", $sql_options->ar_fields);
+				}
 
 			$ar_data=array();
 
 			$strQuery = "-- ".__METHOD__;
 
-			/* With prepare statement
-			$stmt = mysqli_prepare($link, "INSERT INTO table VALUES ('PHP', ?, ?)");
-					mysqli_stmt_bind_param($stmt, "iis", $integer, $code, $string);
-					mysqli_stmt_execute($stmt);
-					*/
+			// With prepare statement
+				// $stmt = mysqli_prepare($link, "INSERT INTO table VALUES ('PHP', ?, ?)");
+				// 	mysqli_stmt_bind_param($stmt, "iis", $integer, $code, $string);
+				// 	mysqli_stmt_execute($stmt);
 
 				if ($sql_options->sql_fullselect) {
 					# Full select like "SELECT id,section_id,titulo,mupreva830 FROM publicaciones UNION SELECT id,section_id,titulo,mupreva830 FROM publicaciones_externas"
@@ -179,6 +185,8 @@ class web_data {
 
 				}else{
 
+					$ar_tables = !is_array($sql_options->table) ? (array)explode(',', $sql_options->table) : (array)$sql_options->table;
+					$ar_tables = array_map("trim", $ar_tables);
 
 					$end_table = end($ar_tables);
 					foreach ($ar_tables as $table) {
@@ -215,9 +223,7 @@ class web_data {
 				}
 
 				$sql_options->strQuery = $strQuery;
-				if(SHOW_DEBUG) {
-					#dump($strQuery);
-				}
+
 
 			# SAFE QUERY TEST
 			preg_match_all("/delete|update|insert/i", $strQuery, $output_array);
@@ -289,14 +295,12 @@ class web_data {
 						$current_field = trim($ar_parts[1]);
 					}
 
-
 					# POSTPROCESS_FIELD if need
 					if ($sql_options->apply_postprocess===true) {
 						$field_data = self::postprocess_field($current_field, $rows[$current_field]); // Default
 					}else{
 						$field_data = $rows[$current_field];
 					}
-
 
 					# Default behaviour
 					$ar_data[$i][$current_field] = $field_data;
@@ -2033,10 +2037,11 @@ class web_data {
 		public static function get_thesaurus_autocomplete( $request_options ) {
 
 			$options = new stdClass();
-				$options->q 					 = false;
-				$options->limit 		 		 = 25;
-				$options->table 	 	 		 = TABLE_THESAURUS;
-				$options->lang 				 	 = WEB_CURRENT_LANG_CODE;
+				$options->q 		= false;
+				$options->limit 	= 25;
+				$options->table 	= TABLE_THESAURUS;
+				$options->lang 		= WEB_CURRENT_LANG_CODE;
+				$options->format 	= 'simple'; // simple | full
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$field_term = FIELD_TERM;
@@ -2050,7 +2055,7 @@ class web_data {
 
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $options->table;
-					$sd_options->ar_fields  = array($field_term );
+					$sd_options->ar_fields  = array($field_term, 'term_id');
 					$sd_options->sql_filter = "`$field_term` LIKE '%".$options->q."%'";
 					$sd_options->order 	 	= $field_term ." ASC";
 					$sd_options->lang 	 	= $options->lang ;
@@ -2059,8 +2064,15 @@ class web_data {
 				$search_data	= (object)web_data::get_rows_data( $sd_options );
 
 				$result = array();
-				foreach ((array)$search_data->result as $ar_value) foreach ($ar_value as $key => $value) {
-					$result[] = $value;
+				if ($options->format==='full') {
+					foreach ((array)$search_data->result as $item) {
+						$result[] = (object)$item; // set whole item as object value
+					}
+				}else{
+					foreach ((array)$search_data->result as $item) {
+						$value = $item[$field_term]; // select only the term as string value
+						$result[] = $value;
+					}
 				}
 
 				$response = new stdClass();
@@ -2358,6 +2370,7 @@ class web_data {
 				$ar_indexation_node[] = $indexation_node;
 			}
 			#debug_log(__METHOD__." ar_indexation_node ".to_string($ar_indexation_node), logger::DEBUG);
+			#dump($ar_indexation_node, ' ar_indexation_node ++ '.to_string()); die();
 
 			$response = new stdClass();
 				$response->result 	= $ar_indexation_node;
