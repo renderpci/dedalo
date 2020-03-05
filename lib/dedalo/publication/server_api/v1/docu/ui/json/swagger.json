@@ -210,7 +210,7 @@
         }, {
           "name" : "sql_fullselect",
           "in" : "query",
-          "description" : "Custom sql select for builds query. Replaces any other columns selection option",
+          "description" : "Custom sql select for builds query. Replaces any other columns or table selection option. i.e. 'SELECT mycolumn FROM mytable'",
           "required" : false,
           "type" : "string"
         }, {

@@ -135,41 +135,46 @@ class web_data {
 				$db_name 			= isset($sql_options->db_name) ? $sql_options->db_name : false;
 				$sql_options->conn 	= web_data::get_db_connection($db_name);
 
-			// table verifications and clean
-				if (empty($sql_options->table) || empty($sql_options->conn)) {
+			// connection check
+				if (empty($sql_options->conn)) {
 					$response->result = false;
-					$response->msg    = "Empty options->table or connexion ";
+					$response->msg    = "Empty connection";
 					return $response;
 				}
-				$ar_tables = !is_array($sql_options->table) ? (array)explode(',', $sql_options->table) : (array)$sql_options->table;
-				$ar_tables = array_map("trim", $ar_tables);
+
+			// table check
+				if ( empty($sql_options->table) && empty($sql_options->sql_fullselect) ) {
+					$response->result = false;
+					$response->msg    = "Empty options->table ";
+					return $response;
+				}
 
 			#dump($sql_options, ' sql_options ++ '.to_string());
 			#dump(json_encode($sql_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ' sql_options->resolve_portal ++ '.to_string());
 
-			if ($sql_options->section_id!==false) {
-				if (empty($sql_options->sql_filter)) {
-					$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id;
-				}else{
-					$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id . " AND " . $sql_options->sql_filter;
+			// section_id filter
+				if ($sql_options->section_id!==false) {
+					if (empty($sql_options->sql_filter)) {
+						$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id;
+					}else{
+						$sql_options->sql_filter = "section_id = " . (int)$sql_options->section_id . " AND " . $sql_options->sql_filter;
+					}
 				}
-			}
 
-			# Convert text ar_fields to array
-			if (!is_array($sql_options->ar_fields)) {
-				$sql_options->ar_fields = explode(',', $sql_options->ar_fields );
-				$sql_options->ar_fields = array_map("trim", $sql_options->ar_fields);
-			}
+			// fields. Convert text ar_fields to array
+				if (!is_array($sql_options->ar_fields)) {
+					$sql_options->ar_fields = explode(',', $sql_options->ar_fields );
+					$sql_options->ar_fields = array_map("trim", $sql_options->ar_fields);
+				}
 
 			$ar_data=array();
 
 			$strQuery = "-- ".__METHOD__;
 
-			/* With prepare statement
-			$stmt = mysqli_prepare($link, "INSERT INTO table VALUES ('PHP', ?, ?)");
-					mysqli_stmt_bind_param($stmt, "iis", $integer, $code, $string);
-					mysqli_stmt_execute($stmt);
-					*/
+			// With prepare statement
+				// $stmt = mysqli_prepare($link, "INSERT INTO table VALUES ('PHP', ?, ?)");
+				// 	mysqli_stmt_bind_param($stmt, "iis", $integer, $code, $string);
+				// 	mysqli_stmt_execute($stmt);
 
 				if ($sql_options->sql_fullselect) {
 					# Full select like "SELECT id,section_id,titulo,mupreva830 FROM publicaciones UNION SELECT id,section_id,titulo,mupreva830 FROM publicaciones_externas"
@@ -180,6 +185,8 @@ class web_data {
 
 				}else{
 
+					$ar_tables = !is_array($sql_options->table) ? (array)explode(',', $sql_options->table) : (array)$sql_options->table;
+					$ar_tables = array_map("trim", $ar_tables);
 
 					$end_table = end($ar_tables);
 					foreach ($ar_tables as $table) {
@@ -216,9 +223,7 @@ class web_data {
 				}
 
 				$sql_options->strQuery = $strQuery;
-				if(SHOW_DEBUG) {
-					#dump($strQuery);
-				}
+
 
 			# SAFE QUERY TEST
 			preg_match_all("/delete|update|insert/i", $strQuery, $output_array);
@@ -290,14 +295,12 @@ class web_data {
 						$current_field = trim($ar_parts[1]);
 					}
 
-
 					# POSTPROCESS_FIELD if need
 					if ($sql_options->apply_postprocess===true) {
 						$field_data = self::postprocess_field($current_field, $rows[$current_field]); // Default
 					}else{
 						$field_data = $rows[$current_field];
 					}
-
 
 					# Default behaviour
 					$ar_data[$i][$current_field] = $field_data;
