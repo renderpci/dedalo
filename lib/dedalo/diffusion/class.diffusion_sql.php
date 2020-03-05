@@ -1027,7 +1027,8 @@ class diffusion_sql extends diffusion  {
 								$ar_field_data['field_value'] = (string)$propiedades->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}
 								break;
 							default:
-								if (is_array($dato)) {
+								$components_with_relations = component_relation_common::get_components_with_relations();
+								if (is_array($dato) && in_array($modelo_name, $components_with_relations)) {
 									$ar_id = array();
 									foreach ($dato as $current_locator) {
 
