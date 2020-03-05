@@ -1647,6 +1647,13 @@
 		Fix free_node pregMatchCapture bug where all matches had been computed. Now only global matches are used (iterate only first level)
 
 
+	Valencia 27-02-2020 5.5.20
+		Fix the replace_tool for work with no-lang when the component has the with_lang_versions in true
+
+
+	Valencia 04-03-2020 5.5.30
+		Makes more easy to separate the Publication API from Dédalo application
+
 
 
 
@@ -1669,12 +1676,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.19';
+	$DEDALO_VERSION = '5.5.30';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '25-02-2020');
+	define('DEDALO_BUILD'	, '04-03-2020');
 
 
 	/*
