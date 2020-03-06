@@ -89,7 +89,7 @@ class diffusion_sql extends diffusion  {
 	* @param string $table_tipo
 	* @param string $database_tipo
 	*/
-	public static function build_table_columns( $request_options ) {
+	public static function build_table_columns($request_options) {
 
 		$options = new stdClass();
 			$options->table_tipo 		= null;
@@ -251,7 +251,7 @@ class diffusion_sql extends diffusion  {
 	* 	$ar_data['field_coment'];
 	* 	$ar_data['field_options'];
 	*/
-	public static function create_field( stdClass $request_options ) {	// old: $tipo, $is_section_id=false, $is_relation=false
+	public static function create_field(stdClass $request_options) {	// old: $tipo, $is_section_id=false, $is_relation=false
 
 		$options = new stdClass();
 			$options->typology 		= null;
@@ -360,7 +360,7 @@ class diffusion_sql extends diffusion  {
 	*
 	* @see $his->get_db_data
 	*/
-	public static function build_table_columns_data( stdClass $request_options ) {
+	public static function build_table_columns_data(stdClass $request_options) {
 
 		// options
 			$options = new stdClass();
@@ -839,7 +839,7 @@ class diffusion_sql extends diffusion  {
 	* CHECK_PUBLICATION_VALUE
 	* @return bool
 	*/
-	public static function check_publication_value( $request_options ) {
+	public static function check_publication_value($request_options) {
 
 		$to_publish = true;
 
@@ -915,7 +915,7 @@ class diffusion_sql extends diffusion  {
 	* @param object stdClass $request_options
 	* @return array $ar_field_data
 	*/
-	public static function build_data_field( stdClass $request_options ) {
+	public static function build_data_field(stdClass $request_options) {
 
 		# Defaults
 		$ar_field_data=array();
@@ -1121,7 +1121,7 @@ class diffusion_sql extends diffusion  {
 	* @param array $options
 	* @return array $this->ar_diffusion_map
 	*/
-	public function get_ar_diffusion_map_sql( $options=array() ) {
+	public function get_ar_diffusion_map_sql($options=array()) {
 
 		// EN PROCESO
 
@@ -1177,7 +1177,7 @@ class diffusion_sql extends diffusion  {
 	* @param bool $resolve_references
 	* @return obj $response
 	*/
-	public function update_record( $request_options, $resolve_references=false ) {
+	public function update_record($request_options, $resolve_references=false) {
 
 		$start_time = start_time();
 
@@ -1547,7 +1547,7 @@ class diffusion_sql extends diffusion  {
 	* v. 1.3 [20-11-2018]
 	* @return object $save
 	*/
-	public function save_global_search_data( $request_options ) {
+	public function save_global_search_data($request_options) {
 
 		$options = new stdClass();
 			$options->global_search_map 	 = null;
@@ -2000,7 +2000,7 @@ class diffusion_sql extends diffusion  {
 	* @param string $$diffusion_table_tipo
 	* @return string $diffusion_database_name | null
 	*/
-	public static function get_diffusion_database_name_from_table( $diffusion_table_tipo ) {
+	public static function get_diffusion_database_name_from_table($diffusion_table_tipo) {
 
 		$diffusion_database_name = null;
 
@@ -2033,7 +2033,7 @@ class diffusion_sql extends diffusion  {
 	* Select from ar_diffusion_map_elements the current request element by tipo
 	* @return object $diffusion_element | bool false
 	*/
-	public static function get_diffusion_element_from_element_tipo( $diffusion_element_tipo ) {
+	public static function get_diffusion_element_from_element_tipo($diffusion_element_tipo) {
 
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();
 		if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
@@ -2051,7 +2051,7 @@ class diffusion_sql extends diffusion  {
 	* @param string $diffusion_domain_name . Like 'aup'
 	* @return object $diffusion_element_tables
 	*/
-	public static function get_diffusion_element_tables_map( $diffusion_element_tipo ) {
+	public static function get_diffusion_element_tables_map($diffusion_element_tipo) {
 
 		static $ar_diffusion_element_tables_map;
 
@@ -2231,7 +2231,7 @@ class diffusion_sql extends diffusion  {
 	* @param string $section_tipo
 	* @return string $diffusion_section (tipo like dd1525) or bool false
 	*/
-	public static function get_diffusion_table_by_section( $section_tipo ) {
+	public static function get_diffusion_table_by_section($section_tipo) {
 
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();
 			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo));
@@ -2373,7 +2373,7 @@ class diffusion_sql extends diffusion  {
 	* @param object $schema_obj
 	* @return object $response
 	*/
-	public static function save_table_schema( $database_name, $schema_obj ) {
+	public static function save_table_schema($database_name, $schema_obj) {
 
 		$response = diffusion_mysql::add_publication_schema( $database_name, json_encode($schema_obj) );
 
@@ -2774,11 +2774,9 @@ class diffusion_sql extends diffusion  {
 	* CALCULATE_DURATION
 	* propiedades generic postprocess data
 	* Calculate the duration of all videos in current interview from portal and returns the total duration
-	* @return $total_tc;
+	* @return $duration
 	*/
-	public static function calculate_duration( $options, $dato, $format='secs') {
-		#dump($dato, ' dato ++ '.to_string($options));
-		// rsc54
+	public static function calculate_duration($options, $dato, $format='secs') {
 
 		$ar_duration = array();
 		foreach ((array)$dato as $key => $locator) {
@@ -2786,8 +2784,6 @@ class diffusion_sql extends diffusion  {
 			$data_source 	= $options->propiedades->data_source;
 			$portal_tipo 	= key($data_source);
 			$component_tipo = reset($data_source);
-
-
 
 
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -2799,19 +2795,16 @@ class diffusion_sql extends diffusion  {
 															 $locator->section_tipo);
 			$component_dato = $component->get_dato();
 			$component_dato = reset($component_dato);
-				#dump($component_dato, ' component_dato ++ '.to_string());
 
 			$seconds = OptimizeTC::TC2seg($component_dato);
 
 			$ar_duration[] = $seconds;
 		}
-		#dump($ar_duration, ' ar_duration ++ '.to_string());
 
 		$total_seconds = 0;
 		foreach ($ar_duration as $seconds) {
 			$total_seconds = $total_seconds + $seconds;
 		}
-		#dump($total_seconds, ' $total_seconds ++ '.to_string());
 
 		switch ($format) {
 			case 'total_tc':
@@ -2823,7 +2816,6 @@ class diffusion_sql extends diffusion  {
 				$duration = (int)ceil($total_seconds);
 				break;
 		}
-		#dump($duration, ' total_tc ++ total_seconds: '.to_string($total_seconds));
 
 		return $duration;
 	}//end calculate_duration
@@ -2835,7 +2827,6 @@ class diffusion_sql extends diffusion  {
 	* @return
 	*/
 	public static function calculate_measurements($options, $dato) {
-		#dump($options, ' options ++ '.to_string($dato));
 
 		# [typology] =>
 	    # [value] =>
@@ -2866,7 +2857,6 @@ class diffusion_sql extends diffusion  {
 														 $modo='list',
 														 $lang,
 														 $section_tipo);
-
 
 		#$measurements = $component->get_valor($lang);
 		#$measurements = $component->get_valor_export( $valor=null, $lang, $quotes=null, $add_id=null );
@@ -2905,7 +2895,7 @@ class diffusion_sql extends diffusion  {
 			foreach ($fields as $current_tipo) {
 
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					#dump($modelo_name, ' $modelo_name ++ '.to_string());
+
 				#if ($modelo_name==='component_section_id') {
 				#	continue;
 				#}
@@ -2925,13 +2915,12 @@ class diffusion_sql extends diffusion  {
 				$ar_resolved[$section_id][] = $current_value_export;
 			}
 		}
-		#dump($ar_resolved, ' $ar_resolved ++ '.to_string());
 
 		$ar_valor_export=array();
 		foreach ($ar_resolved as $key => $ar_value) {
 			#$valor_export .= implode("\t", $ar_value).PHP_EOL;
 			if (!empty($ar_value)) {
-				#dump($ar_value, ' ar_value ++ '.to_string());
+
 				$valor_line='';
 				#$valor_line  = implode("\t", $ar_value);
 				foreach ($ar_value as $ckey => $lvalue) {
@@ -3018,7 +3007,7 @@ class diffusion_sql extends diffusion  {
 	* Fake method to return properties defined fixed value
 	* @return string
 	*/
-	public static function return_fixed_value( $options, $dato ) {
+	public static function return_fixed_value($options, $dato) {
 
 		$value = $options->propiedades->process_dato_arguments->value ?? null;
 
@@ -3031,7 +3020,7 @@ class diffusion_sql extends diffusion  {
 	* OBJECT_TO_STRING
 	* @return
 	*/
-	public static function object_to_string( $options, $dato ) {
+	public static function object_to_string($options, $dato) {
 
 		return json_encode($dato);
 	}//end object_to_string
@@ -3042,9 +3031,7 @@ class diffusion_sql extends diffusion  {
 	* RESOLVE_VALUE
 	* @return
 	*/
-	public static function resolve_value( $options, $dato, $default_separator=" | " ) {
-		#dump($options, ' options ++ '.to_string());
-		#dump($dato, ' dato ++ '.to_string());
+	public static function resolve_value($options, $dato, $default_separator=" | ") {
 
 		if (isset($dato[0])) {
 			$ar_locator = $dato;
@@ -3175,7 +3162,7 @@ class diffusion_sql extends diffusion  {
 	* SPLIT_DATE_RANGE
 	* @return string|null
 	*/
-	public static function split_date_range( $options, $dato ) {
+	public static function split_date_range($options, $dato) {
 
 		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
 		$selected_key 			= isset($process_dato_arguments->selected_key)  ? (int)$process_dato_arguments->selected_key : 0;
@@ -3268,4 +3255,4 @@ class diffusion_sql extends diffusion  {
 
 
 
-}
+}//end class
