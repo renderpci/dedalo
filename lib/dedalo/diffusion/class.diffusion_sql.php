@@ -2946,6 +2946,20 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* COUNT_DATA_ELEMENTS
+	* @return int $total
+	*/
+	public static function count_data_elements($options, $dato) {
+
+			dump($dato, ' dato ++ '.to_string());
+		$total = count($dato);
+
+		return (int)$total;
+	}//end count_data_elements
+
+
+
+	/**
 	* MAP_QUALITY_TO_INT
 	* @return
 	*/
