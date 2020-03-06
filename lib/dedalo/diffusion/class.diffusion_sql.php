@@ -985,6 +985,8 @@ class diffusion_sql extends diffusion  {
 																		 $options->section_tipo,
 																		 false);
 
+					$options->component 			= $current_component;
+
 				if(is_object($propiedades) && property_exists($propiedades, 'get_field_value') && isset($propiedades->get_field_value->get_dato_method)){
 
 					$get_dato_method = $propiedades->get_field_value->get_dato_method;
@@ -2951,11 +2953,85 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function count_data_elements($options, $dato) {
 
-			dump($dato, ' dato ++ '.to_string());
-		$total = count($dato);
+		$model = get_class($options->component);
+		
+		$components_with_relations = component_relation_common::get_components_with_relations();
 
+		if (is_array($dato) && in_array($model, $components_with_relations)) {
+			$ar_result=[];
+			foreach ($dato as $key => $current_locator) {				
+				$current_is_publicable = diffusion::get_is_publicable($current_locator);
+				if($current_is_publicable===true){
+					$ar_result[] = $current_locator;
+				}					
+			}
+			$dato = $ar_result;
+		}
+		$total = count($dato);
 		return (int)$total;
 	}//end count_data_elements
+
+
+	/**
+	* SPLIT_DATA
+	* @return int $total
+	*/
+	public static function split_data($options, $dato) {
+
+		if(!isset($options->propiedades->process_dato_arguments->q)){
+			return null;
+		}
+		$ar_q = $options->propiedades->process_dato_arguments->q;
+
+
+		// ar_result . dato filtered
+			$ar_result = [];
+			foreach ($ar_q as $q) {
+				$q_operator = $q->q_operator;
+				$q_key 		= $q->key;
+
+				switch ($q_operator) {
+					case '=':
+						$current_is_publicable = diffusion::get_is_publicable($dato[$q_key]);
+						if($current_is_publicable ===true){
+							$ar_result[] = $dato[$q_key];
+						}
+						break;
+					case '>':
+						foreach ($dato as $key => $current_locator) {
+							if($key > $q_key){
+								$current_is_publicable = diffusion::get_is_publicable($current_locator);
+								if($current_is_publicable===true){
+									$ar_result[] = $current_locator;
+								}
+							}						
+						}
+						break;
+				}
+			}
+		
+
+		if (isset($options->propiedades->process_dato_arguments->resolve_value) && true===$options->propiedades->process_dato_arguments->resolve_value) {
+			
+			// resolve_value true
+			$component = clone $options->component;
+			$component->set_dato($ar_result);
+
+			$value = $component->get_diffusion_value($options->lang);
+		}else{
+
+			// resolve_value not defined (default)
+			$value = array_map(function($item){
+				return $item->section_id;
+			}, $ar_result);
+		}		
+
+
+		return $value;
+	}//end split_data
+
+
+
 
 
 

@@ -943,15 +943,25 @@ class component_autocomplete extends component_relation_common {
 	public function get_diffusion_value($lang=null) {
 
 		// force recalculate for each lang
-			$this->valor = null;
-			$this->set_lang($lang);
+			unset($this->valor);
 
 		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ')
 		$value = $this->get_valor($lang, 'array');
 
-		$diffusion_value_clean = array_map(function($item){
-			return strip_tags($item->label);
-		}, $value);
+		$diffusion_value_clean = [];
+		foreach ($value as $item) {
+			
+			$locator_section_tipo 	= $item->value->section_tipo;
+			$section_table 			= common::get_matrix_table_from_tipo($locator_section_tipo);
+			
+			$current_is_publicable = ($section_table==='matrix_list' || $section_table==='matrix_hierarchy' || $section_table==='matrix_dd')
+				? true
+				: diffusion::get_is_publicable($item->value);
+
+			if (true===$current_is_publicable) {
+				$diffusion_value_clean[] = strip_tags($item->label);
+			}			
+		}
 
 		$diffusion_value = implode(' | ', $diffusion_value_clean);
 
