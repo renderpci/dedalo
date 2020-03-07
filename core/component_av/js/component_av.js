@@ -31,6 +31,8 @@ export const component_av = function(){
 
 	this.tools
 
+	this.video
+
 
 	return true
 }//end component_av
@@ -62,4 +64,41 @@ export const component_av = function(){
 	component_av.prototype.search 				= render_component_av.prototype.search
 	component_av.prototype.change_mode 			= component_common.prototype.change_mode
 
+
+component_av.prototype.go_to_time = function(options){
+
+	const self = this
+
+	const tag_time = options.tag.dataset.data
+	const seconds = self.tc2secs(tag_time)
+	self.video.currentTime = seconds;
+
+}
+
+component_av.prototype.play_pause = (options) =>{
+
+		console.log("play_pause:");
+
+}
+
+
+
+// TC 2 SECONDS . CONVERT TC LIKE 00:12:19.878 TO TOTAL SECONDS LIKE 139.878	
+component_av.prototype.tc2secs = function(tc) {	
+	if(Number.isInteger(tc)) return tc
+	
+	//var tc = "00:09:52.432";	
+	const ar 		= tc.split(":")
+	const ar_ms 	= tc.split(".")
+	
+	const hours 	= parseFloat(ar[0])>0 ? parseFloat(ar[0]) : 0
+	const minutes 	= parseFloat(ar[1])>0 ? parseFloat(ar[1]) : 0
+	const seconds 	= parseFloat(ar[2])>0 ? parseFloat(ar[2]) : 0
+	const mseconds 	= parseFloat(ar_ms[1])>0 ? parseFloat(ar_ms[1]) : 0
+
+
+	const total_seconds = parseFloat( (hours * 3600) + (minutes * 60) + seconds +'.'+ mseconds)
+
+	return total_seconds ;	
+};
 

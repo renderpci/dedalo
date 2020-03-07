@@ -402,9 +402,11 @@ component_geolocation.prototype.refresh_map = function(map) {
 * Load all data information of the current selected tag. Init the edditor if it is not loaded.
 * Carga los datos al pulsar sobre la etiqueta. Inicializa el editor de no estar ya inicializado
 */
-component_geolocation.prototype.load_geo_editor = function(tag, all_tags) {
+component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 
 	const self = this
+
+	const tag = options.tag
 
 	if (typeof all_tags==="undefined") {
 		all_tags = false

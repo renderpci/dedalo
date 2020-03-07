@@ -559,9 +559,11 @@ const get_custom_events = (self, i, get_service) => {
 				
 				case 'tc':
 					// Video goto timecode by tc tag
-					const timecode = evt.target.dataset.data
+					//const timecode = evt.target.dataset.data
+
+					event_manager.publish('click_tag_tc' +'_'+ self.tipo, {tag:tag_obj, caller: self})
 					// component_text_area.goto_time(timecode);
-					alert("Click on image/reference tc "+timecode);
+					//alert("Click on image/reference tc "+timecode);
 					break;
 
 				case 'indexIn' :
@@ -626,7 +628,7 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'geo' :
 					// Load geo editor
-					event_manager.publish('click_tag_geo' +'_'+ self.tipo, tag_obj)
+					event_manager.publish('click_tag_geo' +'_'+ self.tipo, {tag:tag_obj, caller: self})
 					
 					break;
 
@@ -674,6 +676,9 @@ const get_custom_events = (self, i, get_service) => {
 
 	custom_events.KeyUp = (evt, options) => {
 		console.log("KeyUp evt.keyCode:",evt.keyCode,evt.key);
+
+		event_manager.publish('pay_pause' +'_'+ self.tipo, evt.keyCode)
+
 		return
 		switch(context_name) {
 			case 'component_av':

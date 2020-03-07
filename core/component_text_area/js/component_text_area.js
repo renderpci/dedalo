@@ -441,4 +441,3 @@ component_text_area.prototype.update_tag = function(options) {
 }//end update_tag
 
 
-
