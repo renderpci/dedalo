@@ -279,7 +279,7 @@ class component_portal extends component_relation_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -1311,6 +1311,53 @@ class component_portal extends component_relation_common {
 			case 'valor_list':
 				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows='<br>', $separator_fields=', ' );
 				break;
+
+			case 'valor':
+
+					$dato = $this->get_dato();
+
+					// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
+
+					// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
+						$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+
+					// FIELDS
+						$fields=array();
+						foreach ($ar_terminos_relacionados as $key => $ar_value) {
+							foreach ($ar_value as $current_tipo) {
+
+								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+								if (strpos($modelo_name, 'component_')!==false) {
+									$fields[] = $current_tipo;
+								}
+							}
+						}
+
+					$ar_resolved=array();
+					foreach( (array)$dato as $key => $value) {
+
+						$section_tipo 	= $value->section_tipo;
+						$section_id 	= $value->section_id;
+
+						foreach ($fields as $current_tipo) {
+
+							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$component 		= component_common::get_instance($modelo_name,
+																			 $current_tipo,
+																			 $section_id,
+																			 'list',
+																			 $lang,
+																			 $section_tipo);
+							$current_value_export = $component->get_diffusion_value( $lang );
+
+							$ar_resolved[] = $current_value_export;
+						}
+					}//end foreach( (array)$dato as $key => $value)
+					#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
+
+					$diffusion_value = implode(" | ", $ar_resolved);
+
+					break;
 			case 'dato_full':
 				$ar_values = null;
 				$dato = $this->get_dato();
