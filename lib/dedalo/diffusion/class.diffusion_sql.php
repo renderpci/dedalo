@@ -3201,7 +3201,7 @@ class diffusion_sql extends diffusion  {
 
 					// convert to string always
 						if (is_array($value) || is_object($value)) {
-							$value = json_encode($value);
+							$value = json_encode($value,JSON_UNESCAPED_UNICODE);
 						}else{
 							$value = trim($value);
 						}
