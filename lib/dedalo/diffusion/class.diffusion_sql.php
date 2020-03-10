@@ -2954,16 +2954,16 @@ class diffusion_sql extends diffusion  {
 	public static function count_data_elements($options, $dato) {
 
 		$model = get_class($options->component);
-		
+
 		$components_with_relations = component_relation_common::get_components_with_relations();
 
 		if (is_array($dato) && in_array($model, $components_with_relations)) {
 			$ar_result=[];
-			foreach ($dato as $key => $current_locator) {				
+			foreach ($dato as $key => $current_locator) {
 				$current_is_publicable = diffusion::get_is_publicable($current_locator);
 				if($current_is_publicable===true){
 					$ar_result[] = $current_locator;
-				}					
+				}
 			}
 			$dato = $ar_result;
 		}
@@ -2992,9 +2992,11 @@ class diffusion_sql extends diffusion  {
 
 				switch ($q_operator) {
 					case '=':
-						$current_is_publicable = diffusion::get_is_publicable($dato[$q_key]);
-						if($current_is_publicable ===true){
-							$ar_result[] = $dato[$q_key];
+						if (isset($dato[$q_key])) {
+							$current_is_publicable = diffusion::get_is_publicable($dato[$q_key]);
+							if($current_is_publicable===true){
+								$ar_result[] = $dato[$q_key];
+							}
 						}
 						break;
 					case '>':
@@ -3004,15 +3006,15 @@ class diffusion_sql extends diffusion  {
 								if($current_is_publicable===true){
 									$ar_result[] = $current_locator;
 								}
-							}						
+							}
 						}
 						break;
 				}
 			}
-		
+
 
 		if (isset($options->propiedades->process_dato_arguments->resolve_value) && true===$options->propiedades->process_dato_arguments->resolve_value) {
-			
+
 			// resolve_value true
 			$component = clone $options->component;
 			$component->set_dato($ar_result);
@@ -3024,7 +3026,7 @@ class diffusion_sql extends diffusion  {
 			$value = array_map(function($item){
 				return $item->section_id;
 			}, $ar_result);
-		}		
+		}
 
 
 		return $value;
