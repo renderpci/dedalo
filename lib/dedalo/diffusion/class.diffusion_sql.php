@@ -1407,7 +1407,7 @@ class diffusion_sql extends diffusion  {
 			if ($options->recursion_level>=$max_recursions) {
 				# Avoid infinite loops like Manolo's item to all references
 				$resolve_references = false;
-				debug_log(__METHOD__." Stopped recursive resolve_references on level $options->recursion_level ++++++++++++++++++++++++++++++++++++++++++++++++ ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Stopped recursive resolve_references on level '$options->recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
 			}
 			if ($resolve_references===true) {
 
@@ -1447,16 +1447,17 @@ class diffusion_sql extends diffusion  {
 								continue;
 							}
 
+						// debug_log(__METHOD__." Solving recursive resolve_references on level '$options->recursion_level' tipo: '$current_component_tipo' model: '$modelo_name' label: '".RecordObj_dd::get_termino_by_tipo($current_component_tipo)."' ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
 
-						$lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);
 
+						$current_lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);
 						foreach ((array)$options->section_id as $section_id) {
 
 							$current_component  = component_common::get_instance($modelo_name,
 																				 $current_component_tipo,
 																				 $section_id,
 																				 'list',
-																				 $lang,
+																				 $current_lang,
 																				 $options->section_tipo,
 																				 false);
 							$dato = $current_component->get_dato();
@@ -1476,7 +1477,7 @@ class diffusion_sql extends diffusion  {
 							}
 						}//end foreach ((array)$options->section_id as $section_id) {
 
-						#$data_field = self::create_data_field($current_component_tipo, $dato, $is_section_id=false, $options->section_id, $lang, $is_portal=false);
+						#$data_field = self::create_data_field($current_component_tipo, $dato, $is_section_id=false, $options->section_id, $current_lang, $is_portal=false);
 						#dump($data_field, " data_field ".to_string());
 					}
 					#dump($group_by_section_tipo, ' group_by_section_tipo '.$options->section_tipo.'_'.$options->section_id); #die();
@@ -1487,6 +1488,7 @@ class diffusion_sql extends diffusion  {
 				#
 				# RESOLVE REFERENCES RECURSION
 				# Look inside portals of portals, etc..
+					// $current_recursion_level = 1; // (int)$options->recursion_level +1;
 					foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
 						#if (in_array($current_section_tipo, $ar_section_tipo_resolved)) {
 						#	$response->msg 		.= 'Skipped section already resolved '.$current_section_tipo;
@@ -1498,6 +1500,10 @@ class diffusion_sql extends diffusion  {
 						}
 						#dump($current_section_tipo, ' current_section_tipo '.to_string($ar_section_id));
 
+						// recursion level reset
+							$current_recursion_level = 1;
+							// debug_log(__METHOD__." current_recursion_level: '$current_recursion_level' [$current_section_tipo] label: '".RecordObj_dd::get_termino_by_tipo($current_section_tipo)."' ============================================================================================== ", logger::DEBUG);
+
 						foreach ($ar_section_id as $current_section_id) {
 
 							## Recursion with all references
@@ -1505,7 +1511,7 @@ class diffusion_sql extends diffusion  {
 								$new_options->section_tipo 			 	= $current_section_tipo;
 								$new_options->section_id   			 	= $current_section_id;
 								$new_options->diffusion_element_tipo 	= $diffusion_element_tipo;
-								$new_options->recursion_level 			= (int)$options->recursion_level +1;
+								$new_options->recursion_level 			= $current_recursion_level;
 
 							# Recursion
 							$this->update_record( $new_options, true );

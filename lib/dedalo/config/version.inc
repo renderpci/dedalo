@@ -1655,6 +1655,11 @@
 		Makes more easy to separate the Publication API from Dédalo application
 
 
+	Valencia 10-03-2020 5.5.31
+		Fix error on resolve recursive levels in diffusion_sql class, method -> update_record
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1676,12 +1681,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.30';
+	$DEDALO_VERSION = '5.5.31';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '04-03-2020');
+	define('DEDALO_BUILD'	, '10-03-2020');
 
 
 	/*
