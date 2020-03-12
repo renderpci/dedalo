@@ -30,6 +30,17 @@ class relation_list extends common {
 
 
 	/**
+	* GET_DATO
+	* @return 
+	*/
+	public function get_dato() {
+
+		return [];
+		
+	}//end get_dato
+
+
+	/**
 	* GET_INVERSE_REFERENCES
 	* Get calculated inverse locators for all matrix tables
 	* @see search_development2::calculate_inverse_locator
@@ -209,6 +220,90 @@ class relation_list extends common {
 		
 		return $json;
 	}//end get_json
+
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+
+		$diffusion_value = null;
+
+		# Propiedades of diffusion element that references this component
+		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+		$diffusion_properties = $this->get_diffusion_properties();
+
+		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
+
+		switch ($data_to_be_used) {
+			case 'valor':
+
+				$ar_inverse_references 	= $this->get_inverse_references($limit=false, $offset=0, $count=false);
+
+
+				foreach ($ar_inverse_references as $current_locator) {
+				// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+						continue;
+					}
+					$ar_values[] = $current_locator;
+				}
+
+				$ar_relations_lists 	= $this->get_relation_list_obj($ar_values, $value_resolved=true);
+	
+				$diffusion_value = $ar_relations_lists;
+			
+				break;	
+			case 'dato_full':
+				$ar_values = [];
+				$ar_inverse_references 	= $this->get_inverse_references($limit=false, $offset=0, $count=false);
+
+				foreach ($ar_inverse_references as $current_locator) {
+
+					// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+						continue;
+					}
+					$ar_values[] = $current_locator;
+				}
+
+				$diffusion_value = $ar_values;
+				break;
+			case 'dato':
+			default:
+				$ar_values = [];
+				$ar_inverse_references 	= $this->get_inverse_references($limit=false, $offset=0, $count=false);
+
+				foreach ($ar_inverse_references as $current_locator) {
+
+					// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+						continue;
+					}
+					$ar_values[] = $current_locator->section_tipo;
+				}
+
+				$diffusion_value = array_unique($ar_values);
+				break;
+		}
+
+		return $diffusion_value;
+	}//end get_diffusion_value
 
 
 
