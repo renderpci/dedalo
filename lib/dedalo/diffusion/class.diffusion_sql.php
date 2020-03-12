@@ -975,16 +975,23 @@ class diffusion_sql extends diffusion  {
 				// related term info
 					$ar_field_data['related_term']  = $termino_relacionado;
 					$ar_field_data['related_model'] = $modelo_name;
-
+					
 				// component
-					$current_component	= component_common::get_instance($modelo_name,
-																		 $termino_relacionado,
-																		 $options->parent,
-																		 'list', // Note that list have dato fallback (in section)
-																		 $options->lang,
-																		 $options->section_tipo,
-																		 false);
+					if($modelo_name === 'relation_list'){
 
+						$current_component	= new relation_list($termino_relacionado,
+																$options->parent,
+																$options->section_tipo,
+																'list');
+					}else{
+						$current_component	= component_common::get_instance($modelo_name,
+																			 $termino_relacionado,
+																			 $options->parent,
+																			 'list', // Note that list have dato fallback (in section)
+																			 $options->lang,
+																			 $options->section_tipo,
+																			 false);
+					}
 					$options->component 			= $current_component;
 
 				if(is_object($propiedades) && property_exists($propiedades, 'get_field_value') && isset($propiedades->get_field_value->get_dato_method)){
