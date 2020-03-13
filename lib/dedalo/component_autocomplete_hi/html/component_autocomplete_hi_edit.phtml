@@ -51,9 +51,11 @@
 		case 2	:
 		case 3	:
 			// Button change mode
-				if($modo!=='search' && $from_modo!=='edit'){
-					$html_content .= "<div class=\"css_autocomplete_hi_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
-				}			
+				if($modo !== 'edit_in_list'){
+					if($modo!=='search' && $from_modo!=='edit'){
+						$html_content .= "<div class=\"css_autocomplete_hi_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+					}
+				}				
 
 			// search mode
 				$in_search_mode_css = ($modo==='search') ? 'in_search_mode' : '';
@@ -224,7 +226,9 @@
 
 
 	# PRINT HTML
-	print $html_label;
+	if($modo!=='edit_in_list'){
+		print $html_label;
+	}
 	print $html_content;
 
 

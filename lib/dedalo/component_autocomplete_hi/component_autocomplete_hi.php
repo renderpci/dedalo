@@ -19,6 +19,7 @@
 	$identificador_unico	= $this->get_identificador_unico();	
 	$component_name			= get_class($this);
 	$relation_type 			= $this->get_relation_type();
+	$dato 					= $this->get_dato(); // !!
 
 	if($permissions===0) return null;
 	# Verify component content record is inside section record filter
@@ -30,12 +31,24 @@
 	
 	switch($modo) {		
 
+		case 'edit_in_list':
+			// Fix always edit as modo / filename
+			//$modo 			= 'edit_in_list';
+			if (empty($dato)) {
+				$file_name	= 'edit';
+			}else{
+				$file_name	= 'list';
+			}
+
+			$wrap_style 	= '';
+			// Dont break here. Continue as modo edit
+
 		case 'tool_transcription' :
 				$file_name = 'edit';
 
 		case 'edit'	:
 				// General vars
-					$dato 			= $this->get_dato();
+					//$dato 			= $this->get_dato();
 					$id_wrapper 	= 'wrapper_'.$identificador_unico;
 					$input_name 	= $tipo;
 					$ar_valor 		= $this->get_valor($lang,'array');
@@ -302,7 +315,7 @@
 		case 'list_tm' :
 				$file_name = 'list';
 		case 'portal_list':
-				$dato 			= $this->get_dato();
+				//$dato 			= $this->get_dato();
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$dato_json 		= json_encode($dato);
 				$component_info = $this->get_component_info('json');
@@ -313,7 +326,7 @@
 				break;
 				
 		case 'list'	:
-				$dato	= $this->get_dato();						
+				//$dato	= $this->get_dato();						
 				# Return direct value for store in 'valor_list'
 				$valor 	= $this->get_valor($lang,'string');
 				echo (string)$valor; 	# Like "Catarroja, L'Horta Sud, Valencia/València, Comunidad Valenciana, España"
