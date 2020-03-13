@@ -41,6 +41,12 @@
 
 		case 2 :
 		case 3 :
+				if($modo !== 'edit_in_list'){
+					if($from_modo !== 'edit' ){
+						$html_content .= "<div class=\"css_select_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+					}	
+				}
+
 				$html_content .= '<ul class="radio_button_ul_list">';
 
 				$i=1; foreach((array)$ar_list_of_values->result as $key => $item) {
@@ -117,7 +123,10 @@
 
 
 	# PRINT HTML
-	print $html_label;
+	if($modo!=='edit_in_list'){
+		print $html_label;
+	}
+	//print $html_label;
 	print $html_content;
 
 

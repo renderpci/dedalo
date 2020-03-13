@@ -31,9 +31,15 @@
 	}
 
 	$file_name = $modo;
+	$from_modo = $modo;
 
 
 	switch($modo) {
+
+		case 'edit_in_list':
+				$file_name = 'edit';
+				$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				// Dont break here. Continue as modo edit	
 
 		case 'edit' :
 				$dato 				= $this->get_dato();
