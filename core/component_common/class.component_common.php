@@ -3976,7 +3976,9 @@ abstract class component_common extends common {
 			if (isset($end_path->selector)) {
 				$selector = $end_path->selector;
 			}else{
-				$selector = 'valor_list';
+				//$selector = 'valor_list';
+				$selector = 'dato';
+			
 			}
 
 			if (isset($end_path->lang) && $end_path->lang==='all') {

@@ -358,6 +358,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return 'component_input_text';
 		}elseif ($this->terminoID==='dd551') { // activity 'dato'
 			return 'component_json';
+		}elseif ($this->terminoID==='hierarchy48') { // hierarchy 'order'
+			return 'component_number';
 		}
 		$model = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
 

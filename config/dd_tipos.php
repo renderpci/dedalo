@@ -81,7 +81,7 @@ define('DEDALO_HIERARCHY_TYPES_NAME_TIPO'				, 'hierarchy16');
 define('DEDALO_HIERARCHY_SECTION_TIPO'					, 'hierarchy1');
 define('DEDALO_HIERARCHY_ACTIVE_TIPO'					, 'hierarchy4');
 define('DEDALO_HIERARCHY_LANG_TIPO'						, 'hierarchy8');
-define('DEDALO_HIERARCHY_TIPOLOGY_TIPO'					, 'hierarchy9');
+define('DEDALO_HIERARCHY_TYPOLOGY_TIPO'					, 'hierarchy9');
 define('DEDALO_HIERARCHY_TLD2_TIPO'						, 'hierarchy6');
 define('DEDALO_HIERARCHY_TERM_TIPO'						, 'hierarchy5');
 define('DEDALO_HIERARCHY_TARGET_SECTION_TIPO'			, 'hierarchy53');
