@@ -614,7 +614,7 @@ class component_autocomplete extends component_relation_common {
 				$typology_locator->set_section_id($value);
 				$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
 				$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TIPOLOGY_TIPO);
+				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
 
 			$ar_filter[] = '{
 				"q": '.json_encode(json_encode($typology_locator)).',

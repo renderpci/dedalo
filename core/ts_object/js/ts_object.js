@@ -4,9 +4,7 @@
 *
 *
 */
-var ts_object = new function() {
-
-	"use strict";
+export const ts_object = new function() {
 
 	// class vars
 		this.trigger_url 		= DEDALO_CORE_URL + '/ts_object/trigger.ts_object.php'
@@ -27,11 +25,11 @@ var ts_object = new function() {
 		
 		// THESAURUS_MODE
 		this.thesaurus_mode = url_vars.thesaurus_mode || 'default'
-		// component_name Caller component name for realtions
+		// component_name Caller component name for relations
 		this.component_name = url_vars.component_name || null
 
 	};//end init
-	this.init(); // Auto init !
+	//this.init(); // Auto init !
 
 
 

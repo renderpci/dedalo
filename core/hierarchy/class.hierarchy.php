@@ -93,7 +93,7 @@ class hierarchy {
 
 		#
 		# TIPOLOGY OF HIERARCHY
-		$hierarchy_type	= DEDALO_HIERARCHY_TIPOLOGY_TIPO;
+		$hierarchy_type	= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type, true);
 		$component 		= component_common::get_instance( $modelo_name,
 														  $hierarchy_type,
@@ -1600,7 +1600,7 @@ class hierarchy {
 		      "path": [
 		        {
 		          "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-		          "component_tipo": "'.DEDALO_HIERARCHY_TIPOLOGY_TIPO.'",
+		          "component_tipo": "'.DEDALO_HIERARCHY_TYPOLOGY_TIPO.'",
 		          "modelo": "component_select",
 		          "name": "Typology"
 		        }
@@ -1615,7 +1615,7 @@ class hierarchy {
 
 		foreach ($ar_records as $key => $row) {
 
-			if( $ar_locators = json_decode($row->{DEDALO_HIERARCHY_TIPOLOGY_TIPO}) ) {
+			if( $ar_locators = json_decode($row->{DEDALO_HIERARCHY_TYPOLOGY_TIPO}) ) {
 				if (isset($ar_locators[0]->section_id)) {
 					$hierarchy_type = (int)$ar_locators[0]->section_id;
 				}

@@ -401,9 +401,9 @@ class dd_core_api {
 			$component_tipo = $options->component_tipo ?? null;
 
 		// page elements
-			switch ($model) {
+			switch (true) {
 
-				case 'menu' :
+				case $model === 'menu' :
 					$page_element = (function(){
 
 						$menu = new menu();
@@ -427,8 +427,7 @@ class dd_core_api {
 					})();
 					break;
 
-				case 'area':
-				case 'area_development':
+				case strpos($model, 'area')===0:
 					$page_element = (function() use ($model, $tipo, $mode){
 
 						$page_element = new StdClass();
@@ -443,7 +442,7 @@ class dd_core_api {
 					})();
 					break;
 
-				case 'section_tool':
+				case $model==='section_tool':
 					$page_element = (function() use ($model, $tipo, $mode){
 
 						# Configure section from section_tool data
@@ -476,7 +475,7 @@ class dd_core_api {
 					})();
 					break;
 
-				case 'section':
+				case $model === 'section':
 					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
 
 						$section_tipo = $tipo;
@@ -499,7 +498,7 @@ class dd_core_api {
 					})();
 					break;
 
-				case 'section_tm':
+				case $model === 'section_tm':
 					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
 
 						$section_tipo = $tipo;
