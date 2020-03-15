@@ -3,6 +3,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
+	import {ts_object} from '../../ts_object/js/ts_object.js'
 
 
 
@@ -41,6 +42,23 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 		const wrapper =	ui.area.build_wrapper_edit(self, {
 			content_data : current_content_data,
 			//buttons 	 : current_buttons
+		})
+
+	// change the mode of the thesaurus
+	// when the user do click publish the tipo to go and set the mode in list
+	// the action can be executed mainly in page, but it can be used for any instance.
+
+	// swicht_term_model 
+		const swicht_term_model = ui.create_dom_element({
+			element_type 	: 'div',
+			class_name		:'swicht_term_model',
+			inner_html		: 'term',
+			parent 		 	: wrapper,
+		})
+
+		swicht_term_model.addEventListener("click", e => {
+			self.build_options.terms_are_model = self.build_options.terms_are_model ? false : true
+			self.refresh()
 		})
 
 
@@ -107,22 +125,109 @@ const content_data = async function(self) {
 		})
 
 	// elements
-		const data 				= self.data.find(item => item.tipo == 'dd100')	
-		const typology_nodes  	= data.value
+		const data 				= self.data.find(item => item.tipo === 'dd100')	
+		const ts_nodes  		= data.value
+		const typology_nodes 	= ts_nodes.filter(node => node.type === 'typology' )
 		const typology_length 	= typology_nodes.length
-			console.log("typology_nodes:",typology_nodes);
+		const hierarchy_nodes 	= ts_nodes.filter(node => node.type === 'hierarchy')
 
+	//sort typologies by order field
+		typology_nodes.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
+
+
+		
 
 		for (let i = 0; i < typology_length; i++) {
 
-			// root elements
-			const li = ui.create_dom_element({
-				element_type : 'li',
-				parent 		 : ul,
-			})
+			// li
+				const li = ui.create_dom_element({
+					element_type : 'li',
+					parent 		 : ul,
+				})
+			// typology_header 
+				const typology_header = ui.create_dom_element({
+					element_type 	: 'div',
+					parent 		 	: li,
+					class_name		:'typology_name',
+					dataset			: {
+										state		: 'show',
+										section_id 	: typology_nodes[i].section_id
+									  },
+					inner_html		: typology_nodes[i].label,
+					parent 			: li
+				})
+			// hierarchy sections
+				const hierarchy_sections = hierarchy_nodes.filter(node => node.typology_section_id === typology_nodes[i].section_id)
+
+			//sort hierarchy_nodes by alfabetic
+				hierarchy_sections.sort((a, b) => new Intl.Collator().compare(a.target_section_name, b.target_section_name));
+					console.log("hierarchy_sections:",hierarchy_sections);
+				const hierarchy_sections_length = hierarchy_sections.length
+
+				for (let j = 0; j < hierarchy_sections_length; j++) {
+					hierarchy_sections[j]
+
+					// hierarchy wrapper 
+						const hierarchy_wrapper = ui.create_dom_element({
+							element_type 	: 'div',							
+							class_name		: 'wrap_ts_object hierarchy_root_node',
+							dataset			: {
+												node_type			: 'hierarchy_node',
+												section_tipo 		: hierarchy_sections[j].section_tipo,
+												section_id 			: hierarchy_sections[j].section_id,
+												target_section_tipo : hierarchy_sections[j].target_section_tipo,
+											 },
+							parent 		 	: li,
+						})
+					
+					// hierarchy elements container
+						const elements_contanier = ui.create_dom_element({
+							element_type 	: 'div',
+							class_name		:'elements_contanier',
+							parent 		 	: hierarchy_wrapper,
+							
+						})
+						// hierarchy link_children 
+							const link_children = ui.create_dom_element({
+								element_type 	: 'div',							
+								class_name		:'list_thesaurus_element',
+								id 				: hierarchy_sections[j].section_tipo+'_'+hierarchy_sections[j].section_id+'_root',
+								dataset			: {
+													tipo	: hierarchy_sections[j].children_tipo,
+													type 	: 'link_children'
+												 },
+								parent 		 	: elements_contanier,
+							})
+					// hierarchy children_container 
+							const children_container = ui.create_dom_element({
+								element_type 	: 'div',							
+								class_name		:'children_container',
+								dataset			: {
+													section_id	: hierarchy_sections[j].section_id,
+													role 		: 'children_container'
+												 },
+								parent 		 	: hierarchy_wrapper,
+							})
+
+					// ts_object render
+						ts_object.get_children(link_children)
+				}
 		}
 
-	
+		// ts_object
+
+
+
+			// const hierarchy_root_nodes   = hierarchy_nodes.map(node => node.section_tipo+'_'+node.section_id+'_root')
+			// const hierarchy_nodes_length = hierarchy_root_nodes.length
+			// for (let i = 0; i < hierarchy_nodes_length; i++) {		
+			
+			// 	const root_node_id = hierarchy_root_nodes[i]				
+				
+			// 	// Launch ajax call promise
+			// 		ts_object.get_children(root_node_id)			
+			// }
+
 
 	// for (let i = 0; i < typology_length; i++) {
 	// 	const current_typology = typology_nodes[i]

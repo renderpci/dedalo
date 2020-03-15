@@ -283,7 +283,7 @@ class component_relation_parent extends component_relation_common {
 		# we need search too in main_hierarchy table the "target" parent
 		$search_in_main_hierarchy = true;
 		if($search_in_main_hierarchy===true) {
-			$main_from_component_tipo = DEDALO_HIERARCHY_CHIDRENS_TIPO;
+			$main_from_component_tipo = DEDALO_HIERARCHY_CHIDREN_TIPO;
 			$main_filter  = ",\"from_component_tipo\":\"$main_from_component_tipo\"";
 			$main_compare = "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$main_filter."}";
 			$sql_where    = "datos#>'{relations}' @> '[$main_compare]'::jsonb";
@@ -315,7 +315,7 @@ class component_relation_parent extends component_relation_common {
 
 			# Hierarchy parent case locator, force from_component_tipo
 			if ($current_section_tipo==='hierarchy1') {
-				$from_component_tipo = DEDALO_HIERARCHY_CHIDRENS_TIPO;
+				$from_component_tipo = DEDALO_HIERARCHY_CHIDREN_TIPO;
 			}	
 
 			// Search 'from_component_tipo' in locators when no is received

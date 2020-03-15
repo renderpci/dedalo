@@ -86,7 +86,7 @@ class tool_ts_print extends tool_common {
 
 		$ar_roots = [];
 		
-		$ar_hierachies = area_thesaurus::get_all_hierarchy_sections();
+		$ar_hierachies = area_thesaurus::get_active_hierarchy_sections();
 
 		$ar_result = array_filter($ar_hierachies, function($element) use($section_tipo) {
 			return ($element->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO} === $section_tipo);
@@ -99,7 +99,7 @@ class tool_ts_print extends tool_common {
 		$hierarchy = reset($ar_result);
 
 		# Childrens
-		$tipo 		 = ($model===true) ? DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO : DEDALO_HIERARCHY_CHIDRENS_TIPO;
+		$tipo 		 = ($model===true) ? DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO : DEDALO_HIERARCHY_CHIDREN_TIPO;
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 	 = component_common::get_instance($modelo_name,
 													  $tipo,

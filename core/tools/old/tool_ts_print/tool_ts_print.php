@@ -26,7 +26,7 @@
 				js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 				# Get all hierarchies with target section tipo info
-				$ar_hierachies = area_thesaurus::get_all_hierarchy_sections();
+				$ar_hierachies = area_thesaurus::get_active_hierarchy_sections();
 				// Sort by term
 				function cmp($a, $b) {
 					return strcmp($a->{DEDALO_HIERARCHY_TERM_TIPO}, $b->{DEDALO_HIERARCHY_TERM_TIPO});

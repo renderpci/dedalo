@@ -5,7 +5,7 @@ include(DEDALO_CORE_PATH . '/ts_object/class.ts_object.php');
 
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 $options = new stdClass();
-if (isset($_GET['mode']) && $_GET['mode']==='get_childrens_data') {
+if (isset($_GET['mode']) && $_GET['mode']==='get_children_data') {
 	$options->source = 'GET';
 }else{
 	$options->source = 'php://input';
@@ -18,11 +18,11 @@ ignore_user_abort(true);
 
 
 /**
-* GET_CHILDRENS_DATA
-* Get json data of all childrens of current element
+* GET_CHILDREN_DATA
+* Get json data of all children of current element
 * @return object $response
 */
-function get_childrens_data($json_data) {
+function get_children_data($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
@@ -44,16 +44,16 @@ function get_childrens_data($json_data) {
 
 	if($node_type==='hierarchy_node') {
 
-		// Childrens are the same current data
+		// Children are the same current data
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
 			$locator->set_section_id($section_id);
-		$childrens = array($locator);
-			#dump($childrens, ' childrens ++ '.to_string());
+		$children = array($locator);
+			#dump($children, ' children ++ '.to_string());
 
 	}else{
 
-		// Calculate childrens from parent
+		// Calculate children from parent
 		$modelo_name='component_relation_children';
 		$modo 		='list_thesaurus';
 		$lang		=DEDALO_DATA_NOLAN;
@@ -63,13 +63,13 @@ function get_childrens_data($json_data) {
 																	  $modo,
 																	  $lang,
 																	  $section_tipo);
-		$dato 	   = $component_relation_children->get_dato();
-		$childrens = $dato;
+		$dato 	   	= $component_relation_children->get_dato();
+		$children 	= $dato;
 
 		# sort_elements
 		#if(SHOW_DEBUG===true) $start_time = start_time();
-		#$childrens = ts_object::sort_elements($childrens, 'asc');
-		#if(SHOW_DEBUG===true) debug_log(__METHOD__." Titme to sort childrens ".count($childrens)." - ".exec_time($start_time,""), logger::DEBUG);
+		#$children = ts_object::sort_elements($children, 'asc');
+		#if(SHOW_DEBUG===true) debug_log(__METHOD__." Titme to sort children ".count($children)." - ".exec_time($start_time,""), logger::DEBUG);
 	}
 
 
@@ -80,24 +80,24 @@ function get_childrens_data($json_data) {
 
 	try{
 
-		$childrens_data = array();
-		foreach ((array)$childrens as $locator) {
+		$children_data = array();
+		foreach ((array)$children as $locator) {
 
 			$section_id 		= $locator->section_id;
 			$section_tipo 		= $locator->section_tipo;
 
 			$ts_object  		= new ts_object( $section_id, $section_tipo, $options );
-			$childrens_object 	= $ts_object->get_childrens_data();
-			#debug_log(__METHOD__." childrens_object ".to_string($childrens_object), logger::DEBUG);
+			$children_object 	= $ts_object->get_children_data();
+			#debug_log(__METHOD__." children_object ".to_string($children_object), logger::DEBUG);
 
 			# Add only descriptors
-			#if ($childrens_object->is_descriptor===true) {
-				$childrens_data[] 	= $childrens_object;
+			#if ($children_object->is_descriptor===true) {
+				$children_data[] 	= $children_object;
 			#}
 		}
 
-		$response->result 	= (array)$childrens_data;
-		$response->msg 		= 'Ok. Request done [get_childrens_data]';
+		$response->result 	= (array)$children_data;
+		$response->msg 		= 'Ok. Request done [get_children_data]';
 
 	}catch(Exception $e) {
 
@@ -119,7 +119,7 @@ function get_childrens_data($json_data) {
 	}
 
 	return (object)$response;
-}//end get_ar_childrens_data_real
+}//end get_ar_children_data_real
 
 
 
@@ -366,7 +366,7 @@ function delete($json_data) {
 		}
 
 
-	# CHILDRENS . Verify that current term don't have childrens. If yes, stop process.
+	# CHILDREN . Verify that current term don't have children. If yes, stop process.
 	$modelo_name 		= 'component_relation_children';
 	$modo 				= 'edit';
 	$lang				= DEDALO_DATA_NOLAN;
@@ -382,8 +382,8 @@ function delete($json_data) {
 	 	$dato = $component_relation_children->get_dato();
 
 	 	if (!empty($dato)) {
-	 		debug_log(__METHOD__." Stopped delete term from thesaurus. Current term have childrens".to_string($dato), logger::DEBUG);
-	 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') ' . "Stopped delete term from thesaurus. Current term have childrens ".to_string($dato);
+	 		debug_log(__METHOD__." Stopped delete term from thesaurus. Current term have children".to_string($dato), logger::DEBUG);
+	 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') ' . "Stopped delete term from thesaurus. Current term have children ".to_string($dato);
 	 		return (object)$response;
 	 	}
 	}
@@ -454,7 +454,7 @@ function update_parent_data($json_data) {
 
 	# Add me as children of new parent
 		$modelo_name 	= 'component_relation_children';
-		#$tipo 			= ($parent_node_type=='root') ? DEDALO_HIERARCHY_CHIDRENS_TIPO : DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
+		#$tipo 			= ($parent_node_type=='root') ? DEDALO_HIERARCHY_CHIDREN_TIPO : DEDALO_THESAURUS_RELATION_CHIDREN_TIPO;
 		$modo 			= 'edit';
 		$lang			= DEDALO_DATA_NOLAN;
 		$component_relation_children = component_common::get_instance($modelo_name,

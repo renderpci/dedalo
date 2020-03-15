@@ -427,7 +427,7 @@ class hierarchy {
 			debug_log(__METHOD__." Created first record of thesaurus section $current_section_tipo - $section_id ".to_string(), logger::DEBUG);
 
 			# Attach as children of current hierarchy
-			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHIDRENS_TIPO : DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
+			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHIDREN_TIPO : DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO;
 			$component_relation_children = component_common::get_instance('component_relation_children',
 															 			  $component_relation_children_tipo,
 															 			  $options->section_id,
@@ -1539,8 +1539,8 @@ class hierarchy {
 		$component->set_dato( array("lg2") );
 		$component->Save();
 
-		// DEDALO_HIERARCHY_CHIDRENS_TIPO
-		$tipo 			= DEDALO_HIERARCHY_CHIDRENS_TIPO;
+		// DEDALO_HIERARCHY_CHIDREN_TIPO
+		$tipo 			= DEDALO_HIERARCHY_CHIDREN_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
 														 $tipo,
