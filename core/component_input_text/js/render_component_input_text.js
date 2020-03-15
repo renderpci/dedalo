@@ -451,7 +451,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self, is_ins
 	// input field
 		const input = ui.create_dom_element({
 			element_type 	: element_type,
-			type 		 	: 'text',		
+			type 		 	: 'text',
 			class_name 		: 'input_value',
 			dataset 	 	: { key : i },
 			value 		 	: current_value,
@@ -534,4 +534,5 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 	return input
 }//end get_input_element_search
+
 

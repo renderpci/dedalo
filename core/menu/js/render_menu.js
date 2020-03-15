@@ -464,13 +464,14 @@ const item_hierarchy = async (options) => {
 		// recursive generation of children nodes of the current li node.
 		if (children_item) {
 			li.classList.add ('has-sub')
-			li.dataset.children		= item.tipo
-			level_hierarchy({		self			: self,
-									datalist 		: datalist,
-									root_ul 		: root_ul,
-									current_tipo	: item.tipo,
-									parent_tipo 	: current_tipo
-								})
+			li.dataset.children	= item.tipo
+			level_hierarchy({
+					self			: self,
+					datalist 		: datalist,
+					root_ul 		: root_ul,
+					current_tipo	: item.tipo,
+					parent_tipo 	: current_tipo
+			})
 
 		}// end children_item
 }//end item_hierarchy

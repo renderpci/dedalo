@@ -680,16 +680,18 @@ export const ui = {
 				})
 
 			// Events
-				tool_button.addEventListener('click', (e) => {
+				tool_button.addEventListener('click', publish_load_tool)
+
+				function publish_load_tool(e) {
 					e.stopPropagation();
+						alert("publish_load_tool");
 					//common.prototype.load_tool(self, tool_object)
 					// ui.tool.load_tool(self, tool_object)
 					event_manager.publish('load_tool', {
 						self 		: self,
 						tool_object : tool_object
 					})
-
-				})
+				}
 
 			return tool_button
 		},//build_tool_button
