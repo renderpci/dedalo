@@ -1,3 +1,6 @@
+	import {data_manager} from './data_manager.js'
+
+
 
 	/**
 	* INSTANCES CACHE STORE
@@ -37,19 +40,42 @@
 	export const get_instance = async function(options){
 
 		// key values ['model','tipo','section_tipo','section_id','mode','lang']
-			const model 			= options.model
+		// mandatory
 			const tipo 				= options.tipo
 			const section_tipo 		= options.section_tipo
 			const section_id		= options.section_id // string format
-			const mode				= options.mode
-			const lang				= options.lang
+
+		// optional (only mandatory for build the instance)
+			const mode				= options.mode  || 'list'
+			const lang				= options.lang  || page_globals.dedalo_data_lang
+			const model 			= options.model || await ( async () => {
+			    const current_data_manager 	= new data_manager()
+				const element_context = await current_data_manager.get_element_context({
+					tipo 			: tipo,
+					section_tipo 	: section_tipo,
+					section_id		: section_id
+				})
+				const current_model = element_context.result[0].model
+
+				if(typeof options.context === 'undefined'){
+					options.context = element_context.result[0]
+				}
+
+			    return current_model
+			})();
+			// reasign the optional vars to the options
+				options.model 	= model
+				options.mode 	= mode
+				options.lang 	= lang
+
 
 		// key. build the key locator of the instance
-			const key				= options.key || key_instances_builder(options, true)
+			const key = options.key || key_instances_builder(options, true)
 
 			//if (model!=='section_record') {
 			//	key = key_instances_builder(options) + "_" + Date.now()
 			//}
+
 
 		// if the instance is not in the cache, build one new instance of the element
 			const load_instance = async () => {
@@ -103,6 +129,8 @@
 		return instance
 	}// end get_instance
 
+
+
 	/**
 	* GET_ALL_INSTANCES
 	* Get all the instances from memory
@@ -110,8 +138,9 @@
 	export const get_all_instances = function() {
 
 		return instances
-
 	}// end get_all_instances
+
+
 
 	/**
 	* DELETE_INSTANCE

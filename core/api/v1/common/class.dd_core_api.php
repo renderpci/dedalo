@@ -435,7 +435,7 @@ class dd_core_api {
 							$page_element->type  		= 'area';
 							$page_element->tipo  		= $tipo;
 							$page_element->mode 	 	= $mode;
-							$page_element->lang 	 	= DEDALO_DATA_LANG;
+							$page_element->lang 	 	= DEDALO_DATA_LANG;						
 							#$page_element->sqo_context  = $sqo_context;
 
 						return $page_element;
@@ -948,6 +948,10 @@ class dd_core_api {
 
 								// others (area, etc.)
 									$element = new $model($tipo, $mode);
+
+									// build_options
+										$build_options = $ddo_source->build_options ?? null;
+										$element->set_build_options($build_options);
 							}
 							break;
 

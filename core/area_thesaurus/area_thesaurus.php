@@ -18,7 +18,7 @@
 
 		$this->model_view 				= true;
 		$this->target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
-		$this->hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
+		$this->hierarchy_children_tipo	= DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
 		$_SESSION['dedalo']['config']['thesaurus_view_mode'] = 'model';
 
 	}else{
@@ -28,7 +28,7 @@
 
 	$model_view 				= $this->model_view;
 	$target_section_tipo 		= $this->target_section_tipo;
-	$hierarchy_childrens_tipo 	= $this->hierarchy_childrens_tipo;
+	$hierarchy_children_tipo 	= $this->hierarchy_children_tipo;
 
 	switch($modo) {
 		
@@ -241,7 +241,7 @@
 							$ts_locator->set_section_tipo('ts1');
 							$ts_locator->set_section_id('1');
 
-						$ar_terms = tool_ts_print::get_childrens($ts_locator);
+						$ar_terms = tool_ts_print::get_children($ts_locator);
 							dump( json_encode($ar_terms, JSON_PRETTY_PRINT) , ' ar_terms ++ '.to_string()); 
 
 						#$data_node = tool_ts_print::build_data_node('ts1',1);

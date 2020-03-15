@@ -12,9 +12,10 @@ class area_thesaurus extends area {
 
 	# Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
 	protected $model_view 				= false;
-	protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-	protected $hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_TIPO;
+	// protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHIDREN_TIPO;
 
+	public $build_options				= null;
 
 	
 	function __construct($tipo, $modo='list') {
@@ -41,22 +42,33 @@ class area_thesaurus extends area {
 	* GET_HIERARCHY_SECTIONS
 	* @return array $ar_items
 	*/
-	public function get_hierarchy_sections($hierarchy_types_filter=null, $hierarchy_sections_filter=null) {
-		
-		$ar_records = area_thesaurus::get_all_hierarchy_sections();
+	public function get_hierarchy_sections($hierarchy_types_filter=null, $hierarchy_sections_filter=null, $terms_are_model=false) {
+
+		$hierarchy_target_section_tipo 	= $terms_are_model ? DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO : DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+		$hierarchy_children_tipo 		= $terms_are_model ? DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO 		: DEDALO_HIERARCHY_CHIDREN_TIPO;
+
+		$ar_records = area_thesaurus::get_active_hierarchy_sections();
 		
 		$ar_items = [];
+		$ar_tipologies = [];
 		foreach ($ar_records as $key => $row) {
+
+			// typology data
+			$typology_data = $this->get_typology_data($row->section_id);
+			# Skip filtered types when defined
+			if (!empty($hierarchy_types_filter) && !in_array($typology_data->section_id, $hierarchy_types_filter)) {
+				continue; // Skip
+			}
 	
 			//hierarchy target section tipo
-			$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO,true);
-			$hierarchy_target_section_tipo = component_common::get_instance($model,
-															 DEDALO_HIERARCHY_TARGET_SECTION_TIPO,
+			$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_target_section_tipo,true);
+			$target_section = component_common::get_instance($model,
+															 $hierarchy_target_section_tipo,
 															 $row->section_id,
 															 'list',
 															 DEDALO_DATA_NOLAN,
 															 $row->section_tipo);
-			$target_section_tipo_dato = $hierarchy_target_section_tipo->get_dato();
+			$target_section_tipo_dato = $target_section->get_dato();
 			$target_section_tipo = reset($target_section_tipo_dato);
 
 			if (empty($target_section_tipo)) {
@@ -77,27 +89,33 @@ class area_thesaurus extends area {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $row->section_tipo);
-			$hierarchy_target_section_name = $hierarchy_section_name->get_valor();
+			$target_section_name = $hierarchy_section_name->get_valor();
 
-			if (empty($hierarchy_target_section_name)) {
-				$hierarchy_target_section_name = $this->get_hierarchy_name( $row->section_id );
+			if (empty($target_section_name)) {
+				$target_section_name = $this->get_hierarchy_name( $row->section_id );
 			}
 
-			// typology data
-			$typology_data = $this->get_typology_data($row->section_id);
-			# Skip filtered types when defined
-			if (!empty($hierarchy_types_filter) && !in_array($typology_data->section_id, $hierarchy_types_filter)) {
-				continue; // Skip
-			}
+			//hierarchy order
+			$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ORDER_TIPO,true);
+			$hierarchy_section_order = component_common::get_instance($model,
+															 DEDALO_HIERARCHY_ORDER_TIPO,
+															 $row->section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $row->section_tipo);
+			$hierarchy_target_order_dato 	= $hierarchy_section_order->get_dato();
+			$hierarchy_target_order_value 	= reset($hierarchy_target_order_dato);
 
-			
 
 			$item = new stdClass();
-				$item->section_id 					 = $row->section_id;
-				$item->hierarchy_target_section_tipo = $target_section_tipo;
-				$item->hierarchy_target_section_name = $hierarchy_target_section_name;
-				$item->typology 					 = $typology_data->section_id;
-				$item->typology_name 				 = $this->get_typology_name( $typology_data->section_id );
+				$item->section_id 				= $row->section_id;
+				$item->section_tipo 			= $row->section_tipo;
+				$item->target_section_tipo		= $target_section_tipo;
+				$item->target_section_name		= $target_section_name;
+				$item->typology_section_id		= $typology_data->section_id;
+				$item->order 					= $hierarchy_target_order_value;
+				$item->type						= 'hierarchy';
+				$item->children_tipo			= $hierarchy_children_tipo;
 
 			$ar_items[] = $item;
 		}//end foreach ($ar_records as $key => $row)
@@ -109,10 +127,10 @@ class area_thesaurus extends area {
 
 
 	/**
-	* GET_ALL_HIERARCHY_SECTIONS
+	* GET_ACTIVE_HIERARCHY_SECTIONS
 	* @return array $ar_records
 	*/
-	public static function get_all_hierarchy_sections() {
+	public static function get_active_hierarchy_sections() {
 		
 		$search_query_object = json_decode('{
 		  "id": "thesaurus",
@@ -154,8 +172,7 @@ class area_thesaurus extends area {
 		$ar_records = $result->ar_records;
 
 		return $ar_records;
-	}//end get_all_hierarchy_sections
-
+	}//end get_active_hierarchy_sections
 
 
 	/**
@@ -225,6 +242,37 @@ class area_thesaurus extends area {
 		return (string)$typology_name;
 	}//end get_typology_name
 
+	/**
+	* GET_TYPOLOGY_ORDER
+	* @return 
+	*/
+	public function get_typology_order($typology_section_id) {
+
+		# Store for speed
+		static $typology_names;
+		if (isset($typology_names[$typology_section_id])) {
+			return $typology_names[$typology_section_id];
+		}
+				
+		$tipo 			 = DEDALO_HIERARCHY_TYPES_ORDER;
+		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$parent 		 = $typology_section_id;
+		$modo 			 = 'list';
+		$lang 			 = DEDALO_DATA_LANG;
+		$section_tipo 	 = area_thesaurus::$typologies_section_tipo;
+		
+		$component 		 = component_common::get_instance($modelo_name,
+														  $tipo,
+														  $parent,
+														  $modo,
+														  $lang,
+														  $section_tipo);
+		$dato = $component->get_dato();
+		$value = reset($dato);
+
+		return (int)$value;		
+	}//end get_typology_order
+
 
 
 	/**
@@ -293,8 +341,8 @@ class area_thesaurus extends area {
 			DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO			
 			);
 			
-			# DEDALO_HIERARCHY_CHIDRENS_TIPO	
-			# DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO
+			# DEDALO_HIERARCHY_CHIDREN_TIPO	
+			# DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO
 			# DEDALO_HIERARCHY_ORDER_TIPO,
 			# DEDALO_HIERARCHY_ACTIVE_TIPO,
 			# DEDALO_HIERARCHY_LANG_TIPO,			
@@ -484,8 +532,8 @@ class area_thesaurus extends area {
 					# Add siblings
 					/*
 					if (strpos($cvalue, 'hierarchy')===false) {
-						$ar_childrens = area_thesaurus::get_siblings($cvalue, $ar_value);
-						if(!empty($ar_childrens)) foreach ($ar_childrens as $s_key => $s_value) {
+						$ar_children = area_thesaurus::get_siblings($cvalue, $ar_value);
+						if(!empty($ar_children)) foreach ($ar_children as $s_key => $s_value) {
 							$ar_hierarchy[$key][$cvalue][$s_key]	= array();													
 						}
 					}
@@ -568,7 +616,7 @@ class area_thesaurus extends area {
 
 	/**
 	* WALK_HIERARCHY_DATA
-	* Walk recursively $ar_data_combined resolving ts_object and add childrens as 'heritage'
+	* Walk recursively $ar_data_combined resolving ts_object and add children as 'heritage'
 	* @return array $ar_mix
 	*/
 	public static function walk_hierarchy_data( $ar_data_combined ) {
@@ -581,13 +629,13 @@ class area_thesaurus extends area {
 			$current_section_tipo = $ar_parts[0];
 			$current_section_id   = $ar_parts[1];
 			$ts_object = new ts_object($current_section_id, $current_section_tipo);
-			$childrens_data = $ts_object->get_childrens_data();
-				#dump($childrens_data, ' $childrens_data ++ '.to_string($value));
+			$children_data = $ts_object->get_children_data();
+				#dump($children_data, ' $children_data ++ '.to_string($value));
 
 			# Add to array
-			$ar_mix[$key] = $childrens_data;
+			$ar_mix[$key] = $children_data;
 
-			# Add childrens in cotainer heritage
+			# Add children in cotainer heritage
 			if (!empty($ar_values)) {			
 				$ar_mix[$key]->heritage = self::walk_hierarchy_data( $ar_values );
 			}		

@@ -105,12 +105,13 @@ area_common.prototype.build = async function() {
 
 	// area basic context
 		const source_context = {
-			model 	: self.model,
-			tipo  	: self.tipo,
-			lang  	: self.lang,
-			mode  	: self.mode,
-			action 	: 'get_data',
-			typo 	: 'source'
+			model 			: self.model,
+			tipo  			: self.tipo,
+			lang  			: self.lang,
+			mode  			: self.mode,
+			action 			: 'get_data',
+			typo 			: 'source',
+			build_options 	: self.build_options
 		}
 
 		const sqo_context = [source_context]

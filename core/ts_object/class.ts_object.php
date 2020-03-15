@@ -126,15 +126,15 @@ class ts_object extends Accessors {
 			}
 			*/
 
-			# SUBSTITUTION : When is set $this->options->model as true, we substitute structure propiedades link_childrens with link_childrens_model
-			# for look childrens in other hierarchy component children 
+			# SUBSTITUTION : When is set $this->options->model as true, we substitute structure propiedades link_children with link_children_model
+			# for look children in other hierarchy component children 
 			/*
 			if (isset($this->options->model) && $this->options->model===true) {
 				foreach ($ar_elements as $key => $value_obj) {
-					if ($value_obj->type==='link_childrens') {
+					if ($value_obj->type==='link_children') {
 						unset($ar_elements[$key]);
-					}elseif ($value_obj->type==='link_childrens_model') {
-						$value_obj->type = 'link_childrens';
+					}elseif ($value_obj->type==='link_children_model') {
+						$value_obj->type = 'link_children';
 					}
 				}
 			}
@@ -148,38 +148,38 @@ class ts_object extends Accessors {
 			  },
 			  {
 			    "tipo": "hierarchy45",
-			    "type": "link_childrens"
+			    "type": "link_children"
 			  },
 			  {
 			    "tipo": "hierarchy59",
-			    "type": "link_childrens_model"
+			    "type": "link_children_model"
 			  }
 			]
 			*/	
 			/*
 			if (isset($this->options->model) && $this->options->model===true) {
 
-				$element_childrens = new stdClass();
-					$element_childrens->type = 'link_childrens';
-					$element_childrens->tipo = null;
+				$element_children = new stdClass();
+					$element_children->type = 'link_children';
+					$element_children->tipo = null;
 				
 					foreach ($ar_propiedades as $key => $value_obj) {
-						if($value_obj->type === 'link_childrens_model'){
-							$element_childrens->tipo = $value_obj->tipo;
+						if($value_obj->type === 'link_children_model'){
+							$element_children->tipo = $value_obj->tipo;
 							break;
 						}
 					}
 
 				$ar_elements = array();
 				foreach ($ar_propiedades as $key => $value_obj) {
-					if($value_obj->type === 'link_childrens' || $value_obj->type === 'link_childrens_model'){
+					if($value_obj->type === 'link_children' || $value_obj->type === 'link_children_model'){
 						#unset($ar_propiedades[$key]);
 					}else{
 						$ar_elements[] = $value_obj;
 					}					
 				}
 
-				$ar_elements[] = $element_childrens;
+				$ar_elements[] = $element_children;
 			}else{
 				$ar_elements = $ar_propiedades;
 			}			
@@ -188,15 +188,20 @@ class ts_object extends Accessors {
 		
 			foreach ($ar_propiedades as $key => $value_obj) {
 
-				if (!isset($model) && $value_obj->type==='link_childrens_model') {
+				if (!isset($model) && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
 					unset($ar_propiedades[$key]);
 				}else if (isset($model) && $model===true) {
-					if ($value_obj->type==='link_childrens' && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+					if (($value_obj->type==='link_childrens' || $value_obj->type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 						unset($ar_propiedades[$key]);
-					}else if ($value_obj->type==='link_childrens_model') {
-						$value_obj->type = 'link_childrens';
+					}else if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model') {
+						$value_obj->type = 'link_children';
 					}					
 				}
+
+				if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_childrens') {
+					$value_obj->type = 'link_children';
+				}
+
 			}//end foreach ($ar_propiedades as $key => $value_obj) 
 			$ar_elements = $ar_propiedades;		
 			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
@@ -208,32 +213,32 @@ class ts_object extends Accessors {
 
 
 	/**
-	* GET_CHILDRENS_DATA
-	* @return object $childrens_data
+	* GET_CHILDREN_DATA
+	* @return object $children_data
 	*/
-	public function get_childrens_data() {
+	public function get_children_data() {
 
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		# Global object
-		$childrens_data = new stdClass();
-			$childrens_data->section_tipo 	= $this->section_tipo;
-			$childrens_data->section_id		= $this->section_id;
-			$childrens_data->modo 			= 'edit';	//'list_thesaurus';
-			$childrens_data->lang 			= DEDALO_DATA_LANG;
-			$childrens_data->is_descriptor	= true;
-			$childrens_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);			
-			$childrens_data->permissions_button_new		= $this->get_permissions_element('button_new');
-			$childrens_data->permissions_button_delete 	= $this->get_permissions_element('button_delete');
-			$childrens_data->permissions_indexation 	= $this->get_permissions_element('component_relation_index');
-			$childrens_data->permissions_structuration 	= $this->get_permissions_element('component_relation_struct');
-			$childrens_data->ar_elements 	= array();
+		$children_data = new stdClass();
+			$children_data->section_tipo 	= $this->section_tipo;
+			$children_data->section_id		= $this->section_id;
+			$children_data->modo 			= 'edit';	//'list_thesaurus';
+			$children_data->lang 			= DEDALO_DATA_LANG;
+			$children_data->is_descriptor	= true;
+			$children_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);			
+			$children_data->permissions_button_new		= $this->get_permissions_element('button_new');
+			$children_data->permissions_button_delete 	= $this->get_permissions_element('button_delete');
+			$children_data->permissions_indexation 	= $this->get_permissions_element('component_relation_index');
+			$children_data->permissions_structuration 	= $this->get_permissions_element('component_relation_struct');
+			$children_data->ar_elements 	= array();
 
 		$model = isset($this->options->model) ? $this->options->model : null;
 		
 		# ELEMENTS
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
-			#dump($ar_elements, ' $ar_elements ++ '.to_string($childrens_data));
+			#dump($ar_elements, ' $ar_elements ++ '.to_string($children_data));
 			#debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 		foreach ($ar_elements as $k_element_tipo => $current_object) {
 
@@ -246,8 +251,8 @@ class ts_object extends Accessors {
 				continue;
 			}
 
-			# No descriptors do not have children. Avoid calculate childrens
-			if ($childrens_data->is_descriptor===false && $render_vars->type==='link_childrens') {
+			# No descriptors do not have children. Avoid calculate children
+			if ($children_data->is_descriptor===false && $render_vars->type==='link_children') {
 				continue;
 			}
 			
@@ -338,11 +343,11 @@ class ts_object extends Accessors {
 
 						// ND element can change term value when 'esdecriptor' value is 'no' (locator of 'no')
 							if($render_vars->icon==='ND') {
-								#debug_log(__METHOD__." childrens_data->ar_elements ".to_string($childrens_data->ar_elements), logger::DEBUG);
+								#debug_log(__METHOD__." children_data->ar_elements ".to_string($children_data->ar_elements), logger::DEBUG);
 								#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
 								if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
-									ts_object::set_term_as_nd($childrens_data->ar_elements);
-									$childrens_data->is_descriptor = false;
+									ts_object::set_term_as_nd($children_data->ar_elements);
+									$children_data->is_descriptor = false;
 								}
 								continue 2;
 							}
@@ -360,24 +365,24 @@ class ts_object extends Accessors {
 						}
 						break;
 
-					case ($element_obj->type==='link_childrens'):
+					case ($element_obj->type==='link_children'):
 						
 						# D : Descriptors
 						if($this->have_children_of_type($dato, 'descriptor')===true) {
-							$element_obj->value = 'button show childrens';
+							$element_obj->value = 'button show children';
 						}else{
-							$element_obj->value = 'button show childrens unactive';							
+							$element_obj->value = 'button show children unactive';							
 						}
 						
 						# ND : No descriptors case							
 						if($this->have_children_of_type($dato, 'nd')===true) {					
 							
 							$nd_element = new stdClass();
-								$nd_element->type = 'link_childrens_nd';
+								$nd_element->type = 'link_children_nd';
 								$nd_element->tipo = $element_tipo;
 								$nd_element->value = 'ND';
 
-							$childrens_data->ar_elements[] = $nd_element;
+							$children_data->ar_elements[] = $nd_element;
 						}
 						break;					
 
@@ -387,19 +392,19 @@ class ts_object extends Accessors {
 				}		
 				
 			# Add			
-			$childrens_data->ar_elements[] = $element_obj;
+			$children_data->ar_elements[] = $element_obj;
 					
 		}
 
 		if(SHOW_DEBUG===true) {
 			$total=round( (microtime(1)-$start_time), 3 );	
 			#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-			$childrens_data->total_time = $total;	
+			$children_data->total_time = $total;	
 		}
-		#dump($childrens_data, ' $childrens_data ++ '.to_string());
+		#dump($children_data, ' $children_data ++ '.to_string());
 	
-		return (object)$childrens_data;
-	}//end get_childrens_data
+		return (object)$children_data;
+	}//end get_children_data
 
 
 
@@ -407,14 +412,14 @@ class ts_object extends Accessors {
 	* HAVE_CHILDREN_OF_TYPE
 	* @return bool
 	*/
-	public function have_children_of_type( $ar_childrens, $type ) {
+	public function have_children_of_type( $ar_children, $type ) {
 		
-		if (empty($ar_childrens)) return false;
+		if (empty($ar_children)) return false;
 
 
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 
-		foreach ((array)$ar_childrens as $key => $current_locator) {
+		foreach ((array)$ar_children as $key => $current_locator) {
 
 			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );
 				#dump($section_map, ' section_map ++ '.to_string());
@@ -491,14 +496,14 @@ class ts_object extends Accessors {
 
 
 	/**
-	* GET_DESCRIPTORS_FROM_CHILDRENS
+	* GET_DESCRIPTORS_FROM_CHILDREN
 	* @return 
 	*//*
-	public static function get_descriptors_from_childrens__DES( $ar_childrens ) {
+	public static function get_descriptors_from_children__DES( $ar_children ) {
 
 		$ar_descriptors = array();
 
-		foreach ((array)$ar_childrens as $key => $current_locator) {
+		foreach ((array)$ar_children as $key => $current_locator) {
 
 			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );			
 			#dump($section_map['thesaurus']->is_descriptor, ' $section_map ++ '.to_string($current_locator->section_tipo));
@@ -526,7 +531,7 @@ class ts_object extends Accessors {
 
 
 		return $ar_descriptors;
-	}//end get_descriptors_from_childrens*/
+	}//end get_descriptors_from_children*/
 
 
 

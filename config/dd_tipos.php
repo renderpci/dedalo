@@ -76,6 +76,7 @@ define('DEDALO_COMPONENT_RESOURCES_TR_TIPO'				, 'rsc36');
 # Hierarchy types
 define('DEDALO_HIERARCHY_TYPES_SECTION_TIPO'			, 'hierarchy13');
 define('DEDALO_HIERARCHY_TYPES_NAME_TIPO'				, 'hierarchy16');
+define('DEDALO_HIERARCHY_TYPES_ORDER'					, 'hierarchy106');
 
 # Hierarchy
 define('DEDALO_HIERARCHY_SECTION_TIPO'					, 'hierarchy1');
@@ -86,8 +87,8 @@ define('DEDALO_HIERARCHY_TLD2_TIPO'						, 'hierarchy6');
 define('DEDALO_HIERARCHY_TERM_TIPO'						, 'hierarchy5');
 define('DEDALO_HIERARCHY_TARGET_SECTION_TIPO'			, 'hierarchy53');
 define('DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO'		, 'hierarchy58');
-define('DEDALO_HIERARCHY_CHIDRENS_TIPO'					, 'hierarchy45');
-define('DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO'			, 'hierarchy59');
+define('DEDALO_HIERARCHY_CHIDREN_TIPO'					, 'hierarchy45');
+define('DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO'			, 'hierarchy59');
 define('DEDALO_HIERARCHY_ORDER_TIPO'					, 'hierarchy48');
 define('DEDALO_HIERARCHY_FILTER_TIPO'					, 'hierarchy54');
 define('DEDALO_HIERARCHY_BUTTON_NEW_TIPO'				, 'hierarchy11');
