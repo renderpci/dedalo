@@ -684,7 +684,7 @@ export const ui = {
 
 				function publish_load_tool(e) {
 					e.stopPropagation();
-						alert("publish_load_tool");
+
 					//common.prototype.load_tool(self, tool_object)
 					// ui.tool.load_tool(self, tool_object)
 					event_manager.publish('load_tool', {

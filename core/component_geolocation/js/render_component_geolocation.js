@@ -162,7 +162,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 					return true
 				}
 
-			
+
 			// full_screen
 				if (e.target.matches('.map_full_screen')) {
 					const li = e.target.parentNode.parentNode
@@ -170,7 +170,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 					if( li.classList.contains('map_full') ) {
 						li.classList.remove('map_full')
 					}else{
-						li.classList.add('map_full')		
+						li.classList.add('map_full')
 					}
 
 					// Reset map size
@@ -201,7 +201,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 				}
 		})
 
-	
+
 
 	return wrapper
 }//end edit
@@ -344,9 +344,7 @@ const content_data_edit = async function(self) {
 * GET_INPUT_ELEMENT_EDIT
 * @return dom element li
 */
-const get_input_element_edit =  (i, current_value, ul_container, self, is_inside_tool) =>{
-
-		console.log("current_value:",current_value);
+const get_input_element_edit = (i, current_value, ul_container, self, is_inside_tool) =>{
 
 	// li
 		const li = ui.create_dom_element({

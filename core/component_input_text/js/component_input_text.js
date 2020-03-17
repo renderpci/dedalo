@@ -129,7 +129,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 			//console.log("filter_item:",filter_item);
 			//console.log("new_item_filter:",new_item_filter);
-			console.log("sqo:",sqo);
+			// console.log("sqo:",sqo);
 
 	// add self context as the unique ddo
 		//self.sqo_context.search.push(self.context)

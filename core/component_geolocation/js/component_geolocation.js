@@ -42,7 +42,7 @@ export const component_geolocation = function(){
 	this.ar_tag_loaded 	= []
 	this.map 			= null
 	this.layer_control	= false
-	
+
 
 	//draw editor vars
 	this.draw_data 		= null
@@ -98,7 +98,7 @@ component_geolocation.prototype.init = async function(options) {
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
 
-	// set the self specific libraries and variables not defined by the generic init 
+	// set the self specific libraries and variables not defined by the generic init
 		// load dependences js/css
 			const load_promises = []
 
@@ -111,11 +111,11 @@ component_geolocation.prototype.init = async function(options) {
 			await Promise.all(load_promises).then(async function(response){
 
 				const draw_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.js'
-				common.prototype.load_script(draw_lib_js_file) 
+				common.prototype.load_script(draw_lib_js_file)
 
 				const draw_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.css'
 				common.prototype.load_style(draw_lib_css_file)
-			
+
 			})
 
 	return common_init
@@ -161,8 +161,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				alt  : default_alt
 			 }
 
-				console.log("map_data:",map_data);
-	// new map vars			
+	// new map vars
 		let arcgis 			= null
 		let osm  			= null
 		let dare 			= null
@@ -414,7 +413,7 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 
 	if(SHOW_DEBUG===true) {
 		//console.log("[component_geolocation.load_geo_editor] tag:",tag);;
-	}	
+	}
 
 	// TAG : Get all information of the selected tag
 	const parts_of_tag = self.get_parts_of_tag(tag);
@@ -424,15 +423,15 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 
 	// ar_tag_loaded : store current tag
 		self.ar_tag_loaded[capaId] = tag;
-	
+
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
-	if( self.map.hasLayer(self.ar_FeatureGroup[capaId])===false ) {		
+	if( self.map.hasLayer(self.ar_FeatureGroup[capaId])===false ) {
 
 		if(!all_tags){
 			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
 				if(self.ar_FeatureGroup[i]){
 					self.ar_FeatureGroup[i].clearLayers();
-					self.layer_control.removeLayer(self.ar_FeatureGroup[i]) 
+					self.layer_control.removeLayer(self.ar_FeatureGroup[i])
 				}
 			}
 		}
@@ -441,7 +440,7 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 		self.ar_FeatureGroup[capaId] = new L.FeatureGroup();
 		self.ar_FeatureGroup[capaId].addTo(self.map);
 
-		self.layer_control.addOverlay(self.ar_FeatureGroup[capaId], capaId);							  	
+		self.layer_control.addOverlay(self.ar_FeatureGroup[capaId], capaId);
 
 	}else{
 		// Condfirm our write
@@ -452,19 +451,19 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
 				if(self.ar_FeatureGroup[i]){
 					self.ar_FeatureGroup[i].clearLayers();
-					self.layer_control.removeLayer(self.ar_FeatureGroup[i]) 
+					self.layer_control.removeLayer(self.ar_FeatureGroup[i])
 				}
 			}
 		}
-		self.layer_control.addOverlay( self.ar_FeatureGroup[capaId], capaId);	
-		// FEATUREGROUP RESET : Remove the all data layers for re-created with the new data that come with the loaded tag.		
+		self.layer_control.addOverlay( self.ar_FeatureGroup[capaId], capaId);
+		// FEATUREGROUP RESET : Remove the all data layers for re-created with the new data that come with the loaded tag.
 		self.ar_FeatureGroup[capaId].clearLayers();	//delete self.ar_FeatureGroup[capaId];
-	}		
+	}
 
 	// LAYERS : Load layers from tag data
 	if (typeof data!=="undefined" && data!=="undefined" && data!=="") {
-		
-		L.geoJson( JSON.parse(data), { 
+
+		L.geoJson( JSON.parse(data), {
 			//For each Feature load all layer data of the tag
 	    	onEachFeature: function (feature, data_layer) {
 	    		if(data_layer){
@@ -499,7 +498,7 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 											layer.editing.disable();
 											if(!(layer instanceof L.Marker)){
 												layer.setStyle({color: '#3388ff'});
-											}											
+											}
 										});
 									}
 								}
@@ -514,14 +513,14 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 							//activate the feature (for save)
 							//self.init_draw_editor( self.ar_FeatureGroup[capaId], capaId )
 						 });
-						
+
 					// addLayer
 						// console.log("self.ar_FeatureGroup[capaId]:",self.ar_FeatureGroup[capaId]); // , "data_layer", data_layer, "capaId",capaId
 						self.ar_FeatureGroup[capaId].addLayer(data_layer)
 		    	}
 			}
 		})
-		
+
 	};
 
 
@@ -552,7 +551,7 @@ component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
 
 	const tagState 		= tag_obj.dataset.state
 	const capaId 		= tag_obj.dataset.tag_id
-	const dirty_data 	= tag_obj.dataset.data			
+	const dirty_data 	= tag_obj.dataset.data
 	const data 			= dirty_data.replace(/'/g, '"')
 
 	// if the tag is empty we can't parse it.
@@ -571,7 +570,7 @@ component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
 
 /**
 * GET_POPUP_CONTENT
-* @return 
+* @return
 * 	Generate popup content based on layer type
 *	Returns HTML string, or null if unknown object
 */
@@ -614,7 +613,7 @@ component_geolocation.prototype.get_popup_content = function(layer) {
 
 /**
 * STR_LAT_LNG
-* @return 
+* @return
 * 	Helper method to format LatLng object (x.xxxxxx, y.yyyyyy)
 */
 component_geolocation.prototype.str_lat_lng = function(latlng) {
@@ -628,7 +627,7 @@ component_geolocation.prototype.str_lat_lng = function(latlng) {
 
 /**
 * ROUND_COORDINATE
-* @return 
+* @return
 * 	add pop up information to the draw
 *	Truncate value based on number of decimals
 */
@@ -644,14 +643,14 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 * @see https://github.com/Leaflet/Leaflet.draw/issues/66
 */
 component_geolocation.prototype.init_draw_editor = function( current_editable_FeatureGroup, capa_id ) {
-		
+
 	const self = this
 	const map 						= self.map
-	const draw_editor_is_initated 	= self.draw_editor_is_initated	
+	const draw_editor_is_initated 	= self.draw_editor_is_initated
 
 	self.current_editable_FeatureGroup_id 	= capa_id;
 	self.editable_FeatureGroup 			 	= current_editable_FeatureGroup;
-	const editable_FeatureGroup				= self.editable_FeatureGroup 
+	const editable_FeatureGroup				= self.editable_FeatureGroup
 
 	// DRAW CONTROL REMOVE : Si ya existe, lo eliminamos para poder crearlo de nuevo y que haya sólo uno activo
 		if (self.drawControl) {
@@ -698,7 +697,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 		}
 	});
 	map.addControl(self.drawControl);
-		
+
 		// DRAW HANDLERS //////////////////////////////////////////////
 		// !!IMPORTANTE : El editor se inicializa cada vez, pero los manejadores sólo una
 		if(draw_editor_is_initated===true) {
@@ -708,7 +707,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 
 		// Listenre for object created - bind popup to layer, add to feature group
 		map.on(L.Draw.Event.CREATED, function (e) {	// Triggered when a new vector or marker has been created.
-			
+
 			//var type  	= e.layerType
 			var	layer 	= e.layer
 			var	content = self.get_popup_content(layer)
@@ -736,10 +735,10 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 
 			//save the draw_data
 			self.save_draw_data();
-			
+
 		});
 		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
-		map.on(L.Draw.Event.EDITED, function (e) {	// Triggered when layers in the FeatureGroup, initialised with the plugin, have been edited and saved.						
+		map.on(L.Draw.Event.EDITED, function (e) {	// Triggered when layers in the FeatureGroup, initialised with the plugin, have been edited and saved.
 			// Update draw_data
 			self.draw_data = editable_FeatureGroup;
 			// Save draw_data
@@ -752,11 +751,11 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 			self.save_draw_data();
 		});
 		// Listener for change the mode of the draw (trash button in the editor)
-		map.on(L.Draw.Event.DELETESTART, function (e) {	
+		map.on(L.Draw.Event.DELETESTART, function (e) {
 			self.draw_state = "delete";
 		});
 		// Listener for exit of the "delete mode" of the draw editor (close or save options of the trash button in the editor)
-		map.on(L.Draw.Event.DELETESTOP, function (e) {	
+		map.on(L.Draw.Event.DELETESTOP, function (e) {
 			self.draw_state = "";
 		});
 		// Listerner to the map for change the edit mode the all layer of the all features (change the state and color)
@@ -769,13 +768,13 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 						if(!(layer instanceof L.Marker)){
 							layer.setStyle({color: '#3388ff'});
 						}
-						
+
 					})
 				}
 			}
 		})
 
-		
+
 	// DRAW_EDITOR_IS_INITATED : Fija la variable a global a true (default is false) para evitar duplicidades
 	//draw_editor_is_initated = true;
 
@@ -788,13 +787,13 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 * SAVE_DRAW_DATA
 */
 component_geolocation.prototype.save_draw_data = function() {
-	
+
 		const self = this
 
 		if(!self.draw_data) return false;
 
 		let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
-			if(SHOW_DEBUG===true) {	
+			if(SHOW_DEBUG===true) {
 				console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
 			}
 			current_draw_data = current_draw_data.replace(/"/g, '\'') //replaceAll('"', '\'', current_draw_data)
