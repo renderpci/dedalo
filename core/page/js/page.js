@@ -133,7 +133,11 @@ page.prototype.init = async function(options) {
 
 	// observe tool calls
 		self.events_tokens.push(
-			event_manager.subscribe('load_tool', load_tool)
+			// load_tool from tool_common/js/tool_common.js
+			// event_manager.subscribe('load_tool', load_tool)
+			event_manager.subscribe('load_tool', function(e) {
+				load_tool(e)
+			})
 		)
 
 
@@ -143,9 +147,9 @@ page.prototype.init = async function(options) {
 
 			document.activeElement.blur()
 
-			// 		const confirmationMessage = "Leaving tool transcription page.. ";
-			// 		event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
-			// 		// return confirmationMessage;				// Gecko, WebKit, Chrome <34
+			// 	const confirmationMessage = "Leaving tool transcription page.. ";
+			// 	event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
+			// 	// return confirmationMessage;				// Gecko, WebKit, Chrome <34
 
 			return null
 

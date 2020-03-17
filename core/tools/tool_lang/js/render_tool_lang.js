@@ -188,6 +188,7 @@ const content_data_edit = async function(self) {
 
 		// automatic_translation
 			const translator_engine = self.config.translator_engine
+				console.log("+++++++ translator_engine:",self.config);
 			if (translator_engine) {
 			// 	// const automatic_translation_container = ui.create_dom_element({
 			// 	// 	element_type	: 'div',
