@@ -250,12 +250,14 @@ class search {
 
 				# Skip temp relations_xxx columns and store their solved values
 				if (strpos($field_name, 'relations_')===0) {
-					$ar_relations_cache_solved[$field_name] = $field_value;
+					$ar_relations_cache_solved[$field_name] = json_decode($field_value);
 					continue;
 				}
 
 				# Add property
-				$row->{$field_name} = $field_value;
+				$row->{$field_name} = ($field_name==='datos') 
+					? json_decode($field_value) 
+					: $field_value;
 			}
 
 			#dump($this->relations_cache, ' $this->relations_cache ++ '.to_string());
@@ -272,7 +274,9 @@ class search {
 						$field_value = self::get_filtered_relations($current_relations_cache_solved, $component_tipo); // Filtered by from_component_tipo
 					//}
 					# Add property
-					$row->{$field_name} = $field_value;
+					$row->{$field_name} = ($field_name==='datos') 
+					? json_decode($field_value) 
+					: $field_value;
 				}
 			}
 			#debug_log(__METHOD__." row ".to_string($row), logger::DEBUG);
@@ -317,7 +321,6 @@ class search {
 		#debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		#debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
 		//error_log("sql_query: \n" . to_string($sql_query));
-
 		return $records_data;
 	}//end search
 

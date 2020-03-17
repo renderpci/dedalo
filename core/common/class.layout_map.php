@@ -789,7 +789,7 @@ class layout_map {
 			$result 		= false;
 		}else{
 			$preset_value  	= reset($ar_records)->{$component_json_tipo};
-			$result 		= json_decode($preset_value);
+			$result 		= $preset_value;
 		}
 
 		return $result;

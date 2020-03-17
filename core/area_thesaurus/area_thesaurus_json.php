@@ -16,7 +16,7 @@
 
 	if($options->get_context===true){
 
-			$hierarchy_children_tipo = DEDALO_HIERARCHY_CHIDREN_TIPO;
+			$hierarchy_children_tipo = DEDALO_HIERARCHY_CHILDREN_TIPO;
 			
 		// Component structure context (tipo, relations, properties, etc.)
 			$context[] = $this->get_structure_context($permissions, $sqo_context=false);

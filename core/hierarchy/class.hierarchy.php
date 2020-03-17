@@ -427,7 +427,7 @@ class hierarchy {
 			debug_log(__METHOD__." Created first record of thesaurus section $current_section_tipo - $section_id ".to_string(), logger::DEBUG);
 
 			# Attach as children of current hierarchy
-			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHIDREN_TIPO : DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO;
+			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHILDREN_TIPO : DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;
 			$component_relation_children = component_common::get_instance('component_relation_children',
 															 			  $component_relation_children_tipo,
 															 			  $options->section_id,
@@ -1539,8 +1539,8 @@ class hierarchy {
 		$component->set_dato( array("lg2") );
 		$component->Save();
 
-		// DEDALO_HIERARCHY_CHIDREN_TIPO
-		$tipo 			= DEDALO_HIERARCHY_CHIDREN_TIPO;
+		// DEDALO_HIERARCHY_CHILDREN_TIPO
+		$tipo 			= DEDALO_HIERARCHY_CHILDREN_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
 														 $tipo,
@@ -1615,7 +1615,7 @@ class hierarchy {
 
 		foreach ($ar_records as $key => $row) {
 
-			if( $ar_locators = json_decode($row->{DEDALO_HIERARCHY_TYPOLOGY_TIPO}) ) {
+			if( $ar_locators = $row->{DEDALO_HIERARCHY_TYPOLOGY_TIPO} ) {
 				if (isset($ar_locators[0]->section_id)) {
 					$hierarchy_type = (int)$ar_locators[0]->section_id;
 				}

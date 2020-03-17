@@ -48,7 +48,7 @@
 	if($options->get_data===true){
 
 		// dato is the full result of a search using the search_query_object
-		$dato = $this->get_dato();
+		$dato = $this->get_dato();								
 
 		if (!empty($dato)) {
 
@@ -109,6 +109,6 @@
 	}// end if $permissions > 0
 
 
-
+			
 // JSON string
 	return common::build_element_json_output($context, $data);

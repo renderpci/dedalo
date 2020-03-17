@@ -454,7 +454,7 @@ function update_parent_data($json_data) {
 
 	# Add me as children of new parent
 		$modelo_name 	= 'component_relation_children';
-		#$tipo 			= ($parent_node_type=='root') ? DEDALO_HIERARCHY_CHIDREN_TIPO : DEDALO_THESAURUS_RELATION_CHIDREN_TIPO;
+		#$tipo 			= ($parent_node_type=='root') ? DEDALO_HIERARCHY_CHILDREN_TIPO : DEDALO_THESAURUS_RELATION_CHIDREN_TIPO;
 		$modo 			= 'edit';
 		$lang			= DEDALO_DATA_NOLAN;
 		$component_relation_children = component_common::get_instance($modelo_name,

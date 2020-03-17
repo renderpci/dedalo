@@ -652,7 +652,7 @@ class component_relation_related extends component_relation_common {
 				$element->section_id 			= $row->section_id;
 				$element->from_component_tipo 	= $this->tipo;
 
-			if (isset($thesaurus_map->term) && $term = json_decode($row->{$thesaurus_map->term})) {
+			if (isset($thesaurus_map->term) && $term = $row->{$thesaurus_map->term}) {
 
 				/*$lang = DEDALO_DATA_LANG;
 				switch (true) {

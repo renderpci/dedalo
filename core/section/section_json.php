@@ -53,7 +53,7 @@
 				 $value = [$locator];
 
 			// subdata add
-				 $data = $this->get_ar_subdata($value);
+				 $data = $this->get_ar_subdata($value);	 				
 
 	}// end if $permissions > 0
 

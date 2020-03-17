@@ -343,7 +343,7 @@ class component_filter extends component_relation_common {
 
 				$section_id 	= $row->section_id;
 				$section_tipo 	= $row->section_tipo;
-				$datos 			= json_decode($row->datos);
+				$datos 			= $row->datos;
 
 				if(in_array($section_id, $ar_typology_section_id)) {
 					$ar_groupers = array_merge($ar_groupers, $this->get_project_groupers($section_tipo, $section_id, $datos));
@@ -818,7 +818,7 @@ class component_filter extends component_relation_common {
 			foreach ($result->ar_records as $key => $item) {
 
 				$ar_locators = end($item);
-				$ar_locators = json_decode($ar_locators);
+				$ar_locators = $ar_locators;
 
 				foreach ((array)$ar_locators as $locator) {
 

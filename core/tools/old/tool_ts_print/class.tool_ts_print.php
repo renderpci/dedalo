@@ -99,7 +99,7 @@ class tool_ts_print extends tool_common {
 		$hierarchy = reset($ar_result);
 
 		# Childrens
-		$tipo 		 = ($model===true) ? DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO : DEDALO_HIERARCHY_CHIDREN_TIPO;
+		$tipo 		 = ($model===true) ? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO : DEDALO_HIERARCHY_CHILDREN_TIPO;
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 	 = component_common::get_instance($modelo_name,
 													  $tipo,

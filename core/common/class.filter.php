@@ -201,7 +201,7 @@ abstract class filter {
 				$locator->set_from_component_tipo($from_component_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 
-			$typology = json_decode($row->{$typology_tipo}) ?? null;
+			$typology = $row->{$typology_tipo} ?? null;
 
 			$element = new stdClass();
 				$element->label 	= $label;

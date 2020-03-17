@@ -495,9 +495,6 @@ class component_calculation extends component_common {
 
 									// Process value
 										$value = $row->{$map_item->column};
-										if ($value_decoded = json_decode($value)) {
-											$value = $value_decoded;
-										}
 										if (isset($map_item->process)) {
 											//$value = $map_item->process($value);
 											#$value = call_user_func_array($map_item->process, $value);

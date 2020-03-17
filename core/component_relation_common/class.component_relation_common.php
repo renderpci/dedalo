@@ -1820,7 +1820,7 @@ class component_relation_common extends component_common {
 
 				// locators case (like component_select)
 				if (strpos($value, '[{')===0 && !isset($propiedades->valor_arguments)) {
-					$ar_locators = json_decode($value);
+					$ar_locators = $value;
 					foreach ((array)$ar_locators as $locator) {
 
 						$label = ts_object::get_term_by_locator( $locator, $lang, true );
