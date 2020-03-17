@@ -1016,7 +1016,7 @@
         }, {
           "name" : "ar_calls",
           "in" : "query",
-          "description" : "JSON stringified array of calls to api. Will be iterated and resolved in the server side",
+          "description" : "JSON stringified array of calls to api. Will be iterated and resolved in the server side. Example: [{\"id\":\"templates_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"template_map\",\"ar_fields\":[\"data\",\"name\"],\"lang\":\"lg-spa\"}},{\"id\":\"menu_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"ts_web\",\"ar_fields\":[\"section_id\",\"term_id\",\"term\",\"web_path\",\"parent\",\"childrens\",\"template_name\",\"titulo\",\"entradilla\",\"cuerpo\",\"norder\",\"imagen\"],\"lang\":\"lg-spa\"}}] ",
           "required" : true,
           "type" : "string",
           "format" : "string"
