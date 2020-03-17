@@ -1658,6 +1658,9 @@
 	Valencia 10-03-2020 5.5.31
 		Fix error on resolve recursive levels in diffusion_sql class, method -> update_record
 
+	Valencia 11-03-2020 5.5.32
+		Fix error on resolve_portals_custom (diffusion) when value is already an object
+
 
 
 
@@ -1681,12 +1684,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.31';
+	$DEDALO_VERSION = '5.5.32';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-03-2020');
+	define('DEDALO_BUILD'	, '11-03-2020');
 
 
 	/*
