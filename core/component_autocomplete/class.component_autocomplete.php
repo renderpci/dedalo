@@ -581,9 +581,6 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public static function get_hierarchy_sections_from_types( $hierarchy_types ) {
 
-		$hierarchy_sections_from_types = array();
-
-
 		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
 		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
 
@@ -641,44 +638,30 @@ class component_autocomplete extends component_relation_common {
 				"$and": [
 				  '.$filter.'
 				]
-			  },
-			  "select": [
-				{
-				  "path": [
-					{
-					  "section_tipo": "'.$hierarchy_section_tipo.'",
-					  "component_tipo": "'.$hierarchy_name_tipo.'",
-					  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($hierarchy_name_tipo,true).'",
-					  "name": "Hierarchy name",
-					  "lang": "all"
-					}
-				  ]
-				},
-				{
-				  "path": [
-					{
-					  "section_tipo": "'.$hierarchy_section_tipo.'",
-					  "component_tipo": "'.DEDALO_HIERARCHY_TARGET_SECTION_TIPO.'",
-					  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($hierarchy_name_tipo,true).'",
-					  "name": "Target thesaurus"
-					}
-				  ]
-				}
-			  ]
+			  }
 			}
 		');
 
+
 		$search = search::get_instance($search_query_object);
 		$result = $search->search();
-			#dump($result, ' result +***************+ '.to_string());
 
+		// iterate rows
+			$hierarchy_sections_from_types = [];
+			foreach ($result->ar_records as $row) {
 
-		$target_section_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-		foreach ($result->ar_records as $key => $row) {
-			$hierarchy_sections_from_types[] = $row->{$target_section_tipo};
-		}
+				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {					
+					debug_log(__METHOD__." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string(), logger::ERROR);
+					continue;
+				}
+				
+				$target_dato 		 = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
+				$target_section_tipo = reset($target_dato);
+				
+				$hierarchy_sections_from_types[] = $target_section_tipo;
+			}			
 
-
+		
 		return (array)$hierarchy_sections_from_types;
 	}//end get_hierarchy_sections_from_types
 

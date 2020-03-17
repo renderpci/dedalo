@@ -1280,7 +1280,7 @@ class component_portal extends component_relation_common {
 	* BUILD_COMPONENT_JSON_DATA
 	* @return object $json_d
 	*/
-	public function build_component_json_data( $build_options ) {
+	public function build_component_json_data___DEPRECATED( $build_options ) {
 
 		$max_records 	= $build_options->max_records;
 		$offset 		= $build_options->offset;

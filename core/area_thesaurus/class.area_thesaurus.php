@@ -13,7 +13,7 @@ class area_thesaurus extends area {
 	# Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
 	protected $model_view 				= false;
 	// protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHIDREN_TIPO;
+	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 	public $build_options				= null;
 
@@ -45,7 +45,7 @@ class area_thesaurus extends area {
 	public function get_hierarchy_sections($hierarchy_types_filter=null, $hierarchy_sections_filter=null, $terms_are_model=false) {
 
 		$hierarchy_target_section_tipo 	= $terms_are_model ? DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO : DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-		$hierarchy_children_tipo 		= $terms_are_model ? DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO 		: DEDALO_HIERARCHY_CHIDREN_TIPO;
+		$hierarchy_children_tipo 		= $terms_are_model ? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO 		: DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 		$ar_records = area_thesaurus::get_active_hierarchy_sections();
 		
@@ -341,8 +341,8 @@ class area_thesaurus extends area {
 			DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO			
 			);
 			
-			# DEDALO_HIERARCHY_CHIDREN_TIPO	
-			# DEDALO_HIERARCHY_CHIDREN_MODEL_TIPO
+			# DEDALO_HIERARCHY_CHILDREN_TIPO	
+			# DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
 			# DEDALO_HIERARCHY_ORDER_TIPO,
 			# DEDALO_HIERARCHY_ACTIVE_TIPO,
 			# DEDALO_HIERARCHY_LANG_TIPO,			

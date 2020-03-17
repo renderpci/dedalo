@@ -1020,7 +1020,7 @@ class diffusion_rdf extends diffusion {
 					}else{
 
 
-						$iri_object_data = json_decode($row->{$component_tipo});
+						$iri_object_data = $row->{$component_tipo};
 						$ar_result 		 = array_filter((array)$iri_object_data, function($item) use($title){
 							return $item->title === $title;
 						});

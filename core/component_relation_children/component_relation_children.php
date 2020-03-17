@@ -62,7 +62,7 @@
 				# hierarchy_sections			
 				if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 					
-					if ($tipo===DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO) {
+					if ($tipo===DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO) {
 						# model
 						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
 					}else{
@@ -165,7 +165,7 @@
 				$search_input_name = $this->get_search_input_name();
 
 				if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-					if ($tipo===DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO) {
+					if ($tipo===DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO) {
 						# model
 						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
 					}else{

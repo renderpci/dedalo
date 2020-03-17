@@ -2559,7 +2559,7 @@ abstract class common {
 		foreach ($result->ar_records as $record) {
 
 			$section 		= section::get_instance($record->section_id, $record->section_tipo);
-			$section_dato 	= json_decode($record->datos);
+			$section_dato 	= $record->datos;
 			$section->set_dato($section_dato);
 			$section->set_bl_loaded_matrix_data(true);
 

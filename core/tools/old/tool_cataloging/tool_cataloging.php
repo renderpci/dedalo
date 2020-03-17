@@ -62,7 +62,7 @@
 
 					// add the hierarchy_section_tipo and the node_type (root for the main node of the hierarchy)
 					$current_hierachy->hierarchy_section_tipo 	= DEDALO_HIERARCHY_SECTION_TIPO;
-					$current_hierachy->hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
+					$current_hierachy->hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;
 					$current_hierachy->hierarchy_node_type 		= "root";
 
 					$hierarchy_sections[] = $current_hierachy;

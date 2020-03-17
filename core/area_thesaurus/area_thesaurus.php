@@ -18,7 +18,7 @@
 
 		$this->model_view 				= true;
 		$this->target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
-		$this->hierarchy_children_tipo	= DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
+		$this->hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;
 		$_SESSION['dedalo']['config']['thesaurus_view_mode'] = 'model';
 
 	}else{
