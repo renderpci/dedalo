@@ -7,6 +7,7 @@
 
 import {ui} from '../../common/js/ui.js'
 import * as instances from '../../common/js/instances.js'
+import {event_manager} from '../../common/js/event_manager.js'
 
 export const ts_object = new function() {
 
@@ -17,7 +18,7 @@ export const ts_object = new function() {
 		// thesaurus_mode . Defines apperance of thesaurus
 		this.thesaurus_mode 	= null;
 
-
+		this.events_tokens 		= [];
 
 	/**
 	* INIT
@@ -108,7 +109,7 @@ export const ts_object = new function() {
 		// AJAX REQUEST
 			const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
 					if(SHOW_DEBUG===true) {
-						console.log("[ts_object.get_children] response",response);
+						//console.log("[ts_object.get_children] response",response);
 					}				
 
 					if (response && response.result) {
@@ -398,7 +399,6 @@ export const ts_object = new function() {
 																			class_name 				: 'icon_bs link new_autocomplete_ts ts_object_related_icon', //ts_object_add_icon
 																		 })
 							break;
-
 						default:
 
 							// ADD . button + add element
@@ -548,10 +548,6 @@ export const ts_object = new function() {
 						const children_dataset = {
 							tipo 			 : ar_children_data[i].ar_elements[j].tipo,
 							type 			 : ar_children_data[i].ar_elements[j].type
-							//section_tipo	 : ar_children_data[i].section_tipo,
-							//section_id 	 : ar_children_data[i].section_id,
-							//modo 			 : ar_children_data[i].modo,
-							//lang 			 : ar_children_data[i].lang,
 							}
 						switch(true) {
 
@@ -607,7 +603,6 @@ export const ts_object = new function() {
 																			inner_html 				: term_add,
 																		 })
 								break;						
-							
 							// ND 
 							case (ar_children_data[i].ar_elements[j].type==='link_children_nd'):
 								
@@ -682,7 +677,6 @@ export const ts_object = new function() {
 																			 })*/
 								}
 								break;
-
 							case (ar_children_data[i].ar_elements[j].type==='img'):
 
 								if(ar_children_data[i].ar_elements[j].value){
@@ -1044,21 +1038,6 @@ export const ts_object = new function() {
 			})
 			
 		});//end js_promise
-
-		
-		/* OLD way
-			// Append child
-			div_children.appendChild(wrap_source)
-
-			// Update parent data
-			ts_object.update_parent_data(wrap_source)
-					
-			// Updates element_children_target
-			ts_object.update_arrow_state(element_children_target, true)
-
-			// Updates element_children_source
-			ts_object.update_arrow_state(element_children_source, false) */		
-	
 
 		return true;
 	};//end on_drop
@@ -1432,10 +1411,7 @@ export const ts_object = new function() {
 			section_tipo = wrap.dataset.section_tipo
 		}		
 		
-		let url = DEDALO_CORE_URL + '/main/?t='+section_tipo+'&id='+section_id+'&menu=no'
-		if (area_thesaurus.model_view===true) {
-			url += "&model=1"
-		}
+		let url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=no'
 
 		const strWindowFeatures 	= "menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes";
 			//strWindowFeatures 	= null
@@ -1474,9 +1450,9 @@ export const ts_object = new function() {
 	this.add_children = function(button_obj) {
 
 		// wrap
-			//const wrap = button_obj.parentNode.parentNode;
-			const wrap = find_ancestor(button_obj, "wrap_ts_object")
-				if(!wrap) {
+			const wrap = button_obj.parentNode.parentNode;
+			//const wrap = find_ancestor(button_obj, "wrap_ts_object")
+				if(!wrap || !wrap.classList.contains('wrap_ts_object')) {
 					console.log("[add_children] Error on find wrap");
 					return false
 				}
@@ -1691,135 +1667,6 @@ export const ts_object = new function() {
 	};//end delete
 
 
-	
-	/**
-	* SHOW_component_editor
-	* Open component editor bellow ts_object elements to edit current data
-	*/
-	this.show_component_editor = function(button_obj, html_data, role, callback) {
-	
-		// wrap_ts_object. Locate current ts_object container
-			// var wrap_ts_object = find_ancestor(button_obj, 'wrap_ts_object')
-			const wrap_ts_object = button_obj.parentNode.parentNode;		
-
-		// data_container. Locate data_container
-			// var data_container = wrap_ts_object.getElementsByClassName('data_container')[0]
-			const nodes 		= wrap_ts_object.children //childNodes
-			const nodes_length 	= nodes.length
-			for (let i = nodes_length - 1; i >= 0; i--) {
-				if (nodes[i].dataset.role==='data_container'){
-					var data_container = nodes[i];
-					break;
-				}
-			}
-			if (typeof data_container==='undefined' ) {
-				console.log("[show_component_editor] Error on locate data_container div")
-				return false;
-			}
-			//data_container.style.minHeight = "42px"; // avoid flash on load elements
-
-		// element_data_div. Locate current element_data_div 
-			// var element_data_div = data_container.querySelectorAll('[data-role="'+role+'"]')[0]
-			let element_data_div = data_container.querySelector('[data-role="'+role+'"]')
-
-		if (element_data_div) {
-			// element_data_div found
-
-			// force remove elements
-				//element_data_div.remove()
-
-			// force remove elements all
-				const all_element_data_div 	   = data_container.children // childNodes; 
-				const all_element_data_div_len = all_element_data_div.length
-					for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-						all_element_data_div[i].remove()
-					}			
-
-			// if (element_data_div.style.display==='none') {
-			// 	// Hide all
-			// 		let all_element_data_div 	 = data_container.children // childNodes; 
-			// 		let all_element_data_div_len = all_element_data_div.length
-			// 			for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-			// 				all_element_data_div[i].style.display = 'none'
-			// 			}
-			// 	// Show current
-			// 		element_data_div.style.display = 'table-cell'
-			// }else{
-			// 	// hide
-			// 		element_data_div.style.display = 'none'
-			// }
-
-		}else{
-			// element_data_div not found
-
-			data_container.classList.add("loading_list_thesaurus_data")	
-
-			// element_data_div
-				element_data_div 			  = document.createElement("div");
-				element_data_div.dataset.role = role;
-				element_data_div.style.display='table-cell'
-				element_data_div.classList.add("sgc_edit")
-			
-
-			// Hide all
-				let all_element_data_div = data_container.children  //childNodes;
-				const len = all_element_data_div.length;
-					for (let i = len - 1; i >= 0; i--) {
-						all_element_data_div[i].style.display = 'none'
-					}
-			
-			// Callback optional
-			if (callback && typeof(callback)==="function") {
-
-				// Exec callback
-					const jsPromise = callback();
-
-					jsPromise.then(function(response) {
-						
-						// Parse html text as object
-							let el = document.createElement('div')
-								el.innerHTML = response
-
-						// Pure javascript option (replace content and exec javascript code inside)
-							insertAndExecute(element_data_div, el)
-
-						// remove loading class
-							data_container.classList.remove("loading_list_thesaurus_data")
-
-						// Add element to DOM
-							data_container.appendChild(element_data_div);
-
-						// Focus first input element
-							ts_object.select_first_input_in_editor(element_data_div)
-
-					}, function(xhrObj) {
-						console.log(xhrObj);
-					});
-
-			}else{
-
-				// Parse html text as object
-					let el = document.createElement('div')
-						el.innerHTML = html_data
-
-				// Pure javascript option (replace content and exec javascript code inside)
-					insertAndExecute(element_data_div, el)
-
-				// Add element to DOM
-					data_container.appendChild(element_data_div);
-
-				// Focus first input element
-					ts_object.select_first_input_in_editor(element_data_div)
-
-			}//end if (callback && typeof(callback) === "function")
-			
-		}//end if (element_data_div)
-
-		return true
-	};//end show_component_editor
-
-
-
 	/**
 	* SELECT_FIRST_INPUT_IN_EDITOR
 	*/
@@ -1888,10 +1735,10 @@ export const ts_object = new function() {
 		const section_tipo 	= wrap.dataset.section_tipo
 		const section_id 	= wrap.dataset.section_id
 		const tipo 			= button_obj.dataset.tipo
+		const type 			= button_obj.dataset.type
 		const modo 			= 'edit'
 		const lang 			= page_globals.dedalo_data_lang
 		const html_data 	= '...';	//" show_component_in_ts_object here! "
-		//const role 	  	= 'component_input_text' + '_' + section_tipo + '_' + section_id + '_' + tipo
 		const role 	  		= section_tipo + '_' + section_id + '_' + tipo
 
 		const current_component = await instances.get_instance({
@@ -1901,62 +1748,64 @@ export const ts_object = new function() {
 				mode 			: modo
 		})
 
+		if(type==='term'){
+			// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+			this.events_tokens.push(
+				event_manager.subscribe('update_value_'+current_component.id, update_value)
+			)
+			function update_value (changed_data) {
+				// change the value of the current dom element
+				button_obj.firstChild.innerHTML = changed_data.value
+			}
+		}
+		
+
 		await current_component.build(true)
 		const component_node = await current_component.render()
 
 		const element_data_contanier = wrap.querySelector(':scope > [data-role="data_container"]')
 
-
+		//get the children nodes of data_contanier
 		const all_element_data_div 	   = element_data_contanier.children // childNodes; 
 		const all_element_data_div_len = all_element_data_div.length
-			for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-				all_element_data_div[i].remove()
-			}
 
+		// if the data element is not empty
+		if (all_element_data_div_len > 0) {
+			// get the tipo in the classname of the node element
+			const element_is_different = element_data_contanier.firstChild.classList.contains(tipo) ? false : true
+			//if the element is different that user want to show
+			if(element_is_different){
+				//remove all nodes
+				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
+					all_element_data_div[i].remove()
+				}
+				// get the events that the instance was created
+					const events_tokens = this.events_tokens
+
+				// delete the registred events
+					const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+					current_component.destroy(true,true)
+
+				// add the new onw
+				element_data_contanier.appendChild(component_node)
+			}else{
+				// only remove all nodes
+				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
+					all_element_data_div[i].remove()
+				}
+				// get the events that the instance was created
+					const events_tokens = this.events_tokens
+
+				// delete the registred events
+					const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+					current_component.destroy(true,true)
+			}
+		}else{
+			// if the data element is empty (first click to show)
 			element_data_contanier.appendChild(component_node)
-
-
-
-
+		}
+		
 		return component_node;
-
-
-		const loaded_promise = ts_object.show_component_editor(button_obj, html_data, role, function(){
-
-			const trigger_url  = component_common.url_trigger
-			const trigger_vars = {
-					mode 			: 'load_component_by_ajax',
-					section_tipo  	: section_tipo,
-					parent  		: section_id,
-					tipo  			: tipo,
-					modo  			: modo,
-					lang  			: lang,
-					top_tipo 		: page_globals.top_tipo
-			}
-			//return console.log("[ts_object.show_component_in_ts_object] response",trigger_vars);
-
-			// JSON GET CALL
-			const js_promise = common.get_json_data(trigger_url, trigger_vars).then(function(response) {
-					if(SHOW_DEBUG===true) {
-						console.log("[ts_object.show_component_in_ts_object] response",response);
-					}
-					
-					if (response && response.result) {
-						return response.result
-					}else{
-						return false
-					}
-					
-			}, function(error) {
-					console.log("show_component_in_ts_object ajax error (fail)")
-					console.error("Failed get_json!", error);
-			})//end promise	
-	
-			
-			return js_promise						
-		})//end ts_object.show_component_editor	
-
-		return loaded_promise	
 	};//end show_component_in_ts_object
 
 
@@ -2431,16 +2280,16 @@ export const ts_object = new function() {
 			return false
 		}
 
-		let element_wrap 		 = button_obj.parentNode.parentNode
-		let element_section_tipo = element_wrap.dataset.section_tipo
-		let element_section_id 	 = element_wrap.dataset.section_id		
-		//let children 		 = button_obj.parentNode.parentNode.parentNode.querySelectorAll('.wrap_ts_object')
-		let children 			 = element_wrap.parentNode.childNodes
-		const children_len 	 = children.length
-		let wrap 				 = element_wrap.parentNode.parentNode
+		const element_wrap 		 	= button_obj.parentNode.parentNode
+		const element_section_tipo 	= element_wrap.dataset.section_tipo
+		const element_section_id 	= element_wrap.dataset.section_id		
+		//const children 		 = button_obj.parentNode.parentNode.parentNode.querySelectorAll('.wrap_ts_object')
+		const children 		= element_wrap.parentNode.childNodes
+		const children_len	= children.length
+		const wrap			= element_wrap.parentNode.parentNode
 
 		// LINK_CHILDREN . Search component_relation_children tipo from wrap
-		let link_children 		 = this.get_link_children_from_wrap(wrap)		
+		const link_children 		 = this.get_link_children_from_wrap(wrap)		
 			if (link_children===null) {
 				alert("[ts_object.save_order] Error on get list_thesaurus_element. save_order is skipped");
 				return false;
@@ -2462,9 +2311,44 @@ export const ts_object = new function() {
 				section_id 	 : children[i].dataset.section_id
 			})
 		}
-		
+
 		// Sort array with new keys
-		ar_locators.move( parseInt(old_value)-1, parseInt(new_value)-1 )
+		// function move_locator(ar_locators, from, to) {
+		// 	return ar_locators.splice(to, 0, ar_locators.splice(from, 1)[0]);
+		// };
+
+		function move_locator(array, pos1, pos2) {
+			// local variables
+			var i, tmp;
+			// cast input parameters to integers
+			pos1 = parseInt(pos1, 10);
+			pos2 = parseInt(pos2, 10);
+			// if positions are different and inside array
+			if (pos1 !== pos2 && 0 <= pos1 && pos1 <= array.length && 0 <= pos2 && pos2 <= array.length) {
+			  // save element from position 1
+			  tmp = array[pos1];
+			  // move element down and shift other elements up
+			  if (pos1 < pos2) {
+				for (i = pos1; i < pos2; i++) {
+				  array[i] = array[i + 1];
+				}
+			  }
+			  // move element up and shift other elements down
+			  else {
+				for (i = pos1; i > pos2; i--) {
+				  array[i] = array[i - 1];
+				}
+			  }
+			  // put element from position 1 to destination
+			  array[pos2] = tmp;
+			}
+			return array
+		 }	
+
+		const from 	= parseInt(old_value)-1
+		const to 	= parseInt(new_value)-1
+
+		const order_ar_locators = move_locator(ar_locators, from, to)
 		
 		const trigger_vars = {
 				mode 		 	: 'save_order',
