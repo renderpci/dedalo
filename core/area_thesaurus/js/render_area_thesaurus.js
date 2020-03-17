@@ -161,7 +161,6 @@ const content_data = async function(self) {
 
 			//sort hierarchy_nodes by alfabetic
 				hierarchy_sections.sort((a, b) => new Intl.Collator().compare(a.target_section_name, b.target_section_name));
-					console.log("hierarchy_sections:",hierarchy_sections);
 				const hierarchy_sections_length = hierarchy_sections.length
 
 				for (let j = 0; j < hierarchy_sections_length; j++) {
