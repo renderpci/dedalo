@@ -521,13 +521,13 @@ class diffusion_mysql extends diffusion_sql  {
 			# Iterate one or more records
 			#$ar_fields 	= $options->record_data['ar_fields'][$section_id];
 				#dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));	continue;
-			
+
 			# if it don't work with versions, delete current record in all langs if exists
 			if ($options->delete_previous===true) {
 					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
 					$response->msg[] = $delete_result->msg;
 			}
-			
+
 
 			# Create records . Iterate langs
 			foreach ($ar_fields as $lang => $fields) {
@@ -538,7 +538,7 @@ class diffusion_mysql extends diffusion_sql  {
 					$field_value = $field['field_value'];
 
 					if (!in_array($field_name, $real_table_fields)) {
-						debug_log(__METHOD__." Skipped field $field_name in because not exists in table $table_name [$section_id]", logger::WARNING);
+						debug_log(__METHOD__." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]", logger::WARNING);
 						continue; # Skip
 					}
 
@@ -549,7 +549,7 @@ class diffusion_mysql extends diffusion_sql  {
 					$ar_field_value[] = $field_value;
 				}
 
-				# Insert mysql record				
+				# Insert mysql record
 				# if the difusion_versions is active we store all changes
 				if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
 
@@ -563,7 +563,7 @@ class diffusion_mysql extends diffusion_sql  {
 						return (object)$response;
 					}
 				}
-				
+
 				$strQuery = "INSERT INTO `$database_name`.`$table_name` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
 
 				$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );

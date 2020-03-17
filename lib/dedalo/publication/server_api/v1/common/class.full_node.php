@@ -27,10 +27,10 @@ class full_node {
 		if (!isset($locator->section_top_id) || !isset($locator->section_id) || !isset($locator->tag_id)) {
 			return false;
 		}
-		
-		return new full_node($term_id, $locator, $request_options);    	
+
+		return new full_node($term_id, $locator, $request_options);
 	}//end get_ts_term_instance */
-	
+
 
 
 	/**
@@ -42,7 +42,7 @@ class full_node {
 
 		foreach ($request_options as $key => $value) {
 			$this->$key = $value;
-		}		
+		}
 	}//end __construct
 
 
@@ -58,7 +58,7 @@ class full_node {
 		$row_audiovisual 	  = reset($row_audiovisual_data->result);
 			#dump($row_audiovisual, ' $row_audiovisual_data ++ '.to_string());
 		# General info
-		foreach ((array)$row_audiovisual as $field_name => $value) {			
+		foreach ((array)$row_audiovisual as $field_name => $value) {
 			$this->$field_name = $value;
 		}
 
@@ -85,7 +85,7 @@ class full_node {
 
 		# FRAGMENTS
 		$FIELD_TRANSCRIPTION = FIELD_TRANSCRIPTION;
-		$raw_text 			 = $this->$FIELD_TRANSCRIPTION;		
+		$raw_text 			 = $this->$FIELD_TRANSCRIPTION;
 		$fragments 			 = $this->get_full_fragments( $raw_text );
 		$this->fragments 	 = $fragments;
 
@@ -119,8 +119,8 @@ class full_node {
 			$options->sql_filter 	= "section_id = $av_section_id ";
 			$options->lang 			= $this->lang;
 			$options->order 		= null;
-			$options->limit 		= 1;	
-			
+			$options->limit 		= 1;
+
 			$rows_data = (object)web_data::get_rows_data( $options );
 
 
@@ -136,7 +136,7 @@ class full_node {
 	public function get_row_interview_data( $av_section_id ) {
 
 		$ar_fields = array('*'); 	//array('section_id',code,title,abstract,country,autonomous_community,province,comarca);
-		
+
 		$options = new stdClass();
 			$options->table 		 = (string)TABLE_INTERVIEW;
 			$options->ar_fields 	 = $ar_fields;
@@ -165,20 +165,20 @@ class full_node {
 	* @return array $full_fragments
 	*/
 	public function get_full_fragments( $raw_text ) {
-		
+
 		# REMOVE_RESTRICTED_TEXT
 		$raw_text_sure = web_data::remove_restricted_text( $raw_text, $this->av_section_id );
 			#dump($raw_text_sure, ' $raw_text_sure ++ '.to_string());
 
 		$fragm = TR::deleteMarks($raw_text_sure);
-		
+
 		$full_fragments = array();
 		$obj = new stdClass();
 			$obj->video_url 	= $this->video;
 			$obj->subtitles_url = subtitles::get_subtitles_url($this->av_section_id, false, false, $this->lang);
 			$obj->fragm 		= $fragm;
-			
-			
+
+
 		$full_fragments[] = $obj;
 
 
@@ -190,12 +190,12 @@ class full_node {
 	/**
 	* GET_FRAGMENT_TERMS
 	* Search index tags intersected with current word position
-	* @return 
+	* @return
 	*/
 	public function get_fragment_terms( $av_section_id, $raw_text ) {
 
 
-		# FRAGMENT AFTER . Find index out tags on fragment_after text. 
+		# FRAGMENT AFTER . Find index out tags on fragment_after text.
 		# For speed, is used fragment_after because normally is more short than fragment_before, but the result is the same
 		$indexIn_pattern  = TR::get_mark_pattern('indexIn', $standalone=true, $id=false, $data=false);
 		$indexOut_pattern = TR::get_mark_pattern('indexOut', $standalone=true, $id=false, $data=false);
@@ -205,12 +205,12 @@ class full_node {
 			#dump($indexIn_mathches, ' indexIn_mathches ++ '.to_string($indexIn_pattern));
 
 		preg_match_all($indexOut_pattern, $raw_text, $indexOut_mathches);
-			#dump($indexOut_mathches, ' indexOut matches ++ '.to_string($indexOut_pattern));		
+			#dump($indexOut_mathches, ' indexOut matches ++ '.to_string($indexOut_pattern));
 
 		$tag_number_key = 4;
 		if (empty($indexIn_mathches[$tag_number_key]) || empty($indexOut_mathches[$tag_number_key])) {
 			return array();
-		}		
+		}
 		$ar_indexIn_tag_id 	= $indexIn_mathches[$tag_number_key];
 		$ar_indexOut_tag_id = $indexOut_mathches[$tag_number_key];
 			#dump($ar_indexIn_tag_id, ' ar_indexIn_tag_id ++ '.to_string());
@@ -224,7 +224,7 @@ class full_node {
 		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
 		$ar_termns = array();
 
-		
+
 		$ar_filter= array();
 		foreach ($result as $tag_id) {
 			$line = "`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%' ";
@@ -250,11 +250,11 @@ class full_node {
 			$term 		= $value[FIELD_TERM];
 			$ar_termns[$term_id] = $term;
 		}
-			
+
 
 		/*
 		foreach ($result as $key => $tag_id) {
-			
+
 			$options = new stdClass();
 				$options->table 		= (string)TABLE_THESAURUS;
 				$options->ar_fields 	= array('term_id',FIELD_TERM);
@@ -271,8 +271,8 @@ class full_node {
 				if($term_id===TERM_ID_RESTRICTED) continue;
 				$term 		= $value[FIELD_TERM];
 				$ar_termns[$term_id] = $term;
-			}			
-		
+			}
+
 		}//end if (!empty($indexOut_mathches[0])) foreach ($indexOut_mathches as $key => $value) {
 		#dump($ar_termns, ' ar_termns ++ '.to_string($options->sql_filter));
 		*/
@@ -291,7 +291,7 @@ class full_node {
 	* @return string
 	*/
 	public function get_image_url() {
-	
+
 		$image_url = null;	//'../images/bg_foto_search_free.png'; // Default
 
 		switch (true) {
@@ -300,14 +300,14 @@ class full_node {
 				if (isset($this->image[0])) {
 					$identify_image_url = $this->image[0][FIELD_IMAGE];
 					$image_url = $identify_image_url;
-				}				
+				}
 				break;
-			
+
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
 				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
-				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 
+				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 				$image_url = $path . $name;
 				break;
 		}
@@ -315,7 +315,7 @@ class full_node {
 		return $image_url;
 	}//end get_image_url
 
-	
+
 
 }//end class full_node
 ?>
