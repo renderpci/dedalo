@@ -209,6 +209,7 @@ page.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < elements_length; i++) {
 
 			const element = elements[i]
+				console.log("element:",element);
 
 			// element instance (load file)
 				const current_instance = await get_instance({

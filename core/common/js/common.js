@@ -380,7 +380,7 @@ export const create_source = function(self, action){
 		section_id		: self.section_id,
 		mode 			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
 		lang 			: self.lang,
-		pagination		: self.pagination
+		pagination		: self.pagination || null
 	}
 
 	// matrix_id optional (used in time machine mode)

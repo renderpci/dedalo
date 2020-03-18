@@ -15,12 +15,17 @@
 
 
 	if($options->get_context===true){
-
-			$hierarchy_children_tipo = DEDALO_HIERARCHY_CHILDREN_TIPO;
 			
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions, $sqo_context=false);
+			$current_context = $this->get_structure_context($permissions, $sqo_context=true);
 
+		// section_tipo. Adaptation of the context with the specific ddo and sqo for used them into the filter.
+		// set the section_tipo with the area_tipo, it will be used to store presets of the search (area_tipo will use as section_tipo)
+			$current_context->section_tipo = $tipo;
+		
+	
+		$context[] = $current_context;
+		
 	}//end if($options->get_context===true)
 
 
@@ -56,12 +61,12 @@
 			$item->tipo 				= $this->get_tipo();
 			$item->value 				= $value;
 
-	
 		// subdata add
-			 $data[] = $item;
-
+			$data[] = $item;
+			
 	}// end if $permissions > 0
-
+	
+	
 
 
 // JSON string
