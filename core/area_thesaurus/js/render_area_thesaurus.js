@@ -37,15 +37,6 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 
 	const fragment = new DocumentFragment()
 
-	// search filter node
-		const filter = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'filter',
-			parent 			: fragment
-		})
-		await self.filter.render().then(filter_wrapper =>{
-			filter.appendChild(filter_wrapper)
-		})
 
 	// buttons
 		//const current_buttons = await buttons(self);
@@ -147,8 +138,6 @@ const content_data = async function(self) {
 	//sort typologies by order field
 		typology_nodes.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
 
-
-		
 
 		for (let i = 0; i < typology_length; i++) {
 
