@@ -189,7 +189,7 @@ abstract class common {
 	protected function load_structure_data() {
 
 		if( empty($this->tipo) ) {
-			dump($this,"");
+			dump($this, " DUMP ELEMENT WITHOUT TIPO - THIS ");
 			throw new Exception("Error (3): tipo is mandatory!", 1);
 		}
 
@@ -1613,6 +1613,7 @@ abstract class common {
 				$dd_object->search_operators_info 	= $this->search_operators_info();
 				$dd_object->search_options_title 	= search::search_options_title($dd_object->search_operators_info);
 			}
+		
 
 
 		return $dd_object;
@@ -1955,95 +1956,39 @@ abstract class common {
 	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
 	* The search_query_object_context (sqo_context) have at least:
 	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
-	* one ddo for the searched section
+	* one ddo for the searched section (source ddo)
 	* one ddo for the component searched.
-	* is possible create more than one ddo for different components.
+	* 	is possible create more than one ddo for different components.
 	* @return object | json
 	*/
 	public function get_sqo_context() {
 
-		if (isset($this->sqo_context)) {
-			return $this->sqo_context;
-		}
+		// sort vars
+			$section_tipo 	= $this->get_section_tipo();
+			$tipo			= $this->get_tipo();
+			$lang 			= $this->get_lang();
+			$mode 			= $this->get_modo();
+			$section_id 	= $this->get_section_id();
 
+		// source
+			$source = new stdClass();
+				$source->typo 			= 'source';
+				$source->action 		= 'search';
+				$source->tipo 			= $tipo;
+				$source->section_tipo 	= $section_tipo;
+				$source->lang 			= $lang;
+				$source->mode 			= $mode;
+				$source->section_id 	= $section_id;
+				$source->model 			= get_class($this);
+				$source->pagination 	= (object)[
+					'total'  => 0,
+					'offset' => 0,
+				];
+
+		// for now, empty value is returned as generic
 		$sqo_context = new stdClass();
-		$search = [];
-		$show	= [];
-
-
-		$section_tipo 	= $this->get_section_tipo();
-		$tipo			= $this->get_tipo();
-		$lang 			= $this->get_lang();
-
-		// SEARCH
-
-			// typo SOURCE SEARCH
-				$source_search = new stdClass();
-					$source_search->typo 			= 'source';
-					$source_search->action 			= 'search';
-					$source_search->tipo 			= $tipo;
-					$source_search->section_tipo 	= $section_tipo;
-					$source_search->lang 			= $lang;
-					$source_search->mode 			= 'list';
-
-				// add source
-				$search[] = $source_search;
-
-				// service autocomplete options
-					$ar_target_section_tipo = [$section_tipo];
-				// search_sections . set and remove search sections duplicates
-					$search_sections 		= $ar_target_section_tipo;
-
-
-			// typo SEARCH
-				$filter_custom = [];
-
-				// filter custom
-					if (isset($propiedades->source->filter_custom)) {
-						$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
-					}
-
-				// search_query_object params
-					# Limit
-					$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 10;
-					# operator can be injected by api
-					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : '$and';
-
-				// search_query_object build
-					$query_object_options = new stdClass();
-						$query_object_options->q 	 				= null;
-						$query_object_options->limit  				= $limit;
-						$query_object_options->offset 				= 0;
-						$query_object_options->section_tipo 		= $search_sections;
-						$query_object_options->tipo 				= $tipo;
-						$query_object_options->logical_operator 	= $operator;
-						$query_object_options->add_select 			= false;
-						$query_object_options->filter_custom 		= !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
-						$query_object_options->skip_projects_filter = false; // skip_projects_filter true on edit mode
-
-					$sqo = common::build_search_query_object($query_object_options);
-
-					// add sqo
-					$search[] = $sqo;
-
-			// typo DDO
-				// build self ddo
-					$ddo = $this->get_structure_context($this->get_component_permissions(), false);
-
-				// add ddo
-					$search[] = $ddo;
-
-		// SHOW
-			// Not used now
-
-
-		$sqo_context->show 		= $show;
-		$sqo_context->search 	= $search;
-
-
-		// fix
-		$this->sqo_context = $sqo_context;
-
+			$sqo_context->show 		= [$source];
+			$sqo_context->search 	= [];
 
 		return $sqo_context;
 	}//end get_sqo_context

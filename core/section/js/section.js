@@ -86,14 +86,13 @@ section.prototype.init = async function(options) {
 	self.section_lang 		= options.section_lang
 	self.parent 			= options.parent
 
-
 	self.events_tokens		= []
 	self.ar_instances		= []
 	self.sqo_context		= options.sqo_context 	|| null
 
-	self.context 			= options.context 		|| null
-	self.data 	 			= options.data 	  		|| null
 	self.datum 	 			= options.datum   		|| null
+	self.context 			= options.context 		|| null
+	self.data 	 			= options.data 	  		|| null	
 	self.pagination 		= { // pagination info
 		total : 0,
 		offset: 0
@@ -106,9 +105,10 @@ section.prototype.init = async function(options) {
 	self.inspector 			= null
 
 	self.id_column_width 	= '7em'
-	self.permissions 		= null
+	self.permissions 		= options.permissions || null
 
 	// source. add to sqo_context if not exists. Be careful not to add a source element twice
+	// (!) VERIFICAR QUE REALMENTE HACE FALTA
 		if (self.sqo_context && self.sqo_context.show) {
 			const current_source = self.sqo_context.show.find(element => element.typo==='source')
 			if (current_source) {
@@ -147,8 +147,8 @@ section.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
-
-	const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
+	// sqo
+		const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
 
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -161,11 +161,11 @@ section.prototype.build = async function(autoload=false) {
 					self.pagination.total	= (current_sqo.full_count && current_sqo.full_count>0) ? current_sqo.full_count : current_data_manager.count(current_sqo)
 					//console.log("[section.build] self.pagination.total:",self.pagination.total);
 				}
-					console.log("self:",self);
+					// console.log("self:",self);
 
 			// get context and data
 				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
-					console.log("[section.build] api_response +++++++++++++++++++++++++++++:",api_response);
+					// console.log("[section.build] api_response +++++++++++++++++++++++++++++:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
