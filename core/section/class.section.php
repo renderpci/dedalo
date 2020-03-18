@@ -68,19 +68,19 @@ class section extends common {
 
 	/**
 	* GET_INSTANCE
-    * Singleton pattern
-    * @returns array array of section objects by key
-    */
-    public static function get_instance($section_id=null, $tipo=false, $modo='edit', $cache=true) {
+	* Singleton pattern
+	* @returns array array of section objects by key
+	*/
+	public static function get_instance($section_id=null, $tipo=false, $modo='edit', $cache=true) {
 
-    	if ($tipo===false) {
+		if ($tipo===false) {
 			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
 		}
 
 		# Not cache new sections (without section_id)
-    	if (empty($section_id)) {
-    		return new section(null, $tipo, $modo);
-    	}
+		if (empty($section_id)) {
+			return new section(null, $tipo, $modo);
+		}
 
 		# Direct construct without cache instance
 		# Use this config in imports
@@ -88,34 +88,34 @@ class section extends common {
 			return new section($section_id, $tipo, $modo);
 		}
 
-    	# key for cache
-    	$key = $section_id .'_'. $tipo;
+		# key for cache
+		$key = $section_id .'_'. $tipo;
 
-    	$max_cache_instances = 300*4; // Default 300
+		$max_cache_instances = 300*4; // Default 300
 		$cache_slice_on 	 = 100*4; // Default 100
 
-    	# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
-    	# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
-    	if (isset(self::$ar_section_instances) && count(self::$ar_section_instances)>$max_cache_instances) {
-    		self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
-    		if(SHOW_DEBUG===true) {
-    			debug_log(__METHOD__.' '.DEDALO_HOST." Overload secions prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
-    		}
+		# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
+		# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
+		if (isset(self::$ar_section_instances) && count(self::$ar_section_instances)>$max_cache_instances) {
+			self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__.' '.DEDALO_HOST." Overload secions prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
+			}
 
-    		// let GC do the memory job
+			// let GC do the memory job
 			//time_nanosleep(0, 10000000); // 10 ms
 			time_nanosleep(0, 5000000); // 05 ms
-    	}
+		}
 
-    	# FIND CURRENT INSTANCE IN CACHE
-    	if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
-    		self::$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
-    		#debug_log(__METHOD__." NO exite una instancia de la sección $key. Se devuelve el objeto estático");
-    	}
+		# FIND CURRENT INSTANCE IN CACHE
+		if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
+			self::$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
+			#debug_log(__METHOD__." NO exite una instancia de la sección $key. Se devuelve el objeto estático");
+		}
 
 
-        return self::$ar_section_instances[$key];
-    }//end get_instance
+		return self::$ar_section_instances[$key];
+	}//end get_instance
 
 
 
@@ -152,7 +152,7 @@ class section extends common {
 
 		// active_section_section_id : Set global var
 			if($modo==='edit'
-			 	&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
+				&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
 				&& !isset(section::$active_section_id) ) {
 
 					// fix active_section_id
@@ -974,7 +974,7 @@ class section extends common {
 						$this->dato = $section_dato;
 
 					// Set as loaded
-    					$this->bl_loaded_matrix_data = true;
+						$this->bl_loaded_matrix_data = true;
 
 			// Real data save
 				// Time machine data. We save only current new section in time machine once (section info not change, only components changes)
@@ -1023,8 +1023,8 @@ class section extends common {
 
 				// Store in cached sections . (!) Important
 					# key for cache
-    				$key = $this->section_id .'_'. $tipo;
-    				self::$ar_section_instances[$key] = $this;
+					$key = $this->section_id .'_'. $tipo;
+					self::$ar_section_instances[$key] = $this;
 
 
 				// TOP_ID : Si se crea desde un portal, el top_id está fijado en sesion "TOP_ID". Si no, es el propio section_id de la sección creada
@@ -3106,13 +3106,13 @@ class section extends common {
 				$filter_element = new stdClass();
 					$filter_element->q 		= json_encode($ar_section_id);
 					$filter_element->path 	= json_decode('[
-	                    {
-	                        "section_tipo": "'.$options->section_tipo.'",
-	                        "component_tipo": "section_id",
-	                        "modelo": "component_section_id",
-	                        "name": "section_id"
-	                    }
-	                ]');
+						{
+							"section_tipo": "'.$options->section_tipo.'",
+							"component_tipo": "section_id",
+							"modelo": "component_section_id",
+							"name": "section_id"
+						}
+					]');
 
 				$op = '$and';
 				$filter_group = new stdClass();
@@ -3218,7 +3218,7 @@ class section extends common {
 	*/
 	public static function resolve_query_object_sql($query_object) {
 
-    	# Always set fixed values
+		# Always set fixed values
 		$query_object->type = 'string';
 
 		# Always set format to column
@@ -3233,7 +3233,7 @@ class section extends common {
 		$query_object->q_parsed	= '\''.$q_clean.'\'';
 
 
-        return $query_object;
+		return $query_object;
 	}//end resolve_query_object_sql
 
 
@@ -3396,28 +3396,48 @@ class section extends common {
 	*/
 	public function get_sqo_context() {
 
-		$sqo_context = new stdClass();
-			$sqo_context->show 	 = [];
-			$sqo_context->search = [];
+		// already calculated
+			if (isset($this->sqo_context)) {
+				return $this->sqo_context;
+			}	
 
-
-		$section_tipo 	= $this->tipo;
-		$section_id 	= $this->section_id;
-		$mode 			= $this->modo;
-		$lang 			= $this->lang;
-		$limit 			= ($mode==='list') ? 10 : 1;
+		// sort vars
+			$section_tipo 	= $this->get_tipo();
+			$section_id 	= $this->get_section_id();
+			$lang 			= $this->get_lang();
+			$mode 			= $this->get_modo();		
+			$limit 			= ($mode==='list') ? 10 : 1;
 
 
 		// SHOW
+			$show = [];
+			// source
+				$source = new stdClass();
+					$source->typo 			= 'source';
+					$source->action 		= 'search';
+					$source->tipo 			= $section_tipo;
+					$source->section_tipo 	= $section_tipo;
+					$source->lang 			= $lang;
+					$source->mode 			= $mode;
+					$source->section_id 	= $section_id;
+					$source->model 			= get_class($this);
+					$source->pagination 	= (object)[
+						'total'  => 0,
+						'offset' => 0,
+					];
+
+				$show[] = $source;
+
 			// search_query_object
 				$sqo_options = new stdClass();
 					$sqo_options->tipo 			= $section_tipo;
 					$sqo_options->section_tipo 	= [$section_tipo];
-					$sqo_options->limit  		= $limit;
-					$sqo_options->offset 		= 0;
 					$sqo_options->full_count 	= false;
 					$sqo_options->add_select 	= false;
 					$sqo_options->direct 		= true;
+
+					$sqo_options->limit  		= $limit;
+					$sqo_options->offset 		= 0;
 
 					// filter_by_locators. when sectio_id is received
 					if (!empty($section_id)) {
@@ -3429,13 +3449,10 @@ class section extends common {
 
 				$search_query_object = common::build_search_query_object($sqo_options);
 
+				// add search_query_object
+					$show[] = $search_query_object;
 
-
-
-			// add sqo
-				$sqo_context->show[] = $search_query_object;
-
-			// ddo show
+			// ddo
 				$layout_map_options = new stdClass();
 					$layout_map_options->section_tipo 		 = $section_tipo;
 					$layout_map_options->tipo 				 = $section_tipo;
@@ -3445,15 +3462,22 @@ class section extends common {
 
 				$ar_ddo = layout_map::get_layout_map($layout_map_options);
 
-			// add layout_map ddo's
-				$sqo_context->show = array_merge($sqo_context->show, $ar_ddo);
-
+				// add layout_map ddo's
+					$show = array_merge($show, $ar_ddo);
 
 
 		// SEARCH
+			$search = [];
 			// nothing to do yet
 
 
+		// sqo_context object
+			$sqo_context = new stdClass();
+				$sqo_context->show 	 = $show;
+				$sqo_context->search = $search;
+
+		// fix
+			$this->sqo_context = $sqo_context;
 
 
 		return $sqo_context;

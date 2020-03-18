@@ -2361,7 +2361,6 @@ abstract class component_common extends common {
 				throw new Exception("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo", 1);
 			}
 		}
-			dump($ar_target_section_tipo, ' ar_target_section_tipo +***************************+ '.to_string());
 
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;

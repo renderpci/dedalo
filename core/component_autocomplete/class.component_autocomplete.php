@@ -573,7 +573,8 @@ class component_autocomplete extends component_relation_common {
 	}//end get_component_info
 
 
-	///////////////// HIERARCHY LEGACY
+
+///////////////// HIERARCHY LEGACY
 	/**
 	* GET_HIERARCHY_SECTIONS_FROM_TYPES
 	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
@@ -685,7 +686,9 @@ class component_autocomplete extends component_relation_common {
 	}//end add_hierarchy_sections_from_types
 
 
-	////////////////////END HIERARCHY LEGACY
+
+////////////////////END HIERARCHY LEGACY
+
 
 
 	/**
@@ -729,129 +732,126 @@ class component_autocomplete extends component_relation_common {
 
 
 
-
-
-
-
 	/**
 	* GET_SQO_CONTEXT
+	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
+	* The search_query_object_context (sqo_context) have at least:
+	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
+	* one ddo for the searched section (source ddo)
+	* one ddo for the component searched.
+	* 	is possible create more than one ddo for different components.
 	* @return object | json
 	*/
 	public function get_sqo_context() {
 
-		if (isset($this->sqo_context)) {
-			return $this->sqo_context;
-		}
+		// already calculated
+			if (isset($this->sqo_context)) {
+				return $this->sqo_context;
+			}
+		
 
-		$sqo_context = new stdClass();
-		$search = [];
-		$show	= [];
-
-
-		$section_tipo 	= $this->get_section_tipo();
-		$tipo			= $this->get_tipo();
-		$propiedades	= $this->get_propiedades();
-		$section_id		= $this->get_parent();
-		$dato 			= $this->get_dato();
-		$mode 			= $this->get_modo();
-		$lang 			= $this->get_lang();
-
-		// SOURCE SEARCH
-			$source_search = new stdClass();
-				$source_search->typo 			= 'source';
-				$source_search->action 			= 'search';
-				$source_search->tipo 			= $tipo;
-				$source_search->section_tipo 	= $section_tipo;
-				$source_search->lang 			= $lang;
-				$source_search->mode 			= 'list';
-
-			$search[] = $source_search;
-
-			// service autocomplete options
-				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-			// search_sections . set and remove search sections duplicates
-				$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
+		// sort vars
+			$section_tipo 	= $this->get_section_tipo();
+			$tipo			= $this->get_tipo();
+			$lang 			= $this->get_lang();
+			$section_id		= $this->get_parent();
+			$mode 			= $this->get_modo();
+			$propiedades	= $this->get_propiedades();
+		
 
 		// SEARCH
-				$filter_custom = [];
-			// get get_hierarchy_terms
-				if (isset($propiedades->source->hierarchy_terms)) {
-					$hierarchy_terms_filter = $this->get_hierarchy_terms_filter();
-					$filter_custom = array_merge($filter_custom, $hierarchy_terms_filter);
-				}
+			$search = [];
+			// typo SOURCE SEARCH
+				$source_search = new stdClass();
+					$source_search->typo 			= 'source';
+					$source_search->action 			= 'search';
+					$source_search->tipo 			= $tipo;
+					$source_search->section_tipo 	= $section_tipo;
+					$source_search->lang 			= $lang;
+					$source_search->mode 			= 'list';
 
-			// filter custom
-				if (isset($propiedades->source->filter_custom)) {
-					$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
-				}
+				$search[] = $source_search;
+			
+			// typo SEARCH
+				// filter_custom
+					$filter_custom = [];
+				// hierarchy_terms_filter
+					if (isset($propiedades->source->hierarchy_terms)) {
+						$hierarchy_terms_filter = $this->get_hierarchy_terms_filter();
+						$filter_custom = array_merge($filter_custom, $hierarchy_terms_filter);
+					}
+				// propiedades filter custom
+					if (isset($propiedades->source->filter_custom)) {
+						$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
+					}			
+				// Limit
+					$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;
+				// operator can be injected by api
+					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
+				// search_sections
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();				
+					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
 
-			// search_query_object params
-				# Limit
-				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;
-				# operator can be injected by api
-				$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
+				// search_query_object build
+					$search_sqo_options = new stdClass();
+						$search_sqo_options->q 	 				  = null;
+						$search_sqo_options->limit  			  = $limit;
+						$search_sqo_options->offset 			  = 0;
+						$search_sqo_options->section_tipo 		  = $search_sections;
+						$search_sqo_options->tipo 				  = $tipo;
+						$search_sqo_options->logical_operator 	  = $operator;
+						$search_sqo_options->add_select 		  = false;
+						$search_sqo_options->filter_custom 		  = !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
+						$search_sqo_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
 
+					$search_query_object = common::build_search_query_object($search_sqo_options);
 
-			// search_query_object build
-				$query_object_options = new stdClass();
-					$query_object_options->q 	 				= null;
-					$query_object_options->limit  				= $limit;
-					$query_object_options->offset 				= 0;
-					$query_object_options->section_tipo 		= $search_sections;
-					$query_object_options->tipo 				= $tipo;
-					$query_object_options->logical_operator 	= $operator;
-					$query_object_options->add_select 			= false;
-					$query_object_options->filter_custom 		= !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
-					$query_object_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
+				// value_with_parents
+					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents === true){
 
-				$search_query_object = common::build_search_query_object($query_object_options);
+						$search_query_object->value_with_parents = true;
+						$search_query_object->source_component_tipo = $tipo;
 
-			// value_with_parents
-				if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents === true){
-
-					$search_query_object->value_with_parents = true;
-					$search_query_object->source_component_tipo = $tipo;
-
-				}// end $value_with_parent = true
+					}// end $value_with_parent = true
 
 				// add sqo
-				$search[] = $search_query_object;
+					$search[] = $search_query_object;
 
 
 		// SHOW
+			$show= [];
 			// search_query_object_options
 
 				$limit 	= $propiedades->max_records ?? 10;
 				$offset = 0;
+				
 				$pagination = new stdClass();
 					$pagination->limit 	= $limit;
 					$pagination->offset = $offset;
 
-				$show_search_query_object_options = new stdClass();
-					$show_search_query_object_options->section_tipo 		= $search_sections;
-					$show_search_query_object_options->tipo					= $tipo;
-					$show_search_query_object_options->add_select 			= false;
-					$show_search_query_object_options->add_filter 			= true;
-
+				$show_sqo_options = new stdClass();
+					$show_sqo_options->section_tipo = $search_sections;
+					$show_sqo_options->tipo			= $tipo;
+					$show_sqo_options->full_count	= false;
+					$show_sqo_options->add_select 	= false;
+					$show_sqo_options->add_filter 	= true;
 					// paginations options
-						$show_search_query_object_options->limit 		 = $limit;
-						$show_search_query_object_options->offset 		 = $offset;
+					$show_sqo_options->limit 		 = $limit;
+					$show_sqo_options->offset 		 = $offset;
 
-				$search_query_object = common::build_search_query_object($show_search_query_object_options);
-					#dump($search_query_object, ' search_query_object ++ '.to_string());
+				$search_query_object = common::build_search_query_object($show_sqo_options);				
 
 				// value_with_parents
-				if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents === true){
+					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents === true){
+						$search_query_object->value_with_parents = true;
+						$search_query_object->source_component_tipo = $tipo;
+					}// end $value_with_parent = true
 
-					$search_query_object->value_with_parents = true;
-					$search_query_object->source_component_tipo = $tipo;
-
-				}// end $value_with_parent = true
+				// add sqo
+					$show[] = $search_query_object;
 
 
-				$show[] = $search_query_object;
-
-		// SHOW - SEARCH LAYOUT MAP
+		// SEARCH LAYOUT MAP
 			// fields for select / show. add ddo
 
 			// subcontext from layout_map items
@@ -868,6 +868,8 @@ class component_autocomplete extends component_relation_common {
 				$layout_map_options->config_context_type 		= 'show';
 				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options));
 
+				
+			$sqo_context = new stdClass();
 				$sqo_context->show 		= $show;
 				$sqo_context->search 	= $search;
 
@@ -959,9 +961,9 @@ class component_autocomplete extends component_relation_common {
 			]');
 			*/
 
-			// fix
-			$this->sqo_context	= $sqo_context;
-			$this->pagination	= $pagination;
+		// fix
+		$this->sqo_context	= $sqo_context;
+		$this->pagination	= $pagination;
 
 
 		return $sqo_context;
