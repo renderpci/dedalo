@@ -23,9 +23,43 @@
 
 // mixins
 	// background_icon function. Receive icon full name like 'bug.svg'
-		.background_icon(@icon_name){
-			//@base-path:~"./images/@{color}/"; // unused color now
-			// background-image: url("@{images_base_path}/icons/@{icon_name}");
+		// .background_icon(@icon_name){
+		// 	//@base-path:~"./images/@{color}/"; // unused color now
+		// 	// background-image: url("@{images_base_path}/icons/@{icon_name}");
+		// 	mask: url("@{images_base_path}/icons/@{icon_name}");
+		// 	-webkit-mask: url("@{images_base_path}/icons/@{icon_name}");
+		// 			mask-size: contain;
+		// 	-webkit-mask-size: contain;
+		// 			mask-repeat: no-repeat;
+		// 	-webkit-mask-repeat: no-repeat;
+		// 			mask-position: center;
+		// 	-webkit-mask-position: center;
+		// }
+
+	// icon_svg mixing. Use within :before
+		// .icon_svg {
+		// 	content: " ";
+		// 	//background-image: url(../../themes/default/icons/bug.svg);
+		// 	// .background_icon('bug.svg');
+		// 	// background-size: contain;
+		// 	// background-repeat: no-repeat;
+		// 	// background-position: center;
+		// 	width: 1em;
+		// 	height: 1em;
+		// 	float: right;
+		// 	opacity: 0.7;
+		// }
+
+	// build_button
+		.build_button(@icon_name, @color:black, @opacity:0.7) {
+			// .icon_svg;
+			content: " ";
+			width: 1em;
+			height: 1em;
+			float: right;
+			opacity: @opacity;
+
+			// .background_icon(@icon_name);
 			mask: url("@{images_base_path}/icons/@{icon_name}");
 			-webkit-mask: url("@{images_base_path}/icons/@{icon_name}");
 					mask-size: contain;
@@ -34,28 +68,10 @@
 			-webkit-mask-repeat: no-repeat;
 					mask-position: center;
 			-webkit-mask-position: center;
-		}
 
-	// icon_svg mixing. Use within :before
-		.icon_svg {
-			content: " ";
-			//background-image: url(../../themes/default/icons/bug.svg);
-			// .background_icon('bug.svg');
-			// background-size: contain;
-			// background-repeat: no-repeat;
-			// background-position: center;
-			width: 1em;
-			height: 1em;
-			float: right;
-			opacity: 0.7;
-		}
-
-	// build_button
-		.build_button(@icon_name, @color:black) {
-			.icon_svg;
-			.background_icon(@icon_name);
 			background: @color;
 		}
+
 
 	// hilite (on focus)
 		.hilite(@outline_offset:0) {
@@ -237,11 +253,12 @@
 				user-select: none;
 
 				&:before {
-					.icon_svg;
-					//background-image: url(../../themes/default/icons/gear.svg);
-					.background_icon('gear.svg');
-					margin-left: 1em;
-					filter: invert();
+					// .icon_svg;
+					// //background-image: url(../../themes/default/icons/gear.svg);
+					// .background_icon('gear.svg');
+					// margin-left: 1em;
+					// filter: invert();
+					.build_button('gear.svg', white, 0.7);
 				}
 			}
 			>.widget_body {
@@ -256,9 +273,11 @@
 						opacity: 0.5;
 					}
 					&:before {
-						.icon_svg;
-						//background-image: url(../../themes/default/icons/arrow-circle-right.svg);
-						.background_icon('arrow-circle-right.svg');
+						// .icon_svg;
+						// //background-image: url(../../themes/default/icons/arrow-circle-right.svg);
+						// .background_icon('arrow-circle-right.svg');
+
+						.build_button('arrow-circle-right.svg', #3F3F3F, 1);
 						float: left;
 						margin-right: 0.25em;
 					}
@@ -349,10 +368,12 @@
 					}
 
 					>.clean:after {
-						.icon_svg;
-						//background-image: url(../../themes/default/icons/eraser.svg);
-						.background_icon('eraser.svg');
+						// .icon_svg;
+						// //background-image: url(../../themes/default/icons/eraser.svg);
+						// .background_icon('eraser.svg');
 						cursor: pointer;
+
+						.build_button('eraser.svg', white, 1)
 					}
 				}
 			}
@@ -634,10 +655,13 @@
 						>a {
 							//.icon_svg;
 							//background-image: url(../../themes/default/icons/edit.svg);
-							.background_icon('edit.svg');
+							// .background_icon('edit.svg');
+							.build_button('edit.svg', white, 1);
 
 							&.tm_preview {
-								.background_icon('eye.svg');
+								// .background_icon('eye.svg');
+								.build_button('eye.svg', white, 1);
+
 							}
 						}
 
@@ -652,7 +676,8 @@
 						>a {
 							//.icon_svg;
 							//background-image: url(../../themes/default/icons/trash-o.svg);
-							.background_icon('trash-o.svg');
+							// .background_icon('trash-o.svg');
+							.build_button('trash-o.svg', white, 1);
 						}
 					}
 				}//end id_column
@@ -843,6 +868,12 @@
 				>.content_data {
 					height: 100%;
 					max-height: @media_max_height;
+					padding-bottom: 3em;
+
+					// override json editor
+					.ace_gutter {
+						z-index: unset;
+					}
 				}
 			}
 
@@ -1491,7 +1522,8 @@
 // preload
 	.preload {
 		//background-image: url(../../themes/default/icons/preload.svg);
-		.background_icon('preload.svg');
+		// .background_icon('preload.svg');
+		.build_button('preload.svg', black, 1);
 		background-repeat: no-repeat;
 		background-size: contain; // 2em 2em;
 		background-position: center;
@@ -1771,19 +1803,23 @@
 
 			&.bold:before {
 				//background-image: url(../../themes/default/icons/bold.svg);
-				.background_icon('bold.svg');
+				// .background_icon('bold.svg');
+				.build_button('bold.svg', black, 1);
 			}
 			&.italic:before {
 				//background-image: url(../../themes/default/icons/italic.svg);
-				.background_icon('italic.svg');
+				// .background_icon('italic.svg');
+				.build_button('italic.svg', black, 1);
 			}
 			&.underline:before {
 				//background-image: url(../../themes/default/icons/underline.svg);
-				.background_icon('underline.svg');
+				// .background_icon('underline.svg');
+				.build_button('underline.svg', black, 1);
 			}
 			&.replace:before {
 				//background-image: url(../../themes/default/icons/exchange.svg);
-				.background_icon('exchange.svg');
+				// .background_icon('exchange.svg');
+				.build_button('exchange.svg', black, 1);
 			}
 		}
 	}
