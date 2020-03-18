@@ -552,6 +552,18 @@ export const ui = {
 						buttons.appendChild(items.buttons[i])
 					}
 				}
+				
+			// filter
+				if (instance.filter) {
+					const filter = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'filter',
+						parent 			: fragment
+					})
+					instance.filter.render().then(filter_wrapper =>{
+						filter.appendChild(filter_wrapper)
+					})
+				}
 
 			// content_data
 				if (items.content_data) {

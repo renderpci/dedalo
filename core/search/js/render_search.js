@@ -60,8 +60,8 @@ render_search.prototype.render_base = async function() {
 		self.search_global_container = search_global_container
 
 	// thesaurus add ons
-		if (self.mode==='thesaurus') {
-			const thesaurus_options_node = render_thesaurus_options(self)
+		if (self.caller.model==='area_thesaurus') {
+			const thesaurus_options_node = render_sections_selector(self)
 			search_global_container.appendChild(thesaurus_options_node)
 		}
 
@@ -762,195 +762,125 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 
 /**
-* RENDER_THESAURUS_OPTIONS
+* RENDER_sections_selector
 * Render and insert nodes into wrapper
 */
-const render_thesaurus_options = (self) => {
+const render_sections_selector = (self) => {
 
-	const thesaurus_search_selector = ui.create_dom_element({
-		class_name 		: 'thesaurus_search_selector',
-		element_type	: 'div'
-	})
-	// set thesaurus_search_selector
-	self.thesaurus_search_selector = thesaurus_search_selector
+	if(!self.sections_selector_data) return false
 
-	// selector (list of thesaurus typologies)
-		const thesaurus_typology_selector = ui.create_dom_element({
-			element_type	: 'select',
-			class_name 		: 'thesaurus_typology_selector',
-			parent			: thesaurus_search_selector
+	//wrapper
+		const wrapper_sections_selector = ui.create_dom_element({
+			class_name 		: 'wrapper_sections_selector',
+			element_type	: 'div'
 		})
-		.addEventListener('change',function(){
-			event_manager.publish('show_sections_checkboxes_'+self.id, {select_value : this.value})
-		},false)
+		// set wrapper_sections_selector
+		self.wrapper_sections_selector = wrapper_sections_selector
 
-		// update_thesaurus_typology_selector
-			self.events_tokens.push(
-				event_manager.subscribe('update_thesaurus_typology_selector_'+self.id, (ar_sections_by_type) => {
 
-					// set
-					self.ar_sections_by_type = ar_sections_by_type
+	// typologies
+		const typologies = self.sections_selector_data.filter(item => item.type === 'typology')
+		// typologies.sort((a, b) => new Intl.Collator().compare(a.label, b.label));
+		typologies.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
 
-					// asign the options to the select
-					for (const property in ar_sections_by_type) {
+		// selector (list of typologies)
+			const typology_selector = ui.create_dom_element({
+				element_type	: 'select',
+				class_name 		: 'typology_selector',
+				parent			: wrapper_sections_selector
+			})
+			typology_selector.addEventListener('change',function(event){				
+				const typology_id 	= event.target.value
+				build_sections_check_boxes(self, typology_id, wrapper_sections_selector_ul)
+			},false)
 
-						const typology_id 	= ar_sections_by_type[property][0].typology;
-						const typology_name = ar_sections_by_type[property][0].typology_name;
-
-						const select_option = ui.create_dom_element({
-								element_type	: 'option',
-								parent			: thesaurus_typology_selector,
-								value			: typology_id,
-								inner_html		: typology_name
-						})
-					}
+		// options for selector
+			const typologies_length = typologies.length
+			for (let i = 0; i < typologies_length; i++) {				
+				ui.create_dom_element({
+					element_type	: 'option',
+					value 			: typologies[i].section_id,
+					text_content	: typologies[i].label,
+					parent 			: typology_selector
 				})
-			)
+			}
 
-	// checkbox list (sections of current selected thesaurus typology, like 'thematic')
-		const thesaurus_search_selector_ul = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name 		: 'thesaurus_search_selector_ul',
-			parent			: thesaurus_search_selector
-		})
+		// cookie. previous cookie stored value
+			const cookie_name  		= "selected_typology"
+			const selected_typology = read_cookie(cookie_name)
+			if (selected_typology) {
+				typology_selector.value = selected_typology
+			}
+			
+		// checkbox list wrapper (sections of current selected thesaurus typology, like 'thematic')
+			const wrapper_sections_selector_ul = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name 		: 'wrapper_sections_selector_ul',
+				parent			: wrapper_sections_selector
+			})
 
-		// update_thesaurus_typology_selector
-			self.events_tokens.push(
-				event_manager.subscribe('show_sections_checkboxes_'+self.id, (options) => {
+		// trigger first selected value
+			build_sections_check_boxes(self, typology_selector.value, wrapper_sections_selector_ul)				
 
-					const select_value 	= options.select_value
-					const ar_data 		= self.ar_sections_by_type
-					const ul 			= thesaurus_search_selector_ul
 
-					// clean thesaurus_search_selector_ul
-						while (ul.hasChildNodes()) {
-							ul.removeChild(ul.lastChild);
-						}
-
-					const ar_items 		= ar_data[select_value]
-					const ar_items_len 	= ar_items.length
-					for (let i = 0; i < ar_items_len; i++) {
-
-						const item = ar_items[i]
-
-						// li
-							const li = ui.create_dom_element({
-								element_type 	: 'li',
-								parent 		 	: ul
-							})
-
-						// checkbox
-							const input = ui.create_dom_element({
-								element_type 	: 'input',
-								parent 		 	: li,
-								id 				: item.hierarchy_target_section_tipo,
-								name 			: item.hierarchy_target_section_tipo,
-								value 			: item.hierarchy_target_section_tipo,
-							})
-							input.type = "checkbox"
-							input.checked = true
-
-						// label
-							const label = ui.create_dom_element({
-								element_type 	: 'label',
-								parent 		 	: li,
-								inner_html 		: item.hierarchy_target_section_name,
-								//class_name 		: "checkbox-inline"
-							})
-							label.setAttribute("for", item.hierarchy_target_section_tipo)
-					}
-
-					// Store selected value as cookie to recover later
-					const cookie_name  = "selected_tipology"
-					createCookie(cookie_name, select_value, 365)
-				})
-			)//end self.events_tokens.push
-
-	return thesaurus_search_selector
-}//end render_thesaurus_options
+	return wrapper_sections_selector
+}//end render_sections_selector
 
 
 
 /**
-* render_thesaurus_SECTIONS_CHECKBOXES
-* @return
+* BUILD_SECTIONS_CHECK_BOXES
 */
-export const render_thesaurus_sections_checkboxes = (select_value, ar_data_string) => {
+const build_sections_check_boxes = (self, typology_id, parent) => {
 
-	// ar_data_string = decodeURIComponent(ar_data_string)
+	const ar_sections 	= self.sections_selector_data.filter(item => item.typology_section_id === typology_id)
+	const ul 			= parent
 
-	const ar_data = ar_data_string
-
-	if(SHOW_DEBUG===true) {
-		// console.log("[render_thesaurus_sections_checkboxes] ar_data:",ar_data);
-	}
-
-	if (ar_data.length===0) {
-		console.warn("[render_thesaurus_sections_checkboxes] Empty ar_data:",ar_data)
-		return false
-	}
-
-	// ul
-		const ul = self.thesaurus_search_selector.querySelector(".thesaurus_search_selector_ul")
-		if (!ul) {
-			console.warn("[render_thesaurus_sections_checkboxes] DOM element not found: #thesaurus_search_selector_ul")
-			return false
+	// clean wrapper_sections_selector_ul
+		while (ul.hasChildNodes()) {
+			ul.removeChild(ul.lastChild);
 		}
-		// clean ul
-			while (ul.hasChildNodes()) {
-				ul.removeChild(ul.lastChild);
-			}
 
-	const ar_items = ar_data[select_value]
-	if(typeof ar_items==="undefined") {
-		if(SHOW_DEBUG===true) {
-			console.warn("[render_thesaurus_sections_checkboxes] ar_items is undefined for ar_data:",ar_data,select_value);
+	// li nodes
+		const ar_sections_len 	= ar_sections.length
+		for (let i = 0; i < ar_sections_len; i++) {
+
+			const item = ar_sections[i]
+
+			// li
+				const li = ui.create_dom_element({
+					element_type 	: 'li',
+					parent 		 	: ul
+				})
+
+			// checkbox
+				const input = ui.create_dom_element({
+					element_type 	: 'input',
+					parent 		 	: li,
+					id 				: 'section_option_'+item.target_section_tipo,
+					// name 			: item.hierarchy_target_section_tipo,
+					value 			: item.target_section_tipo,
+				})
+				input.type = "checkbox"
+				input.checked = true
+
+			// label
+				const label = ui.create_dom_element({
+					element_type 	: 'label',
+					parent 		 	: li,
+					inner_html 		: item.target_section_name,
+					//class_name 		: "checkbox-inline"
+				})
+				label.setAttribute("for", 'section_option_'+item.target_section_tipo)
 		}
-		return false
-	}
-
-	const ar_items_len = ar_items.length
-	for (let i = 0; i < ar_items_len; i++) {
-
-		const item = ar_items[i]
-
-		// li
-			let li = ui.create_dom_element({
-				element_type 	: 'li',
-				parent 		 	: ul,
-				//class_name 	: "",
-				//data_set 		: {id:counter},
-				//id 			: options.is_root ? 'root_search_group' : null
-			})
-
-		// checkbox
-			let input = ui.create_dom_element({
-				element_type 	: 'input',
-				parent 		 	: li,
-				id 				: item.hierarchy_target_section_tipo,
-				name 			: item.hierarchy_target_section_tipo,
-				value 			: item.hierarchy_target_section_tipo,
-			})
-			input.type = "checkbox"
-			input.checked = true
-
-		// label
-			let label = ui.create_dom_element({
-				element_type 	: 'label',
-				parent 		 	: li,
-				inner_html 		: item.hierarchy_target_section_name,
-				//class_name 		: "checkbox-inline"
-			})
-			label.setAttribute("for", item.hierarchy_target_section_tipo)
-	}
 
 	// Store selected value as cookie to recover later
-	const cookie_name  = "selected_tipology"
-	create_cookie(cookie_name, select_value)
+		const cookie_name  = "selected_typology"
+		create_cookie(cookie_name, typology_id, 365)
 
 
-	return ul
-}//end render_thesaurus_sections_checkboxes
+	return true
+}//end build_sections_check_boxes
 
 
 
@@ -978,9 +908,9 @@ export const render_thesaurus_sections_checkboxes = (select_value, ar_data_strin
 
 			// Thesaurus mode case
 			if (self.modo==="thesaurus") {
-				const thesaurus_search_selector = wrapper.querySelector(".thesaurus_search_selector")
-					//thesaurus_search_selector.style.display = "block"
-					thesaurus_search_selector.classList.remove("hide")
+				const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
+					//wrapper_sections_selector.style.display = "block"
+					wrapper_sections_selector.classList.remove("hide")
 			}
 
 			self.search_panel_is_open = true
@@ -998,9 +928,9 @@ export const render_thesaurus_sections_checkboxes = (select_value, ar_data_strin
 
 			// Thesaurus mode case
 			if (self.modo==="thesaurus") {
-				const thesaurus_search_selector = wrapper.querySelector(".thesaurus_search_selector")
-					//thesaurus_search_selector.style.display = "none"
-					thesaurus_search_selector.classList.add("hide")
+				const wrapper_sections_selector = wrapper.querySelector(".wrapper_sections_selector")
+					//wrapper_sections_selector.style.display = "none"
+					wrapper_sections_selector.classList.add("hide")
 			}
 
 			self.search_panel_is_open = false

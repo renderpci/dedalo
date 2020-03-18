@@ -13,7 +13,8 @@
 			toggle_fields,
 			toggle_search_panel,
 			toggle_presets,
-			render_thesaurus_sections_checkboxes} from './render_search.js'
+			// render_thesaurus_sections_checkboxes
+			} from './render_search.js'
 	import {on_dragstart,
 			on_dragover,
 			on_dragleave,
@@ -77,30 +78,32 @@ search.prototype.init = async function(options) {
 
 	const self = this
 
-	self.instance_caller		= options.caller
+	self.caller					= options.caller
 	self.context				= options.caller.context
-	self.section_tipo 	 		= self.instance_caller.section_tipo	
+	self.section_tipo 	 		= self.caller.section_tipo	
 	self.events_tokens			= []
 	self.parent_node 			= null
 	self.components_list 		= {}
 	self.ar_instances 			= []
-	self.sqo 					= self.instance_caller.sqo_context.show.find(el => el.typo==='sqo')
+	self.sqo 					= self.caller.sqo_context.show.find(el => el.typo==='sqo')
 	self.target_section_tipo 	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
 	self.limit 					= self.sqo.limit || 10
 	self.search_layout_state 	= null
 	self.search_panel_is_open 	= false
 	self.modo 					= null
 
-
+	self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined" 
+		? self.caller.get_sections_selector_data()
+		: null
 
 
 	// dom stored pointers
-	self.wrapper 							= undefined
-	self.search_global_container 			= undefined
-	self.search_container_selector  		= undefined
-	self.search_group_container 			= undefined
-	self.search_container_selection_presets = undefined
-	self.thesaurus_search_selector 			= undefined
+		self.wrapper 							= undefined
+		self.search_global_container 			= undefined
+		self.search_container_selector  		= undefined
+		self.search_group_container 			= undefined
+		self.search_container_selection_presets = undefined
+		self.wrapper_sections_selector 			= undefined
 
 
 	// events subscription
@@ -704,8 +707,8 @@ this.get_search_json_object = function() {
 	// Thesaurus mode
 		if (self.modo==="thesaurus") {
 			// Selected sections to search. From checkboxes
-			const thesaurus_search_selector_ul = document.getElementById("thesaurus_search_selector_ul")
-			const ar_checkboxes = thesaurus_search_selector_ul.querySelectorAll("input")
+			const wrapper_sections_selector_ul = document.getElementById("wrapper_sections_selector_ul")
+			const ar_checkboxes = wrapper_sections_selector_ul.querySelectorAll("input")
 			let ar_sections = []
 			const ar_checkboxes_len = ar_checkboxes.length
 			for (let i = 0; i < ar_checkboxes_len; i++) {
@@ -837,7 +840,7 @@ this.get_search_json_object = function() {
 			document.activeElement.blur()
 
 		// loading css add
-			self.instance_caller.node[0].classList.add("loading")
+			self.caller.node[0].classList.add("loading")
 
 		// filter_obj. Recalculate filter_obj from DOM in default mode (include components with empty values)
 			const filter_obj = self.parse_dom_to_json_filter({
@@ -849,14 +852,14 @@ this.get_search_json_object = function() {
 			self.sqo.limit 	= self.limit
 
 		// pagination
-			self.instance_caller.pagination.total  = null
-			self.instance_caller.pagination.offset = 0
+			self.caller.pagination.total  = null
+			self.caller.pagination.offset = 0
 
 		// section
-			const js_promise = self.instance_caller.refresh()
+			const js_promise = self.caller.refresh()
 			.then(()=>{
 				// loading css remove
-					self.instance_caller.node[0].classList.remove("loading")
+					self.caller.node[0].classList.remove("loading")
 			})
 
 		return js_promise
@@ -873,21 +876,21 @@ this.get_search_json_object = function() {
 		const self = this
 
 		// loading css add
-			self.instance_caller.node[0].classList.add("loading")
+			self.caller.node[0].classList.add("loading")
 
 		// sqo
 			self.sqo.filter = null
 			self.sqo.limit 	= self.limit
 
 		// pagination
-			self.instance_caller.pagination.total  = null
-			self.instance_caller.pagination.offset = 0
+			self.caller.pagination.total  = null
+			self.caller.pagination.offset = 0
 
 		// section
-			const js_promise = self.instance_caller.refresh()
+			const js_promise = self.caller.refresh()
 			.then(()=>{
 				// loading css remove
-					self.instance_caller.node[0].classList.remove("loading")
+					self.caller.node[0].classList.remove("loading")
 			})
 
 		return js_promise
@@ -932,6 +935,10 @@ search.prototype.track_show_panel = function(options) {
 	// Read cookie to auto open search_panel
 		const cookie_name 	= "search"
 		const cookie_obj 	= JSON.parse( read_cookie(cookie_name) || '{"'+section_tipo+'":{}}' )
+
+	if (typeof cookie_obj[section_tipo]==="undefined") {
+		cookie_obj[section_tipo] = {}
+	}
 
 	if (action==="open") {
 		// Open
@@ -1013,19 +1020,19 @@ search.prototype.filter_is_empty = function(filter_obj) {
 * INIT_TIPOLOGY_SELECTOR
 * @return
 */
-search.prototype.init_tipology_selector = function(options) {
+// search.prototype.init_tipology_selector = function(options) {
 
-	const thesaurus_typology_selector = self.thesaurus_search_selector.querySelector(".thesaurus_typology_selector")
-	const selected_value 			  = read_cookie("selected_tipology") || thesaurus_typology_selector.value;
+// 	const thesaurus_typology_selector = self.wrapper_sections_selector.querySelector(".thesaurus_typology_selector")
+// 	const selected_value 			  = read_cookie("selected_tipology") || thesaurus_typology_selector.value;
 
-	// Force update selector with selected value
-		thesaurus_typology_selector.value = selected_value;
+// 	// Force update selector with selected value
+// 		thesaurus_typology_selector.value = selected_value;
 
-	// Build checkboxes
-		render_thesaurus_sections_checkboxes(selected_value, options.ar_data_string);
+// 	// Build checkboxes
+// 		render_thesaurus_sections_checkboxes(selected_value, options.ar_data_string);
 
 
-	return true;
-}//end init_tipology_selector
+// 	return true;
+// }//end init_tipology_selector
 
 

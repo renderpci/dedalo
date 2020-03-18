@@ -99,8 +99,21 @@ area_thesaurus.prototype.build = async function(options) {
 			self.filter = current_filter
 		}
 
+		console.log("self.data:",self.data);
+
 
 	return common_build
 }//end build
 
 
+/**
+* GET_SECTIONS_SELECTOR_DATA
+*/
+area_thesaurus.prototype.get_sections_selector_data = function() {
+	
+	const self = this
+
+	const sections_selector_data = self.data.find(item => item.tipo === self.tipo).value
+	
+	return sections_selector_data
+}// end get_sections_selector_data
