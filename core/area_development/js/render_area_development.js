@@ -132,11 +132,11 @@ const build_widget = (item, self) => {
 			class_name 	 : "widget_label",
 			parent 		 : container,
 			inner_html	 : item.label || ''
-		}).addEventListener("dblclick", function(e){
+		})
+		label.addEventListener("dblclick", function(e){
 			const body = e.target.nextElementSibling
 			body.classList.contains("display_none") ? body.classList.remove("display_none") : body.classList.add("display_none")
 		})
-
 
 	// body
 		const body = ui.create_dom_element({
