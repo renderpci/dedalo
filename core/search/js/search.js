@@ -79,16 +79,19 @@ search.prototype.init = async function(options) {
 
 	self.instance_caller		= options.caller
 	self.context				= options.caller.context
-	self.section_tipo 	 		= self.instance_caller.section_tipo
+	self.section_tipo 	 		= self.instance_caller.section_tipo	
 	self.events_tokens			= []
 	self.parent_node 			= null
 	self.components_list 		= {}
 	self.ar_instances 			= []
 	self.sqo 					= self.instance_caller.sqo_context.show.find(el => el.typo==='sqo')
+	self.target_section_tipo 	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
 	self.limit 					= self.sqo.limit || 10
 	self.search_layout_state 	= null
 	self.search_panel_is_open 	= false
 	self.modo 					= null
+
+
 
 
 	// dom stored pointers
@@ -282,7 +285,8 @@ search.prototype.load_components_from_section = async function(options) {
 						body : {
 							action 	 	 	: "get_section_elements_context",
 							context_type	: 'simple',
-							ar_section_tipo : [section_tipo]
+							// ar_section_tipo : [section_tipo]
+							ar_section_tipo : self.target_section_tipo
 						}
 					})
 

@@ -4,24 +4,37 @@
 * Manage whole thesaurus hierarchies
 *
 */
-class area_thesaurus extends area {
+class area_thesaurus extends area_common {
 
 
 	static $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
 	static $typologies_name_tipo 	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
 	# Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
-	protected $model_view 				= false;
+	protected $model_view 			= false;
 	// protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
 
-	public $build_options				= null;
+	public $build_options			= null;
 
-	
-	function __construct($tipo, $modo='list') {
 
-		return parent::__construct($tipo, $modo);
-	}
+
+	/**
+	* GET_SECTION_TIPO
+	* @return array $section_tipo
+	*/
+		// public function get_section_tipo() {
+			
+		// 	$hierarchy_sections = $this->get_hierarchy_sections(); // $this->get_data_items();
+
+		// 	$section_tipo = array_map(function($item){
+
+		// 		return $item->target_section_tipo;
+
+		// 	}, $hierarchy_sections);
+
+		// 	return $section_tipo;
+		// }//end get_section_tipo
 
 
 
@@ -175,8 +188,9 @@ class area_thesaurus extends area {
 	}//end get_active_hierarchy_sections
 
 
+
 	/**
-	* GET_TyPOLOGY_DATA
+	* GET_TYPOLOGY_DATA
 	* @return string $typology_name
 	*/
 	public function get_typology_data( $section_id ) {
@@ -241,6 +255,8 @@ class area_thesaurus extends area {
 
 		return (string)$typology_name;
 	}//end get_typology_name
+
+
 
 	/**
 	* GET_TYPOLOGY_ORDER
@@ -464,7 +480,7 @@ class area_thesaurus extends area {
 	/**
 	* COMBINE_AR_DATA
 	* Build a global array hierarchized with all elements
-	* @return 
+	* @return array $ar_combine
 	*/
 	public static function combine_ar_data( $ar_path_mix ) {
 
@@ -484,37 +500,35 @@ class area_thesaurus extends area {
 		}
 		#dump($ar_simple, ' ar_simple ++ '.to_string());
 		#return $ar_simple;
-
-		/*
-			REFERENCE ar_hierarchy
-			Hierarchize the simple plain array in revere order
-
-			[0] => Array
-	        (
-	            [ts1_65] => Array
-	                (
-	                    [ts1_73] => Array
-	                        (
-	                            [ts1_74] => Array
-	                                (
-	                                )
-	                        )
-	                )
-	        )
-		    [1] => Array
-		        (
-		            [ts1_65] => Array
-		                (
-		                    [ts1_66] => Array
-		                        (
-		                            [ts1_67] => Array
-		                                (
-		                                )
-		                        )
-		                )
-		        )
-		    )
-		*/
+		
+		// REFERENCE ar_hierarchy
+			// Hierarchize the simple plain array in revere order
+			// [0] => Array
+			//       (
+			//           [ts1_65] => Array
+			//               (
+			//                   [ts1_73] => Array
+			//                       (
+			//                           [ts1_74] => Array
+			//                               (
+			//                               )
+			//                       )
+			//               )
+			//       )
+			//    [1] => Array
+			//        (
+			//            [ts1_65] => Array
+			//                (
+			//                    [ts1_66] => Array
+			//                        (
+			//                            [ts1_67] => Array
+			//                                (
+			//                                )
+			//                        )
+			//                )
+			//        )
+			//    )
+		
 		$ar_hierarchy=array(); foreach ($ar_simple as $key => $ar_value) {
 			# iterate array values in reverse order
 			foreach (array_reverse($ar_value) as $ckey => $cvalue) {
@@ -543,27 +557,26 @@ class area_thesaurus extends area {
 		}
 		#dump($ar_hierarchy, ' ar_hierarchy ++ '.to_string()); die();
 
+		
+		// REFERENCE ar_combine
+			// Combines hierarchized arrays to obtain one global array with combined values
 
-		/*
-			REFERENCE ar_combine
-			Combines hierarchized arrays to obtain one global array with combined values
-
-			[ts1_65] => Array
-	        (
-	            [ts1_73] => Array
-	                (
-	                    [ts1_74] => Array
-	                        (
-	                        )
-	                )
-	            [ts1_66] => Array
-	                (
-	                    [ts1_67] => Array
-	                        (
-	                        )
-	                )
-	        )
-        */		
+			// [ts1_65] => Array
+			//       (
+			//           [ts1_73] => Array
+			//               (
+			//                   [ts1_74] => Array
+			//                       (
+			//                       )
+			//               )
+			//           [ts1_66] => Array
+			//               (
+			//                   [ts1_67] => Array
+			//                       (
+			//                       )
+			//               )
+			//       )
+        		
 		$ar_combine=array(); foreach ($ar_hierarchy as $key => $ar_value) {			
 			$ar_combine = array_merge_recursive($ar_combine, $ar_value);			
 		}
@@ -576,11 +589,10 @@ class area_thesaurus extends area {
 
 	/**
 	* GET_SIBLINGS
-	* @return 
+	* @return array $ar_siblings
 	*/
 	public static function get_siblings($ckey) {
 		
-		#dump($ckey, ' ckey ++ '.to_string());
 		debug_log(__METHOD__." ckey ".to_string($ckey), logger::WARNING);
 
 		$ar_parts 		= explode('_', $ckey);
@@ -647,7 +659,106 @@ class area_thesaurus extends area {
 
 
 
+	/**
+	* GET_SQO_CONTEXT
+	* @return object $sqo_context
+	*/
+	public function get_sqo_context() {
+
+		// already calculated
+			if (isset($this->sqo_context)) {
+				return $this->sqo_context;
+			}	
+
+		// sort vars
+			$section_tipo 	= $this->get_tipo();
+			$lang 			= $this->get_lang();
+			$mode 			= $this->get_modo();		
+			$limit 			= ($mode==='list') ? 10 : 1;
+
+
+		// ar_section_tipo. Get the sections of the thesaurus that will be used in the filter
+			$hierarchy_sections = $this->get_hierarchy_sections();
+			$ar_section_tipo = array_map(function($item){
+				return $item->target_section_tipo;
+			}, $hierarchy_sections);
+
+
+		// SHOW
+			$show = [];
+			// source
+				$source = new stdClass();
+					$source->typo 			= 'source';
+					$source->action 		= 'get_data'; //  'search';
+					$source->tipo 			= $section_tipo;
+					$source->section_tipo 	= $ar_section_tipo;
+					$source->lang 			= $lang;
+					$source->mode 			= $mode;
+					$source->section_id 	= null;
+					$source->model 			= get_class($this);
+					$source->pagination 	= (object)[
+						'total'  => 0,
+						'offset' => 0,
+					];
+				// add source
+					$show[] = $source;
+
+			// search_query_object
+				$sqo_options = new stdClass();
+					$sqo_options->tipo 			= $section_tipo;
+					$sqo_options->section_tipo 	= $ar_section_tipo;
+					$sqo_options->full_count 	= false;
+					$sqo_options->add_select 	= false;
+					$sqo_options->direct 		= true;
+
+					$sqo_options->limit  		= $limit;
+					$sqo_options->offset 		= 0;
+
+					// filter_by_locators. when sectio_id is received
+					if (!empty($section_id)) {
+						$self_locator = new locator();
+							$self_locator->set_section_tipo($section_tipo);
+							$self_locator->set_section_id($section_id);
+						$sqo_options->filter_by_locators = [$self_locator];
+					}
+
+					$search_query_object = common::build_search_query_object($sqo_options);
+
+				// add search_query_object
+					$show[] = $search_query_object;
+
+			// // ddo
+			// 	$layout_map_options = new stdClass();
+			// 		$layout_map_options->section_tipo 		 = $section_tipo;
+			// 		$layout_map_options->tipo 				 = $section_tipo;
+			// 		$layout_map_options->modo 				 = $mode;
+			// 		$layout_map_options->add_section 		 = true;
+			// 		$layout_map_options->config_context_type = 'show';
+
+			// 	$ar_ddo = layout_map::get_layout_map($layout_map_options);
+
+			// 	// add layout_map ddo's
+			// 		$show = array_merge($show, $ar_ddo);
+
+
+		// SEARCH
+			$search = [];
+			// nothing to do yet
+
+
+		// sqo_context object
+			$sqo_context = new stdClass();
+				$sqo_context->show 	 = $show;
+				$sqo_context->search = $search;
+
+		// fix
+			$this->sqo_context = $sqo_context;
+
+
+		return $sqo_context;
+	}//end get_sqo_context
+
 
 
 }//end area_thesaurus
-?>
+

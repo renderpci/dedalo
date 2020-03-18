@@ -435,8 +435,14 @@ class dd_core_api {
 							$page_element->type  		= 'area';
 							$page_element->tipo  		= $tipo;
 							$page_element->mode 	 	= $mode;
-							$page_element->lang 	 	= DEDALO_DATA_LANG;						
-							#$page_element->sqo_context  = $sqo_context;
+							$page_element->lang 	 	= DEDALO_DATA_LANG;
+							$page_element->section_tipo = $tipo;
+
+							// sqo_context
+								$area = area::get_instance($model, $tipo, $mode);
+								$sqo_context = $area->get_sqo_context();
+
+							$page_element->sqo_context = $sqo_context;							
 
 						return $page_element;
 					})();
@@ -560,7 +566,7 @@ class dd_core_api {
 
 			$ar_section_tipo 	= (array)$json_data->ar_section_tipo;
 			$context_type 		= $json_data->context_type;
-
+			
 			$filter_components = common::get_section_elements_context([
 				'ar_section_tipo' 	=> $ar_section_tipo,
 				'context_type' 		=> $context_type
@@ -595,7 +601,7 @@ class dd_core_api {
 	*/
 	static function filter_get_editing_preset($json_data){
 		global $start_time;
-
+		
 		//////session_write_close();
 
 		$response = new stdClass();
@@ -811,10 +817,15 @@ class dd_core_api {
 									// overwrited to get time machine dato instead the real dato
 									$element->matrix_id = $ddo_source->matrix_id;
 								}
-						}else{
+						}else if (strpos($model, 'area')===0) {
 
-							// others (area, etc.)
-								$element = new $model($tipo, $mode);
+							// areas
+								$element = area::get_instance($model, $tipo, $mode);
+
+						// }else{
+
+						// 	// others 
+						// 		$element = new $model($tipo, $mode);
 						}
 						break;
 
@@ -944,14 +955,24 @@ class dd_core_api {
 										$pagination->offset = $offset;
 
 									$element->pagination = $pagination;
-							}else{
 
-								// others (area, etc.)
-									$element = new $model($tipo, $mode);
+							}else if (strpos($model, 'area')===0) {
 
-									// build_options
-										$build_options = $ddo_source->build_options ?? null;
-										$element->set_build_options($build_options);
+								// areas
+									$element = area::get_instance($model, $tipo, $mode);
+
+								// build_options
+									$build_options = $ddo_source->build_options ?? null;
+									$element->set_build_options($build_options);
+
+							// }else{
+
+							// 	// others (area, etc.)
+							// 		$element = new $model($tipo, $mode);
+
+							// 		// build_options
+							// 			$build_options = $ddo_source->build_options ?? null;
+							// 			$element->set_build_options($build_options);
 							}
 							break;
 

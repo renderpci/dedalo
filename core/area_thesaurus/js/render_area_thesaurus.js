@@ -35,6 +35,18 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 			return current_content_data
 		}
 
+	const fragment = new DocumentFragment()
+
+	// search filter node
+		const filter = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter',
+			parent 			: fragment
+		})
+		await self.filter.render().then(filter_wrapper =>{
+			filter.appendChild(filter_wrapper)
+		})
+
 	// buttons
 		//const current_buttons = await buttons(self);
 
@@ -43,7 +55,8 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 			content_data : current_content_data,
 			//buttons 	 : current_buttons
 		})
-
+		wrapper.appendChild(fragment)
+	
 	// change the mode of the thesaurus
 	// when the user do click publish the tipo to go and set the mode in list
 	// the action can be executed mainly in page, but it can be used for any instance.
