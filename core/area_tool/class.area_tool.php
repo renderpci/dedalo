@@ -1,6 +1,6 @@
 <?php
 
-class area_tool extends area {
+class area_tool extends area_common {
 		
 
 }
