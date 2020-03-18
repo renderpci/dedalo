@@ -4,45 +4,13 @@
 *
 *
 */
-class area extends common  {
-
-	# VARS
-	protected $tipo;
-	protected $lang;
-	protected $modo;
-
-	# STRUCTURE DATA
-	protected $RecordObj_dd ;
-	protected $modelo;
-	protected $norden;
-	protected $label;
+class area extends area_common  {
 
 	static $ar_ts_children_all_areas_hierarchized;
 
 	# CHILDREN AREAS CRITERION
 	static $ar_children_include_modelo_name = array('area','section','section_tool');
 	static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
-
-
-	function __construct($tipo, $modo='list') {
-
-		$this->define_tipo($tipo);
-		$this->define_lang(DEDALO_DATA_LANG);
-		$this->define_modo($modo);
-
-
-		# common load tesauro data of current obj
-		parent::load_structure_data();
-
-		return true;
-	}//end __construct
-
-	# define tipo
-	protected function define_tipo($tipo) {	$this->tipo = $tipo ; }
-	# define lang
-	protected function define_lang($lang) {	$this->lang = $lang ; }
-	# define modo
-	protected function define_modo($modo) {	$this->modo = $modo ; }
 
 
 	/**

@@ -4,7 +4,7 @@
 *
 *
 */
-class area_development extends area {
+class area_development extends area_common {
 
 
 	/**

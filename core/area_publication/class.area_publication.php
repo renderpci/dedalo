@@ -1,6 +1,6 @@
 <?php
 
-class area_publication extends area {
+class area_publication extends area_common {
 	
 	/*
 	function __construct($id=NULL, $tipo=NULL, $modo=NULL) {	# section reference ($id=NULL, $tipo=NULL, $modo=NULL)

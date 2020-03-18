@@ -1,6 +1,6 @@
 <?php
 
-class area_admin extends area {
+class area_admin extends area_common {
 	
 	# HTML
 	public function get_html() {

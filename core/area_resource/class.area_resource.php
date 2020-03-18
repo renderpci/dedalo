@@ -1,6 +1,6 @@
 <?php
 
-class area_resource extends area {
+class area_resource extends area_common {
 		
 
 }
