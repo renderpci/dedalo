@@ -786,17 +786,17 @@ const render_sections_selector = (self) => {
 		// selector (list of typologies)
 			const typology_selector = ui.create_dom_element({
 				element_type	: 'select',
-				class_name 		: 'typology_selector',
+				class_name 		: 'dd_input typology_selector',
 				parent			: wrapper_sections_selector
 			})
-			typology_selector.addEventListener('change',function(event){				
+			typology_selector.addEventListener('change',function(event){
 				const typology_id 	= event.target.value
 				build_sections_check_boxes(self, typology_id, wrapper_sections_selector_ul)
 			},false)
 
 		// options for selector
 			const typologies_length = typologies.length
-			for (let i = 0; i < typologies_length; i++) {				
+			for (let i = 0; i < typologies_length; i++) {
 				ui.create_dom_element({
 					element_type	: 'option',
 					value 			: typologies[i].section_id,
@@ -811,7 +811,7 @@ const render_sections_selector = (self) => {
 			if (selected_typology) {
 				typology_selector.value = selected_typology
 			}
-			
+
 		// checkbox list wrapper (sections of current selected thesaurus typology, like 'thematic')
 			const wrapper_sections_selector_ul = ui.create_dom_element({
 				element_type	: 'ul',
@@ -820,7 +820,7 @@ const render_sections_selector = (self) => {
 			})
 
 		// trigger first selected value
-			build_sections_check_boxes(self, typology_selector.value, wrapper_sections_selector_ul)				
+			build_sections_check_boxes(self, typology_selector.value, wrapper_sections_selector_ul)
 
 
 	return wrapper_sections_selector
@@ -850,6 +850,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 			// li
 				const li = ui.create_dom_element({
 					element_type 	: 'li',
+					class_name 		: 'dd_input',
 					parent 		 	: ul
 				})
 
@@ -857,6 +858,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 				const input = ui.create_dom_element({
 					element_type 	: 'input',
 					parent 		 	: li,
+					class_name 		: '',
 					id 				: 'section_option_'+item.target_section_tipo,
 					// name 			: item.hierarchy_target_section_tipo,
 					value 			: item.target_section_tipo,
