@@ -40,12 +40,13 @@
 	export const get_instance = async function(options){
 
 		// key values ['model','tipo','section_tipo','section_id','mode','lang']
-		// mandatory
+
+		// mandatory vars
 			const tipo 				= options.tipo
 			const section_tipo 		= options.section_tipo
 			const section_id		= options.section_id // string format
 
-		// optional (only mandatory for build the instance)
+		// optional vars (only mandatory for build the instance)
 			const mode				= options.mode  || 'list'
 			const lang				= options.lang  || page_globals.dedalo_data_lang
 			const model 			= options.model || await ( async () => {
@@ -56,8 +57,7 @@
 					section_id		: section_id
 				})
 				const current_model = element_context.result[0].model
-
-				if(typeof options.context === 'undefined'){
+				if(typeof options.context==='undefined'){
 					options.context = element_context.result[0]
 				}
 
@@ -123,7 +123,7 @@
 				}
 			}
 
-			const instance = await load_instance()
+		const instance = load_instance()
 
 
 		return instance
