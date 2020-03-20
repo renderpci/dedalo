@@ -7,7 +7,7 @@
 	$tipo				= $this->get_tipo();
 	$permissions		= common::get_permissions($tipo, $tipo);
 	$modo				= $this->get_modo();
-
+	$search_action 		= $this->search_action;
 
 
 // context
@@ -59,7 +59,15 @@
 
 		$item = new stdClass();
 			$item->tipo 				= $this->get_tipo();
-			$item->value 				= $value;
+			$item->value 				= $value;			
+
+		// search_action			
+			if (!empty($search_action) && $search_action->action==='search') {
+				// search rows
+				$result = $this->search_thesaurus( $search_action->search_query_object );				
+				$item->ts_search = $result;	
+			}
+		
 
 		// subdata add
 			$data[] = $item;

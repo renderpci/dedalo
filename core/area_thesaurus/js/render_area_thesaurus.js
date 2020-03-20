@@ -29,8 +29,16 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 
 	const render_level = options.render_level
 
+	// ts_object
+		const data = self.data.find(item => item.tipo === 'dd100')	
+		if (data.ts_search) {
+			const node_content_data = self.node[0].querySelector('.content_data .area')
+			ts_object.parse_search_result(data.ts_search.result, null, false)
+			return node_content_data
+		}
+
 	// content_data
-		const current_content_data = await content_data(self)
+		const current_content_data = await content_data(self)	
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -211,13 +219,11 @@ const content_data = async function(self) {
 							})
 
 					// ts_object render
-						ts_object.get_children(link_children)
+						ts_object.get_children(link_children)											
 				}
 		}
 
-		// ts_object
-
-
+			
 
 			// const hierarchy_root_nodes   = hierarchy_nodes.map(node => node.section_tipo+'_'+node.section_id+'_root')
 			// const hierarchy_nodes_length = hierarchy_root_nodes.length
@@ -243,7 +249,7 @@ const content_data = async function(self) {
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
 			  content_data.appendChild(fragment)
-
+	
 
 	return content_data
 }//end content_data

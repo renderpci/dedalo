@@ -195,7 +195,7 @@ render_search.prototype.render_components_list = async function(options) {
 
 	// First item check
 		if (!ar_elements || typeof ar_elements[0]==="undefined") {
-			console.error(`[render_components_list] Error. Empty ar_elements on load_components_from_section ${section_tipo}`, ar_elements);
+			console.warn(`[render_components_list] Error. Empty ar_elements on load_components_from_section ${section_tipo}`, ar_elements);
 			return false
 		}
 
@@ -831,10 +831,13 @@ const render_sections_selector = (self) => {
 /**
 * BUILD_SECTIONS_CHECK_BOXES
 */
-const build_sections_check_boxes = (self, typology_id, parent) => {
+const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 	const ar_sections 	= self.sections_selector_data.filter(item => item.typology_section_id === typology_id)
 	const ul 			= parent
+
+	//reset the sqo sections
+		self.target_section_tipo.splice(0,self.target_section_tipo.length)
 
 	// clean wrapper_sections_selector_ul
 		while (ul.hasChildNodes()) {
@@ -847,6 +850,8 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 			const item = ar_sections[i]
 
+			self.target_section_tipo.push(item.target_section_tipo)
+
 			// li
 				const li = ui.create_dom_element({
 					element_type 	: 'li',
@@ -855,7 +860,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 				})
 
 			// checkbox
-				const input = ui.create_dom_element({
+				const check_box = ui.create_dom_element({
 					element_type 	: 'input',
 					parent 		 	: li,
 					class_name 		: '',
@@ -863,8 +868,27 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 					// name 			: item.hierarchy_target_section_tipo,
 					value 			: item.target_section_tipo,
 				})
-				input.type = "checkbox"
-				input.checked = true
+				check_box.type = "checkbox"
+				check_box.checked = true
+
+				check_box.addEventListener('change',async function(event){
+
+					if(check_box.checked){
+						self.target_section_tipo.push(check_box.value)
+					}else{
+						const index = self.target_section_tipo.findIndex(item => item === check_box.value)
+						self.target_section_tipo.splice(index, 1)
+					}
+
+					await self.load_components_from_section( {section_tipo: self.target_section_tipo})
+					self.render_components_list({
+						section_tipo : self.target_section_tipo,
+						target_div 	 : self.search_container_selector,
+						path 		 : []
+					})
+
+				},false)
+
 
 			// label
 				const label = ui.create_dom_element({

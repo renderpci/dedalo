@@ -303,8 +303,8 @@ class search {
 		# RECORDS_DATA BUILD TO OUTPUT
 			$records_data = new stdClass();
 				$records_data->ar_records 	= $ar_records;
-				if(SHOW_DEVELOPER===true) {
-					$records_data->generated_time['parsed_time'] 	 = $parsed_time;
+				if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+					$records_data->generated_time['parsed_time'] = $parsed_time;
 					# Info about required time to exec the search
 					$records_data->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
 					# Query to database string

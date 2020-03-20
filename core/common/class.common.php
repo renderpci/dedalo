@@ -2310,12 +2310,17 @@ abstract class common {
 		# Manage multiple sections
 		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
 		#$ar_section_tipo = (array)$section_tipo;
-
+		$resolved_section = [];
 		$context = [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
+			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
+			if (in_array($section_real_tipo, $resolved_section)) {
+				continue;
+			}
+			$resolved_section[] = $section_real_tipo;
 
 			$section_permisions = security::get_security_permissions($section_tipo, $section_tipo);
-			$user_id_logged = navigator::get_user_id();
+			$user_id_logged 	= navigator::get_user_id();
 
 			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
 				&& $user_id_logged!=DEDALO_SUPERUSER
@@ -2324,6 +2329,7 @@ abstract class common {
 				continue;
 			}
 
+			$section_tipo = $section_real_tipo;
 			//create the section instance and get the context_simple
 				$dd_section = section::get_instance(null, $section_tipo, $modo='list', $cache=true);
 

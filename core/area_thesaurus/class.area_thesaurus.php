@@ -16,7 +16,7 @@ class area_thesaurus extends area_common {
 	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 	public $build_options			= null;
-
+	public $search_action 			= null;
 
 
 	/**
@@ -411,21 +411,19 @@ class area_thesaurus extends area_common {
 	* SEARCH_THESAURUS
 	* @return object $response
 	*/
-	public function search_thesaurus($search_options) {
-
+	public function search_thesaurus($search_query_object) {
+	dump($search_query_object, ' search_query_object ++ '.to_string());
 		$start_time=microtime(1);
 		
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
 
-		$search_query_object = $search_options->search_query_object;
-
 		# Search records
-		$search_development2 = new search_development2($search_query_object);
-		$search_result 		 = $search_development2->search();
-		$ar_records 		 = $search_result->ar_records;
-			#dump($ar_records, ' ar_records ++ '.to_string()); die();
+			$search 		= search::get_instance($search_query_object);
+			$search_result  = $search->search();
+			$ar_records 	= $search_result->ar_records;	
+				#dump($ar_records, ' ar_records ++ '.to_string()); die();
 
 		# ar_path_mix . Calculate full path of each result
 		$ar_path_mix = array();
@@ -470,7 +468,7 @@ class area_thesaurus extends area_common {
 		if(SHOW_DEBUG===true) {
 			$response->strQuery = $search_result->strQuery;
 		}		
-	
+		
 
 		return (object)$response;
 	}//end search_thesaurus
@@ -700,6 +698,7 @@ class area_thesaurus extends area_common {
 						'total'  => 0,
 						'offset' => 0,
 					];
+					$source->loaded 			= false;
 				// add source
 					$show[] = $source;
 
