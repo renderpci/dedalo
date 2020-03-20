@@ -957,13 +957,20 @@ class dd_core_api {
 									$element->pagination = $pagination;
 
 							}else if (strpos($model, 'area')===0) {
-
+								
 								// areas
 									$element = area::get_instance($model, $tipo, $mode);
-
+								
 								// build_options
 									$build_options = $ddo_source->build_options ?? null;
 									$element->set_build_options($build_options);
+
+								// search_action
+									$search_action = $ddo_source->search_action ?? 'show_all';
+									$obj = new stdClass();
+										$obj->action 				= $search_action;
+										$obj->search_query_object 	= $search_query_object;
+									$element->set_search_action($obj);
 
 							// }else{
 

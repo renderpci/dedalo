@@ -162,7 +162,6 @@ section.prototype.build = async function(autoload=false) {
 					//console.log("[section.build] self.pagination.total:",self.pagination.total);
 				}
 					// console.log("self:",self);
-
 			// get context and data
 				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
 					// console.log("[section.build] api_response +++++++++++++++++++++++++++++:",api_response);

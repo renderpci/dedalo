@@ -67,12 +67,18 @@ area_common.prototype.init = async function(options) {
 	self.datum 	 			= options.datum   		|| null
 	self.context 			= options.context 		|| null
 	self.data 	 			= options.data 	  		|| null	
+	self.pagination 		= { // pagination info
+		total : 0,
+		offset: 0
+	}
 
 	self.type 				= 'area'
 	self.label 				= null
 
 	self.widgets 	 		= options.widgets 	  	|| null
 	self.permissions 		= options.permissions 	|| null	
+
+
 
 
 	// source. add to sqo_context if not exists. Be careful not to add a source element twice
@@ -128,21 +134,6 @@ area_common.prototype.build = async function() {
 	// status update
 		self.status = 'building'
 
-	// sqo
-		// const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
-	
-	// // area basic context
-	// 	const source_context = {
-	// 		model 			: self.model,
-	// 		tipo  			: self.tipo,
-	// 		lang  			: self.lang,
-	// 		mode  			: self.mode,
-	// 		action 			: 'get_data',
-	// 		typo 			: 'source',
-	// 		build_options 	: self.build_options
-	// 	}
-	// 	const sqo_context = [source_context]
-
 
 	// build_options. Add custom area build_options to source
 		const source = self.sqo_context.show.find(element => element.typo==='source')
@@ -152,6 +143,7 @@ area_common.prototype.build = async function() {
 		const current_data_manager = new data_manager()
 
 	// get context and data
+			console.log("self.sqo_context.show:",self.sqo_context.show);
 		const api_response 	= await current_data_manager.section_load_data(self.sqo_context.show)
 			console.log("[area_common.build] api_response++++:",api_response);
 
@@ -171,9 +163,6 @@ area_common.prototype.build = async function() {
 
 	// section tipo
 		self.section_tipo = area_ddo.section_tipo || null
-
-	// self.sqo_context
-		self.sqo_context = area_ddo.sqo_context
 		
 	// debug
 		if(SHOW_DEBUG===true) {

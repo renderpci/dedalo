@@ -45,11 +45,11 @@ export const ts_object = new function() {
 	* @return promise
 	*/
 	//var start = null
-	this.get_children = function(children_element) {
+	this.get_children = async function(children_element) {
 		
 		if (SHOW_DEBUG===true) {
 			//let start_time = new Date().getTime()	
-		}			
+		}
 		
 		const tipo 					= children_element.dataset.tipo
 		const wrap 					= children_element.parentNode.parentNode
@@ -82,7 +82,7 @@ export const ts_object = new function() {
 				console.log(children_element);
 				return alert("Error on find children_container!")
 			}*/
-		let children_container 	= null
+		let children_container 		= null
 		const wrap_children 		= wrap.childNodes
 		const wrap_children_len 	= wrap_children.length
 		for (let i = wrap_children_len - 1; i >= 0; i--) {
@@ -107,10 +107,11 @@ export const ts_object = new function() {
 			//return console.log("[ts_object.get_children] trigger_vars", trigger_vars); //console.log(new Error().stack);
 			
 		// AJAX REQUEST
-			const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
-					if(SHOW_DEBUG===true) {
-						//console.log("[ts_object.get_children] response",response);
-					}				
+			const js_promise = ts_object.get_json(trigger_vars)
+
+			js_promise.then(function(response) {
+
+			// const js_promise = new Promise( (resolve, reject) => {			
 
 					if (response && response.result) {
 						// DOM_PARSE_children
@@ -129,8 +130,10 @@ export const ts_object = new function() {
 							// Update arrow state					
 							//ts_object.update_arrow_state(children_element, true) // disabled temporally
 						}
+						return result
 					}else{
 						console.log("[ts_object.get_children] Error, response is null");
+						reject(false)
 					}				
 
 					if(SHOW_DEBUG===true) {
@@ -138,6 +141,9 @@ export const ts_object = new function() {
 						//console.log("[ts_object.get_children] js execution time: " + (end - start_time) +' ms' +')')
 						//start = new Date().getTime()
 					}
+			// });
+
+				
 			}, function(error) {
 				console.error("Error. Failed get_json!", error);
 			});
@@ -189,15 +195,15 @@ export const ts_object = new function() {
 	*/
 	// this.dom_parse_children = function(ar_children_data, children_container, clean_children_container, target_section_tipo, type) {
 	this.dom_parse_children = function(ar_children_data, children_container, options) {
-		
+			// console.log("children_container:",children_container);
 		const self = this
 
 		if (!ar_children_data) {
-			console.log("[dom_parse_children] Error. No ar_children_data received. Nothing is parsed")
+			console.warn("[dom_parse_children] Error. No ar_children_data received. Nothing is parsed")
 			return false;
 		}
 		if (!children_container) {
-			console.log("[dom_parse_children] Error. No children_container received. Nothing is parsed");
+			console.warn("[dom_parse_children] Error. No children_container received. Nothing is parsed");
 			return false;
 		}
 		// Element wrap div is parentNode of 'children_container' (children_container)
@@ -2126,30 +2132,32 @@ export const ts_object = new function() {
 
 			let element = data[key]
 
-			if (ar_resolved.indexOf(key) !== -1) {
-				if(SHOW_DEBUG===true) {
-					console.log("[ts_object.parse_search_result] Skipped resolved key "+key);
-				}				
+			// checks already exists
+				if (ar_resolved.indexOf(key) !== -1) {
+					if(SHOW_DEBUG===true) {
+						console.log("[ts_object.parse_search_result] Skipped resolved key "+key);
+					}				
 
-				// Recursive parent element
-				//let h_data = element.heritage
-				//ts_object.parse_search_result(h_data, self.current_main_div, true)
-				continue;
-			}
-
-			if(is_recursion===false) {
-				// Calculate main div of each root element
-				// Search children place
-				main_div = document.querySelector('.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container')
-				if (main_div) {
-					// Clean main div (Clean previous nodes from root)
-					while (main_div.firstChild) {
-					    main_div.removeChild(main_div.firstChild);
-					}
-				}else{
-					//console.log("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')					
+					// Recursive parent element
+					//let h_data = element.heritage
+					//ts_object.parse_search_result(h_data, self.current_main_div, true)
+					continue;
 				}
-			}
+
+			// clean div conatainer
+				if(is_recursion===false) {
+					// Calculate main div of each root element
+					// Search children place
+					main_div = document.querySelector('.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container')
+					if (main_div) {
+						// Clean main div (Clean previous nodes from root)
+						while (main_div.firstChild) {
+						    main_div.removeChild(main_div.firstChild);
+						}
+					}else{
+						//console.log("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')					
+					}
+				}
 
 			if(!main_div) {
 				ar_resolved = [] // reset array
@@ -2157,34 +2165,35 @@ export const ts_object = new function() {
 
 			}else{
 			
-				let ar_children_data = []
-					ar_children_data.push(element)
+				const ar_children_data = []
+					  ar_children_data.push(element)
 		
 				const options = {
 					clean_children_container 		: false, // Elements are added to existing main_div instead replace
 					children_container_is_loaded 	: false, // Set children container as loaded
 					show_arrow_opened 				: false, // Set icon arrow as opened
-				}			
+				}
 				
 				const promise = ts_object.dom_parse_children(ar_children_data, main_div, options)
 			}
-				/*
-				.then(function(result) {
-					//console.log(element.heritage);
-					if (typeof element.heritage!=='undefined') {
-						var h_data = element.heritage
-						ts_object.parse_search_result(h_data, result)
+				
 
-						//var children_element = result.parentNode.querySelector('.elements_container > [data-type="link_children"]')
-						//ts_object.update_arrow_state(children_element, true)
+				// .then(function(result) {
+				// 	//console.log(element.heritage);
+				// 	if (typeof element.heritage!=='undefined') {
+				// 		var h_data = element.heritage
+				// 		ts_object.parse_search_result(h_data, result)
+
+				// 		//var children_element = result.parentNode.querySelector('.elements_container > [data-type="link_children"]')
+				// 		//ts_object.update_arrow_state(children_element, true)
 						
-						console.log("parse_search_result case "+key);
-					}else{
-						console.log("else case "+key);
-						//ts_object.dom_parse_children(ar_children_data, main_div, false)
-					}
-				})
-				*/
+				// 		console.log("parse_search_result case "+key);
+				// 	}else{
+				// 		console.log("else case "+key);
+				// 		//ts_object.dom_parse_children(ar_children_data, main_div, false)
+				// 	}
+				// })
+				
 
 			// Recursion when heritage is present
 			// Note var self.current_main_div is set on each dom_parse_children call

@@ -1,5 +1,3 @@
-
-
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -36,7 +34,6 @@
 export const search = function() {
 
 	// render prototypes
-
 
 
 	return true
@@ -86,6 +83,7 @@ search.prototype.init = async function(options) {
 	self.components_list 		= {}
 	self.ar_instances 			= []
 	self.sqo 					= self.caller.sqo_context.show.find(el => el.typo==='sqo')
+	self.source 				= self.caller.sqo_context.show.find(el => el.typo==='source')
 	self.target_section_tipo 	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
 	self.limit 					= self.sqo.limit || 10
 	self.search_layout_state 	= null
@@ -216,7 +214,7 @@ search.prototype.render = async function() {
 
 	// render section component list [left]
 		await self.render_components_list({
-			section_tipo : self.section_tipo,
+			section_tipo : self.target_section_tipo,
 			target_div 	 : self.search_container_selector,
 			path 		 : []
 		})
@@ -288,8 +286,7 @@ search.prototype.load_components_from_section = async function(options) {
 						body : {
 							action 	 	 	: "get_section_elements_context",
 							context_type	: 'simple',
-							// ar_section_tipo : [section_tipo]
-							ar_section_tipo : self.target_section_tipo
+							ar_section_tipo : section_tipo
 						}
 					})
 
@@ -847,9 +844,15 @@ this.get_search_json_object = function() {
 				mode : "search"
 			}).filter
 
+		// source search_action
+			self.source.search_action = 'search'
+		
 		// sqo
 			self.sqo.filter = filter_obj
 			self.sqo.limit 	= self.limit
+			// const sqo = self.caller.sqo_context.show.find(el => el.typo==='sqo')
+			// sqo.filter = filter_obj
+			// sqo.limit 	= self.limit
 
 		// pagination
 			self.caller.pagination.total  = null
@@ -877,6 +880,9 @@ this.get_search_json_object = function() {
 
 		// loading css add
 			self.caller.node[0].classList.add("loading")
+		
+		// source search_action
+			self.source.search_action = 'show_all'
 
 		// sqo
 			self.sqo.filter = null
