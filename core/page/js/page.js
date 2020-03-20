@@ -90,15 +90,11 @@ page.prototype.init = async function(options) {
 					const page_element = api_response.result
 
 				// check response page element is valid for instantiate. Element instance loads the file
-					try {
-						const page_element_instance = await instantiate_page_element(page_element)
-					}catch(error){
-						console.error("page_element_instance error:", error);
+					const page_element_instance = await instantiate_page_element(page_element)
+					if (typeof page_element_instance==="undefined" || !page_element_instance) {
 						console.error("[page.user_action] Stopped user action. Element instance not suitable. page_element:", page_element);
 						return false
 					}
-
-
 
 				// elements to stay
 					const base_types = ['section','tool','area']
