@@ -170,7 +170,8 @@ data_manager.prototype.count = async function(sqo) {
 data_manager.prototype.get_element_context = async function(source) {
 
 	// api request
-		const api_response = await this.request({
+		// const api_response = await this.request({
+		const api_response = this.request({
 			body : {
 				action 	: 'get_element_context',
 				source 	: source
@@ -191,7 +192,8 @@ data_manager.prototype.get_element_context = async function(source) {
 data_manager.prototype.get_page_element = async function(options) {
 
 	// api request
-		const api_response = await this.request({
+		// const api_response = await this.request({
+		const api_response = this.request({
 			body : {
 				action 	: 'get_page_element',
 				options : options

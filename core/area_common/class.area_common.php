@@ -1,11 +1,11 @@
 <?php
 /**
-* AREA
+* AREA_COMMON
 *
 *
 */
 class area_common extends common  {
-	
+
 
 # VARS
 	#protected $tipo;
