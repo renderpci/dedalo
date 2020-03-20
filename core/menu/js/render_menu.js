@@ -215,8 +215,11 @@ render_menu.prototype.edit = async function() {
 			section_label.addEventListener("click", e => {
 				event.stopPropagation();
 				// event_manager
-				if (current_instance.mode === 'edit'){
-					event_manager.publish('user_action', {tipo : current_instance.tipo, mode : 'list'})
+				if (current_instance.mode==='edit'){
+					event_manager.publish('user_action', {
+						tipo : current_instance.tipo,
+						mode : 'list'
+					})
 				}
 				self.menu_active = false
 			})
@@ -227,7 +230,8 @@ render_menu.prototype.edit = async function() {
 			element_type	: 'div',
 			class_name		: 'button_toggle_inspector',
 			parent 			: fragment
-		}).addEventListener("click", function(e) {
+		})
+		toggle_inspector.addEventListener("click", function(e) {
 			ui.toggle_inspector(e)
 		})
 
@@ -248,6 +252,8 @@ render_menu.prototype.edit = async function() {
 
 /**
 * GET_DEBUG_INFO_BAR
+* @param object instance self
+* @return dom node debug_info_bar
 */
 const get_debug_info_bar = (self) => {
 
@@ -292,7 +298,6 @@ const get_debug_info_bar = (self) => {
 	})
 
 
-
 	return debug_info_bar
 }//end get_debug_info_bar
 
@@ -304,12 +309,11 @@ const get_debug_info_bar = (self) => {
 */
 const level_hierarchy = async (options) => {
 
-	const self			= options.self
-	const datalist 		= options.datalist
-	const root_ul 		= options.root_ul
-	const current_tipo	= options.current_tipo
-
-	const root_areas = datalist.filter(item => item.parent === current_tipo)
+	// sort vars
+		const self			= options.self
+		const datalist 		= options.datalist
+		const root_ul 		= options.root_ul
+		const current_tipo	= options.current_tipo
 
 	// ul container
 		const ul = ui.create_dom_element({
@@ -318,23 +322,25 @@ const level_hierarchy = async (options) => {
 			id 				: current_tipo
 		})
 
-	//store in the instance the new ul node
-	self.ul_nodes.push(ul)
+	// store in the instance the new ul node
+		self.ul_nodes.push(ul)
 
 	// values (li nodes dependents of the ul)
+		const root_areas 		= datalist.filter(item => item.parent===current_tipo)
 		const root_areas_length = root_areas.length
 		for (let i = 0; i < root_areas_length; i++) {
 			//create the li and a nodes inside the current ul
 			item_hierarchy({
-							self			: self,
-							datalist 		: datalist,
-							root_ul 		: root_ul,
-							ul_container 	: ul,
-							item 			: root_areas[i],
-							current_tipo	: current_tipo
-							})
+				self			: self,
+				datalist 		: datalist,
+				root_ul 		: root_ul,
+				ul_container 	: ul,
+				item 			: root_areas[i],
+				current_tipo 	: current_tipo
+			})
 		}
 
+	return true
 }//end level_hierarchy
 
 
@@ -345,13 +351,14 @@ const level_hierarchy = async (options) => {
 */
 const item_hierarchy = async (options) => {
 
-	const self			= options.self
-	const datalist 		= options.datalist
-	const ul_container 	= options.ul_container
-	const root_ul 		= options.root_ul
-	const item 			= options.item
-	const children_item = datalist.find(children_item => children_item.parent === item.tipo)
-	const current_tipo  = options.current_tipo
+	// sort vars
+		const self			= options.self
+		const datalist 		= options.datalist
+		const ul_container 	= options.ul_container
+		const root_ul 		= options.root_ul
+		const item 			= options.item
+		const children_item = datalist.find(children_item => children_item.parent === item.tipo)
+		const current_tipo  = options.current_tipo
 
 	// li
 		const li = ui.create_dom_element({
@@ -362,118 +369,127 @@ const item_hierarchy = async (options) => {
 
 		self.li_nodes.push(li)
 
-	//events
+	// events
+		// mouseover
+			li.addEventListener("mouseover", e => {
+				//e.stopPropagation();
+				if(self.menu_active===false) {
+					return false
+				}//end if self.menu_active
 
-		li.addEventListener("mouseover", e => {
-			//e.stopPropagation();
-			if(self.menu_active===false) {
-				return false
-			}//end if self.menu_active
+					// get current node mouse is over
+					const active_li = e.target.nodeName === 'A' ? e.target.parentNode : e.target
+					// get all nodes inside ul
+					const nodes_li = ul_container.getElementsByTagName('li')
+					const len		= nodes_li.length
+					for (let i = len - 1; i >= 0; i--) {
+						//desactive all nodes
+						nodes_li[i].classList.add("menu_li_inactive");
+						nodes_li[i].classList.remove("menu_li_active");
+						const close_id = nodes_li[i].dataset.children
+						// close all ul nodes dependent of the current li
+						close_all_childrens(close_id)
+						// check if the active li is the current loop node.
+						if(nodes_li[i] == active_li){
+							// active the current li
+							nodes_li[i].classList.add("menu_li_active");
+							nodes_li[i].classList.remove("menu_li_inactive");
+							// if the active li has childrens
+							const open_id = active_li.dataset.children
+							if(open_id){
+								//get the ul node and active it
+								const open_ul = document.getElementById(open_id)
 
-				// get current node mouse is over
-				const active_li = e.target.nodeName === 'A' ? e.target.parentNode : e.target
-				// get all nodes inside ul
-				const nodes_li = ul_container.getElementsByTagName('li')
-				const len		= nodes_li.length
-				for (let i = len - 1; i >= 0; i--) {
-					//desactive all nodes
-					nodes_li[i].classList.add("menu_li_inactive");
-					nodes_li[i].classList.remove("menu_li_active");
-					const close_id = nodes_li[i].dataset.children
-					// close all ul nodes dependent of the current li
-					close_all_childrens(close_id)
-					// check if the active li is the current loop node.
-					if(nodes_li[i] == active_li){
-						// active the current li
-						nodes_li[i].classList.add("menu_li_active");
-						nodes_li[i].classList.remove("menu_li_inactive");
-						// if the active li has childrens
-						const open_id = active_li.dataset.children
-						if(open_id){
-							//get the ul node and active it
-							const open_ul = document.getElementById(open_id)
+								open_ul.classList.remove("menu_ul_hidden");
+								open_ul.classList.add("menu_ul_displayed");
 
-							open_ul.classList.remove("menu_ul_hidden");
-							open_ul.classList.add("menu_ul_displayed");
+								//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
+								if(active_li.parentNode.id === 'dd1'){
+									open_ul.style.left = (active_li.getBoundingClientRect().left -1 )+'px'
+								}else{
+									// the node is totally visible and don't need move to the top
+									open_ul.style.top = active_li.getBoundingClientRect().top+'px'
+									// normal calculation for the hierarchy menus
+									// get the botton positon of the ul and remove the height of the window
+									const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
+									// if the position is outside of the window (>0)
+									if (ul_bottom_dif>0) {
+											// get the top of the current li and remove the oversize outsize of the window
+											const total_top = active_li.getBoundingClientRect().top - ul_bottom_dif
+											open_ul.style.top = total_top +'px'
+									}
+									// move the node to the right position of the selected li
+									open_ul.style.left = active_li.getBoundingClientRect().right+'px'
 
-							//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
-							if(active_li.parentNode.id === 'dd1'){
-								open_ul.style.left = (active_li.getBoundingClientRect().left -1 )+'px'
-							}else{
-								// the node is totally visible and don't need move to the top
-								open_ul.style.top = active_li.getBoundingClientRect().top+'px'
-								// normal calculation for the hierarchy menus
-								// get the botton positon of the ul and remove the height of the window
-								const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
-								// if the position is outside of the window (>0)
-								if (ul_bottom_dif>0) {
-										// get the top of the current li and remove the oversize outsize of the window
-										const total_top = active_li.getBoundingClientRect().top - ul_bottom_dif
-										open_ul.style.top = total_top +'px'
-								}
-								// move the node to the right position of the selected li
-								open_ul.style.left = active_li.getBoundingClientRect().right+'px'
-
-							}//end if(active_li.parentNode.id === 'dd1')
-
-
-
-						}//end if(open_id)
-					}//end if(nodes_li[i] == active_li)
-				}//end for
-		})// end mouseover
-
-		li.addEventListener("mouseout", e => {
-			// e.stopPropagation();
-			if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
-				close_all_drop_menu(self);
-			}
-
-			return true
-		})
+								}//end if(active_li.parentNode.id === 'dd1')
 
 
-	// remove the html <mark> sended by the server
-	// when the label is not in the current language
-	// and get the label with fallback
-	// and replace it for italic style
-		const is_fallback = item.label.indexOf('<mark>')
-		const text_fallback = is_fallback === -1 ? '' : 'mark'
-		const label_text = item.label.replace(/(<([^>]+)>)/ig,"");
 
-	// a element with the link to the area or section to go
-		const link = ui.create_dom_element({
-			element_type	: 'a',
-			class_name		: 'area_label ' + text_fallback,
-			inner_html 		: label_text,
-			parent 			: li
-		})
+							}//end if(open_id)
+						}//end if(nodes_li[i] == active_li)
+					}//end for
+			})// end mouseover
 
-	// when the user do click publish the tipo to go and set the mode in list
-	// the action can be executed mainly in page, but it can be used for any instance.
-		link.addEventListener("click", e => {
+		// mouseout
+			li.addEventListener("mouseout", e => {
+				// e.stopPropagation();
+				if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
+					close_all_drop_menu(self);
+				}
 
-			if(self.menu_active===false) {
-				return false
-			}//end if self.menu_active
-			//event_manager
-			event_manager.publish('user_action', {tipo : item.tipo, mode : 'list'})
+				return true
+			})//end mouseout
 
-		})
 
-		// recursive generation of children nodes of the current li node.
+		// remove the html <mark> sended by the server
+		// when the label is not in the current language
+		// and get the label with fallback
+		// and replace it for italic style
+			const is_fallback = item.label.indexOf('<mark>')
+			const text_fallback = is_fallback === -1 ? '' : 'mark'
+			const label_text = item.label.replace(/(<([^>]+)>)/ig,"");
+
+		// a element with the link to the area or section to go
+			const link = ui.create_dom_element({
+				element_type	: 'a',
+				class_name		: 'area_label ' + text_fallback,
+				inner_html 		: label_text,
+				parent 			: li
+			})
+
+		// click
+		// when the user do click publish the tipo to go and set the mode in list
+		// the action can be executed mainly in page, but it can be used for any instance.
+			link.addEventListener("click", e => {
+
+				// unactive menu case
+				if(self.menu_active===false) {
+					return false
+				}//end if self.menu_active
+
+				// navigate
+				event_manager.publish('user_action', {
+					tipo : item.tipo,
+					mode : 'list'
+				})
+
+				return true
+			})
+
+	// children_item. recursive generation of children nodes of the current li node.
 		if (children_item) {
 			li.classList.add ('has-sub')
 			li.dataset.children	= item.tipo
 			level_hierarchy({
-					self			: self,
-					datalist 		: datalist,
-					root_ul 		: root_ul,
-					current_tipo	: item.tipo,
-					parent_tipo 	: current_tipo
+				self			: self,
+				datalist 		: datalist,
+				root_ul 		: root_ul,
+				current_tipo	: item.tipo,
+				parent_tipo 	: current_tipo
 			})
+		}//end children_item
 
-		}// end children_item
+	return true
 }//end item_hierarchy
 
 
@@ -509,6 +525,7 @@ const close_all_drop_menu = async function(self) {
 
 	return true
 }//end close_all_drop_menu
+
 
 
 /**
