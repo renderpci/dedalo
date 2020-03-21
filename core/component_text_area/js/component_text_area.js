@@ -443,3 +443,87 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 
 
+/**
+* GET_LAST_TAG_ID
+* @param ed
+*	Text editor instance (tinyMCE)
+* @param tag_type
+*	Class name of image searched like 'geo'
+*/
+component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
+
+	var ar_id_final = [0];
+
+	switch(tag_type) {
+		
+		case 'struct':
+			// SECTION : Select all sections in text
+			var ar_struct_tags = container.getElementsByTagName('section')
+				//console.log(ar_struct_tags)
+
+			// ITERATE TO FIND TIPO_TAG
+			var i_len = ar_struct_tags.length
+			for (let i = i_len - 1; i >= 0; i--) {		
+				
+				// current tag like [svg-n-1]
+				var current_tag = ar_struct_tags[i].id;
+				var ar_parts 	= current_tag.split('_');
+				var number 	 	= parseInt(ar_parts[1]);
+		
+				// Insert id formated as number in final array
+				ar_id_final.push(number)
+			}
+			break;
+
+		case 'reference':
+			// REFERENCE : Select all reference in text
+			var ar_tags = container.getElementsByTagName('reference')
+				//console.log(ar_tags)
+
+			// ITERATE TO FIND TIPO_TAG
+			var i_len = ar_tags.length
+			for (let i = i_len - 1; i >= 0; i--) {		
+				
+				// current tag like [svg-n-1]
+				var current_tag = ar_tags[i].id;
+				var ar_parts 	= current_tag.split('_');
+				var number 	 	= parseInt(ar_parts[1]);
+		
+				// Insert id formated as number in final array
+				ar_id_final.push(number)
+			}
+			break;
+
+		default:
+			// like img as id: [index-n-1--label-data:**]			
+				const ar_img = container.querySelectorAll('img.'+tag_type)				
+			
+			// iterate to find tipo_tag (filter by classname: svg,etc.)
+			var i_len = ar_img.length
+			for (let i = i_len - 1; i >= 0; i--) {				
+				
+				var number 		= 0;
+				var current_tag = ar_img[i].id;
+				var ar_parts 	= current_tag.split('-');
+				var number 	 	= parseInt(ar_parts[2]);
+
+				// Insert id formated as number in final array
+				ar_id_final.push(number)					
+			}
+				console.log("ar_id_final:",ar_id_final);
+			break;
+	}
+	
+	// LAST ID
+	const last_tag_id = Math.max.apply(null, ar_id_final);
+		if(SHOW_DEBUG===true) {
+			console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
+		}
+				
+
+	return parseInt(last_tag_id);
+}//end get_last_tag_id
+
+
+
+

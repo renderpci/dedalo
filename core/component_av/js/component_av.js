@@ -88,17 +88,46 @@ component_av.prototype.play_pause = function(options){
 	return self.video.currentTime
 }// end play_pause
 
-component_av.prototype.get_tc = function(options){
+
+/**
+* GET_DATA_TAG
+* Send the data_tag to the text_area when it need create a new tag
+*/
+component_av.prototype.get_data_tag = function(){
+
+	const self 	= this
+
+	const tc 	= self.get_current_tc()
+	const data_tag = {
+		type 	: 'tc',
+		tag_id 	: tc,
+		state 	: 'n',
+		label 	: tc,
+		data 	: tc
+	}
+
+	return data_tag
+}// end get_data_tag
+
+
+/**
+* GET_CURRENT_TC
+* Send the data_tag to the text_area when it need create a new tag
+*/
+component_av.prototype.get_current_tc = function(){
 
 	const self = this
 
 	const tc = self.time_to_tc(self.video.currentTime)
 	
 	return tc
-}// end get_tc
+}// end get_current_tc
 
 
-// tc to seconds . convert tc like 00:12:19.878 to total seconds like 139.878	
+/**
+* TC_TO_SECONDS
+* tc to seconds . convert tc like 00:12:19.878 to total seconds like 139.878	
+*/
 component_av.prototype.tc_to_seconds = function(tc) {	
 	if(Number.isInteger(tc)) return tc
 	
