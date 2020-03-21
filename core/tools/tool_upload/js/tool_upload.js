@@ -273,7 +273,7 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 			xhr.open("POST", self.trigger_url, true);
 	console.log("file.name:",file);
 			// request header
-			xhr.setRequestHeader("X-File-Name", file.name);
+			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
 			// send data
 			xhr.send(fd);
