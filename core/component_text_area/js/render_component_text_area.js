@@ -680,12 +680,21 @@ const get_custom_events = (self, i, get_service) => {
 				event_manager.publish('key_up_esc' +'_'+ self.tipo, evt.keyCode)
 				break;
 			case 113:
-				const result 	= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
-				const data 		= result[0]
-				const state 	= 'n'
-				const tag 		= build_node_tag('tc', data, state, data, data)
-				const service 	= get_service()
-				service.set_content(tag.outerHTML)
+				const result 				= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
+				const result_length 		= result.length
+				
+				// service 
+					const service 			  = get_service()
+					const editor_content_data = service.get_editor_content_data()
+
+				for (let i = 0; i < result_length; i++) {
+					const data 		= result[i]
+					const tag_id 	= (!data.tag_id) ? self.get_last_tag_id(editor_content_data, data.type) + 1 : data.tag_id;
+					const tag 		= build_node_tag(data.type, tag_id, data.state, data.label, data.data)//('tc', data, state, data, data)
+					
+					service.set_content(tag.outerHTML)
+				}
+				
 				break;
 		}
 
