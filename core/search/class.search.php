@@ -372,11 +372,12 @@ class search {
 	* @return string $filtered_relations
 	* json encoded array
 	*/
-	public static function get_filtered_relations($relations_data_string, $component_tipo) {
+	public static function get_filtered_relations($relations_data, $component_tipo) {
 
 		$filtered_relations = [];
 
-		if($relations_data = json_decode($relations_data_string)) {
+		// if($relations_data = json_decode($relations_data_string)) {
+		if(!empty($relations_data)) {
 
 			$filtered_relations = array_filter($relations_data, function($locator) use($component_tipo) {
 				return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
@@ -385,7 +386,8 @@ class search {
 			$filtered_relations = array_values($filtered_relations); // Avoid json encoding objects
 		}
 
-		return json_encode($filtered_relations);
+		// return json_encode($filtered_relations);
+		return $filtered_relations;
 	}//end get_filtered_relations
 
 
