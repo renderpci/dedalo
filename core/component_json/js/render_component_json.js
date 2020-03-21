@@ -40,13 +40,12 @@ render_component_json.prototype.list = function() {
 		})
 
 	// Set value
-		if(self.section_tipo === 'dd542'){
-
+		if(self.section_tipo==='dd542'){
+			// activity section case
 			const value_len = data.value.length
 			const node = []
-			for (var i = 0; i < value_len; i++) {
+			for (let i = 0; i < value_len; i++) {
 				const value_map = new Map(Object.entries(data.value[i]))
-
 				for (let [key, value] of value_map) {
 					node.push(key+ ": " +value)
 				}
@@ -56,16 +55,14 @@ render_component_json.prototype.list = function() {
 				e.stopPropagation()
 				wrapper.classList.toggle('show_full')
 			})
-
 		}else{
 			// Value as string
 			const list_show_key = self.context.properties.list_show_key || 'msg'
-			const value_string = (typeof data.value[0][list_show_key] !== 'undefined') 
-					? data.value[0][list_show_key] 
+			const value_string = (typeof data.value[0][list_show_key]!=='undefined')
+					? data.value[0][list_show_key]
 					: JSON.stringify(data.value).substring(0,100)+" ..."
 			wrapper.textContent = value_string
 		}
-		
 
 
 	return wrapper
@@ -88,14 +85,14 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 	const render_level 	= options.render_level
 
 	// content_data
-		const current_content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
 
 	// add events
@@ -175,7 +172,7 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* get_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
@@ -222,7 +219,7 @@ const get_content_data_edit = async function(self) {
 
 	// tools
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-			
+
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type, "nowrap")
@@ -287,7 +284,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 	// 	})
 
 	// load
-		await self.init_editor()
+		await self.load_editor()
 
 	// create the editor
 		const editor_options = {
@@ -325,7 +322,6 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				// 	// event to update the dom elements of the instance
 				// 	event_manager.publish('update_value_'+self.id, changed_data)
 				// })
-
 		    }
 		}
 		const editor = new JSONEditor(li, editor_options, current_value)
