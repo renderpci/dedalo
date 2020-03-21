@@ -190,43 +190,43 @@ const content_data_edit = async function(self) {
 			const translator_engine = self.config.translator_engine
 				console.log("+++++++ translator_engine:",self.config);
 			if (translator_engine) {
-			// 	// const automatic_translation_container = ui.create_dom_element({
-			// 	// 	element_type	: 'div',
-			// 	// 	class_name 		: 'automatic_translation_container',
-			// 	// 	parent 			: buttons_container
-			// 	// })
-			// 	// // button
-			// 	// const button_automatic_translation = document.createElement('button');
-			// 	// 	  button_automatic_translation.type = 'button'
-			// 	// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-			// 	// 	  automatic_translation_container.appendChild(button_automatic_translation)
-			// 	// 	  button_automatic_translation.addEventListener("click", (e) => {
+				// 	// const automatic_translation_container = ui.create_dom_element({
+				// 	// 	element_type	: 'div',
+				// 	// 	class_name 		: 'automatic_translation_container',
+				// 	// 	parent 			: buttons_container
+				// 	// })
+				// 	// // button
+				// 	// const button_automatic_translation = document.createElement('button');
+				// 	// 	  button_automatic_translation.type = 'button'
+				// 	// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
+				// 	// 	  automatic_translation_container.appendChild(button_automatic_translation)
+				// 	// 	  button_automatic_translation.addEventListener("click", (e) => {
 
-			// 	// 	  	content_data.classList.add("loading")
+				// 	// 	  	content_data.classList.add("loading")
 
-			// 	// 	  	const translator  = translator_engine_select.value
-			// 	// 	  	const source_lang = source_select_lang.value
-			// 	// 	  	const target_lang = target_select_lang.value
-			// 	// 	  	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
-			// 	// 	  	.then(()=>{
-			// 	// 	  		content_data.classList.remove("loading")
-			// 	// 	  	})
-			// 	// 	  })
+				// 	// 	  	const translator  = translator_engine_select.value
+				// 	// 	  	const source_lang = source_select_lang.value
+				// 	// 	  	const target_lang = target_select_lang.value
+				// 	// 	  	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
+				// 	// 	  	.then(()=>{
+				// 	// 	  		content_data.classList.remove("loading")
+				// 	// 	  	})
+				// 	// 	  })
 
-			// 	// // select
-			// 	// const translator_engine_select = ui.create_dom_element({
-			// 	// 	element_type	: 'select',
-			// 	// 	parent 			: automatic_translation_container
-			// 	// })
-			// 	// for (let i = 0; i < translator_engine.length; i++) {
-			// 	// 	const translator = translator_engine[i]
-			// 	// 	ui.create_dom_element({
-			// 	// 		element_type	: 'option',
-			// 	// 		value 			: JSON.stringify(translator),
-			// 	// 		text_content 	: translator.label,
-			// 	// 		parent 			: translator_engine_select
-			// 	// 	})
-			// 	// }
+				// 	// // select
+				// 	// const translator_engine_select = ui.create_dom_element({
+				// 	// 	element_type	: 'select',
+				// 	// 	parent 			: automatic_translation_container
+				// 	// })
+				// 	// for (let i = 0; i < translator_engine.length; i++) {
+				// 	// 	const translator = translator_engine[i]
+				// 	// 	ui.create_dom_element({
+				// 	// 		element_type	: 'option',
+				// 	// 		value 			: JSON.stringify(translator),
+				// 	// 		text_content 	: translator.label,
+				// 	// 		parent 			: translator_engine_select
+				// 	// 	})
+				// 	// }
 				const automatic_tranlation_node = build_automatic_tranlation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)
 			}//end if (translator_engine)
