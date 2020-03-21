@@ -274,8 +274,8 @@ class search {
 						$field_value = self::get_filtered_relations($current_relations_cache_solved, $component_tipo); // Filtered by from_component_tipo
 					//}
 					# Add property
-					$row->{$field_name} = ($field_name==='datos') 
-					? json_decode($field_value) 
+					$row->{$field_name} = ($field_name==='datos')
+					? json_decode($field_value)
 					: $field_value;
 				}
 			}

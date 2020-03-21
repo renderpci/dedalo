@@ -106,6 +106,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			// config set
 				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
+					console.log("simple_tool_object:",simple_tool_object);
 				self.config 				= simple_tool_object[0];
 				const label 				= self.config.label.find(item => item.lang===self.lang);
 				self.label 					= typeof label!=='undefined' ? label.value : self.model
