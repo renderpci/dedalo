@@ -293,7 +293,7 @@ class search_development2 {
 				#debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 
 		#debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
-		#debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
+		debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
 
 
 		return $records_data;
@@ -836,7 +836,11 @@ class search_development2 {
 
 				# SELECT
 					#$sql_query .= 'SELECT ' . $sql_query_select;
-					$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
+					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+						$sql_query .= 'SELECT '.$this->main_section_tipo_alias.'.section_id';
+					}else{
+						$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
+					}
 				# FROM
 					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# join virtual tables
@@ -868,7 +872,8 @@ class search_development2 {
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
 					}
-				$sql_query = 'SELECT COUNT(section_id) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+				// $sql_query = 'SELECT COUNT(section_id) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 				if(SHOW_DEBUG===true) {
 					$sql_query = '-- Only for count' . PHP_EOL . $sql_query;
 				}
