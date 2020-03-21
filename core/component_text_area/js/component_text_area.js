@@ -94,50 +94,6 @@ component_text_area.prototype.save_value = async function(key, value) {
 
 
 /**
-* BUILD_DEDALO_TAG
-* Unified way of create dedalo custom tags from javascript
-* @return string tag
-*/
-component_text_area.prototype.build_dedalo_tag = function(type, tag_id, state, label, data) {
-
-	const self = this
-
-	const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","referenceIn","referenceOut"]
-		if (valid_types.includes(type)===false) {
-			console.log("[build_dedalo_tag] Invalid tag type:",type);
-			alert("[build_dedalo_tag] Invalid tag type: " + type)
-			return false
-		}
-
-	// Bracket_in is different for close tag
-	const bracket_in = (type.indexOf("Out")!==-1) ? "[/" : "["
-
-	// Removes sufixes 'In' and 'Out'
-	const type_name = type.replace(/In|Out/, '')
-
-	// Label truncate and replace - avoid future errors
-	if (typeof label === "undefined") {
-		label = ''
-	}else{
-		label = label.substring(0,22)
-		label = replaceAll('-', '_', label)
-	}		
-
-	let dedalo_tag = null
-	switch(type) {
-		case "tc":
-			dedalo_tag = tag_id
-			break;
-		default:
-			dedalo_tag = bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "-" + "data:" + data + ":data]"
-	}
-
-	return dedalo_tag
-}//end build_dedalo_tag
-
-
-
-/**
 * PREPROCESS_TEXT_TO_SAVE
 * Replace <section> tags to internal Dédalo tags
 * Unify text content format
@@ -439,5 +395,135 @@ component_text_area.prototype.update_tag = function(options) {
 
 	return true	
 }//end update_tag
+
+
+
+/**
+* BUILD_DEDALO_TAG
+* Unified way of create dedalo custom tags from javascript
+* @return string tag
+*/
+component_text_area.prototype.build_data_tag = function(type, tag_id, state, label, data) {
+
+	const self = this
+
+	const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","referenceIn","referenceOut"]
+		if (valid_types.includes(type)===false) {
+			console.log("[build_dedalo_tag] Invalid tag type:",type);
+			alert("[build_dedalo_tag] Invalid tag type: " + type)
+			return false
+		}
+
+	// Bracket_in is different for close tag
+	const bracket_in = (type.indexOf("Out")!==-1) ? "[/" : "["
+
+	// Removes sufixes 'In' and 'Out'
+	const type_name = type.replace(/In|Out/, '')
+
+	// Label truncate and replace - avoid future errors
+	if (typeof label === "undefined") {
+		label = ''
+	}else{
+		label = label.substring(0,22)
+		label.replace(new RegExp('-', 'g'), '_');
+	}		
+
+	let dedalo_tag = null
+	switch(type) {
+		case "tc":
+			dedalo_tag = tag_id
+			break;
+		default:
+			dedalo_tag = bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "-" + "data:" + data + ":data]"
+	}
+	console.log("dedalo_tag:",dedalo_tag);
+	return dedalo_tag
+}//end build_dedalo_tag
+
+
+
+
+/**
+* GET_LAST_TAG_ID
+* @param ed
+*	Text editor instance (tinyMCE)
+* @param tag_type
+*	Class name of image searched like 'geo'
+*/
+component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
+
+	var ar_id_final = [0];
+
+	switch(tag_type) {
+		
+		case 'struct':
+			// SECTION : Select all sections in text
+			var ar_struct_tags = container.getElementsByTagName('section')
+				//console.log(ar_struct_tags)
+
+			// ITERATE TO FIND TIPO_TAG
+			var i_len = ar_struct_tags.length
+			for (let i = i_len - 1; i >= 0; i--) {		
+				
+				// current tag like [svg-n-1]
+				var current_tag = ar_struct_tags[i].id;
+				var ar_parts 	= current_tag.split('_');
+				var number 	 	= parseInt(ar_parts[1]);
+		
+				// Insert id formated as number in final array
+				ar_id_final.push(number)
+			}
+			break;
+
+		case 'reference':
+			// REFERENCE : Select all reference in text
+			var ar_tags = container.getElementsByTagName('reference')
+				//console.log(ar_tags)
+
+			// ITERATE TO FIND TIPO_TAG
+			var i_len = ar_tags.length
+			for (let i = i_len - 1; i >= 0; i--) {		
+				
+				// current tag like [svg-n-1]
+				var current_tag = ar_tags[i].id;
+				var ar_parts 	= current_tag.split('_');
+				var number 	 	= parseInt(ar_parts[1]);
+		
+				// Insert id formated as number in final array
+				ar_id_final.push(number)
+			}
+			break;
+
+		default:
+			// like img as id: [index-n-1--label-data:**]			
+				const ar_img = container.querySelectorAll('img.'+tag_type)				
+			
+			// iterate to find tipo_tag (filter by classname: svg,etc.)
+			var i_len = ar_img.length
+			for (let i = i_len - 1; i >= 0; i--) {				
+				
+				var number 		= 0;
+				var current_tag = ar_img[i].id;
+				var ar_parts 	= current_tag.split('-');
+				var number 	 	= parseInt(ar_parts[2]);
+
+				// Insert id formated as number in final array
+				ar_id_final.push(number)					
+			}
+				console.log("ar_id_final:",ar_id_final);
+			break;
+	}
+	
+	// LAST ID
+	const last_tag_id = Math.max.apply(null, ar_id_final);
+		if(SHOW_DEBUG===true) {
+			console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
+		}
+				
+
+	return parseInt(last_tag_id);
+}//end get_last_tag_id
+
+
 
 

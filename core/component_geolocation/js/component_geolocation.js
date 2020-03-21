@@ -537,6 +537,23 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 }//end load_geo_editor
 
 
+/**
+* GET_DATA_TAG
+* Send the data_tag to the text_area when it need create a new tag
+*/
+component_geolocation.prototype.get_data_tag = function(){
+
+	const data_tag = {
+		type 	: 'geo',
+		tag_id 	: null,
+		state 	: 'n',
+		label 	: '',
+		data 	: ''
+	}
+
+	return data_tag
+}// end get_data_tag
+
 
 /**
 * GET_PARTS_OF_TAG
