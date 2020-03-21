@@ -94,50 +94,6 @@ component_text_area.prototype.save_value = async function(key, value) {
 
 
 /**
-* BUILD_DEDALO_TAG
-* Unified way of create dedalo custom tags from javascript
-* @return string tag
-*/
-component_text_area.prototype.build_dedalo_tag = function(type, tag_id, state, label, data) {
-
-	const self = this
-
-	const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","referenceIn","referenceOut"]
-		if (valid_types.includes(type)===false) {
-			console.log("[build_dedalo_tag] Invalid tag type:",type);
-			alert("[build_dedalo_tag] Invalid tag type: " + type)
-			return false
-		}
-
-	// Bracket_in is different for close tag
-	const bracket_in = (type.indexOf("Out")!==-1) ? "[/" : "["
-
-	// Removes sufixes 'In' and 'Out'
-	const type_name = type.replace(/In|Out/, '')
-
-	// Label truncate and replace - avoid future errors
-	if (typeof label === "undefined") {
-		label = ''
-	}else{
-		label = label.substring(0,22)
-		label = replaceAll('-', '_', label)
-	}		
-
-	let dedalo_tag = null
-	switch(type) {
-		case "tc":
-			dedalo_tag = tag_id
-			break;
-		default:
-			dedalo_tag = bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "-" + "data:" + data + ":data]"
-	}
-
-	return dedalo_tag
-}//end build_dedalo_tag
-
-
-
-/**
 * PREPROCESS_TEXT_TO_SAVE
 * Replace <section> tags to internal Dédalo tags
 * Unify text content format
@@ -439,5 +395,51 @@ component_text_area.prototype.update_tag = function(options) {
 
 	return true	
 }//end update_tag
+
+
+
+/**
+* BUILD_DEDALO_TAG
+* Unified way of create dedalo custom tags from javascript
+* @return string tag
+*/
+component_text_area.prototype.build_data_tag = function(type, tag_id, state, label, data) {
+
+	const self = this
+
+	const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","referenceIn","referenceOut"]
+		if (valid_types.includes(type)===false) {
+			console.log("[build_dedalo_tag] Invalid tag type:",type);
+			alert("[build_dedalo_tag] Invalid tag type: " + type)
+			return false
+		}
+
+	// Bracket_in is different for close tag
+	const bracket_in = (type.indexOf("Out")!==-1) ? "[/" : "["
+
+	// Removes sufixes 'In' and 'Out'
+	const type_name = type.replace(/In|Out/, '')
+
+	// Label truncate and replace - avoid future errors
+	if (typeof label === "undefined") {
+		label = ''
+	}else{
+		label = label.substring(0,22)
+		label.replace(new RegExp('-', 'g'), '_');
+	}		
+
+	let dedalo_tag = null
+	switch(type) {
+		case "tc":
+			dedalo_tag = tag_id
+			break;
+		default:
+			dedalo_tag = bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "-" + "data:" + data + ":data]"
+	}
+	console.log("dedalo_tag:",dedalo_tag);
+	return dedalo_tag
+}//end build_dedalo_tag
+
+
 
 
