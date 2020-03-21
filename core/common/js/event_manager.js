@@ -82,7 +82,7 @@ const event_manager_class = function(){
 		}else{
 			// exec the suscribed events callbacks
 			const result = current_events.map(current_event => current_event.callback(data))
-			return true
+			return result
 		}
 	}//end publish
 

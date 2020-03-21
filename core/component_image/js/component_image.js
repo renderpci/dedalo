@@ -63,6 +63,24 @@ export const component_image = function(){
 
 
 
+/**
+* GET_DATA_TAG
+* Send the data_tag to the text_area when it need create a new tag
+*/
+component_image.prototype.get_data_tag = function(){
+
+	const data_tag = {
+		type 	: 'draw',
+		tag_id 	: null,
+		state 	: 'n',
+		label 	: '',
+		data 	: ''
+	}
+
+	return data_tag
+}
+
+
 // /**
 // * BUILD
 // */

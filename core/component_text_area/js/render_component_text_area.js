@@ -402,8 +402,6 @@ const get_custom_buttons = (self, i, get_service) => {
 
 	// const editor = get_editor()
 
-
-
 	let button_name
 
 	// button_person
@@ -677,7 +675,29 @@ const get_custom_events = (self, i, get_service) => {
 	custom_events.KeyUp = (evt, options) => {
 		console.log("KeyUp evt.keyCode:",evt.keyCode,evt.key);
 
-		event_manager.publish('pay_pause' +'_'+ self.tipo, evt.keyCode)
+		switch(evt.keyCode ){
+			case  27:
+				event_manager.publish('key_up_esc' +'_'+ self.tipo, evt.keyCode)
+				break;
+			case 113:
+				const result 				= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
+				const result_length 		= result.length
+				
+				// service 
+					const service 			  = get_service()
+					const editor_content_data = service.get_editor_content_data()
+
+				for (let i = 0; i < result_length; i++) {
+					const data 		= result[i]
+					const tag_id 	= (!data.tag_id) ? self.get_last_tag_id(editor_content_data, data.type) + 1 : data.tag_id;
+					const tag 		= build_node_tag(data.type, tag_id, data.state, data.label, data.data)//('tc', data, state, data, data)
+					
+					service.set_content(tag.outerHTML)
+				}
+				
+				break;
+		}
+
 
 		return
 		switch(context_name) {
@@ -708,6 +728,54 @@ const get_custom_events = (self, i, get_service) => {
 	return custom_events
 }//end get_custom_events
 
+
+
+/**
+* BUILD_DOM_ELEMENT_FROM_DATA
+* @return 
+*/
+const build_node_tag = function(type, tag_id, state, label, data) {	
+
+	const images_factory_url = "../component_text_area/tag.php"
+
+	// Bracket_in is different for close tag		
+	const bracket_in = (type.indexOf("Out")!==-1) 
+		? "[/" 
+		: "["
+
+	// Removes sufixes 'In' and 'Out'
+	const type_name = type.replace(/In|Out/, '');
+
+	const src = (type==='tc')
+		? images_factory_url + "/" + "[TC_" + tag_id + "_TC]"
+		: images_factory_url + "/" + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
+
+	const id = (type==='tc')
+		? tag_id
+		: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
+
+	const class_name = (type==='tc')
+		? type
+		: type_name 
+
+	const dataset = {
+		type	: type,
+		tag_id 	: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
+		state 	: (type==='tc') ? 'n': state,
+		label 	: (type==='tc') ? tag_id : label,
+		data 	: (type==='tc') ? tag_id : data
+	}
+	
+	const element = ui.create_dom_element({
+		element_type 	: 'img',
+		src 			: src,
+		id 				: id,
+		class_name		: class_name,
+		dataset			: dataset,
+	})
+
+	return element
+}//end build_dom_element_from_data
 
 
 /**
