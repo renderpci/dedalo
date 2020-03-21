@@ -256,8 +256,25 @@ export const service_tinymce = function() {
 	this.set_content = function(html){
 
 		const self = this
+
 		self.editor.selection.setContent( html );
 	}
-	
+
+
+
+	/**
+	* GET_EDITOR_CONTENT_DATA
+	* @return 
+	*/
+	this.get_editor_content_data = function() {
+
+		const self = this
+
+		const editor_content_data = self.editor.getBody();
+		
+		return editor_content_data
+	};//end get_editor_content_data
+
+
 
 }//end class
