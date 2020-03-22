@@ -247,6 +247,17 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			parent 		 : inputs_container
 		})
 
+
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type : 'div',
+			class_name	 : 'button_fullscreen',
+			parent 		 : li
+		})
+		button_fullscreen.addEventListener("click", function(e) {
+			li.classList.toggle("fullscreen")
+		})
+
 	// button_save
 		const button_save = ui.create_dom_element({
 			element_type : 'button',
