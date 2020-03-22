@@ -184,7 +184,11 @@ function debug_log($info, $level=logger::DEBUG) {
 		return false;
 	}
 
-	$msg = "DEBUG_LOG [".logger::level_to_string($level)."] $info";
+	$msg = 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
+
+	if ($level<11) {
+		$msg .= ' -------------------------------------------------------------------------------------------- ';
+	}
 	error_log($msg);
 
 	$GLOBALS['log_messages'][] = $msg;

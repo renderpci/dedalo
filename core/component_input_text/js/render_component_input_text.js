@@ -419,7 +419,17 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+		if (!is_inside_tool) {
+			ui.add_tools(self, buttons_container)
+			// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
+		}
+
+			// const fecha = new Date()
+			// ui.create_dom_element({
+			// 	element_type	: 'span',
+			// 	inner_html 	 	: fecha,
+			// 	parent 			: buttons_container
+			// })
 
 	// content_data
 		const content_data = document.createElement("div")

@@ -70,7 +70,7 @@ class ontology {
 			'relations'		=> true,
 			'descriptors'	=> true,
 			'label'			=> false
-			]) {		
+			]) {
 
 		$options = new stdClass();
 			$options->tipo			= false;
@@ -148,7 +148,7 @@ class ontology {
 							'type' 	=> $type
 						];
 					}
-					$item->descriptors = $ar_descriptors;				
+					$item->descriptors = $ar_descriptors;
 			}
 
 			// get terminio by tipo with fallback
@@ -171,6 +171,11 @@ class ontology {
 	public static function import(array $data) {
 
 		foreach ($data as $key => $item) {
+
+			if (empty($item) || !isset($item->tld)) {
+				debug_log(__METHOD__." Skippep empty item on import ".to_string(), logger::ERROR);
+				continue;
+			}
 
 			// term. jer_dd
 				$esmodelo 	= $item->is_model ?? 'no';
@@ -207,7 +212,6 @@ class ontology {
 					$RecordObj_descriptors_dd->Save();
 
 				}// end foreach ($descriptors)
-
 		}//end foreach ($data as $key => $item)
 
 
@@ -284,7 +288,7 @@ class ontology {
 
 	/**
 	* GET_CHILDRENS_RECURSIVE . TS TREE FULL FROM PARENT
-	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group 
+	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group
 	* @param string $terminoID
 	* @return array $ar_tesauro
 	*	array recursive of tesauro structure childrens
@@ -294,16 +298,16 @@ class ontology {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
 		}
-		
+
 		# STATIC CACHE
-		static $childrens_recursive_data;	
-		if(isset($childrens_recursive_data[$tipo])) return $childrens_recursive_data[$tipo];	
-		
+		static $childrens_recursive_data;
+		if(isset($childrens_recursive_data[$tipo])) return $childrens_recursive_data[$tipo];
+
 		$ar_elements = [];
 
 		$source_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		switch ($source_model) {
-			
+
 			case 'section':
 
 				$section_tipo 			 = $tipo;
@@ -312,33 +316,33 @@ class ontology {
 				# Real section
 				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
 				$ar_ts_childrens   = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
-				
+
 				# Virtual section too is neccesary (buttons specifics)
 				$ar_ts_childrens_v = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
-				$ar_ts_childrens = array_merge($ar_ts_childrens, $ar_ts_childrens_v);				
+				$ar_ts_childrens = array_merge($ar_ts_childrens, $ar_ts_childrens_v);
 				break;
-			
+
 			default:
 				# Areas
 				$RecordObj_dd	 = new RecordObj_dd($tipo);
-				$ar_ts_childrens = $RecordObj_dd->get_ar_childrens_of_this();				
+				$ar_ts_childrens = $RecordObj_dd->get_ar_childrens_of_this();
 				break;
 		}
-		
+
 
 		$ar_exclude_modelo 		= array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
 		$ar_exclude_components 	= defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
-		foreach((array)$ar_ts_childrens as $element_tipo) {			
-			
+		foreach((array)$ar_ts_childrens as $element_tipo) {
+
 			// Remove_exclude_models
-				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);			
+				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 				if( in_array($component_model, $ar_exclude_modelo)) {
-					continue ;	
+					continue ;
 				}
-			
-			// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp			
+
+			// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
 				if (in_array($element_tipo, $ar_exclude_components)) {
-					continue;	
+					continue;
 				}
 
 			// get the ontology json format
@@ -356,7 +360,7 @@ class ontology {
 						'descriptors'	=> false,
 						'label'			=> true]);
 
-			$ar_elements = array_merge( $ar_elements, self::get_childrens_recursive($element_tipo));			
+			$ar_elements = array_merge( $ar_elements, self::get_childrens_recursive($element_tipo));
 		}
 
 		# STORE CACHE DATA
@@ -364,11 +368,11 @@ class ontology {
 
 		if(SHOW_DEBUG===true) {
 			$total=round(microtime(1)-$start_time,3);
-			#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);				
+			#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);
 		}
-	
-		return $ar_elements;		
-	}//end get_childrens_recursive	
+
+		return $ar_elements;
+	}//end get_childrens_recursive
 
 
 

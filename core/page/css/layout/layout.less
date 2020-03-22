@@ -901,12 +901,35 @@
 			&.component_json {
 				>.content_data {
 					height: 100%;
-					max-height: @media_max_height;
+					// max-height: @media_max_height;
 					padding-bottom: 3em;
+					min-height: 30.5em;
+
+					.inputs_container>li {
+						// align-items: initial;
+
+						.button_fullscreen {
+							.build_button('full_screen.svg');
+							position: absolute;
+							top: 9px;
+							z-index: 4;
+							right: 99px;
+							background-color: white;
+							cursor: pointer;
+
+							&:active {
+								opacity: 0.4;
+							}
+						}
+
+					}
 
 					// override json editor
 					.ace_gutter {
-						z-index: unset;
+						// z-index: unset;
+					}
+					div.jsoneditor-mode-code{
+						// height: 100vh; //100vh if you want full screen
 					}
 				}
 			}
@@ -916,6 +939,12 @@
 				>.content_data {
 					// min-height: @media_max_height;
 					// background-color: #BEF0FA;
+
+					>ul {
+						>li {
+							z-index: inherit;
+						}
+					}
 				}
 			}
 
@@ -1375,6 +1404,7 @@
 			&.inputs_container >li {
 				position: relative;
 				flex: 1 1 100%;
+				z-index: 0;
 				//padding-bottom: 0.25em;
 			}
 		}
@@ -1635,7 +1665,7 @@
 
 
 
-// singular for checking assignaments only
+// EXPERIMENTAL . singular for checking assignaments only
 	.singular {
 
 		&.wrapper_component {
@@ -1652,6 +1682,22 @@
 
 		&:after {
 			content: "*";
+		}
+	}
+
+
+// EXPERIMENTAL section custom test
+	.green {
+		&[class^="wrapper_"] { // affects all classes starting with 'wrapper_' (wrapper_section, wrapper_component, etc.)
+		// &.wrapper_section {
+			background-color: #87FA88 !important;
+			padding: 1em;
+			border-radius: 0.5em;
+		}
+	}
+	.red {
+		&.content_data {
+			background-color: #F37656 !important;
 		}
 	}
 
@@ -1968,12 +2014,6 @@
 			iframe {
 			}
 		}
-
-
-
-
-
-
 		// // Container, container body, iframe
 		// .mce-tinymce, .mce-container-body {
 		// 	min-height: 100% !important;
@@ -2000,8 +2040,19 @@
 		// 	left: 0;
 		// 	right: 0;
 		// }
+	}//end dd-tiny
+
+
+
+// full screen
+	.fullscreen {
+		position: fixed !important;
+		top: 0 !important;
+		left: 0 !important;
+		width: 100% !important;
+		height: 100% !important;
+		z-index: 10 !important;
 	}
-	// tinymce overwrite
 
 
 
