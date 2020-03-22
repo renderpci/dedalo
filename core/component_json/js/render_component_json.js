@@ -301,7 +301,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		const editor_options = {
 			mode	 : 'code',
 			modes	 : ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-			maxLines : 100, // Infinity,
+			// maxLines : 100, // Infinity,
 			onError	 : function (err) {
 				console.error("err:",err);
 				alert(err.toString());
