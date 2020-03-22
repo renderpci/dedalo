@@ -534,7 +534,7 @@ class section extends common {
 					$component_global_dato->dato		= new stdClass();
 					// $component_global_dato->valor		= new stdClass();
 					// $component_global_dato->valor_list	= new stdClass();
-					$component_global_dato->dataframe	= new stdClass();
+					// $component_global_dato->dataframe	= new stdClass();
 		}
 
 
@@ -560,9 +560,9 @@ class section extends common {
 			// }
 
 		# DATAFRAME  OBJ
-			if (!isset($component_global_dato->dataframe)) {
-				$component_global_dato->dataframe = new stdClass();
-			}
+			// if (!isset($component_global_dato->dataframe)) {
+			// 	$component_global_dato->dataframe = new stdClass();
+			// }
 
 		#
 		# DATO : Actualizamos el dato en el idioma actual
@@ -626,7 +626,17 @@ class section extends common {
 
 
 		# DATAFRAME
-			$component_global_dato->dataframe = $component_obj->get_dataframe();
+			$dataframe = $component_obj->get_dataframe();
+			if (isset($component_global_dato->dataframe)) {
+				// already exists property dataframe. Add always
+				$component_global_dato->dataframe = $dataframe;
+			}else{
+				// not exists property. Add only if dataframe is not empty
+				if (!empty($dataframe)) {
+					$component_global_dato->dataframe = $dataframe;
+				}
+			}
+
 
 		#
 		# REPLACE COMPONENT PORTION OF GLOBAL OBJECT :  Actualizamos todo el componente en el objeto global
@@ -3399,13 +3409,13 @@ class section extends common {
 		// already calculated
 			if (isset($this->sqo_context)) {
 				return $this->sqo_context;
-			}	
+			}
 
 		// sort vars
 			$section_tipo 	= $this->get_tipo();
 			$section_id 	= $this->get_section_id();
 			$lang 			= $this->get_lang();
-			$mode 			= $this->get_modo();		
+			$mode 			= $this->get_modo();
 			$limit 			= ($mode==='list') ? 10 : 1;
 
 
