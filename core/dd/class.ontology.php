@@ -172,6 +172,11 @@ class ontology {
 
 		foreach ($data as $key => $item) {
 
+			if (empty($item) || !isset($item->tld)) {
+				debug_log(__METHOD__." Skippep empty item on import ".to_string(), logger::ERROR);
+				continue;
+			}
+
 			// term. jer_dd
 				$esmodelo 	= $item->is_model ?? 'no';
 				$traducible = $item->translatable===true ? 'si' : 'no';

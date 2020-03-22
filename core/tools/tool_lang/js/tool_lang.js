@@ -2,6 +2,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../common/js/instances.js'
 	import {common} from '../../../common/js/common.js'
+	import {ui} from '../../../common/js/ui.js'
 	import {tool_common} from '../../../tool_common/js/tool_common.js'
 	import {render_tool_lang, add_component} from './render_tool_lang.js'
 
