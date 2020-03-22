@@ -901,6 +901,21 @@
 
 					.inputs_container>li {
 						// align-items: initial;
+
+						.button_fullscreen {
+							.build_button('full_screen.svg');
+							position: absolute;
+							top: 9px;
+							z-index: 4;
+							right: 99px;
+							background-color: white;
+							cursor: pointer;
+
+							&:active {
+								opacity: 0.4;
+							}
+						}
+
 					}
 
 					// override json editor
@@ -1993,12 +2008,6 @@
 			iframe {
 			}
 		}
-
-
-
-
-
-
 		// // Container, container body, iframe
 		// .mce-tinymce, .mce-container-body {
 		// 	min-height: 100% !important;
@@ -2025,8 +2034,19 @@
 		// 	left: 0;
 		// 	right: 0;
 		// }
+	}//end dd-tiny
+
+
+
+// full screen
+	.fullscreen {
+		position: fixed !important;
+		top: 0 !important;
+		left: 0 !important;
+		width: 100% !important;
+		height: 100% !important;
+		z-index: 10 !important;
 	}
-	// tinymce overwrite
 
 
 
