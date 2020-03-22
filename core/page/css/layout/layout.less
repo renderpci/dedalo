@@ -806,7 +806,13 @@
 			// component_image
 			&.component_image {
 				>.content_data {
+					height: 100%;
 					max-height: @media_max_height;
+
+					.canvas[resize] {
+						width: 100%;
+						height: 100%;
+					}
 
 					// image
 					.image  {
