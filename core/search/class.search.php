@@ -255,8 +255,8 @@ class search {
 				}
 
 				# Add property
-				$row->{$field_name} = ($field_name==='datos') 
-					? json_decode($field_value) 
+				$row->{$field_name} = ($field_name==='datos')
+					? json_decode($field_value)
 					: $field_value;
 			}
 

@@ -1511,7 +1511,7 @@ abstract class common {
 			$css = new stdClass();
 			if (isset($properties->css)) {
 				$css = $properties->css;
-				// remove from propoerties object
+				// remove from properties object
 				unset($properties->css);
 			}
 
@@ -1613,7 +1613,7 @@ abstract class common {
 				$dd_object->search_operators_info 	= $this->search_operators_info();
 				$dd_object->search_options_title 	= search::search_options_title($dd_object->search_operators_info);
 			}
-		
+
 
 
 		return $dd_object;

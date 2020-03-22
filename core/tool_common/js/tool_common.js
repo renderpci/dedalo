@@ -71,7 +71,7 @@ tool_common.prototype.build = async function(autoload=false) {
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// mandatory varzs check
+			// mandatory vars check
 				if (!self.tool_section_tipo || self.tool_section_tipo.lenght<2) {
 					console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_tipo:", self.tool_section_tipo);
 					return false
@@ -106,7 +106,6 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			// config set
 				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
-					console.log("simple_tool_object:",simple_tool_object);
 				self.config 				= simple_tool_object[0];
 				const label 				= self.config.label.find(item => item.lang===self.lang);
 				self.label 					= typeof label!=='undefined' ? label.value : self.model

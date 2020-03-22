@@ -366,9 +366,10 @@ class dd_core_api {
 		// context add
 			$context = $element_json->context;
 
+		// response
+			$response->result = $context;
+			$response->msg 	  = 'Ok. Request done';
 
-		$response->result 		= $context;
-		$response->msg 	  		= 'Ok. Request done';
 
 		return (object)$response;
 	}//end get_element_context
@@ -392,7 +393,7 @@ class dd_core_api {
 				return $response;
 			}
 
-		// vars
+		// sort vars
 			$tipo 			= $options->tipo ?? null;
 			$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
 			$lang 			= $options->lang ?? DEDALO_DATA_LANG;
@@ -442,7 +443,7 @@ class dd_core_api {
 								$area = area::get_instance($model, $tipo, $mode);
 								$sqo_context = $area->get_sqo_context();
 
-							$page_element->sqo_context = $sqo_context;							
+							$page_element->sqo_context = $sqo_context;
 
 						return $page_element;
 					})();
@@ -566,7 +567,7 @@ class dd_core_api {
 
 			$ar_section_tipo 	= (array)$json_data->ar_section_tipo;
 			$context_type 		= $json_data->context_type;
-			
+
 			$filter_components = common::get_section_elements_context([
 				'ar_section_tipo' 	=> $ar_section_tipo,
 				'context_type' 		=> $context_type
@@ -601,7 +602,7 @@ class dd_core_api {
 	*/
 	static function filter_get_editing_preset($json_data){
 		global $start_time;
-		
+
 		//////session_write_close();
 
 		$response = new stdClass();
@@ -824,7 +825,7 @@ class dd_core_api {
 
 						// }else{
 
-						// 	// others 
+						// 	// others
 						// 		$element = new $model($tipo, $mode);
 						}
 						break;
@@ -957,10 +958,10 @@ class dd_core_api {
 									$element->pagination = $pagination;
 
 							}else if (strpos($model, 'area')===0) {
-								
+
 								// areas
 									$element = area::get_instance($model, $tipo, $mode);
-								
+
 								// build_options
 									$build_options = $ddo_source->build_options ?? null;
 									$element->set_build_options($build_options);
