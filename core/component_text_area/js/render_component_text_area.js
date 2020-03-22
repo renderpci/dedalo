@@ -549,7 +549,7 @@ const get_custom_events = (self, i, get_service) => {
 	}//end blur
 
 	custom_events.click = (evt, options) => {
-
+		// use the observe property into ontology of the components to suscribe to this events
 		// img : click on img
 		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
 			const tag_obj = evt.target
@@ -557,11 +557,7 @@ const get_custom_events = (self, i, get_service) => {
 				
 				case 'tc':
 					// Video goto timecode by tc tag
-					//const timecode = evt.target.dataset.data
-
 					event_manager.publish('click_tag_tc' +'_'+ self.tipo, {tag:tag_obj, caller: self})
-					// component_text_area.goto_time(timecode);
-					//alert("Click on image/reference tc "+timecode);
 					break;
 
 				case 'indexIn' :
@@ -603,31 +599,32 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'draw' :
 					// Load draw editor
-					switch(page_globals.modo) {
+					event_manager.publish('click_tag_draw' +'_'+ self.tipo, {tag:tag_obj, caller: self})
 
-						case 'tool_transcription' :
-							if (typeof component_image==="undefined") {
-								console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
-							}else{
-								component_image.load_draw_editor(tag_obj);
-							}
-							break;
+					// switch(page_globals.modo) {
 
-						case 'edit' :
-							var canvas_id = text_area_component.dataset.canvas_id;
-							if (typeof component_image_read!=="undefined") {
-								component_image_read.load_draw_editor_read(tag_obj, canvas_id);
-							}else{
-								console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
-							}
-							break;
-					}
+					// 	case 'tool_transcription' :
+					// 		if (typeof component_image==="undefined") {
+					// 			console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
+					// 		}else{
+					// 			component_image.load_draw_editor(tag_obj);
+					// 		}
+					// 		break;
+
+					// 	case 'edit' :
+					// 		var canvas_id = text_area_component.dataset.canvas_id;
+					// 		if (typeof component_image_read!=="undefined") {
+					// 			component_image_read.load_draw_editor_read(tag_obj, canvas_id);
+					// 		}else{
+					// 			console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
+					// 		}
+					// 	break;
+					// }
 					break;
 
 				case 'geo' :
 					// Load geo editor
 					event_manager.publish('click_tag_geo' +'_'+ self.tipo, {tag:tag_obj, caller: self})
-					
 					break;
 
 
@@ -673,12 +670,14 @@ const get_custom_events = (self, i, get_service) => {
 	}//end MouseUp
 
 	custom_events.KeyUp = (evt, options) => {
-		console.log("KeyUp evt.keyCode:",evt.keyCode,evt.key);
+		// use the observe property into ontology of the components to suscribe to this events
 
 		switch(evt.keyCode ){
+			// 'esc' code: 27
 			case  27:
 				event_manager.publish('key_up_esc' +'_'+ self.tipo, evt.keyCode)
 				break;
+			// 'f2' code: 113
 			case 113:
 				const result 				= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
 				const result_length 		= result.length
@@ -694,34 +693,8 @@ const get_custom_events = (self, i, get_service) => {
 					
 					service.set_content(tag.outerHTML)
 				}
-				
 				break;
 		}
-
-
-		return
-		switch(context_name) {
-			case 'component_av':
-				// Send keys for tool_transcription (F2, ESC, etc..)
-				component_text_area.av_editor_key_up(evt);
-				break;
-			case 'component_image':
-				// 114 : Key F2 Write draw tag in text
-				var tag_insert_key_cookie = get_localStorage('tag_insert_key')
-				var tag_insert_key = tag_insert_key_cookie ? tag_insert_key_cookie : 113; // Default 113 'F2'
-				if(evt.keyCode==tag_insert_key) {
-					mce_editor.write_tag('draw', ed, evt, text_area_component)
-				}
-				break;
-			case 'component_geolocation':
-				// 115 : Key F2 Write geo tag in text
-				var tag_insert_key_cookie = get_localStorage('tag_insert_key')
-				var tag_insert_key = tag_insert_key_cookie ? tag_insert_key_cookie : 113; // Default 113 'F2'
-				if(evt.keyCode==tag_insert_key) {
-					mce_editor.write_tag('geo', ed, evt, text_area_component)
-				}
-				break;
-		}//end switch(context_name)
 	}//end KeyUp
 
 
