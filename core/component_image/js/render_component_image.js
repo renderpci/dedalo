@@ -111,16 +111,40 @@ const content_data_edit = async function(self) {
 		const url_object 		= value.filter(item => item.quality===quality)[0]
 		const url 				= url_object.url // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
+	// ul
+		const ul = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: '',
+			parent 			: fragment
+		})
+
+	// li
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			class_name 		: '',
+			parent 			: ul
+		})
+
+	// canvas
+		const canvas = ui.create_dom_element({
+			id 				: self.id,
+			element_type	: "canvas",
+			class_name 		: 'image',
+			parent 			: li
+		})
+
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
 			src 			: url,
 			class_name 		: 'image',
-			parent 			: fragment
+			// parent 			: canvas
 		})
 		image.setAttribute("tabindex", 0)
 		ui.component.add_image_fallback(image)
 
+		self.init_canvas(li, canvas, image)
+	
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -136,6 +160,24 @@ const content_data_edit = async function(self) {
 			  content_data.classList.add("content_data", self.type)
 			  content_data.appendChild(fragment)
 
+		
+
+			  	// console.log("content_data:",content_data);
+
+	// event_manager.subscribe('render_'+self.id, (node) => {
+	// event_manager.subscribe('render_instance', (node) => {	
+	// 	if (node.id==='page_list_lg-eng') {
+	// 		console.log("node ++++++:",node);
+	// 		const h = content_data.getBoundingClientRect() 
+	// 		console.log("h:",h);
+	// 	}
+		
+		// setTimeout(()=>{
+		// 	const h = node.getBoundingClientRect() 
+		// 	console.log("h:",h);
+		// },1000)
+		
+	// })
 
 	return content_data
 }//end content_data_edit
