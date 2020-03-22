@@ -386,12 +386,14 @@ export const ui = {
 				//console.log("[ui.build_wrapper_edit] instance:",instance)
 			}
 
-			const id 		= instance.id || 'id is not set'
-			const model 	= instance.model 	// like component_input-text
-			const type 		= instance.type 	// like 'component'
-			const tipo 		= instance.tipo 	// like 'rsc26'
-			const mode 		= instance.mode 	// like 'edit'
-			const label 	= mode === 'edit_in_list' ? null : instance.label // instance.context.label
+			const id 			= instance.id || 'id is not set'
+			const model 		= instance.model 	// like component_input-text
+			const type 			= instance.type 	// like 'component'
+			const tipo 			= instance.tipo 	// like 'rsc26'
+			const mode 			= instance.mode 	// like 'edit'
+			const label 		= mode === 'edit_in_list' ? null : instance.label // instance.context.label
+			const main_context 	= instance.context.find(element => element.tipo===instance.tipo)
+			const element_css 	= main_context.css || {}
 
  			const fragment = new DocumentFragment()
 
@@ -481,8 +483,12 @@ export const ui = {
 			// content_data
 				if (items.content_data) {
 					const content_data = items.content_data
-					content_data.classList.add("content_data", type)
-					fragment.appendChild(content_data)
+					// css
+						const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
+						const ar_css = ["content_data", type, ...content_data_structure_css]
+						content_data.classList.add(...ar_css)
+					// add to fragment
+						fragment.appendChild(content_data)
 				}
 
 
@@ -491,7 +497,12 @@ export const ui = {
 					element_type	: 'div',
 					class_name 		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
  				})
- 				wrapper.appendChild(fragment)
+ 				// css
+	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
+					wrapper.classList.add(...ar_css)
+ 				// append fragment
+ 					wrapper.appendChild(fragment)
 
 
 
@@ -552,7 +563,7 @@ export const ui = {
 						buttons.appendChild(items.buttons[i])
 					}
 				}
-				
+
 			// filter
 				if (instance.filter) {
 					const filter = ui.create_dom_element({
