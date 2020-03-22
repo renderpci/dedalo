@@ -134,7 +134,7 @@ component_image.prototype.get_data_tag = function(){
 
 
 // CANVAS : INIT
-component_image.prototype.init_canvas = function(li, canvas_node, img) {
+component_image.prototype.init_canvas = function(canvas_node, img) {
 
 	const self = this
 
@@ -164,11 +164,10 @@ component_image.prototype.init_canvas = function(li, canvas_node, img) {
 					position : self.current_paper.view.center
 				});
 
-				const height  		= li.offsetHeight //self.current_paper.view.size._height
-				const image_height 	= img.naturalHeight //raster.height
+				const height  		= self.current_paper.view.size._height
+				const image_height 	= img.naturalHeight
 				const ratio 		= height / image_height
 				raster.scale(ratio)
-
 		};
 
 return
