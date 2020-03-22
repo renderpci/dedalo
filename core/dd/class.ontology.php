@@ -70,7 +70,7 @@ class ontology {
 			'relations'		=> true,
 			'descriptors'	=> true,
 			'label'			=> false
-			]) {		
+			]) {
 
 		$options = new stdClass();
 			$options->tipo			= false;
@@ -148,7 +148,7 @@ class ontology {
 							'type' 	=> $type
 						];
 					}
-					$item->descriptors = $ar_descriptors;				
+					$item->descriptors = $ar_descriptors;
 			}
 
 			// get terminio by tipo with fallback
