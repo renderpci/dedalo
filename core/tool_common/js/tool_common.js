@@ -71,7 +71,7 @@ tool_common.prototype.build = async function(autoload=false) {
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// mandatory varzs check
+			// mandatory vars check
 				if (!self.tool_section_tipo || self.tool_section_tipo.lenght<2) {
 					console.warn("[tool_common.build] Error. Undefined mandatory self.tool_section_tipo:", self.tool_section_tipo);
 					return false

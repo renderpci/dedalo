@@ -40,16 +40,22 @@ class tools_register {
 			$info_objects_parsed = [];
 			foreach ($ar_tools as $current_dir_tool) {
 
-				if (preg_match('/.*(\/acc|\/old)$/i', $current_dir_tool)) continue;
+				// ignore folders with name different from pattern 'tool_*'
+				if (1!==preg_match('/tool_*/', $current_dir_tool, $output_array)) continue;
 
-				$info_file = $current_dir_tool . '/register.json';
-				if(!file_exists($info_file)){
-					debug_log(__METHOD__." file register.json dont exist into $current_dir_tool".to_string(), logger::ERROR);
-					continue;
-				}
+				// info_file register.json file check
+					$info_file = $current_dir_tool . '/register.json';
+					if(!file_exists($info_file)){
+						debug_log(__METHOD__." file register.json dont exist into $current_dir_tool".to_string(), logger::ERROR);
+						continue;
+					}
 
 				// info object (JSON encoded)
-					$info_object 	 = json_decode( file_get_contents($info_file) );
+					if( !$info_object = json_decode( file_get_contents($info_file) ) ){
+						debug_log(__METHOD__." wrong file register.json . Is not json valid file ".to_string(), logger::ERROR);
+						continue;
+					}
+
 					$new_info_object = clone $info_object;
 
 				// ontology from info object
@@ -160,8 +166,8 @@ class tools_register {
 
 		$tool_object = new stdClass();
 
-		$tool_object->section_tipo 	= $section_tipo;
-		$tool_object->section_id 	= $section_id;
+			$tool_object->section_tipo 	= $section_tipo;
+			$tool_object->section_id 	= $section_id;
 
 		// name
 			$component_tipo = 'dd1326';
@@ -222,7 +228,7 @@ class tools_register {
 			$value 	= reset($dato);
 			$tool_object->dd_version = $value;
 
-		// afected components (models)
+		// affected components (models)
 			$component_tipo = 'dd1330';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
@@ -232,7 +238,7 @@ class tools_register {
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
 			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array');
-			$tool_object->afected_models = $value;
+			$tool_object->affected_models = $value;
 
 		// description
 			$component_tipo = 'dd612';
@@ -254,7 +260,7 @@ class tools_register {
 			}
 			$tool_object->description = $value;
 
-		// afected components (tipos)
+		// affected components (tipos)
 			$component_tipo = 'dd1350';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
@@ -264,7 +270,7 @@ class tools_register {
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
 			$value 			= $component->get_dato() ?? [];
-			$tool_object->afected_tipos = $value;
+			$tool_object->affected_tipos = $value;
 
 		// show in inspector
 			$component_tipo = 'dd1331';
@@ -330,8 +336,21 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato();
+			$dato 			= (array)$component->get_dato();
+			$value 			= reset($dato);
 			$tool_object->properties = $value;
+
+		// config from tools_config files
+			$tool_object->config = new stdClass();
+			$tool_config_file_path = DEDALO_CONFIG_PATH . '/tools/' . 'config_' .$tool_object->name . '.json';
+			if (file_exists($tool_config_file_path)) {
+				try{
+					$tool_config_file_obj = json_decode( file_get_contents($tool_config_file_path) );
+					$tool_object->config  = $tool_config_file_obj;
+				} catch (Exception $e) {
+					debug_log(__METHOD__." Wrong config json content ".$e->getMessage(), logger::ERROR);
+				}
+			}
 
 
 		// // config
@@ -395,11 +414,18 @@ class tools_register {
 
 	/**
 	* RENUMERATE_TERM_ID
-	* @return
+	* @return object $ontology
 	*/
 	public static function renumerate_term_id($ontology, &$counter) {
 
 		foreach ($ontology as $item) {
+
+			// bad ontology error skip
+				if (!isset($item->tipo)) {
+					debug_log(__METHOD__." Skipped wrong ontology. ontology tipo is not set +++++++++++++++++++++++++++++++++++++++++++++ ".to_string(), logger::ERROR);
+					continue;
+				}
+
 			$tipo = $item->tipo;
 			$ar_items_childrens = array_filter($ontology, function($current_element) use($tipo){
 				return $current_element->parent === $tipo;

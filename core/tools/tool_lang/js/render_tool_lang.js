@@ -32,14 +32,14 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 	const render_level 	= options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = await ui.tool.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
 
 	// // buttons container
@@ -84,8 +84,6 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 	// 			})
 	// 		}
 
-
-
 	// tool_container
 		//const tool_container = document.getElementById('tool_container')
 		//if(tool_container!==null){
@@ -118,10 +116,10 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 
 
 /**
-* CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 
 	const fragment = new DocumentFragment()
@@ -138,6 +136,7 @@ const content_data_edit = async function(self) {
 	// source lang select
 		const source_select_lang = lang_selector(self.langs, self.source_lang, 'source_lang')
 		components_container.appendChild(source_select_lang)
+
 	// target lang select
 		const target_select_lang = lang_selector(self.langs, self.target_lang, 'target_lang')
 		components_container.appendChild(target_select_lang)
@@ -187,47 +186,9 @@ const content_data_edit = async function(self) {
 		})
 
 		// automatic_translation
-			const translator_engine = self.config.translator_engine
-				console.log("+++++++ translator_engine:",self.config);
+			const translator_engine = self.config.config.translator_engine
 			if (translator_engine) {
-				// 	// const automatic_translation_container = ui.create_dom_element({
-				// 	// 	element_type	: 'div',
-				// 	// 	class_name 		: 'automatic_translation_container',
-				// 	// 	parent 			: buttons_container
-				// 	// })
-				// 	// // button
-				// 	// const button_automatic_translation = document.createElement('button');
-				// 	// 	  button_automatic_translation.type = 'button'
-				// 	// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-				// 	// 	  automatic_translation_container.appendChild(button_automatic_translation)
-				// 	// 	  button_automatic_translation.addEventListener("click", (e) => {
-
-				// 	// 	  	content_data.classList.add("loading")
-
-				// 	// 	  	const translator  = translator_engine_select.value
-				// 	// 	  	const source_lang = source_select_lang.value
-				// 	// 	  	const target_lang = target_select_lang.value
-				// 	// 	  	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
-				// 	// 	  	.then(()=>{
-				// 	// 	  		content_data.classList.remove("loading")
-				// 	// 	  	})
-				// 	// 	  })
-
-				// 	// // select
-				// 	// const translator_engine_select = ui.create_dom_element({
-				// 	// 	element_type	: 'select',
-				// 	// 	parent 			: automatic_translation_container
-				// 	// })
-				// 	// for (let i = 0; i < translator_engine.length; i++) {
-				// 	// 	const translator = translator_engine[i]
-				// 	// 	ui.create_dom_element({
-				// 	// 		element_type	: 'option',
-				// 	// 		value 			: JSON.stringify(translator),
-				// 	// 		text_content 	: translator.label,
-				// 	// 		parent 			: translator_engine_select
-				// 	// 	})
-				// 	// }
-				const automatic_tranlation_node = build_automatic_tranlation(self, translator_engine, source_select_lang, target_select_lang, components_container)
+				const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)
 			}//end if (translator_engine)
 
@@ -239,11 +200,11 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 
-const build_automatic_tranlation = (self, translator_engine, source_select_lang, target_select_lang, components_container) => {
+const build_automatic_translation = (self, translator_engine, source_select_lang, target_select_lang, components_container) => {
 
 	// container
 		const automatic_translation_container = ui.create_dom_element({
@@ -275,18 +236,18 @@ const build_automatic_tranlation = (self, translator_engine, source_select_lang,
 			parent 			: automatic_translation_container
 		})
 		for (let i = 0; i < translator_engine.length; i++) {
-			const translator = translator_engine[i]
+			const engine = translator_engine[i]
 			ui.create_dom_element({
 				element_type	: 'option',
-				value 			: JSON.stringify(translator),
-				text_content 	: translator.label,
+				value 			: JSON.stringify(engine),
+				text_content 	: engine.label,
 				parent 			: translator_engine_select
 			})
 		}
 
 
 	return automatic_translation_container
-}//end build_automatic_tranlation
+}//end build_automatic_translation
 
 
 
