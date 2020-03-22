@@ -895,12 +895,20 @@
 			&.component_json {
 				>.content_data {
 					height: 100%;
-					max-height: @media_max_height;
+					// max-height: @media_max_height;
 					padding-bottom: 3em;
+					min-height: 30.5em;
+
+					.inputs_container>li {
+						// align-items: initial;
+					}
 
 					// override json editor
 					.ace_gutter {
 						z-index: unset;
+					}
+					div.jsoneditor-mode-code{
+						// height: 100vh; //100vh if you want full screen
 					}
 				}
 			}
@@ -1629,7 +1637,7 @@
 
 
 
-// singular for checking assignaments only
+// EXPERIMENTAL . singular for checking assignaments only
 	.singular {
 
 		&.wrapper_component {
@@ -1646,6 +1654,22 @@
 
 		&:after {
 			content: "*";
+		}
+	}
+
+
+// EXPERIMENTAL section custom test
+	.green {
+		&[class^="wrapper_"] { // affects all classes starting with 'wrapper_' (wrapper_section, wrapper_component, etc.)
+		// &.wrapper_section {
+			background-color: #87FA88 !important;
+			padding: 1em;
+			border-radius: 0.5em;
+		}
+	}
+	.red {
+		&.content_data {
+			background-color: #F37656 !important;
 		}
 	}
 
