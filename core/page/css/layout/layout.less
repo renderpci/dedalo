@@ -905,7 +905,7 @@
 
 					// override json editor
 					.ace_gutter {
-						z-index: unset;
+						// z-index: unset;
 					}
 					div.jsoneditor-mode-code{
 						// height: 100vh; //100vh if you want full screen
@@ -918,6 +918,12 @@
 				>.content_data {
 					// min-height: @media_max_height;
 					// background-color: #BEF0FA;
+
+					>ul {
+						>li {
+							z-index: inherit;
+						}
+					}
 				}
 			}
 
@@ -1377,6 +1383,7 @@
 			&.inputs_container >li {
 				position: relative;
 				flex: 1 1 100%;
+				z-index: 0;
 				//padding-bottom: 0.25em;
 			}
 		}
