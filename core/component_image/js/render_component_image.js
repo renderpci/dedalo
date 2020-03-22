@@ -129,7 +129,7 @@ const content_data_edit = async function(self) {
 		const canvas = ui.create_dom_element({
 			id 				: self.id,
 			element_type	: "canvas",
-			class_name 		: 'image',
+			class_name 		: 'canvas',
 			parent 			: li
 		})
 

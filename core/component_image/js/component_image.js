@@ -141,7 +141,8 @@ component_image.prototype.init_canvas = function(li, canvas_node, img) {
 		img.onload = function () {
 
 			// canvas
-
+				// resize
+					canvas_node.setAttribute("resize",true)
 				//size
 					canvas_node.height = img.naturalHeight
 					canvas_node.width  = img.naturalWidth
