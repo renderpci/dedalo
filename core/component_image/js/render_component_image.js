@@ -123,7 +123,7 @@ const content_data_edit = async function(self) {
 			element_type	: 'li',
 			class_name 		: '',
 			parent 			: ul
-		})
+		}) 
 
 	// canvas
 		const canvas = ui.create_dom_element({
@@ -132,18 +132,19 @@ const content_data_edit = async function(self) {
 			class_name 		: 'canvas',
 			parent 			: li
 		})
+		canvas.setAttribute("tabindex", 0)
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
 			src 			: url,
-			//class_name 		: 'image',
-			// parent 			: canvas
+			// class_name 		: 'image',
+			// parent 			: li
 		})
-		image.setAttribute("tabindex", 0)
-		ui.component.add_image_fallback(image)
+		// image.setAttribute("tabindex", 0)
+		// ui.component.add_image_fallback(image)
 
-		self.init_canvas(li, canvas, image)
+		self.init_canvas(canvas, image)
 	
 	// buttons container
 		const buttons_container = ui.create_dom_element({
