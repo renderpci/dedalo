@@ -109,7 +109,7 @@ class layout_map {
 		// 3. calculate from section list or related terms
 			if (!isset($layout_map)) {
 				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$ar_related 	= [];
+				$ar_related = [];
 				switch ($modo) {
 					case 'list':
 					case 'portal_list':
@@ -153,6 +153,21 @@ class layout_map {
 							// groupers
 							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 
+							// exclude elements check
+								$ar_excluded = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, 'exclude_elements', 'children', true);
+								if (isset($ar_excluded[0])) {
+									$ar_excluded_terms = RecordObj_dd::get_ar_terminos_relacionados($ar_excluded[0], $cache=true, $simple=true);
+									if (!empty($ar_excluded_terms)) {
+										$ar_related_temp = [];
+										foreach ($ar_related as $current_term) {
+											if (!in_array($current_term, $ar_excluded_terms)) {
+												$ar_related_temp[] = $current_term;
+											}
+										}
+										// overwrite var $ar_related
+										$ar_related = $ar_related_temp;
+									}
+								}
 						}else{
 							// portal, autocomplete
 							// OVERWRITTE MODO: when one component call for you own layout the mode of the component will be edit,
@@ -193,7 +208,6 @@ class layout_map {
 
 			// parse ar_related as config_context format
 				if (!isset($config_context) && !empty($ar_related)) {
-
 					$ar_related_clean 	 = [];
 					$target_section_tipo = $section_tipo;
 					foreach ((array)$ar_related as $key => $current_tipo) {
