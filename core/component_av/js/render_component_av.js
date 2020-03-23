@@ -10,7 +10,7 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_AV
 * Manages the component's logic and apperance in client side
 */
 export const render_component_av = function() {
@@ -68,9 +68,8 @@ render_component_av.prototype.edit = async function(options={render_level:'full'
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const posterframe_url = self.data.posterframe_url
-
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
 		const current_content_data = await get_content_data_edit(self)
@@ -78,9 +77,13 @@ render_component_av.prototype.edit = async function(options={render_level:'full'
 			return current_content_data
 		}
 
+	// buttons
+		const buttons = get_buttons(self)
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : current_content_data,
+			buttons 	 : buttons
 		})
 
 	// add events
@@ -139,14 +142,16 @@ const add_events = function(self, wrapper) {
 }//end add_events
 
 
+
 /**
-* get_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const is_inside_tool = self.is_inside_tool
+
+	const fragment = new DocumentFragment()
 
 	// urls
 		// posterframe
@@ -180,16 +185,6 @@ const get_content_data_edit = async function(self) {
 	self.video = video
 	fragment.appendChild(video)
 
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
@@ -197,6 +192,42 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 

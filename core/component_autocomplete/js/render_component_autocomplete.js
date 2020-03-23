@@ -30,7 +30,8 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 
 	const self = this
 
-	const render_level = options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -38,12 +39,16 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 			return content_data
 		}
 
+	// buttons
+		const buttons = get_buttons(self)
+
 	// reset service state autocomplete_active
 		self.autocomplete_active = false
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// add element, subscription to the events
@@ -207,15 +212,15 @@ render_component_autocomplete.prototype.list = async function() {
 
 
 /**
-* get_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
 
 	const ar_section_record = await self.get_ar_instances()
+	const is_inside_tool 	= self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// inputs contaniner
 		const inputs_container = ui.create_dom_element({
@@ -235,16 +240,6 @@ const get_content_data_edit = async function(self) {
 		}
 		fragment.appendChild(inputs_container)
 
-	// buttons
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add("nowrap")
@@ -253,6 +248,42 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 

@@ -9,18 +9,6 @@
 */
 export const render_component_section_id = function(component) {
 
-	this.component 			= component
-	this.context 			= component.context
-	this.data 				= component.data
-
-	this.tipo 				= component.tipo
-	this.section_tipo		= component.section_tipo
-	this.section_id			= component.section_id
-	this.mode 				= component.mode
-	this.lang 				= component.lang
-	this.section_lang 		= component.section_lang
-	this.model 				= component.model
-	this.id 				= component.id
 
 	return true
 }//end render_component_section_id
@@ -37,8 +25,8 @@ render_component_section_id.prototype.list = function(options) {
 	const self = this
 
 	// Options vars
-		const context 			= self.context
-		const data 				= self.data
+		const context 	= self.context
+		const data 		= self.data
 
 	// Value as string
 		const value_string = data.value
@@ -68,17 +56,18 @@ render_component_section_id.prototype.edit = async function(options={render_leve
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
 
 	// add events

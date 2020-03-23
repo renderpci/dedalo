@@ -135,15 +135,7 @@ export const ui = {
 
 			// buttons
 				if (items.buttons) {
-					const buttons = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'buttons',
-						parent 			: fragment
-					})
-					const items_buttons_length = items.buttons.length;
-					for (let i = 0; i < items_buttons_length; i++) {
-						buttons.appendChild(items.buttons[i])
-					}
+					fragment.appendChild(items.buttons)
 				}
 
 			// filter
@@ -235,6 +227,23 @@ export const ui = {
 
 			return content_data
 		},//end build_content_data
+
+
+
+		/**
+		* BUILD_BUTTONS_CONTAINER
+		* @param object component instance
+		* @return DOM node buttons_container
+		*/
+		build_buttons_container : (instance) => {
+
+			const buttons_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'buttons_container'
+			})
+
+			return buttons_container
+		},//end build_buttons_container
 
 
 

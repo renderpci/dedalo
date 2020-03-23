@@ -90,8 +90,8 @@ render_component_inverse.prototype.edit = function() {
 		})
 
 	return wrapper
-
 }//end edit
+
 
 
 /**
@@ -131,3 +131,5 @@ const input_element = (i, current_value, inputs_container, self) => {
 
 	return li
 }//end input_element
+
+

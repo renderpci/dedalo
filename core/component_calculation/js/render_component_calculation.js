@@ -10,7 +10,7 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_CALCULATION
 * Manage the components logic and appearance in client side
 */
 export const render_component_calculation = function(component) {
@@ -61,30 +61,102 @@ render_component_calculation.prototype.edit = function(options) {
 
 	const self = this
 
-	// Options vars
-		const context 			= self.context
-		const data 				= self.data || []
-		const value 			= data.value || []
-		const label 			= context.label
-		const model 			= self.model
-		const mode 				= 'edit'
-		const tipo 				= context.tipo
-		const section_id 		= data.section_id
-		const id 				= self.id || 'id is not set'
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	// render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
+		const content_data = await get_content_data_edit(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
-		const input = common.create_dom_element({
-			element_type	: 'div',
-			text_content 	: value,
-			parent 			: content_data
-		})
+	// buttons
+		const buttons = get_buttons(self)
 
-	// ui build_edit returns component wrapper
+	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
+
 
 	return wrapper
 }//end edit
+
+
+
+/**
+* GET_CONTENT_DATA_EDIT
+* @return DOM node content_data
+*/
+const get_content_data_edit = async function(self) {
+
+	// sort vars
+		const value 		= self.data.value
+		const mode 			= self.mode
+		const is_inside_tool= self.is_inside_tool
+
+	const fragment = new DocumentFragment()
+
+	// inputs container
+		const inputs_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'inputs_container',
+			parent 			: fragment
+		})
+
+	// values (inputs)
+		const inputs_value = value//(value.length<1) ? [''] : value
+		const value_length = inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
+		}
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
+
+
