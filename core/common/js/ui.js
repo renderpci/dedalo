@@ -172,13 +172,12 @@ export const ui = {
 
 			// content_data
 				if (items.content_data) {
-					const content_data = items.content_data
-					// css
-						const content_data_structure_css = typeof component_css.content_data!=="undefined" ? component_css.content_data : []
-						const ar_css = ["content_data", type, ...content_data_structure_css]
-						content_data.classList.add(...ar_css)
-
-					fragment.appendChild(content_data)
+					// const content_data = items.content_data
+					// // css
+					// 	const content_data_structure_css = typeof component_css.content_data!=="undefined" ? component_css.content_data : []
+					// 	const ar_css = ["content_data", type, ...content_data_structure_css]
+					// 	content_data.classList.add(...ar_css)
+					fragment.appendChild(items.content_data)
 				}
 
 			// tooltip
@@ -194,7 +193,7 @@ export const ui = {
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
-					element_type	: 'div'
+					element_type : 'div'
  				})
  				// css
 	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
@@ -213,6 +212,29 @@ export const ui = {
 
 			return wrapper
 		},//end build_wrapper_edit
+
+
+
+		/**
+		* BUILD_CONTENT_DATA
+		* @param object component instance
+		* @return DOM node content_data
+		*/
+		build_content_data : (instance) => {
+
+			const type 			= instance.type
+			const component_css = instance.context.css || {}
+
+			const content_data = document.createElement("div")
+
+			// css
+				const content_data_structure_css = typeof component_css.content_data!=="undefined" ? component_css.content_data : []
+				const ar_css = ["content_data", type, ...content_data_structure_css]
+				content_data.classList.add(...ar_css)
+
+
+			return content_data
+		},//end build_content_data
 
 
 
@@ -698,7 +720,7 @@ export const ui = {
 					class_name 		: 'button tool',
 					// style 		: { "background-image": "url('" +tool_object.icon +"')" },
 					src 			: tool_object.icon,
-					dataset			: { tool :tool_object.name },
+					dataset			: { tool : tool_object.name },
 					title_label 	: tool_object.label
 				})
 
@@ -724,7 +746,7 @@ export const ui = {
 		/**
 		* ATTACH_TO_MODAL
 		* Insert tool html into a modal box
-		* @return dom element tool_button
+		* @return dom element modal_container
 		*/
 		attach_to_modal : (wrapper, self, size="normal") => {
 
@@ -772,12 +794,8 @@ export const ui = {
 						modal_container._showModal()
 				}
 
-				// modal_container.addEventListener("_hideModal", function(e){
-						// console.log("+++++++++++e:",e);
-				// })
 
-
-			return true
+			return modal_container
 		}//attach_to_modal
 
 

@@ -73,7 +73,7 @@ render_component_av.prototype.edit = async function(options={render_level:'full'
 	const render_level 	= options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const current_content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -140,10 +140,10 @@ const add_events = function(self, wrapper) {
 
 
 /**
-* CONTENT_DATA_EDIT
+* get_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const fragment 			= new DocumentFragment()
 	const is_inside_tool 	= ui.inside_tool(self)
@@ -171,11 +171,9 @@ const content_data_edit = async function(self) {
 		video.addEventListener("timeupdate", async (e) => {
 			// e.stopPropagation()
 
-				
 
-				// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-				// console.log("aqui:",frame);
-
+			// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
+			// console.log("aqui:",frame);
 		})
 
 	// append the video node to the instance
@@ -193,16 +191,12 @@ const content_data_edit = async function(self) {
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
-}//end content_data_edit
-
-
-
+}//end get_content_data_edit
 
 
 
@@ -386,7 +380,5 @@ const build_video_html5 = function(request_options) {
 	return video
 }//end build_video_html5
 */
-
-
 
 

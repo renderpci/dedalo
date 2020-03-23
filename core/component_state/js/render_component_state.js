@@ -59,7 +59,7 @@ render_component_state.prototype.edit = async function() {
 	const value = self.data.value
 
 	// content_data
-		const content_data = document.createElement("div")
+		const content_data = ui.component.build_content_data(self)
 
 		// div_switcher
 			const div_switcher = common.create_dom_element({

@@ -66,14 +66,14 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 	const render_level 	= options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
@@ -217,7 +217,7 @@ render_component_geolocation.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = await content_data_edit(self)
+	const content_data = await get_content_data_edit(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -284,10 +284,10 @@ render_component_geolocation.prototype.search = async function() {
 
 
 /**
-* CONTENT_DATA_EDIT
+* get_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const value = self.data.value
 	const mode 	= self.mode
@@ -330,13 +330,12 @@ const content_data_edit = async function(self) {
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data")
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 

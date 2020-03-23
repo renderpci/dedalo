@@ -162,7 +162,8 @@ const get_content_data_edit = async function(self) {
 	const mode 	= self.mode
 
 	// content_data
-		const content_data = document.createElement("div")
+		const content_data = ui.component.build_content_data(self)
+
 		const div_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_id',
@@ -195,13 +196,14 @@ const get_content_data_search = async function(self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data_search
+
 
 
 /**
@@ -209,7 +211,6 @@ const get_content_data_search = async function(self) {
 * @return dom element input
 */
 const get_input_element_search = (i, current_value, inputs_container, self) => {
-
 
 	// input field
 		const input = ui.create_dom_element({

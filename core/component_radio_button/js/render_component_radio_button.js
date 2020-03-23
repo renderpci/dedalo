@@ -275,13 +275,15 @@ const content_data_edit = async function(self) {
 
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end content_data_edit
+
+
 
 /**
 * INPUT_ELEMENT

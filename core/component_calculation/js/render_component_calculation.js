@@ -73,7 +73,7 @@ render_component_calculation.prototype.edit = function(options) {
 		const id 				= self.id || 'id is not set'
 
 	// content_data
-		const content_data = document.createElement("div")
+		const content_data = ui.component.build_content_data(self)
 
 		const input = common.create_dom_element({
 			element_type	: 'div',

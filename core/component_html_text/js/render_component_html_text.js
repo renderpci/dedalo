@@ -66,7 +66,7 @@ render_component_html_text.prototype.edit = async function(options={render_level
 
 	//load
 	//await self.init_editor()
-		
+
 	// content_data
 		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
@@ -206,7 +206,7 @@ const get_content_data_edit = async function(self) {
 			const input_element = get_input_element(i, inputs_value[i], self, is_inside_tool)
 			inputs_container.appendChild(input_element)
 		}
-		
+
 	// buttons
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -236,9 +236,9 @@ const get_content_data_edit = async function(self) {
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			content_data.classList.add("content_data", self.type)		
-			content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.appendChild(fragment)
+
 
 	return content_data
 }//end get_content_data_edit
@@ -296,7 +296,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 							]
 		editor_config.custom_buttons = get_custom_buttons(self, i, get_service)
 		editor_config.custom_events  = get_custom_events(self, i, get_service)
-		
+
 		// init editor
 		const current_service = new service_tinymce()
 		current_service.init(self, li, {
@@ -352,7 +352,7 @@ const get_custom_buttons = (self, i, get_service) => {
 			}
 		})
 
-	
+
 	return custom_buttons
 }//end get_custom_buttons
 

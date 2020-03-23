@@ -85,7 +85,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
 		function update_value (changed_data) {
-			
+
 		}
 
 	// add element, subscription to the events
@@ -101,24 +101,24 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
 			//e.stopPropagation()
-			
+
 			// input_value. The standard input for the value of the component
 			if (e.target.matches('input[type="text"]')) {
-					
+
 				let value
 
 				// build date
 				switch(date_mode) {
 
 					case 'range':
-						const dato_range = self.get_dato_range(e.target, e.target.dataset.role)	
-												
+						const dato_range = self.get_dato_range(e.target, e.target.dataset.role)
+
 						if (e.target.dataset.role==='range_start') {
 							(dato_range.start === false) ? value = false : value = dato_range
 						}
 
-												
-						if (e.target.dataset.role==='range_end') {							
+
+						if (e.target.dataset.role==='range_end') {
 							(dato_range.end === false) ? value = false : value = dato_range
 						}
 
@@ -189,10 +189,10 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 					})
 
 					datePicker.open()
-		
+
 				return true
  			}
-									
+
 			// insert
 			if (e.target.matches('.button.add')) {
 
@@ -235,14 +235,14 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 				return true
 			}
-			
+
 			if (e.target.matches('.button.close')) {
 				//change mode
 				self.change_mode('list', true)
 
 				return true
 			}
-		})		
+		})
 
 	return wrapper
 }//end edit
@@ -305,8 +305,9 @@ const content_data_edit = async function(self) {
 
 	// content_data
 		const content_data = document.createElement("div")
-		content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
+
 
 	return content_data
 }//end content_data_edit
@@ -329,26 +330,25 @@ const input_element = (i, current_value, inputs_container, self) => {
 		})
 
 	// build date
-	switch(date_mode) {
+		switch(date_mode) {
 
-		case 'range':
-			input_element_range(i, current_value, li, self)
-			break;
+			case 'range':
+				input_element_range(i, current_value, li, self)
+				break;
 
-		case 'period':
-			input_element_period(i, current_value, li)
-			break;
+			case 'period':
+				input_element_period(i, current_value, li)
+				break;
 
-		case 'time':
-			input_element_time(i, current_value, li, self)
-			break;
+			case 'time':
+				input_element_time(i, current_value, li, self)
+				break;
 
-		case 'date':
-		default:
-			input_element_default(i, current_value, li, self)
-			break;
-
-	}
+			case 'date':
+			default:
+				input_element_default(i, current_value, li, self)
+				break;
+		}
 
 	// button remove
 		if(mode==='edit' || 'edit_in_list'){
@@ -360,8 +360,8 @@ const input_element = (i, current_value, inputs_container, self) => {
 			})
 		}
 
-	return li
 
+	return li
 }//end input_element
 
 
@@ -444,7 +444,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 		type 			: 'text',
 		class_name 		: 'input_value',
 		dataset 	 	: { key : i, role: 'period_day' },
-		value 			: day,		
+		value 			: day,
 		placeholder 	: 'D',
 		parent 			: inputs_container
 	})
@@ -498,6 +498,10 @@ const input_element_default = (i, current_value, inputs_container, self) => {
 }//end input_element_default
 
 
+
+/**
+* INPUT_ELEMENT_FLATPICKER
+*/
 const input_element_flatpicker = (i, role_name, input_value, inputs_container, self) => {
 
 	// create div end
@@ -513,7 +517,7 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 		element_type 	: 'input',
 		type 		 	: 'text',
 		class_name 		: 'form-control',
-		dataset 	 	: { key : i, role: role_name, altinput: true, input: ''}, 
+		dataset 	 	: { key : i, role: role_name, altinput: true, input: ''},
 		value 		 	: input_value,
 		placeholder 	: self.get_ejemplo(),
 		parent 		 	: flatpickr_wrap
@@ -529,12 +533,12 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 	const icon_calendar = ui.create_dom_element({
 		element_type	: 'i',
 		class_name 		: 'button calendar',
-		dataset 	 	: { key : i, role: role_name }, 
+		dataset 	 	: { key : i, role: role_name },
 		parent 			: button_calendar
 	})
 
 	return true
-}
+}//end input_element_flatpicker
 
 
 
