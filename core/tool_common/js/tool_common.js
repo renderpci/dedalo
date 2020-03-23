@@ -37,7 +37,7 @@ tool_common.prototype.init = async function(options) {
 	self.ar_instances		= []
 	self.events_tokens 		= []
 	self.lang 				= options.lang
-	self.config				= null // the config will be loaded by the build method in tool_common
+	self.simple_tool_object	= null // the 'simple_tool_object' will be loaded by the build method in tool_common
 
 	// set status
 		self.status = 'initied'
@@ -106,10 +106,10 @@ tool_common.prototype.build = async function(autoload=false) {
 
 			// config set
 				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
-				self.config 				= simple_tool_object[0];
-				const label 				= self.config.label.find(item => item.lang===self.lang);
+				self.simple_tool_object 	= simple_tool_object[0];
+				const label 				= self.simple_tool_object.label.find(item => item.lang===self.lang);
 				self.label 					= typeof label!=='undefined' ? label.value : self.model
-				const description			= self.config.description.find(item => item.lang===self.lang)
+				const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
 				self.description 			= typeof description!=='undefined' ? description.value : null
 
 			// debug
@@ -183,3 +183,49 @@ export const load_tool = async (options) => {
 }//end load_tool
 
 
+
+/**
+* TRIGGER_REQUEST
+*/
+export const trigger_request = async function(trigger_url, body) {
+	const t0 = performance.now()
+
+	const handle_errors = function(response) {
+		if (!response.ok) {
+			throw Error(response.statusText);
+		}
+		return response;
+	}
+
+	const trigger_response = await fetch(
+ 		trigger_url,
+ 		{
+			method		: 'POST',
+			mode		: 'cors',
+			cache		: 'no-cache',
+			credentials	: 'same-origin',
+			headers		: {'Content-Type': 'application/json'},
+			redirect	: 'follow',
+			referrer	: 'no-referrer',
+			body		: JSON.stringify(body)
+		})
+		.then(handle_errors)
+		.then(response => response.json()) // parses JSON response into native Javascript objects
+		.catch(error => {
+			console.error("!!!!! REQUEST ERROR: ",error)
+			return {
+				result 	: false,
+				msg 	: error.message,
+				error 	: error
+			}
+		});
+
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("__Time to trigger_request", self.model, " ms:", performance.now()-t0);
+		}
+
+
+	return trigger_response
+}//end trigger_request
