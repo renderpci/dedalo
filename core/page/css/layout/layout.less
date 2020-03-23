@@ -826,6 +826,7 @@
 
 					// image
 					.image  {
+						visibility: hidden;
 						height: 100%;
 						// height: auto;
 						max-height: 100%;
@@ -1378,6 +1379,7 @@
 						padding: 0.25em;
 						padding-left: 1em;
 						width: 100%;
+						height: 100%;
 					}
 
 					>.grouper_label {
@@ -1423,8 +1425,9 @@
 
 
 // inspector
-	@top_distance : 72px;
 	.inspector {
+		@top_distance : 72px;
+
 		height: 100%;
 		width: @inspector_width;
 		background-color: #fcfcfc;
@@ -1433,12 +1436,22 @@
 		left: calc(100vw - 16.4em);
 		border: 1px solid #eee;
 
+		.data_link {
+			&:before {
+				.build_button('file-download-solid.svg', black, 1);
+				height: 2em;
+				width: 100%;
+				margin: 1em;
+			}
+		}
+
+
 		@media screen and (max-width: @width_break_point_1) {
 			width: 100%;
 			left: 0;
 			position: initial;
 		}
-	}
+	}//end .inspector
 	// .toggle_inspector {
 	// 	//background-color: #fcfcfc;
 	// 	//background-image: url(../../themes/default/icons/reorder.svg);
