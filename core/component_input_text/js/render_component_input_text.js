@@ -170,18 +170,20 @@ const add_events = function(self, wrapper) {
 	// click event [click]
 		wrapper.addEventListener("click", e => {
 
-				const all_buttons_remove =wrapper.querySelectorAll('.remove')
+			// reset remove buttons view
+				const all_buttons_remove = wrapper.querySelectorAll('.remove')
 					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
 						all_buttons_remove[i].classList.add("display_none")
 					}
 
-
+			// show current remove button
 				if (e.target.matches(element_type)) {
 					// set the button_remove associated to the input selected to visible
 						const button_remove = e.target.parentNode.querySelector('.remove')
-						button_remove.classList.remove("display_none")
+						if (button_remove) {
+							button_remove.classList.remove("display_none")
+						}
 				}
-
 
 			// insert
 				if (e.target.matches('.button.add')) {
