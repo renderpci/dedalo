@@ -64,10 +64,11 @@ render_component_password.prototype.edit = async function(options={render_level:
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const current_content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -134,11 +135,12 @@ const add_events = function(self, wrapper) {
 }//end add_events
 
 
+
 /**
-* CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const value = self.data.value
 	const mode 	= self.mode
@@ -162,7 +164,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 

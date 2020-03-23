@@ -62,10 +62,11 @@ render_component_html_text.prototype.edit = async function(options={render_level
  	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level = options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	//load
-	//await self.init_editor()
+		//await self.init_editor()
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -73,9 +74,13 @@ render_component_html_text.prototype.edit = async function(options={render_level
 			return content_data
 		}
 
+	// buttons
+		const buttons = get_buttons(self)
+
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// add events
@@ -182,14 +187,14 @@ const add_events = function(self, wrapper) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return
+* @return DOm node content_data
 */
 const get_content_data_edit = async function(self) {
 
-	const value = self.data.value
+	const value 		= self.data.value
+	const is_inside_tool= self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
@@ -207,34 +212,6 @@ const get_content_data_edit = async function(self) {
 			inputs_container.appendChild(input_element)
 		}
 
-	// buttons
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// button close input
-		if(self.mode==='edit_in_list' && !is_inside_tool){
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: buttons_container
-			})
-		}
-
-	// button add input
-		// if(self.mode==='edit' || 'edit_in_list'){
-		// 	const button_add_input = ui.create_dom_element({
-		// 		element_type	: 'span',
-		// 		class_name 		: 'button add',
-		// 		parent 			: buttons_container
-		// 	})
-		// }
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
@@ -242,6 +219,51 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// button add input
+		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+			const button_add_input = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button add',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 

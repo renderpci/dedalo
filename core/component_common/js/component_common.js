@@ -215,6 +215,9 @@ component_common.prototype.build = async function(autoload=false){
 			await self.build_custom()
 		}
 
+	// is_inside_tool
+		self.is_inside_tool = ui.inside_tool(self)
+
 	// status update
 		self.status = 'builded'
 

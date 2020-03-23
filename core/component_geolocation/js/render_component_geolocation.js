@@ -63,7 +63,8 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -71,9 +72,13 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 			return content_data
 		}
 
+	// buttons
+		const buttons = get_buttons(self)
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
@@ -202,7 +207,6 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 		})
 
 
-
 	return wrapper
 }//end edit
 
@@ -289,11 +293,11 @@ render_component_geolocation.prototype.search = async function() {
 */
 const get_content_data_edit = async function(self) {
 
-	const value = self.data.value
-	const mode 	= self.mode
+	const value 		= self.data.value
+	const mode 			= self.mode
+	const is_inside_tool= self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
@@ -309,26 +313,6 @@ const get_content_data_edit = async function(self) {
 			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
 		}
 
-
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// button close
-		if(mode==='edit_in_list' && !is_inside_tool){
-			const button_close = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: buttons_container
-			})
-		}
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
@@ -336,6 +320,42 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 

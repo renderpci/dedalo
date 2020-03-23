@@ -10,7 +10,7 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_INPUT_TEXT
 * Manages the component's logic and apperance in client side
 */
 export const render_component_input_text = function() {
@@ -22,7 +22,7 @@ export const render_component_input_text = function() {
 
 /**
 * LIST
-* Render node for use in list
+* Render component node to use in list
 * @return DOM node wrapper
 */
 render_component_input_text.prototype.list = async function() {
@@ -63,17 +63,22 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
+
+	// buttons
+		const buttons = get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// add events
@@ -394,7 +399,7 @@ const get_content_data_edit = async function(self) {
 	// sort vars
 		const value 		= self.data.value
 		const mode 			= self.mode
-		const is_inside_tool= ui.inside_tool(self)
+		const is_inside_tool= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -412,37 +417,6 @@ const get_content_data_edit = async function(self) {
 			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
 		}
 
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-		// button close
-			if(mode==='edit_in_list' && !is_inside_tool){
-				const button_close = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'button close',
-					parent 			: buttons_container
-				})
-			}
-
-		// button add input
-			if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-				const button_add_input = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'button add',
-					parent 			: buttons_container
-				})
-			}
-
-		// buttons tools
-			if (!is_inside_tool) {
-				ui.add_tools(self, buttons_container)
-				// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
-			}
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
@@ -454,14 +428,60 @@ const get_content_data_edit = async function(self) {
 
 
 /**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// button add input
+		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+			const button_add_input = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button add',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
+
+
+
+/**
 * INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self, is_inside_tool) => {
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 	const mode 		 	= self.mode
 	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : 'false'
 	const element_type 	= (multi_line === true) ? 'textarea' :'input'
+	const is_inside_tool= self.is_inside_tool
 
 	// li
 		const li = ui.create_dom_element({

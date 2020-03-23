@@ -64,7 +64,8 @@ render_component_pdf.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -72,9 +73,13 @@ render_component_pdf.prototype.edit = async function(options) {
 			return content_data
 		}
 
-	// ui build_edit returns component wrapper
-		const wrapper =	ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+	// buttons
+		const buttons = get_buttons(self)
+
+	// wrapper. ui build_edit returns component wrapper
+		const wrapper = ui.component.build_wrapper_edit(self, {
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 
@@ -89,35 +94,25 @@ render_component_pdf.prototype.edit = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const is_inside_tool = self.is_inside_tool
+
+	const fragment = new DocumentFragment()
 
 	// url
-		const value 		= self.data.value
-		const pdf_url 		= value[0].url || null
-		const viewer_url 	= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
-
-	if (pdf_url) {
+		const value 	= self.data.value
+		const pdf_url 	= value[0].url || null
+		const viewer_url= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
 
 	// iframe
-		const iframe = ui.create_dom_element({
-			element_type	: "iframe",
-			src 			: viewer_url,
-			class_name 		: 'pdf_viewer_frame',
-			parent 			: fragment
-		})
-		iframe.setAttribute('allowfullscreen',true)
-	}
-
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+		if (pdf_url) {
+			const iframe = ui.create_dom_element({
+				element_type	: "iframe",
+				src 			: viewer_url,
+				class_name 		: 'pdf_viewer_frame',
+				parent 			: fragment
+			})
+			iframe.setAttribute('allowfullscreen',true)
+		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -126,5 +121,41 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
