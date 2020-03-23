@@ -78,7 +78,7 @@ render_component_number.prototype.edit = async function(options={render_level : 
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit		
+}//end edit
 
 /**
 * ADD_EVENTS
@@ -315,9 +315,10 @@ const content_data_edit = async function(self) {
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
+
 
 	return content_data
 }//end render_content_data

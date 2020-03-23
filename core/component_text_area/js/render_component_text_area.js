@@ -308,15 +308,12 @@ const get_content_data_edit = async function(self) {
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data_edit
-
-
 
 
 
@@ -554,7 +551,7 @@ const get_custom_events = (self, i, get_service) => {
 		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
 			const tag_obj = evt.target
 			switch(evt.target.className) {
-				
+
 				case 'tc':
 					// Video goto timecode by tc tag
 					event_manager.publish('click_tag_tc' +'_'+ self.tipo, {tag:tag_obj, caller: self})
@@ -681,8 +678,8 @@ const get_custom_events = (self, i, get_service) => {
 			case 113:
 				const result 				= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
 				const result_length 		= result.length
-				
-				// service 
+
+				// service
 					const service 			  = get_service()
 					const editor_content_data = service.get_editor_content_data()
 
@@ -690,7 +687,7 @@ const get_custom_events = (self, i, get_service) => {
 					const data 		= result[i]
 					const tag_id 	= (!data.tag_id) ? self.get_last_tag_id(editor_content_data, data.type) + 1 : data.tag_id;
 					const tag 		= build_node_tag(data.type, tag_id, data.state, data.label, data.data)//('tc', data, state, data, data)
-					
+
 					service.set_content(tag.outerHTML)
 				}
 				break;
@@ -705,15 +702,15 @@ const get_custom_events = (self, i, get_service) => {
 
 /**
 * BUILD_DOM_ELEMENT_FROM_DATA
-* @return 
+* @return
 */
-const build_node_tag = function(type, tag_id, state, label, data) {	
+const build_node_tag = function(type, tag_id, state, label, data) {
 
 	const images_factory_url = "../component_text_area/tag.php"
 
-	// Bracket_in is different for close tag		
-	const bracket_in = (type.indexOf("Out")!==-1) 
-		? "[/" 
+	// Bracket_in is different for close tag
+	const bracket_in = (type.indexOf("Out")!==-1)
+		? "[/"
 		: "["
 
 	// Removes sufixes 'In' and 'Out'
@@ -729,7 +726,7 @@ const build_node_tag = function(type, tag_id, state, label, data) {
 
 	const class_name = (type==='tc')
 		? type
-		: type_name 
+		: type_name
 
 	const dataset = {
 		type	: type,
@@ -738,7 +735,7 @@ const build_node_tag = function(type, tag_id, state, label, data) {
 		label 	: (type==='tc') ? tag_id : label,
 		data 	: (type==='tc') ? tag_id : data
 	}
-	
+
 	const element = ui.create_dom_element({
 		element_type 	: 'img',
 		src 			: src,

@@ -59,7 +59,7 @@ const content_data_edit__DES = async function(self) {
 	const ar_section_record = await self.get_ar_instances()
 
 	// content_data
-		const content_data = document.createElement("div")
+		const content_data = = ui.component.build_content_data(self)
 
 	// add all nodes
 		const length = ar_section_record.length
@@ -119,14 +119,14 @@ const content_data_edit = async function(self) {
 			class_name 		: 'button change_mode',
 			parent 			: buttons_container
 		})
-		
+
 	// tools
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data

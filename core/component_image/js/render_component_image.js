@@ -123,7 +123,7 @@ const content_data_edit = async function(self) {
 			element_type	: 'li',
 			class_name 		: '',
 			parent 			: ul
-		}) 
+		})
 
 	// canvas
 		const canvas = ui.create_dom_element({
@@ -145,7 +145,7 @@ const content_data_edit = async function(self) {
 		// ui.component.add_image_fallback(image)
 
 		self.init_canvas(canvas, image)
-	
+
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -157,27 +157,22 @@ const content_data_edit = async function(self) {
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
-		
-
-			  	// console.log("content_data:",content_data);
-
 	// event_manager.subscribe('render_'+self.id, (node) => {
-	// event_manager.subscribe('render_instance', (node) => {	
+	// event_manager.subscribe('render_instance', (node) => {
 	// 	if (node.id==='page_list_lg-eng') {
 	// 		console.log("node ++++++:",node);
-	// 		const h = content_data.getBoundingClientRect() 
+	// 		const h = content_data.getBoundingClientRect()
 	// 		console.log("h:",h);
 	// 	}
-		
+
 		// setTimeout(()=>{
-		// 	const h = node.getBoundingClientRect() 
+		// 	const h = node.getBoundingClientRect()
 		// 	console.log("h:",h);
 		// },1000)
-		
+
 	// })
 
 	return content_data

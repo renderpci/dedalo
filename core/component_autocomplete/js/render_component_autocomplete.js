@@ -33,9 +33,9 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// reset service state autocomplete_active
@@ -43,7 +43,7 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
 
 	// add element, subscription to the events
@@ -207,10 +207,10 @@ render_component_autocomplete.prototype.list = async function() {
 
 
 /**
-* CONTENT_DATA_EDIT
+* get_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const ar_section_record = await self.get_ar_instances()
 
@@ -246,13 +246,13 @@ const content_data_edit = async function(self) {
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 
