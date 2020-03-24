@@ -64,7 +64,8 @@ render_component_text_area.prototype.edit = async function(options={render_level
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -72,9 +73,13 @@ render_component_text_area.prototype.edit = async function(options={render_level
 			return content_data
 		}
 
+	// buttons
+		const buttons = get_buttons(self)
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// add events
@@ -245,10 +250,10 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = async function(self) {
 
-	const value = self.data.value
+	const value 		 = self.data.value
+	const is_inside_tool = self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// init the editor with the wrapper
 		// const editor = ui.create_dom_element({
@@ -262,7 +267,6 @@ const get_content_data_edit = async function(self) {
 		// self.events_tokens.push(
 		// 	event_manager.subscribe('render_'+self.id, load_editor)
 		// )
-
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
@@ -279,19 +283,34 @@ const get_content_data_edit = async function(self) {
 			inputs_container.appendChild(input_element)
 		}
 
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
 
 	// button close
-		if(self.mode==='edit_in_list' && !is_inside_tool){
+		if(mode==='edit_in_list' && !is_inside_tool){
 			const button_close = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button close',
-				parent 			: buttons_container
+				parent 			: fragment
 			})
 		}
 
@@ -304,19 +323,19 @@ const get_content_data_edit = async function(self) {
 		// 	})
 		// }
 
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+			// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
+		}
 
-	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
-			  content_data.appendChild(fragment)
-
-
-	return content_data
-}//end get_content_data_edit
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
 
 
+	return buttons_container
+}//end get_buttons
 
 
 
@@ -554,7 +573,7 @@ const get_custom_events = (self, i, get_service) => {
 		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
 			const tag_obj = evt.target
 			switch(evt.target.className) {
-				
+
 				case 'tc':
 					// Video goto timecode by tc tag
 					event_manager.publish('click_tag_tc' +'_'+ self.tipo, {tag:tag_obj, caller: self})
@@ -681,8 +700,8 @@ const get_custom_events = (self, i, get_service) => {
 			case 113:
 				const result 				= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
 				const result_length 		= result.length
-				
-				// service 
+
+				// service
 					const service 			  = get_service()
 					const editor_content_data = service.get_editor_content_data()
 
@@ -690,7 +709,7 @@ const get_custom_events = (self, i, get_service) => {
 					const data 		= result[i]
 					const tag_id 	= (!data.tag_id) ? self.get_last_tag_id(editor_content_data, data.type) + 1 : data.tag_id;
 					const tag 		= build_node_tag(data.type, tag_id, data.state, data.label, data.data)//('tc', data, state, data, data)
-					
+
 					service.set_content(tag.outerHTML)
 				}
 				break;
@@ -705,15 +724,15 @@ const get_custom_events = (self, i, get_service) => {
 
 /**
 * BUILD_DOM_ELEMENT_FROM_DATA
-* @return 
+* @return
 */
-const build_node_tag = function(type, tag_id, state, label, data) {	
+const build_node_tag = function(type, tag_id, state, label, data) {
 
 	const images_factory_url = "../component_text_area/tag.php"
 
-	// Bracket_in is different for close tag		
-	const bracket_in = (type.indexOf("Out")!==-1) 
-		? "[/" 
+	// Bracket_in is different for close tag
+	const bracket_in = (type.indexOf("Out")!==-1)
+		? "[/"
 		: "["
 
 	// Removes sufixes 'In' and 'Out'
@@ -729,7 +748,7 @@ const build_node_tag = function(type, tag_id, state, label, data) {
 
 	const class_name = (type==='tc')
 		? type
-		: type_name 
+		: type_name
 
 	const dataset = {
 		type	: type,
@@ -738,7 +757,7 @@ const build_node_tag = function(type, tag_id, state, label, data) {
 		label 	: (type==='tc') ? tag_id : label,
 		data 	: (type==='tc') ? tag_id : data
 	}
-	
+
 	const element = ui.create_dom_element({
 		element_type 	: 'img',
 		src 			: src,

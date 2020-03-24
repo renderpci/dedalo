@@ -164,7 +164,7 @@ const content_data = async function(self) {
 		const data_link = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'data_link',
-			text_content 	: 'DATA LINK',
+			title_label 	: 'Download record data',
 			parent 			: content_data
 		})
 		data_link.addEventListener("click", (e)=>{

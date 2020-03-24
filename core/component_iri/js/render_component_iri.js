@@ -68,30 +68,34 @@ render_component_iri.prototype.list = async function() {
 }//end list
 
 
+
 /**
 * EDIT
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_component_iri.prototype.edit = async function(options={
-		render_level : 'full'
-	}) {
+render_component_iri.prototype.edit = async function(options={render_level : 'full'}) {
 
-	const self 	= this
+	const self = this
 
 	self.data.value = (self.data.value.length<1) ? [] : self.data.value
 
-	const render_level = options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
+
+	// buttons
+		const buttons = get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
@@ -218,6 +222,7 @@ render_component_iri.prototype.edit = async function(options={
 			}
 		})
 
+
 	return wrapper
 }//end edit
 
@@ -277,17 +282,19 @@ render_component_iri.prototype.search = async function() {
 	return wrapper
 }//end search
 
+
+
 /**
-* RENDER_CONTENT_DATA
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
-	const value = self.data.value
-	const mode 	= self.mode
+	const value 		= self.data.value
+	const mode 			= self.mode
+	const is_inside_tool= self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
@@ -303,47 +310,64 @@ const content_data_edit = async function(self) {
 			get_input_element(i, inputs_value[i], inputs_container, self)
 		}
 
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// button add input
-		if(mode==='edit_in_list'){
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: buttons_container
-			})
-		}
-
-	// button add input
-		if(mode==='edit' || 'edit_in_list'){
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: buttons_container
-			})
-		}
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data
-}//end render_content_data
+}//end get_content_data_edit
 
 
 
 /**
-* get_INPUT_ELEMENT
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// button add input
+		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+			const button_add_input = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button add',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
+
+
+
+/**
+* GET_INPUT_ELEMENT
 * @return dom element li
 */
 const get_input_element = (i, current_value, inputs_container, self) => {

@@ -826,6 +826,7 @@
 
 					// image
 					.image  {
+						visibility: hidden;
 						height: 100%;
 						// height: auto;
 						max-height: 100%;
@@ -1081,17 +1082,54 @@
 				font-weight: 100;
 				color: #9e9e9e;
 			}
+
+			>.buttons_container {
+				display: none;
+				background-color: #ffffff;
+				// background-color: #BDFF69;
+				flex: 0 1 1em;
+				padding: 0; // 0.15em;
+				// border-radius: 0.25em;
+				//position: relative;
+
+				// 2
+				position: absolute;
+				top: 0;
+				// right: 0;
+
+				// 3
+				left: 100%;
+				z-index: 1;
+				background-color: #ffa03f;
+				height: 100%;
+				box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
+				border-top-right-radius: 0.25em;
+				border-bottom-right-radius: 0.25em;
+
+				>*{
+					//margin: 0.365em;
+					//line-height: 1.25em;
+				}
+
+				>.close {
+					position: absolute;
+					top: -0.1em;
+					right: -0.4em;
+					color: #f78a1c;
+					opacity: 1;
+					z-index: 2;
+				}
+			}//end .buttons_container
+
 			>.content_data {
 				// background-color: #B9DFF6;
 				// flex: 1 0 calc(80% - 2em);
-				flex: 1 1 100%;
-
 				display: flex;
+				flex: 1 1 100%;
 				flex-wrap: wrap;
 				//flex-flow: column;
 				align-items: flex-start;
 				padding-top: 0.5em;
-
 
 				@media screen and (max-width: @width_break_point_1) {
 					flex: 1 1 100%;
@@ -1108,54 +1146,53 @@
 					flex-flow: unset;
 				}
 
-
 				>.inputs_container {
 					flex: 1 1 auto;
 				}
 
-				>.buttons_container {
-					display: none;
-					background-color: #ffffff;
-					// background-color: #BDFF69;
-					flex: 0 1 1em;
-					padding: 0; // 0.15em;
-					// border-radius: 0.25em;
-					//position: relative;
+				// >.buttons_container {
+					// display: none;
+					// background-color: #ffffff;
+					// // background-color: #BDFF69;
+					// flex: 0 1 1em;
+					// padding: 0; // 0.15em;
+					// // border-radius: 0.25em;
+					// //position: relative;
 
-					// 2
-					position: absolute;
-					top: 0;
-					// right: 0;
+					// // 2
+					// position: absolute;
+					// top: 0;
+					// // right: 0;
 
-					// 3
-					left: 100%;
-					z-index: 1;
-					background-color: #ffa03f;
-					height: 100%;
-					box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
-					border-top-right-radius: 0.25em;
-					border-bottom-right-radius: 0.25em;
+					// // 3
+					// left: 100%;
+					// z-index: 1;
+					// background-color: #ffa03f;
+					// height: 100%;
+					// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
+					// border-top-right-radius: 0.25em;
+					// border-bottom-right-radius: 0.25em;
 
-					>*{
-						//margin: 0.365em;
-						//line-height: 1.25em;
-					}
+					// >*{
+					// 	//margin: 0.365em;
+					// 	//line-height: 1.25em;
+					// }
 
-					>.close {
-						position: absolute;
-						top: -0.1em;
-						right: -0.4em;
-						color: #f78a1c;
-						opacity: 1;
-						z-index: 2;
-					}
-				}
+					// >.close {
+					// 	position: absolute;
+					// 	top: -0.1em;
+					// 	right: -0.4em;
+					// 	color: #f78a1c;
+					// 	opacity: 1;
+					// 	z-index: 2;
+					// }
+				// }
 
 				//&.nowrap {
 				//	flex-wrap: nowrap;
 				//	flex-flow: nowrap;
 				//}
-			}
+			}//end .content_data
 
 			// @media screen and (max-width: 768px) {
 			@media screen and (max-width: 1280px) {
@@ -1423,6 +1460,7 @@
 						padding: 0.25em;
 						padding-left: 1em;
 						width: 100%;
+						height: 100%;
 					}
 
 					>.grouper_label {
@@ -1468,8 +1506,9 @@
 
 
 // inspector
-	@top_distance : 72px;
 	.inspector {
+		@top_distance : 72px;
+
 		height: 100%;
 		width: @inspector_width;
 		background-color: #fcfcfc;
@@ -1478,12 +1517,22 @@
 		left: calc(100vw - 16.4em);
 		border: 1px solid #eee;
 
+		.data_link {
+			&:before {
+				.build_button('file-download-solid.svg', black, 1);
+				height: 2em;
+				width: 100%;
+				margin: 1em;
+			}
+		}
+
+
 		@media screen and (max-width: @width_break_point_1) {
 			width: 100%;
 			left: 0;
 			position: initial;
 		}
-	}
+	}//end .inspector
 	// .toggle_inspector {
 	// 	//background-color: #fcfcfc;
 	// 	//background-image: url(../../themes/default/icons/reorder.svg);

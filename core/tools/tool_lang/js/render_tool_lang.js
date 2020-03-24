@@ -73,7 +73,7 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 	// 			element_type	: 'select',
 	// 			parent 			: automatic_translation_container
 	// 		})
-	// 		const translator_engine = self.config.properties.translator_engine
+	// 		const translator_engine = self.simple_tool_object.properties.translator_engine
 	// 		for (let i = 0; i < translator_engine.length; i++) {
 	// 			const translator = translator_engine[i]
 	// 			ui.create_dom_element({
@@ -186,7 +186,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// automatic_translation
-			const translator_engine = self.config.config.translator_engine
+			const translator_engine = self.simple_tool_object.config.translator_engine
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)

@@ -58,16 +58,16 @@ render_component_check_box.prototype.list = async function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_check_box.prototype.edit = async function(options={
-		render_level 	: 'full'
-	}) {
+render_component_check_box.prototype.edit = async function(options={render_level : 'full'}) {
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level || 'full'
 
-	const value		= self.data.value || []
-	const datalist 	= self.data.datalist || []
+	// sort vars
+		const value		= self.data.value || []
+		const datalist 	= self.data.datalist || []
 
 	// content_data
 		const content_data = await content_data_edit(self)
@@ -75,10 +75,13 @@ render_component_check_box.prototype.edit = async function(options={
 			return content_data
 		}
 
+	// buttons
+		const buttons = get_buttons(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 
@@ -233,12 +236,12 @@ render_component_check_box.prototype.edit = async function(options={
 */
 const content_data_edit = async function(self) {
 
-	const value 	= self.data.value
-	const datalist	= self.data.datalist
-	const mode 		= self.mode
+	const value 		= self.data.value
+	const datalist		= self.data.datalist
+	const mode 			= self.mode
+	const is_inside_tool= self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
@@ -260,40 +263,64 @@ const content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 
-		// button close
-		if(mode==='edit_in_list'){
-			const button_close = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: buttons_container
-			})
-		}
-
-		// button edit
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button edit',
-				parent 			: buttons_container
-			})
-
-		// button reset
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button reset',
-				parent 			: buttons_container
-			})
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// button edit
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button edit',
+			parent 			: fragment
+		})
+
+	// button reset
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button reset',
+			parent 			: fragment
+		})
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 

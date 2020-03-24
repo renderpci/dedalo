@@ -62,10 +62,11 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level = options.render_level
+	// render_level
+		const render_level = options.render_level
 
-	// load
-	await self.init_editor()
+	// load editor file
+		await self.init_editor()
 
 	// content_data
 		const current_content_data = await content_data_edit(self)
@@ -73,9 +74,13 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 			return current_content_data
 		}
 
+	// buttons
+		const buttons = get_buttons(self)
+
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : current_content_data,
+			buttons 	 : buttons
 		})
 
 		wrapper.classList.add(date_mode)
@@ -85,7 +90,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
 		function update_value (changed_data) {
-			
+
 		}
 
 	// add element, subscription to the events
@@ -101,24 +106,24 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
 			//e.stopPropagation()
-			
+
 			// input_value. The standard input for the value of the component
 			if (e.target.matches('input[type="text"]')) {
-					
+
 				let value
 
 				// build date
 				switch(date_mode) {
 
 					case 'range':
-						const dato_range = self.get_dato_range(e.target, e.target.dataset.role)	
-												
+						const dato_range = self.get_dato_range(e.target, e.target.dataset.role)
+
 						if (e.target.dataset.role==='range_start') {
 							(dato_range.start === false) ? value = false : value = dato_range
 						}
 
-												
-						if (e.target.dataset.role==='range_end') {							
+
+						if (e.target.dataset.role==='range_end') {
 							(dato_range.end === false) ? value = false : value = dato_range
 						}
 
@@ -189,10 +194,10 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 					})
 
 					datePicker.open()
-		
+
 				return true
  			}
-									
+
 			// insert
 			if (e.target.matches('.button.add')) {
 
@@ -235,14 +240,14 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 				return true
 			}
-			
+
 			if (e.target.matches('.button.close')) {
 				//change mode
 				self.change_mode('list', true)
 
 				return true
 			}
-		})		
+		})
 
 	return wrapper
 }//end edit
@@ -255,11 +260,11 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 */
 const content_data_edit = async function(self) {
 
-	const value = self.data.value
-	const mode 	= self.mode
+	const value 		= self.data.value
+	const mode 			= self.mode
+	const is_inside_tool= self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
@@ -275,41 +280,59 @@ const content_data_edit = async function(self) {
 			input_element(i, inputs_value[i], inputs_container, self)
 		}
 
-	// buttons
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
-	// button close input
-		if(mode==='edit_in_list'){
-			const button_add_input = ui.create_dom_element({
+
+	return content_data
+}//end content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button close',
-				parent 			: buttons_container
+				parent 			: fragment
 			})
 		}
 
 	// button add input
-		if(mode==='edit' || 'edit_in_list'){
+		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button add',
-				parent 			: buttons_container
+				parent 			: fragment
 			})
 		}
 
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
 
-	// content_data
-		const content_data = document.createElement("div")
-		content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
 
-	return content_data
-}//end content_data_edit
+
+	return buttons_container
+}//end get_buttons
 
 
 
@@ -329,26 +352,25 @@ const input_element = (i, current_value, inputs_container, self) => {
 		})
 
 	// build date
-	switch(date_mode) {
+		switch(date_mode) {
 
-		case 'range':
-			input_element_range(i, current_value, li, self)
-			break;
+			case 'range':
+				input_element_range(i, current_value, li, self)
+				break;
 
-		case 'period':
-			input_element_period(i, current_value, li)
-			break;
+			case 'period':
+				input_element_period(i, current_value, li)
+				break;
 
-		case 'time':
-			input_element_time(i, current_value, li, self)
-			break;
+			case 'time':
+				input_element_time(i, current_value, li, self)
+				break;
 
-		case 'date':
-		default:
-			input_element_default(i, current_value, li, self)
-			break;
-
-	}
+			case 'date':
+			default:
+				input_element_default(i, current_value, li, self)
+				break;
+		}
 
 	// button remove
 		if(mode==='edit' || 'edit_in_list'){
@@ -360,8 +382,8 @@ const input_element = (i, current_value, inputs_container, self) => {
 			})
 		}
 
-	return li
 
+	return li
 }//end input_element
 
 
@@ -444,7 +466,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 		type 			: 'text',
 		class_name 		: 'input_value',
 		dataset 	 	: { key : i, role: 'period_day' },
-		value 			: day,		
+		value 			: day,
 		placeholder 	: 'D',
 		parent 			: inputs_container
 	})
@@ -498,6 +520,10 @@ const input_element_default = (i, current_value, inputs_container, self) => {
 }//end input_element_default
 
 
+
+/**
+* INPUT_ELEMENT_FLATPICKER
+*/
 const input_element_flatpicker = (i, role_name, input_value, inputs_container, self) => {
 
 	// create div end
@@ -513,7 +539,7 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 		element_type 	: 'input',
 		type 		 	: 'text',
 		class_name 		: 'form-control',
-		dataset 	 	: { key : i, role: role_name, altinput: true, input: ''}, 
+		dataset 	 	: { key : i, role: role_name, altinput: true, input: ''},
 		value 		 	: input_value,
 		placeholder 	: self.get_ejemplo(),
 		parent 		 	: flatpickr_wrap
@@ -529,12 +555,12 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 	const icon_calendar = ui.create_dom_element({
 		element_type	: 'i',
 		class_name 		: 'button calendar',
-		dataset 	 	: { key : i, role: role_name }, 
+		dataset 	 	: { key : i, role: role_name },
 		parent 			: button_calendar
 	})
 
 	return true
-}
+}//end input_element_flatpicker
 
 
 
