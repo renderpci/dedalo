@@ -805,29 +805,29 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 */
 component_geolocation.prototype.save_draw_data = function() {
 
-		const self = this
+	const self = this
 
-		if(!self.draw_data) return false;
+	if(!self.draw_data) return false;
 
-		let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
-			if(SHOW_DEBUG===true) {
-				console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
-			}
-			current_draw_data = current_draw_data.replace(/"/g, '\'') //replaceAll('"', '\'', current_draw_data)
-
-
-		const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
-
-		const tag_data = {
-			type 			: tag_obj.dataset.type,
-			tag_id 			: tag_obj.dataset.tag_id,
-			id 				: tag_obj.id,
-			dataset			: {data:current_draw_data},
-			save 			: true
+	let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
+		if(SHOW_DEBUG===true) {
+			console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
 		}
+		current_draw_data = current_draw_data.replace(/"/g, '\'') //replaceAll('"', '\'', current_draw_data)
 
-		// UPDATE_TAG
-		event_manager.publish('geo_change_tag' +'_'+ self.tipo, tag_data)
 
-		return true
-	};//end save_draw_data
+	const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
+
+	const tag_data = {
+		type 			: tag_obj.dataset.type,
+		tag_id 			: tag_obj.dataset.tag_id,
+		id 				: tag_obj.id,
+		dataset			: {data:current_draw_data},
+		save 			: true
+	}
+
+	// UPDATE_TAG
+	event_manager.publish('geo_change_tag' +'_'+ self.tipo, tag_data)
+
+	return true
+};//end save_draw_data

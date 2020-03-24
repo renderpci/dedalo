@@ -1,28 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 23.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 100 100" style="enable-background:new 0 0 100 100;" xml:space="preserve">
+	 viewBox="0 0 1024 1024" style="enable-background:new 0 0 1024 1024;" xml:space="preserve">
 <style type="text/css">
-	.st0{fill:none;stroke:#000000;stroke-width:11;stroke-linecap:round;stroke-miterlimit:10;}
+	.st0{fill:none;stroke:#000000;stroke-width:114.9751;stroke-linecap:round;stroke-miterlimit:10;}
 </style>
 <g>
-	<g><line class="st0" x1="83.51" y1="83.51" x2="61" y2="61"/><g><polygon points="90.37,70.98 97.46,97.46 70.98,90.37 			"/></g></g>
-</g>
-<g>
-	<g><line class="st0" x1="39" y1="39" x2="16.49" y2="16.49"/><g><polygon points="29.02,9.63 2.54,2.54 9.63,29.02 			"/></g></g>
-</g>
-<g>
 	<g>
-		<line class="st0" x1="61" y1="39" x2="83.51" y2="16.49"/>
 		<g>
-			<polygon points="90.37,29.02 97.46,2.54 70.98,9.63 			"/>
+			<line class="st0" x1="862.26" y1="862.26" x2="626.98" y2="626.98"/>
+			<g>
+				<polygon points="933.96,731.29 1008.07,1008.07 731.29,933.96 				"/>
+			</g>
 		</g>
 	</g>
-</g>
-<g>
 	<g>
-		<line class="st0" x1="16.49" y1="83.51" x2="39" y2="61"/>
 		<g>
-			<polygon points="29.02,90.37 2.54,97.46 9.63,70.98 			"/>
+			<line class="st0" x1="397.02" y1="397.02" x2="161.74" y2="161.74"/>
+			<g>
+				<polygon points="292.71,90.04 15.93,15.93 90.04,292.71 				"/>
+			</g>
+		</g>
+	</g>
+	<g>
+		<g>
+			<line class="st0" x1="626.98" y1="397.02" x2="862.26" y2="161.74"/>
+			<g>
+				<polygon points="933.96,292.71 1008.07,15.93 731.29,90.04 				"/>
+			</g>
+		</g>
+	</g>
+	<g>
+		<g>
+			<line class="st0" x1="161.74" y1="862.26" x2="397.02" y2="626.98"/>
+			<g>
+				<polygon points="292.71,933.96 15.93,1008.07 90.04,731.29 				"/>
+			</g>
 		</g>
 	</g>
 </g>
