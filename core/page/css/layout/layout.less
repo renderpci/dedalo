@@ -1003,6 +1003,12 @@
 				}
 			}
 
+			// component_filter
+			&.component_filter {
+				>.content_data {
+				}
+			}
+
 			>.content_data {
 				//height: 100%;
 				max-height: inherit;
@@ -1098,12 +1104,17 @@
 
 				// 3
 				left: 100%;
+				// right: 0;
 				z-index: 1;
 				background-color: #ffa03f;
 				height: 100%;
 				box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 				border-top-right-radius: 0.25em;
 				border-bottom-right-radius: 0.25em;
+
+				.component_filter & {
+					background-color: #ACC7F6;
+				}
 
 				>*{
 					//margin: 0.365em;
@@ -2155,6 +2166,17 @@
 		width: 100% !important;
 		height: 100% !important;
 		z-index: 10 !important;
+		max-height: unset !important;
+		background-color: #ffffff !important;
+
+		.buttons_container {
+			left: unset !important;
+			right: 0 !important;
+		}
+
+		.content_data {
+			padding-right: 2.7em !important;
+		}
 	}
 
 
