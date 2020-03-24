@@ -10,7 +10,7 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_INPUT_TEXT
 * Manages the component's logic and apperance in client side
 */
 export const render_component_input_text = function() {
@@ -22,8 +22,8 @@ export const render_component_input_text = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @return DOM node
+* Render component node to use in list
+* @return DOM node wrapper
 */
 render_component_input_text.prototype.list = async function() {
 
@@ -63,17 +63,22 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
+
+	// buttons
+		const buttons = get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// add events
@@ -87,6 +92,7 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 
 /**
 * ADD_EVENTS
+* @return bool
 */
 const add_events = function(self, wrapper) {
 
@@ -170,18 +176,35 @@ const add_events = function(self, wrapper) {
 	// click event [click]
 		wrapper.addEventListener("click", e => {
 
-				const all_buttons_remove =wrapper.querySelectorAll('.remove')
+			// reset remove buttons view
+				const all_buttons_remove = wrapper.querySelectorAll('.remove')
 					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
 						all_buttons_remove[i].classList.add("display_none")
 					}
 
-
+			// show current remove button
 				if (e.target.matches(element_type)) {
 					// set the button_remove associated to the input selected to visible
 						const button_remove = e.target.parentNode.querySelector('.remove')
-						button_remove.classList.remove("display_none")
+						if (button_remove) {
+							button_remove.classList.remove("display_none")
+						}
 				}
 
+			// test
+				// if (e.target.matches('.button.tool')) {
+				// 	e.stopPropagation();
+
+				// 	//common.prototype.load_tool(self, tool_object)
+				// 	// ui.tool.load_tool(self, tool_object)
+				// 	event_manager.publish('load_tool', {
+				// 		self 		: self,
+				// 		tool_object : e.target
+				// 	})
+
+				// 	console.log("++++++++++++++ .button.tool e.target:", e.target);
+				// 	return true
+				// }
 
 			// insert
 				if (e.target.matches('.button.add')) {
@@ -296,7 +319,7 @@ const add_events = function(self, wrapper) {
 */
 render_component_input_text.prototype.search = async function() {
 
-	const self 			= this
+	const self = this
 
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
@@ -373,11 +396,12 @@ render_component_input_text.prototype.search = async function() {
 */
 const get_content_data_edit = async function(self) {
 
-	const value = self.data.value
-	const mode 	= self.mode
+	// sort vars
+		const value 		= self.data.value
+		const mode 			= self.mode
+		const is_inside_tool= self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
@@ -393,47 +417,8 @@ const get_content_data_edit = async function(self) {
 			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
 		}
 
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// button close
-		if(mode==='edit_in_list' && !is_inside_tool){
-			const button_close = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: buttons_container
-			})
-		}
-
-	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: buttons_container
-			})
-		}
-
-	// tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, buttons_container)
-			// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
-		}
-
-			// const fecha = new Date()
-			// ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	inner_html 	 	: fecha,
-			// 	parent 			: buttons_container
-			// })
-
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
 
@@ -443,14 +428,60 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* INPUT_ELEMENT
-* @return dom element li
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
 */
-const get_input_element_edit = (i, current_value, inputs_container, self, is_inside_tool) => {
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// button add input
+		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+			const button_add_input = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button add',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
+
+
+
+/**
+* INPUT_ELEMENT
+* @return DOM node li
+*/
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 	const mode 		 	= self.mode
 	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : 'false'
 	const element_type 	= (multi_line === true) ? 'textarea' :'input'
+	const is_inside_tool= self.is_inside_tool
 
 	// li
 		const li = ui.create_dom_element({
@@ -504,9 +535,9 @@ const get_content_data_search = async function(self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -529,7 +560,6 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 			class_name 		: 'q_operator',
 			parent 		 	: inputs_container
 		})
-
 
 	// input field
 		const input = ui.create_dom_element({

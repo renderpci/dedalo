@@ -64,17 +64,22 @@ render_component_security_access.prototype.edit = async function(options={render
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
+
+	// buttons
+		const buttons = get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 	// add events
@@ -130,7 +135,7 @@ render_component_security_access.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = await content_data_edit(self)
+	const content_data = await get_content_data_edit(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -197,62 +202,61 @@ render_component_security_access.prototype.search = async function() {
 
 
 /**
-* CONTENT_DATA_EDIT
+* get_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
-	const value 	= self.data.value
-	const datalist	= self.data.datalist
-	const mode 		= self.mode
+	const value 		 = self.data.value
+	const datalist		 = self.data.datalist
+	const mode 			 = self.mode
+	const is_inside_tool = self.is_inside_tool
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
 	level_hierarchy({
-						datalist 		: datalist,
-						value 			: value,
-						ul_container 	: fragment,
-						parent_tipo		: 'dd1'
-					})
+		datalist 		: datalist,
+		value 			: value,
+		ul_container 	: fragment,
+		parent_tipo		: 'dd1'
+	})
 
-
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// // button close
-	// 	if(mode==='edit_in_list' && !is_inside_tool){
-	// 		const button_close = ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name 		: 'button close',
-	// 			parent 			: buttons_container
-	// 		})
-	// 	}
-
-	// // button add input
-	// 	if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool){
-	// 		const button_add_input = ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name 		: 'button add',
-	// 			parent 			: buttons_container
-	// 		})
-	// 	}
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type, "nowrap")
-		content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 
@@ -333,10 +337,10 @@ const level_hierarchy = async (options) => {
 			item_hierarchy({
 							datalist 		: datalist,
 							value 			: value,
-							ul_container 	: inputs_container, 
+							ul_container 	: inputs_container,
 							item 			: root_areas[i]
 							})
-		}	
+		}
 }
 
 
@@ -382,7 +386,7 @@ const item_hierarchy = async (options) => {
 		if (typeof item_value !=='undefined') {
 			item_value.value== 2 ? input.indeterminate = true :	input.checked = true
 		}
-		
+
 		input.addEventListener("change", e => {
 			e.stopPropagation()
 			parents_node(li, input.checked)
@@ -406,7 +410,7 @@ const item_hierarchy = async (options) => {
 
 			button_add_input.addEventListener("mousedown", e => {
 				e.stopPropagation()
-				
+
 				if(button_add_input.classList.contains('open')){
 
 					button_add_input.classList.remove ('open')
@@ -441,7 +445,7 @@ const item_hierarchy = async (options) => {
 					const api_response = await current_data_manager.request({
 						body : {
 							action 		: 'ontology_get_childrens_recursive',
-							target_tipo : item.tipo							
+							target_tipo : item.tipo
 						}
 					})
 

@@ -67,7 +67,7 @@ render_component_inverse.prototype.edit = function() {
 	const value = self.data.value
 
 	// content_data
-		const content_data = document.createElement("div")
+		const content_data = ui.component.build_content_data(self)
 
 	// inputs
 		const inputs_container = ui.create_dom_element({
@@ -89,9 +89,9 @@ render_component_inverse.prototype.edit = function() {
 			content_data : content_data
 		})
 
-	return wrapper	
-	
+	return wrapper
 }//end edit
+
 
 
 /**
@@ -119,7 +119,7 @@ const input_element = (i, current_value, inputs_container, self) => {
 		const span_datalist_length 	= current_value.datalist.length
 
 		for (let j = 0; j < span_datalist_length; j++) {
-			
+
 			const span_value = ui.create_dom_element({
 				element_type 	: 'span',
 				class_name 		: 'inverse_show_values',
@@ -127,7 +127,9 @@ const input_element = (i, current_value, inputs_container, self) => {
 				parent 		 	: li
 			})
 
-		}		
+		}
 
 	return li
 }//end input_element
+
+

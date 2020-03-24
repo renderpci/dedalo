@@ -72,7 +72,7 @@ const content_data_edit = async function(self) {
 		for (let i = 0; i < length; i++) {
 
 			add_target_component(self.langs[i], components_container, self)
-			
+
 		}
 
 	// buttons container
@@ -83,7 +83,7 @@ const content_data_edit = async function(self) {
 		})
 
 		// automatic_translation
-			const translator_engine = self.config.translator_engine
+			const translator_engine = self.simple_tool_object.translator_engine
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_tranlation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)
