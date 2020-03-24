@@ -486,8 +486,30 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				parent 			: buttons_container
 			})
 			full_screen.addEventListener("mouseup", (e) =>{
-				full_screen.classList.add('fullscreen')
+				//add / remove the class fullscreen
+				self.node[0].classList.toggle('fullscreen') 
+
+				//reset the window and the canvas
+				window.dispatchEvent(new Event('resize'));
+				self.current_paper.project.view.update();
+				//change the status of the tool
 				activate_status(full_screen)
+				//reset the window and the canvas (twice, paper error)
+					window.dispatchEvent(new Event('resize'));
+					self.current_paper.project.view.update();
+
+				if(!self.node[0].classList.contains('fullscreen')){
+					// get the ratio diference from original view ratio and curren view ratio
+					const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
+					// get the delta center from current position to original center position
+					const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+					const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+
+					self.current_paper.view.scale(ratio)
+					self.current_paper.view.translate(center_x, center_y)
+				}
+
+				
 			})
 			buttons.push(full_screen)
 
