@@ -1023,8 +1023,8 @@ export const ui = {
 	*/
 	add_tools : function(self, buttons_container) {
 
-		const tools = self.tools
-		const tools_length = tools.length
+		const tools 		= self.tools
+		const tools_length 	= tools.length
 
 		for (let i = 0; i < tools_length; i++) {
 			if(tools[i].show_in_component){
@@ -1032,6 +1032,7 @@ export const ui = {
 			}
 		}
 
+		return tools
 	},//end add_tools
 
 

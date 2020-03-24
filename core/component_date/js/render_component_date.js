@@ -11,13 +11,14 @@
 
 
 /**
-* Render_component
+* RENDER_COMPONENT_DATE
 * Manage the components logic and appearance in client side
 */
 export const render_component_date = function() {
 
 	return true
 }//end render_component_date
+
 
 
 /**
@@ -65,8 +66,8 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	// render_level
 		const render_level = options.render_level
 
-	// load editor file
-		await self.init_editor()
+	// load editor files (calendar)
+		await self.load_editor()
 
 	// content_data
 		const current_content_data = await content_data_edit(self)
@@ -561,6 +562,5 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 
 	return true
 }//end input_element_flatpicker
-
 
 
