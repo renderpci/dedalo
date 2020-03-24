@@ -173,5 +173,8 @@ class DDModal extends HTMLElement {
 				}
 			}
 	}
+	close() {
+		this._closeModal()
+	}
 }
 customElements.define('dd-modal',DDModal);
