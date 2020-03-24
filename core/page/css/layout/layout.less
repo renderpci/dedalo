@@ -853,6 +853,51 @@
 						// max-height: 10em;
 						// width: 100%;
 					}
+
+					// Vector editor
+						.pointer {
+							&:before {
+								.build_button('pointer.svg', black, 1);
+							}
+						}
+						
+						.rectangle {
+							&:before {
+								.build_button('rectangle.svg', black, 1);
+							}
+						}
+						.circle {
+							&:before {
+								.build_button('circle.svg', black, 1);
+							}
+						}
+						.vector {
+							&:before {
+								.build_button('vector.svg', black, 1);
+							}
+						}
+						.zoom {
+							&:before {
+								.build_button('search.svg', black, 1);
+							}
+						}
+						.move {
+							&:before {
+								.build_button('hand.svg', black, 1);
+							}
+						}
+
+
+						.vector_tool_active {
+							opacity: 1;
+							&:before {
+								background-color: white;
+							}
+						}
+
+
+
+
 				}
 			}
 
@@ -2063,7 +2108,6 @@
 		height: 100% !important;
 		z-index: 10 !important;
 	}
-
 
 
 

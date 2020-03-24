@@ -7,7 +7,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_image} from '../../component_image/js/render_component_image.js'
-
+	import {vector_editor} from '../../component_image/js/vector_editor.js'
 
 
 export const component_image = function(){
@@ -72,9 +72,11 @@ component_image.prototype.init = async function(options) {
 	const self = this
 
 	// editor init vars
-		self.ar_tag_loaded = []
-		self.buttons_loaded = null
-		self.current_paper = null
+		self.ar_tag_loaded 			= []
+		self.vector_tools_loaded 	= false
+		self.current_paper 			= null
+
+		self.vector_editor 			= null
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -138,38 +140,33 @@ component_image.prototype.init_canvas = function(canvas_node, img) {
 
 	const self = this
 
-		img.onload = function () {
+	// canvas
+		// resize
+			canvas_node.setAttribute("resize", true)
+		//size
+			canvas_node.height = img.naturalHeight
+			canvas_node.width  = img.naturalWidth
+	
+		// hidpi. Avoid double size on canvas
+			// canvas_node.setAttribute("hidpi","off")
 
-			// canvas
-				// resize
-					canvas_node.setAttribute("resize",true)
-				//size
-					canvas_node.height = img.naturalHeight
-					canvas_node.width  = img.naturalWidth
-			
-		
-				// hidpi. Avoid double size on canvas
-					// canvas_node.setAttribute("hidpi","off")
-
-				// canvas -> active
-					canvas_node.getContext("2d")
+		// canvas -> active
+			canvas_node.getContext("2d")
 
 
-			// paper 
-				self.current_paper = paper.setup(canvas_node);
+	// paper 
+		self.current_paper = paper.setup(canvas_node);
 
-			// raster image
-				const raster = new self.current_paper.Raster({
-					source   : img.src,
-					position : self.current_paper.view.center
-				});
+	// raster image
+		const raster = new self.current_paper.Raster({
+			source   : img.src,
+			position : self.current_paper.view.center
+		});
 
-				const height  		= self.current_paper.view.size._height
-				const image_height 	= img.naturalHeight
-				const ratio 		= height / image_height
-				raster.scale(ratio)
-		};
-
+		const height  		= self.current_paper.view.size._height
+		const image_height 	= img.naturalHeight
+		const ratio 		= height / image_height
+		raster.scale(ratio)
 return
 /// old way v5
 	// zoom
@@ -303,12 +300,10 @@ return
 }//end init_canvas
 
 
-
-
-//Botones de tools
-//SELECT del ZOOM
-// Crear opciones de select para el zoom			
-component_image.prototype.load_draw_editor = function(options) {
+/**
+* LOAD_VECTOR_EDITOR
+*/
+component_image.prototype.load_vector_editor = async function(options) {
 
 	const self = this
 
@@ -317,9 +312,13 @@ component_image.prototype.load_draw_editor = function(options) {
 	// MODE : Only allow mode 'tool_transcription'
 	//if(page_globals.modo!=='tool_transcription') return null;
 
-	if (self.buttons_loaded===false){
-		self.buttons_loaded = true;
-		self.load_tools();
+	if (self.vector_tools_loaded===false){
+
+		self.vector_editor = new vector_editor
+		self.vector_editor.init_tools(self)
+		self.vector_editor.render_tools_buttons(self)
+
+		self.vector_tools_loaded = true
 	}
 
 	self.ar_tag_loaded[tag.tag_id] = tag;
@@ -332,525 +331,12 @@ component_image.prototype.load_draw_editor = function(options) {
 
 	const data 	 	= tag.data.replace(new RegExp('\'', 'g'), '"');
 	const layer_id 	= tag.tag_id +'_layer';
-	
-	// curent paper vars
-	const project = self.current_paper.project
-	const Layer   = self.current_paper.Layer
-	const Color   = self.current_paper.Color
 
-	//layer import
-		if ( data.indexOf('Layer')!=-1 ) {
-			
-			const p_len = project.layers.length
-			for (let i = p_len - 1; i >= 0; i--) {				
-				if (project.layers[i].name===layer_id){
-					project.layers[i].remove();
-						console.log("-> borrada capa: ", layer_id);
-				}
-			}
+	// call the generic commom tool init
+		vector_editor.prototype.load_layer(self, data, layer_id)
+}// load_vector_editor
 
-			const current_layer = project.importJSON(data);
 
-			const color = current_layer.fillColor;
 
-			current_layer.activate();
-			// project.deselectAll();
-			// project.view.draw();
-			//console.log(project.layers[1].name);
-			//console.log(current_layer.fillColor);
-		}else{
-			let create_new_current_layer = true
-			// Verificamos si el nombre del layer existe
 
-			const c_len = project.layers.length
-			for (let i = c_len - 1; i >= 0; i--) {					
-				if (project.layers[i].name == layer_id){
-					const current_layer = project.layers[i];
-					current_layer.activate();
-					create_new_current_layer = false;
-					console.log("-> usando existente current_layer: ", current_layer.name);
-					break;
-				}
-			}//end for
-			if (create_new_current_layer == true) {
-				const current_layer = new Layer();
-					current_layer.name = layer_id;					
-				const color = new Color({
-					hue: 360 * Math.random(),
-					saturation: 1,
-					brightness: 1,
-					alpha: 0.3,
-				});
-				current_layer.fillColor = color;
-				current_layer.activate();	
-				console.log("-> creada nueva capa: " , current_layer.name);	
-			}
-
-		};// end else
-		//segment = path = movePath = handle = handle_sync = null;
-		project.view.draw();
-		project.deselectAll();
-		project.options.handleSize = 8;
-	
-	return true
-}//end load_draw_editor
-
-
-
-/**
-* LOAD_TOOLS
-*/
-component_image.prototype.load_tools = function(){
-
-	const self = this
-
-	// Tool buttons. Show
-	const main_buttons = document.querySelector(".main_buttons")
-		  main_buttons.classList.remove("hide")
-
-	/*
-		//var contexto = canvas_obj.parentNode.parentNode;
-		var contexto = document.getElementsByClassName('image_buttons')[0];
-		//console.log(contexto);
-
-			function createButton(contexto, estado, func){
-					var button = document.createElement("input");
-					button.type = "button";
-					button.value = estado;
-					button.onclick = func;
-					contexto.appendChild(button);
-					//document.body.appendChild(button);
-				}
-
-		if (this.buttons_loaded == true) {
-			createButton(contexto, "rectangle", function(){ 
-							rectangle.activate(); 
-					});
-			createButton(contexto, "circle", function(){ 
-							circle.activate(); 
-					});
-
-			createButton(contexto, "pointer", function(){ 
-							pointer.activate(); 
-					});
-
-			createButton(contexto, "vector", function(){ 
-							vector.activate(); 
-					});
-
-			createButton(contexto, "añadido", function(){ 
-							add_point.activate(); 
-					});
-			createButton(contexto, "salvar", function(){ 
-							salvar();
-					});
-
-
-			this.buttons_loaded = true;		
-		}//end if (this.buttons_loaded == true)
-
-		*/
-
-	// paper. Curent paper vars
-		const project = self.current_paper.project
-		const Layer   = self.current_paper.Layer
-		const Color   = self.current_paper.Color
-		const Tool    = self.current_paper.Tool
-		const Point   = self.current_paper.Point
-		const Size    = self.current_paper.Size
-		const Path    = self.current_paper.Path
-
-
-	// rectangle 
-		self.rectangle = new Tool();
-		self.rectangle.onMouseDown = function(event){
-			// Reset vars
-			segment = path = movePath = handle = handle_sync = null;
-			project.deselectAll();
-		}
-		self.rectangle.onMouseDrag = function(event){
-			//console.log(project.activeLayer.name);
-			//var rect = new Rectangle();
-			const tama = new Size ({
-				width: event.point.x - event.downPoint.x,
-				height: event.point.y - event.downPoint.y
-			});
-
-			const rectangle_path = new Path.Rectangle({
-				point: event.downPoint,
-				size: tama,
-				fillColor: project.activeLayer.fillColor,
-				strokeColor: 'black'
-			});
-
-			// Remove this path on the next drag event:
-			rectangle_path.removeOnDrag();
-		}
-
-
-	// circle 
-		self.circle = new Tool();
-		self.circle.onMouseDown = function(event){
-			// Reset vars
-			segment = path = movePath = handle = handle_sync = null;
-			project.deselectAll();
-		}
-		self.circle.onMouseDrag = function(event){
-			
-			const a = new Point({
-				x: event.downPoint.x - event.point.x,
-				y: event.downPoint.y - event.point.y,
-			})
-
-			const circle_path = new Path.Circle({
-				center 		: event.downPoint,
-				radius 		: a.length,
-				fillColor 	: project.activeLayer.fillColor,
-				strokeColor : 'black'
-			})
-			//console.log((event.downPoint.x - event.point.x).length);
-
-			// Remove this path on the next drag event:
-			circle_path.removeOnDrag()
-		}
-
-
-	// añadir punto 
-		self.add_point = new Tool();			
-		self.add_point.onMouseDown = function(event) {
-			// Reset vars
-			segment = path = movePath = handle = handle_sync = null;
-			const hitResult = project.hitTest(event.point, hitOptions);
-			if (hitResult) {
-				path = hitResult.item;
-				//console.log(hitResult.type);
-				if (hitResult.type==='stroke') {
-					const location = hitResult.location
-					segment = path.insert(location.index +1, event.point)
-					//path.smooth();
-				}
-			}
-		}				
-		self.add_point.onMouseMove = function(event){
-			const hitResult = project.hitTest(event.point, hitOptions);
-			project.activeLayer.selected = false;
-			if (hitResult && hitResult.item)
-				hitResult.item.selected = true;
-		}			
-		self.add_point.onMouseDrag = function(event) {
-			if (segment) {
-				segment.point.x = event.point.x;
-				segment.point.y = event.point.y;
-			}
-		}
-			
-
-	// pointer 
-		self.pointer = new Tool();
-		self.pointer.onMouseDown = function(event) {
-			// Reset vars
-			segment = path = movePath = handle = handle_sync = null;
-
-			//project.activeLayer.selected = false;
-			const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
-
-			/* if (event.modifiers.shift) {
-					if (hitResult.type == 'segment') {
-						hitResult.segment.remove();
-					};
-					if(hitResult.type == 'fill'){
-						path = hitResult.item;
-						//console.log(path.layer.name);
-						//console.log(project.activeLayer.name);
-						if (project.activeLayer.name == path.layer.name) {
-						//	console.log("mismo layer");
-							path.selected = true;
-							//console.log(capa);
-							//path.selected = true;
-						}else{
-						//	console.log("distinto layer");
-							project.deselectAll();
-							capa = path.layer;
-							capa.activate();
-							path.selected = true;
-						}
-
-					}
-					if(hitResult.type == 'pixel'){
-						project.activeLayer.selected = false;
-					}
-					console.log(hitResult.type);
-					return;
-				}
-				*/
-			if(SHOW_DEBUG===true) {
-				console.log("[load_tools] hitResult:",hitResult);
-			}					
-			if (hitResult) {
-				switch(hitResult.type) {
-
-					case ('fill'):
-						project.deselectAll()
-						path = hitResult.item
-						const capa = path.layer
-							capa.activate()
-
-						if (event.modifiers.shift) {
-							hitResult.item.remove()
-						}
-
-						path.selected = true;
-						movePath = hitResult.type == 'fill'
-						break;
-
-					case ('pixel'):
-						project.deselectAll();
-						project.activeLayer.selected = false;
-						//path.selected = false;
-						//path = null;
-						break;
-
-					case ('segment'):
-						project.deselectAll();
-						path = hitResult.item;
-						path.fullySelected = true;
-						segment = hitResult.segment;
-						if (event.modifiers.shift) {
-							hitResult.segment.remove();
-						}
-						if (event.modifiers.command) {
-							if(segment.hasHandles()){
-								hitResult.segment.clearHandles();
-							}
-							handle_sync = hitResult.segment.handleIn;
-							handleIn = hitResult.segment.handleIn;
-							handleOut = hitResult.segment.handleOut;
-							segment = "";
-						}
-						//segment = hitResult.segment
-						break;
-
-					case ('stroke'):
-						const location = hitResult.location;
-						path = hitResult.item;
-						segment = path.insert(location.index +1, event.point);
-						//path.smooth();
-						break;
-
-					case ('handle-in'):
-						handle = hitResult.segment.handleIn;
-						if (event.modifiers.command) {
-							handle_sync = hitResult.segment.handleIn;
-							handleIn = hitResult.segment.handleIn;
-							handleOut = hitResult.segment.handleOut;
-							handle = "";
-						}
-						break;
-
-					case ('handle-out'):
-						handle = hitResult.segment.handleOut;
-						if (event.modifiers.command) {
-							handle_sync = hitResult.segment.handleOut;
-							handleIn = hitResult.segment.handleOut;
-							handleOut = hitResult.segment.handleIn;
-							handle = "";
-						}
-						break;
-
-					default:
-						console.log("Ignored hitResult.type :", hitResult.type)
-						break;
-				}//end switch							
-				//console.log(hitResult.type);
-			}				
-			/*if (movePath)
-			project.activeLayer.addChild(hitResult.item);*/
-		}
-		/*
-		this.pointer.onMouseMove = function(event){
-			var hitResult = project.hitTest(event.point, hitOptions);
-			project.activeLayer.selected = false;
-			if (hitResult && hitResult.item)
-				hitResult.item.selected = true;
-		}*/
-		self.pointer.onMouseDrag = function(event) {
-			if (handle){
-				handle.x += event.delta.x;
-				handle.y += event.delta.y;
-			}
-			if (handle_sync){
-				handleIn.x += event.delta.x;
-				handleIn.y += event.delta.y;
-				handleOut.x -= event.delta.x;
-				handleOut.y -= event.delta.y;
-			}
-			if (segment) {
-				//console.log(segment);
-				segment.point.x = event.point.x;
-				segment.point.y = event.point.y;
-				//console.log(event);
-				//console.log(segment);
-				//path.smooth();
-			}
-			if (movePath){
-				path.position.x += event.delta.x;
-				path.position.y += event.delta.y;
-			}
-		}
-		self.pointer.onKeyUp = function(event){
-			if (event.key==="backspace" || event.key==="delete"){
-				//console.log(event.key);
-				const seleccionados = project.selectedItems;
-				//console.log(seleccionados);
-				const sec_len = seleccionados.length
-				for (let i = sec_len - 1; i >= 0; i--) {
-					seleccionados[i].remove()
-					segment = path = null;
-				}
-			}
-		}
-
-
-	// vector 
-		self.vector = new Tool()
-		const findHandle = function(path, point) {
-			//console.log("path: " + path);
-			//console.log("path.segments.length "+path.segments.length);
-			const s_len = path.segments.length
-			for (let i = s_len - 1; i >= 0; i--) {
-
-				for (let j = 0; j < 3; j++) {
-
-					const type 		 = types[j]
-					const segment 	 = path.segments[i]
-					const segmentPoint = {}
-					
-					if (type==='point'){
-						segmentPoint = segment.point;
-					}else{
-						segmentPoint.x = segment.point.x + segment[type].x;
-						segmentPoint.y = segment.point.y + segment[type].y;
-					}
-					//var segmentPoint = type == 'point'
-					//		? segment.point
-					//		: segment.point.x + segment[type].x;
-					const distance = new Point;// = (point - segmentPoint).length;
-							distance.x = (point.x - segmentPoint.x);
-							distance.y = (point.y - segmentPoint.y);
-					const distance_len = distance.length;
-
-					//console.log("point " + point);
-					//console.log("segmentPoint: " + segmentPoint);
-					//console.log("distance_len " + distance_len);
-
-					if (distance_len < 3) {
-						return {
-							type    : type,
-							segment : segment
-						};
-					}
-				}
-			}
-			//console.log(point)
-			return null;
-		}
-		//console.log("path: "+path);
-		//function onMouseDown(event) {
-		self.vector.onMouseDown = function(event) {
-			
-			if (currentSegment){
-				currentSegment.selected = false;
-			}				
-			mode = type = currentSegment = null;
-			
-			if (!path) {
-				path = new Path({
-					strokeColor : 'black',
-					fillColor : project.activeLayer.fillColor
-				});
-			}
-
-			const result = findHandle(path, event.point)				
-			if (result) {
-				currentSegment = result.segment;
-				type = result.type;
-				//console.log(path.segments.length);
-				//console.log(result.type);
-				//console.log(result.segment.index);
-
-				if (path.segments.length > 1 && result.type==='point' && result.segment.index == 0) {
-					mode = 'close';
-					path.closed = true;
-					path.selected = false;
-					path = null;
-				}
-			}
-
-			if (mode!=="close") {						
-				mode = currentSegment ? 'move' : 'add';
-				if (!currentSegment) {
-					currentSegment = path.add(event.point);
-				}
-				currentSegment.selected = true;
-			}
-		}
-		
-		self.vector.onMouseDrag = function(event) {
-			if (mode==='move' && type==='point') {
-				currentSegment.point = event.point;
-			}else if (mode!=="close" && currentSegment.handleIn) {
-				var delta = event.delta.clone();	
-				if (type==='handleOut' || mode==='add') {
-					//console.log(delta.x +" "+(delta.x)*-1)
-					//console.log(delta)
-					//delta = -delta;
-					delta.x = (delta.x)*-1
-					delta.y = (delta.y)*-1
-				}
-				//console.log(delta);						
-				//currentSegment.handleIn += delta;
-				currentSegment.handleIn.x += delta.x;
-				currentSegment.handleIn.y += delta.y;
-
-				//currentSegment.handleOut -= delta;
-				currentSegment.handleOut.x -= delta.x;
-				currentSegment.handleOut.y -= delta.y;
-			}
-		}
-
-
-	// activate de default tool pointer 
-		const button_pointer = main_buttons.querySelector("[data-tool_name='pointer']")
-		self.active_tool(button_pointer)
-
-
-	return true
-}//end load_tools
-
-
-
-/**
-* ACTIVE_TOOL
-* @return 
-*/
-component_image.prototype.active_tool = function(button) {
-
-	const tool_name = button.dataset.tool_name
-	
-	// Activate tool
-	this[tool_name].activate()
-
-	// Reset all butons apperance
-	const ar_buttons = button.parentNode.querySelectorAll(".button_activate")
-	for (let i = ar_buttons.length - 1; i >= 0; i--) {
-		if (ar_buttons[i].classList.contains("button_active")) {
-			ar_buttons[i].classList.remove("button_active")
-		}			
-	}
-
-	// Hilite current
-	button.classList.add("button_active")
-
-	return true
-};//end active_tool
 
