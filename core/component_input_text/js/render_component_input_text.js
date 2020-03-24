@@ -450,11 +450,22 @@ const get_buttons = (self) => {
 
 	// button add input
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			const button_add_input = ui.create_dom_element({
+			// const button_add_input = ui.create_dom_element({
+			// 	element_type	: 'span',
+			// 	class_name 		: 'button add',
+			// 	parent 			: fragment
+			// })
+			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button add',
 				parent 			: fragment
 			})
+			// const button_add2 = ui.create_dom_element({
+			// 	element_type	: 'img',
+			// 	class_name 		: 'button add',
+			// 	src 			: '../themes/default/icons/blank.svg',
+			// 	parent 			: fragment
+			// })
 		}
 
 	// buttons tools

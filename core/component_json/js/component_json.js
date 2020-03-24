@@ -83,9 +83,8 @@ component_json.prototype.load_editor = async function() {
 			load_promises.push( load_promise )
 			//self.JSONEditor = JSONEditor
 
-	const js_promise = Promise.all(load_promises).then(async function(response){
-		//console.log("JSONEditor:",JSONEditor);
-	})
+	const js_promise = Promise.all(load_promises)
+
 
 	return js_promise
 };//end load_editor
