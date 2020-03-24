@@ -1,9 +1,15 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_component_date} from '../../component_date/js/render_component_date.js'
 
-import {event_manager} from '../../common/js/event_manager.js'
+
 
 export const component_date = function(){
 
@@ -23,6 +29,8 @@ export const component_date = function(){
 	this.parent
 	this.node
 
+	this.tools
+
 	this.separator 		= '-'
 	this.separator_time = ':'
 
@@ -36,11 +44,14 @@ export const component_date = function(){
 * extend component functions from component common
 */
 // prototypes assign
+	// lifecycle
 	component_date.prototype.init 	 			= component_common.prototype.init
 	component_date.prototype.build 	 			= component_common.prototype.build
 	component_date.prototype.render 			= common.prototype.render
-	component_date.prototype.destroy 			= common.prototype.destroy
 	component_date.prototype.refresh 			= common.prototype.refresh
+	component_date.prototype.destroy 			= common.prototype.destroy
+
+	// change data
 	component_date.prototype.save 	 			= component_common.prototype.save
 	component_date.prototype.load_data 			= component_common.prototype.load_data
 	component_date.prototype.get_value 			= component_common.prototype.get_value
@@ -53,44 +64,39 @@ export const component_date = function(){
 	component_date.prototype.list 				= render_component_date.prototype.list
 	component_date.prototype.edit 				= render_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_component_date.prototype.edit
+	component_date.prototype.tm					= render_component_date.prototype.edit
 	component_date.prototype.change_mode 		= component_common.prototype.change_mode
 
 
 
-
 /**
-* INIT_editor
+* LOAD_EDITOR
 * load the libraries and specific css
+* @return promise load_promise
 */
-component_date.prototype.init_editor = async function() {
+component_date.prototype.load_editor = async function() {
 
 	const self = this
 
-	// flatpickr calendar
-		const flatpickr_instance = await get_flatpickr()
+	// flatpickr calendar. load dependences js/css
+		const load_promises = []
 
-	return flatpickr_instance
-}//end init_editor
+		// css file load
+			const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
+			load_promises.push( common.prototype.load_style(lib_css_file) )
 
 
+		// js module import
+			// const js_file_load = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
+			const js_file_load = import('../../../lib/flatpickr/dist/flatpickr.min.js') // used minified version for now
+			load_promises.push( js_file_load )
 
-const get_flatpickr = async () => {
 
-// load dependences js/css
-	const load_promises = []
+	const load_promise = Promise.all(load_promises)
 
-	const lib_js_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
-	load_promises.push( common.prototype.load_script(lib_js_file) )
 
-	const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
-
-	load_promises.push( common.prototype.load_style(lib_css_file) )
-
-	await Promise.all(load_promises).then(async function(response){
-
-	})
-
-}
+	return load_promise
+}//end load_editor
 
 
 
@@ -101,7 +107,7 @@ const get_flatpickr = async () => {
 * @return string $dd_timestamp
 */
 component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=true) {
-	//(date, date_format="Y-m-d H:i:s", padding=true) {
+
 	const self 		= this
 
 	const locale 	= self.get_locale_value()
@@ -190,12 +196,13 @@ component_date.prototype.get_locale_value = function () {
 			break;
 	}
 
-// Format date using locale format
-	//const locale_value = get_locale_from_code(page_globals.dedalo_data_lang)
-	//result = result.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
-	return 'es-ES' //locale_value
+	// Format date using locale format
+		//const locale_value = get_locale_from_code(page_globals.dedalo_data_lang)
+		//result = result.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
 
+	return 'es-ES' //locale_value
 }//end get_locale_value
+
 
 
 /**
@@ -205,7 +212,7 @@ component_date.prototype.get_locale_value = function () {
 */
 component_date.prototype.format_date = function (date_value) {
 
-	const self 		= this
+	const self = this
 
 	let current_input_date = date_value // Raw string from input field
 
@@ -545,20 +552,19 @@ component_date.prototype.get_dato_time = function(value) {
 		console.warn("Invalid input_date value: ",value )
 		//return false
 
-	//}else{
-	//	// Replaces input value
-	//	if (mode!=="search") {
-	//		value = value_formatted.res_formatted
-	//	}
-//
-//	//	// Final dato
-//	//	dato = value_formatted.dd_date
-	//	value = value_formatted.res_formatted
-
+		//}else{
+		//	// Replaces input value
+		//	if (mode!=="search") {
+		//		value = value_formatted.res_formatted
+		//	}
+		//
+		//	//	// Final dato
+		//	//	dato = value_formatted.dd_date
+			//	value = value_formatted.res_formatted
 	}
 
+
 	return value_formatted
-	//return dato
 }//end get_dato_time
 
 
@@ -682,6 +688,11 @@ component_date.prototype.format_time = function(options) {
 	return result
 }//end format_time
 
+
+
+/**
+* SET_DEFAULT_DATE
+*/
 component_date.prototype.set_default_date = function(dateStr) {
 
 	const self = this
@@ -708,8 +719,7 @@ component_date.prototype.set_default_date = function(dateStr) {
 	}
 
 	return value
-
-}
+}//end set_default_date
 
 
 
@@ -740,6 +750,8 @@ component_date.prototype.get_ejemplo = function() {
 	return ejemplo
 }//end get_ejemplo
 
+
+
 /**
 * CLOSE_FLATPICKR
 */
@@ -748,6 +760,8 @@ component_date.prototype.close_flatpickr = function(selectedDates, dateStr, inst
 	instance.destroy()
 
 }//end close_flatpickr
+
+
 
 /**
 * UPDATE_VALUE_FLATPICKR
@@ -795,4 +809,8 @@ component_date.prototype.update_value_flatpickr = function(selectedDates, dateSt
 		event_manager.publish('update_value_'+self.id, changed_data)
 	})
 
+
+	return true
 }//end update_value_flatpickr
+
+

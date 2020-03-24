@@ -255,7 +255,7 @@ class search {
 				}
 
 				# Add property
-				$row->{$field_name} = ($field_name==='datos')
+				$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
 					? json_decode($field_value)
 					: $field_value;
 			}
@@ -274,7 +274,7 @@ class search {
 						$field_value = self::get_filtered_relations($current_relations_cache_solved, $component_tipo); // Filtered by from_component_tipo
 					//}
 					# Add property
-					$row->{$field_name} = ($field_name==='datos')
+					$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
 					? json_decode($field_value)
 					: $field_value;
 				}
@@ -899,7 +899,12 @@ class search {
 
 				# SELECT
 					#$sql_query .= 'SELECT ' . $sql_query_select;
-					$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.'.$column_id;
+					// $sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.'.$column_id;
+					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+						$sql_query .= 'SELECT '.$this->main_section_tipo_alias.'.section_id';
+					}else{
+						$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
+					}
 				# FROM
 					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# join virtual tables
@@ -930,7 +935,8 @@ class search {
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
 					}
-				$sql_query = 'SELECT COUNT('.$column_id.') as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+				// $sql_query = 'SELECT COUNT('.$column_id.') as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 				if(SHOW_DEBUG===true) {
 					$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
 					#debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::DEBUG);
