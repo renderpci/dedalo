@@ -359,7 +359,7 @@ class section_tm extends common {
 			$id 			= $current_record->id;
 			$timestamp 		= $current_record->timestamp;
 			$user_id 		= $current_record->userID;
-			$component_dato	= json_decode($current_record->dato);
+			$component_dato	= $current_record->dato;
 
 		// component
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); // date
