@@ -181,14 +181,14 @@ class section_tm extends common {
 
 		// section
 			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'section',
-				'model' 		=> 'section_tm',
-				'tipo'			=> $this->tipo,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'tm',
-				'parent'		=> null
+				'typo'				=> 'ddo',
+				'type'				=> 'section',
+				'model' 			=> 'section_tm',
+				'tipo'				=> $this->tipo,
+				'section_tipo'		=> $this->tipo,
+				'label'				=> RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true),
+				'mode'				=> 'tm',
+				'parent'			=> null
 			];
 			$context[] = $item;
 
@@ -210,56 +210,56 @@ class section_tm extends common {
 
 		// matrix id
 			$item = (object)[
-				'typo'					=> 'ddo',
-				'type'					=> 'component',
-				'model' 				=> 'component_section_id',
-				'tipo'					=> 'test142',//	'section_id',
-				'section_tipo'			=> $this->tipo,
-				'label'					=> 'matrix ID',
-				'mode'					=> 'list',
-				'parent'				=> $this->tipo
+				'typo'				=> 'ddo',
+				'type'				=> 'component',
+				'model' 			=> 'component_section_id',
+				'tipo'				=> 'test142',//	'section_id',
+				'section_tipo'		=> $this->tipo,
+				'label'				=> 'matrix ID',
+				'mode'				=> 'list',
+				'parent'			=> $this->tipo
 			];
 			$context[] = $item;
 
 
 		// modification date
 			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model' 		=> 'component_date',
-				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
+				'typo'				=> 'ddo',
+				'type'				=> 'component',
+				'model' 			=> 'component_date',
+				'tipo'				=> DEDALO_SECTION_INFO_MODIFIED_DATE,
+				'section_tipo'		=> $this->tipo,
+				'label'				=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
+				'mode'				=> 'list',
+				'parent'			=> $this->tipo
 			];
 			$context[] = $item;
 
 
 		// modification user id
 			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model' 		=> 'component_select',
-				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
+				'typo'				=> 'ddo',
+				'type'				=> 'component',
+				'model' 			=> 'component_select',
+				'tipo'				=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+				'section_tipo'		=> $this->tipo,
+				'label'				=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+				'mode'				=> 'list',
+				'parent'			=> $this->tipo
 			];
 			$context[] = $item;
 
 
 		// component
 			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
-				'tipo'			=> $component_tipo,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo
+				'typo'				=> 'ddo',
+				'type'				=> 'component',
+				'model' 			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+				'tipo'				=> $component_tipo,
+				'section_tipo'		=> $this->tipo,
+				'label'				=> RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true),
+				'mode'				=> 'list',
+				'parent'			=> $this->tipo
 			];
 			$context[] = $item;
 
@@ -322,14 +322,14 @@ class section_tm extends common {
 				// matrix id
 					// prepend element to context
 					$item = (object)[
-						'typo'					=> 'ddo',
-						'type'					=> 'component',
-						'model' 				=> 'component_section_id',
-						'tipo'					=> 'test142',//	'section_id',
-						'section_tipo'			=> $this->tipo,
-						'label'					=> 'matrix ID',
-						'mode'					=> 'list',
-						'parent'				=> $this->tipo
+						'typo'			=> 'ddo',
+						'type'			=> 'component',
+						'model' 		=> 'component_section_id',
+						'tipo'			=> 'test142',//	'section_id',
+						'section_tipo'	=> $this->tipo,
+						'label'			=> 'matrix ID',
+						'mode'			=> 'list',
+						'parent'		=> $this->tipo
 					];
 					array_unshift($context, $item);
 			}
@@ -359,7 +359,7 @@ class section_tm extends common {
 			$id 			= $current_record->id;
 			$timestamp 		= $current_record->timestamp;
 			$user_id 		= $current_record->userID;
-			$component_dato	= json_decode($current_record->dato);
+			$component_dato	= $current_record->dato;
 
 		// component
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); // date
@@ -507,6 +507,7 @@ class section_tm extends common {
 
 		return $data;
 	}//end get_ar_subdata
+
 
 
 }//end section_tm

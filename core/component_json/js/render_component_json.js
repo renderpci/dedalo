@@ -98,6 +98,9 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 			buttons 	 : buttons
 		})
 
+	// fix
+		self.wrapper = wrapper
+
 	// add events
 		//add_events(self, wrapper)
 
@@ -275,7 +278,8 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			parent 		 : li
 		})
 		button_fullscreen.addEventListener("click", function(e) {
-			li.classList.toggle("fullscreen")
+			// li.classList.toggle("fullscreen")
+			self.wrapper.classList.toggle("fullscreen")
 		})
 
 	// button_save
