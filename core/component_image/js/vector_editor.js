@@ -58,6 +58,7 @@ vector_editor.prototype.init_tools = function(self){
 
 			// Remove this path on the next drag event:
 			rectangle_path.removeOnDrag();
+			self.update_draw_data()
 		}
 
 
@@ -85,37 +86,38 @@ vector_editor.prototype.init_tools = function(self){
 
 			// Remove this path on the next drag event:
 			circle_path.removeOnDrag()
+			self.update_draw_data()
 		}
 
 
-	// add point 
-		this.add_point = new Tool();			
-		this.add_point.onMouseDown = (event) => {
-			// Reset vars
-			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-			const hitResult = project.hitTest(event.point, hitOptions);
-			if (hitResult) {
-				path = hitResult.item;
-				//console.log(hitResult.type);
-				if (hitResult.type==='stroke') {
-					const location = hitResult.location
-					segment = path.insert(location.index +1, event.point)
-					//path.smooth();
-				}
-			}
-		}				
-		this.add_point.onMouseMove = function(event){
-			const hitResult = project.hitTest(event.point, hitOptions);
-			project.activeLayer.selected = false;
-			if (hitResult && hitResult.item)
-				hitResult.item.selected = true;
-		}			
-		this.add_point.onMouseDrag = function(event) {
-			if (segment) {
-				segment.point.x = event.point.x;
-				segment.point.y = event.point.y;
-			}
-		}
+	// // add point 
+	// 	this.add_point = new Tool();			
+	// 	this.add_point.onMouseDown = (event) => {
+	// 		// Reset vars
+	// 		this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
+	// 		const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
+	// 		if (hitResult) {
+	// 			this.path = hitResult.item;
+	// 			//console.log(hitResult.type);
+	// 			if (hitResult.type==='stroke') {
+	// 				const location = hitResult.location
+	// 				this.segment = this.path.insert(location.index +1, event.point)
+	// 				//path.smooth();
+	// 			}
+	// 		}
+	// 	}				
+	// 	this.add_point.onMouseMove = function(event){
+	// 		const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
+	// 		project.activeLayer.selected = false;
+	// 		if (hitResult && hitResult.item)
+	// 			hitResult.item.selected = true;
+	// 	}			
+	// 	this.add_point.onMouseDrag = function(event) {
+	// 		if (this.segment) {
+	// 			this.segment.point.x = event.point.x;
+	// 			this.segment.point.y = event.point.y;
+	// 		}
+	// 	}
 			
 
 	// pointer 
@@ -127,35 +129,6 @@ vector_editor.prototype.init_tools = function(self){
 			//project.activeLayer.selected = false;
 			const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
 
-			/* if (event.modifiers.shift) {
-					if (hitResult.type == 'segment') {
-						hitResult.segment.remove();
-					};
-					if(hitResult.type == 'fill'){
-						path = hitResult.item;
-						//console.log(path.layer.name);
-						//console.log(project.activeLayer.name);
-						if (project.activeLayer.name == path.layer.name) {
-						//	console.log("mismo layer");
-							path.selected = true;
-							//console.log(capa);
-							//path.selected = true;
-						}else{
-						//	console.log("distinto layer");
-							project.deselectAll();
-							capa = path.layer;
-							capa.activate();
-							path.selected = true;
-						}
-
-					}
-					if(hitResult.type == 'pixel'){
-						project.activeLayer.selected = false;
-					}
-					console.log(hitResult.type);
-					return;
-				}
-				*/
 			if(SHOW_DEBUG===true) {
 				console.log("[init_tools] hitResult:",hitResult);
 			}					
@@ -165,8 +138,7 @@ vector_editor.prototype.init_tools = function(self){
 
 					case ('fill'):
 						project.deselectAll()
-						const capa = this.path.layer
-							capa.activate()
+						this.path.layer.activate()
 
 						if (event.modifiers.shift) {
 							hitResult.item.remove()
@@ -179,8 +151,6 @@ vector_editor.prototype.init_tools = function(self){
 					case ('pixel'):
 						project.deselectAll();
 						project.activeLayer.selected = false;
-						//path.selected = false;
-						//path = null;
 						break;
 
 					case ('segment'):
@@ -192,29 +162,33 @@ vector_editor.prototype.init_tools = function(self){
 							hitResult.segment.remove();
 						}
 						if (event.modifiers.command) {
-							if(segment.hasHandles()){
+							if(this.segment.hasHandles()){
 								hitResult.segment.clearHandles();
 							}
-							handle_sync = hitResult.segment.handleIn;
-							handleIn = hitResult.segment.handleIn;
-							handleOut = hitResult.segment.handleOut;
-							segment = "";
+							this.handle_sync	= hitResult.segment.handleIn;
+							this.handleIn 		= hitResult.segment.handleIn;
+							this.handleOut 		= hitResult.segment.handleOut;
+							this.segment 		= "";
 						}
 						//segment = hitResult.segment
 						break;
 
 					case ('stroke'):
-						const location = hitResult.location;
-						this.segment = this.path.insert(location.index +1, event.point);
+						project.deselectAll()
+						// this.path.fullySelected = true;
+						this.path.selected = true;
+						this.movePath = 'fill'
+						// const location = hitResult.location;
+						// this.segment = this.path.insert(location.index +1, event.point);
 						//path.smooth();
 						break;
 
 					case ('handle-in'):
 						this.handle = hitResult.segment.handleIn;
 						if (event.modifiers.command) {
-							handle_sync = hitResult.segment.handleIn;
-							handleIn = hitResult.segment.handleIn;
-							handleOut = hitResult.segment.handleOut;
+							this.handle_sync = hitResult.segment.handleIn;
+							this.handleIn = hitResult.segment.handleIn;
+							this.handleOut = hitResult.segment.handleOut;
 							//this.handle = "";
 						}
 						break;
@@ -222,9 +196,9 @@ vector_editor.prototype.init_tools = function(self){
 					case ('handle-out'):
 						this.handle = hitResult.segment.handleOut;
 						if (event.modifiers.command) {
-							handle_sync = hitResult.segment.handleOut;
-							handleIn = hitResult.segment.handleOut;
-							handleOut = hitResult.segment.handleIn;
+							this.handle_sync = hitResult.segment.handleOut;
+							this.handleIn = hitResult.segment.handleOut;
+							this.handleOut = hitResult.segment.handleIn;
 							//this.handle = "";
 						}
 						break;
@@ -238,13 +212,6 @@ vector_editor.prototype.init_tools = function(self){
 			/*if (movePath)
 			project.activeLayer.addChild(hitResult.item);*/
 		}
-		/*
-		this.pointer.onMouseMove = function(event){
-			var hitResult = project.hitTest(event.point, hitOptions);
-			project.activeLayer.selected = false;
-			if (hitResult && hitResult.item)
-				hitResult.item.selected = true;
-		}*/
 		this.pointer.onMouseDrag = (event) => {
 			if (this.handle){
 				this.handle.x += event.delta.x;
@@ -257,17 +224,14 @@ vector_editor.prototype.init_tools = function(self){
 				this.handleOut.y -= event.delta.y;
 			}
 			if (this.segment) {
-				//console.log(segment);
 				this.segment.point.x = event.point.x;
 				this.segment.point.y = event.point.y;
-				//console.log(event);
-				//console.log(segment);
-				//path.smooth();
 			}
 			if (this.movePath){
 				this.path.position.x += event.delta.x;
 				this.path.position.y += event.delta.y;
 			}
+			self.update_draw_data()
 		}
 		this.pointer.onKeyUp = (event) => {
 			if (event.key==="backspace" || event.key==="delete"){
@@ -285,109 +249,141 @@ vector_editor.prototype.init_tools = function(self){
 
 	// vector 
 		this.vector = new Tool()
-		const findHandle = function(path, point) {
-			//console.log("path: " + path);
-			//console.log("path.segments.length "+path.segments.length);
-			const types = ['point', 'handleIn', 'handleOut']
-			const s_len = path.segments.length
-			for (let i = s_len - 1; i >= 0; i--) {
-
-				for (let j = 0; j < 3; j++) {
-
-					const type 		 = types[j]
-					const segment 	 = path.segments[i]
-					let segmentPoint = {}
-					
-					if (type==='point'){
-						segmentPoint = segment.point;
-					}else{
-						segmentPoint.x = segment.point.x + segment[type].x;
-						segmentPoint.y = segment.point.y + segment[type].y;
-					}
-					//var segmentPoint = type == 'point'
-					//		? segment.point
-					//		: segment.point.x + segment[type].x;
-					const distance = new Point;// = (point - segmentPoint).length;
-							distance.x = (point.x - segmentPoint.x);
-							distance.y = (point.y - segmentPoint.y);
-					const distance_len = distance.length;
-
-					//console.log("point " + point);
-					//console.log("segmentPoint: " + segmentPoint);
-					//console.log("distance_len " + distance_len);
-
-					if (distance_len < 3) {
-						return {
-							type    : type,
-							segment : segment
-						};
-					}
-				}
-			}
-			//console.log(point)
-			return null;
-		}
-		//console.log("path: "+path);
-		//function onMouseDown(event) {
 		this.vector.onMouseDown = (event) => {
-			if (this.currentSegment){
-				this.currentSegment.selected = false;
+			// Reset vars
+			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
+
+			//project.activeLayer.selected = false;
+			const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
+
+			if(SHOW_DEBUG===true) {
+				console.log("[init_tools] hitResult:",hitResult);
+			}					
+			if (hitResult) {
+				this.path = hitResult.item
+				switch(hitResult.type) {
+
+					case ('fill'):
+						project.deselectAll()
+						this.path.layer.activate()
+						
+						if (event.modifiers.shift) {
+							hitResult.item.remove()
+						}
+
+						this.path.selected 	= true;
+						this.movePath = hitResult.type == 'fill'
+						this.new_path 		= false
+						break;
+
+					case ('pixel'):
+						project.deselectAll();
+
+						if (!this.new_path) {
+							this.new_path = new Path({
+								strokeColor : 'black',
+								fillColor : project.activeLayer.fillColor
+							});
+							this.new_path.fullySelected	= true;
+							this.segment = this.new_path.add(event.point);
+							// this.segment = event.point
+						}else{
+							this.new_path.fullySelected	= true;
+							this.segment = this.new_path.add(event.point);
+						}
+						if (event.modifiers.command) {
+							if(this.segment.hasHandles()){
+								this.segment.clearHandles();
+							}		
+							this.handle_sync 	= this.segment.handleIn;
+							this.handleIn 		= this.segment.handleIn;
+							this.handleOut 		= this.segment.handleOut;
+							this.segment.selected = true;
+							this.segment 		= "";
+						}
+
+						break;
+					case ('segment'):
+						project.deselectAll();
+						
+						this.path.fullySelected = true;
+						this.path.closed 		= true;
+						this.new_path 			= false
+						this.segment 			= hitResult.segment;
+						if (event.modifiers.shift) {
+							hitResult.segment.remove();
+						}
+						if (event.modifiers.command) {
+							if(this.segment.hasHandles()){
+								hitResult.segment.clearHandles();
+							}
+							this.handle_sync 	= hitResult.segment.handleIn;
+							this.handleIn 		= hitResult.segment.handleIn;
+							this.handleOut 		= hitResult.segment.handleOut;
+							this.segment 		= "";
+						}
+						//segment = hitResult.segment
+						break;
+
+					case ('stroke'):
+						this.path.fullySelected = true;
+						const location	= hitResult.location;
+						this.segment 	= this.path.insert(location.index +1, event.point);
+						this.new_path 	= false
+						//path.smooth();
+						break;
+
+					case ('handle-in'):
+						this.handle = hitResult.segment.handleIn;
+						if (event.modifiers.command) {
+							this.handle_sync 	= hitResult.segment.handleIn;
+							this.handleIn 		= hitResult.segment.handleIn;
+							this.handleOut 		= hitResult.segment.handleOut;
+							//this.handle = "";
+						}
+						break;
+
+					case ('handle-out'):
+						this.handle = hitResult.segment.handleOut;
+						if (event.modifiers.command) {
+							this.handle_sync 	= hitResult.segment.handleOut;
+							this.handleIn 		= hitResult.segment.handleOut;
+							this.handleOut 		= hitResult.segment.handleIn;
+							//this.handle = "";
+						}
+						break;
+
+					default:
+						console.log("Ignored hitResult.type :", hitResult.type)
+						break;
+				}//end switch							
+				//console.log(hitResult.type);
 			}				
-			this.mode = this.type = this.currentSegment = null;
-			
-			if (!this.path) {
-				this.path = new Path({
-					strokeColor : 'black',
-					fillColor : project.activeLayer.fillColor
-				});
-			}
-
-			const result = findHandle(this.path, event.point)				
-			if (result) {
-				this.currentSegment = result.segment;
-				this.type = result.type;
-				//console.log(path.segments.length);
-				//console.log(result.type);
-				//console.log(result.segment.index);
-
-				if (this.path.segments.length > 1 && result.type==='point' && result.segment.index == 0) {
-					this.mode = 'close';
-					this.path.closed = true;
-					this.path.selected = false;
-					this.path = null;
-				}
-			}
-
-			if (this.mode!=="close") {						
-				this.mode = this.currentSegment ? 'move' : 'add';
-				if (!this.currentSegment) {
-					this.currentSegment = this.path.add(event.point);
-				}
-				this.currentSegment.selected = true;
-			}
+			/*if (movePath)
+			project.activeLayer.addChild(hitResult.item);*/
 		}
-		
-		this.vector.onMouseDrag = (event) => {
-			if (this.mode==='move' && this.type==='point') {
-				this.currentSegment.point = event.point;
-			}else if (this.mode!=="close" && this.currentSegment.handleIn) {
-				const delta = event.delta.clone();	
-				if (this.type==='handleOut' || this.mode==='add') {
-					//console.log(delta.x +" "+(delta.x)*-1)
-					//console.log(delta)
-					//delta = -delta;
-					delta.x = (delta.x)*-1
-					delta.y = (delta.y)*-1
-				}
-				//console.log(delta);						
-				//this.currentSegment.handleIn += delta;
-				this.currentSegment.handleIn.x += delta.x;
-				this.currentSegment.handleIn.y += delta.y;
 
-				//this.currentSegment.handleOut -= delta;
-				this.currentSegment.handleOut.x -= delta.x;
-				this.currentSegment.handleOut.y -= delta.y;
+		this.vector.onMouseDrag = (event) => {
+			if (this.handle){
+				this.handle.x += event.delta.x;
+				this.handle.y += event.delta.y;
 			}
+			if (this.handle_sync){
+				this.handleIn.x += event.delta.x;
+				this.handleIn.y += event.delta.y;
+				this.handleOut.x -= event.delta.x;
+				this.handleOut.y -= event.delta.y;
+			}
+			if (this.segment) {
+				this.segment.point.x = event.point.x;
+				this.segment.point.y = event.point.y;
+				//path.smooth();
+			}
+			if (this.movePath){
+				this.path.position.x += event.delta.x;
+				this.path.position.y += event.delta.y;
+			}
+			self.update_draw_data()
 		}
 
 	// zoom 
@@ -483,17 +479,39 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			})
 			buttons.push(vector)
 
-		// add_point
-			const add_point = ui.create_dom_element({
+		// full_screen
+			const full_screen = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button tool add_point',
+				class_name 		: 'button tool full_screen',
 				parent 			: buttons_container
 			})
-			add_point.addEventListener("mouseup", (e) =>{
-				this.add_point.activate()
-				activate_status(add_point)
+			full_screen.addEventListener("mouseup", (e) =>{
+				//add / remove the class fullscreen
+				self.node[0].classList.toggle('fullscreen') 
+
+				//reset the window and the canvas
+				window.dispatchEvent(new Event('resize'));
+				self.current_paper.project.view.update();
+				//change the status of the tool
+				activate_status(full_screen)
+				//reset the window and the canvas (twice, paper error)
+					window.dispatchEvent(new Event('resize'));
+					self.current_paper.project.view.update();
+
+				if(!self.node[0].classList.contains('fullscreen')){
+					// get the ratio diference from original view ratio and curren view ratio
+					const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
+					// get the delta center from current position to original center position
+					const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+					const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+
+					self.current_paper.view.scale(ratio)
+					self.current_paper.view.translate(center_x, center_y)
+				}
+
+				
 			})
-			buttons.push(add_point)
+			buttons.push(full_screen)
 
 		// zoom
 			const zoom = ui.create_dom_element({
@@ -536,15 +554,30 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			})
 			buttons.push(move)
 
-			const activate_status = (button) =>{
-				const buttons_lenght = buttons.length
-				for (let i = 0; i < buttons_lenght; i++) {
-					const current_buton = buttons[i]
-					current_buton.classList.remove('vector_tool_active')
-				}
-				button.classList.add('vector_tool_active')
-			}
+		// save
+			const save = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'button tool save',
+				parent 			: buttons_container
+			})
+			save.addEventListener("mouseup", (e) =>{
+				self.save_draw_data()
+				activate_status(save)
+			})
 
+		//chane the buttons status: active, desactive
+		const activate_status = (button) =>{
+			const buttons_lenght = buttons.length
+			for (let i = 0; i < buttons_lenght; i++) {
+				const current_buton = buttons[i]
+				current_buton.classList.remove('vector_tool_active')
+			}
+			button.classList.add('vector_tool_active')
+		}
+
+		// first load activate pointer
+			this.pointer.activate()
+			activate_status(pointer)
 }//end render_tools_buttons
 
 //Botones de tools

@@ -4,6 +4,7 @@
 
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_image} from '../../component_image/js/render_component_image.js'
@@ -167,134 +168,6 @@ component_image.prototype.init_canvas = function(canvas_node, img) {
 		const image_height 	= img.naturalHeight
 		const ratio 		= height / image_height
 		raster.scale(ratio)
-return
-/// old way v5
-	// zoom
-		var nivelZoom = null
-
-		// zoomselecion function
-		zoomselecion = function(nivelZoom) {
-			var a 			= nivelZoom/100;
-			var ratioZoom 	= a/zoomActual;
-			zoomActual = a; 
-			canvas_node.width 	= canvas_node.width * ratioZoom;
-			canvas_node.height 	= canvas_node.height * ratioZoom;
-
-			//console.log(canvas_node.width);
-			//console.log(canvas_node.height);
-
-			//context.zoom(ratioZoom,ratioZoom);
-			//context.restore();
-			view.zoom = a;
-			//view.scrollBy(0,0);
-			view.scrollBy(new Point(-view.bounds.x, -view.bounds.y));
-			//context.scale(ratioZoom,ratioZoom)
-			//project.activeLayer.translate(0,0);
-			//raster.position = view.center;
-			//console.log(a);
-			//console.log(ratioZoom);
-			//drawScreen();
-			//drawScreen();
-			return true;
-		}//end zoomselecion = function(nivelZoom)
-
-		
-
-	// zoom selector
-		const zoom_select = document.getElementById('zoom');
-			  zoom_select.addEventListener("change",function(){
-				nivelZoom = self.value;
-				toolZoom.activate(); 
-				zoomselecion(nivelZoom);
-
-				const button_pointer = wrapper.querySelector("[data-tool_name='pointer']")
-				self.active_tool(button_pointer)
-			  },false)
-				
-				
-	// zoom tool / handler
-		var zoomActual = 1.0;
-		toolZoom = new Tool();
-		toolZoom.onMouseDown = function(event) {
-			return false; // DESACTIVO DE MOMENTO (!)
-			segment = path = null;
-			var hitResult = project.hitTest(event.point, hitOptions);
-			if (hitResult) {
-				path = hitResult.item;
-				//console.log(hitResult.type);
-				if (hitResult.type==='pixel') {
-					var location = hitResult.location;
-					//segment = path.insert(location.index +1, event.point);
-					if (event.modifiers.shift) {
-						canvas_node.width 	= canvas_node.width * 0.5;
-						canvas_node.height 	= canvas_node.height * 0.5;
-						//canvas_node.scale(zoomActual * 0.5, zoomActual * 0.5);
-						//canvas_node.restore();
-						//canvas_node.draw();
-						view.zoom = zoomActual * 0.5;
-						//view.scrollBy(0,0);
-						view.scrollBy(new Point(-view.bounds.x, -view.bounds.y));
-						//canvas_node.style.backgroundPosition(event.point.x, );
-						//var ctop=(-ui.position.top * canvas_node.height / canvasWrapperHeight);
-						zoomActual = zoomActual * 0.5;
-						return;
-					}else{
-						canvas_node.width 	= canvas_node.width * 2.0;
-						canvas_node.height 	= canvas_node.height * 2.0;
-						//canvas_node.scale(zoomActual * 2.0, zoomActual * 2.0);
-						//canvas_node.restore();
-						//canvas_node.draw();
-						view.zoom = zoomActual * 2.0;
-						//view.scrollBy(0,0);
-						view.scrollBy(new Point(-view.bounds.x, -view.bounds.y));
-						$(canvas_node.parentNode).animate({ scrollTop: event.point.y + canvas_node.parentNode.scrollTop, scrollLeft: event.point.x + canvas_node.parentNode.scrollLeft}, 0);	
-
-						//project.view.scrollBy(event.point);
-						zoomActual = zoomActual * 2.0;
-						return;
-					}//end if (event.modifiers.shift)
-				}//end if (hitResult.type == 'pixel')
-			}//end if (hitResult)
-		}//end toolZoom.onMouseDown = function(event)
-
-
-		//if(ratio_window < 1){
-			//var ventana_h =  window.innerHeight;
-			//var ventana_h_util 	= ventana_h - 60;
-			//var ratio_window 	= ventana_h_util /img_h;
-			var div_width 	 = canvas_node.parentNode.clientHeight;
-			var ratio_window = Math.floor(div_width / img_h);
-			var porcentaje 	 = ratio_window*100;
-
-			// set to 100 on init to avoid zoom problems
-			porcentaje = 100
-			
-			// make zoom
-			zoomselecion(porcentaje);
-			if(SHOW_DEBUG===true) {
-				console.log("Canvas zoom to apply: ",porcentaje);
-			}
-
-			// Add current value as option to zoom seletor
-			const porcentaje_round = Math.round(porcentaje * 100) / 100
-			const option = document.createElement("option")		
-				  option.setAttribute("value", porcentaje_round)
-				  option.setAttribute("selected", true)
-				  option.innerHTML = porcentaje_round + "%"
-			const option_key = zoom_select.options.length -1;				
-			zoom_select.options[option_key] = option;
-			zoom_select.selectedIndex = option_key;
-			//var seleccion_de_zoom   = option_key;
-			//zoom_select.lastChild.text(option);
-			//ratio_window = 1;
-		//}
-	
-		// Get a reference to the canvas object
-		//var canvas = document.getElementById('myCanvas');
-		// Create an empty project and a view for the canvas:
-		//console.log(tool)
-	
-	//});//end $(canvas_node).find('img').first().load(function()		
 
 	return true
 }//end init_canvas
@@ -306,8 +179,8 @@ return
 component_image.prototype.load_vector_editor = async function(options) {
 
 	const self = this
-
-	const tag = options.tag.dataset
+	// convert the tag dataset to 'real' object for manage it
+	const tag = JSON.parse(JSON.stringify(options.tag.dataset))
 
 	// MODE : Only allow mode 'tool_transcription'
 	//if(page_globals.modo!=='tool_transcription') return null;
@@ -321,7 +194,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 		self.vector_tools_loaded = true
 	}
 
-	self.ar_tag_loaded[tag.tag_id] = tag;
+	self.ar_tag_loaded.push(tag)
 
 	/*
 	*ATENTION THE NAME OF THE TAG (1) CHANGE INTO (1_LAYER) FOR COMPATIBILITY WITH PAPER LAYER NAME
@@ -329,7 +202,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 	*BUT THE LAYER NAME ALWAYS ARE "1_layer"
 	*/
 
-	const data 	 	= tag.data.replace(new RegExp('\'', 'g'), '"');
+	const data 	 	= tag.data.replace(/'/g, '"')
 	const layer_id 	= tag.tag_id +'_layer';
 
 	// call the generic commom tool init
@@ -337,6 +210,50 @@ component_image.prototype.load_vector_editor = async function(options) {
 }// load_vector_editor
 
 
+/**
+* UPDATE_DRAW_DATA
+*/
+component_image.prototype.update_draw_data = function() {
 
+	const self = this
+
+	const project 		= self.current_paper.project
+	const tag_id 		= project.activeLayer.name.replace('_layer','')
+	const current_tag	= self.ar_tag_loaded.find((item) => item.tag_id === tag_id)
+
+	const data 				= project.activeLayer.exportJSON()
+	const current_draw_data = data.replace(/"/g, '\'');
+	current_tag.dataset 	= {data:current_draw_data}
+	current_tag.save 		= false
+	
+	return true
+}//end update_draw_data
+
+
+
+/**
+* SAVE_DRAW_DATA
+*/
+component_image.prototype.save_draw_data = function() {
+
+	const self = this
+
+	const ar_tag		= self.ar_tag_loaded
+	const ar_tag_len	= ar_tag.length 
+
+	for (let i = ar_tag_len- 1; i >= 0; i--) {
+		const current_tag = ar_tag[i]
+		// UPDATE_TAG
+		event_manager.publish('draw_change_tag' +'_'+ self.tipo, current_tag)
+		if(i === 0){
+			current_tag.save = true
+			event_manager.publish('draw_change_tag' +'_'+ self.tipo, current_tag)
+		}
+			console.log("tag_data:",current_tag); 
+	}
+
+	
+	return true
+};//end save_draw_data
 
 
