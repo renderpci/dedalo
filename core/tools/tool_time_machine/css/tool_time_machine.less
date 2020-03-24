@@ -1,88 +1,87 @@
 // tool_time_machine
 
 
-.wrapper_tool.tool_time_machine {
-	display: flex;
-	width: 100%;
-	height: 100%;
-
-	>.content_data {
+// wrapper_tool
+	.wrapper_tool.tool_time_machine {
+		display: flex;
 		width: 100%;
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		// grid-template-rows: auto 2em 1fr;
-		grid-template-rows: auto auto auto;
+		height: 100%;
 
-		// component containers
-		.current_component_container, .preview_component_container {
-			// flex: 1 1 50%;
-
+		>.content_data {
+			width: 100%;
 			display: grid;
-			grid-template-rows: 1fr auto;
+			grid-template-columns: 1fr 1fr;
+			// grid-template-rows: auto 2em 1fr;
+			grid-template-rows: auto auto auto;
 
-			.time_label {
-				padding: 0.5em;
-				width: 100%;
-				text-align: center;
-			}
-		}
+			// component containers
+			.current_component_container, .preview_component_container {
+				// flex: 1 1 50%;
 
-		.current_component_container {
-			// background-color: #FAF55D;
-			margin-right: 0.5em;
-		}
+				display: grid;
+				grid-template-rows: 1fr auto;
 
-		.preview_component_container {
-			// background-color: #8AF9FA;
-			margin-left: 0.5em;
-		}
-
-		.tool_bar {
-			// background-color: #f0f0f0;
-			grid-column-start: 1;
-			grid-column-end: 3;
-			padding-top: 0.5em;
-			padding-bottom: 0.5em;
-
-			>* {
-				padding: 0.5em;
-				height: 2em;
+				.time_label {
+					padding: 0.5em;
+					width: 100%;
+					text-align: center;
+				}
 			}
 
-			label {
-				text-transform: capitalize;
+			.current_component_container {
+				// background-color: #FAF55D;
+				margin-right: 0.5em;
 			}
 
-			select {
-
+			.preview_component_container {
+				// background-color: #8AF9FA;
+				margin-left: 0.5em;
 			}
 
-			.button_apply {
-				background-color: #ff9800;
-				color: white;
-				padding: 0.15em;
-				padding-left: 1em;
-				padding-right: 1em;
-				float: right;
+			.tool_bar {
+				// background-color: #f0f0f0;
+				grid-column-start: 1;
+				grid-column-end: 3;
+				padding-top: 0.5em;
+				padding-bottom: 0.5em;
+
+				>* {
+					padding: 0.5em;
+					height: 2em;
+				}
+
+				label {
+					text-transform: capitalize;
+				}
+
+				select {
+
+				}
+
+				.button_apply {
+					background-color: #ff9800;
+					color: white;
+					padding: 0.15em;
+					padding-left: 1em;
+					padding-right: 1em;
+					float: right;
+				}
+			}//end .tool_bar
+
+			// section container
+			.wrapper_section {
+				// background-color: #A7FF82;
+				// flex: 1 1 100%;
+				height: 100%;
+				overflow: auto;
+				grid-column-start: 1;
+				grid-column-end: 3;
 			}
-		}//end .tool_bar
 
-		// section container
-		.wrapper_section {
-			// background-color: #A7FF82;
-			// flex: 1 1 100%;
-			height: 100%;
-			overflow: auto;
-			grid-column-start: 1;
-			grid-column-end: 3;
-		}
+			// header section list
+			.header_wrapper_list {
+				top: 0;
+			}
 
-		// header section list
-		.header_wrapper_list {
-			top: 0;
-		}
-
-	}//end >.content_data
-
-
-}//.wrapper_tool.tool_time_machine
+		}//end >.content_data
+	}//.wrapper_tool.tool_time_machine
