@@ -8,7 +8,6 @@
 	import {ui} from '../../common/js/ui.js'
 
 
-
 /**
 * Render_component
 * Manage the components logic and appearance in client side
@@ -107,9 +106,9 @@ const content_data_edit = async function(self) {
 
 	// url
 		const value 			= self.data.value
-		const quality 			= "1.5MB"
+		const quality 			= "1.5MB" //"original" //
 		const url_object 		= value.filter(item => item.quality===quality)[0]
-		const url 				= url_object.url // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
+		const url 				= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
 	// ul
 		const ul = ui.create_dom_element({
@@ -144,7 +143,9 @@ const content_data_edit = async function(self) {
 		// image.setAttribute("tabindex", 0)
 		// ui.component.add_image_fallback(image)
 
-		self.init_canvas(canvas, image)
+		image.onload = function () {
+			self.init_canvas(canvas, image)
+		}
 	
 	// buttons container
 		const buttons_container = ui.create_dom_element({
@@ -155,6 +156,15 @@ const content_data_edit = async function(self) {
 
 	// tools
 		if (!is_inside_tool) ui.add_tools(self, buttons_container)
+
+
+	// svg editor tools
+		const vector_editor_tools = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'vector_editor_tools',
+			parent 			: buttons_container
+		})
+		self.vector_editor_tools = vector_editor_tools
 
 	// content_data
 		const content_data = document.createElement("div")
