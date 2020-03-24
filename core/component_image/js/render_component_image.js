@@ -75,18 +75,22 @@ render_component_image.prototype.edit = async function(options) {
 
 	const self = this
 
-
-	const render_level 	= options.render_level
+	// render_level
+		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
-	// ui build_edit returns component wrapper
-		const wrapper =	ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+	// buttons
+		const buttons = get_buttons(self)
+
+	// wrapper. ui build_edit returns component wrapper
+		const wrapper = ui.component.build_wrapper_edit(self, {
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 
 
@@ -101,8 +105,9 @@ render_component_image.prototype.edit = async function(options) {
 */
 const content_data_edit = async function(self) {
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const is_inside_tool = ui.inside_tool(self)
+
+	const fragment = new DocumentFragment()
 
 	// url
 		const value 			= self.data.value
@@ -146,25 +151,6 @@ const content_data_edit = async function(self) {
 		image.onload = function () {
 			self.init_canvas(canvas, image)
 		}
-	
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: fragment
-		})
-
-	// tools
-		if (!is_inside_tool) ui.add_tools(self, buttons_container)
-
-
-	// svg editor tools
-		const vector_editor_tools = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'vector_editor_tools',
-			parent 			: buttons_container
-		})
-		self.vector_editor_tools = vector_editor_tools
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -187,5 +173,49 @@ const content_data_edit = async function(self) {
 
 	return content_data
 }//end content_data_edit
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button close
+		if(mode==='edit_in_list' && !is_inside_tool){
+			const button_close = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button close',
+				parent 			: fragment
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// svg editor tools
+		const vector_editor_tools = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'vector_editor_tools',
+			parent 			: fragment
+		})
+		self.vector_editor_tools = vector_editor_tools
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
