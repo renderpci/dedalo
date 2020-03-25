@@ -86,12 +86,15 @@ render_component_image.prototype.edit = async function(options) {
 
 	// buttons
 		const buttons = get_buttons(self)
+	// quality
+		const quality = get_quality_selector(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : content_data,
 			buttons 	 : buttons
 		})
+		wrapper.appendChild(quality)
 
 
 	return wrapper
@@ -219,3 +222,47 @@ const get_buttons = (self) => {
 }//end get_buttons
 
 
+/**
+* GET_QUALITY_SELECTOR
+* @return 
+*/
+const get_quality_selector = (self) => {
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+
+		const fragment = new DocumentFragment()
+
+	// create the quality selector
+		const quality_selector = ui.create_dom_element({
+			element_type	: 'select',
+			class_name 		: 'quality_selector',
+			parent			: fragment
+		})
+		quality_selector.addEventListener("change", (e) =>{
+			const img_src = e.target.value
+			event_manager.publish('image_quality_change_'+self.id, img_src)
+		})
+
+		const value 	= data.value
+		const value_len = value.length
+		for (let i = 0; i < value_len; i++) {
+			//create the node with the all qualities sended by server
+			const quality = ui.create_dom_element({
+				element_type	: 'option',
+				class_name 		: 'quality',
+				value 			: (typeof value[i].url==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : value[i].url,
+				parent			: quality_selector,
+				text_node 		: value[i].quality
+			})
+			//set the default value to config variable dedalo_image_quality_default
+			quality.selected = value[i].quality===page_globals.dedalo_image_quality_default ? true : false
+			
+			// quality.addEventListener("mouseup", (e) =>{
+				
+			// })
+		}
+
+	return quality_selector
+};//end get_quality_selector
