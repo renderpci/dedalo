@@ -74,6 +74,8 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 				return $lang_obj;
 			}, unserialize(DEDALO_PROJECTS_DEFAULT_LANGS));
 
+			$obj->dedalo_image_quality_default = DEDALO_IMAGE_QUALITY_DEFAULT;
+
 			# parent
 			#$obj->_parent 						= isset($parent) ? (int)$parent : '';
 			# tipos
