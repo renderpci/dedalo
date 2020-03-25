@@ -39,6 +39,7 @@
 	*/
 	export const get_instance = async function(options){
 
+		// if(options.model==='section') console.log("=========================================== get_instance options:",options);
 		// key values ['model','tipo','section_tipo','section_id','mode','lang']
 
 		// mandatory vars

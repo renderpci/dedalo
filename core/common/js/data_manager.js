@@ -145,7 +145,10 @@ data_manager.prototype.count = async function(sqo) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, sqo filter:`, sqo.filter);
+			// console.log("----------------------------------- count sqo:", sqo);
+			// console.log("----------------------------------- count total:", total);
+			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
+			console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
 		}
 
 	return total
