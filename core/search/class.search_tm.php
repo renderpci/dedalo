@@ -12,6 +12,33 @@ class search_tm extends search {
 
 
 
+	/**
+	* BUILD_FULL_COUNT_SQL_QUERY_SELECT
+	* @return string $sql_query_select
+	*/
+	public function build_full_count_sql_query_select() {
+
+		// matrix_time_machine specific
+		$sql_query_select = 'count('.$this->main_section_tipo_alias.'.section_id) as full_count';
+
+		return $sql_query_select;
+	}//end build_full_count_sql_query_select
+
+
+
+	/**
+	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
+	* @return string $string_query
+	*/
+	public function build_sql_filter_by_locators_order() {
+
+		$string_query = 'ORDER BY id DESC';
+
+		return $string_query;
+	}//end build_sql_filter_by_locators_order
+
+
+
 	// /**
 	// * BUILD_MAIN_FROM_SQL
 	// * @return string $main_from_sql
@@ -139,20 +166,6 @@ class search_tm extends search {
 
 
 	/**
-	* BUILD_FULL_COUNT_SQL_QUERY_SELECT
-	* @return string $sql_query_select
-	*/
-	public function build_full_count_sql_query_select() {
-
-		// matrix_time_machine specific
-		$sql_query_select = 'count('.$this->main_section_tipo_alias.'.section_id) as full_count';
-
-		return $sql_query_select;
-	}//end build_full_count_sql_query_select
-
-
-
-	/**
 	* GET_TIME_MACHINE_RECORDS
 	* @return
 	*//*
@@ -176,7 +189,6 @@ class search_tm extends search {
 		ORDER BY id DESC
 		LIMIT 10;
 		';
-
 	}//end get_time_machine_records */
 
 
