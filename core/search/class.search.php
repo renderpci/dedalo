@@ -885,7 +885,7 @@ class search {
 		$sql_query .= ';' . PHP_EOL;
 
 		#dump(null, ' sql_query ++ '.to_string($sql_query)); die();
-		debug_log(__METHOD__." SQL QUERY: ".PHP_EOL.to_string($sql_query), logger::DEBUG);
+		// debug_log(__METHOD__." SQL QUERY: ".PHP_EOL.to_string($sql_query), logger::DEBUG);
 		#debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 
