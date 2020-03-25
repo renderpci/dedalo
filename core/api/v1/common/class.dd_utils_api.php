@@ -157,6 +157,9 @@ class dd_utils_api {
 				$import_exec_time = exec_time_unit($prev_time,'ms')." ms";
 			}
 
+		// optimize tables
+			backup::optimize_tables(['jer_dd','matrix_descriptors_dd']);
+
 
 		# Delete session config (force to recalculate)
 		#unset($_SESSION['dedalo']['config']);
