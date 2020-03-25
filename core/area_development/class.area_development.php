@@ -7,6 +7,7 @@
 class area_development extends area_common {
 
 
+
 	/**
 	* GET_AR_WIDGETS
 	* @return array $data_items

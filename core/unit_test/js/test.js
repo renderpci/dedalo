@@ -83,7 +83,7 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 							"lang" 			: "lg-eng"
 						}, 'component_input_text_test159_test65_edit_lg-eng');
 
-				// whitout receive some vars like section_id and lang
+				// without receive some vars like section_id and lang
 					make_test({
 							"model" 		: "component_input_text",
 							"tipo"  		: "test159",
@@ -214,7 +214,6 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 							assert.equal(found_instance_after_destroy.length, 0)
 
 							return false
-
 						}
 					}
 
@@ -314,33 +313,33 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 			function make_test (options, equals) {
 
 				const test_title = (equals===true) ? `${options.model} => Save new_value = old_value + 1`: `${options.model} => Save new_value != old_value`
-		
+
 				it(test_title, async function() {
 
 					const old_instance = await get_instance(options)
 					await old_instance.build(true)
-	
+
 					const old_value = old_instance.data.value[0]
 					const new_value = old_value + 1
 					//const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
-		
+
 					const changed_data = Object.freeze({
 						action	: 'update',
 						key		: 0,
 						value	: new_value,
 					})
-					
+
 					await old_instance.change_value({
 						changed_data : changed_data,
 						refresh 	 : false
 					})
-											
+
 					await old_instance.destroy()
 
 					const new_instance = await get_instance(options)
-						
+
 					await new_instance.build(true)
-						
+
 					if (equals===true) {
 						assert.equal(new_instance.data.value[0], new_value)
 					}else{
@@ -350,30 +349,28 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					await new_instance.destroy()
 
 			    });
-				
-				
 			}
 
 			describe("save data equals", function() {
-				
+
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
 						make_test(options[i], true)
 					})
 				}
-					
+
 			});
 
 			describe("save data NOT equals", function() {
-				
+
 				for (let i = 0; i < options.length; i++) {
 
-					describe(options[i].model, function() {						
+					describe(options[i].model, function() {
 						make_test(options[i], false)
 					})
 				}
-					
+
 			});
 
 		});
@@ -381,6 +378,7 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 
 
 
-
 // exec mocha
 	mocha.run();
+
+
