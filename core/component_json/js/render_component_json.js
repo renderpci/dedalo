@@ -290,17 +290,32 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			parent 		 : li
 		})
 		button_save.addEventListener("click", function(e) {
-			this.blur()
-			if (validated!==true) {
+			e.stopPropagation()
+			// this.blur()
 
-				alert("Error. Trying so save invalid json value!");
+			try {
+				const current_value = editor.get()
+			}catch(error){
+				console.error("error:",error);
+
+				// styles as error
+					self.node.map(item => {
+						item.classList.add("error")
+					})
+
+				// alert("Error: component_json. Trying so save invalid json value!");
 				return false
 			}
+
+			// if (validated!==true) {
+			// 	alert("Error: component_json. Trying so save non validated json value!");
+			// 	return false
+			// }
 
 			const changed_data = Object.freeze({
 				action	: 'update',
 				key		: 0,
-				value	: editor.get()
+				value	: current_value
 			})
 			self.change_value({
 				changed_data : changed_data,
@@ -361,6 +376,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		    }
 		}
 		const editor = new JSONEditor(li, editor_options, current_value)
+
 
 
 	return li
