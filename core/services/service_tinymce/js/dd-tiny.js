@@ -22,12 +22,12 @@ class DDTiny extends HTMLElement {
 		const self = this
 
 		// options params
-			const value = this.options.value
+			const value = self.options.value
 
 		// textarea base element
 			const textarea = document.createElement('textarea')
 				  textarea.innerHTML = value
-				  this.appendChild(textarea)
+				  self.appendChild(textarea)
 
 		// tinymce editor init
 			tinymce.init({
