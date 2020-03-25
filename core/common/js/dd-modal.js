@@ -151,7 +151,7 @@ class DDModal extends HTMLElement {
 			this._closeModal()
 		}
 	}
-	_closeModal() {
+	async _closeModal() {
 
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
@@ -172,9 +172,11 @@ class DDModal extends HTMLElement {
 					header.remove()
 				}
 			}
+
+		return true
 	}
 	close() {
-		this._closeModal()
+		return this._closeModal()
 	}
 }
 customElements.define('dd-modal',DDModal);
