@@ -23,7 +23,11 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 	// });
 
 // Define components that will be tested
-	const options_input_text = {
+	const options = []
+
+	// var model, tipo, section_tipo, lang, type
+
+	options.push({
 		"model" 		: "component_input_text",
 		"tipo"  		: "test159",
 		"section_tipo" 	: "test65",
@@ -32,9 +36,9 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		"lang" 			: "lg-eng",
 		"context" 		: {permissions: 1, tipo: 'test159', model: 'component_input_text', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
 		//"datum"			: {data:[]}
-	}
+	})
 
-	const options_number = {
+	options.push({
 		"model" 		: "component_number",
 		"tipo"  		: "test139",
 		"section_tipo" 	: "test65",
@@ -42,13 +46,21 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		"mode" 			: "edit",
 		"lang" 			: "lg-eng",
 		"context" 		: {permissions: 1, tipo: 'test139', model: 'component_number', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
-	}
+	})
 
-	const options = []
-	options.push(options_input_text)
-	options.push(options_number)
+	options.push({
+		"model" 		: "component_text_area",
+		"tipo"  		: "test32",
+		"section_tipo" 	: "test65",
+		"section_id" 	: 5,
+		"mode" 			: "edit",
+		"lang" 			: "lg-eng",
+		"context" 		: {permissions: 1, tipo: 'test32', model: 'component_text_area', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
+	})
+
 
 // instances
+
 	// key_instances_builder
 		describe("instances : key_instances_builder", function(){
 
@@ -178,31 +190,38 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		});
 
 	// test lifecycle functions for any component instance
-		describe("instances : lifecycle", function(){	
+		describe("instances : lifecycle", function(){
 
 			function make_test (options, property, expected, stage) {
 				//it(`${JSON.stringify(property)} => Init: ${expected}`, async function() {
 				it(`${JSON.stringify(property)} => Init ${options.model}: ${expected}`, async function() {
 
+					// init instance
 					const new_instance = await get_instance(options)
 
-					if (stage ==='build' || stage === 'render' || stage === 'destroy') {
+					if (stage==='build' || stage==='render' || stage==='refresh' || stage==='destroy') {
+
 						await new_instance.build(true)
 
-						if (stage === 'render') {
+						if (stage==='render') {
 							await new_instance.render()
-
 						}
-						if (stage === 'destroy') {
+
+						if (stage==='refresh') {
+							await new_instance.render()
+							await new_instance.refresh()
+						}
+
+						if (stage==='destroy') {
 
 							const instance_id 	= new_instance.id
 							//const instance_key 	= options.key || key_instances_builder(options, true)
 							const instances 	= get_all_instances()
-							
+
 							// console.log("instances:",instances)
 							// 	console.log("instance_id:",instance_id)
 							// 		console.log("instance_key:",instance_key);
-							
+
 							const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
 							await new_instance.destroy()
 							const found_instance_after_destroy = instances.filter(instance => instance.id===instance_id)
@@ -234,7 +253,6 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					     	case 'typo':
 						 		assert.notEqual(new_instance.permissions, expected)
 						     	break;
-
 						    default:
 						 		assert.equal(new_instance.status, expected)
 						     	break;
@@ -242,66 +260,73 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					}
 
 					await new_instance.destroy()
-
 			    });
 			}
 
-			
+
 			describe("init instance based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
-				
+
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
-			
+
 						make_test(options[i], 'status', 'inited', 'init')
 						make_test(options[i], 'lang', options[i].lang, 'init')
 						make_test(options[i], 'permissions', null, 'init')
 
 					})
-			
-				}				
+
+				}
 			});
-			
+
 
 			describe("build instance based on options values to create a component instance: status = builded and permissions = 1", function() {
-				
+
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
 
 						make_test(options[i], 'status', 'builded', 'build')
 						make_test(options[i], 'permissions', options[i].context.permissions, 'build')
-	
+
 						make_test(options[i], 'properties', null, 'build')
 						make_test(options[i], 'typo', null, 'build')
 
 					})
-
 				}
-					
 			});
 
 
 			describe("render instance based on options values to create a component instance: status = builded and permissions = 1", function() {
-				
+
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
 						make_test(options[i], 'status', 'rendered', 'render')
 					})
 				}
-					
+			});
+
+
+			describe("refresh instance based on options values to create a component instance: status = builded and permissions = 1", function() {
+
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {
+						make_test(options[i], 'status', 'rendered', 'refresh')
+					})
+				}
 			});
 
 			describe("destroy instance based on existing instance", function() {
-								
+
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
 						make_test(options[i], 'instance', 'destroy', 'destroy')
 					})
 				}
-					
+
 			});
 
 		});
