@@ -92,7 +92,7 @@ section.prototype.init = async function(options) {
 
 	self.datum 	 			= options.datum   		|| null
 	self.context 			= options.context 		|| null
-	self.data 	 			= options.data 	  		|| null	
+	self.data 	 			= options.data 	  		|| null
 	self.pagination 		= { // pagination info
 		total : 0,
 		offset: 0
@@ -159,9 +159,9 @@ section.prototype.build = async function(autoload=false) {
 				if (!self.pagination.total) {
 					const current_sqo 		= sqo//self.sqo_context.show.find(element => element.typo==='sqo')
 					self.pagination.total	= (current_sqo.full_count && current_sqo.full_count>0) ? current_sqo.full_count : current_data_manager.count(current_sqo)
-					//console.log("[section.build] self.pagination.total:",self.pagination.total);
+					// console.log("[section.build] self.pagination.total:",self.pagination.total);
 				}
-					// console.log("self:",self);
+
 			// get context and data
 				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
 					// console.log("[section.build] api_response +++++++++++++++++++++++++++++:",api_response);

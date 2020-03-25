@@ -53,7 +53,7 @@ tool_time_machine.prototype.init = async function(options) {
 
 	const self = this
 
-	// dedalo_projects_langs
+	// fix dedalo_projects_langs
 		self.langs = page_globals.dedalo_projects_default_langs
 
 	// set the self specific vars not defined by the generic init (in tool_common)

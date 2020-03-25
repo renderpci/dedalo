@@ -278,7 +278,8 @@ class dd_core_api {
 
 	/**
 	* COUNT
-	* @return array $result
+	* @param object $json_data
+	* @return object $response
 	*/
 	static function count($json_data) {
 		global $start_time;
