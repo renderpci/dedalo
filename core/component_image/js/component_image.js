@@ -154,7 +154,6 @@ component_image.prototype.init_canvas = function(canvas_node, img) {
 		// canvas -> active
 			canvas_node.getContext("2d")
 
-
 	// paper 
 		self.current_paper = paper.setup(canvas_node);
 
@@ -168,6 +167,23 @@ component_image.prototype.init_canvas = function(canvas_node, img) {
 		const image_height 	= img.naturalHeight
 		const ratio 		= height / image_height
 		raster.scale(ratio)
+
+		// subscription to the image quality chang event
+		self.events_tokens.push(
+			event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
+		)
+		function img_quality_change (img_src) {
+			// change the value of the current raster element
+			raster.source 		= img_src
+			raster.onLoad = function(e) {
+				//set the view ratio to 1
+				self.current_paper.view.setScaling(1)
+				const height  		= self.current_paper.view.size._height
+				const image_height 	= raster.height
+				const ratio 		= height / image_height
+				raster.setScaling(ratio)
+			}
+		}
 
 	return true
 }//end init_canvas
