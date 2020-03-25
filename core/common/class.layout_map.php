@@ -769,30 +769,29 @@ class layout_map {
 				'full_count' 	=> false,
 				'filter' 		=> (object)[
 					'$and' => $filter
-				],
-				'select' 		=> [
-					(object)[
-						'path' 	=> [
-							(object)[
-								'section_tipo' 	=> $preset_section_tipo,
-								'component_tipo'=> $component_json_tipo,
-								'modelo' 		=> 'component_json',
-								'name'			=> 'JSON Data'
-							]
-						],
-						'component_path' => [
-					        'components',
-					        $component_json_tipo,
-					        'dato',
-					        'lg-nolan'
-					    ]
-					]
-				]
+				]//,
+				// 'select' 		=> [
+				// 	(object)[
+				// 		'path' 	=> [
+				// 			(object)[
+				// 				'section_tipo' 	=> $preset_section_tipo,
+				// 				'component_tipo'=> $component_json_tipo,
+				// 				'modelo' 		=> 'component_json',
+				// 				'name'			=> 'JSON Data'
+				// 			]
+				// 		],
+				// 		'component_path' => [
+				// 	        'components',
+				// 	        $component_json_tipo,
+				// 	        'dato',
+				// 	        'lg-nolan'
+				// 	    ]
+				// 	]
+				// ]
 
 			];
 			#dump($search_query_object, ' search_query_object ++ '.to_string());
 			#error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
-
 
 		$search 	= search::get_instance($search_query_object);
 		$rows_data 	= $search->search();
@@ -802,8 +801,14 @@ class layout_map {
 		if (empty($ar_records)) {
 			$result 		= false;
 		}else{
-			$preset_value  	= reset($ar_records)->{$component_json_tipo};
-			$result 		= $preset_value;
+			$dato = reset($ar_records);
+			if (isset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN})) {
+				$json_data 		= reset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN});
+				$preset_value 	= is_array($json_data) ? $json_data : [$json_data];
+				$result 		= $preset_value;
+			}else{
+				$result 		= false;
+			}
 		}
 
 		return $result;
