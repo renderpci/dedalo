@@ -36,16 +36,21 @@ export const service_tinymce = function() {
 
 		const self = this
 
+		// options vars
+			const value 		= options.value
+			const key 			= options.key
+			const editor_config = options.editor_config
+
 		// fix vars
-			this.caller 	= caller
-			this.container 	= container
-			this.options 	= options
-			this.key 		= options.key
+			self.caller 	= caller
+			self.container 	= container
+			self.options 	= options
+			self.key 		= key
 
 		// editor options
-			const toolbar = options.editor_config.toolbar
+			const toolbar = editor_config.toolbar
 				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_save"
-			const plugins = options.editor_config.plugins
+			const plugins = editor_config.plugins
 				|| ["paste","image","print","searchreplace","code","fullscreen","noneditable"] // "wordcount"
 
 		// dd-tiny dom element (cusmtomHTML element)
@@ -58,8 +63,8 @@ export const service_tinymce = function() {
 		// dd-tiny options (to config editor)
 			dd_tinny.options = {
 				// called when tinymce editor is ready
-				onsetup_editor  		: this.onsetup_editor.bind(this),
-				value  	 				: options.value,
+				onsetup_editor  		: self.onsetup_editor.bind(this),
+				value  	 				: value,
 				toolbar  				: toolbar,
 				plugins 				: plugins,
 				container 				: container
@@ -67,7 +72,6 @@ export const service_tinymce = function() {
 
 		// add to dom
 			container.appendChild(dd_tinny)
-
 
 
 		return true
@@ -264,14 +268,14 @@ export const service_tinymce = function() {
 
 	/**
 	* GET_EDITOR_CONTENT_DATA
-	* @return 
+	* @return
 	*/
 	this.get_editor_content_data = function() {
 
 		const self = this
 
 		const editor_content_data = self.editor.getBody();
-		
+
 		return editor_content_data
 	};//end get_editor_content_data
 

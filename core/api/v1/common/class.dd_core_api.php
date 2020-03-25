@@ -764,16 +764,16 @@ class dd_core_api {
 			}
 			$ddo_source = reset($ar_source);
 
-			// from source vars
-			$action 		= $ddo_source->action;
-			$mode 			= $ddo_source->mode;
-			$lang 			= $ddo_source->lang ?? null;
-			$section_tipo 	= $ddo_source->section_tipo ?? null;
-			$section_id 	= $ddo_source->section_id ?? null;
-			$tipo 			= $ddo_source->tipo ?? null;
-			$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$limit 			= $ddo_source->pagination->limit ?? null;
-			$offset 		= $ddo_source->pagination->offset ?? null;
+			// source vars
+				$action 		= $ddo_source->action;
+				$mode 			= $ddo_source->mode;
+				$lang 			= $ddo_source->lang ?? null;
+				$section_tipo 	= $ddo_source->section_tipo ?? null;
+				$section_id 	= $ddo_source->section_id ?? null;
+				$tipo 			= $ddo_source->tipo ?? null;
+				$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$limit 			= $ddo_source->pagination->limit ?? null;
+				$offset 		= $ddo_source->pagination->offset ?? null;
 
 		// sqo
 			$search_query_object = array_reduce($base_context, function($carry, $item){

@@ -107,11 +107,11 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 		console.log("[component_text_area.preprocess_text_to_save] Error. container element is not valid", container)
 		return false;
 	}
-	
-	//const start = new Date().getTime();		
-	
+
+	//const start = new Date().getTime();
+
 	// Clone to avoid affect existing DOM elements
-	const cloned_text = container.cloneNode(true)		
+	const cloned_text = container.cloneNode(true)
 
 	// SECTION TAGS (STRUCT)
 		// Iterate all section elements
@@ -121,7 +121,7 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 		if (section_elements) {
 			//console.log(section_elements)
 			const section_elements_len = section_elements.length
-			for (let i = section_elements_len - 1; i >= 0; i--) {				
+			for (let i = section_elements_len - 1; i >= 0; i--) {
 				// Convert section tags to dedalo internal labels
 				// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">..</section>
 				// [struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]...[/struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]
@@ -130,13 +130,13 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 				const label 		= section_elements[i].dataset.label
 				const data 		= section_elements[i].dataset.data
 				// Compose Dédalo tags
-				const tag_in  	= self.build_dedalo_tag('structIn', tag_id, state, label, data)				
+				const tag_in  	= self.build_dedalo_tag('structIn', tag_id, state, label, data)
 				const tag_out 	= self.build_dedalo_tag('structOut', tag_id, state, label, data)
 				const final_string= tag_in + section_elements[i].innerHTML + tag_out
 
 				// Replaces tag content string with new created
 				section_elements[i].innerHTML = final_string
-				
+
 				// Unwrap section tag node (removes tags and leaves only contents)
 				unwrap_element(section_elements[i]);
 
@@ -178,7 +178,7 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 
 				// Replaces tag content string with new created
 				reference_elements[i].innerHTML = final_string
-				
+
 				// Unwrap section tag node (removes tags and leaves only contents)
 				unwrap_element(reference_elements[i]);
 			}//end for (var i = len - 1; i >= 0; i--) {
@@ -186,19 +186,19 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 
 	// IMG TAGS (INDEX,TC,SVG,GEO,PERSON,ETC.)
 		//const image_elements = cloned_text.getElementsByTagName('img')
-		const image_elements = cloned_text.querySelectorAll('img') // ! use querySelectorAll to avoid loop problems on i++ 
+		const image_elements = cloned_text.querySelectorAll('img') // ! use querySelectorAll to avoid loop problems on i++
 		if (image_elements) {
 			const ar_svg_used_tag_id = []
 			const image_elements_len = image_elements.length
-		
+
 			//for (let i = image_elements_len - 1; i >= 0; i--) {
 			for (let i = 0; i < image_elements_len; i++) {
 
 				const current_element = image_elements[i]
-					
+
 				//console.log("image_elements[i]:",i,image_elements[i].dataset.tag_id,parseInt(image_elements[i].dataset.tag_id));
 				let current_tag_id = current_element.dataset.tag_id
-				
+
 				// SVG . Keep current svg tag_id for renumerate on the fly
 				if (current_element.dataset.type==="svg") {
 
@@ -210,7 +210,7 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 					// If is zero or already exits, renumerate
 					if(ar_svg_used_tag_id.indexOf( current_tag_id ) > -1) {
 						// Renumerate
-						current_tag_id = Math.max.apply(Math, ar_svg_used_tag_id) + 1							
+						current_tag_id = Math.max.apply(Math, ar_svg_used_tag_id) + 1
 					}
 					ar_svg_used_tag_id.push( current_tag_id )
 				}
@@ -262,7 +262,7 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 			unwrap_element(temp_elements[i]);
 		}
 
-	
+
 	if(SHOW_DEBUG===true) {
 		//const end  	= new Date().getTime()
 		//const time 	= end - start
@@ -277,7 +277,7 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 
 /**
 * UNWRAP_ELEMENT
-* @return 
+* @return
 */
 const unwrap_element = function(el) {
 	// get the element's parent node
@@ -294,7 +294,7 @@ const unwrap_element = function(el) {
 
 /**
 * IS_TINY
-* @return bool 
+* @return bool
 */
 const is_tiny = function(ed) {
 
@@ -304,6 +304,7 @@ const is_tiny = function(ed) {
 
 	return is_tiny
 }//end is_tiny
+
 
 
 /**
@@ -322,7 +323,7 @@ component_text_area.prototype.update_tag = function(options) {
 		return false
 	}
 
-	const type 			= options.type 
+	const type 			= options.type
 	const tag_id 		= options.tag_id
 	const new_data_obj 	= options.dataset
 	const save 			= options.save || false
@@ -350,12 +351,12 @@ component_text_area.prototype.update_tag = function(options) {
 			// Set new state to dataset of each dataset
 			for (let key in new_data_obj) {
 				current_elements[i].dataset[key] = new_data_obj[key]
-			}			
+			}
 		}
 	}
-		
+
 	// Select current tag in dom
-	if (ed_is_tiny===true) {		
+	if (ed_is_tiny===true) {
 		// tinyMCE editor
 		const ed = container
 		const tiny_current_elements = ed.dom.select(selection_pattern)
@@ -364,15 +365,15 @@ component_text_area.prototype.update_tag = function(options) {
 			return false;
 		}
 		update_tag_state(tiny_current_elements, new_data_obj)
-		
+
 		ed.focus();
 		// Force ed dirty state
 		ed.setDirty(true);	 // Force dirty state
 
 		if (typeof save!=="undefined" && save===true) {
-			
+
 			const key 	= 0 // fixed unique key 0
-			const value = ed.getContent({format:'raw'})			
+			const value = ed.getContent({format:'raw'})
 
 			// Save modified content
 			self.save_value(key, value)
@@ -388,12 +389,12 @@ component_text_area.prototype.update_tag = function(options) {
 		update_tag_state(current_elements, new_data_obj)
 
 		if (typeof save!=="undefined" && save===true) {
-			
-			return tool_structuration.save_structuration_text()				
-		}	
-	}	
 
-	return true	
+			return tool_structuration.save_structuration_text()
+		}
+	}
+
+	return true
 }//end update_tag
 
 
@@ -426,7 +427,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 	}else{
 		label = label.substring(0,22)
 		label.replace(new RegExp('-', 'g'), '_');
-	}		
+	}
 
 	let dedalo_tag = null
 	switch(type) {
@@ -442,7 +443,6 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 
 
-
 /**
 * GET_LAST_TAG_ID
 * @param ed
@@ -455,7 +455,7 @@ component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
 	var ar_id_final = [0];
 
 	switch(tag_type) {
-		
+
 		case 'struct':
 			// SECTION : Select all sections in text
 			var ar_struct_tags = container.getElementsByTagName('section')
@@ -463,13 +463,13 @@ component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
 
 			// ITERATE TO FIND TIPO_TAG
 			var i_len = ar_struct_tags.length
-			for (let i = i_len - 1; i >= 0; i--) {		
-				
+			for (let i = i_len - 1; i >= 0; i--) {
+
 				// current tag like [svg-n-1]
 				var current_tag = ar_struct_tags[i].id;
 				var ar_parts 	= current_tag.split('_');
 				var number 	 	= parseInt(ar_parts[1]);
-		
+
 				// Insert id formated as number in final array
 				ar_id_final.push(number)
 			}
@@ -482,48 +482,47 @@ component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
 
 			// ITERATE TO FIND TIPO_TAG
 			var i_len = ar_tags.length
-			for (let i = i_len - 1; i >= 0; i--) {		
-				
+			for (let i = i_len - 1; i >= 0; i--) {
+
 				// current tag like [svg-n-1]
 				var current_tag = ar_tags[i].id;
 				var ar_parts 	= current_tag.split('_');
 				var number 	 	= parseInt(ar_parts[1]);
-		
+
 				// Insert id formated as number in final array
 				ar_id_final.push(number)
 			}
 			break;
 
 		default:
-			// like img as id: [index-n-1--label-data:**]			
-				const ar_img = container.querySelectorAll('img.'+tag_type)				
-			
+			// like img as id: [index-n-1--label-data:**]
+				const ar_img = container.querySelectorAll('img.'+tag_type)
+
 			// iterate to find tipo_tag (filter by classname: svg,etc.)
 			var i_len = ar_img.length
-			for (let i = i_len - 1; i >= 0; i--) {				
-				
+			for (let i = i_len - 1; i >= 0; i--) {
+
 				var number 		= 0;
 				var current_tag = ar_img[i].id;
 				var ar_parts 	= current_tag.split('-');
 				var number 	 	= parseInt(ar_parts[2]);
 
 				// Insert id formated as number in final array
-				ar_id_final.push(number)					
+				ar_id_final.push(number)
 			}
 				console.log("ar_id_final:",ar_id_final);
 			break;
 	}
-	
+
 	// LAST ID
 	const last_tag_id = Math.max.apply(null, ar_id_final);
 		if(SHOW_DEBUG===true) {
 			console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
 		}
-				
+
 
 	return parseInt(last_tag_id);
 }//end get_last_tag_id
-
 
 
 
