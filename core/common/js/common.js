@@ -134,12 +134,18 @@ common.prototype.render = async function(options={render_level:'full'}) {
 								//console.log("-----------------old_node:", old_content_data_node, self.model);
 
 							// new content data node (first is new rendered node, others are clones of it)
-								const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true)
+								// const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true) (!) Removed 25-03-2020
+								// Note : In some context like dd-tiny, it is necessary to generate a fresh DOM node for each
+								// component node like text_area in a time machine refresh scenario
+								const new_content_data_node = (i===0)
+									? node // use already calculated node
+									: await self[render_mode]({render_level : render_level});
 
-								//console.log("-----------------new_node:", new_content_data_node, self.model);
+								// console.log("-----------------new_node:", new_content_data_node, self.model);
 
 							// replace child from parent wrapper
 								wrapper.replaceChild(new_content_data_node, old_content_data_node)
+
 						}
 
 					return self.node[0]
