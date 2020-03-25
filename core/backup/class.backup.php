@@ -1406,4 +1406,30 @@ abstract class backup {
 
 
 
+	/**
+	* OPTIMIZE_TABLES
+	* Exec VACUUM ANALYZE command on every received table
+	* @param array $tables
+	* @return string $res
+	*/
+	public static function optimize_tables($tables) {
+
+ 		$tables = is_array($tables) ? $tables : [$tables];
+
+		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+
+		$command = $command_base . ' -c \'VACUUM ANALYZE ' . implode(', ', $tables) .';\'';
+
+		// exewc command
+			$res = shell_exec($command);
+
+		// debug
+			debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command:' . to_string($command), logger::ERROR);
+
+
+		return (string)$res;
+	}//end optimize_tables
+
+
+
 }//end class
