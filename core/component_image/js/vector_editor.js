@@ -6,6 +6,7 @@
 // imports
 
 import {ui} from '../../common/js/ui.js'
+import '../../../lib/iro/dist/iro.min.js';
 
 export const vector_editor = function(){
 
@@ -13,6 +14,7 @@ export const vector_editor = function(){
 	// paper vars
 	this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
 	this.currentSegment = this.mode = this.type = null;
+	this.active_layer = null
 
 	return true
 }//end component_image
@@ -31,7 +33,7 @@ vector_editor.prototype.init_tools = function(self){
 		const Point   = self.current_paper.Point
 		const Size    = self.current_paper.Size
 		const Path    = self.current_paper.Path
-
+	
 
 	// rectangle 
 		this.rectangle = new Tool();
@@ -61,7 +63,6 @@ vector_editor.prototype.init_tools = function(self){
 			self.update_draw_data()
 		}
 
-
 	// circle 
 		this.circle = new Tool();
 		this.circle.onMouseDown = (event) => {
@@ -89,37 +90,6 @@ vector_editor.prototype.init_tools = function(self){
 			self.update_draw_data()
 		}
 
-
-	// // add point 
-	// 	this.add_point = new Tool();			
-	// 	this.add_point.onMouseDown = (event) => {
-	// 		// Reset vars
-	// 		this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-	// 		const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
-	// 		if (hitResult) {
-	// 			this.path = hitResult.item;
-	// 			//console.log(hitResult.type);
-	// 			if (hitResult.type==='stroke') {
-	// 				const location = hitResult.location
-	// 				this.segment = this.path.insert(location.index +1, event.point)
-	// 				//path.smooth();
-	// 			}
-	// 		}
-	// 	}				
-	// 	this.add_point.onMouseMove = function(event){
-	// 		const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
-	// 		project.activeLayer.selected = false;
-	// 		if (hitResult && hitResult.item)
-	// 			hitResult.item.selected = true;
-	// 	}			
-	// 	this.add_point.onMouseDrag = function(event) {
-	// 		if (this.segment) {
-	// 			this.segment.point.x = event.point.x;
-	// 			this.segment.point.y = event.point.y;
-	// 		}
-	// 	}
-			
-
 	// pointer 
 		this.pointer = new Tool();
 		this.pointer.onMouseDown = (event) => {
@@ -139,6 +109,8 @@ vector_editor.prototype.init_tools = function(self){
 					case ('fill'):
 						project.deselectAll()
 						this.path.layer.activate()
+						this.active_layer = project.activeLayer
+						this.set_color_picker()
 
 						if (event.modifiers.shift) {
 							hitResult.item.remove()
@@ -246,7 +218,6 @@ vector_editor.prototype.init_tools = function(self){
 			}
 		}
 
-
 	// vector 
 		this.vector = new Tool()
 		this.vector.onMouseDown = (event) => {
@@ -266,6 +237,8 @@ vector_editor.prototype.init_tools = function(self){
 					case ('fill'):
 						project.deselectAll()
 						this.path.layer.activate()
+						this.active_layer = project.activeLayer
+						this.set_color_picker()
 						
 						if (event.modifiers.shift) {
 							hitResult.item.remove()
@@ -416,9 +389,6 @@ vector_editor.prototype.init_tools = function(self){
 			// project.view.center.y = event.point.x
 		}
 
-	// activate de default tool pointer 
-		// const button_pointer = self.svg_editor_tools.querySelector("[data-tool_name='pointer']")
-		// self.active_tool(button_pointer)
 
 	return true
 }//end init_tools
@@ -456,6 +426,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				activate_status(rectangle)
 			})
 			buttons.push(rectangle)
+		
 		// circle
 			const circle = ui.create_dom_element({
 				element_type	: 'div',
@@ -467,6 +438,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				activate_status(circle)
 			})
 			buttons.push(circle)
+		
 		// vector
 			const vector = ui.create_dom_element({
 				element_type	: 'div',
@@ -486,12 +458,12 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				parent 			: buttons_container
 			})
 			full_screen.addEventListener("mouseup", (e) =>{
-				//add / remove the class fullscreen
-				self.node[0].classList.toggle('fullscreen') 
 
+				//add / remove the class fullscreen
+				self.node[0].classList.toggle('fullscreen')
 				//reset the window and the canvas
 				window.dispatchEvent(new Event('resize'));
-				self.current_paper.project.view.update();
+				self.current_paper.view.update();
 				//change the status of the tool
 				activate_status(full_screen)
 				//reset the window and the canvas (twice, paper error)
@@ -499,6 +471,8 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					self.current_paper.project.view.update();
 
 				if(!self.node[0].classList.contains('fullscreen')){
+					//reset the button state
+					activate_status()
 					// get the ratio diference from original view ratio and curren view ratio
 					const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
 					// get the delta center from current position to original center position
@@ -508,7 +482,6 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					self.current_paper.view.scale(ratio)
 					self.current_paper.view.translate(center_x, center_y)
 				}
-
 				
 			})
 			buttons.push(full_screen)
@@ -535,6 +508,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			})
 			buttons.push(zoom)
+		
 		// move
 			const move = ui.create_dom_element({
 				element_type	: 'div',
@@ -564,6 +538,65 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				self.save_draw_data()
 				activate_status(save)
 			})
+			buttons.push(save)
+
+		// color_picker
+			this.button_color_picker = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'button tool button_color_picker',
+				parent 			: buttons_container
+			})
+
+				const color_wheel_contaniner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'hide color_wheel_contaniner',
+					parent 			: buttons_container
+				})
+
+				this.color_picker = new iro.ColorPicker(color_wheel_contaniner, {
+						// Set the size of the color picker
+						width: 160,
+						// Set the initial color to paper project color
+						color: "#f00",
+						// color wheel will not fade to black when the lightness decreases.
+						wheelLightness: false,
+						transparency: true,
+						layout: [
+							{
+								component: iro.ui.Wheel, //can be iro.ui.Box
+								options: {
+									sliderShape: 'circle'
+								}
+							},
+							{
+								component: iro.ui.Slider,
+								options: {
+									sliderType: 'value' // can also be 'saturation', 'value', 'alpha' or 'kelvin'
+								}
+							},
+							{
+								component: iro.ui.Slider,
+								options: {
+									sliderType: 'alpha'
+								}
+							},
+						]
+					})
+			this.button_color_picker.addEventListener("mouseup", (e) =>{
+				color_wheel_contaniner.classList.toggle('hide')
+			})
+			// color:change event callback
+			// color:change callbacks receive the current color and a changes object
+			const color_selected = (color, changes) =>{
+				this.active_layer.fillColor = color.hex8String;
+				this.button_color_picker.style.backgroundColor = color.hexString
+				self.update_draw_data()			
+			}
+
+			// listen to a color picker's color:change event
+			this.color_picker.on('color:change', color_selected);
+
+
 
 		//chane the buttons status: active, desactive
 		const activate_status = (button) =>{
@@ -572,13 +605,21 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				const current_buton = buttons[i]
 				current_buton.classList.remove('vector_tool_active')
 			}
-			button.classList.add('vector_tool_active')
+			button ? button.classList.add('vector_tool_active') : null
 		}
 
 		// first load activate pointer
 			this.pointer.activate()
 			activate_status(pointer)
 }//end render_tools_buttons
+
+
+vector_editor.prototype.set_color_picker = function(){
+
+		const color = this.active_layer.fillColor.toCSS()
+		this.button_color_picker.style.backgroundColor = color
+		this.color_picker.color.rgbaString = color
+}
 
 //Botones de tools
 //SELECT del ZOOM
@@ -604,16 +645,11 @@ vector_editor.prototype.load_layer = function(self, data, layer_id) {
 			const current_layer = project.importJSON(data);
 
 			const color = current_layer.fillColor;
-
 			current_layer.activate();
-			// project.deselectAll();
-			// project.view.draw();
-			//console.log(project.layers[1].name);
-			//console.log(current_layer.fillColor);
+			
 		}else{
 			let create_new_current_layer = true
 			// Verificamos si el nombre del layer existe
-
 			const c_len = project.layers.length
 			for (let i = c_len - 1; i >= 0; i--) {					
 				if (project.layers[i].name == layer_id){
@@ -634,43 +670,17 @@ vector_editor.prototype.load_layer = function(self, data, layer_id) {
 					alpha: 0.3,
 				});
 				current_layer.fillColor = color;
-				current_layer.activate();	
+				current_layer.activate();
 				console.log("-> creada nueva capa: " , current_layer.name);	
 			}
 
 		};// end else
-		//segment = path = movePath = handle = handle_sync = null;
+
+		this.active_layer = project.activeLayer
+		this.set_color_picker()
 		project.view.draw();
 		project.deselectAll();
 		project.options.handleSize = 8;
 	
 	return true
 }//end load_layer
-
-
-
-/**
-* ACTIVE_TOOL
-* @return 
-*/
-const active_tool = function(button) {
-	console.log("aqui:",button);
-	console.log("aqui:",this);
-	// const tool_name = button.dataset.tool_name
-		
-	// Activate tool
-	this[button].activate()
-
-	// Reset all butons apperance
-	// const ar_buttons = button.parentNode.querySelectorAll(".button_activate")
-	// for (let i = ar_buttons.length - 1; i >= 0; i--) {
-	// 	if (ar_buttons[i].classList.contains("button_active")) {
-	// 		ar_buttons[i].classList.remove("button_active")
-	// 	}			
-	// }
-
-	// Hilite current
-	// button.classList.add("button_active")
-
-	return true
-}//end active_tool

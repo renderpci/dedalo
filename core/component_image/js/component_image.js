@@ -182,6 +182,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 	// convert the tag dataset to 'real' object for manage it
 	const tag = JSON.parse(JSON.stringify(options.tag.dataset))
 
+
 	// MODE : Only allow mode 'tool_transcription'
 	//if(page_globals.modo!=='tool_transcription') return null;
 
@@ -194,19 +195,19 @@ component_image.prototype.load_vector_editor = async function(options) {
 		self.vector_tools_loaded = true
 	}
 
-	self.ar_tag_loaded.push(tag)
-
 	/*
 	*ATENTION THE NAME OF THE TAG (1) CHANGE INTO (1_LAYER) FOR COMPATIBILITY WITH PAPER LAYER NAME
 	*WHEN SAVE THE LAYER TAG IT IS REMOVE TO ORIGINAL TAG NAME OF DÉDALO. "draw-n-1-data"
 	*BUT THE LAYER NAME ALWAYS ARE "1_layer"
 	*/
 
-	const data 	 	= tag.data.replace(/'/g, '"')
-	const layer_id 	= tag.tag_id +'_layer';
+	// call the generic commom tool init with the tag
+		self.ar_tag_loaded.push(tag)
+		const data 	 	= tag.data.replace(/'/g, '"')
+		const layer_id 	= tag.tag_id +'_layer';
+		self.vector_editor.load_layer(self, data, layer_id)
 
-	// call the generic commom tool init
-		vector_editor.prototype.load_layer(self, data, layer_id)
+
 }// load_vector_editor
 
 
@@ -225,7 +226,7 @@ component_image.prototype.update_draw_data = function() {
 	const current_draw_data = data.replace(/"/g, '\'');
 	current_tag.dataset 	= {data:current_draw_data}
 	current_tag.save 		= false
-	
+
 	return true
 }//end update_draw_data
 
