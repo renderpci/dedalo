@@ -3,7 +3,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../common/js/instances.js'
 	import {common} from '../../../common/js/common.js'
-	import {tool_common} from '../../../tool_common/js/tool_common.js'
+	import {tool_common, trigger_request} from '../../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 
 
@@ -28,6 +28,8 @@ export const tool_time_machine = function () {
 	this.section_tm
 	this.button_apply
 	this.selected_matrix_id
+	this.trigger_url
+	this.modal_container
 
 	return true
 }//end page
@@ -88,6 +90,24 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// section_tm. get section full context
+		const current_data_manager = new data_manager()
+		const source = {
+			typo 		 : 'source',
+			tipo 		 : self.caller.tipo,
+			section_tipo : self.caller.section_tipo,
+			section_id 	 : self.caller.section_id,
+			model 		 : 'section_tm',
+			lang 		 : self.caller.lang,
+			pagination 	 : {
+				total  : 0,
+				offset : 0,
+				limit  : 10
+			}
+		}
+		const element_context 	= await current_data_manager.get_element_context(source)
+		self.section_tm_context = element_context.result
+
 	// call generic commom tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
 
@@ -102,23 +122,6 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 		// const api_response 			= await current_data_manager.section_load_data(base_context)
 		// self.section_tm_context 	= api_response.result.context
 		// 	console.log("+++++ api_response.result:",api_response.result);
-
-	// section_tm. get section full context
-		const current_data_manager = new data_manager()
-		const source = {
-			typo 		 : 'source',
-			tipo 		 : self.caller.tipo,
-			section_tipo : self.caller.section_tipo,
-			section_id 	 : self.caller.section_id,
-			model 		 : 'section_tm',
-			lang 		 : self.caller.lang,
-			pagination 	 : {
-				total  : {},
-				offset : 0
-			}
-		}
-		const element_context 	= await current_data_manager.get_element_context(source)
-		self.section_tm_context = element_context.result
 
 
 	return common_build
@@ -228,7 +231,7 @@ tool_time_machine.prototype.load_section = async function() {
 			tipo 			: self.caller.section_tipo,
 			section_tipo 	: self.caller.section_tipo,
 			section_id 		: self.caller.section_id,
-			mode 			: "list",
+			mode 			: "list_tm",
 			lang 			: self.caller.lang,
 			section_lang 	: self.caller.lang,
 			type 			: "section",
@@ -305,7 +308,9 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 		await component_instance.build(true)
 
 	// set current tool as component caller (to check if component is inside tool or not)
-		component_instance.caller = self
+		if (matrix_id) {
+			component_instance.caller = self
+		}
 
 	// add created component instance to current ar_instances
 		const instance_found = self.ar_instances.find( el => el===component_instance )
@@ -317,6 +322,54 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 	return component_instance
 }//end load_component
 
+
+
+/**
+* APPLY_VALUE
+* Loads component to place in respective containers: current and version preview
+*/
+tool_time_machine.prototype.apply_value = async function() {
+
+	const self = this
+
+	// vars 'section_id','section_tipo','tipo','lang','matrix_id'
+
+	const lang 		= self.lang
+	const matrix_id = self.selected_matrix_id
+
+	const body = {
+		url 			: self.trigger_url,
+		mode 			: 'apply_value',
+		section_id 		: self.caller.section_id,
+		section_tipo  	: self.caller.section_tipo,
+		tipo  			: self.caller.tipo,
+		lang 			: lang,
+		matrix_id		: matrix_id
+	}
+	const trigger_response = await trigger_request(self.trigger_url, body);
+
+		// // user messages
+		// 	const msg_type = (trigger_response.result===false) ? 'error' : 'ok'
+		// 	//if (trigger_response.result===false) {
+		// 		ui.show_message(buttons_container, trigger_response.msg, msg_type)
+		// 	//}
+
+	// close tool modal
+		const close_promise = self.modal_container.close()
+
+	// reload source component on finish close
+		close_promise.then(()=>{
+			self.caller.refresh()
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("[tool_time_machine.apply_value] trigger_response:",trigger_response);
+		}
+
+
+	return trigger_response
+}//end apply_value
 
 
 
