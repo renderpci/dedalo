@@ -4,9 +4,9 @@
 
 
 // imports
-
-import {ui} from '../../common/js/ui.js'
-import '../../../lib/iro/dist/iro.min.js';
+	import {ui} from '../../common/js/ui.js'
+	import '../../../lib/iro/dist/iro.min.js';
+	import {event_manager} from '../../common/js/event_manager.js'
 
 export const vector_editor = function(){
 
@@ -21,7 +21,7 @@ export const vector_editor = function(){
 
 
 /**
-* LOAD_TOOLS
+* INIT_TOOLS
 */
 vector_editor.prototype.init_tools = function(self){
 
@@ -394,7 +394,9 @@ vector_editor.prototype.init_tools = function(self){
 }//end init_tools
 
 
-
+/**
+* RENDER_TOOLS_BUTTONS
+*/
 vector_editor.prototype.render_tools_buttons = function(self){
 
 	// Tool buttons. Show
@@ -402,203 +404,220 @@ vector_editor.prototype.render_tools_buttons = function(self){
 		buttons_container.classList.remove("hide")
 
 	// vector editor tools
-	const buttons = []
-		// pointer
-			const pointer = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool pointer',
-				parent 			: buttons_container
-			})
-			pointer.addEventListener("mouseup", (e) =>{
-				this.pointer.activate()
-				activate_status(pointer)
-			})
-			buttons.push(pointer)
+		const buttons = []
 
-		// rectangle
-			const rectangle = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool rectangle',
-				parent 			: buttons_container
-			})
-			rectangle.addEventListener("mouseup", (e) =>{
-				this.rectangle.activate()
-				activate_status(rectangle)
-			})
-			buttons.push(rectangle)
-		
-		// circle
-			const circle = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool circle',
-				parent 			: buttons_container
-			})
-			circle.addEventListener("mouseup", (e) =>{
-				this.circle.activate()
-				activate_status(circle)
-			})
-			buttons.push(circle)
-		
-		// vector
-			const vector = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool vector',
-				parent 			: buttons_container
-			})
-			vector.addEventListener("mouseup", (e) =>{
-				this.vector.activate()
-				activate_status(vector)
-			})
-			buttons.push(vector)
-
-		// full_screen
-			const full_screen = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool full_screen',
-				parent 			: buttons_container
-			})
-			full_screen.addEventListener("mouseup", (e) =>{
-
-				//add / remove the class fullscreen
-				self.node[0].classList.toggle('fullscreen')
-				//reset the window and the canvas
-				window.dispatchEvent(new Event('resize'));
-				self.current_paper.view.update();
-				//change the status of the tool
-				activate_status(full_screen)
-				//reset the window and the canvas (twice, paper error)
-					window.dispatchEvent(new Event('resize'));
-					self.current_paper.project.view.update();
-
-				if(!self.node[0].classList.contains('fullscreen')){
-					//reset the button state
-					activate_status()
-					// get the ratio diference from original view ratio and curren view ratio
-					const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
-					// get the delta center from current position to original center position
-					const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-					const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
-
-					self.current_paper.view.scale(ratio)
-					self.current_paper.view.translate(center_x, center_y)
-				}
-				
-			})
-			buttons.push(full_screen)
-
-		// zoom
-			const zoom = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool zoom',
-				parent 			: buttons_container
-			})
-			zoom.addEventListener("mouseup", (e) =>{
-				this.zoom.activate()
-				activate_status(zoom)
-			})
-			zoom.addEventListener("dblclick", (e) =>{
-				// get the ratio diference from original view ratio and curren view ratio
-				const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
-				// get the delta center from current position to original center position
-				const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-				const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
-
-				self.current_paper.view.scale(ratio)
-				self.current_paper.view.translate(center_x, center_y)
-
-			})
-			buttons.push(zoom)
-		
-		// move
-			const move = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool move',
-				parent 			: buttons_container
-			})
-			move.addEventListener("mouseup", (e) =>{
-				this.move.activate()
-				activate_status(move)
-			})
-			move.addEventListener("dblclick", (e) =>{
-				// get the delta center from current position to original center position
-				const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-				const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
-
-				self.current_paper.view.translate(center_x, center_y)
-			})
-			buttons.push(move)
-
-		// save
-			const save = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool save',
-				parent 			: buttons_container
-			})
-			save.addEventListener("mouseup", (e) =>{
-				self.save_draw_data()
-				activate_status(save)
-			})
-			buttons.push(save)
-
-		// color_picker
-			this.button_color_picker = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button tool button_color_picker',
-				parent 			: buttons_container
-			})
-
-				const color_wheel_contaniner = ui.create_dom_element({
+			// pointer
+				const pointer = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'hide color_wheel_contaniner',
+					class_name 		: 'button tool pointer',
+					parent 			: buttons_container
+				})
+				pointer.addEventListener("mouseup", (e) =>{
+					this.pointer.activate()
+					activate_status(pointer)
+				})
+				buttons.push(pointer)
+
+			// rectangle
+				const rectangle = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool rectangle',
+					parent 			: buttons_container
+				})
+				rectangle.addEventListener("mouseup", (e) =>{
+					this.rectangle.activate()
+					activate_status(rectangle)
+				})
+				buttons.push(rectangle)
+			
+			// circle
+				const circle = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool circle',
+					parent 			: buttons_container
+				})
+				circle.addEventListener("mouseup", (e) =>{
+					this.circle.activate()
+					activate_status(circle)
+				})
+				buttons.push(circle)
+			
+			// vector
+				const vector = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool vector',
+					parent 			: buttons_container
+				})
+				vector.addEventListener("mouseup", (e) =>{
+					this.vector.activate()
+					activate_status(vector)
+				})
+				buttons.push(vector)
+
+			// full_screen
+				const full_screen = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool full_screen',
+					parent 			: buttons_container
+				})
+				full_screen.addEventListener("mouseup", (e) =>{
+
+					//add / remove the class fullscreen
+					self.node[0].classList.toggle('fullscreen')
+					//reset the window and the canvas
+					window.dispatchEvent(new Event('resize'));
+					self.current_paper.view.update();
+					//change the status of the tool
+					activate_status(full_screen)
+					//reset the window and the canvas (twice, paper error)
+						window.dispatchEvent(new Event('resize'));
+						self.current_paper.project.view.update();
+
+					if(!self.node[0].classList.contains('fullscreen')){
+						//reset the button state
+						activate_status()
+						// get the ratio diference from original view ratio and curren view ratio
+						const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
+						// get the delta center from current position to original center position
+						const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+						const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+
+						self.current_paper.view.scale(ratio)
+						self.current_paper.view.translate(center_x, center_y)
+					}
+					
+				})
+				buttons.push(full_screen)
+
+			// zoom
+				const zoom = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool zoom',
+					parent 			: buttons_container
+				})
+				zoom.addEventListener("mouseup", (e) =>{
+					this.zoom.activate()
+					activate_status(zoom)
+				})
+				zoom.addEventListener("dblclick", (e) =>{
+					
+					//set the view ratio to 1
+					self.current_paper.view.setScaling(1)
+					//set the center of the view
+					const center_y = self.current_paper.view.size._height /2
+					const center_x = self.current_paper.view.size._width /2
+					self.current_paper.view.setCenter(center_x,center_y)
+
+					// // get the ratio diference from original view ratio and curren view ratio
+					// const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
+					// // get the delta center from current position to original center position
+					// const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+					// const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+
+					// self.current_paper.view.scale(ratio)
+					// self.current_paper.view.translate(center_x, center_y)
+
+				})
+
+				zoom.addEventListener('wheel', (e) =>{
+				
+				})
+				buttons.push(zoom)
+			
+			// move
+				const move = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool move',
+					parent 			: buttons_container
+				})
+				move.addEventListener("mouseup", (e) =>{
+					this.move.activate()
+					activate_status(move)
+				})
+				move.addEventListener("dblclick", (e) =>{
+					//set the center of the view
+					const center_y = self.current_paper.view.size._height /2
+					const center_x = self.current_paper.view.size._width /2
+					self.current_paper.view.setCenter(center_x,center_y)
+
+					// // get the delta center from current position to original center position
+					// const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+					// const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+
+					// self.current_paper.view.translate(center_x, center_y)
+				})
+				buttons.push(move)
+
+			// save
+				const save = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool save',
+					parent 			: buttons_container
+				})
+				save.addEventListener("mouseup", (e) =>{
+					self.save_draw_data()
+					activate_status(save)
+				})
+				buttons.push(save)
+
+			// color_picker
+				this.button_color_picker = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool button_color_picker',
 					parent 			: buttons_container
 				})
 
-				this.color_picker = new iro.ColorPicker(color_wheel_contaniner, {
-						// Set the size of the color picker
-						width: 160,
-						// Set the initial color to paper project color
-						color: "#f00",
-						// color wheel will not fade to black when the lightness decreases.
-						wheelLightness: false,
-						transparency: true,
-						layout: [
-							{
-								component: iro.ui.Wheel, //can be iro.ui.Box
-								options: {
-									sliderShape: 'circle'
-								}
-							},
-							{
-								component: iro.ui.Slider,
-								options: {
-									sliderType: 'value' // can also be 'saturation', 'value', 'alpha' or 'kelvin'
-								}
-							},
-							{
-								component: iro.ui.Slider,
-								options: {
-									sliderType: 'alpha'
-								}
-							},
-						]
+					const color_wheel_contaniner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'hide color_wheel_contaniner',
+						parent 			: buttons_container
 					})
-			this.button_color_picker.addEventListener("mouseup", (e) =>{
-				color_wheel_contaniner.classList.toggle('hide')
-			})
-			// color:change event callback
-			// color:change callbacks receive the current color and a changes object
-			const color_selected = (color, changes) =>{
-				this.active_layer.fillColor = color.hex8String;
-				this.button_color_picker.style.backgroundColor = color.hexString
-				self.update_draw_data()			
-			}
 
-			// listen to a color picker's color:change event
-			this.color_picker.on('color:change', color_selected);
+					this.color_picker = new iro.ColorPicker(color_wheel_contaniner, {
+							// Set the size of the color picker
+							width: 160,
+							// Set the initial color to paper project color
+							color: "#f00",
+							// color wheel will not fade to black when the lightness decreases.
+							wheelLightness: false,
+							transparency: true,
+							layout: [
+								{
+									component: iro.ui.Wheel, //can be iro.ui.Box
+									options: {
+										sliderShape: 'circle'
+									}
+								},
+								{
+									component: iro.ui.Slider,
+									options: {
+										sliderType: 'value' // can also be 'saturation', 'value', 'alpha' or 'kelvin'
+									}
+								},
+								{
+									component: iro.ui.Slider,
+									options: {
+										sliderType: 'alpha'
+									}
+								},
+							]
+						})
+				this.button_color_picker.addEventListener("mouseup", (e) =>{
+					color_wheel_contaniner.classList.toggle('hide')
+				})
+				// color:change event callback
+				// color:change callbacks receive the current color and a changes object
+				const color_selected = (color, changes) =>{
+					this.active_layer.fillColor = color.hex8String;
+					this.button_color_picker.style.backgroundColor = color.hexString
+					self.update_draw_data()			
+				}
+
+				// listen to a color picker's color:change event
+				this.color_picker.on('color:change', color_selected);
 
 
-
-		//chane the buttons status: active, desactive
+		//change the buttons status: active, desactive
 		const activate_status = (button) =>{
 			const buttons_lenght = buttons.length
 			for (let i = 0; i < buttons_lenght; i++) {
@@ -614,16 +633,34 @@ vector_editor.prototype.render_tools_buttons = function(self){
 }//end render_tools_buttons
 
 
+/**
+* SET_COLOR_PICKER
+* get the color of the current active layer to set to the color picker and the button color picker
+* @return 
+*/
 vector_editor.prototype.set_color_picker = function(){
 
 		const color = this.active_layer.fillColor.toCSS()
 		this.button_color_picker.style.backgroundColor = color
 		this.color_picker.color.rgbaString = color
-}
+}// end set_color_picker
 
-//Botones de tools
-//SELECT del ZOOM
-// Crear opciones de select para el zoom			
+
+/**
+* GET_LAYERS
+* get the layers loaded and show into window
+* @return 
+*/
+vector_editor.prototype.get_layers = function(event) {
+		const node = event.target
+};//end get_layers
+
+
+/**
+* LOAD_LAYER
+* get the layers loaded and show into window
+* @return 
+*/		
 vector_editor.prototype.load_layer = function(self, data, layer_id) {
 
 	// curent paper vars
