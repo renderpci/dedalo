@@ -54,13 +54,31 @@
 		//	}
 		//}
 
-		$test_file = false;
+		$test_file 			= true;
+		$absolute  			= false;
+		$image_ar_quality 	= ($modo==='edit')
+			? unserialize(DEDALO_IMAGE_AR_QUALITY)
+			: [DEDALO_IMAGE_QUALITY_DEFAULT];
 
-		$image_item = new stdClass();
-			$image_item->url 	 = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
-			$image_item->quality = DEDALO_IMAGE_QUALITY_DEFAULT;
+		foreach ($image_ar_quality as $current_quality) {
 
-		$value[] = $image_item;
+			if($current_quality===DEDALO_IMAGE_THUMB_DEFAULT) continue;
+
+			$default_add 		= $current_quality===DEDALO_IMAGE_QUALITY_DEFAULT ? true : false;
+			$is_default_quality = $current_quality===DEDALO_IMAGE_QUALITY_DEFAULT ? true : false;
+
+			$current_url = $this->get_image_url($current_quality, $test_file, $absolute, $default_add); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+
+			if ($current_url!==false) {
+
+				$image_item = new stdClass();
+					$image_item->url 	 	= $current_url;
+					$image_item->quality 	= $current_quality;
+					$image_item->is_default = $is_default_quality;
+
+				$value[] = $image_item;
+			}
+		}
 
 		// data item
 		$item  = $this->get_data_item($value);
