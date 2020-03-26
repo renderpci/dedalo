@@ -143,12 +143,21 @@ class web_data {
 				// dump(json_encode($sql_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ' sql_options->resolve_portal ++ '.to_string());
 
 			// section_id filter
-				if ($sql_options->section_id!==false) {
-					if (empty($sql_options->sql_filter)) {
-						$sql_options->sql_filter = 'section_id = ' . (int)$sql_options->section_id;
-					}else{
-						$sql_options->sql_filter = 'section_id = ' . (int)$sql_options->section_id . ' AND ' . $sql_options->sql_filter;
-					}
+				if ($sql_options->section_id!==false && !empty($sql_options->section_id)) {
+
+					// parse as array always
+						$ar_section_id = explode(',', $sql_options->section_id);
+						$ar_sentences  = array_map(function($current_section_id){
+							return 'section_id=' . (int)$current_section_id;
+						}, $ar_section_id);
+						$current_sql_filter = '(' . implode(' OR ', $ar_sentences) .')';
+
+					// add sql_filter if not empty
+						if (!empty($sql_options->sql_filter)) {
+							$current_sql_filter .= ' AND ' . $sql_options->sql_filter;
+						}
+
+					$sql_options->sql_filter = $current_sql_filter;
 				}
 
 			// fields. Convert text ar_fields to array

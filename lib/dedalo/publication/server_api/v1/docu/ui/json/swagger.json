@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.10",
-    "title" : "Dédalo Web REST API 1.0.10",
+    "version" : "1.0.11",
+    "title" : "Dédalo Web REST API 1.0.11",
     "description" : "Builds Public Dédalo data for publication. <br>Use this online tool to test your data and remember always write your <i>Auth code</i> when executes a try call.<br> <strong>This API is focused to Oral History archives and is for general pourposes.<br>If you need special features or custom results, you are wellcome to join API develop team contacting with the source developers (aka Alex&Paco)</strong> in webmaster@render.es",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -197,16 +197,17 @@
           "name" : "table",
           "in" : "query",
           "type" : "string",
+          "format" : "string",
           "default" : "interview"
         }, {
           "$ref" : "#/parameters/ar_fields"
         }, {
           "name" : "section_id",
           "in" : "query",
-          "description" : "Filter by specific section_id. Like 1",
+          "description" : "Filter by specific section_id. Like 1. Also, it is valid a sequence separated by comma, like 1,4,5",
           "required" : false,
-          "type" : "number",
-          "format" : "integer"
+          "type" : "string",
+          "format" : "string"
         }, {
           "name" : "sql_fullselect",
           "in" : "query",
