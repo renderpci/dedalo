@@ -465,6 +465,7 @@ abstract class common {
 	}//end set_to_force_reload_dato
 
 
+
 	/**
 	* GET_MAIN_LANG
 	* @return string $main_lang
@@ -2209,12 +2210,17 @@ abstract class common {
 				$query_object->id  	   				= $id;
 				$query_object->section_tipo 		= $section_tipo;
 				$query_object->filter  				= $filter_group;
-				$query_object->filter_by_locators  	= $filter_by_locators ?? false;
 				$query_object->select  				= $select_group;
-				$query_object->order_custom 		= $options->order_custom;
 				$query_object->limit   				= $options->limit;
 				$query_object->offset  				= $options->offset;
 				$query_object->full_count  			= $total_locators ?? $options->full_count;
+
+				if (!empty($filter_by_locators)) {
+					$query_object->filter_by_locators = $filter_by_locators;
+				}
+				if (!empty($options->order_custom)) {
+					$query_object->order_custom = $options->order_custom;
+				}
 
 
 		return (object)$query_object;

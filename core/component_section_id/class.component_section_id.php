@@ -37,17 +37,17 @@ class component_section_id extends component_common {
 
 		$between_separator  = '...';
 		$sequence_separator = ',';
-	
+
 		// Case is an array of values
-		if (is_array($q)) {	
+		if (is_array($q)) {
 			$q = implode($sequence_separator, $q);
 		}
 
 		# component path
 		$query_object->component_path = ['section_id'];
-		
-		$query_object->unaccent = false;	
-		
+
+		$query_object->unaccent = false;
+
 
         switch (true) {
         	# BETWEEN
@@ -67,19 +67,19 @@ class component_section_id extends component_common {
 
 				// Return an array instead object
 				#$query_object = [$query_object_one,$query_object_two];
-				
+
 				// Group in a new "AND"
 				$current_op = '$and';
 				$new_query_object = new stdClass();
 					$new_query_object->{$current_op} = [$query_object_one,$query_object_two];
 
 				$query_object = $new_query_object;
-				break;	
+				break;
         	# SEQUENCE
 			case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
 				$ar_parts 	= explode($sequence_separator, $q);
-				$ar_result  = []; 
+				$ar_result  = [];
 				foreach ($ar_parts as $key => $value) {
 					$value = (int)$value;
 					if ($value<1) continue;
@@ -107,7 +107,7 @@ class component_section_id extends component_common {
 				$q_clean  = (int)str_replace($operator, '', $q);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= $q_clean;
-				break;		
+				break;
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
@@ -125,13 +125,13 @@ class component_section_id extends component_common {
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
-				$q_clean  = (int)str_replace('+', '', $q);				
+				$q_clean  = (int)str_replace('+', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;	
+    			$query_object->q_parsed	= $q_clean;
 				break;
-		}//end switch (true) {		
-       	dump($query_object, ' query_object ++ '.to_string());
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+		}//end switch (true) {
+       	// dump($query_object, ' query_object ++ '.to_string());
+		// debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 
         return $query_object;
@@ -145,7 +145,7 @@ class component_section_id extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'...' 	=> 'entre',
 			',' 	=> 'secuencia',
@@ -159,7 +159,6 @@ class component_section_id extends component_common {
 		return $ar_operators;
 	}//end search_operators_info
 
-	
-	
-}
-?>
+
+
+}//end class component_section_id
