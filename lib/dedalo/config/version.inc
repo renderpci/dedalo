@@ -1661,8 +1661,11 @@
 	Valencia 11-03-2020 5.5.32
 		Fix error on resolve_portals_custom (diffusion) when value is already an object
 
+	Valencia 21-03-2020 5.5.34
+		Improve search_development2 count performance (specially in matrix_activity)
 
-
+	Valencia 26-03-2020 5.5.36
+		Update class web_data->get_records method to allow send sequences of section id to the API server
 
 
 	WORK IN PROGRESS
@@ -1684,12 +1687,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.33';
+	$DEDALO_VERSION = '5.5.35';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '13-03-2020');
+	define('DEDALO_BUILD'	, '26-03-2020');
 
 
 	/*
