@@ -158,7 +158,7 @@ class dd_utils_api {
 			}
 
 		// optimize tables
-			backup::optimize_tables(['jer_dd','matrix_descriptors_dd']);
+			backup::optimize_tables(['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list']);
 
 
 		# Delete session config (force to recalculate)
