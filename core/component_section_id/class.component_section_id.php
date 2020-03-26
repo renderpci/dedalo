@@ -1,33 +1,42 @@
 <?php
 /*
-* CLASS COMPONENT SECTION_ID
+* CLASS COMPONENT_SECTION_ID
 *
 *
 */
 class component_section_id extends component_common {
-	
-	# GET DATO
+
+
+
+	/**
+	* GET_DATO
+	*/
 	public function get_dato() {
 		return (int)$this->parent;
-	}
+	}//end get_dato
 
-	# GET DATO
+
+
+	/**
+	* GET_VALOR
+	*/
 	public function get_valor() {
-		return (int)$this->parent;
-	}
+		return $this->get_dato();
+	}//end get_valor
 
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
+
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
-		if (isset($query_object->type) && $query_object->type==='jsonb') {
-			$q = json_decode($q);
-		}	
+		// if (isset($query_object->type) && $query_object->type==='jsonb') {
+		// 	$q = json_decode($q);
+		// }
 
     	# Always set fixed values
 		$query_object->type = 'number';
