@@ -3239,67 +3239,65 @@ abstract class component_common extends common {
 
 	/**
 	* GET_SELECT_QUERY2
-	* @return
+	* @param object $select_object
+	* @return object $select_object
 	*/
 	public static function get_select_query2($select_object) {
 
-		/*
-		[path] => Array
-			(
-				[0] => stdClass Object
-					(
-						[name] => Título
-						[modelo] => component_input_text
-						[section_tipo] => numisdata224
-						[component_tipo] => numisdata231
-					)
+		// ref
+			// [path] => Array
+			// 	(
+			// 		[0] => stdClass Object
+			// 			(
+			// 				[name] => Título
+			// 				[modelo] => component_input_text
+			// 				[section_tipo] => numisdata224
+			// 				[component_tipo] => numisdata231
+			// 			)
+			// 	)
+			// [lang] => lg-spa
+			# $selector = isset($select_object->selector) ? $select_object->selector : 'valor_list';
 
-			)
+		// component_path check
+			if(!isset($select_object->component_path)) {
 
-		[lang] => lg-spa
-		*/
-		#$selector = isset($select_object->selector) ? $select_object->selector : 'valor_list';
+				$end_path 		= end($select_object->path);
+				$component_tipo = $end_path->component_tipo;
 
+				// selector
+					$selector = isset($end_path->selector)
+						? $end_path->selector
+						: 'dato';
 
-		# component path is not calculated
-		if(!isset($select_object->component_path)) {
+				// component_path
+					if (isset($end_path->lang) && $end_path->lang==='all') {
 
-			$end_path 		= end($select_object->path);
-			$component_tipo = $end_path->component_tipo;
+						$select_object->component_path = ['components',$component_tipo,$selector];
 
-			if (isset($end_path->selector)) {
-				$selector = $end_path->selector;
-			}else{
-				//$selector = 'valor_list';
-				$selector = 'dato';
-			
+					}else{
+
+						if (isset($end_path->lang)) {
+							$lang = $end_path->lang;
+						}else{
+							$RecordObj_dd = new RecordObj_dd($component_tipo);
+							$traducible   = $RecordObj_dd->get_traducible();
+							if ($traducible!=='si') {
+								$default_lang = DEDALO_DATA_NOLAN;
+							}else{
+								$default_lang = DEDALO_DATA_LANG;
+							}
+							$lang = $default_lang;
+						}
+
+						# Set default
+						$select_object->component_path = ['components',$component_tipo,$selector,$lang];
+					}
 			}
 
-			if (isset($end_path->lang) && $end_path->lang==='all') {
-	      		$select_object->component_path = ['components',$component_tipo,$selector];
-	      	}else{
-
-		      	if (isset($end_path->lang)) {
-					$lang = $end_path->lang;
-				}else{
-					$RecordObj_dd = new RecordObj_dd($component_tipo);
-					$traducible   = $RecordObj_dd->get_traducible();
-					if ($traducible!=='si') {
-						$default_lang = DEDALO_DATA_NOLAN;
-					}else{
-						$default_lang = DEDALO_DATA_LANG;
-					}
-					$lang = $default_lang;
-				}
-
-				# Set default
-				$select_object->component_path = ['components',$component_tipo,$selector,$lang];
-	      	}
-		}
-
-		if(!isset($select_object->type)) {
-			$select_object->type = 'string';
-		}
+		// type check
+			if(!isset($select_object->type)) {
+				$select_object->type = 'string';
+			}
 
 
 		return $select_object;
@@ -3379,6 +3377,7 @@ abstract class component_common extends common {
 
 			}//end if ($total_count===1) {
 		}
+
 
 		return $ar_query_object;
 	}//end split_query
