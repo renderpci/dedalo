@@ -7,6 +7,7 @@
 class area_thesaurus extends area {
 
 
+
 	static $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
 	static $typologies_name_tipo 	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
@@ -16,11 +17,14 @@ class area_thesaurus extends area {
 	protected $hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_TIPO;
 
 
-	
+
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo, $modo='list') {
 
 		return parent::__construct($tipo, $modo);
-	}
+	}//end __construct
 
 
 
@@ -29,9 +33,9 @@ class area_thesaurus extends area {
 	* @return array $active_hierarchies
 	*/
 	public function get_hierarchy_typologies() {
-	
+
 		$hierarchy_typologies = section::get_ar_all_section_records_unfiltered( area_thesaurus::$typologies_section_tipo );
-		
+
 		return (array)$hierarchy_typologies;
 	}//end get_hierarchy_typologies
 
@@ -42,15 +46,15 @@ class area_thesaurus extends area {
 	* @return array $ar_items
 	*/
 	public function get_hierarchy_sections($hierarchy_types_filter=null, $hierarchy_sections_filter=null) {
-		
+
 		$ar_records = area_thesaurus::get_all_hierarchy_sections();
-		
+
 		$ar_items = [];
 		foreach ($ar_records as $key => $row) {
 			if (empty($row->{$this->target_section_tipo})) {
 				debug_log(__METHOD__." Skipped row $row->section_id with empty target_section_tipo ".$row->{DEDALO_HIERARCHY_TERM_TIPO}, logger::WARNING);
 				continue; // Skip
-			}		
+			}
 
 			# Skip filtered sections when defined
 			$target_section_tipo = $row->{$this->target_section_tipo};
@@ -68,7 +72,7 @@ class area_thesaurus extends area {
 			if (empty($hierarchy_target_section_name)) {
 				$hierarchy_target_section_name = $this->get_hierarchy_name( $row->section_id );
 			}
-			
+
 			$item = new stdClass();
 				$item->section_id 					 = $row->section_id;
 				$item->hierarchy_target_section_tipo = $target_section_tipo;
@@ -90,7 +94,7 @@ class area_thesaurus extends area {
 	* @return array $ar_records
 	*/
 	public static function get_all_hierarchy_sections() {
-		
+
 		$search_query_object = json_decode('{
 		  "id": "thesaurus",
 		  "section_tipo": ["hierarchy1"],
@@ -213,7 +217,7 @@ class area_thesaurus extends area {
 														 DEDALO_DATA_NOLAN,
 														 $section_tipo);
 		$dato 	 = $component->get_dato();
-		
+
 		$locator = reset($dato);
 
 		return $locator;
@@ -232,14 +236,14 @@ class area_thesaurus extends area {
 		if (isset($tipology_names[$tipology_section_id])) {
 			return $tipology_names[$tipology_section_id];
 		}
-				
+
 		$tipo 			 = DEDALO_HIERARCHY_TYPES_NAME_TIPO;
 		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$parent 		 = $tipology_section_id;
 		$modo 			 = 'list';
 		$lang 			 = DEDALO_DATA_LANG;
 		$section_tipo 	 = area_thesaurus::$typologies_section_tipo;
-		
+
 		$component 		 = component_common::get_instance($modelo_name,
 														  $tipo,
 														  $parent,
@@ -277,15 +281,15 @@ class area_thesaurus extends area {
 		if (isset($hierarchy_names[$hierarchy_section_id])) {
 			return $hierarchy_names[$hierarchy_section_id];
 		}
-		
-		
+
+
 		$tipo 			 = DEDALO_HIERARCHY_TERM_TIPO;
 		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$parent 		 = $hierarchy_section_id;
 		$modo 			 = 'list';
 		$lang 			 = DEDALO_DATA_LANG;
 		$section_tipo 	 = DEDALO_HIERARCHY_SECTION_TIPO;
-		
+
 		$component 		 = component_common::get_instance($modelo_name,
 														  $tipo,
 														  $parent,
@@ -326,17 +330,17 @@ class area_thesaurus extends area {
 		$layout_map=array();
 		$layout_map[DEDALO_HIERARCHY_SECTION_TIPO] = array(
 			DEDALO_HIERARCHY_TIPOLOGY_TIPO,
-			DEDALO_HIERARCHY_TLD2_TIPO,	
+			DEDALO_HIERARCHY_TLD2_TIPO,
 			DEDALO_HIERARCHY_TERM_TIPO,
 			DEDALO_HIERARCHY_TARGET_SECTION_TIPO,
-			DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO			
+			DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO
 			);
-			
-			# DEDALO_HIERARCHY_CHIDRENS_TIPO	
+
+			# DEDALO_HIERARCHY_CHIDRENS_TIPO
 			# DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO
 			# DEDALO_HIERARCHY_ORDER_TIPO,
 			# DEDALO_HIERARCHY_ACTIVE_TIPO,
-			# DEDALO_HIERARCHY_LANG_TIPO,			
+			# DEDALO_HIERARCHY_LANG_TIPO,
 
 		# FILTER_BY_SEARCH . Uses a search similar as sections do
 		$filter_by_search = new stdClass();
@@ -389,7 +393,7 @@ class area_thesaurus extends area {
 	public function search_thesaurus($search_options) {
 
 		$start_time=microtime(1);
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
@@ -405,7 +409,7 @@ class area_thesaurus extends area {
 		# ar_path_mix . Calculate full path of each result
 		$ar_path_mix = array();
 		foreach ($ar_records as $key => $row) {
-		
+
 			$section_tipo = $row->section_tipo;
 			$section_id   = $row->section_id;
 
@@ -418,8 +422,8 @@ class area_thesaurus extends area {
 
 			$ar_path   = array_reverse($ar_parents);
 			$ar_path[] = $locator; // add self at end
-			
-			$ar_path_mix[] = $ar_path;			
+
+			$ar_path_mix[] = $ar_path;
 		}
 		# Root parents
 		if(SHOW_DEBUG===true) {
@@ -428,13 +432,13 @@ class area_thesaurus extends area {
 
 		# AR_DATA_COMBINED
 		$ar_data_combined = $this->combine_ar_data($ar_path_mix);
-			#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());			
+			#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
 
 		$result = self::walk_hierarchy_data($ar_data_combined);
 			#dump($result, ' result ++ '.json_encode($result));
 
 		if(SHOW_DEBUG===true) {
-			$response->debug[] = exec_time($start_time," result");			
+			$response->debug[] = exec_time($start_time," result");
 		}
 
 		$total_records = count($ar_records);
@@ -444,8 +448,8 @@ class area_thesaurus extends area {
 		$response->total  	= $total_records;
 		if(SHOW_DEBUG===true) {
 			$response->strQuery = $search_result->strQuery;
-		}		
-	
+		}
+
 
 		return (object)$response;
 	}//end search_thesaurus
@@ -455,7 +459,7 @@ class area_thesaurus extends area {
 	/**
 	* COMBINE_AR_DATA
 	* Build a global array hierarchized with all elements
-	* @return 
+	* @return
 	*/
 	public static function combine_ar_data( $ar_path_mix ) {
 
@@ -469,9 +473,9 @@ class area_thesaurus extends area {
         */
 		$ar_simple=array();	foreach ($ar_path_mix as $key => $ar_value) {
 			foreach ($ar_value as $i => $locator) {
-				$ckey = $locator->section_tipo.'_'.$locator->section_id;				
+				$ckey = $locator->section_tipo.'_'.$locator->section_id;
 				$ar_simple[$key][$i] = $ckey;
-			}		
+			}
 		}
 		#dump($ar_simple, ' ar_simple ++ '.to_string());
 		#return $ar_simple;
@@ -509,23 +513,23 @@ class area_thesaurus extends area {
 		$ar_hierarchy=array(); foreach ($ar_simple as $key => $ar_value) {
 			# iterate array values in reverse order
 			foreach (array_reverse($ar_value) as $ckey => $cvalue) {
-				
+
 
 				if(empty($ar_hierarchy[$key])) {
 					// Último elemento (estará vacío porque es el que estamos buscando)
-					$ar_hierarchy[$key][$cvalue] = array();					
-					
-				}else{								
+					$ar_hierarchy[$key][$cvalue] = array();
+
+				}else{
 					// Elementos intermendios descendentes
 					$ar_hierarchy[$key] = array($cvalue => $ar_hierarchy[$key]);
 
-					
+
 					# Add siblings
 					/*
 					if (strpos($cvalue, 'hierarchy')===false) {
 						$ar_childrens = area_thesaurus::get_siblings($cvalue, $ar_value);
 						if(!empty($ar_childrens)) foreach ($ar_childrens as $s_key => $s_value) {
-							$ar_hierarchy[$key][$cvalue][$s_key]	= array();													
+							$ar_hierarchy[$key][$cvalue][$s_key]	= array();
 						}
 					}
 					*/
@@ -554,23 +558,23 @@ class area_thesaurus extends area {
 	                        )
 	                )
 	        )
-        */		
-		$ar_combine=array(); foreach ($ar_hierarchy as $key => $ar_value) {			
-			$ar_combine = array_merge_recursive($ar_combine, $ar_value);			
+        */
+		$ar_combine=array(); foreach ($ar_hierarchy as $key => $ar_value) {
+			$ar_combine = array_merge_recursive($ar_combine, $ar_value);
 		}
 		#dump($ar_combine, ' ar_combine ++ '.to_string());
-	
-		return (array)$ar_combine;	
+
+		return (array)$ar_combine;
 	}//end combine_ar_data
 
 
 
 	/**
 	* GET_SIBLINGS
-	* @return 
+	* @return
 	*/
 	public static function get_siblings($ckey) {
-		
+
 		#dump($ckey, ' ckey ++ '.to_string());
 		debug_log(__METHOD__." ckey ".to_string($ckey), logger::WARNING);
 
@@ -613,7 +617,7 @@ class area_thesaurus extends area {
 	public static function walk_hierarchy_data( $ar_data_combined ) {
 
 		$ar_mix = array();
-		foreach ($ar_data_combined as $key => $ar_values) {		
+		foreach ($ar_data_combined as $key => $ar_values) {
 
 			# Parent
 			$ar_parts = explode('_', $key);
@@ -627,18 +631,15 @@ class area_thesaurus extends area {
 			$ar_mix[$key] = $childrens_data;
 
 			# Add childrens in cotainer heritage
-			if (!empty($ar_values)) {			
+			if (!empty($ar_values)) {
 				$ar_mix[$key]->heritage = self::walk_hierarchy_data( $ar_values );
-			}		
+			}
 		}
 		#dump($ar_mix, ' ar_mix ++ '.to_string());
-		
+
 		return $ar_mix;
 	}//end walk_hierarchy_data
 
 
 
-
-
 }//end area_thesaurus
-?>
