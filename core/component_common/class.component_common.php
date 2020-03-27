@@ -4112,7 +4112,10 @@ abstract class component_common extends common {
 
 		$dato = $this->get_dato();
 
-		$dato_paginated = array_slice($dato, $offset, $limit);
+		// limit. avoid use zero as limit. Instead use null
+			$array_lenght = $limit>0 ? $limit : null;
+
+		$dato_paginated = array_slice($dato, $offset, $array_lenght);
 
 		foreach ($dato_paginated as $key => $value) {
 			$paginated_key = $key + $offset;
