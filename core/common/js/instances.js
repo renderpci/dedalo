@@ -36,6 +36,7 @@
 	*				"mode"			: "edit",
 	*				"lang"			: "lg-eng"
 	*			  }
+	* @return promise
 	*/
 	export const get_instance = async function(options){
 
@@ -114,12 +115,14 @@
 					// add to the instances cache
 						instances.push(instance_element)
 
+						// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
+
 					// return the new created instance
 						return instance_element
 
 				}else{
 					// resolve the promise with the cache instance found
-						//console.log("Recycled instance of :",model,section_tipo,section_id)
+						// console.log("Recycled instance of :",model, section_tipo, section_id)
 						return found_instance[0]
 				}
 			}
@@ -217,8 +220,8 @@
 			console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
 		}
 
-		//console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
-		//console.log(" ++++++++ instances:",instances, deleted)
+		// console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
+		// console.log(" ++++++++ instances:",instances, deleted)
 
 		return deleted
 	}//end delete_instance

@@ -57,12 +57,12 @@ export const component_input_text = function(){
 	component_input_text.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
-	component_input_text.prototype.list 		= render_component_input_text.prototype.list
-	component_input_text.prototype.edit 		= render_component_input_text.prototype.edit
-	component_input_text.prototype.edit_in_list	= render_component_input_text.prototype.edit
-	component_input_text.prototype.tm			= render_component_input_text.prototype.edit
-	component_input_text.prototype.search 		= render_component_input_text.prototype.search
-	component_input_text.prototype.change_mode 	= component_common.prototype.change_mode
+	component_input_text.prototype.list 				= render_component_input_text.prototype.list
+	component_input_text.prototype.edit 				= render_component_input_text.prototype.edit
+	component_input_text.prototype.edit_in_list			= render_component_input_text.prototype.edit
+	component_input_text.prototype.tm					= render_component_input_text.prototype.edit
+	component_input_text.prototype.search 				= render_component_input_text.prototype.search
+	component_input_text.prototype.change_mode 			= component_common.prototype.change_mode
 
 
 

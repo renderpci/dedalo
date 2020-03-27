@@ -247,18 +247,20 @@ class dd_core_api {
 			default:
 				# code...
 				break;
-		}
-		// if the proces is correct we return the $result to the client, for component is the section_id
-		$response->result 		= $result;
-		$response->msg 	  		= 'Ok. Request done';
+		}//end switch ($context_type)
 
-		# Debug
+		// result. if the process is correct, we return the $result to the client
+			$response->result 	= $result;
+			$response->msg 	  	= 'Ok. Request done';
+
+		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 					$debug->json_data 	= $json_data;
 
 				$response->debug = $debug;
+				// dump($debug->exec_time, ' debug->exec_time ++ '.to_string());
 			}
 
 
