@@ -149,14 +149,22 @@ component_common.prototype.init = async function(options) {
 
 	//event_manager.publish('component_init', self)
 
-	// source. add to sqo_context show
-		if (self.sqo_context && self.sqo_context.show) {
-			const source = create_source(self,'get_data')
-			// deep clone self context to avoid interactions (!)
-			self.sqo_context = JSON.parse(JSON.stringify(self.sqo_context))
-			self.sqo_context.show.push(source)
+	// self.sqo_context. Fill from context.sqo_context if defined
+		if (!self.sqo_context && self.context.sqo_context) {
+			self.sqo_context = self.context.sqo_context
 		}
 
+	// source. add to sqo_context show
+		if (self.sqo_context && self.sqo_context.show) {
+			// check if already exists a source into sqo_context.show
+			const show_source = self.sqo_context.show.find(element => element.typo==='source')
+			if (typeof show_source==="undefined") {
+				const source = create_source(self,'get_data')
+				// deep clone self sqo_context to avoid interactions (!)
+				self.sqo_context = JSON.parse(JSON.stringify(self.sqo_context))
+				self.sqo_context.show.push(source)
+			}
+		}
 
 	// status update
 		self.status = 'inited'
