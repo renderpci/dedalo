@@ -82,11 +82,12 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 	// status update
 		self.status = 'building'
 
-	// load data if is not already received as option
+	// load data if not yet received as an option
 		if (autoload===true) {
 
 			const current_data_manager 	= new data_manager()
 			const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
+
 			// Update the self.data into the datum and self instance
 			self.update_datum(api_response)
 		}
@@ -95,7 +96,6 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 		self.pagination.total 	= self.pagination.total  || 0
 		self.pagination.offset 	= self.pagination.offset || 0
 		self.pagination.limit 	= self.pagination.limit  || self.context.properties.max_records || 3
-
 
 	// sqo update filter_by_locators
 		if(self.pagination.total>self.pagination.limit){
@@ -108,7 +108,6 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 			sqo.filter_by_locators = data_value
 		}//end if(self.pagination.total>self.pagination.limit)
 
-
 	// paginator
 		if (!self.paginator) {
 			// create new
@@ -117,7 +116,7 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 				caller : self
 			})
 			await current_paginator.build()
-			self.paginator = current_paginator // current_paginator.build()
+			self.paginator = current_paginator
 
 			self.events_tokens.push(
 				event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
@@ -328,94 +327,6 @@ component_autocomplete.prototype.remove_value = async function(target) {
 
 	return js_promise
 }//end remove_value
-*/
-
-
-
-/**
-* ADD_VALUE
-* @param object value (locator)
-* @return bool
-*/
-/*
-component_autocomplete.prototype.add_value = async function(value) {
-
-	const self = this
-
-	const ar_found = self.data.value.filter(item => item.section_id===value.section_id && item.section_tipo===value.section_tipo)
-	if (ar_found.length>0) {
-		console.log("Ignored to add value because already exists:", value);
-		return false
-	}
-
-	const key = self.data.total_records
-
-	// changed_data update
-		self.data.changed_data = {
-			action	: 'insert',
-			key	  	: key,
-			value 	: value
-		}
-		//self.update_datum()
-	// get the locator values
-		const current_section_tipo 	= value.section_tipo
-		const current_section_id 	= value.section_id
-
-	// get and clone full the sqo_context of the main object
-		const search_sqo_context = JSON.parse(JSON.stringify(self.sqo_context.search))
-	// cretate the new filter to load data
-		const filter = {
-				"$and": [{
-							q: current_section_id,
-							path: [{
-									section_tipo : current_section_tipo,
-									modelo 		 : "component_section_id"
-							}]
-						}]
-		}
-	// find the sqo in the current_sqo_context
-		const current_sqo 			= search_sqo_context.find((item)=> item.typo === 'sqo')
-		const current_sqo_section 	= search_sqo_context.find((item)=> item.tipo === current_section_tipo)
-		const source ={
-				typo 			: 'source',
-				tipo 			: self.tipo,
-				model 			: 'section',
-				lang 			: self.lang,
-				mode 			: 'list',
-			}
-	// set the filter to the sqo
-		current_sqo.filter = filter
-		current_sqo.section_tipo = [current_section_tipo]
-	// get the context to show the fields (the components that will see as data can be others that find components in the sqo_context)
-		const current_sqo_context 	= self.datum.context.filter(element => element.section_tipo===current_section_tipo && element.parent===self.tipo)
-	// set the current_sqo_context witht the context and sqo
-		current_sqo_context.push(current_sqo,current_sqo_section,source)
-	// section_record instance
-		const current_section_record = await instances.get_instance({
-				model 				: 'section_record',
-				tipo 				: current_section_tipo,
-				section_tipo		: current_section_tipo,
-				section_id			: current_section_id,
-				mode				: self.mode,
-				lang				: self.section_lang,
-				//context 			: current_context,
-				sqo_context 		: current_sqo_context,
-				paginated_key		: key,
-		})
-
-
-	//event_manager.publish('save_component_'+self.id, self)
-
-			//event_manager.publish('update_dom_'+self.id, select.value)
-	//event_manager.publish('add_element_'+self.id, new_locator_element)
-
-	// rebuild and save the component
-		self.save().then(api_response =>{
-			event_manager.publish('add_element_'+self.id, current_section_record)
-		})
-
-	return true
-}//end add_value
 */
 
 
