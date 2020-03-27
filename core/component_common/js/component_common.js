@@ -601,7 +601,10 @@ component_common.prototype.get_ar_instances = async function(){
 			const current_section_tipo 	= locator.section_tipo
 			const current_section_id 	= locator.section_id
 			const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
-			const current_context 		= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+			// const current_context 	= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+			const current_context 		= (typeof self.datum.context!=="undefined")
+				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+				: []
 
 			// section_record instance
 				const current_section_record = await instances.get_instance({
