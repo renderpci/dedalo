@@ -8,8 +8,8 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_autocomplete} from '../../component_autocomplete/js/render_component_autocomplete.js'
 	import {paginator} from '../../paginator/js/paginator.js'
+	import {render_component_autocomplete} from '../../component_autocomplete/js/render_component_autocomplete.js'
 
 
 
@@ -47,25 +47,25 @@ export const component_autocomplete = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_autocomplete.prototype.init 	 				= component_common.prototype.init
-	component_autocomplete.prototype.destroy 				= common.prototype.destroy
-	component_autocomplete.prototype.save 	 				= component_common.prototype.save
-	component_autocomplete.prototype.refresh 				= common.prototype.refresh
-	component_autocomplete.prototype.load_data 				= component_common.prototype.load_data
-	component_autocomplete.prototype.load_datum 			= component_common.prototype.load_datum
-	component_autocomplete.prototype.get_value 				= component_common.prototype.get_value
-	component_autocomplete.prototype.set_value 				= component_common.prototype.set_value
-	component_autocomplete.prototype.update_data_value		= component_common.prototype.update_data_value
-	component_autocomplete.prototype.update_datum			= component_common.prototype.update_datum
-	component_autocomplete.prototype.change_value 			= component_common.prototype.change_value
+	component_autocomplete.prototype.init 	 			= component_common.prototype.init
+	component_autocomplete.prototype.destroy 			= common.prototype.destroy
+	component_autocomplete.prototype.save 	 			= component_common.prototype.save
+	component_autocomplete.prototype.refresh 			= common.prototype.refresh
+	component_autocomplete.prototype.load_data 			= component_common.prototype.load_data
+	component_autocomplete.prototype.load_datum 		= component_common.prototype.load_datum
+	component_autocomplete.prototype.get_value 			= component_common.prototype.get_value
+	component_autocomplete.prototype.set_value 			= component_common.prototype.set_value
+	component_autocomplete.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_autocomplete.prototype.update_datum		= component_common.prototype.update_datum
+	component_autocomplete.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
-	component_autocomplete.prototype.list 					= render_component_autocomplete.prototype.list
-	component_autocomplete.prototype.edit 					= render_component_autocomplete.prototype.edit
-	component_autocomplete.prototype.edit_in_list			= render_component_autocomplete.prototype.edit
-	component_autocomplete.prototype.render 				= common.prototype.render
-	component_autocomplete.prototype.change_mode 			= component_common.prototype.change_mode
-	component_autocomplete.prototype.get_ar_instances 		= component_common.prototype.get_ar_instances
+	component_autocomplete.prototype.render 			= common.prototype.render
+	component_autocomplete.prototype.list 				= render_component_autocomplete.prototype.list
+	component_autocomplete.prototype.edit 				= render_component_autocomplete.prototype.edit
+	component_autocomplete.prototype.edit_in_list		= render_component_autocomplete.prototype.edit
+	component_autocomplete.prototype.change_mode 		= component_common.prototype.change_mode
+	component_autocomplete.prototype.get_ar_instances 	= component_common.prototype.get_ar_instances
 
 
 
@@ -176,37 +176,39 @@ component_autocomplete.prototype.add_value = async function(value) {
 		console.log("==== add_value - value - changed_data:", value, changed_data);
 	}
 
-	// const js_promise = self.change_value({
-	// 	changed_data : changed_data,
-	// 	refresh 	 : false
-	// })
-	// .then(async (api_response)=>{
+	// des
+		// const js_promise = self.change_value({
+		// 	changed_data : changed_data,
+		// 	refresh 	 : false
+		// })
+		// .then(async (api_response)=>{
 
-	// 	// destroy. change the autocomplete service to false and desactive it.
-	// 		if(self.autocomplete_active===true){
-	// 			self.autocomplete.destroy()
-	// 			self.autocomplete_active = false
-	// 			self.autocomplete 		 = null
-	// 		}
+		// 	// destroy. change the autocomplete service to false and desactive it.
+		// 		if(self.autocomplete_active===true){
+		// 			self.autocomplete.destroy()
+		// 			self.autocomplete_active = false
+		// 			self.autocomplete 		 = null
+		// 		}
 
-	// 	// update pagination offset and total
-	// 		self.update_pagination_values()
-	// 		await self.paginator.build()
+		// 	// update pagination offset and total
+		// 		self.update_pagination_values()
+		// 		await self.paginator.build()
 
-	// 	// refresh
-	// 		self.refresh()
+		// 	// refresh
+		// 		self.refresh()
 
-	// 	return true
-	// })
+		// 	return true
+		// })
 
-	const api_response = await self.change_value({
-		changed_data : changed_data,
-		refresh 	 : false
-	})
+	// change_value
+		const api_response = await self.change_value({
+			changed_data : changed_data,
+			refresh 	 : false
+		})
 
 	// autocomplete destroy. change the autocomplete service to false and desactive it.
 		if(self.autocomplete_active===true){
-			const destroyed = self.autocomplete.destroy()
+			self.autocomplete.destroy()
 			self.autocomplete_active = false
 			self.autocomplete 		 = null
 		}
@@ -218,7 +220,7 @@ component_autocomplete.prototype.add_value = async function(value) {
 		self.refresh()
 
 
-	return true //js_promise
+	return true
 }//end add_value
 
 

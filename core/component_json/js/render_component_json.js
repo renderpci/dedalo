@@ -327,12 +327,6 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			})
 		})
 
-	// // editor_container
-	// 	const editor_container = ui.create_dom_element({
-	// 		element_type : 'div',
-	// 		parent 		 : li
-	// 	})
-
 	// load
 		await self.load_editor()
 

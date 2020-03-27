@@ -36,7 +36,7 @@ export const service_autocomplete = function() {
 		self.instance_caller 		= options.caller
 		self.wrapper 				= options.wrapper
 		self.sqo_context			= self.instance_caller.sqo_context.search
-		self.ar_search_section_tipo	= self.sqo_context.find((current_item)=> current_item.typo === 'sqo').section_tipo
+		self.ar_search_section_tipo	= self.sqo_context.find((current_item)=> current_item.typo==='sqo').section_tipo
 
 		// Vars
 			self.tipo 				= self.instance_caller.tipo

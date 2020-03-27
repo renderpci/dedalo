@@ -166,17 +166,19 @@ section_record.prototype.get_ar_instances = async function(){
 
 	const self = this
 
-	const mode 			= self.mode
-	const section_tipo 	= self.section_tipo
-	const section_id 	= self.section_id
+	// sort vars
+		const mode 			= self.mode
+		const section_tipo 	= self.section_tipo
+		const section_id 	= self.section_id
 
-	// get the items inside the section of the record to render it
-		const items			= (mode==="list") ?
-							self.context.filter(element => element.section_tipo===section_tipo && (element.type==='component')) :
-							self.context.filter(element => element.section_tipo===section_tipo && (element.type==='component' || element.type==='grouper'))
-		const items_length 	= items.length
+	// items. Get the items inside the section of the record to render it
+		const items = (mode==="list")
+			? self.context.filter(element => element.section_tipo===section_tipo && (element.type==='component'))
+			: self.context.filter(element => element.section_tipo===section_tipo && (element.type==='component' || element.type==='grouper'))
 
+	// instances
 		const ar_instances = []
+		const items_length = items.length
 		for (let i = 0; i < items_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
@@ -220,6 +222,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 	// fix
 		self.ar_instances = ar_instances
+
 
 	return ar_instances
 }//end get_ar_instances

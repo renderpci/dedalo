@@ -98,7 +98,7 @@ class activity_v5_to_v6 {
 
 					$conversion = new stdClass();
 						$conversion->start = $new_date;
-							
+
 					$new_dato = [$conversion];
 
 					$dato->components->dd547->dato->{DEDALO_DATA_NOLAN} = $new_dato;
