@@ -293,24 +293,16 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			e.stopPropagation()
 			// this.blur()
 
-			try {
-				const current_value = editor.get()
-			}catch(error){
-				console.error("error:",error);
+			const current_value = editor.get()
 
+			if (validated!==true) {
 				// styles as error
 					self.node.map(item => {
 						item.classList.add("error")
 					})
-
-				// alert("Error: component_json. Trying so save invalid json value!");
+				alert("Error: component_json. Trying so save non validated json value!");
 				return false
 			}
-
-			// if (validated!==true) {
-			// 	alert("Error: component_json. Trying so save non validated json value!");
-			// 	return false
-			// }
 
 			const changed_data = Object.freeze({
 				action	: 'update',
