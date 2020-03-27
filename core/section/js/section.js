@@ -69,7 +69,7 @@ export const section = function() {
 * @return bool
 */
 section.prototype.init = async function(options) {
-
+	console.log("options:",options);
 	const self = this
 
 	// instance key used vars
@@ -148,7 +148,7 @@ section.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// sqo
-		const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
+		const show_sqo = self.sqo_context.show.find(element => element.typo==='sqo')
 
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -157,14 +157,13 @@ section.prototype.build = async function(autoload=false) {
 
 			// count rows
 				if (!self.pagination.total) {
-					const current_sqo 		= sqo//self.sqo_context.show.find(element => element.typo==='sqo')
-					self.pagination.total	= (current_sqo.full_count && current_sqo.full_count>0) ? current_sqo.full_count : current_data_manager.count(current_sqo)
-					// console.log("[section.build] self.pagination.total:",self.pagination.total);
+					self.pagination.total = (show_sqo.full_count && show_sqo.full_count>0)
+						? show_sqo.full_count
+						: current_data_manager.count(show_sqo)
 				}
 
 			// get context and data
 				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
-					// console.log("[section.build] api_response +++++++++++++++++++++++++++++:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -190,22 +189,21 @@ section.prototype.build = async function(autoload=false) {
 		self.label 	= section_context.label
 
 	// permissions. calculate and set (used by section records later)
-		//const section_self_context = self.context.find(element => element.model===self.model) || {}
 		self.permissions = section_context.permissions || 0
 
 	// pagination update properties
-		self.pagination.limit	= sqo.limit
-		self.pagination.offset	= sqo.offset
-		self.pagination.total	= self.pagination.total || sqo.full_count || 0
+		self.pagination.limit	= show_sqo.limit
+		self.pagination.offset	= show_sqo.offset
+		self.pagination.total	= self.pagination.total || show_sqo.full_count || 0
 
 	// paginator
 		if (!self.paginator) {
-
 			const current_paginator = new paginator()
 			current_paginator.init({
 				caller : self
 			})
 			current_paginator.build()
+			// fix section paginator
 			self.paginator = current_paginator
 
 			self.events_tokens.push(
@@ -214,9 +212,7 @@ section.prototype.build = async function(autoload=false) {
 					self.refresh() // refresh current section
 				})
 			)//end events push
-
 		}else{
-
 			// self.paginator.limit 	= self.pagination.limit
 			// self.paginator.offset 	= self.pagination.offset
 			// self.paginator.total 	= self.pagination.total
@@ -230,6 +226,7 @@ section.prototype.build = async function(autoload=false) {
 				caller : self
 			})
 			current_filter.build()
+			// fix section filter
 			self.filter = current_filter
 		}
 
@@ -242,14 +239,15 @@ section.prototype.build = async function(autoload=false) {
 			})
 			current_inspector.caller = self
 			current_inspector.build()
+			// fix section inspector
 			self.inspector = current_inspector
 		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
+			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
+			// load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
 		}
 
 	// status update
