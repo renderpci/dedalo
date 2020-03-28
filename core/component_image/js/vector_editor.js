@@ -26,13 +26,14 @@ export const vector_editor = function(){
 vector_editor.prototype.init_tools = function(self){
 
 	// paper. Curent paper vars
-		const project = self.current_paper.project
-		const Layer   = self.current_paper.Layer
-		const Color   = self.current_paper.Color
-		const Tool    = self.current_paper.Tool
-		const Point   = self.current_paper.Point
-		const Size    = self.current_paper.Size
-		const Path    = self.current_paper.Path
+		const project 	= self.current_paper.project
+		const Layer   	= self.current_paper.Layer
+		const Color   	= self.current_paper.Color
+		const Tool    	= self.current_paper.Tool
+		const Point   	= self.current_paper.Point
+		const Size    	= self.current_paper.Size
+		const Path    	= self.current_paper.Path
+		const main 		= self.main_layer
 	
 
 	// rectangle 
@@ -368,10 +369,14 @@ vector_editor.prototype.init_tools = function(self){
 		}
 
 		this.zoom.onMouseDrag = (event) => {
-			const delta = 0.01
-			const x = Math.sign(event.delta.x) === 0 ? 1 : Math.sign(event.delta.x)
-			const ratio = Math.abs(delta + x)
-
+			//ratio of zoom
+			const zoom_factor = 0.03
+			// if the mouse is 0 get 1 else get the 1 or -1
+			const y = Math.sign(event.delta.y) === 0 ? 1 : Math.sign(event.delta.y)
+			// add to the zoom_fator to obtain the factor if y=1 get 1.03 else get 0.97
+			const ratio = Math.abs(zoom_factor + y)
+			// set the scale with the ratio and the mouse pointer
+			// main.scale(ratio, new Point(event.point.x, event.point.y))
 			project.view.scale(ratio, new Point(event.point.x, event.point.y))
 		}
 
@@ -384,9 +389,10 @@ vector_editor.prototype.init_tools = function(self){
 		}
 
 		this.move.onMouseDrag = (event) => {
+			//get the diference (delta) of the first click point and the current posistion of the mouse 
 			const delta = event.downPoint.subtract(event.point)
+			// scroll the view to the position
 			project.view.scrollBy(delta)
-			// project.view.center.y = event.point.x
 		}
 
 
@@ -400,6 +406,8 @@ vector_editor.prototype.init_tools = function(self){
 vector_editor.prototype.render_tools_buttons = function(self){
 
 	// Tool buttons. Show
+	const main 		= self.main_layer
+	const view 		= self.current_paper.view
 	const buttons_container = self.vector_editor_tools
 		buttons_container.classList.remove("hide")
 
@@ -455,39 +463,90 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				buttons.push(vector)
 
 			// full_screen
-				const full_screen = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'button tool full_screen',
-					parent 			: buttons_container
-				})
-				full_screen.addEventListener("mouseup", (e) =>{
+				// const full_screen = ui.create_dom_element({
+				// 	element_type	: 'div',
+				// 	class_name 		: 'button tool full_screen',
+				// 	parent 			: buttons_container
+				// })
+				// full_screen.addEventListener("mouseup", (e) =>{
 
-					//add / remove the class fullscreen
-					self.node[0].classList.toggle('fullscreen')
-					//reset the window and the canvas
-					window.dispatchEvent(new Event('resize'));
-					self.current_paper.view.update();
-					//change the status of the tool
-					activate_status(full_screen)
-					//reset the window and the canvas (twice, paper error)
-						window.dispatchEvent(new Event('resize'));
-						self.current_paper.project.view.update();
+				// 	event_manager.publish('full_screen_'+self.id, full_screen)
 
-					if(!self.node[0].classList.contains('fullscreen')){
-						//reset the button state
-						activate_status()
-						// get the ratio diference from original view ratio and curren view ratio
-						const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
-						// get the delta center from current position to original center position
-						const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-						const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+				// 	// self.current_paper.view.setScaling(1)
 
-						self.current_paper.view.scale(ratio)
-						self.current_paper.view.translate(center_x, center_y)
-					}
+				// 	// //add / remove the class fullscreen
+				// 	// self.node[0].classList.toggle('fullscreen')
+
+				// 	// const x = self.node[0].clientWidth
+				// 	// const y = self.node[0].clientHeight
+
+				// 	// //reset the window and the canvas
+				// 	// // window.dispatchEvent(new Event('resize'));
+				// 	// // self.current_paper.project.view.update();
+
+				// 	// const ratio = y / self.current_paper.project.view.size._height
+				// 	// self.current_paper.view.setScaling(ratio)
+
+
+				// 	// self.current_paper.project.view.setViewSize(x,y)
+
+				// 	//////////
+
+				// 	// const center_y = self.current_paper.view.viewSize._height /2
+				// 	// const center_x = self.current_paper.view.viewSize._width /2
+				// 	// self.current_paper.view.setCenter(center_x, center_y)
+
+				// 	// self.current_paper.view.scale(ratio,new self.current_paper.Point(center_x, center_y))
+
 					
-				})
-				buttons.push(full_screen)
+				// 	// self.current_paper.project.view.setViewSize(x,y)
+				// 		// const center_y = self.current_paper.view.viewSize._height /2
+				// 		// const center_x = self.current_paper.view.viewSize._width /2
+				// 		// self.current_paper.view.setCenter(center_x, center_y)
+
+				
+
+				// 	// const ar_layers = self.current_paper.project.layers
+				// 	// const ar_layers_len = ar_layers.length
+				// 	// for (let i = ar_layers_len - 1; i >= 0; i--) {				
+				// 	// 	const curent_layer = ar_layers[i]
+				// 	// }
+
+				// 	// self.current_paper.view.setScaling(1)
+				// 		// const center_y = self.current_paper.view.viewSize._height /2
+				// 		// const center_x = self.current_paper.view.viewSize._width /2
+				// 		// self.current_paper.view.setCenter(center_x, center_y)
+
+
+
+				// 		// 		//reset the window and the canvas
+				// 		// 		 window.dispatchEvent(new Event('resize'));
+				// 		// 		//change the status of the tool
+				// 				// activate_status(full_screen)
+				// 		// 		//reset the window and the canvas (twice, paper error)
+				// 					// window.dispatchEvent(new Event('resize'));
+				// 		// 			self.current_paper.project.view.viewSize.update();
+
+				// 		// 		// if(!self.node[0].classList.contains('fullscreen')){
+				// 		// 			//reset the button state
+				// 		// 			activate_status()
+				// 		// 			self.current_paper.view.setScaling(1)
+				// 		// 			//set the center of the view
+				// 		// 			const center_y = self.current_paper.view.viewSize._height /2
+				// 		// 			const center_x = self.current_paper.view.viewSize._width /2
+				// 		// 			self.current_paper.view.setCenter(center_x, center_y)
+									
+				// 		// // console.log("raster.parent:",self.current_paper.project.layers['raster_image'].setScaling(1));
+
+
+				// 		// 			const height  		= self.current_paper.view.size._height
+				// 		// 			const image_height 	= self.current_paper.project.raster.height
+				// 		// 			const ratio 		= height / image_height
+
+				// 		// 		// }
+					
+				// })
+				// buttons.push(full_screen)
 
 			// zoom
 				const zoom = ui.create_dom_element({
@@ -500,13 +559,20 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					activate_status(zoom)
 				})
 				zoom.addEventListener("dblclick", (e) =>{
-					
+						// const ratio = view.height / main.height
+						self.current_paper.view.setScaling(1)
+						main.setPosition(view.center)
+						// main.fitBounds(view.bounds);
+						// main.setScaling(1)
+						// main.setPosition(view.center)
 					//set the view ratio to 1
-					self.current_paper.view.setScaling(1)
+						// self.current_paper.view.setScaling(1)
 					//set the center of the view
-					const center_y = self.current_paper.view.size._height /2
-					const center_x = self.current_paper.view.size._width /2
-					self.current_paper.view.setCenter(center_x,center_y)
+						// const center_y = self.current_paper.view.size._height /2
+						// const center_x = self.current_paper.view.size._width /2
+						// self.current_paper.project.view.setCenter(center_x,center_y)
+
+					
 
 					// // get the ratio diference from original view ratio and curren view ratio
 					// const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
@@ -519,9 +585,9 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 				})
 
-				zoom.addEventListener('wheel', (e) =>{
+				// zoom.addEventListener('wheel', (e) =>{
 				
-				})
+				// })
 				buttons.push(zoom)
 			
 			// move
@@ -536,15 +602,18 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				})
 				move.addEventListener("dblclick", (e) =>{
 					//set the center of the view
-					const center_y = self.current_paper.view.size._height /2
-					const center_x = self.current_paper.view.size._width /2
-					self.current_paper.view.setCenter(center_x,center_y)
+					main.setPosition(view.center)
 
-					// // get the delta center from current position to original center position
-					// const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-					// const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
 
-					// self.current_paper.view.translate(center_x, center_y)
+					// const center_y = self.current_paper.view.size._height /2
+					// const center_x = self.current_paper.view.size._width /2
+					// self.current_paper.project.view.setCenter(center_x,center_y)
+
+					// get the delta center from current position to original center position
+					// const delta_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+					// const delta_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+
+					// self.current_paper.view.translate(delta_x, delta_y)
 				})
 				buttons.push(move)
 
@@ -555,6 +624,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					parent 			: buttons_container
 				})
 				save.addEventListener("mouseup", (e) =>{
+					// save all data layers into the tag
 					self.save_draw_data()
 					activate_status(save)
 				})
@@ -647,16 +717,6 @@ vector_editor.prototype.set_color_picker = function(){
 
 
 /**
-* GET_LAYERS
-* get the layers loaded and show into window
-* @return 
-*/
-vector_editor.prototype.get_layers = function(event) {
-		const node = event.target
-};//end get_layers
-
-
-/**
 * LOAD_LAYER
 * get the layers loaded and show into window
 * @return 
@@ -664,17 +724,19 @@ vector_editor.prototype.get_layers = function(event) {
 vector_editor.prototype.load_layer = function(self, data, layer_id) {
 
 	// curent paper vars
-	const project = self.current_paper.project
-	const Layer   = self.current_paper.Layer
-	const Color   = self.current_paper.Color
+	const project 	= self.current_paper.project
+	const Layer   	= self.current_paper.Layer
+	const Color   	= self.current_paper.Color
+	const main 		= self.main_layer
+		console.log("main.layers:",main.children);
 
 	//layer import
 		if ( data.indexOf('Layer')!=-1 ) {
 			
-			const p_len = project.layers.length
-			for (let i = p_len - 1; i >= 0; i--) {				
-				if (project.layers[i].name===layer_id){
-					project.layers[i].remove();
+			const p_len = main.children.length
+			for (let i = p_len - 1; i >= 0; i--) {
+				if (main.children[i].name===layer_id){
+					main.children[i].remove();
 						console.log("-> borrada capa: ", layer_id);
 				}
 			}
@@ -682,24 +744,30 @@ vector_editor.prototype.load_layer = function(self, data, layer_id) {
 			const current_layer = project.importJSON(data);
 
 			const color = current_layer.fillColor;
+			// current_layer.position = main.position
+			current_layer.applyMatrix = false
+			main.addChild(current_layer)
 			current_layer.activate();
 			
 		}else{
 			let create_new_current_layer = true
 			// Verificamos si el nombre del layer existe
-			const c_len = project.layers.length
+			const c_len = main.children.length
 			for (let i = c_len - 1; i >= 0; i--) {					
-				if (project.layers[i].name == layer_id){
-					const current_layer = project.layers[i];
+				if (main.children[i].name == layer_id){
+					const current_layer 	= main.children[i];
+					// current_layer.position 	= main.position
+					main.addChild(current_layer)
 					current_layer.activate();
 					create_new_current_layer = false;
+					current_layer.applyMatrix = false
 					console.log("-> usando existente current_layer: ", current_layer.name);
 					break;
 				}
 			}//end for
 			if (create_new_current_layer == true) {
-				const current_layer = new Layer();
-					current_layer.name = layer_id;					
+				const current_layer 	= new Layer();
+					current_layer.name 	= layer_id;					
 				const color = new Color({
 					hue: 360 * Math.random(),
 					saturation: 1,
@@ -707,6 +775,9 @@ vector_editor.prototype.load_layer = function(self, data, layer_id) {
 					alpha: 0.3,
 				});
 				current_layer.fillColor = color;
+				current_layer.applyMatrix = false
+				// current_layer.position 	= main.position
+				main.addChild(current_layer)
 				current_layer.activate();
 				console.log("-> creada nueva capa: " , current_layer.name);	
 			}

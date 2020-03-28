@@ -199,6 +199,16 @@ const get_buttons = (self) => {
 				parent 			: fragment
 			})
 		}
+	// full_screen
+		const full_screen = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'button tool full_screen',
+			parent 			: fragment
+		})
+		full_screen.addEventListener("mouseup", (e) =>{
+			event_manager.publish('full_screen_'+self.id, full_screen)
+		})
+
 
 	// buttons tools
 		if (!is_inside_tool) {
@@ -258,10 +268,6 @@ const get_quality_selector = (self) => {
 			})
 			//set the default value to config variable dedalo_image_quality_default
 			quality.selected = value[i].quality===page_globals.dedalo_image_quality_default ? true : false
-			
-			// quality.addEventListener("mouseup", (e) =>{
-				
-			// })
 		}
 
 	return quality_selector
