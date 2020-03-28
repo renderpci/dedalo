@@ -8,8 +8,8 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_autocomplete} from '../../component_autocomplete/js/render_component_autocomplete.js'
 	import {paginator} from '../../paginator/js/paginator.js'
+	import {render_component_autocomplete} from '../../component_autocomplete/js/render_component_autocomplete.js'
 
 
 
@@ -47,25 +47,25 @@ export const component_autocomplete = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_autocomplete.prototype.init 	 				= component_common.prototype.init
-	component_autocomplete.prototype.destroy 				= common.prototype.destroy
-	component_autocomplete.prototype.save 	 				= component_common.prototype.save
-	component_autocomplete.prototype.refresh 				= common.prototype.refresh
-	component_autocomplete.prototype.load_data 				= component_common.prototype.load_data
-	component_autocomplete.prototype.load_datum 			= component_common.prototype.load_datum
-	component_autocomplete.prototype.get_value 				= component_common.prototype.get_value
-	component_autocomplete.prototype.set_value 				= component_common.prototype.set_value
-	component_autocomplete.prototype.update_data_value		= component_common.prototype.update_data_value
-	component_autocomplete.prototype.update_datum			= component_common.prototype.update_datum
-	component_autocomplete.prototype.change_value 			= component_common.prototype.change_value
+	component_autocomplete.prototype.init 	 			= component_common.prototype.init
+	component_autocomplete.prototype.destroy 			= common.prototype.destroy
+	component_autocomplete.prototype.save 	 			= component_common.prototype.save
+	component_autocomplete.prototype.refresh 			= common.prototype.refresh
+	component_autocomplete.prototype.load_data 			= component_common.prototype.load_data
+	component_autocomplete.prototype.load_datum 		= component_common.prototype.load_datum
+	component_autocomplete.prototype.get_value 			= component_common.prototype.get_value
+	component_autocomplete.prototype.set_value 			= component_common.prototype.set_value
+	component_autocomplete.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_autocomplete.prototype.update_datum		= component_common.prototype.update_datum
+	component_autocomplete.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
-	component_autocomplete.prototype.list 					= render_component_autocomplete.prototype.list
-	component_autocomplete.prototype.edit 					= render_component_autocomplete.prototype.edit
-	component_autocomplete.prototype.edit_in_list			= render_component_autocomplete.prototype.edit
-	component_autocomplete.prototype.render 				= common.prototype.render
-	component_autocomplete.prototype.change_mode 			= component_common.prototype.change_mode
-	component_autocomplete.prototype.get_ar_instances 		= component_common.prototype.get_ar_instances
+	component_autocomplete.prototype.render 			= common.prototype.render
+	component_autocomplete.prototype.list 				= render_component_autocomplete.prototype.list
+	component_autocomplete.prototype.edit 				= render_component_autocomplete.prototype.edit
+	component_autocomplete.prototype.edit_in_list		= render_component_autocomplete.prototype.edit
+	component_autocomplete.prototype.change_mode 		= component_common.prototype.change_mode
+	component_autocomplete.prototype.get_ar_instances 	= component_common.prototype.get_ar_instances
 
 
 
@@ -82,11 +82,12 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 	// status update
 		self.status = 'building'
 
-	// load data if is not already received as option
+	// load data if not yet received as an option
 		if (autoload===true) {
 
 			const current_data_manager 	= new data_manager()
 			const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
+
 			// Update the self.data into the datum and self instance
 			self.update_datum(api_response)
 		}
@@ -95,7 +96,6 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 		self.pagination.total 	= self.pagination.total  || 0
 		self.pagination.offset 	= self.pagination.offset || 0
 		self.pagination.limit 	= self.pagination.limit  || self.context.properties.max_records || 3
-
 
 	// sqo update filter_by_locators
 		if(self.pagination.total>self.pagination.limit){
@@ -108,7 +108,6 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 			sqo.filter_by_locators = data_value
 		}//end if(self.pagination.total>self.pagination.limit)
 
-
 	// paginator
 		if (!self.paginator) {
 			// create new
@@ -117,7 +116,7 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 				caller : self
 			})
 			await current_paginator.build()
-			self.paginator = current_paginator // current_paginator.build()
+			self.paginator = current_paginator
 
 			self.events_tokens.push(
 				event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
@@ -176,37 +175,39 @@ component_autocomplete.prototype.add_value = async function(value) {
 		console.log("==== add_value - value - changed_data:", value, changed_data);
 	}
 
-	// const js_promise = self.change_value({
-	// 	changed_data : changed_data,
-	// 	refresh 	 : false
-	// })
-	// .then(async (api_response)=>{
+	// des
+		// const js_promise = self.change_value({
+		// 	changed_data : changed_data,
+		// 	refresh 	 : false
+		// })
+		// .then(async (api_response)=>{
 
-	// 	// destroy. change the autocomplete service to false and desactive it.
-	// 		if(self.autocomplete_active===true){
-	// 			self.autocomplete.destroy()
-	// 			self.autocomplete_active = false
-	// 			self.autocomplete 		 = null
-	// 		}
+		// 	// destroy. change the autocomplete service to false and desactive it.
+		// 		if(self.autocomplete_active===true){
+		// 			self.autocomplete.destroy()
+		// 			self.autocomplete_active = false
+		// 			self.autocomplete 		 = null
+		// 		}
 
-	// 	// update pagination offset and total
-	// 		self.update_pagination_values()
-	// 		await self.paginator.build()
+		// 	// update pagination offset and total
+		// 		self.update_pagination_values()
+		// 		await self.paginator.build()
 
-	// 	// refresh
-	// 		self.refresh()
+		// 	// refresh
+		// 		self.refresh()
 
-	// 	return true
-	// })
+		// 	return true
+		// })
 
-	const api_response = await self.change_value({
-		changed_data : changed_data,
-		refresh 	 : false
-	})
+	// change_value
+		const api_response = await self.change_value({
+			changed_data : changed_data,
+			refresh 	 : false
+		})
 
 	// autocomplete destroy. change the autocomplete service to false and desactive it.
 		if(self.autocomplete_active===true){
-			const destroyed = self.autocomplete.destroy()
+			self.autocomplete.destroy()
 			self.autocomplete_active = false
 			self.autocomplete 		 = null
 		}
@@ -218,7 +219,7 @@ component_autocomplete.prototype.add_value = async function(value) {
 		self.refresh()
 
 
-	return true //js_promise
+	return true
 }//end add_value
 
 
@@ -326,94 +327,6 @@ component_autocomplete.prototype.remove_value = async function(target) {
 
 	return js_promise
 }//end remove_value
-*/
-
-
-
-/**
-* ADD_VALUE
-* @param object value (locator)
-* @return bool
-*/
-/*
-component_autocomplete.prototype.add_value = async function(value) {
-
-	const self = this
-
-	const ar_found = self.data.value.filter(item => item.section_id===value.section_id && item.section_tipo===value.section_tipo)
-	if (ar_found.length>0) {
-		console.log("Ignored to add value because already exists:", value);
-		return false
-	}
-
-	const key = self.data.total_records
-
-	// changed_data update
-		self.data.changed_data = {
-			action	: 'insert',
-			key	  	: key,
-			value 	: value
-		}
-		//self.update_datum()
-	// get the locator values
-		const current_section_tipo 	= value.section_tipo
-		const current_section_id 	= value.section_id
-
-	// get and clone full the sqo_context of the main object
-		const search_sqo_context = JSON.parse(JSON.stringify(self.sqo_context.search))
-	// cretate the new filter to load data
-		const filter = {
-				"$and": [{
-							q: current_section_id,
-							path: [{
-									section_tipo : current_section_tipo,
-									modelo 		 : "component_section_id"
-							}]
-						}]
-		}
-	// find the sqo in the current_sqo_context
-		const current_sqo 			= search_sqo_context.find((item)=> item.typo === 'sqo')
-		const current_sqo_section 	= search_sqo_context.find((item)=> item.tipo === current_section_tipo)
-		const source ={
-				typo 			: 'source',
-				tipo 			: self.tipo,
-				model 			: 'section',
-				lang 			: self.lang,
-				mode 			: 'list',
-			}
-	// set the filter to the sqo
-		current_sqo.filter = filter
-		current_sqo.section_tipo = [current_section_tipo]
-	// get the context to show the fields (the components that will see as data can be others that find components in the sqo_context)
-		const current_sqo_context 	= self.datum.context.filter(element => element.section_tipo===current_section_tipo && element.parent===self.tipo)
-	// set the current_sqo_context witht the context and sqo
-		current_sqo_context.push(current_sqo,current_sqo_section,source)
-	// section_record instance
-		const current_section_record = await instances.get_instance({
-				model 				: 'section_record',
-				tipo 				: current_section_tipo,
-				section_tipo		: current_section_tipo,
-				section_id			: current_section_id,
-				mode				: self.mode,
-				lang				: self.section_lang,
-				//context 			: current_context,
-				sqo_context 		: current_sqo_context,
-				paginated_key		: key,
-		})
-
-
-	//event_manager.publish('save_component_'+self.id, self)
-
-			//event_manager.publish('update_dom_'+self.id, select.value)
-	//event_manager.publish('add_element_'+self.id, new_locator_element)
-
-	// rebuild and save the component
-		self.save().then(api_response =>{
-			event_manager.publish('add_element_'+self.id, current_section_record)
-		})
-
-	return true
-}//end add_value
 */
 
 

@@ -316,8 +316,13 @@ class search {
 					#dump($records_data, '$records_data', array());
 					$this->search_query_object->generated_time 	= $records_data->generated_time['get_records_data'];
 
+					$ar_sections = (array)$this->search_query_object->section_tipo;
+					$ar_sections = array_map(function($section_tipo){
+						return $section_tipo . ' - '. RecordObj_dd::get_termino_by_tipo($section_tipo);
+					}, $ar_sections);
+
 					// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
-					debug_log(__METHOD__." SQL QUERY EXEC TIME: ".round(microtime(1)-$start_time,3) .PHP_EOL. to_string($sql_query), logger::DEBUG);
+					// debug_log(__METHOD__." SQL QUERY EXEC TIME (".implode(',', $ar_sections)."): ".round(microtime(1)-$start_time,3).' '. str_repeat('-', 50) .PHP_EOL. to_string($sql_query), logger::DEBUG);
 				}
 
 
@@ -332,7 +337,7 @@ class search {
 	/**
 	* COUNT
 	* Count the rows of the sqo
-	* @return
+	* @return object $records_data
 	*/
 	public function count() {
 
@@ -593,7 +598,7 @@ class search {
 				# SELECT
 					#$sql_query .= 'SELECT ' . $sql_query_select;
 					// $sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.'.$column_id;
-					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine') {
 						$sql_query .= 'SELECT '.$this->main_section_tipo_alias.'.section_id';
 					}else{
 						$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
@@ -632,7 +637,7 @@ class search {
 					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 				if(SHOW_DEBUG===true) {
 					$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
-					#debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::DEBUG);
+					debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::ERROR);
 				}
 				break;
 

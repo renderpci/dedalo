@@ -149,14 +149,22 @@ component_common.prototype.init = async function(options) {
 
 	//event_manager.publish('component_init', self)
 
-	// source. add to sqo_context show
-		if (self.sqo_context && self.sqo_context.show) {
-			const source = create_source(self,'get_data')
-			// deep clone self context to avoid interactions (!)
-			self.sqo_context = JSON.parse(JSON.stringify(self.sqo_context))
-			self.sqo_context.show.push(source)
+	// self.sqo_context. Fill from context.sqo_context if defined
+		if (!self.sqo_context && self.context.sqo_context) {
+			self.sqo_context = self.context.sqo_context
 		}
 
+	// source. add to sqo_context show
+		if (self.sqo_context && self.sqo_context.show) {
+			// check if already exists a source into sqo_context.show
+			const show_source = self.sqo_context.show.find(element => element.typo==='source')
+			if (typeof show_source==="undefined") {
+				const source = create_source(self,'get_data')
+				// deep clone self sqo_context to avoid interactions (!)
+				self.sqo_context = JSON.parse(JSON.stringify(self.sqo_context))
+				self.sqo_context.show.push(source)
+			}
+		}
 
 	// status update
 		self.status = 'inited'
@@ -601,7 +609,10 @@ component_common.prototype.get_ar_instances = async function(){
 			const current_section_tipo 	= locator.section_tipo
 			const current_section_id 	= locator.section_id
 			const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
-			const current_context 		= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+			// const current_context 	= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+			const current_context 		= (typeof self.datum.context!=="undefined")
+				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+				: []
 
 			// section_record instance
 				const current_section_record = await instances.get_instance({

@@ -57,7 +57,9 @@ render_tool_time_machine.prototype.edit = async function (options={render_level:
 		//}
 
 	// modal container
-		ui.tool.attach_to_modal(wrapper, self, 'big')
+		const modal_container = ui.tool.attach_to_modal(wrapper, self, 'big')
+		// fix
+		self.modal_container = modal_container
 
 	// events
 		// click
@@ -135,6 +137,7 @@ const content_data_edit = async function(self) {
 				text_content    : get_label['aplicar_y_salvar'] || 'Apply and save',
 				parent 			: tool_bar
 			})
+			self.button_apply.addEventListener("click", self.apply_value.bind(self))
 
 	// section container
 		// const section_container = ui.create_dom_element({
