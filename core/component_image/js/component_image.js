@@ -141,49 +141,152 @@ component_image.prototype.init_canvas = function(canvas_node, img) {
 
 	const self = this
 
+	const li = canvas_node.parentNode
+		console.log("li:",li.clientWidth, li.clientHeight);
+
 	// canvas
 		// resize
 			canvas_node.setAttribute("resize", true)
 		//size
-			canvas_node.height = img.naturalHeight
-			canvas_node.width  = img.naturalWidth
-	
+			const img_height	= img.naturalHeight
+			const img_width		= img.naturalWidth
+			//get the current resized canvas size
+			const canvas_w		= canvas_node.clientWidth
+			const canvas_h		= canvas_node.clientHeight
+			// fixed height for the image
+			const view_height	= 1200
+			const ratio 		= view_height / img_height
+			const view_width	= ratio * img_width
+			// canvas_node.width 	= 500
+			// canvas_node.height 	= 400
 		// hidpi. Avoid double size on canvas
 			// canvas_node.setAttribute("hidpi","off")
 
 		// canvas -> active
-			canvas_node.getContext("2d")
+			const context = canvas_node.getContext("2d");
+			const ratio_canvas = 432 / img_height
+			canvas_node.height = 432
+			canvas_node.width  = ratio_canvas * img_width
+				console.log("ratio:",ratio,"img_height",img_height);
+			// return
 
-	// paper 
-		self.current_paper = paper.setup(canvas_node);
+	// paper
+		self.current_paper = new paper.PaperScope()
+		self.current_paper.setup(canvas_node);
 
-	// raster image
+	// create the main layer
+		self.main_layer	= new self.current_paper.Group();
+			self.main_layer.name = 'main';
+			// self.main_layer.activate();
+			 
+			// console.log("self.main_layer.matrix:",self.main_layer.matrix);
+			// set the main layer to the center of the view,
+			// all other items and layers has reference to the main posistion and scale
+			self.main_layer.position = self.current_paper.view.center
+
+	// self.main_layer.setPosition(self.current_paper.view.center)
+	// create the raster layer
+		const raster_layer	= new self.current_paper.Layer();
+			raster_layer.name = 'raster';
+			raster_layer.activate();
+			raster_layer.position = self.main_layer.position
+
+	// create the image in the rater layer
 		const raster = new self.current_paper.Raster({
-			source   : img.src,
-			position : self.current_paper.view.center
+			source		: img.src,
+			position	: raster_layer.position
 		});
 
-		const height  		= self.current_paper.view.size._height
-		const image_height 	= img.naturalHeight
-		const ratio 		= height / image_height
+		// raster.bounds.width 	= self.current_paper.view.bounds.width;
+		// raster.bounds.height = self.current_paper.view.bounds.height;
+		// raster.applyMatrix = true
+		// scale the image to fixed heigth: 1024
+		
 		raster.scale(ratio)
+		console.log("raster.scaling:",raster.scaling);
 
-		// subscription to the image quality chang event
+	// append the raster layer to the main layer
+		self.main_layer.addChild(raster_layer)
+		// self.main_layer.activate();
+
+
+		// const rect = new self.current_paper.Path.Rectangle(0, 0, ratio*img_width , view_height);
+
+	// scale main layer
+	// get the ratio for the scale the main layer to fit to canvas view heigth
+		const ratio_layer = canvas_h / view_height
+		self.main_layer.scale(ratio_layer, self.current_paper.view.center)
+
+	// subscription to the image quality change event
 		self.events_tokens.push(
 			event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
 		)
 		function img_quality_change (img_src) {
 			// change the value of the current raster element
-			raster.source 		= img_src
+			raster.source = img_src
 			raster.onLoad = function(e) {
-				//set the view ratio to 1
-				self.current_paper.view.setScaling(1)
-				const height  		= self.current_paper.view.size._height
-				const image_height 	= raster.height
-				const ratio 		= height / image_height
+				// raster.layer.setScaling(1)
+				const new_image_height 	= raster.height//raster.bounds.height
+				const ratio 			= view_height / new_image_height
 				raster.setScaling(ratio)
+					console.log("raster.scaling:",raster.scaling);
+				 raster.layer.setScaling(ratio_layer)
 			}
 		}
+		// subscription to the full_sreen change event
+		self.events_tokens.push(
+			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
+		)
+		function full_screen_change (button) {
+			// change the value of the current raster element
+				self.current_paper.view.setScaling(1)
+				// get the current size of the paper view
+				// const paper_w = self.current_paper.view.size._width
+				// const paper_h = self.current_paper.view.size._height
+				// if the image loaded is wide get the paper width else get the paper hight
+				// const paper_reference = img_width > img_height ? paper_w : paper_h
+
+				//add / remove class fullscreen to wrap. The component will resize
+				self.node[0].classList.toggle('fullscreen')
+				//get the current resized canvas size
+				const canvas_w = canvas_node.clientWidth
+				const canvas_y = canvas_node.clientHeight
+
+				//set the paper view size to the canvas size
+				self.current_paper.project.view.setViewSize(canvas_w, canvas_y)
+
+				
+
+				
+				//reset the window and the canvas
+				// window.dispatchEvent(new Event('resize'));
+				// self.current_paper.project.view.update();
+				// self.current_paper.view.setScaling(1)
+				// self.main_layer.setPosition(self.current_paper.view.center)
+
+				// self.main_layer.fitBounds(self.current_paper.project.view.bounds);
+
+				//get the current resized canvas size
+				// const canvas_w = canvas_node.clientWidth
+				// const canvas_y = canvas_node.clientHeight
+				// // if the image loaded is wide get the canvas width else get the canvas hight
+				// const canvas_reference = img_width > img_height ? canvas_w : canvas_y
+
+				//get the scale ratio, when remove the fullscreen the ratio of image will be 1 (original ratio)
+				// const ratio = self.node[0].classList.contains('fullscreen') ? canvas_reference / paper_reference : 1
+				//set the paper view size to the canvas size
+				// self.current_paper.project.view.setViewSize(canvas_w, canvas_y)
+				//scaling the paper view		
+				// self.current_paper.view.setScaling(ratio)
+				//set the center of the view
+				// const center_y = self.current_paper.view.size._height /2
+				// const center_x = self.current_paper.view.size._width /2
+					
+				// self.current_paper.project.view.setCenter(center_x, center_y)
+
+				// self.main_layer.scale(2, self.current_paper.view.center)
+		}
+
 
 	return true
 }//end init_canvas
@@ -234,7 +337,12 @@ component_image.prototype.update_draw_data = function() {
 
 	const self = this
 
+
+
 	const project 		= self.current_paper.project
+		// console.log("project.activeLayer.exportJSON():",project.exportJSON());
+		// console.log("project.activeLayer.exportJSON():",project.exportSVG({embedImages:false}));
+
 	const tag_id 		= project.activeLayer.name.replace('_layer','')
 	const current_tag	= self.ar_tag_loaded.find((item) => item.tag_id === tag_id)
 

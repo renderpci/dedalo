@@ -916,13 +916,26 @@
 					// 	height: 100%;
 					// }
 
+					canvas {
+						background-color: #59d61d;
+					}
+					li{
+						height: @media_max_height;
+						width: 100%;
+						text-align: center;
+						background-color: #dcdc28;
+						display: block;
+					}
+					ul{
+						height: 100%;
+						width: 100%;
+					}
 					.canvas[resize] {
 						height: 100%;
-						//height: auto;
-						max-height: 100%;
-						width: 100%;
-						max-width: 100%;
-						object-fit: contain;
+						// width: 100%;
+						// max-height: 100%;						 
+						// max-width: 100%;
+						// object-fit: contain;
 						// object-position: center;
 					}
 
@@ -2192,10 +2205,24 @@
 		.content_data {
 			padding-right: 2.7em !important;
 			max-height: unset !important;
-		}
-		.ul{
-			width: 100% !important;
-		}
+
+			>ul{
+				width: 100% !important;
+				>li{
+					height: 100% !important;
+
+					.canvas[resize] {
+						height: 100%;
+						width: 100%;
+						// max-height: 100%;						 
+						// max-width: 100%;
+						// object-fit: contain;
+						// object-position: center;
+					}
+				}
+			}
+		}		
+
 	}
 
 
