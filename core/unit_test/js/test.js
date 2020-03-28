@@ -1,12 +1,85 @@
 // test.js
 import {get_instance, key_instances_builder, delete_instance, get_all_instances} from '../../common/js/instances.js'
+import {data_manager} from '../../common/js/data_manager.js'
 import {page} from '../../page/js/page.js'
 import {component_input_text} from '../../component_input_text/js/component_input_text.js'
+import {component_date} from '../../component_date/js/component_date.js'
 import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 
 
 
-// model
+// utilities
+	function fn_random_string(length=128) {
+		var result           = '';
+		var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789àü\'ñç';
+		var charactersLength = characters.length;
+		for ( var i = 0; i < length; i++ ) {
+		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
+		}
+		return result;
+	}
+	function fn_random_number(length=10000000) {
+		return Math.floor(Math.random() * Math.floor(length));
+	}
+	function fn_random_json() {
+		const value = {
+			"text" 	 : fn_random_string(64),
+			"number" : fn_random_number()
+		}
+		return value
+	}
+	function fn_random_locator() {
+		const section_tipo 			= arguments[0][0]
+		const from_component_tipo 	= arguments[0][1]
+		const paginated_key 		= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
+
+		const value = {}
+
+			value.type 					= "dd151"
+			value.section_id 			= fn_random_number(50) || 1
+			value.section_tipo 			= section_tipo // "dd501"
+			if (paginated_key!==false) {
+				value.paginated_key 	= paginated_key
+			}
+			value.from_component_tipo 	= from_component_tipo // "test144"
+
+		return value
+	}
+	function fn_random_date() {
+		let day 	= fn_random_number(30) || 1
+		let month 	= fn_random_number(12) || 1
+		let year  	= fn_random_number(2020) || 1
+		const time  = component_date.prototype.convert_date_to_seconds({
+			day 	: day,
+            month 	: month,
+            year 	: year
+		}, 'date')
+
+		const value =  {
+            start : {
+                day 	: day,
+                time 	: time,
+                year 	: year,
+                month 	: month
+            }
+        }
+		return value
+	}
+	function fn_random_email() {
+		let result           	= ''
+		const length 		 	= 40
+		const characters       	= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+		const charactersLength 	= characters.length;
+		for ( var i = 0; i < length; i++ ) {
+		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
+		}
+		result += '@mydomain.net'
+		return result;
+	}
+
+
+
+// reference model
 	// function pow(x, n) {
 	// 	/* function code is to be written, empty now */
 	// }
@@ -22,40 +95,196 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 
 	// });
 
+
+
 // Define components that will be tested
 	const options = []
 
-	// var model, tipo, section_tipo, lang, type
+	// components general
+		const section_tipo 	= 'test65'
+		const section_id 	= 5
+		const mode 			= 'edit'
+		const lang 			= 'lg-eng'
+		const permissions 	= 2
 
+
+
+	var model = 'component_input_text',
+		tipo  = 'test159'
 	options.push({
-		"model" 		: "component_input_text",
-		"tipo"  		: "test159",
-		"section_tipo" 	: "test65",
-		"section_id" 	: 5,
-		"mode" 			: "edit",
-		"lang" 			: "lg-eng",
-		"context" 		: {permissions: 1, tipo: 'test159', model: 'component_input_text', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
-		//"datum"			: {data:[]}
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_string
 	})
 
+	var model = 'component_number',
+		tipo  = 'test139'
 	options.push({
-		"model" 		: "component_number",
-		"tipo"  		: "test139",
-		"section_tipo" 	: "test65",
-		"section_id" 	: 5,
-		"mode" 			: "edit",
-		"lang" 			: "lg-eng",
-		"context" 		: {permissions: 1, tipo: 'test139', model: 'component_number', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_number
 	})
 
+	var model = 'component_text_area',
+		tipo  = 'test32'
 	options.push({
-		"model" 		: "component_text_area",
-		"tipo"  		: "test32",
-		"section_tipo" 	: "test65",
-		"section_id" 	: 5,
-		"mode" 			: "edit",
-		"lang" 			: "lg-eng",
-		"context" 		: {permissions: 1, tipo: 'test32', model: 'component_text_area', section_tipo: 'test65', lang: 'lg-eng', type:'component'}
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_string
+	})
+
+	var model = 'component_json',
+		tipo  = 'test150'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_json
+	})
+
+	var model = 'component_radio_button',
+		tipo  = 'test144'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_locator,
+		new_value_params: ['dd501', tipo]
+	})
+
+	var model = 'component_check_box',
+		tipo  = 'test146'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_locator,
+		new_value_params: ['dd501', tipo]
+	})
+
+	var model = 'component_publication',
+		tipo  = 'test148'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_locator,
+		new_value_params: ['dd64', tipo]
+	})
+
+	var model = 'component_date',
+		tipo  = 'test145'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {date_mode : 'date'} },
+		new_value 		: fn_random_date,
+		new_value_params: []
+	})
+
+	var model = 'component_autocomplete',
+		tipo  = 'test153'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
+		new_value 		: fn_random_locator,
+		new_value_params: ['es1', tipo, 0]
+	})
+
+	var model = 'component_portal',
+		tipo  = 'test149'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
+		new_value 		: fn_random_locator,
+		new_value_params: ['es1', tipo, 0]
+	})
+
+	var model = 'component_filter',
+		tipo  = 'test151'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_locator,
+		new_value_params: ['dd501', tipo]
+	})
+
+	var model = 'component_select',
+		tipo  = 'test55'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_locator,
+		new_value_params: ['dd64', tipo]
+	})
+
+	var model = 'component_email',
+		tipo  = 'test140'
+	options.push({
+		model 			: model,
+		tipo  			: tipo,
+		section_tipo 	: section_tipo,
+		section_id 		: section_id,
+		mode 			: mode,
+		lang 			: lang,
+		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component'},
+		new_value 		: fn_random_email,
+		new_value_params: []
 	})
 
 
@@ -189,190 +418,229 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 			});
 		});
 
-	// test lifecycle functions for any component instance
-		describe("instances : lifecycle", function(){
-
-			function make_test (options, property, expected, stage) {
-				//it(`${JSON.stringify(property)} => Init: ${expected}`, async function() {
-				it(`${JSON.stringify(property)} => Init ${options.model}: ${expected}`, async function() {
-
-					// init instance
-					const new_instance = await get_instance(options)
-
-					if (stage==='build' || stage==='render' || stage==='refresh' || stage==='destroy') {
-
-						await new_instance.build(true)
-
-						if (stage==='render') {
-							await new_instance.render()
-						}
-
-						if (stage==='refresh') {
-							await new_instance.render()
-							await new_instance.refresh()
-						}
-
-						if (stage==='destroy') {
-
-							const instance_id 	= new_instance.id
-							//const instance_key 	= options.key || key_instances_builder(options, true)
-							const instances 	= get_all_instances()
-
-							// console.log("instances:",instances)
-							// 	console.log("instance_id:",instance_id)
-							// 		console.log("instance_key:",instance_key);
-
-							const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
-							await new_instance.destroy()
-							const found_instance_after_destroy = instances.filter(instance => instance.id===instance_id)
-
-							// console.log("found_instance_before_destroy:",found_instance_before_destroy)
-							// console.log("found_instance_after_destroy:",found_instance_after_destroy)
-
-							//assert.equal(found_instance_before_destroy.length, 1)
-							assert.equal(found_instance_after_destroy.length, 0)
-
-							return false
-						}
-					}
-
-					if (property) {
-						switch (property) {
-						 	case 'status':
-						     	assert.equal(new_instance.status, expected)
-						     	break;
-						    case 'lang':
-						 		assert.equal(new_instance.lang, expected)
-						     	break;
-						    case 'permissions':
-						 		assert.equal(new_instance.permissions, expected)
-						     	break;
-						    case 'properties':
-						 		assert.notEqual(new_instance.permissions, expected)
-						     	break;
-					     	case 'typo':
-						 		assert.notEqual(new_instance.permissions, expected)
-						     	break;
-						    default:
-						 		assert.equal(new_instance.status, expected)
-						     	break;
-						}
-					}
-
-					await new_instance.destroy()
-			    });
-			}
 
 
-			describe("init instance based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
+// components lifecycle functions for any component instance
+	describe("components : lifecycle", function(){
 
-				for (let i = 0; i < options.length; i++) {
+		function make_test (options, property, expected, stage) {
+			//it(`${JSON.stringify(property)} => Init: ${expected}`, async function() {
+			it(`${JSON.stringify(property)} => Init ${options.model}: ${expected}`, async function() {
 
-					describe(options[i].model, function() {
-
-						make_test(options[i], 'status', 'inited', 'init')
-						make_test(options[i], 'lang', options[i].lang, 'init')
-						make_test(options[i], 'permissions', null, 'init')
-
+				// get and set element context
+					const current_data_manager 	= new data_manager()
+					const element_context = await current_data_manager.get_element_context({
+						tipo 			: options.tipo,
+						section_tipo 	: options.section_tipo,
+						section_id		: options.section_id
 					})
+					console.log("************* calculated element_context:",element_context.result[0]);
+					options.context = element_context.result[0]
 
-				}
-			});
+				// init instance
+				const new_instance = await get_instance(options)
 
-
-			describe("build instance based on options values to create a component instance: status = builded and permissions = 1", function() {
-
-				for (let i = 0; i < options.length; i++) {
-
-					describe(options[i].model, function() {
-
-						make_test(options[i], 'status', 'builded', 'build')
-						make_test(options[i], 'permissions', options[i].context.permissions, 'build')
-
-						make_test(options[i], 'properties', null, 'build')
-						make_test(options[i], 'typo', null, 'build')
-
-					})
-				}
-			});
-
-
-			describe("render instance based on options values to create a component instance: status = builded and permissions = 1", function() {
-
-				for (let i = 0; i < options.length; i++) {
-
-					describe(options[i].model, function() {
-						make_test(options[i], 'status', 'rendered', 'render')
-					})
-				}
-			});
-
-
-			describe("refresh instance based on options values to create a component instance: status = builded and permissions = 1", function() {
-
-				for (let i = 0; i < options.length; i++) {
-
-					describe(options[i].model, function() {
-						make_test(options[i], 'status', 'rendered', 'refresh')
-					})
-				}
-			});
-
-			describe("destroy instance based on existing instance", function() {
-
-				for (let i = 0; i < options.length; i++) {
-
-					describe(options[i].model, function() {
-						make_test(options[i], 'instance', 'destroy', 'destroy')
-					})
-				}
-
-			});
-
-		});
-
-
-	// test change data functions for any component instance
-		describe("instances : change data", function(){
-
-			function make_test (options, equals) {
-
-				const test_title = (equals===true) ? `${options.model} => Save new_value = old_value + 1`: `${options.model} => Save new_value != old_value`
-
-				it(test_title, async function() {
-
-					const old_instance = await get_instance(options)
-					await old_instance.build(true)
-
-					const old_value = old_instance.data.value[0]
-					const new_value = old_value + 1
-					//const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
-
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: 0,
-						value	: new_value,
-					})
-
-					await old_instance.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
-					})
-
-					await old_instance.destroy()
-
-					const new_instance = await get_instance(options)
+				if (stage==='build' || stage==='render' || stage==='refresh' || stage==='destroy') {
 
 					await new_instance.build(true)
 
-					if (equals===true) {
-						assert.equal(new_instance.data.value[0], new_value)
-					}else{
-						assert.notEqual(new_instance.data.value[0], old_value)
+					if (stage==='render') {
+						await new_instance.render()
 					}
 
-					await new_instance.destroy()
+					if (stage==='refresh') {
+						await new_instance.render()
+						await new_instance.refresh()
+					}
 
+					if (stage==='destroy') {
+
+						const instance_id 	= new_instance.id
+						//const instance_key 	= options.key || key_instances_builder(options, true)
+						const instances 	= get_all_instances()
+
+						// console.log("instances:",instances)
+						// 	console.log("instance_id:",instance_id)
+						// 		console.log("instance_key:",instance_key);
+
+						const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
+						await new_instance.destroy()
+
+						// exists after destroy ?
+							const found_instance_after_destroy = instances.filter(instance => instance.id===instance_id)
+							// console.log("found_instance_before_destroy:",found_instance_before_destroy)
+							// console.log("found_instance_after_destroy:",found_instance_after_destroy)
+							assert.equal(found_instance_after_destroy.length, 0)
+
+						return false // stop on destroy
+					}
+				}
+
+				if (property) {
+					switch (property) {
+					 	case 'status':
+					     	assert.equal(new_instance.status, expected)
+					     	break;
+					    case 'lang':
+					 		assert.equal(new_instance.lang, expected)
+					     	break;
+					    case 'permissions':
+					 		assert.equal(new_instance.permissions, expected)
+					     	break;
+					    case 'properties':
+					 		assert.notEqual(new_instance.permissions, expected)
+					     	break;
+				     	case 'typo':
+					 		assert.notEqual(new_instance.permissions, expected)
+					     	break;
+					    default:
+					 		assert.equal(new_instance.status, expected)
+					     	break;
+					}
+				}
+
+				await new_instance.destroy()
+		    });
+		}
+
+
+		describe("init component based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
+
+			for (let i = 0; i < options.length; i++) {
+
+				describe(options[i].model, function() {
+
+					make_test(options[i], 'status', 'inited', 'init')
+					make_test(options[i], 'lang', options[i].lang, 'init')
+					make_test(options[i], 'permissions', null, 'init')
+				})
+			}
+		});
+
+
+		describe("build component based on options values to create a component instance: status = builded and permissions = 1", function() {
+
+			for (let i = 0; i < options.length; i++) {
+
+				describe(options[i].model, function() {
+
+					make_test(options[i], 'status', 'builded', 'build')
+					// make_test(options[i], 'permissions', options[i].context.permissions, 'build')
+					make_test(options[i], 'properties', null, 'build')
+					make_test(options[i], 'typo', null, 'build')
+				})
+			}
+		});
+
+
+		describe("render component based on options values to create a component instance: status = builded and permissions = 1", function() {
+
+			for (let i = 0; i < options.length; i++) {
+
+				describe(options[i].model, function() {
+					make_test(options[i], 'status', 'rendered', 'render')
+				})
+			}
+		});
+
+
+		describe("refresh component based on options values to create a component instance: status = builded and permissions = 1", function() {
+
+			for (let i = 0; i < options.length; i++) {
+
+				describe(options[i].model, function() {
+					make_test(options[i], 'status', 'rendered', 'refresh')
+				})
+			}
+		});
+
+		describe("destroy component based on existing instance", function() {
+
+			for (let i = 0; i < options.length; i++) {
+
+				describe(options[i].model, function() {
+					make_test(options[i], 'instance', 'destroy', 'destroy')
+				})
+			}
+		});
+
+	});
+
+
+	// test change data functions for any component instance
+		describe("components : change data", function(){
+
+			function make_test_change_data(options, equals) {
+
+				const new_value = options.new_value(options.new_value_params) //  old_value + 1
+					// console.log("new_value:",new_value);
+
+				const test_title = (equals===true)
+					? `${options.model} => Save new_value = new_value (` + JSON.stringify(new_value) + ')'
+					: `${options.model} => Save new_value != old_value (` + JSON.stringify(new_value) + ')'
+
+				it(test_title, async function() {
+
+					// get and set element context
+						const current_data_manager 	= new data_manager()
+						const element_context = await current_data_manager.get_element_context({
+							tipo 			: options.tipo,
+							section_tipo 	: options.section_tipo,
+							section_id		: options.section_id
+						})
+						console.log("************* 2 calculated element_context:",element_context.result[0]);
+						options.context = element_context.result[0]
+
+					// first instance
+						const old_instance = await get_instance(options)
+						await old_instance.build(true)
+							console.log("old_instance:",old_instance);
+						const old_value = typeof old_instance.data.value!=="undefined"
+							? old_instance.data.value[0]
+							: null
+							console.log("************* old_value:",old_value);
+						// const new_value = old_value + 1
+						// const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
+
+
+						// save
+						if (typeof old_instance.add_value==="function") {
+
+							console.log("************* new_value to add_value:",new_value);
+
+							// remove values
+							old_instance.data.value = []
+
+							await old_instance.add_value(new_value)
+
+						}else{
+							const changed_data = Object.freeze({
+								action	: 'update',
+								key		: 0,
+								value	: new_value,
+							})
+							await old_instance.change_value({
+								changed_data : changed_data,
+								refresh 	 : false
+							})
+						}
+
+						// destroy
+							if (old_instance) {
+								await old_instance.destroy(true, true, true)
+							}
+
+					// new instance
+						const new_instance = await get_instance(options)
+						await new_instance.build(true)
+
+						if (equals===true) {
+							assert.equal( JSON.stringify(new_instance.data.value[0]), JSON.stringify(new_value) )
+						}else{
+							assert.notEqual( JSON.stringify(new_instance.data.value[0]), JSON.stringify(old_value) )
+						}
+
+						await new_instance.destroy()
 			    });
 			}
 
@@ -381,10 +649,9 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
-						make_test(options[i], true)
+						make_test_change_data(options[i], true)
 					})
 				}
-
 			});
 
 			describe("save data NOT equals", function() {
@@ -392,10 +659,9 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
-						make_test(options[i], false)
+						make_test_change_data(options[i], false)
 					})
 				}
-
 			});
 
 		});
@@ -404,6 +670,8 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 
 
 // exec mocha
+	// mocha.setup({ignoreLeaks: true});
+	mocha.checkLeaks(false)
 	mocha.run();
 
 

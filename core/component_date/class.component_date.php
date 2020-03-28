@@ -1022,50 +1022,6 @@ class component_date extends component_common {
 
 
 	/**
-	* GET_SEARCH_ORDER
-	* Overwrite as needed
-	* @return string $order_direction
-	*/
-	public static function get_search_order($json_field, $search_tipo, $tipo_de_dato_order, $current_lang, $order_direction) {
-
-		$tipo_de_dato_order = 'dato';
-
-		$RecordObj_dd 	= new RecordObj_dd($search_tipo);
-		$propiedades 	= $RecordObj_dd->get_propiedades();
-
-		$propiedades = json_decode($propiedades);
-
-		//dump($propiedades	, ' propiedades ++ '.to_string());
-
-		if (isset($propiedades->date_mode)) {
-					$date_mode = $propiedades->date_mode; // Default from structure if is defined
-				}else{
-					$date_mode = 'date'; // Default
-		}
-
-		switch ($date_mode) {
-			case 'range':
-				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'start'->'time' ".$order_direction;
-			break;
-
-			case 'period':
-				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'period'->'time' ".$order_direction;
-			break;
-
-			case 'date':
-				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'start'->'time' ".$order_direction;
-				//PREVIOUS TO 4.9.1
-				//$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'time' ".$order_direction;
-			default:
-		}
-
-
-		return (string)$order_by_resolved;
-	}//end get_search_order
-
-
-
-	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* @return object stdClass $search_comparison_operators
 	*/

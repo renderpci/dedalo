@@ -30,8 +30,8 @@ render_component_email.prototype.list = async function() {
 	const self = this
 
 	// Options vars
-		const context 			= self.context
-		const data 				= self.data
+		const context	= self.context
+		const data		= self.data
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -100,16 +100,16 @@ render_component_email.prototype.edit = async function(options={render_level : '
 			input_element(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
-//	// remove element, subscription to the events
-//		self.events_tokens.push(
-//			event_manager.subscribe('remove_element_'+self.id, remove_element)
-//		)
-//		async function remove_element(component) {
-//			// change all elements inside of content_data
-//			const new_content_data = await render_content_data(component)
-//			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
-//			wrapper.childNodes[2].replaceWith(new_content_data)
-//		}
+	//	// remove element, subscription to the events
+		//		self.events_tokens.push(
+		//			event_manager.subscribe('remove_element_'+self.id, remove_element)
+		//		)
+		//		async function remove_element(component) {
+		//			// change all elements inside of content_data
+		//			const new_content_data = await render_content_data(component)
+		//			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
+		//			wrapper.childNodes[2].replaceWith(new_content_data)
+		//		}
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
@@ -245,6 +245,7 @@ render_component_email.prototype.edit = async function(options={render_level : '
 
 	return wrapper
 }//end edit
+
 
 
 /**
@@ -404,12 +405,12 @@ const input_element = (i, current_value, inputs_container, self) => {
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: 'input',
-			type 		 	: 'text',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i },
-			value 		 	: current_value,
-			parent 		 	: li
+			element_type : 'input',
+			type 		 : 'text',
+			class_name 	 : 'input_value',
+			dataset 	 : { key : i },
+			value 		 : current_value,
+			parent 		 : li
 		})
 
 	// input field
