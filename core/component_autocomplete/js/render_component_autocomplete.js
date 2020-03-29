@@ -42,14 +42,30 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 	// buttons
 		const buttons = get_buttons(self)
 
-	// reset service state autocomplete_active
-		self.autocomplete_active = false
+	// top
+		const top = get_top(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.component.build_wrapper_edit(self, {
 			content_data : content_data,
-			buttons 	 : buttons
+			buttons 	 : buttons,
+			top 		 : top
 		})
+
+	// events
+		add_events(self, wrapper)
+
+
+	return wrapper
+}//end edit
+
+
+
+/**
+* ADD_EVENTS
+* @return bool
+*/
+const add_events = function(self, wrapper) {
 
 	// add element, subscription to the events
 	// show the add_value in the instance
@@ -291,6 +307,178 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* GET_TOP
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_top = function(self) {
+
+	const is_inside_tool= self.is_inside_tool
+	const mode 			= self.mode
+
+	if (mode!=='edit') {
+		return null;
+	}
+
+	const show 						 = self.sqo_context.show
+	const target_section_tipo 		 = show.filter(item => item.model==='section')
+	const target_section_tipo_lenght = target_section_tipo.length
+	// sort by label
+	target_section_tipo.sort((a, b) => (a.label > b.label) ? 1 : -1)
+
+	const fragment = new DocumentFragment()
+
+	// top container
+		const top = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'top',
+			parent 			: fragment
+		})
+		top.addEventListener("click", function(e){
+			e.stopPropagation()
+		})
+
+	// select_section
+		const select_section = ui.create_dom_element({
+			element_type	: 'select',
+			class_name 		: 'select_section' + (target_section_tipo_lenght===1 ? ' mono' : ''),
+			parent 			: top
+		})
+
+		// options
+			for (let i = 0; i < target_section_tipo_lenght; i++) {
+				const item = target_section_tipo[i]
+				ui.create_dom_element({
+					element_type	: 'option',
+					value 			: item.tipo,
+					inner_html 		: item.label + " [" + item.tipo + "]",
+					parent 			: select_section
+				})
+			}
+
+	// button_add
+		const button_add = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button add',
+			parent 			: top
+		})
+		button_add.addEventListener("click", async function(e){
+			e.stopPropagation()
+			console.log("select_section.value:",select_section.value);
+
+			// data_manager. create new record
+				const api_response = await data_manager.prototype.request({
+					body : {
+						action 		: 'create',
+						section_tipo: select_section.value
+					}
+				})
+				// add value to current data
+				if (api_response.result && api_response.result>0) {
+
+					const value = {
+						section_tipo : select_section.value,
+						section_id 	 : api_response.result
+					}
+					self.add_value(value)
+				}else{
+					console.error("Error on api_response on try to create new row:", api_response);
+				}
+		})
+
+
+
+	// button_find
+		const button_find = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button find',
+			parent 			: top
+		})
+		button_find.addEventListener("click", async function(e){
+			e.stopPropagation()
+
+			const section_tipo  = select_section.value
+			const section_label = select_section.options[select_section.selectedIndex].innerHTML;
+
+
+			const current_data_manager 	= new data_manager()
+
+			// const source = {
+			// 	typo 		 : 'source',
+			// 	tipo 		 : section_tipo,
+			// 	section_tipo : section_tipo,
+			// 	section_id 	 : null,
+			// 	model 		 : 'section',
+			// 	lang 		 : page_globals.dedalo_data_lang,
+			// 	pagination 	 : {
+			// 		total  : 0,
+			// 		offset : 0,
+			// 		limit  : 10
+			// 	}
+			// }
+			// const element_context_call 	= await current_data_manager.get_element_context(source)
+			// const element_context 		= element_context_call.result
+
+			// // section instance (regular section)
+			// 	const section_instance = await get_instance({
+			// 		model 			: "section",
+			// 		tipo 			: source.section_tipo,
+			// 		section_tipo 	: source.section_tipo,
+			// 		section_id 		: null,
+			// 		mode 			: "list",
+			// 		lang 			: source.lang,
+			// 		section_lang 	: source.lang,
+			// 		type 			: "section",
+			// 		// sqo_context 	: {
+			// 		// 	show : show
+			// 		// }
+			// 		context 		: element_context
+			// 	})
+			// 	await section_instance.build(true)
+			// 		console.log("section_instance:",section_instance);
+
+
+			// section. create target section page element and instance
+				if (!self.find_section_options) {
+					const options 		= {
+						model 			: 'section',
+						type 			: 'section',
+						tipo  			: section_tipo,
+						section_tipo  	: section_tipo,
+						section_id 		: null,
+						mode 			: 'list',
+						lang 			: page_globals.dedalo_data_lang
+					}
+					const page_element_call = await current_data_manager.get_page_element(options)
+					const page_element 		= page_element_call.result
+						  // page_element.id_variant = 'ID_VARIANT_PORTAL'
+
+					self.find_section_options = page_element
+				}
+					  // console.log("++++++++++++++++++++++ page_element:",page_element);
+
+				const find_section = await get_instance(self.find_section_options)
+				await find_section.build(true)
+				const find_section_wrapper = await find_section.render()
+
+			// modal container
+				const header = ui.create_dom_element({
+					element_type	: 'div',
+					text_content 	: section_label
+				})
+				const modal_container = ui.attach_to_modal(find_section, find_section_wrapper, header, 'big')
+		})
+
+
+
+
+
+	return top
+}//end get_top
 
 
 

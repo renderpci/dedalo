@@ -133,6 +133,11 @@ export const ui = {
 						component_label.classList.add(...ar_css)
 				}
 
+			// top
+				if (items.top) {
+					fragment.appendChild(items.top)
+				}
+
 			// buttons
 				if (items.buttons) {
 					fragment.appendChild(items.buttons)
