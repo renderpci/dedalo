@@ -316,7 +316,7 @@ class layout_map {
 				if(SHOW_DEBUG===true) {
 					# dump($layout_map, ' layout_map ++ '.to_string());
 					foreach ($layout_map as $current_item) {
-						$current_item->debug_from = 'calculated from section list or related terms';
+						$current_item->debug_from = 'calculated from section list or related terms 1';
 					}
 				}
 			}//end if (!isset($layout_map))

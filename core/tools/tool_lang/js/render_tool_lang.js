@@ -204,6 +204,9 @@ const get_content_data_edit = async function(self) {
 
 
 
+/**
+* BUILD_AUTOMATIC_TRANSLATION
+*/
 const build_automatic_translation = (self, translator_engine, source_select_lang, target_select_lang, components_container) => {
 
 	// container

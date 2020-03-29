@@ -45,7 +45,7 @@ export const area_common = function() {
 * @return bool
 */
 area_common.prototype.init = async function(options) {
-	
+
 	const self = this
 
 	// instance key used vars
@@ -66,7 +66,7 @@ area_common.prototype.init = async function(options) {
 
 	self.datum 	 			= options.datum   		|| null
 	self.context 			= options.context 		|| null
-	self.data 	 			= options.data 	  		|| null	
+	self.data 	 			= options.data 	  		|| null
 	self.pagination 		= { // pagination info
 		total : 0,
 		offset: 0
@@ -76,9 +76,7 @@ area_common.prototype.init = async function(options) {
 	self.label 				= null
 
 	self.widgets 	 		= options.widgets 	  	|| null
-	self.permissions 		= options.permissions 	|| null	
-
-
+	self.permissions 		= options.permissions 	|| null
 
 
 	// source. add to sqo_context if not exists. Be careful not to add a source element twice
@@ -88,7 +86,7 @@ area_common.prototype.init = async function(options) {
 			if (current_source) {
 				console.warn("Source alredy exists. Skipped source creation for sqo_context",current_source)
 			}else{
-				const source = create_source(self,'get_data')				
+				const source = create_source(self,'get_data')
 				self.sqo_context.show.push(source)
 				if(SHOW_DEBUG===true) {
 					console.warn("Added created 'source' element to sqo_context.show on init section",source)
@@ -110,7 +108,7 @@ area_common.prototype.init = async function(options) {
 
 
 	// events subscription
-	
+
 
 	// status update
 		self.status = 'inited'
@@ -163,7 +161,7 @@ area_common.prototype.build = async function() {
 
 	// section tipo
 		self.section_tipo = area_ddo.section_tipo || null
-		
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));

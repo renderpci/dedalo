@@ -74,6 +74,13 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 		//	//input_element(current_section_record, inputs_container)
 		//}
 
+	// subscribe to 'update_dom': if the dom was changed by other dom elements the value will be changed
+		//self.events_tokens.push(
+		//	event_manager.subscribe('update_dom_'+self.id, (value) => {
+		//		// change the value of the current dom element
+		//	})
+		//)
+
 	// remove element, subscription to the events
 		self.events_tokens.push(
 			event_manager.subscribe('remove_element_'+self.id, remove_element)
