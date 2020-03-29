@@ -29,7 +29,8 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// render level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -99,7 +100,8 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 		//}
 
 	// modal container
-		ui.tool.attach_to_modal(wrapper, self)
+		const header = wrapper.querySelector('.tool_header')
+		ui.attach_to_modal(self, wrapper, header)
 
 	// events
 		// click
@@ -269,12 +271,16 @@ export const add_component = async (self, component_container, value) => {
 		}
 
 	const component = await self.load_component(value)
-	const node = await component.render()
+	const node 		= await component.render()
 
-	while (component_container.firstChild) {
-		component_container.removeChild(component_container.firstChild)
-	}
-	component_container.appendChild(node)
+	// clean container
+		while (component_container.firstChild) {
+			component_container.removeChild(component_container.firstChild)
+		}
+
+	// append node
+		component_container.appendChild(node)
+
 
 	return true
 }//end add_component

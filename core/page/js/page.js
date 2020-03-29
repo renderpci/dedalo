@@ -148,19 +148,19 @@ page.prototype.init = async function(options) {
 		)
 
 
-	// BEFOREUNLOAD (EVENT)
-		window.addEventListener("beforeunload", function (event) {
-			event.preventDefault();
+	// beforeunload (event)
+		// window.addEventListener("beforeunload", function (event) {
+		// 	event.preventDefault();
 
-			document.activeElement.blur()
+		// 	document.activeElement.blur()
 
-			// 	const confirmationMessage = "Leaving tool transcription page.. ";
-			// 	event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
-			// 	// return confirmationMessage;				// Gecko, WebKit, Chrome <34
+		// 	// 	const confirmationMessage = "Leaving tool transcription page.. ";
+		// 	// 	event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
+		// 	// 	// return confirmationMessage;				// Gecko, WebKit, Chrome <34
 
-			return null
+		// 	return null
 
-		}, false)//end beforeunload
+		// }, false)//end beforeunload
 
 
 	// status update

@@ -5,6 +5,8 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 
@@ -22,6 +24,49 @@ export const render_component_autocomplete = function() {
 
 
 /**
+* LIST
+* Render node for use in list
+* @return DOM node wrapper
+*/
+render_component_autocomplete.prototype.list = async function() {
+
+	const self = this
+
+	const ar_section_record = await self.get_ar_instances()
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: self.model + '_list ' + self.tipo + ' breakdown'
+		})
+
+
+	// add all nodes
+		const length = ar_section_record.length
+		for (let i = 0; i < length; i++) {
+
+			//const child_item = await ar_section_record[i].node
+			const child_item = await ar_section_record[i].render()
+
+			wrapper.appendChild(child_item)
+		}
+
+	// events
+		// dblclick
+			wrapper.addEventListener("dblclick", function(e){
+				// e.stopPropagation()
+
+				// change mode
+				self.change_mode('edit_in_list', true)
+			})
+
+
+	return wrapper
+}//end list
+
+
+
+/**
 * EDIT
 * Render node for use in edit
 * @return DOM node wrapper
@@ -32,6 +77,9 @@ render_component_autocomplete.prototype.edit = async function(options={render_le
 
 	// render_level
 		const render_level = options.render_level
+
+	// reset service state autocomplete_active
+		self.autocomplete_active = false
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -116,121 +164,70 @@ const add_events = function(self, wrapper) {
 			//wrapper.childNodes[1].replaceWith(new_content_data)
 		}
 
-	// events
-		// click
-			wrapper.addEventListener("click", function(e){
-				// e.stopPropagation()
+	// click
+		wrapper.addEventListener("click", function(e){
+			// e.stopPropagation()
 
-				// ignore click on paginator
-					//if (e.target.closest('.paginator')) {
-					//	return false
-					//}
+			// ignore click on paginator
+				//if (e.target.closest('.paginator')) {
+				//	return false
+				//}
 
-				// remove
-					if (e.target.matches('.button.remove')) {
+			// remove
+				if (e.target.matches('.button.remove')) {
 
-						const changed_data = Object.freeze({
-							action	: 'remove',
-							key		: JSON.parse(e.target.dataset.key),
-							value	: null
-						})
-						self.change_value({
-							changed_data : changed_data,
-							label 		 : e.target.previousElementSibling.textContent,
-							refresh 	 : false
-						})
-						.then(async (api_response)=>{
+					const changed_data = Object.freeze({
+						action	: 'remove',
+						key		: JSON.parse(e.target.dataset.key),
+						value	: null
+					})
+					self.change_value({
+						changed_data : changed_data,
+						label 		 : e.target.previousElementSibling.textContent,
+						refresh 	 : false
+					})
+					.then(async (api_response)=>{
 
-							// service destroy. change the autocomplete service to false and desactive it.
-								if(self.autocomplete_active===true){
-									const destroyed = self.autocomplete.destroy()
-									self.autocomplete_active = false
-									self.autocomplete 		 = null
-								}
+						// service destroy. change the autocomplete service to false and desactive it.
+							if(self.autocomplete_active===true){
+								const destroyed = self.autocomplete.destroy()
+								self.autocomplete_active = false
+								self.autocomplete 		 = null
+							}
 
-							// update pagination offset
-								self.update_pagination_values()
+						// update pagination offset
+							self.update_pagination_values()
 
-							// refresh
-								self.refresh()
+						// refresh
+							self.refresh()
 
-							// event to update the dom elements of the instance
-								event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-						})
+						// event to update the dom elements of the instance
+							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+					})
 
-						return true
-					}
-
-
-				// activate service. Enable the service_autocomplete when the user do click
-					if(self.autocomplete_active===false){
-
-						self.autocomplete = new service_autocomplete()
-						self.autocomplete.init({
-							caller	: self,
-							wrapper : wrapper
-						})
-						self.autocomplete_active = true
-						self.autocomplete.search_input.focus()
-
-						return true
-					}
-
-			})//end click event
-
-	// subscribe to 'update_dom': if the dom was changed by other dom elements the value will be changed
-		//self.events_tokens.push(
-		//	event_manager.subscribe('update_dom_'+self.id, (value) => {
-		//		// change the value of the current dom element
-		//	})
-		//)
+					return true
+				}
 
 
-	return wrapper
-}//end edit
+			// activate service. Enable the service_autocomplete when the user do click
+				if(self.autocomplete_active===false){
+
+					self.autocomplete = new service_autocomplete()
+					self.autocomplete.init({
+						caller	: self,
+						wrapper : wrapper
+					})
+					self.autocomplete_active = true
+					self.autocomplete.search_input.focus()
+
+					return true
+				}
+
+		})//end click event
 
 
-
-/**
-* LIST
-* Render node for use in list
-* @return DOM node wrapper
-*/
-render_component_autocomplete.prototype.list = async function() {
-
-	const self = this
-
-	const ar_section_record = await self.get_ar_instances()
-
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: self.model + '_list ' + self.tipo + ' breakdown'
-		})
-
-
-	// add all nodes
-		const length = ar_section_record.length
-		for (let i = 0; i < length; i++) {
-
-			//const child_item = await ar_section_record[i].node
-			const child_item = await ar_section_record[i].render()
-
-			wrapper.appendChild(child_item)
-		}
-
-	// events
-		// dblclick
-			wrapper.addEventListener("dblclick", function(e){
-				// e.stopPropagation()
-
-				// change mode
-				self.change_mode('edit_in_list', true)
-			})
-
-
-	return wrapper
-}//end list
+	return true
+}//end add_events
 
 
 

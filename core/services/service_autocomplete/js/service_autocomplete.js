@@ -170,13 +170,20 @@ export const service_autocomplete = function() {
 
 			// build the text of the row with label nodes in correct order (the ddo order in context).
 			for(const ddo_item of current_ddo){
-				const current_value 	= current_row.find((item)=> item.tipo===ddo_item.tipo).value
+				// value_element
+					const current_value_element = current_row.find((item)=> item.tipo===ddo_item.tipo)
+					if (typeof current_value_element==="undefined") {
+						console.warn("[autocomplete_build_options] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
+						continue
+					}
 
-				ui.create_dom_element({
-					element_type	: 'span',
-					text_content	: current_value,
-					parent 			: li_node
-				})// end create dom node
+				// span node
+					const current_value = current_value_element.value
+					ui.create_dom_element({
+						element_type	: 'span',
+						text_content	: current_value,
+						parent 			: li_node
+					})// end create dom node
 			}// enf for ddo_item
 
 			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
