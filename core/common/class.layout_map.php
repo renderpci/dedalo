@@ -255,6 +255,7 @@ class layout_map {
 								'model' 		=> 'section',
 								'mode' 			=> $modo,
 								'lang'			=> DEDALO_DATA_NOLAN,
+								'label' 		=> RecordObj_dd::get_termino_by_tipo($current_section_tipo),
 								'parent' 		=> 'root'
 							]);
 
