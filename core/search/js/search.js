@@ -33,8 +33,8 @@
 */
 export const search = function() {
 
-	// render prototypes
 
+	this.id_variant
 
 	return true
 }//end search
