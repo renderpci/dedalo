@@ -81,7 +81,7 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 			buttons 	 : buttons
 		})
 
-	// add events
+	// events
 		add_events(self, wrapper)
 
 

@@ -12,6 +12,7 @@
 	$properties 		= $this->get_propiedades() ?? new stdClass();
 
 
+
 // context
 	$context = [];
 
@@ -62,14 +63,14 @@
 			case 'edit':
 				$dato 	= $this->get_dato();
 				$value 	= $this->get_dato_paginated();
-				$limit 	= $this->pagination->limit ?? $properties->max_records ?? 3;
+				$limit 	= $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
 
 				break;
 
 			case 'list':
 				$dato 	= $this->get_dato();
-				$value 	= $dato;
-				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? 3;
+				$value 	= $this->get_dato_paginated(); // $dato;
+				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records;
 				break;
 		}
 

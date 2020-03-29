@@ -74,7 +74,6 @@ component_common.prototype.init = async function(options) {
 
 	self.permissions = null
 
-
 	// events subscription
 		// active_component (when user focus it in dom)
 			self.events_tokens.push(

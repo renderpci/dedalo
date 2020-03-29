@@ -651,18 +651,18 @@ class component_autocomplete extends component_relation_common {
 			$hierarchy_sections_from_types = [];
 			foreach ($result->ar_records as $row) {
 
-				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {					
+				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
 					debug_log(__METHOD__." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string(), logger::ERROR);
 					continue;
 				}
-				
+
 				$target_dato 		 = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
 				$target_section_tipo = reset($target_dato);
-				
-				$hierarchy_sections_from_types[] = $target_section_tipo;
-			}			
 
-		
+				$hierarchy_sections_from_types[] = $target_section_tipo;
+			}
+
+
 		return (array)$hierarchy_sections_from_types;
 	}//end get_hierarchy_sections_from_types
 
@@ -748,7 +748,7 @@ class component_autocomplete extends component_relation_common {
 			if (isset($this->sqo_context)) {
 				return $this->sqo_context;
 			}
-		
+
 
 		// sort vars
 			$section_tipo 	= $this->get_section_tipo();
@@ -757,7 +757,7 @@ class component_autocomplete extends component_relation_common {
 			$section_id		= $this->get_parent();
 			$mode 			= $this->get_modo();
 			$propiedades	= $this->get_propiedades();
-		
+
 
 		// SEARCH
 			$search = [];
@@ -771,7 +771,7 @@ class component_autocomplete extends component_relation_common {
 					$source_search->mode 			= 'list';
 
 				$search[] = $source_search;
-			
+
 			// typo SEARCH
 				// filter_custom
 					$filter_custom = [];
@@ -783,13 +783,13 @@ class component_autocomplete extends component_relation_common {
 				// propiedades filter custom
 					if (isset($propiedades->source->filter_custom)) {
 						$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
-					}			
+					}
 				// Limit
 					$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;
 				// operator can be injected by api
 					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
 				// search_sections
-					$ar_target_section_tipo = $this->get_ar_target_section_tipo();				
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
 
 				// search_query_object build
@@ -807,9 +807,9 @@ class component_autocomplete extends component_relation_common {
 					$search_query_object = common::build_search_query_object($search_sqo_options);
 
 				// value_with_parents
-					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents === true){
+					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true){
 
-						$search_query_object->value_with_parents = true;
+						$search_query_object->value_with_parents 	= true;
 						$search_query_object->source_component_tipo = $tipo;
 
 					}// end $value_with_parent = true
@@ -839,11 +839,11 @@ class component_autocomplete extends component_relation_common {
 					$show_sqo_options->limit 		 = $limit;
 					$show_sqo_options->offset 		 = $offset;
 
-				$search_query_object = common::build_search_query_object($show_sqo_options);				
+				$search_query_object = common::build_search_query_object($show_sqo_options);
 
 				// value_with_parents
-					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents === true){
-						$search_query_object->value_with_parents = true;
+					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true){
+						$search_query_object->value_with_parents 	= true;
 						$search_query_object->source_component_tipo = $tipo;
 					}// end $value_with_parent = true
 
@@ -868,7 +868,7 @@ class component_autocomplete extends component_relation_common {
 				$layout_map_options->config_context_type 		= 'show';
 				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options));
 
-				
+
 			$sqo_context = new stdClass();
 				$sqo_context->show 		= $show;
 				$sqo_context->search 	= $search;

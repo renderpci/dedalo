@@ -100,10 +100,10 @@ const add_events = (wrapper, self) => {
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -133,7 +133,7 @@ const content_data = async function(self) {
 			button_new.addEventListener('click', async (e) => {
 				e.stopPropagation()
 
-				// data_manager
+				// data_manager. create
 				const api_response = await data_manager.prototype.request({
 					body : {
 						action 		: 'create',
@@ -148,7 +148,6 @@ const content_data = async function(self) {
 						section_id		 : api_response.result
 					})
 				}
-
 			})
 			buttons_container.appendChild(button_new)
 
@@ -174,8 +173,7 @@ const content_data = async function(self) {
 		})
 
 
-
 	return content_data
-}// end content_data
+}// end get_content_data
 
 

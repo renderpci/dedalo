@@ -100,6 +100,7 @@ section_record.prototype.init = async function(options) {
 
 	self.modification_date 	= options.modification_date || null
 
+
 	// events subscription
 		// event active (when user focus in dom)
 		//event_manager.subscribe('section_record_rendered', (active_section_record) => {
