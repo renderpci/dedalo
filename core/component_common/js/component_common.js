@@ -613,20 +613,27 @@ component_common.prototype.get_ar_instances = async function(){
 				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
 				: []
 
+			const instance_options = {
+				model 			: 'section_record',
+				tipo 			: current_section_tipo,
+				section_tipo	: current_section_tipo,
+				section_id		: current_section_id,
+				mode			: records_mode,
+				lang			: lang,
+				context 		: current_context,
+				data			: current_data,
+				datum 			: self.datum,
+				paginated_key 	: locator.paginated_key, // used by autocomplete / portal
+				caller 			: self
+			}
+
+			// id_variant . Propagate a custom instance id to children
+				if (self.id_variant) {
+					instance_options.id_variant = self.id_variant
+				}
+
 			// section_record instance
-				const current_section_record = await instances.get_instance({
-					model 			: 'section_record',
-					tipo 			: current_section_tipo,
-					section_tipo	: current_section_tipo,
-					section_id		: current_section_id,
-					mode			: records_mode,
-					lang			: lang,
-					context 		: current_context,
-					data			: current_data,
-					datum 			: self.datum,
-					paginated_key 	: locator.paginated_key, // used by autocomplete / portal
-					caller 			: self
-				})
+				const current_section_record = await instances.get_instance(instance_options)
 
 				await current_section_record.build()
 

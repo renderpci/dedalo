@@ -44,6 +44,7 @@ export const section_record = function() {
 	this.caller
 
 	this.matrix_id
+	this.id_variant
 
 	return true
 }//end section
@@ -202,9 +203,14 @@ section_record.prototype.get_ar_instances = async function(){
 					sqo_context 	: current_context.sqo_context
 				}
 
-				if (self.matrix_id) {
-					instance_options.matrix_id = self.matrix_id
-				}
+				// id_variant . Propagate a custom instance id to children
+					if (self.id_variant) {
+						instance_options.id_variant = self.id_variant
+					}
+				// time machine matrix_id
+					if (self.matrix_id) {
+						instance_options.matrix_id = self.matrix_id
+					}
 
 			// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
 				const current_instance = await instances.get_instance(instance_options)

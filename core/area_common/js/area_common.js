@@ -35,6 +35,8 @@ export const area_common = function() {
 	this.node
 	this.status
 
+	this.id_variant
+
 	return true
 }//end area_common
 

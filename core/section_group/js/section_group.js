@@ -33,6 +33,7 @@ export const section_group = function(){
 
 	this.node
 
+	this.id_variant
 
 	return true
 }//end section_group

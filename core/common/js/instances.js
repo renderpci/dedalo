@@ -109,6 +109,11 @@
 						instance_element.id = key
 						//instance_element.id_base = key_instances_builder(options, false)
 
+					// id_variant . Propagate a custom instance id to children
+						if (options.id_variant) {
+							instance_element.id_variant = options.id_variant
+						}
+
 					// init the element
 						await instance_element.init(options)
 
@@ -233,7 +238,7 @@
 	*/
 	export const key_instances_builder = function(options){
 
-		const order = ['model','tipo','section_tipo','section_id','mode','lang','matrix_id']
+		const order = ['model','tipo','section_tipo','section_id','mode','lang','matrix_id','id_variant']
 		const key_parts = []
 
 		const l = order.length
