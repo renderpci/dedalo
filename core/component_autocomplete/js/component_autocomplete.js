@@ -132,6 +132,13 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 			self.paginator.refresh()
 		}
 
+	// autocomplete destroy. change the autocomplete service to false and desactive it.
+		if(self.autocomplete_active===true){
+			self.autocomplete.destroy()
+			self.autocomplete_active = false
+			self.autocomplete 		 = null
+		}
+
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
 
@@ -204,13 +211,6 @@ component_autocomplete.prototype.add_value = async function(value) {
 			changed_data : changed_data,
 			refresh 	 : false
 		})
-
-	// autocomplete destroy. change the autocomplete service to false and desactive it.
-		if(self.autocomplete_active===true){
-			self.autocomplete.destroy()
-			self.autocomplete_active = false
-			self.autocomplete 		 = null
-		}
 
 	// update pagination offset
 		self.update_pagination_values()
