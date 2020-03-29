@@ -229,6 +229,17 @@ export const ui = {
 				const ar_css = ["content_data", type, ...content_data_structure_css]
 				content_data.classList.add(...ar_css)
 
+			// button close
+				if(instance.mode==='edit_in_list' && !instance.is_inside_tool){
+					const button_close = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'button close',
+						parent 			: content_data
+					})
+					button_close.addEventListener("click", function(){
+						instance.change_mode('list', false)
+					})
+				}
 
 			return content_data
 		},//end build_content_data
