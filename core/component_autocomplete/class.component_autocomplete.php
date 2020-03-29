@@ -21,6 +21,8 @@ class component_autocomplete extends component_relation_common {
 	# referenced component tipo
 	public $tipo_to_search;
 
+	public $max_records = 3;
+
 
 
 	/**
@@ -822,9 +824,9 @@ class component_autocomplete extends component_relation_common {
 			$show= [];
 			// search_query_object_options
 
-				$limit 	= $propiedades->max_records ?? 10;
+				$limit 	= $propiedades->max_records ?? $this->max_records;
 				$offset = 0;
-				
+
 				$pagination = new stdClass();
 					$pagination->limit 	= $limit;
 					$pagination->offset = $offset;

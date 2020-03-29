@@ -163,7 +163,7 @@ component_autocomplete.prototype.add_value = async function(value) {
 	// update pagination total
 	//self.pagination.total = self.data.value ? self.data.value.length : 0
 
-	const key = (self.data.value ? self.data.value.length : 0) + self.pagination.offset
+	const key = self.pagination.total || 0
 
 	const changed_data = Object.freeze({
 		action	: 'insert',
