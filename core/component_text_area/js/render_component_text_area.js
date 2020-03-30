@@ -224,15 +224,6 @@ const add_events = function(self, wrapper) {
 					return true
 				}
 
-			// change_mode
-				if (e.target.matches('.button.close')) {
-
-					// change mode
-					self.change_mode('list', false)
-
-					return true
-				}
-
 			//const current_buttons_editor = document.querySelector(".buttons_editor")
 			//if (current_buttons_editor) current_buttons_editor.remove()
 
@@ -711,8 +702,6 @@ const get_custom_events = (self, i, get_service) => {
 								const tag 	= build_node_tag(data_tag, tag_id)//('tc', data, state, data, data)
 								service.set_content(tag.outerHTML)
 						}// end switch
-
-					
 				}
 				break;
 		}

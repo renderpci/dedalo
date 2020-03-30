@@ -38,7 +38,8 @@ export const ui = {
 					class_name 		: 'close',
 					text_content 	: ' x ',
 					parent 			: new_message_wrap
-				}).addEventListener("click", (e) => {
+				})
+				close_button.addEventListener("click", (e) => {
 					e.stopPropagation()
 					message_wrap.remove()
 				})
@@ -236,7 +237,7 @@ export const ui = {
 						class_name 		: 'button close',
 						parent 			: content_data
 					})
-					button_close.addEventListener("click", function(){
+					button_close.addEventListener("click", function(){						
 						instance.change_mode('list', false)
 					})
 				}
