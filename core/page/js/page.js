@@ -148,7 +148,7 @@ page.prototype.init = async function(options) {
 		)
 
 
-	// BEFOREUNLOAD (EVENT)
+	// beforeunload (event)
 		window.addEventListener("beforeunload", function (event) {
 			event.preventDefault();
 

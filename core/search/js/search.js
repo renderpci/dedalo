@@ -33,8 +33,8 @@
 */
 export const search = function() {
 
-	// render prototypes
 
+	this.id_variant
 
 	return true
 }//end search
@@ -77,7 +77,7 @@ search.prototype.init = async function(options) {
 
 	self.caller					= options.caller
 	self.context				= options.caller.context
-	self.section_tipo 	 		= self.caller.section_tipo	
+	self.section_tipo 	 		= self.caller.section_tipo
 	self.events_tokens			= []
 	self.parent_node 			= null
 	self.components_list 		= {}
@@ -90,7 +90,8 @@ search.prototype.init = async function(options) {
 	self.search_panel_is_open 	= false
 	self.modo 					= null
 
-	self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined" 
+
+	self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined"
 		? self.caller.get_sections_selector_data()
 		: null
 
@@ -846,7 +847,7 @@ this.get_search_json_object = function() {
 
 		// source search_action
 			self.source.search_action = 'search'
-		
+
 		// sqo
 			self.sqo.filter = filter_obj
 			self.sqo.limit 	= self.limit
@@ -880,7 +881,7 @@ this.get_search_json_object = function() {
 
 		// loading css add
 			self.caller.node[0].classList.add("loading")
-		
+
 		// source search_action
 			self.source.search_action = 'show_all'
 

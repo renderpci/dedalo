@@ -133,6 +133,11 @@ export const ui = {
 						component_label.classList.add(...ar_css)
 				}
 
+			// top
+				if (items.top) {
+					fragment.appendChild(items.top)
+				}
+
 			// buttons
 				if (items.buttons) {
 					fragment.appendChild(items.buttons)
@@ -224,6 +229,17 @@ export const ui = {
 				const ar_css = ["content_data", type, ...content_data_structure_css]
 				content_data.classList.add(...ar_css)
 
+			// button close
+				if(instance.mode==='edit_in_list' && !instance.is_inside_tool){
+					const button_close = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'button close',
+						parent 			: content_data
+					})
+					button_close.addEventListener("click", function(){
+						instance.change_mode('list', false)
+					})
+				}
 
 			return content_data
 		},//end build_content_data
@@ -752,63 +768,6 @@ export const ui = {
 
 
 
-		/**
-		* ATTACH_TO_MODAL
-		* Insert tool html into a modal box
-		* @return dom element modal_container
-		*/
-		attach_to_modal : (wrapper, self, size="normal") => {
-
-			// modal tool container
-				const modal_container = document.querySelector('dd-modal')
-					  modal_container.caller_instance = self // set current tool instance as modal caller_instance
-					  modal_container.on_close = function(e) {
-					  		event_manager.publish('modal_close', e)
-					  }
-
-			// header . move tool header to modal header and insert in slot
-				const tool_header = wrapper.querySelector('.tool_header')
-					  tool_header.slot = "header"
-					//const actual_header = modal_container.querySelector('.tool_header')
-					//if (actual_header) {
-					//	actual_header.replaceWith(tool_header)
-					//}else{
-						modal_container.appendChild(tool_header)
-					//}
-
-			// body. add tool wrapper to modal body and insert in slot
-				wrapper.slot = 'body'
-				modal_container.appendChild(wrapper) 	// append tool html to modal
-
-			// show modal
-				switch(size) {
-					case "big" :
-						modal_container._showModalBig();
-
-						// hide contents to avoid double scrollbars
-							const content_data_page = document.querySelector(".content_data.page")
-								  content_data_page.classList.add("display_none")
-							const menu_wrapper = document.querySelector(".content_data.page")
-								  menu_wrapper.classList.add("display_none")
-							const debug_div = document.getElementById("debug")
-								  if(debug_div) debug_div.classList.add("display_none")
-
-						event_manager.subscribe('modal_close', () => {
-							content_data_page.classList.remove("display_none")
-							menu_wrapper.classList.remove("display_none")
-							if(debug_div) debug_div.classList.remove("display_none")
-						})
-						break;
-					default :
-						modal_container._showModal()
-				}
-
-
-			return modal_container
-		}//attach_to_modal
-
-
-
 	},//end tool
 
 
@@ -1273,6 +1232,62 @@ export const ui = {
 
 		return contenteditable_buttons
 	},//end get_contenteditable_buttons
+
+
+
+	/**
+	* ATTACH_TO_MODAL
+	* Insert tool html into a modal box
+	* @return dom element modal_container
+	*/
+	attach_to_modal : (self, wrapper, header, size="normal") => {
+
+		// modal tool container
+			const modal_container = document.querySelector('dd-modal')
+				  modal_container.caller_instance = self // set current tool instance as modal caller_instance
+				  modal_container.on_close = function(e) {
+				  		event_manager.publish('modal_close', e)
+				  }
+
+		// header . move tool header to modal header and insert in slot
+			// const tool_header = wrapper.querySelector('.tool_header')
+			// 	  tool_header.slot = "header"
+			// modal_container.appendChild(tool_header)
+			if (header) {
+				header.slot = "header"
+				modal_container.appendChild(header)
+			}
+
+		// body. add tool wrapper to modal body and insert in slot
+			wrapper.slot = 'body'
+			modal_container.appendChild(wrapper) 	// append tool html to modal
+
+		// show modal
+			switch(size) {
+				case "big" :
+					modal_container._showModalBig();
+
+					// hide contents to avoid double scrollbars
+						const content_data_page = document.querySelector(".content_data.page")
+							  content_data_page.classList.add("display_none")
+						const menu_wrapper = document.querySelector(".content_data.page")
+							  menu_wrapper.classList.add("display_none")
+						const debug_div = document.getElementById("debug")
+							  if(debug_div) debug_div.classList.add("display_none")
+
+					event_manager.subscribe('modal_close', () => {
+						content_data_page.classList.remove("display_none")
+						menu_wrapper.classList.remove("display_none")
+						if(debug_div) debug_div.classList.remove("display_none")
+					})
+					break;
+				default :
+					modal_container._showModal()
+			}
+
+
+		return modal_container
+	},//attach_to_modal
 
 
 

@@ -333,15 +333,6 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// button close
-		if(mode==='edit_in_list' && !is_inside_tool){
-			const button_close = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: fragment
-			})
-		}
-
 	// button add input
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 			const button_add_input = ui.create_dom_element({

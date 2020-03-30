@@ -255,6 +255,7 @@ class layout_map {
 								'model' 		=> 'section',
 								'mode' 			=> $modo,
 								'lang'			=> DEDALO_DATA_NOLAN,
+								'label' 		=> RecordObj_dd::get_termino_by_tipo($current_section_tipo),
 								'parent' 		=> 'root'
 							]);
 
@@ -316,7 +317,7 @@ class layout_map {
 				if(SHOW_DEBUG===true) {
 					# dump($layout_map, ' layout_map ++ '.to_string());
 					foreach ($layout_map as $current_item) {
-						$current_item->debug_from = 'calculated from section list or related terms';
+						$current_item->debug_from = 'calculated from section list or related terms 1';
 					}
 				}
 			}//end if (!isset($layout_map))

@@ -27,6 +27,8 @@ export const paginator = function() {
 
 	this.status
 
+	this.id_variant
+
 	return true
 }//end paginator
 
