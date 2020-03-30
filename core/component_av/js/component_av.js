@@ -65,17 +65,29 @@ export const component_av = function(){
 	component_av.prototype.change_mode 			= component_common.prototype.change_mode
 
 
+
+/**
+* GO_TO_TIME
+* @return int seconds
+*/
 component_av.prototype.go_to_time = function(options){
 
 	const self = this
 
 	const tag_time = options.tag.dataset.data
-	const seconds = self.tc_to_seconds(tag_time)
+	const seconds  = self.tc_to_seconds(tag_time)
+
 	self.video.currentTime = seconds;
 
-}
+	return seconds
+}//end go_to_time
 
-component_av.prototype.play_pause = function(options){
+
+
+/**
+* PLAY_PAUSE
+*/
+component_av.prototype.play_pause = function(){
 
 	const self = this
 
@@ -87,6 +99,7 @@ component_av.prototype.play_pause = function(options){
 
 	return self.video.currentTime
 }// end play_pause
+
 
 
 /**
@@ -110,6 +123,7 @@ component_av.prototype.get_data_tag = function(){
 }// end get_data_tag
 
 
+
 /**
 * GET_CURRENT_TC
 * Send the data_tag to the text_area when it need create a new tag
@@ -119,22 +133,24 @@ component_av.prototype.get_current_tc = function(){
 	const self = this
 
 	const tc = self.time_to_tc(self.video.currentTime)
-	
+
 	return tc
 }// end get_current_tc
 
 
+
 /**
 * TC_TO_SECONDS
-* tc to seconds . convert tc like 00:12:19.878 to total seconds like 139.878	
+* tc to seconds . convert tc like 00:12:19.878 to total seconds like 139.878
 */
-component_av.prototype.tc_to_seconds = function(tc) {	
+component_av.prototype.tc_to_seconds = function(tc) {
+
 	if(Number.isInteger(tc)) return tc
-	
-	//var tc = "00:09:52.432";	
+
+	//var tc = "00:09:52.432";
 	const ar 		= tc.split(":")
 	const ar_ms 	= tc.split(".")
-	
+
 	const hours 	= parseFloat(ar[0])>0 ? parseFloat(ar[0]) : 0
 	const minutes 	= parseFloat(ar[1])>0 ? parseFloat(ar[1]) : 0
 	const seconds 	= parseFloat(ar[2])>0 ? parseFloat(ar[2]) : 0
@@ -143,8 +159,10 @@ component_av.prototype.tc_to_seconds = function(tc) {
 
 	const total_seconds = parseFloat( (hours * 3600) + (minutes * 60) + seconds +'.'+ mseconds)
 
-	return total_seconds ;	
-};
+	return total_seconds ;
+}//end tc_to_seconds
+
+
 
 /**
 * TIME_TO_TC
@@ -170,8 +188,8 @@ component_av.prototype.time_to_tc = function(time) {
 	const mseconds 	= wrap_ms(date.getMilliseconds()) //fps: wrap(Math.floor(((time % 1) * frame_rate)));
 
 	const tc    = hours+':'+minutes+':'+seconds+'.'+mseconds;
-	
+
 	return tc
-};
+}//end time_to_tc
 
 

@@ -3,11 +3,6 @@
 
 
 
-// imports
-	//import * as instances from '../../common/js/instances.js'
-	//import {ui} from '../../common/js/ui.js'
-
-
 /**
 * DATA_LOADER
 */
@@ -57,7 +52,7 @@ data_manager.prototype.request = async function(options) {
 		})
 		.then(handle_errors)
 		.then(response => {
-			console.log("-> json response 1 ok:",response.body);
+			// console.log("-> json response 1 ok:",response.body);
 			const json_parsed = response.json().then((result)=>{
 				//console.log("-> json result 2:",result);
 				return result
@@ -186,6 +181,7 @@ data_manager.prototype.get_element_context = async function(source) {
 }//end get_element_context
 
 
+
 /**
 * GET_PAGE_ELEMENT
 * Get full page element
@@ -294,103 +290,6 @@ data_manager.prototype.component_load_context = async function(component) {
 
 	return context
 }//end component_load_context
-*/
-
-
-
-/**
-* COMPONENT_SAVE
-* Receive full component object and start the save process across the section_record
-* @param object component
-* @return promise save_promise
-*//*
-data_manager.prototype.component_save = async (component, saved_component) => {
-	if(SHOW_DEBUG===true) {
-		//console.log("component save",component)
-		//console.log("instances:",instances);
-	}
-
-	if (component.id!==saved_component.id) {
-		return saved_component
-	}
-
-	const tipo = component.tipo
-
-	// force to update / sync dom node and component value
-		const node = component.node
-		if(node){
-			component.update_data_value()
-		}
-
-		node.classList.remove("success")
-
-	// // section_record instance
-	// 	const section_record = await instances.get_instance({
-	// 		model 			: 'section_record',
-	// 		tipo 			: component.section_tipo,
-	// 		section_tipo 	: component.section_tipo,
-	// 		section_id		: component.section_id,
-	// 		mode			: component.mode,
-	// 		lang			: component.section_lang
-	// 	})
-	//
-	// // section record save execution
-	// 	const save_promise = section_record.save(component)
-
-
-	// direct way
-		// send_data
-		const send_data = async () => {
-			try {
-				// data_manager
-					const current_data_manager 	= new data_manager()
-					const api_response 			= await current_data_manager.request({
-						body : {
-							action 	: 'update',
-							context : component.context,
-							data 	: component.data
-						}
-					})
-					console.log("+++++++ api_response:",api_response);
-
-				return api_response
-
-			} catch (error) {
-			  	//logAndReport(error)
-			  	console.log("++++++ error:",error);
-			  	return {
-			  		result 	: false,
-			  		msg 	: error.message,
-			  		error 	: error
-			  	}
-			}
-		}
-		const save_promise = send_data()
-
-
-	// check result for errors
-		save_promise.then(function(response){
-				//console.log("+++++++++++++++++ save response:",response);
-			// result expected is current section_id. False is returned if a problem found
-			const result = response.result
-			if (result===false) {
-				node.classList.add("error")
-				if (response.error) {
-					console.error(response.error)
-				}
-				if (response.msg) {
-					alert("Error on save component "+component.model+" data: \n" + response.msg)
-				}
-			}else{
-				node.classList.add("success")
-				setTimeout(()=>{
-					node.classList.remove("success")
-				}, 2100)
-			}
-		})
-
-	return save_promise
-}//end active
 */
 
 

@@ -315,7 +315,7 @@ const get_top = function(self) {
 	const show 						 = self.sqo_context.show
 	const target_section_tipo 		 = show.filter(item => item.model==='section')
 	const target_section_tipo_lenght = target_section_tipo.length
-	// sort by label
+	// sort section by label asc
 	target_section_tipo.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
 	const fragment = new DocumentFragment()
@@ -356,7 +356,6 @@ const get_top = function(self) {
 		})
 		button_add.addEventListener("click", async function(e){
 			e.stopPropagation()
-			console.log("select_section.value:",select_section.value);
 
 			// data_manager. create new record
 				const api_response = await data_manager.prototype.request({
@@ -367,7 +366,6 @@ const get_top = function(self) {
 				})
 				// add value to current data
 				if (api_response.result && api_response.result>0) {
-
 					const value = {
 						section_tipo : select_section.value,
 						section_id 	 : api_response.result
@@ -377,7 +375,6 @@ const get_top = function(self) {
 					console.error("Error on api_response on try to create new row:", api_response);
 				}
 		})
-
 
 
 	// button_find
@@ -410,6 +407,7 @@ const get_top = function(self) {
 			// }
 			// const element_context_call 	= await current_data_manager.get_element_context(source)
 			// const element_context 		= element_context_call.result
+			// 	console.log("!-- get_element_context:", element_context_call);
 
 			// // section instance (regular section)
 			// 	const section_instance = await get_instance({
@@ -446,8 +444,11 @@ const get_top = function(self) {
 						  // page_element.id_variant = 'ID_VARIANT_PORTAL'
 
 					self.find_section_options = page_element
+
+					// console.log("!-- get_page_element:", page_element_call);
 				}
-					  // console.log("++++++++++++++++++++++ page_element:",page_element);
+				// console.log("++++++++++++++++++++++ page_element:",page_element);
+
 
 				const find_section = await get_instance(self.find_section_options)
 				await find_section.build(true)
