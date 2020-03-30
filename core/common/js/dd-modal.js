@@ -31,10 +31,12 @@ class DDModal extends HTMLElement {
 				border: 1px solid #888;
 				width: 80%;
 				box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+				/*
 				-webkit-animation-name: animatetop;
 				-webkit-animation-duration: 0.4s;
 				animation-name: animatetop;
 				animation-duration: 0.4s;
+				*/
 			}
 
 			/* Add Animation */
@@ -134,20 +136,6 @@ class DDModal extends HTMLElement {
 		// only click over base modal or button close are aceppted
 		if (e.target.matches('.modal') || e.target.matches('.close')) {
 
-			// this._modalVisible = false;
-			// this._modal.style.display = 'none';
-
-			// // remove caller instance if exists on close
-			// if (this.caller_instance) {
-			// 	const destroyed = this.caller_instance.destroy(true, true, true)
-
-			// 	// clean header
-			// 	const header = this.querySelector("[slot='header']")
-			// 	if (header) {
-			// 		header.remove()
-			// 	}
-			// }
-
 			this._closeModal()
 		}
 	}
@@ -156,15 +144,15 @@ class DDModal extends HTMLElement {
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
 
-		// exec optional on-close
+		// exec optional on-close callback
 			if (typeof this.on_close==="function") {
-				this.on_close()
+				this.on_close(this)
 			}
 
 		// remove caller instance if exists on close
 			if (this.caller_instance) {
 				// destroy recursivelly
-				const destroyed = this.caller_instance.destroy(true, true, true)
+				this.caller_instance.destroy(true, true, true)
 
 				// clean header
 				const header = this.querySelector("[slot='header']")

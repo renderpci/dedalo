@@ -4092,35 +4092,37 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATO_PAGINATED
-	* @return
+	* It slices the component array of locators to allocate pagination options
+	* @return arrray $dato_paginated
 	*/
 	public function get_dato_paginated() {
 
-		$properties = $this->get_propiedades();
+		// sort vars
+			$properties = $this->get_propiedades();
+			$mode 		= $this->get_modo();
 
-		switch ($this->get_modo()) {
-			case 'list':
-				$limit = $this->pagination->limit ?? $properties->list_max_records ?? 10;
-				break;
+		// dato full
+			$dato = $this->get_dato();
 
-			default:
-				$limit = $this->pagination->limit ?? $properties->max_records ?? 10;
-				break;
-		}
+		// limit
+			$limit = ($mode==='list')
+				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
+				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
 
-		$offset = $this->pagination->offset ?? 0;
+		// offset
+			$offset = $this->pagination->offset ?? 0;
 
-		$dato = $this->get_dato();
-
-		// limit. avoid use zero as limit. Instead use null
+		// array_lenght. avoid use zero as limit. Instead this, use null
 			$array_lenght = $limit>0 ? $limit : null;
 
-		$dato_paginated = array_slice($dato, $offset, $array_lenght);
+		// slice
+			$dato_paginated = array_slice($dato, $offset, $array_lenght);
 
-		foreach ($dato_paginated as $key => $value) {
-			$paginated_key = $key + $offset;
-			$value->paginated_key = $paginated_key;
-		}
+		// pagination keys. Set a offset relative key to each element of paginated array
+			foreach ($dato_paginated as $key => $value) {
+				$paginated_key = $key + $offset;
+				$value->paginated_key = $paginated_key;
+			}
 
 
 		return $dato_paginated;

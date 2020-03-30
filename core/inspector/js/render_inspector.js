@@ -21,17 +21,25 @@ export const render_inspector = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_inspector.prototype.edit = async function(options={render_level : 'full'}) {
+render_inspector.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	// render_level
+		const render_level = options.render_level || 'full'
 
 	// content data
-		const current_content_data = await content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
+
+	// label
+		const label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html 		: 'Inspector'
+		})
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -39,39 +47,12 @@ render_inspector.prototype.edit = async function(options={render_level : 'full'}
 			class_name		: 'wrapper_inspector text_unselectable',
 		})
 
-	// label
-		const label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html 		: 'Inspector',
-			parent 			: wrapper
-		})
-
-	// add paginator_content
-		wrapper.appendChild(current_content_data)
+	// add elements
+		wrapper.appendChild(label)
+		wrapper.appendChild(content_data)
 
 	// events
-	//	add_events(wrapper, self)
-
-
-		// console.log("self.caller:",self);
-
-		// event_manager.subscribe('render_'+self.caller.id, function(node){
-		// 	alert("2");
-		// })
-
-		// 	const time_info = "" +
-		// 	"Total time: " + response.debug.exec_time +
-		// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
-		// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
-
-		// const time_info_pre = ui.create_dom_element({
-		// 	element_type : "pre",
-		// 	class_name   : "total_time",
-		// 	id   		 : "total_time",
-		// 	inner_html   : time_info,
-		// 	parent 		 : debug
-		// })
+		// add_events(wrapper, self)
 
 
 	return wrapper
@@ -100,10 +81,10 @@ const add_events = (wrapper, self) => {
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -133,7 +114,7 @@ const content_data = async function(self) {
 			button_new.addEventListener('click', async (e) => {
 				e.stopPropagation()
 
-				// data_manager
+				// data_manager. create
 				const api_response = await data_manager.prototype.request({
 					body : {
 						action 		: 'create',
@@ -148,7 +129,6 @@ const content_data = async function(self) {
 						section_id		 : api_response.result
 					})
 				}
-
 			})
 			buttons_container.appendChild(button_new)
 
@@ -174,8 +154,7 @@ const content_data = async function(self) {
 		})
 
 
-
 	return content_data
-}// end content_data
+}// end get_content_data
 
 

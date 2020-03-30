@@ -44,6 +44,8 @@ export const section = function() {
 	this.status
 	this.paginator
 
+	this.id_variant
+
 	return true
 }//end section
 
@@ -54,13 +56,17 @@ export const section = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	section.prototype.edit 			= render_section.prototype.edit
-	section.prototype.list 			= render_section.prototype.list
-	section.prototype.tm 			= render_section.prototype.list
-	section.prototype.list_header 	= render_section.prototype.list_header
+	// life clycle
 	section.prototype.render 		= common.prototype.render
 	section.prototype.destroy 		= common.prototype.destroy
 	section.prototype.refresh 		= common.prototype.refresh
+	// render
+	section.prototype.edit 			= render_section.prototype.edit
+	section.prototype.list 			= render_section.prototype.list
+	section.prototype.list_portal 	= render_section.prototype.list
+	section.prototype.tm 			= render_section.prototype.list
+	section.prototype.list_header 	= render_section.prototype.list_header
+
 
 
 
@@ -69,7 +75,7 @@ export const section = function() {
 * @return bool
 */
 section.prototype.init = async function(options) {
-	console.log("options:",options);
+
 	const self = this
 
 	// instance key used vars
@@ -106,6 +112,7 @@ section.prototype.init = async function(options) {
 
 	self.id_column_width 	= '7em'
 	self.permissions 		= options.permissions || null
+
 
 	// source. add to sqo_context if not exists. Be careful not to add a source element twice
 	// (!) VERIFICAR QUE REALMENTE HACE FALTA
@@ -299,14 +306,20 @@ section.prototype.get_ar_instances = async function(){
 					caller 			: self
 			}
 
-			if (self.mode==='tm') {
-				instance_options.matrix_id 			= value[i].matrix_id
-				instance_options.modification_date 	= value[i].timestamp
-				// instance_options.state 			= value[i].state
-			}
+			// id_variant . Propagate a custom instance id to children
+				if (self.id_variant) {
+					instance_options.id_variant = self.id_variant
+				}
+
+			// time machine options
+				if (self.mode==='tm') {
+					instance_options.matrix_id 			= value[i].matrix_id
+					instance_options.modification_date 	= value[i].timestamp
+					// instance_options.state 			= value[i].state
+				}
 
 			// section_record. init and build
-				const current_section_record = await instances.get_instance(instance_options)
+				const current_section_record = await instances.get_instance(instance_options);
 				await current_section_record.build(true)
 
 			// add

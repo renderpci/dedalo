@@ -57,7 +57,8 @@ render_tool_time_machine.prototype.edit = async function (options={render_level:
 		//}
 
 	// modal container
-		const modal_container = ui.tool.attach_to_modal(wrapper, self, 'big')
+		const header = wrapper.querySelector('.tool_header')
+		const modal_container = ui.attach_to_modal(self, wrapper, header, 'big')
 		// fix
 		self.modal_container = modal_container
 

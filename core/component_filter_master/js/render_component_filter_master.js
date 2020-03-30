@@ -289,15 +289,6 @@
 // 			parent 			: fragment
 // 		})
 
-// 		// button close
-// 		if(mode==='edit_in_list'){
-// 			const button_close = ui.create_dom_element({
-// 				element_type	: 'span',
-// 				class_name 		: 'button close',
-// 				parent 			: buttons_container
-// 			})
-// 		}
-
 // 		// button edit
 // 			ui.create_dom_element({
 // 				element_type	: 'span',

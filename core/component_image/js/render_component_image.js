@@ -191,14 +191,6 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// button close
-		if(mode==='edit_in_list' && !is_inside_tool){
-			const button_close = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: fragment
-			})
-		}
 	// full_screen
 		const full_screen = ui.create_dom_element({
 			element_type	: 'div',
@@ -208,7 +200,6 @@ const get_buttons = (self) => {
 		full_screen.addEventListener("mouseup", (e) =>{
 			event_manager.publish('full_screen_'+self.id, full_screen)
 		})
-
 
 	// buttons tools
 		if (!is_inside_tool) {

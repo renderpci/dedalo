@@ -43,7 +43,9 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 		})
 
 	// modal container
-		ui.tool.attach_to_modal(wrapper, self)
+		const header = wrapper.querySelector('.tool_header')
+		ui.attach_to_modal(self, wrapper, header)
+
 
 	return wrapper
 }//end render_tool_lang_multi
