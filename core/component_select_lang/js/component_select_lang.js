@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -17,7 +22,7 @@ export const component_select_lang = function(){
 	this.mode
 	this.lang
 
-	this.section_lang	
+	this.section_lang
 	this.context
 	this.data
 	this.parent
@@ -47,7 +52,7 @@ export const component_select_lang = function(){
 	component_select_lang.prototype.update_datum		= component_common.prototype.update_datum
 	component_select_lang.prototype.change_value 		= component_common.prototype.change_value
 	//component_select_lang.prototype.load_datum 		= component_common.prototype.load_datum
-	
+
 	// render
 	component_select_lang.prototype.list 				= render_component_select_lang.prototype.list
 	component_select_lang.prototype.edit 				= render_component_select_lang.prototype.edit
