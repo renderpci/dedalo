@@ -16,12 +16,30 @@
 require dirname(dirname(__FILE__)).'/base/upgrade/class.activity_v5_to_v6.php';
 
 
-echo "hello clean_component_dato";
+$run = $_GET['run'] ?? false;
+if ($run==='clean_component_dato') {
+	$result = activity_v5_to_v6::clean_component_dato();
+}
 
-echo "<hr>Stopped!";
 
-	// activity_v5_to_v6::clean_component_dato();
+?>
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+	<a href="?run=clean_component_dato">clean_component_dato</a>
 
-sleep(1);
+	<div>
+	<?php
+		if (isset($result)) {
+			echo "<h2>Result</h2>";
+			$a = print_r($result, true);
+			echo "<pre>$a</pre>";
+		}
+	?>
+	</div>
+</body>
+</html>
 
-echo "<br>Bye";
