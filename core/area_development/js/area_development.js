@@ -1,6 +1,11 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	import {common} from '../../common/js/common.js'
-	import {area_common} from '../../common/js/area_common.js'
+	import {area_common} from '../../area_common/js/area_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_area_development} from './render_area_development.js'
 
@@ -40,12 +45,72 @@ export const area_development = function() {
 */
 // prototypes assign
 	area_development.prototype.init 		= area_common.prototype.init
-	area_development.prototype.build 		= area_common.prototype.build
+	// area_development.prototype.build 		= area_common.prototype.build
 	area_development.prototype.render 		= common.prototype.render
 	area_development.prototype.refresh 		= common.prototype.refresh
 	area_development.prototype.destroy 		= common.prototype.destroy
 	area_development.prototype.edit 		= render_area_development.prototype.edit
 	area_development.prototype.list 		= render_area_development.prototype.list
+
+
+
+/**
+* BUILD
+* @return promise
+*	bool true
+*/
+area_development.prototype.build = async function() {
+	const t0 = performance.now()
+
+	const self = this
+
+	// status update
+		self.status = 'building'
+
+	// area basic context
+		const source_context = {
+			model 			: self.model,
+			tipo  			: self.tipo,
+			lang  			: self.lang,
+			mode  			: self.mode,
+			action 			: 'get_data',
+			typo 			: 'source',
+			build_options 	: self.build_options
+		}
+
+		const sqo_context = [source_context]
+
+	// load data
+		const current_data_manager = new data_manager()
+
+	// get context and data
+		const api_response 	= await current_data_manager.section_load_data(sqo_context)
+			console.log("[area_development.build] api_response++++:",api_response);
+
+	// set the result to the datum
+		self.datum = api_response.result
+
+	// set context and data to current instance
+		self.context	= self.datum.context.filter(element => element.tipo===self.tipo)
+		self.data 		= self.datum.data.filter(element => element.tipo===self.tipo)
+		self.widgets 	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
+
+		const area_ddo	= self.context.find(element => element.type==='area')
+		self.label 		= area_ddo.label
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
+			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			//load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
+		}
+
+	// status update
+		self.status = 'builded'
+
+	return true
+}//end build
+
 
 
 
