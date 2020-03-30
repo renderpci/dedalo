@@ -143,15 +143,6 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// button close
-		if(mode==='edit_in_list' && !is_inside_tool){
-			const button_close = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button close',
-				parent 			: fragment
-			})
-		}
-
 	// buttons tools
 		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
