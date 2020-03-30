@@ -36,7 +36,7 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		const value = {}
 
 			value.type 					= "dd151"
-			value.section_id 			= fn_random_number(50) || 1
+			value.section_id 			= (fn_random_number(50) || 1).toString()
 			value.section_tipo 			= section_tipo // "dd501"
 			// if (paginated_key!==false) {
 				// value.paginated_key 	= paginated_key
@@ -593,7 +593,7 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 						section_tipo 	: options.section_tipo,
 						section_id		: options.section_id
 					})
-					console.log("************* calculated element_context:",element_context.result[0]);
+
 					options.context = element_context.result[0]
 
 				// first instance
@@ -603,37 +603,13 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					const old_value = typeof old_instance.data.value!=="undefined"
 						? old_instance.data.value[0]
 						: null
-						console.log("************* old_value:",old_value);
+
 					// const new_value = old_value + 1
 					// const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
 
-
 					// save
-					if (typeof old_instance.add_value==="function") {
-
-						console.log("************* new_value to add_value:",new_value);
-
-						// remove values
-						const current_values = old_instance.data.value = []
-						for (let i = current_values.length - 1; i >= 0; i--) {
-
-							// remove array element sending null as value
-							const changed_data = Object.freeze({
-								action	: 'update',
-								key		: i,
-								value	: null,
-							})
-							await old_instance.change_value({
-								changed_data : changed_data,
-								refresh 	 : false
-							})
-						}
-						// add new value
-						await old_instance.add_value(new_value)
-
-					}else{
 						const changed_data = Object.freeze({
-							action	: 'update',
+							action	: 'insert',
 							key		: 0,
 							value	: new_value,
 						})
@@ -641,7 +617,6 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 							changed_data : changed_data,
 							refresh 	 : false
 						})
-					}
 
 					// destroy
 						if (old_instance) {
@@ -652,10 +627,35 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 					const new_instance = await get_instance(options)
 					await new_instance.build(true)
 
+
 					if (equals===true) {
-						assert.equal( JSON.stringify(new_instance.data.value[0]), JSON.stringify(new_value) )
+
+						const reference_value = new_value
+						const data_value      = new_instance.data.value[0]
+
+						// locator case check
+						if (typeof data_value.from_component_tipo!=="undefined" && data_value.from_component_tipo) {
+
+							const a = {
+								section_tipo 		: data_value.section_tipo,
+								section_id 			: data_value.section_id,
+								from_component_tipo : data_value.from_component_tipo
+							}
+							const b = {
+								section_tipo 		: reference_value.section_tipo,
+								section_id 			: reference_value.section_id,
+								from_component_tipo : reference_value.from_component_tipo
+							}
+							assert.equal( JSON.stringify(a), JSON.stringify(b), "Compares equal saved value and sended value [locator]" )
+
+						}else{
+
+							assert.equal( JSON.stringify(data_value), JSON.stringify(reference_value), "Compares equal saved value and sended value" )
+						}
+
 					}else{
-						assert.notEqual( JSON.stringify(new_instance.data.value[0]), JSON.stringify(old_value) )
+
+						assert.notEqual( JSON.stringify(new_instance.data.value[0]), JSON.stringify(old_value), "Compares notEqual data value and old value" )
 					}
 
 					await new_instance.destroy()
