@@ -366,6 +366,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		if ($model==='component_input_text_large') {
 			$model='component_input_text';
 		}
+		elseif ($model==='component_portal') {
+			$model='component_autocomplete';
+		}
 
 		return $model;
 	}
