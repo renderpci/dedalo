@@ -38,9 +38,9 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 			value.type 					= "dd151"
 			value.section_id 			= fn_random_number(50) || 1
 			value.section_tipo 			= section_tipo // "dd501"
-			if (paginated_key!==false) {
-				value.paginated_key 	= paginated_key
-			}
+			// if (paginated_key!==false) {
+				// value.paginated_key 	= paginated_key
+			// }
 			value.from_component_tipo 	= from_component_tipo // "test144"
 
 		return value
@@ -231,20 +231,6 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		new_value_params: ['es1', tipo, 0]
 	})
 
-	var model = 'component_portal',
-		tipo  = 'test149'
-	options.push({
-		model 			: model,
-		tipo  			: tipo,
-		section_tipo 	: section_tipo,
-		section_id 		: section_id,
-		mode 			: mode,
-		lang 			: lang,
-		// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
-		new_value 		: fn_random_locator,
-		new_value_params: ['es1', tipo, 0]
-	})
-
 	var model = 'component_filter',
 		tipo  = 'test151'
 	options.push({
@@ -286,6 +272,21 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		new_value 		: fn_random_email,
 		new_value_params: []
 	})
+
+	// PORTAL NOT USED ANYMORE
+	// var model = 'component_portal',
+	// 	tipo  = 'test149'
+	// options.push({
+	// 	model 			: model,
+	// 	tipo  			: tipo,
+	// 	section_tipo 	: section_tipo,
+	// 	section_id 		: section_id,
+	// 	mode 			: mode,
+	// 	lang 			: lang,
+	// 	// context 		: {permissions: 2, tipo: tipo, model: model, section_tipo: section_tipo, lang: lang, type:'component', properties : {} },
+	// 	new_value 		: fn_random_locator,
+	// 	new_value_params: ['es1', tipo, 0]
+	// })
 
 
 // instances
@@ -503,168 +504,185 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		    });
 		}
 
+		// init
+			describe("init component based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
 
-		describe("init component based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
+				for (let i = 0; i < options.length; i++) {
 
-			for (let i = 0; i < options.length; i++) {
+					describe(options[i].model, function() {
 
-				describe(options[i].model, function() {
-
-					make_test(options[i], 'status', 'inited', 'init')
-					make_test(options[i], 'lang', options[i].lang, 'init')
-					make_test(options[i], 'permissions', null, 'init')
-				})
-			}
-		});
-
-
-		describe("build component based on options values to create a component instance: status = builded and permissions = 1", function() {
-
-			for (let i = 0; i < options.length; i++) {
-
-				describe(options[i].model, function() {
-
-					make_test(options[i], 'status', 'builded', 'build')
-					// make_test(options[i], 'permissions', options[i].context.permissions, 'build')
-					make_test(options[i], 'properties', null, 'build')
-					make_test(options[i], 'typo', null, 'build')
-				})
-			}
-		});
+						make_test(options[i], 'status', 'inited', 'init')
+						make_test(options[i], 'lang', options[i].lang, 'init')
+						make_test(options[i], 'permissions', null, 'init')
+					})
+				}
+			});
 
 
-		describe("render component based on options values to create a component instance: status = builded and permissions = 1", function() {
+		// build
+			describe("build component based on options values to create a component instance: status = builded and permissions = 1", function() {
 
-			for (let i = 0; i < options.length; i++) {
+				for (let i = 0; i < options.length; i++) {
 
-				describe(options[i].model, function() {
-					make_test(options[i], 'status', 'rendered', 'render')
-				})
-			}
-		});
+					describe(options[i].model, function() {
+
+						make_test(options[i], 'status', 'builded', 'build')
+						// make_test(options[i], 'permissions', options[i].context.permissions, 'build')
+						make_test(options[i], 'properties', null, 'build')
+						make_test(options[i], 'typo', null, 'build')
+					})
+				}
+			});
 
 
-		describe("refresh component based on options values to create a component instance: status = builded and permissions = 1", function() {
+		// render
+			describe("render component based on options values to create a component instance: status = builded and permissions = 1", function() {
 
-			for (let i = 0; i < options.length; i++) {
+				for (let i = 0; i < options.length; i++) {
 
-				describe(options[i].model, function() {
-					make_test(options[i], 'status', 'rendered', 'refresh')
-				})
-			}
-		});
+					describe(options[i].model, function() {
+						make_test(options[i], 'status', 'rendered', 'render')
+					})
+				}
+			});
 
-		describe("destroy component based on existing instance", function() {
 
-			for (let i = 0; i < options.length; i++) {
+		// refresh
+			describe("refresh component based on options values to create a component instance: status = builded and permissions = 1", function() {
 
-				describe(options[i].model, function() {
-					make_test(options[i], 'instance', 'destroy', 'destroy')
-				})
-			}
-		});
+				for (let i = 0; i < options.length; i++) {
 
+					describe(options[i].model, function() {
+						make_test(options[i], 'status', 'rendered', 'refresh')
+					})
+				}
+			});
+
+
+		// destroy
+			describe("destroy component based on existing instance", function() {
+
+				for (let i = 0; i < options.length; i++) {
+
+					describe(options[i].model, function() {
+						make_test(options[i], 'instance', 'destroy', 'destroy')
+					})
+				}
+			});
 	});
 
 
-	// test change data functions for any component instance
-		describe("components : change data", function(){
+// components change data functions for any component instance
+	describe("components : change data", function(){
 
-			function make_test_change_data(options, equals) {
+		function make_test_change_data(options, equals) {
 
-				const new_value = options.new_value(options.new_value_params) //  old_value + 1
-					// console.log("new_value:",new_value);
+			const new_value = options.new_value(options.new_value_params) //  old_value + 1
+				// console.log("new_value:",new_value);
 
-				const test_title = (equals===true)
-					? `${options.model} => Save new_value = new_value (` + JSON.stringify(new_value) + ')'
-					: `${options.model} => Save new_value != old_value (` + JSON.stringify(new_value) + ')'
+			const test_title = (equals===true)
+				? `${options.model} => Save new_value = new_value (` + JSON.stringify(new_value) + ')'
+				: `${options.model} => Save new_value != old_value (` + JSON.stringify(new_value) + ')'
 
-				it(test_title, async function() {
+			it(test_title, async function() {
 
-					// get and set element context
-						const current_data_manager 	= new data_manager()
-						const element_context = await current_data_manager.get_element_context({
-							tipo 			: options.tipo,
-							section_tipo 	: options.section_tipo,
-							section_id		: options.section_id
-						})
-						console.log("************* 2 calculated element_context:",element_context.result[0]);
-						options.context = element_context.result[0]
+				// get and set element context
+					const current_data_manager 	= new data_manager()
+					const element_context = await current_data_manager.get_element_context({
+						tipo 			: options.tipo,
+						section_tipo 	: options.section_tipo,
+						section_id		: options.section_id
+					})
+					console.log("************* calculated element_context:",element_context.result[0]);
+					options.context = element_context.result[0]
 
-					// first instance
-						const old_instance = await get_instance(options)
-						await old_instance.build(true)
-							console.log("old_instance:",old_instance);
-						const old_value = typeof old_instance.data.value!=="undefined"
-							? old_instance.data.value[0]
-							: null
-							console.log("************* old_value:",old_value);
-						// const new_value = old_value + 1
-						// const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
+				// first instance
+					const old_instance = await get_instance(options)
+					await old_instance.build(true)
+						console.log("old_instance:",old_instance);
+					const old_value = typeof old_instance.data.value!=="undefined"
+						? old_instance.data.value[0]
+						: null
+						console.log("************* old_value:",old_value);
+					// const new_value = old_value + 1
+					// const test_title = (equals===true) ? `${options.model} => Save old value: ${old_value} => new_value = old_value + 1: ${new_value}`: `${options.model} => Save old value: ${old_value} => new_value != old_value: ${new_value}`
 
 
-						// save
-						if (typeof old_instance.add_value==="function") {
+					// save
+					if (typeof old_instance.add_value==="function") {
 
-							console.log("************* new_value to add_value:",new_value);
+						console.log("************* new_value to add_value:",new_value);
 
-							// remove values
-							old_instance.data.value = []
+						// remove values
+						const current_values = old_instance.data.value = []
+						for (let i = current_values.length - 1; i >= 0; i--) {
 
-							await old_instance.add_value(new_value)
-
-						}else{
+							// remove array element sending null as value
 							const changed_data = Object.freeze({
 								action	: 'update',
-								key		: 0,
-								value	: new_value,
+								key		: i,
+								value	: null,
 							})
 							await old_instance.change_value({
 								changed_data : changed_data,
 								refresh 	 : false
 							})
 						}
+						// add new value
+						await old_instance.add_value(new_value)
 
-						// destroy
-							if (old_instance) {
-								await old_instance.destroy(true, true, true)
-							}
+					}else{
+						const changed_data = Object.freeze({
+							action	: 'update',
+							key		: 0,
+							value	: new_value,
+						})
+						await old_instance.change_value({
+							changed_data : changed_data,
+							refresh 	 : false
+						})
+					}
 
-					// new instance
-						const new_instance = await get_instance(options)
-						await new_instance.build(true)
-
-						if (equals===true) {
-							assert.equal( JSON.stringify(new_instance.data.value[0]), JSON.stringify(new_value) )
-						}else{
-							assert.notEqual( JSON.stringify(new_instance.data.value[0]), JSON.stringify(old_value) )
+					// destroy
+						if (old_instance) {
+							await old_instance.destroy(true, true, true)
 						}
 
-						await new_instance.destroy()
-			    });
+				// new instance
+					const new_instance = await get_instance(options)
+					await new_instance.build(true)
+
+					if (equals===true) {
+						assert.equal( JSON.stringify(new_instance.data.value[0]), JSON.stringify(new_value) )
+					}else{
+						assert.notEqual( JSON.stringify(new_instance.data.value[0]), JSON.stringify(old_value) )
+					}
+
+					await new_instance.destroy()
+		    });
+		}
+
+		describe("save data equals", function() {
+
+			for (let i = 0; i < options.length; i++) {
+
+				describe(options[i].model, function() {
+					make_test_change_data(options[i], true)
+				})
 			}
-
-			describe("save data equals", function() {
-
-				for (let i = 0; i < options.length; i++) {
-
-					describe(options[i].model, function() {
-						make_test_change_data(options[i], true)
-					})
-				}
-			});
-
-			describe("save data NOT equals", function() {
-
-				for (let i = 0; i < options.length; i++) {
-
-					describe(options[i].model, function() {
-						make_test_change_data(options[i], false)
-					})
-				}
-			});
-
 		});
+
+		describe("save data NOT equals", function() {
+
+			for (let i = 0; i < options.length; i++) {
+
+				describe(options[i].model, function() {
+					make_test_change_data(options[i], false)
+				})
+			}
+		});
+
+	});
 
 
 
