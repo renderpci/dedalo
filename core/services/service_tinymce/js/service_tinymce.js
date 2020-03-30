@@ -49,7 +49,7 @@ export const service_tinymce = function() {
 
 		// editor options
 			const toolbar = editor_config.toolbar
-				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_save"
+				|| "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save"
 			const plugins = editor_config.plugins
 				|| ["paste","image","print","searchreplace","code","fullscreen","noneditable"] // "wordcount"
 

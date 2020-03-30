@@ -361,7 +361,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// editor_config
 		const editor_config = {}
 			  editor_config.plugins 		= ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
-			  editor_config.toolbar 		= "bold italic underline undo redo searchreplace pastetext code fullscreen | button_save"
+			  editor_config.toolbar 		= "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save"
 			  editor_config.custom_buttons 	= get_custom_buttons(self, i, get_service)
 			  editor_config.custom_events  	= get_custom_events(self, i, get_service)
 
@@ -403,12 +403,9 @@ const get_custom_buttons = (self, i, get_service) => {
 
 	// const editor = get_editor()
 
-	let button_name
-
 	// button_person
-		button_name = "button_person"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_person",
 			options : {
 				tooltip: 'Add person',
 				image:  '../themes/default/icons/person.svg',
@@ -420,9 +417,8 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_geo
-		button_name = "button_geo"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_geo",
 			options : {
 				tooltip: 'Add georef',
 				image:  '../themes/default/icons/geo.svg',
@@ -434,9 +430,8 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_note
-		button_name = "button_note"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_note",
 			options : {
 				tooltip: 'Add note',
 				image:  '../themes/default/icons/note.svg',
@@ -448,9 +443,8 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_reference
-		button_name = "button_reference"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_reference",
 			options : {
 				tooltip: 'Add reference',
 				image:  '../themes/default/icons/reference.svg',
@@ -462,12 +456,12 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_delete_structuration
-		button_name = "button_delete_structuration"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_delete_structuration",
 			options : {
-				tooltip: 'Delete structuration',
 				text: "Delete chapter",
+				tooltip: 'Delete structuration',
+				icon :false,
 				onclick: function(evt) {
 					alert("Deleting structuration !");
 					// tool_lang.delete_structuration(ed, evt, text_area_component)
@@ -476,12 +470,12 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_add_structuration
-		button_name = "button_add_structuration"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_add_structuration",
 			options : {
-				tooltip: 'Add structuration',
 				text: "Add chapter",
+				tooltip: 'Add structuration',
+				icon :false,
 				onclick: function(evt) {
 					alert("Adding structuration !");
 					// tool_lang.add_structuration(ed, evt, text_area_component)
@@ -490,12 +484,12 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_change_structuration
-		button_name = "button_change_structuration"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_change_structuration",
 			options : {
-				tooltip: 'Change structuration',
 				text: "Change chapter",
+				tooltip: 'Change structuration',
+				icon :false,
 				onclick: function(evt) {
 					alert("Changing structuration !");
 					// tool_lang.change_structuration(ed, evt, text_area_component)
@@ -504,9 +498,8 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_save
-		button_name = "button_save"
 		custom_buttons.push({
-			name 	: button_name,
+			name 	: "button_save",
 			options : {
 				text: get_label.salvar,
 				tooltip: get_label.salvar,
