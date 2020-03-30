@@ -1,9 +1,9 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {area_common} from '../../area_common/js/area_common.js'	
-	import {render_area_thesaurus} from './render_area_thesaurus.js'
+	import {area_common} from '../../area_common/js/area_common.js'
 	import {search} from '../../search/js/search.js'
+	import {render_area_thesaurus} from './render_area_thesaurus.js'
 
 
 
@@ -59,6 +59,7 @@ export const area_thesaurus = function() {
 
 /**
 * INIT
+* @return bool
 */
 area_thesaurus.prototype.init = async function(options) {
 
@@ -81,13 +82,49 @@ area_thesaurus.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @return promise
+*	bool true
 */
-area_thesaurus.prototype.build = async function(options) {
+area_thesaurus.prototype.build = async function() {
+	const t0 = performance.now()
 
 	const self = this
-	
+
 	// call the generic commom tool build
-		const common_build = await area_common.prototype.build.call(this, options);
+		// const common_build = await area_common.prototype.build.call(this, options);
+
+	// status update
+		self.status = 'building'
+
+
+	// build_options. Add custom area build_options to source
+		const source = self.sqo_context.show.find(element => element.typo==='source')
+			  source.build_options = self.build_options
+
+	// load data
+		const current_data_manager = new data_manager()
+
+	// get context and data
+		const api_response 	= await current_data_manager.section_load_data(self.sqo_context.show)
+			// console.log("[area_thesaurus.build] api_response++++:",api_response);
+
+	// set the result to the datum
+		self.datum = api_response.result
+
+	// set context and data to current instance
+		self.context	= self.datum.context.filter(element => element.tipo===self.tipo)
+		self.data 		= self.datum.data.filter(element => element.tipo===self.tipo)
+		self.widgets 	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
+
+		const area_ddo	= self.context.find(element => element.type==='area')
+		self.label 		= area_ddo.label
+
+	// permissions. calculate and set (used by section records later)
+		self.permissions = area_ddo.permissions || 0
+
+	// section tipo
+		self.section_tipo = area_ddo.section_tipo || null
+
 
 	// filter
 		if (!self.filter && self.permissions>0) {
@@ -99,21 +136,34 @@ area_thesaurus.prototype.build = async function(options) {
 			self.filter = current_filter
 		}
 
-		console.log("self.data:",self.data);
+	// debug
+		if(SHOW_DEBUG===true) {
+			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
+			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
+			//load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
+		}
+
+	// status update
+		self.status = 'builded'
 
 
-	return common_build
+	return true
 }//end build
+
 
 
 /**
 * GET_SECTIONS_SELECTOR_DATA
+* @return array of objects sections_selector_data
 */
 area_thesaurus.prototype.get_sections_selector_data = function() {
-	
+
 	const self = this
 
-	const sections_selector_data = self.data.find(item => item.tipo === self.tipo).value
-	
+	const sections_selector_data = self.data.find(item => item.tipo===self.tipo).value
+
+
 	return sections_selector_data
 }// end get_sections_selector_data
+
+
