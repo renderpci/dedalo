@@ -250,7 +250,7 @@ class activity_v5_to_v6 {
 
 		self::convert_table_data($ar_tables, $action='remove_valor');
 
-		return true;
+		return $ar_tables;
 	}//end clean_component_dato
 
 

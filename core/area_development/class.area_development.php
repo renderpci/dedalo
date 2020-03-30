@@ -222,9 +222,9 @@ class area_development extends area_common {
 				$item->typo 	= 'widget';
 				$item->tipo 	= $this->tipo;
 				$item->parent 	= $this->tipo;
-				$item->label 	= 'UNIT TEST';
+				$item->label 	= 'TEST';
 				$item->info 	= null;
-				$item->body 	= '<a href="../unit_test" target="_blank">Open alpha unit test</a>';
+				$item->body 	= '<a href="../unit_test" target="_blank">Open alpha unit test</a> <hr><a href="../unit_test/test.php" target="_blank">Open clean_component_dato script</a>';
 			$ar_widgets[] = $item;
 
 
