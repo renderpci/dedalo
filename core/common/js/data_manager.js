@@ -57,7 +57,7 @@ data_manager.prototype.request = async function(options) {
 		})
 		.then(handle_errors)
 		.then(response => {
-			//console.log("-> json response 1 ok:",response.body);
+			console.log("-> json response 1 ok:",response.body);
 			const json_parsed = response.json().then((result)=>{
 				//console.log("-> json result 2:",result);
 				return result

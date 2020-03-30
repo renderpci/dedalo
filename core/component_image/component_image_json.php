@@ -39,8 +39,8 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		// Available image files
-			$value = [];
+
+
 
 		//$ar_quality = $this->get_ar_image_quality();
 		//foreach ($ar_quality as $quality) {
@@ -54,33 +54,38 @@
 		//	}
 		//}
 
-		$test_file 			= ($modo==='list') ? false : true;
-		$absolute  			= false;
-		$image_ar_quality 	= ($modo==='edit')
-			? unserialize(DEDALO_IMAGE_AR_QUALITY)
-			: [DEDALO_IMAGE_QUALITY_DEFAULT];
+		$value = $this->get_dato();
+		// get the quality url of the available image files
+			$valid_urls		= [];
+			$test_file 			= ($modo==='list') ? false : true;
+			$absolute  			= false;
+			$image_ar_quality 	= ($modo==='edit')
+				? unserialize(DEDALO_IMAGE_AR_QUALITY)
+				: [DEDALO_IMAGE_QUALITY_DEFAULT];
 
-		foreach ($image_ar_quality as $current_quality) {
+			foreach ($image_ar_quality as $current_quality) {
 
-			if($current_quality===DEDALO_IMAGE_THUMB_DEFAULT) continue;
+				if($current_quality===DEDALO_IMAGE_THUMB_DEFAULT) continue;
 
-			$default_add = $current_quality===DEDALO_IMAGE_QUALITY_DEFAULT ? true : false;
+				$default_add = $current_quality===DEDALO_IMAGE_QUALITY_DEFAULT ? true : false;
 
-			$current_url = $this->get_image_url($current_quality, $test_file, $absolute, $default_add); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+				$current_url = $this->get_image_url($current_quality, $test_file, $absolute, $default_add); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 
-			if ($current_url!==false) {
+				if ($current_url!==false) {
 
-				$image_item = new stdClass();
-					$image_item->url 	 = $current_url;
-					$image_item->quality = $current_quality;
+					$image_item = new stdClass();
+						$image_item->url 	 = $current_url;
+						$image_item->quality = $current_quality;
 
-				$value[] = $image_item;
+					$valid_urls[] = $image_item;
+				}
 			}
-		}
 
 		// data item
 		$item  = $this->get_data_item($value);
 
+		$item->datalist = $valid_urls;
+		
 		$data[] = $item;
 
 	}//end if($options->get_data===true && $permissions>0)

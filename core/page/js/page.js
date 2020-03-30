@@ -154,9 +154,9 @@ page.prototype.init = async function(options) {
 
 			document.activeElement.blur()
 
-			// 	const confirmationMessage = "Leaving tool transcription page.. ";
-			// 	event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
-			// 	// return confirmationMessage;				// Gecko, WebKit, Chrome <34
+				const confirmationMessage = "Leaving tool transcription page.. ";
+				event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
+				// return confirmationMessage;				// Gecko, WebKit, Chrome <34
 
 			return null
 

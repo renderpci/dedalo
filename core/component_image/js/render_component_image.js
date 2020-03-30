@@ -30,7 +30,7 @@ render_component_image.prototype.list = function(options) {
 
 	// Options vars
 		const context 	= self.context
-		const data 		= self.data
+		const datalist 	= self.data.datalist
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -38,9 +38,9 @@ render_component_image.prototype.list = function(options) {
 		})
 
 	// url
-		const value 			= data.value
+		// const value 			= data.value
 		const quality 			= "1.5MB"
-		const url_object 		= value.filter(item => item.quality===quality)[0]
+		const url_object 		= datalist.filter(item => item.quality===quality)[0]
 		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
 	// image
@@ -113,9 +113,9 @@ const content_data_edit = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// url
-		const value 			= self.data.value
+		const datalist 			= self.data.datalist
 		const quality 			= "1.5MB" //"original" //
-		const url_object 		= value.filter(item => item.quality===quality)[0]
+		const url_object 		= datalist.filter(item => item.quality===quality)[0]
 		const url 				= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
 	// ul
@@ -215,6 +215,17 @@ const get_buttons = (self) => {
 			ui.add_tools(self, fragment)
 		}
 
+	// open svg editor tools
+		const vector_editor = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'button tool vector_editor',
+			parent 			: fragment
+		})
+		vector_editor.addEventListener("mouseup", (e) =>{
+			self.load_vector_editor({load:'full'})
+		})
+		
+
 	// svg editor tools
 		const vector_editor_tools = ui.create_dom_element({
 			element_type	: 'div',
@@ -255,19 +266,19 @@ const get_quality_selector = (self) => {
 			event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
-		const value 	= data.value
-		const value_len = value.length
-		for (let i = 0; i < value_len; i++) {
+		const datalist 	= data.datalist
+		const datalist_len = datalist.length
+		for (let i = 0; i < datalist_len; i++) {
 			//create the node with the all qualities sended by server
 			const quality = ui.create_dom_element({
 				element_type	: 'option',
 				class_name 		: 'quality',
-				value 			: (typeof value[i].url==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : value[i].url,
+				value 			: (typeof datalist[i].url==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : datalist[i].url,
 				parent			: quality_selector,
-				text_node 		: value[i].quality
+				text_node 		: datalist[i].quality
 			})
-			//set the default value to config variable dedalo_image_quality_default
-			quality.selected = value[i].quality===page_globals.dedalo_image_quality_default ? true : false
+			//set the default datalist to config variable dedalo_image_quality_default
+			quality.selected = datalist[i].quality===page_globals.dedalo_image_quality_default ? true : false
 		}
 
 	return quality_selector

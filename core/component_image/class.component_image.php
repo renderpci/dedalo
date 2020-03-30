@@ -108,29 +108,6 @@ class component_image extends component_media_common {
 	*/
 	public function Save() {
 
-		#####################################################################################################
-		# DEFAULT DATO
-		$locator = new locator();
-			$locator->set_component_tipo($this->tipo);
-			$locator->set_section_tipo($this->section_tipo);
-			$locator->set_section_id($this->parent);
-		# END DEFAULT DATO
-		######################################################################################################
-
-		# Dato
-		$this->set_dato($locator);
-
-		# Generate default image quality from original if need
-		$overwrite 	= ($this->quality===$this->get_original_quality()) ? true : false;
-		$default 	= $this->generate_default($overwrite);
-
-		# Generate thumb image quality from default always (if default exits)
-		$thumb 	 = $this->generate_thumb();
-
-		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
-		}
-
 		return parent::Save();
 	}//end Save
 
@@ -167,22 +144,12 @@ class component_image extends component_media_common {
 	public function get_dato() {
 		$dato = parent::get_dato();
 
-		if(SHOW_DEBUG===true) {
-			#dump($dato,"dato  (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
-			/*
-			if (!isset($dato->component_tipo)) {
-				throw new Exception("Error Processing Request. Wrong dato format (locator component_tipo)", 1);
-			}
-			if (!isset($dato->section_tipo)) {
-				throw new Exception("Error Processing Request. Wrong dato format (locator section_tipo)", 1);
-			}
-			if (!isset($dato->section_id)) {
-				throw new Exception("Error Processing Request. Wrong dato format (locator section_id)", 1);
-			}
-			*/
+		if(is_object($dato)){
+			$this->dato = null;
+			$dato = $this->dato;
 		}
 
-		return (object)$dato;
+		return (array)$dato;
 	}//end get_dato
 
 
@@ -192,7 +159,7 @@ class component_image extends component_media_common {
 	*/
 	public function set_dato($dato) {
 
-		parent::set_dato( (object)$dato );
+		parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
@@ -216,11 +183,6 @@ class component_image extends component_media_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
 
 		#$valor = $this->get_valor();
 		#$valor .= '.'.DEDALO_IMAGE_EXTENSION;
@@ -1275,8 +1237,30 @@ class component_image extends component_media_common {
 						$result = custom_postprocessing_image($this);
 					}
 
-				// Save component image. Force update data and create default and thumb qualitys
-					$this->Save();
+				// Generate default image quality from original if need
+					$overwrite 	= ($this->quality===$this->get_original_quality()) ? true : false;
+					$default 	= $this->generate_default($overwrite);
+
+				// Generate thumb image quality from default always (if default exits)
+					$thumb 	 = $this->generate_thumb();
+
+					if(SHOW_DEBUG===true) {
+						debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
+					}
+
+				// add data with the file uploaded, only for original and retouched images, other quality images don't has relevant info.
+					if($this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED){
+						$file_name		= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_file_name' 	: 'retouched_file_name';
+						$upload_date 	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_upload_date' 	: 'retouched_upload_date';
+						$dato  = $this->get_dato();
+						$value = empty($dato) ? new stdClass() : reset($dato);
+						dump($value);
+							$value->$file_name 		= $original_file_name;
+							$value->$upload_date	= component_date::get_date_now();
+						$this->set_dato([$value]);
+						$this->Save();
+					}
+				
 
 				// all is ok
 					$response->result 	= true;
