@@ -123,7 +123,7 @@ class activity_v5_to_v6 {
 	* CONVERT_TABLE_DATA
 	* @return bool true
 	*/
-	public static function convert_table_data($ar_tables=null) {
+	public static function convert_table_data($ar_tables=null, $action='convert_section_dato_to_data') {
 
 		if ($ar_tables===null) {
 			// default
@@ -176,7 +176,8 @@ class activity_v5_to_v6 {
 						#dump($datos, ' datos ++ '.to_string($id));
 
 					if (!empty($datos)) {
-						$section_data 			= self::convert_section_dato_to_data( $datos );
+						// $section_data 		= self::convert_section_dato_to_data( $datos );
+						$section_data 			= self::$action( $datos ); // default is 'convert_section_dato_to_data'
 						$section_data_encoded 	= json_encode($section_data);
 
 						$strQuery 	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
@@ -217,6 +218,73 @@ class activity_v5_to_v6 {
 
 		return true;
 	}//end convert_table_data_activity
+
+
+
+	/**
+	* CLEAN_COMPONENT_DATO
+	* @return
+	*/
+	public static function clean_component_dato() {
+
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			'matrix_activities',
+			'matrix_dataframe',
+			'matrix_dd',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_indexations',
+			'matrix_langs',
+			'matrix_layout',
+			'matrix_layout_dd',
+			'matrix_list',
+			'matrix_notes',
+			'matrix_profiles',
+			'matrix_projects',
+			'matrix_structurations',
+			'matrix_tools',
+			'matrix_users'
+		];
+
+		self::convert_table_data($ar_tables, $action='remove_valor');
+
+		return true;
+	}//end clean_component_dato
+
+
+
+	/**
+	* REMOVE_VALOR
+	* @return object $dato
+	*/
+	public static function remove_valor( stdClass $datos_column ) {
+
+		$dato = clone $datos_column;
+
+		if (!empty($dato->components)) {
+
+			foreach ($dato->components as $tipo => $component_data) {
+
+				$new_component_data = new stdClass();
+				foreach ($component_data as $key => $value) {
+					if ($key==='dato' || $key==='info' || ($key==='dataframe' && !empty($value)) ) {
+
+						if ($key==='info') {
+							$new_component_data->inf = $value->label . ' [' . $value->modelo .']';
+						}else{
+							$new_component_data->{$key} = $value;
+						}
+					}
+				}
+				$dato->components->{$tipo} = $new_component_data;
+			}
+		}
+
+
+		return $dato;
+	}//end remove_valor
 
 
 
