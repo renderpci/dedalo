@@ -400,7 +400,7 @@ component_text_area.prototype.update_tag = function(options) {
 
 
 /**
-* BUILD_DEDALO_TAG
+* BUILD_DATA_TAG
 * Unified way of create dedalo custom tags from javascript
 * @return string tag
 */
@@ -439,7 +439,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 	}
 	console.log("dedalo_tag:",dedalo_tag);
 	return dedalo_tag
-}//end build_dedalo_tag
+}//end build_data_tag
 
 
 

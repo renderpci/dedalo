@@ -561,7 +561,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				zoom.addEventListener("dblclick", (e) =>{
 						// const ratio = view.height / main.height
 						self.current_paper.view.setScaling(1)
-						main.setPosition(view.center)
+						// main.setPosition(view.center)
 						// main.fitBounds(view.bounds);
 						// main.setScaling(1)
 						// main.setPosition(view.center)
@@ -577,11 +577,11 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					// // get the ratio diference from original view ratio and curren view ratio
 					// const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
 					// // get the delta center from current position to original center position
-					// const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-					// const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+					const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+					const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
 
 					// self.current_paper.view.scale(ratio)
-					// self.current_paper.view.translate(center_x, center_y)
+					self.current_paper.view.translate(center_x, center_y)
 
 				})
 
@@ -602,7 +602,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				})
 				move.addEventListener("dblclick", (e) =>{
 					//set the center of the view
-					main.setPosition(view.center)
+					// main.setPosition(view.center)
 
 
 					// const center_y = self.current_paper.view.size._height /2
@@ -610,10 +610,10 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					// self.current_paper.project.view.setCenter(center_x,center_y)
 
 					// get the delta center from current position to original center position
-					// const delta_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-					// const delta_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
+					const delta_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
+					const delta_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
 
-					// self.current_paper.view.translate(delta_x, delta_y)
+					self.current_paper.view.translate(delta_x, delta_y)
 				})
 				buttons.push(move)
 
@@ -624,8 +624,16 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					parent 			: buttons_container
 				})
 				save.addEventListener("mouseup", (e) =>{
-					// save all data layers into the tag
-					self.save_draw_data()
+					// save all data layers
+					self.change_value({
+						changed_data : self.data.changed_data,
+						refresh 	 : false
+					})
+					.then((save_response)=>{
+						// event to update the dom elements of the instance
+						event_manager.publish('update_value_'+self.id, self.data.changed_data)
+					})
+
 					activate_status(save)
 				})
 				buttons.push(save)
@@ -680,7 +688,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				const color_selected = (color, changes) =>{
 					this.active_layer.fillColor = color.hex8String;
 					this.button_color_picker.style.backgroundColor = color.hexString
-					self.update_draw_data()			
+					self.update_draw_data()
 				}
 
 				// listen to a color picker's color:change event
@@ -721,74 +729,78 @@ vector_editor.prototype.set_color_picker = function(){
 * get the layers loaded and show into window
 * @return 
 */		
-vector_editor.prototype.load_layer = function(self, data, layer_id) {
+vector_editor.prototype.load_layer = function(self, layer) {
 
 	// curent paper vars
 	const project 	= self.current_paper.project
 	const Layer   	= self.current_paper.Layer
 	const Color   	= self.current_paper.Color
 	const main 		= self.main_layer
-		console.log("main.layers:",main.children);
 
+	const layer_id		= layer.layer_id
+	const layer_data	= layer.layer_data
+	const layer_name	= 'layer_' +layer_id
+
+	
 	//layer import
-		if ( data.indexOf('Layer')!=-1 ) {
-			
-			const p_len = main.children.length
-			for (let i = p_len - 1; i >= 0; i--) {
-				if (main.children[i].name===layer_id){
+		if ( layer_data.indexOf('Layer')!=-1 ) {
+			const main_len = main.children.length
+			for (let i = main_len - 1; i >= 0; i--) {
+				if (main.children[i].name===layer_name){
 					main.children[i].remove();
-						console.log("-> borrada capa: ", layer_id);
+						console.log("-> layer delete: ", layer_name);
 				}
 			}
 
-			const current_layer = project.importJSON(data);
+			const current_layer = project.importJSON(layer_data)
 
-			const color = current_layer.fillColor;
-			// current_layer.position = main.position
-			current_layer.applyMatrix = false
+			current_layer.fillColor = layer.layer_color;
 			main.addChild(current_layer)
 			current_layer.activate();
 			
 		}else{
 			let create_new_current_layer = true
 			// Verificamos si el nombre del layer existe
-			const c_len = main.children.length
-			for (let i = c_len - 1; i >= 0; i--) {					
-				if (main.children[i].name == layer_id){
+			const main_len = main.children.length
+			for (let i = main_len - 1; i >= 0; i--) {					
+				if (main.children[i].name === layer_name){
 					const current_layer 	= main.children[i];
-					// current_layer.position 	= main.position
 					main.addChild(current_layer)
 					current_layer.activate();
 					create_new_current_layer = false;
-					current_layer.applyMatrix = false
-					console.log("-> usando existente current_layer: ", current_layer.name);
+					console.log("-> using existing current_layer: ", current_layer.name);
 					break;
 				}
 			}//end for
-			if (create_new_current_layer == true) {
-				const current_layer 	= new Layer();
-					current_layer.name 	= layer_id;					
+			if (create_new_current_layer === true) {
+				const current_layer 	= new Layer()
+					current_layer.name 	= layer_name
+					// set the id of Dédalo data
+					current_layer.data.layer_id 		= layer_id
+					// set the user layer name to default layer_name (layer_2)
+					current_layer.data.user_layer_name 	= layer_name
 				const color = new Color({
 					hue: 360 * Math.random(),
 					saturation: 1,
 					brightness: 1,
 					alpha: 0.3,
 				});
-				current_layer.fillColor = color;
-				current_layer.applyMatrix = false
-				// current_layer.position 	= main.position
+					current_layer.fillColor = color
 				main.addChild(current_layer)
 				current_layer.activate();
-				console.log("-> creada nueva capa: " , current_layer.name);	
+				console.log("-> create new layer: " , current_layer);	
 			}
 
 		};// end else
 
 		this.active_layer = project.activeLayer
-		this.set_color_picker()
+
 		project.view.draw();
 		project.deselectAll();
 		project.options.handleSize = 8;
+		this.set_color_picker()
 	
 	return true
 }//end load_layer
+
+

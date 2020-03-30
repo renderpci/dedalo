@@ -257,11 +257,23 @@ export const service_tinymce = function() {
 	}//end onsetup_editor
 
 
+
 	this.set_content = function(html){
 
 		const self = this
 
-		self.editor.selection.setContent( html );
+		self.editor.selection.setContent( html );		
+		self.editor.setDirty(true);
+		
+		// save. service save function calls current component save_value()
+			// const actual_value 	= self.caller.data.value[0]	
+			// const actual_value 	= self.editor.getContent({format:'raw'})	
+			// self.save(actual_value)
+
+		const value = self.editor.getContent({format:'raw'})
+		self.caller.save_value(self.key, value)
+
+		return true
 	}
 
 

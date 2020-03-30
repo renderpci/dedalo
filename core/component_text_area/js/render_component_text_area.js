@@ -706,11 +706,22 @@ const get_custom_events = (self, i, get_service) => {
 					const editor_content_data = service.get_editor_content_data()
 
 				for (let i = 0; i < result_length; i++) {
-					const data 		= result[i]
-					const tag_id 	= (!data.tag_id) ? self.get_last_tag_id(editor_content_data, data.type) + 1 : data.tag_id;
-					const tag 		= build_node_tag(data.type, tag_id, data.state, data.label, data.data)//('tc', data, state, data, data)
+					const data_tag 	= result[i]
+					const tag_id 	= (!data_tag.tag_id) 
+						? self.get_last_tag_id(editor_content_data, data_tag.type) + 1 
+						: data_tag.tag_id;
 
-					service.set_content(tag.outerHTML)
+						switch(data_tag.type) {
+							case ('draw'):
+								const layer_node = render_layer_selector(self, data_tag, tag_id, service)
+							break;
+
+							default:
+								const tag 	= build_node_tag(data_tag, tag_id)//('tc', data, state, data, data)
+								service.set_content(tag.outerHTML)
+						}// end switch
+
+					
 				}
 				break;
 		}
@@ -726,7 +737,12 @@ const get_custom_events = (self, i, get_service) => {
 * BUILD_DOM_ELEMENT_FROM_DATA
 * @return
 */
-const build_node_tag = function(type, tag_id, state, label, data) {
+const build_node_tag = function(data_tag, tag_id) {
+
+	const type 		= data_tag.type
+	const state 	= data_tag.state
+	const label		= data_tag.label
+	const data		= data_tag.data
 
 	const images_factory_url = "../component_text_area/tag.php"
 
@@ -768,6 +784,115 @@ const build_node_tag = function(type, tag_id, state, label, data) {
 
 	return element
 }//end build_dom_element_from_data
+
+
+
+/**
+*  LAYER_SELECTOR
+* @return 
+*/
+const render_layer_selector = function(self, data_tag, tag_id, service){
+
+	const ar_layers = data_tag.layers
+	
+	const fragment = new DocumentFragment()
+
+	const add_layer = ui.create_dom_element({
+		element_type	: 'div',
+		class_name 		: 'button add',
+		parent 			: fragment,
+	})
+	add_layer.addEventListener("click", (e) =>{
+		e.preventDefault()
+
+		data_tag.data = "["+data_tag.last_layer_id+"]"
+		const tag 	= build_node_tag(data_tag, tag_id)
+		service.set_content(tag.outerHTML)
+		layer_selector.remove()
+	})
+
+	const close = ui.create_dom_element({
+		element_type	: 'div',
+		class_name 		: 'button close',
+		parent 			: fragment,
+	})
+	close.addEventListener("click", (e) =>{
+		e.preventDefault()
+		layer_selector.remove()
+	})
+
+	// inputs container
+		const layer_ul = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'layer_ul',
+			parent 			: fragment
+		})
+
+		for (let i = 0; i < ar_layers.length; i++) {
+			const layer = ar_layers[i]
+
+			const layer_li = ui.create_dom_element({
+				element_type	: 'li',
+				class_name 		: 'li',
+				parent 			: layer_ul
+			})
+			layer_li.addEventListener("click", (e) =>{
+				e.preventDefault()
+
+				data_tag.data = "["+layer.layer_id+"]"
+				const tag 	= build_node_tag(data_tag, tag_id)
+				service.set_content(tag.outerHTML)
+				layer_selector.remove()
+			})
+
+				const layer_icon = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_icon',
+					parent 			: layer_li,
+					text_node		: layer.layer_icon
+				})
+
+				const layer_id = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_id',
+					parent 			: layer_li,
+					text_node		: layer.layer_id
+				})
+
+				const user_layer_name = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'user_layer_name',
+					parent 			: layer_li,
+					text_node		: layer.user_layer_name
+				})
+
+				const layer_color_box = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_color_box',
+					parent 			: layer_li,
+				})
+				const layer_color = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_color',
+					parent 			: layer_color_box,
+				})
+				layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined' 
+					? layer.layer_color 
+					: 'black'
+		}// end for
+
+	const layer_selector = ui.create_dom_element({
+		element_type	: 'div',
+		class_name 		: 'layer_selector',
+	})
+	layer_selector.appendChild(fragment)
+
+	self.node[0].appendChild(layer_selector)
+
+	return fragment
+};//end layer_selector
+
+
 
 
 /**

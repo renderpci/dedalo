@@ -992,6 +992,75 @@
 
 			// component_text_area
 			&.component_text_area {
+				.layer_selector{
+					width: 10em;
+					background-color: #ffa03f;
+					position: absolute;
+					right: 0;
+					top: 0;
+					padding: 0;
+					text-align: right;
+
+					>.button {
+						margin: 0.5em;
+						float: none;
+						display: inline-block;
+						&.add {
+							float: left;
+						}
+					}
+
+					>ul.layer_ul {
+						text-align: left;
+						clear: both;
+					
+
+						// border: 0.5px solid #777;
+						
+						>li{
+							display: grid;
+							grid-template-columns: 1em 1em auto 2em;
+							align-items: center;
+							border-bottom: 1px solid #777;
+							border-left: 1px solid #777;
+							border-right: 1px solid #777;							
+							cursor: pointer;
+							background-color: #ffffff;
+
+							&:hover {
+								background-color: #ffa03f;
+								color: #ffffff;
+							}
+							&:active {
+								background-color: #ffffff;
+								color: initial;
+							}
+
+							.layer_icon {
+
+							}
+							.layer_id {
+								 
+							}
+							.user_layer_name {
+								 
+							}
+							.layer_color_box {
+								background-color: #ffffff;
+								.layer_color {
+									width: 100%;
+									height: 30px;							
+								}
+							}							
+						}
+						>li:first-child {
+							border-top: 0.5px solid #777;
+						}
+						
+					}
+				}
+				
+
 				>.content_data {
 					// min-height: @media_max_height;
 					// background-color: #BEF0FA;
@@ -1129,6 +1198,11 @@
 				}
 
 				// Vector editor
+					.vector_editor {
+						&:before {
+							.build_button('vector_editor.svg', black, 1);
+						}
+					}
 					.pointer {
 						&:before {
 							.build_button('pointer.svg', black, 1);
