@@ -300,41 +300,33 @@ const get_buttons = (self) => {
 
 /**
 * GET_TOP
+* Used to add special elements to the component,like custom buttons or info
 * @param object instance
-* @return DOM node buttons_container
+* @return DOM node top
 */
 const get_top = function(self) {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
-
-	if (mode!=='edit') {
+	if (self.mode!=='edit') {
 		return null;
 	}
 
-	const show 						 = self.sqo_context.show
-	const target_section_tipo 		 = show.filter(item => item.model==='section')
-	const target_section_tipo_lenght = target_section_tipo.length
-	// sort section by label asc
-	target_section_tipo.sort((a, b) => (a.label > b.label) ? 1 : -1)
+	// sort vars
+		const is_inside_tool			= self.is_inside_tool
+		const mode						= self.mode
+		const current_data_manager		 = new data_manager()
+		const show						 = self.sqo_context.show
+		const target_section_tipo		 = show.filter(item => item.model==='section')
+		const target_section_tipo_lenght = target_section_tipo.length
+		// sort section by label asc
+		target_section_tipo.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
 	const fragment = new DocumentFragment()
-
-	// top container
-		const top = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'top',
-			parent 			: fragment
-		})
-		top.addEventListener("click", function(e){
-			e.stopPropagation()
-		})
 
 	// select_section
 		const select_section = ui.create_dom_element({
 			element_type	: 'select',
 			class_name 		: 'select_section' + (target_section_tipo_lenght===1 ? ' mono' : ''),
-			parent 			: top
+			parent 			: fragment
 		})
 
 		// options
@@ -352,10 +344,9 @@ const get_top = function(self) {
 		const button_add = ui.create_dom_element({
 			element_type	: 'span',
 			class_name 		: 'button add',
-			parent 			: top
+			parent 			: fragment
 		})
 		button_add.addEventListener("click", async function(e){
-			e.stopPropagation()
 
 			// data_manager. create new record
 				const api_response = await data_manager.prototype.request({
@@ -376,61 +367,56 @@ const get_top = function(self) {
 				}
 		})
 
-
 	// button_find
 		const button_find = ui.create_dom_element({
 			element_type	: 'span',
 			class_name 		: 'button find',
-			parent 			: top
+			parent 			: fragment
 		})
 		button_find.addEventListener("click", async function(e){
-			e.stopPropagation()
 
 			const section_tipo  = select_section.value
 			const section_label = select_section.options[select_section.selectedIndex].innerHTML;
 
+			// des
+				// const source = {
+				// 	typo 		 : 'source',
+				// 	tipo 		 : section_tipo,
+				// 	section_tipo : section_tipo,
+				// 	section_id 	 : null,
+				// 	model 		 : 'section',
+				// 	lang 		 : page_globals.dedalo_data_lang,
+				// 	pagination 	 : {
+				// 		total  : 0,
+				// 		offset : 0,
+				// 		limit  : 10
+				// 	}
+				// }
+				// const element_context_call 	= await current_data_manager.get_element_context(source)
+				// const element_context 		= element_context_call.result
+				// 	console.log("!-- get_element_context:", element_context_call);
 
-			const current_data_manager 	= new data_manager()
+				// // section instance (regular section)
+				// 	const section_instance = await get_instance({
+				// 		model 			: "section",
+				// 		tipo 			: source.section_tipo,
+				// 		section_tipo 	: source.section_tipo,
+				// 		section_id 		: null,
+				// 		mode 			: "list",
+				// 		lang 			: source.lang,
+				// 		section_lang 	: source.lang,
+				// 		type 			: "section",
+				// 		// sqo_context 	: {
+				// 		// 	show : show
+				// 		// }
+				// 		context 		: element_context
+				// 	})
+				// 	await section_instance.build(true)
+				// 		console.log("section_instance:",section_instance);
 
-			// const source = {
-			// 	typo 		 : 'source',
-			// 	tipo 		 : section_tipo,
-			// 	section_tipo : section_tipo,
-			// 	section_id 	 : null,
-			// 	model 		 : 'section',
-			// 	lang 		 : page_globals.dedalo_data_lang,
-			// 	pagination 	 : {
-			// 		total  : 0,
-			// 		offset : 0,
-			// 		limit  : 10
-			// 	}
-			// }
-			// const element_context_call 	= await current_data_manager.get_element_context(source)
-			// const element_context 		= element_context_call.result
-			// 	console.log("!-- get_element_context:", element_context_call);
-
-			// // section instance (regular section)
-			// 	const section_instance = await get_instance({
-			// 		model 			: "section",
-			// 		tipo 			: source.section_tipo,
-			// 		section_tipo 	: source.section_tipo,
-			// 		section_id 		: null,
-			// 		mode 			: "list",
-			// 		lang 			: source.lang,
-			// 		section_lang 	: source.lang,
-			// 		type 			: "section",
-			// 		// sqo_context 	: {
-			// 		// 	show : show
-			// 		// }
-			// 		context 		: element_context
-			// 	})
-			// 	await section_instance.build(true)
-			// 		console.log("section_instance:",section_instance);
-
-
-			// section. create target section page element and instance
+			// find_section options. To create a complete set of options (including sqo), call API requesting a page_element
 				if (!self.find_section_options) {
-					const options 		= {
+					const options = {
 						model 			: 'section',
 						type 			: 'section',
 						tipo  			: section_tipo,
@@ -441,29 +427,43 @@ const get_top = function(self) {
 					}
 					const page_element_call = await current_data_manager.get_page_element(options)
 					const page_element 		= page_element_call.result
-						  // page_element.id_variant = 'ID_VARIANT_PORTAL'
 
-					self.find_section_options = page_element
+					// id_variant avoid instances id collisions
+						page_element.id_variant = 'ID_VARIANT_PORTAL'
 
-					// console.log("!-- get_page_element:", page_element_call);
+					// fix options to re-use
+						self.find_section_options = page_element
 				}
-				// console.log("++++++++++++++++++++++ page_element:",page_element);
 
-
+			// find_section instance. Create target section page element and instance
 				const find_section = await get_instance(self.find_section_options)
-				await find_section.build(true)
-				const find_section_wrapper = await find_section.render()
+
+				// set self as find_section caller (!)
+					find_section.caller = self
+
+				// load data and render wrapper
+					await find_section.build(true)
+					const find_section_wrapper = await find_section.render()
 
 			// modal container
 				const header = ui.create_dom_element({
 					element_type	: 'div',
 					text_content 	: section_label
 				})
-				const modal_container = ui.attach_to_modal(find_section, find_section_wrapper, header, 'big')
+				// fix modal to allow close later, on set value
+					self.modal = ui.attach_to_modal(find_section, find_section_wrapper, header, 'big')
 		})
 
 
-
+	// top container
+		const top = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'top'
+		})
+		top.addEventListener("click", function(e){
+			e.stopPropagation()
+		})
+		top.appendChild(fragment)
 
 
 	return top

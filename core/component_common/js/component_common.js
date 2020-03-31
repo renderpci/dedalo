@@ -297,7 +297,7 @@ component_common.prototype.save = async function(changed_data) {
 
 			}catch(error) {
 
-			  	console.log("+++++++ COMPONENT SAVE ERROR:", error);
+			  	console.error("+++++++ COMPONENT SAVE ERROR:", error);
 			  	return {
 			  		result 	: false,
 			  		msg 	: error.message,
@@ -495,7 +495,7 @@ component_common.prototype.change_value = async function(options) {
 				resolve( function_queue(self, self.change_value_pool, self.change_value, options) );
 			})
 		}
-	console.log("options:",options);
+
 	const changed_data 	= options.changed_data
 	const action 		= changed_data.action
 	const label 		= options.label
