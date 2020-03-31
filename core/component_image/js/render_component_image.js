@@ -213,14 +213,16 @@ const get_buttons = (self) => {
 			parent 			: fragment
 		})
 		vector_editor.addEventListener("mouseup", (e) =>{
-			self.load_vector_editor({load:'full'})
+			vector_editor_tools.classList.toggle('hide')
+			if(!vector_editor_tools.classList.contains('hide')){
+				self.load_vector_editor({load:'full'})
+			}
 		})
 		
-
 	// svg editor tools
 		const vector_editor_tools = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'vector_editor_tools',
+			class_name 		: 'vector_editor_tools hide',
 			parent 			: fragment
 		})
 		self.vector_editor_tools = vector_editor_tools
