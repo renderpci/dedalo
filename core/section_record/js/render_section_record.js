@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -315,6 +316,54 @@ const build_id_column = function(self) {
 						section_id 	 : self.section_id
 					})
 				})
+				// button edit (pen)
+				if (permissions>0) {
+					const edit_button = ui.create_dom_element({
+						element_type	: 'a',
+						parent 			: edit_line
+					})
+					edit_button.addEventListener("click", async function(e){
+
+						const options = {
+							model 			: 'section',
+							type 			: 'section',
+							tipo  			: self.section_tipo,
+							section_tipo  	: self.section_tipo,
+							section_id 		: self.section_id,
+							mode 			: 'edit',
+							lang 			: page_globals.dedalo_data_lang
+						}
+						const current_data_manager	= new data_manager()
+						const page_element_call 	= await current_data_manager.get_page_element(options)
+						const page_element 			= page_element_call.result
+							console.log("page_element options:",options);
+							console.log("page_element:",page_element);
+							console.log("self.caller:",self.caller);
+
+						// detail_section instance. Create target section page element and instance
+							const detail_section = await get_instance(page_element)
+
+							// set self as detail_section caller (!)
+								detail_section.caller = initiator
+
+							// load data and render wrapper
+								await detail_section.build(true)
+								const detail_section_wrapper = await detail_section.render()
+
+						// modal container (header, body, footer, size)
+							const modal = ui.attach_to_modal(null, detail_section_wrapper, null, 'big')
+							modal.on_close = () => {
+								detail_section.destroy(true, true, true)
+							}
+
+						// set self as find_section caller (!)
+							// current_section.caller = self
+
+						// load data and render wrapper
+							// await current_section.build(true)
+							// const current_section_wrapper = await current_section.render()
+					})
+				}
 				break
 
 			default:
