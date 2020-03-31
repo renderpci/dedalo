@@ -5,6 +5,7 @@ class DDModal extends HTMLElement {
 		this._modal;
 		// this.caller_instance;
 		this.on_close;
+		this.publish_close;
 		this.attachShadow({ mode: 'open' });
 		this.shadowRoot.innerHTML = `
 		<style>
@@ -147,7 +148,12 @@ class DDModal extends HTMLElement {
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
 
-		// exec optional on-close callback
+		// exec publish_close callback (normally defined in ui)
+			if (typeof this.publish_close==="function") {
+				this.publish_close(this)
+			}
+
+		// exec optional on-close callback (normally defined in component caller)
 			if (typeof this.on_close==="function") {
 				this.on_close(this)
 			}
@@ -174,7 +180,7 @@ class DDModal extends HTMLElement {
 			if (footer) {
 				footer.remove()
 			}
-		
+
 
 		return true
 	}

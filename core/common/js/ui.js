@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import '../../common/js/dd-modal.js'
 
 
 
@@ -1244,11 +1245,20 @@ export const ui = {
 	attach_to_modal : (header, body, footer, size="normal") => {
 
 		// modal container select from DOM (created hidden when page is builded)
-			const modal_container = document.querySelector('dd-modal')
-				
+			// const modal_container = document.querySelector('dd-modal')
+		// modal container buil new DOM on each call and remove on close
+			// const previous_modal  	= document.querySelector('dd-modal')
+			// if (previous_modal) {
+			// 	previous_modal.remove()
+			// }
+			const modal_container 	= document.createElement('dd-modal')
+			const wrapper_page  	= document.querySelector('.wrapper_page')
+			wrapper_page.appendChild(modal_container)
+
 		// publish close event
-			modal_container.on_close = function(e) {
+			modal_container.publish_close = function(e) {
 				event_manager.publish('modal_close', e)
+				modal_container.remove()
 			}
 
 		// header . Add node header to modal header and insert it into slot
@@ -1286,6 +1296,7 @@ export const ui = {
 							menu_wrapper.classList.remove("display_none")
 							if(debug_div) debug_div.classList.remove("display_none")
 						})
+
 					modal_container._showModalBig();
 					break;
 				default :
@@ -1452,7 +1463,7 @@ export const ui = {
 						parent 			: body,
 						text_node 		: msg
 					})
-		
+
 		// footer
 			const footer = ui.create_dom_element({
 					element_type	: 'div',
@@ -1473,7 +1484,7 @@ export const ui = {
 						event_manager.publish('user_option_'+element_id, option.id)
 					})
 			}
-		
+
 		ui.attach_to_modal(header, body, footer)
 
 		return footer
