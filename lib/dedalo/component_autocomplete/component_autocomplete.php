@@ -119,6 +119,7 @@
 					$query_object_options->section_tipo 	= $section_tipo;
 					$query_object_options->tipo 			= $tipo;
 				$search_query_object 		= component_autocomplete::build_search_query_object($query_object_options);
+					#dump($search_query_object, ' search_query_object ++ '.to_string());
 					# skip_projects_filter true on edit mode
 					$search_query_object->skip_projects_filter 	= true;
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS );
