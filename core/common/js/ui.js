@@ -812,7 +812,7 @@ export const ui = {
 
 	/**
 	* CREATE_DOM_ELEMENT
-	* Builds a DOM node baased on received options
+	* Builds a DOM node based on received options
 	*/
 	create_dom_element : function(element_options){
 
@@ -1241,16 +1241,15 @@ export const ui = {
 	* Insert wrapper into a modal box
 	* @return DOM element modal_container
 	*/
-	attach_to_modal : (instance, wrapper, header, size="normal") => {
+	attach_to_modal : (header, body, footer, size="normal") => {
 
 		// modal container select from DOM (created hidden when page is builded)
 			const modal_container = document.querySelector('dd-modal')
-				  // fix caller. Set current tool instance as modal caller_instance
-				  modal_container.caller_instance = instance
-				  // publish close event
-				  modal_container.on_close = function(e) {
-				  		event_manager.publish('modal_close', e)
-				  }
+				
+		// publish close event
+			modal_container.on_close = function(e) {
+				event_manager.publish('modal_close', e)
+			}
 
 		// header . Add node header to modal header and insert it into slot
 			if (header) {
@@ -1259,11 +1258,16 @@ export const ui = {
 			}
 
 		// body . Add  wrapper to modal body and insert it into slot
-			wrapper.slot = 'body'
-			modal_container.appendChild(wrapper)
+			if (body) {
+				body.slot = 'body'
+				modal_container.appendChild(body)
+			}
 
-		// show modal
-			modal_container._showModalBig();
+		// footer . Add node footer to modal footer and insert it into slot
+			if (footer) {
+				footer.slot = 'footer'
+				modal_container.appendChild(footer)
+			}
 
 		// modal special features based on property 'size'
 			switch(size) {
@@ -1282,8 +1286,10 @@ export const ui = {
 							menu_wrapper.classList.remove("display_none")
 							if(debug_div) debug_div.classList.remove("display_none")
 						})
+					modal_container._showModalBig();
 					break;
 				default :
+					modal_container._showModal();
 					break;
 			}
 
@@ -1377,7 +1383,101 @@ export const ui = {
 
 				return txt;
 			}
-	}//end do_search
+	},//end do_search
+
+	/**
+	* CREATE_DIALOG
+	* format:
+	* dialog_options =
+	*	{
+	*		title			: 'Delete...',
+	*		msg				: 'Are you sure?',
+	*		header_class	: 'light',
+	*		body_class 		: 'light',
+	*		footer_class 	: 'light',
+	*		user_options	:[{
+	*			id 			: 1,
+	*			label 		: 'Yes',
+	*			class_name 	: 'success'
+	*		},{
+	*			id 			: 2,
+	*			label 		: 'No',
+	*			class_name 	: 'warning'
+	*		},{
+	*			id 			:3,
+	*			label 		: 'Cancel',
+	*			class_name 	: 'light'
+	*		}]
+	*	}
+	*/
+	create_dialog : (options) =>{
+
+		//event for dispach the user_option
+		const user_option_event = new Event('user_option');
+
+		const element_id	= options.element_id
+		const title 		= options.title || ''
+		const msg 			= options.msg || ''
+		const header_class 	= options.header_class || 'light'
+		const body_class 	= options.body_class || 'light'
+		const footer_class 	= options.footer_class || 'light'
+		const user_options	= options.user_options || [{
+								id 			: 1,
+								label 		: get_label.ok,
+								class_name 	: 'light'
+							}]
+
+		// header
+			const header = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: header_class,
+				})
+			//title
+				const title_dialog = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'title',
+						parent 			: header,
+						text_node 		: title
+					})
+
+		// body
+			const body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: body_class,
+				})
+			//msg
+				const msg_dialog = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'msg',
+						parent 			: body,
+						text_node 		: msg
+					})
+		
+		// footer
+			const footer = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: footer_class,
+				})
+			const user_options_len = user_options.length
+			for (let i = 0; i < user_options_len; i++) {
+				const option = user_options[i]
+				//user_option
+					const user_option = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'user_option ' + option.class_name,
+						parent 			: footer,
+						text_node 		: option.label,
+						dataset 		: {id : option.id}
+					})
+					user_option.addEventListener("mouseup", function(e) {
+						event_manager.publish('user_option_'+element_id, option.id)
+					})
+			}
+		
+		ui.attach_to_modal(header, body, footer)
+
+		return footer
+	}//end create_dialog
 
 
 
