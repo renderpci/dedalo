@@ -49,25 +49,63 @@ export const component_autocomplete = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_autocomplete.prototype.init 	 			= component_common.prototype.init
-	component_autocomplete.prototype.destroy 			= common.prototype.destroy
+	// lifecycle
+	// component_autocomplete.prototype.init 			= component_common.prototype.init
+	// component_autocomplete.prototype.build 			= component_common.prototype.build
+	component_autocomplete.prototype.render				= common.prototype.render
+	component_autocomplete.prototype.refresh			= common.prototype.refresh
+	component_autocomplete.prototype.destroy			= common.prototype.destroy
+
+	// change data
 	component_autocomplete.prototype.save 	 			= component_common.prototype.save
-	component_autocomplete.prototype.refresh 			= common.prototype.refresh
-	component_autocomplete.prototype.load_data 			= component_common.prototype.load_data
-	component_autocomplete.prototype.load_datum 		= component_common.prototype.load_datum
-	component_autocomplete.prototype.get_value 			= component_common.prototype.get_value
-	component_autocomplete.prototype.set_value 			= component_common.prototype.set_value
+	// component_autocomplete.prototype.load_data 		= component_common.prototype.load_data
+	// component_autocomplete.prototype.load_datum 		= component_common.prototype.load_datum
+	// component_autocomplete.prototype.get_value 		= component_common.prototype.get_value
+	// component_autocomplete.prototype.set_value 		= component_common.prototype.set_value
 	component_autocomplete.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_autocomplete.prototype.update_datum		= component_common.prototype.update_datum
-	component_autocomplete.prototype.change_value 		= component_common.prototype.change_value
+	component_autocomplete.prototype.change_value		= component_common.prototype.change_value
+	component_autocomplete.prototype.get_ar_instances	= component_common.prototype.get_ar_instances
 
 	// render
-	component_autocomplete.prototype.render 			= common.prototype.render
-	component_autocomplete.prototype.list 				= render_component_autocomplete.prototype.list
-	component_autocomplete.prototype.edit 				= render_component_autocomplete.prototype.edit
+	component_autocomplete.prototype.list				= render_component_autocomplete.prototype.list
+	component_autocomplete.prototype.edit				= render_component_autocomplete.prototype.edit
 	component_autocomplete.prototype.edit_in_list		= render_component_autocomplete.prototype.edit
-	component_autocomplete.prototype.change_mode 		= component_common.prototype.change_mode
-	component_autocomplete.prototype.get_ar_instances 	= component_common.prototype.get_ar_instances
+	component_autocomplete.prototype.change_mode		= component_common.prototype.change_mode
+
+
+
+/**
+* INIT
+*/
+component_autocomplete.prototype.init = async function(options) {
+
+	const self = this
+
+	// call the generic commom tool init
+		const common_init = component_common.prototype.init.call(this, options);
+
+	// events subscribe
+		self.events_tokens.push(
+			// user click over list record
+			event_manager.subscribe('component_autocomplete_link_' + self.id, async (locator)=>{
+					console.log("--------------------------------------------------------------------------- locator:",locator);
+				// add locator selected
+					const result = await self.add_value(locator)
+					if (result===false) {
+						alert("Value already exists!");
+						return
+					}
+				// modal close
+					if (self.modal) {
+						self.modal.close()
+					}
+			})
+		)
+
+
+	return common_init
+}//end init
 
 
 
@@ -168,6 +206,14 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 component_autocomplete.prototype.add_value = async function(value) {
 
 	const self = this
+
+	// check if value lready exists
+		const current_value = self.data.value
+		const exists 		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id===value.section_id)
+		if (typeof exists!=="undefined") {
+			console.log("[add_value] Value already exists !");
+			return false
+		}
 
 	// update pagination total
 	//self.pagination.total = self.data.value ? self.data.value.length : 0
