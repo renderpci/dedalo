@@ -997,15 +997,19 @@ vector_editor.prototype.render_layer_selector = function(self){
 					parent 			: layer_li,
 					text_node		: layer.layer_delete
 				})
-				layer_delete.addEventListener("click", (e) =>{
+				layer_delete.addEventListener("click", function(e){
+
 					const dialog = ui.create_dialog({
-						title 		: 'Borrar...',
-						body		: '¿seguro que desea borrar?'
-						class_name 	: 'light,',
-						options		:[{
+						element_id 		: self.id,
+						title			: 'Borrar...',
+						msg				: '¿seguro que desea borrar?',
+						header_class	: 'light',
+						body_class 		: 'light',
+						footer_class 	: 'light',
+						user_options	:[{
 							id 			: 1,
 							label 		: 'si',
-							class_name 	: 'suscess'
+							class_name 	: 'success'
 						},{
 							id 			: 2,
 							label 		: 'no',
@@ -1016,9 +1020,22 @@ vector_editor.prototype.render_layer_selector = function(self){
 							class_name 	: 'light'
 						}]
 					})
-					dialog.addEventListener("user_option", (e) =>{
+					
+					self.events_tokens.push(
+						event_manager.subscribe('user_option_'+self.id, (user_option)=>{
+						})
+					)
 
-					})
+					// function user_option(user_option) {
+					// 		console.log("user_option:",user_option);
+					// }
+
+
+					// dialog.addEventListener("user_option", function(e){
+					// 	console.log("layer_delete e:",e);
+					// 	const id = e.target.dataset.id
+					// 	console.log("layer_delete id:",id);
+					// })
 				})
 			// layer_color
 				const layer_color_box = ui.create_dom_element({

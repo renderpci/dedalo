@@ -105,7 +105,6 @@ component_image.prototype.init = async function(options) {
 component_image.prototype.get_data_tag = function(){
 
 	const self = this
-		console.log("self.data:",self.data);
 
 	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
 		? self.data.value[0].lib_data 
@@ -127,7 +126,6 @@ component_image.prototype.get_data_tag = function(){
 		return layer 
 	})
 
-		console.log("layers:",layers);
 
 	const data_tag = {
 		type 			: 'draw',
@@ -142,6 +140,15 @@ component_image.prototype.get_data_tag = function(){
 	return data_tag
 }
 
+
+
+/**
+* GET_last_layer_id
+* Send the data_tag to the text_area when it need create a new tag
+*/
+component_image.prototype.get_last_layer_id = function(){
+
+}//end 
 
 // /**
 // * BUILD

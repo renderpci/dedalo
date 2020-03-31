@@ -3,7 +3,7 @@ class DDModal extends HTMLElement {
 		super();
 		this._modalVisible = false;
 		this._modal;
-		this.caller_instance;
+		// this.caller_instance;
 		this.on_close;
 		this.attachShadow({ mode: 'open' });
 		this.shadowRoot.innerHTML = `
@@ -104,6 +104,9 @@ class DDModal extends HTMLElement {
 				<div class="modal-body">
 					<slot name="body">Modal box default body<slot>
 				</div>
+				<div class="modal-footer">
+					<slot name="footer"><slot>
+				</div>
 			</div>
 		</div>
 		`
@@ -150,16 +153,28 @@ class DDModal extends HTMLElement {
 			}
 
 		// remove caller instance if exists on close
-			if (this.caller_instance) {
-				// destroy recursivelly
-				this.caller_instance.destroy(true, true, true)
+			// if (this.caller_instance) {
+			// 	// destroy recursivelly
+			// 	this.caller_instance.destroy(true, true, true)
 
-				// clean header
-				const header = this.querySelector("[slot='header']")
-				if (header) {
-					header.remove()
-				}
+		// clean header
+			const header = this.querySelector("[slot='header']")
+			if (header) {
+				header.remove()
 			}
+
+		// clean body
+			const body = this.querySelector("[slot='body']")
+			if (body) {
+				body.remove()
+			}
+
+		// clean header
+			const footer = this.querySelector("[slot='footer']")
+			if (footer) {
+				footer.remove()
+			}
+		
 
 		return true
 	}
