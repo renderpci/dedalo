@@ -414,8 +414,7 @@ const get_top = function(self) {
 				// 	await section_instance.build(true)
 				// 		console.log("section_instance:",section_instance);
 
-			// find_section options. To create a complete set of options (including sqo), call API requesting a page_element
-				if (!self.find_section_options) {
+			// find_section options. To create a complete set of options (including sqo), call API requesting a page_elemen
 					const options = {
 						model 			: 'section',
 						type 			: 'section',
@@ -431,12 +430,10 @@ const get_top = function(self) {
 					// id_variant avoid instances id collisions
 						page_element.id_variant = 'ID_VARIANT_PORTAL'
 
-					// fix options to re-use
-						self.find_section_options = page_element
-				}
+					const find_section_options = page_element
 
 			// find_section instance. Create target section page element and instance
-				const find_section = await get_instance(self.find_section_options)
+				const find_section = await get_instance(find_section_options)
 
 				// set self as find_section caller (!)
 					find_section.caller = self
@@ -451,7 +448,7 @@ const get_top = function(self) {
 					text_content 	: section_label
 				})
 				// fix modal to allow close later, on set value
-					self.modal = ui.attach_to_modal(null, find_section_wrapper, header, 'big')
+					self.modal = ui.attach_to_modal(header, find_section_wrapper, null, 'big')
 					self.modal.on_close = () =>{
 						find_section.destroy(true, true, true)
 					}
