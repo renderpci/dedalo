@@ -1222,6 +1222,106 @@
 							.build_button('vector_editor.svg', black, 1);
 						}
 					}
+					.vector_editor_tools{
+
+					}
+
+					.layer_selector_button{
+						text-align: center;
+						color: #000;
+					}
+					.layer_selector{
+						float: right;
+						width: 11em;
+						background-color: #ffa03f;
+						position: absolute;
+						right: 2em;
+						top: 0;
+						padding: 0;
+						text-align: right;
+
+						>.button {
+							margin: 0.5em;
+							float: none;
+							display: inline-block;
+							&.add {
+								float: left;
+							}
+						}
+
+						>ul.layer_ul {
+							text-align: left;
+							clear: both;
+						    max-height: 200px;
+								overflow: auto;
+
+							// border: 0.5px solid #777;
+							
+							>li{
+								display: grid;
+								grid-template-columns: 1.5em 1em auto 1.5em 2em;
+								align-items: center;
+								border-bottom: 1px solid #777;
+								border-left: 1px solid #777;
+								border-right: 1px solid #777;							
+								cursor: pointer;
+								background-color: #ffffff;
+
+								&:hover {
+									background-color: #ffa03f;
+									color: #ffffff;
+								}
+								&:active {
+									background-color: #ffa03f;
+									color: #000;
+								}
+								&.active{
+									background-color: #e6e6e6;
+									color: #000;
+									font-weight: bold;
+									user-select: none;
+								}
+
+								.layer_icon {
+									&:before {
+										.build_button('eye.svg', black, 1);
+									}
+									justify-self: center;
+									opacity: 0;							
+									&.active{
+										background-color: unset !important;
+										opacity: 1;
+									}
+								}
+								.layer_id {				
+									 
+								}
+								.user_layer_name {
+									 
+								
+								}
+								.layer_delete {
+									&:before {
+										.build_button('trash_light.svg', black, 1);
+									}
+									justify-self: center;
+								}
+								.layer_color_box {
+									background-color: #ffffff;
+									.layer_color {
+										width: 100%;
+										height: 30px;							
+									}
+								}							
+							}
+							>li:first-child {
+								border-top: 0.5px solid #777;
+							}
+							
+						}
+						
+					}
+						
 					.pointer {
 						&:before {
 							.build_button('pointer.svg', black, 1);
@@ -1277,6 +1377,7 @@
 							background-color: white;
 						}
 					}
+					
 			}//end .buttons_container
 
 			>.content_data {

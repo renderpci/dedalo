@@ -22,6 +22,7 @@ export const vector_editor = function(){
 
 /**
 * INIT_TOOLS
+* init paper tools
 */
 vector_editor.prototype.init_tools = function(self){
 
@@ -111,6 +112,7 @@ vector_editor.prototype.init_tools = function(self){
 						project.deselectAll()
 						this.path.layer.activate()
 						this.active_layer = project.activeLayer
+						event_manager.publish('active_layer_'+self.id, this.active_layer)
 						this.set_color_picker()
 
 						if (event.modifiers.shift) {
@@ -239,6 +241,7 @@ vector_editor.prototype.init_tools = function(self){
 						project.deselectAll()
 						this.path.layer.activate()
 						this.active_layer = project.activeLayer
+						event_manager.publish('active_layer_'+self.id, this.active_layer)
 						this.set_color_picker()
 						
 						if (event.modifiers.shift) {
@@ -413,6 +416,38 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 	// vector editor tools
 		const buttons = []
+
+			// layer selector
+				const layer_selector_button = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'button tool layer_selector_button',
+					parent 			: buttons_container,
+				})
+
+				const layer_selector_container = ui.create_dom_element({
+					element_type	: 'div',
+					parent 			: buttons_container,
+				})
+			
+				layer_selector_button.addEventListener("mouseup", (e) =>{
+					// clean
+						while (layer_selector_container.firstChild) {
+							layer_selector_container.removeChild(layer_selector_container.firstChild)
+						}
+
+					const layer_selector = this.render_layer_selector(self, this.active_layer)
+					layer_selector_container.appendChild(layer_selector)
+
+					activate_status(layer_selector_button)
+				})
+				buttons.push(layer_selector_button)
+
+				self.events_tokens.push(
+					event_manager.subscribe('active_layer_'+self.id, change_layer)
+				)
+				function change_layer(active_layer) {
+					layer_selector_button.innerHTML = active_layer.data.layer_id
+				}
 
 			// pointer
 				const pointer = ui.create_dom_element({
@@ -689,6 +724,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					this.active_layer.fillColor = color.hex8String;
 					this.button_color_picker.style.backgroundColor = color.hexString
 					self.update_draw_data()
+					event_manager.publish('color_change_'+this.active_layer.data.layer_id, color.hex8String)
 				}
 
 				// listen to a color picker's color:change event
@@ -696,18 +732,20 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 
 		//change the buttons status: active, desactive
-		const activate_status = (button) =>{
-			const buttons_lenght = buttons.length
-			for (let i = 0; i < buttons_lenght; i++) {
-				const current_buton = buttons[i]
-				current_buton.classList.remove('vector_tool_active')
+			const activate_status = (button) =>{
+				const buttons_lenght = buttons.length
+				for (let i = 0; i < buttons_lenght; i++) {
+					const current_buton = buttons[i]
+					current_buton.classList.remove('vector_tool_active')
+				}
+				button ? button.classList.add('vector_tool_active') : null
 			}
-			button ? button.classList.add('vector_tool_active') : null
-		}
 
 		// first load activate pointer
 			this.pointer.activate()
 			activate_status(pointer)
+
+	return true
 }//end render_tools_buttons
 
 
@@ -722,6 +760,7 @@ vector_editor.prototype.set_color_picker = function(){
 		this.button_color_picker.style.backgroundColor = color
 		this.color_picker.color.rgbaString = color
 }// end set_color_picker
+
 
 
 /**
@@ -795,6 +834,8 @@ vector_editor.prototype.load_layer = function(self, layer) {
 
 		this.active_layer = project.activeLayer
 
+		event_manager.publish('active_layer_'+self.id, this.active_layer)
+
 		project.view.draw();
 		project.deselectAll();
 		project.options.handleSize = 8;
@@ -802,5 +843,214 @@ vector_editor.prototype.load_layer = function(self, layer) {
 	
 	return true
 }//end load_layer
+
+
+
+/**
+*  LAYER_SELECTOR
+* @return 
+*/
+vector_editor.prototype.render_layer_selector = function(self){
+
+	const ar_layers = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
+				? self.data.value[0].lib_data
+				: []
+	const project = self.current_paper.project
+
+	const fragment = new DocumentFragment()
+	// add button
+		const add_layer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'button add',
+			parent 			: fragment,
+		})
+		add_layer.addEventListener("click", (e) =>{
+			e.preventDefault()
+		})
+
+	// close button
+		const close = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'button close',
+			parent 			: fragment,
+		})
+		close.addEventListener("click", (e) =>{
+			e.preventDefault()
+			layer_selector.remove()
+		})
+
+	// rows container
+		const layer_ul = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'layer_ul',
+			parent 			: fragment
+		})
+
+		for (let i = 0; i < ar_layers.length; i++) {
+			const layer = ar_layers[i]
+			
+			// layer_container
+				const layer_li = ui.create_dom_element({
+					element_type	: 'li',
+					class_name 		: 'li',
+					parent 			: layer_ul
+				})
+				layer_li.addEventListener("click", (e) =>{
+					project.deselectAll()
+
+					const name = 'layer_'+layer.layer_id
+					const new_active_layer = project.layers.main.children[name]
+					if(typeof new_active_layer === 'undefined'){
+						this.load_layer(self, layer)
+					}else{
+						new_active_layer.activate()
+						this.active_layer = project.activeLayer
+						event_manager.publish('active_layer_'+self.id, new_active_layer)
+						this.set_color_picker()
+					}
+					
+				})
+				layer.layer_id === this.active_layer.data.layer_id
+					? layer_li.classList.add('active') 
+					: layer_li.classList.remove('active')
+
+				self.events_tokens.push(
+					event_manager.subscribe('active_layer_'+self.id, change_layer)
+				)
+				function change_layer(active_layer) {
+					layer.layer_id === active_layer.data.layer_id
+					? layer_li.classList.add('active') 
+					: layer_li.classList.remove('active')
+				}
+				
+			// layer_icon
+				const layer_icon = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_icon',
+					parent 			: layer_li,
+					text_node		: layer.layer_icon
+				})
+				const name = 'layer_'+layer.layer_id
+				const viewed_layer = project.layers.main.children[name] 
+
+				typeof viewed_layer !== 'undefined' && layer.layer_id === viewed_layer.data.layer_id
+					? layer_icon.classList.add('active') 
+					: layer_icon.classList.remove('active')
+				
+				layer_icon.addEventListener("click", (e) =>{
+					 const name = 'layer_'+layer.layer_id
+					 const viewed_layer = project.layers.main.children[name]
+					if(typeof viewed_layer === 'undefined'){
+						this.load_layer(self,layer)
+						layer_icon.classList.add('active')
+						this.active_layer = viewed_layer
+					}else{
+						if(viewed_layer.visible === true){
+							this.active_layer = ''
+							viewed_layer.visible = false
+							layer_icon.classList.remove('active')
+						}else{
+							viewed_layer.visible = true
+							layer_icon.classList.add('active')
+							this.active_layer = viewed_layer
+						}
+					}
+					
+				})
+				
+			// layer_id
+				const layer_id = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_id',
+					parent 			: layer_li,
+					text_node		: layer.layer_id
+				})
+			
+			// layer_name
+				const user_layer_name = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'user_layer_name',
+					parent 			: layer_li,
+					text_node		: layer.user_layer_name
+				})
+				// user_layer_name.contentEditable = false
+				user_layer_name.addEventListener("dblclick", (e) =>{
+					user_layer_name.contentEditable = true
+					user_layer_name.focus();
+				})
+				user_layer_name.addEventListener("blur", (e) =>{
+					user_layer_name.contentEditable = false
+					// layer.user_layer_name = user_layer_name.innerText
+					const name = 'layer_'+layer.layer_id
+					const viewed_layer = project.layers.main.children[name]
+					viewed_layer.data.user_layer_name = user_layer_name.innerText
+					self.update_draw_data()
+				})
+				user_layer_name.addEventListener("keydown", (e) =>{
+					if(e.keyCode === 13) user_layer_name.blur()
+				})
+
+			// layer_delete
+				const layer_delete = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_delete',
+					parent 			: layer_li,
+					text_node		: layer.layer_delete
+				})
+				layer_delete.addEventListener("click", (e) =>{
+					const dialog = ui.create_dialog({
+						title 		: 'Borrar...',
+						body		: '¿seguro que desea borrar?'
+						class_name 	: 'light,',
+						options		:[{
+							id 			: 1,
+							label 		: 'si',
+							class_name 	: 'suscess'
+						},{
+							id 			: 2,
+							label 		: 'no',
+							class_name 	: 'warning'
+						},{
+							id 			:3,
+							label 		: 'cancelar',
+							class_name 	: 'light'
+						}]
+					})
+					dialog.addEventListener("user_option", (e) =>{
+
+					})
+				})
+			// layer_color
+				const layer_color_box = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_color_box',
+					parent 			: layer_li,
+				})
+				const layer_color = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_color',
+					parent 			: layer_color_box,
+				})
+				layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined' 
+					? layer.layer_color 
+					: 'black'
+
+				self.events_tokens.push(
+					event_manager.subscribe('color_change_'+layer.layer_id, change_color)
+				)
+				function change_color(color) {
+					layer_color.style.backgroundColor = color
+				}
+		}// end for
+
+	// layer_selector
+		const layer_selector = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'layer_selector',
+				})
+		layer_selector.appendChild(fragment)
+
+	return layer_selector
+};//end layer_selector
 
 

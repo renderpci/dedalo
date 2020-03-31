@@ -444,6 +444,8 @@ component_image.prototype.update_draw_data = function() {
 	current_layer.layer_color 		= project.activeLayer.fillColor.toCSS()
 	current_layer.user_layer_name 	= project.activeLayer.data.user_layer_name
 
+		console.log("current_layer.user_layer_name:",current_layer.user_layer_name);
+
 	// const new_lib_data 			= project.exportJSON({asString:false})
 
 	// update the data in the instance previous to save
