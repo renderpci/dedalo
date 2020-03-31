@@ -44,7 +44,10 @@ render_tool_tc.prototype.edit = async function (options={render_level:'full'}) {
 
 	// modal container
 		const header = wrapper.querySelector('.tool_header')
-		ui.attach_to_modal(self, wrapper, header)
+		const modal  = ui.attach_to_modal(header, wrapper, null)
+		modal.on_close = () => {
+			self.destroy(true, true, true)
+		}
 
 
 	return wrapper

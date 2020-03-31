@@ -451,7 +451,10 @@ const get_top = function(self) {
 					text_content 	: section_label
 				})
 				// fix modal to allow close later, on set value
-					self.modal = ui.attach_to_modal(find_section, find_section_wrapper, header, 'big')
+					self.modal = ui.attach_to_modal(null, find_section_wrapper, header, 'big')
+					self.modal.on_close = () =>{
+						find_section.destroy(true, true, true)
+					}
 		})
 
 
