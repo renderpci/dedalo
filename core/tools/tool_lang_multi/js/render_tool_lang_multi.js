@@ -32,19 +32,22 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 	const render_level 	= options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = await ui.tool.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
 
 	// modal container
 		const header = wrapper.querySelector('.tool_header')
-		ui.attach_to_modal(self, wrapper, header)
+		const modal  = ui.attach_to_modal(header, wrapper, null)
+		modal.on_close = () => {
+			self.destroy(true, true, true)
+		}
 
 
 	return wrapper
@@ -53,10 +56,10 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 
 /**
-* CONTENT_DATA_EDIT
+* get_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 
 	const fragment = new DocumentFragment()
