@@ -333,9 +333,17 @@ component_common.prototype.save = async function(changed_data) {
 
 			}else{
 
-				self.node.map(item => {
-					item.classList.add("success")
-				})
+				// success. add success class to component wrappers (green line animation)
+					self.node.map(item => {
+						item.classList.add("success")
+					})
+
+				// remove success. after 1000ms, remove wrapper class to avoid issues on refresh
+					setTimeout(()=>{
+						self.node.map(item => {
+							item.classList.remove("success")
+						})
+					},1000)
 			}
 		})
 
