@@ -89,7 +89,7 @@ component_autocomplete.prototype.init = async function(options) {
 		self.events_tokens.push(
 			// user click over list record
 			event_manager.subscribe('component_autocomplete_link_' + self.id, async (locator)=>{
-					console.log("--------------------------------------------------------------------------- locator:",locator);
+
 				// add locator selected
 					const result = await self.add_value(locator)
 					if (result===false) {
@@ -208,15 +208,15 @@ component_autocomplete.prototype.add_value = async function(value) {
 	const self = this
 
 	// check if value lready exists
-		const current_value = self.data.value
-		const exists 		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id===value.section_id)
-		if (typeof exists!=="undefined") {
-			console.log("[add_value] Value already exists !");
-			return false
-		}
+		// const current_value = self.data.value
+		// const exists 		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id===value.section_id)
+		// if (typeof exists!=="undefined") {
+		// 	console.log("[add_value] Value already exists !");
+		// 	return false
+		// }
 
 	// update pagination total
-	//self.pagination.total = self.data.value ? self.data.value.length : 0
+		// self.pagination.total = self.data.value ? self.data.value.length : 0
 
 	const key = self.pagination.total || 0
 
