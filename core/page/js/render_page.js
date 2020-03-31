@@ -51,8 +51,8 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 		wrapper_page.appendChild(await current_content_data)
 
 	// modal box hidden
-		const dd_modal = document.createElement('dd-modal')
-		wrapper_page.appendChild(dd_modal)
+		// const dd_modal = document.createElement('dd-modal')
+		// wrapper_page.appendChild(dd_modal)
 
 
  	return wrapper_page
