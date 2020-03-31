@@ -276,13 +276,13 @@ const build_id_column = function(self) {
 
 		// initiator. Caller of parent section
 			const initiator = typeof self.caller.caller!=="undefined"
-				? self.caller.caller.model
+				? self.caller.caller
 				: false
 
 		// button
 		switch(true) {
 
-			case (initiator==='tool_time_machine'):
+			case (initiator && initiator.model==='tool_time_machine'):
 				// button time machine preview (eye)
 				const edit_button_tm = ui.create_dom_element({
 					element_type	: 'a',
@@ -301,7 +301,7 @@ const build_id_column = function(self) {
 				})
 				break
 
-			case (initiator==='component_autocomplete'):
+			case (initiator && initiator.model==='component_autocomplete'):
 				// component_autocomplete / portal caller (link)
 				const link_button = ui.create_dom_element({
 					element_type	: 'a',

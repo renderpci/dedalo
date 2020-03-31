@@ -198,6 +198,11 @@ section.prototype.build = async function(autoload=false) {
 	// permissions. calculate and set (used by section records later)
 		self.permissions = section_context.permissions || 0
 
+	// initiator. Caller of parent section
+		const initiator = typeof self.caller!=="undefined"
+			? self.caller
+			: false
+
 	// pagination update properties
 		self.pagination.limit	= show_sqo.limit
 		self.pagination.offset	= show_sqo.offset
@@ -239,15 +244,22 @@ section.prototype.build = async function(autoload=false) {
 
 	// inspector
 		if (!self.inspector && self.permissions) {
-			const current_inspector = new inspector()
-			current_inspector.init({
-				section_tipo 	: self.section_tipo,
-				section_id 		: self.section_id
-			})
-			current_inspector.caller = self
-			current_inspector.build()
-			// fix section inspector
-			self.inspector = current_inspector
+			// if (initiator && initiator.model==='component_autocomplete') {
+
+			// 	self.inspector = null
+
+			// }else{
+
+				const current_inspector = new inspector()
+				current_inspector.init({
+					section_tipo 	: self.section_tipo,
+					section_id 		: self.section_id
+				})
+				current_inspector.caller = self
+				current_inspector.build()
+				// fix section inspector
+				self.inspector = current_inspector
+			// }
 		}
 
 	// debug
