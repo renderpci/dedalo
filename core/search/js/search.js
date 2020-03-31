@@ -469,11 +469,11 @@ search.prototype.get_component = async function(options) {
 	const self = this
 
 	const source = {
-			model 			: options.model,
-			tipo 			: options.component_tipo,
-			section_tipo 	: options.section_tipo,
-			section_id 		: null,
-			mode 			: 'search'
+		model 			: options.model,
+		tipo 			: options.component_tipo,
+		section_tipo 	: options.section_tipo,
+		section_id 		: null,
+		mode 			: 'search'
 	}
 	const current_data_manager 	= new data_manager()
 	const api_response 			= await current_data_manager.get_element_context(source)

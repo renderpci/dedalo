@@ -1,3 +1,8 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
@@ -135,82 +140,82 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 */
 // const get_base_context = (self) => {
 
-// 	const mode = "tm"
+	// 	const mode = "tm"
 
-// 	// sqo
-// 		const sqo = {
-// 			typo 	: "sqo",
-// 			id 		: "tmp",
-// 			mode 	: mode,
-// 			section_tipo: [
-// 				self.caller.section_tipo
-// 			],
-// 			filter_by_locators: [{
-// 				section_tipo : self.caller.section_tipo,
-// 				section_id 	 : self.caller.section_id,
-// 				tipo 		 : self.caller.tipo,
-// 				lang 		 : self.caller.lang
-// 			}],
-// 			full_count: true,
-// 			limit: 10,
-// 			offset: 0,
-// 			order: [{
-// 				direction : "DESC",
-// 				path	  : [{
-// 					component_tipo: "id"
-// 				}]
-// 			}]
-// 		}
+	// 	// sqo
+	// 		const sqo = {
+	// 			typo 	: "sqo",
+	// 			id 		: "tmp",
+	// 			mode 	: mode,
+	// 			section_tipo: [
+	// 				self.caller.section_tipo
+	// 			],
+	// 			filter_by_locators: [{
+	// 				section_tipo : self.caller.section_tipo,
+	// 				section_id 	 : self.caller.section_id,
+	// 				tipo 		 : self.caller.tipo,
+	// 				lang 		 : self.caller.lang
+	// 			}],
+	// 			full_count: true,
+	// 			limit: 10,
+	// 			offset: 0,
+	// 			order: [{
+	// 				direction : "DESC",
+	// 				path	  : [{
+	// 					component_tipo: "id"
+	// 				}]
+	// 			}]
+	// 		}
 
-// 	// component
-// 		const component = {
-// 			typo 			: "ddo",
-// 			type 			: "component",
-// 			model 			: self.caller.model,
-// 			tipo 			: self.caller.tipo,
-// 			section_tipo 	: self.caller.section_tipo,
-// 			mode 			: "list",
-// 			parent 			: self.caller.section_tipo,
-// 			label 			: self.caller.label
-// 		}
+	// 	// component
+	// 		const component = {
+	// 			typo 			: "ddo",
+	// 			type 			: "component",
+	// 			model 			: self.caller.model,
+	// 			tipo 			: self.caller.tipo,
+	// 			section_tipo 	: self.caller.section_tipo,
+	// 			mode 			: "list",
+	// 			parent 			: self.caller.section_tipo,
+	// 			label 			: self.caller.label
+	// 		}
 
-// 	// section
-// 		const section = {
-// 			typo 			: "ddo",
-// 			type 			: "section",
-// 			model 			: "section_tm",
-// 			tipo 			: self.caller.section_tipo,
-// 			section_tipo 	: self.caller.section_tipo,
-// 			mode 			: "tm",
-// 			parent 			: null,
-// 			label 			: null
-// 		}
+	// 	// section
+	// 		const section = {
+	// 			typo 			: "ddo",
+	// 			type 			: "section",
+	// 			model 			: "section_tm",
+	// 			tipo 			: self.caller.section_tipo,
+	// 			section_tipo 	: self.caller.section_tipo,
+	// 			mode 			: "tm",
+	// 			parent 			: null,
+	// 			label 			: null
+	// 		}
 
-// 	// source
-// 		const source = {
-// 			typo 			: "source",
-// 			action 			: "search",
-// 			model 			: "section_tm",
-// 			tipo 			: self.caller.section_tipo,
-// 			section_tipo 	: self.caller.section_tipo,
-// 			section_id 		: null,
-// 			mode 			: mode,
-// 			lang 			: self.caller.lang,
-// 			pagination 		: {
-// 			  total  : {},
-// 			  offset : 0
-// 			}
-// 		}
+	// 	// source
+	// 		const source = {
+	// 			typo 			: "source",
+	// 			action 			: "search",
+	// 			model 			: "section_tm",
+	// 			tipo 			: self.caller.section_tipo,
+	// 			section_tipo 	: self.caller.section_tipo,
+	// 			section_id 		: null,
+	// 			mode 			: mode,
+	// 			lang 			: self.caller.lang,
+	// 			pagination 		: {
+	// 			  total  : {},
+	// 			  offset : 0
+	// 			}
+	// 		}
 
-// 	const base_context = [
-// 		sqo,
-// 		component,
-// 		section,
-// 		source
-// 	]
+	// 	const base_context = [
+	// 		sqo,
+	// 		component,
+	// 		section,
+	// 		source
+	// 	]
 
 
-// 	return base_context
+	// 	return base_context
 // }//end get_base_context
 
 
@@ -348,7 +353,7 @@ tool_time_machine.prototype.apply_value = async function() {
 	}
 	const trigger_response = await trigger_request(self.trigger_url, body);
 
-		// // user messages
+	// // user messages
 		// 	const msg_type = (trigger_response.result===false) ? 'error' : 'ok'
 		// 	//if (trigger_response.result===false) {
 		// 		ui.show_message(buttons_container, trigger_response.msg, msg_type)
@@ -370,6 +375,5 @@ tool_time_machine.prototype.apply_value = async function() {
 
 	return trigger_response
 }//end apply_value
-
 
 
