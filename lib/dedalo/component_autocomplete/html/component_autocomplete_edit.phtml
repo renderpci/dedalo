@@ -102,23 +102,23 @@
 								$filter_list_options->tipo 			= $tipo;
 								$filter_list_options->section_tipo 	= $section_tipo;
 								$filter_list_options->ar_elements 	= $ar_elements;
-							
+
 							$autosearch_options_js .= 'service_autocomplete.build_filter_list('.json_encode($filter_list_options).');';
 						}//end if ($filter_by_list!==false)
-					
+
 					// Filter by fields (advanced search)
 						$filter_by_fields = false;
 						// Calculate ar elements to show in filter
 						$ar_elements = component_relation_common::get_filter_fields_data($search_query_object, $propiedades);
 						if (!empty($ar_elements)) {
 							$filter_by_fields = true;
-							
+
 							$filter_fields_options = new stdClass();
 								$filter_fields_options->tipo 		 = $tipo;
 								$filter_fields_options->section_tipo = $section_tipo;
 								$filter_fields_options->ar_elements  = $ar_elements;
-								$filter_fields_options->op_label_or  = RecordObj_dd::get_termino_by_tipo('dd1061',DEDALO_DATA_LANG,true);
-								$filter_fields_options->op_label_and = RecordObj_dd::get_termino_by_tipo('dd1060',DEDALO_DATA_LANG,true);
+								$filter_fields_options->op_label_or  = label::get_label('o');
+								$filter_fields_options->op_label_and = label::get_label('y');
 								$filter_fields_options->operator  	 = isset($propiedades->source->operator) ? $propiedades->source->operator : 'or';
 								$filter_fields_options->q_split  	 = isset($propiedades->source->q_split) ? (bool)$propiedades->source->q_split : true;
 								$filter_fields_options->target_id 	 = $autosearch_options_id;
