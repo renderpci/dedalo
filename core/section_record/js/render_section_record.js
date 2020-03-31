@@ -232,19 +232,129 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 			fragment.appendChild(info)
 		}
 
+	// wrapper filling
+		wrapper.appendChild(fragment)
+
 	// events
 		wrapper.addEventListener("click", (e) => {
 			e.stopPropagation()
-
 			e.target.classList.add("row_active")
 		},false)
 
 
-	wrapper.appendChild(fragment)
-
-
 	return wrapper
 }//end render_section_record.prototype.list
+
+
+/**
+* BUILD_ID_COLUMN
+* @return
+*/
+const build_id_column = function(self) {
+
+	const permissions = self.caller.permissions
+
+	// id_column
+		const id_column = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'id_column'
+		})
+
+	// edit_line
+		const edit_line = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'edit_line',
+			parent 			: id_column
+		})
+
+		// section id
+			const section_id_info = ui.create_dom_element({
+				element_type	: 'span',
+				text_content 	: self.section_id,
+				parent 			: edit_line
+			})
+
+		// initiator. Caller of parent section
+			const initiator = typeof self.caller.caller!=="undefined"
+				? self.caller.caller.model
+				: false
+
+		// button
+		switch(true) {
+
+			case (initiator==='tool_time_machine'):
+				// button time machine preview (eye)
+				const edit_button_tm = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'tm_preview',
+					parent 			: edit_line
+				})
+				edit_button_tm.addEventListener("click", function(e){
+					// publish event
+					event_manager.publish('tm_edit_record', {
+						tipo 		: self.section_tipo,
+						section_id 	: self.section_id,
+						matrix_id 	: self.matrix_id,
+						date 		: self.modification_date || null,
+						mode 		: 'tm'
+					})
+				})
+				break
+
+			case (initiator==='component_autocomplete'):
+				// component_autocomplete / portal caller (link)
+				const link_button = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'link',
+					parent 			: edit_line
+				})
+				link_button.addEventListener("click", function(e){
+					// publish event
+					event_manager.publish('component_autocomplete_link_' + self.caller.caller.id, {
+						section_tipo : self.section_tipo,
+						section_id 	 : self.section_id
+					})
+				})
+				break
+
+			default:
+				// button edit (pen)
+				if (permissions>0) {
+					const edit_button = ui.create_dom_element({
+						element_type	: 'a',
+						parent 			: edit_line
+					})
+					edit_button.addEventListener("click", function(e){
+						// edit_record(this, self)
+						event_manager.publish('user_action', {
+							tipo 		: self.section_tipo,
+							section_id 	: self.section_id,
+							mode 		: 'edit'
+						})
+					})
+				}
+				break
+		}
+
+	// delete_line
+		if (permissions>1) {
+			const delete_line = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'delete_line',
+				parent 			: id_column
+			})
+			const delete_button = ui.create_dom_element({
+				element_type	: 'a',
+				parent 			: delete_line
+			})
+			delete_button.addEventListener("click", function(e){
+				delete_record(this, self)
+			})
+		}
+
+	return id_column
+};//end build_id_column
+
 
 
 
