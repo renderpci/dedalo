@@ -106,16 +106,8 @@ component_image.prototype.get_data_tag = function(){
 
 	const self = this
 
-	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
-		? self.data.value[0].lib_data 
-		: [{
-				layer_id 		: 1,
-				layer_data 		: [],
-				user_layer_name : 'layer_1'
-			}]
-
-	const ar_layer_id 	= lib_data.map((item) => item.layer_id) //.replace('layer_','')
-	const last_layer_id = Math.max(...ar_layer_id)
+	const lib_data 		= self.get_lib_data()
+	const last_layer_id = self.get_last_layer_id()
 	
 	const layers 		= lib_data.map((item) => {
 		const layer = {
@@ -125,7 +117,6 @@ component_image.prototype.get_data_tag = function(){
 		}
 		return layer 
 	})
-
 
 	const data_tag = {
 		type 			: 'draw',
@@ -138,17 +129,47 @@ component_image.prototype.get_data_tag = function(){
 	}
 
 	return data_tag
-}
+}//end get_data_tag
 
 
 
 /**
-* GET_last_layer_id
-* Send the data_tag to the text_area when it need create a new tag
+* GET_LIB_DATA
+* get the lib_data in self.data, lib_data is the specific data of the library used (paperjs)
+*/
+component_image.prototype.get_lib_data = function(){
+
+	const self = this
+
+	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
+		? self.data.value[0].lib_data 
+		: [{
+				layer_id 		: 1,
+				layer_data 		: [],
+				user_layer_name : 'layer_1'
+			}]
+
+
+	return lib_data
+}//get_lib_data
+
+
+
+/**
+* GET_LAST_LAYER_ID
+* Get the last layer_id in the data
 */
 component_image.prototype.get_last_layer_id = function(){
 
-}//end 
+	const self = this
+
+	const lib_data 		= self.get_lib_data()
+	const ar_layer_id 	= lib_data.map((item) => item.layer_id)
+	const last_layer_id = Math.max(...ar_layer_id)
+	
+	return last_layer_id
+}//end get_last_layer_id
+
 
 // /**
 // * BUILD
@@ -191,8 +212,7 @@ component_image.prototype.init_canvas = function(canvas_node, img) {
 			const view_height	= 1200
 			const ratio 		= view_height / img_height
 			const view_width	= ratio * img_width
-			// canvas_node.width 	= 500
-			// canvas_node.height 	= 400
+
 		// hidpi. Avoid double size on canvas
 			// canvas_node.setAttribute("hidpi","off")
 
@@ -328,6 +348,7 @@ component_image.prototype.init_canvas = function(canvas_node, img) {
 }//end init_canvas
 
 
+
 /**
 * LOAD_VECTOR_EDITOR
 */
@@ -395,7 +416,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 
 /**
-* LOAD_VECTOR_EDITOR
+* LOAD_TAG_INTO_VECTOR_EDITOR
 */
 component_image.prototype.load_tag_into_vector_editor = async function(options) {
 
@@ -432,7 +453,59 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 			// self.vector_editor.load_layer(self, data, layer_id)
 
 	
-}// load_vector_editor
+}// load_tag_into_vector_editor
+
+
+/**
+* GET_LAST_LAYER_ID
+* Get the last layer_id in the data
+*/
+component_image.prototype.add_layer = function(){
+
+	const self = this
+
+	const last_layer_id = self.get_last_layer_id()
+	const layer_id 	 	= last_layer_id + 1
+
+	self.load_vector_editor({
+			load 	 : 'layer',
+			layer_id : layer_id
+		})
+	
+	return layer_id
+}//end get_last_layer_id
+
+
+/**
+* delete_layer
+*/
+component_image.prototype.delete_layer = function(layer) {
+
+	const self = this
+
+	const ar_clear_layers		= self.ar_layer_loaded.filter((item) => item.layer_id !== layer.layer_id)
+
+	self.ar_layer_loaded 		= ar_clear_layers
+
+	// update the data in the instance previous to save
+	const value 				=  typeof (self.data.value[0]) !== 'undefined'
+		? JSON.parse(JSON.stringify(self.data.value[0]))
+		: {}
+		  value.lib_data 		= self.ar_layer_loaded
+		
+
+	// set the changed_data for update the component data and send it to the server for change when save
+		const changed_data = {
+			action	: 'update',
+			key	  	: 0,
+			value 	: value
+		}
+	// set the change_data to the instance
+		self.data.changed_data = changed_data
+
+	return true
+}//end delete_layer
+
 
 
 /**
@@ -450,8 +523,6 @@ component_image.prototype.update_draw_data = function() {
 	current_layer.layer_data 		= project.activeLayer.exportJSON({asString:false})
 	current_layer.layer_color 		= project.activeLayer.fillColor.toCSS()
 	current_layer.user_layer_name 	= project.activeLayer.data.user_layer_name
-
-		console.log("current_layer.user_layer_name:",current_layer.user_layer_name);
 
 	// const new_lib_data 			= project.exportJSON({asString:false})
 
