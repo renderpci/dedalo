@@ -502,9 +502,6 @@ const get_components_with_subcolumns = () => {
 	// 		update_page()
 
 
-	// 	return
-
-
 	// 	return false
 // }//end edit_record
 

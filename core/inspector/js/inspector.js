@@ -59,6 +59,9 @@ inspector.prototype.init = function(options) {
 */
 inspector.prototype.build = async function(){
 
+	const self = this
+
+
 	return true
 }// end build
 
