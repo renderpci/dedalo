@@ -297,7 +297,7 @@ component_common.prototype.save = async function(changed_data) {
 
 			}catch(error) {
 
-			  	console.log("+++++++ COMPONENT SAVE ERROR:", error);
+			  	console.error("+++++++ COMPONENT SAVE ERROR:", error);
 			  	return {
 			  		result 	: false,
 			  		msg 	: error.message,
@@ -333,9 +333,17 @@ component_common.prototype.save = async function(changed_data) {
 
 			}else{
 
-				self.node.map(item => {
-					item.classList.add("success")
-				})
+				// success. add success class to component wrappers (green line animation)
+					self.node.map(item => {
+						item.classList.add("success")
+					})
+
+				// remove success. after 1000ms, remove wrapper class to avoid issues on refresh
+					setTimeout(()=>{
+						self.node.map(item => {
+							item.classList.remove("success")
+						})
+					},1000)
 			}
 		})
 
@@ -495,7 +503,7 @@ component_common.prototype.change_value = async function(options) {
 				resolve( function_queue(self, self.change_value_pool, self.change_value, options) );
 			})
 		}
-	console.log("options:",options);
+
 	const changed_data 	= options.changed_data
 	const action 		= changed_data.action
 	const label 		= options.label

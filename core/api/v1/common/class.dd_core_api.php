@@ -339,7 +339,7 @@ class dd_core_api {
 		// build element
 			switch (true) {
 				case $model==='section':
-					$element 		= section::get_instance(null, $section_tipo);
+					$element = section::get_instance(null, $section_tipo);
 					break;
 
 				case $model==='section_tm':
@@ -350,13 +350,18 @@ class dd_core_api {
 					break;
 
 				case strpos($model, 'component')!==false:
+					$element = component_common::get_instance($model,
+															  $tipo,
+															  null,
+															  $mode,
+															  $lang,
+															  $section_tipo);
+					break;
+
 				default:
-					$element 		= component_common::get_instance($model,
-																	 $tipo,
-																	 null,
-																	 $mode,
-																	 $lang,
-																	 $section_tipo);
+					#throw new Exception("Error Processing Request", 1);
+					$response->msg = 'Error. model not found: '.$model;
+					return $response;
 					break;
 			}
 
@@ -407,7 +412,7 @@ class dd_core_api {
 		// page elements
 			switch (true) {
 
-				case $model === 'menu' :
+				case $model==='menu' :
 					$page_element = (function(){
 
 						$menu = new menu();
@@ -452,12 +457,60 @@ class dd_core_api {
 					})();
 					break;
 
+				case $model==='section':
+					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
+
+						$section_tipo = $tipo;
+
+						// sqo_context
+							$section = section::get_instance($section_id, $section_tipo, $mode);
+							$section->set_lang($lang);
+							$sqo_context = $section->get_sqo_context();
+
+						$page_element = new StdClass();
+							$page_element->model 		 = $model;
+							$page_element->type 		 = 'section';
+							$page_element->tipo 		 = $section_tipo;
+							$page_element->section_tipo  = $section_tipo;
+							$page_element->section_id 	 = $section_id;
+							$page_element->mode 		 = $mode;
+							$page_element->lang 		 = $lang;
+							$page_element->sqo_context	 = $sqo_context;
+
+						return $page_element;
+					})();
+					break;
+
+				case $model==='section_tm':
+					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
+
+						$section_tipo = $tipo;
+
+						// sqo_context
+							$section = section_tm::get_instance($section_id, $section_tipo, $mode);
+							$section->set_lang($lang);
+							$sqo_context = $section->get_sqo_context();
+
+						$page_element = new StdClass();
+							$page_element->model		 = $model;
+							$page_element->type			 = 'section';
+							$page_element->tipo			 = $section_tipo;
+							$page_element->section_tipo  = $section_tipo;
+							$page_element->section_id	 = $section_id;
+							$page_element->mode 		 = $mode;
+							$page_element->lang 		 = $lang;
+							$page_element->sqo_context	 = $sqo_context;
+
+						return $page_element;
+					})();
+					break;
+
 				case $model==='section_tool':
 					$page_element = (function() use ($model, $tipo, $mode){
 
 						# Configure section from section_tool data
 						$RecordObj_dd = new RecordObj_dd($tipo);
-						$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+						$propiedades  = $RecordObj_dd->get_propiedades(true);
 
 						#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
 						#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
@@ -474,52 +527,6 @@ class dd_core_api {
 
 						$page_element = new StdClass();
 							$page_element->model 		 = 'section';
-							$page_element->type 		 = 'section';
-							$page_element->section_tipo  = $section_tipo;
-							$page_element->section_id 	 = $section_id;
-							$page_element->mode 	 	 = $mode;
-							$page_element->lang 	 	 = $lang;
-							$page_element->sqo_context   = $sqo_context;
-
-						return $page_element;
-					})();
-					break;
-
-				case $model === 'section':
-					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-
-						$section_tipo = $tipo;
-
-						// sqo_context
-							$section = section::get_instance($section_id, $section_tipo, $mode);
-							$section->set_lang($lang);
-							$sqo_context = $section->get_sqo_context();
-
-						$page_element = new StdClass();
-							$page_element->model 		 = $model;
-							$page_element->type 		 = 'section';
-							$page_element->section_tipo  = $section_tipo;
-							$page_element->section_id 	 = $section_id;
-							$page_element->mode 	 	 = $mode;
-							$page_element->lang 	 	 = $lang;
-							$page_element->sqo_context   = $sqo_context;
-
-						return $page_element;
-					})();
-					break;
-
-				case $model === 'section_tm':
-					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-
-						$section_tipo = $tipo;
-
-						// sqo_context
-							$section = section_tm::get_instance($section_id, $section_tipo, $mode);
-							$section->set_lang($lang);
-							$sqo_context = $section->get_sqo_context();
-
-						$page_element = new StdClass();
-							$page_element->model 		 = $model;
 							$page_element->type 		 = 'section';
 							$page_element->section_tipo  = $section_tipo;
 							$page_element->section_id 	 = $section_id;
