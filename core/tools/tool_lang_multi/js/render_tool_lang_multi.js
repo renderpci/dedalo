@@ -72,9 +72,7 @@ const content_data_edit = async function(self) {
 	// target
 		const length = self.langs.length
 		for (let i = 0; i < length; i++) {
-
 			add_target_component(self.langs[i], components_container, self)
-
 		}
 
 	// buttons container
@@ -89,17 +87,17 @@ const content_data_edit = async function(self) {
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_tranlation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)
-			}//end if (translator_engine)
+			}
 
 
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
-		content_data.appendChild(fragment)
+			  content_data.appendChild(fragment)
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 
