@@ -5,7 +5,7 @@
 
 // import
 	// custom html elements
-	import '../../common/js/dd-modal.js'
+	// import '../../common/js/dd-modal.js'
 	import '../../services/service_tinymce/js/dd-tiny.js'
 	// others
 	import {menu} from '../../menu/js/menu.js'
