@@ -153,6 +153,8 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	const ar_instances = await self.get_ar_instances()
 
+	const fragment = new DocumentFragment()
+
 	// section_record wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
@@ -160,85 +162,15 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
 
-
-	const fragment = new DocumentFragment()
-
-
-	// add ID column always
-		const permissions = self.caller.permissions
-		const id_column = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'id_column'
-		})
-		// edit_line
-			const edit_line = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'edit_line',
-				parent 			: id_column
-			})
-			// section id
-			const section_id_info = ui.create_dom_element({
-				element_type	: 'span',
-				text_content 	: self.section_id,
-				parent 			: edit_line
-			})
-			// button time machine
-			if (self.mode==='tm') {
-				const edit_button = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'tm_preview',
-					parent 			: edit_line
-				})
-				.addEventListener("click", function(e){
-					// edit_record(this, self)
-					event_manager.publish('tm_edit_record', {
-						tipo 		: self.section_tipo,
-						section_id 	: self.section_id,
-						matrix_id 	: self.matrix_id,
-						date 		: self.modification_date || null,
-						mode 		: 'tm'
-					})
-						console.log("self:",self);
-				})
-			}
-			// button edit
-			if (permissions>0) {
-				const edit_button = ui.create_dom_element({
-					element_type	: 'a',
-					parent 			: edit_line
-				})
-				.addEventListener("click", function(e){
-					// edit_record(this, self)
-					event_manager.publish('user_action', {
-						tipo 		: self.section_tipo,
-						section_id 	: self.section_id,
-						mode 		: 'edit'
-					})
-				})
-			}
-		// delete_line
-			if (permissions>1) {
-				const delete_line = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'delete_line',
-					parent 			: id_column
-				})
-				const delete_button = ui.create_dom_element({
-					element_type	: 'a',
-					parent 			: delete_line
-				})
-				.addEventListener("click", function(e){
-					delete_record(this, self)
-				})
-			}
-
+	// id column
+		const id_column = build_id_column(self)
 		fragment.appendChild(id_column)
 
-
-	let n_colums 					= 0
-	let n_relation_columns 			= 0
-	const ar_grid_columns 			= [] // remember add id column
-	const components_with_relations = get_components_with_subcolumns()
+	// regular columns
+		let n_colums 					= 0
+		let n_relation_columns 			= 0
+		const ar_grid_columns 			= [] // remember add id column
+		const components_with_relations = get_components_with_subcolumns()
 
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
@@ -287,7 +219,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 			}
 		)
 
-	// dd_info
+	// component_info
 		const component_info = self.get_component_info()
 		if (component_info){
 			const info_value = component_info.value.join('')
@@ -380,90 +312,90 @@ const get_components_with_subcolumns = () => {
 // */
 // const edit_record = (button, self) => {
 
-// 	// old mode (new url)
-// 		const url = `?t=${self.section_tipo}&id=${self.section_id}`
-// 		return window.location.href = url;
+	// 	// old mode (new url)
+	// 		const url = `?t=${self.section_tipo}&id=${self.section_id}`
+	// 		return window.location.href = url;
 
-// 	// section element
-// 		const element = {
-// 			model 		 	: self.caller.model,
-// 			section_tipo 	: self.section_tipo,
-// 			section_id 		: self.section_id,
-// 			mode 			: "edit",
-// 			lang 			: self.lang,
-// 			sqo_context 	: {
-// 				show : [
-// 					{
-// 						typo : "sqo",
-// 						section_tipo : [self.section_tipo],
-// 						filter : false,
-// 						filter_by_locators : [
-// 							{
-// 								section_tipo : self.section_tipo,
-// 								section_id : self.section_id
-// 							}
-// 	                	],
-// 						select : [],
-// 						limit : 1,
-// 						offset : 0,
-// 						full_count : false
-// 					},
-// 					{
-// 						typo : "ddo",
-// 						type : "section",
-// 						model : "section",
-// 						tipo : self.section_tipo,
-// 						section_tipo : self.section_tipo,
-// 						mode : "edit"
-// 					}
-// 				]
-// 			}
-// 		}
-// 		console.log("element:",element);
+	// 	// section element
+	// 		const element = {
+	// 			model 		 	: self.caller.model,
+	// 			section_tipo 	: self.section_tipo,
+	// 			section_id 		: self.section_id,
+	// 			mode 			: "edit",
+	// 			lang 			: self.lang,
+	// 			sqo_context 	: {
+	// 				show : [
+	// 					{
+	// 						typo : "sqo",
+	// 						section_tipo : [self.section_tipo],
+	// 						filter : false,
+	// 						filter_by_locators : [
+	// 							{
+	// 								section_tipo : self.section_tipo,
+	// 								section_id : self.section_id
+	// 							}
+	// 	                	],
+	// 						select : [],
+	// 						limit : 1,
+	// 						offset : 0,
+	// 						full_count : false
+	// 					},
+	// 					{
+	// 						typo : "ddo",
+	// 						type : "section",
+	// 						model : "section",
+	// 						tipo : self.section_tipo,
+	// 						section_tipo : self.section_tipo,
+	// 						mode : "edit"
+	// 					}
+	// 				]
+	// 			}
+	// 		}
+	// 		console.log("element:",element);
 
-// 	// update page node
-// 		const update_page = async () => {
+	// 	// update page node
+	// 		const update_page = async () => {
 
-// 			// const main = document.getElementById("main")
-// 			// 	  main.classList.add("loading")
+	// 			// const main = document.getElementById("main")
+	// 			// 	  main.classList.add("loading")
 
-// 			// page instance (recycle actual)
-// 				const page = await get_instance({
-// 					model : 'page'
-// 				})
+	// 			// page instance (recycle actual)
+	// 				const page = await get_instance({
+	// 					model : 'page'
+	// 				})
 
-// 				page.elements = [element]
-// 					console.log("page:",page);
+	// 				page.elements = [element]
+	// 					console.log("page:",page);
 
-// 			// page instance build and render
-// 				//const build 	= await page.build()
-// 				//const wrapper_page 	= await page.render()
-// 				const refresh = await page.refresh()
-// 					console.log("refresh:",refresh);
+	// 			// page instance build and render
+	// 				//const build 	= await page.build()
+	// 				//const wrapper_page 	= await page.render()
+	// 				const refresh = await page.refresh()
+	// 					console.log("refresh:",refresh);
 
-// 				if (refresh===true) {
-// 					const state = {'page_id': page.id}
-// 					const title = ''
-// 					const url 	= "?t=test65"//window.location.href
+	// 				if (refresh===true) {
+	// 					const state = {'page_id': page.id}
+	// 					const title = ''
+	// 					const url 	= "?t=test65"//window.location.href
 
-// 					history.pushState(state, title, url)
-// 				}
+	// 					history.pushState(state, title, url)
+	// 				}
 
-// 			// main add and restore class
-// 				// while (main.firstChild) {
-// 				// 	main.removeChild(main.firstChild);
-// 				// }
-// 				// main.appendChild(wrapper_page)
-// 		 	// 	main.classList.remove("loading","hide")
+	// 			// main add and restore class
+	// 				// while (main.firstChild) {
+	// 				// 	main.removeChild(main.firstChild);
+	// 				// }
+	// 				// main.appendChild(wrapper_page)
+	// 		 	// 	main.classList.remove("loading","hide")
 
-// 		}
-// 		update_page()
-
-
-// 	return
+	// 		}
+	// 		update_page()
 
 
-// 	return false
+	// 	return
+
+
+	// 	return false
 // }//end edit_record
 
 

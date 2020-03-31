@@ -37,6 +37,8 @@ export const component_autocomplete = function(){
 	this.node
 	this.pagination
 
+	this.modal
+
 	return true
 }//end component_autocomplete
 
@@ -181,6 +183,7 @@ component_autocomplete.prototype.add_value = async function(value) {
 	if(SHOW_DEBUG===true) {
 		console.log("==== add_value - value - changed_data:", value, changed_data);
 	}
+
 
 	// des
 		// const js_promise = self.change_value({
