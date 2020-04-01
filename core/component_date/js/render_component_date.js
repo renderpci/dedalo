@@ -242,12 +242,6 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 				return true
 			}
 
-			if (e.target.matches('.button.close')) {
-				//change mode
-				self.change_mode('list', true)
-
-				return true
-			}
 		})
 
 	return wrapper

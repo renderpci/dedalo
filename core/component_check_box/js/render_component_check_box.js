@@ -191,14 +191,6 @@ render_component_check_box.prototype.edit = async function(options={render_level
 					return true
 				}
 
-			// change_mode
-				if (e.target.matches('.button.close')) {
-					//change mode
-					self.change_mode('list', true)
-
-					return true
-				}
-
 		})
 
 	// dblclick event
