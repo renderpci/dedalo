@@ -231,42 +231,6 @@ const add_events = function(self, wrapper) {
 
 		})
 
-	// focus event
-	/*
-		wrapper.addEventListener("focusin", e => {
-			e.stopPropagation()
-
-			// selected_node. fix selected node
-			self.selected_node = wrapper
-
-			if (e.target.matches('input[type="text"]')) {
-				//e.preventDefault()
-				// set the button_remove associated to the input selected to visible
-			 	const button_remove = e.target.parentNode.querySelector('.remove')
-			 	button_remove.classList.remove("hidden")
-
-			 	const button_email_send = e.target.parentNode.querySelector('.email_send')
-			 	button_email_send.classList.remove("hidden")
-			 	//button_remove.style.visibility='visible';
-			 	//button_remove.style.display='inline-block';
-			 	//button_remove.hidden = false
-			 	event_manager.publish('active_component', self)
-			}
-		})
-
-	// blur event
-		wrapper.addEventListener("focusout", e => {
-			e.stopPropagation()
-
-		 	const button_remove = e.target.parentNode.querySelector('.remove')
-			 	button_remove.classList.add("hidden")
-
-			const button_email_send = e.target.parentNode.querySelector('.email_send')
-				button_email_send.classList.add("hidden")
-
-		})
-		*/
-
 }
 
 /**
