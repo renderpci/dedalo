@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+ /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -51,7 +51,7 @@ render_component_number.prototype.list = async function() {
 
 /**
 * EDIT
-* Render node for use in edit
+* Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
 render_component_number.prototype.edit = async function(options={render_level : 'full'}) {
@@ -62,7 +62,7 @@ render_component_number.prototype.edit = async function(options={render_level : 
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -194,12 +194,12 @@ const add_events = function(self, wrapper) {
 				return true
 			}
 
-			if (e.target.matches('.button.close')) {
-				//change mode
-				self.change_mode()
+			// if (e.target.matches('.button.close')) {
+			// 	//change mode
+			// 	self.change_mode()
 
-				return true
-			}
+			// 	return true
+			// }
 		})
 
 	return true
@@ -216,7 +216,10 @@ render_component_number.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = await get_content_data_edit(self)
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	const content_data = await get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -260,8 +263,6 @@ render_component_number.prototype.search = async function() {
 
 			}, false)
 
-
-
 	return wrapper
 }//end search
 
@@ -290,12 +291,11 @@ const get_content_data_edit = async function(self) {
 		const inputs_value = value//(value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			input_element(i, inputs_value[i], inputs_container, self)
+			get_input_element_edit(i, inputs_value[i], inputs_container, self)
 		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
 			  content_data.appendChild(fragment)
 
 
@@ -344,11 +344,10 @@ const get_buttons = (self) => {
 * INPUT_ELEMENT
 * @return dom element li
 */
-const input_element = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
-	const mode = self.mode
-
-	const type = (mode==='search') ? 'text' : 'number'
+	const mode 				= self.mode	
+	const is_inside_tool	= self.is_inside_tool
 
 	// li
 		const li = ui.create_dom_element({
@@ -359,7 +358,7 @@ const input_element = (i, current_value, inputs_container, self) => {
 	// input field
 		const input = ui.create_dom_element({
 			element_type 	: 'input',
-			type 		 	: type,
+			type 		 	: 'number',
 			class_name 		: 'input_value',
 			dataset 	 	: { key : i },
 			value 		 	: current_value,
@@ -367,7 +366,7 @@ const input_element = (i, current_value, inputs_container, self) => {
 		})
 
 	// button remove
-		if(mode==='edit' || 'edit_in_list'){
+		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'div',
 				class_name 		: 'button remove display_none',
@@ -379,4 +378,52 @@ const input_element = (i, current_value, inputs_container, self) => {
 	return li
 }//end input_element
 
+/**
+* GET_CONTENT_DATA_SEARCH
+* @return DOM node content_data
+*/
+const get_content_data_search = async function(self) {
 
+	const value = self.data.value
+	const mode 	= self.mode
+
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
+
+	// values (inputs)
+		const inputs_value = value//(value.length<1) ? [''] : value
+		const value_length = inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			get_input_element_search(i, inputs_value[i], fragment, self)
+		}
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_search
+
+
+
+/**
+* GET_INPUT_ELEMENT_SEARCH
+* @return dom element input
+*/
+const get_input_element_search = (i, current_value, inputs_container, self) => {
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			class_name 		: 'input_value',
+			dataset 	 	: { key : i },
+			value 		 	: current_value,
+			parent 		 	: inputs_container
+		})
+
+
+	return input
+}//end get_input_element_search
