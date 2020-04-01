@@ -527,11 +527,14 @@ class section extends common {
 				$component_global_dato = new stdClass();
 
 					// INFO : Creamos la info del componente actual
-						$component_global_dato->info 		= new stdClass();
-							$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
-							$component_global_dato->info->modelo= $component_modelo_name;
+						// $component_global_dato->info 		= new stdClass();
+						// 	$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
+						// 	$component_global_dato->info->modelo= $component_modelo_name;
+						$inf = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true) .' ['.$component_modelo_name.']';
+						$component_global_dato->inf = $inf;
 
-					$component_global_dato->dato		= new stdClass();
+
+					$component_global_dato->dato = new stdClass();
 					// $component_global_dato->valor		= new stdClass();
 					// $component_global_dato->valor_list	= new stdClass();
 					// $component_global_dato->dataframe	= new stdClass();
