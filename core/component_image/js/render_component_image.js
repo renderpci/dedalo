@@ -133,27 +133,29 @@ const content_data_edit = async function(self) {
 		})
 
 	// canvas
-		const canvas = ui.create_dom_element({
-			id 				: self.id,
-			element_type	: "canvas",
-			class_name 		: 'canvas',
-			parent 			: li
-		})
-		canvas.setAttribute("tabindex", 0)
+		// const canvas = ui.create_dom_element({
+		// 	id 				: self.id,
+		// 	element_type	: "canvas",
+		// 	class_name 		: 'canvas',
+		// 	parent 			: li
+		// })
+		// canvas.setAttribute("tabindex", 0)
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: "img",
 			src 			: url,
-			// class_name 		: 'image',
-			// parent 			: li
+			class_name 		: 'image',
+			parent 			: li
 		})
-		// image.setAttribute("tabindex", 0)
+		image.setAttribute("tabindex", 0)
 		// ui.component.add_image_fallback(image)
 
-		image.onload = function () {
-			self.init_canvas(canvas, image)
-		}
+		self.image_node = image
+
+		// image.onload = function () {
+		// 	self.init_canvas(canvas, image)
+		// }
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -198,6 +200,7 @@ const get_buttons = (self) => {
 			parent 			: fragment
 		})
 		full_screen.addEventListener("mouseup", (e) =>{
+			self.node[0].classList.toggle('fullscreen')
 			event_manager.publish('full_screen_'+self.id, full_screen)
 		})
 
