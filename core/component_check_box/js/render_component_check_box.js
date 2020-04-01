@@ -191,14 +191,6 @@ render_component_check_box.prototype.edit = async function(options={render_level
 					return true
 				}
 
-			// change_mode
-				if (e.target.matches('.button.close')) {
-					//change mode
-					self.change_mode('list', true)
-
-					return true
-				}
-
 		})
 
 	// dblclick event
@@ -264,9 +256,12 @@ const content_data_edit = async function(self) {
 		})
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self, {
+			autoload : true
+		})
+		
+		content_data.classList.add("nowrap")
+		content_data.appendChild(fragment)
 
 
 	return content_data

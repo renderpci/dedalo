@@ -219,10 +219,13 @@ export const ui = {
 		* @param object component instance
 		* @return DOM node content_data
 		*/
-		build_content_data : (instance) => {
+		build_content_data : (instance, options={}) => {
 
 			const type 			= instance.type
 			const component_css = instance.context.css || {}
+
+			const autoload 		= typeof options.autoload==="undefined" ? false : options.autoload
+
 
 			const content_data = document.createElement("div")
 
@@ -239,7 +242,7 @@ export const ui = {
 						parent 			: content_data
 					})
 					button_close.addEventListener("click", function(){
-						instance.change_mode('list', false)
+						instance.change_mode('list', autoload)
 					})
 				}
 
