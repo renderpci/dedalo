@@ -276,9 +276,12 @@ const content_data_edit = async function(self) {
 		}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self, {
+			autoload : true
+		})
+	
+		content_data.classList.add("nowrap")
+		content_data.appendChild(fragment)
 
 
 	return content_data
