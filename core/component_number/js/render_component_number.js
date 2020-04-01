@@ -209,7 +209,7 @@ const add_events = function(self, wrapper) {
 
 /**
 * SEARCH
-* Render node for use in edit
+* Render node for use in search
 * @return DOM node wrapper
 */
 render_component_number.prototype.search = async function() {
