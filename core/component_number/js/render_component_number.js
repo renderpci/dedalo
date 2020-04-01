@@ -341,7 +341,7 @@ const get_buttons = (self) => {
 
 
 /**
-* INPUT_ELEMENT
+* GET_INPUT_ELEMENT_EDIT
 * @return dom element li
 */
 const get_input_element_edit = (i, current_value, inputs_container, self) => {
