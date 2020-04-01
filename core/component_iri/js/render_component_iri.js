@@ -71,8 +71,8 @@ render_component_iri.prototype.list = async function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @return DOM node wrapper
+* Render node for use in modes: edit, edit_in_list
+* @return DOM node
 */
 render_component_iri.prototype.edit = async function(options={render_level : 'full'}) {
 
@@ -81,7 +81,7 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 	self.data.value = (self.data.value.length<1) ? [] : self.data.value
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -98,7 +98,19 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 			buttons 	 : buttons
 		})
 
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+	// add events
+		add_events(self, wrapper)
+	
+	return wrapper
+}//end edit
+
+
+/**
+* ADD_EVENTS
+*/
+const add_events = function(self, wrapper) {
+
+// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
@@ -115,7 +127,7 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 		function add_element(changed_data) {
 		// change the value of the current dom element
 			const inputs_container 	= wrapper.querySelector('.inputs_container')
-			get_input_element(changed_data.key, changed_data.value, inputs_container, self)
+			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
 	//	// remove element, subscription to the events
@@ -163,6 +175,26 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
 
+			// reset remove and go_link buttons view
+				const all_buttons_remove = wrapper.querySelectorAll('.remove, .go_link')
+					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
+						all_buttons_remove[i].classList.add("display_none")
+					}
+
+			// show current remove button
+				if (e.target.matches('input[type="text"') || e.target.matches('input[type="url"')) {
+					// set the button_remove and button_go_link associated to the input selected to visible
+						const button_remove = e.target.parentNode.querySelector('.remove')
+						if (button_remove) {
+							button_remove.classList.remove("display_none")
+						}
+
+						const button_email_send = e.target.parentNode.querySelector('.go_link')
+						if (button_email_send) {
+							button_email_send.classList.remove("display_none")
+						}
+				}
+
 			// insert
 			if (e.target.matches('.button.add')) {
 
@@ -206,13 +238,6 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 				return true
 			}
 
-			if (e.target.matches('.button.close')) {
-				//change mode
-				self.change_mode()
-
-				return true
-			}
-
 			if (e.target.matches('.button.go_link')) {
 
 				self.open_iri(e.target)
@@ -222,10 +247,7 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 			}
 		})
 
-
-	return wrapper
-}//end edit
-
+}
 
 /**
 * SEARCH
@@ -236,7 +258,7 @@ render_component_iri.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = await render_content_data(self)
+	const content_data = await get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -307,12 +329,11 @@ const get_content_data_edit = async function(self) {
 		const inputs_value = (value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			get_input_element(i, inputs_value[i], inputs_container, self)
+			get_input_element_edit(i, inputs_value[i], inputs_container, self)
 		}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+		const content_data = ui.component.build_content_data(self)			 
 			  content_data.appendChild(fragment)
 
 
@@ -358,12 +379,13 @@ const get_buttons = (self) => {
 
 
 /**
-* GET_INPUT_ELEMENT
+* GET_INPUT_ELEMENT_EDIT
 * @return dom element li
 */
-const get_input_element = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
-	const mode = self.mode
+	const mode 				= self.mode
+	const is_inside_tool	= self.is_inside_tool
 
 
 	// li
@@ -384,7 +406,7 @@ const get_input_element = (i, current_value, inputs_container, self) => {
 		})
 
 
-	if(mode==='edit' || 'edit_in_list'){
+	if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 	// input iri field
 		const input_iri = ui.create_dom_element({
 			element_type 	: 'input',
@@ -416,4 +438,54 @@ const get_input_element = (i, current_value, inputs_container, self) => {
 	}
 
 	return li
-}//end get_input_element
+}//end get_input_element_edit
+
+
+/**
+* GET_CONTENT_DATA_SEARCH
+* @return DOM node content_data
+*/
+const get_content_data_search = async function(self) {
+
+	const value = self.data.value
+	const mode 	= self.mode
+
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
+
+	// values (inputs)
+		const inputs_value = value//(value.length<1) ? [''] : value
+		const value_length = inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			get_input_element_search(i, inputs_value[i], fragment, self)
+		}
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_search
+
+
+/**
+* GET_INPUT_ELEMENT_SEARCH
+* @return dom element input
+*/
+const get_input_element_search = (i, current_value, inputs_container, self) => {
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			class_name 		: 'input_value',
+			dataset 	 	: { key : i },
+			value 		 	: current_value,
+			parent 		 	: inputs_container
+		})
+
+
+	return input
+}//end get_input_element_search
