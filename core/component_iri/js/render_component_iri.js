@@ -251,13 +251,16 @@ const add_events = function(self, wrapper) {
 
 /**
 * SEARCH
-* Render node for use in edit
+* Render node for use in search
 * @return DOM node wrapper
 */
 render_component_iri.prototype.search = async function() {
 
 	const self 	= this
 
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		
 	const content_data = await get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
