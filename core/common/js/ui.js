@@ -1399,6 +1399,8 @@ export const ui = {
 			}
 	},//end do_search
 
+
+
 	/**
 	* CREATE_DIALOG
 	* format:
@@ -1426,9 +1428,6 @@ export const ui = {
 	*/
 	create_dialog : (options) =>{
 
-		//event for dispach the user_option
-		const user_option_event = new Event('user_option');
-
 		const element_id	= options.element_id
 		const title 		= options.title || ''
 		const msg 			= options.msg || ''
@@ -1443,52 +1442,55 @@ export const ui = {
 
 		// header
 			const header = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: header_class,
-				})
-			//title
+				element_type	: 'div',
+				class_name 		: 'header ' + header_class,
+			})
+			// title
 				const title_dialog = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'title',
-						parent 			: header,
-						text_node 		: title
-					})
+					element_type	: 'div',
+					class_name 		: 'title',
+					parent 			: header,
+					text_node 		: title
+				})
 
 		// body
 			const body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: body_class,
-				})
-			//msg
+				element_type	: 'div',
+				class_name 		: 'body ' + body_class,
+			})
+			// msg
 				const msg_dialog = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'msg',
-						parent 			: body,
-						text_node 		: msg
-					})
+					element_type	: 'div',
+					class_name 		: 'msg',
+					parent 			: body,
+					text_node 		: msg
+				})
 
 		// footer
 			const footer = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: footer_class,
-				})
+				element_type	: 'div',
+				class_name 		: 'footer ' + footer_class
+			})
 			const user_options_len = user_options.length
 			for (let i = 0; i < user_options_len; i++) {
 				const option = user_options[i]
 				//user_option
 					const user_option = ui.create_dom_element({
-						element_type	: 'div',
+						element_type	: 'button',
 						class_name 		: 'user_option ' + option.class_name,
 						parent 			: footer,
-						text_node 		: option.label,
-						dataset 		: {id : option.id}
+						text_content 	: option.label
 					})
 					user_option.addEventListener("mouseup", function(e) {
 						event_manager.publish('user_option_'+element_id, option.id)
+						// modal.remove()
+						modal._closeModal()
 					})
 			}
 
-		ui.attach_to_modal(header, body, footer)
+		// modal open
+			const modal = ui.attach_to_modal(header, body, footer)
+
 
 		return footer
 	}//end create_dialog
