@@ -41,7 +41,6 @@ render_component_email.prototype.list = async function() {
 	// Value as string
 		const value_string = data.value.join(self.divisor)
 
-
 	// Set value
 		wrapper.textContent = value_string
 
@@ -52,7 +51,7 @@ render_component_email.prototype.list = async function() {
 
 /**
 * EDIT
-* Render node for use in edit
+* Render node for use in modes: edit, edit_in_list
 * @return DOM node
 */
 render_component_email.prototype.edit = async function(options={render_level : 'full'}) {
@@ -62,12 +61,12 @@ render_component_email.prototype.edit = async function(options={render_level : '
 	self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -75,32 +74,44 @@ render_component_email.prototype.edit = async function(options={render_level : '
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data,
+			content_data : content_data,
 			buttons 	 : buttons
 		})
+
+	// add events
+		add_events(self, wrapper)
+
+	return wrapper
+}//end edit
+
+
+
+/**
+* ADD_EVENTS
+*/
+const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
 		function update_value (changed_data) {
-
 			// change the value of the current dom element
 			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
 			changed_node.value = changed_data.value
 		}
+
 	// add element, subscription to the events
 		self.events_tokens.push(
 			event_manager.subscribe('add_element_'+self.id, add_element)
 		)
 		function add_element(changed_data) {
-
 			// change the value of the current dom element
 			const inputs_container 	= wrapper.querySelector('.inputs_container')
 			input_element(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
-	//	// remove element, subscription to the events
+	// remove element, subscription to the events
 		//		self.events_tokens.push(
 		//			event_manager.subscribe('remove_element_'+self.id, remove_element)
 		//		)
@@ -190,12 +201,12 @@ render_component_email.prototype.edit = async function(options={render_level : '
 				return true
 			}
 
-			if (e.target.matches('.button.close')) {
-				//change mode
-				self.change_mode()
+			// if (e.target.matches('.button.close')) {
+			// 	//change mode
+			// 	self.change_mode()
 
-				return true
-			}
+			// 	return true
+			// }
 
 			if (e.target.matches('.button.email_send')) {
 
@@ -243,21 +254,21 @@ render_component_email.prototype.edit = async function(options={render_level : '
 		})
 		*/
 
-	return wrapper
-}//end edit
-
-
+}
 
 /**
 * SEARCH
-* Render node for use in edit
+* Render node for use in search
 * @return DOM node wrapper
 */
 render_component_email.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = await content_data_edit(self)
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	const content_data = await get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -309,10 +320,10 @@ render_component_email.prototype.search = async function() {
 
 
 /**
-* RENDER_CONTENT_DATA
+* GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const value 		= self.data.value
 	const mode 			= self.mode
@@ -331,12 +342,11 @@ const content_data_edit = async function(self) {
 		const inputs_value = value//(value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			input_element(i, inputs_value[i], inputs_container, self)
+			get_input_element_edit(i, inputs_value[i], inputs_container, self)
 		}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+		const content_data = ui.component.build_content_data(self)			  
 			  content_data.appendChild(fragment)
 
 	return content_data
@@ -381,12 +391,13 @@ const get_buttons = (self) => {
 
 
 /**
-* INPUT_ELEMENT
+* GET_INPUT_ELEMENT_EDIT
 * @return dom element li
 */
-const input_element = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
-	const mode = self.mode
+	const mode 				= self.mode
+	const is_inside_tool	= self.is_inside_tool
 
 	// li
 		const li = ui.create_dom_element({
@@ -404,15 +415,14 @@ const input_element = (i, current_value, inputs_container, self) => {
 			parent 		 : li
 		})
 
-	// input field
-
-		if(mode==='edit' || 'edit_in_list'){
-			const button_remove = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button remove display_none',
-				dataset			: { key : i },
-				parent 			: li
-			})
+	// button remove
+		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
+		const button_remove = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'button remove display_none',
+			dataset			: { key : i },
+			parent 			: li
+		})
 
 			// button email
 			const button_email = ui.create_dom_element({
@@ -425,3 +435,53 @@ const input_element = (i, current_value, inputs_container, self) => {
 
 	return li
 }//end input_element
+
+
+/**
+* GET_CONTENT_DATA_SEARCH
+* @return DOM node content_data
+*/
+const get_content_data_search = async function(self) {
+
+	const value = self.data.value
+	const mode 	= self.mode
+
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
+
+	// values (inputs)
+		const inputs_value = value//(value.length<1) ? [''] : value
+		const value_length = inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			get_input_element_search(i, inputs_value[i], fragment, self)
+		}
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_search
+
+
+/**
+* GET_INPUT_ELEMENT_SEARCH
+* @return dom element input
+*/
+const get_input_element_search = (i, current_value, inputs_container, self) => {
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			class_name 		: 'input_value',
+			dataset 	 	: { key : i },
+			value 		 	: current_value,
+			parent 		 	: inputs_container
+		})
+
+
+	return input
+}//end get_input_element_search
