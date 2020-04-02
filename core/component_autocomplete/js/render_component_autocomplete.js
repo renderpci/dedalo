@@ -414,44 +414,90 @@ const get_top = function(self) {
 				// 	await section_instance.build(true)
 				// 		console.log("section_instance:",section_instance);
 
-			// find_section options. To create a complete set of options (including sqo), call API requesting a page_elemen
-					const options = {
-						model 			: 'section',
-						type 			: 'section',
-						tipo  			: section_tipo,
-						section_tipo  	: section_tipo,
-						section_id 		: null,
-						mode 			: 'list',
-						lang 			: page_globals.dedalo_data_lang
-					}
-					const page_element_call = await current_data_manager.get_page_element(options)
-					const page_element 		= page_element_call.result
+			// iframe
+				( async () => {
+					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
+					const iframe = ui.create_dom_element({
+						element_type	: 'iframe',
+						class_name 		: 'fixed',
+						src 			: '../page/?tipo=' + section_tipo + '&mode=list&initiator='+ self.id,
+						parent 			: iframe_container
+					})
 
-					// id_variant avoid instances id collisions
-						page_element.id_variant = 'ID_VARIANT_PORTAL'
+					// fix modal to allow close later, on set value
+					const header = ui.create_dom_element({element_type : 'div',text_content : section_label})
+					self.modal   = ui.attach_to_modal(header, iframe_container, null, 'big')
 
-					const find_section_options = page_element
+				})()
+				return
 
-			// find_section instance. Create target section page element and instance
-				const find_section = await get_instance(find_section_options)
+			// page
+				// ( async () => {
 
-				// set self as find_section caller (!)
-					find_section.caller = self
+				// 	const options = {
+				// 		model 			: 'section',
+				// 		type 			: 'section',
+				// 		tipo  			: section_tipo,
+				// 		section_tipo  	: section_tipo,
+				// 		section_id 		: null,
+				// 		mode 			: 'list',
+				// 		lang 			: page_globals.dedalo_data_lang
+				// 	}
+				// 	const page_element_call = await current_data_manager.get_page_element(options)
+				// 	const page_element 		= page_element_call.result
 
-				// load data and render wrapper
-					await find_section.build(true)
-					const find_section_wrapper = await find_section.render()
+				// 	const page = await get_instance({
+				// 		model 		: 'page',
+				// 		id_variant  : 'PORTAL_VARIANT',
+				// 		elements 	: [page_element_call.result]
+				// 	})
+				// 	page.caller = self.caller
+				// 	const build 		= await page.build()
+				// 	const wrapper_page 	= await page.render()
+				// 	const header = ui.create_dom_element({element_type : 'div',text_content : section_label})
+				// 	const modal  = ui.attach_to_modal(header, wrapper_page, null, 'big')
+				// 		console.log("page:",page);
+				// })()
+				// return
 
-			// modal container
-				const header = ui.create_dom_element({
-					element_type	: 'div',
-					text_content 	: section_label
-				})
-				// fix modal to allow close later, on set value
-					self.modal = ui.attach_to_modal(header, find_section_wrapper, null, 'big')
-					self.modal.on_close = () =>{
-						find_section.destroy(true, true, true)
-					}
+			// section
+				// // find_section options. To create a complete set of options (including sqo), call API requesting a page_elemen
+				// 	const options = {
+				// 		model 			: 'section',
+				// 		type 			: 'section',
+				// 		tipo  			: section_tipo,
+				// 		section_tipo  	: section_tipo,
+				// 		section_id 		: null,
+				// 		mode 			: 'list',
+				// 		lang 			: page_globals.dedalo_data_lang
+				// 	}
+				// 	const page_element_call = await current_data_manager.get_page_element(options)
+				// 	const page_element 		= page_element_call.result
+				// 	// id_variant avoid instances id collisions
+				// 		page_element.id_variant = 'ID_VARIANT_PORTAL'
+				// 	const find_section_options = page_element
+
+				// // find_section instance. Create target section page element and instance
+				// 	const find_section = await get_instance(find_section_options)
+
+				// 	// set self as find_section caller (!)
+				// 		find_section.caller = self
+
+				// 	// load data and render wrapper
+				// 		await find_section.build(true)
+				// 		const find_section_wrapper = await find_section.render()
+
+				// // modal container
+				// 	const header = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		text_content 	: section_label
+				// 	})
+				// 	// fix modal to allow close later, on set value
+				// 		self.modal = ui.attach_to_modal(header, find_section_wrapper, null, 'big')
+				// 		self.modal.on_close = () =>{
+				// 			find_section.destroy(true, true, true)
+				// 		}
+
 		})
 
 
