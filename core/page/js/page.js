@@ -37,6 +37,7 @@ export const page = function () {
 	this.status
 	this.events_tokens
 
+
 	return true
 }//end page
 
@@ -72,6 +73,7 @@ page.prototype.init = async function(options) {
 	self.events_tokens	= []
 	self.menu_data 		= options.menu_data
 
+
 	// launch preload all components files in parallel
 		//import('../../common/js/components_list.js')
 
@@ -90,7 +92,7 @@ page.prototype.init = async function(options) {
 					const page_element = api_response.result
 
 				// check response page element is valid for instantiate. Element instance loads the file
-					const page_element_instance = await instantiate_page_element(page_element)
+					const page_element_instance = await instantiate_page_element(self, page_element)
 					if (typeof page_element_instance==="undefined" || !page_element_instance) {
 						console.error("[page.user_action] Stopped user action. Element instance not suitable. page_element:", page_element);
 						return false
@@ -130,11 +132,14 @@ page.prototype.init = async function(options) {
 				return true
 			}//end user_action
 
+
 	// window onpopstate
 		window.onpopstate = function(event) {
-			const options = event.state.options
-			options.event_in_history = true
-			event_manager.publish('user_action', options)
+			if (event.state) {
+				const options = event.state.options
+				options.event_in_history = true
+				event_manager.publish('user_action', options)
+			}
 		};
 
 
@@ -162,8 +167,17 @@ page.prototype.init = async function(options) {
 		// }, false)//end beforeunload
 
 
+	// window messages
+		// window.addEventListener("message", receiveMessage, false);
+		// function receiveMessage(event) {
+		// 	console.log("message event:",event);
+		// 	alert("Mensaje recibido !");
+		// }
+
+
 	// status update
 		self.status = 'inited'
+
 
  	return true
 }//end init
@@ -230,7 +244,7 @@ page.prototype.get_ar_instances = async function(){
 				// 	sqo_context			: element.sqo_context || null,
 				// 	datum				: element.datum || null
 				// })
-				const current_instance = await instantiate_page_element(element)
+				const current_instance = await instantiate_page_element(self, element)
 
 			// build (load data)
 				await current_instance.build(true)
@@ -250,10 +264,10 @@ page.prototype.get_ar_instances = async function(){
 * INSTANTIATE_PAGE_ELEMENT
 * @return promise current_instance_promise
 */
-const instantiate_page_element = function(page_element) {
+const instantiate_page_element = function(self, page_element) {
 
-	// page_element instance (load file)
-		const current_instance_promise = get_instance({
+	// instance options
+		const instance_options = {
 			model 				: page_element.model,
 			tipo 				: page_element.tipo || page_element.section_tipo,
 			section_tipo		: page_element.section_tipo || null,
@@ -262,7 +276,15 @@ const instantiate_page_element = function(page_element) {
 			lang				: page_element.lang,
 			sqo_context			: page_element.sqo_context || null,
 			datum				: page_element.datum || null
-		})
+		}
+
+		// id_variant . Propagate a custom instance id to children
+			if (self.id_variant) {
+				instance_options.id_variant = self.id_variant
+			}
+
+	// page_element instance (load file)
+		const current_instance_promise = get_instance(instance_options)
 
 	return current_instance_promise
 }//end instantiate_page_element
