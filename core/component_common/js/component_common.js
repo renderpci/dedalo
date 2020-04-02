@@ -256,7 +256,7 @@ component_common.prototype.save = async function(changed_data) {
 
 	// remove previous success/error css class if exists
 		self.node.map(item => {
-			item.classList.remove("error","success")
+			item.classList.remove("error","save_success")
 			item.classList.add("loading")
 		})
 
@@ -333,15 +333,15 @@ component_common.prototype.save = async function(changed_data) {
 
 			}else{
 
-				// success. add success class to component wrappers (green line animation)
+				// success. add save_success class to component wrappers (green line animation)
 					self.node.map(item => {
-						item.classList.add("success")
+						item.classList.add("save_success")
 					})
 
-				// remove success. after 1000ms, remove wrapper class to avoid issues on refresh
+				// remove save_success. after 1000ms, remove wrapper class to avoid issues on refresh
 					setTimeout(()=>{
 						self.node.map(item => {
-							item.classList.remove("success")
+							item.classList.remove("save_success")
 						})
 					},1000)
 			}
