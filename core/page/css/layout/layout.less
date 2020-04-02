@@ -1199,13 +1199,13 @@
 				position: absolute;
 				top: 0;
 				width: 2em;
+				min-height: 100%;
 
 				// 3
 				left: 100%;
 				// right: 0;
 				z-index: 1;
 				background-color: #ffa03f;
-				height: 100%;
 				box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 				border-top-right-radius: 0.25em;
 				border-bottom-right-radius: 0.25em;
@@ -2546,6 +2546,19 @@
 
 
 
+ul.inputs_container {
+	>li {
+		.hidden_button {
+			display: none;
+		}
+
+		&:focus-within {
+			.hidden_button {
+				display: block;
+			}
+		}
+	}
+}
 
 
 
