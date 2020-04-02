@@ -96,14 +96,14 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 */
 const add_events = function(self, wrapper) {
 
-	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : 'false'
-	const element_type 	= (multi_line === true) ? 'textarea' :'input[type="text"]'
+	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+	const element_type 	= (multi_line===true) ? 'textarea' :'input[type="text"]'
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
-		function update_value (changed_data) {
+		function update_value(changed_data) {
 			//console.log("-------------- - event update_value changed_data:", changed_data);
 			// change the value of the current dom element
 			const changed_node = wrapper.querySelector(element_type + '[data-key="'+changed_data.key+'"]')
@@ -141,18 +141,16 @@ const add_events = function(self, wrapper) {
 				//console.log("++update e.target:",JSON.parse(JSON.stringify(e.target.dataset.key)));
 				//console.log("++update e.target value:",JSON.parse(JSON.stringify(e.target.value)));
 
-				// // is_unique check
-				// if (self.context.properties.unique) {
-				// 	// const result = await check_duplicates(self, e.target.value, false)
-				// 	if (self.duplicates) {
-				// 		e.target.classList.add("duplicated")
-
-				// 		const message = ui.build_message("Warning. Duplicated value " + self.duplicates.section_id)
-				// 		wrapper.appedChild(message)
-
-				// 		return false
-				// 	}
-				// }
+				// is_unique check
+					// if (self.context.properties.unique) {
+					// 	// const result = await check_duplicates(self, e.target.value, false)
+					// 	if (self.duplicates) {
+					// 		e.target.classList.add("duplicated")
+					// 		const message = ui.build_message("Warning. Duplicated value " + self.duplicates.section_id)
+					// 		wrapper.appedChild(message)
+					// 		return false
+					// 	}
+					// }
 
 				const changed_data = Object.freeze({
 					action	: 'update',
@@ -190,42 +188,7 @@ const add_events = function(self, wrapper) {
 							button_remove.classList.remove("display_none")
 						}
 				}
-
-			// test
-				// if (e.target.matches('.button.tool')) {
-				// 	e.stopPropagation();
-
-				// 	//common.prototype.load_tool(self, tool_object)
-				// 	// ui.tool.load_tool(self, tool_object)
-				// 	event_manager.publish('load_tool', {
-				// 		self 		: self,
-				// 		tool_object : e.target
-				// 	})
-
-				// 	console.log("++++++++++++++ .button.tool e.target:", e.target);
-				// 	return true
-				// }
-
-			// insert
-				if (e.target.matches('.button.add')) {
-
-					const changed_data = Object.freeze({
-						action	: 'insert',
-						key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
-						value	: null
-					})
-					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('add_element_'+self.id, changed_data)
-					})
-
-					return true
-				}
-
+			*/
 			// remove
 				if (e.target.matches('.button.remove')) {
 
@@ -248,15 +211,6 @@ const add_events = function(self, wrapper) {
 
 					return true
 				}
-
-			// change_mode
-				// if (e.target.matches('.button.close')) {
-
-				// 	//change mode
-				// 	self.change_mode('list', false)
-
-				// 	return true
-				// }
 
 		})
 
@@ -481,8 +435,8 @@ const get_buttons = (self) => {
 const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 	const mode 		 	= self.mode
-	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : 'false'
-	const element_type 	= (multi_line === true) ? 'textarea' :'input'
+	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+	const element_type 	= (multi_line===true) ? 'textarea' :'input'
 	const is_inside_tool= self.is_inside_tool
 
 	// li
