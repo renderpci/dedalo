@@ -67,13 +67,17 @@
 
 	$page_elements = [];
 
+	$initiator = $_GET['initiator'] ?? false;
+
 	// menu. Get the mandatory menu element
-		$menu_element_required = new stdClass();
-			$menu_element_required->options = (object)[
-				'model' 	=> 'menu',
-				'lang' 		=> DEDALO_DATA_LANG
-			];
-		$page_elements[] = dd_core_api::get_page_element($menu_element_required)->result;
+		if ($initiator===false) {
+			$menu_element_required = new stdClass();
+				$menu_element_required->options = (object)[
+					'model' 	=> 'menu',
+					'lang' 		=> DEDALO_DATA_LANG
+				];
+			$page_elements[] = dd_core_api::get_page_element($menu_element_required)->result;
+		}
 
 	// section/area/tool. Get the page element from get url vars
 		$element_required = new stdClass();

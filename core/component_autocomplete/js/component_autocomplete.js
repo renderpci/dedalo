@@ -88,7 +88,7 @@ component_autocomplete.prototype.init = async function(options) {
 	// events subscribe
 		self.events_tokens.push(
 			// user click over list record
-			event_manager.subscribe('component_autocomplete_link_' + self.id, async (locator)=>{
+			event_manager.subscribe('initiator_link_' + self.id, async (locator)=>{
 
 				// add locator selected
 					const result = await self.add_value(locator)
