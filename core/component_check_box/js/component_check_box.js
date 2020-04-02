@@ -32,27 +32,26 @@ export const component_check_box = function(){
 * extend component functions from component common
 */
 // prototypes assign
+	// lifecycle
 	component_check_box.prototype.init 	 			= component_common.prototype.init
+	component_check_box.prototype.build 			= component_common.prototype.build
+	component_check_box.prototype.render 			= common.prototype.render	
+	component_check_box.prototype.refresh 			= common.prototype.refresh
 	component_check_box.prototype.destroy 	 		= common.prototype.destroy
+
+	// change data
 	component_check_box.prototype.save 	 			= component_common.prototype.save
-	component_check_box.prototype.load_data 		= component_common.prototype.load_data
-	component_check_box.prototype.get_value 		= component_common.prototype.get_value
-	component_check_box.prototype.set_value 		= component_common.prototype.set_value
 	component_check_box.prototype.update_data_value = component_common.prototype.update_data_value
 	component_check_box.prototype.update_datum		= component_common.prototype.update_datum
 	component_check_box.prototype.change_value 		= component_common.prototype.change_value
 
-	// render
-	component_check_box.prototype.build 		= component_common.prototype.build
-	component_check_box.prototype.render 		= common.prototype.render
-	component_check_box.prototype.refresh 		= common.prototype.refresh
-	component_check_box.prototype.list 			= render_component_check_box.prototype.list
-	component_check_box.prototype.edit 			= render_component_check_box.prototype.edit
-	component_check_box.prototype.edit_in_list	= render_component_check_box.prototype.edit
-	component_check_box.prototype.rebuild_nodes = component_common.prototype.rebuild_nodes
-	component_check_box.prototype.change_mode 	= component_common.prototype.change_mode
-
-
+	// render	
+	component_check_box.prototype.list 				= render_component_check_box.prototype.list
+	component_check_box.prototype.edit 				= render_component_check_box.prototype.edit
+	component_check_box.prototype.edit_in_list		= render_component_check_box.prototype.edit
+	component_check_box.prototype.tm				= render_component_check_box.prototype.edit
+	component_check_box.prototype.search 			= render_component_check_box.prototype.search
+	component_check_box.prototype.change_mode 		= component_common.prototype.change_mode
 
 
 /**
