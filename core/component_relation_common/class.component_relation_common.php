@@ -89,6 +89,26 @@ class component_relation_common extends component_common {
 	*/
 	public function get_dato() {
 
+		if(isset($this->dato_resolved)) {
+			return $this->dato_resolved;
+		}
+
+		// time machine mode case
+			if ($this->modo==='tm') {
+
+				if (empty($this->matrix_id)) {
+					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
+					return false;
+				}
+
+				// tm dato. Note that no lang or section_id is needed, only matrix_id
+				$dato_tm = component_common::get_component_tm_dato($this->tipo, $this->section_tipo, $this->matrix_id);
+				// inject dato to component
+				$this->dato_resolved = $dato_tm;
+
+				return $this->dato_resolved;
+			}
+
 		# MATRIX DATA : Load matrix data
 		$this->load_component_dato();
 
