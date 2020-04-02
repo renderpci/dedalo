@@ -42,19 +42,17 @@ export const component_number = function(){
 
 	// change data
 	component_number.prototype.save 	 			= component_common.prototype.save
-	//component_number.prototype.load_data 			= component_common.prototype.load_data
-	//component_number.prototype.get_value 			= component_common.prototype.get_value
-	//component_number.prototype.set_value 			= component_common.prototype.set_value
 	component_number.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_number.prototype.update_datum 		= component_common.prototype.update_datum
 	component_number.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
-	component_number.prototype.list 		= render_component_number.prototype.list
-	component_number.prototype.edit 		= render_component_number.prototype.edit
-	component_number.prototype.edit_in_list	= render_component_number.prototype.edit
-	component_number.prototype.search 		= render_component_number.prototype.search
-	component_number.prototype.change_mode 	= component_common.prototype.change_mode
+	component_number.prototype.list 				= render_component_number.prototype.list
+	component_number.prototype.edit 				= render_component_number.prototype.edit
+	component_number.prototype.edit_in_list			= render_component_number.prototype.edit
+	component_number.prototype.tm					= render_component_number.prototype.edit
+	component_number.prototype.search 				= render_component_number.prototype.search
+	component_number.prototype.change_mode 			= component_common.prototype.change_mode
 
 
 
