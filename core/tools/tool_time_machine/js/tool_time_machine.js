@@ -308,14 +308,16 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 			instance_options.matrix_id = matrix_id
 		}
 
+
 	// get instance and build
 		const component_instance = await get_instance(instance_options)
-		await component_instance.build(true)
 
 	// set current tool as component caller (to check if component is inside tool or not)
 		if (matrix_id) {
 			component_instance.caller = self
 		}
+
+		await component_instance.build(true)
 
 	// add created component instance to current ar_instances
 		const instance_found = self.ar_instances.find( el => el===component_instance )
