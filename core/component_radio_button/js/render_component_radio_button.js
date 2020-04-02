@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+	/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -30,8 +30,8 @@ render_component_radio_button.prototype.list = async function() {
 	const self = this
 
 	// Options vars
-		const context 			= self.context
-		const data 				= self.data
+		const context	= self.context
+		const data		= self.data
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -93,7 +93,7 @@ render_component_radio_button.prototype.edit = async function(options={render_le
 */
 const add_events = function(self, wrapper) {
 
-// events delegated
+	// events delegated
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
@@ -218,7 +218,9 @@ const add_events = function(self, wrapper) {
 		},true)
 
 
-}
+	return true
+}//end add_events
+
 
 
 /**
@@ -338,7 +340,7 @@ const get_content_data_edit = async function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-		
+
 		content_data.appendChild(fragment)
 
 	return content_data
@@ -442,8 +444,8 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 
 	return li
-
 }//end get_input_element_edit
+
 
 
 /**
@@ -470,7 +472,7 @@ const get_content_data_search = async function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-		
+
 		content_data.classList.add("nowrap")
 		content_data.appendChild(fragment)
 
@@ -486,8 +488,8 @@ const get_content_data_search = async function(self) {
 */
 const get_input_element_search = (i, current_value, inputs_container, self) => {
 
-	const datalist_item  	= current_value
-	const datalist_value 	= datalist_item.value
+	const datalist_item  = current_value
+	const datalist_value = datalist_item.value
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -499,17 +501,17 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 			parent 		 	: inputs_container
 		})
 
-	// // input field
-	// 	const input = ui.create_dom_element({
-	// 		element_type 	: 'input',
-	// 		type 		 	: 'text',
-	// 		class_name 		: 'input_value',
-	// 		dataset 	 	: { key : i },
-	// 		value 		 	: current_value,
-	// 		parent 		 	: inputs_container
-	// 	})
+	// input field
+		// 	const input = ui.create_dom_element({
+		// 		element_type 	: 'input',
+		// 		type 		 	: 'text',
+		// 		class_name 		: 'input_value',
+		// 		dataset 	 	: { key : i },
+		// 		value 		 	: current_value,
+		// 		parent 		 	: inputs_container
+		// 	})
 
-			// input checkbox
+	// input checkbox
 		const option = ui.create_dom_element({
 			element_type	: 'input',
 			type 			: 'radio',
@@ -523,3 +525,5 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 	return input
 }//end get_input_element_search
+
+
