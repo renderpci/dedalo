@@ -245,6 +245,9 @@ tool_time_machine.prototype.load_section = async function() {
 			}
 		})
 
+	// set current tool as component caller (to check if component is inside tool or not)
+		section_instance.caller = this
+
 	// save section instance (necessary to destroy later)
 		self.ar_instances.push(section_instance)
 
@@ -255,9 +258,6 @@ tool_time_machine.prototype.load_section = async function() {
 		if(SHOW_DEBUG===true) {
 			console.log("[tool_time_machine.load_section] section_instance:", section_instance);
 		}
-
-	// // set current tool as component caller (to check if component is inside tool or not)
-		section_instance.caller = this
 
 	// add
 		const instance_found = self.ar_instances.find( el => el===section_instance )
