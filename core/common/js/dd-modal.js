@@ -54,10 +54,12 @@ class DDModal extends HTMLElement {
 			.close {
 				color: white;
 				float: right;
-				font-size: 1.5em;
+				font-size: 1.75em;
 				font-weight: bold;
 				position: relative;
-    			top: -0.25em;
+    			top: 0.25em;
+    			right: 0.5em;
+    			z-index: 3;
 			}
 			.close:hover,
 			.close:focus {
@@ -67,22 +69,17 @@ class DDModal extends HTMLElement {
 			}
 
 			.modal-header {
-				padding: 1em;
+				/*padding: 1em;
 				background-color: #FF9800;
 				color: white;
 				font-weight: normal;
-				font-size: 1.4em;
+				font-size: 1.4em;*/
 			}
 			.modal-body {
 				padding: 2px 16px;
 				margin: 20px 2px;
 				overflow: auto;
 			}
-
-			button {
-				display: none;
-			}
-
 			.modal_big {
 				padding: 0;
 				z-index: 9999;
@@ -95,12 +92,11 @@ class DDModal extends HTMLElement {
 				height: 100%;
 			}
 		</style>
-		<button>Open Modal</button>
 		<div class="modal">
 			<div class="modal-content">
 				<div class="modal-header">
 					<span class="close">&times;</span>
-					<slot name="header">Modal box default header</slot>
+					<slot name="header" class="header">Modal box default header</slot>
 				</div>
 				<div class="modal-body">
 					<slot name="body">Modal box default body<slot>
@@ -114,12 +110,12 @@ class DDModal extends HTMLElement {
 	}
 	connectedCallback() {
 		this._modal = this.shadowRoot.querySelector(".modal");
-		this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
+		// this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
 		this.shadowRoot.querySelector(".close").addEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").addEventListener('click', this._hideModal.bind(this));
 	}
 	disconnectedCallback() {
-		this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
+		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
 		this.shadowRoot.querySelector(".close").removeEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('click', this._hideModal.bind(this));
 	}
@@ -134,6 +130,14 @@ class DDModal extends HTMLElement {
 		this._modalVisible = true;
 		this._modal.style.display = 'block';
 		this._modal.classList.add("modal_big")
+
+		// iframe. Fix iframe fixed position calculating padding based on header height
+			const iframe = this.querySelector("iframe.fixed")
+			if (iframe) {
+				const header 	  = this.querySelector(".header")
+				const padding_top = header.offsetHeight + "px"
+				iframe.style.paddingTop = padding_top;
+			}
 	}
 	_hideModal(e) {
 		e.stopPropagation();
@@ -180,7 +184,6 @@ class DDModal extends HTMLElement {
 			if (footer) {
 				footer.remove()
 			}
-
 
 		return true
 	}
