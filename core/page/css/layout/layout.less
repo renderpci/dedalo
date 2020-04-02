@@ -1534,6 +1534,32 @@
 		vertical-align: baseline;
 		z-index: unset;
 
+		.header {
+			padding: 1em;
+			background-color: #FF9800;
+			color: white;
+			font-weight: normal;
+			font-size: 1.4em;
+			z-index: 2;
+		}
+
+		.iframe_container {
+			background-color: #96FD53;
+			>iframe {
+				height: calc(100vh - 68px);
+				width: 100%;
+				top: 0;
+				left: 0;
+				position: fixed;
+				// padding-top: 68px;
+				z-index: 1;
+
+				.header_wrapper_list {
+					top: 0 !important;
+				}
+			}
+		}
+
 		.footer {
 			text-align: right;
 
@@ -1549,7 +1575,7 @@
 // header_wrapper_list
 	.header_wrapper_list {
 		position: sticky;
-		top: 2em;
+		top: 2em; // default
 		background-color: #2c2c2e;
 		color: #efefef;
 		//display: flex;
@@ -1562,6 +1588,9 @@
 
 		&.with_debug_info_bar {
 			top: 3.9em;
+		}
+		&.with_initiator {
+			top: 0;
 		}
 
 		>div {

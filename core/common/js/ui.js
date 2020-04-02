@@ -1267,6 +1267,7 @@ export const ui = {
 		// header . Add node header to modal header and insert it into slot
 			if (header) {
 				header.slot = 'header'
+				header.classList.add('header')
 				modal_container.appendChild(header)
 			}
 
