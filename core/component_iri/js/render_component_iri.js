@@ -409,7 +409,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		})
 
 
-	if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
+	if((mode==='edit' || 'edit_in_list')) {
 	// input iri field
 		const input_iri = ui.create_dom_element({
 			element_type 	: 'input',
