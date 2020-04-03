@@ -101,7 +101,7 @@ const content_data = async function(self) {
 			//console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
-	// display none when pages are <2
+	// empty case. display none when pages are <2
 		if (total_pages<2) {
 			const wrap_rows_paginator = ui.create_dom_element({
 				element_type	: 'div',
@@ -110,25 +110,20 @@ const content_data = async function(self) {
 			return wrap_rows_paginator
 		}
 
-	// content_data
-		const content_data = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_data paginator css_rows_paginator_content'
-		})
+	const fragment = new DocumentFragment()
 
-	// paginator_div_links. create the paginator_div_links
+	// nav_buttons
 		const paginator_div_links = ui.create_dom_element({
 			element_type	: 'div',
-			parent			: content_data,
-			class_name		: 'nav_buttons'
+			class_name		: 'nav_buttons',
+			parent			: fragment
 		})
 
-		// first . create the paginator_first
+		// btn first
 			const paginator_first = ui.create_dom_element({
-				element_type	: 'button',
+				element_type	: 'div',
+				class_name		: 'btn paginator_first_icon',
 				parent			: paginator_div_links,
-				//class_name		: 'icon_bs paginator_first_icon link',
-				class_name		: 'paginator_first_icon'
 			})
 			if(page_number>1) {
 				paginator_first.addEventListener("mousedown",function(){
@@ -138,11 +133,11 @@ const content_data = async function(self) {
 				paginator_first.classList.add("unactive")
 			}
 
-		// previous . create the paginator_prev
+		// btn previous
 			const paginator_prev = ui.create_dom_element({
-				element_type	: 'button',
+				element_type	: 'div',
+				class_name		: 'btn paginator_prev_icon',
 				parent			: paginator_div_links,
-				class_name		: 'paginator_prev_icon'
 			})
 			if(prev_page_offset>=0) {
 				paginator_prev.addEventListener("mousedown",function(){
@@ -152,11 +147,11 @@ const content_data = async function(self) {
 				paginator_prev.classList.add("unactive")
 			}
 
-		// next . create the paginator_next
+		// btn next
 			const paginator_next = ui.create_dom_element({
-				element_type	: 'button',
-				parent			: paginator_div_links,
-				class_name		: 'paginator_next_icon'
+				element_type	: 'div',
+				class_name		: 'btn paginator_next_icon',
+				parent			: paginator_div_links
 			})
 			if(next_page_offset<total) {
 				paginator_next.addEventListener("mousedown",function(){
@@ -166,11 +161,11 @@ const content_data = async function(self) {
 				paginator_next.classList.add("unactive")
 			}
 
-		// last . create the paginator_last
+		// btn last
 			const paginator_last = ui.create_dom_element({
-				element_type	: 'button',
-				parent			: paginator_div_links,
-				class_name		: 'paginator_last_icon'
+				element_type	: 'div',
+				class_name		: 'btn paginator_last_icon',
+				parent			: paginator_div_links
 			})
 			if(page_number<total_pages) {
 				paginator_last.addEventListener("mousedown",function(){
@@ -180,11 +175,11 @@ const content_data = async function(self) {
 				paginator_last.classList.add("unactive")
 			}
 
-	// paginator_info. create the paginator_info
+	// paginator_info
 		const paginator_info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'paginator_info',
-			parent			: content_data
+			parent			: fragment
 		})
 
 		const page_info = ui.create_dom_element({
@@ -231,6 +226,13 @@ const content_data = async function(self) {
 		// 	text += '<span class="displayed_records">. Displayed records from ' + page_row_begin + ' to ' + page_row_end + ' of ' + total + '.</span> '
 		// 	text += '<span class="go_to_page_text">' + get_label["go_to_page"] + '</span> '
 		// //}
+
+	// content_data
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_data paginator css_rows_paginator_content'
+		})
+		content_data.appendChild(fragment)
 
 
 	return content_data

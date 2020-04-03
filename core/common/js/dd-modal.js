@@ -21,6 +21,7 @@ class DDModal extends HTMLElement {
 				height: 100%;
 				overflow: auto;
 				background-color: rgba(0,0,0,0.4);
+				font-size: inherit;
 			}
 
 			/* Modal Content */
@@ -32,6 +33,7 @@ class DDModal extends HTMLElement {
 				border: 1px solid #888;
 				width: 80%;
 				box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+				font-size: inherit;
 				/*
 				-webkit-animation-name: animatetop;
 				-webkit-animation-duration: 0.4s;

@@ -173,12 +173,12 @@ const add_events = function(self, wrapper) {
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
-
+			/*
 			// reset remove buttons view
 				const all_buttons_remove = wrapper.querySelectorAll('.remove')
-					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-						all_buttons_remove[i].classList.add("display_none")
-					}
+				for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
+					all_buttons_remove[i].classList.add("display_none")
+				}
 
 			// show current remove button
 				if (e.target.matches(element_type)) {
@@ -405,12 +405,22 @@ const get_buttons = (self) => {
 				class_name 		: 'button add',
 				parent 			: fragment
 			})
-			// const button_add2 = ui.create_dom_element({
-			// 	element_type	: 'img',
-			// 	class_name 		: 'button add',
-			// 	src 			: '../themes/default/icons/blank.svg',
-			// 	parent 			: fragment
-			// })
+			button_add.addEventListener("click",function() {
+
+				const changed_data = Object.freeze({
+					action	: 'insert',
+					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
+					value	: null
+				})
+				self.change_value({
+					changed_data : changed_data,
+					refresh 	 : false
+				})
+				.then((save_response)=>{
+					// event to update the dom elements of the instance
+					event_manager.publish('add_element_'+self.id, changed_data)
+				})
+			})
 		}
 
 	// buttons tools
@@ -459,7 +469,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button remove display_none',
+				class_name 		: 'button remove display_none99 hidden_button',
 				dataset			: { key : i },
 				parent 			: li
 			})
