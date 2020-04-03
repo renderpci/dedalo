@@ -115,11 +115,14 @@ class DDModal extends HTMLElement {
 		// this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
 		this.shadowRoot.querySelector(".close").addEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").addEventListener('click', this._hideModal.bind(this));
+		document.addEventListener('keyup', this.detect_key)
+		window.modal = this // fix modal in window for easy access to close
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
 		this.shadowRoot.querySelector(".close").removeEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('click', this._hideModal.bind(this));
+		document.removeEventListener('keyup', this.detect_key);
 	}
 	_showModal() {
 		this._modalVisible = true;
@@ -145,7 +148,6 @@ class DDModal extends HTMLElement {
 		e.stopPropagation();
 		// only click over base modal or button close are aceppted
 		if (e.target.matches('.modal') || e.target.matches('.close')) {
-
 			this._closeModal()
 		}
 	}
@@ -187,10 +189,22 @@ class DDModal extends HTMLElement {
 				footer.remove()
 			}
 
+
 		return true
 	}
 	close() {
 		return this._closeModal()
+	}
+	/**
+	* DETECT_KEY
+	* Detect user keyup event and close modal when key is 'ESC'
+	*/
+	detect_key(e) {
+		if (e.keyCode===27) {
+			window.modal._closeModal()
+			window.modal = null
+			return
+		}
 	}
 }
 customElements.define('dd-modal',DDModal);
