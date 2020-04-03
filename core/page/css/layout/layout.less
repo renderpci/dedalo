@@ -835,6 +835,9 @@
 							opacity: 0.5;
 						}
 					}
+					.remove {
+						position: initial;
+					}
 				}
 			}
 
@@ -2553,25 +2556,28 @@
 				}
 			}
 		}
-
-	}
+	}//end .fullscreen
 
 
 
 // component buttons show / hide PROPOSAL !
-ul.inputs_container {
-	>li {
-		.hidden_button {
-			display: none;
-		}
-
-		&:focus-within {
+	ul.inputs_container {
+		>li {
 			.hidden_button {
-				display: block;
+				display: none;
+				// user click prevents hide again
+				&:active {
+					display: block;
+				}
+			}
+
+			&:focus-within {
+				.hidden_button {
+					display: block;
+				}
 			}
 		}
 	}
-}
 
 
 
