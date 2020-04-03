@@ -874,6 +874,17 @@
 
 			// component json
 			&.component_json {
+				>.buttons_container {
+					.button_fullscreen {
+						.build_button('full_screen.svg');
+						// position: absolute;
+						// top: 9px;
+						// z-index: 4;
+						// right: 99px;
+						// background-color: white;
+						// cursor: pointer;
+					}
+				}
 				>.content_data {
 					height: 100%;
 					// max-height: @media_max_height;
@@ -883,19 +894,7 @@
 					.inputs_container>li {
 						// align-items: initial;
 
-						.button_fullscreen {
-							.build_button('full_screen.svg');
-							position: absolute;
-							top: 9px;
-							z-index: 4;
-							right: 99px;
-							background-color: white;
-							cursor: pointer;
 
-							&:active {
-								opacity: 0.4;
-							}
-						}
 
 					}
 
@@ -2432,16 +2431,18 @@
 	.component_json {
 
 		.button_save {
-			height: 26px;
+			height: 28px;
 			position: absolute;
-			top: 5px;
-			right: 6px;
+			top: 4px;
+			right: 4px;
 			z-index: 1;
 			padding-left: 1.7em;
 			padding-right: 1.7em;
 			background-color: #b7d2fd;
 			border: 1px solid #3883fa;
 			color: #3883fa;
+			line-height: 24px;
+			border-radius: 3px;
 		}
 		z-index: 1;
 
