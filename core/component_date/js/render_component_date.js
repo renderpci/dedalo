@@ -186,7 +186,6 @@ const add_events = function(self, wrapper) {
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
 
 			// const all_buttons_remove =wrapper.querySelectorAll('.remove')
 
@@ -269,6 +268,7 @@ const add_events = function(self, wrapper) {
 
 			// remove
 				if (e.target.matches('.button.remove')) {
+					e.stopPropagation()
 
 					// force possible input change before remove
 					document.activeElement.blur()
