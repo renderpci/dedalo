@@ -58,7 +58,9 @@ render_component_date.prototype.list = async function() {
 render_component_date.prototype.edit = async function(options={render_level : 'full'}) {
 
 	const self = this
-	const date_mode = self.context.properties.date_mode || 'date'
+
+	// date_mode . Defined in ontology properties
+		const date_mode = self.context.properties.date_mode || 'date'
 
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
@@ -89,8 +91,10 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 	// add events
 		add_events(self, wrapper)
 
+
 	return wrapper
 }//end edit
+
 
 
 /**
@@ -98,7 +102,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 */
 const add_events = function(self, wrapper) {
 
-// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
@@ -135,11 +139,9 @@ const add_events = function(self, wrapper) {
 							(dato_range.start === false) ? value = false : value = dato_range
 						}
 
-
 						if (e.target.dataset.role==='range_end') {
 							(dato_range.end === false) ? value = false : value = dato_range
 						}
-
 						break;
 
 					case 'period':
@@ -184,10 +186,10 @@ const add_events = function(self, wrapper) {
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
-			//e.stopPropagation()
+			e.stopPropagation()
 
 			// const all_buttons_remove =wrapper.querySelectorAll('.remove')
-				
+
 			// console.log("all_buttons_remove:",all_buttons_remove);
 
 			// for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
@@ -216,7 +218,7 @@ const add_events = function(self, wrapper) {
 			const date_mode = self.context.properties.date_mode
 
 			//if (e.target.matches('input[type="text"]') && date_mode != 'period' && date_mode != 'time') {
-			if (e.target.matches('.calendar') && date_mode != 'period' && date_mode != 'time') {
+			if (e.target.matches('.calendar') && date_mode!=='period' && date_mode!=='time') {
 			//if (date_mode != 'period' && date_mode != 'time') {
 
 				//console.log("e.target.parentNode.parentNode:",e.target.parentNode.parentNode);
@@ -229,70 +231,69 @@ const add_events = function(self, wrapper) {
 				// 	}
 
 				//ui.component.show_button(e.target.parentNode.parentNode, '.remove')
-									
-				//if  (e.target.matches('.calendar')) {
-					const datePicker = flatpickr(e.target, {
-						onClose: self.close_flatpickr,
-						onValueUpdate: function(selectedDates, dateStr, instance){
-											ui.component.error(false, e.target.parentNode.previousSibling)
-             								self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
-             						}
-					})
 
-					datePicker.open()
 
-					return true
-				//}
+				const datePicker = flatpickr(e.target, {
+					onClose 	  : self.close_flatpickr,
+					onValueUpdate : function(selectedDates, dateStr, instance){
+										ui.component.error(false, e.target.parentNode.previousSibling)
+										self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
+									}
+				})
+				datePicker.open()
 
-			//} else {	
- 				//ui.component.show_button(e.target.parentNode, '.remove')
- 			}
+				return true
+			//} else {
+				//ui.component.show_button(e.target.parentNode, '.remove')
+			}
 
 			// insert
-			if (e.target.matches('.button.add')) {
+				if (e.target.matches('.button.add')) {
 
-				const changed_data = Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,
-					value	: null
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('add_element_'+self.id, changed_data)
-				})
+					const changed_data = Object.freeze({
+						action	: 'insert',
+						key		: self.data.value.length,
+						value	: null
+					})
+					self.change_value({
+						changed_data : changed_data,
+						refresh 	 : false
+					})
+					.then((save_response)=>{
+						// event to update the dom elements of the instance
+						event_manager.publish('add_element_'+self.id, changed_data)
+					})
 
-				return true
-			}
+					return true
+				}
 
 			// remove
-			if (e.target.matches('.button.remove')) {
+				if (e.target.matches('.button.remove')) {
 
-				// force possible input change before remove
-				document.activeElement.blur()
+					// force possible input change before remove
+					document.activeElement.blur()
 
-				const changed_data = Object.freeze({
-					action	: 'remove',
-					key		: e.target.dataset.key,
-					value	: null,
-					refresh : true
-				})
-				self.change_value({
-					changed_data : changed_data,
-					label 		 : e.target.previousElementSibling.value,
-					refresh 	 : true
-				})
-				.then(()=>{
-				})
+					const changed_data = Object.freeze({
+						action	: 'remove',
+						key		: e.target.dataset.key,
+						value	: null,
+						refresh : true
+					})
+					self.change_value({
+						changed_data : changed_data,
+						label 		 : e.target.previousElementSibling.value,
+						refresh 	 : true
+					})
+					.then(()=>{
+					})
 
-				return true
-			}
+					return true
+				}
+		})//end click
 
-		})
-}
+	return true
+}//end add_events
+
 
 
 /**
@@ -355,6 +356,7 @@ render_component_date.prototype.search = async function() {
 }//end search
 
 
+
 /**
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
@@ -385,7 +387,7 @@ const get_content_data_edit = async function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-	
+
 		content_data.appendChild(fragment)
 
 	return content_data
@@ -502,6 +504,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 
 		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container, self)
 
+	return true
 }//end input_element_range
 
 
@@ -628,29 +631,31 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 		})
 
 	// input field
-	const input = ui.create_dom_element({
-		element_type 	: 'input',
-		type 		 	: 'text',
-		class_name 		: 'form-control',
-		dataset 	 	: { key : i, role: role_name, altinput: true, input: ''},
-		value 		 	: input_value,
-		placeholder 	: self.get_ejemplo(),
-		parent 		 	: flatpickr_wrap
-	})
+		const input = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			class_name 		: 'form-control',
+			dataset 	 	: { key : i, role: role_name, altinput: true, input: ''},
+			value 		 	: input_value,
+			placeholder 	: self.get_ejemplo(),
+			parent 		 	: flatpickr_wrap
+		})
 
-	const button_calendar = ui.create_dom_element({
-		element_type	: 'a',
-		class_name 		: 'input-group-addon',
-		dataset 		: { toggle: ''},
-		parent 			: flatpickr_wrap
-	})
+	// button_calendar
+		const button_calendar = ui.create_dom_element({
+			element_type	: 'a',
+			class_name 		: 'input-group-addon',
+			dataset 		: { toggle: ''},
+			parent 			: flatpickr_wrap
+		})
 
-	const icon_calendar = ui.create_dom_element({
-		element_type	: 'i',
-		class_name 		: 'button calendar hidden_button',
-		dataset 	 	: { key : i, role: role_name },
-		parent 			: button_calendar
-	})
+	// icon_calendar
+		const icon_calendar = ui.create_dom_element({
+			element_type	: 'i',
+			class_name 		: 'button calendar hidden_button',
+			dataset 	 	: { key : i, role: role_name },
+			parent 			: button_calendar
+		})
 
 	return true
 }//end input_element_flatpicker
@@ -715,3 +720,5 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 	return input
 }//end get_input_element_search
+
+

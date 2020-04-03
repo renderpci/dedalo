@@ -32,19 +32,14 @@ render_search.prototype.render_base = async function() {
 
 	const section_tipo = self.section_tipo
 
-	// wrapper . Top div where elements are placed
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrapper_search full_width'
-		})
-		// set
-		self.wrapper = wrapper
+	const fragment = new DocumentFragment()
+
 
 	// filter button . Show and hide all search elements
 		const filter_button = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'filter_button button search link',
-			parent 			: wrapper
+			parent 			: fragment
 		})
 		.addEventListener("click", () => {
 			toggle_search_panel(self)
@@ -54,7 +49,7 @@ render_search.prototype.render_base = async function() {
 		const search_global_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'search_global_container hide',
-			parent 			: wrapper
+			parent 			: fragment
 		})
 		// set
 		self.search_global_container = search_global_container
@@ -156,6 +151,16 @@ render_search.prototype.render_base = async function() {
 		.addEventListener('click',function(){
 			toggle_presets(self)
 		},false)
+
+
+	// wrapper . Top div where elements are placed
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper_search full_width ' + self.caller.mode
+		})
+		wrapper.appendChild(fragment)
+		// fix wrapper
+		self.wrapper = wrapper
 
 
 	return wrapper
