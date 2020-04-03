@@ -51,12 +51,12 @@
 		// }
 
 	// build_button
-		.build_button(@icon_name, @color:black, @opacity:0.7) {
-			// .icon_svg;
+		.build_button(@icon_name, @color:black, @opacity:0.7, @size:1em) {
 			content: " ";
-			width: 1em;
-			height: 1em;
+			width: @size;
+			height: @size;
 			float: right;
+			cursor: pointer;
 			opacity: @opacity;
 
 			// .background_icon(@icon_name);
@@ -488,8 +488,7 @@
 		}
 
 		>.paginator {
-			padding-top: 0.5em;
-			padding-bottom: 0.5em;
+			// background-color: #7FFCEB;
 		}
 
 		&.edit {
@@ -1078,13 +1077,23 @@
 			// component_section_id
 			&.component_section_id {
 				flex: 0 0 100%;
-				background-color: #f78a1c;
+				background-color: #f78a1c !important;
+				flex-direction: row-reverse;
 				color: white;
+				display: flex;
 
-				.section_id {
-					font-weight: bold;
-					font-size: larger;
-					letter-spacing: 0.05em;
+				.label {
+					color: white;
+					flex: auto;
+				}
+
+				>.content_data {
+					flex: 0 0 3em;
+					.section_id {
+						font-weight: bold;
+						font-size: larger;
+						letter-spacing: 0.05em;
+					}
 				}
 			}
 		}//end &.edit
@@ -1539,8 +1548,12 @@
 			background-color: #FF9800;
 			color: white;
 			font-weight: normal;
-			font-size: 1.4em;
 			z-index: 2;
+
+			>.label {
+				font-size: 1.4em;
+				line-height: 1.4em;
+			}
 		}
 
 		.iframe_container {
@@ -1762,7 +1775,7 @@
 			}
 			&.search {
 				// &:before {
-					.build_button('search.svg', black, 1);
+					.build_button('find.svg', black, 1);
 				// }
 			}
 			&.email_send {
@@ -2545,7 +2558,7 @@
 
 
 
-
+// component buttons show / hide PROPOSAL !
 ul.inputs_container {
 	>li {
 		.hidden_button {
