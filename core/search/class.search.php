@@ -1009,6 +1009,9 @@ class search {
 								$sql_select .= '\'\'';
 							}
 
+							// add always to iterate after
+								$this->relations_cache[$table_alias][] = $component_tipo;
+
 						}else{
 
 							$sql_select .= $table_alias.'.datos';
