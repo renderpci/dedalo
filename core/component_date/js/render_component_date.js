@@ -113,7 +113,7 @@ const add_events = function(self, wrapper) {
 		function add_element(changed_data) {
 			const inputs_container = wrapper.querySelector('.inputs_container')
 			// add new dom input element
-			input_element(changed_data.key, changed_data.value, inputs_container, self)
+			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
 	// change event, for every change the value in the imputs of the component
@@ -186,27 +186,51 @@ const add_events = function(self, wrapper) {
 		wrapper.addEventListener("click", e => {
 			//e.stopPropagation()
 
-			const all_buttons_remove =wrapper.querySelectorAll('.remove')
-				for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-					all_buttons_remove[i].classList.add("display_none")
-				}
+			// const all_buttons_remove =wrapper.querySelectorAll('.remove')
+				
+			// console.log("all_buttons_remove:",all_buttons_remove);
+
+			// for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
+			// 	all_buttons_remove[i].classList.add("display_none")
+			// }
 
 			// show current remove button
-				if (e.target.matches('input[type="text"')) {
-					// set the button_remove associated to the input selected to visible
-						const button_remove = e.target.parentNode.querySelector('.remove')
-						if (button_remove) {
-							button_remove.classList.remove("display_none")
-						}
-				}
+			// const targetDate = e.target.parentNode
+			// console.log("e.target:",e.target);
+			// console.log("targetDate:",targetDate.parentNode);
+
+				// if (targetDate.matches('input[type="text"')) {
+				// 	// set the button_remove associated to the input selected to visible
+				// 		const button_remove = targetDate.parentNode.querySelector('.remove')
+				// 		if (button_remove) {
+				// 			button_remove.classList.remove("display_none")
+				// 		}
+				// }
+				// if (targetDate.matches('i')) {
+				// 		const button_email_send = targetDate.parentNode.querySelector('.calendar')
+				// 		if (button_email_send) {
+				// 			button_email_send.classList.remove("display_none")
+				// 		}
+				// }
 
 			const date_mode = self.context.properties.date_mode
 
 			//if (e.target.matches('input[type="text"]') && date_mode != 'period' && date_mode != 'time') {
 			if (e.target.matches('.calendar') && date_mode != 'period' && date_mode != 'time') {
-				// set the button_remove associated to the input selected to visible
-					// const button_remove = e.target.parentNode.querySelector('.remove')
-					// button_remove.classList.remove("display_none")
+			//if (date_mode != 'period' && date_mode != 'time') {
+
+				//console.log("e.target.parentNode.parentNode:",e.target.parentNode.parentNode);
+
+				// // set the button_remove associated to the input selected to visible
+				// 	const button_remove = e.target.parentNode.parentNode.querySelector('.remove')
+				// 		console.log("button_remove:",button_remove);
+				// 	if (button_remove) {
+				// 		button_remove.classList.remove("display_none")
+				// 	}
+
+				//ui.component.show_button(e.target.parentNode.parentNode, '.remove')
+									
+				//if  (e.target.matches('.calendar')) {
 					const datePicker = flatpickr(e.target, {
 						onClose: self.close_flatpickr,
 						onValueUpdate: function(selectedDates, dateStr, instance){
@@ -217,7 +241,11 @@ const add_events = function(self, wrapper) {
 
 					datePicker.open()
 
-				return true
+					return true
+				//}
+
+			//} else {	
+ 				//ui.component.show_button(e.target.parentNode, '.remove')
  			}
 
 			// insert
@@ -441,7 +469,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		if(mode==='edit' || 'edit_in_list'){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button remove display_none',
+				class_name 		: 'button remove hidden_button',
 				dataset			: { key : i },
 				parent 			: li
 			})
@@ -619,7 +647,7 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 
 	const icon_calendar = ui.create_dom_element({
 		element_type	: 'i',
-		class_name 		: 'button calendar',
+		class_name 		: 'button calendar hidden_button',
 		dataset 	 	: { key : i, role: role_name },
 		parent 			: button_calendar
 	})
