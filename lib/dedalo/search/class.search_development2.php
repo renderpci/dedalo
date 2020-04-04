@@ -1235,12 +1235,13 @@ class search_development2 {
 								$sql_select .= $table_alias.'.datos#>\'{relations}\'';
 								$column_alias = 'relations_' . $table_alias; // Override table alias for generic name
 
-								$this->relations_cache[$table_alias][] = $component_tipo;
-
 							}else{
 								# Already exists a relations column. Skip select again
 								$sql_select .= '\'\'';
 							}
+
+							// add always to iterate after
+								$this->relations_cache[$table_alias][] = $component_tipo;
 
 						}else{
 
@@ -1255,28 +1256,28 @@ class search_development2 {
 							$sql_select .= '}\'';
 						}
 
-						# All
-						if ($aply_distinct===true) {
-							# Define as default order prevent apply default behavior
-							$this->sql_query_order_default = $sql_select .' ASC';
-							# Define custom sql_query_order_window_subselect
-								# (!) Commented 16-09-2018 because not work with distinct_values true clause
-								### $this->sql_query_order_window_subselect = $this->main_section_tipo_alias.'.id, ' . $sql_select .' ASC';
-							# Wrap sentence
-							$sql_select = 'DISTINCT ON ('.$sql_select.') '.$sql_select;
-						}
-						$sql_select .= ' as '.$column_alias;
+						// All
+							if ($aply_distinct===true) {
+								# Define as default order prevent apply default behavior
+								$this->sql_query_order_default = $sql_select .' ASC';
+								# Define custom sql_query_order_window_subselect
+									# (!) Commented 16-09-2018 because not work with distinct_values true clause
+									### $this->sql_query_order_window_subselect = $this->main_section_tipo_alias.'.id, ' . $sql_select .' ASC';
+								# Wrap sentence
+								$sql_select = 'DISTINCT ON ('.$sql_select.') '.$sql_select;
+							}
+							$sql_select .= ' as '.$column_alias;
 					}
 
-					# Add line
-					if ($aply_distinct===true) {
-						# Force key 0 to overwrite first select line
-						$ar_sql_select[0] = $sql_select;
-						# Move section_id column to end of select
-						$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
-					}else{
-						$ar_sql_select[] = $sql_select;
-					}
+					// Add line
+						if ($aply_distinct===true) {
+							# Force key 0 to overwrite first select line
+							$ar_sql_select[0] = $sql_select;
+							# Move section_id column to end of select
+							$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
+						}else{
+							$ar_sql_select[] = $sql_select;
+						}
 
 					#if ($n_levels>1) {
 					#	$this->join_group[] = $this->build_sql_join($select_object->path);
