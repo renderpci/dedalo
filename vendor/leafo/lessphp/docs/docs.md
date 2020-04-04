@@ -1,8 +1,8 @@
-    title: v0.4.0 documentation
+    title: v0.5.0 documentation
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.4.0</h2>
+<h2 skip="true">Documentation v0.5.0</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
@@ -270,7 +270,7 @@ Any block can be mixed in just by naming it:
 
     h1 {
       font-size: 200px;
-      .mixin;
+      .mymixin;
     }
     ```
 
@@ -900,7 +900,7 @@ function that let's you unquote any value. It is called `e`.
   See [String Unquoting](#string_unquoting)
 
 * `floor(number)` -- returns the floor of a numerical input
-* `round(number)` -- returns the rounded value of numerical input
+* `round(number, [precision])` -- returns the rounded value of numerical input with optional precision
 
 * `lighten(color, percent)` -- lightens `color` by `percent` and returns it
 * `darken(color, percent)` -- darkens `color` by `percent` and returns it
@@ -1023,7 +1023,7 @@ result or write it to the path specified by an optional second argument.
     echo $less->compileFile("input.less");
     ```
 
-The `compileChecked` method is like `compileFile`, but it only compiles if the output
+The `checkedCompile` method is like `compileFile`, but it only compiles if the output
 file doesn't exist or it's older than the input file:
 
     ```php
@@ -1239,7 +1239,7 @@ One for PHP and one for LESS.
 
     ```php
     $less->setVariables(array(
-      "url" => "'http://example.com.com/'"
+      "url" => "'http://example.com'"
     ));
 
     echo $less->compile("body { background: url("@{url}/bg.png"); }");
@@ -1271,7 +1271,7 @@ In this example, `@import "colors";` will look for either
     ```
 
 `addImportDir` will append a single path to the import search path instead of
-overwritting the whole thing.
+overwriting the whole thing.
 
     ```php
     $less->addImportDir("public/stylesheets");
