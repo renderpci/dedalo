@@ -1015,7 +1015,7 @@
 
 						>li{
 							display: grid;
-							grid-template-columns: 1em 1em auto 2em;
+							grid-template-columns: 1em 1em auto 1em;
 							align-items: center;
 							border-bottom: 1px solid #777;
 							border-left: 1px solid #777;
@@ -1033,7 +1033,7 @@
 							}
 
 							.layer_icon {
-
+								height: 30px;
 							}
 							.layer_id {
 
@@ -1044,8 +1044,9 @@
 							.layer_color_box {
 								background-color: #ffffff;
 								.layer_color {
-									width: 100%;
-									height: 30px;
+									width: 80%;
+									height: 20px;
+									border-radius: 19px;
 								}
 							}
 						}
@@ -1257,7 +1258,8 @@
 
 							>li{
 								display: grid;
-								grid-template-columns: 1.5em 1em auto 1.5em 2em;
+								grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
+								height: 30px;
 								align-items: center;
 								border-bottom: 1px solid #777;
 								border-left: 1px solid #777;
@@ -1304,13 +1306,13 @@
 									}
 									justify-self: center;
 								}
-								.layer_color_box {
-									background-color: #ffffff;
-									.layer_color {
-										width: 100%;
-										height: 30px;
-									}
+								
+								.layer_color {
+									width: 12px;
+									height: 12px;
+									border-radius: 12px;
 								}
+							
 							}
 							>li:first-child {
 								border-top: 0.5px solid #777;
@@ -1320,6 +1322,12 @@
 					}//end layer_selector
 
 					.pointer {
+						&:before {
+							.build_button('pointer.svg', black, 1);
+						}
+					}
+
+					.transform {
 						&:before {
 							.build_button('pointer.svg', black, 1);
 						}
