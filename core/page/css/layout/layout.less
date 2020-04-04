@@ -1,20 +1,7 @@
-// vars
-	@inspector_width 	: 15em;
-	@images_base_path 	: '../../themes/default';
-	@color_blue   : #3b87fd; // blue base osc checkbox, radiobuttons, etc
-	@color_orange : #f78a1c; // Dédalo logo orange
-	@color_grey_dark : #949494; // used in section group headers
-	@color_grey_medium : #e6e6e6; // used in component actibe background
-
-	@media_max_height : 27em;
-
-	// break points
-	@width_break_point_1 : 960px;
 
 
 
 // general styles
-
 	.mark{
 		font-style: italic;
 	}
@@ -76,8 +63,8 @@
 	// hilite (on focus)
 		.hilite(@outline_offset:0) {
 			outline-offset: @outline_offset;
-			outline: 1px solid @color_blue;
-			box-shadow: 0 0 10px @color_blue; //rgba(26, 154, 245, .5);
+			outline: 1px solid @color_hilite;
+			box-shadow: 0 0 10px @color_hilite; //rgba(26, 154, 245, .5);
 			opacity: 1;
 			z-index: 1;
 
@@ -492,7 +479,6 @@
 		}
 
 		&.edit {
-			//padding-right: @inspector_width;
 			width: calc(100vw - 18em);
 
 			@media screen and (max-width: @width_break_point_1) {
@@ -781,7 +767,7 @@
 			}
 		}
 
-		&.edit {
+		&.edit, &.search {
 			>.content_data {
 				max-height: inherit;
 			}
@@ -980,6 +966,13 @@
 				}
 			}
 
+			// component_radio_button
+			&.component_radio_button {
+				>.content_data {
+
+				}
+			}
+
 			// component_svg
 			&.component_svg {
 				>.content_data {
@@ -1079,7 +1072,7 @@
 			// component_section_id
 			&.component_section_id {
 				flex: 0 0 100%;
-				background-color: #f78a1c !important;
+				background-color: @color_orange_dedalo !important;
 				flex-direction: row-reverse;
 				color: white;
 				display: flex;
@@ -1136,7 +1129,7 @@
 
 		// inside .section_record.edit context
 		//.section_record.edit &, .components_container & { 22
-		.section_record &, .wrapper_tool & {
+		.section_record &, .wrapper_tool &, .search_group & {
 			// flex base config
 			.component_base;
 
@@ -1198,25 +1191,17 @@
 			}
 
 			>.buttons_container {
+				background-color: @color_orange_dedalo;
 				display: none;
-				background-color: #ffffff;
-				// background-color: #BDFF69;
 				flex: 0 1 1em;
 				padding: 0; // 0.15em;
 				padding-top: 0.5em;
-				// border-radius: 0.25em;
-
-				// 2
 				position: absolute;
 				top: 0;
 				width: 2em;
 				min-height: 100%;
-
-				// 3
 				left: 100%;
-				// right: 0;
 				z-index: 1;
-				background-color: #ffa03f;
 				box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 				border-top-right-radius: 0.25em;
 				border-bottom-right-radius: 0.25em;
@@ -1239,11 +1224,11 @@
 
 					}
 
-					.layer_selector_button{
+					.layer_selector_button {
 						text-align: center;
 						color: #000;
 					}
-					.layer_selector{
+					.layer_selector {
 						float: right;
 						width: 11em;
 						background-color: #ffa03f;
@@ -1332,8 +1317,7 @@
 							}
 
 						}
-
-					}
+					}//end layer_selector
 
 					.pointer {
 						&:before {
@@ -1407,6 +1391,10 @@
 					flex: 1 1 100%;
 				}
 
+				>.q_operator {
+					width: 3em;
+				}
+
 				>.close {
 					position: absolute;
 					top: -0.1em;
@@ -1420,7 +1408,9 @@
 				}
 
 				>ul {
-					height: 100%;
+					&:not(.search) {
+				       height: 100%;
+					}
 				}
 
 				&.vertical {
@@ -1466,7 +1456,7 @@
 					// 	position: absolute;
 					// 	top: -0.1em;
 					// 	right: -0.4em;
-					// 	color: #f78a1c;
+					// 	color: @color_orange_dedalo;
 					// 	opacity: 1;
 					// 	z-index: 2;
 					// }
@@ -1547,19 +1537,19 @@
 
 		.header {
 			padding: 1em;
-			background-color: #FF9800;
+			background-color: @color_orange_dedalo;
 			color: white;
 			font-weight: normal;
 			z-index: 2;
 
-			>.label {
+			&.label, >.label {
 				font-size: 1.4em;
 				line-height: 1.4em;
 			}
 		}
 
 		.iframe_container {
-			background-color: #96FD53;
+			// background-color: #96FD53;
 			>iframe {
 				height: calc(100vh - 68px);
 				width: 100%;
@@ -1723,6 +1713,19 @@
 		margin: 0.5em;
 		margin-top: 0.25em;
 		margin-bottom: 0.25em;
+
+		width: 1em;
+		height: 1em;
+
+
+		// generic
+				mask-size: contain;
+		-webkit-mask-size: contain;
+				mask-repeat: no-repeat;
+		-webkit-mask-repeat: no-repeat;
+				mask-position: center;
+		-webkit-mask-position: center;
+		background: #ffffff;
 
 
 
@@ -1891,6 +1894,7 @@
 // inspector
 	.inspector {
 		@top_distance : 72px;
+		@inspector_width : 15em;
 
 		height: 100%;
 		width: @inspector_width;
@@ -1984,13 +1988,14 @@
 		.hidden_tooltip {
 			opacity: 0;
 			visibility: hidden;
-			//display: none;
+			// display: none;
 		}
 
 		.tooltip {
 			transition: all 0.5s ease;
 			position: absolute;
-			top: 6.25em;
+			top: calc(100% + 1em);//6.25em;
+			left: 1em;
 			z-index: 9999999999999999999;
 			background-color: rgba(0, 0, 0, 0.9);
 			color: #fff;
@@ -1998,11 +2003,9 @@
 			line-height: 1.5em;
 			border-radius: 5px;
 			font-size: .8em;
-			left: 0;
 			width: 100%;
 			max-width: 200px;
-			//display: block !important;
-
+			// display: block !important;
 
 			>.search_options_title_item {
 				display: grid;
@@ -2031,6 +2034,7 @@
 		}
 
 		&:hover .tooltip {
+			transition-delay: 2s; // delay show after hover component wrapper
 			visibility: visible;
 			opacity: 1;
 		}
@@ -2429,22 +2433,27 @@
 
 // component_json
 	.component_json {
+		z-index: 1;
 
 		.button_save {
-			height: 28px;
+			height: 31px;
 			position: absolute;
-			top: 4px;
-			right: 4px;
+			top: 2px;
+			right: 2px;
 			z-index: 1;
 			padding-left: 1.7em;
 			padding-right: 1.7em;
 			background-color: #b7d2fd;
 			border: 1px solid #3883fa;
 			color: #3883fa;
-			line-height: 24px;
+			line-height: 28px;
 			border-radius: 3px;
+			cursor: pointer;
+			&:active {
+				background-color: #8FA3C4;
+				color: #ffffff;
+			}
 		}
-		z-index: 1;
 
 		.jsoneditor {
 			//min-height: 30vh;
