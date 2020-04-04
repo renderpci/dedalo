@@ -1,5 +1,17 @@
 language: php
-script: phpunit tests
+
 php:
-  - 5.3
-  - 5.4
+  - 5.6
+  - hhvm
+  - 7.0
+  - 7.1
+  - 7.2
+  - 7.3
+
+sudo: false
+
+install:
+  - travis_retry composer install --no-interaction --prefer-source
+
+script:
+  - composer test

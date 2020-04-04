@@ -1,7 +1,7 @@
-# lessphp v0.4.0
-### <http://leafo.net/lessphp>
+[![Build Status](https://travis-ci.org/leafo/lessphp.svg?branch=master)](https://travis-ci.org/leafo/lessphp)
 
-[![Build Status](https://secure.travis-ci.org/leafo/lessphp.png)](http://travis-ci.org/leafo/lessphp)
+# lessphp v0.5.0
+### <http://leafo.net/lessphp>
 
 `lessphp` is a compiler for LESS written in PHP. The documentation is great,
 so check it out: <http://leafo.net/lessphp/docs/>.
@@ -34,7 +34,7 @@ result or write it to the path specified by an optional second argument.
 echo $less->compileFile("input.less");
 ```
 
-The `compileChecked` method is like `compileFile`, but it only compiles if the output
+The `checkedCompile` method is like `compileFile`, but it only compiles if the output
 file doesn't exist or it's older than the input file:
 
 ```php
@@ -75,12 +75,12 @@ css is written to standard out:
 
     $ plessc input.less > output.css
 
-Using the -r flag, you can specify LESS code directly as an argument or, if 
+Using the -r flag, you can specify LESS code directly as an argument or, if
 the argument is left off, from standard in:
 
     $ plessc -r "my less code here"
 
-Finally, by using the -w flag you can watch a specified input file and have it 
+Finally, by using the -w flag you can watch a specified input file and have it
 compile as needed to the output file:
 
     $ plessc -w input-file output-file
