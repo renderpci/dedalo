@@ -171,7 +171,7 @@ render_search.prototype.render_base = async function() {
 /**
 * RENDER_COMPONENTS_LIST
 * Create dom elements to generate list of components and section groups of current section
-* @see this.load_components_from_section
+* @see this.get_section_elements_context
 * @param object options
 *	string options.section_tipo (section to load components and render)
 *	dom element options.target_div (Target dom element on new data will be added)
@@ -188,7 +188,7 @@ render_search.prototype.render_components_list = async function(options) {
 	const path 		 	= options.path
 
 	// load components from api
-		const ar_elements = await self.load_components_from_section({
+		const ar_elements = await self.get_section_elements_context({
 			section_tipo : section_tipo
 		})
 		//console.log("ar_elements:",ar_elements);
@@ -200,7 +200,7 @@ render_search.prototype.render_components_list = async function(options) {
 
 	// First item check
 		if (!ar_elements || typeof ar_elements[0]==="undefined") {
-			console.warn(`[render_components_list] Error. Empty ar_elements on load_components_from_section ${section_tipo}`, ar_elements);
+			console.warn(`[render_components_list] Error. Empty ar_elements on get_section_elements_context ${section_tipo}`, ar_elements);
 			return false
 		}
 
@@ -897,10 +897,9 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			// label
 				const label = ui.create_dom_element({
-					element_type 	: 'label',
-					parent 		 	: li,
-					inner_html 		: item.target_section_name,
-					//class_name 		: "checkbox-inline"
+					element_type : 'label',
+					parent 		 : li,
+					inner_html 	 : item.target_section_name
 				})
 				label.setAttribute("for", 'section_option_'+item.target_section_tipo)
 		}

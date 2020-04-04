@@ -194,6 +194,13 @@ search.prototype.build = async function(){
 			}
 		})
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("-> search build editing_preset:", editing_preset);
+			console.log("-> search build user_presets:", user_presets);
+		}
+
+
 	// status update
 		self.status = 'builded'
 
@@ -222,8 +229,8 @@ search.prototype.render = async function() {
 
 	// render components from temp preset [center]
 		await self.render_filter({
-			editing_preset 		: self.json_filter,
-			allow_duplicates 	: true
+			editing_preset 	 : self.json_filter,
+			allow_duplicates : true
 		})
 
 	// render buttons
