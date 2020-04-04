@@ -73,6 +73,18 @@ component_image.prototype.init = async function(options) {
 	const self = this
 	// image node
 		self.image_node 			= null
+	// image size
+		self.img_height				= null
+		self.img_width				= null
+	// image source (URI)
+		self.img_src 				= null
+	// fixed height for the image
+		self.img_view_height		= 1200
+		self.canvas_height			= 432
+
+	//canvar node
+		self.canvas_node 			= null
+
 	// editor init vars
 		self.ar_layer_loaded		= []
 		self.vector_tools_loaded 	= false
@@ -102,9 +114,7 @@ component_image.prototype.get_data_tag = function(){
 	const layers 		= lib_data.map((item) => {
 		const layer = {
 			layer_id 			: item.layer_id, 
-			user_layer_name 	: item.user_layer_name,
-			layer_color			: item.layer_color
-		}
+			user_layer_name 	: item.user_layer_name		}
 		return layer 
 	})
 
@@ -170,7 +180,6 @@ component_image.prototype.load_vector_editor = async function(options) {
 	const self = this
 	const load = options.load || 'full'
 
-
 	if (self.vector_tools_loaded===false){
 
 		self.vector_editor = new vector_editor
@@ -180,26 +189,28 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 		self.vector_tools_loaded = true
 	}
-
+	//load all layers if the data is empty it create the frist layer
 	if(self.ar_layer_loaded.length < 1){
 		self.ar_layer_loaded = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
 			? self.data.value[0].lib_data 
 			: [{
-					layer_id 	:1,
+					layer_id 	:0,
 					layer_data 	:[]
 				}]
 	}
 
 	switch(load) {
 		case ('full'):
-			const ar_layer = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
-				? self.data.value[0].lib_data 
-				: [{
-					layer_id 	:1,
-					layer_data 	:[]
-				}]
+			const ar_layer = self.ar_layer_loaded
+			// typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
+			// 	? self.data.value[0].lib_data 
+			// 	: [{
+			// 		layer_id 	:0,
+			// 		layer_data 	:[]
+			// 	}]
 			for (let i = 0; i < ar_layer.length; i++) {
 				const layer = ar_layer[i]
+					console.log("layer:",layer);
 				self.vector_editor.load_layer(self, layer)
 			}
 
@@ -214,7 +225,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 			: (function(){
 				const new_layer = {
 					layer_id 	: layer_id,
-					layer_data 	:[]
+					layer_data 	: [],
 				}
 				self.ar_layer_loaded.push(new_layer)
 				return new_layer
@@ -336,7 +347,8 @@ component_image.prototype.update_draw_data = function() {
 
 	const current_layer				= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 	current_layer.layer_data 		= project.activeLayer.exportJSON({asString:false})
-	current_layer.layer_color 		= project.activeLayer.fillColor.toCSS()
+
+	// current_layer.layer_color 		= project.activeLayer.selectedColor.toCSS()
 	current_layer.user_layer_name 	= project.activeLayer.data.user_layer_name
 
 	// const new_lib_data 			= project.exportJSON({asString:false})
