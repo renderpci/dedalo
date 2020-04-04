@@ -1667,6 +1667,12 @@
 	Valencia 26-03-2020 5.5.36
 		Update class web_data->get_records method to allow send sequences of section id to the API server
 
+	Valencia 04-04-2020 5.5.36
+		Fix error on search development when only first element of relational component was calculated
+
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1687,12 +1693,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.33';
+	$DEDALO_VERSION = '5.5.37';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '31-03-2020');
+	define('DEDALO_BUILD'	, '04-04-2020');
 
 
 	/*
