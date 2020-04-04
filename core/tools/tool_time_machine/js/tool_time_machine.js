@@ -245,6 +245,9 @@ tool_time_machine.prototype.load_section = async function() {
 			}
 		})
 
+	// set current tool as component caller (to check if component is inside tool or not)
+		section_instance.caller = this
+
 	// save section instance (necessary to destroy later)
 		self.ar_instances.push(section_instance)
 
@@ -255,9 +258,6 @@ tool_time_machine.prototype.load_section = async function() {
 		if(SHOW_DEBUG===true) {
 			console.log("[tool_time_machine.load_section] section_instance:", section_instance);
 		}
-
-	// // set current tool as component caller (to check if component is inside tool or not)
-		section_instance.caller = this
 
 	// add
 		const instance_found = self.ar_instances.find( el => el===section_instance )
@@ -278,7 +278,7 @@ tool_time_machine.prototype.load_section = async function() {
 tool_time_machine.prototype.load_component = async function(lang, mode='tm', matrix_id=null) {
 
 	const self = this
-
+	console.log("self:",self);
 	const component = self.caller
 	const context   = JSON.parse(JSON.stringify(component.context))
 
@@ -300,7 +300,8 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 			type 			: component.type,
 			context 		: context,
 			data 			: {value:[]},
-			datum 			: component.datum
+			datum 			: component.datum,
+			id_variant 		: 'time_machine'
 			//sqo_context 	: component.sqo_context
 		}
 
@@ -308,14 +309,16 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 			instance_options.matrix_id = matrix_id
 		}
 
+
 	// get instance and build
 		const component_instance = await get_instance(instance_options)
-		await component_instance.build(true)
 
 	// set current tool as component caller (to check if component is inside tool or not)
 		if (matrix_id) {
 			component_instance.caller = self
 		}
+
+		await component_instance.build(true)
 
 	// add created component instance to current ar_instances
 		const instance_found = self.ar_instances.find( el => el===component_instance )

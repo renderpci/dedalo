@@ -275,15 +275,101 @@ const build_id_column = function(self) {
 				parent 			: edit_line
 			})
 
-		// initiator. Caller of parent section
-			const initiator = typeof self.caller.caller!=="undefined"
-				? self.caller.caller
-				: false
+		// initiator. Caller section defined
+			const initiator = self.caller.initiator || false
+				console.log("initiator:",initiator);
 
 		// button
 		switch(true) {
 
-			case (initiator && initiator.model==='tool_time_machine'):
+			case (initiator && initiator.indexOf('component_autocomplete')!==-1):
+			// case (self.id_variant==='PORTAL_VARIANT'):
+				// component_autocomplete / portal caller (link)
+				const link_button = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'link',
+					parent 			: edit_line
+				})
+				link_button.addEventListener("click", function(e){
+					// top window event
+					top.event_manager.publish('initiator_link_' + initiator, {
+						section_tipo : self.section_tipo,
+						section_id 	 : self.section_id
+					})
+				})
+				// button edit (pen)
+				if (permissions>0) {
+					const edit_button = ui.create_dom_element({
+						element_type	: 'a',
+						parent 			: edit_line
+					})
+					edit_button.addEventListener("click", async function(e){
+							console.log("self.section_tipo:", self.section_tipo);
+							console.log("self.section_id:", self.section_id);
+								console.log("self.caller:",self.caller);
+						event_manager.publish('user_action', {
+							tipo 		: self.section_tipo,
+							section_id 	: self.section_id,
+							mode 		: 'edit'
+						})
+
+						// detail_section
+							// ( async () => {
+							// 	const options = {
+							// 		model 			: 'section',
+							// 		type 			: 'section',
+							// 		tipo  			: self.section_tipo,
+							// 		section_tipo  	: self.section_tipo,
+							// 		section_id 		: self.section_id,
+							// 		mode 			: 'edit',
+							// 		lang 			: page_globals.dedalo_data_lang
+							// 	}
+							// 	const current_data_manager	= new data_manager()
+							// 	const page_element_call 	= await current_data_manager.get_page_element(options)
+							// 	const page_element 			= page_element_call.result
+
+							// 	// detail_section instance. Create target section page element and instance
+							// 		const detail_section = await get_instance(page_element)
+
+							// 		// set self as detail_section caller (!)
+							// 			detail_section.caller = initiator
+
+							// 		// load data and render wrapper
+							// 			await detail_section.build(true)
+							// 			const detail_section_wrapper = await detail_section.render()
+
+							// 	// modal container (header, body, footer, size)
+							// 		const header = ui.create_dom_element({
+							// 			element_type	: 'div',
+							// 			text_content 	: detail_section.label
+							// 		})
+							// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
+							// 		modal.on_close = () => {
+							// 			detail_section.destroy(true, true, true)
+							// 		}
+							// })()
+
+						// iframe
+							// ( async () => {
+							// 	const iframe = ui.create_dom_element({
+							// 		element_type	: 'iframe',
+							// 		src 			: '../page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
+							// 	})
+							// 	// modal container (header, body, footer, size)
+							// 		const header = ui.create_dom_element({
+							// 			element_type	: 'div',
+							// 			text_content 	: detail_section.label
+							// 		})
+							// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
+							// 		modal.on_close = () => {
+							// 			detail_section.destroy(true, true, true)
+							// 	}
+							// })()
+					})
+				}
+				break
+
+			case (initiator && initiator.indexOf('tool_time_machine')!==-1):
 				// button time machine preview (eye)
 				const edit_button_tm = ui.create_dom_element({
 					element_type	: 'a',
@@ -300,70 +386,6 @@ const build_id_column = function(self) {
 						mode 		: 'tm'
 					})
 				})
-				break
-
-			case (initiator && initiator.model==='component_autocomplete'):
-				// component_autocomplete / portal caller (link)
-				const link_button = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'link',
-					parent 			: edit_line
-				})
-				link_button.addEventListener("click", function(e){
-					// publish event
-					event_manager.publish('component_autocomplete_link_' + self.caller.caller.id, {
-						section_tipo : self.section_tipo,
-						section_id 	 : self.section_id
-					})
-				})
-				// button edit (pen)
-				if (permissions>0) {
-					const edit_button = ui.create_dom_element({
-						element_type	: 'a',
-						parent 			: edit_line
-					})
-					edit_button.addEventListener("click", async function(e){
-
-						const options = {
-							model 			: 'section',
-							type 			: 'section',
-							tipo  			: self.section_tipo,
-							section_tipo  	: self.section_tipo,
-							section_id 		: self.section_id,
-							mode 			: 'edit',
-							lang 			: page_globals.dedalo_data_lang
-						}
-						const current_data_manager	= new data_manager()
-						const page_element_call 	= await current_data_manager.get_page_element(options)
-						const page_element 			= page_element_call.result
-							console.log("page_element options:",options);
-							console.log("page_element:",page_element);
-							console.log("self.caller:",self.caller);
-
-						// detail_section instance. Create target section page element and instance
-							const detail_section = await get_instance(page_element)
-
-							// set self as detail_section caller (!)
-								detail_section.caller = initiator
-
-							// load data and render wrapper
-								await detail_section.build(true)
-								const detail_section_wrapper = await detail_section.render()
-
-						// modal container (header, body, footer, size)
-							const modal = ui.attach_to_modal(null, detail_section_wrapper, null, 'big')
-							modal.on_close = () => {
-								detail_section.destroy(true, true, true)
-							}
-
-						// set self as find_section caller (!)
-							// current_section.caller = self
-
-						// load data and render wrapper
-							// await current_section.build(true)
-							// const current_section_wrapper = await current_section.render()
-					})
-				}
 				break
 
 			default:

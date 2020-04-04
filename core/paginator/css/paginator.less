@@ -4,13 +4,12 @@
 
 // wrapper_paginator
 	.wrapper_paginator {
-		line-height: 1em;
-		// padding: 0.5em;
-
+		// background-color: #7FFCEB;
 		>.content_data {
-			line-height: 1.5em;
-			width: 100%;
 			display: flex;
+			width: 100%;
+			padding: 0.5em;
+			line-height: 1.5em;
 
 			> * {
 				align-self: center;
@@ -20,75 +19,44 @@
 			.nav_buttons {
 				display: flex;
 				vertical-align: bottom;
+				font-size: small;
 
-				button {
-					background-color: #2c2c2e;
-					background-size: 100%;
-					background-repeat: no-repeat;
-					background-position: center;
-					border: none;
-					height: 1em;
-					padding: 1em;
-					cursor: pointer;
+				>.btn {
+					// padding: 0.80em;
 					margin-right: 0.35em;
 					user-select: none;
 
-					&:active {
-						opacity: 0.2;
-					}
-
 					// unactive
 					&.unactive {
-						opacity: 0.4;
-
+						opacity: 0.4 !important;
 						&:hover {
 							opacity: 0.4;
 							cursor: default !important;
 						}
 					}
-				}//end button
 
-				//.element-color(@color) {
-					//	background-image: url('data:image/svg+xml;utf8,<svg width="1792" height="1792" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg"><path d="M1683 141q19-19 32-13t13 32v1472q0 26-13 32t-32-13l-710-710q-9-9-13-19v710q0 26-13 32t-32-13l-710-710q-19-19-19-45t19-45l710-710q19-19 32-13t13 32v710q4-10 13-19z" fill="@{color}"/></svg>');
-					//}
+					&.paginator_first_icon {
+						.build_button('forward.svg', black, 1, 2em);
+						transform: scaleX(-1);
+						mask-size: 80%;
+						-webkit-mask-size: 80%;
+					}
 
-				.paginator_first_icon {
-					//background-image: url('../../themes/default/icons/backward.svg');
-					//background-image: url('../../themes/default/icons/forward.svg');
-					// .background_icon('forward.svg');
-					.build_button('forward.svg', black, 1);
-					transform: scaleX(-1);
-					// background-size: 80%;
-					mask-size: 80%;
-					-webkit-mask-size: 80%;
-				}
+					&.paginator_prev_icon {
+						.build_button('play.svg', black, 1, 2em);
+						transform: scaleX(-1);
+					}
 
-				.paginator_prev_icon {
-					//background-image: url('../../themes/default/icons/play.svg');
-					// .background_icon('play.svg');
-					.build_button('play.svg', black, 1);
-					transform: scaleX(-1);
-				}
+					&.paginator_next_icon {
+						.build_button('play.svg', black, 1, 2em);
+					}
 
-				.paginator_next_icon {
-					//background-image: url('../../themes/default/icons/play.svg');
-					// .background_icon('play.svg');
-					.build_button('play.svg', black, 1);
-				}
-
-				.paginator_last_icon {
-					//background-image: url('../../themes/default/icons/forward.svg');
-					// .background_icon('forward.svg');
-					.build_button('forward.svg', black, 1);
-					// background-size: 80%;
-					mask-size: 80%;
-					-webkit-mask-size: 80%;
-				}
-
-				.paginator_desactive {
-					cursor: default;
-					opacity: 0.1 !important;
-				}
+					&.paginator_last_icon {
+						.build_button('forward.svg', black, 1, 2em);
+						mask-size: 80%;
+						-webkit-mask-size: 80%;
+					}
+				}//end btn
 			}//end .nav_buttons
 
 

@@ -104,6 +104,7 @@ class component_input_text extends component_common {
 	}//end get_valor
 
 
+
 	/**
 	* LOAD TOOLS
 	*//**/
@@ -315,6 +316,7 @@ class component_input_text extends component_common {
 				break;
 		}
 	}//end update_dato_version
+
 
 
 	/**
@@ -568,4 +570,3 @@ class component_input_text extends component_common {
 
 
 }//end class component_input_text
-?>

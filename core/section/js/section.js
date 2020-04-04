@@ -129,6 +129,7 @@ section.prototype.init = async function(options) {
 			}
 		}
 
+
 	// events subscription
 
 
@@ -198,10 +199,15 @@ section.prototype.build = async function(autoload=false) {
 	// permissions. calculate and set (used by section records later)
 		self.permissions = section_context.permissions || 0
 
-	// initiator. Caller of parent section
-		const initiator = typeof self.caller!=="undefined"
-			? self.caller
-			: false
+	// initiator . Url defined var or Caller of parent section
+		const searchParams = new URLSearchParams(window.location.href);
+		const initiator = searchParams.has("initiator")
+			? searchParams.get("initiator")
+			: typeof self.caller!=="undefined"
+				? self.caller.id
+				: false
+		// fix initiator
+			self.initiator = initiator
 
 	// pagination update properties
 		self.pagination.limit	= show_sqo.limit
