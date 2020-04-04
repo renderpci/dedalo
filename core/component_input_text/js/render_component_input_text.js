@@ -518,14 +518,14 @@ const get_content_data_search = async function(self) {
 const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 	// q operator (search only)
-		const q_operator = self.data.q_operator
-		const input_q_operator = ui.create_dom_element({
-			element_type 	: 'input',
-			type 		 	: 'text',
-			value 		 	: q_operator,
-			class_name 		: 'q_operator',
-			parent 		 	: inputs_container
-		})
+		// const q_operator = self.data.q_operator
+		// const input_q_operator = ui.create_dom_element({
+		// 	element_type 	: 'input',
+		// 	type 		 	: 'text',
+		// 	value 		 	: q_operator,
+		// 	class_name 		: 'q_operator',
+		// 	parent 		 	: inputs_container
+		// })
 
 	// input field
 		const input = ui.create_dom_element({

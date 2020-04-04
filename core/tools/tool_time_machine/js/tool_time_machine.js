@@ -278,7 +278,7 @@ tool_time_machine.prototype.load_section = async function() {
 tool_time_machine.prototype.load_component = async function(lang, mode='tm', matrix_id=null) {
 
 	const self = this
-	console.log("self:",self);
+
 	const component = self.caller
 	const context   = JSON.parse(JSON.stringify(component.context))
 
@@ -301,7 +301,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 			context 		: context,
 			data 			: {value:[]},
 			datum 			: component.datum,
-			id_variant 		: 'time_machine'
+			id_variant 		: 'time_machine' // avoid conflicts
 			//sqo_context 	: component.sqo_context
 		}
 
