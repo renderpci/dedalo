@@ -115,10 +115,10 @@ tool_tc.prototype.load_component = async function(lang) {
 		//sqo_context 	: component.sqo_context
 	})
 
-	await component_instance.build(true)
-
 	// set current tool as component caller (to check if component is inside tool or not)
 		component_instance.caller = this
+
+	await component_instance.build(true)
 
 	// add
 		const instance_found = self.ar_instances.find( el => el===component_instance )

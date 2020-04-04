@@ -58,21 +58,23 @@ render_component_date.prototype.list = async function() {
 render_component_date.prototype.edit = async function(options={render_level : 'full'}) {
 
 	const self = this
-	const date_mode = self.context.properties.date_mode || 'date'
+
+	// date_mode . Defined in ontology properties
+		const date_mode = self.context.properties.date_mode || 'date'
 
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// load editor files (calendar)
 		await self.load_editor()
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -80,11 +82,25 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data,
+			content_data : content_data,
 			buttons 	 : buttons
 		})
 
 		wrapper.classList.add(date_mode)
+
+	// add events
+		add_events(self, wrapper)
+
+
+	return wrapper
+}//end edit
+
+
+
+/**
+* ADD_EVENTS
+*/
+const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
@@ -101,7 +117,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 		function add_element(changed_data) {
 			const inputs_container = wrapper.querySelector('.inputs_container')
 			// add new dom input element
-			input_element(changed_data.key, changed_data.value, inputs_container, self)
+			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
 	// change event, for every change the value in the imputs of the component
@@ -123,11 +139,9 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 							(dato_range.start === false) ? value = false : value = dato_range
 						}
 
-
 						if (e.target.dataset.role==='range_end') {
 							(dato_range.end === false) ? value = false : value = dato_range
 						}
-
 						break;
 
 					case 'period':
@@ -172,88 +186,182 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
-			//e.stopPropagation()
 
-			const all_buttons_remove =wrapper.querySelectorAll('.remove')
-				for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-					all_buttons_remove[i].classList.add("display_none")
-				}
+			// const all_buttons_remove =wrapper.querySelectorAll('.remove')
+
+			// console.log("all_buttons_remove:",all_buttons_remove);
+
+			// for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
+			// 	all_buttons_remove[i].classList.add("display_none")
+			// }
+
+			// show current remove button
+			// const targetDate = e.target.parentNode
+			// console.log("e.target:",e.target);
+			// console.log("targetDate:",targetDate.parentNode);
+
+				// if (targetDate.matches('input[type="text"')) {
+				// 	// set the button_remove associated to the input selected to visible
+				// 		const button_remove = targetDate.parentNode.querySelector('.remove')
+				// 		if (button_remove) {
+				// 			button_remove.classList.remove("display_none")
+				// 		}
+				// }
+				// if (targetDate.matches('i')) {
+				// 		const button_email_send = targetDate.parentNode.querySelector('.calendar')
+				// 		if (button_email_send) {
+				// 			button_email_send.classList.remove("display_none")
+				// 		}
+				// }
 
 			const date_mode = self.context.properties.date_mode
 
 			//if (e.target.matches('input[type="text"]') && date_mode != 'period' && date_mode != 'time') {
-			if (e.target.matches('.calendar') && date_mode != 'period' && date_mode != 'time') {
-				// set the button_remove associated to the input selected to visible
-					// const button_remove = e.target.parentNode.querySelector('.remove')
-					// button_remove.classList.remove("display_none")
-					const datePicker = flatpickr(e.target, {
-						onClose: self.close_flatpickr,
-						onValueUpdate: function(selectedDates, dateStr, instance){
-											ui.component.error(false, e.target.parentNode.previousSibling)
-             								self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
-             						}
-					})
+			if (e.target.matches('.calendar') && date_mode!=='period' && date_mode!=='time') {
+			//if (date_mode != 'period' && date_mode != 'time') {
 
-					datePicker.open()
+				//console.log("e.target.parentNode.parentNode:",e.target.parentNode.parentNode);
+
+				// // set the button_remove associated to the input selected to visible
+				// 	const button_remove = e.target.parentNode.parentNode.querySelector('.remove')
+				// 		console.log("button_remove:",button_remove);
+				// 	if (button_remove) {
+				// 		button_remove.classList.remove("display_none")
+				// 	}
+
+				//ui.component.show_button(e.target.parentNode.parentNode, '.remove')
+
+
+				const datePicker = flatpickr(e.target, {
+					onClose 	  : self.close_flatpickr,
+					onValueUpdate : function(selectedDates, dateStr, instance){
+										ui.component.error(false, e.target.parentNode.previousSibling)
+										self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
+									}
+				})
+				datePicker.open()
 
 				return true
- 			}
+			//} else {
+				//ui.component.show_button(e.target.parentNode, '.remove')
+			}
 
 			// insert
-			if (e.target.matches('.button.add')) {
+				if (e.target.matches('.button.add')) {
 
-				const changed_data = Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,
-					value	: null
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('add_element_'+self.id, changed_data)
-				})
+					const changed_data = Object.freeze({
+						action	: 'insert',
+						key		: self.data.value.length,
+						value	: null
+					})
+					self.change_value({
+						changed_data : changed_data,
+						refresh 	 : false
+					})
+					.then((save_response)=>{
+						// event to update the dom elements of the instance
+						event_manager.publish('add_element_'+self.id, changed_data)
+					})
 
-				return true
-			}
+					return true
+				}
 
 			// remove
-			if (e.target.matches('.button.remove')) {
+				if (e.target.matches('.button.remove')) {
+					e.stopPropagation()
 
-				// force possible input change before remove
-				document.activeElement.blur()
+					// force possible input change before remove
+					document.activeElement.blur()
 
-				const changed_data = Object.freeze({
-					action	: 'remove',
-					key		: e.target.dataset.key,
-					value	: null,
-					refresh : true
-				})
-				self.change_value({
-					changed_data : changed_data,
-					label 		 : e.target.previousElementSibling.value,
-					refresh 	 : true
-				})
-				.then(()=>{
-				})
+					const changed_data = Object.freeze({
+						action	: 'remove',
+						key		: e.target.dataset.key,
+						value	: null,
+						refresh : true
+					})
+					self.change_value({
+						changed_data : changed_data,
+						label 		 : e.target.previousElementSibling.value,
+						refresh 	 : true
+					})
+					.then(()=>{
+					})
 
-				return true
-			}
+					return true
+				}
+		})//end click
 
-		})
-
-	return wrapper
-}//end edit
+	return true
+}//end add_events
 
 
 
 /**
-* CONTENT_DATA_EDIT
-* @return
+* SEARCH
+* Render node for use in search
+* @return DOM node wrapper
 */
-const content_data_edit = async function(self) {
+render_component_date.prototype.search = async function() {
+
+	const self 	= this
+
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	const content_data = await get_content_data_search(self)
+
+	// ui build_edit returns component wrapper
+		const wrapper = ui.component.build_wrapper_edit(self, {
+			content_data : content_data
+		})
+
+	// id
+		wrapper.id = self.id
+
+	// Events
+
+		// change event, for every change the value in the imputs of the component
+			wrapper.addEventListener('change', (e) => {
+				// e.stopPropagation()
+
+				// input_value. The standard input for the value of the component
+				if (e.target.matches('input[type="text"].input_value')) {
+					//get the input node that has changed
+					const input = e.target
+					//the dataset.key has the index of correspondence self.data.value index
+					const i 	= input.dataset.key
+					// set the selected node for change the css
+					self.selected_node = wrapper
+					// set the changed_data for replace it in the instance data
+					// update_data_value. key is the posistion in the data array, the value is the new value
+					const value = (input.value.length>0) ? input.value : null
+					// set the changed_data for update the component data and send it to the server for change when save
+					const changed_data = {
+						action	: 'update',
+						key	  	: i,
+						value 	: value
+					}
+					// update the data in the instance previous to save
+					self.update_data_value(changed_data)
+					// set the change_data to the instance
+					self.data.changed_data = changed_data
+					// event to update the dom elements of the instance
+					event_manager.publish('change_search_element', self)
+					return true
+				}
+
+			}, false)
+
+	return wrapper
+}//end search
+
+
+
+/**
+* GET_CONTENT_DATA_EDIT
+* @return DOM node content_data
+*/
+const get_content_data_edit = async function(self) {
 
 	const value 		= self.data.value
 	const mode 			= self.mode
@@ -272,20 +380,18 @@ const content_data_edit = async function(self) {
 		const inputs_value = (value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			input_element(i, inputs_value[i], inputs_container, self)
+			get_input_element_edit(i, inputs_value[i], inputs_container, self)
 		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-	
-		content_data.classList.add("nowrap")
+
 		content_data.appendChild(fragment)
 
-
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -326,10 +432,10 @@ const get_buttons = (self) => {
 
 
 /**
-* INPUT_ELEMENT
+* GET_INPUT_ELEMENT_EDIT
 * @return dom element li
 */
-const input_element = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 	const mode 		= self.mode
 	const date_mode = self.context.properties.date_mode
@@ -365,7 +471,7 @@ const input_element = (i, current_value, inputs_container, self) => {
 		if(mode==='edit' || 'edit_in_list'){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button remove display_none',
+				class_name 		: 'button remove hidden_button',
 				dataset			: { key : i },
 				parent 			: li
 			})
@@ -373,7 +479,7 @@ const input_element = (i, current_value, inputs_container, self) => {
 
 
 	return li
-}//end input_element
+}//end get_input_element_edit
 
 
 
@@ -398,6 +504,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 
 		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container, self)
 
+	return true
 }//end input_element_range
 
 
@@ -524,31 +631,94 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 		})
 
 	// input field
-	const input = ui.create_dom_element({
-		element_type 	: 'input',
-		type 		 	: 'text',
-		class_name 		: 'form-control',
-		dataset 	 	: { key : i, role: role_name, altinput: true, input: ''},
-		value 		 	: input_value,
-		placeholder 	: self.get_ejemplo(),
-		parent 		 	: flatpickr_wrap
-	})
+		const input = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			class_name 		: 'form-control',
+			dataset 	 	: { key : i, role: role_name, altinput: true, input: ''},
+			value 		 	: input_value,
+			placeholder 	: self.get_ejemplo(),
+			parent 		 	: flatpickr_wrap
+		})
 
-	const button_calendar = ui.create_dom_element({
-		element_type	: 'a',
-		class_name 		: 'input-group-addon',
-		dataset 		: { toggle: ''},
-		parent 			: flatpickr_wrap
-	})
+	// button_calendar
+		const button_calendar = ui.create_dom_element({
+			element_type	: 'a',
+			class_name 		: 'input-group-addon',
+			dataset 		: { toggle: ''},
+			parent 			: flatpickr_wrap
+		})
 
-	const icon_calendar = ui.create_dom_element({
-		element_type	: 'i',
-		class_name 		: 'button calendar',
-		dataset 	 	: { key : i, role: role_name },
-		parent 			: button_calendar
-	})
+	// icon_calendar
+		const icon_calendar = ui.create_dom_element({
+			element_type	: 'i',
+			class_name 		: 'button calendar hidden_button',
+			dataset 	 	: { key : i, role: role_name },
+			parent 			: button_calendar
+		})
 
 	return true
 }//end input_element_flatpicker
+
+
+
+/**
+* GET_CONTENT_DATA_SEARCH
+* @return DOM node content_data
+*/
+const get_content_data_search = async function(self) {
+
+	const value = self.data.value
+	const mode 	= self.mode
+
+	const fragment 			= new DocumentFragment()
+	const is_inside_tool 	= ui.inside_tool(self)
+
+	// values (inputs)
+		const inputs_value = value//(value.length<1) ? [''] : value
+		const value_length = inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			get_input_element_search(i, inputs_value[i], fragment, self)
+		}
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
+			  content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_search
+
+
+
+/**
+* GET_INPUT_ELEMENT_SEARCH
+* @return dom element input
+*/
+const get_input_element_search = (i, current_value, inputs_container, self) => {
+
+	// q operator (search only)
+		const q_operator = self.data.q_operator
+		const input_q_operator = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			value 		 	: q_operator,
+			class_name 		: 'q_operator',
+			parent 		 	: inputs_container
+		})
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type 	: 'input',
+			type 		 	: 'text',
+			class_name 		: 'input_value',
+			dataset 	 	: { key : i },
+			value 		 	: current_value,
+			parent 		 	: inputs_container
+		})
+
+	return input
+}//end get_input_element_search
 
 

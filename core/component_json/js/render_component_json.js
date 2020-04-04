@@ -230,6 +230,17 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type : 'div',
+			class_name	 : 'button button_fullscreen',
+			parent 		 : fragment
+		})
+		button_fullscreen.addEventListener("click", function(e) {
+			// li.classList.toggle("fullscreen")
+			self.wrapper.classList.toggle("fullscreen")
+		})
+
 	// buttons tools
 		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
@@ -263,19 +274,19 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 
 	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type : 'div',
-			class_name	 : 'button_fullscreen',
-			parent 		 : li
-		})
-		button_fullscreen.addEventListener("click", function(e) {
-			// li.classList.toggle("fullscreen")
-			self.wrapper.classList.toggle("fullscreen")
-		})
+		// const button_fullscreen = ui.create_dom_element({
+		// 	element_type : 'div',
+		// 	class_name	 : 'button_fullscreen',
+		// 	parent 		 : li
+		// })
+		// button_fullscreen.addEventListener("click", function(e) {
+		// 	// li.classList.toggle("fullscreen")
+		// 	self.wrapper.classList.toggle("fullscreen")
+		// })
 
 	// button_save
 		const button_save = ui.create_dom_element({
-			element_type : 'button',
+			element_type : 'div',
 			class_name	 : 'button_save',
 			text_content : "Save",
 			parent 		 : li

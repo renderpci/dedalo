@@ -21,6 +21,7 @@ class DDModal extends HTMLElement {
 				height: 100%;
 				overflow: auto;
 				background-color: rgba(0,0,0,0.4);
+				font-size: inherit;
 			}
 
 			/* Modal Content */
@@ -32,6 +33,7 @@ class DDModal extends HTMLElement {
 				border: 1px solid #888;
 				width: 80%;
 				box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+				font-size: inherit;
 				/*
 				-webkit-animation-name: animatetop;
 				-webkit-animation-duration: 0.4s;
@@ -54,10 +56,12 @@ class DDModal extends HTMLElement {
 			.close {
 				color: white;
 				float: right;
-				font-size: 1.5em;
+				font-size: 1.75em;
 				font-weight: bold;
 				position: relative;
-    			top: -0.25em;
+    			top: 0.25em;
+    			right: 0.5em;
+    			z-index: 3;
 			}
 			.close:hover,
 			.close:focus {
@@ -67,22 +71,17 @@ class DDModal extends HTMLElement {
 			}
 
 			.modal-header {
-				padding: 1em;
+				/*padding: 1em;
 				background-color: #FF9800;
 				color: white;
 				font-weight: normal;
-				font-size: 1.4em;
+				font-size: 1.4em;*/
 			}
 			.modal-body {
 				padding: 2px 16px;
 				margin: 20px 2px;
 				overflow: auto;
 			}
-
-			button {
-				display: none;
-			}
-
 			.modal_big {
 				padding: 0;
 				z-index: 9999;
@@ -95,12 +94,11 @@ class DDModal extends HTMLElement {
 				height: 100%;
 			}
 		</style>
-		<button>Open Modal</button>
 		<div class="modal">
 			<div class="modal-content">
 				<div class="modal-header">
 					<span class="close">&times;</span>
-					<slot name="header">Modal box default header</slot>
+					<slot name="header" class="header">Modal box default header</slot>
 				</div>
 				<div class="modal-body">
 					<slot name="body">Modal box default body<slot>
@@ -114,14 +112,17 @@ class DDModal extends HTMLElement {
 	}
 	connectedCallback() {
 		this._modal = this.shadowRoot.querySelector(".modal");
-		this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
+		// this.shadowRoot.querySelector("button").addEventListener('click', this._showModal.bind(this));
 		this.shadowRoot.querySelector(".close").addEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").addEventListener('click', this._hideModal.bind(this));
+		document.addEventListener('keyup', this.detect_key)
+		window.modal = this // fix modal in window for easy access to close
 	}
 	disconnectedCallback() {
-		this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
+		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
 		this.shadowRoot.querySelector(".close").removeEventListener('click', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('click', this._hideModal.bind(this));
+		document.removeEventListener('keyup', this.detect_key);
 	}
 	_showModal() {
 		this._modalVisible = true;
@@ -134,12 +135,19 @@ class DDModal extends HTMLElement {
 		this._modalVisible = true;
 		this._modal.style.display = 'block';
 		this._modal.classList.add("modal_big")
+
+		// iframe. Fix iframe fixed position calculating padding based on header height
+			const iframe = this.querySelector("iframe.fixed")
+			if (iframe) {
+				const header 	  = this.querySelector(".header")
+				const padding_top = header.offsetHeight + "px"
+				iframe.style.paddingTop = padding_top;
+			}
 	}
 	_hideModal(e) {
 		e.stopPropagation();
 		// only click over base modal or button close are aceppted
 		if (e.target.matches('.modal') || e.target.matches('.close')) {
-
 			this._closeModal()
 		}
 	}
@@ -186,6 +194,17 @@ class DDModal extends HTMLElement {
 	}
 	close() {
 		return this._closeModal()
+	}
+	/**
+	* DETECT_KEY
+	* Detect user keyup event and close modal when key is 'ESC'
+	*/
+	detect_key(e) {
+		if (e.keyCode===27) {
+			window.modal._closeModal()
+			window.modal = null
+			return
+		}
 	}
 }
 customElements.define('dd-modal',DDModal);

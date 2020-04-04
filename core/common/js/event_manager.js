@@ -109,3 +109,13 @@ const event_manager_class = function(){
 export const event_manager = new event_manager_class()
 
 
+
+/**
+* WINDOW.EVENT_MANAGER
+* Set as global window var to be available for all, included
+* iframes calling as parent.window
+*/
+window.event_manager = event_manager
+
+
+

@@ -444,11 +444,24 @@ render_section.prototype.list_header = async function(){
 		// // }
 	}
 
+
+
 	// header_wrapper
 		const header_wrapper = ui.create_dom_element({
 			element_type	: "div",
-			class_name		: "header_wrapper_list" + (SHOW_DEBUG===true ? ' with_debug_info_bar' : '')
+			class_name		: "header_wrapper_list"
 		})
+
+		const searchParams = new URLSearchParams(window.location.href);
+		const initiator = searchParams.has("initiator")
+			? searchParams.get("initiator")
+			: false
+
+		if (initiator!==false) {
+			header_wrapper.classList.add('with_initiator')
+		}else if (SHOW_DEBUG===true) {
+			header_wrapper.classList.add('with_debug_info_bar')
+		}
 
 	// id column
 		const id_column = ui.create_dom_element({

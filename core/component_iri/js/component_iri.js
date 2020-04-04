@@ -43,9 +43,6 @@ export const component_iri = function(){
 
 	// change data
 	component_iri.prototype.save 	 			= component_common.prototype.save
-	//component_iri.prototype.load_data 		= component_common.prototype.load_data
-	//component_iri.prototype.get_value 		= component_common.prototype.get_value
-	//component_iri.prototype.set_value 		= component_common.prototype.set_value
 	component_iri.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_iri.prototype.update_datum 		= component_common.prototype.update_datum
 	component_iri.prototype.change_value 		= component_common.prototype.change_value
@@ -54,6 +51,7 @@ export const component_iri = function(){
 	component_iri.prototype.list 				= render_component_iri.prototype.list
 	component_iri.prototype.edit 				= render_component_iri.prototype.edit
 	component_iri.prototype.edit_in_list		= render_component_iri.prototype.edit
+	component_iri.prototype.tm					= render_component_iri.prototype.edit
 	component_iri.prototype.search 				= render_component_iri.prototype.search
 	component_iri.prototype.change_mode 		= component_common.prototype.change_mode
 
