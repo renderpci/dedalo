@@ -819,8 +819,8 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 			})
 
 				const layer_icon = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'layer_icon',
+					element_type	: 'span',
+					class_name 		: 'button eye layer_icon',
 					parent 			: layer_li,
 					text_node		: layer.layer_icon
 				})
