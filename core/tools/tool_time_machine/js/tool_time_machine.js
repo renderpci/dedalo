@@ -260,7 +260,7 @@ tool_time_machine.prototype.load_section = async function() {
 		}
 
 	// add
-		const instance_found = self.ar_instances.find( el => el===section_instance )
+		// const instance_found = self.ar_instances.find( el => el===section_instance )
 		// if (section_instance!==self.caller && typeof instance_found==="undefined") {
 			self.ar_instances.push(section_instance)
 		// }

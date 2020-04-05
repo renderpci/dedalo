@@ -266,13 +266,13 @@ search.prototype.render = async function() {
 
 
 /**
-* LOAD_COMPONENTS_FROM_SECTION
+* get_section_elements_context
 * Call to dd_core_api to obtain the list of components associated to current options section_tipo
 * @param object options
 *	string options.section_tipo
 * @return promise
 */
-search.prototype.load_components_from_section = async function(options) {
+search.prototype.get_section_elements_context = async function(options) {
 
 	const self = this
 
@@ -308,7 +308,7 @@ search.prototype.load_components_from_section = async function(options) {
 
 
 	return components
-}//end load_components_from_section
+}//end get_section_elements_context
 
 
 

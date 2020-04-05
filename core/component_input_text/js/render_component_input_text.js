@@ -134,7 +134,6 @@ const add_events = function(self, wrapper) {
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', async (e) => {
-			//e.stopPropagation()
 
 			// update
 			if (e.target.matches(element_type + '.input_value')) {
@@ -174,26 +173,29 @@ const add_events = function(self, wrapper) {
 	// click event [click]
 		wrapper.addEventListener("click", e => {
 			/*
-			// reset remove buttons view
-				const all_buttons_remove = wrapper.querySelectorAll('.remove')
-				for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-					all_buttons_remove[i].classList.add("display_none")
-				}
+				// reset remove buttons view
+					const all_buttons_remove = wrapper.querySelectorAll('.remove')
+					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
+						all_buttons_remove[i].classList.add("display_none")
+					}
 
-			// show current remove button
-				if (e.target.matches(element_type)) {
-					// set the button_remove associated to the input selected to visible
-						const button_remove = e.target.parentNode.querySelector('.remove')
-						if (button_remove) {
-							button_remove.classList.remove("display_none")
-						}
-				}
-			*/
+				// show current remove button
+					if (e.target.matches(element_type)) {
+						// set the button_remove associated to the input selected to visible
+							const button_remove = e.target.parentNode.querySelector('.remove')
+							if (button_remove) {
+								button_remove.classList.remove("display_none")
+							}
+					}
+				*/
 			// remove
 				if (e.target.matches('.button.remove')) {
 
 					// force possible input change before remove
 					document.activeElement.blur()
+
+					const current_input = e.target.previousElementSibling
+					const current_value = current_input ? current_input.value : null
 
 					const changed_data = Object.freeze({
 						action	: 'remove',
@@ -203,7 +205,7 @@ const add_events = function(self, wrapper) {
 					})
 					self.change_value({
 						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.value,
+						label 		 : current_value,
 						refresh 	 : true
 					})
 					.then(()=>{
@@ -211,8 +213,7 @@ const add_events = function(self, wrapper) {
 
 					return true
 				}
-
-		})
+		})//end click
 
 	// keyup event
 		wrapper.addEventListener("keyup", async (e) => {
@@ -242,24 +243,24 @@ const add_events = function(self, wrapper) {
 		//})
 
 	// // focus event [focusin]
-	// 	wrapper.addEventListener("focusin", e => {
-	// 		// selected_node. fix selected node
-	// 		//self.selected_node = wrapper
+		// 	wrapper.addEventListener("focusin", e => {
+		// 		// selected_node. fix selected node
+		// 		//self.selected_node = wrapper
 
-	// 		if (e.target.matches('input[type="text"]')) {
-	// 			// set the button_remove associated to the input selected to visible
-	// 		 	const button_remove = e.target.parentNode.querySelector('.remove')
-	// 		 	button_remove.classList.remove("display_none")
-	// 		 	//event_manager.publish('active_component', self)
-	// 		}
-	// 	})
-
+		// 		if (e.target.matches('input[type="text"]')) {
+		// 			// set the button_remove associated to the input selected to visible
+		// 		 	const button_remove = e.target.parentNode.querySelector('.remove')
+		// 		 	button_remove.classList.remove("display_none")
+		// 		 	//event_manager.publish('active_component', self)
+		// 		}
+		// 	})
 
 	// // blur event [focusout]
-	// 	wrapper.addEventListener("focusout", e => {
-	// 		const button_remove = e.target.parentNode.querySelector('.remove')
-	// 		 	button_remove.classList.add("display_none")
-	// 	})
+		// 	wrapper.addEventListener("focusout", e => {
+		// 		const button_remove = e.target.parentNode.querySelector('.remove')
+		// 		 	button_remove.classList.add("display_none")
+		// 	})
+
 
 	return true
 }//end add_events
@@ -403,6 +404,7 @@ const get_buttons = (self) => {
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button add',
+				title 			: 'Add new input field',
 				parent 			: fragment
 			})
 			button_add.addEventListener("click",function() {
