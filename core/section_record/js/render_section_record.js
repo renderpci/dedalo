@@ -271,13 +271,13 @@ const build_id_column = function(self) {
 		// section id
 			const section_id_info = ui.create_dom_element({
 				element_type	: 'span',
+				class_name		: 'section_id',
 				text_content 	: self.section_id,
 				parent 			: edit_line
 			})
 
 		// initiator. Caller section defined
 			const initiator = self.caller.initiator || false
-				console.log("initiator:",initiator);
 
 		// button
 		switch(true) {
@@ -286,8 +286,8 @@ const build_id_column = function(self) {
 			// case (self.id_variant==='PORTAL_VARIANT'):
 				// component_autocomplete / portal caller (link)
 				const link_button = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'link',
+					element_type	: 'span',
+					class_name		: 'button link',
 					parent 			: edit_line
 				})
 				link_button.addEventListener("click", function(e){
@@ -300,7 +300,8 @@ const build_id_column = function(self) {
 				// button edit (pen)
 				if (permissions>0) {
 					const edit_button = ui.create_dom_element({
-						element_type	: 'a',
+						element_type	: 'span',
+						class_name		: 'button edit',
 						parent 			: edit_line
 					})
 					edit_button.addEventListener("click", async function(e){
@@ -372,8 +373,8 @@ const build_id_column = function(self) {
 			case (initiator && initiator.indexOf('tool_time_machine')!==-1):
 				// button time machine preview (eye)
 				const edit_button_tm = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'tm_preview',
+					element_type	: 'span',
+					class_name		: 'button eye',
 					parent 			: edit_line
 				})
 				edit_button_tm.addEventListener("click", function(e){
@@ -392,7 +393,8 @@ const build_id_column = function(self) {
 				// button edit (pen)
 				if (permissions>0) {
 					const edit_button = ui.create_dom_element({
-						element_type	: 'a',
+						element_type	: 'span',
+						class_name		: 'button edit',
 						parent 			: edit_line
 					})
 					edit_button.addEventListener("click", function(e){
@@ -415,7 +417,8 @@ const build_id_column = function(self) {
 				parent 			: id_column
 			})
 			const delete_button = ui.create_dom_element({
-				element_type	: 'a',
+				element_type	: 'span',
+				class_name		: 'button remove',
 				parent 			: delete_line
 			})
 			delete_button.addEventListener("click", function(e){

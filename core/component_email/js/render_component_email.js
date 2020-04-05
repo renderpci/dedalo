@@ -231,7 +231,10 @@ const add_events = function(self, wrapper) {
 
 		})
 
-}
+	return true
+}//end add_events
+
+
 
 /**
 * SEARCH
@@ -323,7 +326,7 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)			  
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
 	return content_data
@@ -404,7 +407,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 			// button email
 			const button_email = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button email_send display_none',
+				class_name 		: 'button email display_none',
 				dataset			: { key : i },
 				parent 			: li
 			})
@@ -412,6 +415,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 	return li
 }//end input_element
+
 
 
 /**
@@ -443,6 +447,7 @@ const get_content_data_search = async function(self) {
 }//end get_content_data_search
 
 
+
 /**
 * GET_INPUT_ELEMENT_SEARCH
 * @return dom element input
@@ -462,3 +467,5 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 	return input
 }//end get_input_element_search
+
+

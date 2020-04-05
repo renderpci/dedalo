@@ -194,6 +194,13 @@ search.prototype.build = async function(){
 			}
 		})
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("-> search build editing_preset:", editing_preset);
+			console.log("-> search build user_presets:", user_presets);
+		}
+
+
 	// status update
 		self.status = 'builded'
 
@@ -222,8 +229,8 @@ search.prototype.render = async function() {
 
 	// render components from temp preset [center]
 		await self.render_filter({
-			editing_preset 		: self.json_filter,
-			allow_duplicates 	: true
+			editing_preset 	 : self.json_filter,
+			allow_duplicates : true
 		})
 
 	// render buttons
@@ -259,13 +266,13 @@ search.prototype.render = async function() {
 
 
 /**
-* LOAD_COMPONENTS_FROM_SECTION
+* get_section_elements_context
 * Call to dd_core_api to obtain the list of components associated to current options section_tipo
 * @param object options
 *	string options.section_tipo
 * @return promise
 */
-search.prototype.load_components_from_section = async function(options) {
+search.prototype.get_section_elements_context = async function(options) {
 
 	const self = this
 
@@ -301,7 +308,7 @@ search.prototype.load_components_from_section = async function(options) {
 
 
 	return components
-}//end load_components_from_section
+}//end get_section_elements_context
 
 
 

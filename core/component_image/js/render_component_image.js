@@ -213,7 +213,7 @@ const get_buttons = (self) => {
 
 	// full_screen
 		const full_screen = ui.create_dom_element({
-			element_type	: 'div',
+			element_type	: 'span',
 			class_name 		: 'button tool full_screen',
 			parent 			: fragment
 		})
@@ -239,7 +239,7 @@ const get_buttons = (self) => {
 				self.load_vector_editor({load:'full'})
 			}
 		})
-		
+
 	// svg editor tools
 		const vector_editor_tools = ui.create_dom_element({
 			element_type	: 'div',
@@ -259,7 +259,7 @@ const get_buttons = (self) => {
 
 /**
 * GET_QUALITY_SELECTOR
-* @return 
+* @return
 */
 const get_quality_selector = (self) => {
 

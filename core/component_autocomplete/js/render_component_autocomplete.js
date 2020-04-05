@@ -425,7 +425,7 @@ const get_top = function(self) {
 					})
 
 					// fix modal to allow close later, on set value
-					const header = ui.create_dom_element({element_type : 'div',text_content : section_label})
+					const header = ui.create_dom_element({element_type : 'div', text_content : section_label, class_name: "label"})
 					self.modal   = ui.attach_to_modal(header, iframe_container, null, 'big')
 
 				})()
