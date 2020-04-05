@@ -29,12 +29,25 @@ export const vector_editor = function(){
 vector_editor.prototype.init_canvas = async function(self) {
 
 	//img node
-		const img 		= self.image_node
+		const object 		= self.object_node
+
+		//	SVG document inside the Object tag
+		const svg_doc = object.contentDocument;
+		// Get one of the SVG items by ID;
+		const image = svg_doc.querySelector("image")
+
+		const img 		= image.getBBox();
+
+
+
 	// fix image size
-		self.img_height	= img.naturalHeight
-		self.img_width	= img.naturalWidth
+		// self.img_height	= img.naturalHeight
+		// self.img_width	= img.naturalWidth
+		
+		self.img_height	= img.height
+		self.img_width	= img.width
 	// fix image source (URI)
-		self.img_src 	= img.src
+		self.img_src 	= image.getAttributeNS('http://www.w3.org/1999/xlink','href')
 
 	// set the self specific libraries and variables not defined by the generic init
 		// load dependences js/css
@@ -52,10 +65,10 @@ vector_editor.prototype.init_canvas = async function(self) {
 			id 				: self.id,
 			element_type	: "canvas",
 			class_name 		: 'canvas',
-			parent 			: img.parentNode
+			parent 			: object.parentNode
 		})
 		//remove the image node from dom
-			img.remove()
+			object.remove()
 
 		// resize
 			self.canvas_node.setAttribute("resize", true)
@@ -480,48 +493,41 @@ vector_editor.prototype.init_tools = function(self){
 			this.transform.onMouseDrag = (event) => {
 
 			if (this.path.data.state === 'scale'){
-					console.log("scale:")
-					 // scale by distance from down point
-					const bounds = this.path.data.bounds;
-					const scale = event.point.subtract(bounds.center).length /
-									this.path.data.scale_base.length;
+				console.log("scale:")
+				 // scale by distance from down point
+				const bounds = this.path.data.bounds;
+				const scale = event.point.subtract(bounds.center).length /
+								this.path.data.scale_base.length;
 
-					const top_left 		= bounds.topLeft.subtract(bounds.center).multiply(scale);
-					const botton_right 	= bounds.bottomRight.subtract(bounds.center).multiply(scale);
+				const top_left 		= bounds.topLeft.subtract(bounds.center).multiply(scale);
+				const botton_right 	= bounds.bottomRight.subtract(bounds.center).multiply(scale);
 
-					const new_bounds 	= new self.current_paper.Rectangle(top_left.add(bounds.center), botton_right.add(bounds.center));
-					this.path.bounds 	= new_bounds;
-					// if(typeof this.path.firstChild.image != 'undefined'){
-					// 		console.log("scale:",this.path.firstChild.scaling.length);
-					// }
-					return;
-				}
-				else if(this.path.data.state === 'rotate')
-				{
-					console.log("rotation:")
-					// the last two points.
-					const center 	= this.path.bounds.center;
-					const base 		= new self.current_paper.Point(center.x - event.lastPoint.x, center.y - event.lastPoint.y)
-					const actual 	= new self.current_paper.Point(center.x - event.point.x, center.y - event.point.y)
+				const new_bounds 	= new self.current_paper.Rectangle(top_left.add(bounds.center), botton_right.add(bounds.center));
+				this.path.bounds 	= new_bounds;
+				// if(typeof this.path.firstChild.image != 'undefined'){
+				// 		console.log("scale:",this.path.firstChild.scaling.length);
+				// }
+				return;
+			}else if(this.path.data.state === 'rotate'){
+				console.log("rotation:")
+				// the last two points.
+				const center 	= this.path.bounds.center;
+				const base 		= new self.current_paper.Point(center.x - event.lastPoint.x, center.y - event.lastPoint.y)
+				const actual 	= new self.current_paper.Point(center.x - event.point.x, center.y - event.point.y)
 
-					const angle 	= actual.angle - base.angle
-					this.path.rotation = angle;
-					// if(typeof this.path.firstChild.image != 'undefined'){
-					// 		console.log("rotation:",this.path.firstChild.rotation);
-					// }
-					return;
-				}
-
-				if (this.path.data.state 		= 'move'){
+				const angle 	= actual.angle - base.angle
+				this.path.rotation = angle;
+				// if(typeof this.path.firstChild.image != 'undefined'){
+				// 		console.log("rotation:",this.path.firstChild.rotation);
+				// }
+				return;
+			}else if (this.path.data.state === 'move'){
 					console.log("postion:")
 					this.path.position.x += event.delta.x;
 					this.path.position.y += event.delta.y;
 					// if( this.path.firstChild != null && typeof this.path.firstChild.image != 'undefined'){
 					// 		console.log("postion:",this.path.firstChild.bounds);
-					// }
 				}
-
-
 			}
 
 			this.transform.onMouseUp = (event) => {
@@ -1167,6 +1173,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 				// create the raster layer
 					if(layer_id===0){
 						this.create_raster_layer(self)
+						// current_layer.applyMatrix = false
 					}
 
 				console.log("-> create new layer: " , current_layer);
@@ -1182,6 +1189,37 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		project.view.draw();
 		project.deselectAll();
 		project.options.handleSize = 8;
+
+		if(layer_id===0){
+			const raster = project.activeLayer.firstChild
+			// subscription to the image quality change event
+			self.events_tokens.push(
+				event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
+			)
+			function img_quality_change (img_src) {
+				// scale raster layer
+				// get the ratio for the scale the project layer to fit to canvas view heigth
+				// used to fix the raster layer to the canvas height
+				const canvas_h		= self.canvas_node.clientHeight
+				const ratio_layer 	= canvas_h / self.img_view_height
+
+				// change the value of the current raster element
+				raster.source = img_src
+				raster.onLoad = function(e) {
+					const new_image_height 	= raster.height//raster.bounds.height
+					const ratio 			= self.img_view_height / new_image_height
+					raster.setScaling(ratio)
+					raster.layer.setScaling(ratio_layer)
+				}
+			}
+		}
+
+
+
+
+
+
+
 	return true
 }//end load_layer
 
@@ -1216,20 +1254,7 @@ vector_editor.prototype.create_raster_layer = function(self){
 		raster.scale(ratio)
 		raster.layer.scale(ratio_layer, self.current_paper.view.center)
 
-	// subscription to the image quality change event
-		self.events_tokens.push(
-			event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
-		)
-		function img_quality_change (img_src) {
-			// change the value of the current raster element
-			raster.source = img_src
-			raster.onLoad = function(e) {
-				const new_image_height 	= raster.height//raster.bounds.height
-				const ratio 			= self.img_view_height / new_image_height
-				raster.setScaling(ratio)
-				raster.layer.setScaling(ratio_layer)
-			}
-		}
+	return raster
 }//end create_raster_layer
 
 

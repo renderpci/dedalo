@@ -108,6 +108,18 @@ class component_image extends component_media_common {
 	*/
 	public function Save() {
 
+		$dato = $this->dato;
+
+		foreach ($dato as $current_value) {		
+			if(isset($current_value->svg_file_data)){
+				$svg_file_data = $current_value->svg_file_data;
+				$this->create_svg_file($svg_file_data);
+				unset($current_value->svg_file_data);
+			}
+		}
+
+		$this->dato = $dato;
+
 		return parent::Save();
 	}//end Save
 
@@ -1261,6 +1273,8 @@ class component_image extends component_media_common {
 						$this->Save();
 					}
 				
+				// generate the svg file
+					$svg_string_node = $this->create_default_svg_file();
 
 				// all is ok
 					$response->result 	= true;
@@ -1289,6 +1303,111 @@ class component_image extends component_media_common {
 
 		return $preview_url;
 	}//end get_preview_url
+
+
+
+	/**
+	* CREATE_DEFAULT_SVG_FILE
+	* @return string $svg_string_node
+	*/
+	public function create_default_svg_file($save_file=false) {
+
+		$image_id 		 		= $this->get_image_id();
+		$source_quality 		= DEDALO_IMAGE_QUALITY_DEFAULT;
+		$aditional_path  		= $this->get_aditional_path();
+		$initial_media_path 	= $this->get_initial_media_path();
+
+		// string_node
+			$source_ImageObj		= new ImageObj($image_id, $source_quality, $aditional_path, $initial_media_path);
+			$image_url 				= $source_ImageObj->get_media_path() .'/'. $image_id .'.'. $source_ImageObj->get_extension();
+			$image_dimensions 		= $source_ImageObj->get_image_dimensions();
+			$image_width  			= $image_dimensions[0];
+			$image_height 			= $image_dimensions[1];
+
+			$svg_string_node = '
+				<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="'.$image_width.'" height="'.$image_height.'" viewBox="0,0,'.$image_width.','.$image_height.'">
+					<g id="raster">
+						<image width="'.$image_width.'" height="'.$image_height.'" xlink:href="'.$image_url.'"/>
+					</g>
+				</svg>';
+
+		// file save
+			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/svg' . $aditional_path;
+			$filename 		= $media_path . '/' . $image_id . '.svg';
+			if(!file_put_contents($filename, trim($svg_string_node) )){
+				throw new Exception("Error Processing Request. Error on write svg file", 1);				
+			}
+		
+
+		return $svg_string_node;
+	}//end create_default_svg_file
+
+
+
+
+	/**
+	* GET_BASE_SVG_URL
+	* Get image url for current quality
+	* @param string | bool $quality
+	*	optional default (bool)false
+	* @param bool $test_file
+	*	Check if file exists. If not use 0.jpg as output. Default true
+	* @param bool $absolute
+	*	Return relative o absolute url. Default false (relative)
+	*/
+	public function get_base_svg_url($test_file=false, $absolute=false, $default_add=false) {
+
+		$image_id 		 	= $this->get_image_id();
+		$aditional_path  	= $this->get_aditional_path();
+		$initial_media_path = $this->get_initial_media_path();
+
+		$base_path = DEDALO_IMAGE_FOLDER . $initial_media_path . '/svg' . $aditional_path;
+		
+		// default
+			$image_url = DEDALO_MEDIA_URL . $base_path . '/' . $image_id . '.svg';
+
+		// File exists test : If not, show '0' dedalo image logo
+			if($test_file===true) {
+				
+				$file = DEDALO_MEDIA_PATH . $base_path . '/' . $image_id . '.svg';
+				if(!file_exists($file)) {
+					if ($default_add===false) {
+						return false;
+					}
+					$image_url = DEDALO_CORE_URL . '/themes/default/0.svg';
+				}
+			}
+
+		// Absolute (Default false)
+			if ($absolute===true) {
+				$image_url = DEDALO_PROTOCOL . DEDALO_HOST . $image_url;
+			}
+
+		return $image_url;
+	}//end get_base_svg_url
+
+
+
+	/**
+	* CREATE_SVG_FILE
+	* @return 
+	*/
+	public function create_svg_file($svg_string_node) {
+
+		$image_id 		 		= $this->get_image_id();
+		$source_quality 		= DEDALO_IMAGE_QUALITY_DEFAULT;
+		$aditional_path  		= $this->get_aditional_path();
+		$initial_media_path 	= $this->get_initial_media_path();
+
+		// file save
+			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/svg' . $aditional_path;
+			$filename 		= $media_path . '/' . $image_id . '.svg';
+			if(!file_put_contents($filename, trim($svg_string_node) )){
+				throw new Exception("Error Processing Request. Error on write svg file", 1);				
+			}
+		
+		return true;
+	}//end create_svg_file
 
 
 
