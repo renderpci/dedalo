@@ -21,6 +21,85 @@ export const render_component_radio_button = function() {
 
 
 /**
+* SEARCH
+* Render node for use in search
+* @return DOM node wrapper
+*/
+render_component_radio_button.prototype.search = async function() {
+
+	const self = this
+
+	// fix non value scenarios
+		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
+	// content data
+		const content_data = await get_content_data_search(self)
+
+	// ui build_edit returns component wrapper
+		const wrapper = ui.component.build_wrapper_edit(self, {
+			content_data : content_data
+		})
+
+	// id
+		wrapper.id = self.id
+
+	// Events
+
+		// change event, for every change the value in the imputs of the component
+			wrapper.addEventListener('change', (e) => {
+				e.stopPropagation()
+
+				// input_value. The standard input for the value of the component
+				if (e.target.matches('input[type="text"].input_value')) {
+					//get the input node that has changed
+					const input = e.target
+					//the dataset.key has the index of correspondence self.data.value index
+					const i 	= input.dataset.key
+					// set the selected node for change the css
+					self.selected_node = wrapper
+					// set the changed_data for replace it in the instance data
+					// update_data_value. key is the posistion in the data array, the value is the new value
+					const value = (input.value.length>0) ? input.value : null
+					// set the changed_data for update the component data and send it to the server for change when save
+					const changed_data = {
+						action	: 'update',
+						key	  	: i,
+						value 	: value
+					}
+					// update the data in the instance previous to save
+					self.update_data_value(changed_data)
+					// set the change_data to the instance
+					self.data.changed_data = changed_data
+					// event to update the dom elements of the instance
+					event_manager.publish('change_search_element', self)
+					return true
+				}
+
+				// q_operator. get the input value of the q_operator
+				// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
+				// like; radio_button, check_box, date, autocomplete, etc
+				if (e.target.matches('input[type="text"].q_operator')) {
+					//get the input node that has changed
+					const input = e.target
+					// set the changed_data for replace it in the instance data
+					// update_data_value. key is the posistion in the data array, the value is the new value
+					const value = (input.value.length>0) ? input.value : null
+					// update the data in the instance previous to save
+					self.data.q_operator = value
+					// event to update the dom elements of the instance
+					event_manager.publish('change_search_element', self)
+					return true
+				}
+			}, false)
+
+
+
+	return wrapper
+}//end search
+
+
+
+/**
 * LIST
 * Render node for use in list
 * @return DOM node
@@ -380,42 +459,13 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 */
 const get_content_data_search = async function(self) {
 
-	const value 		= self.data.value
-	const mode 			= self.mode
-	const datalist 		= self.data.datalist
+	const value 			= self.data.value
+	const mode 				= self.mode
+	const datalist 			= self.data.datalist
+	const is_inside_tool 	= self.is_inside_tool // ui.inside_tool(self)
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
-	// values (inputs)
-		const value_compare = value.length>0 ? value[0] : null
-		const length = datalist.length
-		for (let i = 0; i < value_length; i++) {
-			get_input_element_search(i, datalist[i], fragment, self)
-		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
-
-		content_data.classList.add("nowrap")
-		content_data.appendChild(fragment)
-
-
-	return content_data
-}//end get_content_data_search
-
-
-
-/**
-* GET_INPUT_ELEMENT_SEARCH
-* @return dom element input
-*/
-const get_input_element_search = (i, current_value, inputs_container, self) => {
-
-	const datalist_item  = current_value
-	const datalist_value = datalist_item.value
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -424,32 +474,30 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 			type 		 	: 'text',
 			value 		 	: q_operator,
 			class_name 		: 'q_operator',
-			parent 		 	: inputs_container
+			parent 		 	: fragment
 		})
 
-	// input field
-		// 	const input = ui.create_dom_element({
-		// 		element_type 	: 'input',
-		// 		type 		 	: 'text',
-		// 		class_name 		: 'input_value',
-		// 		dataset 	 	: { key : i },
-		// 		value 		 	: current_value,
-		// 		parent 		 	: inputs_container
-		// 	})
-
-	// input checkbox
-		const option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'radio',
-			id 				: self.id +"_"+ i,
-			dataset 	 	: { key : i },
-			value 			: JSON.stringify(datalist_value),
-			name 			: self.id,
-			parent 			: inputs_container
+	// inputs_container ul
+		const inputs_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'inputs_container '+mode,
+			parent 			: fragment
 		})
 
+	// values (inputs)
+		const datalist_length = datalist.length
+		for (let i = 0; i < datalist_length; i++) {
+			get_input_element_edit(i, datalist[i], inputs_container, self)
+		}
 
-	return input
-}//end get_input_element_search
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload : false
+		})
+		content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_search
 
 
