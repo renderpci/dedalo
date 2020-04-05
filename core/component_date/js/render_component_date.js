@@ -267,11 +267,13 @@ const add_events = function(self, wrapper) {
 				}
 
 			// remove
-				if (e.target.matches('.button.remove')) {
-					e.stopPropagation()
+				if (e.target.matches('.button.remove')) {					// e.stopPropagation()
 
 					// force possible input change before remove
 					document.activeElement.blur()
+
+					const current_input = e.target.parentNode.querySelector('input')
+					const current_value = current_input ? current_input.value : null
 
 					const changed_data = Object.freeze({
 						action	: 'remove',
@@ -281,7 +283,7 @@ const add_events = function(self, wrapper) {
 					})
 					self.change_value({
 						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.value,
+						label 		 : current_value,
 						refresh 	 : true
 					})
 					.then(()=>{
@@ -470,7 +472,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	// button remove
 		if(mode==='edit' || 'edit_in_list'){
 			const button_remove = ui.create_dom_element({
-				element_type	: 'div',
+				element_type	: 'span',
 				class_name 		: 'button remove hidden_button',
 				dataset			: { key : i },
 				parent 			: li
