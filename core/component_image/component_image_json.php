@@ -82,9 +82,12 @@
 			}
 
 		// data item
-		$item  = $this->get_data_item($value);
+		$item = $this->get_data_item($value);
 
 		$item->datalist = $valid_urls;
+
+		// base_svg_url
+			$item->base_svg_url = $this->get_base_svg_url();
 		
 		$data[] = $item;
 

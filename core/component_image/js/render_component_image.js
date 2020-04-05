@@ -112,6 +112,7 @@ const content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+
 	// url
 		const datalist 			= self.data.datalist
 		const quality 			= "1.5MB" //"original" //
@@ -142,16 +143,33 @@ const content_data_edit = async function(self) {
 		// canvas.setAttribute("tabindex", 0)
 
 	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			src 			: url,
-			class_name 		: 'image',
-			parent 			: li
-		})
-		image.setAttribute("tabindex", 0)
-		// ui.component.add_image_fallback(image)
+	// 	const image = ui.create_dom_element({
+	// 		element_type	: "img",
+	// 		src 			: self.data.base_svg_url,
+	// 		class_name 		: 'image',
+	// 		parent 			: li
+	// 	})
+	// 	image.setAttribute("tabindex", 0)
+	// 	// ui.component.add_image_fallback(image)
+	// console.log("image:",image);
+	// 	self.image_node = image
 
-		self.image_node = image
+	// 	image.onload = function () {
+
+	// 		const svg_image = image.querySelector('image')
+	// 		console.log(svg_image)
+	// 	}
+
+		// opbject <object type="image/svg+xml" data="image.svg"></object>
+			const object = ui.create_dom_element({
+				element_type	: "object",
+				class_name 		: 'image',
+				parent 			: li
+			})
+			object.type = "image/svg+xml"
+			object.data = self.data.base_svg_url
+
+			self.object_node = object
 
 		// image.onload = function () {
 		// 	self.init_canvas(canvas, image)
