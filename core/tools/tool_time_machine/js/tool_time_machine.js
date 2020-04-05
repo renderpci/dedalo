@@ -242,7 +242,8 @@ tool_time_machine.prototype.load_section = async function() {
 			type 			: "section",
 			sqo_context 	: {
 				show : show
-			}
+			},
+			id_variant 		: 'time_machine' // avoid conflicts
 		})
 
 	// set current tool as component caller (to check if component is inside tool or not)
