@@ -1299,7 +1299,7 @@ vector_editor.prototype.render_layer_selector = function(self){
 
 /**
 *  LAYER_SELECTOR
-* @return 
+* @return
 */
 vector_editor.prototype.render_layer_row = function(self, layer){
 
@@ -1322,10 +1322,10 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				this.active_layer = project.activeLayer
 				event_manager.publish('active_layer_'+self.id, new_active_layer)
 			}
-			
+
 		})
 		layer.layer_id === this.active_layer.data.layer_id
-			? layer_li.classList.add('active') 
+			? layer_li.classList.add('active')
 			: layer_li.classList.remove('active')
 
 		self.events_tokens.push(
@@ -1333,24 +1333,24 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 		)
 		function change_layer(active_layer) {
 			layer.layer_id === active_layer.data.layer_id
-			? layer_li.classList.add('active') 
+			? layer_li.classList.add('active')
 			: layer_li.classList.remove('active')
 		}
-		
+
 		// layer_icon
 			const layer_icon = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'layer_icon',
+				element_type	: 'span',
+				class_name 		: 'button eye layer_icon',
 				parent 			: layer_li,
 				text_node		: layer.layer_icon
 			})
 			const name = 'layer_'+layer.layer_id
-			const viewed_layer = project.layers[name] 
+			const viewed_layer = project.layers[name]
 
 			typeof viewed_layer !== 'undefined' && layer.layer_id === viewed_layer.data.layer_id
-				? layer_icon.classList.add('active') 
+				? layer_icon.classList.add('active')
 				: layer_icon.classList.remove('active')
-			
+
 			layer_icon.addEventListener("click", (e) =>{
 				 const name = 'layer_'+layer.layer_id
 				 const viewed_layer = project.layers[name]
@@ -1406,8 +1406,8 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 
 		// layer_delete
 			const layer_delete = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'layer_delete',
+				element_type	: 'span',
+				class_name 		: 'button remove layer_delete',
 				parent 			: layer_li,
 				text_node		: layer.layer_delete
 			})

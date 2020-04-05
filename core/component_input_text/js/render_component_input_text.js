@@ -468,8 +468,8 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 			const button_remove = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button remove display_none99 hidden_button',
+				element_type	: 'span',
+				class_name 		: 'button remove hidden_button',
 				dataset			: { key : i },
 				parent 			: li
 			})

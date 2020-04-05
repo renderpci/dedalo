@@ -38,7 +38,7 @@ render_search.prototype.render_base = async function() {
 	// filter button . Show and hide all search elements
 		const filter_button = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'filter_button button search link',
+			class_name		: 'filter_button button search',
 			parent 			: fragment
 		})
 		.addEventListener("click", () => {
@@ -122,7 +122,7 @@ render_search.prototype.render_base = async function() {
 			})
 			const button_new_preset = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button link add',
+				class_name 		: 'button add',
 				parent			: component_presets_label
 			})
 			.addEventListener('click',function(){
@@ -417,7 +417,7 @@ render_search.prototype.render_search_buttons = function(){
 	// Reset button
 		const reset_button = ui.create_dom_element({
 			element_type 			: "button",
-			class_name 	 			: "button link reload",
+			class_name 	 			: "button reload",
 			text_content 			: get_label["recargar"],
 			parent 		 			: reset_group
 
@@ -429,7 +429,7 @@ render_search.prototype.render_search_buttons = function(){
 	// Show all
 		const show_all_button = ui.create_dom_element({
 			element_type 			: "button",
-			class_name 	 			: "button link show_all",
+			class_name 	 			: "button show_all",
 			text_content 			: get_label["mostrar_todos"], //"mostrar_todos",
 			parent 		 			: reset_group
 		})
@@ -442,7 +442,7 @@ render_search.prototype.render_search_buttons = function(){
 		const submit_button = ui.create_dom_element({
 			element_type 			: "button",
 			id 						: "button_submit",
-			class_name 	 			: "button link submit",
+			class_name 	 			: "button submit",
 			text_content 			: get_label["aplicar"], //"Submit",
 			parent 		 			: search_buttons_container
 		})
@@ -524,7 +524,7 @@ render_search.prototype.build_search_group = async function(parent_div, options)
 		const search_group_button_close = ui.create_dom_element({
 			element_type 			: 'span',
 			parent 		 			: search_group,
-			class_name 	 			: "button link close"
+			class_name 	 			: "button close"
 		})
 		search_group_button_close.addEventListener("click",function(e){
 			// remove from dom
@@ -539,7 +539,7 @@ render_search.prototype.build_search_group = async function(parent_div, options)
 			element_type 			: 'span',
 			parent 		 			: search_group,
 			//text_content 			: "X",
-			class_name 	 			: "button link add"
+			class_name 	 			: "button add"
 		})
 		search_group_button_plus.addEventListener("click",function(e){
 			//self.add_search_group_to_dom(this, search_group)
@@ -567,39 +567,37 @@ render_search.prototype.build_search_component = async function(parent_div, path
 	const last_item  = path[path.length-1]
 	const first_item = path[0]
 
-	// Create dom element before load html from trigger
-	// search_component
-	const search_component = ui.create_dom_element({
-		element_type 	: 'div',
-		parent 		 	: parent_div,
-		class_name 	 	: "search_component",
-		data_set 		: { path : path_plain }
-	})
+	// search_component container. Create dom element before load html from trigger
+		const search_component = ui.create_dom_element({
+			element_type 	: 'div',
+			parent 		 	: parent_div,
+			class_name 	 	: "search_component",
+			data_set 		: { path : path_plain }
+		})
 
-	// component_instance
-		const component_instance = await self.get_component({
+	// component_instance. Get functional component to render
+		const component_instance = await self.get_component_instance({
 			section_tipo 	: last_item.section_tipo,
 			component_tipo 	: last_item.component_tipo,
 			model 			: last_item.modelo,
-			section_id 		: null,
-			mode 			: 'search',
-			value 			: current_value,
+			value 			: current_value || null,
 			q_operator 		: q_operator || null,
 			path 			: path
 		})
-		//console.log("////////// component_instance:",component_instance);
+		// console.log("////////// component_instance:",component_instance);
 
 	// Render component
-	const component_node = await component_instance.render()
+		// await component_instance.build(true)
+		const component_node = await component_instance.render()
 
 	// Inject component html
-	search_component.appendChild(component_node)
+		search_component.appendChild(component_node)
 
-	// Add button close
+	// button close
 		const search_component_button_close = ui.create_dom_element({
 			element_type 			: 'span',
 			parent 		 			: search_component,
-			class_name 	 			: "button link close"
+			class_name 	 			: "button close"
 		})
 		search_component_button_close.addEventListener("click",function(e){
 			// remove search box and content (component) from dom
@@ -613,24 +611,24 @@ render_search.prototype.build_search_component = async function(parent_div, path
 			self.update_state({state:'changed'})
 		},false)
 
-	// Add label component source if exists
+	// label component source if exists
 		if (first_item!==last_item) {
 			//console.log("first_item:",first_item);
 			const label_add = parent_div.querySelector("span.label_add")
-				if (label_add) {
-					label_add.innerHTML = first_item.name +" "+ label_add.innerHTML
-				}
+			if (label_add) {
+				label_add.innerHTML = first_item.name +" "+ label_add.innerHTML
+			}
 		}
 
 	// Check update_component_with_value_state
 	// If component have any value or q_operator, set style with different color to remark it
 	//	component_common.update_component_with_value_state( search_component.querySelector("div.wrap_component") )
 
-	// show
-	parent_div.classList.remove("hide")
+	// show hidden parent cantainer
+		parent_div.classList.remove("hide")
 
 
-	return
+	return true
 }//end build_search_component
 
 
@@ -712,7 +710,7 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			const icon_load = ui.create_dom_element({
 				element_type 			: 'span',
 				parent 		 			: li_element,
-				class_name 	 			: "icon_bs link component_presets_button_load"
+				class_name 	 			: "icon_bs component_presets_button_load"
 			})
 			icon_load.addEventListener("click",function(e){
 				self.load_search_preset(this)
@@ -741,7 +739,7 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			const icon_delete = ui.create_dom_element({
 				element_type 			: 'span',
 				parent 		 			: li_element,
-				class_name 	 			: "icon_bs link component_presets_button_delete"
+				class_name 	 			: "icon_bs component_presets_button_delete"
 			})
 			icon_delete.addEventListener("click",function(e){
 				self.delete_preset(this)
@@ -885,7 +883,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 						self.target_section_tipo.splice(index, 1)
 					}
 
-					await self.load_components_from_section( {section_tipo: self.target_section_tipo})
+					await self.get_section_elements_context( {section_tipo: self.target_section_tipo})
 					self.render_components_list({
 						section_tipo : self.target_section_tipo,
 						target_div 	 : self.search_container_selector,
