@@ -682,8 +682,8 @@ const get_custom_events = (self, i, get_service) => {
 
 				for (let i = 0; i < result_length; i++) {
 					const data_tag 	= result[i]
-					const tag_id 	= (!data_tag.tag_id) 
-						? self.get_last_tag_id(editor_content_data, data_tag.type) + 1 
+					const tag_id 	= (!data_tag.tag_id)
+						? self.get_last_tag_id(editor_content_data, data_tag.type) + 1
 						: data_tag.tag_id;
 
 						switch(data_tag.type) {
@@ -762,12 +762,12 @@ const build_node_tag = function(data_tag, tag_id) {
 
 /**
 *  LAYER_SELECTOR
-* @return 
+* @return
 */
 const render_layer_selector = function(self, data_tag, tag_id, service){
 
 	const ar_layers = data_tag.layers
-	
+
 	const fragment = new DocumentFragment()
 
 	const add_layer = ui.create_dom_element({
@@ -806,7 +806,6 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 
 			const layer_li = ui.create_dom_element({
 				element_type	: 'li',
-				class_name 		: 'li',
 				parent 			: layer_ul
 			})
 			layer_li.addEventListener("click", (e) =>{
@@ -849,8 +848,8 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 					class_name 		: 'layer_color',
 					parent 			: layer_color_box,
 				})
-				layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined' 
-					? layer.layer_color 
+				layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
+					? layer.layer_color
 					: 'black'
 		}// end for
 
