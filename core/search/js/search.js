@@ -468,61 +468,78 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 
 
 /**
-* GET_COMPONENT
+* GET_COMPONENT_INSTANCE
+* Called by render.build_search_component to create the component instance
 * @return promise
 */
-search.prototype.get_component = async function(options) {
+search.prototype.get_component_instance = async function(options) {
 
 	const self = this
 
+	const section_tipo 		= options.section_tipo
+	const component_tipo 	= options.component_tipo
+	const model 			= options.model
+	const value 			= options.value || []
+	const q_operator 		= options.q_operator
+	const path 				= options.path
+
 	const source = {
-		model 			: options.model,
-		tipo 			: options.component_tipo,
-		section_tipo 	: options.section_tipo,
+		model 			: model,
+		tipo 			: component_tipo,
+		section_tipo 	: section_tipo,
 		section_id 		: null,
 		mode 			: 'search'
 	}
-	const current_data_manager 	= new data_manager()
-	const api_response 			= await current_data_manager.get_element_context(source)
+	const _data_manager = new data_manager()
+	const api_response 	= await _data_manager.get_element_context(source)
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[search.get_component] api_response:", options.model, options.component_tipo, api_response);
+			console.log("[search.get_component_instance] api_response:", model, component_tipo, api_response);
 		}
 
-	const current_component_context 	= api_response.result[0]
-	const current_lang 					= current_component_context.lang
+	const component_context = api_response.result[0]
 
-	const serial = performance.now() //Date.now()
-	const key 	 = options.section_tipo +'_'+ options.component_tipo +'_search_'+ current_lang +'_'+ serial
+	// instance key. Custom to get unique key
+		const serial = performance.now()
+		const key 	 = section_tipo +'_'+ component_tipo +'_search_'+ component_context.lang +'_'+ serial
 
-	const current_data 	= {value : options.value || []}
-	const current_datum = {context : current_component_context, data : current_data}
+	// datum. Create empty dummy datum
+		const current_data 	= {value : value}
+		const current_datum = {context : component_context, data : current_data}
 
-	const component_instance = await instances.get_instance({
+	const component_options = {
 		key 			: key,
-		model 			: current_component_context.model,
-		tipo 			: current_component_context.tipo,
-		section_tipo 	: current_component_context.section_tipo,
+		model 			: component_context.model,
+		tipo 			: component_context.tipo,
+		section_tipo 	: component_context.section_tipo,
 		section_id 		: null,
 		mode 			: 'search',
-		lang 			: current_lang,
+		lang 			: component_context.lang,
 
-		context 		: current_component_context,
-		data 			: current_data,
-		datum 			: current_datum,
-		sqo_context 	: current_component_context.sqo_context
-	})
+		context 		: component_context,
+		sqo_context 	: component_context.sqo_context,
+		// data 			: current_data,
+		// datum 			: current_datum
+	}
+	const component_instance = await instances.get_instance(component_options)
 
-	//add search options to the instance
-	component_instance.data.q_operator 	= options.q_operator
-	component_instance.path 			= options.path
-	// add
-	self.ar_instances.push(component_instance)
+	// build component to force load datalist etc.
+		await component_instance.build(true)
+
+	// inject value from search user preset
+		component_instance.datum.data[0].value = value
+
+	// add search options to the instance
+		component_instance.data.q_operator 	= q_operator
+		component_instance.path 			= path
+
+	// add instance
+		self.ar_instances.push(component_instance)
 
 
 	return component_instance
-}//end get_component
+}//end get_component_instance
 
 
 

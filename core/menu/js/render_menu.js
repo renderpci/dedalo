@@ -206,7 +206,7 @@ render_menu.prototype.edit = async function() {
 				event_manager.subscribe('render_instance', update_section_label)
 			)
 			function update_section_label (instance) {
-				if(instance.model === 'section'|| instance.model === 'area'){
+				if(instance.mode!=='tm' && (instance.model==='section'|| instance.model==='area')){
 					// change the value of the current dom element
 					section_label.innerHTML = instance.label
 					current_instance = instance
