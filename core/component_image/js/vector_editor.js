@@ -765,7 +765,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// pointer
 				const pointer = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool pointer',
 					parent 			: buttons_container
 				})
@@ -777,7 +777,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// transform
 				const transform = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool transform',
 					parent 			: buttons_container
 				})
@@ -790,7 +790,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// rectangle
 				const rectangle = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool rectangle',
 					parent 			: buttons_container
 				})
@@ -802,7 +802,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// circle
 				const circle = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool circle',
 					parent 			: buttons_container
 				})
@@ -814,7 +814,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// vector
 				const vector = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool vector',
 					parent 			: buttons_container
 				})
@@ -912,7 +912,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// zoom
 				const zoom = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool zoom',
 					parent 			: buttons_container
 				})
@@ -954,7 +954,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// move
 				const move = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool move',
 					parent 			: buttons_container
 				})
@@ -981,7 +981,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// save
 				const save = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool save',
 					parent 			: buttons_container
 				})
@@ -1002,7 +1002,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// color_picker
 				this.button_color_picker = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: 'button tool button_color_picker',
 					parent 			: buttons_container
 				})
@@ -1200,9 +1200,8 @@ vector_editor.prototype.load_layer = function(self, layer) {
 				// scale raster layer
 				// get the ratio for the scale the project layer to fit to canvas view heigth
 				// used to fix the raster layer to the canvas height
-				const canvas_h		= self.canvas_node.clientHeight
-				const ratio_layer 	= canvas_h / self.img_view_height
-
+					const canvas_h		= self.canvas_node.clientHeight
+					const ratio_layer 	= canvas_h / self.img_view_height
 				// change the value of the current raster element
 				raster.source = img_src
 				raster.onLoad = function(e) {
@@ -1210,15 +1209,9 @@ vector_editor.prototype.load_layer = function(self, layer) {
 					const ratio 			= self.img_view_height / new_image_height
 					raster.setScaling(ratio)
 					raster.layer.setScaling(ratio_layer)
-				}
-			}
-		}
-
-
-
-
-
-
+				}// end onLoad
+			}//end img_quality_change
+		}//end if layer_id==0
 
 	return true
 }//end load_layer
