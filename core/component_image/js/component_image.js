@@ -72,7 +72,7 @@ component_image.prototype.init = async function(options) {
 
 	const self = this
 	// image node
-		self.image_node 			= null
+		self.object_node 			= null
 	// image size
 		self.img_height				= null
 		self.img_width				= null
@@ -341,9 +341,9 @@ component_image.prototype.update_draw_data = function() {
 
 	const self = this
 
-	const project 				= self.current_paper.project
+	const project 					= self.current_paper.project
 	//remove the layer_ string in the name and parse to int
-	const layer_id				= project.activeLayer.data.layer_id
+	const layer_id					= project.activeLayer.data.layer_id
 
 	const current_layer				= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 	current_layer.layer_data 		= project.activeLayer.exportJSON({asString:false})
@@ -351,13 +351,12 @@ component_image.prototype.update_draw_data = function() {
 	// current_layer.layer_color 		= project.activeLayer.selectedColor.toCSS()
 	current_layer.user_layer_name 	= project.activeLayer.data.user_layer_name
 
-	// const new_lib_data 			= project.exportJSON({asString:false})
-
 	// update the data in the instance previous to save
 	const value 				=  typeof (self.data.value[0]) !== 'undefined'
 		? JSON.parse(JSON.stringify(self.data.value[0]))
 		: {}
-		  value.lib_data 		= self.ar_layer_loaded
+	value.lib_data 			= self.ar_layer_loaded
+	value.svg_file_data		= project.exportSVG({asString:true,embedImages:false})
 		
 
 	// set the changed_data for update the component data and send it to the server for change when save
