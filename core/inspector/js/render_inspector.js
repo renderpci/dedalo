@@ -106,7 +106,7 @@ const get_content_data = async function(self) {
 			parent 			: content_data
 		})
 
-		// button_new section
+		// button_new . Call API to create new section and navigate to the new record
 			const button_new = ui.button.build_button({
 				class_name 	: "new",
 				label 		: get_label.nuevo || "New"
@@ -122,7 +122,7 @@ const get_content_data = async function(self) {
 					}
 				})
 				if (api_response.result && api_response.result>0) {
-					// launch event 'user_action' tha page is watching
+					// launch event 'user_action' that page is watching
 					event_manager.publish('user_action', {
 						tipo 			 : self.caller.tipo,
 						mode 			 : self.caller.mode,

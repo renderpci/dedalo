@@ -242,7 +242,8 @@ tool_time_machine.prototype.load_section = async function() {
 			type 			: "section",
 			sqo_context 	: {
 				show : show
-			}
+			},
+			id_variant 		: 'time_machine' // avoid conflicts
 		})
 
 	// set current tool as component caller (to check if component is inside tool or not)
@@ -260,7 +261,7 @@ tool_time_machine.prototype.load_section = async function() {
 		}
 
 	// add
-		const instance_found = self.ar_instances.find( el => el===section_instance )
+		// const instance_found = self.ar_instances.find( el => el===section_instance )
 		// if (section_instance!==self.caller && typeof instance_found==="undefined") {
 			self.ar_instances.push(section_instance)
 		// }
@@ -278,7 +279,7 @@ tool_time_machine.prototype.load_section = async function() {
 tool_time_machine.prototype.load_component = async function(lang, mode='tm', matrix_id=null) {
 
 	const self = this
-	console.log("self:",self);
+
 	const component = self.caller
 	const context   = JSON.parse(JSON.stringify(component.context))
 
@@ -301,7 +302,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 			context 		: context,
 			data 			: {value:[]},
 			datum 			: component.datum,
-			id_variant 		: 'time_machine'
+			id_variant 		: 'time_machine' // avoid conflicts
 			//sqo_context 	: component.sqo_context
 		}
 

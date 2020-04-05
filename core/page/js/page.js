@@ -79,14 +79,15 @@ page.prototype.init = async function(options) {
 
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('user_action', user_action)
-		)
+		// user_action
+			self.events_tokens.push(
+				event_manager.subscribe('user_action', user_action)
+			)
 		// user_action fn
 			async function user_action(options) {
 
-				const current_data_manager = new data_manager()
-				const api_response = await current_data_manager.get_page_element(options)
+				const current_data_manager 	= new data_manager()
+				const api_response 			= await current_data_manager.get_page_element(options)
 
 				// element context from api server result
 					const page_element = api_response.result

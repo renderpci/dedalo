@@ -738,21 +738,27 @@ export const ui = {
 		build_tool_button : (tool_object, self) => {
 
 			// button
+				const tool_button = ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'button tool',
+					title_label 	: tool_object.label,
+					style 			: {
+						"-webkit-mask" : "url('" +tool_object.icon +"')",
+						"mask" 		   : "url('" +tool_object.icon +"')"
+					},
+					dataset			: {
+						tool : tool_object.name
+					}
+				})
 				// const tool_button = ui.create_dom_element({
-				// 	element_type	: 'span',
+				// 	element_type	: 'img',
 				// 	class_name 		: 'button tool',
-				// 	style 			: { "background-image": "url('" +tool_object.icon +"')" },
-				// 	dataset			: { tool :tool_object.name },
+				// 	// style 		: { "background-image": "url('" +tool_object.icon +"')" },
+				// 	src 			: tool_object.icon,
+				// 	dataset			: { tool : tool_object.name },
 				// 	title_label 	: tool_object.label
 				// })
-				const tool_button = ui.create_dom_element({
-					element_type	: 'img',
-					class_name 		: 'button tool',
-					// style 		: { "background-image": "url('" +tool_object.icon +"')" },
-					src 			: tool_object.icon,
-					dataset			: { tool : tool_object.name },
-					title_label 	: tool_object.label
-				})
+
 
 			// Events
 				tool_button.addEventListener('click', publish_load_tool)
@@ -793,7 +799,7 @@ export const ui = {
 
 			// button
 				const button = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'span',
 					class_name 		: class_name,
 					text_content  	: label
 					//style 			: { "background-image": "url('" +tool_object.icon +"')" },
@@ -828,7 +834,7 @@ export const ui = {
 			if (typeof data_set==="undefined" && typeof element_options.dataset!=="undefined") data_set = element_options.dataset
 
 		const custom_function_events= element_options.custom_function_events
-		const title_label			= element_options.title_label
+		const title_label			= element_options.title_label || element_options.title
 		const text_node				= element_options.text_node
 		const text_content			= element_options.text_content
 		const inner_html			= element_options.inner_html
@@ -1255,8 +1261,10 @@ export const ui = {
 			// 	previous_modal.remove()
 			// }
 			const modal_container 	= document.createElement('dd-modal')
+			// document.body.appendChild(modal_container)
 			const wrapper_page  	= document.querySelector('.wrapper_page')
 			wrapper_page.appendChild(modal_container)
+
 
 		// publish close event
 			modal_container.publish_close = function(e) {
@@ -1283,7 +1291,7 @@ export const ui = {
 				modal_container.appendChild(footer)
 			}
 
-		// modal special features based on property 'size'
+		// size. Modal special features based on property 'size'
 			switch(size) {
 				case 'big' :
 					// hide contents to avoid double scrollbars
@@ -1307,8 +1315,6 @@ export const ui = {
 					modal_container._showModal();
 					break;
 			}
-
-
 
 
 		return modal_container

@@ -100,7 +100,7 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 
 	// add events
 		add_events(self, wrapper)
-	
+
 	return wrapper
 }//end edit
 
@@ -175,21 +175,21 @@ const add_events = function(self, wrapper) {
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
 
-			// reset remove and go_link buttons view
-				const all_buttons_remove = wrapper.querySelectorAll('.remove, .go_link')
+			// reset remove and link buttons view
+				const all_buttons_remove = wrapper.querySelectorAll('.remove, .link')
 					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
 						all_buttons_remove[i].classList.add("display_none")
 					}
 
 			// show current remove button
 				if (e.target.matches('input[type="text"') || e.target.matches('input[type="url"')) {
-					// set the button_remove and button_go_link associated to the input selected to visible
+					// set the button_remove and button_link associated to the input selected to visible
 						const button_remove = e.target.parentNode.querySelector('.remove')
 						if (button_remove) {
 							button_remove.classList.remove("display_none")
 						}
 
-						const button_email_send = e.target.parentNode.querySelector('.go_link')
+						const button_email_send = e.target.parentNode.querySelector('.link')
 						if (button_email_send) {
 							button_email_send.classList.remove("display_none")
 						}
@@ -238,7 +238,7 @@ const add_events = function(self, wrapper) {
 				return true
 			}
 
-			if (e.target.matches('.button.go_link')) {
+			if (e.target.matches('.button.link')) {
 
 				self.open_iri(e.target)
 
@@ -260,7 +260,7 @@ render_component_iri.prototype.search = async function() {
 
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-		
+
 	const content_data = await get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
@@ -336,7 +336,7 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)			 
+		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
 
@@ -434,7 +434,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	// button link
 		const button_link = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'button go_link display_none',
+			class_name 		: 'button link display_none',
 			dataset			: { key : i },
 			parent 			: li
 		})
