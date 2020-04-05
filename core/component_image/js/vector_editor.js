@@ -29,12 +29,25 @@ export const vector_editor = function(){
 vector_editor.prototype.init_canvas = async function(self) {
 
 	//img node
-		const img 		= self.image_node
+		const object 		= self.object_node
+
+		//	SVG document inside the Object tag
+		const svg_doc = object.contentDocument;
+		// Get one of the SVG items by ID;
+		const image = svg_doc.querySelector("image")
+
+		const img 		= image.getBBox();
+
+
+
 	// fix image size
-		self.img_height	= img.naturalHeight
-		self.img_width	= img.naturalWidth
+		// self.img_height	= img.naturalHeight
+		// self.img_width	= img.naturalWidth
+		
+		self.img_height	= img.height
+		self.img_width	= img.width
 	// fix image source (URI)
-		self.img_src 	= img.src
+		self.img_src 	= image.getAttributeNS('http://www.w3.org/1999/xlink','href')
 
 	// set the self specific libraries and variables not defined by the generic init
 		// load dependences js/css
@@ -52,10 +65,10 @@ vector_editor.prototype.init_canvas = async function(self) {
 			id 				: self.id,
 			element_type	: "canvas",
 			class_name 		: 'canvas',
-			parent 			: img.parentNode
+			parent 			: object.parentNode
 		})
 		//remove the image node from dom
-			img.remove()
+			object.remove()
 
 		// resize
 			self.canvas_node.setAttribute("resize", true)
@@ -518,7 +531,10 @@ vector_editor.prototype.init_tools = function(self){
 					this.path.position.y += event.delta.y;
 					// if( this.path.firstChild != null && typeof this.path.firstChild.image != 'undefined'){
 					// 		console.log("postion:",this.path.firstChild.bounds);
-					// }			
+					// }
+					if( this.path.firstChild != null && typeof this.path.firstChild.image != 'undefined'){
+							console.log("matrix:",this.path.firstChild.matrix);
+												}		
 				}
 				
 
@@ -1167,6 +1183,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 				// create the raster layer
 					if(layer_id===0){
 						this.create_raster_layer(self)
+						// current_layer.applyMatrix = false
 					}
 
 				console.log("-> create new layer: " , current_layer);	
@@ -1182,6 +1199,37 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		project.view.draw();
 		project.deselectAll();
 		project.options.handleSize = 8;
+
+		if(layer_id===0){
+			const raster = project.activeLayer.firstChild
+			// subscription to the image quality change event
+			self.events_tokens.push(
+				event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
+			)
+			function img_quality_change (img_src) {
+				// scale raster layer
+				// get the ratio for the scale the project layer to fit to canvas view heigth
+				// used to fix the raster layer to the canvas height
+				const canvas_h		= self.canvas_node.clientHeight
+				const ratio_layer 	= canvas_h / self.img_view_height
+
+				// change the value of the current raster element
+				raster.source = img_src
+				raster.onLoad = function(e) {
+					const new_image_height 	= raster.height//raster.bounds.height
+					const ratio 			= self.img_view_height / new_image_height
+					raster.setScaling(ratio)
+					raster.layer.setScaling(ratio_layer)
+				}
+			}
+		}
+
+
+
+
+
+
+
 	return true
 }//end load_layer
 
@@ -1216,20 +1264,7 @@ vector_editor.prototype.create_raster_layer = function(self){
 		raster.scale(ratio)
 		raster.layer.scale(ratio_layer, self.current_paper.view.center)
 
-	// subscription to the image quality change event
-		self.events_tokens.push(
-			event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
-		)
-		function img_quality_change (img_src) {
-			// change the value of the current raster element
-			raster.source = img_src
-			raster.onLoad = function(e) {
-				const new_image_height 	= raster.height//raster.bounds.height
-				const ratio 			= self.img_view_height / new_image_height
-				raster.setScaling(ratio)
-				raster.layer.setScaling(ratio_layer)
-			}
-		}
+	return raster
 }//end create_raster_layer
 
 
