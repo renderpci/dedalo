@@ -3929,10 +3929,20 @@ abstract class component_common extends common {
 			if(isset($component_tipo_properties->source->search)){
 				// properties terms (new way)
 				$source_search = $component_tipo_properties->source->search;
+				$ar_terminos_relacionados = [];
 				foreach ($source_search as $current_search) {
 					if ($current_search->type === 'internal'){
+
+						// components_skip_search_only_v5
+						$components_skip_search_only_v5 = $current_search->components_skip_search_only_v5;
+
 						$ar_related_section_tipo[] 	= $current_search->section_tipo;
-						$ar_terminos_relacionados 	= $current_search->components;
+						foreach ($current_search->components as $cs_tipo) {
+							// if (isset($components_skip_search_only_v5) && in_array($cs_tipo, $components_skip_search_only_v5)) {
+							// 	continue;
+							// }
+							$ar_terminos_relacionados[] = $cs_tipo;
+						}
 					}
 				}
 			}else{
@@ -3956,15 +3966,20 @@ abstract class component_common extends common {
 					# FILTER . filter_element (operator_group)
 						if ($options->add_filter===true) {
 
-							$filter_element = new stdClass();
-								$filter_element->q 		= $options->q;
-								$filter_element->lang 	= $options->lang;
-								$filter_element->path 	= $path;
+							// remove some elements only from filter, not for show
+							if (isset($components_skip_search_only_v5) && in_array($current_tipo, $components_skip_search_only_v5)) {
+								// skip
+							}else{
+								$filter_element = new stdClass();
+									$filter_element->q 		= $options->q;
+									$filter_element->lang 	= $options->lang;
+									$filter_element->path 	= $path;
 
-							if(!isset($filter_group)) {
-								$filter_group = new stdClass();
+								if(!isset($filter_group)) {
+									$filter_group = new stdClass();
+								}
+								$filter_group->$logical_operator[] = $filter_element;
 							}
-							$filter_group->$logical_operator[] = $filter_element;
 						}
 					# SELECT . Select_element (select_group)
 						# Add options lang
