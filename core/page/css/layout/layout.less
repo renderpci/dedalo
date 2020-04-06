@@ -1189,155 +1189,151 @@
 					// margin-top: 2em;
 				// }
 
-
 				// Vector editor
 					.vector_editor {
-						.build_button('vector_editor.svg', black, 1);
+						.add_mask('vector_editor.svg');
 					}
-					.vector_editor_tools{
-
-					}
-
-					.layer_selector_button {
-						text-align: center;
-						color: #000;
-					}
-					.layer_selector {
-						float: right;
-						width: 11em;
-						background-color: #ffa03f;
-						position: absolute;
-						right: 2em;
-						top: 0;
-						padding: 0;
-						text-align: right;
+					// tool buttons container
+					.vector_editor_tools {
 
 						>.button {
-							margin: 0.5em;
-							float: none;
-							display: inline-block;
-							&.add {
-								float: left;
-							}
+							background-color: #ffffff;
 						}
 
-						>ul.layer_ul {
-							text-align: left;
-							clear: both;
-						    max-height: 200px;
-								overflow: auto;
+						.layer_selector {
+							float: right;
+							width: 11em;
+							background-color: #ffa03f;
+							position: absolute;
+							right: 2em;
+							top: 0;
+							padding: 0;
+							text-align: right;
 
-							// border: 0.5px solid #777;
-
-							>li{
-								display: grid;
-								grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
-								height: 30px;
-								align-items: center;
-								border-bottom: 1px solid #777;
-								border-left: 1px solid #777;
-								border-right: 1px solid #777;
-								cursor: pointer;
-								background-color: #ffffff;
-
-								&:hover {
-									background-color: #ffa03f;
-									color: #ffffff;
+							>.button {
+								margin: 0.5em;
+								float: none;
+								display: inline-block;
+								&.add {
+									float: left;
 								}
-								&:active {
-									background-color: #ffa03f;
-									color: #000;
-								}
-								&.active{
-									background-color: #e6e6e6;
-									color: #000;
-									font-weight: bold;
-									user-select: none;
-								}
+							}
 
-								.layer_icon {
-									// .build_button('eye.svg', black, 1);
-									background-color: black;
-									justify-self: center;
-									opacity: 0.2;
+							>ul.layer_ul {
+								text-align: left;
+								clear: both;
+							    max-height: 200px;
+									overflow: auto;
+
+								// border: 0.5px solid #777;
+
+								>li{
+									display: grid;
+									grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
+									height: 30px;
+									align-items: center;
+									border-bottom: 1px solid #777;
+									border-left: 1px solid #777;
+									border-right: 1px solid #777;
+									cursor: pointer;
+									background-color: #ffffff;
+
 									&:hover {
-										opacity: 0.5 !important;
+										background-color: #ffa03f;
+										color: #ffffff;
+									}
+									&:active {
+										background-color: #ffa03f;
+										color: #000;
 									}
 									&.active{
-										// background-color: unset !important;
-										opacity: 1;
+										background-color: #e6e6e6;
+										color: #000;
+										font-weight: bold;
+										user-select: none;
 									}
-								}
-								.layer_id {
+
+									.layer_icon {
+										// .build_button('eye.svg', black, 1);
+										background-color: black;
+										justify-self: center;
+										opacity: 0.2;
+										&:hover {
+											opacity: 0.5 !important;
+										}
+										&.active{
+											// background-color: unset !important;
+											opacity: 1;
+										}
+									}
+									.layer_id {
+
+									}
+									.user_layer_name {
+
+
+									}
+									.layer_delete {
+										// .build_button('trash_light.svg', black, 1);
+										background-color: black;
+										justify-self: center;
+									}
+
+									.layer_color {
+										width: 12px;
+										height: 12px;
+										border-radius: 12px;
+									}
 
 								}
-								.user_layer_name {
-
-
+								>li:first-child {
+									border-top: 0.5px solid #777;
 								}
-								.layer_delete {
-									// .build_button('trash_light.svg', black, 1);
-									background-color: black;
-									justify-self: center;
-								}
-
-								.layer_color {
-									width: 12px;
-									height: 12px;
-									border-radius: 12px;
-								}
-
 							}
-							>li:first-child {
-								border-top: 0.5px solid #777;
-							}
+						}//end layer_selector
 
+						.open_layer_selector {
+							text-align: center;
+							color: #000;
 						}
-					}//end layer_selector
-
-					.pointer {
-						.build_button('pointer.svg', black, 1);
-					}
-
-					.transform {
-						.build_button('pointer.svg', black, 1);
-					}
-
-					.rectangle {
-						.build_button('rectangle.svg', black, 1);
-					}
-					.circle {
-						.build_button('circle.svg', black, 1);
-					}
-					.vector {
-						.build_button('vector.svg', black, 1);
-					}
-					.zoom {
-						.build_button('find.svg', black, 1);
-					}
-					.move {
-						.build_button('hand.svg', black, 1);
-					}
-					.save {
-						.build_button('save.svg', black, 1);
-					}
-					// .full_screen {
-						// .build_button('full_screen.svg', black, 1);
-					// }
-					.button_color_picker {
-						// .build_button('rectangle.svg', black, 1);
-						border: 0.5px solid #000000;
-					}
-					.color_wheel_contaniner{
-						float: right;
-					}
-
-					.vector_tool_active {
-						opacity: 1;
-						&:before {
-							background-color: white;
+						.pointer {
+							.add_mask('pointer.svg');
 						}
-					}
+						.transform {
+							.add_mask('pointer.svg');
+						}
+						.rectangle {
+							.add_mask('rectangle.svg');
+						}
+						.circle {
+							.add_mask('circle.svg');
+						}
+						.vector {
+							.add_mask('vector.svg');
+						}
+						.zoom {
+							.add_mask('find.svg');
+						}
+						.move {
+							.add_mask('hand.svg');
+						}
+						.save {
+							// .build_button('save.svg', black, 1);
+							// background-color: #000000;
+						}
+						.button_color_picker {
+							// .build_button('rectangle.svg', black, 1);
+							border: 0.5px solid #3F3F3F;
+						}
+						.color_wheel_contaniner{
+							float: right;
+						}
+
+						.vector_tool_active {
+							opacity: 1;
+							background-color: black;
+						}
+					}//end vector-editor_tools
 
 			}//end .buttons_container
 
