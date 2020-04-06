@@ -293,7 +293,7 @@ class search_development2 {
 				#debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 
 		#debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
-		debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
+		// debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
 
 
 		return $records_data;
