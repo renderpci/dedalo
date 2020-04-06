@@ -173,27 +173,6 @@ const add_events = function(self, wrapper) {
 
 	// click event [mousedown]
 		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-			// reset remove and link buttons view
-				const all_buttons_remove = wrapper.querySelectorAll('.remove, .link')
-					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-						all_buttons_remove[i].classList.add("display_none")
-					}
-
-			// show current remove button
-				if (e.target.matches('input[type="text"') || e.target.matches('input[type="url"')) {
-					// set the button_remove and button_link associated to the input selected to visible
-						const button_remove = e.target.parentNode.querySelector('.remove')
-						if (button_remove) {
-							button_remove.classList.remove("display_none")
-						}
-
-						const button_email_send = e.target.parentNode.querySelector('.link')
-						if (button_email_send) {
-							button_email_send.classList.remove("display_none")
-						}
-				}
 
 			// insert
 			if (e.target.matches('.button.add')) {
@@ -425,16 +404,16 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	// button remove
 
 		const button_remove = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button remove display_none',
+			element_type	: 'span',
+			class_name 		: 'button remove hidden_button',
 			dataset			: { key : i },
 			parent 			: li
 		})
 
 	// button link
 		const button_link = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button link display_none',
+			element_type	: 'span',
+			class_name 		: 'button link hidden_button',
 			dataset			: { key : i },
 			parent 			: li
 		})
