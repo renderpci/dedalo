@@ -158,23 +158,23 @@ const add_events = function(self, wrapper) {
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
 
-			// reset remove and email_send buttons view
-				const all_buttons_remove = wrapper.querySelectorAll('.remove, .email_send')
+			// reset remove and email buttons view
+				const all_buttons_remove = wrapper.querySelectorAll('.remove, .email')
 					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
 						all_buttons_remove[i].classList.add("display_none")
 					}
 
 			// show current remove button
 				if (e.target.matches('input[type="text"')) {
-					// set the button_remove and button_email_send associated to the input selected to visible
+					// set the button_remove and button_email associated to the input selected to visible
 						const button_remove = e.target.parentNode.querySelector('.remove')
 						if (button_remove) {
 							button_remove.classList.remove("display_none")
 						}
 
-						const button_email_send = e.target.parentNode.querySelector('.email_send')
-						if (button_email_send) {
-							button_email_send.classList.remove("display_none")
+						const button_email = e.target.parentNode.querySelector('.email')
+						if (button_email) {
+							button_email.classList.remove("display_none")
 						}
 				}
 
@@ -221,7 +221,7 @@ const add_events = function(self, wrapper) {
 				return true
 			}
 
-			if (e.target.matches('.button.email_send')) {
+			if (e.target.matches('.button.email')) {
 
 				self.send_email(e.target)
 
