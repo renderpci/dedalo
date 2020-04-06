@@ -85,8 +85,9 @@ vector_editor.prototype.init_canvas = async function(self) {
 		// canvas -> active canvas_height = 432px (set in the instance)
 			// const context = canvas_node.getContext("2d");
 			const ratio_canvas 		= self.canvas_height / self.img_height
+			self.canvas_width 		= ratio_canvas * self.img_width
 			self.canvas_node.height = self.canvas_height
-			self.canvas_node.width  = ratio_canvas * self.img_width
+			self.canvas_node.width  = self.canvas_width
 				// console.log("ratio:",ratio,"img_height",img_height);
 			// return
 
@@ -94,10 +95,6 @@ vector_editor.prototype.init_canvas = async function(self) {
 		self.current_paper = new paper.PaperScope()
 		self.current_paper.setup(self.canvas_node);
 		//get the current resized canvas size
-			//set the paper view size to the canvas size
-			// if(self.node[0].classList.contains('fullscreen')){
-			// 	self.current_paper.project.view.setViewSize(canvas_node.clientWidth, canvas_node.clientHeight)
-			// }
 
 
 	//Paste svg clipboard to active layer
@@ -118,12 +115,12 @@ vector_editor.prototype.init_canvas = async function(self) {
 			}
 		})
 
-		document.addEventListener('copy', function (e) {
+		document.addEventListener('copy', function (event) {
 			//don't block the ace editor copy/paste
-				e.preventDefault();
+				event.preventDefault();
 				const projectSVG = project.exportSVG({asString:true,precision:3})
-				if (e.clipboardData) {
-					e.clipboardData.setData('text/plain', projectSVG);
+				if (event.clipboardData) {
+					event.clipboardData.setData('text/plain', projectSVG);
 				} else if (window.clipboardData) {
 					window.clipboardData.setData('Text', projectSVG);
 				}
@@ -132,8 +129,22 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 
 	// create the main layer
-		// self.main_layer	= new self.current_paper.Layer();
-		// 	self.main_layer.name = 'main';
+		const main_layer	= new self.current_paper.Layer();
+		main_layer.name = 'main';
+
+		const size = new self.current_paper.Size ({
+				width: (ratio_canvas * self.img_width) +2,
+				height: (self.canvas_height) +2
+			});
+		const top_left = new self.current_paper.Point(-1, -1)
+
+			const main_canvas_area = new self.current_paper.Path.Rectangle({
+				point: top_left,
+				size: size,
+				strokeColor: 'black'
+			});
+			self.current_paper.project.deselectAll();
+			main_canvas_area.name = 'main_area'
 
 			// set the main layer to the center of the view,
 			// all other items and layers has reference to the main posistion and scale
@@ -150,72 +161,28 @@ vector_editor.prototype.init_canvas = async function(self) {
 			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
 		)
 		function full_screen_change (button) {
-			//add / remove class fullscreen to wrap. The component will resize
-				// self.node[0].classList.toggle('fullscreen')
+			
+			if(!self.node[0].classList.contains('fullscreen')){
+				self.canvas_node.height = self.canvas_height
+				self.canvas_node.width  = self.canvas_width
+			}
 
-				if(!self.node[0].classList.contains('fullscreen')){
-					const ratio_canvas = 432 / self.img_height
-					self.canvas_node.height = 432
-					self.canvas_node.width  = ratio_canvas * self.img_width
-				}
+			//get the current resized canvas size
+			//set the paper view size to the canvas size
+			self.current_paper.project.view.setViewSize(self.canvas_node.clientWidth, self.canvas_node.clientHeight)
 
-				//get the current resized canvas size
-				//set the paper view size to the canvas size
-				self.current_paper.project.view.setViewSize(self.canvas_node.clientWidth, self.canvas_node.clientHeight)
+			const ratio = self.node[0].classList.contains('fullscreen')
+				? (self.current_paper.view.size._height / self.canvas_height) * 0.8
+				: 1
+			
+			self.current_paper.view.setScaling(ratio)
 
-				return
+			const delta_x =  self.canvas_width /2 
+			const delta_y =  self.canvas_height /2
+			self.current_paper.view.setCenter(delta_x, delta_y)
 
-
-
-			// change the value of the current raster element
-				// self.current_paper.view.setScaling(1)
-				// get the current size of the paper view
-				// const paper_w = self.current_paper.view.size._width
-				// const paper_h = self.current_paper.view.size._height
-				// if the image loaded is wide get the paper width else get the paper hight
-				// const paper_reference = img_width > img_height ? paper_w : paper_h
-
-				//add / remove class fullscreen to wrap. The component will resize
-					// self.node[0].classList.toggle('fullscreen')
-				//get the current resized canvas size
-					// const canvas_w = canvas_node.clientWidth
-					// const canvas_y = canvas_node.clientHeight
-
-				//set the paper view size to the canvas size
-					// self.current_paper.project.view.setViewSize(canvas_w, canvas_y)
-
-				// self.current_paper.view.setScaling(1)
-				// self.main_layer.setPosition(view.center)
-
-
-				//reset the window and the canvas
-				// window.dispatchEvent(new Event('resize'));
-				// self.current_paper.project.view.update();
-				// self.current_paper.view.setScaling(1)
-				// self.main_layer.setPosition(self.current_paper.view.center)
-
-				// self.main_layer.fitBounds(self.current_paper.project.view.bounds);
-
-				//get the current resized canvas size
-				// const canvas_w = canvas_node.clientWidth
-				// const canvas_y = canvas_node.clientHeight
-				// // if the image loaded is wide get the canvas width else get the canvas hight
-				// const canvas_reference = img_width > img_height ? canvas_w : canvas_y
-
-				//get the scale ratio, when remove the fullscreen the ratio of image will be 1 (original ratio)
-				// const ratio = self.node[0].classList.contains('fullscreen') ? canvas_reference / paper_reference : 1
-				//set the paper view size to the canvas size
-				// self.current_paper.project.view.setViewSize(canvas_w, canvas_y)
-				//scaling the paper view
-				// self.current_paper.view.setScaling(ratio)
-				//set the center of the view
-				// const center_y = self.current_paper.view.size._height /2
-				// const center_x = self.current_paper.view.size._width /2
-
-				// self.current_paper.project.view.setCenter(center_x, center_y)
-
-				// self.main_layer.scale(2, self.current_paper.view.center)
-		}
+			return
+		}// end full_screen_change
 
 
 	return true
@@ -318,6 +285,8 @@ vector_editor.prototype.init_tools = function(self){
 				console.log("[init_tools] hitResult:",hitResult);
 			}
 			if (hitResult) {
+				//remove all behavior if the click is in the main_area rectangle, deselect all.
+				if(hitResult.item.name === 'main_area') return;
 				this.path = hitResult.item
 				switch(hitResult.type) {
 
@@ -446,6 +415,8 @@ vector_editor.prototype.init_tools = function(self){
 				//project.activeLayer.selected = false;
 				const hitResult = project.hitTest(event.point , { fill: true, stroke: true, segments: true, tolerance: 5, bounds: true });
 				if (hitResult) {
+					//remove all behavior if the click is in the main_area rectangle, deselect all.
+					if(hitResult.item.name === 'main_area') return;
 					this.path = hitResult.item
 
 					// the image can be resized only the parent layer
@@ -534,8 +505,6 @@ vector_editor.prototype.init_tools = function(self){
 				self.update_draw_data()
 			}
 
-
-
 	// vector
 		this.vector = new Tool()
 		this.vector.onMouseDown = (event) => {
@@ -549,6 +518,8 @@ vector_editor.prototype.init_tools = function(self){
 				console.log("[init_tools] hitResult:",hitResult);
 			}
 			if (hitResult) {
+				//remove all behavior if the click is in the main_area rectangle, deselect all.
+				if(hitResult.item.name === 'main_area') return;
 				this.path = hitResult.item
 				switch(hitResult.type) {
 
@@ -711,6 +682,7 @@ vector_editor.prototype.init_tools = function(self){
 			const delta = event.downPoint.subtract(event.point)
 			// scroll the view to the position
 			project.view.scrollBy(delta)
+				console.log("project.view.center:",project.view.center);
 		}
 
 
@@ -766,7 +738,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// pointer
 				const pointer = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button pointer',
+					class_name 		: 'button pointer_alt',
 					parent 			: buttons_container
 				})
 				pointer.addEventListener("mouseup", (e) =>{
@@ -778,7 +750,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// transform
 				const transform = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button transform',
+					class_name 		: 'button pointer',
 					parent 			: buttons_container
 				})
 				transform.addEventListener("mouseup", (e) =>{
@@ -791,7 +763,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// rectangle
 				const rectangle = ui.create_dom_element({
 
-					element_type	: 'span',,
+					element_type	: 'span',
 					class_name 		: 'button rectangle',
 					parent 			: buttons_container
 				})
@@ -922,29 +894,16 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					activate_status(zoom)
 				})
 				zoom.addEventListener("dblclick", (e) =>{
-						// const ratio = view.height / main.height
-						self.current_paper.view.setScaling(1)
-						// main.setPosition(view.center)
-						// main.fitBounds(view.bounds);
-						// main.setScaling(1)
-						// main.setPosition(view.center)
-					//set the view ratio to 1
-						// self.current_paper.view.setScaling(1)
-					//set the center of the view
-						// const center_y = self.current_paper.view.size._height /2
-						// const center_x = self.current_paper.view.size._width /2
-						// self.current_paper.project.view.setCenter(center_x,center_y)
+						
+					const ratio = self.node[0].classList.contains('fullscreen')
+						? (self.canvas_node.clientHeight  / self.canvas_height) * 0.8
+						: 1
+							console.log("ratio:",ratio);
+						self.current_paper.view.setScaling(ratio)
 
-
-
-					// // get the ratio diference from original view ratio and curren view ratio
-					// const ratio = self.current_paper.view.size._height / self.current_paper.view.viewSize._height
-					// // get the delta center from current position to original center position
-					const center_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-					const center_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
-
-					// self.current_paper.view.scale(ratio)
-					self.current_paper.view.translate(center_x, center_y)
+						const delta_x =  self.canvas_width /2 
+						const delta_y =  self.canvas_height /2
+						self.current_paper.view.setCenter(delta_x, delta_y)
 
 				})
 
@@ -964,19 +923,9 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					activate_status(move)
 				})
 				move.addEventListener("dblclick", (e) =>{
-					//set the center of the view
-					// main.setPosition(view.center)
-
-
-					// const center_y = self.current_paper.view.size._height /2
-					// const center_x = self.current_paper.view.size._width /2
-					// self.current_paper.project.view.setCenter(center_x,center_y)
-
-					// get the delta center from current position to original center position
-					const delta_y =  self.current_paper.view.center.y -(self.current_paper.view.viewSize._height /2)
-					const delta_x =  self.current_paper.view.center.x -(self.current_paper.view.viewSize._width /2)
-
-					self.current_paper.view.translate(delta_x, delta_y)
+					const delta_x =  self.canvas_width /2 
+					const delta_y =  self.canvas_height /2
+					self.current_paper.view.setCenter(delta_x, delta_y)
 				})
 				buttons.push(move)
 
@@ -1191,6 +1140,9 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		project.deselectAll();
 		project.options.handleSize = 8;
 
+		const main_layer = project.layers['main']
+		main_layer.bringToFront()
+
 		if(layer_id===0){
 			const raster = project.activeLayer.firstChild
 			// subscription to the image quality change event
@@ -1331,6 +1283,8 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 		})
 		layer_li.addEventListener("click", (e) =>{
 			project.deselectAll()
+			// prevent the selection of the raster layer
+			if(layer.layer_id===0)return
 
 			const name = 'layer_'+layer.layer_id
 			const new_active_layer = project.layers[name]
@@ -1343,7 +1297,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 			}
 
 		})
-		layer.layer_id === this.active_layer.data.layer_id
+		layer.layer_id === this.active_layer.data.layer_id && layer.layer_id != 0
 			? layer_li.classList.add('active')
 			: layer_li.classList.remove('active')
 
@@ -1351,7 +1305,9 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 			event_manager.subscribe('active_layer_'+self.id, change_layer)
 		)
 		function change_layer(active_layer) {
-			layer.layer_id === active_layer.data.layer_id
+
+				console.log("aqui:",layer.layer_id === active_layer.data.layer_id && layer.layer_id != 0);
+			layer.layer_id === active_layer.data.layer_id || layer.layer_id != 0
 			? layer_li.classList.add('active')
 			: layer_li.classList.remove('active')
 		}
@@ -1371,7 +1327,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				: layer_icon.classList.remove('active')
 
 			layer_icon.addEventListener("click", (e) =>{
-				 const name = 'layer_'+layer.layer_id
+				 const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
 				 const viewed_layer = project.layers[name]
 				if(typeof viewed_layer === 'undefined'){
 					this.load_layer(self,layer)

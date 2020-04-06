@@ -81,6 +81,7 @@ component_image.prototype.init = async function(options) {
 	// fixed height for the image
 		self.img_view_height		= 1200
 		self.canvas_height			= 432
+		self.canvas_width			= null
 
 	//canvar node
 		self.canvas_node 			= null
@@ -90,7 +91,6 @@ component_image.prototype.init = async function(options) {
 		self.vector_tools_loaded 	= false
 		self.current_paper 			= null
 		self.vector_editor 			= null
-
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
