@@ -631,13 +631,16 @@ class web_data {
 				$ar_data = [];
 				$i=0;while( $rows = $result->fetch_assoc() ) {
 
+					// table is added always as first column
+						$ar_data[$i]['table'] = $table;
+
 					foreach($ar_fields as $current_field) {
 
 						if ($current_field==='id') {
 							# continue; // Skip mysql table id
 							# Replace id column for table name column
 							# If table is array, only first table is supported
-							$ar_data[$i]['table'] = $table;
+							// $ar_data[$i]['table'] = $table;
 							continue;
 						}
 
