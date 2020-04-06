@@ -223,7 +223,10 @@ const add_events = function(self, wrapper) {
 			}
 		},true)
 
-}
+	return true
+}//end add_events
+
+
 
 /**
 * SEARCH
@@ -452,42 +455,13 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 */
 const get_content_data_search = async function(self) {
 
-	const value 		= self.data.value
-	const mode 			= self.mode
-	const datalist 		= self.data.datalist
+	const value 			= self.data.value
+	const mode 				= self.mode
+	const datalist 			= self.data.datalist
+	const is_inside_tool 	= self.is_inside_tool // ui.inside_tool(self)
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment = new DocumentFragment()
 
-	// values (inputs)
-		const value_compare = value.length>0 ? value[0] : null
-		const length = datalist.length
-		for (let i = 0; i < value_length; i++) {
-			get_input_element_search(i, datalist[i], fragment, self)
-		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
-		
-		content_data.classList.add("nowrap")
-		content_data.appendChild(fragment)
-
-
-	return content_data
-}//end get_content_data_search
-
-
-
-/**
-* GET_INPUT_ELEMENT_SEARCH
-* @return dom element input
-*/
-const get_input_element_search = (i, current_value, inputs_container, self) => {
-
-	const datalist_item  	= current_value
-	const datalist_value 	= datalist_item.value
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -496,30 +470,30 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 			type 		 	: 'text',
 			value 		 	: q_operator,
 			class_name 		: 'q_operator',
-			parent 		 	: inputs_container
+			parent 		 	: fragment
 		})
 
-	// // input field
-	// 	const input = ui.create_dom_element({
-	// 		element_type 	: 'input',
-	// 		type 		 	: 'text',
-	// 		class_name 		: 'input_value',
-	// 		dataset 	 	: { key : i },
-	// 		value 		 	: current_value,
-	// 		parent 		 	: inputs_container
-	// 	})
-
-			// input checkbox
-		const option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			id 				: self.id +"_"+ i,
-			dataset 	 	: { key : i },
-			value 			: JSON.stringify(datalist_value),
-			name 			: self.id,
-			parent 			: inputs_container
+	// inputs_container ul
+		const inputs_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'inputs_container '+mode,
+			parent 			: fragment
 		})
 
+	// values (inputs)
+		const datalist_length = datalist.length
+		for (let i = 0; i < datalist_length; i++) {
+			get_input_element_edit(i, datalist[i], inputs_container, self)
+		}
 
-	return input
-}//end get_input_element_search
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload : false
+		})
+		content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_search
+
+

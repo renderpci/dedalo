@@ -43,7 +43,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 	// fix image size
 		// self.img_height	= img.naturalHeight
 		// self.img_width	= img.naturalWidth
-		
+
 		self.img_height	= img.height
 		self.img_width	= img.width
 	// fix image source (URI)
@@ -733,8 +733,8 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// layer selector
 				const layer_selector_button = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'button tool layer_selector_button',
+					element_type	: 'span',
+					class_name 		: 'button open_layer_selector',
 					parent 			: buttons_container,
 				})
 
@@ -766,7 +766,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// pointer
 				const pointer = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button tool pointer',
+					class_name 		: 'button pointer',
 					parent 			: buttons_container
 				})
 				pointer.addEventListener("mouseup", (e) =>{
@@ -778,7 +778,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// transform
 				const transform = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button tool transform',
+					class_name 		: 'button transform',
 					parent 			: buttons_container
 				})
 				transform.addEventListener("mouseup", (e) =>{
@@ -790,8 +790,9 @@ vector_editor.prototype.render_tools_buttons = function(self){
 
 			// rectangle
 				const rectangle = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'button tool rectangle',
+
+					element_type	: 'span',,
+					class_name 		: 'button rectangle',
 					parent 			: buttons_container
 				})
 				rectangle.addEventListener("mouseup", (e) =>{
@@ -803,7 +804,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// circle
 				const circle = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button tool circle',
+					class_name 		: 'button circle',
 					parent 			: buttons_container
 				})
 				circle.addEventListener("mouseup", (e) =>{
@@ -815,7 +816,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			// vector
 				const vector = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button tool vector',
+					class_name 		: 'button vector',
 					parent 			: buttons_container
 				})
 				vector.addEventListener("mouseup", (e) =>{

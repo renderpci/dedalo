@@ -214,7 +214,7 @@ const get_buttons = (self) => {
 	// full_screen
 		const full_screen = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button tool full_screen',
+			class_name 		: 'button full_screen',
 			parent 			: fragment
 		})
 		full_screen.addEventListener("mouseup", (e) =>{
@@ -229,8 +229,8 @@ const get_buttons = (self) => {
 
 	// open svg editor tools
 		const vector_editor = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'button tool vector_editor',
+			element_type	: 'span',
+			class_name 		: 'button vector_editor',
 			parent 			: fragment
 		})
 		vector_editor.addEventListener("mouseup", (e) =>{
@@ -242,7 +242,7 @@ const get_buttons = (self) => {
 
 	// svg editor tools
 		const vector_editor_tools = ui.create_dom_element({
-			element_type	: 'div',
+			element_type	: 'span',
 			class_name 		: 'vector_editor_tools hide',
 			parent 			: fragment
 		})
