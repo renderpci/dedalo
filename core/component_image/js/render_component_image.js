@@ -219,7 +219,8 @@ const get_buttons = (self) => {
 		})
 		full_screen.addEventListener("mouseup", (e) =>{
 			self.node[0].classList.toggle('fullscreen')
-			event_manager.publish('full_screen_'+self.id, full_screen)
+			const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
+			event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		})
 
 	// buttons tools
