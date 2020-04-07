@@ -231,10 +231,8 @@ section.prototype.build = async function(autoload=false) {
 				})
 			)//end events push
 		}else{
-			// self.paginator.limit 	= self.pagination.limit
-			// self.paginator.offset 	= self.pagination.offset
-			// self.paginator.total 	= self.pagination.total
-			// self.paginator.refresh() // refresh current paginator
+			// refresh current existing paginator
+			self.paginator.refresh()
 		}
 
 	// filter
