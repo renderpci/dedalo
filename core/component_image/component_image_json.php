@@ -39,21 +39,6 @@
 
 	if($options->get_data===true && $permissions>0){
 
-
-
-
-		//$ar_quality = $this->get_ar_image_quality();
-		//foreach ($ar_quality as $quality) {
-		//	$image_url = $this->get_image_url($quality, true, true, false); // ($quality=false, $test_file=true, $absolute=false, $default_add=true)
-		//	if ($image_url!==false) {
-		//		$item = new stdClass();
-		//			#$item->lang 	= DEDALO_DATA_NOLAN;
-		//			$item->url 		= $image_url;
-		//			$item->quality 	= $quality;
-		//		$value[] = $item;
-		//	}
-		//}
-
 		$value = $this->get_dato();
 		// get the quality url of the available image files
 			$valid_urls		= [];

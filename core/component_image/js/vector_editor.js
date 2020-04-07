@@ -160,9 +160,10 @@ vector_editor.prototype.init_canvas = async function(self) {
 		self.events_tokens.push(
 			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
 		)
-		function full_screen_change (button) {
+		function full_screen_change (fullscreen_state) {
 			
-			if(!self.node[0].classList.contains('fullscreen')){
+			// if(!self.node[0].classList.contains('fullscreen')){
+			if(!fullscreen_state){
 				self.canvas_node.height = self.canvas_height
 				self.canvas_node.width  = self.canvas_width
 			}
@@ -171,7 +172,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 			//set the paper view size to the canvas size
 			self.current_paper.project.view.setViewSize(self.canvas_node.clientWidth, self.canvas_node.clientHeight)
 
-			const ratio = self.node[0].classList.contains('fullscreen')
+			const ratio = fullscreen_state === true
 				? (self.current_paper.view.size._height / self.canvas_height) * 0.8
 				: 1
 			
@@ -759,7 +760,6 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				})
 				buttons.push(transform)
 
-
 			// rectangle
 				const rectangle = ui.create_dom_element({
 
@@ -796,92 +796,6 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					activate_status(vector)
 				})
 				buttons.push(vector)
-
-			// full_screen
-				// const full_screen = ui.create_dom_element({
-				// 	element_type	: 'div',
-				// 	class_name 		: 'button tool full_screen',
-				// 	parent 			: buttons_container
-				// })
-				// full_screen.addEventListener("mouseup", (e) =>{
-
-				// 	event_manager.publish('full_screen_'+self.id, full_screen)
-
-				// 	// self.current_paper.view.setScaling(1)
-
-				// 	// //add / remove the class fullscreen
-				// 	// self.node[0].classList.toggle('fullscreen')
-
-				// 	// const x = self.node[0].clientWidth
-				// 	// const y = self.node[0].clientHeight
-
-				// 	// //reset the window and the canvas
-				// 	// // window.dispatchEvent(new Event('resize'));
-				// 	// // self.current_paper.project.view.update();
-
-				// 	// const ratio = y / self.current_paper.project.view.size._height
-				// 	// self.current_paper.view.setScaling(ratio)
-
-
-				// 	// self.current_paper.project.view.setViewSize(x,y)
-
-				// 	//////////
-
-				// 	// const center_y = self.current_paper.view.viewSize._height /2
-				// 	// const center_x = self.current_paper.view.viewSize._width /2
-				// 	// self.current_paper.view.setCenter(center_x, center_y)
-
-				// 	// self.current_paper.view.scale(ratio,new self.current_paper.Point(center_x, center_y))
-
-
-				// 	// self.current_paper.project.view.setViewSize(x,y)
-				// 		// const center_y = self.current_paper.view.viewSize._height /2
-				// 		// const center_x = self.current_paper.view.viewSize._width /2
-				// 		// self.current_paper.view.setCenter(center_x, center_y)
-
-
-
-				// 	// const ar_layers = self.current_paper.project.layers
-				// 	// const ar_layers_len = ar_layers.length
-				// 	// for (let i = ar_layers_len - 1; i >= 0; i--) {
-				// 	// 	const curent_layer = ar_layers[i]
-				// 	// }
-
-				// 	// self.current_paper.view.setScaling(1)
-				// 		// const center_y = self.current_paper.view.viewSize._height /2
-				// 		// const center_x = self.current_paper.view.viewSize._width /2
-				// 		// self.current_paper.view.setCenter(center_x, center_y)
-
-
-
-				// 		// 		//reset the window and the canvas
-				// 		// 		 window.dispatchEvent(new Event('resize'));
-				// 		// 		//change the status of the tool
-				// 				// activate_status(full_screen)
-				// 		// 		//reset the window and the canvas (twice, paper error)
-				// 					// window.dispatchEvent(new Event('resize'));
-				// 		// 			self.current_paper.project.view.viewSize.update();
-
-				// 		// 		// if(!self.node[0].classList.contains('fullscreen')){
-				// 		// 			//reset the button state
-				// 		// 			activate_status()
-				// 		// 			self.current_paper.view.setScaling(1)
-				// 		// 			//set the center of the view
-				// 		// 			const center_y = self.current_paper.view.viewSize._height /2
-				// 		// 			const center_x = self.current_paper.view.viewSize._width /2
-				// 		// 			self.current_paper.view.setCenter(center_x, center_y)
-
-				// 		// // console.log("raster.parent:",self.current_paper.project.layers['raster_image'].setScaling(1));
-
-
-				// 		// 			const height  		= self.current_paper.view.size._height
-				// 		// 			const image_height 	= self.current_paper.project.raster.height
-				// 		// 			const ratio 		= height / image_height
-
-				// 		// 		// }
-
-				// })
-				// buttons.push(full_screen)
 
 			// zoom
 				const zoom = ui.create_dom_element({
@@ -936,6 +850,9 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					parent 			: buttons_container
 				})
 				save.addEventListener("mouseup", (e) =>{
+					self.node[0].classList.remove('fullscreen')
+					event_manager.publish('full_screen_'+self.id, false)
+					self.update_draw_data()
 					// save all data layers
 					self.change_value({
 						changed_data : self.data.changed_data,
@@ -1059,8 +976,6 @@ vector_editor.prototype.load_layer = function(self, layer) {
 	const Layer   		= self.current_paper.Layer
 	const Color   		= self.current_paper.Color
 
-		console.log("project:",project);
-
 	// set the layer data
 	const layer_id		= layer.layer_id
 	const layer_data	= layer.layer_data
@@ -1145,6 +1060,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 
 		if(layer_id===0){
 			const raster = project.activeLayer.firstChild
+			
 			// subscription to the image quality change event
 			self.events_tokens.push(
 				event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
@@ -1157,11 +1073,13 @@ vector_editor.prototype.load_layer = function(self, layer) {
 					const ratio_layer 	= canvas_h / self.img_view_height
 				// change the value of the current raster element
 				raster.source = img_src
+
 				raster.onLoad = function(e) {
 					const new_image_height 	= raster.height//raster.bounds.height
 					const ratio 			= self.img_view_height / new_image_height
 					raster.setScaling(ratio)
 					raster.layer.setScaling(ratio_layer)
+					
 				}// end onLoad
 			}//end img_quality_change
 		}//end if layer_id==0
