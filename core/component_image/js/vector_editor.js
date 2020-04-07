@@ -223,7 +223,7 @@ vector_editor.prototype.init_tools = function(self){
 			project.deselectAll();
 		}
 		this.rectangle.onMouseDrag = (event) => {
-			//var rect = new Rectangle();
+			if(project.activeLayer.name === 'raster') return;
 
 			const size = new Size ({
 				width: event.point.x - event.downPoint.x,
@@ -250,6 +250,7 @@ vector_editor.prototype.init_tools = function(self){
 			project.deselectAll();
 		}
 		this.circle.onMouseDrag = (event) => {
+			if(project.activeLayer.name === 'raster') return;
 
 			const radio_delta = new Point({
 				x: event.downPoint.x - event.point.x,
@@ -319,7 +320,7 @@ vector_editor.prototype.init_tools = function(self){
 						if (event.modifiers.shift) {
 							hitResult.segment.remove();
 						}
-						if (event.modifiers.command) {
+						if (event.modifiers.option) {
 							if(this.segment.hasHandles()){
 								hitResult.segment.clearHandles();
 							}
@@ -343,7 +344,7 @@ vector_editor.prototype.init_tools = function(self){
 
 					case ('handle-in'):
 						this.handle = hitResult.segment.handleIn;
-						if (event.modifiers.command) {
+						if (event.modifiers.option) {
 							this.handle_sync = hitResult.segment.handleIn;
 							this.handleIn = hitResult.segment.handleIn;
 							this.handleOut = hitResult.segment.handleOut;
@@ -353,7 +354,7 @@ vector_editor.prototype.init_tools = function(self){
 
 					case ('handle-out'):
 						this.handle = hitResult.segment.handleOut;
-						if (event.modifiers.command) {
+						if (event.modifiers.option) {
 							this.handle_sync = hitResult.segment.handleOut;
 							this.handleIn = hitResult.segment.handleOut;
 							this.handleOut = hitResult.segment.handleIn;
@@ -436,9 +437,6 @@ vector_editor.prototype.init_tools = function(self){
 					this.active_layer = project.activeLayer
 					event_manager.publish('active_layer_'+self.id, this.active_layer)
 
-
-
-
 					switch(hitResult.type) {
 						case ('bounds'):
 							console.log("this.path:",this.path);
@@ -463,7 +461,7 @@ vector_editor.prototype.init_tools = function(self){
 			}
 
 			this.transform.onMouseDrag = (event) => {
-
+			if (this.path === null || this.path.data.state === null)return
 			if (this.path.data.state === 'scale'){
 				console.log("scale:")
 				 // scale by distance from down point
@@ -520,7 +518,8 @@ vector_editor.prototype.init_tools = function(self){
 			}
 			if (hitResult) {
 				//remove all behavior if the click is in the main_area rectangle, deselect all.
-				if(hitResult.item.name === 'main_area') return;
+					console.log("hitResult.item.layer.name:",hitResult.item.layer.name);
+				if(hitResult.item.name === 'main_area' || project.activeLayer.name === 'raster') return;
 				this.path = hitResult.item
 				switch(hitResult.type) {
 
@@ -555,7 +554,7 @@ vector_editor.prototype.init_tools = function(self){
 							this.new_path.fullySelected	= true;
 							this.segment = this.new_path.add(event.point);
 						}
-						if (event.modifiers.command) {
+						if (event.modifiers.option) {
 							if(this.segment.hasHandles()){
 								this.segment.clearHandles();
 							}
@@ -577,7 +576,7 @@ vector_editor.prototype.init_tools = function(self){
 						if (event.modifiers.shift) {
 							hitResult.segment.remove();
 						}
-						if (event.modifiers.command) {
+						if (event.modifiers.option) {
 							if(this.segment.hasHandles()){
 								hitResult.segment.clearHandles();
 							}
@@ -599,7 +598,7 @@ vector_editor.prototype.init_tools = function(self){
 
 					case ('handle-in'):
 						this.handle = hitResult.segment.handleIn;
-						if (event.modifiers.command) {
+						if (event.modifiers.option) {
 							this.handle_sync 	= hitResult.segment.handleIn;
 							this.handleIn 		= hitResult.segment.handleIn;
 							this.handleOut 		= hitResult.segment.handleOut;
@@ -609,7 +608,7 @@ vector_editor.prototype.init_tools = function(self){
 
 					case ('handle-out'):
 						this.handle = hitResult.segment.handleOut;
-						if (event.modifiers.command) {
+						if (event.modifiers.option) {
 							this.handle_sync 	= hitResult.segment.handleOut;
 							this.handleIn 		= hitResult.segment.handleOut;
 							this.handleOut 		= hitResult.segment.handleIn;
@@ -972,26 +971,27 @@ vector_editor.prototype.set_color_picker = function(item){
 vector_editor.prototype.load_layer = function(self, layer) {
 
 	// curent paper vars
-	const project 		= self.current_paper.project
-	const Layer   		= self.current_paper.Layer
-	const Color   		= self.current_paper.Color
+		const project 		= self.current_paper.project
+		const Layer   		= self.current_paper.Layer
+		const Color   		= self.current_paper.Color
 
 	// set the layer data
-	const layer_id		= layer.layer_id
-	const layer_data	= layer.layer_data
-	const layer_name	= layer_id === 0 ? 'raster' : 'layer_' +layer_id
+		const layer_id		= layer.layer_id
+		const layer_data	= layer.layer_data
+		const layer_name	= layer_id === 0 ? 'raster' : 'layer_' +layer_id
 
 	// create a layer color for selectors
-	const layer_color = new Color({
-					hue: 360 * Math.random(),
-					saturation: 1,
-					brightness: 1,
-					alpha: 1,
-				})
+		const layer_color = new Color({
+						hue: 360 * Math.random(),
+						saturation: 1,
+						brightness: 1,
+						alpha: 1,
+					})
 
-	layer.layer_color = layer_color.toCSS()
+		layer.layer_color = layer_color.toCSS()
 
 	//layer import
+		console.log("layer_data:",layer);
 		if ( layer_data.indexOf('Layer')!=-1 ) {
 			const project_len = project.layers.length
 			for (let i = project_len - 1; i >= 0; i--) {
@@ -1010,7 +1010,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 
 		}else{
 			let create_new_current_layer = true
-			// Check if the layer is loaded
+			// Check if the layer is loaded, if the layer is loaded will be reused.
 			const project_len = project.layers.length
 			for (let i = project_len - 1; i >= 0; i--) {
 				if (project.layers[i].name === layer_name){
@@ -1047,43 +1047,46 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		};// end else
 
 		this.active_layer = project.activeLayer
-
 		event_manager.publish('active_layer_'+self.id, this.active_layer)
 
+		// set the visibility of the layer
 		this.active_layer.visible = true
 		project.view.draw();
 		project.deselectAll();
+		// set the global handle margin
 		project.options.handleSize = 8;
 
-		const main_layer = project.layers['main']
-		main_layer.bringToFront()
-
+		// suscribe the raster layer to change the quality of the image (original, 1.5MB,...)
 		if(layer_id===0){
+			// get the current raster item
 			const raster = project.activeLayer.firstChild
-			
 			// subscription to the image quality change event
 			self.events_tokens.push(
 				event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
 			)
 			function img_quality_change (img_src) {
-				// scale raster layer
-				// get the ratio for the scale the project layer to fit to canvas view heigth
-				// used to fix the raster layer to the canvas height
-					const canvas_h		= self.canvas_node.clientHeight
-					const ratio_layer 	= canvas_h / self.img_view_height
+				// get the current raster layer bounds and save it for apply later
+					const layer_bounds	= raster.layer.bounds
 				// change the value of the current raster element
-				raster.source = img_src
-
-				raster.onLoad = function(e) {
-					const new_image_height 	= raster.height//raster.bounds.height
-					const ratio 			= self.img_view_height / new_image_height
-					raster.setScaling(ratio)
-					raster.layer.setScaling(ratio_layer)
-					
+					raster.source = img_src
+					raster.onLoad = function(e) {
+						// new image ratio (1200 / new image height)
+						const ratio 			= self.img_view_height / raster.height
+						// scale the raster to new ratio
+						raster.setScaling(ratio)
+						// apply the original layer bounds to the new layer situation
+						raster.layer.bounds = layer_bounds
 				}// end onLoad
 			}//end img_quality_change
 		}//end if layer_id==0
 
+		// Bring the main layer with the crop reference to to top of the layers
+		const main_layer = project.layers['main']
+		main_layer.bringToFront()
+
+		// Send the raster layer to the back of the layers
+		const raster_layer = project.layers['raster']
+		raster_layer.sendToBack()
 	return true
 }//end load_layer
 
@@ -1111,11 +1114,12 @@ vector_editor.prototype.create_raster_layer = function(self){
 	// create the image in the raster layer
 		const raster = new self.current_paper.Raster({
 			source		: self.img_src,
-			position	: self.current_paper.view.center
+			position	: self.current_paper.view.center,
 		});
 
 	// scale the image to fixed heigth: 1200px
-		raster.scale(ratio)
+		raster.setScaling(ratio)
+	// also scale the layer of the raster to be exact to the canvas bounds.
 		raster.layer.scale(ratio_layer, self.current_paper.view.center)
 
 	return raster
@@ -1128,9 +1132,7 @@ vector_editor.prototype.create_raster_layer = function(self){
 */
 vector_editor.prototype.render_layer_selector = function(self){
 
-	// const ar_layers = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
-	// 			? self.data.value[0].lib_data
-	// 			: []
+	// get the layers loaded in the image instance
 	const ar_layers = self.ar_layer_loaded
 
 	const fragment = new DocumentFragment()
@@ -1142,7 +1144,6 @@ vector_editor.prototype.render_layer_selector = function(self){
 		})
 		add_layer.addEventListener("click", (e) =>{
 			// add the data in the instance
-				console.log("self.ar_layer_loaded:",self.ar_layer_loaded);
 			const layer_id 	= self.add_layer()
 			const new_layer = self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 			const layer_li 	= this.render_layer_row(self, new_layer)
@@ -1167,6 +1168,7 @@ vector_editor.prototype.render_layer_selector = function(self){
 			parent 			: fragment
 		})
 
+		// load the layer into the layer box
 		for (let i = 0; i < ar_layers.length; i++) {
 			const layer = ar_layers[i]
 			const layer_li = this.render_layer_row(self, layer)
@@ -1202,10 +1204,13 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 		layer_li.addEventListener("click", (e) =>{
 			project.deselectAll()
 			// prevent the selection of the raster layer
-			if(layer.layer_id===0)return
-
+			// (it can't be selected and used in the same form that other layers)
+				if(layer.layer_id===0)return
+				
+			// get the paper layer name
 			const name = 'layer_'+layer.layer_id
 			const new_active_layer = project.layers[name]
+			 // if we don't has the layer loaded, we load now
 			if(typeof new_active_layer === 'undefined'){
 				this.load_layer(self, layer)
 			}else{
@@ -1215,17 +1220,22 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 			}
 
 		})
+		// set the raster layer with specific class to remove css behavior (hover...)
+		if(layer.layer_id===0){
+				layer_li.classList.add('raster_layer')
+		}
+
+		// set the active layer, remove the raster layer to the active option
 		layer.layer_id === this.active_layer.data.layer_id && layer.layer_id != 0
 			? layer_li.classList.add('active')
 			: layer_li.classList.remove('active')
 
+		// when we change the active layer, the other layers will be innactived
 		self.events_tokens.push(
 			event_manager.subscribe('active_layer_'+self.id, change_layer)
 		)
 		function change_layer(active_layer) {
-
-				console.log("aqui:",layer.layer_id === active_layer.data.layer_id && layer.layer_id != 0);
-			layer.layer_id === active_layer.data.layer_id || layer.layer_id != 0
+			layer.layer_id === active_layer.data.layer_id
 			? layer_li.classList.add('active')
 			: layer_li.classList.remove('active')
 		}
@@ -1237,21 +1247,25 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				parent 			: layer_li,
 				text_node		: layer.layer_icon
 			})
-			const name = 'layer_'+layer.layer_id
+			// select the layer in paper, if the layer is the raster we change the selector name
+			const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
 			const viewed_layer = project.layers[name]
-
+			// toogle the class active to the icon
 			typeof viewed_layer !== 'undefined' && layer.layer_id === viewed_layer.data.layer_id
 				? layer_icon.classList.add('active')
 				: layer_icon.classList.remove('active')
 
 			layer_icon.addEventListener("click", (e) =>{
+				// get the name of the layer, if the layer is the raster we change the selector name
 				 const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
 				 const viewed_layer = project.layers[name]
+				 // if we don't has the layer loaded, we load now
 				if(typeof viewed_layer === 'undefined'){
 					this.load_layer(self,layer)
 					layer_icon.classList.add('active')
 					this.active_layer = viewed_layer
 				}else{
+					// change the visibility state of the paper layer and icon
 					if(viewed_layer.visible === true){
 						this.active_layer = ''
 						viewed_layer.visible = false
@@ -1280,19 +1294,23 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				parent 			: layer_li,
 				text_node		: layer.user_layer_name
 			})
-			// user_layer_name.contentEditable = false
+			// when the user has double click in the text we active the edit text box
 			user_layer_name.addEventListener("dblclick", (e) =>{
 				user_layer_name.contentEditable = true
 				user_layer_name.focus();
 			})
+			// when the user blur the text box save the name into the layer structure
 			user_layer_name.addEventListener("blur", (e) =>{
 				user_layer_name.contentEditable = false
-				// layer.user_layer_name = user_layer_name.innerText
-				const name = 'layer_'+layer.layer_id
+				// get the name of the layer, if the layer is the raster we change the selector name
+				const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
 				const viewed_layer = project.layers[name]
 				viewed_layer.data.user_layer_name = user_layer_name.innerText
+				// update the data into the instance, prepared to save 
+				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
 			})
+			// if the user press return key = 13, we blur the text box 
 			user_layer_name.addEventListener("keydown", (e) =>{
 				if(e.keyCode === 13) user_layer_name.blur()
 			})
@@ -1304,6 +1322,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				parent 			: layer_li,
 				text_node		: layer.layer_delete
 			})
+			// show the alter with the option to select the action to do
 			layer_delete.addEventListener("click", function(e){
 
 				const dialog = ui.create_dialog({
@@ -1327,23 +1346,46 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 						class_name 	: 'light'
 					}]
 				})
+				// create the response event of the alert
 				const event = event_manager.subscribe('user_option_'+self.id, (user_option))
 				self.events_tokens.push( event )
 				function user_option(user_option) {
-					if(user_option===1){
-								console.log("layer:",layer.layer_id);
-							// event_manager.publish('delete_layer_'+self.id, layer)
-							// remove the event
-							event_manager.unsubscribe(event)
-							// remove the layer in paper project
-							const name = 'layer_'+layer.layer_id
-							const delete_layer = project.layers[name]
-							delete_layer.remove()
-							// remove the data in the instance
-							self.delete_layer(layer)
-							//remove the layer node
-							layer_li.remove()
+					// success, any other option will be ignored
+					if(user_option===1){	
+						// get the layer in paper, we change the name if the layer is the raster layer					
+						const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
+						const delete_layer = project.layers[name]
+						// remove the layer in paper project
+						delete_layer.remove()
 
+						//check if the user want remove transformations in raster or remove path layer	
+						if(layer.layer_id === 0){
+							// create new empty raster layer
+							const new_raster_layer	= {
+								layer_id 	:0,
+								layer_data 	:[]
+							}
+							// load new raster layer into paper
+							self.vector_editor.load_layer(self, new_raster_layer)
+							// active the raster layer in the project
+							project.layers['raster'].activate()
+							// update the instance with the new layer information, prepared to save 
+							// (but is not saved directly, the user need click in the save button)
+							self.update_draw_data()
+
+						}else{
+							//the user want remove one path layer
+							// remove the data in the instance
+								self.delete_layer(layer)
+							// remove the this event in the instance
+								event_manager.unsubscribe(event)
+							//remove the layer node
+								layer_li.remove()
+							// active the raster layer in the project
+							// it will by used for the next action in the vector editor
+							// if don't active one layer, paper can't save the changes (it has one delete layer active)
+								project.layers['raster'].activate()
+						}
 					}
 				}
 
@@ -1358,17 +1400,12 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 			layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
 				? layer.layer_color
 				: 'black'
+			// if the user do a doble click into the color icon will be assigned the current color in the color picker
 			layer_color.addEventListener("dblclick", (e) =>{
 				layer_color.style.backgroundColor = this.active_fill_color.toCSS()
 				layer.layer_color = this.active_fill_color.toCSS()
 			})
 
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('color_change_'+layer.layer_id, change_color)
-			// )
-			// function change_color(color) {
-			// 	layer_color.style.backgroundColor = color
-			// }
 
 	return layer_li
 }//end layer_selector

@@ -81,9 +81,14 @@ const add_wrapper_events = (wrapper, self) => {
 const content_data = async function(self) {
 
 	// build vars
-		const offset 			= self.offset
-		const limit 			= self.limit
-		const total 			= await self.total
+		// const offset 		= self.offset
+		// const limit 			= self.limit
+		// const total 			= await self.total
+
+		const total		= await self.get_total()
+		const limit		= self.get_limit()
+		const offset	= self.get_offset()
+
 
 		const total_pages  		= self.total_pages
 		const page_number 		= self.page_number
