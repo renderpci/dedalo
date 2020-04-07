@@ -133,14 +133,6 @@ const content_data_edit = async function(self) {
 			parent 			: ul
 		})
 
-	// canvas
-		// const canvas = ui.create_dom_element({
-		// 	id 				: self.id,
-		// 	element_type	: "canvas",
-		// 	class_name 		: 'canvas',
-		// 	parent 			: li
-		// })
-		// canvas.setAttribute("tabindex", 0)
 
 	// image
 	// 	const image = ui.create_dom_element({
@@ -154,26 +146,31 @@ const content_data_edit = async function(self) {
 	// console.log("image:",image);
 	// 	self.image_node = image
 
-	// 	image.onload = function () {
 
-	// 		const svg_image = image.querySelector('image')
-	// 		console.log(svg_image)
-	// 	}
 
-		// opbject <object type="image/svg+xml" data="image.svg"></object>
-			const object = ui.create_dom_element({
-				element_type	: "object",
-				class_name 		: 'image',
-				parent 			: li
-			})
-			object.type = "image/svg+xml"
-			object.data = self.data.base_svg_url
+	// opbject <object type="image/svg+xml" data="image.svg"></object>
+		const object = ui.create_dom_element({
+			element_type	: "object",
+			class_name 		: 'image',
+			parent 			: li
+		})
+		object.type = "image/svg+xml"
+		object.data = self.data.base_svg_url
 
-			self.object_node = object
+		self.object_node = object
 
-		// image.onload = function () {
-		// 	self.init_canvas(canvas, image)
-		// }
+		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
+		self.events_tokens.push(image_change_event)
+		object.dataset.image_change_event = image_change_event
+		function img_quality_change (img_src) {
+			// svg document inside the object tag
+			const svg_doc 	= object.contentDocument;
+			// Get one of the svg items by ID;
+			const image 	= svg_doc.querySelector("image")
+			// set the new source to the image node into the svg
+			self.img_src 	= image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
+		}
+
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)

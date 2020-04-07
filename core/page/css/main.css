@@ -151,6 +151,10 @@ pre {
   font-family: monospace;
   z-index: 9999;
 }
+svg,
+object {
+  pointer-events: none;
+}
 @font-face {
   font-family: 'Oxygen';
   src: url('./fonts/oxigen-webfont/oxygen-regular-webfont.eot');
@@ -192,6 +196,7 @@ pre {
 }
 .button {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -467,6 +472,7 @@ button.link {
 }
 .contenteditable_buttons > .button.bold:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -661,6 +667,7 @@ button.link {
 }
 .contenteditable_buttons > .button.italic:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -855,6 +862,7 @@ button.link {
 }
 .contenteditable_buttons > .button.underline:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -1049,6 +1057,7 @@ button.link {
 }
 .contenteditable_buttons > .button.replace:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -1421,6 +1430,7 @@ li .component_base select {
 }
 .area .widget_container > .widget_label:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -1626,6 +1636,7 @@ li .component_base select {
 }
 .area .widget_container > .widget_body > .link:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -1886,6 +1897,7 @@ li .component_base select {
 }
 .area .widget_container > .widget_body > .body_response > .clean:after {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -2877,7 +2889,16 @@ li .search_group .wrapper_component select {
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector,
 .search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector {
   text-align: center;
-  color: #000;
+  border-radius: 2px;
+  width: calc(100% - 0.6em);
+  margin-left: 0.3em;
+  height: 1.25em;
+  line-height: 1.25em;
+}
+.section_record .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
+.wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active,
+.search_group .wrapper_component > .buttons_container .vector_editor_tools .open_layer_selector.vector_tool_active {
+  background-color: #FFFFFF;
 }
 .section_record .wrapper_component > .buttons_container .vector_editor_tools .pointer,
 .wrapper_tool .wrapper_component > .buttons_container .vector_editor_tools .pointer,
@@ -3189,6 +3210,7 @@ dd-modal .footer > * {
 }
 .inspector .data_link:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -3451,6 +3473,7 @@ dd-modal .footer > * {
 }
 .disabled_component:after {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -3648,6 +3671,7 @@ dd-modal .footer > * {
 }
 .preload {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -4711,6 +4735,7 @@ div.tool_inspector_div .icon_bs {
 }
 .wrapper_paginator > .content_data .nav_buttons > .btn.paginator_first_icon {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -4910,6 +4935,7 @@ div.tool_inspector_div .icon_bs {
 }
 .wrapper_paginator > .content_data .nav_buttons > .btn.paginator_prev_icon {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -5107,6 +5133,7 @@ div.tool_inspector_div .icon_bs {
 }
 .wrapper_paginator > .content_data .nav_buttons > .btn.paginator_next_icon {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -5303,6 +5330,7 @@ div.tool_inspector_div .icon_bs {
 }
 .wrapper_paginator > .content_data .nav_buttons > .btn.paginator_last_icon {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -6278,6 +6306,7 @@ background-color: #FFFF00;
 }
 .menu_wrapper > .section_label:before {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -6953,6 +6982,7 @@ background-color: #FFFF00;
 }
 .map_inputs .map_reload {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
@@ -7156,6 +7186,7 @@ background-color: #FFFF00;
 }
 .map_inputs .map_full_screen {
   cursor: pointer;
+  user-select: none;
   display: inline-block;
   opacity: 0.8;
   background-color: #000000;
