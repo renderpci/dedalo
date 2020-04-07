@@ -21,9 +21,21 @@ export const paginator = function() {
 	this.mode
 	this.events_tokens
 	this.node
-	this.offset
-	this.limit
-	this.total
+
+	this.caller
+
+	this.total_pages
+	this.page_number
+	this.prev_page_offset
+	this.next_page_offset
+
+	this.page_row_begin
+	this.page_row_end
+
+	this.offset_first
+	this.offset_prev
+	this.offset_next
+	this.offset_last
 
 	this.status
 
@@ -61,37 +73,17 @@ paginator.prototype.init = function(options) {
 
 	// set vars
 		self.model 				= 'paginator'
-		self.caller				= options.caller
 		self.mode 				= options.caller.mode
+		self.caller				= options.caller
 		self.events_tokens		= []
 		self.node 				= []
-
-	// build vars
-		self.total 	= self.caller.pagination.total
-		self.offset = self.caller.pagination.offset || 0
-		self.limit 	= self.caller.pagination.limit  || 10
-
 
 	// serialize the paginator.Create the unique token
 		self.id = 'paginator_'+self.caller.id
 
-	// events subscription
-		// render. launched when instance render finish
-			//self.events_tokens.push(
-			//	event_manager.subscribe('render_'+self.instance_caller.id , async (instance_wrapper) => {
-			//		const wrapper		= (instance_wrapper instanceof Promise) ? await instance_wrapper : instance_wrapper
-			//		// fix
-			//		self.parent_node	= wrapper.querySelector('.paginator')
-			//		// render
-			//		const current_paginator = await self.render()
-			//		// dom add
-			//		self.parent_node.appendChild(current_paginator)
-			//
-			//	})
-			//)//end events push
-
 	// status update
 		self.status = 'initied'
+
 
 	return true
 }//end init
@@ -106,27 +98,24 @@ paginator.prototype.build = async function(){
 
 	const self = this
 
-	const total		= await self.total
-	const offset	= self.offset || 0
-	const limit		= self.limit || 10
+	const total		= await self.get_total()
+	const limit		= self.get_limit()
+	const offset	= self.get_offset()
 
-	self.total_pages = Math.ceil(total / limit)
+	// pages fix vars
+		self.total_pages 		= Math.ceil(total / limit)
+		self.page_number 		= self.get_page_number(limit, offset)
+		self.prev_page_offset 	= offset - limit
+		self.next_page_offset 	= offset + limit
 
-	if(SHOW_DEBUG===true) {
-		//console.log("===== paginator self.total_pages, total, limit:", self.total_pages, total, limit);
-	}
+		self.page_row_begin 	= (total===0) ? 0 : offset + 1;
+		self.page_row_end 		= self.get_page_row_end(self.page_row_begin, limit, total);
 
-	self.page_number 		= self.get_page_number(limit, offset)
-	self.prev_page_offset 	= offset - limit
-	self.next_page_offset 	= offset + limit
-
-	self.page_row_begin 	= (total===0) ? 0 : offset + 1;
-	self.page_row_end 		= self.get_page_row_end(self.page_row_begin, limit, total);
-
-	self.offset_first 	= 0;
-	self.offset_prev 	= (offset>limit) ? offset - limit : 0
-	self.offset_next 	= offset + limit
-	self.offset_last 	= limit * (self.total_pages -1)
+	// offset fix
+		self.offset_first 	= 0;
+		self.offset_prev 	= (offset>limit) ? offset - limit : 0
+		self.offset_next 	= offset + limit
+		self.offset_last 	= limit * (self.total_pages -1)
 
 
 	// status update
@@ -134,6 +123,7 @@ paginator.prototype.build = async function(){
 
 	if(SHOW_DEBUG===true) {
 		//console.log("paginator [build] self:",self);
+		console.log("paginator total:",total);
 	}
 
 
@@ -165,6 +155,42 @@ paginator.prototype.destroy = async function(){
 
 
 /**
+* GET_TOTAL
+*/
+paginator.prototype.get_total = async function() {
+
+	const total = await this.caller.pagination.total
+
+	return total
+}//end get_total
+
+
+
+/**
+* GET_LIMIT
+*/
+paginator.prototype.get_limit = function() {
+
+	const limit = this.caller.pagination.limit
+
+	return limit
+}//end get_limit
+
+
+
+/**
+* GET_OFFSET
+*/
+paginator.prototype.get_offset = function() {
+
+	const offset = this.caller.pagination.offset
+
+	return offset
+}//end get_offset
+
+
+
+/**
 * PAGINATE
 * @return promise
 *	bool true on successfull, false on error
@@ -181,7 +207,7 @@ paginator.prototype.paginate = async function(offset) {
 		}
 
 	// set the new offset to the current paginator
-		self.offset = offset
+		// self.offset = offset
 
 	// publish event (section is listen this event to refresh)
 		event_manager.publish('paginator_goto_'+self.id, offset)

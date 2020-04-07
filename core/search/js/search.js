@@ -861,8 +861,12 @@ this.get_search_json_object = function() {
 		// always blur active component to force set dato (!)
 			document.activeElement.blur()
 
+		// section
+			const section 		= self.caller
+			const section_node 	= section.node[0]
+
 		// loading css add
-			self.caller.node[0].classList.add("loading")
+			section_node.classList.add("loading")
 
 		// filter_obj. Recalculate filter_obj from DOM in default mode (include components with empty values)
 			const filter_obj = self.parse_dom_to_json_filter({
@@ -875,19 +879,19 @@ this.get_search_json_object = function() {
 		// sqo
 			self.sqo.filter = filter_obj
 			self.sqo.limit 	= self.limit
-			// const sqo = self.caller.sqo_context.show.find(el => el.typo==='sqo')
+			// const sqo = section.sqo_context.show.find(el => el.typo==='sqo')
 			// sqo.filter = filter_obj
 			// sqo.limit 	= self.limit
 
 		// pagination
-			self.caller.pagination.total  = null
-			self.caller.pagination.offset = 0
+			section.pagination.total  = null
+			section.pagination.offset = 0
 
 		// section
-			const js_promise = self.caller.refresh()
+			const js_promise = section.refresh()
 			.then(()=>{
 				// loading css remove
-					self.caller.node[0].classList.remove("loading")
+					section_node.classList.remove("loading")
 			})
 
 		return js_promise
@@ -903,8 +907,12 @@ this.get_search_json_object = function() {
 
 		const self = this
 
+		// section
+			const section 		= self.caller
+			const section_node 	= section.node[0]
+
 		// loading css add
-			self.caller.node[0].classList.add("loading")
+			section_node.classList.add("loading")
 
 		// source search_action
 			self.source.search_action = 'show_all'
@@ -914,14 +922,14 @@ this.get_search_json_object = function() {
 			self.sqo.limit 	= self.limit
 
 		// pagination
-			self.caller.pagination.total  = null
-			self.caller.pagination.offset = 0
+			section.pagination.total  = null
+			section.pagination.offset = 0
 
 		// section
-			const js_promise = self.caller.refresh()
+			const js_promise = section.refresh()
 			.then(()=>{
 				// loading css remove
-					self.caller.node[0].classList.remove("loading")
+					section_node.classList.remove("loading")
 			})
 
 		return js_promise

@@ -81,9 +81,13 @@ const add_wrapper_events = (wrapper, self) => {
 const content_data = async function(self) {
 
 	// build vars
-		const offset 			= self.offset
-		const limit 			= self.limit
-		const total 			= await self.total
+		// const offset 		= self.offset
+		// const limit 			= self.limit
+		// const total 			= await self.total
+
+		const total		= await self.get_total()
+		const limit		= self.get_limit()
+		const offset	= self.get_offset()
 
 		const total_pages  		= self.total_pages
 		const page_number 		= self.page_number
@@ -102,13 +106,13 @@ const content_data = async function(self) {
 		}
 
 	// empty case. display none when pages are <2
-		if (total_pages<2) {
-			const wrap_rows_paginator = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'content_data paginator display_none'
-			})
-			return wrap_rows_paginator
-		}
+		// if (total_pages<2) {
+		// 	const wrap_rows_paginator = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name		: 'content_data paginator display_none'
+		// 	})
+		// 	return wrap_rows_paginator
+		// }
 
 	const fragment = new DocumentFragment()
 
