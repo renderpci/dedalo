@@ -247,53 +247,100 @@ render_component_radio_button.prototype.search = async function() {
 		wrapper.id = self.id
 
 	// Events
+		// change event, for every change the value in the inputs of the component
+		wrapper.addEventListener('change', (e) => {
 
-		// change event, for every change the value in the imputs of the component
-			wrapper.addEventListener('change', (e) => {
-				e.stopPropagation()
+			// value update
+				if (e.target.matches('input[type="radio"]')) {
 
-				// input_value. The standard input for the value of the component
-				if (e.target.matches('input[type="text"].input_value')) {
-					//get the input node that has changed
-					const input = e.target
-					//the dataset.key has the index of correspondence self.data.value index
-					const i 	= input.dataset.key
-					// set the selected node for change the css
-					self.selected_node = wrapper
-					// set the changed_data for replace it in the instance data
-					// update_data_value. key is the posistion in the data array, the value is the new value
-					const value = (input.value.length>0) ? input.value : null
-					// set the changed_data for update the component data and send it to the server for change when save
-					const changed_data = {
-						action	: 'update',
-						key	  	: i,
-						value 	: value
-					}
-					// update the data in the instance previous to save
-					self.update_data_value(changed_data)
-					// set the change_data to the instance
-					self.data.changed_data = changed_data
-					// event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
+					// input. Get the input node that has changed
+						const input = e.target
+
+					// parsed_value
+						const parsed_value = JSON.parse(input.value)
+
+					// changed_data
+						const changed_data = Object.freeze({
+							action  : 'update',
+							key 	: 0,
+							value 	: parsed_value
+						})
+
+					// update the instance data (previous to save)
+						self.update_data_value(changed_data)
+					// set data.changed_data. The change_data to the instance
+						self.data.changed_data = changed_data
+					// publish search. Event to update the dom elements of the instance
+						event_manager.publish('change_search_element', self)
+
 					return true
 				}
 
-				// q_operator. get the input value of the q_operator
+			// q_operator. get the input value of the q_operator
 				// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
 				// like; radio_button, check_box, date, autocomplete, etc
 				if (e.target.matches('input[type="text"].q_operator')) {
-					//get the input node that has changed
-					const input = e.target
-					// set the changed_data for replace it in the instance data
-					// update_data_value. key is the posistion in the data array, the value is the new value
-					const value = (input.value.length>0) ? input.value : null
-					// update the data in the instance previous to save
-					self.data.q_operator = value
-					// event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
+
+					// input. Get the input node that has changed
+						const input = e.target
+					// value
+						const value = (input.value.length>0) ? input.value : null
+					// q_operator. Fix the data in the instance previous to save
+						self.data.q_operator = value
+					// publish search. Event to update the dom elements of the instance
+						event_manager.publish('change_search_element', self)
+
 					return true
 				}
-			}, false)
+
+		}, false)
+
+		// change event, for every change the value in the imputs of the component
+			// wrapper.addEventListener('change', (e) => {
+			// 	e.stopPropagation()
+
+			// 	// input_value. The standard input for the value of the component
+			// 	if (e.target.matches('input[type="text"].input_value')) {
+			// 		//get the input node that has changed
+			// 		const input = e.target
+			// 		//the dataset.key has the index of correspondence self.data.value index
+			// 		const i 	= input.dataset.key
+			// 		// set the selected node for change the css
+			// 		self.selected_node = wrapper
+			// 		// set the changed_data for replace it in the instance data
+			// 		// update_data_value. key is the posistion in the data array, the value is the new value
+			// 		const value = (input.value.length>0) ? input.value : null
+			// 		// set the changed_data for update the component data and send it to the server for change when save
+			// 		const changed_data = {
+			// 			action	: 'update',
+			// 			key	  	: i,
+			// 			value 	: value
+			// 		}
+			// 		// update the data in the instance previous to save
+			// 		self.update_data_value(changed_data)
+			// 		// set the change_data to the instance
+			// 		self.data.changed_data = changed_data
+			// 		// event to update the dom elements of the instance
+			// 		event_manager.publish('change_search_element', self)
+			// 		return true
+			// 	}
+
+			// 	// q_operator. get the input value of the q_operator
+			// 	// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
+			// 	// like; radio_button, check_box, date, autocomplete, etc
+			// 	if (e.target.matches('input[type="text"].q_operator')) {
+			// 		//get the input node that has changed
+			// 		const input = e.target
+			// 		// set the changed_data for replace it in the instance data
+			// 		// update_data_value. key is the posistion in the data array, the value is the new value
+			// 		const value = (input.value.length>0) ? input.value : null
+			// 		// update the data in the instance previous to save
+			// 		self.data.q_operator = value
+			// 		// event to update the dom elements of the instance
+			// 		event_manager.publish('change_search_element', self)
+			// 		return true
+			// 	}
+			// }, false)
 
 
 
