@@ -61,34 +61,38 @@ component_check_box.prototype.get_changed_key = function(action, value) {
 
 	const self = this
 
+	var  changed_key = 0
+
 	if (action==='insert') {
 		// insert value
 
-		// check if value already exists
-		const ar_found = self.data.value.filter(item => item.section_id===value.section_id && item.section_tipo===value.section_tipo)
-		if (ar_found.length>0) {
-			console.warn("Ignored to add value because already exists:", value);
-			return false
-		}
+		if (self.data.value[0]) {
+			
+			// check if value already exists
+			const ar_found = self.data.value.filter(item => item.section_id===value.section_id && item.section_tipo===value.section_tipo)
+			if (ar_found.length>0) {
+				console.warn("Ignored to add value because already exists:", value);
+				//return false
+			}
 
-		// component common add value and save (without refresh)
-			return self.data.value.length || 0
+			// component common add value and save (without refresh)
+				changed_key = self.data.value.length || 0
+		}
 
 	}else{
 		// remove value
-
 		const value_key = self.data.value.findIndex( (item) => {
 			return (item.section_id===value.section_id && item.section_tipo===value.section_tipo)
 		})
 		if (value_key===-1) {
 			console.warn("Error. item not found in values:", value);
-			return false
+			//return false
+		} else {
+			changed_key= value_key
 		}
-
-		return value_key
 	}
 
-	return false
+	return changed_key
 }//end get_changed_key
 
 
