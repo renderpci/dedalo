@@ -22,9 +22,20 @@ export const paginator = function() {
 	this.events_tokens
 	this.node
 
-	// this.total
-	// this.limit
-	// this.offset
+	this.caller
+
+	this.total_pages
+	this.page_number
+	this.prev_page_offset
+	this.next_page_offset
+
+	this.page_row_begin
+	this.page_row_end
+
+	this.offset_first
+	this.offset_prev
+	this.offset_next
+	this.offset_last
 
 	this.status
 
@@ -62,37 +73,17 @@ paginator.prototype.init = function(options) {
 
 	// set vars
 		self.model 				= 'paginator'
-		self.caller				= options.caller
 		self.mode 				= options.caller.mode
+		self.caller				= options.caller
 		self.events_tokens		= []
 		self.node 				= []
-
-	// build vars
-		// self.total 	= self.caller.pagination.total
-		// self.limit 	= self.caller.pagination.limit
-		// self.offset = self.caller.pagination.offset
-
 
 	// serialize the paginator.Create the unique token
 		self.id = 'paginator_'+self.caller.id
 
-	// events subscription
-		// render. launched when instance render finish
-			//self.events_tokens.push(
-			//	event_manager.subscribe('render_'+self.instance_caller.id , async (instance_wrapper) => {
-			//		const wrapper		= (instance_wrapper instanceof Promise) ? await instance_wrapper : instance_wrapper
-			//		// fix
-			//		self.parent_node	= wrapper.querySelector('.paginator')
-			//		// render
-			//		const current_paginator = await self.render()
-			//		// dom add
-			//		self.parent_node.appendChild(current_paginator)
-			//
-			//	})
-			//)//end events push
-
 	// status update
 		self.status = 'initied'
+
 
 	return true
 }//end init
@@ -107,32 +98,24 @@ paginator.prototype.build = async function(){
 
 	const self = this
 
-	// const total		= await self.total
-	// const limit		= self.limit || 10
-	// const offset		= self.offset || 0
-
 	const total		= await self.get_total()
 	const limit		= self.get_limit()
 	const offset	= self.get_offset()
 
+	// pages fix vars
+		self.total_pages 		= Math.ceil(total / limit)
+		self.page_number 		= self.get_page_number(limit, offset)
+		self.prev_page_offset 	= offset - limit
+		self.next_page_offset 	= offset + limit
 
-	self.total_pages = Math.ceil(total / limit)
+		self.page_row_begin 	= (total===0) ? 0 : offset + 1;
+		self.page_row_end 		= self.get_page_row_end(self.page_row_begin, limit, total);
 
-	if(SHOW_DEBUG===true) {
-		//console.log("===== paginator self.total_pages, total, limit:", self.total_pages, total, limit);
-	}
-
-	self.page_number 		= self.get_page_number(limit, offset)
-	self.prev_page_offset 	= offset - limit
-	self.next_page_offset 	= offset + limit
-
-	self.page_row_begin 	= (total===0) ? 0 : offset + 1;
-	self.page_row_end 		= self.get_page_row_end(self.page_row_begin, limit, total);
-
-	self.offset_first 	= 0;
-	self.offset_prev 	= (offset>limit) ? offset - limit : 0
-	self.offset_next 	= offset + limit
-	self.offset_last 	= limit * (self.total_pages -1)
+	// offset fix
+		self.offset_first 	= 0;
+		self.offset_prev 	= (offset>limit) ? offset - limit : 0
+		self.offset_next 	= offset + limit
+		self.offset_last 	= limit * (self.total_pages -1)
 
 
 	// status update
