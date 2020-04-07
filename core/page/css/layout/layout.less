@@ -1299,7 +1299,14 @@
 
 						.open_layer_selector {
 							text-align: center;
-							color: #000;
+							border-radius: 2px;
+							width: calc(100% - 0.6em);
+							margin-left: 0.3em;
+							height: 1.25em;
+							line-height: 1.25em;
+							&.vector_tool_active {
+								background-color: #FFFFFF;
+							}
 						}
 						.pointer {
 							.add_mask('pointer.svg');
