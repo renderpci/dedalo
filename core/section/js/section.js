@@ -165,10 +165,19 @@ section.prototype.build = async function(autoload=false) {
 
 			// count rows
 				if (!self.pagination.total) {
+					// self.pagination.total = (show_sqo.full_count && show_sqo.full_count>0)
+					// 	? show_sqo.full_count
+					// 	: current_data_manager.count(show_sqo)
+
 					self.pagination.total = (show_sqo.full_count && show_sqo.full_count>0)
 						? show_sqo.full_count
-						: current_data_manager.count(show_sqo)
+						: (async () => {
+							const response = await current_data_manager.count(show_sqo)
+							return response.result.total
+						})()
 				}
+				// console.log("self.pagination.total:",self.pagination.total);
+
 
 			// get context and data
 				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
