@@ -1007,6 +1007,7 @@
 								color: initial;
 							}
 
+
 							.layer_icon {
 								height: 30px;
 							}
@@ -1241,11 +1242,15 @@
 									&:hover {
 										background-color: #ffa03f;
 										color: #ffffff;
+										&.raster_layer{
+											background-color: #ffffff;
+											color: initial;
+										}
 									}
 									&:active {
 										background-color: #ffa03f;
 										color: #000;
-									}
+									}								
 									&.active{
 										background-color: #e6e6e6;
 										color: #000;
@@ -1294,7 +1299,14 @@
 
 						.open_layer_selector {
 							text-align: center;
-							color: #000;
+							border-radius: 2px;
+							width: calc(100% - 0.6em);
+							margin-left: 0.3em;
+							height: 1.25em;
+							line-height: 1.25em;
+							&.vector_tool_active {
+								background-color: #FFFFFF;
+							}
 						}
 						.pointer {
 							.add_mask('pointer.svg');
@@ -1796,7 +1808,7 @@
 		}
 
 		&:hover .tooltip {
-			transition-delay: 2s; // delay show after hover component wrapper
+			transition-delay: 1s; // delay show after hover component wrapper
 			visibility: visible;
 			opacity: 1;
 		}
