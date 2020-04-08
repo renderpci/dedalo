@@ -1,7 +1,7 @@
 <?php
 
 	# Version
-	$DEDALO_VERSION = '6.0.0_alpha10';
+	$DEDALO_VERSION = '6.0.0_alpha14';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
