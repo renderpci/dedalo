@@ -11,23 +11,25 @@
 			padding: 0.5em;
 			line-height: 1.5em;
 
-			> * {
+			>* {
 				align-self: center;
 			}
 
 			// buttons (nav_buttons)
-			.nav_buttons {
+			>.nav_buttons {
 				display: flex;
 				vertical-align: bottom;
 				font-size: small;
 
 				>.btn {
 					// padding: 0.80em;
-					margin-right: 0.35em;
-					user-select: none;
+					margin-right: 0.35em !important;
+					margin-left: 0 !important;
+					// user-select: none;
 
 					// unactive
 					&.unactive {
+						pointer-events: none;
 						opacity: 0.4 !important;
 						&:hover {
 							opacity: 0.4;
@@ -61,7 +63,7 @@
 
 
 			// text
-			.paginator_info {
+			>.paginator_info {
 
 				>* {
 
@@ -89,8 +91,6 @@
 					}
 				}
 			}//end .paginator_info
-
-
 		}//end .content_data
 	}//end .wrapper_paginator
 
