@@ -129,6 +129,35 @@ data_manager.prototype.section_load_data = async function(sqo_context) {
 data_manager.prototype.count = async function(sqo) {
 
 	// data_manager
+		const api_response = this.request({
+			body : {
+				action 	: 'count',
+				sqo 	: sqo
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			// console.log("----------------------------------- count sqo:", sqo);
+			// console.log("----------------------------------- count total:", total);
+			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
+			// console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
+		}
+
+	return api_response
+}//end count
+
+
+
+/**
+* COUNT
+* Generic section data loader
+* @param object context
+* @return promise api_response
+*/
+data_manager.prototype.count_OLD = async function(sqo) {
+
+	// data_manager
 		const api_response = await this.request({
 			body : {
 				action 	: 'count',
