@@ -226,12 +226,11 @@
 				user-select: none;
 
 				&:before {
-					// .icon_svg;
-					// //background-image: url(../../themes/default/icons/gear.svg);
-					// .background_icon('gear.svg');
-					// margin-left: 1em;
-					// filter: invert();
+					content: " ";
 					.build_button('gear.svg', white, 0.7);
+					float: right;
+					margin: 0;
+					cursor: default;
 				}
 			}
 			>.widget_body {
@@ -246,13 +245,13 @@
 						opacity: 0.5;
 					}
 					&:before {
-						// .icon_svg;
-						// //background-image: url(../../themes/default/icons/arrow-circle-right.svg);
-						// .background_icon('arrow-circle-right.svg');
-
+						content: " ";
 						.build_button('arrow-circle-right.svg', #3F3F3F, 1);
-						float: left;
-						margin-right: 0.25em;
+						vertical-align: text-bottom;
+						padding: 0;
+						margin: 0;
+						margin-right: 0.3em;
+						height: 1.2em;
 					}
 				}
 
@@ -1250,7 +1249,7 @@
 									&:active {
 										background-color: #ffa03f;
 										color: #000;
-									}								
+									}
 									&.active{
 										background-color: #e6e6e6;
 										color: #000;
