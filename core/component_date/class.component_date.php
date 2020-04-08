@@ -512,25 +512,25 @@ class component_date extends component_common {
 			return null;
 		}
 
-		$ano  	= substr($timestamp, 0, 4);
-		$mes 	= substr($timestamp, 5, 2);
-		$dia   	= substr($timestamp, 8, 2);
-		$hora 	= substr($timestamp, 11, 2);
+		$year  	= substr($timestamp, 0, 4);
+		$month 	= substr($timestamp, 5, 2);
+		$day   	= substr($timestamp, 8, 2);
+		$hour 	= substr($timestamp, 11, 2);
 		$min 	= substr($timestamp, 14, 2);
 		$sec 	= substr($timestamp, 17, 2);
 		/*
 		if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
 			# American format month/day/year
-			$date	= $mes . '-' .$dia . '-' .$ano ;
+			$date	= $mes . '-' .$day . '-' .$year ;
 		}else{
 			# European format day.month.year
-			$date	= $dia . '-' .$mes . '-' .$ano ;
+			$date	= $day . '-' .$mes . '-' .$year ;
 		}
 		*/
-		$date	= $dia . '-' .$mes . '-' .$ano ;
+		$date	= $day . '-' .$month . '-' .$year ;
 
 		if($full===true) {
-			$date	.= ' ' .$hora . ':' .$min . ':' .$sec ;
+			$date	.= ' ' .$hour . ':' .$min . ':' .$sec ;
 		}
 
 		return $date;
