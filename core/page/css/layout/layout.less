@@ -226,12 +226,11 @@
 				user-select: none;
 
 				&:before {
-					// .icon_svg;
-					// //background-image: url(../../themes/default/icons/gear.svg);
-					// .background_icon('gear.svg');
-					// margin-left: 1em;
-					// filter: invert();
+					content: " ";
 					.build_button('gear.svg', white, 0.7);
+					float: right;
+					margin: 0;
+					cursor: default;
 				}
 			}
 			>.widget_body {
@@ -246,13 +245,13 @@
 						opacity: 0.5;
 					}
 					&:before {
-						// .icon_svg;
-						// //background-image: url(../../themes/default/icons/arrow-circle-right.svg);
-						// .background_icon('arrow-circle-right.svg');
-
+						content: " ";
 						.build_button('arrow-circle-right.svg', #3F3F3F, 1);
-						float: left;
-						margin-right: 0.25em;
+						vertical-align: text-bottom;
+						padding: 0;
+						margin: 0;
+						margin-right: 0.3em;
+						height: 1.2em;
 					}
 				}
 
@@ -810,7 +809,7 @@
 					// left: 100%;
 					// right: 0;
 					z-index: 1;
-					background-color: #ffa03f;
+					background-color: @color_orange_dedalo;
 					height: 100%;
 					box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 					border-top-right-radius: 0.25em;
@@ -965,7 +964,7 @@
 			&.component_text_area {
 				.layer_selector{
 					width: 10em;
-					background-color: #ffa03f;
+					background-color: @color_orange_dedalo;
 					position: absolute;
 					right: 0;
 					top: 0;
@@ -999,7 +998,7 @@
 							background-color: #ffffff;
 
 							&:hover {
-								background-color: #ffa03f;
+								background-color: @color_orange_dedalo;
 								color: #ffffff;
 							}
 							&:active {
@@ -1204,7 +1203,7 @@
 						.layer_selector {
 							float: right;
 							width: 11em;
-							background-color: #ffa03f;
+							background-color: @color_orange_dedalo;
 							position: absolute;
 							right: 2em;
 							top: 0;
@@ -1240,7 +1239,7 @@
 									background-color: #ffffff;
 
 									&:hover {
-										background-color: #ffa03f;
+										background-color: @color_orange_dedalo;
 										color: #ffffff;
 										&.raster_layer{
 											background-color: #ffffff;
@@ -1248,9 +1247,9 @@
 										}
 									}
 									&:active {
-										background-color: #ffa03f;
+										background-color: @color_orange_dedalo;
 										color: #000;
-									}								
+									}
 									&.active{
 										background-color: #e6e6e6;
 										color: #000;
@@ -1416,7 +1415,7 @@
 					// // 3
 					// left: 100%;
 					// z-index: 1;
-					// background-color: #ffa03f;
+					// background-color: @color_orange_dedalo;
 					// height: 100%;
 					// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 					// border-top-right-radius: 0.25em;
