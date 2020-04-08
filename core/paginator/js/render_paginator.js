@@ -106,13 +106,13 @@ const content_data = async function(self) {
 		}
 
 	// empty case. display none when pages are <2
-		// if (total_pages<2) {
-		// 	const wrap_rows_paginator = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name		: 'content_data paginator display_none'
-		// 	})
-		// 	return wrap_rows_paginator
-		// }
+		if (total_pages<2) {
+			const wrap_rows_paginator = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'content_data paginator display_none'
+			})
+			return wrap_rows_paginator
+		}
 
 	const fragment = new DocumentFragment()
 
