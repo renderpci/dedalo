@@ -216,15 +216,21 @@ class component_date extends component_common {
 
 		$date = new DateTime();
 
-		$dato = new dd_date();
-			$dato->set_year( 	$date->format('Y') );	// 	 $date->format('Y-m-d H:i:s'); # Default as DB format
-			$dato->set_month( 	$date->format('m') );
-			$dato->set_day( 	$date->format('d') );
-			$dato->set_hour( 	$date->format('H') );
-			$dato->set_minute( 	$date->format('i') );
-			$dato->set_second( 	$date->format('s') );
+		// dd_date
+			$dd_date = new dd_date();
+				$dd_date->set_year( 	$date->format('Y') ); // $date->format('Y-m-d H:i:s'); # Default as DB format
+				$dd_date->set_month( 	$date->format('m') );
+				$dd_date->set_day( 		$date->format('d') );
+				$dd_date->set_hour( 	$date->format('H') );
+				$dd_date->set_minute(	$date->format('i') );
+				$dd_date->set_second( 	$date->format('s') );
 
-		return (object)$dato;
+		// add time
+			$time = dd_date::convert_date_to_seconds($dd_date);
+			$dd_date->set_time( $time );
+
+
+		return $dd_date;
 	}//end get_date_now
 
 
