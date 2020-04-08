@@ -23,7 +23,12 @@ $updates->$v = new stdClass();
 
 
 # UPDATE COMPONENTS
-		$updates->$v->components_update = ['component_json'];	// Force convert from string to array
+	$updates->$v->components_update = ['component_image','component_text_area'];
+	
+	return;
+	
+
+	$updates->$v->components_update = ['component_json','component_image','component_text_area'];	// Force convert from string to array
 
 
 # DATABASE UPDATES

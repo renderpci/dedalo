@@ -1411,4 +1411,141 @@ class component_image extends component_media_common {
 
 
 
+
+	/**
+	* UPDATE_DATO_VERSION
+	* @return
+	*/
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+
+
+		$update_version = implode(".", $update_version);
+
+		switch ($update_version) {
+			
+			case '6.0.0':
+				if (!is_array($dato_unchanged)) {
+
+					/* 	Change the dato to array from string
+					*	From:
+					*	"some text"
+					*	To:
+					*	["some text"]
+					* 	change the img tag to new format into the image component.
+					*/
+
+					// new dato
+						$dato = $dato_unchanged;
+
+						// create the component image
+						$image_component = component_common::get_instance('component_image',
+																		 $options->tipo,
+																		 $options->section_id,
+																		 'list',
+																		 DEDALO_DATA_NOLAN,
+																		 $options->section_tipo);
+
+						$image_component->create_default_svg_file($save_file=true);
+					// get the original name
+						$original_file_name = '';
+						$properties = $image_component->get_propiedades();
+						if(isset($properties->target_filename)){
+
+							$original_name_tipo 	= $properties->target_filename;
+							$original_name_model 	=  RecordObj_dd::get_modelo_name_by_tipo($original_name_tipo,true);
+
+							// create the component with the name of the original file
+							$original_name_component = component_common::get_instance($original_name_model,
+																					 $original_name_tipo,
+																					 $options->section_id,
+																					 'list',
+																					 DEDALO_DATA_NOLAN,
+																					 $options->section_tipo);
+
+							$original_file_name = $original_name_component->get_dato();
+
+							// if the original name is empty we can get the origianl name from Previous Code
+							if(empty($original_file_name)){
+								$previous_code_tipo 	= 'rsc22';
+								$previous_code_model 	=  RecordObj_dd::get_modelo_name_by_tipo($original_name_tipo,true);
+								// create the component image
+								$previous_code_component = component_common::get_instance($previous_code_model,
+																						 $previous_code_tipo,
+																						 $options->section_id,
+																						 'list',
+																						 DEDALO_DATA_NOLAN,
+																						 $options->section_tipo);
+								$original_file_name = $previous_code_component->get_dato();
+							}
+
+
+
+							// get the upload data
+
+								$image_id 		 		= $image_component->get_image_id();
+								$source_quality 		= DEDALO_IMAGE_QUALITY_ORIGINAL;
+								$aditional_path  		= $image_component->get_aditional_path();
+								$initial_media_path 	= $image_component->get_initial_media_path();
+								$original_extension 	= $image_component->get_original($source_quality);
+							
+									$base_path = DEDALO_IMAGE_FOLDER . $initial_media_path . $source_quality . $aditional_path;
+
+									$file = DEDALO_MEDIA_PATH . $base_path . '/' . $image_id . $original_extension;
+									if(file_exists($file)) {
+
+										$upload_date = filemtime($file);
+										
+									}
+
+
+
+
+
+
+
+						}
+						$new_dato = new stdClass();
+							$new_dato->original_file_name = $original_file_name;
+
+					}
+					
+					// fix final dato with new format as array
+						$new_dato = [$dato];					
+
+					$response = new stdClass();
+						$response->result = 1;
+						$response->new_dato = $new_dato;
+						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					return $response;
+				}else{
+					$response = new stdClass();
+					$response->result = 2;
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					return $response;
+				}
+				break;
+			default:
+				# code...
+				break;
+		}
+	}//end update_dato_version
+
+
+
+
 }//end class

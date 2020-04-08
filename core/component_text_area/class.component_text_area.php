@@ -2590,5 +2590,173 @@ class component_text_area extends component_common {
 
 
 
+	/**
+	* UPDATE_DATO_VERSION
+	* @return
+	*/
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+
+
+		$update_version = implode(".", $update_version);
+
+		switch ($update_version) {
+			
+			case '6.0.0':
+				if (!empty($dato_unchanged) && !is_array($dato_unchanged)) {
+
+					/* 	Change the dato to array from string
+					*	From:
+					*	"some text"
+					*	To:
+					*	["some text"]
+					* 	change the img tag to new format into the image component.
+					*/
+
+					// new dato
+						$dato = $dato_unchanged;
+
+					$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($options->tipo, false, true);
+					foreach ($ar_realated_tipo as $current_tipo) {
+						
+						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);					
+						switch (true) {
+							case $model === 'component_image':
+
+								$lib_data = [];
+								
+								// create the component relation for save the layers
+								$image_component = component_common::get_instance($model,
+																				 $current_tipo,
+																				 $options->section_id,
+																				 'edit',
+																				 DEDALO_DATA_NOLAN,
+																				 $options->section_tipo);
+								$image_dato = $image_component->get_dato();
+
+								if(empty($image_dato[0]->lib_data)){
+									$raster_layer = new stdClass();
+										$raster_layer->layer_id 		= 0;
+										$raster_layer->user_layer_name 	= 'raster';
+
+									$lib_data[] = $raster_layer;
+								}else{
+									$lib_data[] = $image_dato[0]->lib_data;
+								}
+
+								$ar_draw_tags = NULL;
+								//get the draw pattern
+								$pattern = TR::get_mark_pattern($mark='draw',$standalone=true);
+
+								# Search math patern tags
+								preg_match_all($pattern,  $dato, $ar_draw_tags, PREG_PATTERN_ORDER);
+								
+								if(empty($ar_draw_tags)){
+									continue 2;
+								} 
+
+								// Array result key 7 is the layer into the data stored in the result of the preg_match_all
+								// The layer data inside the tag are with ' and is necessary change to "
+								
+								foreach ($ar_draw_tags as $current_layer) {
+									$new_lib_data = new stdClass();
+										$new_lib_data->layer_id 	= $current_layer[4];
+										$new_lib_data->layer_data 	= json_decode( str_replace("'", "\"", $current_layer[7]) );
+									$layer_key = array_filter($lib_data, function($layer_item, $layer_key){
+										if($layer_item->layer_id === $current_layer[4]){
+											return $layer_key;
+										}
+									},ARRAY_FILTER_USE_BOTH);
+									if(empty($layer_key[0])){
+										$lib_data[] = $new_lib_data;
+									}else{
+										$lib_data[$layer_key[0]] = $new_lib_data;
+									}							
+								}
+
+								$image_dato[0]->lib_data = $lib_data;
+
+								$image_component->set_dato($image_dato);
+								$image_component->save();
+
+
+								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
+								break;
+
+							// case $model === 'component_geolocation':
+
+							// 	$lib_data = [];
+								
+							// 	// create the component relation for save the layers
+							// 	$geo_component = component_common::get_instance($model,
+							// 													 $current_tipo,
+							// 													 $options->section_id,
+							// 													 'edit',
+							// 													 DEDALO_DATA_NOLAN,
+							// 													 $options->section_tipo);
+							// 	$geo_dato = $geo_component->get_dato();
+
+							// 	if(empty($geo_dato[0]->lib_data)){
+							// 		$raster_layer = new stdClass();
+							// 			$raster_layer->layer_id 		= 0;
+							// 			$raster_layer->user_layer_name 	= 'raster';
+
+							// 		$lib_data[] = $raster_layer;
+							// 	}else{
+							// 		$lib_data[] = $geo_dato[0]->lib_data;
+							// 	}
+
+							// 	$ar_geo_tags = NULL;
+							// 	//get the draw pattern
+							// 	$pattern = TR::get_mark_pattern($mark='geo',$standalone=true);
+
+							// 	# Search math patern tags
+							// 	preg_match_all($pattern,  $dato, $ar_geo_tags, PREG_PATTERN_ORDER);
+								
+							// 	if(empty($ar_geo_tags)){
+							// 		continue 2;
+							// 	} 
+							// 	break;
+						}	
+					}
+					
+					// fix final dato with new format as array
+						$new_dato = [$dato];					
+
+					$response = new stdClass();
+						$response->result = 1;
+						$response->new_dato = $new_dato;
+						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					return $response;
+				}else{
+					$response = new stdClass();
+					$response->result = 2;
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					return $response;
+				}
+				break;
+			default:
+				# code...
+				break;
+		}
+	}//end update_dato_version
+
+
+
+
 }//end component_text_area
 ?>
