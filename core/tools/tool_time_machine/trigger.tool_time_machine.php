@@ -8,6 +8,7 @@ common::trigger_manager();
 
 /**
 * APPLY_VALUE
+* Set user selected value from time machine to acual component data
 * @param $section_id
 * @param $section_tipo
 * @param $tipo
