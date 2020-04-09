@@ -721,7 +721,7 @@ class login extends common {
 
 		# LOG : Prepare and save login action
 		$browser = $_SERVER["HTTP_USER_AGENT"];
-		if (strpos($browser, 'AppleWebKit')===false) $browser = "<i style='color:red'>$browser</i>";
+		if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
 		$activity_datos['result'] 	= "allow";
 		$activity_datos['cause'] 	= "correct user and password";
