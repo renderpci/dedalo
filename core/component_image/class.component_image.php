@@ -110,7 +110,7 @@ class component_image extends component_media_common {
 
 		$dato = $this->dato;
 
-		foreach ($dato as $current_value) {		
+		foreach ($dato as $current_value) {
 			if(isset($current_value->svg_file_data)){
 				$svg_file_data = $current_value->svg_file_data;
 				$this->create_svg_file($svg_file_data);
@@ -1272,7 +1272,7 @@ class component_image extends component_media_common {
 						$this->set_dato([$value]);
 						$this->Save();
 					}
-				
+
 				// generate the svg file
 					$svg_string_node = $this->create_default_svg_file();
 
@@ -1335,9 +1335,9 @@ class component_image extends component_media_common {
 			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/svg' . $aditional_path;
 			$filename 		= $media_path . '/' . $image_id . '.svg';
 			if(!file_put_contents($filename, trim($svg_string_node) )){
-				throw new Exception("Error Processing Request. Error on write svg file", 1);				
+				throw new Exception("Error Processing Request. Error on write svg file", 1);
 			}
-		
+
 
 		return $svg_string_node;
 	}//end create_default_svg_file
@@ -1362,13 +1362,13 @@ class component_image extends component_media_common {
 		$initial_media_path = $this->get_initial_media_path();
 
 		$base_path = DEDALO_IMAGE_FOLDER . $initial_media_path . '/svg' . $aditional_path;
-		
+
 		// default
 			$image_url = DEDALO_MEDIA_URL . $base_path . '/' . $image_id . '.svg';
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
-				
+
 				$file = DEDALO_MEDIA_PATH . $base_path . '/' . $image_id . '.svg';
 				if(!file_exists($file)) {
 					if ($default_add===false) {
@@ -1390,7 +1390,7 @@ class component_image extends component_media_common {
 
 	/**
 	* CREATE_SVG_FILE
-	* @return 
+	* @return
 	*/
 	public function create_svg_file($svg_string_node) {
 
@@ -1403,9 +1403,9 @@ class component_image extends component_media_common {
 			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/svg' . $aditional_path;
 			$filename 		= $media_path . '/' . $image_id . '.svg';
 			if(!file_put_contents($filename, trim($svg_string_node) )){
-				throw new Exception("Error Processing Request. Error on write svg file", 1);				
+				throw new Exception("Error Processing Request. Error on write svg file", 1);
 			}
-		
+
 		return true;
 	}//end create_svg_file
 
@@ -1436,7 +1436,7 @@ class component_image extends component_media_common {
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
-			
+
 			case '6.0.0':
 				if (!is_array($dato_unchanged)) {
 
@@ -1501,14 +1501,14 @@ class component_image extends component_media_common {
 								$aditional_path  		= $image_component->get_aditional_path();
 								$initial_media_path 	= $image_component->get_initial_media_path();
 								$original_extension 	= $image_component->get_original($source_quality);
-							
+
 									$base_path = DEDALO_IMAGE_FOLDER . $initial_media_path . $source_quality . $aditional_path;
 
 									$file = DEDALO_MEDIA_PATH . $base_path . '/' . $image_id . $original_extension;
 									if(file_exists($file)) {
 
 										$upload_date = filemtime($file);
-										
+
 									}
 
 
@@ -1521,10 +1521,10 @@ class component_image extends component_media_common {
 						$new_dato = new stdClass();
 							$new_dato->original_file_name = $original_file_name;
 
-					}
-					
+
+
 					// fix final dato with new format as array
-						$new_dato = [$dato];					
+						$new_dato = [$dato];
 
 					$response = new stdClass();
 						$response->result = 1;

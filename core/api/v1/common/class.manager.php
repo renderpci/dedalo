@@ -46,7 +46,7 @@ class manager {
 				return $dedalo_data;
 			}
 
-		// actions
+		// actions (dd_core_api | dd_utils_api)
 			$dd_api_type = $options->dd_api ?? 'dd_core_api';
 
 			switch ($dd_api_type) {
