@@ -32,9 +32,9 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
@@ -42,13 +42,13 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 			element_type	: 'div',
 			class_name 		: "wrapper_login"
 		})
-		wrapper.appendChild(current_content_data)
+		wrapper.appendChild(content_data)
 
 	// validate browser version
 		validate_browser()
 
 	// events delegated
-		add_events(self, wrapper, current_content_data)
+		add_events(self, wrapper, content_data)
 
 	// autofocus username
 	setTimeout(()=>{
@@ -64,7 +64,7 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 /**
 * ADD_EVENTS
 */
-const add_events = function(self, wrapper, current_content_data) {
+const add_events = function(self, wrapper, content_data) {
 
 	// click event
 		wrapper.addEventListener("click", e => {
@@ -77,14 +77,14 @@ const add_events = function(self, wrapper, current_content_data) {
 					const username = e.target.parentNode.querySelector('#username').value
 					if (username.length<2) {
 						const message = `Invalid username ${username}!`
-						ui.show_message(current_content_data, message, 'error', 'component_message', true)
+						ui.show_message(content_data, message, 'error', 'component_message', true)
 						return false
 					}
 
 					const auth = e.target.parentNode.querySelector('#auth').value
 					if (auth.length<2) {
 						const message = `Invalid auth code!`
-						ui.show_message(current_content_data, message, 'error', 'component_message', true)
+						ui.show_message(content_data, message, 'error', 'component_message', true)
 						return false
 					}
 
@@ -113,7 +113,7 @@ const add_events = function(self, wrapper, current_content_data) {
 
 						const message  = response.msg
 						const msg_type = response.result===true ? 'ok' : 'error'
-						ui.show_message(current_content_data, message, msg_type, 'component_message', true)
+						ui.show_message(content_data, message, msg_type, 'component_message', true)
 
 						if (response.result===true) {
 
@@ -137,10 +137,10 @@ const add_events = function(self, wrapper, current_content_data) {
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -265,7 +265,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
+}//end get_content_data
 
 
 
