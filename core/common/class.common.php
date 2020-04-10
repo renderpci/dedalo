@@ -42,8 +42,9 @@ abstract class common {
 	// temporal excluded/mapped models
 		public static $ar_temp_map_models = [
 			// map to => old model
-			'component_autocomplete' => 'component_autocomplete_hi',
-			'section_group' 		 => 'section_group_div'
+			'component_portal' 	=> 'component_autocomplete_hi',
+			'component_portal' 	=> 'component_autocomplete',
+			'section_group' 	=> 'section_group_div'
 		];
 		public static $ar_temp_exclude_models = [
 			// v5
@@ -2408,7 +2409,7 @@ abstract class common {
 					$item_context = $element_json->context;
 
 				// target section tipo add
-					if ($model==='component_portal' || $model==='component_autocomplete') {
+					if ($model==='component_portal') {
 						$ddo = reset($item_context);
 						$target_section_tipo = $element->get_ar_target_section_tipo();
 						// Check target section access here ?
@@ -2544,5 +2545,3 @@ abstract class common {
 
 
 }//end class
-
-

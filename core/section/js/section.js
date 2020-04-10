@@ -257,7 +257,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// inspector
 		if (!self.inspector && self.permissions) {
-			// if (initiator && initiator.model==='component_autocomplete') {
+			// if (initiator && initiator.model==='component_portal') {
 
 			// 	self.inspector = null
 
@@ -741,6 +741,3 @@ section.prototype.load_section_records = function() {
 	return loaded
 }//end load_section_records
 */
-
-
-
