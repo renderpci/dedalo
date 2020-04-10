@@ -34,55 +34,55 @@ export const tr = {
 			// INDEX
 			case 'index' :
 					reg_ex = /\[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]/g;
-					
+
 					break;
 
 			case 'indexIn' :
 					reg_ex = /(\[(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-					
+
 					break;
 
 			case 'indexOut':
 					reg_ex = /(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-					
+
 					break;
 
 			// STRUCT
 			case 'struct' :
 					reg_ex = /\[\/{0,1}(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]/g;
-					
+
 					break;
 
 			case 'structIn' :
 					reg_ex = /(\[(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-					
+
 					break;
 
 			case 'structOut' :
 					reg_ex = /(\[\/(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-					
+
 					break;
 
 			// REFERENCE
 			case 'reference' :
 					reg_ex = /\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]/g;
-					
+
 					break;
 
 			case 'referenceIn' :
 					reg_ex = /(\[(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-					
+
 					break;
 
 			case 'referenceOut' :
 					reg_ex = /(\[\/(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-					
+
 					break;
 
 			// SVG (From now 18-05-2018 v4.9.0, will be used to manage tags from the component component_svg)
 			case 'svg' :
 					reg_ex = /(\[(svg)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
-					
+
 					break;
 			// case 'svg_full_text' :
 			// 		reg_ex = /\[svg-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\]/g;
@@ -92,13 +92,13 @@ export const tr = {
 			// DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Now manage images over draws js paper data)
 			case 'draw' :
 					reg_ex = /(\[(draw)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
-					
+
 					break;
 
 			// GEO
 			case 'geo' :
 					reg_ex = /(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
-					
+
 					break;
 			// GEO_FULL . Select complete tag
 			case 'geo_full' :
@@ -108,19 +108,19 @@ export const tr = {
 			// PAGE (pdf) [page-n-3]
 			case 'page' :
 					reg_ex = /(\[(page)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-					
+
 					break;
 
 			// PERSON (transcription spoken person) like [person-a-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
 			case 'person' :
 					reg_ex = /(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])/g;
-					
+
 					break;
 
 			// NOTE (transcription annotations) like [note-n-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
 			case 'note' :
 					reg_ex = /(\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
-						
+
 					break;
 
 			// OTHERS
@@ -157,7 +157,13 @@ export const tr = {
 	add_tag_img_on_the_fly : (text)  => {
 
 		const tag_url			= '../component_text_area/tag.php';
-		
+
+	if (!text || text.lenght 	<1) {
+			return
+			text
+
+		}
+
 		// INDEX IN
 		const pattern_indexIn 	= tr.get_mark_pattern('indexIn'); // id,state,label,data
 		text = text.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}/[$2-$3-$4-$6]" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
@@ -177,7 +183,7 @@ export const tr = {
 		// TC. [TC_00:00:25.091_TC]
 		const pattern_tc 			= tr.get_mark_pattern('tc');
 		text = text.replace(pattern_tc, `<img id="$1" src="${tag_url}/$1" class="tc" data-type="tc" data-tag_id="$1" data-state="n" data-label="$2" data-data="$2">`);
-		
+
 		// SVG
 		const pattern_svg  			= tr.get_mark_pattern('svg');
 		text = text.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}/$7" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
