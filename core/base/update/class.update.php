@@ -196,6 +196,7 @@ class update {
 		$tables = (array)backup::get_tables();
 
 		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+		$ar_section_tipo = ['test65'];
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
 			# Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]

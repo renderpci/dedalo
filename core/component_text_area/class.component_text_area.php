@@ -2616,6 +2616,8 @@ class component_text_area extends component_common {
 		switch ($update_version) {
 			
 			case '6.0.0':
+
+					dump($dato_unchanged, ' dato_unchanged +---------------+ '.to_string());
 				if (!empty($dato_unchanged) && !is_array($dato_unchanged)) {
 
 					/* 	Change the dato to array from string

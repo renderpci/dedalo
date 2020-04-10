@@ -84,10 +84,10 @@ export const service_tinymce = function() {
 	* Trigger save_value against caller sending key and value
 	* @param string previous_value
 	*	Used to compare changes in editor value.
-	*	Current svaed value for current key data
+	*	Current saved value for current key data
 	* @return bool
 	*/
-	this.save = function(previous_value) {
+	this.save = function() {
 
 		const self = this
 
@@ -98,13 +98,8 @@ export const service_tinymce = function() {
 		if (editor.isDirty()!==true) {
 			return false
 		}
-
 		const value = editor.getContent({format:'raw'})
-
-		// no changes in value found
-		if (previous_value===value) {
-			return false
-		}
+		// const value = self.editor.getBody()
 
 		self.caller.save_value(key, value)
 
@@ -271,6 +266,7 @@ export const service_tinymce = function() {
 			// self.save(actual_value)
 
 		const value = self.editor.getContent({format:'raw'})
+		// const value = self.editor.getBody()
 		self.caller.save_value(self.key, value)
 
 		return true

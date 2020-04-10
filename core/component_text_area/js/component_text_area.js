@@ -8,6 +8,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_text_area} from '../../component_text_area/js/render_component_text_area.js'
+	import {tr} from '../../component_text_area/js/tr.js'
 	//import '../../../prosemirror/dist/prosemirror.js';
 
 
@@ -63,6 +64,16 @@ export const component_text_area = function(){
 
 
 /**
+* TAGS_TO_HTML
+*/
+component_text_area.prototype.tags_to_html = function(value) {
+	
+	const html = tr.add_tag_img_on_the_fly(value)
+		console.log("html:",html);
+	return html
+}// end
+
+/**
 * SAVE_VALUE
 * Saves individual value based on element key
 * @param int key
@@ -74,10 +85,20 @@ component_text_area.prototype.save_value = async function(key, value) {
 
 	const self = this
 
+	console.log("value:",value);
+	const new_data = self.preprocess_text_to_save(value)
+
+
+
+
+	// const string_value = value.innerHTML
+	// const old_data = self.data.value[key]
+	// if(string_value === old_data) return false
+
 	const changed_data = Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: (value.length>0) ? value : null,
+		value	: (new_data.length>0) ? new_data : null,
 	})
 	self.change_value({
 		changed_data : changed_data,
@@ -99,19 +120,19 @@ component_text_area.prototype.save_value = async function(key, value) {
 * Unify text content format
 * @return string
 */
-component_text_area.prototype.preprocess_text_to_save = function(container) {
+component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 
 	const self = this
 
-	if (!container) {
-		console.log("[component_text_area.preprocess_text_to_save] Error. container element is not valid", container)
-		return false;
-	}
+	const cloned_text = document.createElement('div')
+	cloned_text.innerHTML = html_value
+
+		console.log("cloned_text:",cloned_text);
 
 	//const start = new Date().getTime();
 
 	// Clone to avoid affect existing DOM elements
-	const cloned_text = container.cloneNode(true)
+	// const cloned_text = container.cloneNode(true)
 
 	// SECTION TAGS (STRUCT)
 		// Iterate all section elements
@@ -130,8 +151,8 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 				const label 		= section_elements[i].dataset.label
 				const data 		= section_elements[i].dataset.data
 				// Compose Dédalo tags
-				const tag_in  	= self.build_dedalo_tag('structIn', tag_id, state, label, data)
-				const tag_out 	= self.build_dedalo_tag('structOut', tag_id, state, label, data)
+				const tag_in  	= self.build_data_tag('structIn', tag_id, state, label, data)
+				const tag_out 	= self.build_data_tag('structOut', tag_id, state, label, data)
 				const final_string= tag_in + section_elements[i].innerHTML + tag_out
 
 				// Replaces tag content string with new created
@@ -172,8 +193,8 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 				const label 		= reference_elements[i].dataset.label
 				const data 		= reference_elements[i].dataset.data
 				// Compose Dédalo tags
-				const tag_in  	= self.build_dedalo_tag('referenceIn', tag_id, state, label, data)
-				const tag_out 	= self.build_dedalo_tag('referenceOut', tag_id, state, label, data)
+				const tag_in  	= self.build_data_tag('referenceIn', tag_id, state, label, data)
+				const tag_out 	= self.build_data_tag('referenceOut', tag_id, state, label, data)
 				const final_string= tag_in + reference_elements[i].innerHTML + tag_out
 
 				// Replaces tag content string with new created
@@ -216,7 +237,7 @@ component_text_area.prototype.preprocess_text_to_save = function(container) {
 				}
 
 				// Build dedalo tag from node image dataset	info
-				const final_string = self.build_dedalo_tag(current_element.dataset.type, current_tag_id, current_element.dataset.state, current_element.dataset.label, current_element.dataset.data)
+				const final_string = self.build_data_tag(current_element.dataset.type, current_tag_id, current_element.dataset.state, current_element.dataset.label, current_element.dataset.data)
 
 				if (final_string) {
 					// Replaces tag content string with new created
@@ -410,8 +431,8 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 	const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","referenceIn","referenceOut"]
 		if (valid_types.includes(type)===false) {
-			console.log("[build_dedalo_tag] Invalid tag type:",type);
-			alert("[build_dedalo_tag] Invalid tag type: " + type)
+			console.log("[build_data_tag] Invalid tag type:",type);
+			alert("[build_data_tag] Invalid tag type: " + type)
 			return false
 		}
 
