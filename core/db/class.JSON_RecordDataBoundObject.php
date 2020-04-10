@@ -248,7 +248,7 @@ abstract class JSON_RecordDataBoundObject {
 					$section_id = pg_fetch_result($result,0,'section_id');
 					if ($section_id===false) {
 						if(SHOW_DEBUG===true) {
-							dump($strQuery,"strQuery");
+							dump(null, "strQuery : ".PHP_EOL.to_string($strQuery));
 							throw new Exception("Error Processing Request: ".pg_last_error(), 1);
 						}
 					}

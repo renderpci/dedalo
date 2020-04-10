@@ -218,12 +218,13 @@
 			>.widget_label {
 				padding: 1em;
 				//background-color: #73A266;
-				background-color: #f48c1c;
+				background-color: @color_orange_dedalo;
 				color: #ffffff;
 				//font-weight: 600;
 				text-transform: uppercase;
 				letter-spacing: 0.025em;
 				user-select: none;
+				cursor: pointer;
 
 				&:before {
 					content: " ";
@@ -1850,11 +1851,12 @@
 		//background-image: url(../../themes/default/icons/preload.svg);
 		// .background_icon('preload.svg');
 		.build_button('preload.svg', black, 1);
-		background-repeat: no-repeat;
-		background-size: contain; // 2em 2em;
-		background-position: center;
+		// background-repeat: no-repeat;
+		// background-size: contain; // 2em 2em;
+		// background-position: center;
 		min-height: 3em;
 		min-width: 3em;
+		vertical-align: middle;
 	}
 
 
@@ -1976,7 +1978,7 @@
 		position: fixed; /* or absolute */
 		margin: -1em;
 
-		// background image
+		// background image big Dédalo
 		&:before {
 			content: "";
 			position: absolute;
@@ -2001,7 +2003,6 @@
 			transform: translate(-50%);
 
 			.component_base;
-
 
 			background-color: rgba(243, 243, 243, 0.76);
 			max-width: 24em;
@@ -2038,16 +2039,23 @@
 					font-size: 1em !important;
 				}
 
+				>input {
+					margin-bottom: 1em;
+					&#username {
+					}
+				}
+
 				>#auth_submit {
-					background-color: #FF9800;
-					color: #000000;
-					margin-top: 1em;
+					background-color: @color_orange_dedalo;
+					color: white;
+					// margin-top: 1em;
 					cursor: pointer;
 					border-radius: 0.25em;
 					height: unset;
 
 					.preload {
-						min-height: 1.50em;
+						min-height: 1.5em;
+						background-color: white;
 					}
 				}
 			}//end form

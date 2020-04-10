@@ -214,7 +214,7 @@ const content_data = async function(self) {
 			parent			: form
 		})
 		const button_loading = ui.create_dom_element({
-			element_type	: 'div',
+			element_type	: 'span',
 			class_name		: 'preload display_none',
 			parent			: button_enter
 		})
@@ -388,7 +388,3 @@ const validate_browser = function() {
 
 // 	return buttons
 // }//end buttons
-
-
-
-
