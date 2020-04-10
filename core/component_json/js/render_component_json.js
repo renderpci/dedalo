@@ -54,8 +54,11 @@ render_component_json.prototype.list = function() {
 				wrapper.classList.toggle('show_full')
 			})
 		}else{
+
 			// Value as string
-			const list_show_key = self.context.properties.list_show_key || 'msg'
+			const list_show_key = typeof self.context.properties!=="undefined"
+				? self.context.properties.list_show_key
+				: 'msg'
 			const value_string = (typeof data.value[0][list_show_key]!=='undefined')
 					? data.value[0][list_show_key]
 					: JSON.stringify(data.value).substring(0,100)+" ..."
@@ -171,7 +174,6 @@ const add_events = function(self, wrapper) {
 		}, false)
 
 
-
 	return true
 }//end add_events
 
@@ -232,8 +234,8 @@ const get_buttons = (self) => {
 
 	// button_fullscreen
 		const button_fullscreen = ui.create_dom_element({
-			element_type : 'div',
-			class_name	 : 'button button_fullscreen',
+			element_type : 'span',
+			class_name	 : 'button full_screen',
 			parent 		 : fragment
 		})
 		button_fullscreen.addEventListener("click", function(e) {
@@ -271,18 +273,6 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			element_type : 'li',
 			parent 		 : inputs_container
 		})
-
-
-	// button_fullscreen
-		// const button_fullscreen = ui.create_dom_element({
-		// 	element_type : 'div',
-		// 	class_name	 : 'button_fullscreen',
-		// 	parent 		 : li
-		// })
-		// button_fullscreen.addEventListener("click", function(e) {
-		// 	// li.classList.toggle("fullscreen")
-		// 	self.wrapper.classList.toggle("fullscreen")
-		// })
 
 	// button_save
 		const button_save = ui.create_dom_element({
@@ -366,8 +356,5 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		const editor = new JSONEditor(li, editor_options, current_value)
 
 
-
 	return li
 }//end get_input_element
-
-
