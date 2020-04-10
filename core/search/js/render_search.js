@@ -266,7 +266,7 @@ render_search.prototype.render_components_list = async function(options) {
 
 				let class_names 				= "search_component_label element_draggable"
 				let has_subquery_draggable 		= true
-				if (element.model==="component_autocomplete") {
+				if (element.model==="component_portal") {
 					// Autocompletes only
 					// Pointer to open "children" section (portals and aurocompletes)
 					// Builds li element
@@ -1104,5 +1104,3 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 		return localized
 	}//end localize_operator
-
-

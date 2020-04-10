@@ -1828,7 +1828,7 @@ export const service_autocomplete = function() {
 
 		switch(component_name) {
 
-			case "component_autocomplete":
+			case "component_portal":
 			case "component_relation_related":
 				const list_ul = wrap_div.querySelector('ul.filter_by_list')
 				if (list_ul) {
@@ -1847,7 +1847,6 @@ export const service_autocomplete = function() {
 				}
 				break;
 
-			case "component_autocomplete_hi":
 			default:
 				selected_values = self.get_search_sections(wrap_div)
 				break;

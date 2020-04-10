@@ -366,12 +366,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 		if ($model==='component_input_text_large') {
 			$model='component_input_text';
 		}
-		elseif ($model==='component_portal') {
-			$model='component_autocomplete';
+		elseif ($model==='component_autocomplete' || $model==='component_autocomplete_hi') {
+			$model='component_portal';
 		}
 
 		return $model;
-	}
+	}//end get_modelo_name
 
 	# GET MODELO NAME BY TIPO (STATIC)
 	public static function get_modelo_name_by_tipo($tipo, $from_cache=false) {
@@ -394,7 +394,33 @@ class RecordObj_dd extends RecordDataBoundObject {
 		#}
 
 		return $modelo_name;
-	}
+	}//end get_modelo_name_by_tipo
+
+
+
+	/**
+	* GET_REAL_MODEL_NAME_BY_TIPO
+	* Temporal function to manage transitional models
+	*/
+	public static function get_real_model_name_by_tipo($tipo) {
+
+		$RecordObj_dd = new RecordObj_dd($tipo);
+		$model_name  = $RecordObj_dd->get_real_model_name();
+
+		return $model_name;
+	}//end get_real_model_name_by_tipo
+
+
+	/**
+	* GET_REAL_MODEL_NAME_BY_TIPO
+	* Temporal function to manage transitional models
+	*/
+	public function get_real_model_name() {
+
+		$model_name = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
+
+		return $model_name;
+	}//end get_real_model_name
 
 
 
