@@ -230,7 +230,7 @@ component_common.prototype.build = async function(autoload=false){
 
 
 	return true
-}//end component_autocomplete.prototype.build
+}//end component_common.prototype.build
 
 
 
@@ -744,5 +744,3 @@ component_common.prototype.test_save = async function(component) {
 		}
 	}
 }//end test_save
-
-
