@@ -88,9 +88,6 @@ component_text_area.prototype.save_value = async function(key, value) {
 	console.log("value:",value);
 	const new_data = self.preprocess_text_to_save(value)
 
-
-
-
 	// const string_value = value.innerHTML
 	// const old_data = self.data.value[key]
 	// if(string_value === old_data) return false
@@ -126,8 +123,6 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 
 	const cloned_text = document.createElement('div')
 	cloned_text.innerHTML = html_value
-
-		console.log("cloned_text:",cloned_text);
 
 	//const start = new Date().getTime();
 
