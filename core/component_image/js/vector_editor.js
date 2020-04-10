@@ -326,7 +326,7 @@ vector_editor.prototype.init_tools = function(self){
 
 					case ('stroke'):
 						project.deselectAll()
-						// this.path.fullySelected = true;
+						this.path.fullySelected = true;
 						this.path.selected = true;
 						this.movePath = 'fill'
 						// const location = hitResult.location;
@@ -382,9 +382,6 @@ vector_editor.prototype.init_tools = function(self){
 				this.path.position.x += event.delta.x;
 				this.path.position.y += event.delta.y;
 			}
-			// update the instance with the new layer information, prepared to save 
-			// (but is not saved directly, the user need click in the save button)
-			self.update_draw_data()
 		}
 		this.pointer.onKeyUp = (event) => {
 			if (event.key==="backspace" || event.key==="delete"){
@@ -398,6 +395,11 @@ vector_editor.prototype.init_tools = function(self){
 				}
 			}
 		}
+		this.pointer.onMouseUp = (event) => {
+				// update the instance with the new layer information, prepared to save 
+				// (but is not saved directly, the user need click in the save button)
+				self.update_draw_data()
+			}
 
 	// transform
 		this.transform = new Tool();
@@ -634,9 +636,11 @@ vector_editor.prototype.init_tools = function(self){
 				this.path.position.x += event.delta.x;
 				this.path.position.y += event.delta.y;
 			}
-			// update the instance with the new layer information, prepared to save 
-			// (but is not saved directly, the user need click in the save button)
-			self.update_draw_data()
+		}
+		this.vector.onMouseUp = (event) => {
+				// update the instance with the new layer information, prepared to save 
+				// (but is not saved directly, the user need click in the save button)
+				self.update_draw_data()
 		}
 
 	// zoom
@@ -672,7 +676,6 @@ vector_editor.prototype.init_tools = function(self){
 			const delta = event.downPoint.subtract(event.point)
 			// scroll the view to the position
 			project.view.scrollBy(delta)
-				console.log("project.view.center:",project.view.center);
 		}
 
 	return true
@@ -1142,7 +1145,8 @@ vector_editor.prototype.render_layer_selector = function(self){
 			const layer_id 	= self.add_layer()
 			const new_layer = self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 			const layer_li 	= this.render_layer_row(self, new_layer)
-			layer_ul.appendChild(layer_li)
+			// layer_ul.appendChild(layer_li)
+			layer_ul.insertBefore(layer_li, layer_ul.firstChild)
 		})
 
 	// close button
@@ -1164,7 +1168,8 @@ vector_editor.prototype.render_layer_selector = function(self){
 		})
 
 		// load the layer into the layer box
-		for (let i = 0; i < ar_layers.length; i++) {
+		for (var i =  ar_layers.length - 1; i >= 0; i--) {
+		// for (let i = 0; i < ar_layers.length; i++) {
 			const layer = ar_layers[i]
 			const layer_li = this.render_layer_row(self, layer)
 			layer_ul.appendChild(layer_li)
