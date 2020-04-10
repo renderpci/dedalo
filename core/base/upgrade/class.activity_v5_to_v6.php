@@ -1,10 +1,11 @@
 <?php
+require_once( dirname(__FILE__) .'/class.v5_to_v6.php');
 /**
-* CLASS DATO_V4_TO_SECTION_DATA_V5
-*
+* CLASS activity_v5_to_v6
 *
 */
-class activity_v5_to_v6 {
+class activity_v5_to_v6 extends v5_to_v6 {
+
 
 
 	public static $what_conversion_values = [
@@ -25,6 +26,24 @@ class activity_v5_to_v6 {
 		"dd1098"	=>	15,
 		"dd1081"	=>	16
 	];
+
+
+
+	/**
+	* CONVERT_TABLE_DATA_ACTIVITY
+	* @return bool true
+	*/
+	public static function convert_table_data_activity() {
+
+		$ar_tables = [
+			'matrix_activity'
+		];
+		$action = 'convert_section_dato_to_data';
+
+		self::convert_table_data($ar_tables, $action);
+
+		return true;
+	}//end convert_table_data_activity
 
 
 
@@ -110,181 +129,11 @@ class activity_v5_to_v6 {
 				if (!is_array($activity_ip_dato)) {
 					$dato->components->dd551->dato->{DEDALO_DATA_NOLAN} = [$activity_ip_dato]; // same dato but as array
 				}
-
-
 		}
+
 
 		return $dato;
 	}//end convert_section_dato_to_data
-
-
-
-	/**
-	* CONVERT_TABLE_DATA
-	* @return bool true
-	*/
-	public static function convert_table_data($ar_tables=null, $action='convert_section_dato_to_data') {
-
-		if ($ar_tables===null) {
-			// default
-			$ar_tables = [
-				"matrix_activity"
-			];
-		}
-
-		foreach ($ar_tables as $key => $table) {
-
-			// Get last id in the table
-			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
-			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-			$rows 		= pg_fetch_assoc($result);
-			if (!$rows) {
-				continue;
-			}
-			$max 		= $rows['id'];
-
-			// Get first id in the table
-			$min_strQuery 	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
-			$min_result 	= JSON_RecordDataBoundObject::search_free($min_strQuery);
-			$min_rows 		= pg_fetch_assoc($min_result);
-			if (!$min_rows) {
-				continue;
-			}
-			$min 		= $min_rows['id'];
-
-			//$min = 1;
-
-			// iterate from 1 to last id
-			$i_ref = 0; $start_time=microtime(1);
-			for ($i=$min; $i<=$max; $i++) {
-
-				$strQuery 	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
-				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if(!$result) {
-					$msg = "Failed Search id $i. Data is not found.";
-					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-					continue;
-				}
-				$n_rows = pg_num_rows($result);
-
-				if ($n_rows<1) continue;
-
-				while($rows = pg_fetch_assoc($result)) {
-
-					$id 	= $rows['id'];
-					$datos 	= json_decode($rows['datos']);
-						#dump($datos, ' datos ++ '.to_string($id));
-
-					if (!empty($datos)) {
-						// $section_data 		= self::convert_section_dato_to_data( $datos );
-						$section_data 			= self::$action( $datos ); // default is 'convert_section_dato_to_data'
-						$section_data_encoded 	= json_encode($section_data);
-
-						$strQuery 	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-						$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
-						if(!$result) {
-							$msg = "Failed Update section_data $i";
-							debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-							continue;
-						}
-					}else{
-						debug_log(__METHOD__." ERROR: Empty datos from: $table - $id ".to_string(), logger::ERROR);
-					}
-				}
-
-				// log info each 1000
-					if ($i_ref===0) {
-						debug_log(__METHOD__." Partial update of section data table: $table - id: $id - total: $n_rows - total time secs: ".exec_time_unit($start_time,'sec'), logger::DEBUG);
-					}else{
-						$i_ref = ($i_ref>1000) ? 0 : $i_ref + 1;
-					}
-			}
-			#break; // stop now
-		}//end foreach ($ar_tables as $key => $table)
-
-
-		return true;
-	}//end convert_table_data
-
-
-
-	/**
-	* CONVERT_TABLE_DATA_ACTIVITY
-	* @return bool true
-	*/
-	public static function convert_table_data_activity() {
-
-		self::convert_table_data(["matrix_activity"]);
-
-		return true;
-	}//end convert_table_data_activity
-
-
-
-	/**
-	* CLEAN_COMPONENT_DATO
-	* @return
-	*/
-	public static function clean_component_dato() {
-
-		$ar_tables = [
-			// 'new_matrix'
-			'matrix',
-			'matrix_activities',
-			'matrix_dataframe',
-			'matrix_dd',
-			'matrix_hierarchy',
-			'matrix_hierarchy_main',
-			'matrix_indexations',
-			'matrix_langs',
-			'matrix_layout',
-			'matrix_layout_dd',
-			'matrix_list',
-			'matrix_notes',
-			'matrix_profiles',
-			'matrix_projects',
-			'matrix_structurations',
-			'matrix_tools',
-			'matrix_users'
-		];
-
-		self::convert_table_data($ar_tables, $action='remove_valor');
-
-		return $ar_tables;
-	}//end clean_component_dato
-
-
-
-	/**
-	* REMOVE_VALOR
-	* @return object $dato
-	*/
-	public static function remove_valor( stdClass $datos_column ) {
-
-		$dato = clone $datos_column;
-
-		if (!empty($dato->components)) {
-
-			foreach ($dato->components as $tipo => $component_data) {
-
-				$new_component_data = new stdClass();
-				foreach ($component_data as $key => $value) {
-					if ($key==='dato' || $key==='info' || ($key==='dataframe' && !empty($value)) ) {
-
-						if ($key==='info') {
-							$new_component_data->inf = $value->label . ' [' . $value->modelo .']';
-						}else{
-							$new_component_data->{$key} = $value;
-						}
-					}
-				}
-				$dato->components->{$tipo} = $new_component_data;
-			}
-		}
-
-
-		return $dato;
-	}//end remove_valor
 
 
 
