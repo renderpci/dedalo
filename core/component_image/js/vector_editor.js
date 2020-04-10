@@ -205,197 +205,204 @@ vector_editor.prototype.init_tools = function(self){
 
 	// rectangle
 		this.rectangle = new Tool();
-		this.rectangle.onMouseDown = (event) => {
-			// Reset vars
-			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-			project.deselectAll();
-		}
-		this.rectangle.onMouseDrag = (event) => {
-			// desactivate the tool when the user try to create the path into raster layer
-			if(project.activeLayer.name === 'raster') return;
+			this.rectangle.onMouseDown = (event) => {
+				// Reset vars
+				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
+				project.deselectAll();
+			}
+			this.rectangle.onMouseDrag = (event) => {
+				// desactivate the tool when the user try to create the path into raster layer
+				if(project.activeLayer.name === 'raster'|| project.activeLayer.name==='main') return;
 
-			const size = new Size ({
-				width: event.point.x - event.downPoint.x,
-				height: event.point.y - event.downPoint.y
-			});
+				const size = new Size ({
+					width: event.point.x - event.downPoint.x,
+					height: event.point.y - event.downPoint.y
+				});
 
-			const rectangle_path = new Path.Rectangle({
-				point: event.downPoint,
-				size: size,
-				fillColor: this.active_fill_color,
-				strokeColor: 'black'
-			});
+				const rectangle_path = new Path.Rectangle({
+					point: event.downPoint,
+					size: size,
+					fillColor: this.active_fill_color,
+					strokeColor: 'black'
+				});
 
-			// Remove this path on the next drag event:
-			rectangle_path.removeOnDrag();
-			// update the instance with the new layer information, prepared to save 
-			// (but is not saved directly, the user need click in the save button)
-			self.update_draw_data()
-		}
+				// Remove this path on the next drag event:
+				rectangle_path.removeOnDrag();
+			}
+			this.rectangle.onMouseUp = (event) => {
+				if(project.activeLayer.name === 'raster' || project.activeLayer.name==='main') return;
+				// update the instance with the new layer information, prepared to save 
+				// (but is not saved directly, the user need click in the save button)
+				self.update_draw_data()
+			}
 
 	// circle
 		this.circle = new Tool();
-		this.circle.onMouseDown = (event) => {
-			// Reset vars
-			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-			project.deselectAll();
-		}
-		this.circle.onMouseDrag = (event) => {
-			// desactivate the tool when the user try to create the path into raster layer
-			if(project.activeLayer.name === 'raster') return;
+			this.circle.onMouseDown = (event) => {
+				// Reset vars
+				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
+				project.deselectAll();
+			}
+			this.circle.onMouseDrag = (event) => {
+				// desactivate the tool when the user try to create the path into raster layer
+				if(project.activeLayer.name === 'raster' || project.activeLayer.name==='main') return;
 
-			const radio_delta = new Point({
-				x: event.downPoint.x - event.point.x,
-				y: event.downPoint.y - event.point.y,
-			})
+				const radio_delta = new Point({
+					x: event.downPoint.x - event.point.x,
+					y: event.downPoint.y - event.point.y,
+				})
 
-			const circle_path = new Path.Circle({
-				center 		: event.downPoint,
-				radius 		: radio_delta.length,
-				fillColor 	: this.active_fill_color,
-				strokeColor : 'black'
-			})
-			//console.log((event.downPoint.x - event.point.x).length);
+				const circle_path = new Path.Circle({
+					center 		: event.downPoint,
+					radius 		: radio_delta.length,
+					fillColor 	: this.active_fill_color,
+					strokeColor : 'black'
+				})			
 
-			// Remove this path on the next drag event:
-			circle_path.removeOnDrag()
-			self.update_draw_data()
-		}
+				// Remove this path on the next drag event:
+				circle_path.removeOnDrag()
+			}
+			this.circle.onMouseUp = (event) => {
+				if(project.activeLayer.name === 'raster' || project.activeLayer.name==='main') return;
+				// update the instance with the new layer information, prepared to save 
+				// (but is not saved directly, the user need click in the save button)
+				self.update_draw_data()
+			}
 
 	// pointer
 		this.pointer = new Tool();
-		this.pointer.onMouseDown = (event) => {
-			// Reset vars
-			if (this.path != null) {
-					this.path.bounds.selected = false
-					this.path.data.state = null
-			}
-			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-			project.deselectAll()
-			//project.activeLayer.selected = false;
-			const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
+			this.pointer.onMouseDown = (event) => {
+				// Reset vars
+				if (this.path != null) {
+						this.path.bounds.selected = false
+						this.path.data.state = null
+				}
+				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
+				project.deselectAll()
+				//project.activeLayer.selected = false;
+				const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
 
-			if(SHOW_DEBUG===true) {
-				console.log("[init_tools] hitResult:",hitResult);
-			}
-			if (hitResult) {
-				//remove all behavior if the click is in the main_area rectangle, deselect all.
-				if(hitResult.item.name === 'main_area') return;
-				this.path = hitResult.item
-				switch(hitResult.type) {
+				if(SHOW_DEBUG===true) {
+					console.log("[init_tools] hitResult:",hitResult);
+				}
+				if (hitResult) {
+					//remove all behavior if the click is in the main_area rectangle, deselect all.
+					if(hitResult.item.name === 'main_area') return;
+					this.path = hitResult.item
+					switch(hitResult.type) {
 
-					case ('fill'):
-						project.deselectAll()
-						this.path.layer.activate()
-						this.active_layer = project.activeLayer
-						event_manager.publish('active_layer_'+self.id, this.active_layer)
-						this.set_color_picker(this.path)
+						case ('fill'):
+							project.deselectAll()
+							this.path.layer.activate()
+							this.active_layer = project.activeLayer
+							event_manager.publish('active_layer_'+self.id, this.active_layer)
+							this.set_color_picker(this.path)
 
-						if (event.modifiers.shift) {
-							hitResult.item.remove()
-						}
-
-						this.path.selected = true;
-						this.movePath = hitResult.type == 'fill'
-						break;
-
-					case ('pixel'):
-						project.deselectAll();
-						project.activeLayer.selected = false;
-						break;
-
-					case ('segment'):
-						project.deselectAll();
-
-						this.path.fullySelected = true;
-						this.segment = hitResult.segment;
-						if (event.modifiers.shift) {
-							hitResult.segment.remove();
-						}
-						if (event.modifiers.option) {
-							if(this.segment.hasHandles()){
-								hitResult.segment.clearHandles();
+							if (event.modifiers.shift) {
+								hitResult.item.remove()
 							}
-							this.handle_sync	= hitResult.segment.handleIn;
-							this.handleIn 		= hitResult.segment.handleIn;
-							this.handleOut 		= hitResult.segment.handleOut;
-							this.segment 		= "";
-						}
-						//segment = hitResult.segment
-						break;
 
-					case ('stroke'):
-						project.deselectAll()
-						this.path.fullySelected = true;
-						this.path.selected = true;
-						this.movePath = 'fill'
-						// const location = hitResult.location;
-						// this.segment = this.path.insert(location.index +1, event.point);
-						//path.smooth();
-						break;
+							this.path.selected = true;
+							this.movePath = hitResult.type == 'fill'
+							break;
 
-					case ('handle-in'):
-						this.handle = hitResult.segment.handleIn;
-						if (event.modifiers.option) {
-							this.handle_sync = hitResult.segment.handleIn;
-							this.handleIn = hitResult.segment.handleIn;
-							this.handleOut = hitResult.segment.handleOut;
-							//this.handle = "";
-						}
-						break;
+						case ('pixel'):
+							project.deselectAll();
+							project.activeLayer.selected = false;
+							break;
 
-					case ('handle-out'):
-						this.handle = hitResult.segment.handleOut;
-						if (event.modifiers.option) {
-							this.handle_sync = hitResult.segment.handleOut;
-							this.handleIn = hitResult.segment.handleOut;
-							this.handleOut = hitResult.segment.handleIn;
-							//this.handle = "";
-						}
-						break;
+						case ('segment'):
+							project.deselectAll();
 
-					default:
-						console.log("Ignored hitResult.type :", hitResult.type)
-						break;
-				}//end switch
-				//console.log(hitResult.type);
+							this.path.fullySelected = true;
+							this.segment = hitResult.segment;
+							if (event.modifiers.shift) {
+								hitResult.segment.remove();
+							}
+							if (event.modifiers.option) {
+								if(this.segment.hasHandles()){
+									hitResult.segment.clearHandles();
+								}
+								this.handle_sync	= hitResult.segment.handleIn;
+								this.handleIn 		= hitResult.segment.handleIn;
+								this.handleOut 		= hitResult.segment.handleOut;
+								this.segment 		= "";
+							}
+							//segment = hitResult.segment
+							break;
+
+						case ('stroke'):
+							project.deselectAll()
+							this.path.fullySelected = true;
+							this.path.selected = true;
+							this.movePath = 'fill'
+							// const location = hitResult.location;
+							// this.segment = this.path.insert(location.index +1, event.point);
+							//path.smooth();
+							break;
+
+						case ('handle-in'):
+							this.handle = hitResult.segment.handleIn;
+							if (event.modifiers.option) {
+								this.handle_sync = hitResult.segment.handleIn;
+								this.handleIn = hitResult.segment.handleIn;
+								this.handleOut = hitResult.segment.handleOut;
+								//this.handle = "";
+							}
+							break;
+
+						case ('handle-out'):
+							this.handle = hitResult.segment.handleOut;
+							if (event.modifiers.option) {
+								this.handle_sync = hitResult.segment.handleOut;
+								this.handleIn = hitResult.segment.handleOut;
+								this.handleOut = hitResult.segment.handleIn;
+								//this.handle = "";
+							}
+							break;
+
+						default:
+							console.log("Ignored hitResult.type :", hitResult.type)
+							break;
+					}//end switch
+					//console.log(hitResult.type);
+				}
+				/*if (movePath)
+				project.activeLayer.addChild(hitResult.item);*/
 			}
-			/*if (movePath)
-			project.activeLayer.addChild(hitResult.item);*/
-		}
-		this.pointer.onMouseDrag = (event) => {
-			if (this.handle){
-				this.handle.x += event.delta.x;
-				this.handle.y += event.delta.y;
-			}
-			if (this.handle_sync){
-				this.handleIn.x += event.delta.x;
-				this.handleIn.y += event.delta.y;
-				this.handleOut.x -= event.delta.x;
-				this.handleOut.y -= event.delta.y;
-			}
-			if (this.segment) {
-				this.segment.point.x = event.point.x;
-				this.segment.point.y = event.point.y;
-			}
-			if (this.movePath){
-				this.path.position.x += event.delta.x;
-				this.path.position.y += event.delta.y;
-			}
-		}
-		this.pointer.onKeyUp = (event) => {
-			if (event.key==="backspace" || event.key==="delete"){
-				//console.log(event.key);
-				const seleccionados = project.selectedItems;
-				//console.log(seleccionados);
-				const sec_len = seleccionados.length
-				for (let i = sec_len - 1; i >= 0; i--) {
-					seleccionados[i].remove()
-					this.segment = this.path = null;
+			this.pointer.onMouseDrag = (event) => {
+				if (this.handle){
+					this.handle.x += event.delta.x;
+					this.handle.y += event.delta.y;
+				}
+				if (this.handle_sync){
+					this.handleIn.x += event.delta.x;
+					this.handleIn.y += event.delta.y;
+					this.handleOut.x -= event.delta.x;
+					this.handleOut.y -= event.delta.y;
+				}
+				if (this.segment) {
+					this.segment.point.x = event.point.x;
+					this.segment.point.y = event.point.y;
+				}
+				if (this.movePath){
+					this.path.position.x += event.delta.x;
+					this.path.position.y += event.delta.y;
 				}
 			}
-		}
-		this.pointer.onMouseUp = (event) => {
+			this.pointer.onKeyUp = (event) => {
+				if (event.key==="backspace" || event.key==="delete"){
+					//console.log(event.key);
+					const seleccionados = project.selectedItems;
+					//console.log(seleccionados);
+					const sec_len = seleccionados.length
+					for (let i = sec_len - 1; i >= 0; i--) {
+						seleccionados[i].remove()
+						this.segment = this.path = null;
+					}
+				}
+			}
+			this.pointer.onMouseUp = (event) => {
 				// update the instance with the new layer information, prepared to save 
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
@@ -455,7 +462,6 @@ vector_editor.prototype.init_tools = function(self){
 					}
 				}
 			}
-
 			this.transform.onMouseDrag = (event) => {
 				// if we select main layer or other forbiden paths, desactive the drag
 				if (this.path === null || this.path.data.state === null)return
@@ -488,7 +494,6 @@ vector_editor.prototype.init_tools = function(self){
 					
 				}
 			}
-
 			this.transform.onMouseUp = (event) => {
 				// update the instance with the new layer information, prepared to save 
 				// (but is not saved directly, the user need click in the save button)
@@ -497,151 +502,152 @@ vector_editor.prototype.init_tools = function(self){
 
 	// vector
 		this.vector = new Tool()
-		this.vector.onMouseDown = (event) => {
-			// Reset vars
-			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
+			this.vector.onMouseDown = (event) => {
+				// Reset vars
+				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
 
-			//project.activeLayer.selected = false;
-			const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
+				//project.activeLayer.selected = false;
+				const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
 
-			if(SHOW_DEBUG===true) {
-				console.log("[init_tools] hitResult:",hitResult);
-			}
-			if (hitResult) {
-				//remove all behavior if the click is in the main_area rectangle or the raster layer, deselect all.
-				if(hitResult.item.name === 'main_area' || project.activeLayer.name === 'raster') return;
-				this.path = hitResult.item
-				switch(hitResult.type) {
+				if(SHOW_DEBUG===true) {
+					console.log("[init_tools] hitResult:",hitResult);
+						console.log("project.activeLayer.name:",project.activeLayer.name);
+				}
+				if (hitResult) {
+					//remove all behavior if the click is in the main_area rectangle or the raster layer, deselect all.
+					if(hitResult.item.name === 'main_area' || project.activeLayer.name === 'raster' || project.activeLayer.name ==='main') return;
+					this.path = hitResult.item
+					switch(hitResult.type) {
 
-					case ('fill'):
-						project.deselectAll()
-						this.path.layer.activate()
-						this.active_layer = project.activeLayer
-						event_manager.publish('active_layer_'+self.id, this.active_layer)
-						this.set_color_picker(this.path)
+						case ('fill'):
+							project.deselectAll()
+							this.path.layer.activate()
+							this.active_layer = project.activeLayer
+							event_manager.publish('active_layer_'+self.id, this.active_layer)
+							this.set_color_picker(this.path)
 
-						if (event.modifiers.shift) {
-							hitResult.item.remove()
-						}
-
-						this.path.selected 	= true;
-						this.movePath = hitResult.type == 'fill'
-						this.new_path 		= false
-						break;
-
-					case ('pixel'):
-						project.deselectAll();
-
-						if (!this.new_path) {
-							this.new_path = new Path({
-								strokeColor : 'black',
-								fillColor : this.active_fill_color
-							});
-							this.new_path.fullySelected	= true;
-							this.segment = this.new_path.add(event.point);
-							// this.segment = event.point
-						}else{
-							this.new_path.fullySelected	= true;
-							this.segment = this.new_path.add(event.point);
-						}
-						if (event.modifiers.option) {
-							if(this.segment.hasHandles()){
-								this.segment.clearHandles();
+							if (event.modifiers.shift) {
+								hitResult.item.remove()
 							}
-							this.handle_sync 	= this.segment.handleIn;
-							this.handleIn 		= this.segment.handleIn;
-							this.handleOut 		= this.segment.handleOut;
-							this.segment.selected = true;
-							this.segment 		= "";
-						}
 
-						break;
-					case ('segment'):
-						project.deselectAll();
+							this.path.selected 	= true;
+							this.movePath = hitResult.type == 'fill'
+							this.new_path 		= false
+							break;
 
-						this.path.fullySelected = true;
-						this.path.closed 		= true;
-						this.new_path 			= false
-						this.segment 			= hitResult.segment;
-						if (event.modifiers.shift) {
-							hitResult.segment.remove();
-						}
-						if (event.modifiers.option) {
-							if(this.segment.hasHandles()){
-								hitResult.segment.clearHandles();
+						case ('pixel'):
+							project.deselectAll();
+
+							if (!this.new_path) {
+								this.new_path = new Path({
+									strokeColor : 'black',
+									fillColor : this.active_fill_color
+								});
+								this.new_path.fullySelected	= true;
+								this.segment = this.new_path.add(event.point);
+								// this.segment = event.point
+							}else{
+								this.new_path.fullySelected	= true;
+								this.segment = this.new_path.add(event.point);
 							}
-							this.handle_sync 	= hitResult.segment.handleIn;
-							this.handleIn 		= hitResult.segment.handleIn;
-							this.handleOut 		= hitResult.segment.handleOut;
-							this.segment 		= "";
-						}
-						//segment = hitResult.segment
-						break;
+							if (event.modifiers.option) {
+								if(this.segment.hasHandles()){
+									this.segment.clearHandles();
+								}
+								this.handle_sync 	= this.segment.handleIn;
+								this.handleIn 		= this.segment.handleIn;
+								this.handleOut 		= this.segment.handleOut;
+								this.segment.selected = true;
+								this.segment 		= "";
+							}
 
-					case ('stroke'):
-						this.path.fullySelected = true;
-						const location	= hitResult.location;
-						this.segment 	= this.path.insert(location.index +1, event.point);
-						this.new_path 	= false
-						//path.smooth();
-						break;
+							break;
+						case ('segment'):
+							project.deselectAll();
 
-					case ('handle-in'):
-						this.handle = hitResult.segment.handleIn;
-						if (event.modifiers.option) {
-							this.handle_sync 	= hitResult.segment.handleIn;
-							this.handleIn 		= hitResult.segment.handleIn;
-							this.handleOut 		= hitResult.segment.handleOut;
-							//this.handle = "";
-						}
-						break;
+							this.path.fullySelected = true;
+							this.path.closed 		= true;
+							this.new_path 			= false
+							this.segment 			= hitResult.segment;
+							if (event.modifiers.shift) {
+								hitResult.segment.remove();
+							}
+							if (event.modifiers.option) {
+								if(this.segment.hasHandles()){
+									hitResult.segment.clearHandles();
+								}
+								this.handle_sync 	= hitResult.segment.handleIn;
+								this.handleIn 		= hitResult.segment.handleIn;
+								this.handleOut 		= hitResult.segment.handleOut;
+								this.segment 		= "";
+							}
+							//segment = hitResult.segment
+							break;
 
-					case ('handle-out'):
-						this.handle = hitResult.segment.handleOut;
-						if (event.modifiers.option) {
-							this.handle_sync 	= hitResult.segment.handleOut;
-							this.handleIn 		= hitResult.segment.handleOut;
-							this.handleOut 		= hitResult.segment.handleIn;
-							//this.handle = "";
-						}
-						break;
+						case ('stroke'):
+							this.path.fullySelected = true;
+							const location	= hitResult.location;
+							this.segment 	= this.path.insert(location.index +1, event.point);
+							this.new_path 	= false
+							//path.smooth();
+							break;
 
-					default:
-						console.log("Ignored hitResult.type :", hitResult.type)
-						break;
-				}//end switch
-				//console.log(hitResult.type);
-			}
-			/*if (movePath)
-			project.activeLayer.addChild(hitResult.item);*/
-		}
+						case ('handle-in'):
+							this.handle = hitResult.segment.handleIn;
+							if (event.modifiers.option) {
+								this.handle_sync 	= hitResult.segment.handleIn;
+								this.handleIn 		= hitResult.segment.handleIn;
+								this.handleOut 		= hitResult.segment.handleOut;
+								//this.handle = "";
+							}
+							break;
 
-		this.vector.onMouseDrag = (event) => {
-			if (this.handle){
-				this.handle.x += event.delta.x;
-				this.handle.y += event.delta.y;
+						case ('handle-out'):
+							this.handle = hitResult.segment.handleOut;
+							if (event.modifiers.option) {
+								this.handle_sync 	= hitResult.segment.handleOut;
+								this.handleIn 		= hitResult.segment.handleOut;
+								this.handleOut 		= hitResult.segment.handleIn;
+								//this.handle = "";
+							}
+							break;
+
+						default:
+							console.log("Ignored hitResult.type :", hitResult.type)
+							break;
+					}//end switch
+					//console.log(hitResult.type);
+				}
+				/*if (movePath)
+				project.activeLayer.addChild(hitResult.item);*/
 			}
-			if (this.handle_sync){
-				this.handleIn.x += event.delta.x;
-				this.handleIn.y += event.delta.y;
-				this.handleOut.x -= event.delta.x;
-				this.handleOut.y -= event.delta.y;
+			this.vector.onMouseDrag = (event) => {
+				if (this.handle){
+					this.handle.x += event.delta.x;
+					this.handle.y += event.delta.y;
+				}
+				if (this.handle_sync){
+					this.handleIn.x += event.delta.x;
+					this.handleIn.y += event.delta.y;
+					this.handleOut.x -= event.delta.x;
+					this.handleOut.y -= event.delta.y;
+				}
+				if (this.segment) {
+					this.segment.point.x = event.point.x;
+					this.segment.point.y = event.point.y;
+					//path.smooth();
+				}
+				if (this.movePath){
+					this.path.position.x += event.delta.x;
+					this.path.position.y += event.delta.y;
+				}
 			}
-			if (this.segment) {
-				this.segment.point.x = event.point.x;
-				this.segment.point.y = event.point.y;
-				//path.smooth();
-			}
-			if (this.movePath){
-				this.path.position.x += event.delta.x;
-				this.path.position.y += event.delta.y;
-			}
-		}
-		this.vector.onMouseUp = (event) => {
+			this.vector.onMouseUp = (event) => {
+				if(project.activeLayer.name === 'raster' || project.activeLayer.name==='main') return;
 				// update the instance with the new layer information, prepared to save 
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
-		}
+			}
 
 	// zoom
 		this.zoom = new Tool()
