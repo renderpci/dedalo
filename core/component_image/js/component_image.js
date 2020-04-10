@@ -355,9 +355,8 @@ component_image.prototype.update_draw_data = function() {
 	const value 				=  typeof (self.data.value[0]) !== 'undefined'
 		? JSON.parse(JSON.stringify(self.data.value[0]))
 		: {}
-	value.lib_data 			= self.ar_layer_loaded
+	value.lib_data 			= self.ar_layer_loaded	
 	value.svg_file_data		= project.exportSVG({asString:true,embedImages:false})
-		
 
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {

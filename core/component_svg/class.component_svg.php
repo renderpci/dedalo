@@ -233,6 +233,19 @@ class component_svg extends component_media_common {
 	}//end get_file_path
 
 
+	/**
+	* GET_FILE_CONTENT
+	* @return 
+	*/
+	public function get_file_content() {
+
+		$file_path 		= $this->get_file_path();
+		$file_content	= file_get_contents($file_path);
+		
+		return $file_content;
+	}//end get_file_content
+
+
 
 	/**
 	* GET_TARGET_DIR

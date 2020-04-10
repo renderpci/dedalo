@@ -1333,11 +1333,17 @@ class component_image extends component_media_common {
 
 		// file save
 			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/svg' . $aditional_path;
+			
+			# Target folder verify (EXISTS AND PERMISSIONS)
+			if( !is_dir($media_path) ) {
+				if(!mkdir($media_path, 0777,true)) throw new Exception(" Error on read or create directory: svg. Permission denied $media_path (2)");
+			}
+
 			$filename 		= $media_path . '/' . $image_id . '.svg';
 			if(!file_put_contents($filename, trim($svg_string_node) )){
 				throw new Exception("Error Processing Request. Error on write svg file", 1);				
 			}
-		
+
 
 		return $svg_string_node;
 	}//end create_default_svg_file
@@ -1400,7 +1406,7 @@ class component_image extends component_media_common {
 		$initial_media_path 	= $this->get_initial_media_path();
 
 		// file save
-			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/svg' . $aditional_path;
+			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/' .DEDALO_SVG_EXTENSION . $aditional_path;
 			$filename 		= $media_path . '/' . $image_id . '.svg';
 			if(!file_put_contents($filename, trim($svg_string_node) )){
 				throw new Exception("Error Processing Request. Error on write svg file", 1);				
@@ -1408,6 +1414,39 @@ class component_image extends component_media_common {
 		
 		return true;
 	}//end create_svg_file
+
+
+
+
+	/**
+	* GET_FILE_CONTENT
+	* @return string $file_content
+	*/
+	public function get_file_content() {
+
+		$image_id 		 		= $this->get_image_id();
+		$aditional_path  		= $this->get_aditional_path();
+		$initial_media_path 	= $this->get_initial_media_path();
+
+		$aditional_path = $this->get_aditional_path();
+
+		$svg_file_name 	= $image_id .'.'. DEDALO_SVG_EXTENSION;
+		$svg_file_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_SVG_EXTENSION . $aditional_path . '/' . $svg_file_name;
+
+		$svg_data = file_get_contents($svg_file_path);
+
+		$img_file_name 	= $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+		$img_file_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_IMAGE_QUALITY_DEFAULT . $aditional_path . '/' . $img_file_name;
+
+		$type = pathinfo($img_file_path, PATHINFO_EXTENSION);
+		$data = file_get_contents($img_file_path);
+		$base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+
+		$file_path = preg_replace('/xlink:href=".*?.jpg"/', 'xlink:href="'.$base64.'"', $svg_data);
+
+		return $file_path;
+	}//end get_file_content
+
 
 
 
@@ -1438,7 +1477,7 @@ class component_image extends component_media_common {
 		switch ($update_version) {
 			
 			case '6.0.0':
-				if (!is_array($dato_unchanged)) {
+				if ($dato_unchanged === null) {
 
 					/* 	Change the dato to array from string
 					*	From:
@@ -1451,7 +1490,7 @@ class component_image extends component_media_common {
 					// new dato
 						$dato = $dato_unchanged;
 
-						// create the component image
+					// create the component image
 						$image_component = component_common::get_instance('component_image',
 																		 $options->tipo,
 																		 $options->section_id,
@@ -1459,14 +1498,40 @@ class component_image extends component_media_common {
 																		 DEDALO_DATA_NOLAN,
 																		 $options->section_tipo);
 
+					// get the upload data
+						$image_id 		 		= $image_component->get_image_id();
+						$source_quality 		= DEDALO_IMAGE_QUALITY_ORIGINAL;
+						$aditional_path  		= $image_component->get_aditional_path();
+						$initial_media_path 	= $image_component->get_initial_media_path();
+						$original_extension 	= $image_component->get_original($source_quality, false) ?? 'jpg';
+					
+						$base_path 	= DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $source_quality . $aditional_path;
+						$file 		= DEDALO_MEDIA_PATH . $base_path . '/' . $image_id . '.' . $original_extension;
+							
+
+						if(file_exists($file)) {
+							$upload_date_timestamp 		= date ("Y-m-d H:i:s", filemtime($file));
+							$dd_date = new dd_date();
+							$original_upload_date 		= $dd_date->get_date_from_timestamp($upload_date_timestamp);
+							$original_upload_date->time = dd_date::convert_date_to_seconds($original_upload_date);
+						}else{
+							$response = new stdClass();
+								$response->result = 2;
+								$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+								return $response;				
+						}
+
+
+					// create the svg_file
 						$image_component->create_default_svg_file($save_file=true);
+				
 					// get the original name
 						$original_file_name = '';
 						$properties = $image_component->get_propiedades();
 						if(isset($properties->target_filename)){
 
 							$original_name_tipo 	= $properties->target_filename;
-							$original_name_model 	=  RecordObj_dd::get_modelo_name_by_tipo($original_name_tipo,true);
+							$original_name_model 	= RecordObj_dd::get_modelo_name_by_tipo($original_name_tipo,true);
 
 							// create the component with the name of the original file
 							$original_name_component = component_common::get_instance($original_name_model,
@@ -1477,52 +1542,30 @@ class component_image extends component_media_common {
 																					 $options->section_tipo);
 
 							$original_file_name = $original_name_component->get_dato();
-
-							// if the original name is empty we can get the origianl name from Previous Code
-							if(empty($original_file_name)){
-								$previous_code_tipo 	= 'rsc22';
-								$previous_code_model 	=  RecordObj_dd::get_modelo_name_by_tipo($original_name_tipo,true);
-								// create the component image
-								$previous_code_component = component_common::get_instance($previous_code_model,
-																						 $previous_code_tipo,
-																						 $options->section_id,
-																						 'list',
-																						 DEDALO_DATA_NOLAN,
-																						 $options->section_tipo);
-								$original_file_name = $previous_code_component->get_dato();
-							}
-
-
-
-							// get the upload data
-
-								$image_id 		 		= $image_component->get_image_id();
-								$source_quality 		= DEDALO_IMAGE_QUALITY_ORIGINAL;
-								$aditional_path  		= $image_component->get_aditional_path();
-								$initial_media_path 	= $image_component->get_initial_media_path();
-								$original_extension 	= $image_component->get_original($source_quality);
-							
-									$base_path = DEDALO_IMAGE_FOLDER . $initial_media_path . $source_quality . $aditional_path;
-
-									$file = DEDALO_MEDIA_PATH . $base_path . '/' . $image_id . $original_extension;
-									if(file_exists($file)) {
-
-										$upload_date = filemtime($file);
-										
-									}
-
-
-
-
-
-
-
+							$original_file_name = isset($original_file_name[0]) ? $original_file_name[0] : $original_file_name; 
 						}
-						$new_dato = new stdClass();
-							$new_dato->original_file_name = $original_file_name;
 
-					}
+					// if the original name is empty we can get the origianl name from Previous Code
+						if(empty($original_file_name)){
+							$previous_code_tipo 	= 'rsc22';
+							$previous_code_model 	=  RecordObj_dd::get_modelo_name_by_tipo($previous_code_tipo,true);
+							// create the component image
+							$previous_code_component = component_common::get_instance($previous_code_model,
+																					 $previous_code_tipo,
+																					 $options->section_id,
+																					 'list',
+																					 DEDALO_DATA_NOLAN,
+																					 $options->section_tipo);
+							$original_file_name = $previous_code_component->get_dato();
+							$original_file_name = isset($original_file_name[0]) ? $original_file_name[0] : $original_file_name; 
+						}
+
 					
+					// create new dato
+						$dato = new stdClass();
+							$dato->original_file_name 	= $original_file_name;
+							$dato->original_upload_date = $original_upload_date ?? null;
+
 					// fix final dato with new format as array
 						$new_dato = [$dato];					
 

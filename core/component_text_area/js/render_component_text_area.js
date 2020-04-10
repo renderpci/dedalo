@@ -329,6 +329,8 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	const mode = self.mode
 
+	const value_html = self.tags_to_html(current_value)
+
 	// li container
 		const li = ui.create_dom_element({
 			element_type : 'li'
@@ -351,7 +353,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// 	element_type 	: 'div',
 		// 	class_name 		: 'input_tex_area contenteditable',
 		// 	dataset 	 	: { key : i },
-		// 	inner_html 		: current_value,
+		// 	inner_html 		: value_html,
 		// 	contenteditable : true,
 		// 	parent 		 	: li
 		// })
@@ -368,7 +370,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// init editor
 		const current_service = new service_tinymce()
 		current_service.init(self, li, {
-			value 			: current_value,
+			value 			: value_html,
 			key 			: i,
 			editor_config 	: editor_config
 		})
@@ -506,9 +508,8 @@ const get_custom_buttons = (self, i, get_service) => {
 				icon: false,
 				onclick: function(evt) {
 					// save. service save function calls current component save_value()
-						const actual_value 	= self.data.value[i]
 						const service 		= get_service()
-						service.save(actual_value)
+						service.save()
 				}
 			}
 		})
@@ -537,9 +538,8 @@ const get_custom_events = (self, i, get_service) => {
 
 	custom_events.blur = (evt, options) => {
 		// save. service save function calls current component save_value()
-			const actual_value 	= self.data.value[i]
 			const service 		= get_service()
-			service.save(actual_value)
+			service.save()
 	}//end blur
 
 	custom_events.click = (evt, options) => {

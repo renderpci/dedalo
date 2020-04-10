@@ -20,10 +20,10 @@ if (strpos($_SERVER["REQUEST_URI"],'[/index')!==false) {
 }
 
 /**
-* SAFE_XSS
+* tag_SAFE_XSS
 * @return mixed $value
 */
-function safe_xss($value) {
+function tag_safe_xss($value) {
 
 	if (is_string($value)) {
 
@@ -37,15 +37,17 @@ function safe_xss($value) {
 	#error_log("value: ".to_string($value));
 
 	return $value;
-}//end safe_xss
+}//end tag_safe_xss
 
 // clean variable
-$text = safe_xss($text);
+$text = tag_safe_xss($text);
 
 
 # Text to show
 $text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
+
+
 
 #
 # TAG TYPE
@@ -79,15 +81,6 @@ switch (true) {
 			$text 		= $n;
 			$imgBase 	= $tag_image_dir."/indexIn-{$state}-x2.png";
 		}
-		break;
-	case (strpos($text,'[svg-')!==false):
-		$type = 'svg' ;
-		# mode [svg-n-1-data:***]
-		$state 		= substr($text,5,1);
-		$last_minus = strrpos($text, '-');
-		$ar_parts 	= explode('-', $text);
-		$text 		= $ar_parts[2];
-		$imgBase 	= $tag_image_dir."/svg-{$state}-x2.png";
 		break;
 	case (strpos($text,'[draw-')!==false):
 		$type = 'draw' ;
@@ -137,26 +130,50 @@ switch (true) {
 		$text 		= urldecode($ar_parts[2]);
 		$imgBase 	= $tag_image_dir."/note-{$state}-x2.png";
 		break;
-	/*
-	case (strpos($text,'[reference-')!==false || strpos($text,'[/reference-')!==false):
-		$type 			= 'reference';
-		$pattern 		= "/\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-(.{0,22}))?(-data:(.*?):data)?\]/";
-		$text_original 	= $text;
-		preg_match_all($pattern, $text, $matches);
-		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
-		$n 		= $matches[3][0];
-		$state 	= $matches[2][0];
+	// locator case, used by svg or image or vídeo, etc...
+	case (strpos($text,'{')===0):
+		
+		$changed_text = str_replace(['&#039;','\''],'"', $text);		
+		$locator = json_decode($changed_text);
 
-		if(strpos($text_original,'/')!==false) {
-			# mode [/reference-u-6]	
-			$text 		= " $n";
-			$imgBase 	= $tag_image_dir."/referenceOut-{$state}-x2.png";
-		}else{
-			# mode [reference-u-1]
-			$text 		= $n;
-			$imgBase 	= $tag_image_dir."/referenceIn-{$state}-x2.png";
-		}
-		break;*/
+		if(!$locator) return;
+		include(dirname(dirname(dirname(__FILE__))).'/config/config.php');
+
+		$section_tipo 	= $locator->section_tipo;
+		$section_id 	= $locator->section_id;
+		$component_tipo = $locator->component_tipo;
+
+		$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+		$component 		= component_common::get_instance($model,
+														 $component_tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+		$file_content = $component->get_file_content();
+
+
+
+
+		header("Cache-Control: private, max-age=10800, pre-check=10800");
+		header("Pragma: private");
+		header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
+
+		# No cache header
+		#header("Cache-Control: no-cache, must-revalidate");
+
+		# Output to browser
+		// header('Content-Length: '.strlen($file_content));
+		header('Content-Type: image/svg+xml');
+		// header('Content-Length: '.filesize($file_path));
+		// header('Accept-Ranges: bytes');
+		header('Vary: Accept-Encoding');
+		// fpassthru( $file_path );
+		echo $file_content;
+		exit;
+		break;
+	
 	default:
 		die("Need type ..! <br>$text");
 		break;
@@ -207,13 +224,6 @@ switch($type) {
 
 					if($state=='n') $colorText	= $white ;
 					break;	
-
-	case 'svg':		$colorText	= $white ;
-					$colorBG 	= $black ;
-					#$font_name	= $font; // --
-					#$font_size	= 7.9  ; # 11 o 10.88
-					$font_size 	= ($font_size *2)+2;
-					break;
 
 	case 'draw':	$colorText	= $white ;
 					$colorBG 	= $black ;
@@ -280,7 +290,6 @@ switch ($type) {
 		$offsetX = 2;
 		$offsetY = 2;
 		break;
-	case 'svg':
 	case 'draw':
 	case 'page':
 		$offsetY = 2;
@@ -306,7 +315,6 @@ if (PHP_OS==='Darwin') {
 		case 'tc':
 		case 'index':
 			break;
-		case 'svg':
 		case 'draw':
 		case 'page':
 		case 'person':
