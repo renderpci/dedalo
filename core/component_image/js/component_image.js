@@ -83,7 +83,7 @@ component_image.prototype.init = async function(options) {
 		self.canvas_height			= 432
 		self.canvas_width			= null
 
-	//canvar node
+	//canvas node
 		self.canvas_node 			= null
 
 	// editor init vars
@@ -114,7 +114,8 @@ component_image.prototype.get_data_tag = function(){
 	const layers 		= lib_data.map((item) => {
 		const layer = {
 			layer_id 			: item.layer_id, 
-			user_layer_name 	: item.user_layer_name		}
+			user_layer_name 	: item.user_layer_name		
+		}
 		return layer 
 	})
 
