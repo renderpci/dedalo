@@ -182,7 +182,7 @@ const add_events = function(self, wrapper) {
 				// }
 
 			// insert
-				if (e.target.matches('.button.add')) {
+				if (e.target.matches('.button.add.add_input')) {
 
 					const changed_data = Object.freeze({
 						action	: 'insert',
@@ -675,7 +675,6 @@ const get_custom_events = (self, i, get_service) => {
 			case 113:
 				const result 				= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
 				const result_length 		= result.length
-
 				// service
 					const service 			  = get_service()
 					const editor_content_data = service.get_editor_content_data()
@@ -688,6 +687,7 @@ const get_custom_events = (self, i, get_service) => {
 
 						switch(data_tag.type) {
 							case ('draw'):
+							case ('geo'):
 								const layer_node = render_layer_selector(self, data_tag, tag_id, service)
 							break;
 
@@ -771,7 +771,7 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 	const fragment = new DocumentFragment()
 
 	const add_layer = ui.create_dom_element({
-		element_type	: 'div',
+		element_type	: 'span',
 		class_name 		: 'button add',
 		parent 			: fragment,
 	})
@@ -784,8 +784,15 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 		layer_selector.remove()
 	})
 
+	const layer_icon = ui.create_dom_element({
+		element_type	: 'span',
+		class_name 		: 'layer_icon',
+		parent 			: fragment,
+		text_node		: data_tag.type
+	})
+
 	const close = ui.create_dom_element({
-		element_type	: 'div',
+		element_type	: 'span',
 		class_name 		: 'button close',
 		parent 			: fragment,
 	})
@@ -817,13 +824,6 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 				layer_selector.remove()
 			})
 
-				const layer_icon = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'button eye layer_icon',
-					parent 			: layer_li,
-					text_node		: layer.layer_icon
-				})
-
 				const layer_id = ui.create_dom_element({
 					element_type	: 'div',
 					class_name 		: 'layer_id',
@@ -838,19 +838,19 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 					text_node		: layer.user_layer_name
 				})
 
-				const layer_color_box = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'layer_color_box',
-					parent 			: layer_li,
-				})
-				const layer_color = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'layer_color',
-					parent 			: layer_color_box,
-				})
-				layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
-					? layer.layer_color
-					: 'black'
+				// const layer_color_box = ui.create_dom_element({
+				// 	element_type	: 'div',
+				// 	class_name 		: 'layer_color_box',
+				// 	parent 			: layer_li,
+				// })
+				// const layer_color = ui.create_dom_element({
+				// 	element_type	: 'div',
+				// 	class_name 		: 'layer_color',
+				// 	parent 			: layer_color_box,
+				// })
+				// layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
+				// 	? layer.layer_color
+				// 	: 'black'
 		}// end for
 
 	const layer_selector = ui.create_dom_element({
@@ -948,5 +948,3 @@ const do_command = (command, val) => {
 // function replace_selected_text(replacementText) {
 //    document.execCommand( 'insertText', false, replacementText );
 // }
-
-

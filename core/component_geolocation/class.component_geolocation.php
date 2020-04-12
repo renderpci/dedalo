@@ -5,21 +5,21 @@
 *
 */
 class component_geolocation extends component_common {
-	
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
 
 	# COMPONENT_GEOLOCATION COSNTRUCT
 	function __construct($tipo, $section_id=null, $modo='edit', $lang=NULL, $section_tipo=null) {
-		
+
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
 		# Build the component
 		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
-		# Dato verification, if the dato is empty, build the standard view of the map 
+		# Dato verification, if the dato is empty, build the standard view of the map
 		$dato = $this->get_dato();
 
 		# if the section_id is not empty and the dato is empty create the basic and standart dato
@@ -28,7 +28,7 @@ class component_geolocation extends component_common {
 			#####################################################################################################
 			# DEFAULT VALUES
 			# Store section dato as array(key=>value)
-			$dato_new = new stdClass();	
+			$dato_new = new stdClass();
 				$dato_new->lat		= 39.462571;
 				$dato_new->lon		= -0.376295;	# Calle Denia
 				$dato_new->zoom		= 12;
@@ -36,7 +36,7 @@ class component_geolocation extends component_common {
 				#$dato_new->coordinates	= array();
 			# END DEFAULT VALUES
 			######################################################################################################
-			
+
 			# Dato
 			$this->set_dato([$dato_new]);
 			$need_save=true;
@@ -51,7 +51,7 @@ class component_geolocation extends component_common {
 			# debug_log(__METHOD__."  Added default component_geolocation data $section_id with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
 		}
 
-		
+
 		if(SHOW_DEBUG) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
@@ -59,7 +59,7 @@ class component_geolocation extends component_common {
 				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
-						
+
 	}
 
 
@@ -70,7 +70,7 @@ class component_geolocation extends component_common {
 		if (!is_array($dato)) {
 			$dato = [$dato];
 		}
-		
+
 		return (array)$dato;
 	}
 
@@ -96,14 +96,14 @@ class component_geolocation extends component_common {
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	*/
 	public function get_valor() {
-		
+
 		$valor = (array)self::get_dato();
 
 		$separator = ' ,  ';
 		if($this->modo==='list') $separator = '<br>';
-	
+
 		if (is_object($valor)) {
-			$valor = array($valor); # Convert json obj to array			
+			$valor = array($valor); # Convert json obj to array
 		}
 
 		if (is_array($valor)) {
@@ -119,9 +119,9 @@ class component_geolocation extends component_common {
 			return $string;
 
 		}else{
-			
+
 			return $valor;
-		}		
+		}
 	}//end get_valor
 
 
@@ -136,7 +136,7 @@ class component_geolocation extends component_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-	
+
 		$dato 			 = $this->get_dato();
 		$diffusion_value = json_encode($dato);
 
@@ -150,23 +150,23 @@ class component_geolocation extends component_common {
 	* Example
 	* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
 	* {
-		"type": "FeatureCollection",
-		"features": [
-		    {
-		      "type": "Feature",
-		      "properties": {},
-		      "geometry": {
-		        "type": "Point",
-		        "coordinates": [
-		          2.304362542927265,
-		          41.82053505145308
-		        ]
-		      }
-		    }
-		]
+	*	"type": "FeatureCollection",
+	*	"features": [
+	*	    {
+	*	      "type": "Feature",
+	*	      "properties": {},
+	*	      "geometry": {
+	*	        "type": "Point",
+	*	        "coordinates": [
+	*	          2.304362542927265,
+	*	          41.82053505145308
+	*	        ]
+	*	      }
+	*	    }
+	*	]
 	* }
 	*
-	* @return 
+	* @return
 	*/
 	public static function build_geolocation_tag_string($tag_id, $lon, $lat) {
 		/*
@@ -178,7 +178,7 @@ class component_geolocation extends component_common {
 			$feature->type 		 = "Feature";
 			$feature->properties = new stdClass();
 			$feature->geometry 	 = $geometry
-		
+
 		$data = new stdClass();
 			$data->type 	= 'FeatureCollection';
 			$data->features = array( $feature );
@@ -199,7 +199,7 @@ class component_geolocation extends component_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value_socrata() {
-	
+
 		$dato 			= $this->get_dato();
 		$socrata_data 	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
 
@@ -215,14 +215,14 @@ class component_geolocation extends component_common {
 			$geo_json_point->type 		 = 'Point';
 			$geo_json_point->coordinates = [
 				floatval($dato->lon),
-				floatval($dato->lat)				
+				floatval($dato->lat)
 			];
 
 		#$point = new stdClass();
 		#	$point->latitude  = 47.59815;
 		#	$point->longitude = -122.334540;
 
-					
+
 		$diffusion_value_socrata = $geo_json_point;// json_encode($geo_json_point, JSON_UNESCAPED_SLASHES); // json_encode($socrata_data, JSON_UNESCAPED_SLASHES);
 
 		return $diffusion_value_socrata;

@@ -1222,6 +1222,3 @@ $updates->$v = new stdClass();
 										CONSTRAINT matrix_notifications_id PRIMARY KEY(id)
 									) ';
 	$updates->$v->SQL_update[] 	= ' INSERT INTO "matrix_notifications" ("datos") VALUES (\'[]\') ';
-
-
-

@@ -26,10 +26,6 @@ export const component_geolocation = function(){
 
 	this.context
 	this.data
-	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
-	// We need a temporary value for the all current values of the inputs (lat, lon, zoom, alt)
-	// to will be used for save it when the user clicks on the save button
-	this.current_value = []
 
 	this.parent
 	this.node
@@ -52,23 +48,23 @@ export const component_geolocation = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_geolocation.prototype.build 	 					= component_common.prototype.build
-	component_geolocation.prototype.render 						= common.prototype.render
-	component_geolocation.prototype.destroy 	 				= common.prototype.destroy
-	component_geolocation.prototype.refresh 					= common.prototype.refresh
-	component_geolocation.prototype.save 	 						= component_common.prototype.save
-	component_geolocation.prototype.load_data 				= component_common.prototype.load_data
-	component_geolocation.prototype.get_value 				= component_common.prototype.get_value
-	component_geolocation.prototype.set_value 				= component_common.prototype.set_value
+	component_geolocation.prototype.build 	 			= component_common.prototype.build
+	component_geolocation.prototype.render 				= common.prototype.render
+	component_geolocation.prototype.destroy 	 		= common.prototype.destroy
+	component_geolocation.prototype.refresh 			= common.prototype.refresh
+	component_geolocation.prototype.save 	 			= component_common.prototype.save
+	component_geolocation.prototype.load_data 			= component_common.prototype.load_data
+	component_geolocation.prototype.get_value 			= component_common.prototype.get_value
+	component_geolocation.prototype.set_value 			= component_common.prototype.set_value
 	component_geolocation.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_geolocation.prototype.update_datum 			= component_common.prototype.update_datum
-	component_geolocation.prototype.change_value 			= component_common.prototype.change_value
+	component_geolocation.prototype.update_datum 		= component_common.prototype.update_datum
+	component_geolocation.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
-	component_geolocation.prototype.list 					= render_component_geolocation.prototype.list
-	component_geolocation.prototype.edit 					= render_component_geolocation.prototype.edit
+	component_geolocation.prototype.list 			= render_component_geolocation.prototype.list
+	component_geolocation.prototype.edit 			= render_component_geolocation.prototype.edit
 	component_geolocation.prototype.edit_in_list	= render_component_geolocation.prototype.edit
-	component_geolocation.prototype.search 				= render_component_geolocation.prototype.search
+	component_geolocation.prototype.search 			= render_component_geolocation.prototype.search
 	component_geolocation.prototype.change_mode 	= component_common.prototype.change_mode
 
 
@@ -81,19 +77,23 @@ component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
-	self.ar_tag_loaded 		= []
+	// self.ar_tag_loaded 	= []
 	self.ar_layer_loaded 	= []
 	self.map 				= null
 	self.layer_control		= false
 
+	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
+	// We need a temporary value for the all current values of the inputs (lat, lon, zoom, alt)
+	// to will be used for save it when the user clicks on the save button
+	this.current_value 		= []
 
 	//draw editor vars
-	self.draw_data 								= null
-	self.drawControl							= null
+	self.draw_data 					= null
+	self.drawControl				= null
 	self.draw_editor_is_initated 	= false
 	self.editable_FeatureGroup 		= null
-	self.ar_FeatureGroup 					= []
-	self.draw_state								= null
+	self.ar_FeatureGroup 			= []
+	self.draw_state					= null
 	self.current_editable_FeatureGroup_id
 
 
@@ -146,8 +146,15 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 		const field_zoom 	= value.zoom 	|| default_zoom
 		const field_alt 	= value.alt 	|| default_alt
 
-	// update teh current_value
+	// update the current_value with the data from DDBB
+	// current_value will be update with different changes to create change_data to save
 		self.current_value[key] = JSON.parse(JSON.stringify(self.data.value[key]))
+
+	// load all layers
+		self.ar_layer_loaded = typeof self.data.value[key].lib_data!=='undefined'
+			? JSON.parse(JSON.stringify(self.data.value[key].lib_data))
+			: []
+			console.log("ar_layers",self.ar_layer_loaded);
 
 	// map_data
 		const map_data = (typeof value!=="undefined")
@@ -165,10 +172,10 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 			 }
 
 	// new map vars
-		let arcgis 			= null
-		let osm  			= null
-		let dare 			= null
-		let base_maps 		= {}
+		let arcgis 		= null
+		let osm  		= null
+		let dare 		= null
+		let base_maps 	= {}
 
 
 	// Add layer to map
@@ -178,7 +185,6 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 				L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 					attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-					//attribution: '<a href="http://fmomo.org">Dedalo</a>',
 					maxZoom: 19
 				}).addTo(self.map);
 				break;
@@ -235,7 +241,38 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				//var cloudmade 	= new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png');
 				//var osm 		= new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
 				osm = new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-		        //var ggl 	= new L.Google();
+				// mapbox https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
+				// https://api.mapbox.com/styles/v1/mapbox/dark-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
+				// https://api.mapbox.com/styles/v1/mapbox/light-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
+				//// Provide your access token
+				// const accessToken =
+				//   'pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2l1ZDF3dHE5MDAxZDMwbjA0cTR3dG50eSJ9.63Xci-GKFikhAobboF0DVQ';
+				//
+				// // set mapbox tile layer
+				// const mapboxTiles1 = L.tileLayer(
+				//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
+				//   {
+				//     attribution:
+				//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+				//   }
+				// );
+				// const mapboxTiles2 = L.tileLayer(
+				//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
+				//   {
+				//     attribution:
+				//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+				//   }
+				// );
+				// const mapboxTiles3 = L.tileLayer(
+				//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
+				//   {
+				//     attribution:
+				//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+				//   }
+				// );
+
+
+			    //var ggl 	= new L.Google();
 				//var ggl2 	= new L.Google('TERRAIN');
 
 				// MAP
@@ -262,7 +299,6 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				//self.add_draw_edit_layer(map, tag_id);
 				break;
 		}//end switch(self.context.geo_provider)
-
 
 
 	// disable zoom handlers
@@ -358,7 +394,7 @@ component_geolocation.prototype.update_input_values = function(data, map_contain
 
 	const self = this
 
-	const key 	= map_container.dataset.key
+	const key = map_container.dataset.key
 	const li 	= map_container.parentNode
 
 	// inputs
@@ -376,7 +412,10 @@ component_geolocation.prototype.update_input_values = function(data, map_contain
 		data.alt = JSON.parse(input_alt.value)
 
 	//set the current value
-		self.current_value[key] = data
+		self.current_value[key].lat 	= data.lat
+		self.current_value[key].lon 	= data.lon
+		self.current_value[key].zoom 	= data.zoom
+		self.current_value[key].alt 	= data.alt
 
 		//self.node[data.key].dispatchEvent(new Event('change')); //Event('change',{ 'bubbles': true })
 
@@ -401,47 +440,72 @@ component_geolocation.prototype.refresh_map = function(map) {
 
 /**
 * LOAD_GEO_EDITOR
-* Load all data information of the current selected tag. Init the edditor if it is not loaded.
+* Load all data information of the current selected tag or Full database. Init the edditor if it is not loaded.
 * Carga los datos al pulsar sobre la etiqueta. Inicializa el editor de no estar ya inicializado
 */
-component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
+component_geolocation.prototype.load_geo_editor = function(options) {
 
 	const self = this
+	const load = options.load || 'full'
 
-	const tag = options.tag
+	switch(load) {
+		case ('full'):
+			const ar_layer 		= self.ar_layer_loaded
+			const ar_layer_len 	= ar_layer.length
+			for (let i = 0; i < ar_layer_len; i++) {
+				const layer = ar_layer[i]
+				self.load_layer(layer)
+			}
+		break;
+		case ('layer'):
+			const layer_id 		= options.layer_id
+			console.log("layer_id",layer_id);
+			const loaded_layer	= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
+			// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
+			// create new layer data with the new id and set to ar_layer_loaded
 
-	if (typeof all_tags==="undefined") {
-		all_tags = false
-	}
+			console.log(loaded_layer);
+			const layer = (typeof (loaded_layer) !== 'undefined')
+			? loaded_layer
+			: (function(){
+				const new_layer = {
+					layer_id 	: layer_id,
+					layer_data 	: [],
+				}
+				self.ar_layer_loaded.push(new_layer)
+				return new_layer
+			})()
+			self.load_layer(layer)
+		break;
+
+		default:
+		break;
+	}//end switch
+
+}// end load_geo_editor
 
 
-	// TAG : Get all information of the selected tag
-	const parts_of_tag = self.get_parts_of_tag(tag);
-
-	const layer_data 	= parts_of_tag.data
-	const layer_id 		= parts_of_tag.layer_id
-
-	const new_layer = {
-		layer_data 	: parts_of_tag.data,
-		layer_id 	: parts_of_tag.layer_id
-	};
-
-	self.ar_layer_loaded.push(new_layer)
 
 
+component_geolocation.prototype.load_layer = function(layer){
 
-	// ar_tag_loaded : store current tag
-		self.ar_tag_loaded[layer_id] = tag;
+		const self = this
 
+	// set the layer data
+		const layer_id		= layer.layer_id
+		const layer_data	= layer.layer_data
+		const layer_name	= 'layer_' +layer_id
+
+		console.log(layer_data);
+
+console.log("layer",self.ar_FeatureGroup[layer_id]===false);
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
 	if( self.map.hasLayer(self.ar_FeatureGroup[layer_id])===false ) {
 
-		if(!all_tags){
-			for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
-				if(self.ar_FeatureGroup[i]){
-					self.ar_FeatureGroup[i].clearLayers();
-					self.layer_control.removeLayer(self.ar_FeatureGroup[i])
-				}
+		for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
+			if(self.ar_FeatureGroup[i]){
+				self.ar_FeatureGroup[i].clearLayers();
+				self.layer_control.removeLayer(self.ar_FeatureGroup[i])
 			}
 		}
 
@@ -456,23 +520,22 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 		//if( !confirm("Discard changes?") ) return;
 		//remove all layers
 
-		if(!all_tags){
-			for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
-				if(self.ar_FeatureGroup[i]){
-					self.ar_FeatureGroup[i].clearLayers();
-					self.layer_control.removeLayer(self.ar_FeatureGroup[i])
-				}
+		for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
+			if(self.ar_FeatureGroup[i]){
+				self.ar_FeatureGroup[i].clearLayers();
+				self.layer_control.removeLayer(self.ar_FeatureGroup[i])
 			}
 		}
+
 		self.layer_control.addOverlay( self.ar_FeatureGroup[layer_id], layer_id);
 		// FEATUREGROUP RESET : Remove the all data layers for re-created with the new data that come with the loaded tag.
 		self.ar_FeatureGroup[layer_id].clearLayers();	//delete self.ar_FeatureGroup[layer_id];
 	}
 
-	// LAYERS : Load layers from tag data
+	// LAYERS : Load layers from data
 	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
 
-		L.geoJson( JSON.parse(layer_data), {
+		L.geoJson( layer_data, {
 			//For each Feature load all layer data of the tag
 	    	onEachFeature: function (feature, data_layer) {
 	    		if(data_layer){
@@ -537,13 +600,34 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 	// DRAW_EDITOR : Init draw editor and pass current FeatureGroup
 	self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
 
-	// OVERLAY : Lo añadimos al map ovelay (Adds an overlay (checkbox entry) with the given name to the control)
+	// OVERLAY : add current featrureGroup to map ovelay (Adds an overlay (checkbox entry) with the given name to the control)
 	//current_overlay = L.tileLayer(self.ar_FeatureGroup[layer_id]);
 	//L.control.layers({},{'current_overlay':current_overlay}).addTo(map);
 
-	// CURRENT_EDITABLE_FEATUREGROUP_ID : Fijamos como current editable el FeatureGroup actual
+	// CURRENT_EDITABLE_FEATUREGROUP_ID : Set the current featrure editable the actual FeatureGroup
 	self.current_editable_FeatureGroup_id = layer_id;
 }//end load_geo_editor
+
+
+/**
+* LOAD_TAG_INTO_GEO_EDITOR
+*/
+component_geolocation.prototype.load_tag_into_geo_editor = async function(options) {
+
+	const self = this
+	// convert the tag dataset to 'real' object for manage it
+	const ar_layer_id = JSON.parse(options.tag.dataset.data)
+
+	for (let i = 0; i < ar_layer_id.length; i++) {
+
+		self.load_geo_editor({
+			load 	 		: 'layer',
+			layer_id 	: parseInt(ar_layer_id[i])
+		})
+	}
+}// load_tag_into_geo_editor
+
+
 
 
 /**
@@ -566,13 +650,13 @@ component_geolocation.prototype.get_data_tag = function(){
 	})
 
 	const data_tag = {
-		type 			: 'geo',
-		tag_id 			: null,
-		state 			: 'n',
-		label 			: '',
-		data 			: '',
+		type 					: 'geo',
+		tag_id 				: null,
+		state 				: 'n',
+		label 				: '',
+		data 					: '',
 		last_layer_id	: last_layer_id+1,
-		layers 			: layers
+		layers 				: layers
 
 	}
 
@@ -634,7 +718,7 @@ component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
 	const tagState 		= tag_obj.dataset.state
 	const layer_id 		= tag_obj.dataset.tag_id
 	const dirty_data 	= tag_obj.dataset.data
-	const data 			= dirty_data.replace(/'/g, '"')
+	const data 				= dirty_data.replace(/'/g, '"')
 
 	// if the tag is empty we can't parse it.
 	const dato = (data) ? JSON.parse(data) : data
@@ -727,7 +811,7 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 component_geolocation.prototype.init_draw_editor = function( current_editable_FeatureGroup, capa_id ) {
 
 	const self = this
-	const map 								= self.map
+	const map 													= self.map
 	const draw_editor_is_initated 			= self.draw_editor_is_initated
 
 	self.current_editable_FeatureGroup_id 	= capa_id;
@@ -739,7 +823,6 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 			self.drawControl.remove(map)
 		}
 
-			console.log("map:",map);
 
 	// DRAW CONTROL ///////////////////////////////////////////////////
 	// El editor se inicaliza cada vez y recibe el FeatureGroup recién cargado como parámetro (ver https://github.com/Leaflet/Leaflet.draw/issues/66)
@@ -868,36 +951,37 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 
 
 /**
-* SAVE_DRAW_DATA
+* Deprecated old way
+* SAVE_DRAW_DATA to tag
 */
-component_geolocation.prototype.save_draw_data = function() {
-
-	const self = this
-
-	if(!self.draw_data) return false;
-
-	let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
-		if(SHOW_DEBUG===true) {
-			console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
-		}
-		current_draw_data = current_draw_data.replace(/"/g, '\'')
-
-
-	const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
-
-	const tag_data = {
-		type 			: tag_obj.dataset.type,
-		tag_id 			: tag_obj.dataset.tag_id,
-		id 				: tag_obj.id,
-		dataset			: {data:current_draw_data},
-		save 			: true
-	}
-
-	// UPDATE_TAG
-	event_manager.publish('geo_change_tag' +'_'+ self.tipo, tag_data)
-
-	return true
-};//end save_draw_data
+// component_geolocation.prototype.save_draw_data = function() {
+//
+// 	const self = this
+//
+// 	if(!self.draw_data) return false;
+//
+// 	let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
+// 		if(SHOW_DEBUG===true) {
+// 			console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
+// 		}
+// 		current_draw_data = current_draw_data.replace(/"/g, '\'')
+//
+//
+// 	const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
+//
+// 	const tag_data = {
+// 		type 			: tag_obj.dataset.type,
+// 		tag_id 			: tag_obj.dataset.tag_id,
+// 		id 				: tag_obj.id,
+// 		dataset			: {data:current_draw_data},
+// 		save 			: true
+// 	}
+//
+// 	// UPDATE_TAG
+// 	event_manager.publish('geo_change_tag' +'_'+ self.tipo, tag_data)
+//
+// 	return true
+// };//end save_draw_data
 
 
 
@@ -914,7 +998,7 @@ component_geolocation.prototype.update_draw_data = function() {
 
 	const layer_id					= self.current_editable_FeatureGroup_id
 
-	const current_layer 			= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
+	const current_layer 		= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 
 	// const current_layer				= self.ar_tag_loaded.find((item) => item.layer_id === layer_id)
 	current_layer.layer_data 		= project.toGeoJSON()

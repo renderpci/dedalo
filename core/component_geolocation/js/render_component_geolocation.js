@@ -152,8 +152,8 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 
 					const changed_data = Object.freeze({
 						action	: 'update',
-						key		: key,
-						value	: self.current_value[key],
+						key			: key,
+						value		: self.current_value[key],
 					})
 					self.change_value({
 						changed_data : changed_data,
@@ -503,5 +503,3 @@ const get_input_element_edit = (i, current_value, ul_container, self, is_inside_
 
 	return li
 }//end get_input_element_edit
-
-
