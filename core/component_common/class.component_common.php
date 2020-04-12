@@ -2322,6 +2322,7 @@ abstract class component_common extends common {
 		$propiedades = $this->get_propiedades();
 
 		if(isset($propiedades->source->config_context)){
+
 			$ar_target_section_tipo = [];
 			foreach ($propiedades->source->config_context as $current_item) {
 				if ($current_item->type!=='internal') continue;
@@ -2333,7 +2334,7 @@ abstract class component_common extends common {
 
 					# Resolve hierarchy_sections for speed
 						if (!empty($hierarchy_types)) {
-							$hierarchy_sections_from_types = component_autocomplete::add_hierarchy_sections_from_types($hierarchy_types);
+							$hierarchy_sections_from_types = component_portal::add_hierarchy_sections_from_types($hierarchy_types);
 
 							# Add hierarchy_sections_from_types
 							foreach ($hierarchy_sections_from_types as $current_section_tipo) {
@@ -2345,13 +2346,13 @@ abstract class component_common extends common {
 				}else{
 					$ar_target_section_tipo[] = $current_item->section_tipo;
 				}
-
 			}
 
 		}else{
 			$ar_target_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
 		}
 
+		// avoid array holes
 		$ar_target_section_tipo = array_values($ar_target_section_tipo);
 
 
@@ -4015,7 +4016,7 @@ abstract class component_common extends common {
 					# Resolve hierarchy_sections for speed
 						if (!empty($hierarchy_types)) {
 
-							$hierarchy_sections_from_types = component_autocomplete::add_hierarchy_sections_from_types($hierarchy_types);
+							$hierarchy_sections_from_types = component_portal::add_hierarchy_sections_from_types($hierarchy_types);
 
 							# Add hierarchy_sections_from_types
 							foreach ($hierarchy_sections_from_types as $current_section_tipo) {

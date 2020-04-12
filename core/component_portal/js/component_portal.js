@@ -9,14 +9,14 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
-	import {render_component_autocomplete} from '../../component_autocomplete/js/render_component_autocomplete.js'
+	import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
 
 
 
 /**
-* COMPONENT_AUTOCOMPLETE
+* COMPONENT_PORTAL
 */
-export const component_autocomplete = function(){
+export const component_portal = function(){
 
 	this.id
 
@@ -40,7 +40,7 @@ export const component_autocomplete = function(){
 	this.modal
 
 	return true
-}//end component_autocomplete
+}//end component_portal
 
 
 
@@ -50,36 +50,36 @@ export const component_autocomplete = function(){
 */
 // prototypes assign
 	// lifecycle
-	// component_autocomplete.prototype.init 			= component_common.prototype.init
-	// component_autocomplete.prototype.build 			= component_common.prototype.build
-	component_autocomplete.prototype.render				= common.prototype.render
-	component_autocomplete.prototype.refresh			= common.prototype.refresh
-	component_autocomplete.prototype.destroy			= common.prototype.destroy
+	// component_portal.prototype.init 				= component_common.prototype.init
+	// component_portal.prototype.build 			= component_common.prototype.build
+	component_portal.prototype.render				= common.prototype.render
+	component_portal.prototype.refresh				= common.prototype.refresh
+	component_portal.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_autocomplete.prototype.save 	 			= component_common.prototype.save
-	// component_autocomplete.prototype.load_data 		= component_common.prototype.load_data
-	// component_autocomplete.prototype.load_datum 		= component_common.prototype.load_datum
-	// component_autocomplete.prototype.get_value 		= component_common.prototype.get_value
-	// component_autocomplete.prototype.set_value 		= component_common.prototype.set_value
-	component_autocomplete.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_autocomplete.prototype.update_datum		= component_common.prototype.update_datum
-	component_autocomplete.prototype.change_value		= component_common.prototype.change_value
-	component_autocomplete.prototype.get_ar_instances	= component_common.prototype.get_ar_instances
+	component_portal.prototype.save 	 			= component_common.prototype.save
+	// component_portal.prototype.load_data 		= component_common.prototype.load_data
+	// component_portal.prototype.load_datum 		= component_common.prototype.load_datum
+	// component_portal.prototype.get_value 		= component_common.prototype.get_value
+	// component_portal.prototype.set_value 		= component_common.prototype.set_value
+	component_portal.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_portal.prototype.update_datum			= component_common.prototype.update_datum
+	component_portal.prototype.change_value			= component_common.prototype.change_value
+	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
 
 	// render
-	component_autocomplete.prototype.list				= render_component_autocomplete.prototype.list
-	component_autocomplete.prototype.edit				= render_component_autocomplete.prototype.edit
-	component_autocomplete.prototype.edit_in_list		= render_component_autocomplete.prototype.edit
-	component_autocomplete.prototype.change_mode		= component_common.prototype.change_mode
+	component_portal.prototype.list					= render_component_portal.prototype.list
+	component_portal.prototype.edit					= render_component_portal.prototype.edit
+	component_portal.prototype.edit_in_list			= render_component_portal.prototype.edit
+	component_portal.prototype.change_mode			= component_common.prototype.change_mode
 
 
 
 /**
 * INIT
 */
-component_autocomplete.prototype.init = async function(options) {
-
+component_portal.prototype.init = async function(options) {
+	
 	const self = this
 
 	// call the generic commom tool init
@@ -114,7 +114,7 @@ component_autocomplete.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_autocomplete.prototype.build  = async function(autoload=false){
+component_portal.prototype.build  = async function(autoload=false){
 	const t0 = performance.now()
 
 	const self = this
@@ -172,11 +172,11 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 			self.paginator.refresh()
 		}
 
-	// autocomplete destroy. change the autocomplete service to false and desactive it.
-		if(self.autocomplete_active===true){
-			self.autocomplete.destroy()
-			self.autocomplete_active = false
-			self.autocomplete 		 = null
+	// portal destroy. change the portal service to false and desactive it.
+		if(self.portal_active===true){
+			self.portal.destroy()
+			self.portal_active = false
+			self.portal 		 = null
 		}
 
 	// permissions. calculate and set (used by section records later)
@@ -185,7 +185,7 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 	// debug
 		if(SHOW_DEBUG===true) {
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			//console.log("component_autocomplete self +++++++++++ :",self);
+			//console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}
 
@@ -194,7 +194,7 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 
 
 	return true
-}//end component_autocomplete.prototype.build
+}//end component_portal.prototype.build
 
 
 
@@ -203,7 +203,7 @@ component_autocomplete.prototype.build  = async function(autoload=false){
 * @param object value (locator)
 * @return bool
 */
-component_autocomplete.prototype.add_value = async function(value) {
+component_portal.prototype.add_value = async function(value) {
 
 	const self = this
 
@@ -238,11 +238,11 @@ component_autocomplete.prototype.add_value = async function(value) {
 		// })
 		// .then(async (api_response)=>{
 
-		// 	// destroy. change the autocomplete service to false and desactive it.
-		// 		if(self.autocomplete_active===true){
-		// 			self.autocomplete.destroy()
-		// 			self.autocomplete_active = false
-		// 			self.autocomplete 		 = null
+		// 	// destroy. change the portal service to false and desactive it.
+		// 		if(self.portal_active===true){
+		// 			self.portal.destroy()
+		// 			self.portal_active = false
+		// 			self.portal 		 = null
 		// 		}
 
 		// 	// update pagination offset and total
@@ -276,7 +276,7 @@ component_autocomplete.prototype.add_value = async function(value) {
 /**
 * UPDATE_PAGINATION_VALUES
 */
-component_autocomplete.prototype.update_pagination_values = function() {
+component_portal.prototype.update_pagination_values = function() {
 
 	const self = this
 
@@ -300,7 +300,7 @@ component_autocomplete.prototype.update_pagination_values = function() {
 /**
 * GET_LAST_OFFSET
 */
-component_autocomplete.prototype.get_last_offset = function() {
+component_portal.prototype.get_last_offset = function() {
 	//console.log("[get_last_offset] self:",self);
 
 	const self = this
@@ -337,7 +337,7 @@ component_autocomplete.prototype.get_last_offset = function() {
 * @param object value (locator)
 * @return bool
 *//*
-component_autocomplete.prototype.remove_value = async function(target) {
+component_portal.prototype.remove_value = async function(target) {
 
 	const self = this
 
@@ -377,5 +377,3 @@ component_autocomplete.prototype.remove_value = async function(target) {
 	return js_promise
 }//end remove_value
 */
-
-

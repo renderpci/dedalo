@@ -13,13 +13,13 @@
 
 
 /**
-* RENDER_COMPONENT_AUTOCOMPLETE
+* RENDER_COMPONENT_portal
 * Manages the component's logic and apperance in client side
 */
-export const render_component_autocomplete = function() {
+export const render_component_portal = function() {
 
 	return true
-}//end render_component_autocomplete
+}//end render_component_portal
 
 
 
@@ -28,7 +28,7 @@ export const render_component_autocomplete = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_component_autocomplete.prototype.list = async function() {
+render_component_portal.prototype.list = async function() {
 
 	const self = this
 
@@ -71,15 +71,15 @@ render_component_autocomplete.prototype.list = async function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_component_autocomplete.prototype.edit = async function(options={render_level:'full'}) {
+render_component_portal.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
 	// render_level
 		const render_level = options.render_level
 
-	// reset service state autocomplete_active
-		self.autocomplete_active = false
+	// reset service state portal_active
+		self.portal_active = false
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -122,12 +122,12 @@ const add_events = function(self, wrapper) {
 		//)
 		//async function add_element(key) {
 		//	self.refresh()
-		//	// change the autocomplete service to false and desactive it.
+		//	// change the portal service to false and desactive it.
 		//
-		//	//if(self.autocomplete_active===true){
-		//	//	self.autocomplete.destroy()
-		//	//	self.autocomplete_active = false
-		//	//	self.autocomplete 		 = null
+		//	//if(self.portal_active===true){
+		//	//	self.portal.destroy()
+		//	//	self.portal_active = false
+		//	//	self.portal 		 = null
 		//	//}
 		//
 		//	//self.refresh();
@@ -188,11 +188,11 @@ const add_events = function(self, wrapper) {
 					})
 					.then(async (api_response)=>{
 
-						// service destroy. change the autocomplete service to false and desactive it.
-							if(self.autocomplete_active===true){
-								const destroyed = self.autocomplete.destroy()
-								self.autocomplete_active = false
-								self.autocomplete 		 = null
+						// service destroy. change the portal service to false and desactive it.
+							if(self.portal_active===true){
+								const destroyed = self.portal.destroy()
+								self.portal_active = false
+								self.portal 		 = null
 							}
 
 						// update pagination offset
@@ -210,15 +210,15 @@ const add_events = function(self, wrapper) {
 
 
 			// activate service. Enable the service_autocomplete when the user do click
-				if(self.autocomplete_active===false){
+				if(self.portal_active===false){
 
-					self.autocomplete = new service_autocomplete()
-					self.autocomplete.init({
+					self.portal = new service_autocomplete()
+					self.portal.init({
 						caller	: self,
 						wrapper : wrapper
 					})
-					self.autocomplete_active = true
-					self.autocomplete.search_input.focus()
+					self.portal_active = true
+					self.portal.search_input.focus()
 
 					return true
 				}
@@ -547,5 +547,3 @@ const input_element = async function(current_section_record, inputs_container){
 
 	return li
 }//end input_element
-
-

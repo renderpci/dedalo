@@ -1,10 +1,10 @@
 <?php
 /*
-* CLASS COMPONENT_AUTOCOMPLETE
+* CLASS component_portal
 *
 *
 */
-class component_autocomplete extends component_relation_common {
+class component_portal extends component_relation_common {
 
 
 	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
@@ -53,15 +53,15 @@ class component_autocomplete extends component_relation_common {
 
 	/**
 	* GET_PROPIEDADES
-	* @return
+	* @return object $properties
 	*/
 	public function get_propiedades() {
 
 		$properties = parent::get_propiedades();
 			#dump($properties, ' properties ++ '.to_string($this->tipo));
 
-		// component_autocomplete_hi compatibility
-		$real_model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
+		// component_portal_hi compatibility
+		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
 		if ($real_model==='component_autocomplete_hi') {
 			// convert from
 			// {
@@ -116,15 +116,15 @@ class component_autocomplete extends component_relation_common {
 			    "records_mode": "list"
 			}
 			');
-			#dump(json_decode($source_string), ' source_string ++ '.to_string($this->tipo));
+			// dump(json_decode($source_string), ' source_string ++ '.to_string($this->tipo));
 
 			$new_properties = new stdClass();
 				$new_properties->source 			= json_decode($source_string);
 				$new_properties->value_with_parents = isset($properties->value_with_parents) ? $properties->value_with_parents : false;
 				$new_properties->css  				= isset($properties->css) ? $properties->css : null;
-
+			
 			$properties = $new_properties;
-		}
+		}//end if ($real_model==='component_portal_hi')
 
 
 		return $properties;
@@ -197,12 +197,12 @@ class component_autocomplete extends component_relation_common {
 	* CREATE_NEW_AUTOCOMPLETE_RECORD
 	* Insert a new record on target section, set projects filter heritage, defaults and text ar_data
 	* Return locator object of new created section
-	* @param int $parent . section_id of current component_autocomplete
-	* @param string $tipo . tipo of current component_autocomplete
+	* @param int $parent . section_id of current component_portal
+	* @param string $tipo . tipo of current component_portal
 	* @param string $target_section_tipo . tipo of section on create the record
-	* @param string $section_tipo . section_tipo of current component_autocomplete
-	* @param object $ar_data . Object with all component_tipo => value of component_autocomplete value elements
-	* @return locator object. Locator of new created section to add in current component_autocomplete data
+	* @param string $section_tipo . section_tipo of current component_portal
+	* @param object $ar_data . Object with all component_tipo => value of component_portal value elements
+	* @return locator object. Locator of new created section to add in current component_portal data
 	*/
 	public static function create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data) {
 
@@ -253,8 +253,8 @@ class component_autocomplete extends component_relation_common {
 				$target_component_filter->Save();
 			}
 
-		// component_autocomplete
-			$component_autocomplete 	= component_common::get_instance('component_autocomplete',
+		// component_portal
+			$component_portal 	= component_common::get_instance('component_portal',
 																		  $tipo,
 																		  $section_id,
 																		  'edit',
@@ -262,7 +262,7 @@ class component_autocomplete extends component_relation_common {
 																		  $section_tipo);
 
 		// propiedades
-			$propiedades = $component_autocomplete->get_propiedades();
+			$propiedades = $component_portal->get_propiedades();
 			if (!empty($propiedades)) {
 
 				if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
@@ -503,7 +503,7 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
-		# Activity case (in transition from component_autocomplete_ts to component_autocomplete_hi)
+		# Activity case (in transition from component_portal_ts to component_portal_hi)
 		# Current stored data is in format: "dd546": {"dato": {"lg-nolan": "dd242"}} bypassing the component in write
     	# file rows_activity.phtml parses current value to label in current lang
 		#if ($tipo==='dd545' || $tipo==='dd546') {
@@ -680,7 +680,7 @@ class component_autocomplete extends component_relation_common {
 
 		$hierarchy_sections_from_types = [];
 		foreach ((array)$hierarchy_types as $current_type) {
-			$sections_from_types = component_autocomplete::get_hierarchy_sections_from_types( $current_type );
+			$sections_from_types = component_portal::get_hierarchy_sections_from_types( $current_type );
 			$hierarchy_sections_from_types = array_merge($hierarchy_sections_from_types, $sections_from_types);
 		}
 
@@ -974,5 +974,3 @@ class component_autocomplete extends component_relation_common {
 
 
 }//end class
-
-

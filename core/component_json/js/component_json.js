@@ -58,6 +58,7 @@ export const component_json = function(){
 	component_json.prototype.list 				= render_component_json.prototype.list
 	component_json.prototype.edit 				= render_component_json.prototype.edit
 	component_json.prototype.edit_in_list		= render_component_json.prototype.edit
+	component_json.prototype.tm					= render_component_json.prototype.edit
 	// component_json.prototype.search 			= render_component_json.prototype.search
 	component_json.prototype.change_mode 		= component_common.prototype.change_mode
 

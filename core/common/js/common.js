@@ -42,7 +42,7 @@ common.prototype.build = async function(){
 
 
 	return true
-}//end component_autocomplete.prototype.build
+}//end common.prototype.build
 
 
 
@@ -525,5 +525,3 @@ common.prototype.load_script = async function(src) {
 
 	// 	return tool_instance
 // }//end load_tool
-
-
