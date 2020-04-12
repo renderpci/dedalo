@@ -110,13 +110,13 @@ component_image.prototype.get_data_tag = function(){
 
 	const lib_data 		= self.get_lib_data()
 	const last_layer_id = self.get_last_layer_id()
-	
+
 	const layers 		= lib_data.map((item) => {
 		const layer = {
-			layer_id 			: item.layer_id, 
-			user_layer_name 	: item.user_layer_name		
+			layer_id 			: item.layer_id,
+			user_layer_name 	: item.user_layer_name
 		}
-		return layer 
+		return layer
 	})
 
 	const data_tag = {
@@ -142,8 +142,8 @@ component_image.prototype.get_lib_data = function(){
 
 	const self = this
 
-	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
-		? self.data.value[0].lib_data 
+	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
+		? self.data.value[0].lib_data
 		: [{
 				layer_id 		: 1,
 				layer_data 		: [],
@@ -167,7 +167,7 @@ component_image.prototype.get_last_layer_id = function(){
 	const lib_data 		= self.get_lib_data()
 	const ar_layer_id 	= lib_data.map((item) => item.layer_id)
 	const last_layer_id = Math.max(...ar_layer_id)
-	
+
 	return last_layer_id
 }//end get_last_layer_id
 
@@ -192,8 +192,8 @@ component_image.prototype.load_vector_editor = async function(options) {
 	}
 	//load all layers if the data is empty it create the frist layer
 	if(self.ar_layer_loaded.length < 1){
-		self.ar_layer_loaded = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
-			? self.data.value[0].lib_data 
+		self.ar_layer_loaded = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
+			? self.data.value[0].lib_data
 			: [{
 					layer_id 	:0,
 					layer_data 	:[]
@@ -203,8 +203,8 @@ component_image.prototype.load_vector_editor = async function(options) {
 	switch(load) {
 		case ('full'):
 			const ar_layer = self.ar_layer_loaded
-			// typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined' 
-			// 	? self.data.value[0].lib_data 
+			// typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
+			// 	? self.data.value[0].lib_data
 			// 	: [{
 			// 		layer_id 	:0,
 			// 		layer_data 	:[]
@@ -222,7 +222,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 			// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
 			// create new layer data with the new id and set to ar_layer_loaded
 			const layer = (typeof (loaded_layer) !== 'undefined')
-			? loaded_layer 
+			? loaded_layer
 			: (function(){
 				const new_layer = {
 					layer_id 	: layer_id,
@@ -236,7 +236,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 		default:
 		break;
-	}//end switch		
+	}//end switch
 
 }//end load_vector_editor
 
@@ -258,7 +258,7 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 			layer_id : parseInt(ar_layer_id[i])
 		})
 	}
-	
+
 
 	//TAG WAY
 
@@ -279,7 +279,7 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 			// const layer_id 	= tag.tag_id +'_layer';
 			// self.vector_editor.load_layer(self, data, layer_id)
 
-	
+
 }// load_tag_into_vector_editor
 
 
@@ -298,7 +298,7 @@ component_image.prototype.add_layer = function(){
 			load 	 : 'layer',
 			layer_id : layer_id
 		})
-	
+
 	return layer_id
 }//end get_last_layer_id
 
@@ -319,7 +319,7 @@ component_image.prototype.delete_layer = function(layer) {
 		? JSON.parse(JSON.stringify(self.data.value[0]))
 		: {}
 		  value.lib_data 		= self.ar_layer_loaded
-		
+
 
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
@@ -356,7 +356,7 @@ component_image.prototype.update_draw_data = function() {
 	const value 				=  typeof (self.data.value[0]) !== 'undefined'
 		? JSON.parse(JSON.stringify(self.data.value[0]))
 		: {}
-	value.lib_data 			= self.ar_layer_loaded	
+	value.lib_data 			= self.ar_layer_loaded
 	value.svg_file_data		= project.exportSVG({asString:true,embedImages:false})
 
 	// set the changed_data for update the component data and send it to the server for change when save
@@ -368,7 +368,7 @@ component_image.prototype.update_draw_data = function() {
 	// set the change_data to the instance
 		self.data.changed_data = changed_data
 
-		
+
 	// tag save OLD
 		// const tag_id 		= project.activeLayer.name.replace('_layer','')
 		// const current_tag	= self.ar_tag_loaded.find((item) => item.tag_id === tag_id)
@@ -385,14 +385,14 @@ component_image.prototype.update_draw_data = function() {
 
 /**
 * OLD_WAY TAG
-* SAVE_DRAW_DATA 
+* SAVE_DRAW_DATA
 */
 // component_image.prototype.save_draw_data = function() {
 
 // 	const self = this
 
 // 	const ar_tag		= self.ar_tag_loaded
-// 	const ar_tag_len	= ar_tag.length 
+// 	const ar_tag_len	= ar_tag.length
 
 // 	for (let i = ar_tag_len- 1; i >= 0; i--) {
 // 		const current_tag = ar_tag[i]
@@ -402,11 +402,9 @@ component_image.prototype.update_draw_data = function() {
 // 			current_tag.save = true
 // 			event_manager.publish('draw_change_tag' +'_'+ self.tipo, current_tag)
 // 		}
-// 			console.log("tag_data:",current_tag); 
+// 			console.log("tag_data:",current_tag);
 // 	}
 
-	
+
 // 	return true
 // };//end save_draw_data
-
-

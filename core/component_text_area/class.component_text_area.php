@@ -2614,10 +2614,8 @@ class component_text_area extends component_common {
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
-			
-			case '6.0.0':
 
-					dump($dato_unchanged, ' dato_unchanged +---------------+ '.to_string());
+			case '6.0.0':
 				if (!empty($dato_unchanged) && !is_array($dato_unchanged)) {
 
 					/* 	Change the dato to array from string
@@ -2633,13 +2631,13 @@ class component_text_area extends component_common {
 
 					$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($options->tipo, false, true);
 					foreach ($ar_realated_tipo as $current_tipo) {
-						
-						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);					
+
+						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						switch (true) {
 							case $model === 'component_image':
 
 								$lib_data = [];
-								
+
 								// create the component relation for save the layers
 								$image_component = component_common::get_instance($model,
 																				 $current_tipo,
@@ -2653,10 +2651,11 @@ class component_text_area extends component_common {
 									$raster_layer = new stdClass();
 										$raster_layer->layer_id 		= 0;
 										$raster_layer->user_layer_name 	= 'raster';
+										$raster_layer->layer_data 		= [];
 
 									$lib_data[] = $raster_layer;
 								}else{
-									$lib_data[] = $image_dato[0]->lib_data;
+									$lib_data = $image_dato[0]->lib_data;
 								}
 
 								$ar_draw_tags = NULL;
@@ -2665,28 +2664,30 @@ class component_text_area extends component_common {
 
 								# Search math patern tags
 								preg_match_all($pattern,  $dato, $ar_draw_tags, PREG_PATTERN_ORDER);
-								
+
 								if(empty($ar_draw_tags)){
 									continue 2;
-								} 
+								}
 
 								// Array result key 7 is the layer into the data stored in the result of the preg_match_all
 								// The layer data inside the tag are with ' and is necessary change to "
-								
-								foreach ($ar_draw_tags as $current_layer) {
-									$new_lib_data = new stdClass();
-										$new_lib_data->layer_id 	= $current_layer[4];
-										$new_lib_data->layer_data 	= json_decode( str_replace("'", "\"", $current_layer[7]) );
-									$layer_key = array_filter($lib_data, function($layer_item, $layer_key){
-										if($layer_item->layer_id === $current_layer[4]){
+
+								foreach ($ar_draw_tags[4] as $match_key => $layer_id) {
+									$layer_id = (int)$layer_id;
+									$tag_data = new stdClass();
+										$tag_data->layer_id 		= $layer_id;
+										$tag_data->user_layer_name 	= 'layer_'.$layer_id;
+										$tag_data->layer_data 		= json_decode( str_replace('\'', '"', $ar_draw_tags[7][$match_key]) );
+									$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
+										if(isset($layer_item->layer_id) && $layer_item->layer_id === $layer_id){
 											return $layer_key;
 										}
 									},ARRAY_FILTER_USE_BOTH);
-									if(empty($layer_key[0])){
-										$lib_data[] = $new_lib_data;
+									if(empty($ar_layer_key[0])){
+										$lib_data[] = $tag_data;
 									}else{
-										$lib_data[$layer_key[0]] = $new_lib_data;
-									}							
+										$lib_data[$ar_layer_key[0]] = $tag_data;
+									}
 								}
 
 								$image_dato[0]->lib_data = $lib_data;
@@ -2698,45 +2699,68 @@ class component_text_area extends component_common {
 								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
 								break;
 
-							// case $model === 'component_geolocation':
+							case $model === 'component_geolocation':
 
-							// 	$lib_data = [];
-								
-							// 	// create the component relation for save the layers
-							// 	$geo_component = component_common::get_instance($model,
-							// 													 $current_tipo,
-							// 													 $options->section_id,
-							// 													 'edit',
-							// 													 DEDALO_DATA_NOLAN,
-							// 													 $options->section_tipo);
-							// 	$geo_dato = $geo_component->get_dato();
+								$lib_data = [];
 
-							// 	if(empty($geo_dato[0]->lib_data)){
-							// 		$raster_layer = new stdClass();
-							// 			$raster_layer->layer_id 		= 0;
-							// 			$raster_layer->user_layer_name 	= 'raster';
+								// create the component relation for save the layers
+								$geo_component = component_common::get_instance($model,
+																				 $current_tipo,
+																				 $options->section_id,
+																				 'edit',
+																				 DEDALO_DATA_NOLAN,
+																				 $options->section_tipo);
+								$geo_dato = $geo_component->get_dato();
 
-							// 		$lib_data[] = $raster_layer;
-							// 	}else{
-							// 		$lib_data[] = $geo_dato[0]->lib_data;
-							// 	}
+								if(!empty($geo_dato[0]->lib_data)){
+									$lib_data = $geo_dato[0]->lib_data;
+								}
 
-							// 	$ar_geo_tags = NULL;
-							// 	//get the draw pattern
-							// 	$pattern = TR::get_mark_pattern($mark='geo',$standalone=true);
+								$ar_geo_tags = NULL;
+								//get the geo pattern
+								$pattern = TR::get_mark_pattern($mark='geo',$standalone=true);
 
-							// 	# Search math patern tags
-							// 	preg_match_all($pattern,  $dato, $ar_geo_tags, PREG_PATTERN_ORDER);
-								
-							// 	if(empty($ar_geo_tags)){
-							// 		continue 2;
-							// 	} 
-							// 	break;
-						}	
+								# Search math patern tags
+								preg_match_all($pattern,  $dato, $ar_geo_tags, PREG_PATTERN_ORDER);
+
+								if(empty($ar_geo_tags)){
+									continue 2;
+								}
+
+								// Array result key 7 is the layer into the data stored in the result of the preg_match_all
+								// The layer data inside the tag are with ' and is necessary change to "
+
+								foreach ($ar_geo_tags[4] as $match_key => $layer_id) {
+									$layer_id = (int)$layer_id;
+									$tag_data = new stdClass();
+										$tag_data->layer_id 	= $layer_id;
+										$tag_data->layer_data 	= json_decode( str_replace('\'', '"', $ar_geo_tags[7][$match_key]) );
+									$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
+										if(isset($layer_item->layer_id) && $layer_item->layer_id === $layer_id){
+											return $layer_key;
+										}
+									},ARRAY_FILTER_USE_BOTH);
+									if(empty($ar_layer_key[0])){
+										$lib_data[] = $tag_data;
+									}else{
+										$lib_data[$ar_layer_key[0]] = $tag_data;
+									}
+								}
+
+								$geo_dato[0]->lib_data = $lib_data;
+
+								$geo_component->set_dato($geo_dato);
+								$geo_component->save();
+
+
+								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
+
+								break;
+						}
 					}
-					
+
 					// fix final dato with new format as array
-						$new_dato = [$dato];					
+						$new_dato = [$dato];
 
 					$response = new stdClass();
 						$response->result = 1;

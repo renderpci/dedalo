@@ -41,9 +41,9 @@ vector_editor.prototype.init_canvas = async function(self) {
 	// fix image size
 		self.img_height	= img.height
 		self.img_width	= img.width
-	
+
 	// fix image source (URI)
-		// we need the uri of the image inside svg, 
+		// we need the uri of the image inside svg,
 		// for select the attribute is necesary use the namespace of the attribute
 		// xlink:href ; namespace for xlink = http://www.w3.org/1999/xlink, atribute href
 		self.img_src 	= image.getAttributeNS('http://www.w3.org/1999/xlink','href')
@@ -163,12 +163,12 @@ vector_editor.prototype.init_canvas = async function(self) {
 			const ratio = fullscreen_state === true
 				? (self.current_paper.view.size._height / self.canvas_height) * 0.8
 				: 1
-			
+
 			// set the new scale ratio to paper view
 			self.current_paper.view.setScaling(ratio)
 
 			// move the scene to the center of the canvas
-			const delta_x =  self.canvas_width /2 
+			const delta_x =  self.canvas_width /2
 			const delta_y =  self.canvas_height /2
 			self.current_paper.view.setCenter(delta_x, delta_y)
 
@@ -231,7 +231,7 @@ vector_editor.prototype.init_tools = function(self){
 			}
 			this.rectangle.onMouseUp = (event) => {
 				if(project.activeLayer.name === 'raster' || project.activeLayer.name==='main') return;
-				// update the instance with the new layer information, prepared to save 
+				// update the instance with the new layer information, prepared to save
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
 			}
@@ -257,14 +257,14 @@ vector_editor.prototype.init_tools = function(self){
 					radius 		: radio_delta.length,
 					fillColor 	: this.active_fill_color,
 					strokeColor : 'black'
-				})			
+				})
 
 				// Remove this path on the next drag event:
 				circle_path.removeOnDrag()
 			}
 			this.circle.onMouseUp = (event) => {
 				if(project.activeLayer.name === 'raster' || project.activeLayer.name==='main') return;
-				// update the instance with the new layer information, prepared to save 
+				// update the instance with the new layer information, prepared to save
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
 			}
@@ -403,7 +403,7 @@ vector_editor.prototype.init_tools = function(self){
 				}
 			}
 			this.pointer.onMouseUp = (event) => {
-				// update the instance with the new layer information, prepared to save 
+				// update the instance with the new layer information, prepared to save
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
 			}
@@ -465,7 +465,7 @@ vector_editor.prototype.init_tools = function(self){
 			this.transform.onMouseDrag = (event) => {
 				// if we select main layer or other forbiden paths, desactive the drag
 				if (this.path === null || this.path.data.state === null)return
-				if (this.path.data.state === 'scale'){					
+				if (this.path.data.state === 'scale'){
 					 // scale by distance from down point
 					const bounds = this.path.data.bounds;
 					// get the scale from current bounds center to the original bounds center
@@ -478,7 +478,7 @@ vector_editor.prototype.init_tools = function(self){
 					this.path.bounds 	= new_bounds;
 
 					return;
-				}else if(this.path.data.state === 'rotate'){					
+				}else if(this.path.data.state === 'rotate'){
 					// the last two points.
 					const center 	= this.path.bounds.center;
 					const base 		= new self.current_paper.Point(center.x - event.lastPoint.x, center.y - event.lastPoint.y)
@@ -486,16 +486,16 @@ vector_editor.prototype.init_tools = function(self){
 
 					const angle 	= actual.angle - base.angle
 					this.path.rotation = angle;
-				
+
 					return;
-				}else if (this.path.data.state === 'move'){					
+				}else if (this.path.data.state === 'move'){
 					this.path.position.x += event.delta.x;
 					this.path.position.y += event.delta.y;
-					
+
 				}
 			}
 			this.transform.onMouseUp = (event) => {
-				// update the instance with the new layer information, prepared to save 
+				// update the instance with the new layer information, prepared to save
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
 			}
@@ -644,7 +644,7 @@ vector_editor.prototype.init_tools = function(self){
 			}
 			this.vector.onMouseUp = (event) => {
 				if(project.activeLayer.name === 'raster' || project.activeLayer.name==='main') return;
-				// update the instance with the new layer information, prepared to save 
+				// update the instance with the new layer information, prepared to save
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
 			}
@@ -806,14 +806,14 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					activate_status(zoom)
 				})
 				zoom.addEventListener("dblclick", (e) =>{
-						
+
 					const ratio = self.node[0].classList.contains('fullscreen')
 						? (self.canvas_node.clientHeight  / self.canvas_height) * 0.8
 						: 1
 							console.log("ratio:",ratio);
 						self.current_paper.view.setScaling(ratio)
 
-						const delta_x =  self.canvas_width /2 
+						const delta_x =  self.canvas_width /2
 						const delta_y =  self.canvas_height /2
 						self.current_paper.view.setCenter(delta_x, delta_y)
 
@@ -835,7 +835,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					activate_status(move)
 				})
 				move.addEventListener("dblclick", (e) =>{
-					const delta_x =  self.canvas_width /2 
+					const delta_x =  self.canvas_width /2
 					const delta_y =  self.canvas_height /2
 					self.current_paper.view.setCenter(delta_x, delta_y)
 				})
@@ -850,7 +850,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 				save.addEventListener("mouseup", (e) =>{
 					self.node[0].classList.remove('fullscreen')
 					event_manager.publish('full_screen_'+self.id, false)
-					// update the instance with the new layer information, prepared to save 
+					// update the instance with the new layer information, prepared to save
 					self.update_draw_data()
 					// save all data layers
 					self.change_value({
@@ -919,7 +919,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 					}
 					this.active_fill_color = new self.current_paper.Color(color.hex8String)
 					this.button_color_picker.style.backgroundColor = color.hexString
-					// update the instance with the new layer information, prepared to save 
+					// update the instance with the new layer information, prepared to save
 					// (but is not saved directly, the user need click in the save button)
 					self.update_draw_data()
 					// event_manager.publish('color_change_'+this.active_layer.data.layer_id, color.hex8String)
@@ -1008,8 +1008,12 @@ vector_editor.prototype.load_layer = function(self, layer) {
 
 			current_layer.selectedColor = layer_color;
 			current_layer.selectedColor.alpha = 1
+			// set the id of Dédalo data
+			current_layer.data.layer_id 		= layer_id
+			// set the user layer name to default layer_name (layer_2)
+			current_layer.data.user_layer_name 	= layer_name
 			current_layer.activate();
-
+			console.log("-> layer import: ", layer_name);
 
 		}else{
 			let create_new_current_layer = true
@@ -1050,6 +1054,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		};// end else
 
 		this.active_layer = project.activeLayer
+		console.log("active_layer",this.active_layer)
 		event_manager.publish('active_layer_'+self.id, this.active_layer)
 
 		// set the visibility of the layer
@@ -1212,7 +1217,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 			// prevent the selection of the raster layer
 			// (it can't be selected and used in the same form that other layers)
 				if(layer.layer_id===0)return
-				
+
 			// get the paper layer name
 			const name = 'layer_'+layer.layer_id
 			const new_active_layer = project.layers[name]
@@ -1312,11 +1317,11 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
 				const viewed_layer = project.layers[name]
 				viewed_layer.data.user_layer_name = user_layer_name.innerText
-				// update the data into the instance, prepared to save 
+				// update the data into the instance, prepared to save
 				// (but is not saved directly, the user need click in the save button)
 				self.update_draw_data()
 			})
-			// if the user press return key = 13, we blur the text box 
+			// if the user press return key = 13, we blur the text box
 			user_layer_name.addEventListener("keydown", (e) =>{
 				if(e.keyCode === 13) user_layer_name.blur()
 			})
@@ -1357,14 +1362,14 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 				self.events_tokens.push( event )
 				function user_option(user_option) {
 					// success, any other option will be ignored
-					if(user_option===1){	
-						// get the layer in paper, we change the name if the layer is the raster layer					
+					if(user_option===1){
+						// get the layer in paper, we change the name if the layer is the raster layer
 						const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
 						const delete_layer = project.layers[name]
 						// remove the layer in paper project
 						delete_layer.remove()
 
-						//check if the user want remove transformations in raster or remove path layer	
+						//check if the user want remove transformations in raster or remove path layer
 						if(layer.layer_id === 0){
 							// create new empty raster layer
 							const new_raster_layer	= {
@@ -1375,7 +1380,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 							self.vector_editor.load_layer(self, new_raster_layer)
 							// active the raster layer in the project
 							project.layers['raster'].activate()
-							// update the instance with the new layer information, prepared to save 
+							// update the instance with the new layer information, prepared to save
 							// (but is not saved directly, the user need click in the save button)
 							self.update_draw_data()
 
