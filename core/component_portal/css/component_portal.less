@@ -8,10 +8,10 @@
 
 /* WRAP DIV CONTAINER
 --------------------------------------------- */
-.css_wrap_autocomplete {
+.css_wrap_component_portal {
 	//background-color: @color_orange !important;
 	}
-	.css_wrap_autocomplete > .content_data {
+	.css_wrap_component_portal > .content_data {
 		
 	}
 
@@ -19,7 +19,7 @@
 
 	/* BUTTONS_AND_FIELDS
 	--------------------------------------------- */
-	.css_wrap_autocomplete .buttons_and_fields {
+	.css_wrap_component_portal .buttons_and_fields {
 		/*
 		//background-color: #FDE853;
 		display: block;
@@ -43,18 +43,18 @@
 		display: none;
 		}
 		// In search mode
-			.css_wrap_autocomplete.wrap_component_search .buttons_and_fields {
+			.css_wrap_component_portal.wrap_component_search .buttons_and_fields {
 				display: block;
 				background-color: transparent;
 				top: 0.4em;
 				right: -0.6em;
 			}
-			.css_wrap_autocomplete.wrap_component_search .buttons_and_fields .new_autocomplete, .css_wrap_autocomplete.wrap_component_search .buttons_and_fields .edit_autocomplete {
+			.css_wrap_component_portal.wrap_component_search .buttons_and_fields .new_component_portal, .css_wrap_component_portal.wrap_component_search .buttons_and_fields .edit_component_portal {
 				display: none
 			}
 
 		// BTN DELETE 
-		.css_autocomplete_button_delete {
+		.css_component_portal_button_delete {
 			position: relative;
 			top: 0px;
 			margin-right: 5px;
@@ -63,13 +63,13 @@
 			min-width: 15px;
 		}
 		// BTN EDIT SECTION
-		.edit_autocomplete {
+		.edit_component_portal {
 			background-position: 0 -72px;
 			opacity: 0.3;
 			margin-left: 3px;
 		}
 		// BTN EDIT ROW
-		.edit_autocomplete_row {
+		.edit_component_portal_row {
 			//top: 1px;
 		    //left: 5px;
 
@@ -84,7 +84,7 @@
 			margin-left: 5px;
 		}
 		// BTN NEW
-		.new_autocomplete {	
+		.new_component_portal {	
 			background-position: 0 -96px;
 			opacity: 0.3;
 			margin-left: 3px;
@@ -95,7 +95,7 @@
 
 	/* VALOR TEXT
 	--------------------------------------------- */
-	ul.css_autocomplete_valor {
+	ul.css_component_portal_valor {
 		display: inline-block;
 		color: #1a1a1a;
 		padding: 3px;
@@ -104,23 +104,23 @@
 		width: 100%;
 
 		}
-		ul.css_autocomplete_valor.in_search_mode {
+		ul.css_component_portal_valor.in_search_mode {
 			width: 100%;
 			padding-top: 10px;
 		}
-		ul.css_autocomplete_valor > li {
+		ul.css_component_portal_valor > li {
 			display: flex;
 			//max-width: 95%;
 		}
-		ul.css_autocomplete_valor.in_search_mode {
+		ul.css_component_portal_valor.in_search_mode {
 			//float: left;
 		}
-		ul.css_autocomplete_valor.in_search_mode > li {
+		ul.css_component_portal_valor.in_search_mode > li {
 			display: block;
 			max-width: 100%;
 		}
 
-	ul.css_autocomplete_valor_edit_in_list {
+	ul.css_component_portal_valor_edit_in_list {
 		display: inline-block;
 		width: 45%;
 	}
@@ -129,11 +129,11 @@
 
 	/* THESAURUS CONTEXT
 	--------------------------------------------- */
-		.data_container .css_wrap_autocomplete .buttons_and_fields {
+		.data_container .css_wrap_component_portal .buttons_and_fields {
 			visibility: hidden;
 			display: none !important;
 		}
-		.data_container .css_wrap_autocomplete .css_autocomplete_button_delete {
+		.data_container .css_wrap_component_portal .css_component_portal_button_delete {
 			visibility: hidden;
 			display: none !important;
 		}
@@ -142,13 +142,13 @@
 
 	/* DATO HIDDEN INPUT
 	----------------------------------------- */
-	input.css_autocomplete_dato_hidden {
+	input.css_component_portal_dato_hidden {
 		opacity: 0.8;
 		display: none;
 		width:100%;
 		background-color: #c3e6f7;
 		}
-		input.css_autocomplete_dato_hidden.debug {
+		input.css_component_portal_dato_hidden.debug {
 			display: inline-block;
 			width: 290px;
 			margin-top: 2px;
@@ -158,9 +158,9 @@
 
 
 
-	/* autocomplete_semantic_nodes
+	/* component_portal_semantic_nodes
 	---------------------------------------- */
-		.autocomplete_semantic_nodes {
+		.component_portal_semantic_nodes {
 			background-color: rgba(232, 232, 232, 0.81);
 			border-radius: 4px;
 			margin: 3px;
@@ -174,7 +174,7 @@
 
 
 
-	.css_autocomplete_ul_edit_in_portal {
+	.css_component_portal_ul_edit_in_portal {
 		display: inline-block;
 		width: 16px;
 		height: 16px;
@@ -190,7 +190,7 @@
 	    filter: brightness(0%);
 		    opacity: 0.4;
 		}
-		.css_autocomplete_ul_edit_in_portal:hover {
+		.css_component_portal_ul_edit_in_portal:hover {
 			-webkit-filter: hue-rotate(150deg) brightness(100%) saturate(2);	
 			filter: hue-rotate(150deg) brightness(100%) saturate(2);
 			cursor: pointer;
@@ -199,7 +199,7 @@
 
 	
 
-	.css_autocomplete_button_close {
+	.css_component_portal_button_close {
 		display: inline-block;
 		width: 16px;
 		height: 16px;
@@ -210,7 +210,7 @@
 		filter: brightness(0%);
 		opacity: 0.4;
 		}
-		.css_autocomplete_button_close:hover {
+		.css_component_portal_button_close:hover {
 			-webkit-filter: brightness(100%);
 			filter:brightness(100%); 
 			cursor: pointer;
@@ -221,11 +221,11 @@
 
 	/* wrap_portal_list
 	---------------------------------------- */
-		.css_wrap_autocomplete.wrap_portal_list > .content_data {
+		.css_wrap_component_portal.wrap_portal_list > .content_data {
 			width: 100%;
 			padding: 3px;
 			}
-			.css_wrap_autocomplete.wrap_portal_list > .content_data .css_autocomplete_search_field {
+			.css_wrap_component_portal.wrap_portal_list > .content_data .css_component_portal_search_field {
 				//width: 75%;
 				background-position-x: 90%;
 				//right:0px;
@@ -233,7 +233,7 @@
 				max-width: 82px;
 				z-index: 9;
 			}
-		.css_wrap_autocomplete.wrap_portal_list >.content_data > input.css_autocomplete_search_field:focus {
+		.css_wrap_component_portal.wrap_portal_list >.content_data > input.css_component_portal_search_field:focus {
 			background-position-x: 98%;
 		}
 
@@ -242,7 +242,7 @@
 	
 
 	// button options to show/hide the options custom position
-		.css_wrap_autocomplete .autocomplete_list_button_options {
+		.css_wrap_component_portal .component_portal_list_button_options {
 			top: -1px;
 			right: 1px;
 		}
@@ -293,10 +293,10 @@
 
 
 
-	/* COMPONENT_AUTOCOMPLETE_NEW_ELEMENT. 
+	/* COMPONENT_component_portal_NEW_ELEMENT. 
 		Container where components for make new record are loaded
 	------------------------------------------------------------ */
-		.component_autocomplete_new_element {
+		.component_component_portal_new_element {
 			width: 100%;
 			display: table;
 			//margin-top: 15px;		
@@ -306,7 +306,7 @@
 			//border-radius: 3px;
 			border-bottom: 0.5px solid #ccc;
 
-			input.css_autocomplete_search_field {
+			input.css_component_portal_search_field {
 				width: initial;
 			}
 
@@ -314,7 +314,7 @@
 				cursor: pointer;
 			}
 
-			.new_autocomplete {
+			.new_component_portal {
 				display: none;
 			}
 		}
@@ -332,7 +332,7 @@
 
 	/* UL LI DATAFRAME
 	------------------------------------------------------- */
-	.css_wrap_autocomplete .content_data ul > li {
+	.css_wrap_component_portal .content_data ul > li {
 		//display: flex;
 
 		.dataframe_container{

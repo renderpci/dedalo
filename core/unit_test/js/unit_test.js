@@ -217,7 +217,7 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 		new_value_params: []
 	})
 
-	var model = 'component_autocomplete',
+	var model = 'component_portal',
 		tipo  = 'test153'
 	options.push({
 		model 			: model,
@@ -691,5 +691,3 @@ import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
 	// mocha.setup({ignoreLeaks: true});
 	mocha.checkLeaks(false)
 	mocha.run();
-
-

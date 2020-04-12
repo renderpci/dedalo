@@ -15,20 +15,18 @@
 
 
 
+// hilite (on focus)
+	.hilite(@outline_offset:0) {
+		outline-offset: @outline_offset;
+		outline: 1px solid @color_hilite;
+		box-shadow: 0 0 10px @color_hilite; //rgba(26, 154, 245, .5);
+		opacity: 1;
+		z-index: 1;
 
-
-	// hilite (on focus)
-		.hilite(@outline_offset:0) {
-			outline-offset: @outline_offset;
-			outline: 1px solid @color_hilite;
-			box-shadow: 0 0 10px @color_hilite; //rgba(26, 154, 245, .5);
-			opacity: 1;
-			z-index: 1;
-
-			&.input_value {
-				padding-right: 2em;
-			}
+		&.input_value {
+			padding-right: 2em;
 		}
+	}
 
 
 
@@ -1996,11 +1994,13 @@
 		}
 
 		>.content_data {
-			//.centered;
-			position: absolute;
-			left: 50%;
-			top: 32%;
-			transform: translate(-50%);
+			// center
+			// position: absolute;
+			// left: 50%;
+			// top: 32%;
+			// transform: translate(-50%);
+			.centered;
+			// top: 35%;
 
 			.component_base;
 

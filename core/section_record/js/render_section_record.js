@@ -282,7 +282,7 @@ const build_id_column = function(self) {
 		// button
 		switch(true) {
 
-			case (initiator && initiator.indexOf('component_autocomplete')!==-1):
+			case (initiator && initiator.indexOf('component_portal')!==-1):
 			// case (self.id_variant==='PORTAL_VARIANT'):
 				// component_autocomplete / portal caller (link)
 				const link_button = ui.create_dom_element({
@@ -469,7 +469,7 @@ const recursive_relation_columns = function(current_instance, datum) {
 */
 const get_components_with_subcolumns = () => {
 	return [
-			'component_autocomplete',
+			// 'component_autocomplete',
 			//'component_autocomplete_hi',
 			//'component_check_box',
 			//'component_filter',
@@ -597,5 +597,3 @@ const delete_record = (button, self) => {
 
 	return false
 }//end delete_record
-
-

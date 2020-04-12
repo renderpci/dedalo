@@ -19,7 +19,7 @@ class dd_core_api {
 	/**
 	* __CONSTRUCT
 	* @return bool
-	*
+	*//*
 	public function __construct() {
 
 		return true;

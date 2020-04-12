@@ -30,7 +30,7 @@
 	import '../../component_iri/js/component_iri.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_email/js/component_email.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_json/js/component_json.js' // + '?v=' + page_globals.dedalo_version
-	import '../../component_autocomplete/js/component_autocomplete.js' // + '?v=' + page_globals.dedalo_version
+	// import '../../component_autocomplete/js/component_autocomplete.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_portal/js/component_portal.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_image/js/component_image.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_publication/js/component_publication.js' // + '?v=' + page_globals.dedalo_version
@@ -49,7 +49,7 @@
 	import '../../component_iri/js/render_component_iri.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_email/js/render_component_email.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_json/js/render_component_json.js' // + '?v=' + page_globals.dedalo_version
-	import '../../component_autocomplete/js/render_component_autocomplete.js' // + '?v=' + page_globals.dedalo_version
+	// import '../../component_autocomplete/js/render_component_autocomplete.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_portal/js/render_component_portal.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_image/js/render_component_image.js' // + '?v=' + page_globals.dedalo_version
 	import '../../component_publication/js/render_component_publication.js' // + '?v=' + page_globals.dedalo_version
