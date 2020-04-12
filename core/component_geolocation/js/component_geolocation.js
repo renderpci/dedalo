@@ -39,20 +39,6 @@ export const component_geolocation = function(){
 	this.duplicates 	= false
 	this.events_tokens
 
-	this.ar_tag_loaded 	= []
-	this.map 			= null
-	this.layer_control	= false
-
-
-	//draw editor vars
-	this.draw_data 		= null
-	this.drawControl
-	this.draw_editor_is_initated = false
-	this.editable_FeatureGroup
-	this.ar_FeatureGroup = []
-	this.draw_state
-	this.current_editable_FeatureGroup_id
-
 	//global state of the document
 	this.loaded_document = false
 
@@ -66,23 +52,23 @@ export const component_geolocation = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_geolocation.prototype.build 	 			= component_common.prototype.build
-	component_geolocation.prototype.render 				= common.prototype.render
-	component_geolocation.prototype.destroy 	 		= common.prototype.destroy
-	component_geolocation.prototype.refresh 			= common.prototype.refresh
-	component_geolocation.prototype.save 	 			= component_common.prototype.save
-	component_geolocation.prototype.load_data 			= component_common.prototype.load_data
-	component_geolocation.prototype.get_value 			= component_common.prototype.get_value
-	component_geolocation.prototype.set_value 			= component_common.prototype.set_value
+	component_geolocation.prototype.build 	 					= component_common.prototype.build
+	component_geolocation.prototype.render 						= common.prototype.render
+	component_geolocation.prototype.destroy 	 				= common.prototype.destroy
+	component_geolocation.prototype.refresh 					= common.prototype.refresh
+	component_geolocation.prototype.save 	 						= component_common.prototype.save
+	component_geolocation.prototype.load_data 				= component_common.prototype.load_data
+	component_geolocation.prototype.get_value 				= component_common.prototype.get_value
+	component_geolocation.prototype.set_value 				= component_common.prototype.set_value
 	component_geolocation.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_geolocation.prototype.update_datum 		= component_common.prototype.update_datum
-	component_geolocation.prototype.change_value 		= component_common.prototype.change_value
+	component_geolocation.prototype.update_datum 			= component_common.prototype.update_datum
+	component_geolocation.prototype.change_value 			= component_common.prototype.change_value
 
 	// render
-	component_geolocation.prototype.list 			= render_component_geolocation.prototype.list
-	component_geolocation.prototype.edit 			= render_component_geolocation.prototype.edit
+	component_geolocation.prototype.list 					= render_component_geolocation.prototype.list
+	component_geolocation.prototype.edit 					= render_component_geolocation.prototype.edit
 	component_geolocation.prototype.edit_in_list	= render_component_geolocation.prototype.edit
-	component_geolocation.prototype.search 			= render_component_geolocation.prototype.search
+	component_geolocation.prototype.search 				= render_component_geolocation.prototype.search
 	component_geolocation.prototype.change_mode 	= component_common.prototype.change_mode
 
 
@@ -94,6 +80,23 @@ export const component_geolocation = function(){
 component_geolocation.prototype.init = async function(options) {
 
 	const self = this
+
+	self.ar_tag_loaded 		= []
+	self.ar_layer_loaded 	= []
+	self.map 				= null
+	self.layer_control		= false
+
+
+	//draw editor vars
+	self.draw_data 								= null
+	self.drawControl							= null
+	self.draw_editor_is_initated 	= false
+	self.editable_FeatureGroup 		= null
+	self.ar_FeatureGroup 					= []
+	self.draw_state								= null
+	self.current_editable_FeatureGroup_id
+
+
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -411,24 +414,30 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 		all_tags = false
 	}
 
-	if(SHOW_DEBUG===true) {
-		//console.log("[component_geolocation.load_geo_editor] tag:",tag);;
-	}
 
 	// TAG : Get all information of the selected tag
 	const parts_of_tag = self.get_parts_of_tag(tag);
 
-	var data 	= parts_of_tag.data
-	var	capaId 	= parts_of_tag.capaId
+	const layer_data 	= parts_of_tag.data
+	const layer_id 		= parts_of_tag.layer_id
+
+	const new_layer = {
+		layer_data 	: parts_of_tag.data,
+		layer_id 	: parts_of_tag.layer_id
+	};
+
+	self.ar_layer_loaded.push(new_layer)
+
+
 
 	// ar_tag_loaded : store current tag
-		self.ar_tag_loaded[capaId] = tag;
+		self.ar_tag_loaded[layer_id] = tag;
 
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
-	if( self.map.hasLayer(self.ar_FeatureGroup[capaId])===false ) {
+	if( self.map.hasLayer(self.ar_FeatureGroup[layer_id])===false ) {
 
 		if(!all_tags){
-			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
+			for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
 				if(self.ar_FeatureGroup[i]){
 					self.ar_FeatureGroup[i].clearLayers();
 					self.layer_control.removeLayer(self.ar_FeatureGroup[i])
@@ -437,10 +446,10 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 		}
 
 		// Create a new FeatureGroup
-		self.ar_FeatureGroup[capaId] = new L.FeatureGroup();
-		self.ar_FeatureGroup[capaId].addTo(self.map);
+		self.ar_FeatureGroup[layer_id] = new L.FeatureGroup();
+		self.ar_FeatureGroup[layer_id].addTo(self.map);
 
-		self.layer_control.addOverlay(self.ar_FeatureGroup[capaId], capaId);
+		self.layer_control.addOverlay(self.ar_FeatureGroup[layer_id], layer_id);
 
 	}else{
 		// Condfirm our write
@@ -448,22 +457,22 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 		//remove all layers
 
 		if(!all_tags){
-			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
+			for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
 				if(self.ar_FeatureGroup[i]){
 					self.ar_FeatureGroup[i].clearLayers();
 					self.layer_control.removeLayer(self.ar_FeatureGroup[i])
 				}
 			}
 		}
-		self.layer_control.addOverlay( self.ar_FeatureGroup[capaId], capaId);
+		self.layer_control.addOverlay( self.ar_FeatureGroup[layer_id], layer_id);
 		// FEATUREGROUP RESET : Remove the all data layers for re-created with the new data that come with the loaded tag.
-		self.ar_FeatureGroup[capaId].clearLayers();	//delete self.ar_FeatureGroup[capaId];
+		self.ar_FeatureGroup[layer_id].clearLayers();	//delete self.ar_FeatureGroup[layer_id];
 	}
 
 	// LAYERS : Load layers from tag data
-	if (typeof data!=="undefined" && data!=="undefined" && data!=="") {
+	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
 
-		L.geoJson( JSON.parse(data), {
+		L.geoJson( JSON.parse(layer_data), {
 			//For each Feature load all layer data of the tag
 	    	onEachFeature: function (feature, data_layer) {
 	    		if(data_layer){
@@ -477,16 +486,16 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 		            // Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 						data_layer.on('click', function(e) {
 							if(self.draw_state==="delete"){
-								self.ar_FeatureGroup[capaId].removeLayer(e.layer);
+								self.ar_FeatureGroup[layer_id].removeLayer(e.layer);
 								return;
 	            			}
 	            			// change all features and layers for activate or deactivate the edit mode.
 	            			const FeatureGroup_length = self.ar_FeatureGroup.length;
 							for (var i = FeatureGroup_length - 1; i >= 1; i--) {
 								if(self.ar_FeatureGroup[i]){
-									if(self.ar_FeatureGroup[i]===self.ar_FeatureGroup[capaId]){
+									if(self.ar_FeatureGroup[i]===self.ar_FeatureGroup[layer_id]){
 										//All layers and features to desactive and change to blue color
-										self.ar_FeatureGroup[capaId].eachLayer(function (layer){
+										self.ar_FeatureGroup[layer_id].eachLayer(function (layer){
 											layer.editing.disable();
 									    	if(!(layer instanceof L.Marker)){
 										    	layer.setStyle({color: '#31df25'});
@@ -511,12 +520,12 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 								console.log("NOt e.target instanceof L.Marker ",);
 							}
 							//activate the feature (for save)
-							//self.init_draw_editor( self.ar_FeatureGroup[capaId], capaId )
+							//self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
 						 });
 
 					// addLayer
-						// console.log("self.ar_FeatureGroup[capaId]:",self.ar_FeatureGroup[capaId]); // , "data_layer", data_layer, "capaId",capaId
-						self.ar_FeatureGroup[capaId].addLayer(data_layer)
+						// console.log("self.ar_FeatureGroup[layer_id]:",self.ar_FeatureGroup[layer_id]); // , "data_layer", data_layer, "layer_id",layer_id
+						self.ar_FeatureGroup[layer_id].addLayer(data_layer)
 		    	}
 			}
 		})
@@ -524,16 +533,16 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 	};
 
 
-	//map.addControl(L.Control.Layers.addOverlay( self.ar_FeatureGroup[capaId], capaId));
+	//map.addControl(L.Control.Layers.addOverlay( self.ar_FeatureGroup[layer_id], layer_id));
 	// DRAW_EDITOR : Init draw editor and pass current FeatureGroup
-	self.init_draw_editor( self.ar_FeatureGroup[capaId], capaId )
+	self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
 
 	// OVERLAY : Lo añadimos al map ovelay (Adds an overlay (checkbox entry) with the given name to the control)
-	//current_overlay = L.tileLayer(self.ar_FeatureGroup[capaId]);
+	//current_overlay = L.tileLayer(self.ar_FeatureGroup[layer_id]);
 	//L.control.layers({},{'current_overlay':current_overlay}).addTo(map);
 
 	// CURRENT_EDITABLE_FEATUREGROUP_ID : Fijamos como current editable el FeatureGroup actual
-	self.current_editable_FeatureGroup_id = capaId;
+	self.current_editable_FeatureGroup_id = layer_id;
 }//end load_geo_editor
 
 
@@ -543,16 +552,72 @@ component_geolocation.prototype.load_geo_editor = function(options, all_tags) {
 */
 component_geolocation.prototype.get_data_tag = function(){
 
+	const self = this
+
+	const lib_data 		= self.get_lib_data()
+	const last_layer_id = self.get_last_layer_id()
+
+	const layers 		= lib_data.map((item) => {
+		const layer = {
+			layer_id 			: item.layer_id,
+			user_layer_name 	: item.user_layer_name
+		}
+		return layer
+	})
+
 	const data_tag = {
-		type 	: 'geo',
-		tag_id 	: null,
-		state 	: 'n',
-		label 	: '',
-		data 	: ''
+		type 			: 'geo',
+		tag_id 			: null,
+		state 			: 'n',
+		label 			: '',
+		data 			: '',
+		last_layer_id	: last_layer_id+1,
+		layers 			: layers
+
 	}
 
 	return data_tag
 }// end get_data_tag
+
+
+/**
+* GET_LIB_DATA
+* get the lib_data in self.data, lib_data is the specific data of the library used (leaflet)
+*/
+component_geolocation.prototype.get_lib_data = function(){
+
+	const self = this
+
+	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
+		? self.data.value[0].lib_data
+		: [{
+				layer_id 		: 1,
+				layer_data 		: [],
+				user_layer_name : 'layer_1'
+			}]
+
+
+	return lib_data
+}//get_lib_data
+
+
+
+/**
+* GET_LAST_LAYER_ID
+* Get the last layer_id in the data
+*/
+component_geolocation.prototype.get_last_layer_id = function(){
+
+	const self = this
+
+	const lib_data 		= self.get_lib_data()
+	const ar_layer_id 	= lib_data.map((item) => item.layer_id)
+	const last_layer_id = Math.max(...ar_layer_id)
+
+	return last_layer_id
+}//end get_last_layer_id
+
+
 
 
 /**
@@ -567,7 +632,7 @@ component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
 		}
 
 	const tagState 		= tag_obj.dataset.state
-	const capaId 		= tag_obj.dataset.tag_id
+	const layer_id 		= tag_obj.dataset.tag_id
 	const dirty_data 	= tag_obj.dataset.data
 	const data 			= dirty_data.replace(/'/g, '"')
 
@@ -575,7 +640,7 @@ component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
 	const dato = (data) ? JSON.parse(data) : data
 
 	const parts_of_tag = {
-		capaId 	 : capaId,
+		layer_id 	 : layer_id,
 		tagState : tagState,
 		data 	 : data
 	}
@@ -662,8 +727,8 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 component_geolocation.prototype.init_draw_editor = function( current_editable_FeatureGroup, capa_id ) {
 
 	const self = this
-	const map 						= self.map
-	const draw_editor_is_initated 	= self.draw_editor_is_initated
+	const map 								= self.map
+	const draw_editor_is_initated 			= self.draw_editor_is_initated
 
 	self.current_editable_FeatureGroup_id 	= capa_id;
 	self.editable_FeatureGroup 			 	= current_editable_FeatureGroup;
@@ -673,6 +738,8 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 		if (self.drawControl) {
 			self.drawControl.remove(map)
 		}
+
+			console.log("map:",map);
 
 	// DRAW CONTROL ///////////////////////////////////////////////////
 	// El editor se inicaliza cada vez y recibe el FeatureGroup recién cargado como parámetro (ver https://github.com/Leaflet/Leaflet.draw/issues/66)
@@ -722,7 +789,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 			return false;
 		}
 
-		// Listenre for object created - bind popup to layer, add to feature group
+		// Listener for object created - bind popup to layer, add to feature group
 		map.on(L.Draw.Event.CREATED, function (e) {	// Triggered when a new vector or marker has been created.
 
 			//var type  	= e.layerType
@@ -751,7 +818,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 			self.draw_data = editable_FeatureGroup;
 
 			//save the draw_data
-			self.save_draw_data();
+			self.update_draw_data();
 
 		});
 		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
@@ -759,13 +826,13 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 			// Update draw_data
 			self.draw_data = editable_FeatureGroup;
 			// Save draw_data
-			self.save_draw_data();
+			self.update_draw_data();
 		});
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
 		map.on(L.Draw.Event.DELETED, function (e) {	// Triggered when layers have been removed (and saved) from the FeatureGroup.
 			self.draw_data = editable_FeatureGroup;
 			// Save draw_data
-			self.save_draw_data();
+			self.update_draw_data();
 		});
 		// Listener for change the mode of the draw (trash button in the editor)
 		map.on(L.Draw.Event.DELETESTART, function (e) {
@@ -813,7 +880,7 @@ component_geolocation.prototype.save_draw_data = function() {
 		if(SHOW_DEBUG===true) {
 			console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
 		}
-		current_draw_data = current_draw_data.replace(/"/g, '\'') //replaceAll('"', '\'', current_draw_data)
+		current_draw_data = current_draw_data.replace(/"/g, '\'')
 
 
 	const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
@@ -831,3 +898,45 @@ component_geolocation.prototype.save_draw_data = function() {
 
 	return true
 };//end save_draw_data
+
+
+
+
+
+/**
+* UPDATE_DRAW_DATA
+*/
+component_geolocation.prototype.update_draw_data = function() {
+
+	const self = this
+
+	const project 					= self.draw_data
+
+	const layer_id					= self.current_editable_FeatureGroup_id
+
+	const current_layer 			= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
+
+	// const current_layer				= self.ar_tag_loaded.find((item) => item.layer_id === layer_id)
+	current_layer.layer_data 		= project.toGeoJSON()
+
+	const key  						= self.map.getContainer().dataset.key
+
+	// current_layer.user_layer_name 	= current_layer.data.user_layer_name
+
+	// update the data in the instance previous to save
+	const value 			=  typeof (self.data.value[0]) !== 'undefined'
+		? JSON.parse(JSON.stringify(self.data.value[0]))
+		: {}
+	self.current_value[key].lib_data 			= self.ar_layer_loaded
+
+	// set the changed_data for update the component data and send it to the server for change when save
+	// 	const changed_data = {
+	// 		action	: 'update',
+	// 		key		: 0,
+	// 		value 	: value
+	// 	}
+	// // set the change_data to the instance
+	// 	self.data.changed_data = changed_data
+
+	return true
+}//end update_draw_data
