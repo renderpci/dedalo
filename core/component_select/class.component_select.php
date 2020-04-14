@@ -149,17 +149,6 @@ class component_select extends component_relation_common {
 
 
 	/**
-	* GET_ORDER_BY_LOCATOR
-	* OVERWRITE COMPONENT COMMON METHOD
-	* @return bool
-	*/
-	public static function get_order_by_locator() {
-		return true;
-	}//end get_order_by_locator
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
