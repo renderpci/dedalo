@@ -984,15 +984,17 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		const layer_data	= layer.layer_data
 		const layer_name	= layer_id === 0 ? 'raster' : 'layer_' +layer_id
 
-	// create a layer color for selectors and handlers
-		const layer_color = new Color({
-						hue: 360 * Math.random(),
-						saturation: 1,
-						brightness: 1,
-						alpha: 1,
-					})
+	// if the layer don't has layer_color, create a new layer color for selectors and handlers
+		const layer_color = typeof layer.layer_color !== 'undefined'
+			? layer.layer_color
+			: new Color({
+							hue: 360 * Math.random(),
+							saturation: 1,
+							brightness: 1,
+							alpha: 1,
+						}).toCSS()
 
-		layer.layer_color = layer_color.toCSS()
+		layer.layer_color = layer_color
 
 	//layer import
 		if ( layer_data.indexOf('Layer')!=-1 ) {
@@ -1003,15 +1005,20 @@ vector_editor.prototype.load_layer = function(self, layer) {
 						console.log("-> layer delete: ", layer_name);
 				}
 			}
-
+			// impor the layer to paper project
 			const current_layer = project.importJSON(layer_data)
-
+			// set the selected color to the layer_color
 			current_layer.selectedColor = layer_color;
-			current_layer.selectedColor.alpha = 1
+			// set the alpha of the color to 1... don't used, the user can change it.
+			// current_layer.selectedColor.alpha = 1
 			// set the id of Dédalo data
 			current_layer.data.layer_id 		= layer_id
 			// set the user layer name to default layer_name (layer_2)
 			current_layer.data.user_layer_name 	= layer_name
+			// set the layer_name to the current layer when don't match (old layer_name formats like 5_layer)
+			if(current_layer.name !== layer_name){
+				current_layer.name = layer_name
+			}
 			current_layer.activate();
 			console.log("-> layer import: ", layer_name);
 
@@ -1030,6 +1037,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 			}//end for
 			if (create_new_current_layer === true) {
 				const current_layer 	= new Layer()
+					// set the name to the paper layer name
 					current_layer.name 					= layer_name
 					// set the id of Dédalo data
 					current_layer.data.layer_id 		= layer_id
@@ -1037,10 +1045,10 @@ vector_editor.prototype.load_layer = function(self, layer) {
 					current_layer.data.user_layer_name 	= layer_name
 					// set the layer in the self.ar_layer_loaded the curennt layer name (layer_2)
 					layer.user_layer_name 				= layer_name
-					// set the selectedColor
+					// set the selectedColor for paper
 					current_layer.selectedColor 		= layer_color
-					// set the user layer color
-					// current_layer.data.layer_color 	= layer_color
+					// set the user layer color in the data for save it.
+					current_layer.data.layer_color 		= layer_color
 				current_layer.activate();
 				// create the raster layer
 					if(layer_id===0){
@@ -1053,14 +1061,6 @@ vector_editor.prototype.load_layer = function(self, layer) {
 
 		};// end else
 
-		this.active_layer = project.activeLayer
-		console.log("active_layer",this.active_layer)
-		event_manager.publish('active_layer_'+self.id, this.active_layer)
-
-		// set the visibility of the layer
-		this.active_layer.visible = true
-		project.view.draw();
-		project.deselectAll();
 		// set the global handle margin
 		project.options.handleSize = 8;
 
@@ -1099,7 +1099,6 @@ vector_editor.prototype.load_layer = function(self, layer) {
 }//end load_layer
 
 
-
 /**
 * CREATE_RASTER_LAYER
 * get the layers loaded and show into window
@@ -1133,6 +1132,40 @@ vector_editor.prototype.create_raster_layer = function(self){
 	return raster
 }//end create_raster_layer
 
+
+vector_editor.prototype.activate_layer = function(self, layer, load=full) {
+
+	// curent paper
+		const project 			= self.current_paper.project
+	// set the active layer and his visibility
+		// get the paper layer name
+		const name 				= layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
+		// get the paper project layer
+		const new_active_layer 	= project.layers[name]
+		// activavet the new active layer
+		new_active_layer.activate()
+		// set the global active_layer with the new active layer
+		this.active_layer 	= project.activeLayer
+		// publish the change
+		event_manager.publish('active_layer_'+self.id, this.active_layer)
+		if(load==='layer'){
+			const ar_layers = project.layers
+			for (let i = 0; i < ar_layers.length; i++) {
+				const current_layer = ar_layers[i]
+				current_layer.name !== 'raster'
+				? current_layer.visible = false
+				: current_layer.visible = true
+			}
+		}
+		// set the visibility of the layer
+		this.active_layer.visible = true
+
+
+		// redraw the project
+		project.view.draw();
+		// deselect all paths
+		project.deselectAll();
+}
 
 
 /**
@@ -1242,14 +1275,14 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 			: layer_li.classList.remove('active')
 
 		// when we change the active layer, the other layers will be innactived
-		self.events_tokens.push(
-			event_manager.subscribe('active_layer_'+self.id, change_layer)
-		)
-		function change_layer(active_layer) {
-			layer.layer_id === active_layer.data.layer_id
-			? layer_li.classList.add('active')
-			: layer_li.classList.remove('active')
-		}
+				self.events_tokens.push(
+					event_manager.subscribe('active_layer_'+self.id, change_layer)
+				)
+				function change_layer(active_layer) {
+					layer.layer_id === active_layer.data.layer_id
+						?	layer_li.classList.add('active')
+						:	layer_li.classList.remove('active')
+				}// end change_layer
 
 		// layer_icon
 			const layer_icon = ui.create_dom_element({
@@ -1287,8 +1320,8 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 						this.active_layer = viewed_layer
 					}
 				}
+			}) // end click event
 
-			})
 
 		// layer_id
 			const layer_id = ui.create_dom_element({
