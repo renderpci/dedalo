@@ -246,4 +246,3 @@ class component_select extends component_relation_common {
 
 
 }//end class
-?>

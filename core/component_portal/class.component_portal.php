@@ -25,15 +25,17 @@ class component_portal extends component_relation_common {
 
 
 
-	/**
-	* GET_DATO
-	*/
-	public function get_dato() {
+	// /**
+	// * GET_DATO
+	// * @return array $dato
+	// *	Array of objects (locators)
+	// */
+	// public function get_dato() {
 
-		$dato = parent::get_dato();
+	// 	$dato = parent::get_dato();
 
-		return (array)$dato;
-	}//end get_dato
+	// 	return (array)$dato;
+	// }//end get_dato
 
 
 
@@ -53,6 +55,7 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_PROPIEDADES
+	* Only to enable component_autocomplete_hi compatibility
 	* @return object $properties
 	*/
 	public function get_propiedades() {
@@ -122,7 +125,7 @@ class component_portal extends component_relation_common {
 				$new_properties->source 			= json_decode($source_string);
 				$new_properties->value_with_parents = isset($properties->value_with_parents) ? $properties->value_with_parents : false;
 				$new_properties->css  				= isset($properties->css) ? $properties->css : null;
-			
+
 			$properties = $new_properties;
 		}//end if ($real_model==='component_portal_hi')
 
@@ -683,15 +686,15 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_HIERARCHY_TERMS_FILTER
-	* @return
+	* @return array $filter_custom
 	*/
 	public function get_hierarchy_terms_filter() {
 
-		$propiedades = $this->get_propiedades();
 		$filter_custom = [];
 
-		$terms = $propiedades->source->hierarchy_terms;
+		$propiedades = $this->get_propiedades();
 
+		$terms = $propiedades->source->hierarchy_terms;
 		foreach ($terms as $current_item) {
 			$resursive = (bool)$current_item->recursive;
 			# Get childrens

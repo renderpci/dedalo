@@ -43,7 +43,7 @@ class component_relation_children extends component_relation_common {
 				$valor .= $value;
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
-		}		
+		}
 		$this->valor = $valor;
 
 		return (string)$this->valor;
@@ -57,11 +57,11 @@ class component_relation_children extends component_relation_common {
 	* If the component need change this langs (selects, radiobuttons...) overwritte this function
 	*/
 	public function get_valor_lang(){
-		
+
 		return "working here! ".__METHOD__;
 		/*
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
+
 		#dump($relacionados,'$relacionados');
 		if(empty($relacionados)){
 			return $this->lang;
@@ -87,7 +87,7 @@ class component_relation_children extends component_relation_common {
 	* Overrides component common method
 	*/
 	public function get_ar_target_section_tipo() {
-		
+
 		if (!$this->tipo) return null;
 
 		if(isset($this->ar_target_section_tipo)) {
@@ -101,7 +101,7 @@ class component_relation_children extends component_relation_common {
 				# Resolve DEDALO_HIERARCHY_TLD2_TIPO data
 				$target_values = (array)$this->propiedades->target_values;
 				foreach ((array)$target_values as $key => $current_component_tipo) {
-					$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);					
+					$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 					$component 		 = component_common::get_instance($modelo_name,
 																	  $current_component_tipo,
 																	  $this->parent,
@@ -116,7 +116,7 @@ class component_relation_children extends component_relation_common {
 			case 'free':
 				# target_values are directly the target section tipo
 				$target_values = (array)$this->propiedades->target_values;
-				$ar_target_section_tipo = $target_values;				
+				$ar_target_section_tipo = $target_values;
 				break;
 
 			default:
@@ -124,7 +124,7 @@ class component_relation_children extends component_relation_common {
 				$ar_target_section_tipo = array($this->section_tipo);
 				break;
 		}
-		
+
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
 
@@ -148,10 +148,10 @@ class component_relation_children extends component_relation_common {
 			$locator->set_from_component_tipo($this->tipo);
 
 		# Add children locator
-		if (!$add_children = $this->add_children($locator)) {			
+		if (!$add_children = $this->add_children($locator)) {
 			return false;
 		}
-		
+
 		return true;
 	}//end make_me_your_children
 
@@ -159,21 +159,21 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* REMOVE_ME_AS_YOUR_CHILDREN
-	* @return bool 
+	* @return bool
 	*/
 	public function remove_me_as_your_children( $section_tipo, $section_id ) {
-		
+
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
 			$locator->set_section_id($section_id);
 			$locator->set_type($this->relation_type);
 			$locator->set_from_component_tipo($this->tipo);
 
-		# Remove children locator	
-		if (!$remove_children = $this->remove_children($locator)) {			
+		# Remove children locator
+		if (!$remove_children = $this->remove_children($locator)) {
 			return false;
 		}
-		
+
 		return true;
 	}//end remove_me_as_your_children
 
@@ -196,11 +196,11 @@ class component_relation_children extends component_relation_common {
 			return false;
 		}
 
-		# Add current locator to component dato		
+		# Add current locator to component dato
 		if (!$add_locator = $this->add_locator_to_dato($locator)) {
 			return false;
 		}
-		
+
 		return true;
 	}//end add_children
 
@@ -209,29 +209,29 @@ class component_relation_children extends component_relation_common {
 	/**
 	* REMOVE_CHILDREN
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
-	* NOTE: This method updates component 'dato' 
+	* NOTE: This method updates component 'dato'
 	* @return bool
 	*/
 	public function remove_children( $locator ) {
 
-		# Add current locator to component dato		
+		# Add current locator to component dato
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
 			return false;
 		}
-		
-		return true;		
+
+		return true;
 	}//end remove_children
 
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
 	*//*
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		
+
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators */
 
@@ -239,7 +239,7 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -259,7 +259,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-		
+
 		switch (true) {
 			case $comparison_operator==='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
@@ -268,7 +268,7 @@ class component_relation_children extends component_relation_common {
 				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
-		
+
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
@@ -309,8 +309,8 @@ class component_relation_children extends component_relation_common {
 		if (empty($component_tipo)) {
 			$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
 			$component_tipo = reset($ar_tipos);
-		}		
-		
+		}
+
 		# Create first component to get dato
 		$component 		= component_common::get_instance(get_called_class(),
 														 $component_tipo,
@@ -319,12 +319,12 @@ class component_relation_children extends component_relation_common {
 														 DEDALO_DATA_LANG,
 														 $section_tipo,
 														 false);
-		$dato = $component->get_dato();			
+		$dato = $component->get_dato();
 
 		if ($recursive!==true) {
 
 			$ar_childrens_recursive = $dato;
-		
+
 		}else{
 
 			if (!empty($dato)) {
@@ -333,12 +333,12 @@ class component_relation_children extends component_relation_common {
 
 				# Set as resolved to avoid loops
 				$locators_resolved[] = $section_id .'_'. $section_tipo;
-				
+
 				foreach ((array)$dato as $key => $current_locator) {
 					$ar_childrens_recursive = array_merge($ar_childrens_recursive, self::get_childrens($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive, $is_recursion=true));
 				}
 			}
-		}		
+		}
 
 
 		return $ar_childrens_recursive;
@@ -347,4 +347,3 @@ class component_relation_children extends component_relation_common {
 
 
 }//end component_relation_children
-?>
