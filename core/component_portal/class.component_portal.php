@@ -204,140 +204,128 @@ class component_portal extends component_relation_common {
 	* @param object $ar_data . Object with all component_tipo => value of component_portal value elements
 	* @return locator object. Locator of new created section to add in current component_portal data
 	*/
-	public static function create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data) {
+	// public static function create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data) {
 
-		// set from_component_tipo
-			$from_component_tipo = $tipo;
+	// 	// set from_component_tipo
+	// 		$from_component_tipo = $tipo;
 
-		// projects heritage
-			if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
-				# All except main section Projects
-				$source_ar_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_filter', true, true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
-				if (!isset($source_ar_filter[0])) {
-					if(SHOW_DEBUG===true) {
-						throw new Exception("Error Processing Request. component_filter is not defined! ($section_tipo)", 1);
-					}
-					return "Error: component_filter is not defined!";
-				}
-				$source_component_filter = component_common::get_instance('component_filter',
-																		  $source_ar_filter[0],
-																		  $parent,
-																		  'edit',
-																		  DEDALO_DATA_NOLAN,
-																		  $section_tipo);
-				$source_component_filter_dato = $source_component_filter->get_dato();
-					#dump($source_component_filter_dato, ' source_component_filter_dato'.to_string());die();
-			}
+	// 	// projects heritage
+	// 		if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
+	// 			# All except main section Projects
+	// 			$source_ar_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_filter', true, true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
+	// 			if (!isset($source_ar_filter[0])) {
+	// 				if(SHOW_DEBUG===true) {
+	// 					throw new Exception("Error Processing Request. component_filter is not defined! ($section_tipo)", 1);
+	// 				}
+	// 				return "Error: component_filter is not defined!";
+	// 			}
+	// 			$source_component_filter = component_common::get_instance('component_filter',
+	// 																	  $source_ar_filter[0],
+	// 																	  $parent,
+	// 																	  'edit',
+	// 																	  DEDALO_DATA_NOLAN,
+	// 																	  $section_tipo);
+	// 			$source_component_filter_dato = $source_component_filter->get_dato();
+	// 				#dump($source_component_filter_dato, ' source_component_filter_dato'.to_string());die();
+	// 		}
 
-		// section : Create a new section
-			$section 	= section::get_instance(null,$target_section_tipo);
-			$section_id = $section->Save();
+	// 	// section : Create a new section
+	// 		$section 	= section::get_instance(null,$target_section_tipo);
+	// 		$section_id = $section->Save();
 
-		// filter : Set heritage of projects
-			if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
-				# All except main section Projects
-				$target_ar_filter  = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, 'component_filter', true, true);
-				if (!isset($target_ar_filter[0])) {
-					if(SHOW_DEBUG===true) {
-						throw new Exception("Error Processing Request. target component_filter is not defined! ($target_section_tipo)", 1);
-					}
-					return "Error: target component_filter is not defined!";
-				}
-				$target_component_filter = component_common::get_instance('component_filter',
-																		  $target_ar_filter[0],
-																		  $section_id,
-																		  'list', // 'list' mode avoid autosave default project
-																		  DEDALO_DATA_NOLAN,
-																		  $target_section_tipo);
-				$target_component_filter->set_dato($source_component_filter_dato);
-				$target_component_filter->Save();
-			}
+	// 	// filter : Set heritage of projects
+	// 		if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
+	// 			# All except main section Projects
+	// 			$target_ar_filter  = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, 'component_filter', true, true);
+	// 			if (!isset($target_ar_filter[0])) {
+	// 				if(SHOW_DEBUG===true) {
+	// 					throw new Exception("Error Processing Request. target component_filter is not defined! ($target_section_tipo)", 1);
+	// 				}
+	// 				return "Error: target component_filter is not defined!";
+	// 			}
+	// 			$target_component_filter = component_common::get_instance('component_filter',
+	// 																	  $target_ar_filter[0],
+	// 																	  $section_id,
+	// 																	  'list', // 'list' mode avoid autosave default project
+	// 																	  DEDALO_DATA_NOLAN,
+	// 																	  $target_section_tipo);
+	// 			$target_component_filter->set_dato($source_component_filter_dato);
+	// 			$target_component_filter->Save();
+	// 		}
 
-		// component_portal
-			$component_portal 	= component_common::get_instance('component_portal',
-																		  $tipo,
-																		  $section_id,
-																		  'edit',
-																		  DEDALO_DATA_NOLAN,
-																		  $section_tipo);
+	// 	// component_portal
+	// 		$component_portal 	= component_common::get_instance('component_portal',
+	// 																	  $tipo,
+	// 																	  $section_id,
+	// 																	  'edit',
+	// 																	  DEDALO_DATA_NOLAN,
+	// 																	  $section_tipo);
 
-		// propiedades
-			$propiedades = $component_portal->get_propiedades();
-			if (!empty($propiedades)) {
+	// 	// propiedades
+	// 		$propiedades = $component_portal->get_propiedades();
+	// 		if (!empty($propiedades)) {
 
-				if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
+	// 			if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
 
-					$current_lang = DEDALO_DATA_LANG;
-					$RecordObj_dd = new RecordObj_dd($current_tipo);
-					if ($RecordObj_dd->get_traducible()==='no') {
-						$current_lang = DEDALO_DATA_NOLAN;
-					}
+	// 				$current_lang = DEDALO_DATA_LANG;
+	// 				$RecordObj_dd = new RecordObj_dd($current_tipo);
+	// 				if ($RecordObj_dd->get_traducible()==='no') {
+	// 					$current_lang = DEDALO_DATA_NOLAN;
+	// 				}
 
-					$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					$component 			= component_common::get_instance($curren_modelo_name,
-																		$current_tipo,
-																		$section_id,
-																		'edit',
-																		$current_lang,
-																		$target_section_tipo);
-					$component->set_dato($current_value);
-					$component->Save();
+	// 				$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+	// 				$component 			= component_common::get_instance($curren_modelo_name,
+	// 																	$current_tipo,
+	// 																	$section_id,
+	// 																	'edit',
+	// 																	$current_lang,
+	// 																	$target_section_tipo);
+	// 				$component->set_dato($current_value);
+	// 				$component->Save();
 
-					debug_log(__METHOD__." Updated target section component $current_tipo [$curren_modelo_name] to ".to_string($current_value), logger::DEBUG);
-				}
-			}
-			#dump($propiedades, ' propiedades');	die("section_id: $section_id B");
+	// 				debug_log(__METHOD__." Updated target section component $current_tipo [$curren_modelo_name] to ".to_string($current_value), logger::DEBUG);
+	// 			}
+	// 		}
+	// 		#dump($propiedades, ' propiedades');	die("section_id: $section_id B");
 
-		// components
-			# Format:
-			# value: stdClass Object
-			# (
-			#    [rsc85] => a
-			#    [rsc86] => b
-			# )
-			#
-			foreach ($ar_data as $current_tipo => $current_value) {
+	// 	// components
+	// 		# Format:
+	// 		# value: stdClass Object
+	// 		# (
+	// 		#    [rsc85] => a
+	// 		#    [rsc86] => b
+	// 		# )
+	// 		#
+	// 		foreach ($ar_data as $current_tipo => $current_value) {
 
-				$current_lang = DEDALO_DATA_LANG;
-				$RecordObj_dd = new RecordObj_dd($current_tipo);
-				if ($RecordObj_dd->get_traducible()==='no') {
-					$current_lang = DEDALO_DATA_NOLAN;
-				}
+	// 			$current_lang = DEDALO_DATA_LANG;
+	// 			$RecordObj_dd = new RecordObj_dd($current_tipo);
+	// 			if ($RecordObj_dd->get_traducible()==='no') {
+	// 				$current_lang = DEDALO_DATA_NOLAN;
+	// 			}
 
-				$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$component = component_common::get_instance($curren_modelo_name,
-															$current_tipo,
-															$section_id,
-															'edit',
-															$current_lang,
-															$target_section_tipo);
-				$component->set_dato( $current_value );
-				$component->Save();
-			}
+	// 			$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+	// 			$component = component_common::get_instance($curren_modelo_name,
+	// 														$current_tipo,
+	// 														$section_id,
+	// 														'edit',
+	// 														$current_lang,
+	// 														$target_section_tipo);
+	// 			$component->set_dato( $current_value );
+	// 			$component->Save();
+	// 		}
 
-		// locator . return locator object of created section
-			$locator = new locator();
-				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$locator->set_section_id($section_id);
-				$locator->set_section_tipo($target_section_tipo);
-				$locator->set_from_component_tipo($from_component_tipo);
-					#dump($locator,'locator');
-
-
-		return $locator;
-	}//end create_new_autocomplete_record
+	// 	// locator . return locator object of created section
+	// 		$locator = new locator();
+	// 			$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+	// 			$locator->set_section_id($section_id);
+	// 			$locator->set_section_tipo($target_section_tipo);
+	// 			$locator->set_from_component_tipo($from_component_tipo);
+	// 				#dump($locator,'locator');
 
 
-
-	/**
-	* GET_ORDER_BY_LOCATOR
-	* OVERWRITE COMPONENT COMMON METHOD
-	* @return bool
-	*/
-	public static function get_order_by_locator() {
-
-		return true;
-	}//end get_order_by_locator
+	// 	return $locator;
+	// }//end create_new_autocomplete_record
 
 
 
