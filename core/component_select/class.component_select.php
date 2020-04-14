@@ -63,34 +63,6 @@ class component_select extends component_relation_common {
 
 
 
-	/*
-	* GET_VALOR_LANG
-	* Return the main component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
-	*/
-	public function get_valor_lang(){
-
-		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-
-		#dump($relacionados,'$relacionados');
-		if(empty($relacionados)){
-			return $this->lang;
-		}
-
-		$termonioID_related = array_values($relacionados[0])[0];
-		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
-
-		if($RecordObjt_dd->get_traducible()==='no'){
-			$lang = DEDALO_DATA_NOLAN;
-		}else{
-			$lang = DEDALO_DATA_LANG;
-		}
-
-		return $lang;
-	}//end get_valor_lang
-
-
-
 	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
@@ -145,17 +117,6 @@ class component_select extends component_relation_common {
 
 		return $result;
 	}//end get_valor_list_html_to_save
-
-
-
-	/**
-	* GET_ORDER_BY_LOCATOR
-	* OVERWRITE COMPONENT COMMON METHOD
-	* @return bool
-	*/
-	public static function get_order_by_locator() {
-		return true;
-	}//end get_order_by_locator
 
 
 
@@ -257,4 +218,3 @@ class component_select extends component_relation_common {
 
 
 }//end class
-?>

@@ -580,5 +580,3 @@ const change_lang = async function(event) {
 
 	return api_response
 }//end change_lang
-
-

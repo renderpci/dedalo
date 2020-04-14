@@ -1895,7 +1895,7 @@ class component_relation_common extends component_common {
 		$ar_sections_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
 
 		//expanded model: get the sections inside the properties of the component
-		$propiedades 	 = $this->get_propiedades();
+		$propiedades = $this->get_propiedades();
 		if(isset($propiedades->source->search)){
 			foreach ($propiedades->source->search as $current_search) {
 				$ar_sections_tipo[] =  $current_search->section_tipo;

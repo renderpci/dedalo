@@ -16,93 +16,56 @@ class component_radio_button extends component_relation_common {
 
 	/**
 	* GET_VALOR
+	* Get resolved value in requested lang
+	* Note that no value is fixed here because 'valor' depends of requested lang
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
-
 		$dato = $this->get_dato();
 		if (empty($dato)) {
-			return $this->valor = null;
+			return null;
 		}
 
-		# Test dato format (b4 changed to object)
-		foreach ($dato as $key => $value) {
-			if (!is_object($value)) {
-				if(SHOW_DEBUG===true) {
-					dump($dato," dato");
-					trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
+		// Test dato format (b4 changed to object)
+			foreach ($dato as $key => $value) {
+				if (!is_object($value)) {
+					if(SHOW_DEBUG===true) {
+						dump($dato," dato");
+						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
+					}
+					return null;
 				}
-				return $this->valor = null;
-			}
-		}	
+			}	
 
 		switch ($this->modo) {
 
 			case 'diffusion': 
-				
+				// dd64 case
 				$object_si = new stdClass();
 					$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
-					$object_si->section_tipo = (string)"dd64";
+					$object_si->section_tipo = (string)DEDALO_SECTION_SI_NO_TIPO; // 'dd64'
 				
-				if ($dato[0]===$object_si) {
-					$valor = 'si';
-				}else{
-					$valor = 'no';
-				}
+				$valor = ($dato[0]===$object_si) ? 'si' : 'no';				
 				break;
 			
-			default:
-				
-				# Always run list of values
-				$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual		
+			default:				
+				// list_of_values. Always run list of values. (!) Get values only in requested lang
+				$ar_list_of_values = $this->get_ar_list_of_values2($lang);	
 				$valor = '';
 				foreach ($ar_list_of_values->result as $key => $item) {
 					
 					$locator = $item->value;
-
 					if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
 						$valor = $item->label;
 						break;
 					}
 				}
-				# Set value
-				$this->valor = $valor;
-				break;
-				
-		}#end switch
+				break;				
+		}//end switch
+
 
 		return $valor;
 	}//end get_valor
-
-
-
-	/*
-	* GET_VALOR_LANG
-	* Return the main component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
-	*/
-	public function get_valor_lang(){
-
-		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
-		#dump($relacionados,'$relacionados');
-		if(empty($relacionados)){
-			return $this->lang;
-		}
-
-		$termonioID_related = array_values($relacionados[0])[0];
-		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
-
-		if($RecordObjt_dd->get_traducible() === 'no'){
-			$lang = DEDALO_DATA_NOLAN;
-		}else{
-			$lang = DEDALO_DATA_LANG;
-		}
-		return $lang;
-	}//end get_valor_lang
 
 
 
@@ -162,18 +125,6 @@ class component_radio_button extends component_relation_common {
 
 
 	/**
-	* GET_ORDER_BY_LOCATOR
-	* OVERWRITE COMPONENT COMMON METHOD
-	* @return bool
-	*/
-	public static function get_order_by_locator() {
-		
-		return true;
-	}//end get_order_by_locator
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
@@ -190,6 +141,26 @@ class component_radio_button extends component_relation_common {
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
 
+
+
+	/**
+	* GET_DIFFUSION_DATO
+	* @return string $diffusion_value
+	*/
+	public function get_diffusion_dato() {
+
+		$dato = $this->get_dato();
+		if (is_array($dato)) {
+			$ar_id =array();
+			foreach ($dato as $current_locator) {
+				$ar_id[] = $current_locator->section_id;
+			}
+			$final_dato = $ar_id;
+		}
+		$diffusion_value = json_encode($final_dato);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_dato
 
 
 
