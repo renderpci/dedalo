@@ -103,7 +103,6 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 			get_input_element(changed_data.key, changed_data.value, inputs_container, self)
 		}
 
-
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', async (e) => {
 			// e.stopPropagation()
@@ -146,12 +145,13 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 			// e.stopPropagation()
 
 			// save
-				if (e.target.matches('.map_save')) {
+				if (e.target.matches('.save')) {
 
-					const key = JSON.parse(e.target.dataset.key)
+					// const key = JSON.parse(e.target.dataset.key)
+					const key = 0;
 
 					const changed_data = Object.freeze({
-						action	: 'update',
+						action		: 'update',
 						key			: key,
 						value		: self.current_value[key],
 					})
@@ -168,20 +168,6 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 				}
 
 
-			// full_screen
-				if (e.target.matches('.map_full_screen')) {
-					const li = e.target.parentNode.parentNode
-
-					if( li.classList.contains('map_full') ) {
-						li.classList.remove('map_full')
-					}else{
-						li.classList.add('map_full')
-					}
-
-					// Reset map size
-					self.map.invalidateSize()
-					return true
-				}
 			// map_reload
 				if (e.target.matches('.map_reload')) {
 
@@ -335,10 +321,30 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
+	// button full_screen
+		const button_full_screen = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button full_screen',
+			parent 			: fragment
+		})
+		button_full_screen.addEventListener("mouseup", (e) =>{
+			self.node[0].classList.toggle('fullscreen')
+			const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
+			event_manager.publish('full_screen_'+self.id, fullscreen_state)
+			self.map.invalidateSize()
+		})
+
 	// buttons tools
 		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
 		}
+
+	// save
+		const save = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button tool save',
+			parent 			: fragment
+		})
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
@@ -442,51 +448,12 @@ const get_input_element_edit = (i, current_value, ul_container, self, is_inside_
 			})
 
 	// refresh
-		// refresh separator
-			ui.create_dom_element({
-				element_type 	: 'span',
-				parent 		 	: inputs_container,
-				class_name 		: 'geolocation_separator',
-			})
-		// refresh button
-			ui.create_dom_element({
-				element_type 	: 'span',
-				dataset 	 	: { key : i },
-				parent 		 	: inputs_container,
-				class_name 		: 'map_reload',
-			})
-
-	// save
-		// save separator
-			ui.create_dom_element({
-				element_type 	: 'span',
-				parent 		 	: inputs_container,
-				dataset 	 	: { key : i },
-				class_name 		: 'geolocation_separator',
-			})
-		// save button
-			ui.create_dom_element({
-				element_type 	: 'span',
-				parent 		 	: inputs_container,
-				dataset 	 	: { key : i },
-				class_name 		: 'map_save',
-				text_content	: get_label['salvar']
-			})
-
-	// full screen
-		// full screen separator
-			ui.create_dom_element({
-				element_type 	: 'span',
-				parent 		 	: inputs_container,
-				class_name 		: 'geolocation_separator',
-			})
-		// full screen button
-			ui.create_dom_element({
-				element_type 	: 'span',
-				parent 		 	: inputs_container,
-				class_name 		: 'map_full_screen',
-			})
-
+		ui.create_dom_element({
+			element_type 	: 'span',
+			dataset 	 	: { key : i },
+			parent 		 	: inputs_container,
+			class_name 		: 'map_reload',
+		})
 
 	// map container
 		const map_container = ui.create_dom_element({
