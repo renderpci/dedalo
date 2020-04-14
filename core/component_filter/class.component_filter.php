@@ -510,32 +510,6 @@ class component_filter extends component_relation_common {
 
 
 
-	/*
-	* GET_VALOR_LANG
-	* Return the main component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
-	*/
-	public function get_valor_lang(){
-
-		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-
-		if(empty($relacionados)){
-			return $this->lang;
-		}
-
-		$termonioID_related = array_values($relacionados[0])[0];
-		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
-
-		if($RecordObjt_dd->get_traducible() === 'no'){
-			$lang = DEDALO_DATA_NOLAN;
-		}else{
-			$lang = DEDALO_DATA_LANG;
-		}
-
-		return $lang;
-	}//end get_valor_lang
-
-
 	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component

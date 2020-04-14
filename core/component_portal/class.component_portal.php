@@ -40,20 +40,6 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* SET_DATO
-	*/
-	public function set_dato($dato) {
-
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-
-		return parent::set_dato( (array)$dato );
-	}//end set_dato
-
-
-
-	/**
 	* GET_PROPIEDADES
 	* Only to enable component_autocomplete_hi compatibility
 	* @return object $properties
@@ -135,64 +121,41 @@ class component_portal extends component_relation_common {
 
 
 
-	/**
-	* GET_TIPO_TO_SEARCH
-	* Locate in structure TR the component tipo to search
-	* @return string $tipo_to_search
-	*/
-	public function get_tipo_to_search($options=null) {
-
-		if(isset($this->tipo_to_search)) {
-			return $this->tipo_to_search;
-		}
-
-		$propiedades 	 = $this->get_propiedades();
-
-		if(isset($propiedades->source->search)){
-				foreach ($propiedades->source->search as $current_search) {
-					if($current_search->type === "internal"){
-						$ar_terminoID_by_modelo_name =  $current_search->components;
-					}
-				}
-			}else{
-				$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado');
-			}
-
-			#dump($ar_terminoID_by_modelo_name, ' ar_terminoID_by_modelo_name '.$this->tipo.' ');
-		$tipo_to_search = reset($ar_terminoID_by_modelo_name);
-
-		if (!isset($tipo_to_search)) {
-			throw new Exception("Error Processing Request. Inconsistency detect. This component need related component to search always", 1);
-		}
-
-		// Fix value
-			$this->tipo_to_search = $tipo_to_search;
-
-		return $tipo_to_search;
-	}//end get_tipo_to_search
-
-
-	/**
-	* GET_VALOR_LANG
-	* Return the main component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
-	* @return string $lang
-	*/
-	public function get_valor_lang() {
-
-		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		if(empty($relacionados)){
-			return $this->lang;
-		}
-
-		$termonioID_related = array_values($relacionados[0])[0];
-		$RecordObj_dd 		= new RecordObj_dd($termonioID_related);
-
-		$lang = ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-
-
-		return $lang;
-	}//end get_valor_lang
+	// /**
+	// * GET_TIPO_TO_SEARCH (!) Moved to relation_common
+	// * Locate in structure TR the component tipo to search
+	// * @return string $tipo_to_search
+	// */
+	// public function get_tipo_to_search($options=null) {
+	//
+	// 	if(isset($this->tipo_to_search)) {
+	// 		return $this->tipo_to_search;
+	// 	}
+	//
+	// 	$propiedades = $this->get_propiedades();
+	//
+	// 	if(isset($propiedades->source->search)){
+	// 			foreach ($propiedades->source->search as $current_search) {
+	// 				if($current_search->type === "internal"){
+	// 					$ar_terminoID_by_modelo_name =  $current_search->components;
+	// 				}
+	// 			}
+	// 		}else{
+	// 			$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado');
+	// 		}
+	//
+	// 		#dump($ar_terminoID_by_modelo_name, ' ar_terminoID_by_modelo_name '.$this->tipo.' ');
+	// 	$tipo_to_search = reset($ar_terminoID_by_modelo_name);
+	//
+	// 	if (!isset($tipo_to_search)) {
+	// 		throw new Exception("Error Processing Request. Inconsistency detect. This component need related component to search always", 1);
+	// 	}
+	//
+	// 	// Fix value
+	// 		$this->tipo_to_search = $tipo_to_search;
+	//
+	// 	return $tipo_to_search;
+	// }//end get_tipo_to_search
 
 
 
