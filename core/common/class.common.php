@@ -2434,6 +2434,7 @@ abstract class common {
 	}//end get_section_elements_context
 
 
+
 	/**
 	* GET_TOOLS
 	* @return

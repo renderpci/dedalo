@@ -2719,17 +2719,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_ORDER_BY_LOCATOR
-	* @return bool
-	*/
-	public static function get_order_by_locator() {
-
-		return false;
-	}//end get_order_by_locator
-
-
-
-	/**
 	* SET_DATO_FROM_CSV
 	* Receive a plain text value from csv file and set this value as dato.
 	* Override in each component.
