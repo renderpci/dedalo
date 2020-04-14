@@ -175,8 +175,8 @@ section_record.prototype.get_ar_instances = async function(){
 
 	// items. Get the items inside the section of the record to render it
 		const items = (mode==="list")
-			? self.context.filter(element => element.section_tipo===section_tipo && (element.type==='component'))
-			: self.context.filter(element => element.section_tipo===section_tipo && (element.type==='component' || element.type==='grouper'))
+			? self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.mode===mode)
+			: self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.mode===mode)
 
 	// instances
 		const ar_instances = []
@@ -393,5 +393,3 @@ section_record.prototype.get_context_childrens = function(component_tipo){
 	return group_childrens
 }//end get_context_childrens
 */
-
-
