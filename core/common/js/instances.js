@@ -260,5 +260,3 @@ export const key_instances_builder = function(options){
 
 	return key
 }//end key_instances_builder
-
-

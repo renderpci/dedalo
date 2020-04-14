@@ -121,9 +121,12 @@ paginator.prototype.build = async function(){
 	// status update
 		self.status = 'builded'
 
-	if(SHOW_DEBUG===true) {
-		//console.log("paginator [build] self:",self);
-		console.log("paginator total:",total);
+			
+
+			if(SHOW_DEBUG===true) 
+			{
+		// console.log("paginator [build] self:",self);
+		// console.log("paginator total:",total);
 	}
 
 
@@ -296,5 +299,3 @@ paginator.prototype.go_to_page_json = function(input_obj, e, total_pages, item_p
 
 	return false
 }//end go_to_page_json
-
-
