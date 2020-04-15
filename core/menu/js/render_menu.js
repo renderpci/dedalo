@@ -467,11 +467,19 @@ const item_hierarchy = async (options) => {
 					return false
 				}//end if self.menu_active
 
-				// navigate
-				event_manager.publish('user_action', {
-					tipo : item.tipo,
-					mode : 'list'
-				})
+				if (e.altKey===true) {
+					// open in new tab
+					const base_url = window.location.pathname
+					const url = base_url + "?tipo=" + item.tipo + "&mode=list"
+					const win = window.open(url, '_blank');
+						  win.focus();
+				}else{
+					// navigate
+					event_manager.publish('user_action', {
+						tipo : item.tipo,
+						mode : 'list'
+					})
+				}
 
 				return true
 			})

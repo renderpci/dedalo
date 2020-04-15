@@ -186,7 +186,7 @@ section.prototype.build = async function(autoload=false) {
 				self.datum = api_response.result
 
 			// debug
-				// load_section_data_debug(self.tipo, self.sqo_context, api_response, self)
+				load_section_data_debug(self.tipo, self.sqo_context, api_response, self)
 		}
 
 	// set context and data to current instance

@@ -60,13 +60,13 @@ class dd_core_api {
 		# Section save returns the section_id created
 		$section_id = $section->Save();
 
-
-		# Update search_query_object full_count property
-		$search_options = section_records::get_search_options($section_tipo);
-		if (isset($search_options->search_query_object)) {
-			$search_options->search_query_object->full_count = true; // Force re-count records
-		}
-
+		// OJO : Aquí, cuando guardemos las opciones de búsqueda, resetearemos el count para forzar a recalculat el total
+		//		 esto está ahora en 'section_records' pero puede cambiar..
+			// Update search_query_object full_count property
+				// $search_options = section_records::get_search_options($section_tipo);
+				// if (isset($search_options->search_query_object)) {
+				// 	$search_options->search_query_object->full_count = true; // Force re-count records
+				// }
 
 		$response->result 	= $section_id;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
