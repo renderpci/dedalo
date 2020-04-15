@@ -192,27 +192,28 @@ component_image.prototype.load_vector_editor = async function(options) {
 	}
 	//load all layers if the data is empty it create the frist layer
 	if(self.ar_layer_loaded.length < 1){
+		// add the data from instance to the ar_layer_loaded, it control the all project layers that will showed in the vector editor
 		self.ar_layer_loaded = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
 			? self.data.value[0].lib_data
 			: [{
 					layer_id 	:0,
 					layer_data 	:[]
 				}]
+		// load all layers into the vector editor, when open the vector editor for first time load all layers but don't activate it.
+		const ar_layer_length = self.ar_layer_loaded.length
+		for (let i = 0; i < ar_layer_length; i++) {
+			const layer = self.ar_layer_loaded[i]
+			self.vector_editor.load_layer(self, layer)
+		}
 	}
 
 	switch(load) {
 		case ('full'):
+			// active the visibility of the layers
 			const ar_layer = self.ar_layer_loaded
-			// typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
-			// 	? self.data.value[0].lib_data
-			// 	: [{
-			// 		layer_id 	:0,
-			// 		layer_data 	:[]
-			// 	}]
 			for (let i = 0; i < ar_layer.length; i++) {
 				const layer = ar_layer[i]
-					console.log("layer:",layer);
-				self.vector_editor.load_layer(self, layer)
+				self.vector_editor.activate_layer(self, layer, load)
 			}
 
 		break;
@@ -229,9 +230,12 @@ component_image.prototype.load_vector_editor = async function(options) {
 					layer_data 	: [],
 				}
 				self.ar_layer_loaded.push(new_layer)
+				// load the layer (if it's a new layer or existed layer, the method load_layer will check the duplicates)
+				self.vector_editor.load_layer(self, new_layer)
 				return new_layer
 			})()
-			self.vector_editor.load_layer(self, layer)
+			// active the layer
+			self.vector_editor.activate_layer(self, layer, load)
 		break;
 
 		default:

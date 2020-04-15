@@ -5,16 +5,18 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 // pdfjs paths
-	$pdf_js                       	= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.min.js';
-	$pdf_worker               		= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.worker.min.js';
+	$pdf_js                       	= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf-min.js';
+	$pdf_worker               		= DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.worker-min.js';
 	$pdf_images 					= DEDALO_ROOT_WEB .'/lib/pdfjs/web/images/';
 	$pdf_maps 						= DEDALO_ROOT_WEB .'/lib/pdfjs/web/cmaps/';
 	$pdf_viewer_locale_properties 	= DEDALO_ROOT_WEB .'/lib/pdfjs/web/locale/locale.properties';
 	$pdf_viewer_css               	= DEDALO_ROOT_WEB .'/lib/pdfjs/web/viewer.css';
 
+// ATTENTION: Viewer is changed for use dedalo variables
+// find dedalo_pdfjs_options to add at new versions.
 // Viewer custom. Read const dedalo_pdfjs_options to init the reader
-	$pdf_viewer = DEDALO_CORE_URL .'/component_pdf/viewer/viewer-min.js'; // is not the original file (!)
-
+	// $pdf_viewer = DEDALO_CORE_URL .'/component_pdf/viewer/viewer-min.js'; // is not the original file (!)
+	$pdf_viewer = DEDALO_ROOT_WEB .'/lib/pdfjs/web/viewer-min.js'; // is not the original file (!)
 ?>
 <!DOCTYPE html>
 <!--
@@ -60,7 +62,7 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 			function getURLParameter(name) {
 				return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null
 			}
-			// pdfjsLib.GlobalWorkerOptions.workerSrc = '<?php echo DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.worker.js' ?>';
+			// pdfjsLib.GlobalWorkerOptions.workerSrc = '<?php echo DEDALO_ROOT_WEB .'/lib/pdfjs/build/pdf.worker-min.js' ?>';
 
 		const dedalo_pdfjs_options = {
 			"locale" 				: '<?php echo lang::get_locale_from_code(DEDALO_APPLICATION_LANG) ?>',
@@ -142,11 +144,6 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 					<div id="secondaryToolbarButtonContainer">
 						<button id="secondaryPresentationMode" class="secondaryToolbarButton presentationMode visibleLargeView" title="Switch to Presentation Mode" tabindex="51" data-l10n-id="presentation_mode">
 							<span data-l10n-id="presentation_mode_label">Presentation Mode</span>
-						</button>
-
-						<button id="full_screen" class="secondaryToolbarButton presentationMode visibleLargeView" title="Switch to full screen" tabindex="51" data-l10n-id="presentation_mode"
-								 onclick="top.component_pdf.toggle_full_pdf_viewer(this, parent.document.getElementById(window.name))">
-							<span data-l10n-id="presentation_mode_label">Full screen</span>
 						</button>
 
 						<button id="secondaryOpenFile" class="secondaryToolbarButton openFile visibleLargeView" title="Open File" tabindex="52" data-l10n-id="open_file" style="display:none">
@@ -250,10 +247,6 @@ http://sourceforge.net/adobe/cmap/wiki/License/
 							<div id="toolbarViewerRight">
 								<button id="presentationMode" class="toolbarButton presentationMode hiddenLargeView" title="Switch to Presentation Mode" tabindex="31" data-l10n-id="presentation_mode">
 									<span data-l10n-id="presentation_mode_label">Presentation Mode</span>
-								</button>
-								<button id="full_screen" class="toolbarButton presentationMode hiddenLargeView" title="Switch to full screen" tabindex="31" data-l10n-id="presentation_mode"
-								 onclick="top.component_pdf.toggle_full_pdf_viewer(this, parent.document.getElementById(window.name))">
-									<span data-l10n-id="presentation_mode_label">Full screen</span>
 								</button>
 
 								<button id="openFile" class="toolbarButton openFile hiddenLargeView" title="Open File" tabindex="32" data-l10n-id="open_file" style="display:none">

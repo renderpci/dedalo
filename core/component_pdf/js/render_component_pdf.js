@@ -136,6 +136,18 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
+	// button full_screen
+		const button_full_screen = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button full_screen',
+			parent 			: fragment
+		})
+		button_full_screen.addEventListener("mouseup", (e) =>{
+			self.node[0].classList.toggle('fullscreen')
+			const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
+			event_manager.publish('full_screen_'+self.id, fullscreen_state)
+		})
+
 	// buttons tools
 		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
@@ -148,5 +160,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
