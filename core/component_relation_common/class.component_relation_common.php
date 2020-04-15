@@ -77,6 +77,8 @@ class component_relation_common extends component_common {
 				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
+
+		return true;
 	}//end __construct
 
 
@@ -85,7 +87,7 @@ class component_relation_common extends component_common {
 	* GET_DATO
 	* Returns dato from container 'relations', not for component dato container
 	* @return array $dato
-	*	$dato is always an array of locators
+	*	$dato is always an array of locators or an empy array
 	*/
 	public function get_dato() {
 
@@ -109,31 +111,34 @@ class component_relation_common extends component_common {
 				return $this->dato_resolved;
 			}
 
-		# MATRIX DATA : Load matrix data
-		$this->load_component_dato();
+		// load. Load matrix data and set this->dato
+			$this->load_component_dato();
 
-		return $this->dato;
+		$dato = $this->dato;
+
+		return $dato;
 	}//end get_dato
 
 
 
 	/**
 	* GET_DATO_GENERIC
-	* @return array $ar_generic_dato
+	* Get the component dato locators with no other property than section_tipo and section_id
+	* @return array $dato_generic
 	*/
 	public function get_dato_generic() {
 
 		# Dato without from_component_tipo property
-		$ar_generic_dato = [];
+		$dato_generic = [];
 		foreach ((array)$this->dato as $key => $current_locator) {
 			$generic_locator = new stdClass();
 				$generic_locator->section_tipo 	= $current_locator->section_tipo;
 				$generic_locator->section_id 	= $current_locator->section_id;
 				#$generic_locator->type 		= $current_locator->type;
-			$ar_generic_dato[] = $generic_locator;
+			$dato_generic[] = $generic_locator;
 		}
 
-		return $ar_generic_dato;
+		return $dato_generic;
 	}//end get_dato_generic
 
 
@@ -143,11 +148,14 @@ class component_relation_common extends component_common {
 	* Return the dato to all components, except the components that has references calculated,
 	* like component_relation_related
 	* this will mix the real dato and the result of the calculation
-	* @return array $dato
+	* (!) Default is the component dato, but overwrite it if component need it
+	* @return array $dato_with_references
 	*/
 	public function get_dato_with_references() {
 
-		return $this->get_dato();
+		$dato_with_references = $this->get_dato();
+		
+		return $dato_with_references;
 	}//end get_dato_with_references
 
 
@@ -164,14 +172,17 @@ class component_relation_common extends component_common {
 
 		if (!empty($dato)) {
 
-			if (is_string($dato)) { # Tool Time machine case, dato is string
+			// Tool Time machine case, dato is string
+			if (is_string($dato)) {
 				$dato = json_decode($dato);
 			}
+
+			// Bad formatted array case
 			if (is_object($dato)) {
 				$dato = array($dato);
 			}
 
-			# Ensures is a real non-associative array (avoid json encode as object)
+			// Ensures dato is a real non-associative array (avoid json encode as object)
 			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 			# Verify all locators are well formed
@@ -271,7 +282,6 @@ class component_relation_common extends component_common {
 			return null;
 		}
 
-
 		if( $this->bl_loaded_matrix_data!==true ) {
 
 			# Fix dato
@@ -288,25 +298,27 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_MY_SECTION_RELATIONS
+	* Get all relations from current section and filter the locators
+	* from current component tipo
 	* @return array $relations
 	*/
 	public function get_my_section_relations() {
+
 		$my_section = $this->get_my_section();
 		$relations  = $my_section->get_relations();
 
-		# Filtered case
-		#if ($filtered_by_type!==false) {
-			$filtered_relations = array();
-			foreach ($relations as $current_locator) {
-				if( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$this->tipo ) {
-					$filtered_relations[] = $current_locator;
-				}
+		# Filtered case		
+		$component_relations = array();
+		foreach ($relations as $current_locator) {
+			if(    isset($current_locator->from_component_tipo) 
+				&& $current_locator->from_component_tipo===$this->tipo ) {
+				
+				$component_relations[] = $current_locator;
 			}
-			$relations = $filtered_relations;
-		#}
-		if(SHOW_DEBUG===true) {
-
 		}
+		$relations = $component_relations;
+	
+	
 
 		return (array)$relations;
 	}//end get_my_section_relations
@@ -577,7 +589,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_LOCATOR_VALUE
 	* Resolve locator to string value to show in list etc.
-	* @return string $valor
+	* @return string $locator_value
 	*/
 	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true ) {
 		if(SHOW_DEBUG===true) {
@@ -591,7 +603,7 @@ class component_relation_common extends component_common {
 		$locator = new locator($locator);
 		if($ar_componets_related!==false && !empty($ar_componets_related)){
 
-			$value  	= array();
+			$value = array();
 			foreach ($ar_componets_related as $component_tipo) {
 				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				$current_component = component_common::get_instance($modelo_name,
@@ -613,7 +625,7 @@ class component_relation_common extends component_common {
 				$ar_values_clean[] = $element_value;
 			}
 
-			$valor = implode($divisor, $ar_values_clean);
+			$locator_value = implode($divisor, $ar_values_clean);
 
 		}else{
 
@@ -650,25 +662,24 @@ class component_relation_common extends component_common {
 				}
 
 				#debug_log(__METHOD__."  ".to_string($ar_parents_values), logger::DEBUG);
-				$valor = implode($divisor, $ar_values);
+				$locator_value = implode($divisor, $ar_values);
 
 			}else{
 
-				$valor = ts_object::get_term_by_locator( $locator, $lang, true );
+				$locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
 
 			}//end if ($show_parents===true)
 		}
 
-
 		/*
 		# En proceso. De momento devuelve el locator en formato json, sin resolver..
-		if (!isset($valor)) {
-			$valor = json_encode($locator);
-		}
+			if (!isset($locator_value)) {
+				$locator_value = json_encode($locator);
+			}
 
-		if(SHOW_DEBUG===true) {
-			$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
-		}
+			if(SHOW_DEBUG===true) {
+				$locator_value .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
+			}
 		*/
 		if(SHOW_DEBUG===true) {
 			$total = exec_time_unit($start_time,'ms')." ms";
@@ -676,58 +687,57 @@ class component_relation_common extends component_common {
 		}
 
 
-		return (string)$valor;
+		return (string)$locator_value;
 	}//end get_locator_value
 
 
+	// DES
+		// /**
+		// * RENDER_LIST_VALUE
+		// * Overwrite for non default behaviour
+		// * Receive value from section list and return proper value to show in list
+		// * Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+		// * @param string $value
+		// * @param string $tipo
+		// * @param int $parent
+		// * @param string $modo
+		// * @param string $lang
+		// * @param string $section_tipo
+		// * @param int $section_id
+		// *
+		// * @return string $list_value
+		// */
+		// public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
+		// 	# Activity case (in transition from component_autocomplete_ts to component_autocomplete_hi)
+		// 	# Current stored data is in format: "dd546": {"dato": {"lg-nolan": "dd242"}} bypassing the component in write
+		// 	# file rows_activity.phtml parses current value to label in current lang
+		// 	#if ($tipo==='dd545' || $tipo==='dd546') {
+		// 	#	debug_log(__METHOD__." tipo: $tipo - section_tipo: $section_tipo - section_id: $section_id - parent: $parent - value: ".to_string($value), logger::DEBUG);
+		// 	#	return $value;
+		// 	#}
 
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
+		// 	$component 	= component_common::get_instance(get_called_class(),
+		// 												 $tipo,
+		// 												 $parent,
+		// 												 $modo, //'list',
+		// 												 DEDALO_DATA_NOLAN,
+		// 												 $section_tipo);
 
-		# Activity case (in transition from component_autocomplete_ts to component_autocomplete_hi)
-		# Current stored data is in format: "dd546": {"dato": {"lg-nolan": "dd242"}} bypassing the component in write
-		# file rows_activity.phtml parses current value to label in current lang
-		#if ($tipo==='dd545' || $tipo==='dd546') {
-		#	debug_log(__METHOD__." tipo: $tipo - section_tipo: $section_tipo - section_id: $section_id - parent: $parent - value: ".to_string($value), logger::DEBUG);
-		#	return $value;
-		#}
+		// 	# Use already query calculated values for speed
+		// 	#$ar_records = (array)json_handler::decode($value);
+		// 	#$component->set_dato($ar_records);
 
-		$component 	= component_common::get_instance(get_called_class(),
-													 $tipo,
-													 $parent,
-													 $modo, //'list',
-													 DEDALO_DATA_NOLAN,
-													 $section_tipo);
+		// 	$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 
-		# Use already query calculated values for speed
-		#$ar_records = (array)json_handler::decode($value);
-		#$component->set_dato($ar_records);
+		// 	if ($modo==='edit_in_list') {
+		// 		$result = $component->get_html();
+		// 	}else{
+		// 		$result = $component->get_valor($lang);
+		// 	}
 
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-
-		if ($modo==='edit_in_list') {
-			$result = $component->get_html();
-		}else{
-			$result = $component->get_valor($lang);
-		}
-
-		return $result;
-	}//end render_list_value
+		// 	return $result;
+		// }//end render_list_value
 
 
 
@@ -738,7 +748,6 @@ class component_relation_common extends component_common {
 	* @param int $section_id
 	* @param array $filter
 	* 	Is array of locators. Default is bool false
-	*
 	* @return object $response
 	*/
 	public static function remove_parent_references($section_tipo, $section_id, $filter=false) {
@@ -1395,27 +1404,6 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
-		$valor_export = $this->get_valor($lang);
-		$valor_export = br2nl($valor_export);
-
-		return $valor_export;
-	}//end get_valor_export
-
-
-
-	/**
 	* GET_RELATIONS_SEARCH_VALUE
 	* @return bool false
 	* Default response for calls to this method. Overwritten in component_autocomplete_hi
@@ -1911,6 +1899,7 @@ class component_relation_common extends component_common {
 
 		//create the target_sections object with section_tipo, permisions and label of the target secions
 		foreach ($ar_sections_tipo as $current_section_tipo) {
+			
 			$target_section = new stdClass();
 				$target_section->section_tipo 	= $current_section_tipo;
 				$target_section->label 			= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG,true);
