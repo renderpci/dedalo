@@ -35,9 +35,6 @@ export const component_geolocation = function(){
 	this.duplicates 	= false
 	this.events_tokens
 
-	//global state of the document
-	this.loaded_document = false
-
 	return true
 }//end component_geolocation
 
@@ -77,7 +74,6 @@ component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
-	// self.ar_tag_loaded 	= []
 	self.ar_layer_loaded 	= []
 	self.map 				= null
 	self.layer_control		= false
@@ -88,12 +84,11 @@ component_geolocation.prototype.init = async function(options) {
 	this.current_value 		= []
 
 	//draw editor vars
-	self.draw_data 					= null
 	self.drawControl				= null
 	self.draw_editor_is_initated 	= false
 	self.ar_FeatureGroup 			= []
 	self.draw_state					= null
-	self.active_layer_id
+	self.active_layer_id			= null
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -221,7 +216,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 					arcgis 	: arcgis,
 					osm 	: osm
 				}
-				if(self.layer_control===false || self.loaded_document===true) {
+				if(self.layer_control===false) {
 					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
 
@@ -279,7 +274,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 					arcgis  : arcgis,
 					osm 	: osm
 				}
-				if(self.layer_control===false || self.loaded_document===true) {
+				if(self.layer_control===false) {
 					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
 
@@ -287,12 +282,6 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				  	self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
 				});
 
-				//self.layer_control.addBaseLayer(base_maps, "basemaps");
-				//map.addControl(new L.Control.Layers( {'Arcgis':arcgis, 'OSM':osm}, {}));
-				//map.addControl(arcgis);
-
-				// ADD_DRAW_EDIT_LAYER
-				//self.add_draw_edit_layer(map, tag_id);
 				break;
 		}//end switch(self.context.geo_provider)
 
@@ -301,8 +290,6 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 	self.map.scrollWheelZoom.disable();
 	// disable tap handler, if present.
 	if (self.map.tap) self.map.tap.disable();
-	// Add to maps array
-	//self.maps[map_container] = map;
 
 	// map move listeners
 		self.map.on('dragend', function(e){
@@ -325,7 +312,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 
 	// map ready event
 		self.map.whenReady(function(e){
-
+			//load data into map
 			const ar_layer 		= self.ar_layer_loaded
 			const ar_layer_len 	= ar_layer.length
 			for (let i = 0; i < ar_layer_len; i++) {
@@ -336,54 +323,10 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 			// force refresh map (apply 'invalidateSize')
 			const current_map = this
 			setTimeout(()=>{
-				// console.log("e:",this);
 				// map.invalidateSize();
 				self.refresh_map(current_map)
 			}, 20)
 		});
-
-
-	// onreadystatechange event complete render_tags
-		document.onreadystatechange = function() {
-			if (document.readyState==='complete') {
-				self.render_tags()
-				self.loaded_document = true
-			}
-		}
-
-	//if (self.loaded_document===true) {
-	//	self.render_tags();
-	//}
-	/*
-		map.whenReady(function(e){
-			self.refresh_map(map)
-		})
-		//load the tags of the component_text_area into the map
-
-
-
-		window.addEventListener("load", function (event) {
-			//self.render_tags()
-			self.refresh_map(map)
-		});
-
-		// Load geo tag info from text_area if exists related
-		// This only is executed when user paginate rows, not on load
-		if (loaded_document===true) {
-			self.render_tags()
-		}
-		*/
-	const section_group   = map_container.parentNode
-	const observer_config = {
-		attributeFilter : ['style'],
-		attributes 		: true,
-		childList 		: false,
-		subtree 		: false
-	}
-	const observer = new MutationObserver(function(mutationList){
-		self.refresh_map(self.map)
-	})
-	observer.observe(section_group, observer_config)
 
 	return true
 }//end get_map
@@ -421,8 +364,6 @@ component_geolocation.prototype.update_input_values = function(data, map_contain
 		self.current_value[key].zoom 	= data.zoom
 		self.current_value[key].alt 	= data.alt
 
-		//self.node[data.key].dispatchEvent(new Event('change')); //Event('change',{ 'bubbles': true })
-
 	return true
 }//end update_input_values
 
@@ -444,8 +385,7 @@ component_geolocation.prototype.refresh_map = function(map) {
 
 /**
 * LOAD_GEO_EDITOR
-* Load all data information of the current selected tag or Full database. Init the edditor if it is not loaded.
-* Carga los datos al pulsar sobre la etiqueta. Inicializa el editor de no estar ya inicializado
+* Load all data information of the current selected tag or Full database.
 */
 component_geolocation.prototype.load_geo_editor = function(options) {
 
@@ -463,12 +403,9 @@ component_geolocation.prototype.load_geo_editor = function(options) {
 		break;
 		case ('layer'):
 			const layer_id 		= options.layer_id
-			console.log("layer_id",layer_id);
 			const loaded_layer	= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 			// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
 			// create new layer data with the new id and set to ar_layer_loaded
-
-			console.log(loaded_layer);
 			const layer = (typeof (loaded_layer) !== 'undefined')
 			? loaded_layer
 			: (function(){
@@ -485,12 +422,18 @@ component_geolocation.prototype.load_geo_editor = function(options) {
 		default:
 		break;
 	}//end switch
-
 }// end load_geo_editor
 
 
 
-
+/**
+* LOAD_LAYER
+* Load specific layer data information into the map
+* one layer = one FeatureGroup (GeoJSON model)
+* ar_FeatureGroup = ar_layers
+* layer_id = int or key for select the layer into the ar_FeatureGroup
+* Layer in Leaflet is a item in the map (circle, point, etc..)
+*/
 component_geolocation.prototype.load_layer = function(layer){
 
 		const self = this
@@ -504,37 +447,23 @@ component_geolocation.prototype.load_layer = function(layer){
 			: layer_name
 
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
-	console.log("map.layers",self.map);
-	console.log("loaded", self.map.hasLayer(self.ar_FeatureGroup[layer_id]) );
 	// if( self.map.hasLayer(self.ar_FeatureGroup[layer_id])===false ) {
 	if( typeof self.ar_FeatureGroup[layer_id] === 'undefined'){
-
+		// the FeatureGroup is not loaded and don't exist into the map
 		// Create a new FeatureGroup
 		self.ar_FeatureGroup[layer_id] = new L.FeatureGroup();
+		// set the FeatureGroup to the map
 		self.ar_FeatureGroup[layer_id].addTo(self.map);
 		// add to the layer control with checkbox and the name of the user
 		self.layer_control.addOverlay(self.ar_FeatureGroup[layer_id], layer_id);
-
 	}else{
-
-		//remove all layers
-		// self.map.eachLayer(function(layer){
-		//     layer.remove()
-		// });
-
+		// FeatureGroup exist and it's loaded
+		// remove the checkbox for all FeatureGroup into the control panel (remove the visualitzation)
 		for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
-			// if(self.ar_FeatureGroup[i]){
-				self.ar_FeatureGroup[i].remove()
-				// self.ar_FeatureGroup[i].clearLayers();
-				// self.layer_control.removeLayer(self.ar_FeatureGroup[i])
-			// }
+			self.ar_FeatureGroup[i].remove()
 		}
-		console.log("layer_id",layer_id);
 		// add to the layer control with checkbox and the name of the user
 		self.ar_FeatureGroup[layer_id].addTo(self.map);
-		// self.layer_control.addOverlay( self.ar_FeatureGroup[layer_id], user_layer_name);
-		// FEATUREGROUP RESET : Remove the all data layers for re-created with the new data that come with the loaded tag.
-		// self.ar_FeatureGroup[layer_id].clearLayers();	//delete self.ar_FeatureGroup[layer_id];
 	}
 
 	// LAYERS : Load layers from data
@@ -551,14 +480,14 @@ component_geolocation.prototype.load_layer = function(layer){
 						const content = self.get_popup_content(current_data_layer);
 							if (content) {
 								current_data_layer.bindPopup(content);
-							}
+							}//end if(content)
 
 		            // Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 						current_data_layer.on('click', function(e) {
 							if(self.draw_state==="delete"){
 								self.ar_FeatureGroup[layer_id].removeLayer(e.layer);
 								return;
-	            			}
+	            			}// end if(self.draw_state==="delete")
 	            			// change all features and layers for activate or deactivate the edit mode.
 	            			const FeatureGroup_length = self.ar_FeatureGroup.length;
 							for (var i = FeatureGroup_length - 1; i >= 1; i--) {
@@ -596,44 +525,39 @@ component_geolocation.prototype.load_layer = function(layer){
 					// addLayer
 						 // console.log("self.ar_FeatureGroup[layer_id]:",self.ar_FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
 						self.ar_FeatureGroup[layer_id].addLayer(current_data_layer)
-		    	}
-			}
-		})
-
-	};
+		    	}// end if (current_data_layer)
+			}//end onEachFeature
+		})// end L.geoJson
+	}// end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
 
 
 	//map.addControl(L.Control.Layers.addOverlay( self.ar_FeatureGroup[layer_id], layer_id));
 	// DRAW_EDITOR : Init draw editor and pass current FeatureGroup
 	// self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
 
-	// OVERLAY : add current featrureGroup to map ovelay (Adds an overlay (checkbox entry) with the given name to the control)
-	//current_overlay = L.tileLayer(self.ar_FeatureGroup[layer_id]);
-	//L.control.layers({},{'current_overlay':current_overlay}).addTo(map);
-
-	// CURRENT_EDITABLE_FEATUREGROUP_ID : Set the current featrure editable the actual FeatureGroup
+	// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
 	self.active_layer_id = layer_id;
 }//end load_geo_editor
 
 
 /**
 * LOAD_TAG_INTO_GEO_EDITOR
+* called by the click into the tag (in component_text_area)
+* the tag will send the ar_layer_id that it's pointing to
 */
 component_geolocation.prototype.load_tag_into_geo_editor = async function(options) {
 
 	const self = this
 	// convert the tag dataset to 'real' object for manage it
 	const ar_layer_id = JSON.parse(options.tag.dataset.data)
-
+	// for every layer_id in the tag load the data from the DDBB
 	for (let i = 0; i < ar_layer_id.length; i++) {
-
 		self.load_geo_editor({
-			load 	 		: 'layer',
+			load 	 	: 'layer',
 			layer_id 	: parseInt(ar_layer_id[i])
 		})
 	}
 }// load_tag_into_geo_editor
-
 
 
 
@@ -695,6 +619,7 @@ component_geolocation.prototype.get_lib_data = function(){
 /**
 * GET_LAST_LAYER_ID
 * Get the last layer_id in the data
+* will be used for create new layer with the tag
 */
 component_geolocation.prototype.get_last_layer_id = function(){
 
@@ -707,37 +632,6 @@ component_geolocation.prototype.get_last_layer_id = function(){
 	return last_layer_id
 }//end get_last_layer_id
 
-
-
-
-// /**
-// * GET_PARTS_OF_TAG
-// */
-// component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
-//
-// 	const type = tag_obj.dataset.type
-// 		if (type!=='geo'){
-// 			alert("invalid tag here!!!!")
-// 			return false
-// 		}
-//
-// 	const tagState 		= tag_obj.dataset.state
-// 	const layer_id 		= tag_obj.dataset.tag_id
-// 	const dirty_data 	= tag_obj.dataset.data
-// 	const data 			= dirty_data.replace(/'/g, '"')
-//
-// 	// if the tag is empty we can't parse it.
-// 	const dato = (data) ? JSON.parse(data) : data
-//
-// 	const parts_of_tag = {
-// 		layer_id 	 : layer_id,
-// 		tagState : tagState,
-// 		data 	 : data
-// 	}
-//
-// 	return parts_of_tag
-// }//end get_parts_of_tag
-//
 
 
 /**
@@ -813,6 +707,8 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 /*
 * INIT_DRAW_EDITOR
 * @see https://github.com/Leaflet/Leaflet.draw/issues/66
+* @editable_FeatureGroup = the current layer data with all items in the current_layer (FeatureGroup)
+* @layer_id = the id of the active layer
 */
 component_geolocation.prototype.init_draw_editor = function( editable_FeatureGroup, layer_id ) {
 
@@ -821,14 +717,15 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 
 	self.active_layer_id 	= layer_id;
 
-	// DRAW CONTROL REMOVE : Si ya existe, lo eliminamos para poder crearlo de nuevo y que haya sólo uno activo
+	// DRAW CONTROL REMOVE
+	// If the draw control is loaded, it's necesary remove from the map, because the drawControl need to be loaded with especific layer/ FeatureGroup data.
+	// When the layer is switched by the user, draw control need to be replace with the new selection.
 		if (self.drawControl !== null) {
 			self.drawControl.remove(map)
 			map.removeControl(self.drawControl)
 		}
 
-
-	// DRAW CONTROL ///////////////////////////////////////////////////
+	// DRAW CONTROL
 	// El editor se inicaliza cada vez y recibe el FeatureGroup recién cargado como parámetro (ver https://github.com/Leaflet/Leaflet.draw/issues/66)
 	self.drawControl = new L.Control.Draw({
 		position: 'topright',
@@ -869,10 +766,9 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 	});
 	map.addControl(self.drawControl);
 
-		// DRAW HANDLERS //////////////////////////////////////////////
-		// !!IMPORTANTE : El editor se inicializa cada vez, pero los manejadores sólo una
-		if(self.draw_editor_is_initated===true) {
-			//console.log('draw_editor_is_initated. returning');
+		// DRAW HANDLERS
+		// IMPORTANT: The editor is inited every time that user change the layer selected, but the context and handlers for the items is the same
+		 if(self.draw_editor_is_initated===true) {
 			return false;
 		}
 
@@ -896,32 +792,20 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
             	}
 			})
 
-			/*if (type === 'marker') {
-				layer.bindPopup('A popup!');
-			}*/
 			self.ar_FeatureGroup[self.active_layer_id].addLayer(layer);
 
 			// Update draw_data
-			self.draw_data = self.ar_FeatureGroup[self.active_layer_id];
-
-			//save the draw_data
 			self.update_draw_data();
 
 		});
 		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
 		map.on(L.Draw.Event.EDITED, function (e) {	// Triggered when layers in the FeatureGroup, initialised with the plugin, have been edited and saved.
 			// Update draw_data
-			console.log("EDITED");
-
-			self.draw_data = self.ar_FeatureGroup[self.active_layer_id];
-			console.log(self.draw_data);
-			// Save draw_data
 			self.update_draw_data();
 		});
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
 		map.on(L.Draw.Event.DELETED, function (e) {	// Triggered when layers have been removed (and saved) from the FeatureGroup.
-			self.draw_data = self.ar_FeatureGroup[self.active_layer_id];
-			// Save draw_data
+			// Update draw_data
 			self.update_draw_data();
 		});
 		// Listener for change the mode of the draw (trash button in the editor)
@@ -957,57 +841,21 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 
 
 /**
-* Deprecated old way
-* SAVE_DRAW_DATA to tag
-*/
-// component_geolocation.prototype.save_draw_data = function() {
-//
-// 	const self = this
-//
-// 	if(!self.draw_data) return false;
-//
-// 	let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
-// 		if(SHOW_DEBUG===true) {
-// 			console.log("[component_geolocation.save_draw_data] for ["+self.active_layer_id + "]", self.draw_data.toGeoJSON() )
-// 		}
-// 		current_draw_data = current_draw_data.replace(/"/g, '\'')
-//
-//
-// 	const tag_obj 		= self.ar_tag_loaded[self.active_layer_id]
-//
-// 	const tag_data = {
-// 		type 			: tag_obj.dataset.type,
-// 		tag_id 			: tag_obj.dataset.tag_id,
-// 		id 				: tag_obj.id,
-// 		dataset			: {data:current_draw_data},
-// 		save 			: true
-// 	}
-//
-// 	// UPDATE_TAG
-// 	event_manager.publish('geo_change_tag' +'_'+ self.tipo, tag_data)
-//
-// 	return true
-// };//end save_draw_data
-
-
-
-
-
-/**
 * UPDATE_DRAW_DATA
+* Preparing the data for save, update the layers data into the instance
+* Save action is not exec here, see the render_component_geolocation for the save action
 */
 component_geolocation.prototype.update_draw_data = function() {
 
 	const self = this
-
-	const project 				= self.draw_data
-
+	// get the active draw data of the active_layer
+	const active_layer 			= self.ar_FeatureGroup[self.active_layer_id];
+	// get the active_layer_id
 	const layer_id				= self.active_layer_id
-
+	// get the layer from the loaded data
 	const current_layer 		= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
-
-	// const current_layer		= self.ar_tag_loaded.find((item) => item.layer_id === layer_id)
-	current_layer.layer_data 	= project.toGeoJSON()
+	//get the GeoJson of the active layer (from leaflet)
+	current_layer.layer_data 	= active_layer.toGeoJSON()
 
 	const key  					= self.map.getContainer().dataset.key
 
@@ -1018,15 +866,6 @@ component_geolocation.prototype.update_draw_data = function() {
 		? JSON.parse(JSON.stringify(self.data.value[0]))
 		: {}
 	self.current_value[key].lib_data 			= self.ar_layer_loaded
-
-	// set the changed_data for update the component data and send it to the server for change when save
-	// 	const changed_data = {
-	// 		action	: 'update',
-	// 		key		: 0,
-	// 		value 	: value
-	// 	}
-	// // set the change_data to the instance
-	// 	self.data.changed_data = changed_data
 
 	return true
 }//end update_draw_data
