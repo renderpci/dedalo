@@ -85,7 +85,7 @@ class component_portal extends component_relation_common {
 				"config_context": [
 			      {
 			        "type": "internal",
-			        "hierarchy_types": '.(isset($properties->source->hierarchy_types) ? json_encode($properties->source->hierarchy_types) : '[2]').',
+			        "hierarchy_types": '.((isset($properties->source->hierarchy_types) && !empty($properties->source->hierarchy_types)) ? json_encode($properties->source->hierarchy_types) : '[2]').',
 			        "search": [
 			          "hierarchy25"
 			        ],
@@ -98,7 +98,7 @@ class component_portal extends component_relation_common {
 			        ]
 			      }
 				],
-			    "section_to_search": '.(isset($properties->source->hierarchy_sections) ? json_encode($properties->source->hierarchy_sections) : '[]').',
+			    "section_to_search": '.((isset($properties->source->hierarchy_sections) && !empty($properties->source->hierarchy_sections)) ? json_encode($properties->source->hierarchy_sections) : '[]').',
 			    "filter_by_list": [],
 			    "divisor": " | ",
 			    "type_map": {},
