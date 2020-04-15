@@ -1521,20 +1521,31 @@ abstract class common {
 			// 1 . From requested context
 			if (isset(dd_core_api::$ar_dd_objects)) {
 
-			 	$request_dd_object = array_reduce(dd_core_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
-					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-						return $item;
-					}
-					return $carry;
-				});
+				if (isset($this->from_parent)) {
+					$current_from_parent = $this->from_parent;
+					$request_dd_object = array_reduce(dd_core_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo, $current_from_parent){
+						if ($item->tipo===$tipo && $item->section_tipo===$section_tipo && $item->parent===$current_from_parent) {
+							return $item;
+						}
+						return $carry;
+					});
+				}else{
+				 	$request_dd_object = array_reduce(dd_core_api::$ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
+						if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+							return $item;
+						}
+						return $carry;
+					});
+				}
 				if (!empty($request_dd_object->parent)) {
 					// set
 					$parent = $request_dd_object->parent;
-				}
+				}				
 			}
 
 			// 2 . From injected 'from_parent'
 			if (!isset($parent) && isset($this->from_parent)) {
+				
 				// injected by the element
 				$parent = $this->from_parent;
 			}
