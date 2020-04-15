@@ -11,7 +11,8 @@ class dd_object extends stdClass {
 		# type				: "component"  (section | component | groupper | button)
 		# tipo 				: 'oh14',
 		# section_tipo 		: 'oh1',
-		# parent 			: 'oh2', // structure parent
+		# parent 			: 'oh2', // caller section / portal  tipo
+		# parent_grouper	: 'oh7', // structure parent
 		# lang 				: 'lg-eng',
 		# label 			: 'Title'
 		# mode 				: "list",
@@ -123,6 +124,18 @@ class dd_object extends stdClass {
 			throw new Exception("Error Processing Request. Invalid parent: $value", 1);
 		}
 		$this->parent = $value;
+	}
+
+
+
+	/**
+	* SET_PARENT_GROUPER
+	*/
+	public function set_parent_grouper(string $value) {
+		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid parent_grouper: $value", 1);
+		}
+		$this->parent_grouper = $value;
 	}
 
 

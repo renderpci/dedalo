@@ -76,11 +76,11 @@ const content_data_edit = async function(self) {
 			const current_instance_node = current_instance.node[0] || await current_instance.render()
 
 			// get the parent node inside the context
-			const parent_tipo = current_instance.parent
-
+				const parent_grouper = current_instance.context.parent_grouper
+			
 			// if the item has the parent the section_tipo is direct children of the section_record
 			// else we has other item parent
-			if(parent_tipo===self.section_tipo || self.mode==="list"){
+			if(parent_grouper===self.section_tipo || self.mode==="list"){
 
 				fragment.appendChild(current_instance_node)
 
@@ -102,7 +102,7 @@ const content_data_edit = async function(self) {
 					}
 
 				// get the parent instance like section group or others
-				const parent_instance = ar_instances.find(instance =>  instance.tipo===parent_tipo
+				const parent_instance = ar_instances.find(instance =>  instance.tipo===parent_grouper
 																	&& instance.section_id===current_instance.section_id
 																	&& instance.section_tipo===current_instance.section_tipo)
 				// if parent_istance exist go to apped the current instace to it.
