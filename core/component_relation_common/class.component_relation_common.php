@@ -233,6 +233,55 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* GET_VALOR_LANG
+	* Return the component lang depending of is translatable or not
+	* If the component need change this langs (selects, radiobuttons...) overwritte this function
+	* @return string $lang
+	*/
+	public function get_valor_lang() {
+
+		$related = (array)$this->RecordObj_dd->get_relaciones();
+		if(empty($related)){
+			return $this->lang;
+		}
+
+		$termonioID_related = array_values($related[0])[0];
+		$RecordObj_dd 		= new RecordObj_dd($termonioID_related);
+
+		$lang = ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
+
+		return $lang;
+	}//end get_valor_lang
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+
+		if (empty($valor)) {
+			// if not already receved 'valor', force component load 'dato' from DB
+			$dato = $this->get_dato();
+		}else{
+			// use parsed received json string as dato
+			$this->set_dato( json_decode($valor) );
+		}
+
+		$valor_export = $this->get_valor($lang);
+
+		// replace html '<br>'' for plain text return '\nl'
+		$valor_export = br2nl($valor_export);
+
+		return $valor_export;
+	}//end get_valor_export
+
+
+
+	/**
 	* LOAD_COMPONENT_DATAFRAME
 	* @return
 	*/
@@ -1914,6 +1963,320 @@ class component_relation_common extends component_common {
 
 		return (array)$target_sections;
 	}//end get_target_sections
+
+
+
+	/**
+	* GET_TIPO_TO_SEARCH
+	* Locate in structure TR the component tipo to search
+	* @return string $tipo_to_search
+	*/
+	public function get_tipo_to_search($options=null) {
+
+		if(isset($this->tipo_to_search)) {
+			return $this->tipo_to_search;
+		}
+
+		$propiedades = $this->get_propiedades();
+		if(isset($propiedades->source->search)){
+			foreach ($propiedades->source->search as $current_search) {
+				if($current_search->type==="internal"){
+					$ar_terminoID_by_modelo_name = $current_search->components;
+				}
+			}
+		}else{
+			$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado');
+		}
+
+		$tipo_to_search = reset($ar_terminoID_by_modelo_name);
+		if (!isset($tipo_to_search)) {
+			throw new Exception("Error Processing Request. Inconsistency detect. This component need related component to search always", 1);
+		}
+
+		// Fix value
+			$this->tipo_to_search = $tipo_to_search;
+
+		return $tipo_to_search;
+	}//end get_tipo_to_search
+
+
+
+	/**
+	* GET_SQO_CONTEXT
+	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
+	* The search_query_object_context (sqo_context) have at least:
+	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
+	* one ddo for the searched section (source ddo)
+	* one ddo for the component searched.
+	* 	is possible create more than one ddo for different components.
+	* @return object | json
+	*/
+	public function get_sqo_context() {
+
+		// already calculated
+			if (isset($this->sqo_context)) {
+				return $this->sqo_context;
+			}
+
+		// sort vars
+			$section_tipo 	= $this->get_section_tipo();
+			$tipo			= $this->get_tipo();
+			$lang 			= $this->get_lang();
+			$section_id		= $this->get_parent();
+			$mode 			= $this->get_modo();
+			$propiedades	= $this->get_propiedades();
+
+
+		// SEARCH
+			$search = [];
+			// typo SOURCE SEARCH
+				$source_search = new stdClass();
+					$source_search->typo 			= 'source';
+					$source_search->action 			= 'search';
+					$source_search->tipo 			= $tipo;
+					$source_search->section_tipo 	= $section_tipo;
+					$source_search->lang 			= $lang;
+					$source_search->mode 			= 'list';
+
+				$search[] = $source_search;
+
+			// typo SEARCH
+				// filter_custom
+					$filter_custom = [];
+				// hierarchy_terms_filter
+					if (isset($propiedades->source->hierarchy_terms)) {
+						$hierarchy_terms_filter = $this->get_hierarchy_terms_filter();
+						$filter_custom = array_merge($filter_custom, $hierarchy_terms_filter);
+					}
+				// propiedades filter custom
+					if (isset($propiedades->source->filter_custom)) {
+						$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
+					}
+				// Limit
+					$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;
+				// operator can be injected by api
+					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
+				// search_sections
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
+
+				// search_query_object build
+					$search_sqo_options = new stdClass();
+						$search_sqo_options->q 	 				  = null;
+						$search_sqo_options->limit  			  = $limit;
+						$search_sqo_options->offset 			  = 0;
+						$search_sqo_options->section_tipo 		  = $search_sections;
+						$search_sqo_options->tipo 				  = $tipo;
+						$search_sqo_options->logical_operator 	  = $operator;
+						$search_sqo_options->add_select 		  = false;
+						$search_sqo_options->filter_custom 		  = !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
+						$search_sqo_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
+
+					$search_query_object = common::build_search_query_object($search_sqo_options);
+
+				// value_with_parents
+					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true){
+
+						$search_query_object->value_with_parents 	= true;
+						$search_query_object->source_component_tipo = $tipo;
+
+					}// end $value_with_parent = true
+
+				// add sqo
+					$search[] = $search_query_object;
+
+
+		// SHOW
+			$show= [];
+			// search_query_object_options
+
+				$limit 	= $propiedades->max_records ?? $this->max_records;
+				$offset = 0;
+
+				$pagination = new stdClass();
+					$pagination->limit 	= $limit;
+					$pagination->offset = $offset;
+
+				$show_sqo_options = new stdClass();
+					$show_sqo_options->section_tipo = $search_sections;
+					$show_sqo_options->tipo			= $tipo;
+					$show_sqo_options->full_count	= false;
+					$show_sqo_options->add_select 	= false;
+					$show_sqo_options->add_filter 	= true;
+					// paginations options
+					$show_sqo_options->limit 		 = $limit;
+					$show_sqo_options->offset 		 = $offset;
+
+				$search_query_object = common::build_search_query_object($show_sqo_options);
+
+				// value_with_parents
+					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true){
+						$search_query_object->value_with_parents 	= true;
+						$search_query_object->source_component_tipo = $tipo;
+					}// end $value_with_parent = true
+
+				// add sqo
+					$show[] = $search_query_object;
+
+
+		// LAYOUT MAP // fields for select / show. add ddo
+
+			// subcontext from layout_map items
+			// search
+				$layout_map_options = new stdClass();
+					$layout_map_options->section_tipo 			= $section_tipo;
+					$layout_map_options->tipo 					= $tipo;
+					$layout_map_options->modo 					= $mode;
+					$layout_map_options->add_section 			= true;
+					$layout_map_options->config_context_type 	= 'select';
+				$search = array_merge( $search, layout_map::get_layout_map($layout_map_options));
+
+			//show
+				$layout_map_options->config_context_type 		= 'show';
+				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options));
+
+
+			$sqo_context = new stdClass();
+				$sqo_context->show 		= $show;
+				$sqo_context->search 	= $search;
+
+
+			///////////////////////////////////////////
+
+			/*
+			$search = json_decode('[
+				{
+					"typo": "sqo",
+					"id": "temp",
+					"section_tipo": ["numisdata3"],
+					"filter": {
+						"$or": [
+							{
+								"q": null,
+								"lang": "all",
+								"path": [
+									{
+										"name"				: "Catálogo",
+										"modelo"			: "component_select",
+										"section_tipo"		: "numisdata3",
+										"component_tipo"	: "numisdata309"
+									},
+									{
+										"name"				: "Catálogo",
+										"modelo"			: "component_input_text",
+										"section_tipo"		: "numisdata300",
+										"component_tipo"	: "numisdata303",
+										"lang_DES"				: "all"
+									}
+								]
+							},
+							{
+								"q"		: null,
+								"lang"	: "all",
+								"path"	: [
+									{
+										"name"				: "Número",
+										"modelo"			: "component_input_text",
+										"section_tipo"		: "numisdata3",
+										"component_tipo"	: "numisdata27",
+										"lang_DES"				: "all"
+									}
+								]
+							}
+						]
+					},
+					"limit": 40,
+					"offset": 0,
+					"skip_projects_filter": true
+				},
+				{
+					"typo"			: "ddo",
+					"model"			: "section",
+					"tipo" 			: "numisdata3",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "no-lan",
+					"parent"		: "root"
+				},
+				{
+					"typo"			: "ddo",
+					"tipo" 			: "numisdata27",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "lg-nolan",
+					"parent"		: "numisdata3",
+					"model"			: "component_input_text"
+				},
+				{
+					"typo"			: "ddo",
+					"tipo" 			: "numisdata309",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "lg-nolan",
+					"parent"		: "numisdata3",
+					"model"			: "component_select"
+				},
+				{
+					"typo"			: "ddo",
+					"tipo" 			: "numisdata81",
+					"section_tipo" 	: "numisdata3",
+					"mode" 			: "list",
+					"lang" 			: "lg-eng",
+					"parent"		: "numisdata3",
+					"model"			: "component_input_text"
+				}
+			]');
+			*/
+
+		// fix
+		$this->sqo_context	= $sqo_context;
+		$this->pagination	= $pagination;
+
+
+		return $sqo_context;
+	}//end get_sqo_context
+
+
+
+	/**
+	* GET_HIERARCHY_TERMS_FILTER
+	* Create a sqo filter from
+	* @return array $filter_custom
+	* @see get_sqo_context
+	*/
+	public function get_hierarchy_terms_filter() {
+
+		$filter_custom = [];
+
+		$properties = $this->get_propiedades();
+
+		$terms = $properties->source->hierarchy_terms;
+		foreach ($terms as $current_item) {
+			$resursive = (bool)$current_item->recursive;
+			# Get childrens
+			$ar_childrens = component_relation_children::get_childrens($current_item->section_id, $current_item->section_tipo, null, $resursive);
+			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_item->section_tipo, ['component_section_id'], true, true, true, true, false);
+
+			$path = new stdClass();
+				$path->section_tipo 	= $current_item->section_tipo;
+				$path->component_tipo 	= reset($component_section_id_tipo);
+				$path->modelo 			= 'component_section_id';
+				$path->name 			= 'Id';
+
+			$ar_section_id = array_map(function($children){
+				return $children->section_id;
+			}, $ar_childrens);
+
+			$filter_item = new stdClass();
+				$filter_item->q 	= implode(',', $ar_section_id);
+				$filter_item->path 	= [$path];
+
+				$filter_custom[] = $filter_item;
+		}//end foreach
+
+
+		return $filter_custom;
+	}//end get_hierarchy_terms_filter
 
 
 
