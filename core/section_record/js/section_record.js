@@ -176,8 +176,8 @@ section_record.prototype.get_ar_instances = async function(){
 
 	// items. Get the items inside the section/component of the record to render it
 		const items = (mode==="list")
-			? self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') ) // && el.parent===caller_tipo
-			: self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') )
+			? self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
+			: self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
 	
 	// instances
 		const ar_instances = []
@@ -185,7 +185,7 @@ section_record.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < items_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
-			const current_context 	= items[i]			
+			const current_context 	= items[i]
 			const current_data 		= self.get_component_data(current_context.tipo)
 			
 				const instance_options = {
