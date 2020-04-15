@@ -91,12 +91,9 @@ component_geolocation.prototype.init = async function(options) {
 	self.draw_data 					= null
 	self.drawControl				= null
 	self.draw_editor_is_initated 	= false
-	self.editable_FeatureGroup 		= null
 	self.ar_FeatureGroup 			= []
 	self.draw_state					= null
-	self.current_editable_FeatureGroup_id
-
-
+	self.active_layer_id
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -154,7 +151,6 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 		self.ar_layer_loaded = typeof self.data.value[key].lib_data!=='undefined'
 			? JSON.parse(JSON.stringify(self.data.value[key].lib_data))
 			: []
-			console.log("ar_layers",self.ar_layer_loaded);
 
 	// map_data
 		const map_data = (typeof value!=="undefined")
@@ -208,13 +204,13 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 			case 'NUMISDATA':
 				// LAYER
 				//var dare 		= new L.TileLayer('http://dare.ht.lu.se/tiles/imperium/{z}/{x}/{y}.png');
-				dare = new L.TileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
+				dare = new L.tileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
 					maxZoom: 11
 				});
 
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-				osm = new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
+				osm = new L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
 
 				// MAP
 				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -240,7 +236,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 				//var cloudmade 	= new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png');
 				//var osm 		= new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-				osm = new L.TileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+				osm = new L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
 				// mapbox https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
 				// https://api.mapbox.com/styles/v1/mapbox/dark-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
 				// https://api.mapbox.com/styles/v1/mapbox/light-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
@@ -329,6 +325,14 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 
 	// map ready event
 		self.map.whenReady(function(e){
+
+			const ar_layer 		= self.ar_layer_loaded
+			const ar_layer_len 	= ar_layer.length
+			for (let i = 0; i < ar_layer_len; i++) {
+				const layer = ar_layer[i]
+				self.load_layer(layer)
+			}
+
 			// force refresh map (apply 'invalidateSize')
 			const current_map = this
 			setTimeout(()=>{
@@ -492,62 +496,65 @@ component_geolocation.prototype.load_layer = function(layer){
 		const self = this
 
 	// set the layer data
-		const layer_id		= layer.layer_id
-		const layer_data	= layer.layer_data
-		const layer_name	= 'layer_' +layer_id
+		const layer_id			= layer.layer_id
+		const layer_data		= layer.layer_data
+		const layer_name		= 'layer_' +layer_id
+		const user_layer_name 	= typeof layer.user_layer_name !=='undefined'
+			? layer.user_layer_name
+			: layer_name
 
-		console.log(layer_data);
-
-console.log("layer",self.ar_FeatureGroup[layer_id]===false);
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
-	if( self.map.hasLayer(self.ar_FeatureGroup[layer_id])===false ) {
-
-		for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
-			if(self.ar_FeatureGroup[i]){
-				self.ar_FeatureGroup[i].clearLayers();
-				self.layer_control.removeLayer(self.ar_FeatureGroup[i])
-			}
-		}
+	console.log("map.layers",self.map);
+	console.log("loaded", self.map.hasLayer(self.ar_FeatureGroup[layer_id]) );
+	// if( self.map.hasLayer(self.ar_FeatureGroup[layer_id])===false ) {
+	if( typeof self.ar_FeatureGroup[layer_id] === 'undefined'){
 
 		// Create a new FeatureGroup
 		self.ar_FeatureGroup[layer_id] = new L.FeatureGroup();
 		self.ar_FeatureGroup[layer_id].addTo(self.map);
-
+		// add to the layer control with checkbox and the name of the user
 		self.layer_control.addOverlay(self.ar_FeatureGroup[layer_id], layer_id);
 
 	}else{
-		// Condfirm our write
-		//if( !confirm("Discard changes?") ) return;
+
 		//remove all layers
+		// self.map.eachLayer(function(layer){
+		//     layer.remove()
+		// });
 
 		for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
-			if(self.ar_FeatureGroup[i]){
-				self.ar_FeatureGroup[i].clearLayers();
-				self.layer_control.removeLayer(self.ar_FeatureGroup[i])
-			}
+			// if(self.ar_FeatureGroup[i]){
+				self.ar_FeatureGroup[i].remove()
+				// self.ar_FeatureGroup[i].clearLayers();
+				// self.layer_control.removeLayer(self.ar_FeatureGroup[i])
+			// }
 		}
-
-		self.layer_control.addOverlay( self.ar_FeatureGroup[layer_id], layer_id);
+		console.log("layer_id",layer_id);
+		// add to the layer control with checkbox and the name of the user
+		self.ar_FeatureGroup[layer_id].addTo(self.map);
+		// self.layer_control.addOverlay( self.ar_FeatureGroup[layer_id], user_layer_name);
 		// FEATUREGROUP RESET : Remove the all data layers for re-created with the new data that come with the loaded tag.
-		self.ar_FeatureGroup[layer_id].clearLayers();	//delete self.ar_FeatureGroup[layer_id];
+		// self.ar_FeatureGroup[layer_id].clearLayers();	//delete self.ar_FeatureGroup[layer_id];
 	}
 
 	// LAYERS : Load layers from data
 	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
-
+		//remove previous data into the layer
+		self.ar_FeatureGroup[layer_id].clearLayers();
 		L.geoJson( layer_data, {
 			//For each Feature load all layer data of the tag
-	    	onEachFeature: function (feature, data_layer) {
-	    		if(data_layer){
+	    	onEachFeature: function (feature, current_data_layer) {
+
+	    		if(current_data_layer){
 
 	    			// PopupContent. get the popup information
-						const content = self.get_popup_content(data_layer);
+						const content = self.get_popup_content(current_data_layer);
 							if (content) {
-								data_layer.bindPopup(content);
+								current_data_layer.bindPopup(content);
 							}
 
 		            // Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
-						data_layer.on('click', function(e) {
+						current_data_layer.on('click', function(e) {
 							if(self.draw_state==="delete"){
 								self.ar_FeatureGroup[layer_id].removeLayer(e.layer);
 								return;
@@ -587,8 +594,8 @@ console.log("layer",self.ar_FeatureGroup[layer_id]===false);
 						 });
 
 					// addLayer
-						// console.log("self.ar_FeatureGroup[layer_id]:",self.ar_FeatureGroup[layer_id]); // , "data_layer", data_layer, "layer_id",layer_id
-						self.ar_FeatureGroup[layer_id].addLayer(data_layer)
+						 // console.log("self.ar_FeatureGroup[layer_id]:",self.ar_FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
+						self.ar_FeatureGroup[layer_id].addLayer(current_data_layer)
 		    	}
 			}
 		})
@@ -598,14 +605,14 @@ console.log("layer",self.ar_FeatureGroup[layer_id]===false);
 
 	//map.addControl(L.Control.Layers.addOverlay( self.ar_FeatureGroup[layer_id], layer_id));
 	// DRAW_EDITOR : Init draw editor and pass current FeatureGroup
-	self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
+	// self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
 
 	// OVERLAY : add current featrureGroup to map ovelay (Adds an overlay (checkbox entry) with the given name to the control)
 	//current_overlay = L.tileLayer(self.ar_FeatureGroup[layer_id]);
 	//L.control.layers({},{'current_overlay':current_overlay}).addTo(map);
 
 	// CURRENT_EDITABLE_FEATUREGROUP_ID : Set the current featrure editable the actual FeatureGroup
-	self.current_editable_FeatureGroup_id = layer_id;
+	self.active_layer_id = layer_id;
 }//end load_geo_editor
 
 
@@ -650,14 +657,13 @@ component_geolocation.prototype.get_data_tag = function(){
 	})
 
 	const data_tag = {
-		type 					: 'geo',
-		tag_id 				: null,
-		state 				: 'n',
-		label 				: '',
-		data 					: '',
+		type 			: 'geo',
+		tag_id 			: null,
+		state 			: 'n',
+		label 			: '',
+		data 			: '',
 		last_layer_id	: last_layer_id+1,
-		layers 				: layers
-
+		layers 			: layers
 	}
 
 	return data_tag
@@ -704,34 +710,34 @@ component_geolocation.prototype.get_last_layer_id = function(){
 
 
 
-/**
-* GET_PARTS_OF_TAG
-*/
-component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
-
-	const type = tag_obj.dataset.type
-		if (type!=='geo'){
-			alert("invalid tag here!!!!")
-			return false
-		}
-
-	const tagState 		= tag_obj.dataset.state
-	const layer_id 		= tag_obj.dataset.tag_id
-	const dirty_data 	= tag_obj.dataset.data
-	const data 				= dirty_data.replace(/'/g, '"')
-
-	// if the tag is empty we can't parse it.
-	const dato = (data) ? JSON.parse(data) : data
-
-	const parts_of_tag = {
-		layer_id 	 : layer_id,
-		tagState : tagState,
-		data 	 : data
-	}
-
-	return parts_of_tag
-}//end get_parts_of_tag
-
+// /**
+// * GET_PARTS_OF_TAG
+// */
+// component_geolocation.prototype.get_parts_of_tag = function(tag_obj) {
+//
+// 	const type = tag_obj.dataset.type
+// 		if (type!=='geo'){
+// 			alert("invalid tag here!!!!")
+// 			return false
+// 		}
+//
+// 	const tagState 		= tag_obj.dataset.state
+// 	const layer_id 		= tag_obj.dataset.tag_id
+// 	const dirty_data 	= tag_obj.dataset.data
+// 	const data 			= dirty_data.replace(/'/g, '"')
+//
+// 	// if the tag is empty we can't parse it.
+// 	const dato = (data) ? JSON.parse(data) : data
+//
+// 	const parts_of_tag = {
+// 		layer_id 	 : layer_id,
+// 		tagState : tagState,
+// 		data 	 : data
+// 	}
+//
+// 	return parts_of_tag
+// }//end get_parts_of_tag
+//
 
 
 /**
@@ -808,19 +814,17 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 * INIT_DRAW_EDITOR
 * @see https://github.com/Leaflet/Leaflet.draw/issues/66
 */
-component_geolocation.prototype.init_draw_editor = function( current_editable_FeatureGroup, capa_id ) {
+component_geolocation.prototype.init_draw_editor = function( editable_FeatureGroup, layer_id ) {
 
 	const self = this
-	const map 													= self.map
-	const draw_editor_is_initated 			= self.draw_editor_is_initated
+	const map  = self.map
 
-	self.current_editable_FeatureGroup_id 	= capa_id;
-	self.editable_FeatureGroup 			 	= current_editable_FeatureGroup;
-	const editable_FeatureGroup				= self.editable_FeatureGroup
+	self.active_layer_id 	= layer_id;
 
 	// DRAW CONTROL REMOVE : Si ya existe, lo eliminamos para poder crearlo de nuevo y que haya sólo uno activo
-		if (self.drawControl) {
+		if (self.drawControl !== null) {
 			self.drawControl.remove(map)
+			map.removeControl(self.drawControl)
 		}
 
 
@@ -867,7 +871,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 
 		// DRAW HANDLERS //////////////////////////////////////////////
 		// !!IMPORTANTE : El editor se inicializa cada vez, pero los manejadores sólo una
-		if(draw_editor_is_initated===true) {
+		if(self.draw_editor_is_initated===true) {
 			//console.log('draw_editor_is_initated. returning');
 			return false;
 		}
@@ -876,8 +880,8 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 		map.on(L.Draw.Event.CREATED, function (e) {	// Triggered when a new vector or marker has been created.
 
 			//var type  	= e.layerType
-			var	layer 	= e.layer
-			var	content = self.get_popup_content(layer)
+			const	layer 	= e.layer
+			const	content = self.get_popup_content(layer)
 
 			if (content!==null) {
                 layer.bindPopup(content);
@@ -885,20 +889,20 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
             //listener fired when the layer is selected.
             layer.on('click', function(e) {
             	if(self.draw_state==="delete"){
-					editable_FeatureGroup.removeLayer(e.layer);
+					self.ar_FeatureGroup[self.active_layer_id].removeLayer(e.layer);
 					return;
             	}else{
-					//e.target.editing.enable();
+					e.target.editing.enable();
             	}
 			})
 
 			/*if (type === 'marker') {
 				layer.bindPopup('A popup!');
 			}*/
-			editable_FeatureGroup.addLayer(layer);
+			self.ar_FeatureGroup[self.active_layer_id].addLayer(layer);
 
 			// Update draw_data
-			self.draw_data = editable_FeatureGroup;
+			self.draw_data = self.ar_FeatureGroup[self.active_layer_id];
 
 			//save the draw_data
 			self.update_draw_data();
@@ -907,13 +911,16 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
 		map.on(L.Draw.Event.EDITED, function (e) {	// Triggered when layers in the FeatureGroup, initialised with the plugin, have been edited and saved.
 			// Update draw_data
-			self.draw_data = editable_FeatureGroup;
+			console.log("EDITED");
+
+			self.draw_data = self.ar_FeatureGroup[self.active_layer_id];
+			console.log(self.draw_data);
 			// Save draw_data
 			self.update_draw_data();
 		});
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
 		map.on(L.Draw.Event.DELETED, function (e) {	// Triggered when layers have been removed (and saved) from the FeatureGroup.
-			self.draw_data = editable_FeatureGroup;
+			self.draw_data = self.ar_FeatureGroup[self.active_layer_id];
 			// Save draw_data
 			self.update_draw_data();
 		});
@@ -935,7 +942,6 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 						if(!(layer instanceof L.Marker)){
 							layer.setStyle({color: '#3388ff'});
 						}
-
 					})
 				}
 			}
@@ -943,7 +949,7 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 
 
 	// DRAW_EDITOR_IS_INITATED : Fija la variable a global a true (default is false) para evitar duplicidades
-	//draw_editor_is_initated = true;
+	self.draw_editor_is_initated = true;
 
 	return true
 }//end init_draw_editor
@@ -962,12 +968,12 @@ component_geolocation.prototype.init_draw_editor = function( current_editable_Fe
 //
 // 	let current_draw_data = JSON.stringify(self.draw_data.toGeoJSON());
 // 		if(SHOW_DEBUG===true) {
-// 			console.log("[component_geolocation.save_draw_data] for ["+self.current_editable_FeatureGroup_id + "]", self.draw_data.toGeoJSON() )
+// 			console.log("[component_geolocation.save_draw_data] for ["+self.active_layer_id + "]", self.draw_data.toGeoJSON() )
 // 		}
 // 		current_draw_data = current_draw_data.replace(/"/g, '\'')
 //
 //
-// 	const tag_obj 		= self.ar_tag_loaded[self.current_editable_FeatureGroup_id]
+// 	const tag_obj 		= self.ar_tag_loaded[self.active_layer_id]
 //
 // 	const tag_data = {
 // 		type 			: tag_obj.dataset.type,
@@ -994,16 +1000,16 @@ component_geolocation.prototype.update_draw_data = function() {
 
 	const self = this
 
-	const project 					= self.draw_data
+	const project 				= self.draw_data
 
-	const layer_id					= self.current_editable_FeatureGroup_id
+	const layer_id				= self.active_layer_id
 
 	const current_layer 		= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 
-	// const current_layer				= self.ar_tag_loaded.find((item) => item.layer_id === layer_id)
-	current_layer.layer_data 		= project.toGeoJSON()
+	// const current_layer		= self.ar_tag_loaded.find((item) => item.layer_id === layer_id)
+	current_layer.layer_data 	= project.toGeoJSON()
 
-	const key  						= self.map.getContainer().dataset.key
+	const key  					= self.map.getContainer().dataset.key
 
 	// current_layer.user_layer_name 	= current_layer.data.user_layer_name
 

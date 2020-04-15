@@ -7,17 +7,6 @@
 
 //@elements_over_z_index : 1000;
 @elements_over_z_index : 1000;
-.css_wrap_geolocation, .css_wrap_geolocation_tm {
-	z-index: 1;
-	//min-height: 400px;
-
-	display: table;
-	}
-	.css_wrap_geolocation .content_data {
-		height: 96%;
-		padding-bottom: 10px;
-	}
-
 
 
 /* FIELDS
@@ -69,18 +58,18 @@
 			background: #fe8000;
 		}
 
-	.map_inputs	.map_full_screen {
-			.build_button('full_screen.svg');
-			width: 1.2em;
-			height: 1.2em;
-		}
-		.map_inputs	.map_full_screen:hover {
-			opacity: 1;
-		}
-		.map_inputs	.map_full_screen:active {
-			opacity: 1;
-			background-color: #fe8000;
-		}
+	// .map_inputs	.map_full_screen {
+	// 		.build_button('full_screen.svg');
+	// 		width: 1.2em;
+	// 		height: 1.2em;
+	// 	}
+	// 	.map_inputs	.map_full_screen:hover {
+	// 		opacity: 1;
+	// 	}
+	// 	.map_inputs	.map_full_screen:active {
+	// 		opacity: 1;
+	// 		background-color: #fe8000;
+	// 	}
 
 
 
@@ -164,6 +153,7 @@
 	.wrapper_component.component_geolocation {
 
 		>.content_data {
+			height: calc(100% - 2em);
 
 			// inputs container
 			ul.inputs_container {
@@ -174,16 +164,6 @@
 		    		flex: 1 1 auto;
 		    		flex-direction: column;
 		    		// z-index: 1;
-
-		    		&.map_full{
-						z-index: 2;
-						position: fixed;
-						display: block;
-						top: 0;
-						left: 0;
-						width: 100%;
-						height: 100%;
-					}
 
 		    		>div {
 						display: : flex;
@@ -233,5 +213,3 @@
 
 		}//end >.content_data
 	}//end .wrapper_component.component_geolocation
-
-
