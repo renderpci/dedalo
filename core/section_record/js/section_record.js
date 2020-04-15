@@ -167,26 +167,27 @@ section_record.prototype.build = async function(autoload=false) {
 section_record.prototype.get_ar_instances = async function(){
 
 	const self = this
-
+	
 	// sort vars
 		const mode 			= self.mode
 		const section_tipo 	= self.section_tipo
 		const section_id 	= self.section_id
+		const caller_tipo	= self.caller.tipo
 
-	// items. Get the items inside the section of the record to render it
+	// items. Get the items inside the section/component of the record to render it
 		const items = (mode==="list")
-			? self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.mode===mode)
-			: self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.mode===mode)
-
+			? self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
+			: self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
+	
 	// instances
 		const ar_instances = []
 		const items_length = items.length
 		for (let i = 0; i < items_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
-			const current_context 	= items[i]
+			const current_context 	= items[i]			
 			const current_data 		= self.get_component_data(current_context.tipo)
-
+			
 				const instance_options = {
 					model 			: current_context.model,
 					tipo 			: current_context.tipo,
@@ -202,7 +203,7 @@ section_record.prototype.get_ar_instances = async function(){
 					datum 			: self.datum,
 					sqo_context 	: current_context.sqo_context
 				}
-
+				
 				// id_variant . Propagate a custom instance id to children
 					if (self.id_variant) {
 						instance_options.id_variant = self.id_variant
@@ -221,7 +222,7 @@ section_record.prototype.get_ar_instances = async function(){
 				}
 				// instance build await
 				await current_instance.build()
-
+	
 			// add
 				ar_instances.push(current_instance)
 
@@ -257,6 +258,7 @@ section_record.prototype.get_component_data = function(component_tipo){
 		}
 		self.data.push(component_data)
 	}
+
 
 	return component_data
 }//end get_component_data
