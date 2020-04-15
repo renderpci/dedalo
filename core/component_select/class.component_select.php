@@ -20,10 +20,6 @@ class component_select extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
 
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
-
 		$dato = $this->get_dato();
 
 		// case user id root
@@ -40,7 +36,7 @@ class component_select extends component_relation_common {
 					dump($dato," actual invalid dato: ");
 				}
 				trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->section_tipo - $this->tipo - $this->parent .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
-				return $this->valor = null;
+				return null;
 			}
 		}
 
@@ -56,9 +52,9 @@ class component_select extends component_relation_common {
 		}
 
 		# Set value
-		$this->valor = implode(', ', $ar_values);
+		$valor = implode(', ', $ar_values);
 
-		return $this->valor;
+		return $valor;
 	}//end get_valor
 
 

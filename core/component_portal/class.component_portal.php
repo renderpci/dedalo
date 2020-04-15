@@ -16,13 +16,13 @@ class component_portal extends component_relation_common {
 	public $ar_target_section_tipo;		# Used to fix section tipo (calculado a partir del componente relacionado de tipo section) Puede ser virtual o real
 
 	# Array of related terms in structure (one or more)
-	protected $ar_terminos_relacionados;
+	// protected $ar_terminos_relacionados;
 
 	# referenced component tipo
-	public $tipo_to_search;
+	// public $tipo_to_search;
 
 	// default max records to show (paginated)
-	public $max_records = 3;
+	public $max_records = 5;
 
 
 

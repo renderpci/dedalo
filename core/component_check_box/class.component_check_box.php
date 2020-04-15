@@ -19,13 +19,9 @@ class component_check_box extends component_relation_common {
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
 
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
-
 		$dato = $this->get_dato();
 		if (empty($dato)) {
-			return $this->valor = null;
+			return null;
 		}
 		
 		# Test dato format (b4 changed to object)
@@ -35,7 +31,7 @@ class component_check_box extends component_relation_common {
 					dump($dato," dato");
 				}
 				trigger_error(__METHOD__." Wrong dato format. OLD format dato in label:$this->label tipo:$this->tipo parent:$this->parent.Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
-				return $this->valor = null;
+				return null;
 			}
 		}
 		
@@ -49,18 +45,14 @@ class component_check_box extends component_relation_common {
 				$ar_values[] = $item->label;
 			}
 		}
-		# Set value
-		switch ($format) {
-			case 'array':
-				$this->valor = $ar_values;
-				break;		
-			case 'string':
-			default:
-				$this->valor = implode(', ', $ar_values);
-				break;
-		}
 
-		return $this->valor;		
+		# Set format
+		$valor = ($format==='array')
+			? $ar_values
+			: implode(', ', $ar_values);
+
+		
+		return $valor;		
 	}//end get_valor
 
 
