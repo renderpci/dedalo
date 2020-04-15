@@ -12,8 +12,18 @@ class component_relation_children extends component_relation_common {
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
+	# ar_target_section_tipo
+	public $ar_target_section_tipo;		# Used to fix section tipo (calculado a partir del componente relacionado de tipo section) Puede ser virtual o real
 
-	
+	# Array of related terms in structure (one or more)
+	// protected $ar_terminos_relacionados;
+
+	# referenced component tipo
+	// public $tipo_to_search;
+
+	public $max_records = 3;
+
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
@@ -21,9 +31,9 @@ class component_relation_children extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
 		#return "working here! ".__METHOD__;
-	
+
 		if (isset($this->valor)) {
-			#dump($this->valor, ' RETURNED VALOR FROM CACHE this->valor ++ '.to_string());		
+			#dump($this->valor, ' RETURNED VALOR FROM CACHE this->valor ++ '.to_string());
 			return $this->valor;
 		}
 
@@ -31,7 +41,7 @@ class component_relation_children extends component_relation_common {
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
 			#$ar_valor[] = self::get_locator_value( $current_locator, $lang );
-			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );		
+			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
 		}//end if (!empty($dato))
 
 
