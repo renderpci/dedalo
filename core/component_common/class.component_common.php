@@ -65,6 +65,9 @@ abstract class component_common extends common {
 		# Component definition. Used in component label
 		public $def;
 
+		# from_parent. Used to link context ddo elements
+		public $from_parent;
+
 
 
 	/**
