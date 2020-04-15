@@ -64,12 +64,7 @@ class component_relation_related extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
-		#return "working here! ".__METHOD__;
-
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
-
+		
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
 		if ($ar_related_terms===false) {
 			$ar_related_terms = $this->RecordObj_dd->get_relaciones();
@@ -113,8 +108,6 @@ class component_relation_related extends component_relation_common {
 		}else{
 			$valor = implode($divisor, $ar_values);
 		}
-
-		$this->valor = $valor;
 
 		return $this->valor;
 	}//end get_valor
@@ -304,119 +297,119 @@ class component_relation_related extends component_relation_common {
 	}//end get_type_rel
 
 
+	// DES
+		// /**
+		// * GET_INVERSE_RELATED
+		// * Get related term to current section
+		// * @param int $section_id
+		// * @param string $section_tipo
+		// * @param string $from_component_tipo
+		// *	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
+		// * @param array $ar_tables
+		// *	Optional. If set, union tables search is made over all tables received
+		// *
+		// * @return array $inverse_related
+		// *	Array of stClass objects with properties: section_tipo, section_id, component_tipo
+		// */
+		// public static function get_inverse_related_DEPRECATED( $section_id, $section_tipo, $type_rel=DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO, $from_component_tipo=null, $ar_tables=null ) {
 
-	/**
-	* GET_INVERSE_RELATED
-	* Get related term to current section
-	* @param int $section_id
-	* @param string $section_tipo
-	* @param string $from_component_tipo
-	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
-	* @param array $ar_tables
-	*	Optional. If set, union tables search is made over all tables received
-	*
-	* @return array $inverse_related
-	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
-	*/
-	public static function get_inverse_related_DEPRECATED( $section_id, $section_tipo, $type_rel=DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO, $from_component_tipo=null, $ar_tables=null ) {
+		// 	if(SHOW_DEBUG===true) {
+		// 		$start_time=microtime(1);
+		// 	}
 
-		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);
-		}
+		// 	# FROM_COMPONENT_TIPO FILTER OPTION
+		// 	$filter ='';
+		// 	if (!is_null($from_component_tipo)) {
+		// 		/*
+		// 			# Locate current section component parent tipo
+		// 			$ar_modelo_name_required = array('component_relation_parent');
+		// 			$ar_children_tipo 	 	 = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+		// 			$component_parent_tipo 	 = reset($ar_children_tipo);
+		// 			# Calculate current target component_relation_children_tipo from structure
+		// 			$from_component_tipo 	 = component_relation_parent::get_component_relation_children_tipo($component_parent_tipo);
+		// 			*/
+		// 		$filter = ",\"from_component_tipo\":\"$from_component_tipo\"";
+		// 	}
 
-		# FROM_COMPONENT_TIPO FILTER OPTION
-		$filter ='';
-		if (!is_null($from_component_tipo)) {
-			/*
-				# Locate current section component parent tipo
-				$ar_modelo_name_required = array('component_relation_parent');
-				$ar_children_tipo 	 	 = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-				$component_parent_tipo 	 = reset($ar_children_tipo);
-				# Calculate current target component_relation_children_tipo from structure
-				$from_component_tipo 	 = component_relation_parent::get_component_relation_children_tipo($component_parent_tipo);
-				*/
-			$filter = ",\"from_component_tipo\":\"$from_component_tipo\"";
-		}
+		// 	$type 	  = DEDALO_RELATION_TYPE_RELATED_TIPO;
+		// 	$compare  = "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\",\"type_rel\":\"$type_rel\"".$filter."}";
 
-		$type 	  = DEDALO_RELATION_TYPE_RELATED_TIPO;
-		$compare  = "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\",\"type_rel\":\"$type_rel\"".$filter."}";
+		// 	# TABLES strQuery
+		// 	$strQuery  = '';
+		// 	if (is_null($ar_tables)) {
+		// 		// Calculated from section_tipo (only search in current table)
+		// 		$table 	   = common::get_matrix_table_from_tipo($section_tipo);
+		// 		$strQuery .= "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";
+		// 	}else{
+		// 		// Iterate tables and make union search
+		// 		$ar_query=array();
+		// 		foreach ((array)$ar_tables as $table) {
+		// 			$ar_query[] = "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";
+		// 		}
+		// 		$strQuery .= implode(" UNION ALL ", $ar_query);
+		// 	}
+		// 	// Set order to maintain results stable
+		// 	$strQuery .= " ORDER BY section_id ASC";
 
-		# TABLES strQuery
-		$strQuery  = '';
-		if (is_null($ar_tables)) {
-			// Calculated from section_tipo (only search in current table)
-			$table 	   = common::get_matrix_table_from_tipo($section_tipo);
-			$strQuery .= "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";
-		}else{
-			// Iterate tables and make union search
-			$ar_query=array();
-			foreach ((array)$ar_tables as $table) {
-				$ar_query[] = "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";
-			}
-			$strQuery .= implode(" UNION ALL ", $ar_query);
-		}
-		// Set order to maintain results stable
-		$strQuery .= " ORDER BY section_id ASC";
+		// 	if(SHOW_DEBUG) {
+		// 		component_relation_related::$get_inverse_related_query = $strQuery;
+		// 		#dump($strQuery, ' $strQuery ++ '.to_string()); die();
+		// 	}
+		// 	$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 
-		if(SHOW_DEBUG) {
-			component_relation_related::$get_inverse_related_query = $strQuery;
-			#dump($strQuery, ' $strQuery ++ '.to_string()); die();
-		}
-		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+		// 	$inverse_related = array();
+		// 	while ($rows = pg_fetch_assoc($result)) {
 
-		$inverse_related = array();
-		while ($rows = pg_fetch_assoc($result)) {
+		// 		$current_section_id   	= $rows['section_id'];
+		// 		$current_section_tipo 	= $rows['section_tipo'];
 
-			$current_section_id   	= $rows['section_id'];
-			$current_section_tipo 	= $rows['section_tipo'];
+		// 		if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
+		// 			debug_log(__METHOD__." Error on get related. Related is set at itself as loop. Ignored locator. ($section_id - $section_tipo) ".to_string(), logger::ERROR);
+		// 			continue;
+		// 		}
 
-			if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
-				debug_log(__METHOD__." Error on get related. Related is set at itself as loop. Ignored locator. ($section_id - $section_tipo) ".to_string(), logger::ERROR);
-				continue;
-			}
+		// 		// Search 'from_tipo' in locators when no is received
+		// 		if (empty($from_component_tipo)) {
 
-			// Search 'from_tipo' in locators when no is received
-			if (empty($from_component_tipo)) {
+		// 			$current_relations = json_decode($rows['relations']);
 
-				$current_relations = json_decode($rows['relations']);
+		// 			$reference_locator = new locator();
+		// 				$reference_locator->set_section_tipo($section_tipo);
+		// 				$reference_locator->set_section_id($section_id);
+		// 				$reference_locator->set_type($type);
 
-				$reference_locator = new locator();
-					$reference_locator->set_section_tipo($section_tipo);
-					$reference_locator->set_section_id($section_id);
-					$reference_locator->set_type($type);
+		// 			foreach ((array)$current_relations as $current_locator) {
+		// 				# dump( $current_locator, ' $current_locator ++ '.to_string($reference_locator));
+		// 				if( $match = locator::compare_locators( $current_locator, $reference_locator, $ar_properties=array('section_tipo','section_id','type')) ){
+		// 					if (!isset($current_locator->from_component_tipo)) {
+		// 						dump($current_locator, "Bad locator.'from_component_tipo' property not found in locator (get_inverse_related: $section_id, $section_tipo)".to_string());
+		// 						debug_log(__METHOD__." Bad locator.'from_component_tipo' property not found in locator (get_inverse_related: $section_id, $section_tipo) ".to_string($current_locator), logger::DEBUG);
+		// 					}
+		// 					$calculated_from_component_tipo = $current_locator->from_component_tipo;
+		// 					break;
+		// 				}
+		// 			}
+		// 		}//end if (empty($from_component_tipo)) {
 
-				foreach ((array)$current_relations as $current_locator) {
-					# dump( $current_locator, ' $current_locator ++ '.to_string($reference_locator));
-					if( $match = locator::compare_locators( $current_locator, $reference_locator, $ar_properties=array('section_tipo','section_id','type')) ){
-						if (!isset($current_locator->from_component_tipo)) {
-							dump($current_locator, "Bad locator.'from_component_tipo' property not found in locator (get_inverse_related: $section_id, $section_tipo)".to_string());
-							debug_log(__METHOD__." Bad locator.'from_component_tipo' property not found in locator (get_inverse_related: $section_id, $section_tipo) ".to_string($current_locator), logger::DEBUG);
-						}
-						$calculated_from_component_tipo = $current_locator->from_component_tipo;
-						break;
-					}
-				}
-			}//end if (empty($from_component_tipo)) {
+		// 		$related = new stdClass();
+		// 			$related->section_tipo	= $current_section_tipo;
+		// 			$related->section_id 	= $current_section_id;
+		// 			$related->component_tipo = empty($from_component_tipo) ? $calculated_from_component_tipo : $from_component_tipo;
 
-			$related = new stdClass();
-				$related->section_tipo	= $current_section_tipo;
-				$related->section_id 	= $current_section_id;
-				$related->component_tipo = empty($from_component_tipo) ? $calculated_from_component_tipo : $from_component_tipo;
+		// 		# ar_related
+		// 		$inverse_related[] = $related;
+		// 	}//end while
 
-			# ar_related
-			$inverse_related[] = $related;
-		}//end while
+		// 	if(SHOW_DEBUG===true) {
+		// 		#$total=round(microtime(1)-$start_time,3);
+		// 		#debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
+		// 	}
 
-		if(SHOW_DEBUG===true) {
-			#$total=round(microtime(1)-$start_time,3);
-			#debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
-		}
+		// 	#dump($inverse_related, ' inverse_related ++ '.to_string());
+		// 	#debug_log(__METHOD__." inverse_related ".to_string($strQuery), logger::DEBUG);
 
-		#dump($inverse_related, ' inverse_related ++ '.to_string());
-		#debug_log(__METHOD__." inverse_related ".to_string($strQuery), logger::DEBUG);
-
-		return (array)$inverse_related;
-	}//end get_inverse_related
+		// 	return (array)$inverse_related;
+		// }//end get_inverse_related
 
 
 
@@ -667,46 +660,6 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* GET_TIPO_TO_SEARCH
-	* Locate in structure TR the component tipo to search
-	* @return string $tipo_to_search
-	*/
-	public function get_tipo_to_search($options=null) {
-
-		if(isset($this->tipo_to_search)) {
-			return $this->tipo_to_search;
-		}
-
-		# DESECHADO POR PROBLEMAS AL SELECCIONAR EL PRIMERO. EL ORDEN NO ES RESPETADO...
-		# $ar_related_terms = (array)$this->RecordObj_dd->get_relaciones();
-		# 	#dump($ar_related_terms, ' ar_related_terms');
-		# foreach ($ar_related_terms as $related_terms)
-		# foreach ($related_terms as $modelo => $current_tipo) {
-		# 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-		# 	# Get first component only
-		# 	if (strpos($modelo_name, 'component_')!==false) {
-		# 		$tipo_to_search = $current_tipo; break;
-		# 	}
-		# }
-
-		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado');
-				#dump($ar_terminoID_by_modelo_name, ' ar_terminoID_by_modelo_name '.$this->tipo.' ');
-		$tipo_to_search = reset($ar_terminoID_by_modelo_name);
-
-		if (!isset($tipo_to_search)) {
-			throw new Exception("Error Processing Request. Inconsistency detect. This component need related component to search always", 1);
-		}
-		#dump($tipo_to_search, ' tipo_to_search');
-
-		# Fix value
-		$this->tipo_to_search = $tipo_to_search;
-
-		return $tipo_to_search;
-	}//end get_tipo_to_search
-
-
-
-	/**
 	* GET_SEARCH_FIELDS
 	*/
 	public function get_search_fields($search_tipo) {
@@ -785,4 +738,3 @@ class component_relation_related extends component_relation_common {
 
 
 }//end component_relation_related
-?>

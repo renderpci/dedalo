@@ -27,7 +27,7 @@
 				$sqo_context = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $sqo_context);
+					$current_context = $this->get_structure_context($permissions, $sqo_context);					
 					// add records_mode to properties, if not already defined 
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {
@@ -99,7 +99,7 @@
 					$data[] = $current_data;
 				}
 
-		}//end if (!empty($dato))
+		}//end if (!empty($dato))		
 	}//end if $options->get_data===true && $permissions>0
 
 

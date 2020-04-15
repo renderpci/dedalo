@@ -6,6 +6,8 @@
 */
 class component_publication extends component_relation_common {
 
+
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
@@ -13,6 +15,7 @@ class component_publication extends component_relation_common {
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+
 
 
 	/**
@@ -26,36 +29,7 @@ class component_publication extends component_relation_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 	}//end __construct
-
-
-	/*
-	# GET DATO : 
-	public function get_dato() {
-		$dato = parent::get_dato();
-		if (!empty($dato) && !is_array($dato)) {			
-			debug_log(__METHOD__." Dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent ".to_string(), logger::ERROR);
-			$this->set_dato(array());
-			$this->Save();
-		}
-		if ($dato===null) {
-			$dato=array();
-		}		
-		return (array)$dato;
-	}*/
-
-
-	/*
-	# SET_DATO
-	public function set_dato($dato) {
-		if (is_string($dato) && strpos($dato, '}')!==false ) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-		if (is_object($dato)) {
-			$dato = array($dato);
-		}
-		parent::set_dato( (array)$dato );
-	}
-	*/
+	
 
 	
 	/**
@@ -67,22 +41,22 @@ class component_publication extends component_relation_common {
 		$dato = $this->get_dato();
 
 		# Test dato format (b4 changed to object)
-		if(SHOW_DEBUG===true) {
-			if (!empty($dato)) foreach ($dato as $key => $value) {
-				if (!empty($value) && !is_object($value)) {
-					if(SHOW_DEBUG===true) {
-						dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));							
+			if(SHOW_DEBUG===true) {
+				if (!empty($dato)) foreach ($dato as $key => $value) {
+					if (!empty($value) && !is_object($value)) {
+						if(SHOW_DEBUG===true) {
+							dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));							
+						}
+						debug_log(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true), logger::ERROR);
+						return null;
 					}
-					debug_log(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true), logger::ERROR);
-					return $this->valor = null;
 				}
 			}
-		}
 
+		// modo changes value result
 		switch ($this->modo) {
 
 			case 'diffusion':
-
 				$valor = 'no';
 				if (!empty($dato)) {				
 					
@@ -100,7 +74,6 @@ class component_publication extends component_relation_common {
 				break;
 			
 			default:
-
 				$valor = null;
 				if (!empty($dato)) {									
 
@@ -109,20 +82,16 @@ class component_publication extends component_relation_common {
 					$component_locator  = reset($dato);
 					foreach ($ar_list_of_values->result as $key => $item) {
 						
-						$locator = $item->value;
-											
+						$locator = $item->value;											
 						if (true===locator::compare_locators( $component_locator, $locator, $ar_properties=['section_id','section_tipo'])) {						
 							$valor = $item->label;
 							break;
 						}
 					}
 				}
-				break;
-				
+				break;				
 		}#end switch
 
-		# Set value
-		$this->valor = $valor;
 
 		return $valor;
 	}#end get_valor
