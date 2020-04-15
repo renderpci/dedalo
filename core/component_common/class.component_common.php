@@ -2190,13 +2190,13 @@ abstract class component_common extends common {
 
 	/*
 	* GET_VALOR_LANG
-	* Return the main component lang
+	* Return the component lang
 	* If the component need change this langs (selects, radiobuttons...) overwritte this function
 	*/
 	public function get_valor_lang(){
 
 		return $this->lang;
-	}
+	}//end get_valor_lang
 
 
 	/*
@@ -2313,14 +2313,13 @@ abstract class component_common extends common {
 	*/
 	public function get_ar_target_section_tipo() {
 
-		if (!$this->tipo) return NULL;
+		if (!$this->tipo) return null;
 
 		if(isset($this->ar_target_section_tipo)) {
 			return $this->ar_target_section_tipo;
 		}
 
 		$propiedades = $this->get_propiedades();
-
 		if(isset($propiedades->source->config_context)){
 
 			$ar_target_section_tipo = [];
@@ -2328,9 +2327,9 @@ abstract class component_common extends common {
 				if ($current_item->type!=='internal') continue;
 
 				//add hierarchy_types
-				if(isset($current_item->hierarchy_types)){
+				if(isset($current_item->hierarchy_types) && !empty($current_item->hierarchy_types)){
 					// get the hierarchy sections from properties
-						$hierarchy_types = isset($current_item->hierarchy_types) ? $current_item->hierarchy_types : null;
+						$hierarchy_types = !empty($current_item->hierarchy_types) ? $current_item->hierarchy_types : null;
 
 					# Resolve hierarchy_sections for speed
 						if (!empty($hierarchy_types)) {
@@ -3722,7 +3721,7 @@ abstract class component_common extends common {
 			$options->limit  			= 1;
 			$options->logical_operator 	= '$or';
 
-		$search_query_object = self::build_search_query_object($options);
+		$search_query_object = common::build_search_query_object($options);
 
 		$search 	= search::get_instance($search_query_object);
 		$response 	= $search->search();
@@ -3997,8 +3996,8 @@ abstract class component_common extends common {
 					$current_config_context->show = $current_config_context->select;
 				}
 
-				//add hierarchy_types
-				if(isset($current_config_context->hierarchy_types)){
+				// add hierarchy_types
+				if(isset($current_config_context->hierarchy_types) && !empty($current_config_context->hierarchy_types)){
 					// get the hierarchy sections from properties
 						$hierarchy_types = $current_config_context->hierarchy_types;
 

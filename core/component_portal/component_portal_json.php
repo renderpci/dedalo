@@ -28,7 +28,7 @@
 
 				// Component structure context (tipo, relations, properties, etc.)
 					$current_context = $this->get_structure_context($permissions, $sqo_context);
-					// add records_mode if not defined to properties
+					// add records_mode to properties, if not already defined 
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {
 							$current_context->properties = new stdClass();

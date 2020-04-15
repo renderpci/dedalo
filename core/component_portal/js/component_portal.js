@@ -127,7 +127,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 			const current_data_manager 	= new data_manager()
 			const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
-
+			
 			// Update the self.data into the datum and self instance
 			self.update_datum(api_response)
 		}
@@ -192,7 +192,7 @@ component_portal.prototype.build  = async function(autoload=false){
 	// status update
 		self.status = 'builded'
 
-
+	
 	return true
 }//end component_portal.prototype.build
 
@@ -229,7 +229,6 @@ component_portal.prototype.add_value = async function(value) {
 	if(SHOW_DEBUG===true) {
 		console.log("==== add_value - value - changed_data:", value, changed_data);
 	}
-
 
 	// des
 		// const js_promise = self.change_value({

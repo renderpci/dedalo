@@ -1495,6 +1495,8 @@ abstract class common {
 			#$called_model = get_called_class();
 			$called_model = get_class($this);
 
+
+
 		// sort vars
 			$tipo 		  = $this->get_tipo();
 			$section_tipo = $this->get_section_tipo();
@@ -1558,7 +1560,6 @@ abstract class common {
 				}else{
 					$parent = $this->RecordObj_dd->get_parent();
 				}
-
 			}
 
 		// tools

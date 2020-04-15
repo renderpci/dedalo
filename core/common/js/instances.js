@@ -139,7 +139,7 @@ export const get_instance = async function(options){
 		}
 
 	const instance = load_instance()
-
+	
 
 	return instance
 }// end get_instance
