@@ -87,7 +87,7 @@ abstract class common {
 			// component_radio_button
 			// 'component_relation_children',
 			'component_relation_index',
-			'component_relation_model',
+			// 'component_relation_model',
 			'component_relation_parent',
 			'component_relation_related',
 			'component_relation_struct',
@@ -1631,8 +1631,7 @@ abstract class common {
 				$dd_object->search_options_title 	= search::search_options_title($dd_object->search_operators_info);
 			}
 
-
-
+		
 		return $dd_object;
 	}//end get_structure_context
 
