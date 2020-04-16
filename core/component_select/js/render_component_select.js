@@ -28,9 +28,8 @@ render_component_select.prototype.list = async function() {
 
 	const self = this
 
-	// Options vars
-		const context 			= self.context
-		const data 				= self.data
+	// short vars
+		const data = self.data
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
