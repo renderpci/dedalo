@@ -40,7 +40,7 @@ render_component_select.prototype.list = async function() {
 		const value_string = data.value
 
 	// Set value
-		wrapper.textContent = value_string
+		wrapper.innerHTML = value_string
 
 	return wrapper
 }//end list
@@ -138,45 +138,42 @@ const add_events = (self, wrapper) => {
 
 					return true
 				}
-
 		}, false)
 
 	// click event
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
 
-			// edit target section
-				if (e.target.matches('.button.edit')) {
-					// rebuild_nodes. event to render the component again
-					event_manager.publish('edit_element_'+self.id, self)
+			// // edit target section
+			// 	if (e.target.matches('.button.edit')) {
+			// 		// rebuild_nodes. event to render the component again
+			// 		event_manager.publish('edit_element_'+self.id, self)
 
-					return true
-				}
+			// 		return true
+			// 	}
 
-			// mode change
-				if (e.target.matches('.button.close')) {
-					//change mode
-					self.change_mode('list', true)
+			// // mode change
+			// 	if (e.target.matches('.button.close')) {
+			// 		//change mode
+			// 		self.change_mode('list', true)
 
-					return true
-				}
-
-
+			// 		return true
+			// 	}
 		},false)
 
 	// focus event
-		wrapper.addEventListener("focus", e => {
-			// e.stopPropagation()
+		// wrapper.addEventListener("focus", e => {
+		// 	// e.stopPropagation()
 
-			// selected_node. fix selected node
-			self.selected_node = wrapper
+		// 	// selected_node. fix selected node
+		// 	self.selected_node = wrapper
 
-			if (e.target.matches('select')) {
-			 	event_manager.publish('active_component', self)
+		// 	if (e.target.matches('select')) {
+		// 	 	event_manager.publish('active_component', self)
 
-			 	return true
-			}
-		},true)
+		// 	 	return true
+		// 	}
+		// },true)
 
 
 	return true
@@ -311,10 +308,17 @@ const input_element = (inputs_container, self) => {
 		for (let i = 0; i < length; i++) {
 
 			const datalist_item = datalist[i]
+
+			const current_section_id = typeof datalist_item.section_id!=="undefined" ? datalist_item.section_id : ''
+			
+			const current_label = (SHOW_DEBUG===true)
+				? datalist_item.label + " [" + current_section_id + "]"
+				: datalist_item.label
+
 			const option = ui.create_dom_element({
 				element_type	: 'option',
 				value 			: JSON.stringify(datalist_item.value),
-				text_content 	: datalist_item.label,
+				text_content 	: current_label,
 				parent 			: select
 			})
 			// selected options set on match
