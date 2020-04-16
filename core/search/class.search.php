@@ -68,6 +68,9 @@ class search {
 		# ar_direct_columns. Useful to calculate efficient order sentences
 		public $ar_direct_columns = ['section_id','section_tipo','id'];
 
+		# include_negative
+		public $include_negative;
+
 
 
 	/**
@@ -1463,7 +1466,9 @@ class search {
 			$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
 
 		// avoid root user is showed except for root
-			$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
+			if (!isset($this->include_negative) || $this->include_negative!==true) {
+				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
+			}			
 
 		# Fix values
 		$this->main_where_sql = $main_where_sql;

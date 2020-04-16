@@ -66,9 +66,6 @@ abstract class component_common extends common {
 		# Component definition. Used in component label
 		public $def;
 
-		# from_parent. Used to link context ddo elements
-		public $from_parent;
-
 
 
 	/**
@@ -1520,7 +1517,7 @@ abstract class component_common extends common {
 	* GET_AR_LIST_OF_VALUES2
 	* @return array $ar_list_of_values
 	*/
-	public function get_ar_list_of_values2($lang=DEDALO_DATA_LANG) {
+	public function get_ar_list_of_values2($lang=DEDALO_DATA_LANG, $include_negative=false) {
 
 		$start_time = microtime(1);
 
@@ -1606,6 +1603,10 @@ abstract class component_common extends common {
 
 		// Search
 			$search 			= search::get_instance($search_query_object);
+			// include_negative values to include root user in list
+				if ($include_negative===true) {
+					$search->include_negative = true;
+				}				
 			$records_data 		= $search->search();
 			$ar_current_dato 	= $records_data->ar_records;
 				#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());

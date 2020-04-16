@@ -32,6 +32,12 @@ abstract class common {
 	# public propiedades
 	public $propiedades;
 
+	# from_parent. Used to link context ddo elements
+	public $from_parent;
+
+	# parent_grouper
+	public $parent_grouper;
+
 	# REQUIRED METHODS
 	#abstract protected function define_id($id);
 	#abstract protected function define_tipo();
@@ -79,9 +85,9 @@ abstract class common {
 			// component_portal
 			// component_publication
 			// component_radio_button
-			'component_relation_children',
+			// 'component_relation_children',
 			'component_relation_index',
-			'component_relation_model',
+			// 'component_relation_model',
 			'component_relation_parent',
 			'component_relation_related',
 			'component_relation_struct',
@@ -1491,11 +1497,8 @@ abstract class common {
 	*/
 	public function get_structure_context($permissions=0, $sqo_object=false) {
 
-		// class called (model name too like component_input_text)
-			#$called_model = get_called_class();
+		// class called (model name too like component_input_text)			
 			$called_model = get_class($this);
-
-
 
 		// sort vars
 			$tipo 		  = $this->get_tipo();
@@ -1553,14 +1556,14 @@ abstract class common {
 			}
 
 			// 3 . From structure (fallback)
-			if (!isset($parent)) {
-				// default
-				if($called_model === 'section'){
-					$parent = $this->get_section_tipo();
-				}else{
-					$parent = $this->RecordObj_dd->get_parent();
-				}
+			if (!isset($parent)) {				
+				$parent = $this->get_section_tipo();				
 			}
+
+		// parent_grouper (structure parent)
+			$parent_grouper = !empty($this->parent_grouper)
+				? $this->parent_grouper
+				: $this->RecordObj_dd->get_parent();
 
 		// tools
 			$tools = array_map(function($item){
@@ -1582,7 +1585,6 @@ abstract class common {
 				return $tool;
 			}, $this->get_tools());
 
-
 		// sqo_context
 			if($sqo_object===true){
 			 	$sqo_context = $this->get_sqo_context();
@@ -1600,6 +1602,7 @@ abstract class common {
 				'section_tipo' 	=> $section_tipo, // *
 				'model' 		=> $called_model, // *
 				'parent' 		=> $parent, // *
+				'parent_grouper'=> $parent_grouper,
 				'lang' 			=> $lang,
 				'mode' 			=> $mode,
 				'translatable' 	=> $translatable,
@@ -1628,8 +1631,7 @@ abstract class common {
 				$dd_object->search_options_title 	= search::search_options_title($dd_object->search_operators_info);
 			}
 
-
-
+		
 		return $dd_object;
 	}//end get_structure_context
 
@@ -1704,7 +1706,7 @@ abstract class common {
 	* GET_AR_SUBCONTEXT
 	* @return array $ar_subcontext
 	*/
-	public function get_ar_subcontext() {
+	public function get_ar_subcontext($from_parent=null, $from_parent_grouper=null) {
 
 		$ar_subcontext = [];
 
@@ -1726,8 +1728,7 @@ abstract class common {
 				$current_section_tipo 	= $dd_object->section_tipo;
 				$mode 					= $dd_object->mode ?? 'list';
 				$model 					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-
-
+				
 				// common temporal excluded/mapped models *******
 					// $match_key = array_search($model, common::$ar_temp_map_models);
 					// if (false!==$match_key) {
@@ -1737,7 +1738,6 @@ abstract class common {
 					// 	debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
 					// 	continue;
 					// }
-
 
 				switch (true) {
 					// component case
@@ -1767,13 +1767,20 @@ abstract class common {
 				// add
 					if (isset($related_element)) {
 
-						// Inject this tipo as related element from_parent
-							$related_element->from_parent = $tipo;
+						// Inject var from_parent as from_parent
+							if (isset($from_parent)) {
+								$related_element->from_parent = $from_parent;
+							}
+
+						// parent_grouper
+							if (isset($parent_grouper)) {
+								$related_element->parent_grouper = $parent_grouper;
+							}
 
 						// get the JSON context of the related component
 							$item_options = new stdClass();
 								$item_options->get_context 	 = true;
-								$item_options->get_data 	 = false;
+								$item_options->get_data 	 = false;								
 							$element_json = $related_element->get_json($item_options);
 
 						// temp ar_subcontext

@@ -40,8 +40,8 @@
 					}
 					$context[] = $current_context;
 
-				// subcontext from element layout_map items
-					$ar_subcontext = $this->get_ar_subcontext();
+				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
+					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
 					foreach ($ar_subcontext as $current_context) {
 						$context[] = $current_context;
 					}

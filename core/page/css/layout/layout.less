@@ -619,6 +619,9 @@
 							display: inline-block;
 							font-size: @height_line + 0.02;
 							//height: @height_line;
+
+							margin-left: 0.2em;
+							margin-right: 0.35em;
 						}
 
 						// >a {
@@ -1114,7 +1117,9 @@
 			outline: 1px solid rgba(216, 216, 216, 0.43);
 
 			>* {
-				padding: 1em;
+				&:not(mark) {
+					padding: 1em;
+				}				
 
 				&.paginator {
 					padding: 0;

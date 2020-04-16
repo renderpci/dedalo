@@ -110,7 +110,7 @@ section.prototype.init = async function(options) {
 	self.filter 			= null // (? used)
 	self.inspector 			= null
 
-	self.id_column_width 	= '7em'
+	self.id_column_width 	= '7.5em'
 	self.permissions 		= options.permissions || null
 
 
@@ -298,11 +298,11 @@ section.prototype.get_ar_instances = async function(){
 	const self = this
 
 	// self data veification
-	if (typeof self.data==="undefined") {
-		self.data = {
-			value : []
+		if (typeof self.data==="undefined") {
+			self.data = {
+				value : []
+			}
 		}
-	}
 
 	// iterate records
 		const value 		= self.data.value || []
