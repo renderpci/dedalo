@@ -49,6 +49,14 @@ export const get_instance = async function(options){
 	// if(options.model==='section') console.log("=========================================== get_instance options:",options);
 	// key values ['model','tipo','section_tipo','section_id','mode','lang']
 
+	// model map
+		if (options.model && options.model.indexOf("component_relation_model")!==-1) {
+			options.model = "component_select"
+		}
+		else if (options.model && options.model.indexOf("component_relation_")!==-1) {
+			options.model = "component_portal"
+		}
+
 	// mandatory vars
 		const tipo 				= options.tipo
 		const section_tipo 		= options.section_tipo
