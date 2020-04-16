@@ -192,7 +192,6 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 			const current_instance_node = await current_instance.render()
 
 			// add
-				//wrapper.appendChild(current_instance_node)
 				fragment.appendChild(current_instance_node)
 
 			// grid . add columns
@@ -247,9 +246,11 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 }//end render_section_record.prototype.list
 
 
+
 /**
 * BUILD_ID_COLUMN
-* @return
+* @param section_record instance self
+* @return DOM element id_column
 */
 const build_id_column = function(self) {
 

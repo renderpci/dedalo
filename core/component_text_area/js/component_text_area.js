@@ -69,9 +69,11 @@ export const component_text_area = function(){
 component_text_area.prototype.tags_to_html = function(value) {
 	
 	const html = tr.add_tag_img_on_the_fly(value)
-		console.log("html:",html);
+	
 	return html
 }// end
+
+
 
 /**
 * SAVE_VALUE
@@ -85,7 +87,6 @@ component_text_area.prototype.save_value = async function(key, value) {
 
 	const self = this
 
-	console.log("value:",value);
 	const new_data = self.preprocess_text_to_save(value)
 
 	// const string_value = value.innerHTML
@@ -530,8 +531,8 @@ component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
 			break;
 	}
 
-	// LAST ID
-	const last_tag_id = Math.max.apply(null, ar_id_final);
+	// last id
+		const last_tag_id = Math.max.apply(null, ar_id_final);
 		if(SHOW_DEBUG===true) {
 			console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
 		}
@@ -539,6 +540,5 @@ component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
 
 	return parseInt(last_tag_id);
 }//end get_last_tag_id
-
 
 

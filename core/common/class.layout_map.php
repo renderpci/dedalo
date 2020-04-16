@@ -92,7 +92,7 @@ class layout_map {
 
 		// 2. search in user presets
 			if (!isset($layout_map)) {
-				$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);
+				$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);				
 				if (!empty($user_preset)) {
 					// layout_map
 						$layout_map = $user_preset;
