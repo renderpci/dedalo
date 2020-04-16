@@ -82,9 +82,74 @@ render_component_pdf.prototype.edit = async function(options) {
 			buttons 	 : buttons
 		})
 
+	// add events
+		add_events(self, wrapper)
+
 
 	return wrapper
 }//end edit
+
+/**
+* ADD_EVENTS
+*/
+const add_events = function(self, wrapper) {
+
+	// change event, for every change the value in the imputs of the component
+		wrapper.addEventListener('change', (e) => {
+			// e.stopPropagation()
+
+			// input_value. The standard input for the value of the component
+			if (e.target.matches('input[type="number"].input_value')) {
+
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: JSON.parse(e.target.dataset.key),
+					value	: {offset : (e.target.value.length>0) ? parseInt(e.target.value) : null}
+				})
+				console.log("changed_data", changed_data);
+				self.change_value({
+					changed_data : changed_data,
+					refresh 	 : false
+				})
+				.then((save_response)=>{
+					// event to update the dom elements of the instance
+					event_manager.publish('update_value_'+self.id, changed_data)
+				})
+
+				return true
+			}
+		}, false)
+
+	// click event [mousedown]
+		wrapper.addEventListener("click", e => {
+			// remove
+			if (e.target.matches('.button.remove')) {
+
+				// force possible input change before remove
+				document.activeElement.blur()
+
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: e.target.dataset.key,
+					value	: null,
+					refresh : true
+				})
+				self.change_value({
+					changed_data : changed_data,
+					label 		 : e.target.previousElementSibling.value,
+					refresh 	 : true
+				})
+				.then(()=>{
+				})
+
+				return true
+			}
+
+		})
+
+	return true
+}//end add_events
+
 
 
 
@@ -94,24 +159,26 @@ render_component_pdf.prototype.edit = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	const is_inside_tool = self.is_inside_tool
+	// sort vars
+		const value 		= self.data.value
+		const mode 			= self.mode
+		const is_inside_tool = self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
-	// url
-		const value 	= self.data.value
-		const pdf_url 	= value[0].url || null
-		const viewer_url= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
+	// inputs container
+		const inputs_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name 		: 'inputs_container',
+			parent 			: fragment
+		})
+		console.log("value", value);
 
-	// iframe
-		if (pdf_url) {
-			const iframe = ui.create_dom_element({
-				element_type	: "iframe",
-				src 			: viewer_url,
-				class_name 		: 'pdf_viewer_frame',
-				parent 			: fragment
-			})
-			iframe.setAttribute('allowfullscreen',true)
+	// values (inputs)
+		const inputs_value = value//(value.length<1) ? [''] : value
+		const value_length = inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
 		}
 
 	// content_data
@@ -122,6 +189,63 @@ const get_content_data_edit = async function(self) {
 	return content_data
 }//end get_content_data_edit
 
+
+/**
+* INPUT_ELEMENT
+* @return DOM node li
+*/
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
+
+	const mode 		 	= self.mode
+	const is_inside_tool= self.is_inside_tool
+
+	// li
+		const li = ui.create_dom_element({
+			element_type : 'li',
+			parent 		 : inputs_container
+		})
+
+	// url
+		const pdf_url 	= self.data.datalist[i].url || null
+		const viewer_url= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
+
+	// iframe
+		if (pdf_url) {
+			const iframe = ui.create_dom_element({
+				element_type	: "iframe",
+				src 			: viewer_url,
+				class_name 		: 'pdf_viewer_frame',
+				parent 			: li
+			})
+			iframe.setAttribute('allowfullscreen',true)
+		}
+
+	// FIELDS
+		const fields = ui.create_dom_element({
+				element_type 	: 'span',
+				class_name 		: 'fields',
+				parent 		 	: li
+			})
+		// offset label
+			const offset_label = ui.create_dom_element({
+					element_type 	: 'span',
+					class_name 		: 'label',
+					text_node 	 	: 'offset',
+					parent 		 	: fields
+				})
+
+		// offset input field
+			const input = ui.create_dom_element({
+				element_type 	: 'input',
+				type 		 	: 'number',
+				class_name 		: 'input_value',
+				dataset 	 	: { key : i },
+				value 		 	: current_value.offset,
+				parent 		 	: fields
+			})
+
+	return li
+}//end input_element
 
 
 /**

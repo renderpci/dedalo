@@ -31,28 +31,6 @@ class component_pdf extends component_media_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-		/*
-		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
-		$dato = $this->get_dato();
-		*/
-		$need_save=false;
-		if($this->parent>0 && !isset($dato->section_id)) {
-
-			#####################################################################################################
-			# DEFAULT DATO
-			$locator = new locator();
-				$locator->set_component_tipo($this->tipo);
-				$locator->set_section_tipo($this->section_tipo);
-				$locator->set_section_id($this->parent);
-			# END DEFAULT DATO
-			######################################################################################################
-
-			# Dato
-			$this->set_dato($locator);
-			$need_save=true;
-		}//end if(empty($dato->counter) && $this->parent>0)
-
-
 			#
 			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
 
@@ -98,11 +76,8 @@ class component_pdf extends component_media_common {
 	*/
 	public function Save() {
 
-		$section_id = $this->get_parent();
-
-		return (int)$section_id;
+		return parent::Save();
 	}//end Save
-
 
 
 	/**
@@ -159,7 +134,6 @@ class component_pdf extends component_media_common {
 	}
 
 
-
 	/**
 	* GET_INITIAL_MEDIA_PATH
 	*
@@ -182,21 +156,18 @@ class component_pdf extends component_media_common {
 	}
 
 
-
-	# GET DATO : Format {"counter":1}
+	# GET DATO : Format
 	public function get_dato() {
 		$dato = parent::get_dato();
-		return (object)$dato;
+		return $dato;
 	}
-
 
 
 	# SET_DATO
 	public function set_dato($dato) {
 
-		parent::set_dato( (object)$dato );
+		parent::set_dato( $dato );
 	}
-
 
 
 	/**
@@ -210,7 +181,6 @@ class component_pdf extends component_media_common {
 	}//end get_valor
 
 
-
 	/**
 	* GET_ID
 	* Alias of get_pdf_id
@@ -221,7 +191,6 @@ class component_pdf extends component_media_common {
 	}//end get_id
 
 
-
 	/**
 	* GET PDF ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
@@ -230,16 +199,20 @@ class component_pdf extends component_media_common {
 	public function get_pdf_id() {
 
 		if(isset($this->pdf_id)) return $this->pdf_id;
+		$section_id = $this->get_section_id();
 
-		$dato = $this->get_dato();
-		if (!isset($dato->section_id)) {
+		if (!isset($section_id)) {
 			if(SHOW_DEBUG===true) {
-				error_log(__METHOD__." Component dato (parent:$this->parent,section_tipo:$this->section_tipo) is empty for: ".to_string($dato));
+				error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
 			}
 			return 0;
 		}
-		$locator  = new locator($dato);
-		$pdf_id	  = $locator->get_flat($dato);
+		$locator  = new locator();
+			$locator->set_section_tipo($this->get_section_tipo());
+			$locator->set_section_id($this->get_section_id());
+			$locator->set_component_tipo($this->get_tipo());
+
+		$pdf_id	  = $locator->get_flat();
 
 		# Add lang
 		if ($this->traducible==='si') {
@@ -249,7 +222,6 @@ class component_pdf extends component_media_common {
 
 		return $this->pdf_id = $pdf_id;
 	}
-
 
 
 	/**
@@ -262,7 +234,6 @@ class component_pdf extends component_media_common {
 	}
 
 
-
 	/**
 	* UPLOAD NEEDED
 	*/
@@ -270,12 +241,15 @@ class component_pdf extends component_media_common {
 
 		return $this->pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 	}
+
+	/**
+	* GET_TARGET_DIR
+	*/
 	public function get_target_dir() {
 
 		#return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();
-	}
-
+	}// end get_target_dir
 
 
 	/**
@@ -329,7 +303,6 @@ class component_pdf extends component_media_common {
 	}//end get_pdf_url
 
 
-
 	/**
 	* GET_PDF_PATH complete absolute file path like '/Users/myuser/works/Dedalo/pdf/standar/dd152-1.pdf'
 	* @param string $quality default false
@@ -356,6 +329,7 @@ class component_pdf extends component_media_common {
 		return $PdfObj->get_local_full_path();
 	}
 
+
 	/**
 	* GET_PDF_SIZE
 	* Alias of $ImageObj->get_size()
@@ -368,6 +342,7 @@ class component_pdf extends component_media_common {
 		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
 		return $PdfObj->get_size();
 	}
+
 
 	/**
 	* GET_FILE_EXISTS
@@ -671,6 +646,73 @@ class component_pdf extends component_media_common {
 
 		return $preview_url;
 	}//end get_preview_url
+
+
+
+	/**
+	* PROCESS_UPLOADED_FILE
+	* @param object $file_data
+	*	Data from trigger upload file
+	* @return object $response
+	*/
+	public function process_uploaded_file($file_data) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// vars
+			$original_file_name = $file_data->original_file_name; 	// like "my doc is beaty.psdf"
+			$full_file_name 	= $file_data->full_file_name;		// like "test175_test65_1.pdf"
+			$full_file_path 	= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
+
+			try {
+
+				// target_filename. Save original file name in a component_input_text if defined
+					$properties = $this->get_propiedades();
+					if (isset($properties->target_filename)) {
+
+						$current_section_id  		= $this->get_section_id();
+						$target_section_tipo 		= $this->get_section_tipo();
+						$model_name_target_filename = RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+						$component_target_filename 	= component_common::get_instance(
+																			$model_name_target_filename,
+																			$properties->target_filename,
+																			$current_section_id,
+																			'edit',
+																			DEDALO_DATA_NOLAN,
+																			$target_section_tipo
+																			);
+						$component_target_filename->set_dato( $original_file_name );
+						$component_target_filename->Save();
+					}
+
+
+				// add data with the file uploaded, only for original and retouched images, other quality images don't has relevant info.
+
+						$file_name		= 'original_file_name';
+						$upload_date 	= 'original_upload_date';
+						$dato  = $this->get_dato();
+						$value = empty($dato) ? new stdClass() : reset($dato);
+							$value->$file_name 		= $original_file_name;
+							$value->$upload_date	= component_date::get_date_now();
+						$this->set_dato([$value]);
+						$this->Save();
+
+				// all is ok
+					$response->result 	= true;
+					$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+
+			} catch (Exception $e) {
+				$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";
+				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+				$response->msg .= ' - '.$msg;
+			}
+
+
+		return $response;
+	}//end process_uploaded_file
+
 
 
 
