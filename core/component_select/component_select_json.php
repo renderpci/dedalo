@@ -6,6 +6,7 @@
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
+	$lang				= $this->get_lang();
 
 
 
@@ -16,13 +17,14 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$item_context = $this->get_structure_context_simple($permissions);
 				break;
 
 			default:
-				$context[] = $this->get_structure_context($permissions);
+				$item_context = $this->get_structure_context($permissions, true);				
 				break;
 		}
+		$context[] = $item_context;
 	}//end if($options->get_context===true)
 
 
@@ -40,7 +42,7 @@
 			case 'edit':
 			default:
 				$value 				= $this->get_dato();
-				$ar_list_of_values	= $this->get_ar_list_of_values2();
+				$ar_list_of_values	= $this->get_ar_list_of_values2($lang, true);
 				break;
 		}
 

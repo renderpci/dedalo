@@ -313,25 +313,25 @@ const get_top = function(self) {
 	// sort vars
 		const is_inside_tool			= self.is_inside_tool
 		const mode						= self.mode
-		const current_data_manager		 = new data_manager()
-		const show						 = self.sqo_context.show
-		const target_section_tipo		 = show.filter(item => item.model==='section')
-		const target_section_tipo_lenght = target_section_tipo.length
+		const current_data_manager		= new data_manager()
+		const show						= self.sqo_context.show
+		const target_section		 	= show.filter(item => item.model==='section')
+		const target_section_lenght 	= target_section.length
 		// sort section by label asc
-		target_section_tipo.sort((a, b) => (a.label > b.label) ? 1 : -1)
+			target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
 	const fragment = new DocumentFragment()
 
 	// select_section
 		const select_section = ui.create_dom_element({
 			element_type	: 'select',
-			class_name 		: 'select_section' + (target_section_tipo_lenght===1 ? ' mono' : ''),
+			class_name 		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
 			parent 			: fragment
 		})
 
 		// options
-			for (let i = 0; i < target_section_tipo_lenght; i++) {
-				const item = target_section_tipo[i]
+			for (let i = 0; i < target_section_lenght; i++) {
+				const item = target_section[i]
 				ui.create_dom_element({
 					element_type	: 'option',
 					value 			: item.tipo,
