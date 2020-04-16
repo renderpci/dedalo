@@ -110,7 +110,7 @@ section.prototype.init = async function(options) {
 	self.filter 			= null // (? used)
 	self.inspector 			= null
 
-	self.id_column_width 	= '7em'
+	self.id_column_width 	= '7.5em'
 	self.permissions 		= options.permissions || null
 
 
