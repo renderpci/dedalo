@@ -9,6 +9,7 @@ abstract class component_common extends common {
 	# GENERAL VARS
 		protected $tipo;					# string component tipo in structur ex ('dd22') eq. terminoID
 		protected $parent;					# int parent section_id
+		protected $section_id;				# int parent section_id
 		protected $section_tipo;			# string parent section tipo
 		protected $lang;					# string lang en estructura ('lg-esp')
 		protected $valor_lang;				# string Idioma del valor final del componente (si es una lista de valor, el idioma del campo al que apunta que puede ser traducible aunque el componente no lo sea dato"1" valor:"Si" o "yes")
@@ -265,7 +266,8 @@ abstract class component_common extends common {
 		#	$msg = "Component common: valid 'parent' value is mandatory! ";
 		#	throw new Exception($msg, 1);
 		#}
-		$this->parent = $parent;
+		$this->parent 		= $parent;
+		$this->section_id 	= $parent;
 
 		# MODO
 		if ( empty($modo) ) {

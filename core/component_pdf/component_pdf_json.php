@@ -40,20 +40,19 @@
 	if($options->get_data===true && $permissions>0){
 
 		// Value
-		// $value = $this->get_dato();
-		// if (!is_array($value)) {
-		// 	$value = [$value];
-		// }
-		$value = [];
+		$value = $this->get_dato();
 
+		$valid_urls = [];
 		$pdf_item = new stdClass();
 			$pdf_item->url 	 	= $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT, true); // $quality=false, $test_file=true, $absolute=false, $default_add=false
 			$pdf_item->quality 	= DEDALO_PDF_QUALITY_DEFAULT;
 
-		$value[] = $pdf_item;
+		$valid_urls[] = $pdf_item;
 
 		// data item
 		$item = $this->get_data_item($value);
+
+		$item->datalist = $valid_urls;
 
 		$data[] = $item;
 
