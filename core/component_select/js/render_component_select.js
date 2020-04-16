@@ -230,11 +230,35 @@ const get_buttons = (self) => {
 
 	// button edit
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button edit',
-				parent 			: fragment
-			})
+
+			const show						= self.sqo_context.show
+			const target_section		 	= show.filter(item => item.model==='section')
+			const target_section_lenght 	= target_section.length
+			// sort section by label asc
+				target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+
+			for (let i = 0; i < target_section_lenght; i++) {
+				
+				const item = target_section[i]
+
+				const label = (SHOW_DEBUG===true)
+					? item.label + " [" + item.tipo + "]"
+					: item.label
+			
+				const button_edit = ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'button edit',
+					title 			: label,
+					parent 			: fragment
+				})
+				button_edit.addEventListener("click", function(){
+					// navigate link
+						event_manager.publish('user_action', {
+							tipo 	: item.tipo,
+							mode 	: 'list'
+						})
+				})
+			}			
 		}
 
 	// buttons tools
