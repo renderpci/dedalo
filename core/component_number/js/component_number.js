@@ -64,7 +64,7 @@ export const component_number = function(){
 */
 component_number.prototype.fix_number_format = function( number ) {
 
-	const new_number = number.replace(/\,/g, ".");
+	const new_number = number.replace(/,/g, ".");
 
 	return Number(new_number)
 }//end fix_number_format
@@ -94,5 +94,3 @@ component_email.prototype.update_data_value_from_dom = function() {
 	return true
 }//end update_data_value_from_dom
 */
-
-
