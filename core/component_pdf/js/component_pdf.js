@@ -79,3 +79,98 @@ component_pdf.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
+
+
+
+
+/**
+* LOAD_TAG_INTO_PDF_EDITOR
+* called by the click into the tag (in component_text_area)
+* the tag will send the ar_layer_id that it's pointing to
+*/
+component_pdf.prototype.load_tag_into_pdf_editor = async function(options) {
+
+	const self = this
+	// convert the tag dataset to 'real' object for manage it
+	const ar_layer_id = JSON.parse(options.tag.dataset.data)
+	// for every layer_id in the tag load the data from the DDBB
+	for (let i = 0; i < ar_layer_id.length; i++) {
+		self.load_geo_editor({
+			load 	 	: 'layer',
+			layer_id 	: parseInt(ar_layer_id[i])
+		})
+	}
+}// load_tag_into_pdf_editor
+
+
+
+/**
+* GET_DATA_TAG
+* Send the data_tag to the text_area when it need create a new tag
+*/
+component_pdf.prototype.get_data_tag = function(){
+
+	const self = this
+
+	const lib_data 		= self.get_lib_data()
+	const last_layer_id = self.get_last_layer_id()
+
+	const layers 		= lib_data.map((item) => {
+		const layer = {
+			layer_id 			: item.layer_id,
+			user_layer_name 	: item.user_layer_name
+		}
+		return layer
+	})
+
+	const data_tag = {
+		type 			: 'page',
+		tag_id 			: null,
+		state 			: 'n',
+		label 			: '',
+		data 			: '',
+		offset			: offset,
+		total_pages 	: total_pages
+	}
+
+	return data_tag
+}// end get_data_tag
+
+
+/**
+* GET_LIB_DATA
+* get the lib_data in self.data, lib_data is the specific data of the library used (leaflet)
+*/
+component_pdf.prototype.get_lib_data = function(){
+
+	const self = this
+
+	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
+		? self.data.value[0].lib_data
+		: [{
+				layer_id 		: 1,
+				layer_data 		: [],
+				user_layer_name : 'layer_1'
+			}]
+
+
+	return lib_data
+}//get_lib_data
+
+
+
+/**
+* GET_LAST_LAYER_ID
+* Get the last layer_id in the data
+* will be used for create new layer with the tag
+*/
+component_pdf.prototype.get_last_layer_id = function(){
+
+	const self = this
+
+	const lib_data 		= self.get_lib_data()
+	const ar_layer_id 	= lib_data.map((item) => item.layer_id)
+	const last_layer_id = Math.max(...ar_layer_id)
+
+	return last_layer_id
+}//end get_last_layer_id
