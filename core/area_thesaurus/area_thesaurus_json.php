@@ -15,6 +15,9 @@
 
 
 	if($options->get_context===true){
+
+		// set self from_parent
+			$this->from_parent = $tipo;
 			
 		// Component structure context (tipo, relations, properties, etc.)
 			$current_context = $this->get_structure_context($permissions, $sqo_context=true);
