@@ -283,7 +283,7 @@ const build_id_column = function(self) {
 		// button
 		switch(true) {
 
-			case (initiator && initiator.indexOf('component_portal')!==-1):
+			case (initiator && initiator.indexOf('component_')!==-1):
 				// component portal caller (link)
 					const link_button = ui.create_dom_element({
 						element_type	: 'span',
