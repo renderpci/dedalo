@@ -203,10 +203,12 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 					parent 			: fragment
 				})
 
-			// button_new section
-				const button_new = ui.button.build_button({
-					class_name 	: "new",
-					label 		: get_label.nuevo || "New"
+			// button_new section				
+				const button_new = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light new',
+					text_content	: get_label.nuevo || "New",
+					parent 			: buttons
 				})
 				button_new.addEventListener('click', async (e) => {
 					e.stopPropagation()
@@ -226,9 +228,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 							section_id		 : api_response.result
 						})
 					}
-
 				})
-				buttons.appendChild(button_new)
 
 			// search filter node
 				const filter = ui.create_dom_element({

@@ -223,21 +223,28 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		})
 
 	// button
-		const button_automatic_translation = document.createElement('button');
-			  button_automatic_translation.type = 'button'
-			  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-			  automatic_translation_container.appendChild(button_automatic_translation)
-			  button_automatic_translation.addEventListener("click", (e) => {
+		const button_automatic_translation = ui.create_dom_element({
+			element_type 	: 'button',
+			class_name 		: 'warning button_automatic_translation',
+			text_content 	: get_label['traduccion_automatica'] || "Automatic translation",
+			parent 			: automatic_translation_container
+		})
 
-			  	components_container.classList.add("loading")
+		// const button_automatic_translation = document.createElement('button');
+		// 	  button_automatic_translation.type = 'button'
+		// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
+		// 	  automatic_translation_container.appendChild(button_automatic_translation)
+		button_automatic_translation.addEventListener("click", (e) => {
 
-			  	const translator  = translator_engine_select.value
-			  	const source_lang = source_select_lang.value
-			  	const target_lang = target_select_lang.value
-			  	const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
-			  		components_container.classList.remove("loading")
-			  	})
-			  })
+			components_container.classList.add("loading")
+
+			const translator  = translator_engine_select.value
+			const source_lang = source_select_lang.value
+			const target_lang = target_select_lang.value
+			const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
+				components_container.classList.remove("loading")
+			})
+		})
 
 	// select
 		const translator_engine_select = ui.create_dom_element({
