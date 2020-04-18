@@ -98,8 +98,7 @@
 					$current_data->parent_section_id 	= $section_id;
 					$data[] = $current_data;
 				}
-
-		}//end if (!empty($dato))		
+		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 
 
