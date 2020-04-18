@@ -140,9 +140,14 @@ tool_tc.prototype.change_all_time_codes = async function(save) {
 
 	const self = this
 
-	const wrapper	= document.querySelector('.components_container')
-	const tc_offset = document.getElementById('tc_offset')
-	//response_div.innerHTML  = ''
+	// (!) Esto ya no tiene via directamente accediendo al DOM. Fijar los componentes en el 
+	// render y pedirle el contenido a ellos
+
+
+	return false
+
+	const wrapper 	= self.wrapper
+	const tc_offset = wrapper.querySelector('#tc_offset')
 
 	if (tc_offset.value==='' || tc_offset.value===null) {
 		//response_div.innerHTML  = '<span style=\"color:red\">Ops.. Empty tc offset value</span>'
@@ -160,7 +165,7 @@ tool_tc.prototype.change_all_time_codes = async function(save) {
 	} else {
 
 		//Changes only preview, don't updates the DB
-			const tc_target_content = document.getElementById('tc_target_content')
+			const tc_target_content = wrapper.querySelector('#tc_target_content')			
 			const ar_images 		= tc_target_content.querySelectorAll('.tc')
 
 			for (let i = 0; i < ar_images.length; i++) {

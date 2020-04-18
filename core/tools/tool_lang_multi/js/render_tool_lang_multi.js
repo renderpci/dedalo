@@ -176,7 +176,7 @@ export const add_target_component = async (lang, components_container, self) => 
 		})
 
 	const target_component_title = ui.create_dom_element({
-			element_type	: 'h4',
+			element_type	: 'div',
 			class_name 		: 'target_component_title',
 			text_content	: lang.label,
 			parent 			: target_component_container
