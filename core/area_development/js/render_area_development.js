@@ -277,29 +277,7 @@ const buttons = async function(self) {
 
 	const buttons = []
 
-	/*
-	// button register tools
-		const button_register_tools = ui.button.build_button({
-			class_name 	: "button_register",
-			label 		: "Register tools"
-		})
-		button_register_tools.addEventListener('mouseup', async (e) => {
-			e.stopPropagation()
-			//alert("Click here! ")
-
-			// data_manager
-			const api_response = await data_manager.prototype.request({
-				body : {
-					action 		: 'trigger',
-					class_name 	: 'ontology',
-					method 		: 'import_tools',
-					options 	: {}
-				}
-			})
-			console.log("+++ api_response:",api_response);
-		})
-		buttons.push(button_register_tools)
-		*/
+	
 
 	return buttons
 }//end buttons

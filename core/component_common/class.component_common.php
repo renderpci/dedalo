@@ -6,6 +6,8 @@
 */
 abstract class component_common extends common {
 
+
+
 	# GENERAL VARS
 		protected $tipo;					# string component tipo in structur ex ('dd22') eq. terminoID
 		protected $parent;					# int parent section_id
@@ -68,6 +70,7 @@ abstract class component_common extends common {
 
 		// changed_data . Fixed when DD_API save call to component update_data_value()
 		public $changed_data;
+
 
 
 	/**
