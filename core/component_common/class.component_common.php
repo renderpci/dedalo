@@ -66,6 +66,8 @@ abstract class component_common extends common {
 		# Component definition. Used in component label
 		public $def;
 
+		// changed_data . Fixed when DD_API save call to component update_data_value()
+		public $changed_data;
 
 
 	/**
@@ -3905,6 +3907,9 @@ abstract class component_common extends common {
 		$properties 		= $this->get_propiedades();
 		$with_lang_versions = $properties->with_lang_versions ?? false;
 
+		// fix changed_data
+			$this->changed_data = $changed_data;
+
 		switch ($changed_data->action) {
 			case 'insert':
 			case 'update':
@@ -3960,6 +3965,10 @@ abstract class component_common extends common {
 
 					default:
 						$key = $changed_data->key;
+						
+						// fix property 'to_remove' to help properly remove
+							$this->changed_data->to_remove = $dato[$key];
+
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;
