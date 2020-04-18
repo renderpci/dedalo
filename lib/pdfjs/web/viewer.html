@@ -32,9 +32,9 @@ See https://github.com/adobe-type-tools/cmap-resources
     <link rel="stylesheet" href="viewer.css">
 
 
-<!-- This snippet is used in production (included from viewer.html) -->
-<link rel="resource" type="application/l10n" href="locale/locale.properties">
-<script src="../build/pdf.js"></script>
+    <!-- This snippet is used in production (included from viewer.html) -->
+    <link rel="resource" type="application/l10n" href="locale/locale.properties">
+    <script src="../build/pdf.js"></script>
 
 
     <script src="viewer.js"></script>
@@ -105,11 +105,6 @@ See https://github.com/adobe-type-tools/cmap-resources
           <div id="secondaryToolbarButtonContainer">
             <button id="secondaryPresentationMode" class="secondaryToolbarButton presentationMode visibleLargeView" title="Switch to Presentation Mode" tabindex="51" data-l10n-id="presentation_mode">
               <span data-l10n-id="presentation_mode_label">Presentation Mode</span>
-            </button>
-
-            <button id="full_screen" class="secondaryToolbarButton presentationMode visibleLargeView" title="Switch to full screen" tabindex="51" data-l10n-id="presentation_mode"
-                     onclick="top.component_pdf.toggle_full_pdf_viewer(this, parent.document.getElementById(window.name))">
-                <span data-l10n-id="presentation_mode_label">Full screen</span>
             </button>
 
             <button id="secondaryOpenFile" class="secondaryToolbarButton openFile visibleLargeView" title="Open File" tabindex="52" data-l10n-id="open_file">
@@ -213,11 +208,6 @@ See https://github.com/adobe-type-tools/cmap-resources
               <div id="toolbarViewerRight">
                 <button id="presentationMode" class="toolbarButton presentationMode hiddenLargeView" title="Switch to Presentation Mode" tabindex="31" data-l10n-id="presentation_mode">
                   <span data-l10n-id="presentation_mode_label">Presentation Mode</span>
-                </button>
-
-                <button id="full_screen" class="toolbarButton presentationMode hiddenLargeView" title="Switch to full screen" tabindex="31" data-l10n-id="presentation_mode"
-                 onclick="top.component_pdf.toggle_full_pdf_viewer(this, parent.document.getElementById(window.name))">
-                    <span data-l10n-id="presentation_mode_label">Full screen</span>
                 </button>
 
                 <button id="openFile" class="toolbarButton openFile hiddenLargeView" title="Open File" tabindex="32" data-l10n-id="open_file">

@@ -206,19 +206,37 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		})
 
 	// url
-		const pdf_url 	= self.data.datalist[i].url || null
-		const viewer_url= DEDALO_CORE_URL + '/component_pdf/html/component_pdf_viewer.php?pdf_url=' + pdf_url
-
+		const pdf_url 		= self.data.datalist[i].url || null
+		// the standar html viewer of the pdf.js library
+		const viewer_url 	= DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
 	// iframe
 		if (pdf_url) {
 			const iframe = ui.create_dom_element({
 				element_type	: "iframe",
-				src 			: viewer_url,
 				class_name 		: 'pdf_viewer_frame',
 				parent 			: li
 			})
 			iframe.setAttribute('allowfullscreen',true)
-		}
+			// when the standard html of pdf.js is loaded, is possible get the library and set the pdf
+			iframe.addEventListener('load', (e) =>{
+				// Libraries are loaded via <script> tag, create shortcut to access PDF.js exports.
+				// the pdf_js is not necesary load here, we will use only the viewer
+				// const pdf_js 						= iframe.contentWindow['pdfjs-dist/build/pdf'];
+				const PDFViewerApplicationOptions 	= iframe.contentWindow['PDFViewerApplicationOptions'];
+				self.pdf_viewer 					= iframe.contentWindow['PDFViewerApplication'];
+				// remove the first page / default page of the library
+				PDFViewerApplicationOptions.set('defaultUrl', '');
+				// load the pdf in the viewer
+				self.pdf_viewer.open(pdf_url).then(function (pdfDocument) {
+					console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
+				});
+			})
+
+			iframe.src = viewer_url
+		}//end if (pdf_url)
+
+
+
 
 	// FIELDS
 		const fields = ui.create_dom_element({
