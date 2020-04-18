@@ -228,33 +228,35 @@ const get_buttons = (self) => {
 	// button edit
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
-			const show						= self.sqo_context.show
-			const target_section		 	= show.filter(item => item.model==='section')
-			const target_section_lenght 	= target_section.length
-			// sort section by label asc
-				target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+			if (self.sqo_context) {
+				const show						= self.sqo_context.show
+				const target_section		 	= show.filter(item => item.model==='section')
+				const target_section_lenght 	= target_section.length
+				// sort section by label asc
+					target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-			for (let i = 0; i < target_section_lenght; i++) {
+				for (let i = 0; i < target_section_lenght; i++) {
+					
+					const item = target_section[i]
+
+					const label = (SHOW_DEBUG===true)
+						? item.label + " [" + item.tipo + "]"
+						: item.label
 				
-				const item = target_section[i]
-
-				const label = (SHOW_DEBUG===true)
-					? item.label + " [" + item.tipo + "]"
-					: item.label
-			
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'button edit',
-					title 			: label,
-					parent 			: fragment
-				})
-				button_edit.addEventListener("click", function(){
-					// navigate link
-						event_manager.publish('user_action', {
-							tipo 	: item.tipo,
-							mode 	: 'list'
-						})
-				})
+					const button_edit = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'button edit',
+						title 			: label,
+						parent 			: fragment
+					})
+					button_edit.addEventListener("click", function(){
+						// navigate link
+							event_manager.publish('user_action', {
+								tipo 	: item.tipo,
+								mode 	: 'list'
+							})
+					})
+				}
 			}			
 		}
 
@@ -308,11 +310,11 @@ const input_element = (inputs_container, self) => {
 		for (let i = 0; i < length; i++) {
 
 			const datalist_item = datalist[i]
-
-			const current_section_id = typeof datalist_item.section_id!=="undefined" ? datalist_item.section_id : ''
+			
+			const current_section_id = typeof datalist_item.section_id!=="undefined" ? datalist_item.section_id : null
 			
 			const current_label = (SHOW_DEBUG===true)
-				? datalist_item.label + " [" + current_section_id + "]"
+				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
 				: datalist_item.label
 
 			const option = ui.create_dom_element({
@@ -328,7 +330,6 @@ const input_element = (inputs_container, self) => {
 				) {
 				option.selected = true
 			}
-
 		}
 
 	return li
