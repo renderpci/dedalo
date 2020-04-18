@@ -488,99 +488,95 @@ class component_relation_common extends component_common {
 	*/
 	public function Save() {
 
-		# MAIN VARS
-		$section_tipo	= $this->get_section_tipo();
-		$parent 		= $this->get_parent();
-		$tipo 			= $this->get_tipo();
-		$lang 			= DEDALO_DATA_LANG;
-		$modo 			= $this->get_modo();
+		// short vars
+			$section_tipo	= $this->get_section_tipo();
+			$parent 		= $this->get_parent();
+			$tipo 			= $this->get_tipo();
+			$lang 			= DEDALO_DATA_LANG;
+			$modo 			= $this->get_modo();
+	
+		// dataframe mode
+			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
 
-		#
-		# DATAFRAME MODE
-		if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
+				#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
 
-			#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
+				$new_tipo 			= $this->caller_dataset->component_tipo;
+				$new_section_tipo 	= $this->caller_dataset->section_tipo;
+				$new_parent 		= $this->caller_dataset->section_id;
+				$new_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+				$new_component 		= component_common::get_instance( $new_modelo_name,
+																	  $new_tipo,
+																	  $new_parent,
+																	  'edit',
+																	  $lang,
+																	  $new_section_tipo);
 
-			$new_tipo 			= $this->caller_dataset->component_tipo;
-			$new_section_tipo 	= $this->caller_dataset->section_tipo;
-			$new_parent 		= $this->caller_dataset->section_id;
-			$new_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
-			$new_component 		= component_common::get_instance( $new_modelo_name,
-																  $new_tipo,
-																  $new_parent,
-																  'edit',
-																  $lang,
-																  $new_section_tipo);
+				# Force load current db dato to avoid loose it
+				# component that will be marked with dataframe (the original component)
+				$component_dato = $new_component->get_dato();
 
-			# Force load current db dato to avoid loose it
-			# component that will be marked with dataframe (the original component)
-			$component_dato = $new_component->get_dato();
+				# Set dataframe data
+				$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
+				#dump($new_component, ' $new_component ++ '.to_string()); #return false;
 
-			# Set dataframe data
-			$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
-			#dump($new_component, ' $new_component ++ '.to_string()); #return false;
-
-			if (isset($this->save_to_database) && $this->save_to_database===false) {
-				debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
-				#$new_component->save_to_database = false;
-			}
-
-			if(isset($component_dato[$this->caller_dataset->caller_key])){
-				$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
-				$new_component->set_dato($component_dato);
-			}
-
-			return $new_component->Save();
-		}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
-
-
-		// Verify component main vars
-			if (!isset($this->save_to_database) || $this->save_to_database!==false) {
-				# PARENT : Verify parent
-				if( abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
-					if(SHOW_DEBUG===true) {
-						dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
-						throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);
-					}
-					die("Error. Save component data is stopped. Inconsistency detected. Contact with your administrator ASAP");
+				if (isset($this->save_to_database) && $this->save_to_database===false) {
+					debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
+					#$new_component->save_to_database = false;
 				}
 
-				# Verify component minumun vars before save
-				if( (empty($parent) || empty($tipo) || empty($lang)) )
-					throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, parent:$parent, tipo,$tipo, lang,$lang", 1);
+				if(isset($component_dato[$this->caller_dataset->caller_key])){
+					$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
+					$new_component->set_dato($component_dato);
+				}
+
+				return $new_component->Save();
+			}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
+
+
+		// save_to_database. Verify component main vars
+			if (!isset($this->save_to_database) || $this->save_to_database!==false) {
+				// parent : Verify parent
+					if( abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
+						if(SHOW_DEBUG===true) {
+							dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
+							throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);
+						}
+						die("Error. Save component data is stopped. Inconsistency detected. Contact with your administrator ASAP");
+					}
+
+				// Verify component minumun vars before save
+					if( (empty($parent) || empty($tipo) || empty($lang)) ) {
+						throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, parent:$parent, tipo,$tipo, lang,$lang", 1);
+					}
 			}
 
-		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
+		// section : Preparamos la sección que será la que se encargue de salvar el dato del componente
 			$section 	= section::get_instance($parent, $section_tipo);
 			$section_id = $section->save_component_dato($this, 'relation');
 
-		if(SHOW_DEBUG===true) {
-			#debug_log(__METHOD__." section saved from relation common: ($section_id) ".json_encode($section), logger::DEBUG);;
-		}
 
-		# ACTIVITY
-		$this->save_activity();
+		// activity
+			$this->save_activity();
 
 
-		# RELATIONS TABLE LINKS
-		if ($this->save_to_database_relations!==false) {
+		// relations table links
+			if ($this->save_to_database_relations!==false) {
 
-			$current_dato = $this->get_dato();
+				$current_dato = $this->get_dato();
 
-			if (!empty($current_dato)) {
+				if (!empty($current_dato)) {
 
-				$relation_options = new stdClass();
-					$relation_options->section_tipo 		= $section_tipo;
-					$relation_options->section_id 			= $parent;
-					$relation_options->from_component_tipo 	= $tipo;
-					$relation_options->ar_locators 			= $current_dato;
+					$relation_options = new stdClass();
+						$relation_options->section_tipo 		= $section_tipo;
+						$relation_options->section_id 			= $parent;
+						$relation_options->from_component_tipo 	= $tipo;
+						$relation_options->ar_locators 			= $current_dato;
 
-				$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
+					$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
+				}
 			}
-		}
 
 
-		# RETURN SECTION ID
 		return (int)$section_id;
 	}//end Save
 

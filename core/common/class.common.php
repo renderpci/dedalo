@@ -57,49 +57,49 @@ abstract class common {
 			'component_security_areas',
 			'component_autocomplete_ts', // ?
 			// v6
-			// component_autocomplete
-			// component_av
+			// 'component_autocomplete'
+			// 'component_av'
 			'component_calculation',
-			// component_check_box
-			// component_date
-			// component_email
+			// 'component_check_box'
+			// 'component_date'
+			// 'component_email'
 			'component_external',
-			// component_filter
-			// component_filter_master
-			// component_filter_records
-			// component_geolocation
+			// 'component_filter'
+			// 'component_filter_master'
+			// 'component_filter_records'
+			// 'component_geolocation'
 			'component_html_file',
 			// 'component_html_text',
-			// component_image
+			// 'component_image'
 			'component_info',
-			// component_input_text
+			// 'component_input_text'
 			'component_input_text_large',
 			//'component_inverse',
 			'component_ip',
-			// component_iri
-			// component_json
+			// 'component_iri'
+			// 'component_json'
 			'component_layout',
-			// component_number
-			//'component_password',
-			// component_pdf
-			// component_portal
-			// component_publication
-			// component_radio_button
+			// 'component_number'
+			// 'component_password',
+			// 'component_pdf'
+			// 'component_portal'
+			// 'component_publication'
+			// 'component_radio_button'
 			// 'component_relation_children',
 			'component_relation_index',
 			// 'component_relation_model',
-			'component_relation_parent',
+			// 'component_relation_parent',
 			'component_relation_related',
 			'component_relation_struct',
 			'component_score',
-			// component_section_id
-			// component_security_access
+			// 'component_section_id'
+			// 'component_security_access'
 			'component_security_tools',
-			// component_select
-			// component_select_lang
+			// 'component_select'
+			// 'component_select_lang'
 			'component_state',
-			// component_svg
-			// component_text_area
+			// 'component_svg'
+			// 'component_text_area'
 		];
 
 
