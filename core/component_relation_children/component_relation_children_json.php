@@ -56,26 +56,16 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$section_id	= $this->get_parent();
-		$properties = $this->get_propiedades();
-
-		switch ($modo) {
-			case 'edit':
-				$dato 	= $this->get_dato();
-				$value 	= $this->get_dato_paginated();
-				$limit 	= $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
-
-				break;
-
-			case 'list':
-				$dato 	= $this->get_dato();
-				$value 	= $this->get_dato_paginated(); // $dato;
-				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records;
-				break;
-		}
+		$dato = $this->get_dato();
 
 		if (!empty($dato)) {
 
+			$value  	= $this->get_dato_paginated();
+			$section_id	= $this->get_parent();
+			$limit 		= ($modo==='list')
+				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
+				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
+		
 			// data item
 				$item = $this->get_data_item($value);
 					$item->parent_tipo 			= $tipo;
