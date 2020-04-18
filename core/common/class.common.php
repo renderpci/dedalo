@@ -1631,7 +1631,7 @@ abstract class common {
 				$dd_object->search_options_title 	= search::search_options_title($dd_object->search_operators_info);
 			}
 
-		
+
 		return $dd_object;
 	}//end get_structure_context
 

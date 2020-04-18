@@ -21,7 +21,9 @@ class component_relation_children extends component_relation_common {
 	# referenced component tipo
 	// public $tipo_to_search;
 
+	// default paginated max rows
 	public $max_records = 3;
+
 
 
 	/**

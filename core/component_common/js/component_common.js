@@ -411,7 +411,7 @@ component_common.prototype.update_datum = async function(api_response) {
 			}
 		}
 		if(SHOW_DEBUG===true) {
-			//console.log(" [component_common.update_datum] api_response.result.data:",JSON.parse( JSON.stringify(api_response.result.data)));
+			// console.log(" [component_common.update_datum] api_response.result.data:",JSON.parse( JSON.stringify(api_response.result.data)));
 		}
 
 	// add the new data into the general datum

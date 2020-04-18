@@ -16,6 +16,10 @@ class component_relation_parent extends component_relation_common {
 	# sql query stored for debug only
 	static $get_parents_query;
 
+	// default paginated max rows
+	public $max_records = 10;
+
+
 
 	/**
 	* SAVE
@@ -41,16 +45,17 @@ class component_relation_parent extends component_relation_common {
 	*	$dato is always an array of locators
 	*/
 	public function get_dato() {
-		# get_my_parents always
-		$dato = $this->get_my_parents();
-
-		if (!empty($dato) && !is_array($dato)) {	
-			debug_log(__METHOD__." Re-saved invalid dato. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent", logger::ERROR);
-			$dato = array();
-			$this->set_dato( $dato );
-			$this->Save();
-		}
-
+		
+		// always get dato calculated from my parents
+			$dato = $this->get_my_parents();
+	
+		// check dato format
+			if (!empty($dato) && !is_array($dato)) {	
+				debug_log(__METHOD__." Re-saved invalid dato. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent", logger::ERROR);
+				$dato = array();
+				$this->set_dato( $dato );
+				$this->Save();
+			}
 			
 		// rebuild dato option 
 			/*
@@ -90,7 +95,7 @@ class component_relation_parent extends component_relation_common {
 	public function set_dato($dato) {
 		
 		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
+			$dato = json_decode($dato);
 		}
 		if (is_object($dato)) {
 			$dato = array($dato);
@@ -104,7 +109,7 @@ class component_relation_parent extends component_relation_common {
 			$this->dato = $dato;
 
 			return true;
-		}		
+		}
 
 		# Add (used only in importations and similar) Note that SAVE (component_relation_children) !!
 		$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
@@ -760,4 +765,3 @@ class component_relation_parent extends component_relation_common {
 
 	
 }//end component_relation_parent
-?>
