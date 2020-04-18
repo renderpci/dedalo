@@ -783,40 +783,41 @@ export const ui = {
 
 
 
-	button : {
+	// DES
+		// button : {
 
 
 
-		/**
-		* BUILD_BUTTON
-		* Generate button element for open the target tool
-		* @return dom element tool_button
-		*/
-		build_button : (options) => {
+		// 	/**
+		// 	* BUILD_BUTTON
+		// 	* Generate button element for open the target tool
+		// 	* @return dom element tool_button
+		// 	*/
+		// 	build_button : (options) => {
 
-			const class_name = 'button' + (options.class_name ? (' ' + options.class_name) : '')
-			const label 	 = options.label || "undefined"
+		// 		const class_name = 'button' + (options.class_name ? (' ' + options.class_name) : '')
+		// 		const label 	 = options.label || "undefined"
 
-			// button
-				const button = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: class_name,
-					text_content  	: label
-					//style 			: { "background-image": "url('" +tool_object.icon +"')" },
-				})
+		// 		// button
+		// 			const button = ui.create_dom_element({
+		// 				element_type	: 'span',
+		// 				class_name 		: class_name,
+		// 				text_content  	: label
+		// 				//style 			: { "background-image": "url('" +tool_object.icon +"')" },
+		// 			})
 
-			// Events
-				//button.addEventListener('mouseup', (e) => {
-				//	e.stopPropagation()
-				//	alert("Click here! "+label)
-				//})
+		// 		// Events
+		// 			//button.addEventListener('mouseup', (e) => {
+		// 			//	e.stopPropagation()
+		// 			//	alert("Click here! "+label)
+		// 			//})
 
-			return button
-		}//build_button
+		// 		return button
+		// 	}//build_button
 
 
 
-	},//end tool
+		// },//end button
 
 
 
