@@ -67,9 +67,9 @@ export const component_text_area = function(){
 * TAGS_TO_HTML
 */
 component_text_area.prototype.tags_to_html = function(value) {
-	
+
 	const html = tr.add_tag_img_on_the_fly(value)
-	
+
 	return html
 }// end
 
@@ -527,18 +527,15 @@ component_text_area.prototype.get_last_tag_id = function(container, tag_type) {
 				// Insert id formated as number in final array
 				ar_id_final.push(number)
 			}
-				console.log("ar_id_final:",ar_id_final);
 			break;
 	}
 
 	// last id
 		const last_tag_id = Math.max.apply(null, ar_id_final);
 		if(SHOW_DEBUG===true) {
-			console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
+			// console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
 		}
 
 
 	return parseInt(last_tag_id);
 }//end get_last_tag_id
-
-

@@ -621,7 +621,10 @@ const get_custom_events = (self, i, get_service) => {
 					event_manager.publish('click_tag_geo' +'_'+ self.tipo, {tag:tag_obj, caller: self})
 					break;
 
-
+				case 'page':
+						// PDF go to the specific page
+						event_manager.publish('click_tag_pdf' +'_'+ self.tipo, {tag:tag_obj, caller: self})
+						break;
 
 				case 'person':
 					// Show person info
@@ -690,7 +693,9 @@ const get_custom_events = (self, i, get_service) => {
 							case ('geo'):
 								const layer_node = render_layer_selector(self, data_tag, tag_id, service)
 							break;
-
+							case ('page'):
+								const page_node_selector = render_page_selector(self, data_tag, tag_id, service)
+							break;
 							default:
 								const tag 	= build_node_tag(data_tag, tag_id)//('tc', data, state, data, data)
 								service.set_content(tag.outerHTML)
@@ -862,6 +867,100 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 	self.node[0].appendChild(layer_selector)
 
 	return fragment
+};//end layer_selector
+
+
+
+
+/**
+*  LAYER_SELECTOR
+* @return
+*/
+const render_page_selector = function(self, data_tag, tag_id, service){
+
+	const total_pages 	= data_tag.total_pages
+	const offset 		= data_tag.offset
+	const page_in 		= offset
+	const page_out 		= (offset -1) + total_pages
+
+
+	const header = ui.create_dom_element({
+		element_type	: 'div',
+		text_node		: get_label.select_page_of_the_doc
+	})
+
+	const body = ui.create_dom_element({
+		element_type	: 'span',
+		class_name 		: 'body',
+	})
+
+	const label = eval('`'+get_label.choose_page_between+'`')
+
+	const body_title = ui.create_dom_element({
+		element_type	: 'span',
+		class_name 		: 'body_title',
+		text_node		: label,
+		parent			: body
+	})
+
+	const body_input = ui.create_dom_element({
+		element_type 	: 'input',
+		type 		 	: 'text',
+		class_name 		: 'body_title',
+		parent			: body
+	})
+
+	const error_input = ui.create_dom_element({
+		element_type 	: 'span',
+		class_name 		: 'body_title',
+		text_node		: '',
+		parent			: body
+	})
+
+
+	const footer = ui.create_dom_element({
+		element_type 	: 'span'
+	})
+
+	const user_option_cancelar = ui.create_dom_element({
+		element_type	: 'button',
+		class_name 		: 'user_option ',
+		parent 			: footer,
+		text_content 	: get_label.cancelar
+	})
+
+	const user_option_ok = ui.create_dom_element({
+		element_type	: 'button',
+		class_name 		: 'user_option ',
+		parent 			: footer,
+		text_content 	: get_label.insertar_etiqueta
+	})
+
+	const page_selector = ui.attach_to_modal( header, body, footer)
+
+	user_option_ok.addEventListener("click", (e) =>{
+		e.preventDefault()
+		const user_value = body_input.value
+		if(user_value === null) {
+			page_selector.renove()
+		}
+		if(user_value > page_out || user_value < page_in){
+			error_input.textContent =	get_label.value_out_of_range || 'Value out of range'
+			return
+		}
+		const data 		= body_input.value - (offset -1)
+		data_tag.label 	= body_input.value
+		data_tag.data 	= "["+data+"]"
+		const tag 	= build_node_tag(data_tag, tag_id)
+		service.set_content(tag.outerHTML)
+		page_selector.remove()
+	})
+
+	user_option_cancelar.addEventListener("click", (e) =>{
+		page_selector.remove()
+	})
+
+	return
 };//end layer_selector
 
 
