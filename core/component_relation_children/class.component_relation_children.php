@@ -109,6 +109,7 @@ class component_relation_children extends component_relation_common {
 
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
+		
 
 		return (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo

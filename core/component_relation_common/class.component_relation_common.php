@@ -2054,7 +2054,7 @@ class component_relation_common extends component_common {
 					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
 				// search_sections
 					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
+					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );					
 
 				// search_query_object build
 					$search_sqo_options = new stdClass();
@@ -2112,7 +2112,7 @@ class component_relation_common extends component_common {
 					}// end $value_with_parent = true
 
 				// add sqo
-					$show[] = $search_query_object;
+					$show[] = $search_query_object;					
 
 
 		// LAYOUT MAP // fields for select / show. add ddo
@@ -2125,11 +2125,11 @@ class component_relation_common extends component_common {
 					$layout_map_options->modo 					= $mode;
 					$layout_map_options->add_section 			= true;
 					$layout_map_options->config_context_type 	= 'select';
-				$search = array_merge( $search, layout_map::get_layout_map($layout_map_options));
+				$search = array_merge( $search, layout_map::get_layout_map($layout_map_options) );
 
-			//show
+			// show
 				$layout_map_options->config_context_type 		= 'show';
-				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options));
+				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options) );
 
 
 			$sqo_context = new stdClass();
@@ -2227,7 +2227,7 @@ class component_relation_common extends component_common {
 		// fix
 		$this->sqo_context	= $sqo_context;
 		$this->pagination	= $pagination;
-
+	
 
 		return $sqo_context;
 	}//end get_sqo_context

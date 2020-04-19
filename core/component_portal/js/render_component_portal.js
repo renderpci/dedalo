@@ -173,7 +173,7 @@ const add_events = function(self, wrapper) {
 				//	return false
 				//}
 
-			// remove
+			// remove row
 				if (e.target.matches('.button.remove')) {
 
 					const changed_data = Object.freeze({
