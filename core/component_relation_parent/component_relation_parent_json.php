@@ -57,7 +57,7 @@
 	if($options->get_data===true && $permissions>0){
 
 		$dato = $this->get_dato();
-
+		
 		if (!empty($dato)) {
 
 			$value  	= $this->get_dato_paginated();

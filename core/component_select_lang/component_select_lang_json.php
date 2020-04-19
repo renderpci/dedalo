@@ -50,9 +50,9 @@
 					$list_value	= lang::get_lang_locator_from_code($item);
 					
 					$item_value = new stdClass();			
-						$item_value->value 	= $list_value;
-						$item_value->label 	= $label;
-						$item_value->code 	= $code;						
+						$item_value->value 		= $list_value;
+						$item_value->label 		= $label;
+						$item_value->section_id = $code;						
 					
 					$datalist[]= $item_value;							
 				}	

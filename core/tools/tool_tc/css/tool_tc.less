@@ -1,36 +1,70 @@
 
 
+.wrapper_tool.tool_tc {
 
-// select style
-	.select_style {
-		width: fit-content;
-		height: 2em;
-		font-size: 0.80em;
-	}
-
-
-
-// components_container
 	.components_container {
 		display: grid;
 	    grid-template-columns: 1fr 1fr;
-	    grid-gap: 1em;
-	    //background-color: #D6F737;
-
-	    >select {
-			.select_style;
-	    }
-
-	    >div {
-
-	    }
+	    grid-gap: 1em;	    
 	}
 
+	.offset_management_container {
 
+		>* {
+			margin-right: 0.5em;
+			vertical-align: middle;
+			font-size: 1em;
+		}
 
-// buttons_container
-	.buttons_container {
-		padding-top: 1em;
-		padding-bottom: 1em;
+		select, input {
+			height: 2.25em;
+		}
+
+		input {
+			height: 2em;
+			width: 6em;
+			text-align: center;
+		}
+
+		button {
+			text-transform: capitalize;
+		}
 	}
+
+	
+}
+
+
+// // select style
+// 	.select_style {
+// 		width: fit-content;
+// 		height: 2em;
+// 		font-size: 0.80em;
+// 	}
+
+
+
+// // components_container
+// 	.components_container {
+// 		display: grid;
+// 	    grid-template-columns: 1fr 1fr;
+// 	    grid-gap: 1em;
+// 	    //background-color: #D6F737;
+
+// 	    >select {
+// 			.select_style;
+// 	    }
+
+// 	    >div {
+
+// 	    }
+// 	}
+
+
+
+// // buttons_container
+// 	.buttons_container {
+// 		padding-top: 1em;
+// 		padding-bottom: 1em;
+// 	}
 

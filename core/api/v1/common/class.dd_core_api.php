@@ -274,6 +274,7 @@ class dd_core_api {
 	* @return array $result
 	*/
 	function delete($json_data) {
+		
 	}//end delete
 
 

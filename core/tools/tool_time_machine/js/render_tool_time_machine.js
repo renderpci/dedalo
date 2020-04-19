@@ -116,28 +116,42 @@ const content_data_edit = async function(self) {
 		})
 		// lang selector
 			if (self.caller.lang!=='lg-nolan') {
-				ui.create_dom_element({
+				const selector_label = ui.create_dom_element({
 					element_type	: 'label',
 					text_content 	: get_label['idioma'],
 					parent 			: tool_bar
 				})
-				const lang_selector = get_lang_selector(self.langs, self.lang)
-				lang_selector.addEventListener('change', async (e) => {
-					e.stopPropagation()
-
+				const lang_selector = ui.build_select_lang({
+					langs  		: self.langs,
+					selected 	: self.lang,
+					class_name	: '',
+					action 		: on_change_select
+				})
+				function on_change_select(e) {
 					const lang = e.target.value
 					if (lang!==self.lang) {
 						self.lang = lang
 						self.caller.lang = lang
 						self.refresh()
 					}
-				})
+				}
+
+				// lang_selector.addEventListener('change', async (e) => {
+				// 	e.stopPropagation()
+
+				// 	const lang = e.target.value
+				// 	if (lang!==self.lang) {
+				// 		self.lang = lang
+				// 		self.caller.lang = lang
+				// 		self.refresh()
+				// 	}
+				// })
 				tool_bar.appendChild(lang_selector)
 			}
 		// button apply
 			self.button_apply = ui.create_dom_element({
 				element_type	: 'button',
-				class_name 		: 'button_apply hide',
+				class_name 		: 'warning button_apply hide',
 				text_content    : get_label['aplicar_y_salvar'] || 'Apply and save',
 				parent 			: tool_bar
 			})
@@ -174,44 +188,44 @@ const content_data_edit = async function(self) {
 }//end content_data_edit
 
 
+// DES
+	// /**
+	// * GET_LANG_SELECTOR
+	// */
+	// const get_lang_selector = function(langs, selected_lang, class_name='') {
 
-/**
-* GET_LANG_SELECTOR
-*/
-const get_lang_selector = function(langs, selected_lang, class_name='') {
+	// 	// components container
+	// 		const select = ui.create_dom_element({
+	// 			element_type	: 'select',
+	// 			class_name 		: class_name
+	// 		})
 
-	// components container
-		const select = ui.create_dom_element({
-			element_type	: 'select',
-			class_name 		: class_name
-		})
+	// 		const option = ui.create_dom_element({
+	// 				element_type	: 'option',
+	// 				value 			: null,
+	// 				text_content 	: '',
+	// 				parent 			: select
+	// 			})
 
-		const option = ui.create_dom_element({
-				element_type	: 'option',
-				value 			: null,
-				text_content 	: '',
-				parent 			: select
-			})
+	// 		const length = langs.length
+	// 		for (let i = 0; i < length; i++) {
 
-		const length = langs.length
-		for (let i = 0; i < length; i++) {
+	// 			const lang = langs[i]
+	// 			const option = ui.create_dom_element({
+	// 				element_type	: 'option',
+	// 				value 			: lang.value,
+	// 				text_content 	: lang.label,
+	// 				parent 			: select
+	// 			})
 
-			const lang = langs[i]
-			const option = ui.create_dom_element({
-				element_type	: 'option',
-				value 			: lang.value,
-				text_content 	: lang.label,
-				parent 			: select
-			})
+	// 			// selected options set on match
+	// 			if (lang.value === selected_lang) {
+	// 				option.selected = true
+	// 			}
+	// 		}
 
-			// selected options set on match
-			if (lang.value === selected_lang) {
-				option.selected = true
-			}
-		}
-
-	return select
-}//end get_lang_selector
+	// 	return select
+	// }//end get_lang_selector
 
 
 
