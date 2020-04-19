@@ -209,16 +209,16 @@ const add_events = function(self, wrapper) {
 				}
 
 
-			// activate service. Enable the service_autocomplete when the user do click
-				if(self.portal_active===false){
+			// activate service autocomplete. Enable the service_autocomplete when the user do click
+				if(self.autocomplete_active===false){
 
-					self.portal = new service_autocomplete()
-					self.portal.init({
+					self.autocomplete = new service_autocomplete()
+					self.autocomplete.init({
 						caller	: self,
 						wrapper : wrapper
 					})
-					self.portal_active = true
-					self.portal.search_input.focus()
+					self.autocomplete_active = true
+					self.autocomplete.search_input.focus()
 
 					return true
 				}
@@ -497,7 +497,6 @@ const get_top = function(self) {
 				// 		self.modal.on_close = () =>{
 				// 			find_section.destroy(true, true, true)
 				// 		}
-
 		})
 
 
@@ -506,9 +505,9 @@ const get_top = function(self) {
 			element_type	: 'div',
 			class_name 		: 'top'
 		})
-		top.addEventListener("click", function(e){
-			e.stopPropagation()
-		})
+		// top.addEventListener("click", function(e){
+		// 	e.stopPropagation()
+		// })
 		top.appendChild(fragment)
 
 
