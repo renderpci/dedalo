@@ -287,34 +287,32 @@ class component_relation_common extends component_common {
 	*/
 	public function load_component_dataframe() {
 
-
 		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
 			return null;
 		}
 
-		#if( $this->bl_loaded_matrix_data!==true ) {
+		if (empty($this->section_tipo)) {
+			if(SHOW_DEBUG===true) {
+				$msg = " Error Processing Request. section tipo not found for component $this->tipo";
+				#throw new Exception("$msg", 1);
+				debug_log(__METHOD__.$msg);
+			}
+		}
+		$dato = $this->get_dato();
 
-			if (empty($this->section_tipo)) {
-				if(SHOW_DEBUG===true) {
-					$msg = " Error Processing Request. section tipo not found for component $this->tipo";
-					#throw new Exception("$msg", 1);
-					debug_log(__METHOD__.$msg);
+		$this->dataframe = [];
+
+		foreach ($dato as $key => $current_locator) {
+			if (isset($current_locator->dataframe)) {
+				foreach ($current_locator->dataframe as $dataframe_obj) {
+					$this->dataframe[] = $dataframe_obj;
 				}
 			}
-			$dato = $this->get_dato();
+		}
 
-			$this->dataframe = [];
+		# Set as loaded
+		$this->bl_loaded_matrix_data = true;
 
-			foreach ($dato as $key => $current_locator) {
-				if (isset($current_locator->dataframe)) {
-					foreach ($current_locator->dataframe as $dataframe_obj) {
-						$this->dataframe[] = $dataframe_obj;
-					}
-				}
-			}
-
-			# Set as loaded
-			$this->bl_loaded_matrix_data = true;
 
 		return true;
 	}//end load_component_dataframe
@@ -365,8 +363,7 @@ class component_relation_common extends component_common {
 				$component_relations[] = $current_locator;
 			}
 		}
-		$relations = $component_relations;
-	
+		$relations = $component_relations;	
 	
 
 		return (array)$relations;
