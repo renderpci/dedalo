@@ -1439,12 +1439,12 @@ export const ui = {
 	create_dialog : (options) =>{
 
 		const element_id	= options.element_id
-		const title 		= options.title || ''
-		const msg 			= options.msg || ''
-		const header_class 	= options.header_class || 'light'
-		const body_class 	= options.body_class || 'light'
-		const footer_class 	= options.footer_class || 'light'
-		const user_options	= options.user_options || [{
+		const title 		= options.title 		|| ''
+		const msg 			= options.msg 			|| ''
+		const header_class 	= options.header_class 	|| 'light'
+		const body_class 	= options.body_class 	|| 'light'
+		const footer_class 	= options.footer_class 	|| 'light'
+		const user_options	= options.user_options 	|| [{
 								id 			: 1,
 								label 		: get_label.ok,
 								class_name 	: 'light'
