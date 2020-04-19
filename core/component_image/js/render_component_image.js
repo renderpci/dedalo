@@ -229,6 +229,7 @@ const get_buttons = (self) => {
 		const vector_editor = ui.create_dom_element({
 			element_type	: 'span',
 			class_name 		: 'button vector_editor',
+			title 			: 'Toggle vector editor',
 			parent 			: fragment
 		})
 		vector_editor.addEventListener("mouseup", (e) =>{
@@ -236,6 +237,8 @@ const get_buttons = (self) => {
 			if(!vector_editor_tools.classList.contains('hide')){
 				self.load_vector_editor({load:'full'})
 			}
+			// set wrapper as wide mode (100%)
+				self.node[0].classList.add('wide')
 		})
 
 	// svg editor tools
