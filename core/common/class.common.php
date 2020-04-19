@@ -85,10 +85,10 @@ abstract class common {
 			// 'component_portal'
 			// 'component_publication'
 			// 'component_radio_button'
-			// 'component_relation_children',
+			'component_relation_children',
 			'component_relation_index',
 			// 'component_relation_model',
-			// 'component_relation_parent',
+			'component_relation_parent',
 			'component_relation_related',
 			'component_relation_struct',
 			'component_score',
