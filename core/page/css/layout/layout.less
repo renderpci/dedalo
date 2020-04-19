@@ -949,16 +949,18 @@
 
 			// component pdf
 			&.component_pdf {
-				min-height: 50em;
+
 				>.content_data {
 					height: calc(100% - 1.5em);
 
 					>ul {
 						li {
 							flex-wrap: wrap;
+							align-items: flex-start;
 							iframe {
 								flex: 0 0 100%;
 								height: calc(100% - 3.5em);
+								min-height: 50em;
 							}
 							.fields {
 								flex: 0 0 100%;
