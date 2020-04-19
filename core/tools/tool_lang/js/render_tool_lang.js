@@ -140,11 +140,28 @@ const get_content_data_edit = async function(self) {
 
 
 	// source lang select
-		const source_select_lang = lang_selector(self.langs, self.source_lang, 'source_lang')
+		const source_select_lang = ui.build_select_lang({
+			langs  		: self.langs,
+			selected 	: self.source_lang,
+			class_name	: 'source_lang',
+			action 		: on_change_source_select_lang
+		})
+		function on_change_source_select_lang(e) {
+			add_component(self, source_component_container, e.target.value)
+		}
 		components_container.appendChild(source_select_lang)
 
+
 	// target lang select
-		const target_select_lang = lang_selector(self.langs, self.target_lang, 'target_lang')
+		const target_select_lang = ui.build_select_lang({
+			langs  		: self.langs,
+			selected 	: self.target_lang,
+			class_name	: 'target_lang',
+			action 		: on_change_target_select_lang
+		})
+		function on_change_target_select_lang(e) {
+			add_component(self, target_component_container, e.target.value)
+		}
 		components_container.appendChild(target_select_lang)
 
 
@@ -154,12 +171,6 @@ const get_content_data_edit = async function(self) {
 			class_name 		: 'source_component_container disabled_component',
 			parent 			: components_container
 		})
-
-		// source on_change
-			source_select_lang.addEventListener('change', async (e) => {
-				e.stopPropagation()
-				add_component(self, source_component_container, e.target.value)
-			})
 
 		// source default value check
 			if (source_select_lang.value) {
@@ -172,12 +183,6 @@ const get_content_data_edit = async function(self) {
 			class_name 		: 'target_component_container',
 			parent 			: components_container
 		})
-
-		// target on_change
-			target_select_lang.addEventListener('change', async (e) => {
-				e.stopPropagation()
-				add_component(self, target_component_container, e.target.value)
-			})
 
 		// target default value check
 			if (target_select_lang.value) {
@@ -223,21 +228,28 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		})
 
 	// button
-		const button_automatic_translation = document.createElement('button');
-			  button_automatic_translation.type = 'button'
-			  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-			  automatic_translation_container.appendChild(button_automatic_translation)
-			  button_automatic_translation.addEventListener("click", (e) => {
+		const button_automatic_translation = ui.create_dom_element({
+			element_type 	: 'button',
+			class_name 		: 'warning button_automatic_translation',
+			text_content 	: get_label['traduccion_automatica'] || "Automatic translation",
+			parent 			: automatic_translation_container
+		})
 
-			  	components_container.classList.add("loading")
+		// const button_automatic_translation = document.createElement('button');
+		// 	  button_automatic_translation.type = 'button'
+		// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
+		// 	  automatic_translation_container.appendChild(button_automatic_translation)
+		button_automatic_translation.addEventListener("click", (e) => {
 
-			  	const translator  = translator_engine_select.value
-			  	const source_lang = source_select_lang.value
-			  	const target_lang = target_select_lang.value
-			  	const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
-			  		components_container.classList.remove("loading")
-			  	})
-			  })
+			components_container.classList.add("loading")
+
+			const translator  = translator_engine_select.value
+			const source_lang = source_select_lang.value
+			const target_lang = target_select_lang.value
+			const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
+				components_container.classList.remove("loading")
+			})
+		})
 
 	// select
 		const translator_engine_select = ui.create_dom_element({
@@ -288,45 +300,5 @@ export const add_component = async (self, component_container, value) => {
 
 	return true
 }//end add_component
-
-
-
-/**
-* LANG_SELECTOR
-*/
-const lang_selector = function(langs, selected_lang, class_name='') {
-
-	// components container
-		const select = ui.create_dom_element({
-			element_type	: 'select',
-			class_name 		: class_name
-		})
-
-		const option = ui.create_dom_element({
-				element_type	: 'option',
-				value 			: null,
-				text_content 	: '',
-				parent 			: select
-			})
-
-		const length = langs.length
-		for (let i = 0; i < length; i++) {
-
-			const lang = langs[i]
-			const option = ui.create_dom_element({
-				element_type	: 'option',
-				value 			: lang.value,
-				text_content 	: lang.label,
-				parent 			: select
-			})
-
-			// selected options set on match
-			if (lang.value === selected_lang) {
-				option.selected = true
-			}
-		}
-
-	return select
-}//end lang_selector
 
 

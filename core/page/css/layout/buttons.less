@@ -36,6 +36,7 @@
 		user-select: none;
 		display: inline-block;
 		width: 1em;
+		min-width: 1em;
 		height: 1em;
 		opacity: 0.8;
 		background-color: #000000;
@@ -172,9 +173,12 @@
 			border-color: #dc3545;
 		}
 		&.warning {
-			color: #212529;
-			background-color: #ffc107;
-			border-color: #ffc107;
+			// color: #212529;
+			// background-color: #ffc107;
+			// border-color: #ffc107;
+			color: #ffffff;
+			background-color: @color_orange_dedalo;
+			border-color: darken(@color_orange_dedalo, 2%);
 		}
 		&.info {
 			color: #fff;

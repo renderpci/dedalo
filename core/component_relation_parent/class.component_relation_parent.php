@@ -94,39 +94,251 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public function set_dato($dato) {
 		
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_decode($dato);
-		}
-		if (is_object($dato)) {
-			$dato = array($dato);
-		}
-		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
+		// format check
+			if (is_string($dato)) { # Tool Time machine case, dato is string
+				$dato = json_decode($dato);
+			}
+			if (is_object($dato)) {
+				$dato = array($dato);
+			}
+			# Ensures is a real non-associative array (avoid json encode as object)
+			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 		// search mode
-		if ($this->modo==="search") {
-			# Fix dato
-			$this->dato = $dato;
+			if ($this->modo==="search") {
+				# Fix dato
+				$this->dato = $dato;
 
-			return true;
-		}
-
-		# Add (used only in importations and similar) Note that SAVE (component_relation_children) !!
-		$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
-		foreach ($dato as $current_locator) {
-			
-			$children_section_tipo 	= $current_locator->section_tipo;
-			$children_section_id 	= $current_locator->section_id;
-			if (empty($children_section_tipo) || empty($children_section_id))  {
-				debug_log(__METHOD__." Skipped Bad locator found on set dato ($this->tipo, $this->parent, $this->section_tipo): locator: ".to_string($current_locator), logger::ERROR);
-				continue;
+				return true;
 			}
-			# Note component_relation_children saves here
-			$result = component_relation_parent::add_parent($this->tipo, $this->parent, $this->section_tipo, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
-		}
+
+		// Add (used only in importations and similar) Note that this call SAVE (component_relation_children) !!
+			// $component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
+			// foreach ($dato as $current_locator) {
+				
+			// 	$children_section_tipo 	= $current_locator->section_tipo;
+			// 	$children_section_id 	= $current_locator->section_id;
+			// 	if (empty($children_section_tipo) || empty($children_section_id))  {
+			// 		debug_log(__METHOD__." Skipped Bad locator found on set dato ($this->tipo, $this->parent, $this->section_tipo): locator: ".to_string($current_locator), logger::ERROR);
+			// 		continue;
+			// 	}
+			// 	# Note component_relation_children saves here
+			// 	$result = component_relation_parent::add_parent($this->tipo,
+			// 													$this->parent,
+			// 													$this->section_tipo,
+			// 													$children_section_tipo,
+			// 													$children_section_id,
+			// 													$component_relation_children_tipo);
+			// }
+
+		// changed_data
+			if (isset($this->changed_data)) {
+				// format object:
+					// {
+					//     "action": "remove",
+					//     "key": 3,
+					//     "value": null
+					//     "to_remove": {locator}
+					// }
+				$changed_data = $this->changed_data;
+				switch ($changed_data->action) {
+					case 'remove':
+						if (isset($changed_data->to_remove)) {
+							$locator = $changed_data->to_remove;
+							$result  = (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
+						}
+						break;
+					case 'insert':
+					case 'update':
+						if (isset($dato[$changed_data->key])) {
+							$locator = $dato[$changed_data->key];							
+							$result = (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
+						}							
+						break;
+					default:
+						debug_log(__METHOD__." Error. action: '$action' not defined ! ".to_string(), logger::ERROR);
+						break;
+				}
+				
+			}
+
+		// update_parents. Updates and SAVE data in component children associated with the current component
+			// $this->update_parents($dato);
 
 		return true;
 	}//end set_dato
+
+
+
+	/**
+	* UPDATE_CHILDREN
+	* @return bool $result
+	*/
+	private function update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
+
+		$result = false;
+
+		$tipo 			= $this->tipo;
+		$section_tipo 	= $this->section_tipo;
+		$section_id 	= $this->section_id;
+
+		// component_relation_children_tipo. Resolve if null
+			if (empty($component_relation_children_tipo)) {
+				$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
+			}
+		
+		// model. Expected 'component_relation_children'
+			$model = RecordObj_dd::get_modelo_name_by_tipo($component_relation_children_tipo,true);
+			if ($model!=='component_relation_children') {
+				debug_log(__METHOD__." Wrong target model: '$model' ".to_string(), logger::ERROR);
+			}
+		
+		// component instance
+			$component_relation_children   = component_common::get_instance($model,
+														  					$component_relation_children_tipo,
+														  					$children_section_id,
+														  					'edit',
+														  					DEDALO_DATA_NOLAN,
+														  					$children_section_tipo);
+
+		// change link to me in relation_children 
+			switch ($action) {
+				case 'remove':
+					$changed = (bool)$component_relation_children->remove_me_as_your_children($section_tipo, $section_id);
+					break;
+				
+				case 'add':
+					$changed = (bool)$component_relation_children->make_me_your_children($section_tipo, $section_id);
+					break;
+
+				default:
+					$changed = false;
+					debug_log(__METHOD__." Error on update_children. Invalid action '$action' ".to_string(), logger::ERROR);
+					break;
+			}			
+			
+		// save if changed
+			if ($changed===true) {
+				$saved = $component_relation_children->Save();
+				if ($saved && $saved>0) {
+					$result = true;
+				}			
+			}
+
+
+		return (bool)$result;
+	}//end update_children
+
+
+
+	/**
+	* ADD_PARENT
+	* @return bool
+	*/
+	public function add_parent($children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
+		
+		$action = 'add';
+
+		return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
+	}//end add_parent
+
+
+
+	/**
+	* REMOVE_PARENT
+	* @return bool
+	*/
+	public function remove_parent($children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
+		
+		$action = 'remove';
+
+		return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
+	}//end remove_parent
+
+
+
+	// DES
+		// /**
+		// * ADD_PARENT
+		// * Add a children to referenced component_relation_children
+		// * @return bool $result
+		// */
+		// public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id) {		
+		// 	// dump($tipo, 'ADD_PARENT '."tipo:'$tipo', parent:'$parent', section_tipo:'$section_tipo', children_section_tipo:'$children_section_tipo', children_section_id:'$children_section_id'");
+			
+		// 	// model to search in current children_section
+		// 		$model = 'component_relation_children';
+
+		// 	# Resolve children component tipo from children_section_tipo
+		// 	$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo, # section tipo
+		// 																							[$model], # ar model name
+		// 																							true, # from_cache
+		// 																							true, # resolve_virtual
+		// 																							true, # recursive
+		// 																							true, # search_exact
+		// 																							false); # ar_tipo_exclude_elements
+		// 	$children_component_tipo = reset($ar_children_component_tipo);
+			
+		// 	$component_relation_children = component_common::get_instance($model,
+		// 																  $children_component_tipo,
+		// 																  $children_section_id,
+		// 																  'edit',
+		// 																  DEDALO_DATA_NOLAN,
+		// 																  $children_section_tipo);
+			
+		// 	$result = false;
+
+		// 	$added  = (bool)$component_relation_children->make_me_your_children( $section_tipo, $parent );		
+		// 	if ($added===true) {
+		// 		$component_relation_children->Save();
+		// 		$result = true;
+		// 	}
+
+		// 	return (bool)$result;
+		// }//end add_parent
+
+
+
+	// DES
+		// /**
+		// * REMOVE_PARENT
+		// * @return bool $result
+		// */
+		// public static function remove_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
+
+		// 	$result = false;
+
+		// 	// component_relation_children_tipo. Resolve if null
+		// 		if (empty($component_relation_children_tipo)) {
+		// 			$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
+		// 		}
+			
+		// 	// model. Expected 'component_relation_children'
+		// 		$model = RecordObj_dd::get_modelo_name_by_tipo($component_relation_children_tipo,true);
+		// 		if ($model!=='component_relation_children') {
+		// 			debug_log(__METHOD__." Wrong target model: '$model' ".to_string(), logger::ERROR);
+		// 		}
+			
+		// 	// component instance
+		// 		$component_relation_children   = component_common::get_instance($model,
+		// 													  					$component_relation_children_tipo,
+		// 													  					$children_section_id,
+		// 													  					'edit',
+		// 													  					DEDALO_DATA_NOLAN,
+		// 													  					$children_section_tipo);
+
+		// 	// remove link to me in relation_children 
+		// 		$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $parent );
+		// 		if ($removed===true) {
+		// 			$saved = $component_relation_children->Save();
+		// 			if ($saved && $saved>0) {
+		// 				$result = true;
+		// 			}			
+		// 		}
+
+
+		// 	return (bool)$result;
+		// }//end remove_parent
 
 
 
@@ -487,101 +699,28 @@ class component_relation_parent extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
-		#return "working here! ".__METHOD__;
-	
-		if (isset($this->valor)) {
-			dump($this->valor, ' RETURNED VALOR FROM CACHE this->valor ++ '.to_string());		
-			return $this->valor;
-		}
-
+		
 		$ar_valor  	= array();		
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
 			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
-		}//end if (!empty($dato)) 
+		}
 
 		# Set component valor
-		#$this->valor = implode(', ', $ar_valor);
 		$valor='';
 		foreach ($ar_valor as $key => $value) {
 			if(!empty($value)) {
 				$valor .= $value;
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
-		}		
-		$this->valor = $valor;
+		}
 
-		return (string)$this->valor;
+		return (string)$valor;
 	}//end get_valor
 
 
 
-	/**
-	* ADD_PARENT
-	* Add a children to referenced component_relation_children
-	* @return bool $result
-	*/
-	public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id) {
-		#dump($tipo, ' tipo ++ '."tipo:$tipo, parent:$parent, section_tipo:$section_tipo, children_section_tipo:$children_section_tipo, children_section_id:$children_section_id, children_component_tipo:$children_component_tipo".to_string());
-		$result = false;
-		
-		$modelo_name = 'component_relation_children';
-
-		# Resolve children component tipo from children_section_tipo
-		$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo,
-																								[$modelo_name],
-																								true, # from_cache
-																								true, # resolve_virtual
-																								true, # recursive
-																								true, # search_exact
-																								false); # ar_tipo_exclude_elements
-		$children_component_tipo = reset($ar_children_component_tipo);
-		
-		$component_relation_children   = component_common::get_instance($modelo_name,
-														  				$children_component_tipo,
-														  				$children_section_id,
-														  				'edit',
-														  				DEDALO_DATA_NOLAN,
-														  				$children_section_tipo);
-		
-		$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $parent );
-		if ($added===true) {
-			$component_relation_children->Save();
-			$result = true;
-		}
-
-		return (bool)$result;
-	}//end add_parent
-
-
-
-	/**
-	* REMOVE_PARENT
-	* @return bool $result
-	*/
-	public static function remove_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo) {
-
-		$result=false;
 	
-		$modelo_name 	= 'component_relation_children';
-		#$component_tipo = self::get_component_relation_children_tipo($tipo);
-		$modo 			= 'edit';
-		$lang 			= DEDALO_DATA_NOLAN;	
-		$component_relation_children   = component_common::get_instance($modelo_name,
-														  				$children_component_tipo,
-														  				$children_section_id,
-														  				$modo,
-														  				$lang,
-														  				$children_section_tipo);
-
-		$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $parent );
-		if ($removed===true) {
-			$component_relation_children->Save();
-			$result = true;
-		}
-
-		return (bool)$result;
-	}//end remove_parent
 
 
 

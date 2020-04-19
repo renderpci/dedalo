@@ -106,10 +106,12 @@ const get_content_data = async function(self) {
 			parent 			: content_data
 		})
 
-		// button_new . Call API to create new section and navigate to the new record
-			const button_new = ui.button.build_button({
-				class_name 	: "new",
-				label 		: get_label.nuevo || "New"
+		// button_new . Call API to create new section and navigate to the new record			
+			const button_new = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light new',
+				text_content	: get_label.nuevo || "New",
+				parent 			: buttons_container
 			})
 			button_new.addEventListener('click', async (e) => {
 				e.stopPropagation()
@@ -130,7 +132,7 @@ const get_content_data = async function(self) {
 					})
 				}
 			})
-			buttons_container.appendChild(button_new)
+			// buttons_container.appendChild(button_new)
 
 
 	// project container

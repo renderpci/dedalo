@@ -6,6 +6,8 @@
 */
 abstract class component_common extends common {
 
+
+
 	# GENERAL VARS
 		protected $tipo;					# string component tipo in structur ex ('dd22') eq. terminoID
 		protected $parent;					# int parent section_id
@@ -66,6 +68,9 @@ abstract class component_common extends common {
 		# Component definition. Used in component label
 		public $def;
 
+		// changed_data . Fixed when DD_API save call to component update_data_value()
+		public $changed_data;
+
 
 
 	/**
@@ -75,118 +80,137 @@ abstract class component_common extends common {
 	*/
 	public static function get_instance($component_name=null, $tipo, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
 
-		# TIPO : MANDATORY
-		if (empty($tipo)) {
-			throw new Exception("Error: on construct component : tipo is mandatory. tipo:$tipo, parent:$parent, modo:$modo, lanfg:$lang", 1);
-		}
+		// tipo check. Is mandatory
+			if (empty($tipo)) {
+				throw new Exception("Error: on construct component : tipo is mandatory. tipo:$tipo, parent:$parent, modo:$modo, lanfg:$lang", 1);
+			}
 
-		# PARENT : OPTIONAL (On save component, new section is created)
-		#if (empty($parent)) {
-			#if(SHOW_DEBUG===true) {
-				#dump($component_name,"component_name");
-			#}
-		#}
+		// model check. Verify 'component_name' and 'tipo' are correct
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			if (empty($component_name)) {
+				
+				// calculate component name (is ontology elemnent model)
+					$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			
+			}else if (!empty($component_name) && $model_name!==$component_name) {				
 
-		# SECTION_TIPO : OPTIONAL (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
-		if (empty($section_tipo)) {
-			/*
-			$section_tipo = component_common::resolve_section_tipo($tipo);
-			debug_log(__METHOD__." Called component without section tipo ".to_string($tipo), logger::DEBUG);
-			*/
-			trigger_error("Sorry. resolve_section_tipo is not supported anymore. Please fix this call ASASP");
-			if(SHOW_DEBUG===true) {
-				dump($section_tipo, ' DEBUG WARNING: TRIGGERED resolve_section_tipo from: '.to_string($tipo));
-				$bt = debug_backtrace();
-				debug_log(__METHOD__." DEBUG WARNING: TRIGGERED resolve_section_tipo: bt : ".to_string($bt), logger::ERROR);
-			}
-			return null;
-		}
+				// warn to admin
+					$msg = "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'";
+					debug_log(__METHOD__.' '. $msg, logger::ERROR);
 
-		if(SHOW_DEBUG===true) {
-			if ( !empty($component_name) && strpos($component_name, 'component_')===false ) {
-				dump($tipo," tipo");
-				throw new Exception("Error Processing Request. section or ($component_name) intented to load as component", 1);
-			}
-			if ( is_numeric($tipo) || !is_string($tipo) || !RecordObj_dd::get_prefix_from_tipo($tipo) ) {
-				dump($tipo," tipo");
-				throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);
-			}
-			if ( (!empty($parent)
-				 && ( (!is_numeric($parent) || abs($parent)<1)) && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) )
-				{
-				dump($parent," parent - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
-				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);
-			}
-			$ar_valid_modo = array('edit','list','search','simple','tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit','tool_description','view_tool_description','player','json');
-			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
+				// fix bad model
+					$component_name = $model_name;
+			}			
+			if (strpos($component_name, 'component_')!==0) {
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);	;
+					throw new Exception("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__, 1);
 				}
-				debug_log(__METHOD__." trying to use empty or invalid modo: '$modo' as modo to load component $tipo. modo: ".to_string($modo), logger::DEBUG);
-			}
-			if ( empty($lang) || strpos($lang, 'lg-')===false ) {
-				dump($lang," lang");
-				throw new Exception("Error Processing Request. trying to use wrong var: '$lang' as lang to load as component", 1);
-			}
-			if (!empty($section_tipo)) {
-				# Verify modelo_name is section
-				$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
-				if ($section_modelo_name!=='section') {
-					dump($section_tipo," section_tipo - section_modelo_name: $section_modelo_name");
-					if (empty($section_modelo_name)) {
-						$msg = "Error. Current section ($section_tipo) don't exists or model is missing. Please fix structure ASAP";
-						throw new Exception($msg, 1);
-					}
-					throw new Exception("Error Processing Request. Trying to use: $section_modelo_name ($section_tipo) as section. Verified modelo is: $section_modelo_name", 1);
-				}
-				# Verify this section is a invalid resource call
-				$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
-				if (in_array($section_tipo, $ar_resources) && $tipo!=='rsc88') {
-					debug_log(__METHOD__." ERROR - Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal".to_string(), logger::ERROR);
-					debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
-					trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");
-					#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
-				}else if(strpos($modo, 'dataframe')===false){
-					$ar_modified_section_tipos = array_map(function($item){
-						return $item['tipo'];
-					}, section::get_modified_section_tipos());
-					// add publication info
-						$ar_modified_section_tipos[] = diffusion::$publication_first_tipo;
-						$ar_modified_section_tipos[] = diffusion::$publication_last_tipo;
-						$ar_modified_section_tipos[] = diffusion::$publication_first_user_tipo;
-						$ar_modified_section_tipos[] = diffusion::$publication_last_user_tipo;
-					if (true===in_array($tipo, $ar_modified_section_tipos)) {
-						# skip verification
-					}else{
-						# Verify this section is from current component tipo
-						$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
-						if (!isset($ar_terminoID_by_modelo_name[0])) {
-							debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_modelo_name), logger::ERROR);
-							throw new Exception("Error Processing Request", 1);
-						}
-						$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
-						$real_section 			 = section::get_section_real_tipo_static($section_tipo);
-						$is_real 				 = $real_section===$section_tipo ? true : false;
-						if ( $is_real && $section_tipo!=$calculated_section_tipo && $modo!=='search' && SHOW_DEBUG===true) {
-							#dump(debug_backtrace(), ' debug_backtrace '.to_string());
-							#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
-						}
-					}
-				}
+				return null;
 			}
 
-			if (is_array($parent)) {
-				trigger_error("Error: parent is array!");
-				$bt = debug_backtrace();
-				debug_log(__METHOD__." Error: parent is array! : ".to_string($bt), logger::ERROR);
+		// section_tipo check : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
+			if (empty($section_tipo)) {				
+				// $section_tipo = component_common::resolve_section_tipo($tipo);
+				// debug_log(__METHOD__." Called component without section tipo ".to_string($tipo), logger::DEBUG);				
+				trigger_error("Sorry. resolve_section_tipo is not supported anymore. Please fix this call ASASP");
+				if(SHOW_DEBUG===true) {
+					dump($section_tipo, ' DEBUG WARNING: TRIGGERED resolve_section_tipo from: '.to_string($tipo));
+					$bt = debug_backtrace();
+					debug_log(__METHOD__." DEBUG WARNING: TRIGGERED resolve_section_tipo: bt : ".to_string($bt), logger::ERROR);
+				}
+				return null;
 			}
-		}//end if(SHOW_DEBUG===true)
 
-		# Direct construct without cache instance
-		# Use this config in imports
-		if ($cache===false) {
-			return new $component_name($tipo, $parent, $modo, $lang, $section_tipo);
-		}
+		// debug verifications
+			if(SHOW_DEBUG===true) {
+				// model received check
+					if ( !empty($component_name) && strpos($component_name, 'component_')===false ) {
+						dump($tipo," tipo");
+						throw new Exception("Error Processing Request. section or ($component_name) intented to load as component", 1);
+					}
+				// tipo format check
+					if ( is_numeric($tipo) || !is_string($tipo) || !RecordObj_dd::get_prefix_from_tipo($tipo) ) {
+						dump($tipo," tipo");
+						throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);
+					}
+				// parent format check
+					if ( (!empty($parent)
+						 && ( (!is_numeric($parent) || abs($parent)<1)) && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) )
+						{
+						dump($parent," parent - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
+						throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);
+					}
+					if (is_array($parent)) {
+						trigger_error("Error: parent is array!");
+						$bt = debug_backtrace();
+						debug_log(__METHOD__." Error: parent is array! : ".to_string($bt), logger::ERROR);
+					}
+				// modo (mode) validation
+					$ar_valid_modo = array('edit','list','search','simple','tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit','tool_description','view_tool_description','player','json');
+					if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
+						if(SHOW_DEBUG===true) {
+							throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);	;
+						}
+						debug_log(__METHOD__." trying to use empty or invalid modo: '$modo' as modo to load component $tipo. modo: ".to_string($modo), logger::DEBUG);
+					}
+				// lang format check
+					if ( empty($lang) || strpos($lang, 'lg-')===false ) {
+						dump($lang," lang");
+						throw new Exception("Error Processing Request. trying to use wrong var: '$lang' as lang to load as component", 1);
+					}
+				// section_tipo format check
+					if (!empty($section_tipo)) {
+						# Verify modelo_name is section
+						$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+						if ($section_modelo_name!=='section') {
+							dump($section_tipo," section_tipo - section_modelo_name: $section_modelo_name");
+							if (empty($section_modelo_name)) {
+								$msg = "Error. Current section ($section_tipo) don't exists or model is missing. Please fix structure ASAP";
+								throw new Exception($msg, 1);
+							}
+							throw new Exception("Error Processing Request. Trying to use: $section_modelo_name ($section_tipo) as section. Verified modelo is: $section_modelo_name", 1);
+						}
+						# Verify this section is a invalid resource call
+						$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
+						if (in_array($section_tipo, $ar_resources) && $tipo!=='rsc88') {
+							debug_log(__METHOD__." ERROR - Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal".to_string(), logger::ERROR);
+							debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
+							trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");
+							#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
+						}else if(strpos($modo, 'dataframe')===false){
+							$ar_modified_section_tipos = array_map(function($item){
+								return $item['tipo'];
+							}, section::get_modified_section_tipos());
+							// add publication info
+								$ar_modified_section_tipos[] = diffusion::$publication_first_tipo;
+								$ar_modified_section_tipos[] = diffusion::$publication_last_tipo;
+								$ar_modified_section_tipos[] = diffusion::$publication_first_user_tipo;
+								$ar_modified_section_tipos[] = diffusion::$publication_last_user_tipo;
+							if (true===in_array($tipo, $ar_modified_section_tipos)) {
+								# skip verification
+							}else{
+								# Verify this section is from current component tipo
+								$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
+								if (!isset($ar_terminoID_by_modelo_name[0])) {
+									debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_modelo_name), logger::ERROR);
+									throw new Exception("Error Processing Request", 1);
+								}
+								$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
+								$real_section 			 = section::get_section_real_tipo_static($section_tipo);
+								$is_real 				 = $real_section===$section_tipo ? true : false;
+								if ( $is_real && $section_tipo!=$calculated_section_tipo && $modo!=='search' && SHOW_DEBUG===true) {
+									#dump(debug_backtrace(), ' debug_backtrace '.to_string());
+									#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
+								}
+							}
+						}
+					}			
+			}//end if(SHOW_DEBUG===true)
+
+		// no cache. Direct construct without cache instance. Use this config in imports
+			if ($cache===false) {
+				return new $component_name($tipo, $parent, $modo, $lang, $section_tipo);
+			}
 
 		static $ar_component_instances;
 
@@ -196,135 +220,127 @@ abstract class component_common extends common {
 		$max_cache_instances = 160; // 500
 		$cache_slice_on 	 = 40; // 200 //$max_cache_instances/2;
 
-		# OVERLOAD : If ar_component_instances > 99 , not add current element to cache to avoid overload
-		if ( isset($ar_component_instances) && count($ar_component_instances)>$max_cache_instances ) {
-			$ar_component_instances = array_slice($ar_component_instances, $cache_slice_on, null, true);
-			if(SHOW_DEBUG===true) {
-				#debug_log(__METHOD__." Overload components prevent. Unset first cache item [$key]");
-			}
-		}
-
-		# unset($ar_component_instances);
-		# FIND CURRENT INSTANCE IN CACHE
-		if ( !isset($ar_component_instances) || !array_key_exists($key, $ar_component_instances) ) {
-
-			if (empty($component_name)) {
-				$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-			}
-			if (strpos($component_name, 'component_')===false) {
+		// overload : If ar_component_instances > 99 , not add current element to cache to avoid overload
+			if ( isset($ar_component_instances) && count($ar_component_instances)>$max_cache_instances ) {
+				$ar_component_instances = array_slice($ar_component_instances, $cache_slice_on, null, true);
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__, 1);
+					#debug_log(__METHOD__." Overload components prevent. Unset first cache item [$key]");
 				}
-				return null;
+			}
+		
+		// cache instances. Find current instance in cache
+			if ( !isset($ar_component_instances) || !array_key_exists($key, $ar_component_instances) ) {
+
+				// __CONSTRUCT : Store new component in static array var
+					$ar_component_instances[$key] = new $component_name($tipo, $parent, $modo, $lang, $section_tipo);
+
+			}else{
+
+				// Change modo if need
+					if ($ar_component_instances[$key]->get_modo()!==$modo) {
+						$ar_component_instances[$key]->set_modo($modo);
+					}
 			}
 
-			# __CONSTRUCT : Store new component in static array var
-			$ar_component_instances[$key] = new $component_name($tipo, $parent, $modo, $lang, $section_tipo);
-
-		}else{
-
-			# Change modo if need
-			if ($ar_component_instances[$key]->get_modo()!==$modo) {
-				$ar_component_instances[$key]->set_modo($modo);
+		// debug
+			if(SHOW_DEBUG===true) {
+				// # Verify 'component_name' and 'tipo' are correct
+				// $modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				// if (!empty($component_name) && $component_name!==$modelo_name) {
+				// 	$msg = "Error Processing Request. Inconsistency detected and fixed with get_instance 'tipo' ($tipo). Expected model is ($modelo_name) and received model is ($component_name)";
+				// 	#throw new Exception($msg, 1);
+				// 	debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+				// }
 			}
-		}
 
-
-		if(SHOW_DEBUG===true) {
-			# Verify 'component_name' and 'tipo' are correct
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			if (!empty($component_name) && $component_name!==$modelo_name) {
-				$msg = "Error Processing Request. Inconsistency detected with get_instance 'tipo' ($tipo). Expected model is ($modelo_name) and received model is ($component_name)";
-				#throw new Exception($msg, 1);
-				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-			}
-		}
-
+		
 		return $ar_component_instances[$key];
 	}//end get_instance
 
 
 
-	# __CONSTRUCT
+	/**
+	* __CONSTRUCT
+	*/
 	public function __construct($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
-		# TIPO : Test valid tipo
-		if ( empty($tipo) ) {
-			$msg = "Component common: valid 'tipo' value is mandatory!";
-			$GLOBALS['log_messages'][] = $msg;
-			throw new Exception($msg, 1);
-		}elseif ($tipo==='dummy') {
-			throw new Exception("Error dummy caller!!", 1);
-		}
-		$this->tipo = $tipo;
-
-		# PARENT : Test valid parent
-		#if ( $parent === NULL ) {
-		#	$msg = "Component common: valid 'parent' value is mandatory! ";
-		#	throw new Exception($msg, 1);
-		#}
-		$this->parent 		= $parent;
-		$this->section_id 	= $parent;
-
-		# MODO
-		if ( empty($modo) ) {
-			$modo = 'edit';
-		}
-		$this->modo = $modo;
-		if ($this->modo==='print') {
-			$this->print_options = new stdClass();
-		}
-		if ($this->modo==='edit') {
-			$this->update_diffusion_info_propagate_changes = true;
-		}
-
-		# LANG : Test valid lang
-		if(isset($this->lang)) {
-			# LANG : Overwrite var '$lang' with previous component declatarion of '$this->lang'
-			$lang = $this->lang;
-		}elseif ( empty($lang) ) {
-			$msg = __METHOD__.' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
-			$GLOBALS['log_messages'][] = $msg;
-			trigger_error($msg);
-			$lang = DEDALO_DATA_LANG;
-		}
-		$this->lang = $lang;
-
-		# SECTION_TIPO
-		# SECTION_TIPO : OPTIONAL (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
-		if (empty($section_tipo)) {
-			$section_tipo = component_common::resolve_section_tipo($tipo);
-			debug_log(__METHOD__." Calculated section tipo from tipo ($tipo) !!!!!! Fix ASAP ".to_string(), logger::ERROR);
-		}
-		$this->section_tipo = $section_tipo;
-
-
-		# STRUCTURE DATA : common::load_structure_data()
-		# Fijamos el tipo recibido y cargamos la estructura previamente para despejar si este tipo es traducible o no
-		# y fijar de nuevo el lenguaje en caso de no ser traducible
-		parent::load_structure_data();
-
-		# LANG : Check lang
-		# Establecemos el lenguaje preliminar (aunque todavía no están cargados lo datos de matrix, ya tenemos la información de si es o no traducible
-		# a partir de la carga de la estructura)
-		if ($this->traducible==='no') {
-			$propiedades = $this->get_propiedades();
-			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
-				# Allow tool lang on non translatable components
-			}else{
-				# Force nolan
-				$this->lang = DEDALO_DATA_NOLAN;
+		// tipo
+			if ( empty($tipo) ) {
+				$msg = "Component common: valid 'tipo' value is mandatory!";
+				$GLOBALS['log_messages'][] = $msg;
+				throw new Exception($msg, 1);
+			}elseif ($tipo==='dummy') {
+				throw new Exception("Error dummy caller!!", 1);
 			}
-		}
+			$this->tipo = $tipo;
 
-		$this->ar_tools_obj		= false;
-		$this->debugger			= "tipo:$this->tipo - norden:$this->norden - modo:$this->modo - parent:$this->parent";
+		// parent		
+			$this->parent 		= $parent;
+			$this->section_id 	= $parent;
+
+		// modo
+			if ( empty($modo) ) {
+				$modo = 'edit';
+			}
+			$this->modo = $modo;
+			if ($this->modo==='print') {
+				$this->print_options = new stdClass();
+			}
+			if ($this->modo==='edit') {
+				$this->update_diffusion_info_propagate_changes = true;
+			}
+
+		// lang 
+			if(isset($this->lang)) {
+				# LANG : Overwrite var '$lang' with previous component declatarion of '$this->lang'
+				$lang = $this->lang;
+			}elseif ( empty($lang) ) {
+				$msg = __METHOD__.' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
+				$GLOBALS['log_messages'][] = $msg;
+				trigger_error($msg);
+				$lang = DEDALO_DATA_LANG;
+			}
+			$this->lang = $lang;
+
+		// section_tipo			
+			if (empty($section_tipo)) {
+				// # section_tipo : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
+				// $section_tipo = component_common::resolve_section_tipo($tipo);
+				// debug_log(__METHOD__." Calculated section tipo from tipo ($tipo) !!!!!! Fix ASAP ".to_string(), logger::ERROR);
+				throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);				
+			}
+			$this->section_tipo = $section_tipo;
+
+		// structure data 
+		// Fijamos el tipo recibido y cargamos la estructura previamente para despejar si este tipo es traducible o no
+		// y fijar de nuevo el lenguaje en caso de no ser traducible
+			parent::load_structure_data();
+
+		// lang : Check lang again after structure data is loaded
+		// Establecemos el lenguaje preliminar a partir de la carga de la estructura
+			if ($this->traducible==='no') {
+				$propiedades = $this->get_propiedades();
+				if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+					# Allow tool lang on non translatable components
+				}else{
+					# Force nolan
+					$this->lang = DEDALO_DATA_NOLAN;
+				}
+			}
+
+		// ar_tools_obj reset
+			$this->ar_tools_obj = false;
+		
+		// debug set base info
+			$this->debugger = "tipo:$this->tipo - norden:$this->norden - modo:$this->modo - parent:$this->parent";
+
+		// set_dato_default (new way 28-10-2016)
+			if ( $this->modo==='edit' && !is_null($this->parent) ) {
+				$this->set_dato_default();
+			}
 
 
-		# SET_DATO_DEFAULT (new way 28-10-2016)
-		if ( $this->modo==='edit' && !is_null($this->parent) ) {
-			$this->set_dato_default();
-		}
+		return true;
 	}//end __construct
 
 
@@ -3905,6 +3921,9 @@ abstract class component_common extends common {
 		$properties 		= $this->get_propiedades();
 		$with_lang_versions = $properties->with_lang_versions ?? false;
 
+		// fix changed_data
+			$this->changed_data = $changed_data;
+
 		switch ($changed_data->action) {
 			case 'insert':
 			case 'update':
@@ -3960,6 +3979,10 @@ abstract class component_common extends common {
 
 					default:
 						$key = $changed_data->key;
+						
+						// fix property 'to_remove' to help properly remove
+							$this->changed_data->to_remove = $dato[$key];
+
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;
