@@ -73,7 +73,7 @@ switch (true) {
 		$state 	= $matches[2][0];
 
 		if(strpos($text_original,'/')!==false) {
-			# mode [/index-u-6]	
+			# mode [/index-u-6]
 			$text 		= " $n";
 			$imgBase 	= $tag_image_dir."/indexOut-{$state}-x2.png";
 		}else{
@@ -102,13 +102,12 @@ switch (true) {
 		break;
 	case (strpos($text,'[page-')!==false):
 		$type = 'page';
-		# mode [page-n-1]
-		$pattern 		= "/\[(page)-([a-z])-([0-9]{1,6})(-.{0,22})?\]/";
+		# mode [page-n-1-77]
+		$pattern 		= "/\[(page)-([a-z])-([0-9]{1,6})-(.{0,22})?\]/";
 		$text_original 	= $text;
 		preg_match_all($pattern, $text, $matches);
-		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
-		$text			= $matches[3][0];	
-		$state 			= $matches[2][0];		
+		$text			= $matches[4][0]; //$matches[3][0]
+		$state 			= $matches[2][0];
 		$imgBase 		= $tag_image_dir."/page-{$state}-x2.png";
 		break;
 	case (strpos($text,'[person-')!==false):
@@ -132,8 +131,8 @@ switch (true) {
 		break;
 	// locator case, used by svg or image or vídeo, etc...
 	case (strpos($text,'{')===0):
-		
-		$changed_text = str_replace(['&#039;','\''],'"', $text);		
+
+		$changed_text = str_replace(['&#039;','\''],'"', $text);
 		$locator = json_decode($changed_text);
 
 		if(!$locator) return;
@@ -173,7 +172,7 @@ switch (true) {
 		echo $file_content;
 		exit;
 		break;
-	
+
 	default:
 		die("Need type ..! <br>$text");
 		break;
@@ -223,7 +222,7 @@ switch($type) {
 					$font_size 	= ($font_size *2)+2; // as 18
 
 					if($state=='n') $colorText	= $white ;
-					break;	
+					break;
 
 	case 'draw':	$colorText	= $white ;
 					$colorBG 	= $black ;
@@ -245,7 +244,7 @@ switch($type) {
 					$colorBG 	= $black ;
 					$font_size 	= ($font_size *2)+2;
 					break;
-	
+
 	case 'person':	$colorText	= $black ;
 					$colorBG 	= $black ;
 					#$maxchar 	= 160 ;
@@ -270,8 +269,8 @@ switch($type) {
 imageAlphaBlending($im, true);
 imageSaveAlpha($im, true);
 
-# Making Image Transparent 
-#imagecolortransparent($im,$colorBG); 
+# Making Image Transparent
+#imagecolortransparent($im,$colorBG);
 
 # FONT FILES . Path to our font file
 $path_fonts = dirname(dirname(__FILE__)) . '/themes/default/fonts';
@@ -303,7 +302,7 @@ switch ($type) {
 	case 'note':
 		$offsetX = 0;
 		$offsetY = 0;
-		break;	
+		break;
 }
 
 # CUSTOM OFFSET FOR MAC DEVELOPMENT
@@ -347,15 +346,15 @@ if($text!==false) {
 	# Get Bounding Box Size
 	$bbox = imagettfbbox($font_size, $angle, $fontfile, $text ); //( float $size , float $angle , string $fontfile , string $text )
 
-	
+
 	// Get your Text Width and Height
 	$text_width  = abs($bbox[2])-abs($bbox[0]);
-	$text_height = abs($bbox[7])-abs($bbox[1]);	
+	$text_height = abs($bbox[7])-abs($bbox[1]);
 
 	// Calculate coordinates of the text
 	$x = ($image_width/2)  - ($text_width/2) 	+ $offsetX ;
-	$y = ($image_height/2) - ($text_height/2);	// + $offsetY ;	
-	
+	$y = ($image_height/2) - ($text_height/2);	// + $offsetY ;
+
 	//calculate y baseline
 	$y = $baseline = abs($font_size/2 - ($image_height) )+ $offsetY ;
 
@@ -373,23 +372,23 @@ if($text!==false) {
 	print_r($text);
 	print_r($font_size);
 	print_r($angle);
-	var_dump($bbox); 
+	var_dump($bbox);
 	echo "</pre>";
 	die();
 */
 
-	
+
 	# This is our cordinates for X and Y
 	#$x = $bbox[0] + $centroXimg  - ($bbox[2] / 2)	+ $offsetX ;
-	#$y = $bbox[1] + $centroYimg  - ($bbox[6] / 2)	+ $offsetY ; 	
-		
+	#$y = $bbox[1] + $centroYimg  - ($bbox[6] / 2)	+ $offsetY ;
+
 	# Write it text1
 	# Add the text
-	$imgText  = imagettftext($im, $font_size , $angle, $x, $y, $colorText, $fontfile, $text );	
+	$imgText  = imagettftext($im, $font_size , $angle, $x, $y, $colorText, $fontfile, $text );
 				# Verify if it failed
 				if ($imgText===false) {
 					imagestring($im, 1, 5, 5, "Error $text1", 0);
-				}	
+				}
 }//end if($text!==false) {
 
 
