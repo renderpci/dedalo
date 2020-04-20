@@ -121,7 +121,7 @@ class layout_map {
 
 							if(isset($properties->source->config_context)){
 								// v6 definition in properties
-								$config_context = component_common::get_config_context($tipo, $options->external);
+								$config_context = component_common::get_config_context($tipo, $options->external, $options->section_tipo);
 
 							}else{
 								// legacy case
@@ -177,8 +177,9 @@ class layout_map {
 							if($view==='full') { // || $view==='view_mosaic'
 
 								if(isset($properties->source->config_context)){
+									
 									// v6 definition in properties
-									$config_context = component_common::get_config_context($tipo, $options->external);
+									$config_context = component_common::get_config_context($tipo, $options->external, $options->section_tipo);
 
 								}else{
 
