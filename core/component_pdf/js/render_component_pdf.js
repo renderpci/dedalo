@@ -221,7 +221,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 			iframe.addEventListener('load', (e) =>{
 				// Libraries are loaded via <script> tag, create shortcut to access PDF.js exports.
 				// the pdf_js is not necesary load here, we will use only the viewer
-				// const pdf_js 						= iframe.contentWindow['pdfjs-dist/build/pdf'];
+				// self.pdf_js 						= iframe.contentWindow['pdfjs-dist/build/pdf'];
 				const PDFViewerApplicationOptions 	= iframe.contentWindow['PDFViewerApplicationOptions'];
 				self.pdf_viewer 					= iframe.contentWindow['PDFViewerApplication'];
 				// remove the first page / default page of the library
@@ -234,8 +234,6 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 			iframe.src = viewer_url
 		}//end if (pdf_url)
-
-
 
 
 	// FIELDS

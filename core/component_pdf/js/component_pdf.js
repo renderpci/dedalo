@@ -98,7 +98,6 @@ component_pdf.prototype.go_to_page = async function(options) {
 	// for every layer_id in the tag load the data from the DDBB
 	self.pdf_viewer.page = page[0]
 
-	console.log("_extractText",self.pdf_viewer.findController._extractText);
 }// load_tag_into_pdf_editor
 
 
@@ -125,3 +124,130 @@ component_pdf.prototype.get_data_tag = function(){
 
 	return data_tag
 }// end get_data_tag
+
+
+///// don't used 
+function get_text(){
+
+	const ar_text = self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textContentItemsStr
+
+	console.log("ar_text", ar_text);
+	console.log("textDivs", self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textDivs);
+	console.log("textLayer", self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textLayerDiv);
+	console.log("outerText", self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textLayerDiv.outerText);
+	console.log("outerText", self.pdf_viewer.pdfViewer.getPageView(3).textLayer.textLayerDiv.outerText);
+	const ar_divs = self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textDivs
+
+	let page_text 			= ''
+	let previous_offsetTop 	= null
+	const final_puntuation 	= ['.','!','?',':']
+	const accents 			= ['\'','`','´','"','¨','’']
+	let distance			= 0
+	for (let i = 0; i < ar_divs.length; i++) {
+		const currrent_div = ar_divs[i]
+		if(previous_offsetTop === currrent_div.offsetTop){
+			if(accents.includes(ar_text[i].slice(0,1))){
+				page_text = page_text+ar_text[i]
+			}else{
+				page_text = page_text+' '+ar_text[i]
+			}
+		}else{
+			if (final_puntuation.includes(page_text.slice(-1)) ||  final_puntuation.includes(page_text.slice(-2,-1)) ) {
+				page_text = page_text +'\n'+ ar_text[i]
+			}else{
+				page_text = page_text + ' ' + ar_text[i]
+			}
+			previous_offsetTop = currrent_div.offsetTop
+		}
+
+		console.log("currrent_div.offsetTop:", currrent_div.offsetTop);
+	}
+
+	console.log("page_text", page_text);
+
+
+	// const viewport = self.pdf_viewer.pdfViewer.getPageView(3).viewport
+	//
+	// const page2 = self.pdf_viewer.pdfViewer.getPageView(3).pdfPage
+	// const text = page2.getTextContent({ normalizeWhitespace: true }).then(function (textContent) {
+	// 	console.log("textContent", textContent);
+	// 	textContent.items.forEach(function (textItem) {
+	// 		console.log("textItem", textItem);
+	//
+	//
+	// 		// const tx = self.pdf_js.Util.transform(
+	// 		//   self.pdf_js.Util.transform(viewport.transform, textItem.transform),
+	// 		//   [1, 0, 0, -1, 0, 0]
+	// 		// );
+	// 		//
+	// 		// const style = textContent.styles[textItem.fontName];
+	// 		//
+	// 		// // adjust for font ascent/descent
+	// 		// const fontSize = Math.sqrt((tx[2] * tx[2]) + (tx[3] * tx[3]));
+	// 		//
+	// 		// if (style.ascent) {
+	// 		//   tx[5] -= fontSize * style.ascent;
+	// 		// } else if (style.descent) {
+	// 		//   tx[5] -= fontSize * (1 + style.descent);
+	// 		// } else {
+	// 		//   tx[5] -= fontSize / 2;
+	// 		// }
+	//
+	// 			// adjust for rendered width
+	// 			// if (textItem.width > 0) {
+	// 			//   ctx.font = tx[0] + 'px ' + style.fontFamily;
+	// 			//
+	// 			//   const width = ctx.measureText(textItem.str).width;
+	// 			//
+	// 			//   if (width > 0) {
+	// 			// 	//tx[0] *= (textItem.width * viewport.scale) / width;
+	// 			// 	tx[0] = (textItem.width * viewport.scale) / width;
+	// 			//   }
+	// 			// }
+	//
+	// 		// const item = document.createElement('span');
+	// 		// item.textContent = textItem.str;
+	// 		// item.style.fontFamily = style.fontFamily;
+	// 		// //item.style.transform = 'matrix(' + tx.join(',') + ')';
+	// 		// item.style.fontSize = fontSize + 'px';
+	// 		// item.style.transform = 'scaleX(' + tx[0] + ')';
+	// 		// item.style.left = tx[4] + 'px';
+	// 		// item.style.top = tx[5] + 'px';
+	//
+	// 	})
+	// })
+
+	// console.log("2222_extractText",self.pdf_viewer.pdfViewer.getPageView(3))
+
+}
+
+
+function getHightlightCoords() {
+	const pageIndex = self.pdf_viewer.pdfViewer.currentPageNumber - 1;
+	const page = self.pdf_viewer.pdfViewer.getPageView(pageIndex);
+	const pageRect = page.canvas.getClientRects()[0];
+	const selectionRects = window.getSelection().getRangeAt(0).getClientRects();
+	const selection_text = window.getSelection().toString()
+	const viewport = page.viewport;
+	const selected = selectionRects.map(function (r) {
+	  return viewport.convertToPdfPoint(r.left - pageRect.x, r.top - pageRect.y).concat(
+	     viewport.convertToPdfPoint(r.right - pageRect.x, r.bottom - pageRect.y));
+	});
+	return {page: pageIndex, coords: selected};
+}
+
+
+function showHighlight(selected) {
+	const pageIndex = selected.page;
+	const page = self.pdf_viewer.pdfViewer.getPageView(pageIndex);
+	const pageElement = page.canvas.parentElement;
+	const viewport = page.viewport;
+	selected.coords.forEach(function (rect) {
+	  const bounds = viewport.convertToViewportRectangle(rect);
+	  const el = document.createElement('div');
+	  el.setAttribute('style', 'position: absolute; background-color: pink;' +
+	    'left:' + Math.min(bounds[0], bounds[2]) + 'px; top:' + Math.min(bounds[1], bounds[3]) + 'px;' +
+	    'width:' + Math.abs(bounds[0] - bounds[2]) + 'px; height:' + Math.abs(bounds[1] - bounds[3]) + 'px;');
+	  pageElement.appendChild(el);
+	});
+}
