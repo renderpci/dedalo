@@ -85,11 +85,11 @@ abstract class common {
 			// 'component_portal'
 			// 'component_publication'
 			// 'component_radio_button'
-			'component_relation_children',
-			'component_relation_index',
+			// 'component_relation_children',
+			// 'component_relation_index',
 			// 'component_relation_model',
-			'component_relation_parent',
-			'component_relation_related',
+			// 'component_relation_parent',
+			// 'component_relation_related',
 			'component_relation_struct',
 			'component_score',
 			// 'component_section_id'
@@ -1619,8 +1619,15 @@ abstract class common {
 
 		// Filter_by_list
 			if (isset($properties->source->filter_by_list)) {
-				// Calculate ar elements to show in filter
-				$filter_list= $properties->source->filter_by_list;
+				
+				// Calculate ar elements to show in filter. Resolve self section items
+					$filter_list = array_map(function($item){
+						$item->section_tipo = ($item->section_tipo==='self')
+							? $this->section_tipo
+							: $item->section_tipo;
+						return $item;
+					}, $properties->source->filter_by_list);
+				
 				$filter_by_list = component_relation_common::get_filter_list_data($filter_list);
 				$dd_object->filter_by_list = $filter_by_list;
 			}
@@ -2170,7 +2177,10 @@ abstract class common {
 								continue;
 							}
 
-						$path = search::get_query_path($current_tipo, $source_search_item->section_tipo);
+						// current section tipo	
+							$current_section_tipo = $source_search_item->section_tipo;
+
+						$path = search::get_query_path($current_tipo, $current_section_tipo);
 
 						# FILTER . filter_element (operator_group)
 							if ($options->add_filter===true) {
@@ -2185,7 +2195,7 @@ abstract class common {
 								}elseif ($options->filter_by_locators!==false) {
 
 									// filter_by_locator case
-									$filter_by_locator_data = $filter_by_locator_builder($options->filter_by_locator, $source_search_item->section_tipo);
+									$filter_by_locator_data = $filter_by_locator_builder($options->filter_by_locator, $current_section_tipo);
 
 									$filter_group 	= $filter_by_locator_data['filter_group'];
 									$total_locators = $filter_by_locator_data['total_locators'];

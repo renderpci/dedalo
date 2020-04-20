@@ -287,34 +287,32 @@ class component_relation_common extends component_common {
 	*/
 	public function load_component_dataframe() {
 
-
 		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
 			return null;
 		}
 
-		#if( $this->bl_loaded_matrix_data!==true ) {
+		if (empty($this->section_tipo)) {
+			if(SHOW_DEBUG===true) {
+				$msg = " Error Processing Request. section tipo not found for component $this->tipo";
+				#throw new Exception("$msg", 1);
+				debug_log(__METHOD__.$msg);
+			}
+		}
+		$dato = $this->get_dato();
 
-			if (empty($this->section_tipo)) {
-				if(SHOW_DEBUG===true) {
-					$msg = " Error Processing Request. section tipo not found for component $this->tipo";
-					#throw new Exception("$msg", 1);
-					debug_log(__METHOD__.$msg);
+		$this->dataframe = [];
+
+		foreach ($dato as $key => $current_locator) {
+			if (isset($current_locator->dataframe)) {
+				foreach ($current_locator->dataframe as $dataframe_obj) {
+					$this->dataframe[] = $dataframe_obj;
 				}
 			}
-			$dato = $this->get_dato();
+		}
 
-			$this->dataframe = [];
+		# Set as loaded
+		$this->bl_loaded_matrix_data = true;
 
-			foreach ($dato as $key => $current_locator) {
-				if (isset($current_locator->dataframe)) {
-					foreach ($current_locator->dataframe as $dataframe_obj) {
-						$this->dataframe[] = $dataframe_obj;
-					}
-				}
-			}
-
-			# Set as loaded
-			$this->bl_loaded_matrix_data = true;
 
 		return true;
 	}//end load_component_dataframe
@@ -365,8 +363,7 @@ class component_relation_common extends component_common {
 				$component_relations[] = $current_locator;
 			}
 		}
-		$relations = $component_relations;
-	
+		$relations = $component_relations;	
 	
 
 		return (array)$relations;
@@ -2054,7 +2051,7 @@ class component_relation_common extends component_common {
 					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
 				// search_sections
 					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
+					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );					
 
 				// search_query_object build
 					$search_sqo_options = new stdClass();
@@ -2112,7 +2109,7 @@ class component_relation_common extends component_common {
 					}// end $value_with_parent = true
 
 				// add sqo
-					$show[] = $search_query_object;
+					$show[] = $search_query_object;					
 
 
 		// LAYOUT MAP // fields for select / show. add ddo
@@ -2125,11 +2122,11 @@ class component_relation_common extends component_common {
 					$layout_map_options->modo 					= $mode;
 					$layout_map_options->add_section 			= true;
 					$layout_map_options->config_context_type 	= 'select';
-				$search = array_merge( $search, layout_map::get_layout_map($layout_map_options));
+				$search = array_merge( $search, layout_map::get_layout_map($layout_map_options) );
 
-			//show
+			// show
 				$layout_map_options->config_context_type 		= 'show';
-				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options));
+				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options) );
 
 
 			$sqo_context = new stdClass();
@@ -2227,7 +2224,7 @@ class component_relation_common extends component_common {
 		// fix
 		$this->sqo_context	= $sqo_context;
 		$this->pagination	= $pagination;
-
+	
 
 		return $sqo_context;
 	}//end get_sqo_context

@@ -131,7 +131,7 @@ class component_relation_parent extends component_relation_common {
 			// 													$component_relation_children_tipo);
 			// }
 
-		// changed_data
+		// changed_data. Updates and SAVE data in component children associated with the current component
 			if (isset($this->changed_data)) {
 				// format object:
 					// {
@@ -151,18 +151,17 @@ class component_relation_parent extends component_relation_common {
 					case 'insert':
 					case 'update':
 						if (isset($dato[$changed_data->key])) {
-							$locator = $dato[$changed_data->key];							
+							$locator = $dato[$changed_data->key];													
 							$result = (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
 						}							
 						break;
 					default:
 						debug_log(__METHOD__." Error. action: '$action' not defined ! ".to_string(), logger::ERROR);
 						break;
-				}
-				
+				}				
 			}
 
-		// update_parents. Updates and SAVE data in component children associated with the current component
+		
 			// $this->update_parents($dato);
 
 		return true;
@@ -369,8 +368,8 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents
 	*/
 	protected function get_my_parents() {
-
-		$target_component_children_tipos = component_relation_parent::get_target_component_children_tipos($this->tipo);
+	
+		$target_component_children_tipos = (array)component_relation_parent::get_target_component_children_tipos($this->tipo);
 
 		$parents = [];
 		foreach ($target_component_children_tipos as $children_component_tipo) {
@@ -659,37 +658,38 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	/**
-	* GET_PARENT_RECURSIVE2
-	* @return array $parents
-	*/
-	public static function get_parent_recursive2__UNUSED($section_id, $section_tipo) {
+	// DES
+		// /**
+		// * GET_PARENT_RECURSIVE2
+		// * @return array $parents
+		// */
+		// public static function get_parent_recursive2__UNUSED($section_id, $section_tipo) {
 
-		# Sólo test de momento 
-		
-		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
-
-		$strQuery = 'SELECT section_id FROM '.$matrix_table.' WHERE section_tipo = \''.$section_tipo.'\' AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.DEDALO_RELATION_TYPE_CHILDREN_TIPO.'"}]\' LIMIT 1;';
-		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		
-		$parents = array();
-		while ($rows = pg_fetch_assoc($result)) {
-			$current_section_id = $rows['section_id'];
-
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($current_section_id);
-				$locator->set_component_tipo('hierarchy49');		
+		// 	# Sólo test de momento 
 			
-			# Add current
-			$parents[] = $locator;
+		// 	$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
-			# Recursion
-			$parents = array_merge($parents, self::get_parent_recursive2($current_section_id, $section_tipo));		
-		}
+		// 	$strQuery = 'SELECT section_id FROM '.$matrix_table.' WHERE section_tipo = \''.$section_tipo.'\' AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.DEDALO_RELATION_TYPE_CHILDREN_TIPO.'"}]\' LIMIT 1;';
+		// 	$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+			
+		// 	$parents = array();
+		// 	while ($rows = pg_fetch_assoc($result)) {
+		// 		$current_section_id = $rows['section_id'];
 
-		return $parents;
-	}//end get_parent_recursive2
+		// 		$locator = new locator();
+		// 			$locator->set_section_tipo($section_tipo);
+		// 			$locator->set_section_id($current_section_id);
+		// 			$locator->set_component_tipo('hierarchy49');		
+				
+		// 		# Add current
+		// 		$parents[] = $locator;
+
+		// 		# Recursion
+		// 		$parents = array_merge($parents, self::get_parent_recursive2($current_section_id, $section_tipo));		
+		// 	}
+
+		// 	return $parents;
+		// }//end get_parent_recursive2
 
 
 	
@@ -716,11 +716,7 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		return (string)$valor;
-	}//end get_valor
-
-
-
-	
+	}//end get_valor	
 
 
 
@@ -829,15 +825,19 @@ class component_relation_parent extends component_relation_common {
 		
 		# Calculate current target component_relation_children_tipo from structure
 		$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($component_tipo);
-	
+		if (empty($from_component_tipo)) {
+			debug_log(__METHOD__." Error on get from_component_tipo of component:'$component_tipo'. Strucure item don't have relation with a component_relation_children ".to_string(), logger::ERROR);
+			return null;
+		}
+		
 		#
 		# Look in children propiedades different possible sources
 		$RecordObj 								= new RecordObj_dd($from_component_tipo);
 		$my_component_children_tipo_propiedades = $RecordObj->get_propiedades(true);
 
 		# hierarchy_sections
-		$hierarchy_types 	= isset($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
-		$hierarchy_sections = isset($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
+		$hierarchy_types 	= !empty($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
+		$hierarchy_sections = !empty($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
 		# Resolve hierarchy_sections for speed
 		if (!empty($hierarchy_types)) {
 			$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);

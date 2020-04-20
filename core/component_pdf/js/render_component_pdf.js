@@ -238,23 +238,22 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 	// FIELDS
 		const fields = ui.create_dom_element({
-				element_type 	: 'span',
+				element_type 	: 'div',
 				class_name 		: 'fields',
 				parent 		 	: li
 			})
 		// offset label
 			const offset_label = ui.create_dom_element({
-					element_type 	: 'span',
-					class_name 		: 'label',
-					text_node 	 	: 'offset',
-					parent 		 	: fields
-				})
-
+				element_type 	: 'span',
+				class_name 		: 'label',
+				text_node 	 	: 'offset',
+				parent 		 	: fields
+			})
 		// offset input field
 			const input = ui.create_dom_element({
 				element_type 	: 'input',
 				type 		 	: 'number',
-				class_name 		: 'input_value',
+				class_name 		: '',
 				dataset 	 	: { key : i },
 				value 		 	: current_value.offset,
 				parent 		 	: fields

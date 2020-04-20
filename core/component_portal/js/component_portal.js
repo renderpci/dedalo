@@ -39,6 +39,9 @@ export const component_portal = function(){
 
 	this.modal
 
+	this.autocomplete
+	this.autocomplete_active
+
 	return true
 }//end component_portal
 
@@ -81,6 +84,10 @@ export const component_portal = function(){
 component_portal.prototype.init = async function(options) {
 	
 	const self = this
+
+	// autocomplete. set default values of service autocomplete
+		self.autocomplete 		= null
+		self.autocomplete_active= false
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -172,11 +179,11 @@ component_portal.prototype.build  = async function(autoload=false){
 			self.paginator.refresh()
 		}
 
-	// portal destroy. change the portal service to false and desactive it.
-		if(self.portal_active===true){
-			self.portal.destroy()
-			self.portal_active = false
-			self.portal 		 = null
+	// autocomplete destroy. change the autocomplete service to false and desactive it.
+		if(self.autocomplete && self.autocomplete_active===true){
+			self.autocomplete.destroy()
+			self.autocomplete_active = false
+			self.autocomplete 		 = null			
 		}
 
 	// permissions. calculate and set (used by section records later)

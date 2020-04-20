@@ -211,6 +211,7 @@ const get_content_data = async function(self) {
 			id 				: 'auth_submit',
 			element_type	: 'button',
 			type 			: 'submit',
+			class_name 		: 'warning',
 			parent			: form
 		})
 		const button_loading = ui.create_dom_element({

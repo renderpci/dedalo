@@ -18,11 +18,14 @@ class component_relation_related extends component_relation_common {
 	# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
 	protected $relation_type_rel ; // Set on construct from propiedades
 
-	# test_equal_properties is used to verify duplicates when add locators
+	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
-	# sql query stored for debug only
+	// sql query stored for debug only
 	static $get_inverse_related_query;
+
+	// default paginated max rows
+	public $max_records = 5;
 
 
 
@@ -71,7 +74,7 @@ class component_relation_related extends component_relation_common {
 			$ar_componets_related = array();
 			foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				if ($modelo_name !== 'section'){
+				if ($modelo_name!=='section'){
 					$ar_componets_related[] = $component_tipo;
 				}
 			}
@@ -94,22 +97,14 @@ class component_relation_related extends component_relation_common {
 
 		}//end if (!empty($dato))
 
-		# Set component valor
-		# $this->valor = implode(', ', $ar_valor);
-		$valor='';
-		#foreach ($ar_values as $key => $value) {
-		#	if(!empty($value)) {
-		#		$valor .= $value;
-		#		if(end($ar_values)!=$value) $valor .= ', ';
-		#	}
-		#}
+			
 		if ($format==='array') {
 			$valor = $ar_values;
 		}else{
 			$valor = implode($divisor, $ar_values);
 		}
 
-		return $this->valor;
+		return $valor;
 	}//end get_valor
 
 
@@ -164,69 +159,14 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS
-	* Note: Override in every specific component
-	* @param array $comparison_operators . Like array('=','!=')
-	* @return object stdClass $search_comparison_operators
-	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
-
-
-
-	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=' ) {
-		$search_query='';
-		if ( empty($search_value) ) {
-			return $search_query;
-		}
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-
-		switch (true) {
-			case $comparison_operator==='=':
-				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
-				break;
-			case $comparison_operator==='!=':
-				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
-				break;
-		}
-
-		if(SHOW_DEBUG) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		}
-
-		return $search_query;
-	}//end get_search_query
-
-
-
-	/**
 	* GET_DATO_WITH_REFERENCES
 	* return the full dato of the component, the real dato with the calculated references
 	* @return
 	*/
 	public function get_dato_with_references() {
 
-		$dato = $this->get_dato();
+		$dato 		= $this->get_dato();
 		$references = $this->get_calculated_references();
-			#dump($references, ' references 2 ++ '."$this->tipo, $this->parent, $this->relation_type_rel");
 
 		$dato_with_references = array_merge($dato, $references);
 
@@ -263,27 +203,6 @@ class component_relation_related extends component_relation_common {
 
 		return $references;
 	}//end get_calculated_references
-
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*//*
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;
-	}//end get_valor_list_html_to_save
-	*/
 
 
 

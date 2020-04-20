@@ -89,24 +89,26 @@ component_common.prototype.init = async function(options) {
 			)
 
 
-	// events subscription
-	const observe = typeof self.context.properties!=="undefined"
-		? (self.context.properties.observe || null)
-		: null
-	if(observe){
-		const l = observe.length
-		for (let i = l - 1; i >= 0; i--) {
-			const component_tipo 	= observe[i].component_tipo
-			const event 			= observe[i].event
-			const perform 			= observe[i].perform || null
+	// events subscription (from component properties)
+		const observe = typeof self.context.properties!=="undefined"
+			? (self.context.properties.observe || null)
+			: null
+		if(observe){
+			const l = observe.length
+			for (let i = l - 1; i >= 0; i--) {
+				const component_tipo 	= observe[i].component_tipo
+				const event 			= observe[i].event
+				const perform 			= observe[i].perform || null
 
-			if(perform){
-				self.events_tokens.push(
-					event_manager.subscribe(event +'_'+ component_tipo, self[perform].bind(self))
-				)
+				if(perform && typeof self[perform]==="function"){
+					self.events_tokens.push(
+						event_manager.subscribe(event +'_'+ component_tipo, self[perform].bind(self))
+					)
+				}else{
+					console.warn("Invalid observe perform:", observe[i], typeof self[perform]);
+				}
 			}
 		}
-	}
 
 
 	// component_save (when user change component value) every component is looking if the own the instance was changed.
