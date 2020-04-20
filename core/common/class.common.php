@@ -86,10 +86,10 @@ abstract class common {
 			// 'component_publication'
 			// 'component_radio_button'
 			// 'component_relation_children',
-			'component_relation_index',
+			// 'component_relation_index',
 			// 'component_relation_model',
 			// 'component_relation_parent',
-			'component_relation_related',
+			// 'component_relation_related',
 			'component_relation_struct',
 			'component_score',
 			// 'component_section_id'
@@ -1619,8 +1619,15 @@ abstract class common {
 
 		// Filter_by_list
 			if (isset($properties->source->filter_by_list)) {
-				// Calculate ar elements to show in filter
-				$filter_list= $properties->source->filter_by_list;
+				
+				// Calculate ar elements to show in filter. Resolve self section items
+					$filter_list = array_map(function($item){
+						$item->section_tipo = ($item->section_tipo==='self')
+							? $this->section_tipo
+							: $item->section_tipo;
+						return $item;
+					}, $properties->source->filter_by_list);
+				
 				$filter_by_list = component_relation_common::get_filter_list_data($filter_list);
 				$dd_object->filter_by_list = $filter_by_list;
 			}
