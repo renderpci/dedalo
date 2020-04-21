@@ -106,7 +106,7 @@ const get_content_data = async function(self) {
 			parent 			: content_data
 		})
 
-		// button_new . Call API to create new section and navigate to the new record			
+		// button_new . Call API to create new section and navigate to the new record
 			const button_new = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light new',
@@ -144,9 +144,9 @@ const get_content_data = async function(self) {
 
 	// data_link
 		const data_link = ui.create_dom_element({
-			element_type	: 'a',
-			class_name		: 'data_link',
-			title_label 	: 'Download record data',
+			element_type	: 'button',
+			class_name		: 'light data_link',
+			text_content 	: 'Download record data',
 			parent 			: content_data
 		})
 		data_link.addEventListener("click", (e)=>{
@@ -158,5 +158,3 @@ const get_content_data = async function(self) {
 
 	return content_data
 }// end get_content_data
-
-
