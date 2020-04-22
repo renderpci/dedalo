@@ -643,7 +643,7 @@ class ts_object extends Accessors {
 
 						$dato_full = $component->get_dato_full();
 						# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-						$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
+						$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang, $lang);
 						if (is_array($valor)) {
 							$valor = implode(', ', $valor);
 						}						

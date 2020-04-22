@@ -1658,17 +1658,26 @@
 	Valencia 10-03-2020 5.5.31
 		Fix error on resolve recursive levels in diffusion_sql class, method -> update_record
 
+	
 	Valencia 11-03-2020 5.5.32
 		Fix error on resolve_portals_custom (diffusion) when value is already an object
 
+	
 	Valencia 21-03-2020 5.5.34
 		Improve search_development2 count performance (specially in matrix_activity)
 
+	
 	Valencia 26-03-2020 5.5.36
 		Update class web_data->get_records method to allow send sequences of section id to the API server
 
+	
 	Valencia 04-04-2020 5.5.36
 		Fix error on search development when only first element of relational component was calculated
+
+
+	Valencia 22-04-2020 5.5.38
+		Fix bug in component_common::get_value_with_fallback_from_dato_full that not change returned value when lang is changed (publication, etc.)
+
 
 
 
@@ -1693,12 +1702,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.37';
+	$DEDALO_VERSION = '5.5.38';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '04-04-2020');
+	define('DEDALO_BUILD'	, '22-04-2020');
 
 
 	/*
