@@ -247,10 +247,10 @@ abstract class JSON_RecordDataBoundObject {
 					// Return sequence auto created section_id
 					$section_id = pg_fetch_result($result,0,'section_id');
 					if ($section_id===false) {
-						if(SHOW_DEBUG===true) {
-							dump($strQuery,"strQuery");
+						// if(SHOW_DEBUG===true) {
+							dump(null,"strQuery".PHP_EOL.to_string($strQuery));
 							throw new Exception("Error Processing Request: ".pg_last_error(), 1);
-						}
+						// }
 					}
 					return (int)$section_id;
 					break;

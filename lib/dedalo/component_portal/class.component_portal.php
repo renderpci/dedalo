@@ -151,10 +151,6 @@ class component_portal extends component_relation_common {
 	public function get_valor( $lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ' ) {
 		$start_time = microtime(1);
 
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
-
 		$options = new stdClass();
 			$options->lang 				= $lang;
 			$options->data_to_be_used 	= $data_to_be_used;
@@ -171,9 +167,9 @@ class component_portal extends component_relation_common {
 			#debug_log(__METHOD__." WARNING CALLED GET VALOR IN COMPONENT PORTAL !! ({$total_list_time}ms) ".$this->tipo, logger::WARNING);
 		}
 
-		$this->valor = $valor_from_ar_locators->result;
+		$valor = $valor_from_ar_locators->result;
 
-		return $this->valor;
+		return $valor;
 	}//end get_valor
 
 

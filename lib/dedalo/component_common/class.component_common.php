@@ -2124,7 +2124,8 @@ abstract class component_common extends common {
 					}else{
 						# use query select value
 						$dato_full_json = $current_row->{$related_tipo};
-						$current_label = self::get_value_with_fallback_from_dato_full( $dato_full_json, false );
+						// $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT, $lang=DEDALO_DATA_LANG
+						$current_label = self::get_value_with_fallback_from_dato_full($dato_full_json, false, DEDALO_DATA_LANG_DEFAULT, $lang);
 					}
 					if (!empty($current_label)) {
 						$ar_label[] = $current_label;
@@ -3641,7 +3642,7 @@ abstract class component_common extends common {
 	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
 	* @return string $value
 	*/
-	public static function get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT) {
+	public static function get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT, $lang=DEDALO_DATA_LANG) {
 
 		if (empty($dato_full_json)) {
 			return null;
@@ -3661,7 +3662,6 @@ abstract class component_common extends common {
 		$is_fallback  = false;
 
 		# Try directe value
-		$lang 	= DEDALO_DATA_LANG;
 		$value	= isset($decoded_obj->$lang) ? $decoded_obj->$lang : null;
 
 
@@ -4393,20 +4393,20 @@ abstract class component_common extends common {
 							switch (true) {
 								case $modelo_name==='component_text_area':
 									// Resolve value with component
-									$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', DEDALO_DATA_LANG, $row->section_tipo, $row->section_id, null, null);
+									$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', $this->lang, $row->section_tipo, $row->section_id, null, null);
 									break;
 								case in_array($modelo_name, $components_with_relations):
 									// Resolve value from locator
 									$value_locators = json_decode($value);
 									if (isset($value_locators[0])) {
-										$value = component_relation_common::get_locator_value($value_locators[0], DEDALO_DATA_LANG, false, false, ', ');
+										$value = component_relation_common::get_locator_value($value_locators[0], $this->lang, false, false, ', ');
 									}else{
 										continue 2; # Skip empty array
 									}
 									break;
 								default:
 									// Extract value from row data
-									$value = component_common::get_value_with_fallback_from_dato_full($value, $mark=false);
+									$value = component_common::get_value_with_fallback_from_dato_full($value, $mark=false, DEDALO_DATA_LANG_DEFAULT, $this->lang);
 									break;
 							}
 
@@ -4429,7 +4429,7 @@ abstract class component_common extends common {
 					if($show_parent_name===true) {
 						// Directly, with recursive options true
 						// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
-						$parents_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, true, false, ', ', false);
+						$parents_value = component_relation_common::get_locator_value($locator, $this->lang, true, false, ', ', false);
 						if (!empty($parents_value)) {
 							// Add value
 							$ar_full_label[] = strip_tags($parents_value);
@@ -4445,9 +4445,9 @@ abstract class component_common extends common {
 																			 $add_tipo,
 																			 $row->section_id,
 																			 'list',
-																			 DEDALO_DATA_LANG,
+																			 $this->lang,
 																			 $row->section_tipo);
-							$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
+							$current_value = strip_tags( $component->get_valor($this->lang) );
 							if (!empty($current_value)) {
 								// Add value
 								$ar_full_label[] = $current_value;

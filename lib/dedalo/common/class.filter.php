@@ -165,7 +165,7 @@ abstract class filter {
 			#dump($row->{$projects_name_tipo}, ' row ++ '.to_string());
 
 			if (!empty($row->{$projects_name_tipo})) {
-				$label = component_common::get_value_with_fallback_from_dato_full( $row->{$projects_name_tipo}, true );
+				$label = component_common::get_value_with_fallback_from_dato_full($row->{$projects_name_tipo}, true, DEDALO_DATA_LANG_DEFAULT, DEDALO_DATA_LANG);
 			}else{
 				$label = '';
 			}

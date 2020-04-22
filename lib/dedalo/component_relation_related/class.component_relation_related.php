@@ -64,12 +64,7 @@ class component_relation_related extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
-		#return "working here! ".__METHOD__;
-	
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
-
+		
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
 		if ($ar_related_terms===false) {
 			$ar_related_terms = $this->RecordObj_dd->get_relaciones();
@@ -113,10 +108,9 @@ class component_relation_related extends component_relation_common {
 		}else{
 			$valor = implode($divisor, $ar_values);
 		}
+		
 
-		$this->valor = $valor;
-
-		return $this->valor;
+		return $valor;
 	}//end get_valor
 
 

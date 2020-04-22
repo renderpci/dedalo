@@ -114,7 +114,6 @@ class component_autocomplete_ts extends component_common {
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
 		
 		$dato = $this->get_dato();
-
 		if ( empty($dato) ) {
 			if ($format=='array') {
 				return array();
@@ -140,8 +139,6 @@ class component_autocomplete_ts extends component_common {
 
 			$current_valor  = '';
 			$current_valor .= RecordObj_ts::get_termino_by_tipo($terminoID, $lang, true);
-				#dump($current_valor, ' current_valor ++ '.to_string($lang));			
-
 
 			if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===false) {
 				# No childres are calculated and showed
@@ -163,7 +160,6 @@ class component_autocomplete_ts extends component_common {
 			
 			$current_locator_string 			= json_encode($current_locator);
 			$ar_valor[$current_locator_string]  = $current_valor;
-
 		}//end foreach ($dato as $key => $current_locator) {
 
 
@@ -172,11 +168,9 @@ class component_autocomplete_ts extends component_common {
 		}else{
 			$valor = implode("<br>", $ar_valor);
 		}
-		#dump($valor, ' valor ++ '.to_string());		
-		#$this->valor = $valor;
+		
 
 		return $valor;
-
 	}//end get_valor
 
 
