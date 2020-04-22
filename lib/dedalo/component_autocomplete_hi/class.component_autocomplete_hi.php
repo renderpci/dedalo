@@ -646,6 +646,57 @@ class component_autocomplete_hi extends component_relation_common {
 							}
 						}
 					}
+
+					if ($key==='custom_parents') {
+						$dato = $this->get_dato();
+						foreach ($dato as $current_locator) {
+							// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+							$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+							$ar_terms = [];
+							$stopped = false;
+							foreach ($ar_parents as $parent_locator) {
+								if(isset($value->parent_end_by_term_id)){
+									$current_term_id = $parent_locator->section_tipo.'_'.$parent_locator->section_id;
+									if(in_array($current_term_id, $value->parent_end_by_term_id)){
+										$stopped = true;
+										 break;
+									}
+								}
+								if(isset($value->parent_end_by_model)){
+									$ar_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($parent_locator->section_tipo,['component_relation_model'],true, true, true, true);
+									
+									$component = component_common::get_instance('component_relation_model',
+																				 $ar_tipo[0],
+																				 $parent_locator->section_id,
+																				 'list',
+																				 DEDALO_DATA_NOLAN,
+																				$parent_locator->section_tipo);
+									$component_dato = $component->get_dato();
+									if(isset($component_dato[0])){
+										$current_term_id = $component_dato[0]->section_tipo.'_'.$component_dato[0]->section_id;
+										if(in_array($current_term_id, $value->parent_end_by_model)){
+											$stopped = true;
+											break;
+										};
+									}
+								}
+
+								$term = ts_object::get_term_by_locator( $parent_locator, $lang, $from_cache=true );
+								if (!empty($term)) {
+									$ar_terms[] = $term;
+								}
+							}
+							if (!empty($ar_terms)) {
+								if($stopped===false){
+									if(isset($value->parents_splice)){
+										$ar_terms = array_splice($ar_terms, $value->parents_splice)
+									}
+
+								}
+								$diffusion_value .= $separator . implode($separator, $ar_terms);
+							}
+						}
+					}
 			}//end foreach ($option_obj as $key => $value)
 		}
 
