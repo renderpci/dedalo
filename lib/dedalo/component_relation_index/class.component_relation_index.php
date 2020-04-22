@@ -20,12 +20,7 @@ class component_relation_index extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
-		#return "working here! ".__METHOD__;
-	
-		if (isset($this->valor)) {			
-			return $this->valor;
-		}
-
+		
 		$ar_valor  	= array();		
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
@@ -40,10 +35,9 @@ class component_relation_index extends component_relation_common {
 				$valor .= $value;
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
-		}		
-		$this->valor = $valor;
+		}
 
-		return (string)$this->valor;
+		return (string)$valor;
 	}//end get_valor
 
 

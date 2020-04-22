@@ -19,13 +19,9 @@ class component_radio_button extends component_relation_common {
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
-
 		$dato = $this->get_dato();
 		if (empty($dato)) {
-			return $this->valor = null;
+			return null;
 		}
 
 		# Test dato format (b4 changed to object)
@@ -35,7 +31,7 @@ class component_radio_button extends component_relation_common {
 					dump($dato," dato");
 					trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
 				}
-				return $this->valor = null;
+				return null;
 			}
 		}	
 
@@ -68,11 +64,9 @@ class component_radio_button extends component_relation_common {
 						break;
 					}
 				}
-				# Set value
-				$this->valor = $valor;
-				break;
-				
+				break;				
 		}#end switch
+		
 
 		return $valor;
 	}//end get_valor

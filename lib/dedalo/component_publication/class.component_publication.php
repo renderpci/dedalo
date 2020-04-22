@@ -74,7 +74,7 @@ class component_publication extends component_relation_common {
 						dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));							
 					}
 					debug_log(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true), logger::ERROR);
-					return $this->valor = null;
+					return null;
 				}
 			}
 		}
@@ -117,12 +117,9 @@ class component_publication extends component_relation_common {
 						}
 					}
 				}
-				break;
-				
+				break;				
 		}#end switch
 
-		# Set value
-		$this->valor = $valor;
 
 		return $valor;
 	}#end get_valor

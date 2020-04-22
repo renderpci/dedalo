@@ -20,20 +20,12 @@ class component_relation_children extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
-		#return "working here! ".__METHOD__;
-	
-		if (isset($this->valor)) {
-			#dump($this->valor, ' RETURNED VALOR FROM CACHE this->valor ++ '.to_string());		
-			return $this->valor;
-		}
-
+		
 		$ar_valor  	= array();
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
-			#$ar_valor[] = self::get_locator_value( $current_locator, $lang );
 			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );		
-		}//end if (!empty($dato))
-
+		}
 
 		# Set component valor
 		#$this->valor = implode(', ', $ar_valor);
@@ -43,10 +35,9 @@ class component_relation_children extends component_relation_common {
 				$valor .= $value;
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
-		}		
-		$this->valor = $valor;
+		}
 
-		return (string)$this->valor;
+		return (string)$valor;
 	}//end get_valor
 
 

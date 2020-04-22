@@ -34,7 +34,6 @@ class component_autocomplete_hi extends component_relation_common {
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $separator='<br>' ) {
 
 		$dato = $this->get_dato();
-
 		if ( empty($dato) ) {
 			if ($format==='array') {
 				return array();

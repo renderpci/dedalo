@@ -96,15 +96,7 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ') {
 
-		if (isset($this->valor)) {
-			if(SHOW_DEBUG===true) {
-				#error_log("Catched valor !!! from ".__METHOD__);
-			}
-			return $this->valor;
-		}
-
 		$dato = $this->get_dato();
-
 		if (empty($dato)) {
 			if ($format==='array') {
 				return array();
@@ -120,7 +112,7 @@ class component_autocomplete extends component_relation_common {
 					dump($dato," dato ($value) is not object!! gettype:".gettype($value)." section_tipo:$this->section_tipo - tipo:$this->tipo - parent:$this->parent " );
 				}
 				trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo [section_id:$this->parent].Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
-				return $this->valor = null;
+				return null;
 			}
 		}
 
@@ -149,7 +141,6 @@ class component_autocomplete extends component_relation_common {
 
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
-
 
 
 		$ar_values = array();
@@ -236,8 +227,7 @@ class component_autocomplete extends component_relation_common {
 			}, $ar_values);
 			$valor = implode($divisor, $ar_labels);
 		}
-		#dump($valor, ' valor ++ '.to_string($lang));
-		#$this->valor = $valor;
+		
 
 		return $valor;
 	}//end get valor

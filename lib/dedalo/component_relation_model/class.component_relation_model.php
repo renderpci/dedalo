@@ -21,13 +21,6 @@ class component_relation_model extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $separator=', ') {
 
-		if (isset($this->valor)) {
-			if(SHOW_DEBUG) {
-				//error_log("Catched valor !!! from ".__METHOD__);
-			}
-			return $this->valor;
-		}
-
 		$valor  = null;		
 		$dato   = $this->get_dato();
 		if (!empty($dato)) {
@@ -65,13 +58,9 @@ class component_relation_model extends component_relation_common {
 					#dump($current_label, ' current_label ++ '.to_string());
 				$ar_values[] = $current_label;
 			}
-			$valor = implode($separator, $ar_values);	
-
+			$valor = implode($separator, $ar_values);
 		}//end if (!empty($dato)) 
-		#dump($valor, ' valor ++ '.to_string());
-
-		# Set component valor
-		$this->valor = $valor;
+		
 
 		return $valor;
 	}//end get_valor

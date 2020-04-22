@@ -510,13 +510,7 @@ class component_relation_parent extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
-		#return "working here! ".__METHOD__;
-
-		if (isset($this->valor)) {
-			dump($this->valor, ' RETURNED VALOR FROM CACHE this->valor ++ '.to_string());
-			return $this->valor;
-		}
-
+		
 		$ar_valor  	= array();
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
@@ -532,9 +526,8 @@ class component_relation_parent extends component_relation_common {
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
 		}
-		$this->valor = $valor;
 
-		return (string)$this->valor;
+		return (string)$valor;
 	}//end get_valor
 
 

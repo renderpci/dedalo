@@ -1678,8 +1678,8 @@
 	Valencia 22-04-2020 5.5.38
 		Fix bug in component_common::get_value_with_fallback_from_dato_full that not change returned value when lang is changed (publication, etc.)
 
-
-
+	Valencia 22-04-2020 5.5.39
+		Fix bug in components get_valor($lang) when using lang, to prevent value to be cached
 
 
 
@@ -1702,7 +1702,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.38';
+	$DEDALO_VERSION = '5.5.39';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
