@@ -1,369 +1,138 @@
-[ach]
-@import url(ach/viewer.properties)
-
-[af]
-@import url(af/viewer.properties)
-
-[ak]
-@import url(ak/viewer.properties)
-
-[an]
-@import url(an/viewer.properties)
-
-[ar]
-@import url(ar/viewer.properties)
-
-[as]
-@import url(as/viewer.properties)
-
-[ast]
-@import url(ast/viewer.properties)
-
-[az]
-@import url(az/viewer.properties)
-
-[be]
-@import url(be/viewer.properties)
-
-[bg]
-@import url(bg/viewer.properties)
-
-[bn-BD]
-@import url(bn-BD/viewer.properties)
-
-[bn-IN]
-@import url(bn-IN/viewer.properties)
-
-[br]
-@import url(br/viewer.properties)
-
-[brx]
-@import url(brx/viewer.properties)
-
-[bs]
-@import url(bs/viewer.properties)
-
-[ca]
-@import url(ca/viewer.properties)
-
-[cak]
-@import url(cak/viewer.properties)
-
-[crh]
-@import url(crh/viewer.properties)
-
-[cs]
-@import url(cs/viewer.properties)
-
-[csb]
-@import url(csb/viewer.properties)
-
-[cy]
-@import url(cy/viewer.properties)
-
-[da]
-@import url(da/viewer.properties)
-
-[de]
-@import url(de/viewer.properties)
-
-[el]
-@import url(el/viewer.properties)
-
-[en-CA]
-@import url(en-CA/viewer.properties)
-
-[en-GB]
-@import url(en-GB/viewer.properties)
-
-[en-US]
-@import url(en-US/viewer.properties)
-
-[en-ZA]
-@import url(en-ZA/viewer.properties)
-
-[eo]
-@import url(eo/viewer.properties)
-
-[es-AR]
-@import url(es-AR/viewer.properties)
-
-[es-CL]
-@import url(es-CL/viewer.properties)
-
-[es-ES]
-@import url(es-ES/viewer.properties)
-
-[es-MX]
-@import url(es-MX/viewer.properties)
-
-[et]
-@import url(et/viewer.properties)
-
-[eu]
-@import url(eu/viewer.properties)
-
-[fa]
-@import url(fa/viewer.properties)
-
-[ff]
-@import url(ff/viewer.properties)
-
-[fi]
-@import url(fi/viewer.properties)
-
-[fr]
-@import url(fr/viewer.properties)
-
-[fy-NL]
-@import url(fy-NL/viewer.properties)
-
-[ga-IE]
-@import url(ga-IE/viewer.properties)
-
-[gd]
-@import url(gd/viewer.properties)
-
-[gl]
-@import url(gl/viewer.properties)
-
-[gn]
-@import url(gn/viewer.properties)
-
-[gu-IN]
-@import url(gu-IN/viewer.properties)
-
-[he]
-@import url(he/viewer.properties)
-
-[hi-IN]
-@import url(hi-IN/viewer.properties)
-
-[hr]
-@import url(hr/viewer.properties)
-
-[hsb]
-@import url(hsb/viewer.properties)
-
-[hto]
-@import url(hto/viewer.properties)
-
-[hu]
-@import url(hu/viewer.properties)
-
-[hy-AM]
-@import url(hy-AM/viewer.properties)
-
-[ia]
-@import url(ia/viewer.properties)
-
-[id]
-@import url(id/viewer.properties)
-
-[is]
-@import url(is/viewer.properties)
-
-[it]
-@import url(it/viewer.properties)
-
-[ja]
-@import url(ja/viewer.properties)
-
-[ka]
-@import url(ka/viewer.properties)
-
-[kab]
-@import url(kab/viewer.properties)
-
-[kk]
-@import url(kk/viewer.properties)
-
-[km]
-@import url(km/viewer.properties)
-
-[kn]
-@import url(kn/viewer.properties)
-
-[ko]
-@import url(ko/viewer.properties)
-
-[kok]
-@import url(kok/viewer.properties)
-
-[ks]
-@import url(ks/viewer.properties)
-
-[ku]
-@import url(ku/viewer.properties)
-
-[lg]
-@import url(lg/viewer.properties)
-
-[lij]
-@import url(lij/viewer.properties)
-
-[lo]
-@import url(lo/viewer.properties)
-
-[lt]
-@import url(lt/viewer.properties)
-
-[ltg]
-@import url(ltg/viewer.properties)
-
-[lv]
-@import url(lv/viewer.properties)
-
-[mai]
-@import url(mai/viewer.properties)
-
-[meh]
-@import url(meh/viewer.properties)
-
-[mk]
-@import url(mk/viewer.properties)
-
-[ml]
-@import url(ml/viewer.properties)
-
-[mn]
-@import url(mn/viewer.properties)
-
-[mr]
-@import url(mr/viewer.properties)
-
-[ms]
-@import url(ms/viewer.properties)
-
-[my]
-@import url(my/viewer.properties)
-
-[nb-NO]
-@import url(nb-NO/viewer.properties)
-
-[ne-NP]
-@import url(ne-NP/viewer.properties)
-
-[nl]
-@import url(nl/viewer.properties)
-
-[nn-NO]
-@import url(nn-NO/viewer.properties)
-
-[nso]
-@import url(nso/viewer.properties)
-
-[oc]
-@import url(oc/viewer.properties)
-
-[or]
-@import url(or/viewer.properties)
-
-[pa-IN]
-@import url(pa-IN/viewer.properties)
-
-[pl]
-@import url(pl/viewer.properties)
-
-[pt-BR]
-@import url(pt-BR/viewer.properties)
-
-[pt-PT]
-@import url(pt-PT/viewer.properties)
-
-[rm]
-@import url(rm/viewer.properties)
-
-[ro]
-@import url(ro/viewer.properties)
-
-[ru]
-@import url(ru/viewer.properties)
-
-[rw]
-@import url(rw/viewer.properties)
-
-[sah]
-@import url(sah/viewer.properties)
-
-[sat]
-@import url(sat/viewer.properties)
-
-[si]
-@import url(si/viewer.properties)
-
-[sk]
-@import url(sk/viewer.properties)
-
-[sl]
-@import url(sl/viewer.properties)
-
-[son]
-@import url(son/viewer.properties)
-
-[sq]
-@import url(sq/viewer.properties)
-
-[sr]
-@import url(sr/viewer.properties)
-
-[sv-SE]
-@import url(sv-SE/viewer.properties)
-
-[sw]
-@import url(sw/viewer.properties)
-
-[ta]
-@import url(ta/viewer.properties)
-
-[ta-LK]
-@import url(ta-LK/viewer.properties)
-
-[te]
-@import url(te/viewer.properties)
-
-[th]
-@import url(th/viewer.properties)
-
-[tl]
-@import url(tl/viewer.properties)
-
-[tn]
-@import url(tn/viewer.properties)
-
-[tr]
-@import url(tr/viewer.properties)
-
-[tsz]
-@import url(tsz/viewer.properties)
-
-[uk]
-@import url(uk/viewer.properties)
-
-[ur]
-@import url(ur/viewer.properties)
-
-[uz]
-@import url(uz/viewer.properties)
-
-[vi]
-@import url(vi/viewer.properties)
-
-[wo]
-@import url(wo/viewer.properties)
-
-[xh]
-@import url(xh/viewer.properties)
-
-[zam]
-@import url(zam/viewer.properties)
-
-[zh-CN]
-@import url(zh-CN/viewer.properties)
-
-[zh-TW]
-@import url(zh-TW/viewer.properties)
-
-[zu]
-@import url(zu/viewer.properties)
-
+[{"section_id":34,"dd_lang":"lg-aar","tld4":"aar","tld2":"aa","glotocode":"afar1241","walls":"qaf","lat":12.0,"long":42.0,"locale":"aa"},
+{"section_id":90,"dd_lang":"lg-abk","tld4":"abk","tld2":"ab","glotocode":"abkh1244","walls":"abk","lat":43.0833333333,"long":41.0,"locale":"ab"},
+{"section_id":1135,"dd_lang":"lg-ave","tld4":"ave","tld2":"ae","locale":"ae"},
+{"section_id":269,"dd_lang":"lg-afr","tld4":"afr","tld2":"af","glotocode":"afri1274","walls":"afr","lat":-31.0,"long":22.0,"locale":"af"},
+{"section_id":457,"dd_lang":"lg-aka","tld4":"aka","tld2":"ak","glotocode":"akan1250","walls":"akn","lat":6.5,"long":-1.25,"locale":"ak"},
+{"section_id":639,"dd_lang":"lg-amh","tld4":"amh","tld2":"am","glotocode":"amha1245","walls":"amh","lat":10.0,"long":38.0,"locale":"am"},
+{"section_id":863,"dd_lang":"lg-arg","tld4":"arg","tld2":"an","locale":"an"},
+{"section_id":841,"dd_lang":"lg-ara","tld4":"ara","tld2":"ar","locale":"ar"},
+{"section_id":973,"dd_lang":"lg-asm","tld4":"asm","tld2":"as","glotocode":"assa1263","walls":"ass","lat":26.0,"long":93.0,"locale":"as"},
+{"section_id":1128,"dd_lang":"lg-ava","tld4":"ava","tld2":"av","glotocode":"avar1256","walls":"ava","lat":42.5,"long":46.5,"locale":"av"},
+{"section_id":1230,"dd_lang":"lg-aze","tld4":"aze","tld2":"az","locale":"az"},
+{"section_id":1310,"dd_lang":"lg-bak","tld4":"bak","tld2":"ba","glotocode":"bash1264","walls":"bsk","lat":53.0,"long":58.0,"locale":"ba"},
+{"section_id":1586,"dd_lang":"lg-bel","tld4":"bel","tld2":"be","glotocode":"bela1254","walls":"blr","lat":54.0,"long":28.0,"locale":"be"},
+{"section_id":2741,"dd_lang":"lg-bul","tld4":"bul","tld2":"bg","glotocode":"bulg1262","walls":"bul","lat":42.5,"long":25.0,"locale":"bg"},
+{"section_id":1874,"dd_lang":"lg-bis","tld4":"bis","tld2":"bi","glotocode":"bisl1239","walls":"bsm","lat":-16.0,"long":168.0,"locale":"bi"},
+{"section_id":1324,"dd_lang":"lg-bam","tld4":"bam","tld2":"bm","glotocode":"bamb1269","walls":"bam","lat":12.5,"long":-7.5,"locale":"bm"},
+{"section_id":1592,"dd_lang":"lg-ben","tld4":"ben","tld2":"bn","glotocode":"beng1280","walls":"ben","lat":24.0,"long":90.0,"locale":"bn"},
+{"section_id":2438,"dd_lang":"lg-bre","tld4":"bre","tld2":"br","glotocode":"bret1244","walls":"bre","lat":48.0,"long":-3.0,"locale":"br"},
+{"section_id":2355,"dd_lang":"lg-bos","tld4":"bos","tld2":"bs","glotocode":"bosn1245","walls":"bos","lat":43.0,"long":18.0,"locale":"bs"},
+{"section_id":3032,"dd_lang":"lg-cat","tld4":"cat","tld2":"ca","glotocode":"stan1289","walls":"ctl","lat":41.75,"long":2.0,"locale":"ca"},
+{"section_id":3259,"dd_lang":"lg-che","tld4":"che","tld2":"ce","glotocode":"chec1245","walls":"chc","lat":43.25,"long":45.8333333333,"locale":"ce"},
+{"section_id":3232,"dd_lang":"lg-cha","tld4":"cha","tld2":"ch","glotocode":"cham1312","walls":"cha","lat":13.45,"long":144.75,"locale":"ch"},
+{"section_id":3740,"dd_lang":"lg-cos","tld4":"cos","tld2":"co","locale":"co"},
+{"section_id":3793,"dd_lang":"lg-cre","tld4":"cre","tld2":"cr","locale":"cr"},
+{"section_id":3191,"dd_lang":"lg-ces","tld4":"ces","tld2":"cs","glotocode":"czec1258","walls":"cze","lat":50.0,"long":15.0,"locale":"cs"},
+{"section_id":3374,"dd_lang":"lg-chu","tld4":"chu","tld2":"cu","locale":"cu"},
+{"section_id":3380,"dd_lang":"lg-chv","tld4":"chv","tld2":"cv","glotocode":"chuv1255","walls":"chv","lat":55.5,"long":47.5,"locale":"cv"},
+{"section_id":4046,"dd_lang":"lg-cym","tld4":"cym","tld2":"cy","glotocode":"wels1247","walls":"wec","lat":52.75,"long":-3.5833,"locale":"cy"},
+{"section_id":4111,"dd_lang":"lg-dan","tld4":"dan","tld2":"da","glotocode":"dani1285","walls":"dsh","lat":56.0,"long":10.0,"locale":"da"},
+{"section_id":4253,"dd_lang":"lg-deu","tld4":"deu","tld2":"de","glotocode":"stan1295","walls":"gbl","lat":52.5,"long":13.3333333333,"locale":"de"},
+{"section_id":4433,"dd_lang":"lg-div","tld4":"div","tld2":"dv","glotocode":"dhiv1236","walls":"dhi","lat":4.16666666667,"long":73.5,"locale":"dv"},
+{"section_id":4936,"dd_lang":"lg-dzo","tld4":"dzo","tld2":"dz","locale":"dz"},
+{"section_id":5037,"dd_lang":"lg-ell","tld4":"ell","tld2":"el","glotocode":"mode1248","walls":"gcy","lat":34.75,"long":33.0,"locale":"el"},
+{"section_id":5101,"dd_lang":"lg-eng","tld4":"eng","tld2":"en","glotocode":"stan1293","walls":"eng","lat":52.0,"long":0.0,"locale":"en-US"},
+{"section_id":5129,"dd_lang":"lg-epo","tld4":"epo","tld2":"eo","locale":"eo"},
+{"section_id":17344,"dd_lang":"lg-spa","tld4":"spa","tld2":"es","glotocode":"stan1288","walls":"spa","lat":40.0,"long":-4.0,"locale":"es-ES"},
+{"section_id":5188,"dd_lang":"lg-est","tld4":"est","tld2":"et","glotocode":"esto1258","walls":"est","lat":59.0,"long":26.0,"locale":"et"},
+{"section_id":5223,"dd_lang":"lg-eus","tld4":"eus","tld2":"eu","glotocode":"basq1248","walls":"bqb","lat":43.0,"long":-3.83333333333,"locale":"eu"},
+{"section_id":5259,"dd_lang":"lg-fas","tld4":"fas","tld2":"fa","locale":"fa"},
+{"section_id":5372,"dd_lang":"lg-fin","tld4":"fin","tld2":"fi","glotocode":"finn1318","walls":"fin","lat":62.0,"long":25.0,"locale":"fi"},
+{"section_id":5256,"dd_lang":"lg-fao","tld4":"fao","tld2":"fo","glotocode":"faro1244","walls":"far","lat":62.0,"long":-7.0,"locale":"fo"},
+{"section_id":5450,"dd_lang":"lg-fra","tld4":"fra","tld2":"fr","glotocode":"stan1290","walls":"fre","lat":48.0,"long":2.0,"locale":"fr"},
+{"section_id":5486,"dd_lang":"lg-fry","tld4":"fry","tld2":"fy","glotocode":"west2354","walls":"frw","lat":53.0,"long":6.0,"locale":"fy"},
+{"section_id":5954,"dd_lang":"lg-gle","tld4":"gle","tld2":"ga","glotocode":"iris1253","walls":"ird","lat":55.0,"long":-8.0,"locale":"ga"},
+{"section_id":5938,"dd_lang":"lg-gla","tld4":"gla","tld2":"gd","glotocode":"scot1245","walls":"gae","lat":57.0,"long":-4.0,"locale":"gd"},
+{"section_id":5960,"dd_lang":"lg-glg","tld4":"glg","tld2":"gl","glotocode":"gali1258","walls":"glc","lat":43.0,"long":-8.0,"locale":"gl"},
+{"section_id":6294,"dd_lang":"lg-guj","tld4":"guj","tld2":"gu","glotocode":"guja1252","walls":"guj","lat":23.0,"long":72.0,"locale":"gu"},
+{"section_id":6002,"dd_lang":"lg-glv","tld4":"glv","tld2":"gv","glotocode":"manx1243","walls":"mnx","lat":54.1666666667,"long":-4.5,"locale":"gv"},
+{"section_id":6498,"dd_lang":"lg-hau","tld4":"hau","tld2":"ha","glotocode":"haus1257","walls":"hau","lat":12.0,"long":7.0,"locale":"ha"},
+{"section_id":6530,"dd_lang":"lg-hbs","tld4":"hbs","tld2":"hbs","locale":"hbs"},
+{"section_id":6567,"dd_lang":"lg-heb","tld4":"heb","tld2":"he","glotocode":"hebr1245","walls":"hba","lat":31.75,"long":35.1666666667,"locale":"he"},
+{"section_id":6664,"dd_lang":"lg-hin","tld4":"hin","tld2":"hi","glotocode":"hind1269","walls":"hin","lat":25.0,"long":77.0,"locale":"hi"},
+{"section_id":6972,"dd_lang":"lg-hrv","tld4":"hrv","tld2":"hr","locale":"hr"},
+{"section_id":6496,"dd_lang":"lg-hat","tld4":"hat","tld2":"ht","glotocode":"hait1244","walls":"hcr","lat":19.0,"long":-72.5,"locale":"ht"},
+{"section_id":7054,"dd_lang":"lg-hun","tld4":"hun","tld2":"hu","glotocode":"hung1274","walls":"hun","lat":47.0,"long":20.0,"locale":"hu"},
+{"section_id":7154,"dd_lang":"lg-hye","tld4":"hye","tld2":"hy","glotocode":"nucl1235","walls":"arm","lat":40.0,"long":45.0,"locale":"hy"},
+{"section_id":7350,"dd_lang":"lg-ina","tld4":"ina","tld2":"ia","locale":"ia"},
+{"section_id":7354,"dd_lang":"lg-ind","tld4":"ind","tld2":"id","glotocode":"indo1316","walls":"ind","lat":0.0,"long":106.0,"locale":"id"},
+{"section_id":7267,"dd_lang":"lg-iii","tld4":"iii","tld2":"ii","glotocode":"sich1238","walls":"yi","lat":24.0,"long":104.0,"locale":"ii"},
+{"section_id":7393,"dd_lang":"lg-ipk","tld4":"ipk","tld2":"ik","locale":"ik"},
+{"section_id":7216,"dd_lang":"lg-ido","tld4":"ido","tld2":"io","locale":"io"},
+{"section_id":7446,"dd_lang":"lg-isl","tld4":"isl","tld2":"is","glotocode":"icel1247","walls":"ice","lat":65.0,"long":-17.0,"locale":"is"},
+{"section_id":7466,"dd_lang":"lg-ita","tld4":"ita","tld2":"it","glotocode":"ital1282","walls":"ifi","lat":43.75,"long":11.25,"locale":"it"},
+{"section_id":7853,"dd_lang":"lg-jpn","tld4":"jpn","tld2":"ja","glotocode":"nucl1643","walls":"jpn","lat":37.0,"long":140.0,"locale":"ja"},
+{"section_id":7584,"dd_lang":"lg-jav","tld4":"jav","tld2":"jv","glotocode":"java1254","walls":"jav","lat":-7.0,"long":111.0,"locale":"jv"},
+{"section_id":8069,"dd_lang":"lg-kat","tld4":"kat","tld2":"ka","glotocode":"nucl1302","walls":"geo","lat":42.0,"long":44.0,"locale":"ka"},
+{"section_id":8092,"dd_lang":"lg-kaz","tld4":"kaz","tld2":"kk","glotocode":"kaza1248","walls":"kaz","lat":50.0,"long":70.0,"locale":"kk"},
+{"section_id":8018,"dd_lang":"lg-kal","tld4":"kal","tld2":"kl","glotocode":"kala1399","walls":"gre","lat":65.0,"long":-40.0,"locale":"kl"},
+{"section_id":8471,"dd_lang":"lg-khm","tld4":"khm","tld2":"km","glotocode":"cent1989","walls":"khm","lat":12.5,"long":105.0,"locale":"km"},
+{"section_id":8036,"dd_lang":"lg-kan","tld4":"kan","tld2":"kn","glotocode":"nucl1305","walls":"knd","lat":14.0,"long":76.0,"locale":"kn"},
+{"section_id":9094,"dd_lang":"lg-kor","tld4":"kor","tld2":"ko","glotocode":"kore1280","walls":"kor","lat":37.5,"long":128.0,"locale":"ko"},
+{"section_id":8079,"dd_lang":"lg-kau","tld4":"kau","tld2":"kr","locale":"kr"},
+{"section_id":8065,"dd_lang":"lg-kas","tld4":"kas","tld2":"ks","glotocode":"kash1277","walls":"kas","lat":34.0,"long":76.0,"locale":"ks"},
+{"section_id":9544,"dd_lang":"lg-kur","tld4":"kur","tld2":"ku","locale":"ku"},
+{"section_id":9076,"dd_lang":"lg-kom","tld4":"kom","tld2":"kv","locale":"kv"},
+{"section_id":3734,"dd_lang":"lg-cor","tld4":"cor","tld2":"kw","glotocode":"corn1251","walls":"crn","lat":50.3333333333,"long":-5.0,"locale":"kw"},
+{"section_id":8585,"dd_lang":"lg-kir","tld4":"kir","tld2":"ky","glotocode":"kirg1245","walls":"kfy","lat":47.75,"long":124.416666667,"locale":"ky"},
+{"section_id":9895,"dd_lang":"lg-lat","tld4":"lat","tld2":"la","locale":"la"},
+{"section_id":10695,"dd_lang":"lg-ltz","tld4":"ltz","tld2":"lb","glotocode":"luxe1241","walls":"lux","lat":49.8333333333,"long":6.16666666667,"locale":"lb"},
+{"section_id":10225,"dd_lang":"lg-lim","tld4":"lim","tld2":"li","locale":"li"},
+{"section_id":9881,"dd_lang":"lg-lao","tld4":"lao","tld2":"lo","glotocode":"laoo1244","walls":"lao","lat":18.0,"long":103.0,"locale":"lo"},
+{"section_id":10253,"dd_lang":"lg-lit","tld4":"lit","tld2":"lt","glotocode":"lith1251","walls":"lit","lat":55.0,"long":24.0,"locale":"lt"},
+{"section_id":9904,"dd_lang":"lg-lav","tld4":"lav","tld2":"lv","glotocode":"latv1249","walls":"lat","lat":57.0,"long":24.0,"locale":"lv"},
+{"section_id":11636,"dd_lang":"lg-mkd","tld4":"mkd","tld2":"mk","glotocode":"mace1250","walls":"mcd","lat":41.6666666667,"long":21.75,"locale":"mk"},
+{"section_id":10930,"dd_lang":"lg-mal","tld4":"mal","tld2":"ml","glotocode":"mala1464","walls":"mym","lat":10.0,"long":76.5,"locale":"ml"},
+{"section_id":12057,"dd_lang":"lg-mon","tld4":"mon","tld2":"mn","locale":"mn"},
+{"section_id":10963,"dd_lang":"lg-mar","tld4":"mar","tld2":"mr","glotocode":"mara1378","walls":"mhi","lat":19.0,"long":76.0,"locale":"mr"},
+{"section_id":11790,"dd_lang":"lg-mlt","tld4":"mlt","tld2":"mt","glotocode":"malt1254","walls":"mlt","lat":35.9166666667,"long":14.4166666667,"locale":"mt"},
+{"section_id":12641,"dd_lang":"lg-mya","tld4":"mya","tld2":"my","glotocode":"nucl1310","walls":"brm","lat":21.0,"long":96.0,"locale":"my"},
+{"section_id":13421,"dd_lang":"lg-nob","tld4":"nob","tld2":"nb","glotocode":"norw1259","walls":"nor","lat":61.0,"long":8.0,"locale":"nb"},
+{"section_id":12943,"dd_lang":"lg-nep","tld4":"nep","tld2":"ne","glotocode":"nepa1252","walls":"nep","lat":28.0,"long":85.0,"locale":"ne"},
+{"section_id":13270,"dd_lang":"lg-nld","tld4":"nld","tld2":"nl","glotocode":"dutc1256","walls":"dbr","lat":50.75,"long":4.5,"locale":"nl"},
+{"section_id":13399,"dd_lang":"lg-nno","tld4":"nno","tld2":"nn","locale":"nn"},
+{"section_id":12803,"dd_lang":"lg-nav","tld4":"nav","tld2":"nv","glotocode":"nava1243","walls":"nav","lat":36.1666666667,"long":-108.0,"locale":"nv"},
+{"section_id":13840,"dd_lang":"lg-oci","tld4":"oci","tld2":"oc","glotocode":"occi1239","walls":"occ","lat":44.0,"long":2.0,"locale":"oc"},
+{"section_id":13915,"dd_lang":"lg-oji","tld4":"oji","tld2":"oj","locale":"oj"},
+{"section_id":14049,"dd_lang":"lg-orm","tld4":"orm","tld2":"om","locale":"om"},
+{"section_id":14040,"dd_lang":"lg-ori","tld4":"ori","tld2":"or","glotocode":"nucl1284","walls":"oya","lat":21.0,"long":85.0,"locale":"or"},
+{"section_id":14084,"dd_lang":"lg-oss","tld4":"oss","tld2":"os","glotocode":"osse1243","walls":"oss","lat":43.0,"long":44.0,"locale":"os"},
+{"section_id":14217,"dd_lang":"lg-pan","tld4":"pan","tld2":"pa","glotocode":"panj1256","walls":"pan","lat":31.0,"long":74.0,"locale":"pa"},
+{"section_id":14664,"dd_lang":"lg-pli","tld4":"pli","tld2":"pi","locale":"pi"},
+{"section_id":14881,"dd_lang":"lg-pol","tld4":"pol","tld2":"pl","glotocode":"poli1260","walls":"pol","lat":52.0,"long":20.0,"locale":"pl"},
+{"section_id":15189,"dd_lang":"lg-pus","tld4":"pus","tld2":"ps","locale":"ps"},
+{"section_id":14895,"dd_lang":"lg-por","tld4":"por","tld2":"pt","glotocode":"port1283","walls":"por","lat":39.0,"long":-8.0,"locale":"pt"},
+{"section_id":15753,"dd_lang":"lg-roh","tld4":"roh","tld2":"rm","glotocode":"roma1326","walls":"rmc","lat":46.6666666667,"long":9.16666666667,"locale":"rm"},
+{"section_id":15761,"dd_lang":"lg-ron","tld4":"ron","tld2":"ro","glotocode":"roma1327","walls":"mol","lat":47.0,"long":29.0,"locale":"ro"},
+{"section_id":15862,"dd_lang":"lg-rus","tld4":"rus","tld2":"ru","glotocode":"russ1263","walls":"rus","lat":56.0,"long":38.0,"locale":"ru"},
+{"section_id":15997,"dd_lang":"lg-san","tld4":"san","tld2":"sa","locale":"sa"},
+{"section_id":17454,"dd_lang":"lg-srd","tld4":"srd","tld2":"sc","locale":"sc"},
+{"section_id":17160,"dd_lang":"lg-snd","tld4":"snd","tld2":"sd","glotocode":"sind1272","walls":"sdh","lat":26.0,"long":69.0,"locale":"sd"},
+{"section_id":17018,"dd_lang":"lg-sme","tld4":"sme","tld2":"se","glotocode":"nort2671","walls":"sno","lat":69.0,"long":24.0,"locale":"se"},
+{"section_id":16673,"dd_lang":"lg-sin","tld4":"sin","tld2":"si","glotocode":"sinh1246","walls":"snh","lat":7.0,"long":80.5,"locale":"si"},
+{"section_id":16912,"dd_lang":"lg-slk","tld4":"slk","tld2":"sk","glotocode":"slov1269","walls":"svk","lat":49.0,"long":20.0,"locale":"sk"},
+{"section_id":16962,"dd_lang":"lg-slv","tld4":"slv","tld2":"sl","glotocode":"slov1268","walls":"slo","lat":46.0,"long":15.0,"locale":"sl"},
+{"section_id":17303,"dd_lang":"lg-som","tld4":"som","tld2":"so","glotocode":"soma1255","walls":"som","lat":3.0,"long":45.0,"locale":"so"},
+{"section_id":17416,"dd_lang":"lg-sqi","tld4":"sqi","tld2":"sq","locale":"sq"},
+{"section_id":17519,"dd_lang":"lg-srp","tld4":"srp","tld2":"sr","locale":"sr"},
+{"section_id":17821,"dd_lang":"lg-sun","tld4":"sun","tld2":"su","glotocode":"sund1252","walls":"sun","lat":-7.0,"long":107.0,"locale":"su"},
+{"section_id":17921,"dd_lang":"lg-swe","tld4":"swe","tld2":"sv","glotocode":"swed1254","walls":"swe","lat":60.0,"long":15.0,"locale":"sv"},
+{"section_id":18146,"dd_lang":"lg-tam","tld4":"tam","tld2":"ta","glotocode":"tami1289","walls":"tml","lat":11.0,"long":78.5,"locale":"ta"},
+{"section_id":18394,"dd_lang":"lg-tel","tld4":"tel","tld2":"te","glotocode":"telu1262","walls":"tel","lat":16.0,"long":79.0,"locale":"te"},
+{"section_id":18476,"dd_lang":"lg-tgk","tld4":"tgk","tld2":"tg","glotocode":"taji1245","walls":"taj","lat":38.6666666667,"long":70.0,"locale":"tg"},
+{"section_id":18521,"dd_lang":"lg-tha","tld4":"tha","tld2":"th","glotocode":"thai1261","walls":"tha","lat":16.0,"long":101.0,"locale":"th"},
+{"section_id":18670,"dd_lang":"lg-tir","tld4":"tir","tld2":"ti","glotocode":"tigr1271","walls":"tig","lat":14.5,"long":38.5,"locale":"ti"},
+{"section_id":19487,"dd_lang":"lg-tuk","tld4":"tuk","tld2":"tk","glotocode":"turk1304","walls":"tkm","lat":40.0,"long":58.0,"locale":"tk"},
+{"section_id":18481,"dd_lang":"lg-tgl","tld4":"tgl","tld2":"tl","glotocode":"taga1270","walls":"tag","lat":15.0,"long":121.0,"locale":"tl"},
+{"section_id":19511,"dd_lang":"lg-tur","tld4":"tur","tld2":"tr","glotocode":"nucl1301","walls":"tur","lat":39.0,"long":35.0,"locale":"tr"},
+{"section_id":18196,"dd_lang":"lg-tat","tld4":"tat","tld2":"tt","glotocode":"tata1255","walls":"tmi","lat":55.5,"long":49.0,"locale":"tt"},
+{"section_id":18122,"dd_lang":"lg-tah","tld4":"tah","tld2":"ty","glotocode":"tahi1242","walls":"tah","lat":-17.6666666667,"long":-149.583333333,"locale":"ty"},
+{"section_id":19772,"dd_lang":"lg-uig","tld4":"uig","tld2":"ug","glotocode":"uigh1240","walls":"uyg","lat":40.0,"long":80.0,"locale":"ug"},
+{"section_id":19792,"dd_lang":"lg-ukr","tld4":"ukr","tld2":"uk","glotocode":"ukra1253","walls":"ukr","lat":49.0,"long":33.0,"locale":"uk"},
+{"section_id":19890,"dd_lang":"lg-urd","tld4":"urd","tld2":"ur","glotocode":"urdu1245","walls":"urd","lat":25.0,"long":67.0,"locale":"ur"},
+{"section_id":19980,"dd_lang":"lg-uzb","tld4":"uzb","tld2":"uz","locale":"uz"},
+{"section_id":20119,"dd_lang":"lg-vie","tld4":"vie","tld2":"vi","glotocode":"viet1252","walls":"vie","lat":10.5,"long":106.5,"locale":"vi"},
+{"section_id":20530,"dd_lang":"lg-wln","tld4":"wln","tld2":"wa","locale":"wa"},
+{"section_id":21033,"dd_lang":"lg-yid","tld4":"yid","tld2":"yi","locale":"yi"},
+{"section_id":21441,"dd_lang":"lg-zha","tld4":"zha","tld2":"za","locale":"za"},
+{"section_id":21449,"dd_lang":"lg-zho","tld4":"zho","tld2":"zh","locale":"zh"}]

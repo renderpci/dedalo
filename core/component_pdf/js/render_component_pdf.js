@@ -194,7 +194,7 @@ const get_content_data_edit = async function(self) {
 * INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+const get_input_element_edit = async (i, current_value, inputs_container, self) => {
 
 	const mode 		 	= self.mode
 	const is_inside_tool= self.is_inside_tool
@@ -211,24 +211,70 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		const viewer_url 	= DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
 	// iframe
 		if (pdf_url) {
+
+			// const pdf_viewer = ui.create_dom_element({
+			//    	element_type	: "div",
+			//    	class_name 		: 'pdf_viewer_frame',
+			//    	parent 			: li
+			// })
+			//
+			// const shadow = pdf_viewer.attachShadow({mode: 'open'});
+			//
+			// const response =  await fetch(viewer_url)
+			// // console.log("response", response);
+			// // .then(response => response.text())
+			// // .then( txt =>  new DOMParser().parseFromString(txt, 'text/html'))
+	  		// const txt = await response.text();
+			// // console.log("txt", txt);
+			// const html =  new DOMParser().parseFromString(txt, 'text/html');
+			//
+			// console.log("html", html);
+			//
+			// shadow.appendChild(html.querySelector('html') )// = txt;
+
 			const iframe = ui.create_dom_element({
 				element_type	: "iframe",
 				class_name 		: 'pdf_viewer_frame',
 				parent 			: li
 			})
-			iframe.setAttribute('allowfullscreen',true)
-			// when the standard html of pdf.js is loaded, is possible get the library and set the pdf
-			iframe.addEventListener('load', (e) =>{
+			// iframe.setAttribute('allowfullscreen',true)
+
+			// const iframe = ui.create_dom_element({
+			//    	element_type	: "object",
+			// 	type 			: 'text/html',
+			//    	class_name 		: 'pdf_viewer_frame',
+			//    	parent 			: li
+			// })
+			// iframe.setAttribute('data', viewer_url)
+
+			//
+			// // when the standard html of pdf.js is loaded, is possible get the library and set the pdf
+			 document.addEventListener("webviewerloaded",  (e) =>{
+
+			// shadow.addEventListener('load', (e) =>{
+				// DEDALO_APPLICATION_LANG
+				const locale = 'es-ES'
 				// Libraries are loaded via <script> tag, create shortcut to access PDF.js exports.
 				// the pdf_js is not necesary load here, we will use only the viewer
 				// self.pdf_js 						= iframe.contentWindow['pdfjs-dist/build/pdf'];
 				const PDFViewerApplicationOptions 	= iframe.contentWindow['PDFViewerApplicationOptions'];
 				self.pdf_viewer 					= iframe.contentWindow['PDFViewerApplication'];
+
 				// remove the first page / default page of the library
 				PDFViewerApplicationOptions.set('defaultUrl', '');
+				PDFViewerApplicationOptions.set('locale', 'es-ES');
+				console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions);
+
 				// load the pdf in the viewer
 				self.pdf_viewer.open(pdf_url).then(function (pdfDocument) {
-					console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
+					// PDFViewerApplicationOptions.document.webL10n.setLanguage('es-ES')
+					// PDFViewerApplicationOptions.set('locale', 'es-ES');
+					// PDFViewerApplicationOptions.locale = 'es-ES'
+					console.log("slef.pdf_viewer.PdfViewer", self.pdf_viewer);
+					console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions.get('locale'));
+
+					PDFViewerApplicationOptions.set('locale', 'es-ES');
+					// console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
 				});
 			})
 

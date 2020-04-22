@@ -1,0 +1,168 @@
+
+
+
+// wrapper_tool
+	.wrapper_tool.tool_pdf_extractor {
+
+
+		>.content_data {
+
+			>form {
+				display: flex;
+			    flex-wrap: wrap;
+				align-items: center;
+
+				>label {
+					padding: 0.9em;
+					padding-left: 1.75em;
+					padding-right: 1.75em;
+					background-color: #ececec;
+					border: 1px dashed #ff9800;
+					border-radius: 0.25em;
+					cursor: pointer;
+
+					&.hover {
+						// border: 1px dashed #20F41B;
+						background-color: #ff9800;
+						color: #ffffff;
+						cursor: move !important;
+						// cursor: grab;
+					}
+
+					&.loading_file {
+						opacity: 0.25;
+						pointer-events: none;
+					}
+
+					img, span {
+						pointer-events: none;
+					}
+
+					>img {
+						height: 1.5em;
+						padding-right: 1em;
+						vertical-align: text-bottom;
+					}
+				}
+
+				// >label, >.filedrag {
+				// 	line-height: 1em;
+				// 	background-color: #ececec;
+				// 	border-radius: 0.25em;
+				// 	padding: 3em;
+				// }
+
+				>input {
+					width: 0.1px;
+					height: 0.1px;
+					opacity: 0;
+					overflow: hidden;
+					position: absolute;
+					z-index: -1;
+				}
+
+				// >.filedrag {
+				// 	padding-top: 0.5em;
+				// 	padding-bottom: 0.5em;
+				// 	border: 1px dashed #ff9800;
+				// 	color: #494949;
+
+				// 	&.hover {
+				// 		// border: 1px dashed #20F41B;
+				// 		background-color: #ff9800;
+				// 		color: #ffffff;
+				// 		cursor: move;
+				// 		// cursor: grab;
+				// 	}
+				// }
+
+				// Removed for the time being
+				// .file_info {
+				// 	margin-left: 2em;
+				// 	display: flex;
+				// 	flex: 1 1;
+				// 	align-items: center;
+				// 	flex-wrap: wrap;
+
+				// 	>div {
+				// 		line-height: 1em;
+				// 	}
+
+				// 	img {
+				// 		max-height: 100px;
+				// 	}
+				// }
+			}
+
+
+
+			>.progress_bar_container {
+				padding: 0;
+
+
+				>div.progress_info {
+					font-size: 1.25em;
+					color: #787878;
+					font-weight: 300;
+					padding-top: 0.75em;
+    				padding-bottom: 0.25em;
+				}
+
+				>progress.progress_line {
+					 width: 100%;
+					 margin-bottom: 0.5em;
+					 // -webkit-appearance: none;
+					 // height: 3px;
+				}
+				// ::-webkit-progress-bar {
+				//   background-color: grey;
+				// }
+
+			}//end >.progress_bar_container
+
+
+			// response_container
+			>.response_container {
+				padding-top: 0.5em;
+	    		padding-bottom: 1.5em;
+	    		display: flex;
+
+	    		>.response_msg {
+	    			flex: 1 1 70%;
+
+	    			.blink {
+					  animation: blinker 1s linear infinite;
+					}
+					@keyframes blinker {
+					  50% {
+					    opacity: 0;
+					  }
+					}
+	    		}
+
+	    		>img.preview_image {
+	    			height: 120px;
+	    			object-fit: contain;
+					object-position: center;
+	    		}
+			}
+
+
+			// system info
+			.info {
+				background-color: #f5f5f5;
+				color: #8c8c8c;
+				>* {
+					display: grid;
+					grid-template-columns: 1fr 5fr;
+					padding: 0.5em;
+
+					>label {
+						padding-right: 2em;
+					}
+				}
+			}
+
+		}//end content_data
+
+	}//end .wrapper_tool.tool_pdf_extractor
