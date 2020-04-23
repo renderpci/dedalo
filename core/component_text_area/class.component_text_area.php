@@ -271,7 +271,6 @@ class component_text_area extends component_common {
 		$valor ='';
 
 		$dato = $this->get_dato();
-
 		if(empty($dato)) {
 			return (string)$valor;
 		}

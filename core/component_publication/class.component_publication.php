@@ -34,7 +34,7 @@ class component_publication extends component_relation_common {
 	
 	/**
 	* GET_VALOR
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	* Get value . default is get dato . overwrite in every different specific component
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 			
@@ -55,7 +55,6 @@ class component_publication extends component_relation_common {
 
 		// modo changes value result
 		switch ($this->modo) {
-
 			case 'diffusion':
 				$valor = 'no';
 				if (!empty($dato)) {				

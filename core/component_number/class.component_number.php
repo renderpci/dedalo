@@ -78,7 +78,6 @@ class component_number extends component_common {
 		}
 
 		return (string)$valor;
-
 	}//end get_valor
 
 

@@ -86,8 +86,7 @@ class component_iri extends component_common {
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
 		
-		$dato = $this->get_dato();
-		
+		$dato = $this->get_dato();		
 
 		if ($index==='all') {
 			$valor = null;
