@@ -260,7 +260,7 @@ class tools_register {
 			}
 			$tool_object->description = $value;
 
-		// affected components (tipos)
+		// affected tipos (components)
 			$component_tipo = 'dd1350';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
@@ -268,8 +268,9 @@ class tools_register {
 															 $section_id,
 															 'list',
 															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$value 			= $component->get_dato() ?? [];
+															 $section_tipo);			
+			$dato 			= (array)$component->get_dato();
+			$value 			= reset($dato);
 			$tool_object->affected_tipos = $value;
 
 		// show in inspector
@@ -323,7 +324,8 @@ class tools_register {
 															 'list',
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
-			$value 			= $component->get_dato();
+			$dato 			= (array)$component->get_dato();
+			$value 			= reset($dato);
 			$tool_object->ontology = $value;
 
 
