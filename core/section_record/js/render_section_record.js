@@ -405,7 +405,7 @@ const build_id_column = function(self) {
 						})
 					}
 				// delete_line
-					if (permissions>1 && self.caller.model!=='component_portal') {
+					if (permissions>1 && (initiator && initiator.indexOf('component_')!==-1)) {
 						const delete_line = ui.create_dom_element({
 							element_type	: 'div',
 							class_name 		: 'delete_line',
@@ -426,7 +426,6 @@ const build_id_column = function(self) {
 
 	return id_column
 };//end build_id_column
-
 
 
 
