@@ -16,7 +16,7 @@ class component_svg extends component_media_common {
 	*/
 	public function get_valor() {
 
-		return $this->valor = $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
+		return $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
 	}//end get_valor
 
 

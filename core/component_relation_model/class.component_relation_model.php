@@ -21,11 +21,12 @@ class component_relation_model extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $separator=', ') {
 
-		$valor  = null;		
-		$dato   = $this->get_dato();
-		if (!empty($dato)) {
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
 			
-			# Test dato format (b4 changed to object)
+		# debug. Test dato format (b4 changed to object)
 			if(SHOW_DEBUG) {
 				foreach ($dato as $key => $current_value) {
 					if (!is_object($current_value)) {
@@ -33,33 +34,17 @@ class component_relation_model extends component_relation_common {
 							dump($dato," dato");
 						}
 						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
-						return $valor;
+						return null;
 					}
 				}
 			}
-
-			/*
-			# Always run list of values			
-			$ar_list_of_values	= $this->get_ar_list_of_values2($lang);
-			foreach ($ar_list_of_values->result as $key => $item) {
-				
-				$locator = $item->value;
-				$label 	 = $item->label;
-
-				if (true===locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') )) {
-					$valor = $label;
-					break;
-				}
-			}
-			*/
-			$ar_values = [];
-			foreach ($dato as $key => $value) {
-				$current_label = component_relation_common::get_locator_value($value, $lang, false);
-					#dump($current_label, ' current_label ++ '.to_string());
-				$ar_values[] = $current_label;
-			}
-			$valor = implode($separator, $ar_values);	
-		}//end if (!empty($dato)) 
+		
+		$ar_values = [];
+		foreach ($dato as $key => $value) {
+			$current_label = component_relation_common::get_locator_value($value, $lang, false);
+			$ar_values[] = $current_label;
+		}
+		$valor = implode($separator, $ar_values);	
 
 
 		return $valor;

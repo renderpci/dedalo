@@ -699,22 +699,26 @@ class component_relation_parent extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
 		
-		$ar_valor  	= array();		
-		$dato   	= $this->get_dato();
+		$ar_valor = [];				
 		foreach ((array)$dato as $key => $current_locator) {
 			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
 		}
 
 		# Set component valor
-		$valor='';
-		foreach ($ar_valor as $key => $value) {
-			if(!empty($value)) {
-				$valor .= $value;
-				if(end($ar_valor)!=$value) $valor .= ', ';
+			$valor='';
+			foreach ($ar_valor as $key => $value) {
+				if(!empty($value)) {
+					$valor .= $value;
+					if(end($ar_valor)!=$value) $valor .= ', ';
+				}
 			}
-		}
-
+		
 		return (string)$valor;
 	}//end get_valor	
 

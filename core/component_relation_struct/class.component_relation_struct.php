@@ -20,30 +20,28 @@ class component_relation_struct extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
-		#return "working here! ".__METHOD__;
-	
-		if (isset($this->valor)) {
-			return $this->valor;
-		}
 
-		$ar_valor  	= array();		
-		$dato   	= $this->get_dato();
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}	
+
+		$ar_valor = [];	
 		foreach ((array)$dato as $key => $current_locator) {
 			$ar_valor[] = self::get_locator_value( $current_locator, $lang );
-		}//end if (!empty($dato)) 
+		}
 
 		# Set component valor
-		# $this->valor = implode(', ', $ar_valor);
 		$valor='';
 		foreach ($ar_valor as $key => $value) {
 			if(!empty($value)) {
 				$valor .= $value;
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
-		}		
-		$this->valor = $valor;
+		}
+		
 
-		return (string)$this->valor;
+		return (string)$valor;
 	}//end get_valor
 
 
