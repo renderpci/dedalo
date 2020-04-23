@@ -31,65 +31,44 @@ class component_autocomplete_hi extends component_relation_common {
 	* GET VALOR
 	* Get resolved string representation of current tesauro value
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $separator='<br>' ) {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $separator='<br>') {
 
-		$dato = $this->get_dato();
-		if ( empty($dato) ) {
-			if ($format==='array') {
-				return array();
-			}else{
-				return '';
+		// load data
+			$dato = $this->get_dato();
+			if ( empty($dato) ) {
+				return ($format==='array') ? [] : '';
 			}
-		}
 
-		if(!is_array($dato)) return "Sorry, type:" .gettype($dato). " not supported yet (Only array format)";
-
-		if (isset($this->ar_valor_resolved)) {
-
-			$ar_valor = $this->ar_valor_resolved;
-
-		}else{
-
-			# lang never must be DEDALO_DATA_NOLAN
+		// check format
+			if(!is_array($dato)) {
+				return "Sorry, type:" .gettype($dato). " not supported yet (Only array format)";
+			}
+		
+		// lang never must be DEDALO_DATA_NOLAN
 			if ($lang===DEDALO_DATA_NOLAN) {
 				$lang = DEDALO_DATA_LANG; // Force current lang as lang
 			}
 
-			# Propiedades
-			$propiedades = $this->get_propiedades();
-			$show_parents 	 = (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
-			if(SHOW_DEBUG===true) {
-				#dump($propiedades, ' propiedades ++ '.to_string());
-				#dump($show_parents, ' show_parents ++ '.to_string());
-				#$show_parents = false;
-			}
-
-
+		// properties
+			$propiedades 	= $this->get_propiedades();
+			$show_parents 	= (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
+		
+		// dato iterate	and resolve each locator
 			$ar_valor = array();
 			foreach ($dato as $key => $current_locator) {
 
-				# $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false )
-				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents); // , ['rsc85','rsc86']
-				#dump($current_valor, ' current_valor ++ '.to_string()); break;
-
-				#
-				# REMOVE TAGS FROM NON TRANSLATED TERMS
-				# $current_valor = strip_tags($current_valor);
-
+				// params: $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
+				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents);
+				
 				$current_locator_string 			= json_encode($current_locator);
 				$ar_valor[$current_locator_string]  = $current_valor;
-
 			}//end foreach ($dato as $key => $current_locator)
 
-			$this->ar_valor_resolved = $ar_valor;
-		}
-
-
-		if ($format==='array') {
-			$valor = $ar_valor;
-		}else{
-			$valor = implode($separator, $ar_valor);
-		}
+		// set value based on format
+			$valor = ($format==='array')
+				? $ar_valor
+				: implode($separator, $ar_valor);
+		
 
 		return $valor;
 	}//end get_valor
@@ -362,7 +341,6 @@ class component_autocomplete_hi extends component_relation_common {
 
 
 
-
 	/**
 	* ADD_HIERARCHY_SECTIONS_FROM_TYPES
 	* Merge resolved hierarchy_sections_from_types with received hierarchy_sections
@@ -615,92 +593,134 @@ class component_autocomplete_hi extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=DEDALO_DATA_LANG, $option_obj=null ) {
+	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) {
 
-		// separator.
-		$separator = ' - '; # (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
+		// separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
+			$separator = ' - ';
 
-		$diffusion_value = $this->get_valor($lang, 'string', $separator);
+		// load dato
+			$dato = $this->get_dato();
+			if (empty($dato)) {
+				return null;
+			}
 
-		#dump($option_obj, ' option_obj ++ '.to_string());
-		#dump(func_get_args(), 'func_get_args() ++ '.to_string());
 
-		if (!empty($option_obj)) {
+		if (empty($option_obj)) {
+			
+			// default case
+			$diffusion_value = $this->get_valor($lang, 'string', $separator);
+
+		}else{
+			
+			// properties options defined
 			foreach ($option_obj as $key => $value) {
-				// parents recursive resolve
-					if ($key==='add_parents' && $value===true) {
-						$dato = $this->get_dato();
+								
+				if ($key==='add_parents' && $value===true) {
+					
+					// parents recursive resolve
+						$ar_diffusion_value = [];
 						foreach ($dato as $current_locator) {
-							// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-							$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
-							$ar_terms = [];
-							foreach ($ar_parents as $parent_locator) {
-								$term = ts_object::get_term_by_locator( $parent_locator, $lang, $from_cache=true );
-								if (!empty($term)) {
-									$ar_terms[] = $term;
-								}
-							}
-							if (!empty($ar_terms)) {
-								$diffusion_value .= $separator . implode($separator, $ar_terms);
-							}
-						}
-					}
 
-					if ($key==='custom_parents') {
-						$dato = $this->get_dato();
-						foreach ($dato as $current_locator) {
-							// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+							// self term plus parents.
+							// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
+								$ar_diffusion_value[] = component_relation_common::get_locator_value($current_locator, $lang, true, false);
+
+							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+							// $ar_terms = [];
+							// foreach ($ar_parents as $parent_locator) {
+							// 	$term = ts_object::get_term_by_locator( $parent_locator, $lang, $from_cache=true );
+							// 	if (!empty($term)) {
+							// 		$ar_terms[] = $term;
+							// 	}
+							// }
+							// if (!empty($ar_terms)) {
+							// 	// $diffusion_value .= $separator . implode($separator, $ar_terms);
+							// 	$ar_diffusion_value = array_merge($ar_diffusion_value, $ar_terms);
+							// }
+						}
+						$diffusion_value = implode($separator, $ar_diffusion_value);
+
+				}else if ($key==='custom_parents') {
+
+					$ar_diffusion_value = [];
+					foreach ($dato as $current_locator) {
+
+						$locator_terms = [];
+
+						// self include. $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
+							$locator_terms[] = component_relation_common::get_locator_value($current_locator, $lang, false, false);
+
+						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+							
+						// iterate parents
+							$stopped  = false;
 							$ar_terms = [];
-							$stopped = false;
 							foreach ($ar_parents as $parent_locator) {
-								if(isset($value->parent_end_by_term_id)){
-									$current_term_id = $parent_locator->section_tipo.'_'.$parent_locator->section_id;
-									if(in_array($current_term_id, $value->parent_end_by_term_id)){
-										$stopped = true;
-										 break;
-									}
-								}
-								if(isset($value->parent_end_by_model)){
-									$ar_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($parent_locator->section_tipo,['component_relation_model'],true, true, true, true);
-									
-									$component = component_common::get_instance('component_relation_model',
-																				 $ar_tipo[0],
-																				 $parent_locator->section_id,
-																				 'list',
-																				 DEDALO_DATA_NOLAN,
-																				$parent_locator->section_tipo);
-									$component_dato = $component->get_dato();
-									if(isset($component_dato[0])){
-										$current_term_id = $component_dato[0]->section_tipo.'_'.$component_dato[0]->section_id;
-										if(in_array($current_term_id, $value->parent_end_by_model)){
+
+								// parent_end_by_term_id. Uses a term_id as last valid parent
+									if(isset($value->parent_end_by_term_id)){
+										$current_term_id = $parent_locator->section_tipo.'_'.$parent_locator->section_id;
+										if(in_array($current_term_id, $value->parent_end_by_term_id)){
 											$stopped = true;
 											break;
-										};
+										}
 									}
-								}
 
-								$term = ts_object::get_term_by_locator( $parent_locator, $lang, $from_cache=true );
-								if (!empty($term)) {
-									$ar_terms[] = $term;
-								}
+								// parent_end_by_model. Uses a model as last valid parent
+									if(isset($value->parent_end_by_model)){
+										$ar_tipo   = section::get_ar_children_tipo_by_modelo_name_in_section($parent_locator->section_tipo,['component_relation_model'],true, true, true, true);										
+										$component = component_common::get_instance('component_relation_model',
+																					 $ar_tipo[0],
+																					 $parent_locator->section_id,
+																					 'list',
+																					 DEDALO_DATA_NOLAN,
+																					 $parent_locator->section_tipo);
+										$component_dato = $component->get_dato();
+										if(isset($component_dato[0])){
+											$current_term_id = $component_dato[0]->section_tipo.'_'.$component_dato[0]->section_id;
+											if(in_array($current_term_id, $value->parent_end_by_model)){
+												$stopped = true;
+												break;
+											}
+										}
+									}
+
+									$term = ts_object::get_term_by_locator($parent_locator, $lang, $from_cache=true);
+									if (!empty($term)) {
+										$ar_terms[] = $term;
+									}
 							}
+
+						// append whole or part of results when no empty
 							if (!empty($ar_terms)) {
-								if($stopped===false){
-									if(isset($value->parents_splice)){
-										$ar_terms = array_splice($ar_terms, $value->parents_splice)
+									dump($ar_terms, ' ar_terms ++ '.to_string());
+								// parents_splice. Selects a portion of the complete parents array
+									if($stopped===false){
+										if(isset($value->parents_splice)){
+											array_splice($ar_terms, $value->parents_splice);
+										}
 									}
-
-								}
-								$diffusion_value .= $separator . implode($separator, $ar_terms);
+								// append terms
+									$locator_terms = array_merge($locator_terms, $ar_terms);
 							}
-						}
-					}
+
+						// join locator terms and append
+							$ar_diffusion_value[] = implode(', ', $locator_terms);
+
+					}//end foreach ($dato as $current_locator)
+
+					// join all locator values
+						$diffusion_value = implode($separator, $ar_diffusion_value);
+
+				}//end if ($key==='custom_parents')
 			}//end foreach ($option_obj as $key => $value)
 		}
 
-
+		
 		$diffusion_value = strip_tags($diffusion_value);
+
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value

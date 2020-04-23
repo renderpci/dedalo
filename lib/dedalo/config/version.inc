@@ -1681,6 +1681,8 @@
 	Valencia 22-04-2020 5.5.39
 		Fix bug in components get_valor($lang) when using lang, to prevent value to be cached
 
+	Valencia 23-04-2020 5.5.40
+		Added component_autocomplete_hi diffusion options of parents by properties custom_parents
 
 
 	WORK IN PROGRESS
@@ -1702,12 +1704,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.39';
+	$DEDALO_VERSION = '5.5.40';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-04-2020');
+	define('DEDALO_BUILD'	, '23-04-2020');
 
 
 	/*
