@@ -78,7 +78,6 @@ class component_input_text extends component_common {
 		$valor ='';
 
 		$dato = $this->get_dato();
-
 		if(empty($dato)) {
 			return (string)$valor;
 		}

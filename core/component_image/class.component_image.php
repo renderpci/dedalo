@@ -183,7 +183,7 @@ class component_image extends component_media_common {
 	*/
 	public function get_valor() {
 
-		return $this->valor = $this->get_image_id() .'.'. DEDALO_IMAGE_EXTENSION;
+		return $this->get_image_id() .'.'. DEDALO_IMAGE_EXTENSION;
 	}//end get_valor
 
 

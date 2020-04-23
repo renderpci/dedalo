@@ -219,12 +219,9 @@ class component_external extends component_common {
 	* If index var is received, return dato element corresponding to this index if exists
 	* @return string $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG ) {
+	public function get_valor($lang=DEDALO_DATA_LANG) {
 		
-		$valor ='';
-
-		$dato = $this->get_dato();
-
+		$dato  = $this->get_dato();
 		$valor = $dato;
 
 		return (string)$valor;

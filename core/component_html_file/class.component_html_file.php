@@ -133,7 +133,7 @@ class component_html_file extends component_common {
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	*/
 	public function get_valor() {
-		return $this->valor = $this->get_html_file_id();
+		return $this->get_html_file_id();
 	}
 	
 	/**
