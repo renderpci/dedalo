@@ -81,8 +81,20 @@ class component_json extends component_common {
 
 
 
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() {
 
-/**
+		$allowed_extensions = ['json'];
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
+	/**
 	* UPDATE_DATO_VERSION
 	* @return
 	*/
@@ -128,7 +140,98 @@ class component_json extends component_common {
 				}
 				break;
 		}
-	}
+	}//end update_dato_version
 
-};//end class
-?>
+
+
+	/**
+	* ADD_FILE
+	* Receive a file info object from tool upload with data properties as:
+	* {
+	* 	"name": "mydata.json",
+	*	"type": "text/json",
+	*	"tmp_name": "/private/var/tmp/php6nd4A2",
+	*	"error": 0,
+	*	"size": 132898
+	* }
+	* @return object $response
+	*/
+	public function add_file($file_data) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// file info
+			$file_extension = strtolower(pathinfo($file_data->name, PATHINFO_EXTENSION));
+	
+		// validate extension			
+			if (!in_array($file_extension, $this->get_allowed_extensions())) {
+				$response->msg  = "Error: " .$file_extension. " is an invalid file type ! ";
+				$response->msg .= "Allowed file extensions are: ". implode(', ', $allowed_extensions);
+				return $response;
+			}		
+
+		// read the uploaded file
+			$file_content = file_get_contents($file_data->tmp_name);
+
+		// remove it after store
+			unlink($file_data->tmp_name);
+
+		// read content
+			if ($value = json_decode($file_content)) {
+				
+				// uploaded ready file info
+				$response->ready 	= (object)[
+					'imported_parsed_data' => $value
+				];
+
+			}else{
+
+				$response->msg  = "Error: " .$file_data->name. " content is an invalid json data";
+				return $response;
+			}			
+
+		// all is ok
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+		
+
+		return $response;
+	}//end add_file
+
+
+
+	/**
+	* PROCESS_UPLOADED_FILE
+	* @return object $response
+	*/
+	public function process_uploaded_file($file_data) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// imported_data. (Is json decoded data from raw uploaded file content)
+			$imported_data = $file_data->imported_parsed_data;
+
+		// wrap data with array to maintain component data format
+			$dato = [$imported_data];
+			$this->set_dato($dato);
+		
+		// save full dato
+			$this->Save();
+
+		$response = new stdClass();
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done';
+
+		return $response;
+	}//end process_uploaded_file
+
+
+				
+
+
+
+}//end class
