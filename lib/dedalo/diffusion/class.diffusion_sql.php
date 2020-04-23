@@ -1092,22 +1092,26 @@ class diffusion_sql extends diffusion  {
 						break;
 
 					default:
+						$option_obj = is_object($propiedades) && property_exists($propiedades, 'option_obj')
+							? $propiedades->option_obj
+							: null;
+
 						# Set unified diffusion value
-						$ar_field_data['field_value'] =	$current_component->get_diffusion_value( $options->lang );
+						$ar_field_data['field_value'] =	$current_component->get_diffusion_value($options->lang, $option_obj);
 							#dump($ar_field_data['field_value'], '1 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
 						# Fallback to main lang
 						if (empty($ar_field_data['field_value'])) {
 							$main_lang = common::get_main_lang($current_component->get_section_tipo(), $current_component->get_parent());
 								#dump($main_lang, ' main_lang ++ $options->lang: '.to_string($options->lang) ." - section_tipo: ".$current_component->get_section_tipo());
 							$current_component->set_lang($main_lang);
-							$ar_field_data['field_value'] =	$current_component->get_diffusion_value( $main_lang );
+							$ar_field_data['field_value'] =	$current_component->get_diffusion_value($main_lang, $option_obj);
 								#dump($ar_field_data['field_value'], '2 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
 
 							# Fallback to ALL langs ... last try
 							if (empty($ar_field_data['field_value'])) {
 								foreach (common::get_ar_all_langs() as $current_t_lang) {
 								 	$current_component->set_lang($current_t_lang);
-									$ar_field_data['field_value'] =	$current_component->get_diffusion_value( $current_t_lang );
+									$ar_field_data['field_value'] =	$current_component->get_diffusion_value($current_t_lang, $option_obj);
 									if (!empty($ar_field_data['field_value'])) break;
 								 }
 							}
@@ -3191,12 +3195,12 @@ class diffusion_sql extends diffusion  {
 			$custom_arguments = array();
 			if (isset($process_dato_arguments->custom_arguments)) {
 				$custom_arguments = (array)$process_dato_arguments->custom_arguments;
-			}
+			}			
 			if ($method==='get_diffusion_value') {
 				#$value = $component->{$method}($options->lang);
 				#$custom_arguments[] = $options->lang;
 				array_unshift($custom_arguments, $options->lang); // always as first argument (!)
-			}
+			}			
 			$value = call_user_func_array(array($component, $method), $custom_arguments);
 
 			switch ($output) {

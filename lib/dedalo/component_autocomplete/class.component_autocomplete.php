@@ -982,6 +982,25 @@ class component_autocomplete extends component_relation_common {
 
 
 	/**
+	* GET_DIFFUSION_RESOLVE_VALUE
+	* @return 
+	*/
+	public function get_diffusion_resolve_value($option_obj=null) {
+
+		// dump(func_get_args(), 'func_get_args() ++ '.to_string());
+
+		$dato = $this->get_dato();
+		
+		$options = new stdClass();
+			$options->lang 			= $this->lang;
+			$options->propiedades 	= $option_obj;
+
+		$value = diffusion_sql::resolve_value($options, $dato);
+
+		return $value;		
+	}//end get_diffusion_resolve_value
+
+	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
 	* Receive value from section list and return proper value to show in list

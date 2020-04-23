@@ -1678,11 +1678,19 @@
 	Valencia 22-04-2020 5.5.38
 		Fix bug in component_common::get_value_with_fallback_from_dato_full that not change returned value when lang is changed (publication, etc.)
 
+
 	Valencia 22-04-2020 5.5.39
 		Fix bug in components get_valor($lang) when using lang, to prevent value to be cached
 
+
 	Valencia 23-04-2020 5.5.40
 		Added component_autocomplete_hi diffusion options of parents by properties custom_parents
+	
+
+	Valencia 23-04-2020 5.5.41
+		Add get_diffusion_resolve_value method to component_autocomplete and intergrate in class diffusion_sql
+
+
 
 
 	WORK IN PROGRESS
@@ -1704,7 +1712,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.40';
+	$DEDALO_VERSION = '5.5.41';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
