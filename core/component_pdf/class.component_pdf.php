@@ -177,7 +177,7 @@ class component_pdf extends component_media_common {
 	*/
 	public function get_valor() {
 
-		return $this->valor = $this->get_pdf_id() ;
+		return $this->get_pdf_id();
 	}//end get_valor
 
 
