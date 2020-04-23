@@ -559,7 +559,7 @@ class component_relation_common extends component_common {
 	* Resolve locator to string value to show in list etc.
 	* @return string $valor
 	*/
-	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true ) {
+	public static function get_locator_value($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true) {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
 			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string());;
