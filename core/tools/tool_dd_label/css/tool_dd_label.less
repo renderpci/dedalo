@@ -1,0 +1,44 @@
+
+
+
+// wrapper_tool
+	.wrapper_tool.tool_dd_label {
+
+
+		>.content_data {
+
+			>.label_matix{
+				>li{
+					display: grid;
+
+				}
+				>.label_header{
+					align-items: center;
+					justify-items: center;
+					background-color: #f78a1c;
+				    color: #fff;
+				    font-weight: 400;
+				    z-index: 2;
+					>.label{
+						padding: 0.6em;
+					}
+				}
+				>.row{
+					// system info
+					>.label {
+						&[contentEditable=true]:empty:not(:focus):before{
+						    content:attr(data-placeholder);
+							color: #aaa;
+						}
+						height:20px;
+						border:1px solid gray;
+					}
+				}
+
+			}
+
+
+
+		}//end content_data
+
+	}//end .wrapper_tool.tool_dd_label
