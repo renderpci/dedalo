@@ -54,6 +54,16 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 		// const dd_modal = document.createElement('dd-modal')
 		// wrapper_page.appendChild(dd_modal)
 
+	// events
+		// page click
+		wrapper_page.addEventListener("click", unactive_components)
+		function unactive_components() {
+			const active_component = document.querySelector(".wrapper_component.active")
+			if (active_component) {
+				active_component.classList.remove("active")
+			}				
+		}
+
 
  	return wrapper_page
 }//end render_page.prototype.edit
