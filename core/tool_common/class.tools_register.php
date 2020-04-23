@@ -260,7 +260,7 @@ class tools_register {
 			}
 			$tool_object->description = $value;
 
-		// affected components (tipos)
+		// affected tipos (components)
 			$component_tipo = 'dd1350';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance($model,
@@ -270,7 +270,7 @@ class tools_register {
 															 DEDALO_DATA_LANG,
 															 $section_tipo);
 			$value 			= $component->get_dato() ?? [];
-			$tool_object->affected_tipos = $value;
+			$tool_object->affected_tipos = reset($value);
 
 		// show in inspector
 			$component_tipo = 'dd1331';
