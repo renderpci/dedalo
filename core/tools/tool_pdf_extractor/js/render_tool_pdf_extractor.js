@@ -112,7 +112,7 @@ const get_content_data = async function(self) {
 				parent 			: page_range
 			})
 		// page_out
-			const page_in = ui.create_dom_element({
+			const page_out = ui.create_dom_element({
 				element_type	: 'input',
 				type 			: 'text',
 				class_name		: 'page_out',
