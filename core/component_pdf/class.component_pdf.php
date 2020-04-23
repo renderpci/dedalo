@@ -167,7 +167,7 @@ class component_pdf extends component_media_common {
 	public function set_dato($dato) {
 
 		parent::set_dato( $dato );
-	}
+	}//end set_dato
 
 
 	/**
