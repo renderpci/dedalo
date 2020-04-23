@@ -604,7 +604,6 @@ class component_autocomplete_hi extends component_relation_common {
 				return null;
 			}
 
-
 		if (empty($option_obj)) {
 			
 			// default case
@@ -614,16 +613,18 @@ class component_autocomplete_hi extends component_relation_common {
 			
 			// properties options defined
 			foreach ($option_obj as $key => $value) {
-								
-				if ($key==='add_parents' && $value===true) {
-					
+							
+				if ($key==='add_parents') {
+
+					$show_parents = (bool)$value;
+
 					// parents recursive resolve
 						$ar_diffusion_value = [];
 						foreach ($dato as $current_locator) {
 
 							// self term plus parents.
 							// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
-								$ar_diffusion_value[] = component_relation_common::get_locator_value($current_locator, $lang, true, false);
+								$ar_diffusion_value[] = component_relation_common::get_locator_value($current_locator, $lang, $show_parents, false);
 
 							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
@@ -639,7 +640,8 @@ class component_autocomplete_hi extends component_relation_common {
 							// 	$ar_diffusion_value = array_merge($ar_diffusion_value, $ar_terms);
 							// }
 						}
-						$diffusion_value = implode($separator, $ar_diffusion_value);
+					
+					$diffusion_value = implode($separator, $ar_diffusion_value);				
 
 				}else if ($key==='custom_parents') {
 
@@ -695,11 +697,16 @@ class component_autocomplete_hi extends component_relation_common {
 
 						// append whole or part of results when no empty
 							if (!empty($ar_terms)) {
-									dump($ar_terms, ' ar_terms ++ '.to_string());
+								
 								// parents_splice. Selects a portion of the complete parents array
 									if($stopped===false){
 										if(isset($value->parents_splice)){
-											array_splice($ar_terms, $value->parents_splice);
+											$splice_values = is_array($value->parents_splice) ? $value->parents_splice : [$value->parents_splice];
+											if (isset($splice_values[1])) {
+												array_splice($ar_terms, $splice_values[0], $splice_values[1]);
+											}else{
+												array_splice($ar_terms, $splice_values[0]);
+											}											
 										}
 									}
 								// append terms
@@ -718,8 +725,8 @@ class component_autocomplete_hi extends component_relation_common {
 			}//end foreach ($option_obj as $key => $value)
 		}
 
-		
-		$diffusion_value = strip_tags($diffusion_value);
+		// clean untranslated tags (<mark>)
+			$diffusion_value = strip_tags($diffusion_value);
 
 
 		return (string)$diffusion_value;
