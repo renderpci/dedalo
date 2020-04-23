@@ -2466,7 +2466,7 @@ abstract class common {
 
 	/**
 	* GET_TOOLS
-	* @return
+	* @return array $tools
 	*/
 	public function get_tools() {
 
@@ -2474,35 +2474,38 @@ abstract class common {
 		$model 				= get_class($this);
 		$tipo 				= $this->tipo;
 		$is_component 		= strpos($model, 'component_')===0;
+		$translatable 		= $this->traducible;
+		$properties 		= $this->get_propiedades(true);
+		$with_lang_versions = isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
 		$tools = [];
-		foreach ($registered_tools as $tool) {
-
-			if( in_array($model, $tool->affected_models)
-				|| ($is_component===true && in_array('all_components', $tool->affected_models))
-				|| (is_array($tool->affected_tipos) && in_array($tipo, $tool->affected_tipos))
+		foreach ($registered_tools as $tool) {			
+			
+			$affected_tipos  = isset($tool->affected_tipos) ? $tool->affected_tipos : [];
+			$affected_models = isset($tool->affected_models) ? $tool->affected_models : [];
+			$requirement_translatable = isset($tool->requirement_translatable) ? (bool)$tool->requirement_translatable : false;
+			
+			if( 	in_array($model, $affected_models)
+				||  in_array($tipo,  $affected_tipos)
+				||  ($is_component===true && in_array('all_components', $affected_models))				
 			  ) {
 
-				if (isset($tool->requirement_translatable) && $tool->requirement_translatable===true) {
+				if ($requirement_translatable===true) {
 
-					$is_translatable = $is_component ? ($this->traducible==='no' ? false : true) : false;
+					$is_translatable = ($is_component===true)
+						? (($translatable==='no' && $with_lang_versions!==true) ? false : true) 
+						: false;
 
-					if ($tool->requirement_translatable===$is_translatable) {
+					if ($requirement_translatable===$is_translatable) {
 						$tools[] = $tool;
 					}
 
 				}else{
 					$tools[] = $tool;
 				}
-
-
 			}
 		}
-
-
-		if ($model==='component_text_area' && $tool->name==='tool_tc') {
-			dump($tool, ' tool ++ '.to_string());
-		}
+		#	dump($tools, ' tools ++ '.to_string());
 
 
 		return $tools;

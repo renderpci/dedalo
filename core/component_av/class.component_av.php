@@ -111,7 +111,7 @@ class component_av extends component_media_common {
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	*/
 	public function get_valor() {
-		return $this->valor = $this->get_video_id();
+		return $this->get_video_id();
 	}//end get_valor
 
 
