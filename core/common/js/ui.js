@@ -320,7 +320,7 @@ export const ui = {
 		*	continue aplying another custom actions
 		*/
 		active : async (component, actived_component) => {
-
+			
 			if (typeof actived_component==="undefined") {
 				console.warn("[ui.component.active]: WARNING. Received undefined actived_component!");
 				return false
@@ -341,14 +341,16 @@ export const ui = {
 					component.node.map(function(item_node) {
 						item_node.classList.remove("active")
 					})
+
+				// remove service autocomplete if active
 					if(component.autocomplete_active === true){
 						component.autocomplete.destroy()
 						component.autocomplete_active = false
 						component.autocomplete = null
-					}
-
-				return false
+					}				
 			}
+
+			return false
 		},//end active
 
 

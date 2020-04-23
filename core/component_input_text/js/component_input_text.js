@@ -33,6 +33,7 @@ export const component_input_text = function(){
 
 	this.duplicates = false
 
+
 	return true
 }//end component_input_text
 
@@ -151,6 +152,5 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 	return record
 }//end is_unique
-
 
 

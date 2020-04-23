@@ -26,8 +26,12 @@ class component_relation_index extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
 		
-		$ar_valor  	= array();		
-		$dato   	= $this->get_dato();
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		$ar_valor = array();		
 		foreach ((array)$dato as $key => $current_locator) {
 			$ar_valor[] = self::get_locator_value( $current_locator, $lang );			
 		}//end if (!empty($dato)) 
@@ -42,7 +46,7 @@ class component_relation_index extends component_relation_common {
 		}		
 		
 
-		return (string)$this->valor;
+		return (string)$valor;
 	}//end get_valor
 
 

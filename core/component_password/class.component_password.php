@@ -36,7 +36,6 @@ class component_password extends component_common {
 		$valor ='';
 
 		$dato = $this->get_dato();
-
 		if(empty($dato)) {
 			return (string)$valor;
 		}

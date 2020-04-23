@@ -584,27 +584,18 @@ class component_state extends component_common {
 	*/
 	public function get_valor() {
 
-		if (isset($this->valor)) {
-			return $this->valor;
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
 		}
 
-		if(SHOW_DEBUG===true) {
-			$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-		$dato 			= $this->get_dato();
 		$all_state_dato = $this->get_dato_recursive();
 		$final_dato 	= array_merge($dato, $all_state_dato);
 		
-		$this->valor = $this->resolve_valor($final_dato);
-			#dump($valor, ' valor');
+		$valor = $this->resolve_valor($final_dato);		
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
 
-		return $this->valor;
+		return $valor;
 	}//end get_valor
 
 

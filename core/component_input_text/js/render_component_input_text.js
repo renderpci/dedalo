@@ -29,8 +29,7 @@ render_component_input_text.prototype.list = async function() {
 
 	const self = this
 
-	// Options vars
-		const context 	= self.context
+	// short vars
 		const data 		= self.data
 		const value 	= data.value || []
 
@@ -136,39 +135,38 @@ const add_events = function(self, wrapper) {
 		wrapper.addEventListener('change', async (e) => {
 
 			// update
-			if (e.target.matches(element_type + '.input_value')) {
-				//console.log("++update e.target:",JSON.parse(JSON.stringify(e.target.dataset.key)));
-				//console.log("++update e.target value:",JSON.parse(JSON.stringify(e.target.value)));
+				if (e.target.matches(element_type + '.input_value')) {
+					//console.log("++update e.target:",JSON.parse(JSON.stringify(e.target.dataset.key)));
+					//console.log("++update e.target value:",JSON.parse(JSON.stringify(e.target.value)));
 
-				// is_unique check
-					// if (self.context.properties.unique) {
-					// 	// const result = await check_duplicates(self, e.target.value, false)
-					// 	if (self.duplicates) {
-					// 		e.target.classList.add("duplicated")
-					// 		const message = ui.build_message("Warning. Duplicated value " + self.duplicates.section_id)
-					// 		wrapper.appedChild(message)
-					// 		return false
-					// 	}
-					// }
+					// is_unique check
+						// if (self.context.properties.unique) {
+						// 	// const result = await check_duplicates(self, e.target.value, false)
+						// 	if (self.duplicates) {
+						// 		e.target.classList.add("duplicated")
+						// 		const message = ui.build_message("Warning. Duplicated value " + self.duplicates.section_id)
+						// 		wrapper.appedChild(message)
+						// 		return false
+						// 	}
+						// }
 
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: (e.target.value.length>0) ? e.target.value : null,
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
+					const changed_data = Object.freeze({
+						action	: 'update',
+						key		: JSON.parse(e.target.dataset.key),
+						value	: (e.target.value.length>0) ? e.target.value : null,
+					})
+					self.change_value({
+						changed_data : changed_data,
+						refresh 	 : false
+					})
+					.then((save_response)=>{
+						// event to update the dom elements of the instance
+						event_manager.publish('update_value_'+self.id, changed_data)
+					})
 
-				return true
-			}
-
-		}, false)
+					return true
+				}
+		})//end change
 
 	// click event [click]
 		wrapper.addEventListener("click", e => {
@@ -217,7 +215,6 @@ const add_events = function(self, wrapper) {
 
 	// keyup event
 		wrapper.addEventListener("keyup", async (e) => {
-			e.stopPropagation()
 
 			if (self.context.properties.unique && e.target.value!=='') {
 				const unique = await self.is_unique(e.target.value)
@@ -229,7 +226,7 @@ const add_events = function(self, wrapper) {
 					)
 				}
 			}
-		})
+		})//end keyup
 
 	// dblclick event
 		//wrapper.addEventListener("dblclick", function(e){
@@ -447,10 +444,12 @@ const get_buttons = (self) => {
 */
 const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
-	const mode 		 	= self.mode
-	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
-	const element_type 	= (multi_line===true) ? 'textarea' :'input'
-	const is_inside_tool= self.is_inside_tool
+	const mode 		 		 = self.mode
+	const multi_line 		 = (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+	const element_type 		 = (multi_line===true) ? 'textarea' :'input'
+	const is_inside_tool 	 = self.is_inside_tool
+	const with_lang_versions = self.context.properties.with_lang_versions || false
+		console.log("with_lang_versions:",with_lang_versions);
 
 	// li
 		const li = ui.create_dom_element({
