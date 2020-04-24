@@ -179,7 +179,9 @@ const get_rows = async function(self, ar_langs, header=false, name, key) {
 		})
 		label_name.addEventListener("blur", function(e){
 			const old_value 	= self.ar_names[key]
-			const value 		= label_name.innerText
+			const dirty_value 	= label_name.innerText
+			const lower_value 	= dirty_value.replace(/\w/g, u => u.toLowerCase())
+			const value 		= lower_value.replace(/\s/g, '_')
 
 			const data = self.ar_data.filter(item => item.name === old_value)
 
@@ -188,6 +190,7 @@ const get_rows = async function(self, ar_langs, header=false, name, key) {
 			}
 
 			self.ar_names[key] 	= value
+			label_name.innerText = value
 
 			// update the data into the instance, prepared to save
 			// (but is not saved directly, the user need click in the save button)

@@ -75,13 +75,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 21,
-                            "hour": 12,
-                            "time": 64934224150,
+                            "day": 24,
+                            "hour": 13,
+                            "time": 64934486533,
                             "year": 2020,
                             "month": 4,
-                            "minute": 29,
-                            "second": 10
+                            "minute": 22,
+                            "second": 13
                         }
                     }
                 ]
@@ -134,12 +134,71 @@
                     "<br data-mce-bogus=\"1\">"
                 ]
             }
+        },
+        "dd1372": {
+            "inf": "Etiquetas [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    [
+                        {
+                            "lang": "lg-spa",
+                            "name": "page_in",
+                            "value": "página inicial"
+                        },
+                        {
+                            "lang": "lg-spa",
+                            "name": "page_out",
+                            "value": "página final"
+                        },
+                        {
+                            "lang": "lg-vlca",
+                            "name": "page_out",
+                            "value": "sdfsdfs"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "page_out",
+                            "value": "page out"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "page_in",
+                            "value": "page in"
+                        },
+                        {
+                            "lang": "lg-spa",
+                            "name": "total_pages",
+                            "value": "páginas totales"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "total_pages",
+                            "value": "total pages"
+                        },
+                        {
+                            "lang": "lg-cat",
+                            "name": "page_in",
+                            "value": "pàgina inicial"
+                        },
+                        {
+                            "lang": "lg-cat",
+                            "name": "page_out",
+                            "value": "pàgina final"
+                        },
+                        {
+                            "lang": "lg-cat",
+                            "name": "total_pages",
+                            "value": "pàgines totals"
+                        }
+                    ]
+                ]
+            }
         }
     },
     "section_id": 2,
     "created_date": "2020-04-21 12:07:00",
     "section_tipo": "dd1340",
-    "modified_date": "2020-04-21 12:29:10",
+    "modified_date": "2020-04-24 13:22:13",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",
