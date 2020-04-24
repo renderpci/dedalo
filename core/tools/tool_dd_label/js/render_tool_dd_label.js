@@ -70,6 +70,8 @@ render_tool_dd_label.prototype.edit = async function (options={render_level:'ful
 */
 const get_content_data = async function(self) {
 
+	const ar_langs = self.loaded_langs
+	const ar_names = self.ar_names
 
 	const fragment = new DocumentFragment()
 
@@ -80,34 +82,34 @@ const get_content_data = async function(self) {
 			text_content 	: '',
 			parent 			: fragment
 		})
-		add_button.addEventListener("mouseup", (e) =>{
-			this.zoom.activate()
-			activate_status(zoom)
+		add_button.addEventListener("mouseup", async (e) =>{
+			const row = await get_rows(self, ar_langs, false, '', ar_names.length)
+			label_matix.appendChild(row)
 		})
 
 	// table
 		const label_matix = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'label_matix',
-			text_content 	: '',
 			parent 			: fragment
 		})
+	label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr);
+	grid-template-rows: repeat(${ar_names.length+1}, 1fr);
+	`
 
-	const ar_langs = self.loaded_langs
+
 	// header
 	const header = await get_rows(self, ar_langs, true, 'name')
 
 	label_matix.appendChild(header)
 
 	// labels
-	const ar_names = self.ar_data.find(item => item.type==='main').names
 
 	for (let i = 0; i < ar_names.length; i++) {
 		const current_name = ar_names[i]
-		const row = await get_rows(self, ar_langs, false, current_name)
+		const row = await get_rows(self, ar_langs, false, current_name, i)
 		label_matix.appendChild(row)
 	}
-
 
 	// content_data
 		const content_data = document.createElement("div")
@@ -124,7 +126,7 @@ const get_content_data = async function(self) {
 * GET_ROWS
 * @return DOM node content_data
 */
-const get_rows = async function(self, ar_langs, header=false, name) {
+const get_rows = async function(self, ar_langs, header=false, name, key) {
 
 	const lang_length = ar_langs.length
 
@@ -133,20 +135,72 @@ const get_rows = async function(self, ar_langs, header=false, name) {
 			element_type	: 'li',
 			class_name		: header===true ? 'label_header' : 'row'
 		})
-		li.style = `grid-template-columns: repeat(${lang_length+1}, 1fr);`
 
-	// label name
-		const language = ui.create_dom_element({
+	// remove button
+	if(header !==true){
+		const remove_button = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'label name',
-			text_content 	: header===true ? 'name' : name,
+			class_name		: 'button tool remove',
+			parent 			: li
+		})
+		remove_button.addEventListener("mouseup", async (e) =>{
+				const old_value 	= self.ar_names[key]
+
+				for (let i = self.ar_data.length - 1; i >= 0; i--) {
+					const item = self.ar_data[i]
+					if(item.name === old_value){
+						self.ar_data.splice(i,1)
+					}
+				}
+				 self.ar_names.splice(key,1)
+				// for (var i = 0; i < ar_keys.length; i++) {
+				// 	self.ar_data.splice(ar_keys[i],1)
+				// }
+				li.remove()
+				self.update_data()
+		})
+	}else{
+		const remove_button = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
 			parent 			: li
 		})
 
+	}
+
+
+	// label name
+		const label_name = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label name',
+			text_content 	: header===true ? 'name' : name,
+			contenteditable : header===true ? false : true,
+			parent 			: li
+		})
+		label_name.addEventListener("blur", function(e){
+			const old_value 	= self.ar_names[key]
+			const value 		= label_name.innerText
+
+			const data = self.ar_data.filter(item => item.name === old_value)
+
+			for (let i = 0; i < data.length; i++) {
+				data[i].name = value
+			}
+
+			self.ar_names[key] 	= value
+
+			// update the data into the instance, prepared to save
+			// (but is not saved directly, the user need click in the save button)
+			self.update_data()
+		})
+		// if the user press return key = 13, we blur the text box
+		label_name.addEventListener("keydown", (e) =>{
+			if(e.keyCode === 13) label_name.blur()
+		})
 
 	for (let i = 0; i < lang_length; i++) {
 		const current_lang = ar_langs[i]
-		get_inputs(self, current_lang, header, name, li)
+		get_inputs(self, current_lang, header, name, key, li)
 	}
 
 	return li
@@ -159,21 +213,58 @@ const get_rows = async function(self, ar_langs, header=false, name) {
 * GET_INPUTS
 * @return DOM node content_data
 */
-const get_inputs = async function(self, current_lang, header, name, li) {
+const get_inputs = async function(self, current_lang, header, name, key, li) {
 
-	const data = self.ar_data.find(item => item.name === name && item.lang === current_lang.value )
+	let data = self.ar_data.find(item => item.name === name && item.lang === current_lang.value )
 
 	const label_value = typeof data !== 'undefined'
 		? data.value
 		: ''
 
 	// label language
-		const language = ui.create_dom_element({
+		const label_language = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
 			text_content 	: header===true ? current_lang.label : label_value,
 			dataset 		: header===true ? '' : {"placeholder": name},
 			contenteditable : header===true ? false : true,
 			parent 			: li
+		})
+
+		// label_language.addEventListener("change", async (e) =>{
+		// 	data.value = label_language.value
+		// 	console.log("data", data);
+		// })
+
+		// when the user has double click in the text we active the edit text box
+		// label_language.addEventListener("mouseup", (e) =>{
+		// 	label_language.focus();
+		// })
+		// when the user blur the text box save the name into the layer structure
+		label_language.addEventListener("blur", (e)=>{
+
+			if(label_language.innerText==='') return
+			if(typeof data !== 'undefined'){
+				data.value = label_language.innerText
+			}else{
+				const name 		= self.ar_names[key]
+				const new_data 	= {
+					lang 	: current_lang.value,
+					name 	: name,
+					value 	: label_language.innerText
+				}
+				self.ar_data.push(new_data)
+				data = self.ar_data.find(item => item.name === name && item.lang === current_lang.value )
+			}
+
+			console.log("data", data);
+			console.log("self.ar_data", self.ar_data);
+			// update the data into the instance, prepared to save
+			// (but is not saved directly, the user need click in the save button)
+		 	self.update_data()
+		})
+		// if the user press return key = 13, we blur the text box
+		label_language.addEventListener("keydown", (e) =>{
+			if(e.keyCode === 13) label_language.blur()
 		})
 }// end get_inputs
