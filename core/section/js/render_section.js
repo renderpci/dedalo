@@ -206,7 +206,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 			// button_new section				
 				const button_new = ui.create_dom_element({
 					element_type	: 'button',
-					class_name		: 'light new',
+					class_name		: 'light add',
 					text_content	: get_label.nuevo || "New",
 					parent 			: buttons
 				})
