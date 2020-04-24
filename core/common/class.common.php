@@ -1497,7 +1497,7 @@ abstract class common {
 	*/
 	public function get_structure_context($permissions=0, $sqo_object=false) {
 
-		// class called (model name too like component_input_text)			
+		// class called (model name too like component_input_text)
 			$called_model = get_class($this);
 
 		// sort vars
@@ -1545,19 +1545,19 @@ abstract class common {
 				if (!empty($request_dd_object->parent)) {
 					// set
 					$parent = $request_dd_object->parent;
-				}				
+				}
 			}
 
 			// 2 . From injected 'from_parent'
 			if (!isset($parent) && isset($this->from_parent)) {
-				
+
 				// injected by the element
 				$parent = $this->from_parent;
 			}
 
 			// 3 . From structure (fallback)
-			if (!isset($parent)) {				
-				$parent = $this->get_section_tipo();				
+			if (!isset($parent)) {
+				$parent = $this->get_section_tipo();
 			}
 
 		// parent_grouper (structure parent)
@@ -1619,7 +1619,7 @@ abstract class common {
 
 		// Filter_by_list
 			if (isset($properties->source->filter_by_list)) {
-				
+
 				// Calculate ar elements to show in filter. Resolve self section items
 					$filter_list = array_map(function($item){
 						$item->section_tipo = ($item->section_tipo==='self')
@@ -1627,7 +1627,7 @@ abstract class common {
 							: $item->section_tipo;
 						return $item;
 					}, $properties->source->filter_by_list);
-				
+
 				$filter_by_list = component_relation_common::get_filter_list_data($filter_list);
 				$dd_object->filter_by_list = $filter_by_list;
 			}
@@ -1735,7 +1735,7 @@ abstract class common {
 				$current_section_tipo 	= $dd_object->section_tipo;
 				$mode 					= $dd_object->mode ?? 'list';
 				$model 					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				
+
 				// common temporal excluded/mapped models *******
 					// $match_key = array_search($model, common::$ar_temp_map_models);
 					// if (false!==$match_key) {
@@ -1787,7 +1787,7 @@ abstract class common {
 						// get the JSON context of the related component
 							$item_options = new stdClass();
 								$item_options->get_context 	 = true;
-								$item_options->get_data 	 = false;								
+								$item_options->get_data 	 = false;
 							$element_json = $related_element->get_json($item_options);
 
 						// temp ar_subcontext
@@ -2177,7 +2177,7 @@ abstract class common {
 								continue;
 							}
 
-						// current section tipo	
+						// current section tipo
 							$current_section_tipo = $source_search_item->section_tipo;
 
 						$path = search::get_query_path($current_tipo, $current_section_tipo);
@@ -2479,21 +2479,21 @@ abstract class common {
 		$with_lang_versions = isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
 		$tools = [];
-		foreach ($registered_tools as $tool) {			
-			
-			$affected_tipos  = isset($tool->affected_tipos) ? $tool->affected_tipos : [];
-			$affected_models = isset($tool->affected_models) ? $tool->affected_models : [];
+		foreach ($registered_tools as $tool) {
+
+			$affected_tipos  = isset($tool->affected_tipos)  ? (array)$tool->affected_tipos : [];
+			$affected_models = isset($tool->affected_models) ? (array)$tool->affected_models : [];
 			$requirement_translatable = isset($tool->requirement_translatable) ? (bool)$tool->requirement_translatable : false;
-			
+
 			if( 	in_array($model, $affected_models)
 				||  in_array($tipo,  $affected_tipos)
-				||  ($is_component===true && in_array('all_components', $affected_models))				
+				||  ($is_component===true && in_array('all_components', $affected_models))
 			  ) {
 
 				if ($requirement_translatable===true) {
 
 					$is_translatable = ($is_component===true)
-						? (($translatable==='no' && $with_lang_versions!==true) ? false : true) 
+						? (($translatable==='no' && $with_lang_versions!==true) ? false : true)
 						: false;
 
 					if ($requirement_translatable===$is_translatable) {

@@ -269,7 +269,7 @@ class tools_register {
 															 $section_id,
 															 'list',
 															 DEDALO_DATA_LANG,
-															 $section_tipo);			
+															 $section_tipo);
 			$dato 			= (array)$component->get_dato();
 			$value 			= reset($dato);
 			$tool_object->affected_tipos = $value;
@@ -342,6 +342,21 @@ class tools_register {
 			$dato 			= (array)$component->get_dato();
 			$value 			= reset($dato);
 			$tool_object->properties = $value;
+
+
+		// labels
+			$component_tipo = 'dd1372';
+			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($model,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$dato 			= (array)$component->get_dato();
+			$value 			= reset($dato);
+			$tool_object->labels = $value;
+
 
 		// config from tools_config files
 			$tool_object->config = new stdClass();
@@ -552,4 +567,3 @@ $ontology_data = json_decode('[
 #ontology::import($ontology_data);
 ontology::import_tools();
 */
-
