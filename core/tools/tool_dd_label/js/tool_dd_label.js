@@ -50,19 +50,29 @@ tool_dd_label.prototype.init = async function(options) {
 	// call the generic commom tool init
 		const common_init = tool_common.prototype.init.call(this, options);
 
-	console.log("options", options);
-
 	// languages
 		self.loaded_langs 	= page_globals.dedalo_projects_default_langs
-		self.ar_data		= this.caller.data.value[0]
+		self.ar_data		= typeof this.caller.data.value[0]==="object" && JSON.stringify(this.caller.data.value[0])==="{}"
+			? []
+			: this.caller.data.value[0]
 		self.ar_names 		= [...new Set(self.ar_data.map(item => item.name))];
 
+	
 	return common_init
 }//end init
 
-tool_dd_label.prototype.update_data= async function(options) {
+
+
+/**
+* UPDATE_DATA
+* Set new json data to json editor
+*/
+tool_dd_label.prototype.update_data = function() {
 
 	const self = this
 	this.caller.set_value(self.ar_data)
 
-}
+	return true
+}//end update_data
+
+
