@@ -109,7 +109,7 @@ const get_content_data = async function(self) {
 		// button_new . Call API to create new section and navigate to the new record
 			const button_new = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'light new',
+				class_name		: 'light add',
 				text_content	: get_label.nuevo || "New",
 				parent 			: buttons_container
 			})
@@ -145,7 +145,7 @@ const get_content_data = async function(self) {
 	// data_link
 		const data_link = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'light data_link',
+			class_name		: 'light download data_link',
 			text_content 	: 'Download record data',
 			parent 			: content_data
 		})
@@ -153,7 +153,7 @@ const get_content_data = async function(self) {
 			e.preventDefault()
 			// window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
 			window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id )
-		})
+		})	
 
 
 	return content_data
