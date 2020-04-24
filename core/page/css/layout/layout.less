@@ -851,12 +851,6 @@
 					.inputs_container>li {
 						// align-items: initial;
 
-						.changed {
-							// border: 1px solid #ea0000;
-							background-color: #ea0000 !important;
-						}
-
-
 					}
 
 					// override json editor
@@ -1728,16 +1722,6 @@
 		left: calc(100vw - 16.4em);
 		border: 1px solid #eee;
 
-		.data_link {
-			&:before {
-				.build_button('file-download-solid.svg', black, 1);
-				height: 2em;
-				width: 100%;
-				margin: 1em;
-			}
-		}
-
-
 		@media screen and (max-width: @width_break_point_1) {
 			width: 100%;
 			left: 0;
@@ -2214,23 +2198,42 @@
 	.component_json {
 		z-index: 1;
 
-		.button_save {
-			height: 31px;
+		button.button_save {
+			display: none; // init hidden
 			position: absolute;
-			top: 2px;
-			right: 2px;
+			top: 0px;
+			right: 0px;
 			z-index: 1;
-			padding-left: 1.7em;
-			padding-right: 1.7em;
-			background-color: #b7d2fd;
-			border: 1px solid #3883fa;
-			color: #3883fa;
-			line-height: 28px;
-			border-radius: 3px;
-			cursor: pointer;
-			&:active {
-				background-color: #8FA3C4;
-				color: #ffffff;
+			height: 36px;
+			// border: 1px solid #2e6cd0;
+			// background-color: #b7d2fe;
+			// color: #2e6cd0;
+
+			&:before {
+				background-color: #2e6cd0;
+			}
+			// padding-left: 1.7em;
+			// padding-right: 1.7em;
+			// background-color: #b7d2fd;
+			// border: 1px solid #3883fa;
+			// color: #3883fa;
+			// line-height: 28px;
+			// border-radius: 3px;
+			// cursor: pointer;
+			// &:active {
+			// 	background-color: #8FA3C4;
+			// 	color: #ffffff;
+			// }
+
+			&.warning {
+				display: flex;
+				background-color: #e8e0e1;
+				border: 1px solid darken(@color_danger, 5%);
+				color: @color_danger;
+
+				&:before {
+					background-color: @color_danger;
+				}
 			}
 		}
 
@@ -2369,6 +2372,30 @@
 			}
 		}
 	}
+
+
+
+// json_editor
+	.jsoneditor {
+
+		>.jsoneditor-menu a.jsoneditor-poweredBy {
+			top: unset;
+			bottom: 0;
+		    padding: 5px;
+		    color: #b3b3b3;
+		}
+
+		&.isDirty {
+			border: 1px solid @color_danger !important;
+
+			>.jsoneditor-menu {
+				background-color: @color_danger !important;
+			}
+
+		}
+
+	}
+
 
 
 
