@@ -381,12 +381,31 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		    },
 		    // onBlur: function() {
 		    // 	console.log('content changed:', this);
+		    // 	alert("content changed");
 		    // }
 		}
 		const editor = new JSONEditor(li, editor_options, current_value)
 
-		// append current editor
-			self.editors.push(editor)
+		// blur event
+			// const ace_editor = editor.aceEditor
+			// ace_editor.on("blur", function(e){
+			// 	e.stopPropagation()
+			// 
+			// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+			// 	const edited_value 	= editor.get()
+			// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
+			// 	if (!changed) {
+			// 		return false
+			// 	}
+			//
+			// 	if (confirm("Save json data changes?")) {
+			// 		button_save.click()
+			// 	}
+			// })
+						
+
+	// append current editor
+		self.editors.push(editor)
 
 
 	return li
