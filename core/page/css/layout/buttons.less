@@ -95,10 +95,9 @@
 		&.upload {
 			.add_mask('upload.svg');
 		}
-		&.download {
-			.add_mask('download.svg');
-			// transform: scaleY(-1);
-		}
+		// &.download {
+		// 	.add_mask('download.svg');
+		// }
 		&.find {
 			.add_mask('find.svg');
 		}
@@ -158,23 +157,23 @@
 
 		&.primary {
 			color: #fff;
-			background-color: #007bff;
-			border-color: #007bff;
+			background-color: @color_primary;
+			border-color: @color_primary;
 		}
 		&.secondary {
 			color: #fff;
-			background-color: #6c757d;
-			border-color: #6c757d;
+			background-color: @color_secondary;
+			border-color: @color_secondary;
 		}
 		&.success {
 			color: #fff;
-			background-color: #28a745;
-			border-color: #28a745;
+			background-color: @color_success;
+			border-color: @color_success;
 		}
 		&.danger {
 			color: #fff;
-			background-color: #dc3545;
-			border-color: #dc3545;
+			background-color: @color_danger;
+			border-color: @color_danger;
 		}
 		&.warning {
 			// color: #212529;
@@ -186,25 +185,61 @@
 		}
 		&.info {
 			color: #fff;
-			background-color: #17a2b8;
-			border-color: #17a2b8;
+			background-color: @color_info;
+			border-color: @color_info;
 		}
 		&.light {
 			color: #212529;
-			background-color: #f8f9fa;
-			border-color: #f8f9fa;
+			background-color: @color_light;
+			border-color: @color_light;
 		}
 		&.dark {
 			color: #fff;
-			background-color: #343a40;
-			border-color: #343a40;
+			background-color: @color_dark;
+			border-color: @color_dark;
 		}
 		&.link {
 			font-weight: 400;
-			color: #007bff;
+			color: @color_primary;
 			text-decoration: none;
 		}
+
+
+		&.save {
+			.append_icon('save.svg')
+		}
+		// &.download {
+		// 	.append_icon('download.svg')
+		// }
 	}
+
+
+// fn append_icon
+	.append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
+		&:before {
+			content: " ";
+			display: inline-block;
+			width: 1em;
+			height: 1em;
+			margin-right: 0.5em;
+			vertical-align: baseline;
+			background-color: @color;
+			opacity: @opacity;
+			.add_mask(@icon_name);
+		}
+	}
+
+
+	// icons for buttons
+		.download {
+			@icon_name : 'download.svg';
+			button& {
+				.append_icon(@icon_name);
+			}
+			.button& {
+				.add_mask(@icon_name);
+			}
+		}
 
 
 
