@@ -1,0 +1,26 @@
+.wrapper_tool.tool_dd_label > .content_data > .label_matix {
+  display: grid;
+}
+.wrapper_tool.tool_dd_label > .content_data > .label_matix > li {
+  display: contents;
+}
+.wrapper_tool.tool_dd_label > .content_data > .label_matix > li > * {
+  align-items: center;
+  justify-items: center;
+}
+.wrapper_tool.tool_dd_label > .content_data > .label_matix > li.label_header > .label {
+  padding: 0.6em;
+  text-align: center;
+  background-color: #f78a1c;
+  color: #fff;
+  font-weight: 400;
+  z-index: 2;
+}
+.wrapper_tool.tool_dd_label > .content_data > .label_matix > li.row > .label {
+  border: 1px solid gray;
+}
+.wrapper_tool.tool_dd_label > .content_data > .label_matix > li.row > .label[contentEditable=true]:empty:not(:focus):before {
+  content: attr(data-placeholder);
+  color: #aaa;
+}
+/*# sourceMappingURL=tool_dd_label.css.map */

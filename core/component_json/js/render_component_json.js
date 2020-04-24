@@ -250,7 +250,7 @@ const get_buttons = (self) => {
 			title 		 : "Download data",
 			parent 		 : fragment
 		})
-		button_download.addEventListener("click", function(e) {						
+		button_download.addEventListener("click", function(e) {
 			const export_obj  = self.data.value[0]
 			const export_name = self.id
 			download_object_as_json(export_obj, export_name)
@@ -295,7 +295,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			parent 		 : li
 		})
 		button_save.addEventListener("click", function(e) {
-			e.stopPropagation()			
+			e.stopPropagation()
 
 			const current_value = editor.get()
 
@@ -352,7 +352,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			},			
 			onChange : function(json) {				
 				on_change(self, editor)
-			},			
+			},
 			onValidate: function() {
 				validated = true
 
@@ -384,7 +384,10 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		    // }
 		}
 		const editor = new JSONEditor(li, editor_options, current_value)
-		
+
+		// append current editor
+			self.editors.push(editor)
+
 
 	return li
 }//end get_input_element
@@ -422,15 +425,15 @@ const on_change = function(self, editor) {
 * Force automatic download of component data value
 */
 const download_object_as_json = function(export_obj, export_name){
-   
+
     const data_str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(export_obj,undefined,2));
-    
+
     const download_anchor_node = document.createElement('a');
     	  download_anchor_node.setAttribute("href",     data_str);
     	  download_anchor_node.setAttribute("download", export_name + ".json");
-    
+
     document.body.appendChild(download_anchor_node); // required for firefox
-    
+
     download_anchor_node.click();
     download_anchor_node.remove();
 

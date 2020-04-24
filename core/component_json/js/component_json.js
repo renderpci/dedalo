@@ -31,6 +31,8 @@ export const component_json = function(){
 
 	this.tools
 
+	this.editors = []
+
 	return true
 }//end component_json
 
@@ -90,6 +92,18 @@ component_json.prototype.load_editor = async function() {
 	return js_promise
 };//end load_editor
 
+
+/**
+* SET_VALUE
+* @return promise
+*/
+component_json.prototype.set_value = async function(value) {
+	const self = this
+
+	self.editors[0].set(value)
+
+
+}// end set_value
 
 
 // /**
