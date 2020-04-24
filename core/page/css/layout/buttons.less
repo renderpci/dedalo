@@ -44,71 +44,16 @@
 		// background-position: center;
 		// background-size: contain;
 		//padding: 0.5em;
-
 		line-height: 1em;
 		margin: 0.5em;
 		margin-top: 0.25em;
 		margin-bottom: 0.25em;
-
 
 		&:hover {
 			opacity: 1 !important;
 		}
 		&:active {
 			opacity: 0.4 !important;
-		}
-
-		// re-usable standard icons
-		&.remove {
-			.add_mask('trash.svg');
-		}
-		&.add {
-			.add_mask('add.svg');
-		}
-		&.edit {
-			.add_mask('edit.svg');
-		}
-		&.pen {
-			.add_mask('pen.svg');
-		}
-		&.reset {
-			.add_mask('eraser.svg');
-		}
-		&.align_justify {
-			.add_mask('justify.svg');
-		}
-		&.search {
-			.add_mask('find.svg');
-		}
-		&.email {
-			.add_mask('email.svg');
-		}
-		&.close {
-			.add_mask('close.svg');
-		}
-		&.link {
-			.add_mask('link.svg');
-		}
-		&.calendar {
-			.add_mask('calendar.svg');
-		}
-		&.upload {
-			.add_mask('upload.svg');
-		}
-		// &.download {
-		// 	.add_mask('download.svg');
-		// }
-		&.find {
-			.add_mask('find.svg');
-		}
-		&.save {
-			.add_mask('save.svg');
-		}
-		&.eye {
-			.add_mask('eye.svg');
-		}
-		&.full_screen {
-			.add_mask('full_screen.svg');
 		}
 
 	// inside buttons_container, all buttons are white
@@ -137,7 +82,7 @@
 		padding-bottom: 0.375rem;
 
 		// bootstrap
-		display: inline-block;
+		// display: inline-block;
 		font-weight: 400;
 		color: #212529;
 		text-align: center;
@@ -154,6 +99,9 @@
 		line-height: 1.5;
 		border-radius: .25rem;
 		transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+
+		display: flex;
+    	align-items: center;
 
 		&.primary {
 			color: #fff;
@@ -203,19 +151,11 @@
 			color: @color_primary;
 			text-decoration: none;
 		}
-
-
-		&.save {
-			.append_icon('save.svg')
-		}
-		// &.download {
-		// 	.append_icon('download.svg')
-		// }
 	}
 
 
-// fn append_icon
-	.append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
+// fn append_icon (used by tag element 'button')
+	.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
 		&:before {
 			content: " ";
 			display: inline-block;
@@ -230,16 +170,93 @@
 	}
 
 
-	// icons for buttons
-		.download {
-			@icon_name : 'download.svg';
-			button& {
-				.append_icon(@icon_name);
-			}
-			.button& {
-				.add_mask(@icon_name);
-			}
-		}
+
+// generic icons for buttons
+	.remove {
+		@icon_name : 'trash.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.add {
+		@icon_name : 'add.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.edit {
+		@icon_name : 'edit.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.pen {
+		@icon_name : 'pen.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.reset {
+		@icon_name : 'eraser.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.align_justify {
+		@icon_name : 'justify.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.search {
+		@icon_name : 'find.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.email {
+		@icon_name : 'email.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.close {
+		@icon_name : 'close.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.link {
+		@icon_name : 'link.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.calendar {
+		@icon_name : 'calendar.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.upload {
+		@icon_name : 'upload.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.download {
+		@icon_name : 'download.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.find {
+		@icon_name : 'find.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.save {
+		@icon_name : 'save.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.eye {
+		@icon_name : 'eye.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
+	.full_screen {
+		@icon_name : 'full_screen.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .add_mask(@icon_name); }
+	}
 
 
 
