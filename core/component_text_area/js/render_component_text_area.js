@@ -182,7 +182,7 @@ const add_events = function(self, wrapper) {
 				// }
 
 			// insert
-				if (e.target.matches('.button.add.add_input')) {
+				if (e.target.matches('.button.add_input')) {
 
 					const changed_data = Object.freeze({
 						action	: 'insert',
@@ -331,7 +331,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	const value_html = self.tags_to_html(current_value)
 
-	// li container
+		// li container
 		const li = ui.create_dom_element({
 			element_type : 'li'
 		})

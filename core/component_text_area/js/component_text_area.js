@@ -67,8 +67,10 @@ export const component_text_area = function(){
 * TAGS_TO_HTML
 */
 component_text_area.prototype.tags_to_html = function(value) {
-
-	const html = tr.add_tag_img_on_the_fly(value)
+	
+	const html = (value)
+		? tr.add_tag_img_on_the_fly(value)
+		: null
 
 	return html
 }// end
