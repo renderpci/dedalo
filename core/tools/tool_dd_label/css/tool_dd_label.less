@@ -1,0 +1,50 @@
+
+
+
+// wrapper_tool
+	.wrapper_tool.tool_dd_label {
+
+
+		>.content_data {
+
+			>.label_matix{
+				display: grid;
+
+				>li {
+					display: contents;
+
+					>* {
+						align-items: center;
+						justify-items: center;
+					}
+
+					&.label_header{
+						>.label{
+							padding: 0.6em;
+							text-align: center;
+							background-color: #f78a1c;
+						    color: #fff;
+						    font-weight: 400;
+						    z-index: 2;
+						}
+					}
+
+					&.row{
+						// system info
+						>.label {
+							&[contentEditable=true]:empty:not(:focus):before{
+							    content:attr(data-placeholder);
+								color: #aaa;
+							}
+							// height:20px;
+							border:1px solid gray;
+						}
+					}
+				}
+			}
+
+
+
+		}//end content_data
+
+	}//end .wrapper_tool.tool_dd_label
