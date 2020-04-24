@@ -1299,17 +1299,17 @@ export const ui = {
 				case 'big' :
 					// hide contents to avoid double scrollbars
 						const content_data_page = document.querySelector(".content_data.page")
-							  content_data_page.classList.add("display_none")
+							  content_data_page.classList.add("hide")
 						const menu_wrapper = document.querySelector(".content_data.page")
-							  menu_wrapper.classList.add("display_none")
+							  menu_wrapper.classList.add("hide")
 						const debug_div = document.getElementById("debug")
-							  if(debug_div) debug_div.classList.add("display_none")
+							  if(debug_div) debug_div.classList.add("hide")
 
 					// show hidded elements again on close
 						event_manager.subscribe('modal_close', () => {
-							content_data_page.classList.remove("display_none")
-							menu_wrapper.classList.remove("display_none")
-							if(debug_div) debug_div.classList.remove("display_none")
+							content_data_page.classList.remove("hide")
+							menu_wrapper.classList.remove("hide")
+							if(debug_div) debug_div.classList.remove("hide")
 						})
 
 					modal_container._showModalBig();
