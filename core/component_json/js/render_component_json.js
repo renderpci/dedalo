@@ -250,8 +250,7 @@ const get_buttons = (self) => {
 			title 		 : "Download data",
 			parent 		 : fragment
 		})
-		button_download.addEventListener("click", function(e) {
-						
+		button_download.addEventListener("click", function(e) {						
 			const export_obj  = self.data.value[0]
 			const export_name = self.id
 			download_object_as_json(export_obj, export_name)
@@ -290,8 +289,8 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 	// button_save
 		const button_save = ui.create_dom_element({
-			element_type : 'div',
-			class_name	 : 'button_save',
+			element_type : 'button',
+			class_name	 : 'primary save button_save',
 			text_content : "Save",
 			parent 		 : li
 		})
@@ -300,33 +299,40 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 			const current_value = editor.get()
 
-			if (validated!==true) {
-				// styles as error
-					self.node.map(item => {
-						item.classList.add("error")
-					})
-				alert("Error: component_json. Trying so save non validated json value!");
-				return false
-			}
-
-			const changed_data = Object.freeze({
-				action	: 'update',
-				key		: 0,
-				value	: current_value
-			})
-			self.change_value({
-				changed_data : changed_data,
-				refresh 	 : false
-			})
-			.then((save_response)=>{
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, changed_data)
-
-				const menu = li.querySelector(".jsoneditor-menu")
-				if (menu) {
-					menu.classList.remove("changed")
+			// check json format and validate
+				if (validated!==true) {
+					// styles as error
+						self.node.map(item => {
+							item.classList.add("error")
+						})
+					alert("Error: component_json. Trying so save non validated json value!");
+					return false
 				}
-			})
+
+			// check data has really changed. If not, stop save
+				const db_value 	= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+				const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
+				if (!changed) {
+					console.log("No changes are detected. Stop save");
+					return false
+				}
+
+			// save sequence
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: 0,
+					value	: current_value
+				})
+				self.change_value({
+					changed_data : changed_data,
+					refresh 	 : false
+				})
+				.then((save_response)=>{
+					// event to update the dom elements of the instance
+					event_manager.publish('update_value_'+self.id, changed_data)
+
+					on_change(self, editor)
+				})
 		})
 
 	// load
@@ -344,12 +350,8 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			onValidationError : function() {
 				validated = false
 			},			
-			onChange : function(json) {
-				self.changed = true				
-				const menu = li.querySelector(".jsoneditor-menu")
-				if (menu) {
-					menu.classList.add("changed")
-				}
+			onChange : function(json) {				
+				on_change(self, editor)
 			},			
 			onValidate: function() {
 				validated = true
@@ -382,11 +384,36 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		    // }
 		}
 		const editor = new JSONEditor(li, editor_options, current_value)
-
-
+		
 
 	return li
 }//end get_input_element
+
+
+
+/**
+* ON_CHANGE
+*/
+const on_change = function(self, editor) {
+
+	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+	const edited_value 	= editor.get()
+	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
+	const editor_wrapper= editor.frame
+	const button_save 	= editor_wrapper.previousElementSibling
+
+	if (changed) {
+		editor_wrapper.classList.add("isDirty")
+		button_save.classList.add("warning")
+	}else{
+		if (editor_wrapper.classList.contains("isDirty")) {
+			editor_wrapper.classList.remove("isDirty")
+			button_save.classList.remove("warning")
+		}		
+	}
+	
+	return true
+}//end on_change
 
 
 
