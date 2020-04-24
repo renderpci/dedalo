@@ -33,12 +33,6 @@
         },
         {
             "type": "dd151",
-            "section_id": "26",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
             "section_id": "-1",
             "section_tipo": "dd128",
             "from_component_tipo": "dd197"
@@ -69,13 +63,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 23,
-                            "hour": 18,
-                            "time": 64934418589,
+                            "day": 24,
+                            "hour": 13,
+                            "time": 64934485992,
                             "year": 2020,
                             "month": 4,
-                            "minute": 29,
-                            "second": 49
+                            "minute": 13,
+                            "second": 12
                         }
                     }
                 ]
@@ -85,7 +79,7 @@
             "inf": "Descripción [component_text_area]",
             "dato": {
                 "lg-eng": [
-                    "Label generator in languages, this tool will generate json and only is applied to component_json"
+                    "Label generator in languages, this tool will generate json and only will be applied to component_json"
                 ]
             }
         },
@@ -135,7 +129,7 @@
     "section_id": 3,
     "created_date": "2020-04-23 18:12:00",
     "section_tipo": "dd1340",
-    "modified_date": "2020-04-23 18:29:49",
+    "modified_date": "2020-04-24 13:13:12",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",
