@@ -127,6 +127,7 @@
 
 		display: flex;
     	align-items: center;
+    	justify-content: center;
 
     	// color
     	color: #212529; // default dark grey
@@ -293,7 +294,11 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-
+	.label {
+		@icon_name : 'label.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
 
 
 // .contenteditable_buttons (used by content editable)

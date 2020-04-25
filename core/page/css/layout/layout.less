@@ -520,10 +520,18 @@
 				//	padding: 1em;
 				//}
 
-				// inside content_data
+				>.content_data {
+					display: flex;
+					flex-wrap: wrap;
+				}
+
+				// inside another content_data
 				>.content_data & {
 					margin-left: 0;
+
 				}
+
+
 		}//end &.edit
 
 
@@ -1561,7 +1569,7 @@
 			font-weight: normal;
 			z-index: 2;
 
-			&.label, >.label {
+			&.label, >div.label {
 				font-size: 1.4em;
 				line-height: 1.4em;
 			}
@@ -2232,7 +2240,7 @@
 				color: @color_danger;
 
 				&:before {
-					background-color: @color_danger;
+					background-color: @color_danger !important;
 				}
 			}
 		}
