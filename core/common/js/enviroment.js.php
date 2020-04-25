@@ -64,10 +64,11 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 			# version
 			$obj->dedalo_version 				= DEDALO_VERSION;
 			# lang
-			$obj->dedalo_application_lang 		= DEDALO_APPLICATION_LANG;
-			$obj->dedalo_data_lang 				= DEDALO_DATA_LANG;
-			$obj->dedalo_data_nolan 			= DEDALO_DATA_NOLAN;
-			$obj->dedalo_projects_default_langs = array_map(function($current_lang){
+			$obj->dedalo_application_langs_default 	= DEDALO_APPLICATION_LANGS_DEFAULT;
+			$obj->dedalo_application_lang 			= DEDALO_APPLICATION_LANG;
+			$obj->dedalo_data_lang 					= DEDALO_DATA_LANG;
+			$obj->dedalo_data_nolan 				= DEDALO_DATA_NOLAN;
+			$obj->dedalo_projects_default_langs 	= array_map(function($current_lang){
 				$lang_obj = new stdClass();
 					$lang_obj->label = lang::get_name_from_code($current_lang);
 					$lang_obj->value = $current_lang;
