@@ -235,6 +235,27 @@ data_manager.prototype.get_page_element = async function(options) {
 
 
 /**
+* DOWNLOAD_URL
+* @param string url
+* @param string filename
+* Donwload url blob data and create a temporal autofired link
+*/
+export function download_url(url, filename) {
+	fetch(url).then(function(t) {
+		return t.blob().then((b)=>{
+			var a = document.createElement("a");
+			a.href = URL.createObjectURL(b);
+			a.setAttribute("download", filename);
+			a.click();
+			a.remove();
+		}
+		);
+	});
+}//end download_url
+
+
+
+/**
 * AREA_LOAD_DATA
 * Generic area data loader
 * @param object context
@@ -320,5 +341,3 @@ data_manager.prototype.component_load_context = async function(component) {
 	return context
 }//end component_load_context
 */
-
-
