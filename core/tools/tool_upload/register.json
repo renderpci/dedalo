@@ -1,179 +1,160 @@
 {
-	"label": "Desarrollo de herramientas",
-	"relations": [
-		{
-			"type": "dd151",
-			"section_id": "-1",
-			"section_tipo": "dd128",
-			"from_component_tipo": "dd200"
-		},
-		{
-			"type": "dd675",
-			"section_id": "1",
-			"section_tipo": "dd153",
-			"from_component_tipo": "dd1337"
-		},
-		{
-			"type": "dd151",
-			"section_id": "1",
-			"section_tipo": "dd64",
-			"from_component_tipo": "dd1354"
-		},
-		{
-			"type": "dd151",
-			"section_id": "8",
-			"section_tipo": "dd1342",
-			"from_component_tipo": "dd1330"
-		},
-		{
-			"type": "dd151",
-			"section_id": "20",
-			"section_tipo": "dd1342",
-			"from_component_tipo": "dd1330"
-		},
-		{
-			"type": "dd151",
-			"section_id": "30",
-			"section_tipo": "dd1342",
-			"from_component_tipo": "dd1330"
-		},
-		{
-			"type": "dd151",
-			"section_id": "50",
-			"section_tipo": "dd1342",
-			"from_component_tipo": "dd1330"
-		},
-		{
-			"type": "dd151",
-			"section_id": "2",
-			"section_tipo": "dd64",
-			"from_component_tipo": "dd1331"
-		},
-		{
-			"type": "dd151",
-			"section_id": "1",
-			"section_tipo": "dd64",
-			"from_component_tipo": "dd1332"
-		},
-		{
-			"type": "dd151",
-			"section_id": "2",
-			"section_tipo": "dd64",
-			"from_component_tipo": "dd1333"
-		},
-		{
-			"type": "dd151",
-			"section_id": "-1",
-			"section_tipo": "dd128",
-			"from_component_tipo": "dd197"
-		}
-	],
-	"components": {
-		"dd199": {
-			"dato": {
-				"lg-nolan": [
-					{
-						"start": {
-							"day": 8,
-							"hour": 12,
-							"time": 64925064509,
-							"year": 2020,
-							"month": 1,
-							"minute": 8,
-							"second": 29
-						}
-					}
-				]
-			},
-			"info": {
-				"label": "Fecha de creación",
-				"modelo": "component_date"
-			}
-		},
-		"dd201": {
-			"dato": {
-				"lg-nolan": [
-					{
-						"start": {
-							"day": 9,
-							"hour": 15,
-							"time": 64925161341,
-							"year": 2020,
-							"month": 1,
-							"minute": 2,
-							"second": 21
-						}
-					}
-				]
-			},
-			"info": {
-				"label": "Fecha de modificación",
-				"modelo": "component_date"
-			}
-		},
-		"dd612": {
-			"dato": {
-				"lg-eng": "Allow upload media files to server"
-			},
-			"info": {
-				"label": "Descripción",
-				"modelo": "component_text_area"
-			}
-		},
-		"dd799": {
-			"dato": {
-				"lg-eng": [
-					"Upload"
-				]
-			},
-			"info": {
-				"label": "Etiqueta",
-				"modelo": "component_input_text"
-			}
-		},
-		"dd1326": {
-			"dato": {
-				"lg-nolan": [
-					"tool_upload"
-				]
-			},
-			"info": {
-				"label": "Nombre de la herramienta",
-				"modelo": "component_input_text"
-			}
-		},
-		"dd1327": {
-			"dato": {
-				"lg-nolan": [
-					"2.0.0"
-				]
-			},
-			"info": {
-				"label": "Versión",
-				"modelo": "component_input_text"
-			}
-		},
-		"dd1328": {
-			"dato": {
-				"lg-nolan": [
-					"6.0.0"
-				]
-			},
-			"info": {
-				"label": "Versión Dédalo mínima",
-				"modelo": "component_input_text"
-			}
-		}
-	},
-	"section_id": 3,
-	"created_date": "2020-01-08 12:08:29",
-	"section_tipo": "dd1340",
-	"modified_date": "2020-01-09 15:02:21",
-	"diffusion_info": null,
-	"created_by_userID": -1,
-	"section_real_tipo": "dd1324",
-	"modified_by_userID": -1,
-	"section_creator_top_tipo": "dd1340",
-	"section_creator_portal_tipo": "",
-	"section_creator_portal_section_tipo": ""
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1331"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "8",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "30",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "50",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "20",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "26",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "inf": "Fecha de creación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 9,
+                            "hour": 19,
+                            "time": 64925178597,
+                            "year": 2020,
+                            "month": 1,
+                            "minute": 49,
+                            "second": 57
+                        }
+                    }
+                ]
+            }
+        },
+        "dd201": {
+            "inf": "Fecha de modificación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 23,
+                            "hour": 17,
+                            "time": 64934416304,
+                            "year": 2020,
+                            "month": 4,
+                            "minute": 51,
+                            "second": 44
+                        }
+                    }
+                ]
+            }
+        },
+        "dd612": {
+            "inf": "Descripción [component_text_area]",
+            "dato": {
+                "lg-eng": [
+                    "Upload selected file to the server"
+                ]
+            }
+        },
+        "dd799": {
+            "inf": "Etiqueta [component_input_text]",
+            "dato": {
+                "lg-eng": [
+                    "Upload"
+                ]
+            }
+        },
+        "dd1326": {
+            "inf": "Nombre de la herramienta [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "tool_upload"
+                ]
+            }
+        },
+        "dd1327": {
+            "inf": "Versión [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "2.0.0"
+                ]
+            }
+        },
+        "dd1328": {
+            "inf": "Versión Dédalo mínima [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            }
+        }
+    },
+    "section_id": 3,
+    "created_date": "2020-01-09 19:49:57",
+    "section_tipo": "dd1340",
+    "modified_date": "2020-04-23 17:51:44",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd1324",
+    "modified_by_userID": -1,
+    "section_creator_top_tipo": "",
+    "section_creator_portal_tipo": "",
+    "section_creator_portal_section_tipo": ""
 }
