@@ -1,6 +1,6 @@
 // import
 	import {ui} from '../../common/js/ui.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager, download_url} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 
 
@@ -145,15 +145,35 @@ const get_content_data = async function(self) {
 	// data_link
 		const data_link = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'light download data_link',
-			text_content 	: 'Download record data',
+			class_name		: 'light eye data_link',
+			text_content 	: 'View record data',
 			parent 			: content_data
 		})
 		data_link.addEventListener("click", (e)=>{
 			e.preventDefault()
 			// window.open( DEDALO_CORE_URL + '/json/' + self.section_tipo + '/' + self.section_id )
 			window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id )
-		})	
+		})
+
+	// tool register files.	dd1340
+		const section_tipo = self.caller.tipo
+		if (section_tipo==="dd1340") {
+			const register_download = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning download register_download',
+				text_content 	: "Download register file",
+				parent 			: content_data
+			})
+			register_download.addEventListener("click", (e)=>{
+				e.preventDefault()
+				const url 		= DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id
+				const file_name = "register.json"
+				// download_url (import from data_manager) temporal link create and click
+				if (confirm(`Donwload file: ${file_name} ?`)) {
+					download_url(url, file_name)
+				}
+			})
+		}
 
 
 	return content_data
