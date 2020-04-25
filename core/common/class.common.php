@@ -172,6 +172,12 @@ abstract class common {
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
+
+		// dd1324 Tools Register section
+			if ($parent_tipo==='dd1324') {
+				return 1;
+			}
+
 		$permissions = security::get_security_permissions($parent_tipo, $tipo);
 
 

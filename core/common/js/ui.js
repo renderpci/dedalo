@@ -208,6 +208,11 @@ export const ui = {
 
 				wrapper.appendChild(fragment)
 
+				// read only. Disable events on permissions <2
+					if (instance.permissions<2 && model!=="section_group") {
+						wrapper.classList.add("disabled_component")
+					}
+
 
 			return wrapper
 		},//end build_wrapper_edit
@@ -320,7 +325,7 @@ export const ui = {
 		*	continue aplying another custom actions
 		*/
 		active : async (component, actived_component) => {
-			
+
 			if (typeof actived_component==="undefined") {
 				console.warn("[ui.component.active]: WARNING. Received undefined actived_component!");
 				return false
@@ -347,7 +352,7 @@ export const ui = {
 						component.autocomplete.destroy()
 						component.autocomplete_active = false
 						component.autocomplete = null
-					}				
+					}
 			}
 
 			return false
@@ -668,7 +673,7 @@ export const ui = {
 			const mode 		= instance.mode 	// like 'edit'
 			const label 	= instance.label
 			const name 		= instance.constructor.name
-			
+
 			const fragment = new DocumentFragment()
 
 			// header
