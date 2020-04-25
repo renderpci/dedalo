@@ -667,13 +667,14 @@ export const ui = {
 			const tipo 		= instance.tipo 	// like 'rsc26'
 			const mode 		= instance.mode 	// like 'edit'
 			const label 	= instance.label
-
+			const name 		= instance.constructor.name
+			
 			const fragment = new DocumentFragment()
 
 			// header
 				const tool_header = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'tool_header',
+					class_name		: 'tool_header ' + name,
 					parent 			: fragment
 				})
 
