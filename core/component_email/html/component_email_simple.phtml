@@ -1,30 +1,30 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
-	
-	
-	print "\n<!-- EMAIL [tipo:$tipo section_id_matrix:$parent] -->";
+	# VISUALIZADOR HTML
 
-	print "\n<div class=\"css_wrap_email\" >";
-	
+
+
+	print "<!-- EMAIL [tipo:$tipo section_id_matrix:$parent] -->";
+
+	print "<div class=\"css_wrap_email\" >";
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	/*
 	switch($permissions) {
-			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (email)</span>";
+
+		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (email)</span>";
 					break;
-						
+
 		case ($permissions>=1)	:
-		
-					$html_contenido .= "\n <input class=\"css_email\" type=\"text\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" id=\"{$id}\" value=\"\" title=\"$html_title\" placeholder=\"$modo\" />";					
+
+					$html_contenido .= "<input class=\"css_email\" type=\"text\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" id=\"{$id}\" value=\"\" title=\"$html_title\" placeholder=\"$modo\" />";
 	}
 	*/
-	$html_contenido .= "\n <input class=\"css_email\" type=\"text\"
+	$html_contenido .= "<input class=\"css_email\" type=\"text\"
 							id=\"{$identificador_unico}\" name=\"{$tipo}\"
 							data-tipo=\"{$tipo}\"
 							data-section_tipo=\"{$section_tipo}\"
@@ -34,12 +34,13 @@
 							title=\"$html_title\"
 							placeholder=\"$modo\"
 							/>";
-	
-	
+
+
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
-	
-	
-	print "\n</div>\n\n"; //wrap
-?>
+
+
+	print "</div>"; //wrap
+
+

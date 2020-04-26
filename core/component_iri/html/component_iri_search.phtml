@@ -1,24 +1,25 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
 	print "<div class=\"wrap_component css_wrap_iri tooltip_active\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print ">";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch(true) {
 
 		case ($permissions>=1) :
 
-				# INPUT 
+				# INPUT
 				#$html_content .= "<span id=\"search_component_$tipo\">";
 			/*
 				$html_content .= "<input class=\"css_iri_search\" type=\"text\" ";
@@ -29,7 +30,7 @@
 				$html_content .= "/>"; */
 
 				$html_content .= '<ul>';
-				
+
 					$obj_value = reset($dato);
 
 					# Correct issues with quotes
@@ -38,7 +39,7 @@
 					$html_content .= '<li class="input-group">';
 
 					# Input
-					$html_content .= "<input type=\"text\" id=\"{$id_wrapper}_input\" class=\"form-control99 css_iri\" ";
+					$html_content .= "<input type=\"url\" id=\"{$id_wrapper}_input\" class=\"form-control99 css_iri\" ";
 					#$html_content .= "data-tipo=\"{$tipo}\" ";
 					#$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 					#$html_content .= "data-parent=\"{$parent}\" ";
@@ -52,10 +53,10 @@
 
 
 					$html_content .= '</li>';
-				
+
 				$html_content .= '</ul>';
-			
-				
+
+
 				if(SHOW_DEBUG===true) {
 					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
 				}
@@ -68,13 +69,13 @@
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-	
-	
+
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
-	
-	
+
+
 	print '</div>'; //wrap
 
 

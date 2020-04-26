@@ -1,0 +1,132 @@
+<?php
+/**
+* TOOL_EXPORT PAGE
+*/
+
+$html = '';
+
+// header
+	$html .= '<!-- TOOL PAGE [tipo:$section_tipo] -->';
+	$html .= '<div class="tool_title text_shadow_inset no-print"> TOOL EXPORT </div>';
+
+// wrap_tool_export
+	$html .= '<div id="wrap_tool_export2" class="wrap_tool">';
+
+	$html .= '';
+
+	$html .= '<div id="list_selector"><div id="search2_container_selector"></div></div>';
+	$html .= '<div id="list_target">
+				<ul id="list_target_ul" class="connectedSortable" ondrop="tool_export2.on_drop(this,event)" ondragover="tool_export2.allowDrop(event)">
+				</ul>
+			 </div>';
+
+	$html .= '<div id="tool_buttons">';
+
+		// info
+			$html .= "<div id=\"records_info\">";
+			$html .= " <h1>Section: <strong>$section_label</strong></h1><span> ".label::get_label('total_records').": <strong>$total_records</strong> </span>";
+			$html .= "</div>";
+
+		// buttons
+			$html .= "<div id=\"buttons_div\">";
+
+				/*
+					#
+					# SELECT ENCODING
+					$html .= '<div class="input-group">';
+					$html .= '<span class="input-group-addon" id="basic-addon1">Encoding</span>';
+
+					$html .= '</div>';
+
+					#
+					# SELECT FORMAT
+					$html .= '<div class="input-group">';
+					$html .= '<span class="input-group-addon" id="basic-addon1">Format</span>';
+
+					$html .= '</div>';
+					*/
+
+					#
+
+				// button export
+					$html .= '<div class="input-group">';
+					$html .= "<a id=\"button_export\" class=\"btn btn-success fileinput-button\" onclick=\"tool_export2.export_data(this);\">
+								<strong>".label::get_label('tool_export')."</strong>
+							 </a>";
+					/*
+						$html .= '<span class="input-label">Encoding</span>';
+						$html .= "<select id=\"select_encoding_export\" class=\"form-control\">
+									<option value=\"UTF8\">UTF8</option>
+									<option value=\"ISO-8859-1\">ISO-8859-1 (Excel)</option>
+								 </select>";
+						*/
+
+				// format
+					/**/
+					$html .= '<span class="input-label">Format</span>';
+					$html .= '<select id="select_data_format_export" class="form-control">';
+					$html .= '<option value="standard">Standard</option>';
+					$html .= '<option value="html">HTML</option>';
+					if(SHOW_DEBUG===true) {
+						$html .= '<option value="breakdown">Breakdown</option>';
+						$html .= '<option value="breakdown_html">Breakdown HTML</option>';
+					}
+					$html .= '<option value="dedalo">Dédalo (Raw)</option>';
+					$html .= '</select>';
+
+
+				// active-unactive all
+					/*
+					$html .= '<a id="active_all_columns" class="move_columns" onclick="tool_export2.active_all_columns(this);">Active all columns</a>';
+					$html .= '<a id="unactive_all_columns" class="move_columns" onclick="tool_export2.unactive_all_columns(this);">Unactive all columns</a>';
+					*/
+
+				$html .= '</div>';
+
+			$html .= "</div>";//end buttons_div
+
+	$html .= '</div>';//end tool_buttons
+
+	$html .= '</div>';//end wrap_tool_export2
+
+
+	// download_file
+		$html .= '<div id="download_file" class="no-print">';
+
+		// download_file csv utf-8
+			#$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link\">".label::get_label("descargar")." CSV</a></h2>";
+			$html .= '<a id="download_file_link" class="btn btn-success fileinput-button"><strong>'.label::get_label("descargar").' CSV</strong></a>';
+
+		// download_file_excel
+			#$html .= "<h2><a href=\"\" target=\"_blank\" id=\"download_file_link_excel\">".label::get_label("descargar")." Excel</a></h2>";
+			$html .= '<a id="download_file_link_excel" class="btn btn-success fileinput-button"><strong>'.label::get_label("descargar").' Excel</strong></a>';
+
+		// download_file_html
+			$html .= '<a id="download_file_link_html" class="btn btn-success fileinput-button" download><strong>'.label::get_label("descargar").' HTML</strong></a>';
+
+		// print
+			$html .= '<a id="print_button" class="btn btn-success fileinput-button" onclick="window.print()"><strong>'.label::get_label("imprimir").'</strong></a>';
+
+		$html .= '</div>';//end download_file
+
+
+	#
+	# TABLE_DATA_PREVIEW
+	$html .= "<div id=\"table_data_preview\"></div>";
+
+
+
+echo $html;
+
+// init_options
+	$init_options = (object)[
+		'section_tipo' 	=> $section_tipo,
+		'section_label' => $section_label,
+		#'ar_columns' 	=> $ar_columns
+	];
+
+?>
+<script>
+tool_export2.init(<?php echo json_encode($init_options)?>);
+</script>
+

@@ -1,0 +1,19 @@
+<?php
+
+# VISUALIZADOR HTML
+$html_tool  ='';
+$html_tool .= "<div id=\"button_tool_export_list\" class=\"css_button_generic btn_inside_section_buttons_container tool_export\" ";
+$html_tool .= "data-section_tipo='$section_tipo' ";
+$html_tool .= "data-tool_name='$tool_name' ";
+$html_tool .= "data-context_name='$context_name' ";
+$html_tool .= "onclick=\"tool_common.open_tool_export(this)\" ";
+$html_tool .= "title=\"$button_title\">";
+$html_tool .= "<span>";
+$html_tool .= label::get_label('tool_export');
+$html_tool .= "</span>";
+$html_tool .= "</div>";
+#$html_tool .= "<div id=\"tool_diffusion_response\"></div>";
+
+
+# PRINT HTML
+echo $html_tool;

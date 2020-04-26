@@ -1,0 +1,20 @@
+/* WIDGET SUM_DATES
+--------------------------------------- */
+.sum_weights {
+  font-size: 120%;
+}
+.get_archive_weights {
+  padding-right: 5px;
+  color: #555555;
+  font-family: "Arial";
+}
+.update_info {
+  top: -15px;
+  position: absolute;
+  right: 0;
+}
+.get_archive_diameter {
+  border-left: 1px solid #c8c8c8;
+  padding-left: 5px;
+}
+/*# sourceMappingURL=get_archive_weights.css.map */

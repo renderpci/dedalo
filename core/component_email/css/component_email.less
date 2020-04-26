@@ -2,45 +2,60 @@
 @common_css: "../../common/css";
 
 // Usage
-@import "@{common_css}/library.less"; 
+@import "@{common_css}/library.less";
+
+
+
 
 
 
 /* WRAP DIV CONTAINER */
+/*
 .css_wrap_email {
-	
+	min-height: 94px !important;
 	}
 	.css_wrap_email .content_data {
 
+		>ul {
+			//width: 90%;
+			display: flex;
+    		background-color: aqua;
+		}
+
 	}
 	.css_wrap_email .content_data input.css_email {
-		max-width: 80%;
-		width: 100%;
+		//max-width: 80%;
+		//width: 100%;
 	}
 
 .css_email_lupa_bg {
 	background-image: url('../../themes/default/lupa2.gif');
 	background-repeat:no-repeat;
-	background-position:0 1px;	
+	background-position:0 1px;
 }
 
 .css_email_error { background-color:red;}
 .css_email_error:hover { background-color:orange;}
 
 
-.btn_create_email_list{
-//	top: 1px;
+.btn_create_email_list {
+	//	top: 1px;
 	//top: -4px;
 	height: 26px;
 	//padding-top: 5px;
 	//width: 26px;
 
-	/* padding: 6px; */
+	// padding: 6px;
 	padding-left: 5px;
 	padding-right: 5px;
 	margin-left: 5px;
 	padding-top: 5px;
-	/* margin-top: 3px; */
+	// margin-top: 3px;
+	float: right;
+
+	&.current {
+		float: none;
+	}
 }
 
 
@@ -70,7 +85,152 @@
 	cursor: pointer;
 	opacity: 1;
 	vertical-align: middle;
+}
 
+
+.btn_add_input_text {
+	//top: 3px;
+    height: 26px;
+    width: 31px;
+    text-align: center;
+
+    position: relative;
+    float: right;
+}
+
+.btn_create_email_list_all {
+	background-color: #eff7d8;
+	position: absolute;
+    top: 30px;
+    right: 1px;
+}
+
+.btn_add_email {
+	text-transform: none;
+    display: table;
+    top: -23px;
+    margin-right: 4px;
+    margin-top: 0;
+    padding: 3px;
+    padding-right: 4px;
+    padding-left: 4px;
+    white-space: nowrap;
+    font-size: 32%;
+    font-weight: normal;
+    background-image: none;
+    box-shadow: none;
+    position: absolute;
+    right: 0;
+    //margin-left: 3px;
+    @media screen and (min-width: @content_data_max_width) {
+		top: 0px;
+		padding-top: 5px;
+		padding-left: 6px;
+		padding-right: 6px;
+		padding-bottom: 4px;
+		right: -3px;
+    }
+}
+*/
+
+
+.css_email_send {
+	width: 20px;
+	height: 12px;
+	line-height: 10px;
+	position: relative;
+	display: inline-block;
+	background-image: url(../../themes/default/email.svg);
+	background-repeat: no-repeat;
+	cursor: pointer;
+	opacity: 1;
+	vertical-align: middle;
+	text-align: center;
+}
+
+
+
+.css_wrap_email {
+
+	@button_height : 26px;
+	@button_width  : 31px;
+
+	>.content_data {
+		display: flex !important;
+
+		// buttons
+		>.component_butons {
+			display: flex;
+			//flex: 1 1 20%;
+			//background-color: #E7E7B6;
+
+			>.btn_add_input_text {
+				height: @button_height;
+				width: @button_width;
+				margin-top: 2px;
+				text-align: center;
+				position: initial;
+
+				>.css_email_add {
+					display: inline-block;
+					width: 14px;
+					height: 16px;
+					line-height: 14px;
+					vertical-align: text-top;
+					background-image: url(../../themes/default/svg_icons.svg);
+					background-position: 0 -96px;
+					background-size: 474px 184px;
+					background-repeat: no-repeat;
+					list-style: none;
+					position: relative;
+					cursor: pointer;
+					opacity: 1;
+				}
+			}
+
+			>.btn_create_email_list_all {
+				height: @button_height;
+				width: @button_width;
+				padding: 5px;
+				margin-left: 0;
+				background-color: bisque;
+
+				&.current {
+					float: none;
+				}
+			}
+
+
+		}//end >.component_butons
+
+		// inputs list
+		>ul {
+			//background-color: #88EAD4;
+			flex: 1 1 80%;
+			//display: flex;
+			//flex-wrap: wrap;
+
+			>li {
+				display: flex;
+				width: 100%;
+
+				>input {
+					flex: 1 1 80%;
+				}
+				>.btn_create_email_list {
+					flex: 1 1 auto;
+					top: 0;
+
+					height: @button_height;
+					width: @button_width;
+					//width: 23px;
+					padding: 5px;
+				}
+			}
+
+		}//end >ul
+
+	}//end content_data
 
 }
 
