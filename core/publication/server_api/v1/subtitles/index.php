@@ -17,25 +17,22 @@
 		
 	// vars
 		// av_section_id . Section id of aufiovisual record tape
-			$av_section_id = isset($_GET['section_id']) ? (int)$_GET['section_id'] : false;
-			if (empty($av_section_id)) {
-				exit("Error on build_subtitles. section_id is mandatory");
-			}
+		$av_section_id = isset($_GET['section_id']) ? (int)$_GET['section_id'] : false;
+		if (empty($av_section_id)) {
+			exit("Error on build_subtitles. section_id is mandatory");
+		}
 		// Lang is autoset by server_config_api
-			$lang 		 = isset($_GET['lang']) ? $_GET['lang'] : WEB_CURRENT_LANG_CODE;
-			preg_match('/^lg-[a-z]{3}$/', $lang, $lang_array);
-			if (empty($lang_array)) {
-				exit("Error on build_subtitles. Invalid lang. Use format like 'lg-spa' ");
-			}
+		$lang 		 = isset($_GET['lang']) ? $_GET['lang'] : WEB_CURRENT_LANG_CODE;
+		preg_match('/^lg-[a-z]{3}$/', $lang, $lang_array);
+		if (empty($lang_array)) {
+			exit("Error on build_subtitles. Invalid lang. Use format like 'lg-spa' ");
+		}
 		// TC as float seconds like '132.317'
-			$tc_in_secs  = isset($_GET['tc_in'])  ? (int)$_GET['tc_in']  : false;
-			$tc_out_secs = isset($_GET['tc_out']) ? (int)$_GET['tc_out'] : false;
-		// db_name
-			$db_name = isset($_GET['db_name']) ? $_GET['db_name'] : false;
+		$tc_in_secs  = isset($_GET['tc_in'])  ? (int)$_GET['tc_in']  : false;
+		$tc_out_secs = isset($_GET['tc_out']) ? (int)$_GET['tc_out'] : false;
 	
 	// Get reel av data
 		$options = new stdClass();
-			$options->db_name 		= $db_name;
 			$options->table 		= (string)TABLE_AUDIOVISUAL;
 			$options->ar_fields 	= array(FIELD_VIDEO, FIELD_TRANSCRIPTION, 'duration');
 			$options->sql_filter 	= 'section_id = '.(int)$av_section_id;
@@ -48,7 +45,8 @@
 		if (empty($rows_data->result)) {
 			exit("Error on build_subtitles. Record not found: ".$av_section_id);
 		}
-		$result = reset($rows_data->result);		
+		$result = reset($rows_data->result);
+
 
 		// duration (from db table column 'duration')
 			$duration = $result['duration'];

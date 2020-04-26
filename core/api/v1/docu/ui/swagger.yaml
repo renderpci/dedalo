@@ -11,7 +11,7 @@ info:
   title: "Dédalo Web REST API"
   contact:
     name: "Aditional Dédalo publication info"
-    url: "https://dedalo.render.es/dedalo/lib/dedalo/publication/server_api/v1/docu/API_docu_v1.pdf"
+    url: "http://dedalo4.antropolis.net/dedalo/lib/dedalo/publication/server_api/v1/docu/API_docu_v1.pdf"
   license:
     name: "Apache 2.0 license"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"

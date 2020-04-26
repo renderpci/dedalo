@@ -1,33 +1,32 @@
 <?php
 
-	# VISUALIZADOR HTML
-
+	# VISUALIZADOR HTML	
+	
 	print "<div class=\"wrap_component css_wrap_select_lang tooltip_active\" ";
-	print "data-tipo=\"{$tipo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'data-q_operator="'.$q_operator.'" ';
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print ">";
-
+	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-
+	
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch(true) {
-
+			
 		case $permissions===0	:
 				$html_content .= "<span class=\"css_span_dato\"> No access here (select_lang)! </span>";
 				break;
-
-
+						
+		
 		case ($permissions>=1)	:
 
 				# COMPARISON OPERATORS
 				#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
-
+				
 				$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
 				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 				$html_content .=' />';
@@ -36,13 +35,13 @@
 				$html_content .= "<select class=\"css_select_lang\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\" ";
 				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 				$html_content .= "data-role=\"component_select_lang_selector\" ";
-				$html_content .= ">";
+				$html_content .= ">";	
 
-					$checked = "";
-
-					$html_content .= "<option value=\"\" {$checked}> </option>";
+					$checked = "";	
+					
+					$html_content .= "<option value=\"\" {$checked}> </option>";								
 					foreach ((array)$ar_all_project_select_langs as $current_lang_code => $current_label) {
-
+		
 						$current_locator 		= lang::get_lang_locator_from_code($current_lang_code);
 						# Set from component tipo
 						$current_locator->from_component_tipo = $tipo;
@@ -67,18 +66,18 @@
 				$html_content .= " </select>";
 
 				# LOGICAL OPERATORS
-				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-
-				break;
+				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);	
+				
+				break;											
 	}
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-
+	
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
 
 	print "</div>"; //wrap
-
+	
 ?>

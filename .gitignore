@@ -35,7 +35,7 @@ test
 .smbdelete*
 * copy.*
 
-# install/import/hierarchy
+install/import/hierarchy
 str_data*
 
 # lib ignore all except dedalo
@@ -53,11 +53,7 @@ core/extras/*
 !core/extras/muvaet
 
 # vendor ignore all except used public
-<<<<<<< HEAD
 vendor
-=======
-# vendor/*
->>>>>>> f0e7f7dbc57229e01c7ed99f946dc2ccadbd1015
 # !vendor/maxmind
 # !vendor/maxmind-db
 # !vendor/react
@@ -67,12 +63,9 @@ vendor
 # !vendor/socrata
 # !vendor/composer
 # !vendor/leafo
-<<<<<<< HEAD
 autoload.php
 composer.json
 composer.lock
-=======
->>>>>>> f0e7f7dbc57229e01c7ed99f946dc2ccadbd1015
 
 # Ignore paths that contain generated content.
 /media
@@ -104,21 +97,12 @@ koala-config.json
 config.codekit3
 .jsbeautifyrc
 
-# various minified except the pdf viewer
+# various minified
 # js min
-<<<<<<< HEAD
 core/**/*-min.js
 
 # js map
 core/**/*-min.js.map
-=======
-lib/dedalo/**/*-min.js
-!lib/dedalo/component_pdf/viewer/*-min.js
-
-# js map except the pdf viewer
-lib/dedalo/**/*-min.js.map
-!lib/dedalo/component_pdf/viewer/*-min.js.map
->>>>>>> f0e7f7dbc57229e01c7ed99f946dc2ccadbd1015
 
 # css min
 core/**/*-min.css
@@ -131,33 +115,13 @@ core/login/saml/test_js.html
 core/login/saml/test.php
 
 # Drafs
-<<<<<<< HEAD
 core/component_date_mod/
 core/component_portal/_versions/
-=======
-lib/dedalo/component_date_mod/
-lib/dedalo/component_portal/_versions/
-
-# structure css
-lib/dedalo/common/css/structure.css
-
-# js langs
-lib/dedalo/common/js/lang/*
-
-
-
->>>>>>> f0e7f7dbc57229e01c7ed99f946dc2ccadbd1015
 
 # structure css
 core/common/css/structure.css
 
-<<<<<<< HEAD
 # js langs
 core/common/js/lang/*
-=======
-/lib/dedalo/.jsbeautifyrc
->>>>>>> f0e7f7dbc57229e01c7ed99f946dc2ccadbd1015
 
-/lib/dedalo/search/js/paginator copy.js
 
-/lib/dedalo/search/js/search copy.js

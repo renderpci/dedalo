@@ -897,8 +897,7 @@ class section extends common {
 					$section_id_counter 	= $current_id_counter+1;
 
 					# section_id. Fix section_id (Non return point, next calls to Save will be updates)
-					// $this->section_id = (int)$section_id_counter;
-					$this->set_section_id( (int)$section_id_counter );
+					$this->section_id = (int)$section_id_counter;
 				}
 
 

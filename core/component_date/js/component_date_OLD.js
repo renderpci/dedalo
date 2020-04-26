@@ -286,7 +286,7 @@ var component_date = new function() {
 				// Review and format input value
 				let value_formatted_end = self.format_date( input_range_end.value )
 
-				if (value_formatted_end===false) {
+				if (value_formatted_start===false) {
 
 					// Nothing to do
 					console.warn("Invalid date value: ",input_range_end.value )

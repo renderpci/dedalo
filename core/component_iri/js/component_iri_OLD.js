@@ -7,7 +7,7 @@
 var component_iri = new function() {
 
 	"use strict";
-
+	
 	this.iri_objects 	= []
 	this.save_arguments = {}
 
@@ -15,10 +15,10 @@ var component_iri = new function() {
 
 	/**
 	* INIT
-	* @return
+	* @return 
 	*/
 	this.init = function(options) {
-
+		
 		return true
 	};//end init
 
@@ -36,8 +36,6 @@ var component_iri = new function() {
 			return false
 		}
 
-		const modo = wrapper_obj.dataset.modo
-
 		//const li_nodes = wrapper_obj.getElementsByTagName("li");
 		const li_nodes = wrapper_obj.getElementsByClassName("input-group");
 
@@ -49,16 +47,16 @@ var component_iri = new function() {
 		const len = li_nodes.length
 
 		for (let i = 0; i < len; i++) {
-			const title_value 	= (modo==='search') ? null : li_nodes[i].querySelector('input[type="text"]').value
-			const iri_value 	= li_nodes[i].querySelector('input[type="url"]').value || null
-			if( (title_value && title_value.length>0) || (iri_value && iri_value.length>0) ){
+			const title_value 	= li_nodes[i].querySelector('input[type="text"]').value
+			const iri_value 	= li_nodes[i].querySelector('input[type="url"]').value
+			if(title_value.length > 0 || iri_value.length > 0 ){
 				dato.push({
 					iri 	: iri_value,
 					title	: title_value
 					})
 			}
 		}
-
+		
 		return dato
 	};//end get_dato
 
@@ -76,14 +74,14 @@ var component_iri = new function() {
 			if (wrap_div === null ) {
 				if(SHOW_DEBUG===true) console.log(btn_obj);
 				return alert("component_iri:Save: Sorry: wrap_div dom element not found")
-			}
+			}		
 
 		// Get dato specific
 		const dato = self.get_dato(wrap_div)
 
 		// Set to save
 		self.save_arguments.dato = dato
-
+		
 		// Exec general save
 		var js_promise = component_common.Save(component_obj, self.save_arguments).then(function(response) {
 
@@ -114,11 +112,11 @@ var component_iri = new function() {
 
 		const wrapper = document.getElementById(id_wrapper)
 			if (wrapper===null) {
-				console.log("Error on select wrapper for id: "+id_wrapper);
+				console.log("Error on select wrapper for id: "+id_wrapper);	
 				return false;
 			}
 		const component_obj = wrapper.querySelector('input.css_iri')
-
+		
 		// Component dataset mandatory info
 		//var mandatory = JSON.parse(component_obj.dataset.mandatory)
 		//	if (!mandatory || mandatory!==true) return false;
@@ -138,7 +136,7 @@ var component_iri = new function() {
 	* VALIDATE_IRI
 	*/
 	this.validate_iri = function(component_obj) {
-
+		
 		component_obj.classList.add("css_iri_validate")
 
 		return true
@@ -163,7 +161,7 @@ var component_iri = new function() {
 		return empty_value;
 	};//end is_empty_value
 
-
+	
 
 	/**
 	* GO_IRI_LINK
@@ -172,7 +170,7 @@ var component_iri = new function() {
 
 		const parent = component_obj.parentNode;
 		const iri = parent.querySelector('input[type="url"]').value
-
+		
 		if(iri.length <= 0){
 			return
 		}
@@ -204,7 +202,7 @@ var component_iri = new function() {
 		const new_li_ar_input = new_li.getElementsByTagName("input");
 		for (var i = new_li_ar_input.length - 1; i >= 0; i--) {
 			new_li_ar_input[i].value = "";
-		}
+		}			
 
 		//set the id to the raid position
 		const new_li_input = new_li_ar_input[0]
@@ -233,7 +231,7 @@ var component_iri = new function() {
 				if(SHOW_DEBUG===true) console.log(btn_obj);
 				return alert("component_iri:Save: Sorry: wrap_div dom element not found")
 			}
-
+		
 		const source_component_tipo = wrap_div.dataset.source_for_component
 		if(source_component_tipo){
 			const section_id = wrap_div.dataset.parent

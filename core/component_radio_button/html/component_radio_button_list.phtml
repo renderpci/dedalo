@@ -1,7 +1,7 @@
 <?php
 
-	# VISUALIZADOR HTML
-
+	# VISUALIZADOR HTML	
+	
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
@@ -22,25 +22,25 @@
 	$required_code 	= NULL;
 	#if($required)
 	#	$required_code = 'style="font-weight:bold"';
-
+	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	switch($permissions) {
-
-		case 0	:
+			
+		case 0	:	
 				$html_contenido .= "";
 				break;
-
-		case 1	:
-				foreach ($ar_list_of_values->result as $value => $rotulo) {
+						
+		case 1	: 
+				foreach ($ar_list_of_values->result as $value => $rotulo) {						
 					if( $value == $dato ) {
 						$html_contenido .= " <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
 					}
 				}
-				break;
-
-
-		case ($permissions>=2) :
+				break;	
+						
+		
+		case ($permissions>=2) :					
 
 				$html_contenido .= "<ul>";
 				foreach ($ar_list_of_values->result as $key => $item) {
@@ -64,7 +64,7 @@
 					}
 
 					$html_contenido .= "<li>";
-
+					
 						$html_contenido .= "<input class=\"css_radio_button\" type=\"radio\" ";
 						$html_contenido .= "onchange=\"component_radio_button.Save(this)\" ";
 						$html_contenido .= "name=\"{$input_name}\" ";
@@ -89,8 +89,8 @@
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
-
-
+	
+	
 	# PRINT HTML
 	print $html_contenido;
 
@@ -98,7 +98,7 @@
 	if(SHOW_DEBUG) {
 		echo "<hr>".$ar_list_of_values->debug;
 	}
-
+	
 	print "</div>"; //wrap
 
 
@@ -106,3 +106,4 @@
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
+?>
