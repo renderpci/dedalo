@@ -1,33 +1,34 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
+	# VISUALIZADOR HTML
+
 	print "<div class=\"wrap_component css_wrap_check_box wrap_check_box_search tooltip_active\" ";
+	print "data-tipo=\"{$tipo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'data-q_operator="'.$q_operator.'" ';
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print ">";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 
 	# CAMPO OBLIGATORIO
 	$required_code 	= NULL;
 	#if($required)	$required_code = 'style="font-weight:bold"';
-	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch(true) {
-			
+
 		case $permissions===0	:
-			$html_content .= ""; 
+			$html_content .= "";
 			break;
-						
+
 		case ($permissions>=1)	:
-					
-			
+
+
 
 			$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
 			$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
@@ -35,7 +36,7 @@
 
 			$html_content .= '<ul class="group">';
 			$i=0;foreach ($ar_list_of_values->result as $key => $item) {
-				
+
 				$label   = (string)$item->label;
 				$locator = (object)$item->value;
 
@@ -43,7 +44,7 @@
 				$locator->from_component_tipo = $tipo;
 
 				$locator_json = json_encode($locator);
-				
+
 				$checked  = '';
 				if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
 					$checked  = 'checked="checked"';
@@ -61,18 +62,18 @@
 				$html_content .= "title=\"$html_title\" ";
 				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 				$html_content .= $checked;
-				$html_content .= "/>";						
+				$html_content .= "/>";
 				$html_content .= "<label class=\"css_check_box_rotulo\" for=\"{$current_id}\" ";
 				$html_content .= $required_code;
 				$html_content .= ">";
 				$html_content .= $label;
 				$html_content .= "</label> ";
-				#$html_content .= "</span>";	
+				#$html_content .= "</span>";
 
 				$html_content .= '</li>';
 			$i++;}
 			$html_content .= '</ul>';
-			
+
 			# LOGICAL OPERATORS
 			#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 
@@ -89,18 +90,18 @@
 				$init_options->component_name 	= $component_name;
 				$init_options->wrapper_id 		= $id_wrapper;
 			$html_content .= 'component_common.init('.json_encode($init_options).');';
-			$html_content .= '</script>';		
-			
-			break;							
+			$html_content .= '</script>';
+
+			break;
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_content);	
-	
+	tools::prepare_content($html_content);
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
-	
-	
+
+
 	print "</div>"; //wrap
 ?>

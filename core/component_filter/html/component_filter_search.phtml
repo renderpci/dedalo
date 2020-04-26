@@ -1,38 +1,39 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
+	# VISUALIZADOR HTML
+
 	print "<div class=\"wrap_component css_wrap_filter wrap_component_{$modo} tooltip_active\" ";
+	print "data-tipo=\"{$tipo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print ">";
 
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 
-	
+
 	# CONTENIDO (INPUT)
 	$html_content  = '';
-	
+
 	switch(true) {
-			
+
 		case $permissions==0 :
 
-				$html_content .= ""; 
+				$html_content .= "";
 				break;
-						
+
 		case ($permissions>=1) :
 
 				$html_content .= "<ul class=\"filter_projects_list\">";
 
-				# INPUT					
+				# INPUT
 				foreach((array)$ar_proyectos_section as $key => $row) {
-					
+
 					$html_content .= "<li>";
-											
+
 						$input_id = $input_name.'_'.$key;
 
 						$checked  = '';  //is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
@@ -43,8 +44,8 @@
 						# Complete locator
 						$locator = $row->locator;
 						$locator->from_component_tipo = $tipo;
-						$locator->type 				  = $this->relation_type;	
-					
+						$locator->type 				  = $this->relation_type;
+
 						$html_content .= "<input type=\"checkbox\" class=\"filter_checkbox\" id=\"{$input_id}\" ";
 						$html_content .= "name=\"{$search_input_name}_array\" ";
 						$html_content .= "data-tipo=\"{$tipo}\" ";
@@ -52,10 +53,10 @@
 						$html_content .= $checked;
 						$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 						$html_content .= "/> ";
-						
+
 						$html_content .= "<label for=\"$input_id\" class=\"filter_checkbox_rotulo\">$row->label</label> ";
-					
-					$html_content .= "</li>";					
+
+					$html_content .= "</li>";
 				}
 
 				$html_content .= "</ul>";
@@ -64,14 +65,14 @@
 				if(SHOW_DEBUG===true) {
 					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
 				}
-				break;							
+				break;
 	}
 
-	
+
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
 
-	
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;

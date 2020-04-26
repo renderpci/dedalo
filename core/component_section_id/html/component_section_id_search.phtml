@@ -4,13 +4,14 @@
 	#$allowed_operators = 'Search options:';
 	#foreach ($this->search_operators_info() as $ikey => $ivalue) {
 	#	$allowed_operators .= '<br>' . $ikey ."\t". $ivalue;
-	#}	
+	#}
 	#$this->def = $allowed_operators;
 
-	
+
 
 	# VISUALIZADOR HTML
 	print "<div class=\"wrap_component css_wrap_section_id tooltip_active tooltip_active\" ";
+	print "data-tipo=\"{$tipo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
@@ -18,17 +19,17 @@
 	print ">";
 
 	#dump($this->get_def(), ' this->get_def() ++ '.to_string());
-	
-	
+
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch(true) {
 
 		case ($permissions>=1) :
-				
+
 				# INPUT
 				$html_content .= "<input class=\"input_css_section_id\" type=\"text\" name=\"{$search_input_name}\" ";
 				$html_content .= "data-tipo=\"{$tipo}\" ";
@@ -47,11 +48,11 @@
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-	
-	
+
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
 
-	print "</div><!-- /css_wrap_section_id -->"; //wrap	
+	print "</div><!-- /css_wrap_section_id -->"; //wrap
 ?>
