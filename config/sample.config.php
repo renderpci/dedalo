@@ -20,33 +20,33 @@
 # DEDALO MAIN VARS
 	define('DEDALO_HOST'			, $_SERVER['HTTP_HOST'] );
 	define('DEDALO_PROTOCOL'		, stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://' );
-	
+
 	# Dedalo paths
 	define('DEDALO_ROOT'			, dirname(dirname(__FILE__)));
-	#define('DEDALO_ROOT_WEB'		, '/'. substr(substr($_SERVER["REQUEST_URI"],1), 0,  strpos(substr($_SERVER["REQUEST_URI"],1), "/")));		
+	#define('DEDALO_ROOT_WEB'		, '/'. substr(substr($_SERVER["REQUEST_URI"],1), 0,  strpos(substr($_SERVER["REQUEST_URI"],1), "/")));
 	define('DEDALO_ROOT_WEB'		, '/'.explode('/', $_SERVER["REQUEST_URI"])[1]);
-	
+
 	define('DEDALO_CONFIG'			,'config');
 	define('DEDALO_CORE'			,'core');
+	define('DEDALO_TOOLS'			,'tools');
 	define('DEDALO_LIB'				,'lib');
 
-	#config	
+	#config
 	define('DEDALO_CONFIG_PATH'		, DEDALO_ROOT.'/'.DEDALO_CONFIG );
 
 	#core
-	define('DEDALO_CORE_PATH'		, DEDALO_ROOT.'/core');
+	define('DEDALO_CORE_PATH'		, DEDALO_ROOT. '/'. DEDALO_CORE);
 	define('DEDALO_CORE_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_CORE );
 
+	#tools
+	define('DEDALO_TOOLS_PATH'		, DEDALO_ROOT.'/'. DEDALO_TOOLS);
+	define('DEDALO_TOOLS_URL'		, DEDALO_ROOT_WEB . '/'. DEDALO_TOOLS );
+
 	#lib
-	# FAST RESOLUTION :
-	#define('DEDALO_ROOT_WEB'		, '/dedalo4');	# Default 'dedalo' or 'dedalo4'	
-	define('DEDALO_LIB_PATH'		, DEDALO_ROOT.'/lib');
+	define('DEDALO_LIB_PATH'		, DEDALO_ROOT.'/'. DEDALO_LIB);
 	define('DEDALO_LIB_URL'			, DEDALO_ROOT_WEB . '/'. DEDALO_LIB );
 
-
-	#define('DEDALO_LIB_EX_BASE_PATH', dirname(dirname( dirname(__FILE__) ))).'/lib';
-	#define('DEDALO_LIB_EX_BASE_URL'	, DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_LIB_EX_BASE_PATH)) . '/'. basename(DEDALO_LIB_EX_BASE_PATH) );
-
+	#extras
 	define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
 	define('DEDALO_EXTRAS_URL'		, DEDALO_CORE_URL . '/extras');
 
@@ -417,7 +417,7 @@
 		# QUALITY DEFAULT normally 'standar'
 		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standard');
 		# QUALITY ORIGINAL normally 'original'
-		define('DEDALO_PDF_QUALITY_ORIGINAL'		, DEDALO_PDF_QUALITY_DEFAULT);	
+		define('DEDALO_PDF_QUALITY_ORIGINAL'		, DEDALO_PDF_QUALITY_DEFAULT);
 
 
 		# QUALITY FOLDERS ARRAY
@@ -598,5 +598,3 @@
 	Please, save the unsaved work and log out as soon as possible.
 	After a few minutes, you can re-login to Dédalo and work again";
 	#notice_to_active_users(array('msg'=>$notice, 'mode'=>"warning"));
-
-
