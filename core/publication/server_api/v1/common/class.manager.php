@@ -16,11 +16,11 @@ class manager {
 
 	/**
 	* __CONSTRUCT
-	* @return
+	* @return 
 	*/
 	public function __construct() {
 
-
+			
 	}//end __construct
 
 
@@ -35,7 +35,7 @@ class manager {
 		if (!is_object($options) || !property_exists($options,'dedalo_get')) {
 			return $dedalo_data;
 		}
-
+		
 
 		$dedalo_get  = $options->dedalo_get;
 		switch ($options->dedalo_get) {
@@ -45,13 +45,6 @@ class manager {
 				#
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_rows_data( $options );
-				break;
-
-			## BIBLIOGRAPHY_ROWS ##
-			case 'bibliography_rows':
-				#
-				# Execute data retrieving
-				$dedalo_data = (object)web_data::get_bibliography_rows( $options );
 				break;
 
 			## INFO ##
@@ -67,9 +60,9 @@ class manager {
 				# Execute data retrieving
 				# $dedalo_data = (array)web_data::get_full_publication_schema( );
 				$dedalo_data = (array)web_data::get_publication_schema( );
-				break;
+				break;			
 
-
+			
 			## THESAURUS ##
 			case 'reel_terms':
 				#
@@ -105,7 +98,7 @@ class manager {
 				#
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_thesaurus_autocomplete( $options );
-				break;
+				break;				
 
 			case 'thesaurus_term':
 				#
@@ -135,7 +128,7 @@ class manager {
 				#
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_thesaurus_parents( $options );
-				break;
+				break;	
 
 			## FREE ##
 			case 'free_search':
@@ -170,7 +163,7 @@ class manager {
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_search_tipos( $options );
 				break;
-
+			
 			case 'reel_fragments_of_type':
 				#
 				# Execute data retrieving
@@ -193,7 +186,7 @@ class manager {
 				#
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_combi( $options );
-				break;
+				break;	
 
 			default:
 				$dedalo_data = new stdClass();
@@ -201,7 +194,7 @@ class manager {
 					$dedalo_data->msg 	 = "Error. Undefined method (dedalo_get) : ".$options->dedalo_get;
 				break;
 		}
-
+	
 		return $dedalo_data;
 	}//end manage_request
 

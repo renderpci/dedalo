@@ -25,42 +25,66 @@
 	#if($required)
 	#	$required_code = 'style="font-weight:bold"';
 
-
+	
 
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch($permissions) {
 
-		case 0	:
+		case 0	:	
 				$html_content .= "";
 				break;
 
 		case 1	:
-				$html_content .= $value;
+				$html_content .= "<ul class=\"radio_button_ul_list\">";
+				$i=1; foreach((array)$ar_list_of_values->result as $key => $item) {
+
+					$label   = (string)$item->label;
+					$locator = (object)clone $item->value;
+
+					#$checked  = is_array($dato) && in_array($locator, $dato) ? true : false;
+					$checked  = '';
+					if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+						$checked  = 'checked="checked"';
+					}
+
+					$tabindex = $i==1 ? 'tabindex="1"' : '';
+
+					$input_id = $input_name.'_'.$i;
+
+					$html_content .= "<li>";
+
+						$checked_style='';
+						if ($checked!==true) {
+							$checked_style = 'checked_style_false';
+						}
+
+						#
+						# LABEL
+						$html_content .= "<label for=\"$input_id\" class=\"css_radio_button_rotulo $checked_style\" {$required_code}>$label</label>";
+
+					$html_content .= "</li>";
+					$i++;
+				}
+				$html_content .= "</ul>";
 				break;
 
 		case 2 :
 		case 3 :
-				if($modo !== 'edit_in_list'){
-					if($from_modo !== 'edit' ){
-						$html_content .= "<div class=\"css_select_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
-					}	
-				}
-
 				$html_content .= '<ul class="radio_button_ul_list">';
-
+	
 				$i=1; foreach((array)$ar_list_of_values->result as $key => $item) {
 
 					$label   = (string)$item->label;
-
+	
 					$locator = new stdClass();
 						$locator->section_tipo 			= $item->value->section_tipo;
 						$locator->section_id 			= $item->value->section_id;
 						$locator->type 					= DEDALO_RELATION_TYPE_LINK;
-						$locator->from_component_tipo 	= $tipo;
+						$locator->from_component_tipo 	= $tipo;					
 
 					$locator_json = json_encode($locator);
-
+		
 
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
 					$checked  = '';
@@ -123,19 +147,16 @@
 
 
 	# PRINT HTML
-	if($modo!=='edit_in_list'){
-		print $html_label;
-	}
-	//print $html_label;
+	print $html_label;
 	print $html_content;
 
-
+	
 
 	print "</div>"; //wrap
 
-
+	
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
-
+?>

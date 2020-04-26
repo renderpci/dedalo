@@ -5,9 +5,9 @@
 
 $html='';
 
-
+	
 	// wrap_tool_export
-		$html .= "<div id=\"wrap_columns_selector\" class=\"no-print\">";
+		$html .= "<div id=\"wrap_columns_selector\" class=\"no-print\">";			
 
 			#
 			# COL1
@@ -16,11 +16,8 @@ $html='';
 					#
 					# SOURCE LIST
 					$html .= "<div class=\"list_title\">".label::get_label('elementos_desactivos')."</div>";
-					$html .= "<ul id=\"source_list\" class=\"connectedSortable\">";
-
-					$exclude_models = ['component_portal'];
+					$html .= "<ul id=\"source_list\" class=\"connectedSortable\">";			
 					foreach ($source_list as $tipo => $name) {
-
 						$html .= "<li data-tipo=\"$tipo\">";
 						$html .= $name;
 						if(SHOW_DEVELOPER===true) {
@@ -29,50 +26,6 @@ $html='';
 							$html .= ' '.RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 							$html .= '</span>';
 						}
-
-						// section_list_selector
-							$section_list_selector = null;
-							$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-							if ($model==='component_portal') {
-								// calculate posible columns to use
-								$component_portal 	= component_common::get_instance($model,
-																					 $tipo,
-																					 null,
-																					 'list',
-																					 DEDALO_DATA_NOLAN,
-																					 $section_tipo);
-								$portal_target_section = $component_portal->get_ar_target_section_tipo()[0];
-									#dump($portal_target_section, ' portal_target_section ++ '.to_string());
-								$components_from_section = search_development2::get_components_from_section([$portal_target_section], [], $ar_tipo_exclude_elements=false);
-									#dump($components_from_section, ' components_from_section ++ '.to_string());
-
-								$list = array_filter($components_from_section->result, function($item) use($exclude_models){
-									return in_array($item, $exclude_models) ? null : $item;
-								});
-								$section_list_selector = array_map(function($item){
-									return (object)[
-										'tipo'  => $item->component_tipo,
-										'label' => strip_tags($item->component_label)
-									];
-								}, $list);
-								#dump($section_list_selector, ' section_list_selector ++ '.to_string());
-							}
-
-						// section_list_selector html
-						if (!empty($section_list_selector)) {
-							$html .= '<span class="arrow_list_selector" onclick="tool_export.toggle_section_list_selector(this, event)"></span>';
-							$html .= '<div class="section_list_selector">';
-							$html .= '<h4>'.label::get_label('campos_personalizados').'</h4>';
-							foreach ($section_list_selector as $selector_value) {
-								$check_id = 'check_'.$tipo.'_'.$selector_value->tipo;
-								$html .= '<div>';
-								$html .= '<input type="checkbox" value="'.$selector_value->tipo.'" id="'.$check_id.'" name="checklist_'.$tipo.'">';
-								$html .= '<label for="'.$check_id.'">'.$selector_value->label.'</label>';
-								$html .= '</div>';
-							}
-							$html .= '</div>';
-						}//end if (!empty($section_list_selector))
-
 						$html .= "</li>";
 					}
 					$html .= "</ul>";
@@ -92,7 +45,7 @@ $html='';
 					#
 					# TARGET LIST
 					$html .= "<div class=\"list_title\">".label::get_label('elementos_activos')."</div>";
-					$html .= "<ul id=\"target_list\" class=\"connectedSortable\" data-section_tipo=\"$section_tipo\">";
+					$html .= "<ul id=\"target_list\" class=\"connectedSortable\" data-section_tipo=\"$section_tipo\">";			
 					foreach ($target_list as $tipo => $name) {
 						$html .= "<li data-tipo=\"$tipo\" class=\"ui-icon ui-icon-arrow-4\" >";
 						$html .= $name;
@@ -112,60 +65,60 @@ $html='';
 
 					// info
 						$html .= "<div id=\"records_info\">";
-						$html .= " <h1>Section: <strong>$section_label</strong></h1><span> ".label::get_label('total_records').": <strong>$total_records</strong> </span>";
+						$html .= " <h1>Section: <strong>$section_label</strong></h1><span> ".label::get_label('total_records').": <strong>$total_records</strong> </span>"; 
 						$html .= "</div>";
 
 					// buttons
 						$html .= "<div id=\"buttons_div\">";
-
+							
 							/*
 								#
 								# SELECT ENCODING
 								$html .= '<div class="input-group">';
 								$html .= '<span class="input-group-addon" id="basic-addon1">Encoding</span>';
-
+								
 								$html .= '</div>';
 
 								#
 								# SELECT FORMAT
 								$html .= '<div class="input-group">';
 								$html .= '<span class="input-group-addon" id="basic-addon1">Format</span>';
-
+								
 								$html .= '</div>';
 								*/
 
 								#
-
+							
 							// button export
 								$html .= '<div class="input-group">';
 								$html .= "<a id=\"button_export\" class=\"btn btn-success fileinput-button\" onclick=\"tool_export.export_data(this);\">
 											<strong>".label::get_label('tool_export')."</strong>
 										 </a>";
 								/*
-									$html .= '<span class="input-label">Encoding</span>';
+									$html .= '<span class="input-label">Encoding</span>';	 
 									$html .= "<select id=\"select_encoding_export\" class=\"form-control\">
 												<option value=\"UTF8\">UTF8</option>
 												<option value=\"ISO-8859-1\">ISO-8859-1 (Excel)</option>
 											 </select>";
 									*/
-
+							
 							// format
-								$html .= '<span class="input-label">'.label::get_label("formato").'</span>';
+								$html .= '<span class="input-label">Format</span>';
 								$html .= '<select id="select_data_format_export" class="form-control">';
-								$html .= '<option value="standard">'.label::get_label("estandar").'</option>';
+								$html .= '<option value="standard">Standard</option>';
 								$html .= '<option value="html">HTML</option>';
-								#if(SHOW_DEVELOPER===true) {
-									$html .= '<option value="breakdown">'.label::get_label("desglose").'</option>';
-									$html .= '<option value="breakdown_html">'.label::get_label("desglose").' HTML</option>';
-								#}
+								if(SHOW_DEBUG===true) {
+									$html .= '<option value="breakdown">Breakdown</option>';
+									$html .= '<option value="breakdown_html">Breakdown HTML</option>';
+								}
 								$html .= '<option value="dedalo">Dédalo (Raw)</option>';
 								$html .= '</select>';
 
 							// active-unactive all
-								$html .= '<a id="active_all_columns" class="move_columns" onclick="tool_export.active_all_columns(this);">'.label::get_label("activar_todas_las_columnas").'</a>';
-								$html .= '<a id="unactive_all_columns" class="move_columns" onclick="tool_export.unactive_all_columns(this);">'.label::get_label("desactivar_todas_las_columnas").'</a>';
+								$html .= '<a id="active_all_columns" class="move_columns" onclick="tool_export.active_all_columns(this);">Active all columns</a>';
+								$html .= '<a id="unactive_all_columns" class="move_columns" onclick="tool_export.unactive_all_columns(this);">Unactive all columns</a>';
 
-							$html .= '</div>';
+							$html .= '</div>';		 
 
 						$html .= "</div>";//end buttons_div
 
@@ -176,7 +129,7 @@ $html='';
 
 	// download_file
 		$html .= '<div id="download_file" class="no-print">';
-
+	
 		// download_file csv utf-8
 			#$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link\">".label::get_label("descargar")." CSV</a></h2>";
 			$html .= '<a id="download_file_link" class="btn btn-success fileinput-button"><strong>'.label::get_label("descargar").' CSV</strong></a>';
@@ -187,10 +140,10 @@ $html='';
 
 		// download_file_html
 			$html .= '<a id="download_file_link_html" class="btn btn-success fileinput-button" download><strong>'.label::get_label("descargar").' HTML</strong></a>';
-
+		
 		// print
 			$html .= '<a id="print_button" class="btn btn-success fileinput-button" onclick="window.print()"><strong>'.label::get_label("imprimir").'</strong></a>';
-
+	
 	$html .= '</div>';
 
 
@@ -199,11 +152,11 @@ $html='';
 	# TABLE_DATA_PREVIEW
 	$html .= "<div id=\"table_data_preview\"></div>";
 
-
-
+	
+	
 
 echo $html;
 ?>
-<script>
+<script>  
   tool_export.init();
 </script>

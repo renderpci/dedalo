@@ -25,9 +25,9 @@
 		position: relative;
 		float: left;
 		//overflow: hidden;
-		padding: 5px;
+		padding: 5px;	
 		border:none;
-		margin: 0;
+		margin: 0;	
 		min-height: 2.333em;
 		width: 100%;
 		//transition: all .180s ease-in-out;
@@ -49,7 +49,7 @@
 
 
 // SELECTED_WRAP
-.selected_wrap {
+.selected_wrap {	
 	background-color: @color_selected_wrap !important;
 }
 
@@ -57,14 +57,14 @@
 /* LOCKED_WRAP . Apperance when component is locked
 ------------------------------------------------------- */
 	.locked_wrap {
-		/*background-color: #ED2112;*/
+		/*background-color: #ED2112;*/	
 		user-select: none;
 	        -moz-user-select: none;
 	        -khtml-user-select: none;
 	        -webkit-user-select: none;
 	        -o-user-select: none;
-	    opacity: 0.80;
-	    //pointer-events:none;
+	    opacity: 0.80;    
+	    //pointer-events:none; 
 
 	    &::before {
 			content: "\e033";
@@ -76,7 +76,7 @@
 		    font-weight: 400;
 		    -webkit-font-smoothing: antialiased;
 		    z-index: 1;
-		}
+		} 
 
 	    > label {
 			color: red;
@@ -85,7 +85,7 @@
 		> .content_data {
 			//opacity: 0.35;
 			//cursor: not-allowed;
-			//pointer-events:none;
+			//pointer-events:none; 
 
 			&::before {
 				content: " ";
@@ -98,16 +98,16 @@
 				background-color: @color_locked_wrap;
 				z-index: 999;
 				opacity: 0.16;
-				//pointer-events:none;
+				//pointer-events:none; 
 			}
 		}
-	}
+	}	
 
 	.locked_wrap_username {
 		font-family: Arial, sans-serif;
 		font-size: 96%;
 		padding-left: 4px;
-	}
+	}	
 	.locked_wrap_overlay {
 		background-color: @color_label_error; //#ED0019;
 		z-index: 2;
@@ -129,16 +129,16 @@
 		position: relative;
 		display: inline-block;
 		padding: 0;
-		margin: 0;
+		margin: 0;	
 		width: 83%;
 		height: 100%;
-		@media screen and (max-width: @content_data_max_width) {
+		@media screen and (max-width: @content_data_max_width) {		
 			display: block !important;
 			width: 100% !important;
 		}
 	}
 
-
+	
 
 /* INPUTS
 ------------------------------------------------------- */
@@ -159,7 +159,7 @@ input[type="text"], input[type="password"], input[type="url"], textarea, input[t
 	input[type=text]:hover, input[type="password"]:hover {
 		//background-color: #F8F8F8;
 	}
-	input[type="text"]:focus, input[type="password"]:focus {
+	input[type="text"]:focus, input[type="password"]:focus {		
 		//box-shadow: 0 0 10px #BEBEBE;
 		color: #000000;
 		z-index: 2001 !important;
@@ -171,7 +171,7 @@ input[type="text"], input[type="password"], input[type="url"], textarea, input[t
 	input::-webkit-input-placeholder {
 		color: #D2D2D2
 	}
-
+	
 	/* OVERWRITE TINYMCE TEXT AREA
 	------------------------------------------------------- */
 	.mce-panel {
@@ -185,11 +185,11 @@ input[type="text"], input[type="password"], input[type="url"], textarea, input[t
 	.label {
 		display: inline-block;
 		padding: 4px;
-		padding-top: 3px;
+		padding-top: 3px;		
 		min-width: 15%;
 		height: auto;
 		line-height: 1em;
-		text-align: left;
+		text-align: left;	
 		word-wrap: break-word;
 		vertical-align: top;
 		font-size: 100%;
@@ -200,7 +200,7 @@ input[type="text"], input[type="password"], input[type="url"], textarea, input[t
 		 -khtml-user-select: none;
 		   -moz-user-select: none;
 		     -o-user-select: none;
-		        user-select: none;
+		        user-select: none;		
 	}
 	/* LABEL IN WRAP COMPONENT CONTEXT */
 	.wrap_component .label {
@@ -227,7 +227,7 @@ input[type="text"], input[type="password"], input[type="url"], textarea, input[t
 			max-width: 100%;
 		}
 	}
-
+		
 
 
 
@@ -265,7 +265,7 @@ input[type="text"], input[type="password"], input[type="url"], textarea, input[t
 	padding: 2px;
 	//padding-left: 4px;
 	color: #404040;
-	font-size: 96%;
+	font-size: 96%;	
 }
 div.dato_refecence_default_lang {
 	font-style: italic;
@@ -285,7 +285,7 @@ div.dato_refecence_default_lang {
     margin-right: 5px;
     position: relative;
     line-height: 1em;
-    vertical-align: middle;
+    vertical-align: middle; 
     padding: 8px;
     padding-bottom: 0;
 }
@@ -297,7 +297,7 @@ div.dato_refecence_default_lang {
 .css_tool_label {
 	display: inline-block;
 	padding-left: 5px;
-	padding-right: 5px;
+	padding-right: 5px;	
 	text-transform: uppercase;
 	color: @color_component_label;
 	font-size: 130%;
@@ -326,7 +326,7 @@ div.dato_refecence_default_lang {
 ------------------------------------------------------- */
 .css_operator_select{
 	padding: 2px;
-	cursor: pointer;
+	cursor: pointer;	
 }
 
 
@@ -337,11 +337,11 @@ div.dato_refecence_default_lang {
 	min-width: initial;
 	min-width: 30px;
 	//height: 2em;
-	margin-right: 5px;
+	margin-right: 5px;	
 	text-align: center;
-	//vertical-align: middle;
+	//vertical-align: middle;	
 	}
-	.search_component > .wrap_component > .content_data > input.q_operator:focus {
+	.search_component > .wrap_component > .content_data > input.q_operator:focus {		
 		//background-color: #4F4F4F;
 		//color: #ffffff;
 		//border-radius: 4px;
@@ -366,7 +366,7 @@ div.dato_refecence_default_lang {
 	.ui-menu-item {
 		font-weight: normal !important;
 	}
-
+	
 
 
 /* mandatory common
@@ -452,12 +452,12 @@ div.dato_refecence_default_lang {
 	/* filter_by_list
 	----------------------------------------*/
 	@filter_by_list_column_width : 25%;
-	// filter_by_list
+	// filter_by_list 	
 		.filter_by_list {
 			display: table;
 			//display: table;
 			//background-color: #8E8E8E;
-			padding: 10px;
+			padding: 10px;	
 			z-index: 1001;
 			/*
 			position: absolute;
@@ -476,7 +476,7 @@ div.dato_refecence_default_lang {
 				//width: 33%;
 				width: @filter_by_list_column_width;
 				display: flex; // Important for text-overflow ellipsis
-			}
+			}				
 			.filter_by_list input {
 				margin: 2px;
 				margin-right: 4px;
@@ -486,13 +486,13 @@ div.dato_refecence_default_lang {
 				overflow: hidden;
 				text-overflow: ellipsis;
 				max-width: 90%;
-				color: #7c7c7c;
+				color: #7c7c7c;	
 				}
 				.filter_by_list li > label > span {
 					position: absolute;
 					right: 0;
 					padding-right: 15px;
-					color: #7c7c7c;
+					color: #7c7c7c;	
 				}
 			.filter_by_list hr {
 				width: 100%;
@@ -516,15 +516,15 @@ div.dato_refecence_default_lang {
 				}
 				.filter_by_list .filter_by_list_close:active {
 					color: black;
-				}*/
+				}*/			
 			.filter_by_list mark {
 				color: #f5c39f !important;
 			}
-
+   
 
 	// component_read_only. Read only / editable
 		.component_read_only {
-
+			
 			pointer-events: none;
 			background-color: #ffebeb !important;
 
@@ -541,15 +541,5 @@ div.dato_refecence_default_lang {
 			    opacity: 0.3
 			}
 		}
-
-
-
-// tinymce in full screen
-	.mce-fullscreen {
-		z-index: 9999999 !important;
-	}
-
-
-
 
 
