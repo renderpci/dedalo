@@ -242,6 +242,7 @@ class component_pdf extends component_media_common {
 		return $this->pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 	}
 
+
 	/**
 	* GET_TARGET_DIR
 	*/
@@ -495,7 +496,7 @@ class component_pdf extends component_media_common {
 			#$flags 		= " -scale 200x200 -background white -flatten ";
 			$command 	= MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
 
-			exec($command.' 2>&1', $output, $result);			
+			exec($command.' 2>&1', $output, $result);
 
 			if ($result===0) {
 				# All is ok
@@ -669,27 +670,27 @@ class component_pdf extends component_media_common {
 
 		// thumb : Create pdf_thumb
 			$thumb_url = $this->get_pdf_thumb( $force_create=true );
-			
-		
+
+
 		// transcription to text automatic
 			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
 				#dump($ar_related_component_text_area_tipo, ' ar_related_component_text_area_tipo ++ '.$this->get_tipo().to_string());
 			if (!empty($ar_related_component_text_area_tipo)) {
-				
+
 				$related_component_text_area_tipo 	= reset($ar_related_component_text_area_tipo);
 				$related_component_text_area_model 	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-				$target_pdf_path 				  	= $this->get_pdf_path();						
+				$target_pdf_path 				  	= $this->get_pdf_path();
 
 				try {
 					$options = new stdClass();
 						$options->path_pdf 	 = (string)$target_pdf_path;	# full source pdf file path
 						#$options->first_page = (int)$pagina_inicial;		# number of first page. default is 1
-					$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );								
+					$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
 						#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
 						// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
-						
+
 					if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
-						
+
 						$component_text_area = component_common::get_instance($related_component_text_area_model,
 																			  $related_component_text_area_tipo,
 																			  $this->section_id,
@@ -700,7 +701,7 @@ class component_pdf extends component_media_common {
 						$component_text_area->Save();
 					}
 
-				} catch (Exception $e) {						  
+				} catch (Exception $e) {
 				    debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
 				}
 
@@ -765,7 +766,7 @@ class component_pdf extends component_media_common {
 	* @return object $response
 	*/
 	public static function get_text_from_pdf( $new_options ) {
-		
+
 		$response=new stdClass();
 
 		$options = new stdClass();
@@ -786,12 +787,12 @@ class component_pdf extends component_media_common {
 				return $response;
 			}
 
-		
+
 		// test engine pdf to text
 			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
 				$response->result = 'error';
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
-				return $response;			
+				return $response;
 			}else{
 				$transcription_engine = trim(shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE));
 				if (empty($transcription_engine)) {
@@ -804,15 +805,15 @@ class component_pdf extends component_media_common {
 		#
 		# FILE TEXT FROM PDF . Create a new text file from pdf text content
 		$text_filename 	= substr($options->path_pdf, 0, -4) .'.txt';
-		
+
 		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
 		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error')) {
 			$response->result = 'error';
 			$response->msg 	  = "$output";
-			return $response;			
+			return $response;
 		}
-		
+
 		if (!file_exists($text_filename)) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Text file not found";
@@ -827,33 +828,33 @@ class component_pdf extends component_media_common {
 		$test_utf8 = self::valid_utf8($pdf_text);
 		if (!$test_utf8) {
 			error_log("WARNING: Current string is NOT utf8 valid. Anyway continue ...");
-		}		
-		
+		}
+
 		# Remove non utf8 chars
 		$pdf_text = self::utf8_clean($pdf_text);
 
 		# Test JSON conversion before save
-		$pdf_text 	= json_handler::encode($pdf_text);		
+		$pdf_text 	= json_handler::encode($pdf_text);
 		if (!$pdf_text) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
-			return $response;			
-		}		
+			return $response;
+		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
 		$pdf_text 	= trim($pdf_text);	// Trim before check is empty
-		if (empty($pdf_text)) {			
+		if (empty($pdf_text)) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
-			return $response;	
-		}	
+			return $response;
+		}
 
 		#
-		# PAGES TAGS	
+		# PAGES TAGS
 		$original_text = str_replace("","", $pdf_text);
 		$pages = explode("", $pdf_text);
 		$i=(int)$options->first_page;
 		$pdf_text='';
-		foreach ($pages as $current_page) {		
+		foreach ($pages as $current_page) {
 		    $pdf_text .= '[page-n-'. $i .']';
 		    $pdf_text .= '<br>';
 		    $pdf_text .= nl2br($current_page);
@@ -863,7 +864,7 @@ class component_pdf extends component_media_common {
 		$response->result  = (string)$pdf_text;
 		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
 		$response->original = trim($original_text);
-		
+
 
 		return $response;
 	}//end build_pdf_transcription
@@ -878,14 +879,14 @@ class component_pdf extends component_media_common {
 	# http://en.wikipedia.org/wiki/UTF-8
 	# Implemented as a recursive descent parser based on a simple state machine
 	# copyright 2005 Maarten Meijer
-	# This cries out for a C-implementation to be included in PHP core	
+	# This cries out for a C-implementation to be included in PHP core
 	public static function valid_utf8($string) {
 		$len = strlen($string);
 
 		function valid_1byte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0x80) == 0x00;
-		}	
+		}
 		function valid_2byte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0xE0) == 0xC0;
@@ -897,13 +898,13 @@ class component_pdf extends component_media_common {
 		function valid_4byte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0xF8) == 0xF0;
-		}	
+		}
 		function valid_nextbyte($char) {
 			if(!is_int($char)) return false;
 			return ($char & 0xC0) == 0x80;
 		}
 
-		$i = 0;    
+		$i = 0;
 		while( $i < $len ) {
 			$char = ord(substr($string, $i++, 1));
 			if(valid_1byte($char)) {    // continue
@@ -925,10 +926,10 @@ class component_pdf extends component_media_common {
 					return false;
 			} // goto next char
 		}
-		
+
 		return true;
 	}//end valid_utf8
-	
+
 
 
 	/**

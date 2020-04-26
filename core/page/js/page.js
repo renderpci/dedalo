@@ -13,7 +13,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {common} from '../../common/js/common.js'
-	import {load_tool} from '../../tool_common/js/tool_common.js'
+	import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
 	import {render_page} from './render_page.js'
