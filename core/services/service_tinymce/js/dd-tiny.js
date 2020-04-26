@@ -26,9 +26,9 @@ class DDTiny extends HTMLElement {
 
 		// textarea base element
 			const textarea = document.createElement('textarea')
-				  textarea.innerHTML = value
+				  textarea.innerHTML = value				  
 				  self.appendChild(textarea)
-
+		
 		// tinymce editor init
 			tinymce.init({
 				// target . node element base for build editor
