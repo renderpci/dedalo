@@ -1584,7 +1584,7 @@ abstract class common {
 					$tool->section_tipo = $item->section_tipo;
 					$tool->name  		= $item->name;
 					$tool->label 		= $label;
-					$tool->icon 		= DEDALO_CORE_URL . '/tools/' . $item->name . '/img/icon.svg';
+					$tool->icon 		= DEDALO_TOOLS_URL . '/' . $item->name . '/img/icon.svg';
 					$tool->show_in_inspector = $item->show_in_inspector;
 					$tool->show_in_component = $item->show_in_component;
 
@@ -2476,7 +2476,7 @@ abstract class common {
 	*/
 	public function get_tools() {
 
-		$registered_tools 	= $this->get_registered_tools();
+		$registered_tools 	= $this->get_client_registered_tools();
 		$model 				= get_class($this);
 		$tipo 				= $this->tipo;
 		$is_component 		= strpos($model, 'component_')===0;
@@ -2523,12 +2523,16 @@ abstract class common {
 	* GET_REGISTERED_TOOLS
 	* @return
 	*/
-	public function get_registered_tools() {
+	public function get_client_registered_tools() {
 
 		if(isset($_SESSION['dedalo']['registered_tools'])) {
-			return $_SESSION['dedalo']['registered_tools'];
+			//return $_SESSION['dedalo']['registered_tools'];
 		}
 
+		// get all tools config sections
+			$ar_config = tools_register::get_all_config_tool_client();
+
+		// get all active and regsitred tools
 		$sqo_tool_active = json_decode('{
 				"section_tipo": "dd1324",
 				"limit": 0,
@@ -2547,12 +2551,13 @@ abstract class common {
 				            ]
 				        }
 				    ]
-				}
+				},
+				"full_count": false
 			}');
 
 		$search = search::get_instance($sqo_tool_active);
 		$result = $search->search();
-
+		// get the simple_tool_object
 		$registered_tools = [];
 		foreach ($result->ar_records as $record) {
 
@@ -2570,16 +2575,26 @@ abstract class common {
 															DEDALO_DATA_NOLAN,
 															$record->section_tipo);
 			$dato = $component->get_dato();
-			foreach ((array)$dato as $current_value) {
-				$registered_tools[] = $current_value;
-			}
+			$current_value = reset($dato);
+
+			// append config
+			$current_config = array_filter($ar_config, function($item) use($current_value){
+				if($item->name === $current_value->name) {
+					return $item;
+				}
+			});
+			$current_value->config = !empty($current_config[0])
+				? $current_config[0]->config
+				: null;
+
+			$registered_tools[] = $current_value;
 		}
 
 		$_SESSION['dedalo']['registered_tools'] = $registered_tools;
 
 
 		return $registered_tools;
-	}//end get_registered_tools
+	}//end get_client_registered_tools
 
 
 
