@@ -51,12 +51,15 @@ class class_loader {
 
 		switch (true) {
 
-			case ($className==='tools_register'):
-				$file_path	= DEDALO_CORE_PATH . '/tool_common/class.tools_register.php';
-				break;
+			// case ($className==='tools_register'):
+			// 	$file_path	= DEDALO_CORE_PATH . '/tool_common/class.tools_register.php';
+			// 	break;
 
-			case (strpos($className, 'tool_')!==false):
-				$file_path	= DEDALO_CORE_PATH . '/tools/' . $className . '/class.' . $className . '.php';
+
+			case (strpos($className, 'tool')===0):
+
+				$directory  = ($className==='tools_register') ? 'tool_common' : $className;				
+				$file_path	= DEDALO_TOOLS_PATH . '/' . $directory . '/class.' . $className . '.php';
 				break;
 
 			case (strpos($className, 'diffusion_')!==false):

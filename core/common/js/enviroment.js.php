@@ -133,6 +133,7 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 	$plain_vars = [
 		'DEDALO_CORE_URL' 		=> DEDALO_CORE_URL,
 		'DEDALO_ROOT_WEB' 		=> DEDALO_ROOT_WEB,
+		'DEDALO_TOOLS_URL' 		=> DEDALO_TOOLS_URL,
 		'SHOW_DEBUG' 			=> SHOW_DEBUG,
 		'SHOW_DEVELOPER' 		=> SHOW_DEVELOPER,
 		'DEVELOPMENT_SERVER' 	=> DEVELOPMENT_SERVER,

@@ -86,7 +86,7 @@ component_pdf.prototype.build = async function(autoload=false) {
 
 
 /**
-* LOAD_TAG_INTO_PDF_EDITOR
+* GO_TO_PAGE
 * called by the click into the tag (in component_text_area)
 * the tag will send the ar_layer_id that it's pointing to
 */
@@ -98,7 +98,7 @@ component_pdf.prototype.go_to_page = async function(options) {
 	// for every layer_id in the tag load the data from the DDBB
 	self.pdf_viewer.page = page[0]
 
-}// load_tag_into_pdf_editor
+}//end go_to_page
 
 
 
@@ -126,7 +126,7 @@ component_pdf.prototype.get_data_tag = function(){
 }// end get_data_tag
 
 
-///// don't used 
+///// don't used
 function get_text(){
 
 	const ar_text = self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textContentItemsStr

@@ -47,7 +47,7 @@ export const instances = []
 export const get_instance = async function(options){
 
 	// if(options.model==='section') console.log("=========================================== get_instance options:",options);
-	// key values ['model','tipo','section_tipo','section_id','mode','lang']	
+	// key values ['model','tipo','section_tipo','section_id','mode','lang']
 
 	// mandatory vars
 		const tipo 				= options.tipo
@@ -95,9 +95,9 @@ export const get_instance = async function(options){
 				//console.log("---Creating instance of:", model, tipo, " - " + key)
 
 				// element file import path
-					const base_path = model.indexOf('tool_') !== -1 ? '../../tools/' : '../../'
+					const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
 					const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
-
+	
 				// import element mod file once (and wait until finish)
 					const current_element = await import(path)
 
@@ -139,7 +139,7 @@ export const get_instance = async function(options){
 		}
 
 	const instance = load_instance()
-	
+
 
 	return instance
 }// end get_instance
