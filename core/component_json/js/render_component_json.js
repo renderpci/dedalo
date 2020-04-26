@@ -104,78 +104,9 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 	// fix
 		self.wrapper = wrapper
 
-	// add events
-		//add_events(self, wrapper)
-
 
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
-		)
-		function update_value (changed_data) {
-			//console.log("-------------- - event update_value changed_data:", changed_data);
-			// change the value of the current dom element
-			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
-			changed_node.value = changed_data.value
-		}
-
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', async (e) => {
-			//e.stopPropagation()
-			alert("Changed ! [under construction]");
-
-			/*
-			// update
-			if (e.target.matches('input[type="text"].input_value')) {
-				//console.log("++update e.target:",JSON.parse(JSON.stringify(e.target.dataset.key)));
-				//console.log("++update e.target value:",JSON.parse(JSON.stringify(e.target.value)));
-
-				// // is_unique check
-				// if (self.context.properties.unique) {
-				// 	// const result = await check_duplicates(self, e.target.value, false)
-				// 	if (self.duplicates) {
-				// 		e.target.classList.add("duplicated")
-
-				// 		const message = ui.build_message("Warning. Duplicated value " + self.duplicates.section_id)
-				// 		wrapper.appedChild(message)
-
-				// 		return false
-				// 	}
-				// }
-
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: (e.target.value.length>0) ? e.target.value : null,
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
-
-				return true
-			}
-			*/
-
-		}, false)
-
-
-	return true
-}//end add_events
 
 
 
@@ -314,43 +245,45 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
 				if (!changed) {
 					console.log("No changes are detected. Stop save");
+					// fire event change
+					on_change(self, editor)
 					return false
 				}
 
 			// save sequence
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: 0,
-					value	: current_value
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-
-					on_change(self, editor)
-				})
+				self.save_sequence(current_value)
+				// const changed_data = Object.freeze({
+				// 	action	: 'update',
+				// 	key		: 0,
+				// 	value	: current_value
+				// })
+				// self.change_value({
+				// 	changed_data : changed_data,
+				// 	refresh 	 : false
+				// })
+				// .then((save_response)=>{
+				// 	// event to update the dom elements of the instance
+				// 	event_manager.publish('update_value_'+self.id, changed_data)
+				// 	// fire event change
+				// 	on_change(self, editor)
+				// })
 		})
 
 	// load
 		await self.load_editor()
 
-	// create the editor
+	// create JSON editor
 		const editor_options = {
 			mode	 : 'code',
 			modes	 : ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-			// maxLines : 100, // Infinity,
 			onError	 : function (err) {
 				console.error("err:",err);
 				alert(err.toString());
 			},
 			onValidationError : function() {
 				validated = false
-			},			
-			onChange : function(json) {				
+			},
+			onChange : function(json) {
 				on_change(self, editor)
 			},
 			onValidate: function() {
@@ -378,11 +311,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				// 	// event to update the dom elements of the instance
 				// 	event_manager.publish('update_value_'+self.id, changed_data)
 				// })
-		    },
-		    // onBlur: function() {
-		    // 	console.log('content changed:', this);
-		    // 	alert("content changed");
-		    // }
+		    }
 		}
 		const editor = new JSONEditor(li, editor_options, current_value)
 
@@ -390,7 +319,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			// const ace_editor = editor.aceEditor
 			// ace_editor.on("blur", function(e){
 			// 	e.stopPropagation()
-			// 
+			//
 			// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
 			// 	const edited_value 	= editor.get()
 			// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
@@ -402,7 +331,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			// 		button_save.click()
 			// 	}
 			// })
-						
+
 
 	// append current editor
 		self.editors.push(editor)
@@ -416,7 +345,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 /**
 * ON_CHANGE
 */
-const on_change = function(self, editor) {
+export const on_change = function(self, editor) {
 
 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
 	const edited_value 	= editor.get()
@@ -431,9 +360,9 @@ const on_change = function(self, editor) {
 		if (editor_wrapper.classList.contains("isDirty")) {
 			editor_wrapper.classList.remove("isDirty")
 			button_save.classList.remove("warning")
-		}		
+		}
 	}
-	
+
 	return true
 }//end on_change
 
@@ -458,5 +387,3 @@ const download_object_as_json = function(export_obj, export_name){
 
     return true
 }//end download_object_as_json
-
-
