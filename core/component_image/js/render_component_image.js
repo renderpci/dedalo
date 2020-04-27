@@ -171,6 +171,12 @@ const content_data_edit = async function(self) {
 			const image 	= svg_doc.querySelector("image")
 			// set the new source to the image node into the svg
 			self.img_src 	= image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
+
+			// add spinner when new image is loading
+			li.classList.add("preload")
+			image.addEventListener("load", function(){
+				li.classList.remove("preload")
+			})
 		}
 
 
