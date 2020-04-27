@@ -27,7 +27,7 @@
 
 // BACKUPS
 	# Target folder exists test
-	$folder_path = DEDALO_CORE_PATH.'/backup/backups';
+	$folder_path = DEDALO_BACKUP_PATH;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backups directory. Permission denied");
@@ -39,7 +39,7 @@
 
 // BACKUPS_STRUCTURE
 	# Target folder exists test
-	$folder_path = DEDALO_CORE_PATH.'/backup/backups_structure';
+	$folder_path = DEDALO_BACKUP_PATH_STRUCTURE;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backups_structure directory. Permission denied");
@@ -51,7 +51,7 @@
 
 // BACKUP_TEMP
 	# Target folder exists test
-	$folder_path = DEDALO_CORE_PATH.'/backup/temp';
+	$folder_path = DEDALO_BACKUP_PATH_TEMP;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backup temp directory. Permission denied");
@@ -63,7 +63,7 @@
 
 // BACKUP USERS DIR
 	# Target folder exists test
-	$folder_path = DEDALO_CORE_PATH.'/backup/users';
+	$folder_path = DEDALO_BACKUP_PATH_USERS;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700,true)) {
 			$init_response->msg .= trim(" Error on read or create backup users directory. Permission denied");

@@ -137,6 +137,12 @@
 	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
 	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
 	define('DEDALO_BACKUP_TIME_RANGE', 4);
+	// backups paths
+	define('DEDALO_BACKUP_PATH' 	 		, dirname(DEDALO_ROOT) . '/backups');
+	define('DEDALO_BACKUP_PATH_TEMP' 	 	, DEDALO_BACKUP_PATH . '/temp');
+	define('DEDALO_BACKUP_PATH_DB' 	 		, DEDALO_BACKUP_PATH . '/db');
+	define('DEDALO_BACKUP_PATH_STRUCTURE' 	, DEDALO_BACKUP_PATH . '/structure');
+	define('DEDALO_BACKUP_PATH_USERS' 		, DEDALO_BACKUP_PATH . '/users');
 
 
 
