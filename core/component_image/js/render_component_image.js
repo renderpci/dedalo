@@ -86,7 +86,7 @@ render_component_image.prototype.edit = async function(options) {
 
 	// buttons
 		const buttons = get_buttons(self)
-	
+
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -95,7 +95,7 @@ render_component_image.prototype.edit = async function(options) {
 		})
 
 	// quality
-		const quality = get_quality_selector(self)	
+		const quality = get_quality_selector(self)
 		wrapper.appendChild(quality)
 
 
@@ -161,7 +161,7 @@ const content_data_edit = async function(self) {
 
 		self.object_node = object
 
-		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
+		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, img_quality_change)
 		self.events_tokens.push(image_change_event)
 		object.dataset.image_change_event = image_change_event
 		function img_quality_change (img_src) {
@@ -247,7 +247,7 @@ const get_buttons = (self) => {
 				self.load_vector_editor({load:'full'})
 			}
 			// set wrapper as wide mode (100%)
-				self.node[0].classList.add('wide')
+				// self.node[0].classList.add('wide')
 		})
 
 	// svg editor tools
@@ -265,6 +265,7 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
 
 
 /**
@@ -307,5 +308,3 @@ const get_quality_selector = (self) => {
 
 	return quality_selector
 }//end get_quality_selector
-
-
