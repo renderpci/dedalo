@@ -11,6 +11,10 @@
 
 
 
+// mixins
+
+
+
 // hilite (on focus)
 	.hilite(@outline_offset:0) {
 		outline-offset: @outline_offset;
@@ -851,6 +855,15 @@
 						>.jsoneditor {
 							// height: 100%;
 						}
+
+					}
+
+					// override json editor
+					.ace_gutter {
+						// z-index: unset;
+					}
+					div.jsoneditor-mode-code{
+						// height: 100vh; //100vh if you want full screen
 					}
 				}
 			}
@@ -1880,10 +1893,9 @@
 // disabled_component
 	.disabled_component {
 		position: relative;
-		pointer-events: none;
 
 		>.wrapper_component {
-			// pointer-events: none;
+			pointer-events: none;
 			//opacity: 0.8;
 			//background-color: #F7B74C
 		}
@@ -2231,15 +2243,31 @@
 		z-index: 1;
 
 		button.button_save {
-			// display: none; // init hidden
+			display: none; // init hidden
 			position: absolute;
 			top: 0px;
 			right: 0px;
 			z-index: 1;
 			height: 36px;
-			background-color: transparent;
-    		border-color: transparent;
-		    opacity: 0.75;
+			// border: 1px solid #2e6cd0;
+			// background-color: #b7d2fe;
+			// color: #2e6cd0;
+
+			&:before {
+				background-color: #2e6cd0;
+			}
+			// padding-left: 1.7em;
+			// padding-right: 1.7em;
+			// background-color: #b7d2fd;
+			// border: 1px solid #3883fa;
+			// color: #3883fa;
+			// line-height: 28px;
+			// border-radius: 3px;
+			// cursor: pointer;
+			// &:active {
+			// 	background-color: #8FA3C4;
+			// 	color: #ffffff;
+			// }
 
 			&.warning {
 				display: flex;
@@ -2257,30 +2285,6 @@
 			//min-height: 30vh;
 		}
 	}
-
-
-
-// json_editor (generic, not only for component_json)
-	.jsoneditor {
-
-		>.jsoneditor-menu a.jsoneditor-poweredBy {
-			top: unset;
-			bottom: 0;
-		    padding: 5px;
-		    color: #b3b3b3;
-		}
-
-		&.isDirty {
-			border: 1px solid @color_danger !important;
-
-			>.jsoneditor-menu {
-				background-color: @color_danger !important;
-			}
-
-		}
-
-	}
-
 
 
 
@@ -2413,6 +2417,30 @@
 			}
 		}
 	}
+
+
+
+// json_editor
+	.jsoneditor {
+
+		>.jsoneditor-menu a.jsoneditor-poweredBy {
+			top: unset;
+			bottom: 0;
+		    padding: 5px;
+		    color: #b3b3b3;
+		}
+
+		&.isDirty {
+			border: 1px solid @color_danger !important;
+
+			>.jsoneditor-menu {
+				background-color: @color_danger !important;
+			}
+
+		}
+
+	}
+
 
 
 
