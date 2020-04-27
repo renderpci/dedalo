@@ -7,7 +7,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_component_json, on_change} from '../../component_json/js/render_component_json.js'
+	import {render_component_json} from '../../component_json/js/render_component_json.js'
 
 
 
@@ -93,65 +93,17 @@ component_json.prototype.load_editor = async function() {
 };//end load_editor
 
 
-
 /**
 * SET_VALUE
-* @param array value
-* @return bool true
+* @return promise
 */
-component_json.prototype.set_value = function(value) {
+component_json.prototype.set_value = async function(value) {
+	const self = this
 
-	const self 	 = this
+	self.editors[0].set(value)
 
-	const editor = self.editors[key]
 
-	// send value to editor
-		editor.set(value)
-
-	// save sequence
-		self.save_sequence(value)
-
-	return true
 }// end set_value
-
-
-
-
-/**
-* SAVE_SEQUENCE
-* @param array value
-* @return bool true
-*/
-component_json.prototype.save_sequence = function(value) {
-
-	const self 	 = this
-
-	const key 	 = 0
-	const editor = self.editors[key]
-
-	// save sequence
-		const changed_data = Object.freeze({
-			action	: 'update',
-			key		: key,
-			value	: value
-		})
-		self.change_value({
-			changed_data : changed_data,
-			refresh 	 : false
-		})
-		.then((save_response)=>{
-			// event to update the dom elements of the instance
-			event_manager.publish('update_value_'+self.id, changed_data)
-			// fire event change
-			on_change(self, editor)
-		})
-
-	// fire event change
-		// on_change(self, editor)
-
-
-	return true
-}// end save_sequence
 
 
 // /**

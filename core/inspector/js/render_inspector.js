@@ -155,7 +155,7 @@ const get_content_data = async function(self) {
 			window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.section_id )
 		})
 
-	// tool register files.	setion dd1340
+	// tool register files.	dd1340
 		const section_tipo = self.caller.tipo
 		if (section_tipo==="dd1340") {
 			const register_download = ui.create_dom_element({
