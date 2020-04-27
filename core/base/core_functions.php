@@ -1517,3 +1517,18 @@ function check_basic_system() {
 }//end check_basic_system
 
 
+
+/**
+* ARRAY_FIND
+* Equivalent of javascript find
+*/
+function array_find($xs, $f) {
+  foreach ($xs as $x) {
+    if (call_user_func($f, $x) === true)
+      return $x;
+  }
+
+  return null;
+}//end find
+
+
