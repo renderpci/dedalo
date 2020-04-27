@@ -197,7 +197,9 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// automatic_translation
-			const translator_engine = self.simple_tool_object.config.translator_engine
+			const translator_engine = (self.simple_tool_object.config)
+				? self.simple_tool_object.config.translator_engine.value
+				: false
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)
