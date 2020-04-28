@@ -6,22 +6,11 @@
 */
 class tool_pdf_extractor extends tool_common{ // extends tool_common
 
-
-
-	/**
-	* __CONSTRUCT
-	*/
-	public function __construct($component_obj, $modo='button') {
-
-	}//end __construct
-
-
-
 	/**
 	* GET_SYSTEM_INFO
 	* @return
 	*/
-	public static function get_pdf_data($options) {
+	public function get_pdf_data($options) {
 
 		$response=new stdClass();
 
@@ -29,17 +18,16 @@ class tool_pdf_extractor extends tool_common{ // extends tool_common
 		$extractor_config 	= $options->extractor_config;
 		$config 			= $this->get_config();
 
-		dump($config, ' config ++ '.to_string()); die();
-
+		// check the component_pdf will be created
 		if(!isset($component_options)){
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: impossible know the caller component";
 			return $response;
 		}
-
-		$model 		= RecordObj_dd::get_modelo_name_by_tipo($component_options->tipo,true);
+		// create the component to get the file path
+		$model 		= RecordObj_dd::get_modelo_name_by_tipo($component_options->component_tipo,true);
 		$component 	= component_common::get_instance($model,
-													$component_options->tipo,
+													$component_options->component_tipo,
 													$component_options->section_id,
 													'list',
 													DEDALO_DATA_NOLAN,
@@ -52,13 +40,17 @@ class tool_pdf_extractor extends tool_common{ // extends tool_common
 				return $response;
 			}
 
+
 		// test engine pdf to text
-			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
+			$method = $extractor_config->method;
+		 	$extactor_engine = $config->{$method}->default;
+
+			if (!isset($extactor_engine)) {
 				$response->result = 'error';
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
+				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config extractor engine is not defined";
 				return $response;
 			}else{
-				$transcription_engine = trim(shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE));
+				$transcription_engine = trim(shell_exec('type -P '.$extactor_engine));
 				if (empty($transcription_engine)) {
 					$response->result = 'error';
 					$response->msg 	  = "Error Processing Request pdf_automatic_transcription: daemon engine not found";
@@ -66,43 +58,84 @@ class tool_pdf_extractor extends tool_common{ // extends tool_common
 				}
 			}
 
-		// FILE TEXT FROM PDF . Create a new text file from pdf text content
-		$text_filename 	= substr($pdf_path, 0, -4) .'.txt';
+		// engine config $options:
+			// text_engine
+				// -f <int> 			: first page to convert
+		 		// -l <int> 			: last page to convert
+				// -layout 				: maintain original physical layout
+		  		// -simple 				: simple one-column page layout
+				// -enc <string> 		: output text encoding name
+			// html_engine
+				// -f <int> 			: first page to convert
+				// -l <int> 			: last page to convert
+				// -p                    : exchange .pdf links by .html
+			    // -c                    : generate complex document
+			    // -s                    : generate single document that includes all pages
+			    // -i                    : ignore images
+			    // -noframes             : generate no frames
+			    // -stdout               : use standard output
+			    // -hidden               : output hidden text
+			    // -nomerge              : do not merge paragraphs
+			    // -enc <string>         : output text encoding name
+
+			$engine_config = '';
+
+			if(!empty($extractor_config->page_in)){
+				$engine_config .= ' -f ' .$extractor_config->page_in;
+			}
+			if(!empty($extractor_config->page_out)){
+				$engine_config .= ' -l ' .$extractor_config->page_out;
+			}
+
+			$file_extension = '.txt';
+			if($method==='html_engine'){
+				$engine_config .= ' -i -p -noframes ' ;
+				$file_extension = '.html';
+			}
+
+		// FILE TEXT FROM PDF . Create a new text file from pdf text content (.txt for text, .html for html)
+		$extraction_filename 	= substr($pdf_path, 0, -4) . $file_extension;
 
 		// exec the extraction
-		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $pdf_path";
+		$command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path";
+		dump($command, ' command ++ '.to_string());
 		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error')) {
 			$response->result = 'error';
 			$response->msg 	  = "$output";
 			return $response;
 		}
-
-		if (!file_exists($text_filename)) {
+		// test if the file is saved
+		if (!file_exists($extraction_filename)) {
 			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Text file not found";
+			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Extraction file not found";
 			return $response;
 		}
-		$pdf_text = file_get_contents($text_filename);	# Read current text file
+		$pdf_text = file_get_contents($extraction_filename);	# Read current text file
 
+		// dump($pdf_text, ' $pdf_text ++ '.to_string()); die();
 
-		#
-		# PAGES TAGS
-		$original_text = str_replace("","", $pdf_text);
-		$pages = explode("", $pdf_text);
-		$i=(int)$options->first_page;
-		$pdf_text='';
-		foreach ($pages as $current_page) {
-			$pdf_text .= '[page-n-'. $i .']';
-			$pdf_text .= '<br>';
-			$pdf_text .= nl2br($current_page);
-			$i++;
-		}
-
-		$response->result  = (string)$pdf_text;
+		$response->result  = $pdf_text;
 		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
-		$response->original = trim($original_text);
+		// $response->original = trim($original_text);
 
+		// #
+		// # PAGES TAGS
+		// $original_text = str_replace("","", $pdf_text);
+		// // explode by the page mark invisible text of return character
+		// $pages = explode("", $pdf_text);
+		// $i=(int)$options->first_page;
+		// $pdf_text='';
+		// foreach ($pages as $current_page) {
+		// 	$pdf_text .= '[page-n-'. $i .']';
+		// 	$pdf_text .= '<br>';
+		// 	$pdf_text .= nl2br($current_page);
+		// 	$i++;
+		// }
+		//
+		// $response->result  = (string)$pdf_text;
+		// $response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
+		// $response->original = trim($original_text);
 
 
 		return $response;

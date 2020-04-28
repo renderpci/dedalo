@@ -17,7 +17,7 @@ abstract class tool_common {
 	* @return bool true
 	*/
 	public function __construct() {
-		
+
 		// set tool name as class name
 		$this->name = get_called_class();
 
@@ -43,7 +43,7 @@ abstract class tool_common {
 					return $item;
 				}
 			});
-		
+
 		$config = !empty($ar_config[0])
 			? $ar_config[0]->config
 			: null;
