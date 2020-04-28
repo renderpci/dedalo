@@ -334,7 +334,7 @@ class component_svg extends component_media_common {
 					if ($default_add===false) {
 						return false;
 					}
-					$image_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
+					$image_url = DEDALO_CORE_URL . '/themes/default/icons/dedalo_icon_grey.svg';
 				}
 			}
 
