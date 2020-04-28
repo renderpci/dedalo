@@ -328,8 +328,8 @@ const get_buttons = (self) => {
 const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	const mode = self.mode
-
-	const value_html = self.tags_to_html(current_value)
+	// value is a raw html without parse into nodes (txt format)
+	const value = self.tags_to_html(current_value)
 
 		// li container
 		const li = ui.create_dom_element({
@@ -353,7 +353,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// 	element_type 	: 'div',
 		// 	class_name 		: 'input_tex_area contenteditable',
 		// 	dataset 	 	: { key : i },
-		// 	inner_html 		: value_html,
+		// 	inner_html 		: value,
 		// 	contenteditable : true,
 		// 	parent 		 	: li
 		// })
@@ -370,10 +370,12 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		// init editor
 		const current_service = new service_tinymce()
 		current_service.init(self, li, {
-			value 			: value_html,
+			value 			: value,
 			key 			: i,
 			editor_config 	: editor_config
 		})
+
+		self.services.push(current_service)
 
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -538,7 +540,7 @@ const get_custom_events = (self, i, get_service) => {
 
 	custom_events.blur = (evt, options) => {
 		// save. service save function calls current component save_value()
-			const service 		= get_service()
+			const service = get_service()
 			service.save()
 	}//end blur
 
@@ -551,7 +553,7 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'tc':
 					// Video goto timecode by tc tag
-					event_manager.publish('click_tag_tc' +'_'+ self.tipo, {tag:tag_obj, caller: self})
+					event_manager.publish('click_tag_tc' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
 					break;
 
 				case 'indexIn' :
@@ -593,7 +595,7 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'draw' :
 					// Load draw editor
-					event_manager.publish('click_tag_draw' +'_'+ self.tipo, {tag:tag_obj, caller: self})
+					event_manager.publish('click_tag_draw' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
 
 					// switch(page_globals.modo) {
 
@@ -618,12 +620,12 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'geo' :
 					// Load geo editor
-					event_manager.publish('click_tag_geo' +'_'+ self.tipo, {tag:tag_obj, caller: self})
+					event_manager.publish('click_tag_geo' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
 					break;
 
 				case 'page':
 						// PDF go to the specific page
-						event_manager.publish('click_tag_pdf' +'_'+ self.tipo, {tag:tag_obj, caller: self})
+						event_manager.publish('click_tag_pdf' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
 						break;
 
 				case 'person':
@@ -672,11 +674,11 @@ const get_custom_events = (self, i, get_service) => {
 		switch(evt.keyCode ){
 			// 'esc' code: 27
 			case  27:
-				event_manager.publish('key_up_esc' +'_'+ self.tipo, evt.keyCode)
+				event_manager.publish('key_up_esc' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, evt.keyCode)
 				break;
 			// 'f2' code: 113
 			case 113:
-				const result 				= event_manager.publish('key_up_f2' +'_'+ self.tipo, evt.keyCode)
+				const result 				= event_manager.publish('key_up_f2' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, evt.keyCode)
 				const result_length 		= result.length
 				// service
 					const service 			  = get_service()
