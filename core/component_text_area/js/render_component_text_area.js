@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
-
+	import {tr} from '../../component_text_area/js/tr.js'
 
 
 /**
@@ -41,10 +41,11 @@ render_component_text_area.prototype.list = async function() {
 		})
 
 	// Value as string
-		const value_string = value.join(self.divisor)
+		const value_string = tr.add_tag_img_on_the_fly( value.join(self.divisor) )
 
 	// Set value
-		wrapper.innerHTML = value_string
+		// wrapper.innerHTML = value_string
+		wrapper.insertAdjacentHTML('afterbegin', value_string);
 
 
 	return wrapper
