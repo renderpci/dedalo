@@ -4,10 +4,18 @@
 *
 *
 */
-abstract class tool_common{
+class tool_common{
 
-    public $name;
     public $config;
+    public $tool_name;
+
+	/**
+	* __CONSTRUCT
+	*/
+	public function __construct() {
+        $this->tool_name = get_called_class();
+	}//end __construct
+
 
     /**
     * get_config
@@ -15,7 +23,7 @@ abstract class tool_common{
     */
     public function get_config() {
 
-        $tool_name = $this->name:
+        $tool_name = $this->tool_name;
 
         // get all tools config sections
 			$ar_config = tools_register::get_all_config_tool();
@@ -33,7 +41,7 @@ abstract class tool_common{
         $this->config = $config;
 
         return $config;
-    };//end get_config
+    }//end get_config
 
 
 }

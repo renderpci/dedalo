@@ -91,10 +91,7 @@ render_tool_pdf_extractor.prototype.edit = async function (options={render_level
 */
 const get_content_data = async function(self) {
 
-
 	const fragment = new DocumentFragment()
-
-console.log("self", self);
 
 	// range page
 		const page_range = ui.create_dom_element({
@@ -172,7 +169,7 @@ console.log("self", self);
 						})
 						option_txt.checked = 'checked'
 						option_txt.addEventListener('change',(e)=>{
-							self.config.method = 'txt'
+							self.config.method = 'text_engine'
 						})
 						const option_txt_label = ui.create_dom_element({
 							element_type	: 'label',
@@ -188,7 +185,7 @@ console.log("self", self);
 							parent 			: radio_li
 						})
 						option_html.addEventListener('change',(e)=>{
-							self.config.method = 'html'
+							self.config.method = 'html_engine'
 						})
 						const option_html_label = ui.create_dom_element({
 							element_type	: 'label',
@@ -203,11 +200,14 @@ console.log("self", self);
 			text_content 	: self.get_label('do_process'),
 			parent 			: page_range
 		})
-		button_submit.addEventListener('mouseup',(e)=>{
-			const pdf_data = self.get_pdf_data(self)
-			console.log("pdf_data", pdf_data);
-
-
+		button_submit.addEventListener('mouseup',async (e)=>{
+			const extracted_data 	= await self.get_pdf_data(self)
+			const pdf_data 			= await self.process_pdf_data(extracted_data.result)
+			const changed_data 		= {
+				key 	: 0,
+				value 	: pdf_data
+			}
+			event_manager.publish('set_pdf_data'+'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo,  changed_data)
 		})
 
 
