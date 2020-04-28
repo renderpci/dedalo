@@ -99,7 +99,7 @@ class tool_import_dedalo_csv extends tool_common {
 				if ($csv_map[$key]==='section_id') continue; # Skip section_id value column
 
 				# created_by_userID
-				if ($csv_map[$key]==='created_by_user') {
+				if ($csv_map[$key]==='created_by_user' || $csv_map[$key]===$created_by_user['tipo']) {
 
 					$user_locator 	 = self::build_user_locator($value, $created_by_user['tipo']);
 
@@ -123,7 +123,7 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 					continue;
 				# created_date
-				}elseif ($csv_map[$key]==='created_date') {
+				}elseif ($csv_map[$key]==='created_date' || $csv_map[$key]===$created_date['tipo']) {
 
 					$current_date 	= self::build_date_from_value($value);
 
@@ -153,7 +153,7 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 					continue;
 				# modified_by_user
-				}elseif ($csv_map[$key]==='modified_by_user') {
+				}elseif ($csv_map[$key]==='modified_by_user' || $csv_map[$key]===$modified_by_user['tipo']) {
 
 					$user_locator 	 = self::build_user_locator($value, $modified_by_user['tipo']);
 						#dump($user_locator, ' user_locator ++ '.to_string());
@@ -180,7 +180,7 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 					continue;
 				# modified_date
-				}elseif ($csv_map[$key]==='modified_date') {
+				}elseif ($csv_map[$key]==='modified_date' || $csv_map[$key]===$modified_date['tipo']) {
 
 					$current_date 	= self::build_date_from_value($value);
 
