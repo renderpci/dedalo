@@ -1,11 +1,42 @@
 <?php
 include( dirname(__FILE__) . '/translators/class.babel.php');
 /*
-* CLASS TOOL LANG
+* CLASS TOOL_indexation
 *
 *
 */
-class tool_lang extends tool_common {
+class tool_indexation { // extends tool_common
+
+
+	public $source_component;
+	public $target_component;
+	public $ar_source_langs;
+	public $ar_source_components;
+	public $target_langs;	# From filter 'Projects'
+	public $last_target_lang;
+	public $section_tipo;
+
+
+
+	/**
+	* __CONSTRUCT
+	*/
+	public function __construct($component_obj, $modo='button') {
+
+		# Fix modo
+		$this->modo = $modo;
+
+		# Para unificar el acceso, se copia el componente a $this->component_obj
+		$this->component_obj 	= $component_obj;
+
+		# Fix component
+		$this->source_component = $component_obj;
+		$this->source_component->set_modo('tool_indexation');
+		#$this->source_component->set_variant( tool_indexation::$source_variant );
+			#dump($component_obj,'component_obj');
+
+		$this->section_tipo = $component_obj->get_section_tipo();
+	}//end __construct
 
 
 
@@ -13,7 +44,7 @@ class tool_lang extends tool_common {
 	* AUTOMATIC_TRANSLATION
 	* @return object $response
 	*/
-	public function automatic_translation($request_options) {
+	public static function automatic_translation($request_options) {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -28,18 +59,22 @@ class tool_lang extends tool_common {
 			$options->translator 		= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		// config json . Must be compatible with tool properties translator_engine data
-			$config 				= $this->get_config();
-			$ar_translator_configs 	= $config->translator_config->value;
-			$translator_name 		= $options->translator->name;
-			// search current translator config in tool config (stored in database, section 'dd996' Tools configuration)
-			$translator_config = array_find($ar_translator_configs, function($item) use($translator_name) {
-				return $item->name===$translator_name;
-			});
+		// config json file . Must be compatible with tool properties translator_engine data
+			// $config = json_decode(file_get_contents(dirname(__FILE__) . '/translators/config.json'));
+			// if ($config===null) {
+			// 	$response->msg 	= "Sorry. 'translators/config.json' file is not valid!"; // error msg
+			// 	return $response;
+			// }
+			// // match config engine name with options translator name
+			// $engine = array_reduce($config->translator_engine, function($carry, $item) use($options){
+			// 	return ($item->name===$options->translator->name) ? $item : $carry;
+			// });
+			// $uri = $engine->uri;
+			// $key = $engine->key;
 
 		// data from options->translator
-			$uri = $translator_config->uri;
-			$key = $translator_config->key;
+			$uri = $options->translator->uri;
+			$key = $options->translator->key;
 
 		// Source text . Get source text from component
 			$model 		= RecordObj_dd::get_modelo_name_by_tipo($options->component_tipo,true);
@@ -55,7 +90,7 @@ class tool_lang extends tool_common {
 			$translated_data = [];
 			foreach ($dato as $key => $value) {
 
-				switch ($translator_name) {
+				switch ($options->translator->name) {
 					case 'google_translation':
 						// Not implemented yet
 						$response->msg = "Sorry. '{$options->translator->label}' is not implemented yet"; // error msg

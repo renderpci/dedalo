@@ -67,7 +67,22 @@ class area_development extends area_common {
 				$item->parent 	= $this->tipo;
 				$item->label 	= label::get_label('registrar_herramientas');
 				$item->info 	= 'Click to read tools folder and update the tools register in database';
-				$item->body 	= ' ';
+				$list = array_map(function($path){
+					// ignore folders with name different from pattern 'tool_*'
+					if (1!==preg_match('/tools\/tool_*/', $path, $output_array)) {
+						return null;
+					}else{
+						$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
+						// skip tool common
+						if ($tool_name==='tool_common') return null;
+						// check file register is ready
+						if(!$register_row = file_get_contents($path.'/register.json')) {
+							$tool_name .= ' <danger>(!) Invalid register.json file from tool</danger>';
+						}
+						return $tool_name;
+					}
+				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
+				$item->body 	= implode('<br>', array_filter($list));
 				$item->trigger 	= (object)[
 					'dd_api' 		=> 'dd_utils_api',
 					'action' 	 	=> 'register_tools',

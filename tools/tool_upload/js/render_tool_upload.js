@@ -150,10 +150,11 @@ const get_content_data = async function(self) {
 				break; // only one is allowed
 			}
 		})
+		console.log("self",self)
 		// label icon
 		ui.create_dom_element({
 			element_type	: 'img',
-			src				: DEDALO_CORE_URL + '/tools/tool_upload/img/icon.svg',
+			src				: DEDALO_TOOLS_URL + '/' + self.model + '/img/icon.svg',
 			parent 			: filedrag
 		})
 		// label text

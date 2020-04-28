@@ -1,0 +1,136 @@
+{
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "8",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "2",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1331"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "inf": "Fecha de creación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 23,
+                            "hour": 18,
+                            "time": 64926383369,
+                            "year": 2020,
+                            "month": 1,
+                            "minute": 29,
+                            "second": 29
+                        }
+                    }
+                ]
+            }
+        },
+        "dd201": {
+            "inf": "Fecha de modificación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 24,
+                            "hour": 18,
+                            "time": 64934506627,
+                            "year": 2020,
+                            "month": 4,
+                            "minute": 57,
+                            "second": 7
+                        }
+                    }
+                ]
+            }
+        },
+        "dd612": {
+            "inf": "Descripción [component_text_area]",
+            "dato": {
+                "lg-eng": [
+                    "Tool to associate text fragments to thesaurus term"
+                ]
+            }
+        },
+        "dd799": {
+            "inf": "Etiqueta [component_input_text]",
+            "dato": {
+                "lg-eng": [
+                    "Tool Indexation"
+                ]
+            }
+        },
+        "dd1326": {
+            "inf": "Nombre de la herramienta [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "tool_indexation"
+                ]
+            }
+        },
+        "dd1327": {
+            "inf": "Versión [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "2.0.0"
+                ]
+            }
+        },
+        "dd1328": {
+            "inf": "Versión Dédalo mínima [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "6.0.0"
+                ]
+            }
+        }
+    },
+    "section_id": 5,
+    "created_date": "2020-01-23 18:29:29",
+    "section_tipo": "dd1340",
+    "modified_date": "2020-04-24 18:57:07",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd1324",
+    "modified_by_userID": -1,
+    "section_creator_top_tipo": "",
+    "section_creator_portal_tipo": "",
+    "section_creator_portal_section_tipo": ""
+}

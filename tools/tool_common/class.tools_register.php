@@ -32,7 +32,7 @@ class tools_register {
 			$tipo_version 	= 'dd1327';
 
 		// get the all tools folders
-			$ar_tools = (array)glob(DEDALO_CORE_PATH . '/tools/*', GLOB_ONLYDIR);
+			$ar_tools = (array)glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
 
 
 		// Ontologies. Get the all tools ontologies
@@ -85,7 +85,7 @@ class tools_register {
 					$name   = reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'});
 					$version = reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'});
 					$info_file_processed[] = (object)[
-						'dir'   	=> str_replace(DEDALO_CORE_PATH, '', $current_dir_tool),
+						'dir'   	=> str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
 						'name' 		=> $name,
 						'version' 	=> $version
 					];

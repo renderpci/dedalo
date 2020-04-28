@@ -108,6 +108,7 @@ const get_content_data_edit = async function(self) {
 	// value (array)
 		const value = self.data.value || []
 
+
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
@@ -164,8 +165,10 @@ const get_buttons = (self) => {
 */
 const get_svg_element = function(item_value) {
 
-	const url = (typeof item_value==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : item_value.url
-
+	const url = (typeof item_value==="undefined")
+		? DEDALO_CORE_URL + "/themes/icons/dedalo_icon_grey.svg"
+		: item_value.url
+	
 	// li
 		const li = ui.create_dom_element({
 			element_type : 'li'
@@ -180,6 +183,7 @@ const get_svg_element = function(item_value) {
 		})
 		image.setAttribute("tabindex", 0)
 		ui.component.add_image_fallback(image)
+		// li.appendChild(image)
 
 
 	return li

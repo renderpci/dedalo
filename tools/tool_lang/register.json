@@ -52,6 +52,7 @@
     ],
     "components": {
         "dd199": {
+            "inf": "Fecha de creación [component_date]",
             "dato": {
                 "lg-nolan": [
                     {
@@ -66,34 +67,28 @@
                         }
                     }
                 ]
-            },
-            "info": {
-                "label": "Fecha de creación",
-                "modelo": "component_date"
             }
         },
         "dd201": {
+            "inf": "Fecha de modificación [component_date]",
             "dato": {
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 22,
-                            "hour": 10,
-                            "time": 64931623437,
+                            "day": 27,
+                            "hour": 12,
+                            "time": 64934742128,
                             "year": 2020,
-                            "month": 3,
-                            "minute": 3,
-                            "second": 57
+                            "month": 4,
+                            "minute": 22,
+                            "second": 8
                         }
                     }
                 ]
-            },
-            "info": {
-                "label": "Fecha de modificación",
-                "modelo": "component_date"
             }
         },
         "dd612": {
+            "inf": "Descripción [component_text_area]",
             "dato": {
                 "lg-eng": [
                     "Tool for translate the content to other langs"
@@ -101,13 +96,10 @@
                 "lg-spa": [
                     "Herramienta de traducción de contenido a otras lenguas"
                 ]
-            },
-            "info": {
-                "label": "Descripción",
-                "modelo": "component_text_area"
             }
         },
         "dd799": {
+            "inf": "Etiqueta [component_input_text]",
             "dato": {
                 "lg-cat": [
                     "Traducció"
@@ -118,46 +110,74 @@
                 "lg-spa": [
                     "Traducción"
                 ]
-            },
-            "info": {
-                "label": "Etiqueta",
-                "modelo": "component_input_text"
+            }
+        },
+        "dd999": {
+            "inf": "Configuración [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "translator_config": {
+                            "type": "array",
+                            "value": [
+                                {
+                                    "key": "XXX",
+                                    "uri": "https:\/\/babel.render.es\/babel_engine\/",
+                                    "name": "babel"
+                                },
+                                {
+                                    "key": "XXX",
+                                    "uri": "https:\/\/google.com\/translator",
+                                    "name": "google_translation"
+                                }
+                            ],
+                            "client": false
+                        },
+                        "translator_engine": {
+                            "type": "array",
+                            "value": [
+                                {
+                                    "name": "babel",
+                                    "label": "Babel"
+                                },
+                                {
+                                    "name": "google_translation",
+                                    "label": "Google translator"
+                                }
+                            ],
+                            "client": true,
+                            "default": []
+                        }
+                    }
+                ]
             }
         },
         "dd1326": {
+            "inf": "nombre [component_input_text]",
             "dato": {
                 "lg-nolan": [
                     "tool_lang"
                 ]
-            },
-            "info": {
-                "label": "nombre",
-                "modelo": "component_input_text"
             }
         },
         "dd1327": {
+            "inf": "versión [component_input_text]",
             "dato": {
                 "lg-nolan": [
                     "2.0.0"
                 ]
-            },
-            "info": {
-                "label": "versión",
-                "modelo": "component_input_text"
             }
         },
         "dd1328": {
+            "inf": "Versión Dédalo [component_input_text]",
             "dato": {
                 "lg-nolan": [
                     "6.0.0"
                 ]
-            },
-            "info": {
-                "label": "Versión Dédalo",
-                "modelo": "component_input_text"
             }
         },
         "dd1334": {
+            "inf": "Ontologia [component_json]",
             "dato": {
                 "lg-nolan": [
                     {
@@ -275,13 +295,10 @@
                         "translatable": false
                     }
                 ]
-            },
-            "info": {
-                "label": "Ontologia",
-                "modelo": "component_json"
             }
         },
         "dd1335": {
+            "inf": "Propiedades [component_json]",
             "dato": {
                 "lg-nolan": [
                     {
@@ -289,55 +306,38 @@
                             {
                                 "key": "mykey",
                                 "name": "myName",
-                                "label": "myLabel1"
+                                "label": "myLabel2"
                             }
                         ]
                     }
                 ]
-            },
-            "info": {
-                "label": "Propiedades",
-                "modelo": "component_json"
             }
         },
         "dd1350": {
+            "inf": "Afecta a los tipos: [component_json]",
             "dato": {
-                "lg-nolan": [
-                    {}
-                ]
-            },
-            "info": {
-                "label": "Afecta a los tipos:",
-                "modelo": "component_json"
+                "lg-nolan": []
             }
         },
         "dd1353": {
+            "inf": "Simple tool object [component_json]",
             "dato": {
-                "lg-nolan": [
-                    {}
-                ]
-            },
-            "info": {
-                "label": "Simple tool object",
-                "modelo": "component_json"
+                "lg-nolan": []
             }
         },
         "dd1362": {
+            "inf": "Dev info [component_text_area]",
             "dato": {
                 "lg-nolan": [
                     "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators, <br>must be defined in Dédalo tools config file:<br><br> \/config\/tools\/config_tool_lang.json<br><br> as:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.render.es\/babel_engine\/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');"
                 ]
-            },
-            "info": {
-                "label": "Dev info",
-                "modelo": "component_text_area"
             }
         }
     },
     "section_id": 1,
     "created_date": "2019-11-05 16:06:56",
     "section_tipo": "dd1340",
-    "modified_date": "2020-03-22 10:03:57",
+    "modified_date": "2020-04-27 12:22:08",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",

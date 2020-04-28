@@ -4,28 +4,28 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {ui} from '../../../core/common/js/ui.js'
+	import {event_manager} from '../../../common/js/event_manager.js'
+	import {ui} from '../../../common/js/ui.js'
 
 
 
 /**
-* RENDER_TOOL_LANG
+* RENDER_tool_indexation
 * Manages the component's logic and apperance in client side
 */
-export const render_tool_lang = function() {
+export const render_tool_indexation = function() {
 
 	return true
-}//end render_tool_lang
+}//end render_tool_indexation
 
 
 
 /**
-* RENDER_TOOL_LANG
+* RENDER_tool_indexation
 * Render node for use like button
 * @return DOM node
 */
-render_tool_lang.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_indexation.prototype.edit = async function (options={render_level:'full'}) {
 
 	const self = this
 
@@ -100,8 +100,8 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 		//}
 
 	// modal container
-		const header = wrapper.querySelector('.tool_header')
-		const modal  = ui.attach_to_modal(header, wrapper, null)
+		const header = wrapper.querySelector('.tool_header')		
+		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
 		modal.on_close = () => {
 			self.destroy(true, true, true)
 		}
@@ -117,7 +117,7 @@ render_tool_lang.prototype.edit = async function (options={render_level:'full'})
 
 
 	return wrapper
-}//end render_tool_lang
+}//end render_tool_indexation
 
 
 
@@ -197,9 +197,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// automatic_translation
-			const translator_engine = (self.simple_tool_object.config)
-				? self.simple_tool_object.config.translator_engine.value
-				: false
+			const translator_engine = self.simple_tool_object.config.translator_engine
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)
@@ -302,3 +300,5 @@ export const add_component = async (self, component_container, value) => {
 
 	return true
 }//end add_component
+
+

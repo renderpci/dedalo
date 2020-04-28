@@ -43,7 +43,7 @@
 		// Available image files
 			$value = [];
 
-		$test_file = false;
+		$test_file = true;
 
 		$svg_item = new stdClass();
 			$svg_item->url = $this->get_url(false, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true

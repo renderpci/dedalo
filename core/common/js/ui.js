@@ -906,14 +906,16 @@ export const ui = {
 			if (element_type==='span') {
 				element.textContent = text_node
 			}else{
-				let el = document.createElement('span')
-					el.innerHTML = " "+text_node // Note that prepend a space to span for avoid Chrome bug on selection
+				const el = document.createElement('span')
+					  // el.innerHTML = " "+text_node // Note that prepend a space to span for avoid Chrome bug on selection
+					  el.insertAdjacentHTML('afterbegin', " "+text_node);
 				element.appendChild(el)
 			}
 		}else if(text_content) {
 			element.textContent = text_content
 		}else if(inner_html) {
-			element.innerHTML = inner_html
+			// element.innerHTML = inner_html
+			element.insertAdjacentHTML('afterbegin', inner_html);
 		}
 
 		// Append created element to parent
