@@ -102,7 +102,7 @@ component_common.prototype.init = async function(options) {
 
 				if(perform && typeof self[perform]==="function"){
 					self.events_tokens.push(
-						event_manager.subscribe(event +'_'+ component_tipo, self[perform].bind(self))
+						event_manager.subscribe(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ component_tipo, self[perform].bind(self))
 					)
 				}else{
 					console.warn("Invalid observe perform:", observe[i], typeof self[perform]);
@@ -618,7 +618,7 @@ component_common.prototype.get_ar_instances = async function(){
 			const current_section_tipo 	= locator.section_tipo
 			const current_section_id 	= locator.section_id
 			const current_data 		 	= self.datum.data.filter(el => el.section_tipo===current_section_tipo && el.section_id===current_section_id)
-			
+
 			// const current_context 	= self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
 			const current_context 		= (typeof self.datum.context!=="undefined")
 				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
