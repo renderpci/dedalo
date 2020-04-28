@@ -553,7 +553,7 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'tc':
 					// Video goto timecode by tc tag
-					event_manager.publish('click_tag_tc' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
+					event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self})
 					break;
 
 				case 'indexIn' :
@@ -595,7 +595,7 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'draw' :
 					// Load draw editor
-					event_manager.publish('click_tag_draw' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
+					event_manager.publish('click_tag_draw' +'_'+ self.id_base, {tag:tag_obj, caller: self})
 
 					// switch(page_globals.modo) {
 
@@ -620,12 +620,12 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'geo' :
 					// Load geo editor
-					event_manager.publish('click_tag_geo' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
+					event_manager.publish('click_tag_geo' +'_'+ self.id_base, {tag:tag_obj, caller: self})
 					break;
 
 				case 'page':
 						// PDF go to the specific page
-						event_manager.publish('click_tag_pdf' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, {tag:tag_obj, caller: self})
+						event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self})
 						break;
 
 				case 'person':
@@ -674,11 +674,11 @@ const get_custom_events = (self, i, get_service) => {
 		switch(evt.keyCode ){
 			// 'esc' code: 27
 			case  27:
-				event_manager.publish('key_up_esc' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, evt.keyCode)
+				event_manager.publish('key_up_esc' +'_'+ self.id_base, evt.keyCode)
 				break;
 			// 'f2' code: 113
 			case 113:
-				const result 				= event_manager.publish('key_up_f2' +'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo, evt.keyCode)
+				const result 				= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
 				const result_length 		= result.length
 				// service
 					const service 			  = get_service()

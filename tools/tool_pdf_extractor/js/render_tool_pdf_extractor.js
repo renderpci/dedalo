@@ -207,7 +207,7 @@ const get_content_data = async function(self) {
 				key 	: 0,
 				value 	: pdf_data
 			}
-			event_manager.publish('set_pdf_data'+'_'+ sel.section_tipo +'_'+ sel.section_id +'_'+ self.tipo,  changed_data)
+			event_manager.publish('set_pdf_data' +'_'+ self.caller.id_base, changed_data)
 		})
 
 
