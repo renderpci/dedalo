@@ -25,8 +25,8 @@ function get_pdf_data($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-
-	$response->result = tool_pdf_extractor::get_pdf_data($json_data);
+	$tool_pdf_extractor = new tool_pdf_extractor();
+	$response->result = $tool_pdf_extractor->get_pdf_data($json_data);
 	$response->msg 	  = 'Ok. Request done ['.__FUNCTION__.']';
 
 	# Debug
