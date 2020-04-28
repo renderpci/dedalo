@@ -30,6 +30,8 @@ export const component_text_area = function(){
 		this.node
 		this.id
 
+		this.services = []
+
 	return true
 }//end component_text_area
 
@@ -67,7 +69,7 @@ export const component_text_area = function(){
 * TAGS_TO_HTML
 */
 component_text_area.prototype.tags_to_html = function(value) {
-	
+
 	const html = (value)
 		? tr.add_tag_img_on_the_fly(value)
 		: null
@@ -75,6 +77,30 @@ component_text_area.prototype.tags_to_html = function(value) {
 	return html
 }// end
 
+
+/**
+* SET_VALUE
+* Set individual value based on element key
+* @param int key
+*	defined in container dataset key
+* @param string value
+*	value from active text editor
+*/
+component_text_area.prototype.set_value = async function(value) {
+	
+	const self = this
+
+	const changed_data =  Object.freeze({
+		action	: 'update',
+		key		: value.key,
+		value	: value.value
+	})
+	self.change_value({
+		changed_data : changed_data,
+		refresh 	 : true
+	})
+
+}//end set_value
 
 
 /**
