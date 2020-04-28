@@ -4,7 +4,6 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_geolocation} from '../../component_geolocation/js/render_component_geolocation.js'
