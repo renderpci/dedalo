@@ -48,7 +48,8 @@ render_component_json.prototype.list = function() {
 					node.push(key+ ": " +value)
 				}
 			}
-			wrapper.innerHTML = node.join('<br>')
+			// wrapper.innerHTML = node.join('<br>')
+			wrapper.insertAdjacentHTML('afterbegin', node.join('<br>'));
 			wrapper.addEventListener('click', async (e) => {
 				e.stopPropagation()
 				wrapper.classList.toggle('show_full')
