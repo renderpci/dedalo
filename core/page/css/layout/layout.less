@@ -8,8 +8,19 @@
 	[hidden] {
 		display: none;
 	}
-
-
+	// components modificators
+	.wrapper_component {
+		&.wide {
+			flex: 1 1 100% !important;
+		}
+		&.height50 {
+			>.content_data {
+				height: 70vh !important;
+				max-height: unset !important;
+			}
+		}
+	}
+	
 
 // mixins
 
@@ -746,9 +757,18 @@
 		}
 
 		&.edit, &.search {
+			>.label {
+				height: @component_label_height;
+			} 
 			// content data defaults
 			>.content_data {
 				max-height: inherit;
+				>ul {
+					height: inherit;
+					>li {
+						height: inherit;
+					}
+				}
 			}
 
 			// component_av
@@ -809,7 +829,6 @@
 
 			// component_filter
 			&.component_filter {
-
 				>.buttons_container {
 					display: none;
 					background-color: #ffffff;
@@ -839,7 +858,10 @@
 			// component json
 			&.component_geolocation {
 				>.content_data {
-					height: calc(100% - 1.75em);
+					height: calc(100% - @component_label_height); // 1.75em
+					>ul {
+						height: 100%;
+					}
 				}
 			}
 
@@ -848,39 +870,25 @@
 				>.content_data {
 					min-height: @media_min_height;
 					max-height: @media_max_height;
-
-					.inputs_container>li {
-						// align-items: initial;
-
-						>.jsoneditor {
-							// height: 100%;
+					>ul {
+						height: 100%;
+						>li {
+							// align-items: initial;
+							>.jsoneditor {
+								// height: 100%;
+							}
 						}
-
-					}
-
-					// override json editor
-					.ace_gutter {
-						// z-index: unset;
-					}
-					div.jsoneditor-mode-code{
-						// height: 100vh; //100vh if you want full screen
-					}
+					}					
 				}
 			}
 
 			// component_image
 			&.component_image {
-				// @width_break_point_2
-
-				&.wide {
-					flex: 1 1 100%;
-				}
+				// @width_break_point_2				
 				>.content_data {
 					// Note that height is always the media min height (27em)
 					// (!) Not use max o min height here to avoid affect canvas reference size
 					height: @media_min_height;
-
-
 					ul {
 						height: 100%;
 						width: 100%;
@@ -900,8 +908,7 @@
 								max-height: 100%;
 								// width: 100%;
 								max-width: 100%;
-								//min-height: 14em;
-
+								
 								// on focus adds a soft shadow and outline
 								&:focus {
 									.hilite(-1px);
@@ -911,8 +918,9 @@
 								background-color: #59d61d;
 
 								// experimental to avoid overflow component width (26-04-2020)
-									max-width: 100%;
-									overflow: hidden;
+								// da problemas. Desactivado de momento
+									// max-width: 100%;
+									// overflow: hidden;
 							}
 							.canvas[resize] {
 								height: 100%;
@@ -966,14 +974,15 @@
 					max-height: @media_max_height;
 
 					>ul {
-						li {
+						height: 100%;
+						>li {
 							flex-wrap: wrap;
 							align-items: flex-start;
-							iframe {
+							>iframe {
 								flex: 0 0 100%;
 								height: calc(100% - 32px);
 							}
-							.fields {
+							>.fields {
 								flex: 0 0 100%;
 								background-color: #3c3c3c;
 								padding: 0;
@@ -1017,103 +1026,114 @@
 			// component_svg
 			&.component_svg {
 				>.content_data {
-					min-height: @media_min_height;
-					max-height: @media_max_height;
+					// min-height: @media_min_height;
+					// max-height: @media_max_height;
+					height: @media_min_height;
+					>ul {
+						height: 100%;
+						width: 100%;
+						>li {
+							justify-content: center;
 
-					>ul>li {
-						justify-content: center;
-					}
-				}
-				img.image {
-					padding: 0;
-					height: 100%;
-					// max-height: 10em;
-					// width: 100%;
-					background-color: #f5f5f5;
-				}
+							img.image {
+								background-color: #f5f5f5;
+								padding: 0;
+								// height: 100%;
+								// max-height: 100%;
+								// max-width: 100%;					
+
+								height: 100%;
+								max-height: 100%;
+								max-width: 100%;
+								object-fit: contain;
+								object-position: center;
+							}
+						}
+					}					
+				}				
 			}
 
 			// component_text_area
 			&.component_text_area {
-				.layer_selector{
-					width: 10em;
-					background-color: @color_orange_dedalo;
-					position: absolute;
-					right: 0;
-					top: 0;
-					padding: 0;
-					text-align: right;
-
-					>.button {
-						margin: 0.5em;
-						float: none;
-						display: inline-block;
-						&.add {
-							float: left;
-						}
-					}
-
-					>ul.layer_ul {
-						text-align: left;
-						clear: both;
-
-
-						// border: 0.5px solid #777;
-
-						>li{
-							display: grid;
-							grid-template-columns: 1em 1em auto 1em;
-							align-items: center;
-							border-bottom: 1px solid #777;
-							border-left: 1px solid #777;
-							border-right: 1px solid #777;
-							cursor: pointer;
-							background-color: #ffffff;
-							height: 30px;
-
-							&:hover {
-								background-color: @color_orange_dedalo;
-								color: #ffffff;
-							}
-							&:active {
-								background-color: #ffffff;
-								color: initial;
-							}
-
-
-							// .layer_icon {
-							//
-							// }
-							.layer_id {
-								justify-self: center;
-							}
-							.user_layer_name {
-
-							}
-							// .layer_color_box {
-							// 	background-color: #ffffff;
-							// 	.layer_color {
-							// 		width: 80%;
-							// 		height: 20px;
-							// 		border-radius: 19px;
-							// 	}
-							// }
-						}
-						>li:first-child {
-							border-top: 0.5px solid #777;
-						}
-
-					}
-				}
-
-
 				>.content_data {
 					min-height: @media_min_height;
 					max-height: @media_max_height;
 
 					>ul {
+						height: 100%;
 						>li {
 							z-index: inherit;
+
+							.layer_selector {
+								width: 10em;
+								background-color: @color_orange_dedalo;
+								position: absolute;
+								right: 0;
+								top: 0;
+								padding: 0;
+								text-align: right;
+
+								>.button {
+									margin: 0.5em;
+									float: none;
+									display: inline-block;
+									&.add {
+										float: left;
+									}
+								}
+
+								>ul.layer_ul {
+									text-align: left;
+									clear: both;
+
+
+									// border: 0.5px solid #777;
+
+									>li{
+										display: grid;
+										grid-template-columns: 1em 1em auto 1em;
+										align-items: center;
+										border-bottom: 1px solid #777;
+										border-left: 1px solid #777;
+										border-right: 1px solid #777;
+										cursor: pointer;
+										background-color: #ffffff;
+										height: 30px;
+
+										&:hover {
+											background-color: @color_orange_dedalo;
+											color: #ffffff;
+										}
+										&:active {
+											background-color: #ffffff;
+											color: initial;
+										}
+
+
+										// .layer_icon {
+										//
+										// }
+										.layer_id {
+											justify-self: center;
+										}
+										.user_layer_name {
+
+										}
+										// .layer_color_box {
+										// 	background-color: #ffffff;
+										// 	.layer_color {
+										// 		width: 80%;
+										// 		height: 20px;
+										// 		border-radius: 19px;
+										// 	}
+										// }
+									}
+									>li:first-child {
+										border-top: 0.5px solid #777;
+									}
+
+								}
+							}
 						}
 					}
 				}
@@ -1127,7 +1147,7 @@
 				color: white;
 				display: flex;
 
-				.label {
+				>.label {
 					color: white;
 					flex: auto;
 				}
@@ -1459,7 +1479,7 @@
 
 				>ul {
 					&:not(.search) {
-				       height: 100%;
+				       // height: 100%;
 					}
 				}
 
@@ -1893,9 +1913,9 @@
 // disabled_component
 	.disabled_component {
 		position: relative;
+		pointer-events: none !important;
 
-		>.wrapper_component {
-			pointer-events: none;
+		>.wrapper_component {			
 			//opacity: 0.8;
 			//background-color: #F7B74C
 		}
@@ -2380,7 +2400,7 @@
 			>ul{
 				width: 100% !important;
 				>li{
-					height: calc(100% - 1.75em) !important;
+					height: calc(100% - @component_label_height) !important; // 1.75em
 
 					.canvas[resize] {
 						height: 100%;
