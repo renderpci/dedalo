@@ -42,7 +42,7 @@
 				$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 				$total = count($value)>0 ? count($value) : 1;
 				foreach ($value as $key => $current_value) {
-					$value[$key] = common::truncate_html( ceil(150/$total), $current_value, true);
+					$value[$key] = common::truncate_html( ceil(200/$total), $current_value, true);
 				}
 				break;
 			case 'edit':
