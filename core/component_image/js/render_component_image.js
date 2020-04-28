@@ -116,15 +116,15 @@ const content_data_edit = async function(self) {
 
 
 	// url
-		const datalist 			= self.data.datalist
-		const quality 			= "1.5MB" //"original" //
-		const url_object 		= datalist.filter(item => item.quality===quality)[0]
-		const url 				= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
+		const datalist 		= self.data.datalist
+		const quality 		= "1.5MB" //"original" //
+		const url_object 	= datalist.filter(item => item.quality===quality)[0]
+		const url 			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
 	// ul
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: '',
+			class_name 		: 'inputs_container',
 			parent 			: fragment
 		})
 
@@ -308,3 +308,5 @@ const get_quality_selector = (self) => {
 
 	return quality_selector
 }//end get_quality_selector
+
+
