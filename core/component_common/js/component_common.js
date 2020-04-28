@@ -90,6 +90,8 @@ component_common.prototype.init = async function(options) {
 
 
 	// events subscription (from component properties)
+	// the ontology can define a observer property that specify the tipo that this component will listen
+	// the event has a scope of the same section_tipo and same section_id for the observer and observable
 		const observe = typeof self.context.properties!=="undefined"
 			? (self.context.properties.observe || null)
 			: null
@@ -102,6 +104,12 @@ component_common.prototype.init = async function(options) {
 
 				if(perform && typeof self[perform]==="function"){
 					self.events_tokens.push(
+						// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
+						// the id_base is build when the component is instantiated
+						// this event can be fired by:
+						// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
+						// or the sort format with the id_base of the obserbable component:
+						// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
 						event_manager.subscribe(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ component_tipo, self[perform].bind(self))
 					)
 				}else{
