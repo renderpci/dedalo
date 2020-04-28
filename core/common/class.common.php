@@ -1503,7 +1503,7 @@ abstract class common {
 	*/
 	public function get_structure_context($permissions=0, $sqo_object=false) {
 
-		// class called (model name too like component_input_text)
+		// class called (model name too, as component_input_text)
 			$called_model = get_class($this);
 
 		// sort vars
@@ -1527,6 +1527,15 @@ abstract class common {
 				// remove from properties object
 				unset($properties->css);
 			}
+			// section overwrite css (virtual sections case)
+			if (strpos($called_model, 'component_')===0) {
+				$RecordObj_dd 		= new RecordObj_dd($section_tipo);
+				$section_properties = $RecordObj_dd->get_propiedades(true);
+				if (isset($section_properties->css) && isset($section_properties->css->{$tipo})) {
+					$css = $section_properties->css->{$tipo};
+				}
+			}
+
 
 		// parent
 			// 1 . From requested context

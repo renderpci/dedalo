@@ -86,7 +86,7 @@ render_component_image.prototype.edit = async function(options) {
 
 	// buttons
 		const buttons = get_buttons(self)
-	
+
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -95,7 +95,7 @@ render_component_image.prototype.edit = async function(options) {
 		})
 
 	// quality
-		const quality = get_quality_selector(self)	
+		const quality = get_quality_selector(self)
 		wrapper.appendChild(quality)
 
 
@@ -116,15 +116,15 @@ const content_data_edit = async function(self) {
 
 
 	// url
-		const datalist 			= self.data.datalist
-		const quality 			= "1.5MB" //"original" //
-		const url_object 		= datalist.filter(item => item.quality===quality)[0]
-		const url 				= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
+		const datalist 		= self.data.datalist
+		const quality 		= "1.5MB" //"original" //
+		const url_object 	= datalist.filter(item => item.quality===quality)[0]
+		const url 			= url_object.url // '/dedalo/media/media_development/image/original/test175_test65_4.jpg' // (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
 
 	// ul
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: '',
+			class_name 		: 'inputs_container',
 			parent 			: fragment
 		})
 
@@ -161,7 +161,7 @@ const content_data_edit = async function(self) {
 
 		self.object_node = object
 
-		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id,  img_quality_change)
+		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, img_quality_change)
 		self.events_tokens.push(image_change_event)
 		object.dataset.image_change_event = image_change_event
 		function img_quality_change (img_src) {
@@ -171,6 +171,12 @@ const content_data_edit = async function(self) {
 			const image 	= svg_doc.querySelector("image")
 			// set the new source to the image node into the svg
 			self.img_src 	= image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
+
+			// add spinner when new image is loading
+			li.classList.add("preload")
+			image.addEventListener("load", function(){
+				li.classList.remove("preload")
+			})
 		}
 
 
@@ -241,7 +247,7 @@ const get_buttons = (self) => {
 				self.load_vector_editor({load:'full'})
 			}
 			// set wrapper as wide mode (100%)
-				self.node[0].classList.add('wide')
+				// self.node[0].classList.add('wide')
 		})
 
 	// svg editor tools
@@ -259,6 +265,7 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
 
 
 /**

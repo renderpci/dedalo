@@ -39,7 +39,7 @@ abstract class backup {
 				$db_name	= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
 			}
 
-			$file_path		= DEDALO_CORE_PATH.'/backup/backups';
+			$file_path = DEDALO_BACKUP_PATH_DB;
 
 			# Backups folder exists verify
 			if( !is_dir($file_path) ) {
@@ -106,12 +106,12 @@ abstract class backup {
 				$command = 'sleep 6s; nice -n 19 '.$command;
 
 				# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
-				$prgfile = DEDALO_CORE_PATH.'/backup/temp/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
+				$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
 				if(!file_exists($prgfile)) {
 
 					# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)
 					try{
-						$target_folder_path = DEDALO_CORE_PATH.'/backup/temp'; ;
+						$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
 						# folder exists
 						if( !is_dir($target_folder_path) ) {
 							if(!mkdir($target_folder_path, 0775,true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
@@ -370,7 +370,7 @@ abstract class backup {
 			$db_name = 'dedalo4_development_str.custom';
 		}
 
-		$file_path		 = DEDALO_CORE_PATH .'/backup/backups_structure/';
+		$file_path		 = DEDALO_BACKUP_PATH_STRUCTURE;
 		$mysqlExportPath = $file_path . $db_name . ".backup";
 
 		# Export the database and output the status to the page
@@ -508,7 +508,7 @@ abstract class backup {
 
 			if ($current_tld==='dd' || $current_tld==='rsc') {
 				# CORE DEDALO STR
-				$path=DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+				$path=DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
 			}else{
 				# STR EXTRAS
 				$path=DEDALO_EXTRAS_PATH.'/'.$current_tld.'/str_data';
@@ -574,7 +574,7 @@ abstract class backup {
 		#
 		# MATRIX_DD (Private list of values)
 		$table 		= 'matrix_dd';
-		$path 		= DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+		$path 		= DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
 		$path_file 	= "{$path}/{$table}.copy";
 		$res3 		= backup::copy_to_file($table, $path_file, null);
 
@@ -656,7 +656,7 @@ abstract class backup {
 			}
 		}else{
 			# Default path
-			$file_path = DEDALO_CORE_PATH .'/backup/backups_structure/';
+			$file_path = DEDALO_BACKUP_PATH_STRUCTURE;
 			$mysqlImportFilename = $file_path . $db_name . ".backup";
 		}
 
@@ -778,7 +778,7 @@ abstract class backup {
 		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
 			$path = STRUCTURE_DOWNLOAD_DIR;
 		}else{
-			$path = DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+			$path = DEDALO_BACKUP_PATH_STRUCTURE.'/download';
 		}
 
 
@@ -1112,31 +1112,31 @@ abstract class backup {
 		$obj = new stdClass();
 			$obj->type = "main_file";
 			$obj->name = "dedalo4_development_str.custom.backup";
-			$obj->path = DEDALO_CORE_PATH.'/backup/backups_structure';
+			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE;
 		$ar_files[] = $obj;
 
 		# core str file
 		$obj = new stdClass();
 			$obj->type = "jer_file";
 			$obj->name = "jer_dd_dd.copy";
-			$obj->path = DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
 		$ar_files[] = $obj;
 		$obj = new stdClass();
 			$obj->type = "descriptors_file";
 			$obj->name = "matrix_descriptors_dd_dd.copy";
-			$obj->path = DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
 		$ar_files[] = $obj;
 
 		# resources str file
 		$obj = new stdClass();
 			$obj->type = "jer_file";
 			$obj->name = "jer_dd_rsc.copy";
-			$obj->path = DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
 		$ar_files[] = $obj;
 		$obj = new stdClass();
 			$obj->type = "descriptors_file";
 			$obj->name = "matrix_descriptors_dd_rsc.copy";
-			$obj->path = DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
 		$ar_files[] = $obj;
 
 		# private list of values
@@ -1145,7 +1145,7 @@ abstract class backup {
 			$obj->name  = "matrix_dd.copy";
 			$obj->table = "matrix_dd";
 			$obj->tld 	= "dd";
-			$obj->path  = DEDALO_CORE_PATH.'/backup/backups_structure/str_data';
+			$obj->path  = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
 		$ar_files[] = $obj;
 
 

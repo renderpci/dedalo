@@ -38,8 +38,9 @@ function automatic_translation($json_data) {
 			#debug_log(__METHOD__." options ".to_string($json_data), logger::DEBUG);
 
 	// Options are the same as received json_data object
-	$options  = $json_data;
-	$response = tool_lang::automatic_translation($options);
+	$options  	= $json_data;
+	$tool_lang 	= new tool_lang();
+	$response 	= $tool_lang->automatic_translation($options);
 
 	# Debug
 	if(SHOW_DEBUG===true) {
