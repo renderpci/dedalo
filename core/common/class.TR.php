@@ -170,7 +170,7 @@ abstract class TR {
 					if ($id) {
 						$string = "\[page-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
 					}else{
-						$string = "(\[(page)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+						$string = "(\[(page)-([a-z])-([0-9]{1,6})-([-0-9]{0,22})-(data:(.*?):data)?\])";
 					}
 					break;
 
@@ -372,7 +372,7 @@ abstract class TR {
 
 		# PAGE
 		$pattern 	= TR::get_mark_pattern('page');
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}/[$2-$3-$4-$6]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}/[$2-$3-$4-$5]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$7\">", $text);
 
 		# PERSON
 		$pattern 	= TR::get_mark_pattern('person'); // $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";

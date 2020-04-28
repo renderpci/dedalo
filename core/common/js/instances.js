@@ -97,7 +97,7 @@ export const get_instance = async function(options){
 				// element file import path
 					const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
 					const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
-	
+
 				// import element mod file once (and wait until finish)
 					const current_element = await import(path)
 
@@ -114,7 +114,7 @@ export const get_instance = async function(options){
 				// add the id for init the instance with the id
 					instance_element.id = key
 					//instance_element.id_base = key_instances_builder(options, false)
-
+					instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
 				// id_variant . Propagate a custom instance id to children
 					if (options.id_variant) {
 						instance_element.id_variant = options.id_variant
