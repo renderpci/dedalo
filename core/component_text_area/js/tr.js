@@ -105,9 +105,9 @@ export const tr = {
 					reg_ex = /(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])/g;
 					break;
 
-			// PAGE (pdf) [page-n-3]
+			// PAGE (pdf) [page-n-1--1-data:[1]:data]
 			case 'page' :
-					reg_ex = /(\[(page)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
+					reg_ex = /(\[(page)-([a-z])-([0-9]{1,6})-([-0-9]{0,22})-(data:(.*?):data)?\])/g;
 
 					break;
 
@@ -198,7 +198,7 @@ export const tr = {
 
 		// PAGE
 		const pattern_page 			= tr.get_mark_pattern('page');
-		text = text.replace(pattern_page, `<img id="[$2-$3-$4-$6]" src="${tag_url}/[$2-$3-$4-$6]" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+		text = text.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}/[$2-$3-$4-$5]" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
 
 		// PERSON
 		const pattern_person 		= tr.get_mark_pattern('person');
