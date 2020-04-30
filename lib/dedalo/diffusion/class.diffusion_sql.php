@@ -1625,7 +1625,11 @@ class diffusion_sql extends diffusion  {
 					//'title',
 					'typology',
 					'data_mod', // added 18-09-2019
-					'fons_code'
+					'fons_code',
+					'situation',
+					'situation_place',
+					'nazi_camp',
+					'nazi_sub_camp'
 				];
 
 			$fields_array = [];
