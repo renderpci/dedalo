@@ -144,7 +144,7 @@
                 "dev-master": "0.4.x-dev"
             }
         },
-        "installation-source": "dist",
+        "installation-source": "source",
         "autoload": {
             "classmap": [
                 "lessc.inc.php"

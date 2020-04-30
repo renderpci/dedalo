@@ -1,4 +1,11 @@
 {
+	"name": "dedalo/composer_libs",
+    "type": "library",
+    "description": "Install aditional Dédalo composer libs",
+    "homepage": "http://www.fmomo.org/dedalo/",
+    "license": [
+      "GPL-3.0-or-later"
+    ],
     "require": {
         "onelogin/php-saml": "3.3.1",
         "leafo/lessphp": "0.5.X",
