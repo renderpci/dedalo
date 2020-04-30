@@ -101,7 +101,7 @@ class tool_import_dedalo_csv extends tool_common {
 				# created_by_userID
 				if ($csv_map[$key]==='created_by_user' || $csv_map[$key]===$created_by_user['tipo']) {
 
-					$user_locator 	 = self::build_user_locator($value, $created_by_user['tipo']);
+					$user_locator = self::build_user_locator($value, $created_by_user['tipo']);
 
 					if (!empty($user_locator)) {
 						// component build and set dato
@@ -110,7 +110,7 @@ class tool_import_dedalo_csv extends tool_common {
 																			 $section_id,
 																			 'list',
 																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);
+																			 $section_tipo);							
 							$component->set_dato($user_locator);
 							$section->set_component_relation_dato($component);
 
@@ -125,7 +125,7 @@ class tool_import_dedalo_csv extends tool_common {
 				# created_date
 				}elseif ($csv_map[$key]==='created_date' || $csv_map[$key]===$created_date['tipo']) {
 
-					$current_date 	= self::build_date_from_value($value);
+					$current_date = self::build_date_from_value($value);
 
 					# Format
 					# $current_date = array(
@@ -378,20 +378,33 @@ class tool_import_dedalo_csv extends tool_common {
 
 		if (empty($value)) return null;
 
-		if (strpos($value, '{')===0 && $value_json = json_decode($value)) {
-			// is full locator. Inject safe fixed properties to avoid errors
-			$locator = new locator($value_json);
-				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-				$locator->set_from_component_tipo($from_component_tipo);
-		}else{
+		// try to json decode (null on not decode)
+			$value_json = json_decode($value);
+
+		if (!$value_json) {
+			// old format (section_id)
 			// is int. Builds complete locator and set section_id from value
 			$locator = new locator();
 				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 				$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 				$locator->set_from_component_tipo($from_component_tipo);
 				$locator->set_section_id($value);
-		}
+		}else{
+			// locator or array of locators is received
+			$locator_base = is_array($value_json) ? reset($value_json) : $value_json;
+			
+			// is full locator. Inject safe fixed properties to avoid errors
+			$locator = new locator($locator_base);
+				if (!property_exists($locator_base, 'type')) {
+					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				}
+				if (!property_exists($locator_base, 'section_tipo')) {
+					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+				}
+				if (!property_exists($locator_base, 'from_component_tipo')) {					
+					$locator->set_from_component_tipo($from_component_tipo);
+				}
+		}		
 
 		if (!isset($locator->section_id)) {
 			debug_log(__METHOD__." Error on get user locator value from: ".to_string($value), logger::ERROR);
@@ -434,6 +447,13 @@ class tool_import_dedalo_csv extends tool_common {
 				// normalize array and object values as single object always
 					$value_obj = is_array($value_obj) ? reset($value_obj) : $value_obj;
 
+				// remove lang
+					if (isset($value_obj->{DEDALO_DATA_NOLAN})) {
+						$value_obj = is_array($value_obj->{DEDALO_DATA_NOLAN})
+							? reset($value_obj->{DEDALO_DATA_NOLAN})
+							: $value_obj->{DEDALO_DATA_NOLAN}; 
+					}
+
 				// Add start property if not present
 					if (!isset($value_obj->start)) {
 
@@ -443,14 +463,16 @@ class tool_import_dedalo_csv extends tool_common {
 						$value_obj = $new_value_obj; // replace here
 						debug_log(__METHOD__." Warning. Added property start to data value ".to_string($value), logger::ERROR);
 					}
+
 				// Check object mandatory properties
 					$ar_properties = ['year','month','day']; // ,'hour','minute','second'
 					foreach ($ar_properties as $name) {
-						if (!isset($value_obj->start->$name)) {
+						if (!isset($value_obj->start->{$name})) {
 							debug_log(__METHOD__." Error. ignored invalid date value (property $name not found) ".to_string($value), logger::ERROR);
 							return null;
 						}
 					}
+
 				// time property is recalculated always for security
 					$dd_date = new dd_date($value_obj->start);
 					$time 	 = dd_date::convert_date_to_seconds($dd_date);
@@ -464,6 +486,7 @@ class tool_import_dedalo_csv extends tool_common {
 						'component_dato' => $value_obj,
 						'timestamp' 	 => $timestamp
 					);
+				
 			}else{
 				return null;
 			}
