@@ -1688,7 +1688,15 @@
 	
 
 	Valencia 23-04-2020 5.5.41
-		Add get_diffusion_resolve_value method to component_autocomplete and intergrate in class diffusion_sql
+		Add get_diffusion_resolve_value method to component_autocomplete and integrate it in class diffusion_sql
+
+
+	Valencia 28-04-2020 5.5.42
+		Add import_dedalo_csv tool auto allow use name and tipo of section info, like  'created_by_user' and tipo 'dd200' indistinctly
+
+	Valencia 29-04-2020 5.5.43
+		Fix error on load security xml classes by SAML login 
+
 
 
 
@@ -1712,12 +1720,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.41';
+	$DEDALO_VERSION = '5.5.43';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-04-2020');
+	define('DEDALO_BUILD'	, '29-04-2020');
 
 
 	/*

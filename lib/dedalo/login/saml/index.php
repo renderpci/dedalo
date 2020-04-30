@@ -11,7 +11,9 @@
 // Require files
 	require_once( dirname(__FILE__) . '/saml_config.php' );
 	require_once( SAML_SETTINGS_PATH );
-	require_once( TOOLKIT_PATH . '_toolkit_loader.php' );
+
+	$path = TOOLKIT_PATH . '_toolkit_loader.php';
+	require_once( $path );
 
 // Login into idp
 	// v3.0
