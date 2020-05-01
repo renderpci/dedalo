@@ -12,7 +12,11 @@ require_once( DEDALO_LIB_BASE_PATH . '/backup/class.backup.php');
 
 // CODE auth. Check valid code match, received with config defined STRUCTURE_SERVER_CODE
 // If not is the same, return error code 401 and exit
-	if (!$data || $data->code!==STRUCTURE_SERVER_CODE) {
+	$valid_codes = defined('STRUCTURE_SERVER_CODE_OTHERS')
+		? STRUCTURE_SERVER_CODE_OTHERS
+		: [];
+	$valid_codes[] = STRUCTURE_SERVER_CODE;	 // add main code	
+	if (!$data || !in_array($data->code, $valid_codes)) {
 		http_response_code(401); // Unauthorized
 		exit();
 	}
