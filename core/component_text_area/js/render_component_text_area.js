@@ -331,7 +331,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 	const mode = self.mode
 	// value is a raw html without parse into nodes (txt format)
 	const value = self.tags_to_html(current_value)
-
+	
 		// li container
 		const li = ui.create_dom_element({
 			element_type : 'li'
@@ -503,13 +503,14 @@ const get_custom_buttons = (self, i, get_service) => {
 		})
 
 	// button_save
+		const save_label = get_label.salvar.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
 		custom_buttons.push({
 			name 	: "button_save",
 			options : {
-				text: get_label.salvar,
-				tooltip: get_label.salvar,
-				icon: false,
-				onclick: function(evt) {
+				text 	: save_label,
+				tooltip : save_label,
+				icon 	: false,
+				onclick : function(evt) {
 					// save. service save function calls current component save_value()
 						const service 		= get_service()
 						service.save()
@@ -533,6 +534,7 @@ const get_custom_buttons = (self, i, get_service) => {
 const get_custom_events = (self, i, get_service) => {
 
 	const custom_events = {}
+
 
 	custom_events.focus = (evt, options) => {
 
