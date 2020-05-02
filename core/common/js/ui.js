@@ -791,6 +791,40 @@ export const ui = {
 
 
 
+	widget : {
+
+
+
+		build_wrapper_edit : async(instance, items)=>{
+
+			const id 		= instance.id || 'id is not set'			
+			const mode 		= instance.mode 	// like 'edit'
+			const type 		= "widget"
+			const name 		= instance.constructor.name
+
+			const fragment = new DocumentFragment()
+
+			// content_data
+				if (items.content_data) {
+					const content_data = items.content_data
+					content_data.classList.add("content_data", type)
+					fragment.appendChild(content_data)
+				}
+
+			// wrapper
+				const wrapper = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'wrapper_' + type + ' ' + name + ' ' + mode
+ 				})
+ 				wrapper.appendChild(fragment)
+
+
+			return wrapper
+		},//end build_wrapper_edit
+	},//end widget
+
+
+
 	// DES
 		// button : {
 
