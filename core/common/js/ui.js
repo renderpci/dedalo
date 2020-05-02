@@ -1112,7 +1112,7 @@ export const ui = {
 
 		// options
 			const id  			= options.id || null
-			const langs  		= options.langs
+			const langs  		= options.langs || page_globals.dedalo_projects_default_langs
 			const selected 		= options.selected || page_globals.dedalo_application_lang
 			const action 		= options.action
 			const class_name	= options.class_name || 'select_lang'
