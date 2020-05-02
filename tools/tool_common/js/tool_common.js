@@ -13,7 +13,6 @@
 
 export const tool_common = function(){
 
-
 	return true
 }//end tool_common
 
@@ -233,6 +232,8 @@ export const trigger_request = async function(trigger_url, body) {
 	return trigger_response
 }//end trigger_request
 
+
+
 /**
 * GET_LABEL
 * return the label in the current language, if the label is not defined in current lang
@@ -244,16 +245,18 @@ const get_label = function(label_name) {
 	const tool_labels 	= self.simple_tool_object.labels
 	const lang_default 	= page_globals.dedalo_application_langs_default
 
-	let label_item = tool_labels.find(item => item.name === label_name && item.lang === self.lang).value
-	if(typeof label_item === 'undefined'){
-		label_item = tool_labels.find(item => item.name === label_name && item.lang === lang_default).value
+	let label_item = tool_labels.find(item => item.name===label_name && item.lang===self.lang).value
+	if(typeof label_item==='undefined'){
+		label_item = tool_labels.find(item => item.name===label_name && item.lang===lang_default).value
 	}
-	if(typeof label_item === 'undefined'){
-		label_item = tool_labels.find(item => item.name === label_name).value
+	if(typeof label_item==='undefined'){
+		label_item = tool_labels.find(item => item.name===label_name).value
 	}
-	if(typeof label_item === 'undefined'){
+	if(typeof label_item==='undefined'){
 		label_item = label_name
 	}
 
 	return label_item
-}// end get_label
+}//end get_label
+
+

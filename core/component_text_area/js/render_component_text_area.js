@@ -625,9 +625,9 @@ const get_custom_events = (self, i, get_service) => {
 					break;
 
 				case 'page':
-						// PDF go to the specific page
-						event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self})
-						break;
+					// PDF go to the specific page
+					event_manager.publish('click_tag_pdf' +'_'+ self.id_base, {tag:tag_obj, caller: self})
+					break;
 
 				case 'person':
 					// Show person info

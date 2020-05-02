@@ -1215,9 +1215,9 @@
 			outline: 1px solid rgba(216, 216, 216, 0.43);
 
 			>* {
-				// &:not(mark):not(img) {
-				// 	padding: 1em;
-				// }
+				&:not(mark):not(img) {
+					padding: 1em;
+				}
 
 				&.paginator {
 					padding: 0;
@@ -1943,12 +1943,10 @@
 
 // preload
 	.preload {
-		//background-image: url(../../themes/default/icons/preload.svg);
-		// .background_icon('preload.svg');
-		.fn_build_button('preload.svg', black, 1);
-		// background-repeat: no-repeat;
-		// background-size: contain; // 2em 2em;
-		// background-position: center;
+		//background-image: url(../../themes/default/icons/preload.svg);		
+		.fn_build_button('preload.svg', black, 1);		
+		mask-size: 30% !important;
+   		 -webkit-mask-size: 30% !important;
 		min-height: 3em;
 		min-width: 3em;
 		vertical-align: middle;

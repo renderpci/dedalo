@@ -1,7 +1,7 @@
 
 
 
-// tool header
+// header
 	.tool_header.tool_indexation {
 		background-color: #1f7551;
 
@@ -18,11 +18,37 @@
 
 
 
-// wrapper_tool
+// wrapper
 	.wrapper_tool.tool_indexation {
+		background-color: #2bab75;
 		padding-right: 1em;
+		display: flex;
+		width: 100%;
+		height: 100%;
 
+		>.content_data {
+			background-color: #f9eae0;
+			width: 100%;
+			height: 100%;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+   			grid-template-rows: 80% 20%;
 
+			>.thesaurus_container {
+				background-color: #91dda4;
+				height: 700px;
+				grid-row-start: 1;
+   				grid-row-end: 3;
+			}
+
+			>.component_container {
+				background-color: #d8de48;
+			}
+
+			>.info_container {
+				background-color: #c4c4f9;
+			}
+		}
 
 	}
 
