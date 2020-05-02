@@ -1266,7 +1266,7 @@ export const ui = {
 
 		// modal container select from DOM (created hidden when page is builded)
 			// const modal_container = document.querySelector('dd-modal')
-		// modal container buil new DOM on each call and remove on close
+		// modal container build new DOM on each call and remove on close
 			// const previous_modal  	= document.querySelector('dd-modal')
 			// if (previous_modal) {
 			// 	previous_modal.remove()
