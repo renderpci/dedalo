@@ -151,7 +151,8 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 	const self = this
 
 	const cloned_text = document.createElement('div')
-	cloned_text.innerHTML = html_value
+	// cloned_text.innerHTML = html_value
+	cloned_text.insertAdjacentHTML('afterbegin', html_value);
 
 	//const start = new Date().getTime();
 

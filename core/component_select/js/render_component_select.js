@@ -40,7 +40,8 @@ render_component_select.prototype.list = async function() {
 		const value_string = data.value
 
 	// Set value
-		wrapper.innerHTML = value_string
+		wrapper.insertAdjacentHTML('afterbegin', value_string);
+	
 
 	return wrapper
 }//end list
