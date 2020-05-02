@@ -43,77 +43,17 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 			content_data : content_data
 		})
 
-	// // buttons container
-	// 	const buttons_container = ui.create_dom_element({
-	// 		element_type	: 'div',
-	// 		class_name 		: 'buttons_container',
-	// 		parent 			: wrapper
-	// 	})
-
-	// 	// automatic_translation
-	// 		const automatic_translation_container = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name 		: 'automatic_translation_container',
-	// 			parent 			: buttons_container
-	// 		})
-	// 		// button
-	// 		const button_automatic_translation = document.createElement('button');
-	// 			  button_automatic_translation.type = 'button'
-	// 			  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-	// 			  automatic_translation_container.appendChild(button_automatic_translation)
-	// 			  button_automatic_translation.addEventListener("click", (e) => {
-
-	// 			  	const translator  = translator_engine_select.value
-	// 			  	const source_lang = wrapper.querySelector('.source_lang').value	// source_select_lang.value
-	// 			  	const target_lang = wrapper.querySelector('.target_lang').value // target_select_lang.value
-	// 			  	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
-	// 			  })
-
-	// 		// select
-	// 		const translator_engine_select = ui.create_dom_element({
-	// 			element_type	: 'select',
-	// 			parent 			: automatic_translation_container
-	// 		})
-	// 		const translator_engine = self.simple_tool_object.properties.translator_engine
-	// 		for (let i = 0; i < translator_engine.length; i++) {
-	// 			const translator = translator_engine[i]
-	// 			ui.create_dom_element({
-	// 				element_type	: 'option',
-	// 				value 			: JSON.stringify(translator),
-	// 				text_content 	: translator.label,
-	// 				parent 			: translator_engine_select
-	// 			})
-	// 		}
-
-	// tool_container
-		//const tool_container = document.getElementById('tool_container')
-		//if(tool_container!==null){
-		//	tool_container.appendChild(wrapper)
-		//}else{
-		//	const main = document.getElementById('main')
-		//	const new_tool_container = ui.create_dom_element({
-		//		id 				: 'tool_container',
-		//		element_type	: 'div',
-		//		parent 			: main
-		//	})
-		//	new_tool_container.appendChild(wrapper)
-		//}
-
 	// modal container
-		const header = wrapper.querySelector('.tool_header')		
+		const header = wrapper.querySelector('.tool_header')
 		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
 		modal.on_close = () => {
 			self.destroy(true, true, true)
+			// refresh source component text area
+			self.caller.refresh()
 		}
 
-
 	// events
-		// click
-			// wrapper.addEventListener("click", function(e){
-			// 	e.stopPropagation()
-			// 	console.log("e:",e);
-			// 	return
-			// })
+
 
 
 	return wrapper

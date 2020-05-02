@@ -119,7 +119,7 @@ export const service_tinymce = function() {
 		const custom_buttons 		= this.options.editor_config.custom_buttons
 		const custom_buttons_length = (custom_buttons) ? custom_buttons.length : 0
 		for (let i = 0; i < custom_buttons_length; i++) {
-
+			
 			const options = custom_buttons[i].options
 
 			// button add
@@ -193,6 +193,17 @@ export const service_tinymce = function() {
 			});//end click event
 
 
+		// NodeChange
+			// editor.on('NodeChange', function(evt) {
+			// 	if (custom_events.NodeChange) {
+			// 		// custom_events.NodeChange(evt, {
+			// 			// selection : editor.selection.getContent({format:'text'})
+			// 		// })
+			// 		console.log("NodeChange evt", evt);
+			// 	}
+			// });//end click event
+
+
 		// KeyPress
 			// prevent that user insert special reserved chars
 			const minor_than_code 	= 60 // <
@@ -257,12 +268,12 @@ export const service_tinymce = function() {
 
 		const self = this
 
-		self.editor.selection.setContent( html );		
+		self.editor.selection.setContent( html );
 		self.editor.setDirty(true);
-		
+
 		// save. service save function calls current component save_value()
-			// const actual_value 	= self.caller.data.value[0]	
-			// const actual_value 	= self.editor.getContent({format:'raw'})	
+			// const actual_value 	= self.caller.data.value[0]
+			// const actual_value 	= self.editor.getContent({format:'raw'})
 			// self.save(actual_value)
 
 		const value = self.editor.getContent({format:'raw'})
