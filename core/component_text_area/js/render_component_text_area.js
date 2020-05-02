@@ -666,9 +666,9 @@ const get_custom_events = (self, i, get_service) => {
 	}//end click
 
 	custom_events.MouseUp = (evt, options) => {
-		// console.log("options.selection:",options.selection);
-		// CREATE_FRAGMENT_COMMAND
-		// mce_editor.create_fragment_command(ed,evt,text_area_component)
+		// user text selection event
+			const selection = options.selection
+			event_manager.publish('text_selection' +'_'+ self.id_base, {selection:selection, caller: self})
 	}//end MouseUp
 
 	custom_events.KeyUp = (evt, options) => {
