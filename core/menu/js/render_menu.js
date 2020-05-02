@@ -208,7 +208,12 @@ render_menu.prototype.edit = async function() {
 			function update_section_label (instance) {
 				if(instance.mode!=='tm' && (instance.model==='section'|| instance.model==='area')){
 					// change the value of the current dom element
-					section_label.innerHTML = instance.label
+					// section_label.innerHTML = instance.label
+					// clean
+					while (section_label.firstChild) {
+						section_label.removeChild(section_label.firstChild)
+					}
+					section_label.insertAdjacentHTML('afterbegin', instance.label);
 					current_instance = instance
 				}
 			}
