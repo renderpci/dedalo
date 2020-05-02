@@ -96,12 +96,12 @@ render_component_pdf.prototype.edit = async function(options) {
 */
 const add_events = function(self, wrapper) {
 
-	// change event, for every change the value in the imputs of the component
+	// change event, for every change the value in the inputs of the component
 		wrapper.addEventListener('change', (e) => {
 			// e.stopPropagation()
 
 			// offset. input_value. The standard input for the value of the component
-			if (e.target.matches('input[type="number"].input_value')) {
+			if (e.target.matches('input[type="number"]')) {
 
 				const changed_data = Object.freeze({
 					action	: 'update',
@@ -196,8 +196,11 @@ const get_content_data_edit = async function(self) {
 */
 const get_input_element_edit = async (i, current_value, inputs_container, self) => {
 
-	const mode 		 	= self.mode
-	const is_inside_tool= self.is_inside_tool
+	const mode 		 		= self.mode
+	const is_inside_tool	= self.is_inside_tool
+	const offset_value		= current_value.offset !== undefined && current_value.offset !== null
+		? current_value.offset
+		: 1
 
 	// li
 		const li = ui.create_dom_element({
@@ -209,7 +212,7 @@ const get_input_element_edit = async (i, current_value, inputs_container, self) 
 		const pdf_url 		= self.data.datalist[i].url || null
 		// the standard html viewer of the pdf.js library
 		const viewer_url 	= DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
-	
+
 	// iframe
 		if (pdf_url) {
 
@@ -302,7 +305,7 @@ const get_input_element_edit = async (i, current_value, inputs_container, self) 
 				type 		 	: 'number',
 				class_name 		: '',
 				dataset 	 	: { key : i },
-				value 		 	: current_value.offset,
+				value 		 	: offset_value,
 				parent 		 	: fields
 			})
 
@@ -347,5 +350,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
