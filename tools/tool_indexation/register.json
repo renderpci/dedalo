@@ -15,12 +15,6 @@
         },
         {
             "type": "dd151",
-            "section_id": "8",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
             "section_id": "2",
             "section_tipo": "dd64",
             "from_component_tipo": "dd1331"
@@ -36,6 +30,12 @@
             "section_id": "1",
             "section_tipo": "dd64",
             "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "51",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
         },
         {
             "type": "dd151",
@@ -69,13 +69,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 24,
-                            "hour": 18,
-                            "time": 64934506627,
+                            "day": 28,
+                            "hour": 11,
+                            "time": 64934824608,
                             "year": 2020,
                             "month": 4,
-                            "minute": 57,
-                            "second": 7
+                            "minute": 16,
+                            "second": 48
                         }
                     }
                 ]
@@ -85,7 +85,7 @@
             "inf": "Descripción [component_text_area]",
             "dato": {
                 "lg-eng": [
-                    "Tool to associate text fragments to thesaurus term"
+                    "Create links between text fragments and thesaurus terms"
                 ]
             }
         },
@@ -120,12 +120,61 @@
                     "6.0.0"
                 ]
             }
+        },
+        "dd1372": {
+            "inf": "Etiquetas [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    [
+                        {
+                            "lang": "lg-spa",
+                            "name": "hello",
+                            "value": "Hola"
+                        },
+                        {
+                            "lang": "lg-cat",
+                            "name": "hello",
+                            "value": "Home!"
+                        },
+                        {
+                            "lang": "lg-vlca",
+                            "name": "hello",
+                            "value": "Che!"
+                        },
+                        {
+                            "lang": "lg-eus",
+                            "name": "hello",
+                            "value": "Che pachi!"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "hello",
+                            "value": "Hi"
+                        },
+                        {
+                            "lang": "lg-por",
+                            "name": "hello",
+                            "value": "Bacalao"
+                        },
+                        {
+                            "lang": "lg-fra",
+                            "name": "hello",
+                            "value": "Bonjour"
+                        },
+                        {
+                            "lang": "lg-spa",
+                            "name": "bue",
+                            "value": "Adiós"
+                        }
+                    ]
+                ]
+            }
         }
     },
     "section_id": 5,
     "created_date": "2020-01-23 18:29:29",
     "section_tipo": "dd1340",
-    "modified_date": "2020-04-24 18:57:07",
+    "modified_date": "2020-04-28 11:16:48",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",
