@@ -400,11 +400,16 @@ export const ts_object = new function() {
 															self.link_term(link_related, e)
 														})
 														// related icon
-														const add_icon 	= ui.create_dom_element({
-																			element_type			: 'div',
-																			parent 					: link_related,
-																			class_name 				: 'icon_bs link new_autocomplete_ts ts_object_related_icon', //ts_object_add_icon
-																		 })
+														// const related_icon 	= ui.create_dom_element({
+														// 	element_type	: 'div',
+														// 	parent 			: link_related,
+														// 	class_name 		: 'icon_bs link new_autocomplete_ts ts_object_related_icon', //ts_object_add_icon
+														//  })
+														const related_icon 	= ui.create_dom_element({
+															element_type	: 'span',
+															parent 			: link_related,
+															class_name 		: 'button arrow_link', //ts_object_add_icon
+														})
 							break;
 						default:
 
