@@ -71,7 +71,7 @@ abstract class common {
 			'component_html_file',
 			// 'component_html_text',
 			// 'component_image'
-			'component_info',
+			// 'component_info',
 			// 'component_input_text'
 			'component_input_text_large',
 			//'component_inverse',
@@ -2338,7 +2338,7 @@ abstract class common {
 				//'component_relation_index',
 				//'component_relation_struct',
 				'component_geolocation',
-				'component_info',
+				// 'component_info',
 				'component_state',
 				'section_tab',
 				'component_json'
