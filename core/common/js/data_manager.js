@@ -214,6 +214,15 @@ data_manager.prototype.get_element_context = async function(source) {
 /**
 * GET_PAGE_ELEMENT
 * Get full page element
+* Expected options:
+*
+*	$tipo 			= $options->tipo ?? null;
+*	$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
+*	$lang 			= $options->lang ?? DEDALO_DATA_LANG;
+*	$mode 			= $options->mode ?? 'list';
+*	$section_id 	= $options->section_id ?? null;
+*	$component_tipo = $options->component_tipo ?? null;
+*
 * @param object options
 * @return promise api_response
 */

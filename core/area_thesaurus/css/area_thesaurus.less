@@ -8,43 +8,59 @@
 
 /* WRAPPER : AREA_THESAURUS
 ------------------------------------------------ */
-.area_thesaurus {
-	font-family: Arial,sans-serif;
-	}
-	.area_thesaurus > ul {
-		padding: 25px;
-		padding-top: 10px;
-		background-color: rgba(255, 255, 255, 0.84);
-		margin: 20px;
-		margin-top: 0;
-		border-radius: 5px;
-		}
-		.area_thesaurus > ul > li {
-		}
-		/* typology_name like 'Toponomy'
-		------------------------------------------------ */
-		.area_thesaurus .typology_name {
-			background-color: rgba(230, 230, 230, 0.88);
-			padding: 7px;
-			padding-bottom: 5px;
-			text-transform: uppercase;
-			border-bottom: 1px solid white;
-			font-size: 1.1em;
-			color: #636363;
-			min-height: 31px;
-			cursor: pointer;
+	.wrapper_area {
+		font-family: Arial,sans-serif;
+		font-size: 1em;
 
-			//background: transparent url(../../themes/default/drop-down-arrow.png) no-repeat right center;
-			//background-size: 12px;
-			//background-position: right 10px center;   
+		>.label {
+
+		}
+
+		>.filter {
+
+		}
+
+		>.content_data {
+			>ul {
+				background-color: rgba(255, 255, 255, 0.84);
+				width: 100%;
+				height: 100%;
+				padding: 25px;
+				padding-top: 10px;				
+				margin: 20px;
+				margin-left: 0;
+				margin-top: 0;
+				border-radius: 5px;
+
+				>li {
+					// typology_name like 'Toponomy'
+					>.typology_name {
+						background-color: rgba(230, 230, 230, 0.88);						
+						text-transform: uppercase;
+						padding: 0.5em;
+						margin-bottom: 0.25em;
+						margin-top: 0.25em;
+						// border-bottom: 1px solid white;
+						font-size: 1em;
+						line-height: 1em;
+						color: #636363;						
+						cursor: pointer;
+						&:hover {
+							background-color: #E0E0E0;
+						}
+						&:active {
+							background-color: #BBBBBB;
+							color: #ffffff;
+						}
+					}
+				}
 			}
-			.area_thesaurus .typology_name:hover {
-				background-color: #E0E0E0;
-			}
-			.area_thesaurus .typology_name:active {
-				background-color: #BBBBBB;
-				color: #ffffff;
-			}
+		}//end .content_data		
+	}//end .area_thesaurus
+
+
+
+	
 		.typology_hide {
 			//background-color: #B4522C !important;
 			background: transparent url(../../themes/default/drop-down-arrow.png) no-repeat right center;
@@ -96,6 +112,9 @@
 			//padding: 7px;			
 			margin: 0;
 			padding: 0;			
+			
+
+
 			}
 			/* ID_COLUMN_CONTENT
 			------------------------------------------------ */

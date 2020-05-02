@@ -137,11 +137,11 @@ const content_data = async function(self) {
 		})
 
 	// elements
-		const data 				= self.data.find(item => item.tipo === 'dd100')	
+		const data 				= self.data.find(item => item.tipo==='dd100')	
 		const ts_nodes  		= data.value
-		const typology_nodes 	= ts_nodes.filter(node => node.type === 'typology' )
+		const typology_nodes 	= ts_nodes.filter(node => node.type==='typology' )
 		const typology_length 	= typology_nodes.length
-		const hierarchy_nodes 	= ts_nodes.filter(node => node.type === 'hierarchy')
+		const hierarchy_nodes 	= ts_nodes.filter(node => node.type==='hierarchy')
 
 	//sort typologies by order field
 		typology_nodes.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
@@ -167,7 +167,7 @@ const content_data = async function(self) {
 					parent 			: li
 				})
 			// hierarchy sections
-				const hierarchy_sections = hierarchy_nodes.filter(node => node.typology_section_id === typology_nodes[i].section_id)
+				const hierarchy_sections = hierarchy_nodes.filter(node => node.typology_section_id===typology_nodes[i].section_id)
 
 			//sort hierarchy_nodes by alfabetic
 				hierarchy_sections.sort((a, b) => new Intl.Collator().compare(a.target_section_name, b.target_section_name));
