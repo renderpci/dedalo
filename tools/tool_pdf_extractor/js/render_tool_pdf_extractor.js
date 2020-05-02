@@ -195,8 +195,8 @@ const get_content_data = async function(self) {
 		// buton submit
 
 		const button_submit = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button_submit',
+			element_type	: 'button',
+			class_name		: 'warning',
 			text_content 	: self.get_label('do_process'),
 			parent 			: page_range
 		})
