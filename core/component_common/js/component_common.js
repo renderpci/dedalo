@@ -293,8 +293,10 @@ component_common.prototype.save = async function(changed_data) {
 					if(SHOW_DEBUG===true) {
 						if (api_response.result) {
 							const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
-							const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
-							console.log(`[component_common.save] ${changed_data.action} ${self.context.lang}: ${changed_data.key}, ${changed_data_value} api_response value:`, api_response_data_value);
+							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
+							console.log(`[component_common.save] action:'${changed_data.action}' lang:'${self.context.lang}', key:'${changed_data.key}', value:'${changed_data_value}'`);
+							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
+							console.log("[component_common.save] api_response:", api_response);
 						}else{
 							console.error("[component_common.save] api_response ERROR:",api_response);
 						}
@@ -394,13 +396,18 @@ component_common.prototype.set_value = function(value) {
 /**
 * UPDATE_DATUM
 * Update component data value with changed_data send by the dom element
-* update_datum. Update the datum and the data of the instance with the data changed and saved
-* the format of changed_data = { key	: i,
-*								value : input.value }
+* Update the datum and the data of the instance with the data changed and saved.
+* changed_data format:
+*	{ 
+*		key	: i,
+*		value : input.value
+*	}
+* @param object api_response
+*	api_response contains fresh calculated context and data of saved component
 * @return bool true
 */
 component_common.prototype.update_datum = async function(api_response) {
-
+	
 	const self = this
 
 	//const changed_data = self.data.changed_data
