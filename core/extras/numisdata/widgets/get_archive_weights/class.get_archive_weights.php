@@ -113,7 +113,6 @@ class get_archive_weights extends widget_common {
 															   $section_tipo);
 
 				$data_weights_dato 	= $data_weights->get_dato();
-				$data_weights_label = $data_weights->get_label();
 
 				if(!empty($data_weights_dato)){
 					$weights[] = $data_weights_dato;
@@ -129,7 +128,6 @@ class get_archive_weights extends widget_common {
 															   $section_tipo);
 
 				$data_diameter_dato = $data_diameter->get_dato();
-				$data_diameter_label = $data_diameter->get_label();
 
 				if(!empty($data_diameter_dato)){
 					$diameter[] = $data_diameter_dato;
