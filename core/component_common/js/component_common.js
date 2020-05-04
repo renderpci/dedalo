@@ -398,7 +398,7 @@ component_common.prototype.set_value = function(value) {
 * Update component data value with changed_data send by the dom element
 * Update the datum and the data of the instance with the data changed and saved.
 * changed_data format:
-*	{ 
+*	{
 *		key	: i,
 *		value : input.value
 *	}
@@ -407,7 +407,7 @@ component_common.prototype.set_value = function(value) {
 * @return bool true
 */
 component_common.prototype.update_datum = async function(api_response) {
-	
+
 	const self = this
 
 	//const changed_data = self.data.changed_data
@@ -415,18 +415,31 @@ component_common.prototype.update_datum = async function(api_response) {
 		if (!self.datum) self.datum = {data:[]}
 
 	// remove the component old data in general datum (from down to top array items)
-		const datum_data_length = self.datum.data.length
-		for (let i = datum_data_length - 1; i >= 0; i--) {
-			const data_item = self.datum.data[i]
-			// console.log("data_item:",data_item);
-			//if (data_item.parent_tipo===self.tipo && data_item.parent_section_id===self.section_id){
-			if (data_item.tipo===self.tipo && data_item.section_id===self.section_id){
-				if(SHOW_DEBUG===true) {
-					console.log(`:---- [update_datum] DELETE data_item i:${i} `, JSON.parse( JSON.stringify(data_item)) );
-				}
-				self.datum.data.splice(i, 1);
-			}
+	const data_to_change = api_response.result.data
+
+	const data_length = data_to_change.length
+	for (let i = data_length - 1; i >= 0; i--) {
+		const current_data = data_to_change[i]
+		const index_to_delete = self.datum.data.findIndex(item => item.section_id === current_data.section_id && item.tipo === current_data.tipo)
+
+		if(SHOW_DEBUG===true) {
+			console.log(`:---- [update_datum] DELETE data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
 		}
+		self.datum.data.splice(index_to_delete, 1);
+	}
+
+		// const datum_data_length = self.datum.data.length
+		// for (let i = datum_data_length - 1; i >= 0; i--) {
+		// 	const data_item = self.datum.data[i]
+		// 	// console.log("data_item:",data_item);
+		// 	//if (data_item.parent_tipo===self.tipo && data_item.parent_section_id===self.section_id){
+		// 	if (data_item.tipo===self.tipo && data_item.section_id===self.section_id){
+		// 		if(SHOW_DEBUG===true) {
+		// 			console.log(`:---- [update_datum] DELETE data_item i:${i} `, JSON.parse( JSON.stringify(data_item)) );
+		// 		}
+		// 		self.datum.data.splice(i, 1);
+		// 	}
+		// }
 		if(SHOW_DEBUG===true) {
 			// console.log(" [component_common.update_datum] api_response.result.data:",JSON.parse( JSON.stringify(api_response.result.data)));
 		}
@@ -435,8 +448,16 @@ component_common.prototype.update_datum = async function(api_response) {
 		self.datum.data = [...self.datum.data, ...api_response.result.data]
 
 	// current element data
-		self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
+		// self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
 			//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
+		const ar_instances = instances.get_all_instances()
+		for (let i = data_length - 1; i >= 0; i--) {
+			const current_data = data_to_change[i]
+			const current_instance = ar_instances.find(item => item.section_id === current_data.section_id
+				&& item.tipo === current_data.tipo
+				&& item.section_tipo === current_data.section_tipo)
+			current_instance.data = self.datum.data.find(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id) || {}
+		}
 
 	// check data
 		if (typeof self.data==="undefined") {
@@ -446,6 +467,9 @@ component_common.prototype.update_datum = async function(api_response) {
 			}
 			alert("Error on read component data!");
 		}
+
+	// dispatch event
+		event_manager.publish('update_data_'+ self.id_base, '')
 
 	// add as new data the most recent changed_data
 		//self.data.changed_data = changed_data
