@@ -239,6 +239,11 @@ class dd_core_api {
 						$get_json_options->get_data 	= true;
 					$element_json = $component->get_json($get_json_options);
 
+				// observers_data
+					if (isset($component->observers_data)) {
+						$element_json->data = array_merge($element_json->data, $component->observers_data);
+					}
+
 				// data add
 					$result = $element_json;
 
@@ -274,7 +279,7 @@ class dd_core_api {
 	* @return array $result
 	*/
 	function delete($json_data) {
-		
+
 	}//end delete
 
 
