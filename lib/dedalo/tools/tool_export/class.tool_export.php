@@ -157,7 +157,7 @@ class tool_export extends tool_common {
 			$section_id = $row->section_id;
 			$ar_records_deep_resolved[$section_id] = ($this->data_format==='dedalo') ? $this->deep_resolve_dedalo_row($row) : $this->deep_resolve_row($row);
 		}
-		dump($ar_records_deep_resolved, ' $ar_records_deep_resolved ++ '.to_string());
+		// dump($ar_records_deep_resolved, ' $ar_records_deep_resolved ++ '.to_string());
 		#$memory_usage = dd_memory_usage();
 		#dump($memory_usage, ' memory_usage deep_resolve_row ++ '.to_string());
 
