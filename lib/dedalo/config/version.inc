@@ -1694,10 +1694,21 @@
 	Valencia 28-04-2020 5.5.42
 		Add import_dedalo_csv tool auto allow use name and tipo of section info, like  'created_by_user' and tipo 'dd200' indistinctly
 
+
 	Valencia 29-04-2020 5.5.43
 		Fix error on load security xml classes by SAML login 
 
 
+	Valencia 01-05-2020 5.5.44
+		Add diffusion global search fields
+
+
+	Valencia 01-05-2020 5.5.45
+		Avoid diffusion global to write empty array fields
+	
+
+	Valencia 04-05-2020 5.5.46
+		Minor clean code
 
 
 
@@ -1720,12 +1731,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.43';
+	$DEDALO_VERSION = '5.5.46';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-04-2020');
+	define('DEDALO_BUILD'	, '04-05-2020');
 
 
 	/*

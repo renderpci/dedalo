@@ -368,6 +368,14 @@ class web_data {
 				$response->total 	= $exec_query_response->total;
 				$response->msg    	= 'Ok get rows_data done. ' . $exec_query_response->msg;
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					if (isset($exec_query_response->debug)) {
+						$response->debug = $exec_query_response->debug;
+					}
+				}
+				
+
 
 			return $response;
 		}//end get_rows_data
@@ -571,7 +579,7 @@ class web_data {
 
 			// debug
 				if ($caller!=='portal_resolve') {
-					debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::ERROR);
+					debug_log(__METHOD__." Executing query " . PHP_EOL . trim($strQuery), logger::DEBUG);
 				}
 
 			// exec mysql query
@@ -705,10 +713,12 @@ class web_data {
 
 			// response debug properties
 				if(SHOW_DEBUG===true) {
-					$response->debug = [];
-					$response->debug['count_query'] = $count_query ?? false;
-					$response->debug['strQuery'] 	= $strQuery;
-					$response->debug['time'] 	 	= round(microtime(1)-$start_time,3);
+					$query_parts = explode(PHP_EOL, $strQuery);
+					$response->debug = (object)[
+						'count_query' 	=> $count_query ?? false,
+						'strQuery' 		=> implode(' ', $query_parts),
+						'time' 	 		=> round(microtime(1)-$start_time,3)
+					];					
 				}
 
 
@@ -1019,7 +1029,7 @@ class web_data {
 			}
 			// $count_query = trim(implode("\n", $ar_lines));  //."\n) AS tables";
 			$count_query = trim(implode(PHP_EOL, $ar_clean));
-			$count_query = 'SELECT COUNT(*) AS total FROM (' .PHP_EOL. $count_query .PHP_EOL. ') AS tcount';
+			$count_query = 'SELECT COUNT(*) AS total FROM (' .PHP_EOL. $count_query .PHP_EOL. ') AS tcount;';
 
 			debug_log(__METHOD__.' count_query - ' .PHP_EOL. to_string($count_query), logger::ERROR);
 
@@ -3428,72 +3438,75 @@ class web_data {
 		* @return object $response
 		*/
 		public static function get_global_search_json( $request_options ) {
+			$start_time = microtime(1);
 
 			$response = new stdClass();
-				$response->results = false;
-				#$response->msg 	   = 'Error. Request free_search failed';
+				$response->results 	= false;
+				#$response->msg 	= 'Error. Request get_global_search_json failed';
 
 			$options = new stdClass();
 				$options->json_search = null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-			# Example
-				# {
-				#     "database": "sra",
-				#     "lang": "ca",
-				#     "query": "batalla del ebro",
-				#     "filters": {
-				#    	 "birth_place": "es1_2352",
-				#    	 "dead_at_prison": false,
-				#    	 "end_date": 376790400,
-				#    	 "exile_place": "es1_967"
-				#    	 "municipality": "on1_5624"
-				#    	 "name_surname": "Rubianes",
-				#    	 "neighborhood": "es1_967",
-				#    	 "prison_municipality": "Barcelona",
-				#    	 "prison": "Presó Convent de les Adoratrius de Girona",
-				#    	 "project": 34,
-				#    	 "pub_author": "Julio Verne",
-				#    	 "pub_editor": "Joan Porcel",
-				#    	 "pub_year": 1985,
-				#    	 "region": "on1_5624"
-				#    	 "residence_place": "es1_2352",
-				#    	 "start_date": 376790400,
-				#    	 "theme": "Espais de la Guerra Civil",
-				#    	 "thesaurus": ["id_1", "id_2", "id_3"],
-				#    	 "title": "Títol específic",
-				#    	 "typology": "Llibre",
-				#		 "data_mod": "2015-12-22"
-				#     },
-				#     "pagination":{
-				#    	 "limit": 10,
-				#    	 "offset": 0
-				#     },
-				#     "sort":{
-				#    	 "name": "date",
-				#    	 "direction": "asc",
-				#     }
-				# }
-				#dump($options, ' options ++ '.to_string());
+			
+			// Example
+				// {
+				//     "database": "sra",
+				//     "lang": "ca",
+				//     "query": "batalla del ebro",
+				//     "filters": {
+				//    	 "birth_place": "es1_2352",
+				//    	 "dead_at_prison": false,
+				//    	 "end_date": 376790400,
+				//    	 "exile_place": "es1_967"
+				//    	 "municipality": "on1_5624"
+				//    	 "name_surname": "Rubianes",
+				//    	 "neighborhood": "es1_967",
+				//    	 "prison_municipality": "Barcelona",
+				//    	 "prison": "Presó Convent de les Adoratrius de Girona",
+				//    	 "project": 34,
+				//    	 "pub_author": "Julio Verne",
+				//    	 "pub_editor": "Joan Porcel",
+				//    	 "pub_year": 1985,
+				//    	 "region": "on1_5624"
+				//    	 "residence_place": "es1_2352",
+				//    	 "start_date": 376790400,
+				//    	 "theme": "Espais de la Guerra Civil",
+				//    	 "thesaurus": ["id_1", "id_2", "id_3"],
+				//    	 "title": "Títol específic",
+				//    	 "typology": "Llibre",
+				// 		 "data_mod": "2015-12-22"
+				//     },
+				//     "pagination":{
+				//    	 "limit": 10,
+				//    	 "offset": 0
+				//     },
+				//     "sort":{
+				//    	 "name": "date",
+				//    	 "direction": "asc",
+				//     }
+				// }				
 
+			// check options json_search is valid json object
+				if(!$json_data = json_decode($options->json_search)){
+					debug_log(__METHOD__." Error on make global search. Invalid options  ".to_string($options->json_search), logger::WARNING);
+					return $response;
+				}
 
-			if(!$json_data = json_decode($options->json_search)){
-				debug_log(__METHOD__." Error on make global search. Invalid options  ".to_string($options->json_search), logger::WARNING);
-				return $response;
-			}
-			#dump($json_data, ' json_data ++ '.to_string());
+			// q . From property 'query'
+				$q = isset($json_data->query) ? $json_data->query : null;
 
-			$q = isset($json_data->query) ? $json_data->query : null;
+			// lang code convert from tld2 to dedalo lang
+				switch ($json_data->lang) {
+					case 'ca': $lang = 'lg-cat'; break;
+					case 'es': $lang = 'lg-spa'; break;
+					case 'en': $lang = 'lg-eng'; break;
+					case 'fr': $lang = 'lg-fra'; break;
+					default: $lang = null;
+				}
 
-			switch ($json_data->lang) {
-				case 'ca': $lang = 'lg-cat'; break;
-				case 'es': $lang = 'lg-spa'; break;
-				case 'en': $lang = 'lg-eng'; break;
-				case 'fr': $lang = 'lg-fra'; break;
-				default: $lang = null;
-			}
-
-			$rows_per_page  = isset($json_data->pagination->limit) ? $json_data->pagination->limit : 10;
-			$offset 		= isset($json_data->pagination->offset) ? $json_data->pagination->offset : 0;
+			// pagination properties
+				$rows_per_page  = isset($json_data->pagination->limit) ? $json_data->pagination->limit : 10;
+				$offset 		= isset($json_data->pagination->offset) ? $json_data->pagination->offset : 0;
 
 			#
 			# ORDER
@@ -3538,7 +3551,7 @@ class web_data {
 			#
 			# FILTER
 				$ar_filter = [];
-				# database
+				# database (table)
 				if (!empty($json_data->database)) {
 					$ar_filter[] = "`table` = '".strtolower($json_data->database)."'";
 				}
@@ -3556,7 +3569,21 @@ class web_data {
 				}
 				# end_date . data format timestamp UNIX
 				if (!empty($json_data->filters->end_date)) {
-					$ar_filter[] = "end_date = '".$json_data->filters->end_date."'";
+					#$ar_filter[] = "end_date = '".$json_data->filters->end_date."'";
+					if (is_array($json_data->filters->end_date)) {
+						$in  = isset($json_data->filters->end_date[0]) ? (int)$json_data->filters->end_date[0] : false;
+						$out = isset($json_data->filters->end_date[1]) ? (int)$json_data->filters->end_date[1] : false;
+						if ($in!==false && $out!==false) {
+							$end_date_filter = '(end_date >= '.$in.' AND end_date <= '.$out.')';
+						}elseif ($in!==false) {
+							$end_date_filter = 'end_date = '.$in;
+						}						
+					}else{
+						$end_date_filter = 'end_date = '.(int)$json_data->filters->end_date;
+					}
+					if (!empty($end_date_filter)) {
+						$ar_filter[] = $end_date_filter;
+					}
 				}
 				# exile_place . like es1_967
 				if (!empty($json_data->filters->exile_place)) {
@@ -3624,10 +3651,24 @@ class web_data {
 				if (!empty($json_data->filters->residence_place)) {
 					$ar_filter[] = "residence_place LIKE '%".escape_string($json_data->filters->residence_place)."%'";
 				}
-				# start_date . like 376790400
+				# start_date . like 376790400 OR [376790400,396790400]
 				if (!empty($json_data->filters->start_date)) {
 					#$ar_filter[] = "start_date = ".$json_data->filters->start_date;
-					$ar_filter[] = "start_date = '".$json_data->filters->start_date."'";
+					#$ar_filter[] = "start_date = '".$json_data->filters->start_date."'";
+					if (is_array($json_data->filters->start_date)) {
+						$in  = isset($json_data->filters->start_date[0]) ? (int)$json_data->filters->start_date[0] : false;
+						$out = isset($json_data->filters->start_date[1]) ? (int)$json_data->filters->start_date[1] : false;
+						if ($in!==false && $out!==false) {
+							$start_date_filter = '(start_date >= '.$in.' AND start_date <= '.$out.')';
+						}elseif ($in!==false) {
+							$start_date_filter = 'start_date = '.$in;
+						}						
+					}else{
+						$start_date_filter = 'start_date = '.(int)$json_data->filters->start_date;
+					}
+					if (!empty($start_date_filter)) {
+						$ar_filter[] = $start_date_filter;
+					}					
 				}
 				# theme . like Espais de la Guerra Civil
 				if (!empty($json_data->filters->theme)) {
@@ -3671,12 +3712,73 @@ class web_data {
 						$ar_filter[] = '`data_mod` REGEXP \''.$json_data->filters->data_mod.'\'';
 					}
 				}
-
-				// sql_filter string
-				if (!empty($ar_filter)) {
-					$options->sql_filter = implode(' AND ', $ar_filter);
+				# situation . like ["1","5"] - operator: OR
+				if (!empty($json_data->filters->situation)) {
+					$ar_situation = $json_data->filters->situation;
+					$ar_term = [];
+					foreach ((array)$ar_situation as $key => $value) {
+						// $ar_term[] = "`situation` LIKE '%\"".escape_string($value)."\"%'";
+						$ar_term[] = "`situation` = '[\"".escape_string($value)."\"]'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_situation = '('.implode(' OR ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_situation;
+					}
 				}
-				#dump($options->sql_filter, '$options->sql_filter ++ '.to_string());
+				# situation_place . like ["es1_2352","es1_2359"] - operator: AND
+				if (!empty($json_data->filters->situation_place)) {
+					$ar_situation_place = $json_data->filters->situation_place;
+					$ar_term = [];
+					foreach ((array)$ar_situation_place as $key => $value) {
+						$ar_term[] = "`situation_place` LIKE '%\"".escape_string($value)."\"%'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_situation_place = '('.implode(' AND ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_situation_place;
+					}
+				}
+				# nazi_camp . like ["es1_2352","es1_2359"] - operator: AND
+				if (!empty($json_data->filters->nazi_camp)) {
+					$ar_nazi_camp = $json_data->filters->nazi_camp;
+					$ar_term = [];
+					foreach ((array)$ar_nazi_camp as $key => $value) {
+						$ar_term[] = "`nazi_camp` LIKE '%\"".escape_string($value)."\"%'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_nazi_camp = '('.implode(' AND ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_nazi_camp;
+					}
+				}
+				# nazi_sub_camp . like ["es1_2352","es1_2359"] - operator: AND
+				if (!empty($json_data->filters->nazi_sub_camp)) {
+					$ar_nazi_sub_camp = $json_data->filters->nazi_sub_camp;
+					$ar_term = [];
+					foreach ((array)$ar_nazi_sub_camp as $key => $value) {
+						$ar_term[] = "`nazi_sub_camp` LIKE '%\"".escape_string($value)."\"%'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_nazi_sub_camp = '('.implode(' AND ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_nazi_sub_camp;
+					}
+				}
+				# prisoner_number - operator: AND
+				if (!empty($json_data->filters->prisoner_number)) {
+					$ar_prisoner_number = $json_data->filters->prisoner_number;
+					$ar_term = [];
+					foreach ((array)$ar_prisoner_number as $key => $value) {
+						$ar_term[] = "`prisoner_number` LIKE '%\"".escape_string($value)."\"%'";
+						// $ar_term[] = "`prisoner_number` = '[\"".escape_string($value)."\"]'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_prisoner_number = '('.implode(' AND ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_prisoner_number;
+					}
+				}
+
+				// sql_filter add final string if not empty
+					if (!empty($ar_filter)) {
+						$options->sql_filter = implode(' AND ', $ar_filter);
+					}
 
 
 			# Offset
@@ -3708,7 +3810,13 @@ class web_data {
 					'theme',
 					'thesaurus',
 					'title',
-					'typology'
+					'typology',
+					// added 29-04-2020
+					'situation',
+					'situation_place',
+					'nazi_camp',
+					'nazi_sub_camp',
+					'prisoner_number'
 				];
 
 			#
@@ -3778,13 +3886,8 @@ class web_data {
 				$row_formated['id'] 	= $link->section_id; //$row['section_id'];
 				$row_formated['table'] 	= $link->table;
 
-				#foreach ($mdcat_tipos as $column_name) {
-				#	$row_formated[$column_name] = $row[$column_name];
-				#}
 				foreach ($fields_data as $key => $value_obj) {
-					#$name = $value_obj->name;
-					#$value= $value_obj->value;
-					#dump($value_obj->name, ' var ++ '.to_string($value_obj->value));
+					
 					if ($value_obj->name==='descriptors') {
 						$value_obj->value = json_decode($value_obj->value);
 					}
@@ -3794,7 +3897,6 @@ class web_data {
 
 				$ar_result_final[] = $row_formated;
 			}
-			#dump($ar_result_final, ' ar_result_final ++ '.to_string());
 
 			# Add vars for pagination
 			#$response->page_number 	 = $options->page_number;
@@ -3802,7 +3904,15 @@ class web_data {
 			$response->total 		 = $rows_data->total;
 
 			$response->results 		 = $ar_result_final; //$rows_data->result;
-			#$response->msg 			 = 'Ok. Request global_search done successfully';
+			#$response->msg 		 = 'Ok. Request global_search done successfully';
+
+			if(SHOW_DEBUG===true) {
+				$response->debug = (object)[
+					'time' 		=> round(microtime(1)-$start_time,3),
+					'filter' 	=> $search_options->sql_filter,
+					'strQuery' 	=> $rows_data->debug->strQuery ?? null
+				];
+			}
 
 
 			return $response;

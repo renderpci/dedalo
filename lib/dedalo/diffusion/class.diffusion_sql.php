@@ -1579,6 +1579,7 @@ class diffusion_sql extends diffusion  {
 		# FULL_DATA
 			$full_data_tipos 		= (array)$options->global_search_map->full_data;
 			$name_surname_tipos 	= isset($options->global_search_map->name_surname) ? (array)$options->global_search_map->name_surname : [];
+			$prisoner_number_tipos 	= isset($options->global_search_map->prisoner_number) ? (array)$options->global_search_map->prisoner_number : [];
 			$sort_tipos 			= isset($options->global_search_map->sort) ? (array)$options->global_search_map->sort : [];
 			$thesaurus_tipos 		= (array)$options->global_search_map->thesaurus;
 			$prison_tipos 			= isset($options->global_search_map->prison) ? (array)$options->global_search_map->prison : []; // 25-01-2018
@@ -1626,10 +1627,12 @@ class diffusion_sql extends diffusion  {
 					'typology',
 					'data_mod', // added 18-09-2019
 					'fons_code',
+					// added 29-04-2020
 					'situation',
 					'situation_place',
 					'nazi_camp',
-					'nazi_sub_camp'
+					'nazi_sub_camp',
+					'prisoner_number'
 				];
 
 			$fields_array = [];
@@ -1647,6 +1650,7 @@ class diffusion_sql extends diffusion  {
 
 					$full_data[$lang] 		 	= [];
 					$name_surname_data[$lang]	= [];
+					$prisoner_number_data[$lang]= [];
 					$thesaurus_data[$lang]		= [];
 					$prison_data[$lang]			= [];
 					$sort_data[$lang]			= [];
@@ -1683,6 +1687,23 @@ class diffusion_sql extends diffusion  {
 										$name_surname_value = trim( strip_tags($column['field_value']) );
 										if (!empty($name_surname_value)) {
 											$name_surname_data[$lang][] = $name_surname_value;
+										}
+									}
+
+								# prisoner_number_tipos . Added 01-05-2020 !!
+									if (in_array($column['tipo'], $prisoner_number_tipos)) {
+										// note $column['field_value'] is in format array flat '1452' or '1452 | 1453'
+										$ar_values = explode(' | ', $column['field_value']);										
+										// if (is_array($column['field_value'])) {
+										// 	$column['field_value'] = json_encode($column['field_value']);
+										// }
+										$prisoner_number_value = trim( strip_tags($column['field_value']) );
+										if (!empty($ar_values)) {
+											foreach ($ar_values as $prisoner_number_value) {
+												if (!empty($prisoner_number_value)) {
+													$prisoner_number_data[$lang][] = $prisoner_number_value;
+												}												
+											}											
 										}
 									}
 
@@ -1758,67 +1779,67 @@ class diffusion_sql extends diffusion  {
 										$filter_date_data[$lang][] = $column['field_value'];
 									}
 
-								if (in_array($column['tipo'], $prison_tipos)) {
-									if (is_array($column['field_value'])) {
-										$column['field_value'] = json_encode($column['field_value']);
+								// prison_tipos
+									if (in_array($column['tipo'], $prison_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$prison_value = trim( strip_tags($column['field_value']) );
+										if (!empty($prison_value)) {
+											$prison_data[$lang][] = $prison_value;
+										}
 									}
-									$prison_value = trim( strip_tags($column['field_value']) );
-									if (!empty($prison_value)) {
-										$prison_data[$lang][] = $prison_value;
-									}
-								}
 
 								$current_field_value = $column['field_value'];
 
-								# mdcat_tipos
-								foreach ($mdcat_tipos as $current_column_name) {
-									if (!isset($options->global_search_map->{$current_column_name})) continue;
+								// mdcat_tipos
+									foreach ($mdcat_tipos as $current_column_name) {
+										if (!isset($options->global_search_map->{$current_column_name})) continue;
 
-									if (in_array($column['tipo'], $prison_tipos)) {
-										#if (is_array($column['field_value'])) {
-										#	$column['field_value'] = json_encode($column['field_value']);
-										#}
-										#$prison_value = trim( strip_tags($column['field_value']) );
-										#if (!empty($prison_value)) {
-										#	$prison_data[$lang][] = $prison_value;
-										#}
+										if (in_array($column['tipo'], $prison_tipos)) {
+											#if (is_array($column['field_value'])) {
+											#	$column['field_value'] = json_encode($column['field_value']);
+											#}
+											#$prison_value = trim( strip_tags($column['field_value']) );
+											#if (!empty($prison_value)) {
+											#	$prison_data[$lang][] = $prison_value;
+											#}
+										}else{
 
-									}else{
-
-										if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value'])) {
-											#$list_data[$lang]->{$current_column_name} = $column['field_value'];
-											#dump( $$column['tipo'] , '$column[field_value] ++ '.to_string($current_column_name));
-											$current_field_value = $column['field_value'];
-											switch ($current_column_name) {
-												case 'end_date':
-													$ar_current_field_value = (array)explode(',', $current_field_value);
-													$current_field_value 	= end($ar_current_field_value);
-													$current_field_value 	= strtotime($current_field_value);
-													break;
-												case 'start_date':
-													$ar_current_field_value = (array)explode(',', $current_field_value);
-													$current_field_value 	= reset($ar_current_field_value);
-													$current_field_value 	= strtotime($current_field_value);
-													break;
-												case 'pub_year':
-													$ar_current_field_value = (array)explode(',', $current_field_value);
-													$current_field_value 	= reset($ar_current_field_value);
-													$ar_part = explode('-', $current_field_value);
-													$year 	 = isset($ar_part[0]) ? $ar_part[0] : null;
-													$current_field_value 	= $year;
-													break;
-
-												default:
-													break;
-											}
-											$ar_fields_global[$pseudo_section_id][$lang][] = [
-												#'field_name'  => '`'.$current_column_name.'`',
-												'field_name'  => ''.$current_column_name.'',
-												'field_value' => $current_field_value
-											];
-										}//end if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value']))
+											if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value'])) {
+												#$list_data[$lang]->{$current_column_name} = $column['field_value'];
+												// default direct value
+												$current_field_value = $column['field_value'];
+												// overwrite value in some cases
+												switch ($current_column_name) {
+													case 'end_date':
+														$ar_current_field_value = (array)explode(',', $current_field_value);
+														$current_field_value 	= end($ar_current_field_value);
+														$current_field_value 	= strtotime($current_field_value);
+														break;
+													case 'start_date':
+														$ar_current_field_value = (array)explode(',', $current_field_value);
+														$current_field_value 	= reset($ar_current_field_value);
+														$current_field_value 	= strtotime($current_field_value);
+														break;
+													case 'pub_year':
+														$ar_current_field_value = (array)explode(',', $current_field_value);
+														$current_field_value 	= reset($ar_current_field_value);
+														$ar_part = explode('-', $current_field_value);
+														$year 	 = isset($ar_part[0]) ? $ar_part[0] : null;
+														$current_field_value 	= $year;
+														break;
+													default:
+														break;
+												}
+												// compound and set final column name and value in this lang
+												$ar_fields_global[$pseudo_section_id][$lang][] = [													
+													'field_name'  => ''.$current_column_name.'',
+													'field_value' => $current_field_value
+												];
+											}//end if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value']))
+										}
 									}
-								}
 								break;
 						}
 					}//end foreach ($ar_columns as $column)
@@ -1859,6 +1880,12 @@ class diffusion_sql extends diffusion  {
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
 							'field_name'  => 'name_surname',
 							'field_value' => implode(' ',$name_surname_data[$lang])
+						];
+
+					# prisoner_number. prisoner_number_DATA . Added 01-05-2020 !!
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'prisoner_number',
+							'field_value' => json_encode($prisoner_number_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
 
 					# sort. sort_data . Added 18-03-2018 !!
@@ -1985,7 +2012,7 @@ class diffusion_sql extends diffusion  {
 							'field_value' => '["'.$fons_code.'"]'
 						];
 						*/
-				}
+				}//end foreach ($ar_langs as $lang => $ar_columns)
 			}//end foreach ($ar_fields as $section_id => $ar_langs) {
 			#dump($ar_fields_global, ' ar_fields_global ++ '.to_string());
 			#dump($ar_fields_global, ' ar_fields_global ++ '.to_string());
@@ -2008,7 +2035,7 @@ class diffusion_sql extends diffusion  {
 			#dump($save, ' save ++ '.to_string());
 
 		if (!isset($save->new_id)) {
-			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::ERROR);
 		}
 		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
 
