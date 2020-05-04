@@ -1,4 +1,7 @@
 <?php
+
+include_once( dirname(__FILE__) . '/widgets/class.widget_common.php' );
+
 /*
 * CLASS COMPONENT_INFO
 *
@@ -10,11 +13,45 @@ class component_info extends component_common {
 
 	/**
 	* GET_DATO
-	* @return 
+	* @return
 	*/
 	public function get_dato() {
 
-		return null;
+		$properties			= $this->get_propiedades();
+		// get the widgets defined in the ontology
+		$widgets = isset($properties->widgets) ? $properties->widgets : null;
+		if (empty($widgets) || !is_array($widgets)) {
+			debug_log(__METHOD__." Empty defined widgets for $component_name : $label [$tipo] ".to_string($widgets), logger::WARNING);
+			return null;
+		}
+		// the component info dato will be the all widgets data
+		$dato = [];
+		// every widget will be created and calculate your own data
+		foreach ($widgets as $widget_obj) {
+
+			$widget_options = new stdClass();
+				$widget_options->section_tipo		= $this->get_section_tipo();
+				$widget_options->section_id 		= $this->get_section_id();
+				$widget_options->lang 				= DEDALO_DATA_LANG;
+				// $widget_options->component_info 	= $this;
+				$widget_options->widget_name 		= $widget_obj->widget_name;
+				$widget_options->widget_path 		= $widget_obj->widget_path;
+				$widget_options->data_source 		= $widget_obj->data_source;
+
+			// instance the current widget
+			$widget = widget_common::get_instance($widget_options);
+
+			// Widget data
+			$widget_value = new stdClass();
+				$widget_value->name 	= $widget_obj->widget_name;
+				$widget_value->value 	= $widget->get_dato();
+			$dato[] = $widget_value;
+		}//end foreach ($widgets as $widget)
+
+		// set the component info dato with the result
+		$this->dato = $dato;
+
+		return $dato;
 	}//end get_dato
 
 
@@ -36,60 +73,19 @@ class component_info extends component_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
-		$component_info  = component_common::get_instance(__CLASS__,
-														  $tipo,
-														  $parent,
-														  $modo,
-														  $lang,
-														  $section_tipo);
-		/* NO SPEED INCREMENT IS APPRECIATED
-			foreach ($component_info->propiedades as $key => $prop_value) {
-				if(isset($prop_value->data_source_list) && in_array($prop_value->data_source_list, $ar_columnas_tipo)) {
-					#dump($rows[$prop_value->data_source_list], ' $ar_columnas_tipo ++ '.to_string());
-					$component_info->propiedades[$key]->ar_locators = json_decode($rows[$prop_value->data_source_list]);
-						#dump($component_info->propiedades[$key], '$component_info->get_propiedades()[$key] ++ '.to_string());
-					break;
-				}
-			}
-			*/
-		
-		$html = $component_info->get_html();
-
-		return $html;
-	}//end render_list_value
-
-
-
-	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		#if (empty($valor)) {
 
-			#$this->set_modo('export');			
+			#$this->set_modo('export');
 
 			$this->widget_lang = $lang;
 			$this->widget_mode = 'export';
-			
+
 			$valor = $this->get_html();
 			#$valor = strip_tags($valor);
 		#}
@@ -99,6 +95,4 @@ class component_info extends component_common {
 
 
 
-	
 }//end component_info
-?>

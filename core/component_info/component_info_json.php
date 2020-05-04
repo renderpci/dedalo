@@ -2,11 +2,9 @@
 // JSON data component controller
 
 
-
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
-
 
 
 // context
@@ -18,7 +16,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -31,10 +29,11 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-		
+
 		// Value
-		$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-			
+		// $value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+		$value = $this->get_dato();
+
 		// data item
 		$item  = $this->get_data_item($value);
 
