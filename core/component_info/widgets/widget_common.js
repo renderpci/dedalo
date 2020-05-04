@@ -29,7 +29,7 @@ widget_common.prototype.init = async function(options) {
 	const self = this
 
 	// set vars
-		self.id				= options.section_tipo
+		self.id				= options.id
 		self.section_tipo	= options.section_tipo
 		self.section_id		= options.section_id
 		self.lang			= options.lang
@@ -39,8 +39,6 @@ widget_common.prototype.init = async function(options) {
 	// status update
 		self.status = 'inited'
 
-	
+
 	return true
 }//end init
-
-
