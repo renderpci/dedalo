@@ -53,7 +53,7 @@
 
 			# Custom propiedades external dato
 				if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
-					$this->set_dato_external($save=false, $changed=false, $current_dato=false);	// Forces update dato with calculated external dato
+					$this->set_dato_external($save=true, $changed=false, $current_dato=false);	// Forces update dato with calculated external dato
 					$dato = $this->get_dato();
 				}
 

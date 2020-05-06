@@ -1711,6 +1711,12 @@
 		Minor clean code
 
 
+	Valencia 06-05-2020 5.5.47
+		Changes default behavior of component_autocomplete controller set_dato_external save from false to true to allow proper publication
+
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1731,12 +1737,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.46';
+	$DEDALO_VERSION = '5.5.47';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '04-05-2020');
+	define('DEDALO_BUILD'	, '06-05-2020');
 
 
 	/*
