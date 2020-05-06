@@ -1715,6 +1715,10 @@
 		Changes default behavior of component_autocomplete controller set_dato_external save from false to true to allow proper publication
 
 
+	Valencia 06-05-2020 5.5.48
+		Fix issues on API web_data global_search_json with order and column selection
+
+
 
 
 
@@ -1737,7 +1741,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.47';
+	$DEDALO_VERSION = '5.5.48';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}

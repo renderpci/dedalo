@@ -2508,7 +2508,7 @@ class web_data {
 				$thesaurus_table = $options->table;
 				foreach ($table_thesaurus_map as $tkey => $tvalue) {
 					if (strpos($term_id, $tkey)===0) {
-						$thesaurus_table = $tvalue; break;
+						$thesaurus_table = $tvalue; # break;
 					}
 				}
 				#dump($thesaurus_table, ' thesaurus_table ++ '.to_string($term_id));
@@ -3717,8 +3717,8 @@ class web_data {
 					$ar_situation = $json_data->filters->situation;
 					$ar_term = [];
 					foreach ((array)$ar_situation as $key => $value) {
-						// $ar_term[] = "`situation` LIKE '%\"".escape_string($value)."\"%'";
-						$ar_term[] = "`situation` = '[\"".escape_string($value)."\"]'";
+						$ar_term[] = "`situation` LIKE '%\"".escape_string($value)."\"%'";
+						// $ar_term[] = "`situation` = '[\"".escape_string($value)."\"]'";
 					}
 					if (!empty($ar_term)) {
 						$current_filter_situation = '('.implode(' OR ', $ar_term).')';
@@ -3850,9 +3850,11 @@ class web_data {
 
 				// sort by 'sort_id' always
 					if (empty($options->order)) {
-						$options->order = 'sort_id ASC';
+						// $options->order = 'sort_id ASC';
+						$options->order = 'LENGTH(sort_id), sort_id ASC';
 					}else{
-						$options->order .= ', sort_id ASC';
+						// $options->order .= ', sort_id ASC'; // , sort ASC
+						$options->order .= ', LENGTH(sort_id), sort_id ASC';
 					}
 
 				$search_options->lang 		= $options->lang;
