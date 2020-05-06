@@ -4,8 +4,8 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
+	import {ui} from '../../../../../common/js/ui.js'
+	import {event_manager} from '../../../../../common/js/event_manager.js'
 
 
 
@@ -28,6 +28,8 @@ export const render_get_archive_weights = function() {
 render_get_archive_weights.prototype.edit = async function(options) {
 
 	const self = this
+
+	const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -54,7 +56,6 @@ const get_content_data_edit = async function(self) {
 
 	// sort vars
 		const value = self.value
-	
 
 	const fragment = new DocumentFragment()
 
@@ -67,6 +68,7 @@ const get_content_data_edit = async function(self) {
 
 	// values
 		const value_length = value.length
+
 		for (let i = 0; i < value_length; i++) {
 			get_value_element(i, value[i], values_container, self)
 		}
@@ -89,7 +91,6 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, current_value, values_container, self) => {
 
-
 	// li
 		const li = ui.create_dom_element({
 			element_type : 'li',
@@ -98,9 +99,9 @@ const get_value_element = (i, current_value, values_container, self) => {
 
 	// iterate object properties
 		for (let [label, value] of Object.entries(current_value)) {
-			
+
 			// label
-				const input = ui.create_dom_element({
+				const span_label = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'label',
 					inner_html 	: label,
@@ -108,15 +109,17 @@ const get_value_element = (i, current_value, values_container, self) => {
 				})
 
 			// value
-				const input = ui.create_dom_element({
+				const span_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: value,
+					inner_html 	: JSON.stringify(value),
 					parent 		: li
 				})
 		}
+		event_manager.subscribe('update_widget_value_'+self.id, (changed_data) =>{
+			console.log("change_data", changed_data);
+			span_value.innerHTML = JSON.stringify(changed_data)
+		})
 
 	return li
 }//end get_value_element
-
-

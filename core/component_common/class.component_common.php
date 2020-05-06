@@ -88,11 +88,11 @@ abstract class component_common extends common {
 		// model check. Verify 'component_name' and 'tipo' are correct
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			if (empty($component_name)) {
-				
+
 				// calculate component name (is ontology elemnent model)
 					$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-			
-			}else if (!empty($component_name) && $model_name!==$component_name) {				
+
+			}else if (!empty($component_name) && $model_name!==$component_name) {
 
 				// warn to admin
 					$msg = "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'";
@@ -100,7 +100,7 @@ abstract class component_common extends common {
 
 				// fix bad model
 					$component_name = $model_name;
-			}			
+			}
 			if (strpos($component_name, 'component_')!==0) {
 				if(SHOW_DEBUG===true) {
 					throw new Exception("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__, 1);
@@ -109,9 +109,9 @@ abstract class component_common extends common {
 			}
 
 		// section_tipo check : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
-			if (empty($section_tipo)) {				
+			if (empty($section_tipo)) {
 				// $section_tipo = component_common::resolve_section_tipo($tipo);
-				// debug_log(__METHOD__." Called component without section tipo ".to_string($tipo), logger::DEBUG);				
+				// debug_log(__METHOD__." Called component without section tipo ".to_string($tipo), logger::DEBUG);
 				trigger_error("Sorry. resolve_section_tipo is not supported anymore. Please fix this call ASASP");
 				if(SHOW_DEBUG===true) {
 					dump($section_tipo, ' DEBUG WARNING: TRIGGERED resolve_section_tipo from: '.to_string($tipo));
@@ -204,7 +204,7 @@ abstract class component_common extends common {
 								}
 							}
 						}
-					}			
+					}
 			}//end if(SHOW_DEBUG===true)
 
 		// no cache. Direct construct without cache instance. Use this config in imports
@@ -227,7 +227,7 @@ abstract class component_common extends common {
 					#debug_log(__METHOD__." Overload components prevent. Unset first cache item [$key]");
 				}
 			}
-		
+
 		// cache instances. Find current instance in cache
 			if ( !isset($ar_component_instances) || !array_key_exists($key, $ar_component_instances) ) {
 
@@ -253,7 +253,7 @@ abstract class component_common extends common {
 				// }
 			}
 
-		
+
 		return $ar_component_instances[$key];
 	}//end get_instance
 
@@ -274,7 +274,7 @@ abstract class component_common extends common {
 			}
 			$this->tipo = $tipo;
 
-		// parent		
+		// parent
 			$this->parent 		= $parent;
 			$this->section_id 	= $parent;
 
@@ -290,7 +290,7 @@ abstract class component_common extends common {
 				$this->update_diffusion_info_propagate_changes = true;
 			}
 
-		// lang 
+		// lang
 			if(isset($this->lang)) {
 				# LANG : Overwrite var '$lang' with previous component declatarion of '$this->lang'
 				$lang = $this->lang;
@@ -302,16 +302,16 @@ abstract class component_common extends common {
 			}
 			$this->lang = $lang;
 
-		// section_tipo			
+		// section_tipo
 			if (empty($section_tipo)) {
 				// # section_tipo : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
 				// $section_tipo = component_common::resolve_section_tipo($tipo);
 				// debug_log(__METHOD__." Calculated section tipo from tipo ($tipo) !!!!!! Fix ASAP ".to_string(), logger::ERROR);
-				throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);				
+				throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);
 			}
 			$this->section_tipo = $section_tipo;
 
-		// structure data 
+		// structure data
 		// Fijamos el tipo recibido y cargamos la estructura previamente para despejar si este tipo es traducible o no
 		// y fijar de nuevo el lenguaje en caso de no ser traducible
 			parent::load_structure_data();
@@ -330,7 +330,7 @@ abstract class component_common extends common {
 
 		// ar_tools_obj reset
 			$this->ar_tools_obj = false;
-		
+
 		// debug set base info
 			$this->debugger = "tipo:$this->tipo - norden:$this->norden - modo:$this->modo - parent:$this->parent";
 
@@ -771,6 +771,10 @@ abstract class component_common extends common {
 		# ACTIVITY
 		$this->save_activity();
 
+		# Observers
+		// the observers will be need to be notified for re-calculate your own dato with the new component dato
+		$this->propagate_to_observers();
+
 
 		return (int)$section_id;
 	}//end Save
@@ -813,6 +817,129 @@ abstract class component_common extends common {
 			}//end try catch
 		}//end if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
 	}//end save_activity
+
+
+
+	/**
+	* PROPAGATE_TO_OBSERVERS
+	* is used by calculations or compoment_info (with widgets) that show sums, or other calculations dependents of others compoments
+	* the observers of the component are defined by the own component in properties that say: This component in this section is watching me:
+	* {
+	*  "observers": [
+	*    {
+	*      "section_tipo": "numisdata3",
+	*      "component_tipo": "numisdata595"
+	*    }
+	*  ]
+	* }
+	* @return
+	*/
+	public function propagate_to_observers() {
+		// get all observers defined in proporties
+		$properties = $this->get_propiedades();
+		// if the component don't has observers stop the process.
+		if(!isset($properties->observers)){
+			return;
+		}
+		$ar_observers = $properties->observers;
+
+		// create the locator of the current component, this locator will be use to search, from the observer section, the component that are changed.
+		$current_locator = new locator();
+			$current_locator->set_section_tipo($this->section_tipo);
+			$current_locator->set_section_id($this->section_id);
+
+		$observers_data = [];
+		foreach ($ar_observers as $current_observer) {
+			$current_observer_data = component_common::update_observer_dato($current_observer, $current_locator, $this->tipo);
+			$observers_data = array_merge($observers_data, $current_observer_data);
+		}
+
+		// store data to accces later in api
+		$this->observers_data = $observers_data;
+
+		return $observers_data;
+	}//end propagate_to_observers
+
+
+	/**
+	* UPDATE_OBSERVER_DATO
+	* @return
+	*/
+	public static function update_observer_dato($observer, $locator, $observable_tipo) {
+
+		// create the observer component
+		$RecordObj_dd = new RecordObj_dd($observer->component_tipo);
+		$properties = $RecordObj_dd->get_propiedades(true);
+
+		$ar_observe = $properties->observe;
+
+		$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
+			return $item->component_tipo === $observable_tipo;
+		});
+
+		if(isset($current_observer->filter) && $current_observer->filter !== false){
+			// get the from_component_tipo of the filter to set at observable locator
+			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplet, etc)
+			$elements 	= reset($current_observer->filter);
+			$element 	= reset($elements);
+			$from_component_tipo = end($element->path)->component_tipo;
+
+			$locator->set_from_component_tipo($from_component_tipo);
+
+			// the sqo base is defined into properties of the observer component.
+			// and is update the q of the filter with the locator of the component that had changed
+			// update the q with the locator of the observable component
+			// the locator is the section_tipo and section_id of the own observable section.
+			$elements = reset($current_observer->filter);
+			foreach ($elements as $key => $item) {
+				$elements[$key]->q = $locator;
+			}
+
+			// build the search_query_object to use in the search.
+			$sqo = new stdClass();
+				$sqo->section_tipo 	= $observer->section_tipo;
+				$sqo->full_count 	= false;
+				$sqo->limit 		= 0;
+				$sqo->filter 		= $current_observer->filter;
+				dump($sqo, ' $sqo ++ '.to_string());
+			// search the sections that has reference to the observable component, the component that had changed
+			$search = search::get_instance($sqo);
+			$result = $search->search();
+			$ar_section = $result->ar_records;
+		}else{
+			$ar_section = [$locator];
+		}
+
+		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
+		$ar_data = [];
+		foreach ($ar_section as $current_section) {
+			// create the observer component that will be update
+			$component = component_common::get_instance($component_name,
+														$observer->component_tipo,
+														$current_section->section_id,
+														'list',
+														DEDALO_DATA_LANG,
+														$current_section->section_tipo);
+
+			// force to update the dato of the observer component
+			$dato = $component->get_dato();
+			// save the new dato into the database, this will be used for search into components calculations of infos
+			$component->Save();
+
+			// only will be send the result of the observer compoent to the current section_tipo and section_id,
+			// this section is the section that user is changed and need to be update witht the new data
+			// the sections that are not the current user changed/ viewed will be save but don't return the result to the client.
+			if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
+				// get the json of the component to send witht the save of the observable compoment data
+				$component_json = $component->get_json();
+				$ar_data = array_merge($ar_data, $component_json->data);
+			}
+		}
+
+		return $ar_data;
+	}//end update_observers_dato
+
+
 
 
 
@@ -1622,7 +1749,7 @@ abstract class component_common extends common {
 			// include_negative values to include root user in list
 				if ($include_negative===true) {
 					$search->include_negative = true;
-				}				
+				}
 			$records_data 		= $search->search();
 			$ar_current_dato 	= $records_data->ar_records;
 				#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
@@ -2350,9 +2477,9 @@ abstract class component_common extends common {
 
 		// $propiedades = $this->get_propiedades();
 		// if(isset($propiedades->source->config_context)){
-			
+
 		// 	$ar_target_section_tipo = [];
-		// 	foreach ($propiedades->source->config_context as $current_item) {				
+		// 	foreach ($propiedades->source->config_context as $current_item) {
 		// 		if ($current_item->type!=='internal') continue;
 
 		// 		// resolve self section_tipo
@@ -3991,7 +4118,7 @@ abstract class component_common extends common {
 
 					default:
 						$key = $changed_data->key;
-						
+
 						// fix property 'to_remove' to help properly remove
 							$this->changed_data->to_remove = $dato[$key];
 
@@ -4028,7 +4155,7 @@ abstract class component_common extends common {
 	public static function get_config_context($tipo, $external=false, $section_tipo=null) {
 
 		if (to_string($section_tipo)==='self') {
-			throw new Exception("Error Processing get_config_context (6) unresolved section_tipo:".to_string($section_tipo), 1);			
+			throw new Exception("Error Processing get_config_context (6) unresolved section_tipo:".to_string($section_tipo), 1);
 		}
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
@@ -4054,7 +4181,7 @@ abstract class component_common extends common {
 					if (isset($current_config_context->section_tipo) && $current_config_context->section_tipo==='self') {
 						$current_config_context->section_tipo = is_array($section_tipo) ? reset($section_tipo) : $section_tipo;
 					}
-				
+
 				// add hierarchy_types
 				if(isset($current_config_context->hierarchy_types) && !empty($current_config_context->hierarchy_types)){
 					// get the hierarchy sections from properties
@@ -4132,7 +4259,7 @@ abstract class component_common extends common {
 			$config_context = [$config_context_item];
 
 		}
-		
+
 		return $config_context;
 	}//end get_config_context
 

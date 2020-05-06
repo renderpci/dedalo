@@ -164,7 +164,7 @@ class get_archive_weights extends widget_common {
 			$dato->min_diameter 			= $min_diameter 			?? null;
 			$dato->total_elements_diameter 	= $total_elements_diameter 	?? null;
 
-		return $dato;
+		return [$dato];
 	}//end get_dato
 
 }//end get_archive_weights
