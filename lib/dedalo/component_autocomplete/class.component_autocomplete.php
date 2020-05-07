@@ -949,7 +949,8 @@ class component_autocomplete extends component_relation_common {
 				: diffusion::get_is_publicable($item->value);
 
 			if (true===$current_is_publicable) {
-				$diffusion_value_clean[] = strip_tags($item->label);
+				$diffusion_value_clean[] = strip_tags($item->label,'<img>');
+				// $diffusion_value_clean[] = $item->label;
 			}			
 		}
 
@@ -980,25 +981,6 @@ class component_autocomplete extends component_relation_common {
 	}//end get_diffusion_dato
 
 
-
-	/**
-	* GET_DIFFUSION_RESOLVE_VALUE
-	* @return 
-	*/
-	public function get_diffusion_resolve_value($option_obj=null) {
-
-		// dump(func_get_args(), 'func_get_args() ++ '.to_string());
-
-		$dato = $this->get_dato();
-		
-		$options = new stdClass();
-			$options->lang 			= $this->lang;
-			$options->propiedades 	= $option_obj;
-
-		$value = diffusion_sql::resolve_value($options, $dato);
-
-		return $value;		
-	}//end get_diffusion_resolve_value
 
 	/**
 	* RENDER_LIST_VALUE

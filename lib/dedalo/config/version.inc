@@ -1719,6 +1719,9 @@
 		Fix issues on API web_data global_search_json with order and column selection
 
 
+	Valencia 07-05-2020 5.5.49
+		Moved method get_diffusion_resolve_value from component_autocomplete to component_common
+
 
 
 
@@ -1741,12 +1744,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.48';
+	$DEDALO_VERSION = '5.5.49';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-05-2020');
+	define('DEDALO_BUILD'	, '07-05-2020');
 
 
 	/*
