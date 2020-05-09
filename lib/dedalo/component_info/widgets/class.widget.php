@@ -10,7 +10,12 @@ class widget {
 	 * @var widget The reference to *widget* instance of this class
 	 */
 	private static $instance;
-	
+
+	// set from properties on configure
+	public $widget_name;
+	public $widget_info;
+	public $widget_path;
+	public $data_source;	
 
 
 	/**

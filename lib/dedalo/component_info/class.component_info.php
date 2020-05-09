@@ -25,7 +25,9 @@ class component_info extends component_common {
 	*/
 	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) {
 
-		$this->widget_lang = $widget_lang;
+		$this->widget_lang = !empty($widget_lang)
+			? $widget_lang
+			: DEDALO_DATA_LANG;
 
 		$valor = $this->get_html();
 		$valor = strip_tags($valor);
@@ -110,6 +112,77 @@ class component_info extends component_common {
 
 		return to_string($valor);
 	}//end get_valor_export
+
+
+
+	/**
+	* GET_DIFFUSION_DATO
+	* @return string $valor
+	*/
+	public function get_diffusion_dato( $options ) {
+		
+		// i.e. options
+			// {
+			//     "widget_name": [
+			//         "get_archive_weights"
+			//     ],
+			//     "select": [
+			//         "media_diameter"
+			//     ],
+			//     "value_format": "first_value"
+			// }
+
+		// set lang to widget
+			// $this->widget_lang = !empty($widget_lang)
+			// 	? $widget_lang
+			// 	: DEDALO_DATA_LANG;
+
+		// force calculate
+			$this->get_html();
+
+		// dato. Dato has been set when widget html is generated
+			$dato = [];
+			foreach ($this->widgets as $current_widget) {
+
+				$widget_name = $current_widget->widget_name;
+				if (!in_array($widget_name, $options->widget_name)) {
+					continue;
+				}
+
+				if (!isset($current_widget->dato)) {
+					continue;
+				}
+				
+				$current_dato_object = $current_widget->dato;
+
+				$select_values = $options->select;
+				if (!empty($select_values)) {
+					foreach ($select_values as $name) {
+						if (property_exists($current_dato_object, $name)) {
+							$dato[] = $current_dato_object->{$name};
+						}
+					}
+				}else{
+					$dato[] = $current_dato_object;
+				}
+			}
+
+		// value format
+			switch ($options->value_format) {
+				case 'first_value':
+					$dato = reset($dato);
+					break;
+				default:
+					# Noting to do
+					break;
+			}
+
+		// encode final dato
+			// $dato = json_encode($dato);
+
+
+		return $dato;
+	}//end get_diffusion_dato
 
 
 

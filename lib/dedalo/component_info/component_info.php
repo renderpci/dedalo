@@ -29,7 +29,7 @@
 
 	# CLASS WIDGETS
 	include_once( dirname(__FILE__) . '/widgets/class.widget.php' );
-
+	
 	$widgets = isset($propiedades->widgets) ? $propiedades->widgets : null;
 	if (empty($widgets) || !is_array($widgets)) {
 		debug_log(__METHOD__." Empty defined widgets for $component_name : $label [$tipo] ".to_string($widgets), logger::WARNING);
@@ -41,6 +41,7 @@
 	$widget_mode = isset($this->widget_mode) ? $this->widget_mode : null;
 	
 	$ar_widget_html=array();
+	$this->widgets = [];
 	foreach ($widgets as $widget_obj) {
 		#$start_time=microtime(1);
 		
@@ -51,6 +52,10 @@
 
 		# Widget html
 		$ar_widget_html[] = $widget->get_html( $widget_lang, $widget_mode );
+
+		// store current widget
+		$this->widgets[] = $widget;
+
 
 		#$total = exec_time_unit($start_time);
 		#debug_log(__METHOD__." total: $total - widget_name: ".to_string($widget_obj->widget_name), logger::WARNING);

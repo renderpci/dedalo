@@ -1723,6 +1723,10 @@
 		Moved method get_diffusion_resolve_value from component_autocomplete to component_common
 
 
+	Valencia 09-05-2020 5.5.49
+		Added method component_info get_diffusion_dato using widget dato response
+
+
 
 
 	WORK IN PROGRESS
@@ -1744,12 +1748,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.49';
+	$DEDALO_VERSION = '5.5.50';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-05-2020');
+	define('DEDALO_BUILD'	, '09-05-2020');
 
 
 	/*

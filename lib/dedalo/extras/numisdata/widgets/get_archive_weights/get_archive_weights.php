@@ -159,6 +159,20 @@
 					}else{
 						debug_log(__METHOD__." Empty diameter. Sum ignored in widget get_archive_weights ".to_string(), logger::DEBUG);
 					}
+
+
+					// fix dato
+						$dato = new stdClass();
+							$dato->media_weight 			= $media_weight 			?? null;
+							$dato->max_weight 				= $max_weight 				?? null;
+							$dato->min_weight 				= $min_weight 				?? null;
+							$dato->total_elements_weights 	= $total_elements_weights 	?? null;
+							$dato->media_diameter 			= $media_diameter 			?? null;
+							$dato->max_diameter 			= $max_diameter 			?? null;
+							$dato->min_diameter 			= $min_diameter 			?? null;
+							$dato->total_elements_diameter 	= $total_elements_diameter 	?? null;
+
+						$this->dato = $dato;
 				break;
 
 			default:
