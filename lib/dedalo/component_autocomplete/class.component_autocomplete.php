@@ -962,27 +962,6 @@ class component_autocomplete extends component_relation_common {
 
 
 	/**
-	* GET_DIFFUSION_DATO
-	* @return string $diffusion_value
-	*/
-	public function get_diffusion_dato() {
-
-		$dato = $this->get_dato();
-		if (is_array($dato)) {
-			$ar_id =array();
-			foreach ($dato as $current_locator) {
-				$ar_id[] = $current_locator->section_id;
-			}
-			$final_dato = $ar_id;
-		}
-		$diffusion_value = json_encode($final_dato);
-
-		return (string)$diffusion_value;
-	}//end get_diffusion_dato
-
-
-
-	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
 	* Receive value from section list and return proper value to show in list

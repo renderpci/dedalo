@@ -1145,6 +1145,46 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_RESOLVE_VALUE
+	* @return 
+	*/
+	public function get_diffusion_resolve_value($option_obj=null) {
+
+		$dato = $this->get_dato();
+		
+		$options = new stdClass();
+			$options->lang 			= $this->lang;
+			$options->propiedades 	= $option_obj;
+
+		$value = diffusion_sql::resolve_value($options, $dato);
+
+		return $value;
+	}//end get_diffusion_resolve_value
+
+
+
+	/**
+	* GET_DIFFUSION_DATO
+	* @return string $diffusion_value
+	*/
+	public function get_diffusion_dato() {
+
+		$dato = $this->get_dato();
+		if (is_array($dato)) {
+			$ar_id =array();
+			foreach ($dato as $current_locator) {
+				$ar_id[] = $current_locator->section_id;
+			}
+			$final_dato = $ar_id;
+		}
+		$diffusion_value = json_encode($final_dato);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_dato
+
+
+
+	/**
 	* GET_DIFFUSION_VALUE_TERM_ID
 	* @return string json_encoded array
 	*/

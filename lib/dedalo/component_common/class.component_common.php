@@ -3229,27 +3229,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_DIFFUSION_RESOLVE_VALUE
-	* @return 
-	*/
-	public function get_diffusion_resolve_value($option_obj=null) {
-
-		// dump(func_get_args(), 'func_get_args() ++ '.to_string());
-
-		$dato = $this->get_dato();
-		
-		$options = new stdClass();
-			$options->lang 			= $this->lang;
-			$options->propiedades 	= $option_obj;
-
-		$value = diffusion_sql::resolve_value($options, $dato);
-
-		return $value;
-	}//end get_diffusion_resolve_value
-
-
-
-	/**
 	* UPDATE_DATO_VERSION
 	* @return $response->result =0; // the component don't have the function "update_dato_version"
 	* @return $response->result =1; // the component do the update"
