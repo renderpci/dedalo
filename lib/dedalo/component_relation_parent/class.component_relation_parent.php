@@ -809,5 +809,40 @@ class component_relation_parent extends component_relation_common {
 
 
 
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) {
+
+		if (isset($option_obj->add_parents)) {
+			
+			// recursive
+			$section_id 	= $this->get_parent();
+			$section_tipo 	= $this->section_tipo;
+
+			$parents = self::get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false);
+
+			$dato = array_map(function($locator){
+				return $locator->section_id;
+			}, $parents);
+
+		}else{
+
+			// default
+			$dato = $this->get_dato();
+		}
+				
+		$diffusion_value = json_encode($dato);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
+
+
+
 }//end component_relation_parent
-?>
