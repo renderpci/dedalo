@@ -1229,6 +1229,7 @@ class diffusion_sql extends diffusion  {
 			$options->diffusion_element_tipo 	 = null;
 			$options->recursion_level 		 	 = 0;
 			$options->component_publication_tipo = null; // optional
+			$options->skip_tipos 				 = null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 				#dump($options, ' options ++ '.to_string()); #die();
 		#
@@ -1467,9 +1468,14 @@ class diffusion_sql extends diffusion  {
 						#dump($ar_section_components, ' ar_section_components ++ '.to_string());
 
 				#
-				# GET REFERENCES FROM COMPONENTS DATO
+				# GET REFERENCES FROM COMPONENTS DATO					
 					$group_by_section_tipo=array();
+					$skip_tipos = isset($options->skip_tipos) ? $options->skip_tipos : [];
 					foreach ($ar_section_components as $current_component_tipo) {
+
+						if (in_array($current_component_tipo, $skip_tipos)) {
+							continue;
+						}
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
 						if (!in_array($modelo_name, $ar_components_with_references)) continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
@@ -1485,6 +1491,9 @@ class diffusion_sql extends diffusion  {
 							if (isset($current_component_propiedades->source->mode) && $current_component_propiedades->source->mode==='external') {
 								debug_log(__METHOD__." Skipped component with external source mode: ".to_string($current_component_tipo), logger::DEBUG);
 								continue;
+								// if (isset($current_component_propiedades->source->component_to_search)) {
+								// 	$skip_tipos = array_merge($skip_tipos, (array)$current_component_propiedades->source->component_to_search);
+								// }
 							}
 
 						// debug_log(__METHOD__." Solving recursive resolve_references on level '$options->recursion_level' tipo: '$current_component_tipo' model: '$modelo_name' label: '".RecordObj_dd::get_termino_by_tipo($current_component_tipo)."' ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
@@ -1552,6 +1561,7 @@ class diffusion_sql extends diffusion  {
 								$new_options->section_id   			 	= $current_section_id;
 								$new_options->diffusion_element_tipo 	= $diffusion_element_tipo;
 								$new_options->recursion_level 			= $current_recursion_level;
+								$new_options->skip_tipos 				= $skip_tipos;
 
 							# Recursion
 							$this->update_record( $new_options, true );
