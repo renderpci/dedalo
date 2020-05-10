@@ -363,6 +363,11 @@ class diffusion_mysql extends diffusion_sql  {
 
 			switch (true) {
 				case ($field_type===$pref.'int'):
+					$sql_query .= " `$field_name` int($field_options) COMMENT '$field_coment',\n";
+					if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
+					break;
+
+				case ($field_type===$pref.'int_unsigned'):
 					$sql_query .= " `$field_name` int($field_options) unsigned COMMENT '$field_coment',\n";
 					if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
 					break;
