@@ -3468,6 +3468,13 @@ class diffusion_sql extends diffusion  {
 					}
 					break;
 
+				case 'split_date_range':
+					// used in numisdata935 to get indirect date
+					$current_options = $process_dato_arguments->output_options;	
+					$current_value 	 = self::split_date_range($current_options, $value);
+					$ar_value = [$current_value];
+					break;
+
 				default:
 					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
 						if (empty($value) && isset($process_dato_arguments->empty_value)) {
