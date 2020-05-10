@@ -3317,6 +3317,62 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* RESOLVE_MULTIPLE
+	* @return string
+	*/
+	public static function resolve_multiple($options, $dato, $default_separator=' | ') {
+
+		// check empty dato
+			if (empty($dato) || !isset($dato[0])) {				
+				return null;
+			}
+
+		// process_dato_arguments
+			$process_dato_arguments = (array)$options->propiedades->process_dato_arguments;
+		
+		// ar_value
+			$ar_value = [];
+			foreach ($process_dato_arguments as $current_options) {
+
+				// method
+					$current_method = $current_options->process_dato;
+
+				// options
+					$new_options = clone $options;
+						$new_options->propiedades = $current_options;	
+
+				// call method
+					$current_value = $current_method($new_options, $dato, $default_separator);
+
+				// add if no empty
+					if($current_value !== null){
+						$ar_value[] = $current_value;
+					}
+			}
+
+		// output optional
+			$output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
+			switch ($output) {
+				case 'merged':
+					# Merge all arrays values in one only array
+					$ar_value 	= array_values($ar_value); // Restore array keys
+					$value 	  	= json_encode($ar_value);
+					break;
+
+				default:
+					$separator 	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
+					$value 		= implode($separator,$ar_value);
+					break;
+			}
+
+		// check empty values
+			if (empty($value) && $value!='0') {
+				$value = null; // default empty value is 'null'
+			}
+
+
+		return $value;
+	}//end resolve_multiple
 	* RESOLVE_VALUE
 	* @return
 	*/
