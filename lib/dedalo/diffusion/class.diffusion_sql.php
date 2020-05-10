@@ -1406,6 +1406,10 @@ class diffusion_sql extends diffusion  {
 						}
 						#dump($save_options, ' save_options ++ '.to_string($diffusion_section)); #die();
 
+					// merge columns
+
+
+
 					$save = diffusion_mysql::save_record($save_options);
 						$ar_record_updated[] = $options;
 						#dump($options, ' options ++ SAVED !! '.to_string());
@@ -2787,6 +2791,9 @@ class diffusion_sql extends diffusion  {
 
 		return $section_tipo;
 	}//end map_locator_to_section_tipo
+
+
+
 	/**
 	* MAP_LOCATOR_TO_section_label
 	* Returns map first locator to plain "terminoID" like "es_2"
@@ -2815,6 +2822,10 @@ class diffusion_sql extends diffusion  {
 
 		return $section_label_encoded;
 	}//end map_locator_to_section_label
+
+
+
+
 	/**
 	* MAP_LOCATOR_TO_NAME
 	* 
@@ -2854,6 +2865,10 @@ class diffusion_sql extends diffusion  {
 		
 		return $name;
 	}//end map_locator_to_name	
+
+
+
+	/**
 	* MAP_TO_POLITICAL_TOPONYMY
 	* @return string $term
 	*/
@@ -3169,6 +3184,7 @@ class diffusion_sql extends diffusion  {
 	}//end count_data_elements
 
 
+
 	/**
 	* SPLIT_DATA
 	* @return int $total
@@ -3228,9 +3244,6 @@ class diffusion_sql extends diffusion  {
 
 		return $value;
 	}//end split_data
-
-
-
 
 
 
@@ -3373,6 +3386,9 @@ class diffusion_sql extends diffusion  {
 
 		return $value;
 	}//end resolve_multiple
+
+
+
 	/**
 	* RESOLVE_VALUE
 	* @return string
@@ -3436,9 +3452,9 @@ class diffusion_sql extends diffusion  {
 			$method 	= isset($process_dato_arguments->component_method) ? $process_dato_arguments->component_method : 'get_diffusion_value';
 
 			// Inject custom properties to target component to manage 'get_diffusion_value' or another called method
-				if (isset($options->propiedades->process_dato_arguments->target_component_properties)) {
+				if (isset($process_dato_arguments->target_component_properties)) {
 					# Overwrite component properties
-					$component->diffusion_properties = $options->propiedades->process_dato_arguments->target_component_properties;
+					$component->diffusion_properties = $process_dato_arguments->target_component_properties;
 				}
 
 			#
@@ -3538,10 +3554,13 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function split_date_range($options, $dato) {
 
-		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
-		$selected_key 			= isset($process_dato_arguments->selected_key)  ? (int)$process_dato_arguments->selected_key : 0;
-		$selected_date 			= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
-		$date_format 			= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
+		$process_dato_arguments = (!isset($options->propiedades))
+			? $options // case direct from resolve value output
+			: (object)$options->propiedades->process_dato_arguments; // default case
+		
+		$selected_key 	= isset($process_dato_arguments->selected_key)  ? (int)$process_dato_arguments->selected_key : 0;
+		$selected_date 	= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
+		$date_format 	= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
 
 			#dump($options, ' options ++ '.to_string());
 			#dump($dato, ' dato ++ '.to_string());
