@@ -726,6 +726,31 @@ class diffusion_sql extends diffusion  {
 									$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $current_ar_field_data;
 									break;
 
+								case ( is_object($propiedades) && property_exists($propiedades, 'merge_columns') ):
+
+									$ar_value = [];
+									foreach ($propiedades->merge_columns as $column_tipo) {
+										$column_found = array_find($ar_field_data['ar_fields'][$current_section_id][$current_lang], function($item) use($column_tipo){
+											return $item['tipo']===$column_tipo;
+										});
+										if ($column_found && !empty($column_found['field_value'])) {
+											$current_value = $column_found['field_value'];																					
+											$ar_value[] = $current_value;
+										}
+									}
+									$value = implode(' ', $ar_value);
+									$value = str_replace(['<br>',' | ','  '], ' ', $value);
+									$value = strip_tags($value);
+
+								    $column = [];
+								    $column['field_name'] 	= RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
+									$column['field_value'] 	= $value;
+									$column['tipo'] 		= $curent_children_tipo;
+									$column['related_model']= null;
+
+									$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $column;
+									break;
+
 								default:
 									# DEFAULT CASE . DIRECT FIELD
 									# COLUMN ADD ###################################################
