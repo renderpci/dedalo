@@ -2787,6 +2787,34 @@ class diffusion_sql extends diffusion  {
 
 		return $section_tipo;
 	}//end map_locator_to_section_tipo
+	/**
+	* MAP_LOCATOR_TO_section_label
+	* Returns map first locator to plain "terminoID" like "es_2"
+	* @return string $terminoID
+	*/
+	public static function map_locator_to_section_label($options, $dato) {
+
+		$section_tipo_encoded = self::map_locator_to_section_tipo($options, $dato);
+		if (empty($section_tipo_encoded)) {
+			return null;
+		}
+
+		$lang = $options->lang;
+
+		// decode and return array
+		$section_tipo = json_decode($section_tipo_encoded);
+		
+		$section_label = array_map(function($item) use($lang){
+			$label = RecordObj_dd::get_termino_by_tipo($item, $lang, true, true);
+			return strip_tags($label);
+		}, $section_tipo);
+
+		// final string
+		$section_label_encoded = json_encode($section_label, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+
+		return $section_label_encoded;
+	}//end map_locator_to_section_label
 	* MAP_TO_POLITICAL_TOPONYMY
 	* @return string $term
 	*/
