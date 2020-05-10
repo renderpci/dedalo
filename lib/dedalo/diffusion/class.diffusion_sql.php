@@ -2730,6 +2730,63 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* MAP_LOCATOR_TO_section_tipo
+	* Returns map first locator to plain "terminoID" like "es_2"
+	* @return string $terminoID
+	*/
+	public static function map_locator_to_section_tipo($options, $dato) {
+
+		$ar_filter = false;
+		if (isset($options->propiedades->process_dato_arguments->filtered_dato_by)) {
+			$ar_filter = $options->propiedades->process_dato_arguments->filtered_dato_by;
+		}
+
+		if (isset($options->propiedades->process_dato_arguments->use_parent)) {
+			$use_parent = $options->propiedades->process_dato_arguments->use_parent;
+		}else{
+			$use_parent = false;
+		}
+
+		$section_tipo = null;
+
+		if (!empty($dato)) {
+			
+			$section_tipo = array();
+			foreach ((array)$dato as $current_locator) {
+
+				if ($ar_filter!==false) foreach ($ar_filter as $filter_obj) {
+					foreach ($filter_obj as $f_property => $f_value) {
+						if (!property_exists($current_locator, $f_property) || $current_locator->{$f_property} != $f_value) {
+							continue 3; // Ignore
+						}
+					}
+				}
+				if($use_parent===true){
+					$ar_parents = component_relation_parent::get_parents($current_locator->section_id, $current_locator->section_tipo);
+					$current_locator = $ar_parents[0];
+				}
+
+				$section_tipo[] = $current_locator->section_tipo;
+
+				// add parents option
+				// if defined in propeerties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+					if (isset($options->propiedades->process_dato_arguments->custom_arguments->add_parents) && $options->propiedades->process_dato_arguments->custom_arguments->add_parents===true) {
+						# calculate parents and add to dato
+						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+						$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+						foreach ($ar_parents as $parent_locator) {							
+							$section_tipo[] = $parent_locator->section_tipo;
+						}
+					}
+			}
+
+
+			$section_tipo = json_encode($section_tipo);
+		}
+
+
+		return $section_tipo;
+	}//end map_locator_to_section_tipo
 	* MAP_TO_POLITICAL_TOPONYMY
 	* @return string $term
 	*/
