@@ -2815,6 +2815,45 @@ class diffusion_sql extends diffusion  {
 
 		return $section_label_encoded;
 	}//end map_locator_to_section_label
+	/**
+	* MAP_LOCATOR_TO_NAME
+	* 
+	* @return string $name
+	*/
+	public static function map_locator_to_name($options, $dato) {
+
+		$section_tipo_encoded = self::map_locator_to_section_tipo($options, $dato);
+		if (empty($section_tipo_encoded)) {
+			return null;
+		}
+
+		// i.e. options
+			// "propiedades": {
+			//       "process_dato": "diffusion_sql::map_locator_to_name",
+			//       "process_dato_arguments": {
+			//           "custom_arguments": {
+			//               "map": {
+			//                   "numisdata6": "mints",
+			//                   "peri1": "ts_period"
+			//               }
+			//           }
+			//       }
+			//   },
+	
+		// decode and return array
+			$section_tipo = json_decode($section_tipo_encoded);
+
+		// only first is used
+			$section_tipo = reset($section_tipo);
+			$map = $options->propiedades->process_dato_arguments->custom_arguments->map;
+
+		// set name
+			$name = isset($map->{$section_tipo})
+				? $map->{$section_tipo}
+				: null;
+		
+		return $name;
+	}//end map_locator_to_name	
 	* MAP_TO_POLITICAL_TOPONYMY
 	* @return string $term
 	*/
