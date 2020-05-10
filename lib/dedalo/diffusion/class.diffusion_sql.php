@@ -3373,10 +3373,14 @@ class diffusion_sql extends diffusion  {
 
 		return $value;
 	}//end resolve_multiple
+	/**
 	* RESOLVE_VALUE
-	* @return
+	* @return string
 	*/
 	public static function resolve_value($options, $dato, $default_separator=" | ") {
+
+		// dump($options, ' options ++ '.to_string());
+		// dump($dato, ' dato ++ '.to_string());
 
 		if (isset($dato[0])) {
 			$ar_locator = $dato;
@@ -3384,8 +3388,26 @@ class diffusion_sql extends diffusion  {
 			return null;
 		}
 
-		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
-		$output 				= isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
+		// can be direct or passed by others
+		$process_dato_arguments = (!isset($options->propiedades))
+			? $options
+			: (object)$options->propiedades->process_dato_arguments;
+		
+
+		$output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
+
+		// dato_splice. To cut dato for get only first, last, etc..
+			if (isset($process_dato_arguments->dato_splice) && !empty($ar_locator)) {
+
+				$dato_splice 	= $process_dato_arguments->dato_splice;
+				$splice_values 	= is_array($dato_splice) ? $dato_splice : [$dato_splice];
+
+				if (isset($splice_values[1])) {
+					array_splice($ar_locator, $splice_values[0], $splice_values[1]);
+				}else{
+					array_splice($ar_locator, $splice_values[0]);
+				}		
+			}
 
 		#$ar_target_component_tipo = array_filter($process_dato_arguments, function($item) {
 		#	return key($item) === 'target_component_tipo';
