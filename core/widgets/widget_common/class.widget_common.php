@@ -18,7 +18,7 @@ class widget_common {
 	* @return widget The *widget* instance.
 	* $options = {
 	*		widget_name 	: string, with the class name
-	*		widget_path		: string, with the path to the class of the widget,
+	*		path		: string, with the path to the class of the widget,
 	*		data_source		: array with objects with the config defined in the ontology
 	*		section_tipo 	: string, $tipo
 	*		section_id 		: int in string format || null (for list mode)
@@ -28,9 +28,9 @@ class widget_common {
 	public static function get_instance($options) {
 
 		$widget_name = $options->widget_name;
-		$widget_path = $options->widget_path;
+		$path = $options->path;
 
-		include_once( DEDALO_EXTRAS_PATH . $widget_path .'/'. $widget_name.'/class.'. $widget_name.'.php');
+		include_once( DEDALO_WIDGETS_PATH . $path .'/class.'. $widget_name.'.php');
 
 		$instance = new $widget_name($options);
 

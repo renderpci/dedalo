@@ -4,10 +4,8 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
-	import {widget_common} from '../../../../../component_info/widgets/widget_common.js'
-	import {render_get_archive_weights} from '../../get_archive_weights/js/render_get_archive_weights.js'
-
+	import {widget_common} from '../../../widget_common/widget_common.js'
+	import {render_get_archive_weights} from '../js/render_get_archive_weights.js'
 
 
 export const get_archive_weights = function(){
