@@ -22,34 +22,31 @@ export const render_component_calculation = function(component) {
 
 /**
 * LIST
-* Render node for use in list
-* @return DOM node
+* Render component node to use in list
+* @return DOM node wrapper
 */
-render_component_calculation.prototype.list = function(options) {
+render_component_calculation.prototype.list = async function() {
 
 	const self = this
 
-	// Options vars
-		const context 			= self.context
-		const data 				= self.data
+	// short vars
+		const data 		= self.data
+		const value 	= data.value || []
 
-	// Value as string
-		const value_string = Array.isArray(data.value) ? data.value.join(' | ') : data.value
-
-	// Node create
-		const node = common.create_dom_element({
-			element_type	: "div",
-			class_name		: self.model + '_list ' + self.tipo,
-			text_content 	: value_string
+	// wrapper
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : false
 		})
 
-	// Debug
-		//console.log("++ context", context);
-		//console.log("++ data:", data);
+	// Value as string
+		const value_string = value.join(self.divisor)
 
-	return node
+	// Set value
+		wrapper.textContent = value_string
+
+
+	return wrapper
 }//end list
-
 
 
 /**
@@ -57,12 +54,12 @@ render_component_calculation.prototype.list = function(options) {
 * Render node for use in edit
 * @return DOM node
 */
-render_component_calculation.prototype.edit = function(options) {
+render_component_calculation.prototype.edit = async function(options) {
 
 	const self = this
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		self.data.value = (self.data.value===null || self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
 		const render_level = options.render_level || 'full'
@@ -82,6 +79,8 @@ render_component_calculation.prototype.edit = function(options) {
 			buttons 	 : buttons
 		})
 
+	// events
+		// add_events(self, wrapper)
 
 	return wrapper
 }//end edit
@@ -126,6 +125,50 @@ const get_content_data_edit = async function(self) {
 
 
 /**
+* INPUT_ELEMENT
+* @return DOM node li
+*/
+const get_input_element_edit = (i, current_value, inputs_container, self) => {
+
+	const mode 		 		 = self.mode
+	const multi_line 		 = (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+	const element_type 		 = (multi_line===true) ? 'textarea' :'input'
+	const is_inside_tool 	 = self.is_inside_tool
+	const with_lang_versions = self.context.properties.with_lang_versions || false
+		console.log("with_lang_versions:",with_lang_versions);
+
+	// li
+		const li = ui.create_dom_element({
+			element_type : 'li',
+			parent 		 : inputs_container
+		})
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type 	: element_type,
+			type 		 	: 'text',
+			class_name 		: 'input_value',
+			dataset 	 	: { key : i },
+			value 		 	: current_value,
+			parent 		 	: li
+		})
+
+	// button remove
+		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
+			const button_remove = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button remove hidden_button',
+				dataset			: { key : i },
+				parent 			: li
+			})
+		}
+
+	return li
+}//end input_element
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
 * @return DOM node buttons_container
@@ -149,5 +192,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-

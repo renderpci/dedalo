@@ -59,7 +59,7 @@ abstract class common {
 			// v6
 			// 'component_autocomplete'
 			// 'component_av'
-			'component_calculation',
+			// 'component_calculation',
 			// 'component_check_box'
 			// 'component_date'
 			// 'component_email'
