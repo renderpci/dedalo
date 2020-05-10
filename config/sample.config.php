@@ -50,7 +50,6 @@
 	define('DEDALO_WIDGETS_PATH'	, DEDALO_CORE_PATH .'/widgets');
 	define('DEDALO_WIDGETS_URL'		, DEDALO_CORE_URL . '/widgets');
 
-
 	#extras
 	define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
 	define('DEDALO_EXTRAS_URL'		, DEDALO_CORE_URL . '/extras');
