@@ -257,6 +257,28 @@ class search_development2 {
 			$ar_records[] = $row;
 		}
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms'.' ms', logger::DEBUG);
+			// dump($ar_records, ' ar_records ++ '.to_string());
+
+		// childrens recursive
+			if (isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
+				$ar_row_children = [];
+				foreach ($ar_records as $row) {
+					$row_children 	 = component_relation_children::get_childrens($row->section_id, $row->section_tipo, $component_tipo=null, $recursive=true, $is_recursion=false);
+					$ar_row_children = array_merge($ar_row_children, $row_children);
+				}
+				// dump($ar_row_children, ' ar_row_children ++ '.to_string());
+				// dump($this->search_query_object, ' search_query_object ++ '.to_string());
+
+				if (!empty($ar_row_children)) {
+									
+					$ar_rows_mix = array_merge($ar_row_children, $ar_records);
+					$new_sqo 	 = $this->generate_children_recursive_search($ar_rows_mix);
+
+					// new full search
+						$new_search_development2 = new search_development2($new_sqo);
+						return $new_search_development2->search();
+				}
+			}
 
 
 		#
@@ -275,8 +297,11 @@ class search_development2 {
 		#
 		# RECORDS_DATA BUILD TO OUTPUT
 			$records_data = new stdClass();
-				#$records_data->search_query_object	= $this->search_query_object;
+
+			// ar_records
 				$records_data->ar_records = $ar_records;
+			
+			// debug info
 				if(SHOW_DEVELOPER===true) {
 					$records_data->generated_time['parsed_time'] 	 = $parsed_time;
 					# Info about required time to exec the search
@@ -298,6 +323,55 @@ class search_development2 {
 
 		return $records_data;
 	}//end search
+
+
+
+	/**
+	* GENERATE_CHILDREN_RECURSIVE_SEARCH
+	* @return 
+	*/
+	public function generate_children_recursive_search($ar_rows) {
+
+		// clone original sqo
+			$new_sqo = clone $this->search_query_object;
+
+		// force re - parse
+			$new_sqo->parsed = false;
+
+		// remove children_recursive to avoid infinite loop
+			$new_sqo->children_recursive = false;
+		
+		// new full filter
+			$filter = new stdClass();
+			$op = '$or';
+			$filter->{$op} = [];
+
+			foreach ($ar_rows as $row_value) {
+				
+				$filter_item = new stdClass();
+
+				$item = json_decode('{
+			        "q": "'.$row_value->section_id.'",
+			        "q_operator": null,
+			        "path": [
+			          {
+			            "section_tipo": "'.$row_value->section_tipo.'",
+			            "component_tipo": "section_id",
+			            "modelo": "component_section_id",
+			            "name": "Id"
+			          }
+			        ]
+			      }');
+
+				$filter->{$op}[] = $item;
+			}
+
+		// replace filter in sqo
+			$new_sqo->filter = $filter;
+
+
+		return $new_sqo;
+	}//end generate_children_recursive_search
 
 
 

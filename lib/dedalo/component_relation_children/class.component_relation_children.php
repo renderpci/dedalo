@@ -286,21 +286,27 @@ class component_relation_children extends component_relation_common {
 		$ar_childrens_recursive = [];
 
 		# Infinite loops prevention
-		$pseudo_locator = $section_id .'_'. $section_tipo;
-		if (in_array($pseudo_locator, $locators_resolved)) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Skipped already resolved locator ".to_string($pseudo_locator), logger::DEBUG);
+			$pseudo_locator = $section_id .'_'. $section_tipo;
+			if (in_array($pseudo_locator, $locators_resolved)) {
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." Skipped already resolved locator ".to_string($pseudo_locator), logger::DEBUG);
+				}
+				return [];
 			}
-			return [];
-		}
 
 		# Locate component children in current section when is not received
 		# Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
-		# $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false
-		if (empty($component_tipo)) {
-			$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
-			$component_tipo = reset($ar_tipos);
-		}		
+		# $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, 	$ar_tipo_exclude_elements=false
+			if (empty($component_tipo)) {
+				$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
+				$component_tipo = reset($ar_tipos);
+			}
+
+		// check again
+			if (empty($component_tipo)) {
+				debug_log(__METHOD__." Skipped non founded component_relation_children in section $section_tipo ".to_string(), logger::ERROR);
+				return [];
+			}
 		
 		# Create first component to get dato
 		$component 		= component_common::get_instance(get_called_class(),
