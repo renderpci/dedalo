@@ -1727,6 +1727,11 @@
 		Added method component_info get_diffusion_dato using widget dato response
 
 
+	Valencia 11-05-2020 5.5.51
+		Added search_development2 children recursive injection search to allow user add childrens on thesaurus sections searchs
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1748,12 +1753,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.50';
+	$DEDALO_VERSION = '5.5.51';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-05-2020');
+	define('DEDALO_BUILD'	, '11-05-2020');
 
 
 	/*
