@@ -1,0 +1,26 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	#echo "\n<!-- COMPONENT_CALCULATION [tipo:$tipo parent:$parent] -->";	
+		
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:
+				$html_contenido .= "";		
+				break;
+					
+		case ($permissions>=1)	:
+			
+				#$html_contenido .= "<span class=\"css_span_dato\">$valor</span>";
+				$html_contenido .= json_encode($valor, JSON_NUMERIC_CHECK);
+				break;							
+	}	
+
+	
+	# PRINT HTML	
+	print $html_contenido;	
+	
+?>
