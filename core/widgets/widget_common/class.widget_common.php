@@ -18,7 +18,7 @@ class widget_common {
 	* @return widget The *widget* instance.
 	* $options = {
 	*		widget_name 	: string, with the class name
-	*		path		: string, with the path to the class of the widget,
+	*		path			: string, with the path to the class of the widget,
 	*		data_source		: array with objects with the config defined in the ontology
 	*		section_tipo 	: string, $tipo
 	*		section_id 		: int in string format || null (for list mode)
