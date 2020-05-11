@@ -273,10 +273,18 @@ class search_development2 {
 									
 					$ar_rows_mix = array_merge($ar_row_children, $ar_records);
 					$new_sqo 	 = $this->generate_children_recursive_search($ar_rows_mix);
-
+					
 					// new full search
 						$new_search_development2 = new search_development2($new_sqo);
-						return $new_search_development2->search();
+						$result = $new_search_development2->search();
+
+						// replace current sqo changed properties to allow pagination
+							$this->search_query_object->filter = $new_sqo->filter;
+							$this->search_query_object->full_count = count($ar_rows_mix);
+							$this->search_query_object->children_recursive = false;
+							$this->search_query_object->parsed = true;
+
+						return $result;
 				}
 			}
 
@@ -340,6 +348,9 @@ class search_development2 {
 
 		// remove children_recursive to avoid infinite loop
 			$new_sqo->children_recursive = false;
+
+		// not count
+			$new_sqo->full_count = false;
 		
 		// new full filter
 			$filter = new stdClass();
