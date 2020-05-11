@@ -278,13 +278,13 @@ class search_development2 {
 						$new_search_development2 = new search_development2($new_sqo);
 						$result = $new_search_development2->search();
 
-						// replace current sqo changed properties to allow pagination
-							$this->search_query_object->filter = $new_sqo->filter;
-							$this->search_query_object->full_count = count($ar_rows_mix);
-							$this->search_query_object->children_recursive = false;
-							$this->search_query_object->parsed = true;
+					// replace current sqo changed properties to allow pagination
+						$this->search_query_object->filter = $new_sqo->filter;
+						$this->search_query_object->full_count = count($ar_rows_mix);
+						$this->search_query_object->children_recursive = false;
+						$this->search_query_object->parsed = true;
 
-						return $result;
+					return $result;
 				}
 			}
 
@@ -348,9 +348,12 @@ class search_development2 {
 
 		// remove children_recursive to avoid infinite loop
 			$new_sqo->children_recursive = false;
+<<<<<<< HEAD
 
 		// not count
 			$new_sqo->full_count = false;
+=======
+>>>>>>> a8489c08d1abd2e57b9ed1289cba09c2f1414923
 		
 		// new full filter
 			$filter = new stdClass();
