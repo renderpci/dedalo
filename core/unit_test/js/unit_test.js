@@ -4,7 +4,7 @@ import {data_manager} from '../../common/js/data_manager.js'
 import {page} from '../../page/js/page.js'
 import {component_input_text} from '../../component_input_text/js/component_input_text.js'
 import {component_date} from '../../component_date/js/component_date.js'
-import {tool_lang} from '../../tools/tool_lang/js/tool_lang.js'
+import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 
