@@ -1,0 +1,43 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	print "<div class=\"wrap_component css_wrap_calculation tooltip_active\" id=\"wrap_{$tipo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch(true) {
+			
+		case $permissions===0 :	
+				$html_content .= "";
+				break;
+						
+		case $permissions>=1 :
+		
+				$html_content .= "<input class=\"css_calculation\" type=\"text\" ";
+				$html_content .= "name=\"{$tipo}\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "value=\"{$dato}\" title=\"$html_title\"";
+				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+				$html_content .= "/>";											
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);	
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_content;
+	
+	
+	print "</div>"; //wrap
+?>

@@ -60,7 +60,7 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 	const self = this
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		self.data.value = (self.data.value===null || self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
 		const render_level = options.render_level || 'full'
@@ -542,5 +542,3 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 	return input
 }//end get_input_element_search
-
-
