@@ -46,6 +46,10 @@
 	define('DEDALO_LIB_PATH'		, DEDALO_ROOT.'/'. DEDALO_LIB);
 	define('DEDALO_LIB_URL'			, DEDALO_ROOT_WEB . '/'. DEDALO_LIB );
 
+	#widgets
+	define('DEDALO_WIDGETS_PATH'	, DEDALO_CORE_PATH .'/widgets');
+	define('DEDALO_WIDGETS_URL'		, DEDALO_CORE_URL . '/widgets');
+
 	#extras
 	define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
 	define('DEDALO_EXTRAS_URL'		, DEDALO_CORE_URL . '/extras');

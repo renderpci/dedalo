@@ -89,7 +89,7 @@ export const component_info = function(){
 
 				const widget_name 		= widget_item.name
 				const widget_properties = widgets_properties.find(item => item.widget_name===widget_name)
-				const widget_path 		= widget_properties.widget_path
+				const path 				= widget_properties.path
 				const widget_id			= self.id + '_'+ widget_name
 
 				const loaded_widget = self.ar_instances.find(item => item.id === widget_id)
@@ -100,10 +100,10 @@ export const component_info = function(){
 				}
 
 				// import widget js file
-				const path = "../../extras" + widget_path + "/" + widget_name + "/js/" + widget_name + ".js"
-
+				const widget_path = "../../widgets" + path  + "/js/" + widget_name + ".js"
+				
 				// import
-				const element_widget = await import(path)
+				const element_widget = await import(widget_path)
 
 				const widget_options = {
 					id				: widget_id,

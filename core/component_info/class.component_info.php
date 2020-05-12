@@ -1,6 +1,6 @@
 <?php
 
-include_once( dirname(__FILE__) . '/widgets/class.widget_common.php' );
+include_once( dirname(dirname(__FILE__)). '/widgets/widget_common/class.widget_common.php' );
 
 /*
 * CLASS COMPONENT_INFO
@@ -35,7 +35,7 @@ class component_info extends component_common {
 				$widget_options->lang 				= DEDALO_DATA_LANG;
 				// $widget_options->component_info 	= $this;
 				$widget_options->widget_name 		= $widget_obj->widget_name;
-				$widget_options->widget_path 		= $widget_obj->widget_path;
+				$widget_options->path 				= $widget_obj->path;
 				$widget_options->data_source 		= $widget_obj->data_source;
 
 			// instance the current widget
