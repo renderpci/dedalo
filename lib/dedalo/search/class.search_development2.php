@@ -336,7 +336,9 @@ class search_development2 {
 
 	/**
 	* GENERATE_CHILDREN_RECURSIVE_SEARCH
-	* @return 
+	* Create a new filter to inject in current search query object
+	* 
+	* @return object $new_sqo
 	*/
 	public function generate_children_recursive_search($ar_rows) {
 
@@ -348,12 +350,9 @@ class search_development2 {
 
 		// remove children_recursive to avoid infinite loop
 			$new_sqo->children_recursive = false;
-<<<<<<< HEAD
 
 		// not count
 			$new_sqo->full_count = false;
-=======
->>>>>>> a8489c08d1abd2e57b9ed1289cba09c2f1414923
 		
 		// new full filter
 			$filter = new stdClass();
@@ -362,8 +361,6 @@ class search_development2 {
 
 			foreach ($ar_rows as $row_value) {
 				
-				$filter_item = new stdClass();
-
 				$item = json_decode('{
 			        "q": "'.$row_value->section_id.'",
 			        "q_operator": null,
