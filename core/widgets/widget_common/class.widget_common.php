@@ -9,7 +9,7 @@ class widget_common {
 	public $section_tipo;
 	public $section_id;
 	public $lang;
-	public $data_source;
+	public $ipo;
 
 
 	/**
@@ -19,7 +19,7 @@ class widget_common {
 	* $options = {
 	*		widget_name 	: string, with the class name
 	*		path			: string, with the path to the class of the widget,
-	*		data_source		: array with objects with the config defined in the ontology
+	*		ipo				: Input-Process-Output; array with objects with the config defined in the ontology
 	*		section_tipo 	: string, $tipo
 	*		section_id 		: int in string format || null (for list mode)
 	* 		lang			: string
@@ -48,7 +48,7 @@ class widget_common {
 		$this->section_tipo		= $options->section_tipo;
 		$this->section_id 		= $options->section_id;
 		$this->lang 			= $options->lang;
-		$this->data_source 		= $options->data_source;
+		$this->ipo 				= $options->ipo;
 
 	}
 
