@@ -10,7 +10,6 @@ include_once( dirname(dirname(__FILE__)). '/widgets/widget_common/class.widget_c
 class component_info extends component_common {
 
 
-
 	/**
 	* GET_DATO
 	* @return
@@ -36,20 +35,21 @@ class component_info extends component_common {
 				// $widget_options->component_info 	= $this;
 				$widget_options->widget_name 		= $widget_obj->widget_name;
 				$widget_options->path 				= $widget_obj->path;
-				$widget_options->data_source 		= $widget_obj->data_source;
+				$widget_options->ipo 				= $widget_obj->ipo;
 
 			// instance the current widget
 			$widget = widget_common::get_instance($widget_options);
 
 			// Widget data
-			$widget_value = new stdClass();
-				$widget_value->name 	= $widget_obj->widget_name;
-				$widget_value->value 	= $widget->get_dato();
-			$dato[] = $widget_value;
+			$widget_value 	= $widget->get_dato();
+
+			$dato = array_merge($dato, $widget_value);
 		}//end foreach ($widgets as $widget)
 
 		// set the component info dato with the result
 		$this->dato = $dato;
+
+		dump($this->dato, ' $this->dato ++ '.to_string());
 
 		return $dato;
 	}//end get_dato
