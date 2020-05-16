@@ -37,7 +37,7 @@ render_get_archive_weights.prototype.edit = async function(options) {
 			return content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
+	// wrapper. ui build_edit returns widget wrapper
 		const wrapper = ui.widget.build_wrapper_edit(self, {
 			content_data : content_data
 		})
@@ -54,9 +54,6 @@ render_get_archive_weights.prototype.edit = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	// sort vars
-		const value = self.value
-
 	const fragment = new DocumentFragment()
 
 	// values container
@@ -67,10 +64,12 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// values
-		const value_length = value.length
+		const ipo 			= self.ipo
+		const ipo_length 	= ipo.length
 
-		for (let i = 0; i < value_length; i++) {
-			get_value_element(i, value[i], values_container, self)
+		for (let i = 0; i < ipo_length; i++) {
+			const data 		= self.value.filter(item => item.key === i)
+			get_value_element(i, data , values_container, self)
 		}
 
 	// content_data
@@ -89,7 +88,7 @@ const get_content_data_edit = async function(self) {
 * GET_VALUE_ELEMENT
 * @return DOM node li
 */
-const get_value_element = (i, current_value, values_container, self) => {
+const get_value_element = (i, data, values_container, self) => {
 
 	// li
 		const li = ui.create_dom_element({
@@ -123,7 +122,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 					const media_weight_value = ui.create_dom_element({
 						type 		: 'span',
 						class_name	: 'value',
-						inner_html 	: current_value.media_weight,
+						inner_html 	: data.find(item => item.id === 'media_weight').value,
 						parent 		: sum_weights
 					})
 
@@ -146,7 +145,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 				const max_weight_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: current_value.max_weight,
+					inner_html 	: data.find(item => item.id === 'max_weight').value,
 					parent 		: get_archive_weights
 				})
 
@@ -163,7 +162,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 				const min_weight_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: current_value.min_weight,
+					inner_html 	: data.find(item => item.id === 'min_weight').value,
 					parent 		: get_archive_weights
 				})
 
@@ -180,7 +179,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 				const total_weight_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: current_value.total_elements_weights,
+					inner_html 	: data.find(item => item.id === 'total_elements_weights').value,
 					parent 		: get_archive_weights
 				})
 
@@ -211,7 +210,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 				const media_diameter_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: current_value.media_diameter,
+					inner_html 	: data.find(item => item.id === 'media_diameter').value,
 					parent 		: sum_diameter
 				})
 		// detail
@@ -233,7 +232,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 				const max_diameter_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: current_value.max_diameter,
+					inner_html 	: data.find(item => item.id === 'max_diameter').value,
 					parent 		: get_archive_diameter
 				})
 
@@ -250,7 +249,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 				const min_diameter_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: current_value.min_diameter,
+					inner_html 	: data.find(item => item.id === 'min_diameter').value,
 					parent 		: get_archive_diameter
 				})
 
@@ -268,7 +267,7 @@ const get_value_element = (i, current_value, values_container, self) => {
 				const total_diameter_value = ui.create_dom_element({
 					type 		: 'span',
 					class_name	: 'value',
-					inner_html 	: current_value.total_elements_diameter,
+					inner_html 	: data.find(item => item.id === 'total_elements_diameter').value,
 					parent 		: get_archive_diameter
 				})
 
@@ -277,16 +276,17 @@ const get_value_element = (i, current_value, values_container, self) => {
 		// this widget don't use it, because the info is not in the same section
 		// than the components that changed our value
 		// the user don't see the info and the imput componets at same time
-		event_manager.subscribe('update_widget_value_'+self.id, (changed_data) =>{
-			media_weight_value.innerHTML 	= changed_data[0].media_weight
-			max_weight_value.innerHTML 		= changed_data[0].max_weight
-			min_weight_value.innerHTML 		= changed_data[0].min_weight
-			total_weight_value.innerHTML 	= changed_data[0].total_elements_weights
+		event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
 
-			media_diameter_value.innerHTML 	= changed_data[0].media_diameter
-			max_diameter_value.innerHTML 	= changed_data[0].max_diameter
-			min_diameter_value.innerHTML 	= changed_data[0].min_diameter
-			total_diameter_value.innerHTML 	= changed_data[0].total_elements_diameter
+			media_weight_value.innerHTML 	= changed_data.find(item => item.id === 'media_weight').value
+			max_weight_value.innerHTML 		= changed_data.find(item => item.id === 'max_weight').value
+			min_weight_value.innerHTML 		= changed_data.find(item => item.id === 'min_weight').value
+			total_weight_value.innerHTML 	= changed_data.find(item => item.id === 'total_elements_weights').value
+
+			media_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'media_diameter').value
+			max_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'max_diameter').value
+			min_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'min_diameter').value
+			total_diameter_value.innerHTML 	= changed_data.find(item => item.id === 'total_elements_diameter').value
 		})
 
 	return li
