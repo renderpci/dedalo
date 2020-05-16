@@ -1730,9 +1730,12 @@
 	Valencia 11-05-2020 5.5.51
 		Added search_development2 children recursive injection search to allow user add childrens on thesaurus sections searchs
 
-	Valencia 15-05-2020 5.5.52
+	Valencia 16-05-2020 5.5.52
 		Fix search_development2 children recursive bug on pagination. Now no limit is applied to first search
 
+
+	Valencia 16-05-2020 5.5.53
+		Fix empty values inclusion on resolve term
 
 
 
@@ -1756,12 +1759,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.52';
+	$DEDALO_VERSION = '5.5.53';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-05-2020');
+	define('DEDALO_BUILD'	, '16-05-2020');
 
 
 	/*

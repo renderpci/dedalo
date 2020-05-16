@@ -623,7 +623,7 @@ class ts_object extends Accessors {
 																  $lang,
 																  $section_tipo);
 				$valor = $component->get_valor($lang);
-					//dump($valor, ' valor ++ '.to_string($tipo));	
+					
 				if (empty($valor)) {
 							
 					$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
@@ -651,7 +651,9 @@ class ts_object extends Accessors {
 					#}
 				}
 
-				$ar_value[] = $valor;
+				if (!empty($valor)) {
+					$ar_value[] = $valor;
+				}
 			}//end foreach ($ar_tipo as $tipo) {
 	
 			// final value
