@@ -899,6 +899,11 @@ class search_development2 {
 			$sql_limit 			= $this->search_query_object->limit;
 			$sql_offset 		= $this->search_query_object->offset;
 
+			if(isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
+				$sql_limit = 0;
+				$sql_offset= 0;
+			}
+
 			if (empty($sql_query_order)) {
 				$sql_query_order = $this->build_sql_query_order_default();
 			}
@@ -1027,13 +1032,13 @@ class search_development2 {
 								$sql_query .= $order_query;
 						// limit
 							$limit_query = '';
-							if ($this->search_query_object->limit>0 && empty($sql_filter_having)) {
+							if ($sql_limit>0 && empty($sql_filter_having)) {
 								$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
 								$sql_query .= $limit_query;
 							}
 						// offset
 							$offset_query = '';
-							if ($this->search_query_object->offset>0) {
+							if ($sql_offset>0) {
 								$offset_query = PHP_EOL . 'OFFSET ' . $sql_offset;
 								$sql_query .= $offset_query;
 							}
@@ -1051,7 +1056,7 @@ class search_development2 {
 							}
 						// order/limit general for sub query
 							$sql_query .= PHP_EOL . 'ORDER BY ' . str_replace('mix.', '', $sql_query_order);
-							if ($this->search_query_object->limit>0) {
+							if ($sql_limit>0) {
 							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
 							}
 
@@ -1114,12 +1119,12 @@ class search_development2 {
 								}
 								$sql_query .= $order_query;
 						// limit
-							if ($this->search_query_object->limit>0) {
+							if ($sql_limit>0) {
 								$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
 								$sql_query  .= $limit_query;
 							}
 						// offset
-							if ($this->search_query_object->offset>0) {
+							if ($sql_offset>0) {
 								$offset_query = ' OFFSET ' . $sql_offset;
 								$sql_query 	 .= $offset_query;
 							}
@@ -1190,12 +1195,12 @@ class search_development2 {
 							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
 						}
 					// limit
-						if ($this->search_query_object->limit>0) {
+						if ($sql_limit>0) {
 							$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
 							$sql_query .= $limit_query;
 						}
 					// offset
-						if ($this->search_query_object->offset>0) {
+						if ($sql_offset>0) {
 							$sql_query .= ' OFFSET ' . $sql_offset;
 						}
 					if(SHOW_DEBUG===true) {

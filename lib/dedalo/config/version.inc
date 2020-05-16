@@ -1730,6 +1730,9 @@
 	Valencia 11-05-2020 5.5.51
 		Added search_development2 children recursive injection search to allow user add childrens on thesaurus sections searchs
 
+	Valencia 15-05-2020 5.5.52
+		Fix search_development2 children recursive bug on pagination. Now no limit is applied to first search
+
 
 
 
