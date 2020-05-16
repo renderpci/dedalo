@@ -8,6 +8,7 @@
 	import {render_calculation} from '../js/render_calculation.js'
 
 
+
 export const calculation = function(){
 
 	this.id
@@ -34,35 +35,9 @@ export const calculation = function(){
 */
 // prototypes assign
 	// lifecycle
-	// calculation.prototype.init 	 	= component_common.prototype.init
+	calculation.prototype.init 	 	= widget_common.prototype.init
 	// render
-	calculation.prototype.edit 			= render_calculation.prototype.edit
-
-
-
-/**
-* INIT
-*/
-calculation.prototype.init = async function(options) {
-
-	const self = this
-
-	// call the generic commom init
-		const common_init = widget_common.prototype.init.call(this, options);
-
-
-	// // load dependences js/css
-	// 	const load_promises = []
-	//
-	// 	// css file load
-	// 		const lib_css_file = '../css/calculation.css'
-	// 		load_promises.push( widget_common.prototype.load_style(lib_css_file) )
-	//
-	// const js_promise = Promise.all(load_promises)
-	//
-	//
-	// return js_promise
-}//end init
+	calculation.prototype.edit 		= render_calculation.prototype.edit
 
 
 
