@@ -35,6 +35,7 @@ widget_common.prototype.init = async function(options) {
 		self.lang			= options.lang
 		self.mode			= options.mode
 		self.value			= options.value
+		self.ipo			= options.ipo
 
 	// status update
 		self.status = 'inited'
