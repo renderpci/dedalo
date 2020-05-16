@@ -48,6 +48,7 @@ render_calculation.prototype.list = async function() {
 }//end list
 
 
+
 /**
 * EDIT
 * Render node for use in edit
@@ -56,9 +57,6 @@ render_calculation.prototype.list = async function() {
 render_calculation.prototype.edit = async function(options) {
 
 	const self = this
-
-	// fix non value scenarios
-		self.data.value = (self.data.value===null || self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
 		const render_level = options.render_level || 'full'
@@ -69,13 +67,9 @@ render_calculation.prototype.edit = async function(options) {
 			return content_data
 		}
 
-	// buttons
-		const buttons = get_buttons(self)
-
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+	// wrapper. ui build_edit returns widget wrapper
+		const wrapper = ui.widget.build_wrapper_edit(self, {
+			content_data : content_data
 		})
 
 	// events
@@ -93,29 +87,34 @@ render_calculation.prototype.edit = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// sort vars
-		const value 		= self.data.value
 		const mode 			= self.mode
 		const is_inside_tool= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
-	// inputs container
-		const inputs_container = ui.create_dom_element({
+	// values_container
+		const values_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
+			class_name 		: 'values_container',
 			parent 			: fragment
 		})
 
-	// values (inputs)
-		const inputs_value = value//(value.length<1) ? [''] : value
-		const value_length = inputs_value.length
-		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
+	// values
+		const ipo 			= self.ipo
+		const ipo_length 	= ipo.length
+
+		for (let i = 0; i < ipo_length; i++) {
+			const data = self.value.filter(item => item.key === i)
+
+			console.log("data+++++++++++++++", data);
+			get_value_element(i, data, values_container, self)
 		}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
+		const content_data = ui.create_dom_element({
+			element_type : 'div'
+		})
+		content_data.appendChild(fragment)
 
 
 	return content_data
@@ -127,14 +126,9 @@ const get_content_data_edit = async function(self) {
 * INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
+const get_value_element = (i, data, inputs_container, self) => {
 
-	const mode 		 		 = self.mode
-	const multi_line 		 = (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
-	const element_type 		 = (multi_line===true) ? 'textarea' :'input'
-	const is_inside_tool 	 = self.is_inside_tool
-	const with_lang_versions = self.context.properties.with_lang_versions || false
-		console.log("with_lang_versions:",with_lang_versions);
+	const output = self.ipo[i].output
 
 	// li
 		const li = ui.create_dom_element({
@@ -142,52 +136,86 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 			parent 		 : inputs_container
 		})
 
-	// input field
-		const input = ui.create_dom_element({
-			element_type 	: element_type,
-			type 		 	: 'text',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i },
-			value 		 	: current_value,
-			parent 		 	: li
-		})
+	for (let j = 0; j < output.length; j++) {
 
-	// button remove
-		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
-			const button_remove = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button remove hidden_button',
-				dataset			: { key : i },
-				parent 			: li
+		const data_map = output[j]
+		const current_data = data.find(el => el.id===data_map.id)
+
+		const value = (typeof current_data!=='undefined')
+			? current_data.value
+			: null
+
+		const label_suffix = value==1 ? '_singular' : ''
+
+		// label before
+			const current_label_before = (value && data_map['label_before'+label_suffix])
+				? data_map['label_before'+label_suffix]
+				: ''
+			const label_before =  ui.create_dom_element({
+					element_type 	: "label",
+					class_name 		: 'before',
+					text_content 	: get_label[current_label_before] || current_label_before,
+					parent 		 	: li
 			})
-		}
+
+		// value
+			const element_value = ui.create_dom_element({
+				element_type 	: "span",
+				class_name 		: 'value',
+				inner_html 		: value,
+				parent 		 	: li
+			})
+
+		// label after
+		const current_label_after = (value && data_map['label_after'+label_suffix])
+			? data_map['label_after'+label_suffix]
+			: ''
+		const separator = (value && data_map['separator'])
+			? data_map['separator']
+			: ''
+		const label_after =  ui.create_dom_element({
+				element_type 	: "label",
+				class_name 		: 'after',
+				text_content 	: (get_label[current_label_after] || current_label_after) + separator,
+				parent 		 	: li
+				})
+
+
+
+		// event update_widget_value
+			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) => {
+
+				const current_data = changed_data.find(el => el.id===data_map.id)
+
+				if(typeof current_data==='undefined'){
+					element_value.innerHTML = ''
+					label_before.textContent = ''
+					label_after.textContent = ''
+					return
+				}
+				const value = current_data.value
+				element_value.innerHTML = value
+
+				// labels
+				const label_suffix = value==1 ? '_singular' : ''
+
+				// label before
+				const current_label_before = (value && data_map['label_before'+label_suffix])
+					? data_map['label_before'+label_suffix]
+					: ''
+				label_before.textContent = get_label[current_label_before] || current_label_before
+
+				// label after
+				const current_label_after = (value && data_map['label_after'+label_suffix])
+					? data_map['label_after'+label_suffix]
+					: ''
+				const separator = (value && data_map['separator'])
+					? data_map['separator']
+					: ''
+				label_after.textContent = (get_label[current_label_after] || current_label_after) + separator
+
+			})
+	}
 
 	return li
 }//end input_element
-
-
-
-/**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
-
-	const fragment = new DocumentFragment()
-
-	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
