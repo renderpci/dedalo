@@ -60,7 +60,7 @@ render_component_info.prototype.edit = async function(options={render_level:'ful
 	const self = this
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// render_level
 		const render_level = options.render_level || 'full'
@@ -96,7 +96,6 @@ render_component_info.prototype.edit = async function(options={render_level:'ful
 const get_content_data_edit = async function(self) {
 
 	// sort vars
-		const value 		= self.data.value
 		const mode 			= self.mode
 		const is_inside_tool= self.is_inside_tool
 
@@ -113,10 +112,10 @@ const get_content_data_edit = async function(self) {
 	 	await self.get_widgets()
 
 	// values (inputs)
-		const inputs_value = value//(value.length<1) ? [''] : value
-		const value_length = inputs_value.length
-		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
+		const widgets 			= self.ar_instances
+		const widgets_length 	= widgets.length
+		for (let i = 0; i < widgets_length; i++) {
+			get_input_element_edit(i, widgets[i], inputs_container, self, is_inside_tool)
 		}
 
 	// content_data
@@ -160,15 +159,13 @@ const get_buttons = (self) => {
 * INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element_edit = async (i, current_value, inputs_container, self) => {
+const get_input_element_edit = async (i, current_widget, inputs_container, self) => {
 
 	const mode 		 		 = self.mode
 	const is_inside_tool 	 = self.is_inside_tool
 
-	const widget_name 	= current_value.name
-	const widget_value 	= current_value.value
-
-	const current_widget = self.ar_instances.find(item => item.id === self.id +'_'+ widget_name)
+	const widget_name 	= current_widget.widget
+	const widget_value 	= current_widget.value
 
 	const widget_node = await current_widget.render()
 
@@ -179,11 +176,6 @@ const get_input_element_edit = async (i, current_value, inputs_container, self) 
 		})
 
 	li.appendChild(widget_node)
-
-	console.log("li", li);
-
-	// widget
-		 // self.init_widget()
 
 
 	return li
