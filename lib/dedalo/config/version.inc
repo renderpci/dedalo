@@ -1737,8 +1737,13 @@
 	Valencia 16-05-2020 5.5.53
 		Fix empty values inclusion on resolve term
 
+
 	Valencia 18-05-2020 5.5.54
 		Fix error on component_autocomplete_hi in search mode when search term is array
+
+
+	Valencia 18-05-2020 5.5.55
+		Added class.process_result.php as auxiliar class to search than allow postprocess results
 
 
 
@@ -1761,7 +1766,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.54';
+	$DEDALO_VERSION = '5.5.55';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
