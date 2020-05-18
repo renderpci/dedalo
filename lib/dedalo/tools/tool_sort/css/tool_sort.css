@@ -173,7 +173,7 @@ body {
 }
 .rows_container > .row_container > div:nth-child(n+6) {
   grid-row-start: 1;
-  grid-row-end: 5;
+  grid-row-end: 6;
 }
 .rows_container > .row_container > div:nth-child(6) {
   grid-column-start: 2;
