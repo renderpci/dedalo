@@ -264,7 +264,13 @@
 							//Get the term_tipo of the hierarchy_sections defined in structure in section_map
 								$ar_terms = [];
 								foreach ($hierarchy_sections as $current_section) {
-									$ar_terms[] = hierarchy::get_element_tipo_from_section_map($current_section,'term');
+									// $ar_terms[] = hierarchy::get_element_tipo_from_section_map($current_section,'term');
+									$current_term = hierarchy::get_element_tipo_from_section_map($current_section,'term');
+									if (is_array($current_term)) {
+										$ar_terms = array_merge($ar_terms, $current_term);
+									}else{
+										$ar_terms[] = $current_term;
+									}									
 								}
 								$ar_terms = array_unique($ar_terms);
 
