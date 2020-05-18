@@ -109,12 +109,12 @@ function set_original_duplicate($json_data) {
 			$component_relation_related = $ar_component_relation_related[0];
 		}
 
-	// component. set dato and save
-		$component_tipo = $component_relation_related;		
-		$section_id 	= $original_id;
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_relation_related,true);
-		$component   = component_common::get_instance($modelo_name,
-													  $component_tipo,
+	// component_realted. set dato and save
+		$component_realated_tipo 	= $component_relation_related;		
+		$section_id  				= $original_id;
+		$modelo_name 				= RecordObj_dd::get_modelo_name_by_tipo($component_relation_related,true);
+		$component_realted   		= component_common::get_instance($modelo_name,
+													  $component_realated_tipo,
 													  $section_id,
 													  "edit",
 													  DEDALO_DATA_NOLAN,
@@ -130,8 +130,54 @@ function set_original_duplicate($json_data) {
 			$dato[] = $locator;
 		}
 
-		$component->set_dato($dato);
-		$component->Save();
+		$component_realted->set_dato($dato);
+		$component_realted->Save();
+
+		//set the discard select in archive
+		// ORIGINAL
+		$discard_dato			= [];
+		$discard_tipo 			= 'numisdata157';
+		$discad_model 			= RecordObj_dd::get_modelo_name_by_tipo($discard_tipo, true);
+		$target_section_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($discard_tipo, 'section', 'termino_relacionado', $search_exact=true);
+
+		$component_discard = component_common::get_instance($discad_model,
+														 $discard_tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+		$original_id = 1;
+		$locator = new locator();
+				$locator->set_section_tipo($target_section_tipo[0]);
+				$locator->set_section_id($original_id);
+				$locator->set_from_component_tipo($discard_tipo);
+
+		$discard_dato[] = $locator;
+		$component_discard->set_dato($discard_dato);
+		$component_discard->Save();
+
+		// COPY
+		$discard_dato_copy = [];
+		$original_id = 2;
+		$locator = new locator();
+				$locator->set_section_tipo($target_section_tipo[0]);
+				$locator->set_section_id($original_id);
+				$locator->set_from_component_tipo($discard_tipo);
+		$discard_dato_copy[] = $locator;
+
+		foreach ($duplicates_id as $current_section_id) {
+
+			$component_discard = component_common::get_instance($discad_model,
+														 $discard_tipo,
+														 $current_section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+			
+			$component_discard->set_dato($discard_dato_copy);
+			$component_discard->Save();
+		}
+
 
 	// response
 		$response->result 	= true;

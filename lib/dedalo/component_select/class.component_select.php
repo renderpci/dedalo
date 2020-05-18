@@ -18,11 +18,15 @@ class component_select extends component_relation_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='string') {
 		
 		$dato = $this->get_dato();
 		if (empty($dato)) {
-			return null;
+			if ($format==='array') {
+				return array();
+			}else{
+				return null;
+			}
 		}			
 			
 		# Test dato format (b4 changed to object)		
@@ -48,7 +52,12 @@ class component_select extends component_relation_common {
 		}
 
 		# Set value
-		$valor = implode(', ', $ar_values);			
+		if ($format==='array') {
+			$valor = $ar_values;
+		}else{
+			#$valor = implode($divisor, $ar_values);
+			$valor = implode(', ', $ar_values);
+		}	
 
 		return $valor;
 	}//end get_valor
