@@ -714,7 +714,7 @@ class web_data {
 				}//end if ($map!==false)
 
 			// process_result. : function name, ar_data, process_result object, sql_options object, $total
-				if ($process_result!==false) {
+				if ($process_result!==false && !empty($ar_data)) {
 					$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
 
 					// overwrite ar_data (!)
