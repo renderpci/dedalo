@@ -819,26 +819,60 @@ class component_relation_parent extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) {
-
+		
 		if (isset($option_obj->add_parents)) {
 			
-			// recursive
+			// recursively
 			$section_id 	= $this->get_parent();
 			$section_tipo 	= $this->section_tipo;
 
+			$resolve_value  	 = isset($option_obj->resolve_value) ? $option_obj->resolve_value : false;
+			$parent_section_tipo = isset($option_obj->parent_section_tipo) ? $option_obj->parent_section_tipo : false;
+	
 			$parents = self::get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false);
 
-			$dato = array_map(function($locator){
-				return $locator->section_id;
-			}, $parents);
+			// new_dato
+			$new_dato = [];
+			foreach ($parents as $locator) {
+				
+				if ($resolve_value===true) {
 
+					if($parent_section_tipo!==false) {
+
+						// term is autocomplete cases
+						$term_dato = ts_object::get_term_dato_by_locator($locator);						
+						foreach ($term_dato as $term_locator) {							
+							if($parent_section_tipo===$term_locator->section_tipo){
+								$value = ts_object::get_term_by_locator($locator);
+								$new_dato[] = strip_tags($value);								
+							}
+						}
+						
+					}else{
+
+						$value = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );					
+						$new_dato[] = strip_tags($value);
+					}
+										
+				}else{
+					$new_dato[] = $locator->section_id;
+				}
+			}
+
+			
 		}else{
 
-			// default
-			$dato = $this->get_dato();
+			if ($resolve_value===true) {
+				$value = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
+				$new_dato = strip_tags($value);
+			}else{
+				// default
+				$new_dato = $this->get_dato();
+			}			
 		}
 				
-		$diffusion_value = json_encode($dato);
+		$diffusion_value = json_encode($new_dato, JSON_UNESCAPED_UNICODE);
+
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
