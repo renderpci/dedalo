@@ -843,14 +843,60 @@ class component_relation_parent extends component_relation_common {
 						$term_dato = ts_object::get_term_dato_by_locator($locator);						
 						foreach ($term_dato as $term_locator) {							
 							if($parent_section_tipo===$term_locator->section_tipo){
-								$value = ts_object::get_term_by_locator($locator);
+								// $value = ts_object::get_term_by_locator($locator);
+
+								// custom get term by locator resolution
+									$custom_get_term_by_locator = function($locator, $lang, $option_obj) {
+
+										$section_map 	= section::get_section_map($locator->section_tipo);
+										$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+										if ($thesaurus_map===false) return false;
+
+										$ar_tipo 		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+										$section_id 	= $locator->section_id;
+										$section_tipo 	= $locator->section_tipo;
+										
+										$ar_value = [];
+										foreach ($ar_tipo as $tipo) {
+													
+											$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);											
+											$component 		= component_common::get_instance( $modelo_name,
+																							  $tipo,
+																							  $section_id,
+																							  'list',
+																							  $lang,
+																							  $section_tipo);											
+											// $valor = $component->get_valor($lang);
+											$valor = $component->get_diffusion_value($lang, $option_obj->process_dato_arguments);	
+											if (empty($valor)) {
+														
+												$main_lang = hierarchy::get_main_lang( $locator->section_tipo );												
+
+												$dato_full = $component->get_dato_full();
+												$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang, $lang);
+												if (is_array($valor)) {
+													$valor = implode(', ', $valor);
+												}													
+											}
+
+											if (!empty($valor)) {
+												$ar_value[] = $valor;
+											}
+										}//end foreach ($ar_tipo as $tipo) 
+
+										$value = implode(', ', $ar_value);
+
+										return $value;
+									};
+
+								$value = $custom_get_term_by_locator($locator, $lang, $option_obj);								
 								$new_dato[] = strip_tags($value);								
 							}
 						}
 						
 					}else{
 
-						$value = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );					
+						$value = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
 						$new_dato[] = strip_tags($value);
 					}
 										
