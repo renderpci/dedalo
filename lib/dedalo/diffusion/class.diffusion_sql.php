@@ -1307,17 +1307,18 @@ class diffusion_sql extends diffusion  {
 			}
 
 
-		static $ar_resolved_static;
+		static $ar_resolved_static = [];
 		static $ar_record_updated;
 		static $ar_unconfigured_diffusion_section;
 		if(SHOW_DEBUG===true) {
 		static $ar_resolved_static_debug;
 		}
 
+		$resolved_static_key = $options->section_tipo . '_' . $options->section_id;
+
 
 		#
 		# Record already resolved check
-			#
 			#if (   isset($ar_resolved_static[$options->section_tipo])
 			#	#&& in_array($options->section_id, $ar_resolved_static[$options->section_tipo])
 			#	) {
@@ -1327,6 +1328,16 @@ class diffusion_sql extends diffusion  {
 			#	$response->msg 		= 'Record already resolved '.$options->section_tipo.'_'.$options->section_id;
 			#	return $response;
 			#}
+			if (true===in_array($resolved_static_key, $ar_resolved_static)) {
+				// response
+				$response->result	= true;
+				$response->msg		= 'Skipped record already resolved: '.$resolved_static_key;
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__."  ".$response->msg, logger::DEBUG);
+				}
+				return $response;
+			}
+
 
 
 		#
@@ -1434,7 +1445,8 @@ class diffusion_sql extends diffusion  {
 				}//end if(!empty($ar_field_data))
 
 			# AR_RESOLVED . update
-				$ar_resolved_static[$options->section_tipo][] = $options->section_id;
+				// $ar_resolved_static[$options->section_tipo][] = $options->section_id;
+				$ar_resolved_static[] = $resolved_static_key;
 				if(SHOW_DEBUG===true) {
 					$time_complete = round(microtime(1)-$start_time,3);
 					$ar_resolved_static_debug[] = array($options->section_tipo, $options->section_id, $time_complete);
@@ -1468,6 +1480,7 @@ class diffusion_sql extends diffusion  {
 					}
 				}
 			}
+
 		#
 		# REFERENCES
 		#
@@ -1544,10 +1557,11 @@ class diffusion_sql extends diffusion  {
 								if ( !isset($group_by_section_tipo[$current_section_tipo]) ||
 									 !in_array($current_locator->section_id, $group_by_section_tipo[$current_section_tipo]) ) { // If not exists in group_by_section_tipo, add
 
-									if( !isset($ar_resolved_static[$current_section_tipo]) ||
-										!in_array($current_section_id, $ar_resolved_static[$current_section_tipo]) ) { // If not exists in ar_resolved_static, add
+									// if( !isset($ar_resolved_static[$current_section_tipo]) ||
+										// !in_array($current_section_id, $ar_resolved_static[$current_section_tipo]) ) { // If not exists in ar_resolved_static, add
+									if(!in_array($current_section_tipo.'_'.$current_section_id, $ar_resolved_static)) {
 
-											$group_by_section_tipo[$current_section_tipo][] = $current_section_id;
+										$group_by_section_tipo[$current_section_tipo][] = $current_section_id;
 									}
 								}
 							}
@@ -1612,12 +1626,12 @@ class diffusion_sql extends diffusion  {
 				#dump($ar_resolved_static_debug, ' ar_resolved_static_debug ++ '.to_string());;
 			}
 
-		$this->ar_published_records = $ar_resolved_static;
+		// $this->ar_published_records = $ar_resolved_static;
 
 		// saves publication data
 			diffusion::update_publication_data($options->section_tipo, $options->section_id);
 
-		//response
+		// response
 			$response->result = true;
 			$response->msg .= "Ok. Record updated $options->section_id and n references: ".count($ar_resolved_static);
 

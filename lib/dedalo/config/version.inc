@@ -1750,6 +1750,13 @@
 		Updated method component_relation_parent->get_diffusion_value adding ts_object::get_term_dato_by_locator method
 
 
+	Valencia 20-05-2020 5.5.57
+		Added component_relation_parent -> get_diffusion-value -> custom_get_term_by_locator resolution
+    	Minor code fixes
+    	Added parents_recursive publication when in thesaurus section
+    	Re-enabled resolved_static cache in diffusion_sql update_record method
+
+
 
 
 	WORK IN PROGRESS
@@ -1771,12 +1778,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.56';
+	$DEDALO_VERSION = '5.5.57';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-05-2020');
+	define('DEDALO_BUILD'	, '20-05-2020');
 
 
 	/*
