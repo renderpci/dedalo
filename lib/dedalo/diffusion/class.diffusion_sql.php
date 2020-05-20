@@ -1441,6 +1441,33 @@ class diffusion_sql extends diffusion  {
 				}
 				#dump($ar_resolved_static, ' ar_resolved_static'); #die();
 
+
+		// thesaurus parent auto publication. If current record is from a thesaurus section, 
+		// recursive parents are publised too (20-05-2020) . 
+		// Allow publish only used terms and parents path for large thesaurus sections like toponyms
+			if (!empty($ar_field_data['ar_fields'])) {
+				$current_record_data = reset($ar_field_data['ar_fields']);
+				$first_lang_data 	 = reset($current_record_data);			
+				$found_component_relation_parent = array_find($first_lang_data, function($item){
+					return $item['related_model']==='component_relation_parent';
+				});
+				if (!empty($found_component_relation_parent)) {
+					// this section is thesaurus
+					// locate recursive parents
+					$parents_recursive = component_relation_parent::get_parents_recursive($options->section_id, $options->section_tipo);
+
+					foreach ($parents_recursive as $parents_recursive_locator) {
+						
+						// launch parent update record
+						$new_options = new stdClass();
+							$new_options->section_tipo			 = $options->section_tipo;
+							$new_options->section_id			 = $parents_recursive_locator->section_id;
+							$new_options->diffusion_element_tipo = $diffusion_element_tipo;
+						
+						$this->update_record($new_options, false);
+					}
+				}
+			}
 		#
 		# REFERENCES
 		#
