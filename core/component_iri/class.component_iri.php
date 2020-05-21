@@ -13,7 +13,7 @@ class component_iri extends component_common {
 	/**
 	* GET DATO
 	* Array with objects, every object have two properties: "iri" mandatory with string value and "title" optional with string value
-	*[ 
+	*[
 	*	{
 	*    "iri": "http://www.render.es/dedalo",
 	*    "title": "dedalo"
@@ -24,7 +24,7 @@ class component_iri extends component_common {
 
 		$dato = parent::get_dato();
 
-		/* 
+		/*
 		* For accept values from component_input_text
 		* we need change the string value of the input_text to object value of IRI
 		*/
@@ -44,8 +44,8 @@ class component_iri extends component_common {
 			}
 
 		}
-		
-		
+
+
 		if(SHOW_DEBUG===true) {
 			if ( !is_null($dato) && !is_array($dato)  ) {
 				debug_log(__METHOD__." WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent. Expected array. Given: ".gettype($dato), logger::ERROR);
@@ -72,7 +72,7 @@ class component_iri extends component_common {
 			}
 			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 		}
-		
+
 		parent::set_dato( (array)$dato );
 	}//end set_dato
 
@@ -85,8 +85,8 @@ class component_iri extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
-		
-		$dato = $this->get_dato();		
+
+		$dato = $this->get_dato();
 
 		if ($index==='all') {
 			$valor = null;
@@ -103,15 +103,15 @@ class component_iri extends component_common {
 				}
 
 				if (!empty($ar_line)) {
-					
+
 					$ar_val[] = implode(' | ', $ar_line);
 				}
 			}
-			
+
 			$valor = !empty($ar_val) ? implode(', ', $ar_val) : null;
 
 		}else{
-			
+
 			$index = (int)$index;
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
 		}
@@ -147,11 +147,11 @@ class component_iri extends component_common {
 		}
 
 		# Save in standar format
-		return parent::Save();		
+		return parent::Save();
 	}//end Save
 
 
-	
+
 	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
@@ -168,14 +168,14 @@ class component_iri extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id=null, $current_locator=null, $caller_component_tipo=null) {
-		
+
 		if (strpos($modo, 'edit')!==false) {
 			$component 			= component_common::get_instance(__CLASS__,
 																 $tipo,
 															 	 $parent,
 															 	 $modo,
 																 $lang,
-															 	 $section_tipo);					
+															 	 $section_tipo);
 			$value = $component->get_html();
 
 		}else{
@@ -185,7 +185,7 @@ class component_iri extends component_common {
 			# creamos el componente para pedirle el valor en el lenguaje principal.
 			# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
 			#
-			# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config 
+			# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config
 			#
 			# FALLBACK TO MAIN_LANG
 			# dump($value, ' value ++ '.to_string());
@@ -201,45 +201,24 @@ class component_iri extends component_common {
 															 	 $parent,
 															 	 $modo,
 																 $main_lang,
-															 	 $section_tipo); 
-					
+															 	 $section_tipo);
+
 					$value = $component->get_valor($main_lang);
 					$value = component_common::decore_untranslated( $value );
 						#dump($value, ' value ++ '.to_string($main_lang));
-					
+
 					#$component->set_lang($main_lang);
 					#$valor = $component->get_valor($main_lang);
-					#$valor = component_common::decore_untranslated( $valor );				
+					#$valor = component_common::decore_untranslated( $valor );
 				}
 			}
 		}
-		
+
 
 		return $value;
 	}//end render_list_value
 
 
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* Usaremos get_valor para permitir importaciones de fichas en lenguajes distintos al actual. Ejemplo: importar
-	* Francia (jer_fr) en castellano (lg-spa)
-	*
-	* @see class.section.php
-	* @return string $html
-	*/
-	public function get_valor_list_html_to_save() {
-		
-		# Get html from current component
-		$html = $this->get_valor();		
-		
-		return (string)$html;
-	}//end get_valor_list_html_to_save
 
 
 	/**
@@ -248,7 +227,7 @@ class component_iri extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}
@@ -259,7 +238,7 @@ class component_iri extends component_common {
 		$previous_modo = $this->get_modo();
 		$this->set_modo('list'); // Force list mode
 		$valor = $this->get_html();
-		# Restore modo after 
+		# Restore modo after
 		$this->set_modo($previous_modo);
 		*/
 		if(SHOW_DEBUG===true) {
@@ -290,14 +269,14 @@ class component_iri extends component_common {
 			$dato_unchanged = $options->dato_unchanged;
 			$reference_id 	= $options->reference_id;
 
-		
+
 	}//end update_dato_version
 
 
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -310,30 +289,30 @@ class component_iri extends component_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND' 
-		
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND'
+
 		if (empty($search_value)) return false;
 
 		#$tipo_de_dato_search = 'valor';
 
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search		
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
 		$search_query='';
 		switch (true) {
 			case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
 				// Allow wildcards like "house*" or "*house"
 				// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
-				$separator 	   = '*';				
+				$separator 	   = '*';
 				if ( $search_value[0] === $separator ) {
 					// Begin with * like
 					$search_value = str_replace($separator, '', $search_value);
 					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value' ";
-				
+
 				}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
 					// End with *
 					$search_value = str_replace($separator, '', $search_value);
 					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value%' ";
-					
+
 				}else{
 					// Contain
 					$search_value = str_replace($separator, '', $search_value);
@@ -362,7 +341,7 @@ class component_iri extends component_common {
 				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
 				break;
 		}
-		
+
 		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 		}
@@ -376,21 +355,21 @@ class component_iri extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object
-	*	Edited/parsed version of received object 
+	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql($query_object) {
         #debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
-					
+
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-			
+
 		#$q = $query_object->q;
 		#if (isset($query_object->type) && $query_object->type==='jsonb') {
 		#	$q = json_decode($q);
-		#}	
+		#}
 
 		# Always set fixed values
 		$query_object->type = 'string';
-		
+
 		$q = pg_escape_string(stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
@@ -437,7 +416,7 @@ class component_iri extends component_common {
 					$clone = clone($query_object);
 						$clone->operator = 'IS NULL';
 						$clone->lang 	 = $lang;
-					$new_query_json->$logical_operator[] = $clone;			
+					$new_query_json->$logical_operator[] = $clone;
 
 				# override
 				$query_object = $new_query_json ;
@@ -456,7 +435,7 @@ class component_iri extends component_common {
 
 				// langs check
 					$ar_query_object = [];
-					
+
 						#$clone = clone($query_object);
 						#	$clone->operator = '!=';
 						#	$clone->q_parsed = '\'[]\'';
@@ -468,16 +447,16 @@ class component_iri extends component_common {
 							$clone->q_parsed = '\'\'';
 							$clone->lang 	 = DEDALO_DATA_NOLAN;
 						$ar_query_object[] = $clone;
-					
+
 
 					$logical_operator ='$or';
 					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $ar_query_object;				
+						$langs_query_json->$logical_operator = $ar_query_object;
 
 				# override
 				$query_object = [$new_query_json, $langs_query_json];
 				break;
-			# IS DIFFERENT			
+			# IS DIFFERENT
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
@@ -533,16 +512,16 @@ class component_iri extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
 				break;
-			# DEFAULT CONTAIN 
+			# DEFAULT CONTAIN
 			default:
 				$operator = '~*';
-				$q_clean  = str_replace('+', '', $q);				
+				$q_clean  = str_replace('+', '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
-				break;			
+				break;
 		}//end switch (true) {
-		  
+
 		return $query_object;
 	}//end resolve_query_object_sql
 
@@ -553,9 +532,9 @@ class component_iri extends component_common {
 	* @return string $valor
 	*/
 	public function get_diffusion_value( $lang=DEDALO_DATA_LANG ) {
-		
+
 		$dato = $this->get_dato();
-				
+
 		$ar_values = [];
 		foreach ($dato as $key => $value) {
 			if(empty($value)) continue;
@@ -569,7 +548,7 @@ class component_iri extends component_common {
 			}
 			$ar_values[] = implode(', ', $ar_parts);
 		}
-		
+
 		$diffusion_value = implode(' | ', $ar_values);
 
 		return $diffusion_value;
@@ -581,10 +560,10 @@ class component_iri extends component_common {
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
+
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null	
+			'!*' 	 => 'campo_vacio', // null
 			'=' 	 => 'similar_a',
 			'!=' 	 => 'distinto_de',
 			'-' 	 => 'no_contiene',
@@ -596,7 +575,7 @@ class component_iri extends component_common {
 
 		return $ar_operators;
 	}//end search_operators_info
-	
+
 
 }//end class component_iri
 ?>

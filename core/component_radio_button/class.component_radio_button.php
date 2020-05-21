@@ -5,7 +5,7 @@
 *
 */
 class component_radio_button extends component_relation_common {
-	
+
 
 	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 
@@ -35,32 +35,32 @@ class component_radio_button extends component_relation_common {
 					}
 					return null;
 				}
-			}	
+			}
 
 		switch ($this->modo) {
 
-			case 'diffusion': 
+			case 'diffusion':
 				// dd64 case
 				$object_si = new stdClass();
 					$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
 					$object_si->section_tipo = (string)DEDALO_SECTION_SI_NO_TIPO; // 'dd64'
-				
-				$valor = ($dato[0]===$object_si) ? 'si' : 'no';				
+
+				$valor = ($dato[0]===$object_si) ? 'si' : 'no';
 				break;
-			
-			default:				
+
+			default:
 				// list_of_values. Always run list of values. (!) Get values only in requested lang
-				$ar_list_of_values = $this->get_ar_list_of_values2($lang);	
+				$ar_list_of_values = $this->get_ar_list_of_values2($lang);
 				$valor = '';
 				foreach ($ar_list_of_values->result as $key => $item) {
-					
+
 					$locator = $item->value;
 					if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
 						$valor = $item->label;
 						break;
 					}
 				}
-				break;				
+				break;
 		}//end switch
 
 
@@ -93,34 +93,14 @@ class component_radio_button extends component_relation_common {
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
-		
+
 		# Use already query calculated values for speed
 		$ar_records   = (array)json_handler::decode($value);
 		$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 
-		return  $component->get_valor($lang);		
+		return  $component->get_valor($lang);
 	}//end render_list_value */
-
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*/
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;		
-	}//end get_valor_list_html_to_save
 
 
 
@@ -134,7 +114,7 @@ class component_radio_button extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null ) {
-	
+
 		$diffusion_value = $this->get_valor($lang);
 		$diffusion_value = strip_tags($diffusion_value);
 

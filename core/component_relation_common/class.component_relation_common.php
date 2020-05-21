@@ -154,7 +154,7 @@ class component_relation_common extends component_common {
 	public function get_dato_with_references() {
 
 		$dato_with_references = $this->get_dato();
-		
+
 		return $dato_with_references;
 	}//end get_dato_with_references
 
@@ -354,17 +354,17 @@ class component_relation_common extends component_common {
 		$my_section = $this->get_my_section();
 		$relations  = $my_section->get_relations();
 
-		# Filtered case		
+		# Filtered case
 		$component_relations = array();
 		foreach ($relations as $current_locator) {
-			if(    isset($current_locator->from_component_tipo) 
+			if(    isset($current_locator->from_component_tipo)
 				&& $current_locator->from_component_tipo===$this->tipo ) {
-				
+
 				$component_relations[] = $current_locator;
 			}
 		}
-		$relations = $component_relations;	
-	
+		$relations = $component_relations;
+
 
 		return (array)$relations;
 	}//end get_my_section_relations
@@ -491,7 +491,7 @@ class component_relation_common extends component_common {
 			$tipo 			= $this->get_tipo();
 			$lang 			= DEDALO_DATA_LANG;
 			$modo 			= $this->get_modo();
-	
+
 		// dataframe mode
 			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
 
@@ -606,25 +606,6 @@ class component_relation_common extends component_common {
 		return $children_section->Save();
 	}//end save_inverse_locator_from_locator
 
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*/
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;
-	}//end get_valor_list_html_to_save
 
 
 
@@ -1941,7 +1922,7 @@ class component_relation_common extends component_common {
 
 		//create the target_sections object with section_tipo, permisions and label of the target secions
 		foreach ($ar_sections_tipo as $current_section_tipo) {
-			
+
 			$target_section = new stdClass();
 				$target_section->section_tipo 	= $current_section_tipo;
 				$target_section->label 			= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG,true);
@@ -2051,7 +2032,7 @@ class component_relation_common extends component_common {
 					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
 				// search_sections
 					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );					
+					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
 
 				// search_query_object build
 					$search_sqo_options = new stdClass();
@@ -2109,7 +2090,7 @@ class component_relation_common extends component_common {
 					}// end $value_with_parent = true
 
 				// add sqo
-					$show[] = $search_query_object;					
+					$show[] = $search_query_object;
 
 
 		// LAYOUT MAP // fields for select / show. add ddo
@@ -2224,7 +2205,7 @@ class component_relation_common extends component_common {
 		// fix
 		$this->sqo_context	= $sqo_context;
 		$this->pagination	= $pagination;
-	
+
 
 		return $sqo_context;
 	}//end get_sqo_context
