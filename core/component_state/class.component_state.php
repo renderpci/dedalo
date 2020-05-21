@@ -5,11 +5,11 @@
 *
 */
 class component_state extends component_common {
-	
-	
+
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
-	
+
 	# Tipo del componente al que referencia el tool
 	public $caller_component_tipo;
 
@@ -20,9 +20,9 @@ class component_state extends component_common {
 
 
 	public function __construct($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
-		
+
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-	
+
 		# Set default options (self component like every tool)
 		$this->options = new stdClass();
 			$this->options->tool_locator 	= DEDALO_STATE_GENERAL_SECTION_TIPO.'_'.DEDALO_STATE_GENERAL_SECTION_ID;	// whole section state
@@ -30,12 +30,12 @@ class component_state extends component_common {
 			$this->options->section_tipo 	= $this->section_tipo;
 			$this->options->section_id		= $this->parent;
 			$this->options->component_tipo 	= $this->tipo;
-		
-		return true;		
+
+		return true;
 	}//end __construct
 
 
-	
+
 	/**
 	* SAVE
 	* @return int $result , section_id
@@ -49,7 +49,7 @@ class component_state extends component_common {
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." Saved $this->section_tipo - $this->parent - dato: ". json_encode($this->dato), logger::DEBUG);
 			#debug_log(__METHOD__." called by ".json_encode(debug_backtrace()[0], JSON_PRETTY_PRINT), logger::DEBUG);;
-		}		
+		}
 
 		if ($result) {
 			# Update caller sections (from inverse locators)
@@ -80,9 +80,9 @@ class component_state extends component_common {
 		if(is_string($dato)){
 			$dato =  json_handler::decode($dato);
 		}
-		
+
 		return parent::set_dato( (array)$dato );
-	}	
+	}
 
 
 
@@ -104,14 +104,14 @@ class component_state extends component_common {
 			}else{
 				$records = array($locator_obj->section_id);
 			}
-			
+
 			foreach ($records as $current_section_id) {
 
-				$state_id = $locator_obj->section_tipo.'_'.$current_section_id;					
+				$state_id = $locator_obj->section_tipo.'_'.$current_section_id;
 
 				$options = new stdClass();
 					$options->tool_locator 	= $state_id;
-					$options->lang 	 		= $lang;					
+					$options->lang 	 		= $lang;
 					$options->component_tipo= $component_tipo;
 					$options->section_id 	= $section_id;
 					$options->section_tipo 	= $section_tipo;
@@ -123,23 +123,23 @@ class component_state extends component_common {
 																		'edit',
 																		DEDALO_APPLICATION_LANG,
 																		$locator_obj->section_tipo);
-				$options->label = $component_input_text->get_valor();				
+				$options->label = $component_input_text->get_valor();
 
 				$ar_state[] = $options;
 			}
 		}
-		
-		
-		return $this->ar_state = $ar_state;		
+
+
+		return $this->ar_state = $ar_state;
 	}//end configure_for_component
 
 
 	/**
 	* SET_DEFAULTS
-	* Calculate and set default values for current component_state based on state_map and components 'propiedades' data 
+	* Calculate and set default values for current component_state based on state_map and components 'propiedades' data
 	*/
 	public function set_defaults() {
-		
+
 		$resolve_virtual = false;	// Important: set to false because state_map is always present in caller section (usually a virtual section)
 		$ar_state_map = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, 'state_map', $from_cache=true, $resolve_virtual);
 			#dump($ar_state_map, ' ar_state_map ++ '.to_string($this->section_tipo));
@@ -147,15 +147,15 @@ class component_state extends component_common {
 			debug_log(__METHOD__." Section without state_map. Nothing is set as defaults. section_tipo:$this->section_tipo, component_tipo:$this->tipo ".to_string(), logger::DEBUG);
 			return false;
 		}
-		
+
 		$state_map_tipo = reset($ar_state_map);	// Like rsc173
 		$RecordObj_dd 	= new RecordObj_dd($state_map_tipo);
 		$related_terms 	= (array)$RecordObj_dd->get_relaciones();
-		
-		$related_terms[] = array($this->get_modelo()=>$this->tipo);	// Add current component state too		
+
+		$related_terms[] = array($this->get_modelo()=>$this->tipo);	// Add current component state too
 		foreach($related_terms as $ar_value) foreach($ar_value as $odelo => $current_tipo) {
-			
-			$ar_state_id = array();			
+
+			$ar_state_id = array();
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 			$component 	 = component_common::get_instance($modelo_name,
 														  $current_tipo,
@@ -164,11 +164,11 @@ class component_state extends component_common {
 														  DEDALO_DATA_LANG,
 														  $this->section_tipo);
 
-			$propiedades = $component->get_propiedades();			
+			$propiedades = $component->get_propiedades();
 			if (isset($propiedades->state)) foreach((array)$propiedades->state as $ar_locator_obj) {
-				
-				foreach ($ar_locator_obj as $key => $locator_obj) {					
-					
+
+				foreach ($ar_locator_obj as $key => $locator_obj) {
+
 					if (empty($locator_obj->section_tipo)) {
 						if(SHOW_DEBUG===true) {
 							dump($locator_obj, ' $propiedades->state ++ '.to_string($modelo_name)." - current_tipo:$current_tipo");;
@@ -181,24 +181,24 @@ class component_state extends component_common {
 							#dump($records, ' records ++ '.to_string());
 						foreach ($records as $current_section_id) {
 							$state_id 	   = $locator_obj->section_tipo.'_'.$current_section_id;
-							$ar_state_id[] = $state_id;	
-						}					
+							$ar_state_id[] = $state_id;
+						}
 					}else{
 						$state_id 	   = $locator_obj->section_tipo.'_'.$locator_obj->section_id;
 							//dump($locator_obj, ' locator_obj ++ '.to_string($state_id));
-						$ar_state_id[] = $state_id;						
+						$ar_state_id[] = $state_id;
 					}
 
-				}//end foreach ($ar_locator_obj as $key => $locator_obj) {									
+				}//end foreach ($ar_locator_obj as $key => $locator_obj) {
 			}//end if (isset($propiedades->state)) foreach((array)$propiedades->state as $ar_locator_obj) {
 
 			foreach ($ar_state_id as $tool_locator) {
-				
+
 				$section_tipo 	= $component->get_section_tipo();
 				$section_id 	= $component->get_parent();
 				$component_tipo = $component->get_tipo();
 				$lang 			= $component->get_lang();
-				$dato 			= array(0,0);	
+				$dato 			= array(0,0);
 
 				$state = new stdClass();
 					$state->$lang = new stdClass();
@@ -209,13 +209,13 @@ class component_state extends component_common {
 					$locator->set_section_id($section_id);
 					$locator->set_component_tipo($component_tipo);
 					$locator->set_state($state);
-				
+
 				$this->update_state($locator);
 			}
 		}//foreach($related_terms as $ar_value) foreach($ar_value as $odelo => $current_tipo) {
 		#dump($ar_state_id, ' ar_state_id ++ '.to_string());
 		#dump($this->get_dato(), ' this->get_dato() ++ '.to_string());
-		
+
 		return $this->Save();
 	}#end set_defaults
 
@@ -232,7 +232,7 @@ class component_state extends component_common {
 		$section_id   = $portal_locator->section_id;
 
 		$dato = (array)$this->get_dato();
-			
+
 		foreach ($dato as $key => $state_locator) {
 
 			if($state_locator->section_tipo === $section_tipo && $state_locator->section_id == $section_id){
@@ -241,7 +241,7 @@ class component_state extends component_common {
 		}
 		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
 		$dato = array_values($dato);
-		
+
 		$this->set_dato($dato);
 
 		return true;
@@ -250,10 +250,10 @@ class component_state extends component_common {
 
 
 	/**
-	* UPDATE_STATE_LOCATOR 
+	* UPDATE_STATE_LOCATOR
 	* Update and save component dato with received options
-	* @param object $options 
-	* @param array $dato 
+	* @param object $options
+	* @param array $dato
 	*/
 	public function update_state_locator( $options, $dato ) {
 
@@ -272,15 +272,15 @@ class component_state extends component_common {
 			$locator->set_section_id($section_id);
 			$locator->set_component_tipo($component_tipo);
 			$locator->set_state($state);
-		
+
 		$this->update_state($locator);
 		$this->Save();
-		
-		
+
+
 		return true;
 	}//end update_state_locator
-	
-	
+
+
 
 	/**
 	* UPDATE_STATE
@@ -292,10 +292,10 @@ class component_state extends component_common {
 
 		$dato = (array)$this->get_dato();
 		$state_value =[0,0]; //default value for the state_value
-		$locator_exists=false;		
-		
+		$locator_exists=false;
+
 		foreach ($dato as $key => $current_locator) {
-			
+
 			if( $current_locator->section_tipo 	 === $locator_state->section_tipo &&
 				$current_locator->section_id 	 == $locator_state->section_id &&
 				$current_locator->component_tipo === $locator_state->component_tipo ) {
@@ -312,7 +312,7 @@ class component_state extends component_common {
 						if(isset($tool_locator)){
 							$state_value = $ar_value->$tool_locator; // change the value with the received value
 						}
-						
+
 							#dump($state_value, ' state_value ++ '.to_string());
 
 						if(!isset($current_locator->state->$lang)){
@@ -323,22 +323,22 @@ class component_state extends component_common {
 						}
 
 						$current_locator->state->$lang->$tool_locator = $state_value;
-					}												
+					}
 				}
 				# Overwrite old locator in dato
 				$dato[$key] = $current_locator;
 				break;
 			}
-		}	
+		}
 
-		# Case dato is empty or not match current locator in dato, locator is added to dato 
-		if (!$locator_exists) {					
+		# Case dato is empty or not match current locator in dato, locator is added to dato
+		if (!$locator_exists) {
 			$dato[] = $locator_state;
 		}
 
 		$dato = array_unique($dato,SORT_REGULAR);
 		$this->set_dato($dato);
-		
+
 		#dump($locator_state, ' locator_state ++ '.to_string($locator_state->section_id)); //return;
 		#dump($dato, ' dato final ++ '.to_string($locator_state->section_id));
 
@@ -376,10 +376,10 @@ class component_state extends component_common {
 
 			$ref_locator = new locator();
 				$ref_locator->set_section_tipo($current_section_tipo);
-				$ref_locator->set_section_id($current_section_id);		
-			
+				$ref_locator->set_section_id($current_section_id);
+
 			$ar_ref_locators[] = $ref_locator;
-		}		
+		}
 
 
 		// AR_REF_LOCATORS . Iterate again result locators
@@ -392,33 +392,33 @@ class component_state extends component_common {
 
 			$key_changed = $current_section_id .'_'. $current_section_tipo;
 			if (in_array($key_changed, $ar_locator_changed)) {
-				
-				debug_log(__METHOD__." Skyp already changed: $key_changed ");				
+
+				debug_log(__METHOD__." Skyp already changed: $key_changed ");
 				continue;	// Skyp already changed
 			}
 			$ar_locator_changed[] = $key_changed ;
 
 			#$section_to_update 	= section::get_instance($current_section_id, $current_section_tipo);
 			$component_state_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, 'component_state', true, true);
-			#dump($ar_result,'get_ar_children_tipo_by_modelo_name_in_section '.$section_tipo);			
+			#dump($ar_result,'get_ar_children_tipo_by_modelo_name_in_section '.$section_tipo);
 
 			if (empty($component_state_tipo[0])) {
 				continue;
 			}
-			
+
 			$component_state_to_update = component_common::get_instance('component_state',
 																		$component_state_tipo[0],
 																		$current_section_id,
 																		'list',
 																		DEDALO_DATA_NOLAN,
-																		$current_section_tipo);					
+																		$current_section_tipo);
 
 			# Force save (and trigger propagate_state again) every component_state_to of section related in inverse locators
-			$component_state_to_update->Save();	
+			$component_state_to_update->Save();
 
-							
+
 			debug_log( __METHOD__." Propagated from $this->section_tipo - $this->parent to ".json_encode($current_ref_locator) );
-					
+
 		}//end foreach ($ar_locators as $current_ref_locator) {
 
 
@@ -433,28 +433,28 @@ class component_state extends component_common {
 	* @return array $valor_for_checkbox Like [0,100]
 	*/
 	function get_valor_for_checkbox( $options=false ) {
-		
-		$valor_for_checkbox =[0,0];		
 
-		if (!$options) {	
+		$valor_for_checkbox =[0,0];
+
+		if (!$options) {
 			$options = $this->options;
 		}
 		if (empty($options)) {
 			debug_log(__METHOD__." Please, define options for this component: ".get_class() );
 			return $valor_for_checkbox;
-		}	
-		
+		}
+
 		# Current tool config (options)
 		$lang 			= $options->lang;
 		$tool_locator 	= $options->tool_locator;
 
-		$dato = $this->get_dato();	
-			#dump($dato, ' dato ++ '.to_string());	
+		$dato = $this->get_dato();
+			#dump($dato, ' dato ++ '.to_string());
 
 		foreach ((array)$dato as $current_locator) {
-			if( $this->compare($current_locator,$options)===true ){						
+			if( $this->compare($current_locator,$options)===true ){
 				if (isset($current_locator->state->$lang->$tool_locator)) {
-					$valor_for_checkbox = $current_locator->state->$lang->$tool_locator;			
+					$valor_for_checkbox = $current_locator->state->$lang->$tool_locator;
 				}
 				break;
 			}
@@ -471,7 +471,7 @@ class component_state extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
+
 		if(SHOW_DEBUG===true) {
 			#return "STATE: n/a";
 		}
@@ -480,21 +480,21 @@ class component_state extends component_common {
 	}#end get_valor_export
 
 
-	
+
 	/**
 	* COMPARE
 	* @return (bool) true/false
 	*/
 	public function compare( $locator, $options=false ) {
 
-		if (!$options) {	
+		if (!$options) {
 			$options = $this->options;
-		}	
+		}
 
 		if (!is_object($locator) || !isset($locator->section_tipo)) {
 			debug_log(__METHOD__." Request compare bad locator: ".to_string($locator), logger::WARNING);
 			return false;
-		}	
+		}
 
 		if(	$locator->section_tipo 	=== $options->section_tipo &&
 			$locator->section_id 	== $options->section_id &&
@@ -510,17 +510,17 @@ class component_state extends component_common {
 	/**
 	* BOOL_TRACEABLE
 	* Test if current component caller is traceble or not
-	* @return 
+	* @return
 	*/
 	public function bool_traceable() {
-		
+
 		if (isset($this->options->component_tipo)) {
-					
-			$related_terms = (array)$this->RecordObj_dd->get_relaciones();				
-				#dump($a, ' related_terms ++ '.to_string( $this->options->component_tipo ));				
+
+			$related_terms = (array)$this->RecordObj_dd->get_relaciones();
+				#dump($a, ' related_terms ++ '.to_string( $this->options->component_tipo ));
 
 			foreach($related_terms as $ar_value) foreach($ar_value as $odelo => $terminoID) {
-			//foreach ( (array)array_flatten($related_terms) as $odelo => $terminoID) {				
+			//foreach ( (array)array_flatten($related_terms) as $odelo => $terminoID) {
 				if ($this->options->component_tipo===$terminoID) {
 					return true;
 				}
@@ -531,7 +531,7 @@ class component_state extends component_common {
 	}#end bool_traceable
 
 
-	
+
 	/**
 	* GET_DATO_RECURSIVE
 	* get all dato from every portal in this section and all sections childrens
@@ -551,7 +551,7 @@ class component_state extends component_common {
 		$ar_dato_state = [];
 		foreach ($ar_dato_final as $current_locator) {
 			$ar_state_tipo = (array)section::get_ar_children_tipo_by_modelo_name_in_section($current_locator->section_tipo, 'component_state', true,true);
-			
+
 			if(empty($ar_state_tipo[0])) continue;
 
 			$current_state = component_common::get_instance('component_state',$ar_state_tipo[0],$current_locator->section_id, 'edit', DEDALO_DATA_NOLAN, $current_locator->section_tipo);
@@ -560,7 +560,7 @@ class component_state extends component_common {
 			$ar_dato_state = array_merge($ar_dato_state, $current_state->get_dato_recursive());
 
 		}
-		
+
 		return $ar_dato_state;
 	}//end get_valor
 
@@ -568,7 +568,7 @@ class component_state extends component_common {
 
 	/**
 	* SET_VALOR
-	* @param arry $valor 
+	* @param arry $valor
 	*/
 	public function set_valor( $valor ) {
 		#unset($this->valor);
@@ -579,7 +579,7 @@ class component_state extends component_common {
 
 	/**
 	* GET_VALOR
-	* Mix current component dato and all related sections component_state dato (from portals) to build a 
+	* Mix current component dato and all related sections component_state dato (from portals) to build a
 	* complete state vssion of current section
 	*/
 	public function get_valor() {
@@ -591,8 +591,8 @@ class component_state extends component_common {
 
 		$all_state_dato = $this->get_dato_recursive();
 		$final_dato 	= array_merge($dato, $all_state_dato);
-		
-		$valor = $this->resolve_valor($final_dato);		
+
+		$valor = $this->resolve_valor($final_dato);
 
 
 		return $valor;
@@ -608,8 +608,8 @@ class component_state extends component_common {
 	*/
 	public function resolve_valor($dato) {
 
-		$ar_process_types = array('acabado','validado'); // values are not used as 
-	
+		$ar_process_types = array('acabado','validado'); // values are not used as
+
 		#
 		# GROUPS BY PROCESS TYPE
 		$group = array();
@@ -619,14 +619,14 @@ class component_state extends component_common {
 				debug_log(__METHOD__." Bad locator received. Skiping this locator. Please, review your data ASAP ".to_string($current_locator), logger::WARNING);
 				continue;
 			}
-			
+
 			$section_tipo 	= $current_locator->section_tipo;
 			$section_id 	= $current_locator->section_id;
 			$component_tipo = $current_locator->component_tipo;
 
 			foreach ($current_locator->state as $lang => $object_value) {
 				#dump($object_value, ' object_value ++ '.to_string($lang));
-				foreach ($object_value as $tool_locator => $current_value) {									
+				foreach ($object_value as $tool_locator => $current_value) {
 
 					foreach ($ar_process_types as $process_key => $current_type) {
 						$val = isset($current_value[$process_key]) ? $current_value[$process_key] : 0;
@@ -639,11 +639,11 @@ class component_state extends component_common {
 					}//end foreach ($ar_process_types as $process_key => $current_type) {
 
 				}//end foreach ($object_value as $tool_locator => $current_value) {
-			}			
-			
+			}
+
 		}//end foreach ((array)$dato as $key => $current_locator) {
 		ksort($group);
-		#dump($group, ' group ++ '.to_string());				
+		#dump($group, ' group ++ '.to_string());
 
 		return $group;
 	}//end get_valor
@@ -653,7 +653,7 @@ class component_state extends component_common {
 	/**
 	* GET_AR_GRAPH
 	* Build graph objects array ready to use as source data in javascript graph library (nvd3)
-	* @return 
+	* @return
 	*/
 	public function get_ar_graph() {
 
@@ -665,7 +665,7 @@ class component_state extends component_common {
 			foreach ($group as $key => $value) {
 
 				$ar_keys = explode('_', $key);
-				
+
 				$process_section_tipo 	= $ar_keys[0];
 				$process_id 			= $ar_keys[1];
 				$lang 					= $ar_keys[2];
@@ -690,7 +690,7 @@ class component_state extends component_common {
 						default:
 							$obj_values->color 	= '#FFB733'; 	// Color orange
 							break;
-					}							
+					}
 
 				if (isset($ar_resolved[$process_name])) {
 					# Element exists, update values
@@ -700,7 +700,7 @@ class component_state extends component_common {
 				}else{
 					# Element not exists, create object and add to array
 					$object = new stdClass();
-						$object->key 	= "Series $process_name";						
+						$object->key 	= "Series $process_name";
 						$object->values = array($obj_values);
 						$object->total 	= (int)$value;
 
@@ -713,7 +713,7 @@ class component_state extends component_common {
 		# BUILD GRAPHIC DATA
 			$ar_graph=array();
 			foreach ($ar_resolved as $title => $data) {
-				
+
 				$total = reset($data)->total;
 				$object = new stdClass();
 					$object->title 		= strip_tags($title)." [$total]";
@@ -721,10 +721,10 @@ class component_state extends component_common {
 					$object->data 		= $data;
 
 				$ar_graph[] = $object;
-					
+
 			}
 			#dump($ar_graph, ' ar_graph ++ '.to_string());
-		
+
 		return $ar_graph;
 	}#end get_ar_graph
 
@@ -732,17 +732,17 @@ class component_state extends component_common {
 
 	/**
 	* GET_VALOR_PLAIN
-	* @return 
+	* @return
 	*/
-	public function get_valor_plain( $valor ) {		
-		
+	public function get_valor_plain( $valor ) {
+
 		#
 		# BUILD ELEMENTS
 		$ar_resolved=array();
 		foreach ((array)$valor as $key => $value) {
 
 			$ar_keys = explode('_', $key);
-			
+
 			$process_section_tipo 	= $ar_keys[0];
 			$process_id 			= $ar_keys[1];
 			$lang 					= $ar_keys[2];
@@ -758,10 +758,10 @@ class component_state extends component_common {
 			$obj_values = new stdClass();
 				$obj_values->label 		= $process_value_name;	// Label
 				$obj_values->value 		= $value;				// Value
-	
+
 			if ((int)$process_value>50) {
 				$ar_resolved[$process_name]['show_icon'] = $process_section_tipo.'_'.$process_id;
-			}				
+			}
 
 			if (isset($ar_resolved[$process_name][$process_type])) {
 				# Element exists, update values
@@ -771,7 +771,7 @@ class component_state extends component_common {
 			}else{
 				# Element not exists, create object and add to array
 				$object = new stdClass();
-					$object->key 	= $process_name.': '.$process_type_name;					
+					$object->key 	= $process_name.': '.$process_type_name;
 					$object->values = array($obj_values);
 					$object->total 	= (int)$value;
 
@@ -787,15 +787,15 @@ class component_state extends component_common {
 	/**
 	* ELEMENT_OBJECT_TO_TEXT
 	* Convert object element of state data to text like 'Ficha general Acabado: 2/3'
-	* @return 
+	* @return
 	*/
 	public function element_object_to_text( $element_object ) {
-		
+
 		# FINISHED_VALUE : When label of current element is 100, current value is interpreted as 'yes' finish elements of total
 		$finished_value = 0;
 		foreach ((array)$element_object->values as $current_obj_value) {
 			#dump($current_obj_value, ' current_obj_value ++ '.to_string());
-			if ( isset($current_obj_value->label) && (int)$current_obj_value->label==100 ) {					
+			if ( isset($current_obj_value->label) && (int)$current_obj_value->label==100 ) {
 				$finished_value = isset($current_obj_value->value) ? $current_obj_value->value : 0;
 			}
 		}
@@ -814,7 +814,7 @@ class component_state extends component_common {
 	* @return string $value
 	*/
 	public function get_process_value_name( $source_value, $process_type ) {
-		
+
 		switch ($process_type) {
 			case 'acabado':
 				if ( (int)$source_value>0 ) {
@@ -845,7 +845,7 @@ class component_state extends component_common {
 	/**
 	* GET_PROCESS_NAME
 	* @param string $process_locator, Like 'dd174_1'
-	* @return string $process_name 
+	* @return string $process_name
 	*/
 	public function get_process_name( $process_locator=false, $process_section_tipo=null, $process_id=null ) {
 
@@ -853,7 +853,7 @@ class component_state extends component_common {
 			$ar_parts 				= explode('_', $process_locator);
 			$process_section_tipo 	= $ar_parts[0];
 			$process_id 			= $ar_parts[1];
-		}		
+		}
 
 		$modelo_name  = 'component_input_text';
 		$process_tipo = section::get_ar_children_tipo_by_modelo_name_in_section( $process_section_tipo, $modelo_name, true, true);
@@ -875,13 +875,13 @@ class component_state extends component_common {
 
 	/**
 	* GET_PROCESS_TYPE_NAME
-	* @return 
+	* @return
 	*/
 	public function get_process_type_name( $type ) {
 
 		return label::get_label($type);
 	}#end get_process_type_name
-	
+
 
 
 	/**
@@ -912,7 +912,7 @@ class component_state extends component_common {
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request: caller_element is not defined", 1);
 			}
-			return false;					
+			return false;
 		}
 
 		$ar_dato = $this->get_dato();
@@ -927,7 +927,7 @@ class component_state extends component_common {
 			if($value==$this->caller_element) return true;
 		}
 	}//end map_dato_to_current_element_DEPRECATED
-	
+
 
 
 	/**
@@ -946,10 +946,10 @@ class component_state extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+
 		$current_valor  = $value;
 		$valor 			= '';
-		if(!empty($current_valor)) {					
+		if(!empty($current_valor)) {
 			$component  = component_common::get_instance(__CLASS__,
 														 $tipo,
 													 	 $parent,
@@ -960,30 +960,11 @@ class component_state extends component_common {
 			#$component->set_valor($ar_val);
 			$valor 		= $component->get_html();
 		}
-		
+
 
 		return $valor;
 	}#end render_list_value
 
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el 'valor'
-	*
-	* @see class.section.php
-	* @return string $html
-	*/
-	public function get_valor_list_html_to_save() {		
-		$group = $this->get_valor();	
-		
-		return (string)to_string($group);
-	}//end get_valor_list_html_to_save
 
 
 

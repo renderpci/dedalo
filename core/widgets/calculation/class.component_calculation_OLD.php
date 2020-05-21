@@ -1382,20 +1382,6 @@ class component_calculation extends component_common {
 
 
 
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	* @see class.section.php
-	* @return string $html
-	*/
-	public function get_valor_list_html_to_save() {
-		$valor = $this->get_valor();
-
-		return $valor;
-	}//end get_valor_list_html_to_save
 
 
 

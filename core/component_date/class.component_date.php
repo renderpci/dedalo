@@ -1471,27 +1471,6 @@ class component_date extends component_common {
 
 
 	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*/
-	public function get_valor_list_html_to_save() {
-		#$result = $this->get_dato_unchanged();
-		$result = $this->get_valor();
-
-		return $result;
-	}//end get_valor_list_html_to_save
-
-
-
-	/**
 	* GET_CALCULATION_DATA
 	* @return int|object $data
 	* get the data of the component for do a calculation

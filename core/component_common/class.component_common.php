@@ -2852,33 +2852,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	* @see class.section.php
-	* @return string $html
-	*/
-	public function get_valor_list_html_to_save() {
-		# Store current modo
-		$modo_previous = $this->get_modo();
-
-		# Temporal modo
-		$this->set_modo('list');
-
-		# Get html from current component
-		$html = $this->get_html();
-
-		# Return it to anterior mode after get the html
-		$this->set_modo($modo_previous);	# Important!
-
-		return (string)$html;
-	}//end get_valor_list_html_to_save
-
-
-
-	/**
 	* SET_DATO_FROM_CSV
 	* Receive a plain text value from csv file and set this value as dato.
 	* Override in each component.

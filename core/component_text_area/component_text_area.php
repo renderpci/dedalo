@@ -410,7 +410,6 @@
 
 				#if(empty($dato)) return null;
 				$file_name 	= 'list';
-				$value 		= $this->get_valor_list_html_to_save();
 
 				#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
 				$obj_value = $value;
@@ -474,8 +473,6 @@
 				#	$list_value = $component->get_html();
 				#	return $list_value;
 				#}
-
-				$value = $component->get_valor_list_html_to_save();
 
 				#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
 				$obj_value = $value;
