@@ -1757,6 +1757,9 @@
     	Re-enabled resolved_static cache in diffusion_sql update_record method
 
 
+	Valencia 22-05-2020 5.5.58
+		Fix bug in class component_relation_common->Save where table relations data is not deleted when component data is deleted
+		
 
 
 	WORK IN PROGRESS
@@ -1778,12 +1781,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.57';
+	$DEDALO_VERSION = '5.5.58';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-05-2020');
+	define('DEDALO_BUILD'	, '22-05-2020');
 
 
 	/*
