@@ -101,62 +101,62 @@ class component_select extends component_relation_common {
 	}//end get_diffusion_dato
 
 
-	/**
-	* GET_CONTROLLER_DATA
-	* @return controller_data
-	*/
-	public function get_controller_data(){
-
-		//check properties->js for get the controllers
-		if(!isset($this->propiedades->js)){
-			return null;
-		}
-
-		//check if the component has dato, if not, do nothing
-		$current_dato = $this->get_dato();
-		if(!isset($current_dato[0])){
-			return null;
-		}
-		// get the section_id & section_tipo of the main controller selection of the user
-		$section_id 	= $current_dato[0]->section_id;
-		$section_tipo 	= $current_dato[0]->section_tipo;
-		$modo 			= 'list';
-
-		$ar_js = $this->propiedades->js;
-
-		//build the controller_data
-		$controller_data = [];
-		$ar_controller_tipos = [];
-		foreach ($ar_js as $trigger) {
-
-			//get the current controller_tipo
-			$controller_tipo 	= $trigger->controller;
-			if (in_array($controller_tipo, $ar_controller_tipos)){
-				continue;
-			}
-			//get the modelo_name
-			$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($controller_tipo,true);
-			//get the translation mode of the component
-			$RecordObj_dd 		= new RecordObj_dd($controller_tipo);
-			$lang 				= ($RecordObj_dd->get_traducible()!=='si') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-			// build the component of the controller
-			$component = component_common::get_instance($modelo_name,
-												 $controller_tipo,
-											 	 $section_id,
-											 	 $modo,
-												 $lang,
-											 	 $section_tipo);
-			//build the object that has the controler_tipo and the controller dato
-			$controller_dato = new stdClass();
-			$controller_dato->tipo = $controller_tipo;
-			$controller_dato->dato = $component->get_dato();
-			//assign the controller dato to the controller data array with all controller of the current section.
-			$controller_data[] = $controller_dato;
-			$ar_controller_tipos[] =$controller_tipo;
-		}
-
-		return $controller_data;
-	}//end get_controller_data
+	// /**
+	// * GET_CONTROLLER_DATA
+	// * @return controller_data
+	// */
+	// public function get_controller_data(){
+	//
+	// 	//check properties->js for get the controllers
+	// 	if(!isset($this->propiedades->js)){
+	// 		return null;
+	// 	}
+	//
+	// 	//check if the component has dato, if not, do nothing
+	// 	$current_dato = $this->get_dato();
+	// 	if(!isset($current_dato[0])){
+	// 		return null;
+	// 	}
+	// 	// get the section_id & section_tipo of the main controller selection of the user
+	// 	$section_id 	= $current_dato[0]->section_id;
+	// 	$section_tipo 	= $current_dato[0]->section_tipo;
+	// 	$modo 			= 'list';
+	//
+	// 	$ar_js = $this->propiedades->js;
+	//
+	// 	//build the controller_data
+	// 	$controller_data = [];
+	// 	$ar_controller_tipos = [];
+	// 	foreach ($ar_js as $trigger) {
+	//
+	// 		//get the current controller_tipo
+	// 		$controller_tipo 	= $trigger->controller;
+	// 		if (in_array($controller_tipo, $ar_controller_tipos)){
+	// 			continue;
+	// 		}
+	// 		//get the modelo_name
+	// 		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($controller_tipo,true);
+	// 		//get the translation mode of the component
+	// 		$RecordObj_dd 		= new RecordObj_dd($controller_tipo);
+	// 		$lang 				= ($RecordObj_dd->get_traducible()!=='si') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+	// 		// build the component of the controller
+	// 		$component = component_common::get_instance($modelo_name,
+	// 											 $controller_tipo,
+	// 										 	 $section_id,
+	// 										 	 $modo,
+	// 											 $lang,
+	// 										 	 $section_tipo);
+	// 		//build the object that has the controler_tipo and the controller dato
+	// 		$controller_dato = new stdClass();
+	// 		$controller_dato->tipo = $controller_tipo;
+	// 		$controller_dato->dato = $component->get_dato();
+	// 		//assign the controller dato to the controller data array with all controller of the current section.
+	// 		$controller_data[] = $controller_dato;
+	// 		$ar_controller_tipos[] =$controller_tipo;
+	// 	}
+	//
+	// 	return $controller_data;
+	// }//end get_controller_data
 
 
 }//end class

@@ -285,7 +285,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 							const destroyed_elements = self.ar_instances.splice(i, 1);
 							continue;
 						}
-						//console.log("self.ar_instances:",JSON.parse(JSON.stringify(self.ar_instances[i])));
+						// console.log("self.ar_instances:",JSON.parse(JSON.stringify(self.ar_instances[i])));
 						// self.ar_instances[i].destroy(true, true, false)
 						const destroyed_elements = self.ar_instances.splice(i, 1)
 
