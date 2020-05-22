@@ -1468,7 +1468,7 @@ class search {
 		// avoid root user is showed except for root
 			if (!isset($this->include_negative) || $this->include_negative!==true) {
 				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
-			}			
+			}
 
 		# Fix values
 		$this->main_where_sql = $main_where_sql;
@@ -2543,7 +2543,10 @@ class search {
 				$target_section_tipo  = $locator->section_tipo;
 				$target_section_id 	  = $locator->section_id;
 
-				$ar_insert_values[]   = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
+				$value = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
+				if (!in_array($value, $ar_insert_values)) {
+					$ar_insert_values[] = $value; 
+				}
 			}
 			# Exec query (all records at once)
 				if (!empty($ar_insert_values)) {

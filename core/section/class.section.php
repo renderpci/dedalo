@@ -645,7 +645,7 @@ class section extends common {
 	public function set_component_relation_dato( $component_obj ) {
 
 		$component_tipo 		= $component_obj->get_tipo();
-		$component_dato 		= $component_obj->get_dato();
+		$component_dato 		= $component_obj->get_dato_full();
 		$relation_type 		 	= $component_obj->get_relation_type();
 		$from_component_tipo 	= $component_tipo;
 
