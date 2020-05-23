@@ -2545,7 +2545,7 @@ class search {
 
 				$value = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
 				if (!in_array($value, $ar_insert_values)) {
-					$ar_insert_values[] = $value; 
+					$ar_insert_values[] = $value;
 				}
 			}
 			# Exec query (all records at once)
@@ -2944,6 +2944,73 @@ class search {
 		return $ar_result;
 	}//end search_count
 
+
+
+	/**
+	* GET_DATA_WITH_PATH
+	*	"path": [
+	*	  {
+	*		  "section_tipo": "oh1",
+	*		  "component_tipo": "oh25",
+	*		  "modelo": "component_portal",
+	*		  "name": "Audiovisual"
+	*	  },
+	*	  {
+	*		  "section_tipo": "rsc167",
+	*		  "component_tipo": "rsc25",
+	*		  "modelo": "component_select",
+	*		  "name": "Collection \/ archive"
+	*	  }
+	*  ],
+	* @return array $data
+	*/
+	public static function get_data_with_path($path, $ar_locator) {
+
+		$data = [];
+		foreach ($path as $path_item) {
+
+			// level data resolve
+			$path_level_locators = search::resolve_path_level($path_item, $ar_locator);
+
+			// object to store in this path level
+			$data_item = new stdClass();
+				$data_item->path 	= $path_item;
+				$data_item->value 	= $path_level_locators;
+
+			$data[] = $data_item;
+
+			// overwrite var $ar_locator for the next iteration
+			$ar_locator = $path_level_locators;
+		}
+
+		return $data;
+	}//end get_data_with_path
+
+
+	/**
+	* RESOLVE_PATH_LEVEL
+	* @return array $result
+	*/
+	public static function resolve_path_level($path_item, $ar_locator) {
+
+		$result = [];
+		foreach ($ar_locator as $locator) {
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($path_item->component_tipo,true);
+			$component 	= component_common::get_instance($model_name,
+													     $path_item->component_tipo,
+													     $locator->section_id,
+													     'list',
+													     DEDALO_DATA_NOLAN,
+													     $locator->section_tipo);
+			$component_dato = $component->get_dato_full();
+
+			if (!empty($component_dato)) {
+				$result = array_merge($result, $component_dato);
+			}
+		}
+
+		return $result;
+	}//end resolve_path_level
 
 
 

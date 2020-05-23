@@ -923,6 +923,7 @@ abstract class component_common extends common {
 
 			// force to update the dato of the observer component
 			$dato = $component->get_dato();
+
 			// save the new dato into the database, this will be used for search into components calculations of infos
 			$component->Save();
 

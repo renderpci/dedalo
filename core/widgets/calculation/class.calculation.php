@@ -598,6 +598,7 @@ class calculation extends widget_common {
 	}//end get_values_from_component_tipo
 
 
+
 	/**
 	* resolve_logic
 	* @param object $process
