@@ -797,7 +797,7 @@ export const ui = {
 
 		build_wrapper_edit : async(instance, items)=>{
 
-			const id 		= instance.id || 'id is not set'			
+			const id 		= instance.id || 'id is not set'
 			const mode 		= instance.mode 	// like 'edit'
 			const type 		= "widget"
 			const name 		= instance.constructor.name

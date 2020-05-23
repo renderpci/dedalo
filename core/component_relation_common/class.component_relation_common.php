@@ -651,6 +651,9 @@ class component_relation_common extends component_common {
 				$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
 			}
 
+		# Observers
+		// the observers will be need to be notified for re-calculate your own dato with the new component dato
+			$this->propagate_to_observers();
 
 		return (int)$section_id;
 	}//end Save
