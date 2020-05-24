@@ -90,13 +90,13 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, values_container, self) => {
 
-	// li
+	// li, for every ipo will create a li node
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'state',
 			parent 			: values_container
 		})
-
+		// first row with the header labels
 		const header = ui.create_dom_element({
 				element_type 	: 'div',
 				inner_html		: '',
@@ -120,7 +120,7 @@ const get_value_element = (i, data, values_container, self) => {
 					inner_html 		: get_label['state'] || 'state',
 					parent 			: header
 				})
-
+		// get the langs for create the all lang nodes(data will only send the lang that has value)
 		const project_langs = page_globals.dedalo_projects_default_langs
 		const nolan 		= page_globals.dedalo_data_nolan
 
@@ -141,21 +141,24 @@ const get_value_element = (i, data, values_container, self) => {
 						inner_html 		: output_item.id,
 						parent 			: container
 					})
-				//situation
+			//situation
 
+				// check if the component is translatable, with the first item in the data of the current column
 				const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
+				// second, check if the item is translatable
 				const situation_translatable = (situation_item.lang !== nolan)
+				// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
 				const situation_length = situation_translatable ? project_langs.length : 1;
-
+				// get the total item for situation
 				const situation_total = data.find(item => item.id === output_item.id
 														&& item.column === 'situation'
 														&& item.type ==='total')
-
-					const situation = ui.create_dom_element({
-						element_type 	: 'div',
-						class_name		: 'situation',
-						parent 			: container
-					})
+				// node situation
+				const situation = ui.create_dom_element({
+					element_type 	: 'div',
+					class_name		: 'situation',
+					parent 			: container
+				})
 
 					// total
 					const situation_total_node = ui.create_dom_element({
@@ -171,7 +174,7 @@ const get_value_element = (i, data, values_container, self) => {
 							inner_html 		: situation_total.value+'%',
 							parent 			: situation_total_node
 						})
-
+					// save the node for reuse later
 					ar_nodes.push({
 						node_value 	: situation_total_value,
 						type 		: 'total',
