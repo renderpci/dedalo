@@ -311,16 +311,21 @@ render_component_check_box.prototype.search = async function() {
 	return wrapper
 }//end search
 
+
+
 /**
 * GET_CONTENT_DATA_EDIT
 * @return
 */
 const get_content_data_edit = async function(self) {
-
+	
 	const value 		= self.data.value
-	const datalist		= self.data.datalist
+	const datalist		= self.data.datalist || []
 	const mode 			= self.mode
 	const is_inside_tool= self.is_inside_tool
+
+		console.log("++++++ datalist:",datalist);
+		console.log("++++++ self:",self);
 
 	const fragment = new DocumentFragment()
 
@@ -332,7 +337,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// build options
-		const datalist_length 	= datalist.length
+		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			get_input_element_edit(i, datalist[i], inputs_container, self)
 		}
