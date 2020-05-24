@@ -105,8 +105,6 @@ const get_content_data_edit = async function(self) {
 
 		for (let i = 0; i < ipo_length; i++) {
 			const data = self.value.filter(item => item.key === i)
-
-			console.log("data+++++++++++++++", data);
 			get_value_element(i, data, values_container, self)
 		}
 

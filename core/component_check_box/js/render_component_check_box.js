@@ -89,7 +89,7 @@ render_component_check_box.prototype.edit = async function(options={render_level
 
 	// events
 		add_events(self, wrapper)
-	
+
 	return wrapper
 }//end edit
 
@@ -258,7 +258,7 @@ render_component_check_box.prototype.search = async function() {
 
 				// input_value. The standard input for the value of the component
 				if (e.target.matches('input[type="checkbox"]')) {
-					
+
 					console.log("e.target:",e.target.value);
 
 					// input. Get the input node that has changed
@@ -353,7 +353,7 @@ const get_content_data_edit = async function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-		
+
 		content_data.classList.add("nowrap")
 		content_data.appendChild(fragment)
 
@@ -507,5 +507,3 @@ const get_content_data_search = async function(self) {
 
 	return content_data
 }//end get_content_data_search
-
-
