@@ -93,9 +93,33 @@ const get_value_element = (i, data, values_container, self) => {
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class 			: 'state',
+			class_name		: 'state',
 			parent 			: values_container
 		})
+
+		const header = ui.create_dom_element({
+				element_type 	: 'div',
+				inner_html		: '',
+				parent 			: li
+			})
+			// group_name_column
+				const group_name_column = ui.create_dom_element({
+					element_type 	: 'label',
+					inner_html 		: '',
+					parent 			: header
+				})
+			// label_situation
+				const label_situation = ui.create_dom_element({
+					element_type 	: 'label',
+					inner_html 		: get_label['situation'] || 'situation',
+					parent 			: header
+				})
+			// label_state
+				const label_state = ui.create_dom_element({
+					element_type 	: 'label',
+					inner_html 		: get_label['state'] || 'state',
+					parent 			: header
+				})
 
 		const project_langs = page_globals.dedalo_projects_default_langs
 		const nolan 		= page_globals.dedalo_data_nolan
@@ -108,84 +132,174 @@ const get_value_element = (i, data, values_container, self) => {
 
 			const container = ui.create_dom_element({
 					element_type 	: 'div',
-					class 			: '',
+					class_name		: '',
 					parent 			: li
 				})
 				// label
 					const label = ui.create_dom_element({
-						element_type 	: 'div',
-						class_name		: 'label',
+						element_type 	: 'label',
 						inner_html 		: output_item.id,
 						parent 			: container
 					})
 				//situation
+
+				const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
+				const situation_translatable = (situation_item.lang !== nolan)
+				const situation_length = situation_translatable ? project_langs.length : 1;
+
+				const situation_total = data.find(item => item.id === output_item.id
+														&& item.column === 'situation'
+														&& item.type ==='total')
+
 					const situation = ui.create_dom_element({
 						element_type 	: 'div',
 						class_name		: 'situation',
 						parent 			: container
 					})
 
-					const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
-					const situation_translatable = (situation_item.lang !== nolan)
-					const situation_length = situation_translatable ? project_langs.length : 1;
+					// total
+					const situation_total_node = ui.create_dom_element({
+						element_type 	: 'div',
+						class_name		: 'total',
+						parent 			: situation
+					})
+
+						// create the node with the value
+						const situation_total_value = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'value',
+							inner_html 		: situation_total.value+'%',
+							parent 			: situation_total_node
+						})
+
+					ar_nodes.push({
+						node_value 	: situation_total_value,
+						type 		: 'total',
+						value 		: situation_total.value,
+						lang 		: nolan,
+						id			: output_item.id,
+						key 		: i,
+						column		: 'situation'
+					})
+
+					// detail with all languages
+					const situation_detail = ui.create_dom_element({
+						element_type 	: 'div',
+						class_name		: 'detail',
+						parent 			: situation
+					})
+
 
 					for (let j = 0; j < situation_length; j++) {
-						const lang = situation_translatable ? project_langs[j] : nolan
-						const situation_items_data = data.find(item => item.id === output_item.id && item.column === 'situation' && item.lang === lang.value)
+						const lang = situation_translatable ? project_langs[j].value : nolan
+						const situation_items_data = data.find(item => item.id === output_item.id
+																	&& item.column === 'situation'
+																	&& item.lang === lang
+																	&& item.type ==='detail')
 
-						const lang_label = situation_translatable ? project_langs[j].label : 'total'
-						const situation_label = (situation_items_data) ? lang_label+': '+ situation_items_data.value : lang_label+': 0'
+						const label_situation = ui.create_dom_element({
+							element_type	: 'label',
+							inner_html 		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
+							parent 			: situation_detail
+						})
 
 						const item_situation = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'value',
-							inner_html 		: situation_label,
-							parent 			: situation
+							inner_html 		: (situation_items_data) ? situation_items_data.value+'%' : '0%',
+							parent 			: situation_detail
 						})
 						ar_nodes.push({
-							node 	: item_situation,
-							lang 	: lang,
-							id		: output_item.id,
-							key 	: i,
-							column	: 'situation'})
+							node_label 	: label_situation,
+							node_value 	: item_situation,
+							type 		: 'detail',
+							value 		: (situation_items_data) ? situation_items_data.value : 0,
+							lang 		: lang,
+							id			: output_item.id,
+							key 		: i,
+							column		: 'situation'})
 					}
 				//state
+				// check if the component is translatable, with the first item in the data of the current column
+				const state_item = data.find(item => item.id === output_item.id && item.column === 'state')
+				// second, check if the item is translatable
+				const state_translatable = (state_item.lang !== nolan)
+				// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
+				const item_length = state_translatable ? project_langs.length : 1;
+
+				const state_total = data.find(item => item.id === output_item.id && item.column === 'state' && item.type ==='total')
+
+
 					const state = ui.create_dom_element({
 						element_type 	: 'div',
 						class_name		: 'state',
 						parent 			: container
 					})
-					// check if the component is translatable, with the first item in the data of the current column
-					const state_item = data.find(item => item.id === output_item.id && item.column === 'state')
-					// second, check if the item is translatable
-					const state_translatable = (state_item.lang !== nolan)
-					// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
-					const item_length = state_translatable ? project_langs.length : 1;
+						// total
+						const total_node = ui.create_dom_element({
+							element_type 	: 'div',
+							class_name		: 'total',
+							parent 			: state
+						})
+
+						// create the node with the value
+						const total_value = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'value',
+							inner_html 		: state_total.value+'%',
+							parent 			: total_node
+						})
+
+						ar_nodes.push({
+							node_value 	: total_value,
+							type 		: 'total',
+							value 		: state_total.value,
+							lang 		: nolan,
+							id			: output_item.id,
+							key 		: i,
+							column		: 'state'
+						})
+
+						// detail with all languages
+						const detail = ui.create_dom_element({
+							element_type 	: 'div',
+							class_name		: 'detail',
+							parent 			: state
+						})
 
 					for (let k = 0; k < item_length; k++) {
 						// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
-						const lang = state_translatable ? project_langs[k] : nolan
+						const lang = state_translatable ? project_langs[k].value : nolan
 						// find the data of the item with the lang
-						const state_item_data = data.find(item => item.id === output_item.id && item.column === 'state' && item.lang === lang.value)
+						const state_item_data = data.find(item => item.id === output_item.id
+																&& item.column === 'state'
+																&& item.lang === lang
+																&& item.type ==='detail')
 
 						// build the label with the lang
-						const lang_label = state_translatable ? project_langs[k].label : 'total'
-						const state_label = (state_item_data) ? lang_label+': '+ state_item_data.value : lang_label+': 0'
+						const label_state = ui.create_dom_element({
+							element_type	: 'label',
+							inner_html 		: (state_translatable) ? project_langs[k].label+': ' : 'total :',
+							parent 			: detail
+						})
 
-						// create the node
+						// create the node with the value
 						const item_state = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'value',
-							inner_html 		: state_label,
-							parent 			: state
+							inner_html 		: (state_item_data) ? state_item_data.value+'%' : '0%',
+							parent 			: detail
 						})
 						// save the node for reuse later
 						ar_nodes.push({
-							node 	: item_state,
-							lang 	: lang,
-							id		: output_item.id,
-							key 	: i,
-							column	: 'state'
+							node_label 	: label_state,
+							node_value 	: item_state,
+							type 		: 'detail',
+							value 		: (state_item_data) ? state_item_data.value : 0,
+							lang 		: lang,
+							id			: output_item.id,
+							key 		: i,
+							column		: 'state'
 						})
 					}
 
@@ -193,33 +307,24 @@ const get_value_element = (i, data, values_container, self) => {
 
 
 		event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
-			// get the output of the current ipo
-			const output = self.ipo[i].output
-			//every output is a row that has 2 different colums 'situation' and 'state'
-			for (let o = 0; o < output.length; o++) {
+			// get all detail nodes 'situation' and 'state' in DOM
+			const detail_nodes = ar_nodes //.filter(node => node.type === 'detail')
+			const node_length = detail_nodes.length
 
-				const output_item = output[o]
-				// state
-				// check if the component is translatable, with the first item in the data of the current column
-				const state_item = changed_data.find(item => item.id === output_item.id && item.column === 'state')
-				// second check if the item is translatable
-				const state_translatable = (state_item.lang !== nolan)
-				// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
-				const state_length = state_translatable ? project_langs.length : 1;
-
-				for (let j = 0; j < state_length; j++) {
-					// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
-					const lang = state_translatable ? project_langs[j] : nolan
-					// find the data of the item with the lang
-					const state_items_data = changed_data.find(item => item.id === output_item.id && item.column === 'state' && item.lang === lang.value)
-					// build the label with the lang
-					const lang_label = state_translatable ? project_langs[j].label : 'total'
-					const state_label = (state_items_data) ? lang_label+': '+ state_items_data.value : lang_label+': 0'
-
-					// select the node to change the data
-					const state_node = ar_nodes.find(item => item.id === output_item.id && item.column === 'state' && item.lang === lang)
-					// set the new value
-					state_node.node.innerHTML = state_label
+			for (let o = node_length - 1; o >= 0; o--) {
+				const node = detail_nodes[o]
+				// find if the node has new data
+				const new_data = changed_data.find(item => item.id === node.id
+														&& item.column === node.column
+														&& item.lang === node.lang
+														&& item.key === i
+														&& item.type === node.type
+													)
+				// set the new value
+				if(new_data){
+					node.node_value.innerHTML = new_data.value +'%'
+				}else{
+					node.node_value.innerHTML = '0%'
 				}
 			}
 

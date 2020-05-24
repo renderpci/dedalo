@@ -1784,6 +1784,19 @@ li .section_record.list .id_column {
 .wrapper_component.search.component_info > .content_data .wrapper_widget .values_container > li label {
   padding-right: 0.5em;
 }
+.wrapper_component.edit.component_info > .content_data .wrapper_widget.state li.state,
+.wrapper_component.search.component_info > .content_data .wrapper_widget.state li.state {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.wrapper_component.edit.component_info > .content_data .wrapper_widget.state li.state > div,
+.wrapper_component.search.component_info > .content_data .wrapper_widget.state li.state > div {
+  display: contents;
+}
+.wrapper_component.edit.component_info > .content_data .wrapper_widget.state li.state > div .detail,
+.wrapper_component.search.component_info > .content_data .wrapper_widget.state li.state > div .detail {
+  display: none;
+}
 .wrapper_component.edit.component_input_text > .content_data .button.remove,
 .wrapper_component.search.component_input_text > .content_data .button.remove {
   position: absolute;
