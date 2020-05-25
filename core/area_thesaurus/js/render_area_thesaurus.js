@@ -30,7 +30,10 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 	const render_level = options.render_level
 
 	// ts_object
-		const data = self.data.find(item => item.tipo === 'dd100')	
+		// set mode. Note that ts_object is NOT an instance
+		ts_object.thesaurus_mode = self.thesaurus_mode
+		// parse data
+		const data = self.data.find(item => item.tipo==='dd100')	
 		if (data.ts_search) {
 			const node_content_data = self.node[0].querySelector('.content_data .area')
 			ts_object.parse_search_result(data.ts_search.result, null, false)
