@@ -80,13 +80,14 @@ class state extends widget_common {
 					$current_result = new stdClass();
 						$label_component = ($section==='dd501') ? 'dd503' :'dd185';
 
-						$current_result->label 	= $this->get_label($locator, $label_component);;
-						$current_result->value 	= 0;
-						$current_result->lang 	= $translatable === 'si' ? null : 'lg-nolan';
-						$current_result->id		= $last_path->var_name;
-						$current_result->column	= ($section==='dd501') ? 'state' :'situation';
-						$current_result->type 	= 'detail';
-						$current_result->n 		= $translatable==='si' ? count($project_langs) : 1;
+						$current_result->label 		= $this->get_label($locator, $label_component);;
+						$current_result->value 		= 0;
+						$current_result->locator	= null;
+						$current_result->lang 		= $translatable === 'si' ? null : 'lg-nolan';
+						$current_result->id			= $last_path->var_name;
+						$current_result->column		= ($section==='dd501') ? 'state' :'situation';
+						$current_result->type 		= 'detail';
+						$current_result->n 			= $translatable==='si' ? count($project_langs) : 1;
 					$result[] = $current_result;
 				}
 
