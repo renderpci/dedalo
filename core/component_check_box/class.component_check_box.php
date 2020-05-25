@@ -30,7 +30,7 @@ class component_check_box extends component_relation_common {
 				if(SHOW_DEBUG) {
 					dump($dato," dato");
 				}
-				trigger_error(__METHOD__." Wrong dato format. OLD format dato in label:$this->label tipo:$this->tipo parent:$this->parent.Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
+				trigger_error(__METHOD__." Wrong dato format. OLD format dato in label:$this->label tipo:$this->tipo section_id:$this->section_id.Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
 				return null;
 			}
 		}
