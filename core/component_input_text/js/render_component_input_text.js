@@ -449,7 +449,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	const element_type 		 = (multi_line===true) ? 'textarea' :'input'
 	const is_inside_tool 	 = self.is_inside_tool
 	const with_lang_versions = self.context.properties.with_lang_versions || false
-		console.log("with_lang_versions:",with_lang_versions);
+	
 
 	// li
 		const li = ui.create_dom_element({

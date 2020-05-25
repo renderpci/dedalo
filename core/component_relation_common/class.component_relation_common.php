@@ -274,7 +274,7 @@ class component_relation_common extends component_common {
 	* insert complete array of locators at once. Use this method in this cases
 	*/
 	public function set_dato($dato) {
-
+		
 		$safe_dato = [];
 
 		$translatable = $this->RecordObj_dd->get_traducible();
@@ -287,7 +287,7 @@ class component_relation_common extends component_common {
 				$dato = json_decode($dato);
 			}
 
-			// Bad formatted array case
+			// Bad formed array case
 			if (is_object($dato)) {
 				$dato = array($dato);
 			}
@@ -301,8 +301,9 @@ class component_relation_common extends component_common {
 
 			foreach ((array)$dato as $key => $current_locator) {
 
+				// is_object check
 				if (!is_object($current_locator)) {
-					$msg = " Error on set locator (is not object) ".json_encode($current_locator);
+					$msg = " Error on set locator (is not object) json_ecoded: ".json_encode($current_locator);
 					trigger_error( __METHOD__ . $msg );
 					debug_log( __METHOD__ . $msg, logger::ERROR);
 					throw new Exception("Error Processing Request. Look server log for details", 1);
@@ -327,7 +328,7 @@ class component_relation_common extends component_common {
 					$current_locator->from_component_tipo = $from_component_tipo;
 				}
 
-				//set lang
+				// lang
 				if ($translatable==='si') {
 					if (!isset($current_locator->lang)) {
 						$current_locator->lang = $lang;

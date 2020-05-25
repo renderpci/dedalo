@@ -376,7 +376,65 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			editor_config 	: editor_config
 		})
 
-		self.services.push(current_service)
+		self.services.push(current_service)		
+		
+
+		// button create fragment
+			if (self.caller && self.caller.constructor.name==="tool_indexation") {
+
+				// create_fragment event subscription
+					// self.events_tokens.push(
+					// 	event_manager.subscribe('create_fragment'+'_'+ self.id, self.create_fragment.bind(self))
+					// )
+
+				// text_selection
+					self.events_tokens.push(
+						event_manager.subscribe('text_selection'+'_'+ self.id, show_button_create_fragment)
+					)
+					function show_button_create_fragment(data) {
+
+						const component_container = li
+						
+						const selection 	= data.selection
+						const button 		= component_container.querySelector(".create_fragment")
+						const last_tag_id	= self.get_last_tag_id(i, 'index')
+						const label 		= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+
+						
+						
+						function create_button(selection) {
+							const button_create_fragment = ui.create_dom_element({
+								element_type	: 'button',
+								class_name 		: 'warning compress create_fragment',
+								inner_html 		: label,
+								parent 			: component_container
+							})
+							
+							// event create_fragment add publish on click
+								// button_create_fragment.addEventListener("click", publish)
+								// function publish() {
+								// 	event_manager.publish('create_fragment'+'_'+ self.id, self)
+								// }
+								button_create_fragment.addEventListener("click", () => {
+									self.create_fragment(i)
+								})
+
+							return button_create_fragment
+						}
+
+						if (selection.length<1) {
+							if (button) {
+								button.remove()
+							}
+						}else{
+							if (!button) {
+								create_button(selection)
+							}else{
+								button.innerHTML = label
+							}
+						}
+					}
+			}//end if (self.caller && self.caller.constructor.name==="tool_indexation") {
 
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -529,6 +587,8 @@ const get_custom_buttons = (self, i, get_service) => {
 * @param instance self
 * @param int i
 *	self data element from array of values
+* @param function get_service
+*	select and return current service
 * @return object custom_events
 */
 const get_custom_events = (self, i, get_service) => {
@@ -668,7 +728,7 @@ const get_custom_events = (self, i, get_service) => {
 	custom_events.MouseUp = (evt, options) => {
 		// user text selection event
 			const selection = options.selection
-			event_manager.publish('text_selection' +'_'+ self.id_base, {selection:selection, caller: self})
+			event_manager.publish('text_selection' +'_'+ self.id, {selection:selection, caller: self})
 	}//end MouseUp
 
 	custom_events.KeyUp = (evt, options) => {
@@ -681,31 +741,39 @@ const get_custom_events = (self, i, get_service) => {
 				break;
 			// 'f2' code: 113
 			case 113:
-				const result 				= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
-				const result_length 		= result.length
-				// service
+				// publish event and receive susbscriptors responses
+				const susbscriptors_responses = event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
+				const susbscriptors_responses_length = susbscriptors_responses.length
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log("[render_component_text_area.get_custom_events] susbscriptors_responses (key_up_f2):", susbscriptors_responses);
+					}
+				
+				// service. get editor and content data
 					const service 			  = get_service()
 					const editor_content_data = service.get_editor_content_data()
 
-				for (let i = 0; i < result_length; i++) {
-					const data_tag 	= result[i]
-					const tag_id 	= (!data_tag.tag_id)
-						? self.get_last_tag_id(editor_content_data, data_tag.type) + 1
-						: data_tag.tag_id;
+				// iterate susbscriptors responses
+					for (let i = 0; i < susbscriptors_responses_length; i++) {
+						const data_tag 	= susbscriptors_responses[i]
+						const tag_id 	= (!data_tag.tag_id)
+							? self.get_last_tag_id(editor_content_data, data_tag.type) + 1
+							: data_tag.tag_id;
 
 						switch(data_tag.type) {
 							case ('draw'):
 							case ('geo'):
-								const layer_node = render_layer_selector(self, data_tag, tag_id, service)
-							break;
+								render_layer_selector(self, data_tag, tag_id, service)
+								break;
 							case ('page'):
-								const page_node_selector = render_page_selector(self, data_tag, tag_id, service)
-							break;
+								render_page_selector(self, data_tag, tag_id, service)
+								break;
 							default:
-								const tag 	= build_node_tag(data_tag, tag_id)//('tc', data, state, data, data)
+								const tag = build_node_tag(data_tag, tag_id)
 								service.set_content(tag.outerHTML)
 						}// end switch
-				}
+					}
 				break;
 		}
 	}//end KeyUp
@@ -717,10 +785,13 @@ const get_custom_events = (self, i, get_service) => {
 
 
 /**
-* BUILD_DOM_ELEMENT_FROM_DATA
-* @return
+* BUILD_NODE_TAG
+* Create a DOM node from tag info (type, state, label, data, id)
+* @param object data_tag
+* @param int tag_id
+* @return DOM node node_tag
 */
-const build_node_tag = function(data_tag, tag_id) {
+export const build_node_tag = function(data_tag, tag_id) {
 
 	const type 		= data_tag.type
 	const state 	= data_tag.state
@@ -757,21 +828,22 @@ const build_node_tag = function(data_tag, tag_id) {
 		data 	: (type==='tc') ? tag_id : data
 	}
 
-	const element = ui.create_dom_element({
+	const node_tag = ui.create_dom_element({
 		element_type 	: 'img',
 		src 			: src,
 		id 				: id,
 		class_name		: class_name,
-		dataset			: dataset,
+		dataset			: dataset
 	})
 
-	return element
-}//end build_dom_element_from_data
+
+	return node_tag
+}//end build_node_tag
 
 
 
 /**
-*  LAYER_SELECTOR
+* RENDER_LAYER_SELECTOR
 * @return
 */
 const render_layer_selector = function(self, data_tag, tag_id, service){
@@ -872,13 +944,12 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 	self.node[0].appendChild(layer_selector)
 
 	return fragment
-};//end layer_selector
-
+}//end render_layer_selector
 
 
 
 /**
-*  LAYER_SELECTOR
+* RENDER_PAGE_SELECTOR
 * @return
 */
 const render_page_selector = function(self, data_tag, tag_id, service){
@@ -966,8 +1037,7 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 	})
 
 	return
-};//end layer_selector
-
+}//end render_page_selector
 
 
 
