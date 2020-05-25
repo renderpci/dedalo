@@ -30,14 +30,14 @@ class component_av extends component_media_common {
 	* __CONSTRUCT
 	*
 	*/
-	function __construct($tipo, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
+	function __construct($tipo, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
 
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
@@ -53,7 +53,7 @@ class component_av extends component_media_common {
 			$locator = new locator();
 				$locator->set_component_tipo($this->tipo);
 				$locator->set_section_tipo($this->section_tipo);
-				$locator->set_section_id($this->parent);
+				$locator->set_section_id($this->section_id);
 			# END DEFAULT DATO
 			######################################################################################################
 
