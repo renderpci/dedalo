@@ -62,9 +62,6 @@ render_component_check_box.prototype.edit = async function(options={render_level
 
 	const self = this
 
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// render_level
 		const render_level = options.render_level || 'full'
 
@@ -141,7 +138,6 @@ const add_events = function(self, wrapper) {
 
 			// update / remove
 				if (e.target.matches('input[type="checkbox"]')) {
-
 					const action 		= (e.target.checked===true) ? 'insert' : 'remove'
 					const parsed_value 	= JSON.parse(e.target.value)
 					const changed_key 	= self.get_changed_key(action, parsed_value)
@@ -238,7 +234,8 @@ render_component_check_box.prototype.search = async function() {
 	const self = this
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
 
 	const content_data = await get_content_data_search(self)
 
@@ -318,14 +315,11 @@ render_component_check_box.prototype.search = async function() {
 * @return
 */
 const get_content_data_edit = async function(self) {
-	
+
 	const value 		= self.data.value
 	const datalist		= self.data.datalist || []
 	const mode 			= self.mode
 	const is_inside_tool= self.is_inside_tool
-
-		console.log("++++++ datalist:",datalist);
-		console.log("++++++ self:",self);
 
 	const fragment = new DocumentFragment()
 
