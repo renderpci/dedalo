@@ -3631,10 +3631,6 @@ abstract class component_common extends common {
 						// Resolve indirect values and exec fallback lang when empty
 							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
 							switch (true) {
-								case $modelo_name==='component_text_area':
-									// Resolve value with component
-									$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', DEDALO_DATA_LANG, $row->section_tipo, $row->section_id, null, null);
-									break;
 								case in_array($modelo_name, $components_with_relations):
 									// Resolve value from locator
 									$value_locators = $value;
