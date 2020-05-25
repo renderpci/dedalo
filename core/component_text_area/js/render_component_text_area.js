@@ -529,6 +529,8 @@ const get_custom_buttons = (self, i, get_service) => {
 * @param instance self
 * @param int i
 *	self data element from array of values
+* @param function get_service
+*	select and return current service
 * @return object custom_events
 */
 const get_custom_events = (self, i, get_service) => {
@@ -872,13 +874,12 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 	self.node[0].appendChild(layer_selector)
 
 	return fragment
-};//end layer_selector
-
+}//end render_layer_selector
 
 
 
 /**
-*  LAYER_SELECTOR
+* RENDER_PAGE_SELECTOR
 * @return
 */
 const render_page_selector = function(self, data_tag, tag_id, service){
@@ -966,8 +967,7 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 	})
 
 	return
-};//end layer_selector
-
+}//end render_page_selector
 
 
 

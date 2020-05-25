@@ -67,6 +67,8 @@ export const component_text_area = function(){
 
 /**
 * TAGS_TO_HTML
+* Parses Dédalo server side tags to html tags
+* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />' 
 */
 component_text_area.prototype.tags_to_html = function(value) {
 
@@ -90,7 +92,7 @@ component_text_area.prototype.set_value = async function(value) {
 	
 	const self = this
 
-	const changed_data =  Object.freeze({
+	const changed_data = Object.freeze({
 		action	: 'update',
 		key		: value.key,
 		value	: value.value
@@ -100,7 +102,9 @@ component_text_area.prototype.set_value = async function(value) {
 		refresh 	 : true
 	})
 
+	return true
 }//end set_value
+
 
 
 /**
@@ -150,16 +154,11 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 
 	const self = this
 
-	const cloned_text = document.createElement('div')
-	// cloned_text.innerHTML = html_value
-	cloned_text.insertAdjacentHTML('afterbegin', html_value);
+	// clone text. Avoid interactions between html nodes
+		const cloned_text = document.createElement('div')	
+			  cloned_text.insertAdjacentHTML('afterbegin', html_value);
 
-	//const start = new Date().getTime();
-
-	// Clone to avoid affect existing DOM elements
-	// const cloned_text = container.cloneNode(true)
-
-	// SECTION TAGS (STRUCT)
+	// section tags (struct)
 		// Iterate all section elements
 		const section_elements 			= cloned_text.getElementsByTagName('section')
 		const ar_section_id 			= []
@@ -174,11 +173,11 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				const tag_id 		= section_elements[i].dataset.tag_id
 				const state 		= section_elements[i].dataset.state
 				const label 		= section_elements[i].dataset.label
-				const data 		= section_elements[i].dataset.data
+				const data 			= section_elements[i].dataset.data
 				// Compose Dédalo tags
-				const tag_in  	= self.build_data_tag('structIn', tag_id, state, label, data)
-				const tag_out 	= self.build_data_tag('structOut', tag_id, state, label, data)
-				const final_string= tag_in + section_elements[i].innerHTML + tag_out
+				const tag_in  		= self.build_data_tag('structIn', tag_id, state, label, data)
+				const tag_out 		= self.build_data_tag('structOut', tag_id, state, label, data)
+				const final_string 	= tag_in + section_elements[i].innerHTML + tag_out
 
 				// Replaces tag content string with new created
 				section_elements[i].innerHTML = final_string
@@ -202,8 +201,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 			}
 		}
 
-
-	// REFERENCE TAGS
+	// reference tags
 		// Iterate all reference elements
 		const reference_elements = cloned_text.getElementsByTagName('reference')
 		if (reference_elements) {
@@ -273,40 +271,40 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 			}
 		}//end if (image_elements)
 
+	// temporal elements. Remove after use
+		let temp_elements = []
 
-	let temp_elements = []
+		// remove temporal elements (h2)
+			temp_elements = cloned_text.getElementsByTagName('h2')
+			const h2_len = temp_elements.length
+			for (let i = h2_len - 1; i >= 0; i--) {
+				temp_elements[i].remove()
+			}
 
-	// REMOVE TEMPORAL ELEMENTS
-	temp_elements = cloned_text.getElementsByTagName('h2')
-	const h2_len = temp_elements.length
-		for (let i = h2_len - 1; i >= 0; i--) {
-			temp_elements[i].remove()
-		}
+		// remove temporal header (toc)
+			temp_elements = cloned_text.getElementsByTagName('header')
+			const header_len = temp_elements.length
+			for (let i = header_len - 1; i >= 0; i--) {
+				temp_elements[i].remove()
+			}
 
-	// REMOVE TEMPORAL HEADER (TOC)
-	temp_elements = cloned_text.getElementsByTagName('header')
-	const header_len = temp_elements.length
-		for (let i = header_len - 1; i >= 0; i--) {
-			temp_elements[i].remove()
-		}
+		// remove fake caret
+			temp_elements = cloned_text.getElementsByTagName('caret')
+			const caret_len = temp_elements.length
+			for (let i = caret_len - 1; i >= 0; i--) {
+				temp_elements[i].remove()
+			}
 
-	// REMOVE FAKE CARET
-	temp_elements = cloned_text.getElementsByTagName('caret')
-	const caret_len = temp_elements.length
-		for (let i = caret_len - 1; i >= 0; i--) {
-			temp_elements[i].remove()
-		}
-
-	// REMOVE <p> (And change </p> by <br>)
-	temp_elements = cloned_text.getElementsByTagName("p")
-	const p_len = temp_elements.length
-		for (let i = p_len - 1; i >= 0; i--) {
-			// Add tag <br> after </p>
-			let new_element = document.createElement("br")
-			temp_elements[i].parentNode.insertBefore(new_element, temp_elements[i].nextSibling);
-			// Unwrap tag p content (removes tags and leaves only contents)
-			unwrap_element(temp_elements[i]);
-		}
+		// remove <p> (and change </p> by <br>)
+			temp_elements = cloned_text.getElementsByTagName("p")
+			const p_len = temp_elements.length
+			for (let i = p_len - 1; i >= 0; i--) {
+				// Add tag <br> after </p>
+				let new_element = document.createElement("br")
+				temp_elements[i].parentNode.insertBefore(new_element, temp_elements[i].nextSibling);
+				// Unwrap tag p content (removes tags and leaves only contents)
+				unwrap_element(temp_elements[i]);
+			}
 
 
 	if(SHOW_DEBUG===true) {
@@ -326,6 +324,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 * @return
 */
 const unwrap_element = function(el) {
+	
 	// get the element's parent node
 	const parent = el.parentNode;
 
@@ -334,6 +333,8 @@ const unwrap_element = function(el) {
 
 	// remove the empty element
 	parent.removeChild(el);
+
+	return true
 }//end unwrap_element
 
 
@@ -447,22 +448,26 @@ component_text_area.prototype.update_tag = function(options) {
 
 /**
 * BUILD_DATA_TAG
-* Unified way of create dedalo custom tags from javascript
+* Unified way of create Dedalo internal custom tags from javascript
+* i.e. '[index-d-7--data::data][/index-d-7--data::data]' 
 * @return string tag
 */
 component_text_area.prototype.build_data_tag = function(type, tag_id, state, label, data) {
 
 	const self = this
 
-	const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","referenceIn","referenceOut"]
+	// check tag type
+		const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","referenceIn","referenceOut"]
 		if (valid_types.includes(type)===false) {
-			console.log("[build_data_tag] Invalid tag type:",type);
-			alert("[build_data_tag] Invalid tag type: " + type)
+			console.warn("[component_text_area.build_data_tag] Invalid tag type:", type);
+			alert("[component_text_area.build_data_tag] Invalid tag type: " + type)
 			return false
 		}
 
-	// Bracket_in is different for close tag
-	const bracket_in = (type.indexOf("Out")!==-1) ? "[/" : "["
+	// bracket_in. Is different for close tag
+		const bracket_in = (type.indexOf("Out")!==-1)
+			? "[/"
+			: "["
 
 	// Removes sufixes 'In' and 'Out'
 	const type_name = type.replace(/In|Out/, '')

@@ -294,7 +294,7 @@ component_common.prototype.save = async function(changed_data) {
 						if (api_response.result) {
 							const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
 							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
-							console.log(`[component_common.save] action:'${changed_data.action}' lang:'${self.context.lang}', key:'${changed_data.key}', value:'${changed_data_value}'`);
+							console.log(`[component_common.save] action:'${changed_data.action}' lang:'${self.context.lang}', key:'${changed_data.key}', value:`, changed_data_value);
 							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
 							console.log("[component_common.save] api_response:", api_response);
 						}else{
@@ -419,9 +419,8 @@ component_common.prototype.update_datum = async function(api_response) {
 
 	const data_length = data_to_change.length
 	for (let i = data_length - 1; i >= 0; i--) {
-		const current_data = data_to_change[i]
-		const index_to_delete = self.datum.data.findIndex(item => item.section_id === current_data.section_id && item.tipo === current_data.tipo)
-
+		const current_data = data_to_change[i]			
+		const index_to_delete = self.datum.data.findIndex(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id)
 		if(SHOW_DEBUG===true) {
 			console.log(`:---- [update_datum] DELETE data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
 		}
@@ -453,10 +452,12 @@ component_common.prototype.update_datum = async function(api_response) {
 		const ar_instances = instances.get_all_instances()
 		for (let i = data_length - 1; i >= 0; i--) {
 			const current_data = data_to_change[i]
-			const current_instance = ar_instances.find(item => item.section_id === current_data.section_id
-				&& item.tipo === current_data.tipo
-				&& item.section_tipo === current_data.section_tipo)
-			current_instance.data = self.datum.data.find(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id) || {}
+			const current_instance = ar_instances.find(item =>
+				   item.tipo===current_data.tipo
+				&& item.section_tipo===current_data.section_tipo
+				&& item.section_id==current_data.section_id
+			)
+			current_instance.data = self.datum.data.find(item => item.tipo===current_data.tipo && item.section_id==current_data.section_id) || {}
 		}
 
 	// check data

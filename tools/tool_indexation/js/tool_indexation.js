@@ -1,15 +1,20 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // import
-	import {data_manager} from '../../../common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../../common/js/instances.js'
-	import {common} from '../../../common/js/common.js'
-	import {ui} from '../../../common/js/ui.js'
-	import {tool_common} from '../../../tool_common/js/tool_common.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {common} from '../../../core/common/js/common.js'
+	import {ui} from '../../../core/common/js/ui.js'
+	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation, add_component} from './render_tool_indexation.js'
 
 
 
 /**
-* tool_indexation
+* TOOL_INDEXATION
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_indexation = function () {
@@ -56,9 +61,6 @@ tool_indexation.prototype.init = async function(options) {
 		self.trigger_url 	= DEDALO_CORE_URL + "/tools/tool_indexation/trigger.tool_indexation.php"
 		self.lang 			= options.lang // page_globals.dedalo_data_lang
 		self.langs 			= page_globals.dedalo_projects_default_langs
-		self.source_lang 	= options.caller.lang
-		self.target_lang 	= null
-
 
 	// call the generic commom tool init
 		const common_init = tool_common.prototype.init.call(this, options);

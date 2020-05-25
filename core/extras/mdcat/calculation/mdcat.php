@@ -233,6 +233,7 @@
         $opt    = $options->options;
 
 		$numero = $data->numero;
+        error_log('------ to_euros numero: '.json_encode($options));
 
         $total = $numero / 166.386;
 

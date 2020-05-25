@@ -231,8 +231,9 @@ class dd_core_api {
 				// save the new data to the component
 					$component->Save();
 
+				// force reacalculate dato
 					$dato = $component->get_dato();
-
+	
 				// element json
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 	= true;

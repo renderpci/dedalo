@@ -127,7 +127,7 @@ export const service_tinymce = function() {
 		}
 
 		return custom_buttons
-	};//end add_editor_buttons
+	}//end add_editor_buttons
 
 
 
@@ -158,7 +158,7 @@ export const service_tinymce = function() {
 				if (custom_events.focus) {
 					custom_events.focus(evt, {})
 				}
-			});//end focus event
+			})//end focus event
 
 
 		// blur event
@@ -170,7 +170,7 @@ export const service_tinymce = function() {
 						isDirty : editor.isDirty()
 					})
 				}
-			});//end blur event
+			})//end blur event
 
 
 		// click event
@@ -180,7 +180,7 @@ export const service_tinymce = function() {
 
 					})
 				}
-			});//end click event
+			})//end click event
 
 
 		// MouseUp
@@ -190,7 +190,7 @@ export const service_tinymce = function() {
 						selection : editor.selection.getContent({format:'text'})
 					})
 				}
-			});//end click event
+			})//end click event
 
 
 		// NodeChange
@@ -201,7 +201,7 @@ export const service_tinymce = function() {
 			// 		// })
 			// 		console.log("NodeChange evt", evt);
 			// 	}
-			// });//end click event
+			// })//end click event
 
 
 		// KeyPress
@@ -264,6 +264,9 @@ export const service_tinymce = function() {
 
 
 
+	/**
+	* SET_CONTENT
+	*/
 	this.set_content = function(html){
 
 		const self = this
@@ -281,7 +284,7 @@ export const service_tinymce = function() {
 		self.caller.save_value(self.key, value)
 
 		return true
-	}
+	}//end set_content
 
 
 
@@ -293,10 +296,13 @@ export const service_tinymce = function() {
 
 		const self = this
 
+			// console.log("self:",self);
+			// console.log("self.editor:",self.editor);
+
 		const editor_content_data = self.editor.getBody();
 
 		return editor_content_data
-	};//end get_editor_content_data
+	}//end get_editor_content_data
 
 
 
