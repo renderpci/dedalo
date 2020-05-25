@@ -32,10 +32,16 @@
 
 		// Value
 		// $value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-		$value = $this->get_dato();
+		$value 		= $this->get_dato();
+		$data_list 	= $this->get_data_list();
 
 		// data item
 		$item  = $this->get_data_item($value);
+
+		// data_list
+		if (isset($data_list) && !empty($data_list)) {
+			$item->datalist = $data_list;
+		}
 
 		$data[] = $item;
 

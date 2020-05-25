@@ -49,12 +49,16 @@ class state extends widget_common {
 				default:
 					break;
 			}
+
 			// every path has a object with the component and section to locate the final component with the data
 			$result = [];
 			foreach ($ar_paths as $path) {
+				// get the last path, this will be the component the call to the list (select / radio_button)
+				$last_path		= end($path);
+
 				// resolve the path with all levels and get the data of the final component.
 				$data_with_path = search::get_data_with_path($path, $ar_locator);
-				$last_path		= end($path);
+
 				// $data_with_path has all locators of every level of the path, we need select the last component of the path
 				// this last compoment that has the usable locators for state
 				$path_result = array_find($data_with_path, function($item) use($last_path){
@@ -74,7 +78,9 @@ class state extends widget_common {
 				$ar_value	= $path_result->value;
 				if (empty($ar_value) ) {
 					$current_result = new stdClass();
-						// $current_result->label 	= '';
+						$label_component = ($section==='dd501') ? 'dd503' :'dd185';
+
+						$current_result->label 	= $this->get_label($locator, $label_component);;
 						$current_result->value 	= 0;
 						$current_result->lang 	= $translatable === 'si' ? null : 'lg-nolan';
 						$current_result->id		= $last_path->var_name;
@@ -92,26 +98,28 @@ class state extends widget_common {
 						// Status, the list contoled by users
 						case 'dd174':
 							$situation_value = $this->get_value($locator,'dd92');
+							$current_result->id			= $last_path->var_name;
+							$current_result->lang 		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
+							$current_result->value 		= $situation_value;
+							$current_result->locator	= $locator;
+							$current_result->column		= 'situation';
+							$current_result->type 		= 'detail';
 							// $current_result->label 	= $this->get_label($locator,'dd185');
-							$current_result->value 	= $situation_value;
-							$current_result->lang 	= isset($locator->lang) ? $locator->lang : 'lg-nolan';
-							$current_result->id		= $last_path->var_name;
-							$current_result->column	= 'situation';
-							$current_result->type 	= 'detail';
-							$current_result->n 		= $translatable==='si' ? count($project_langs) : 1;
+							$current_result->n 			= $translatable==='si' ? count($project_langs) : 1;
 							break;
 
 						// Status, the list controled by admins
 						case 'dd501':
 							$state_value = $this->get_value($locator,'dd83');
 
+							$current_result->id			= $last_path->var_name;
+							$current_result->lang 		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
+							$current_result->value 		= $state_value;
+							$current_result->locator	= $locator;
+							$current_result->column		= 'state';
+							$current_result->type 		= 'detail';
 							// $current_result->label 	= $this->get_label($locator,'dd503');
-							$current_result->value 	= $state_value;
-							$current_result->lang 	= isset($locator->lang) ? $locator->lang : 'lg-nolan';
-							$current_result->id		= $last_path->var_name;
-							$current_result->column	= 'state';
-							$current_result->type 	= 'detail';
-							$current_result->n 		= $translatable==='si' ? count($project_langs) : 1;
+							$current_result->n 			= $translatable==='si' ? count($project_langs) : 1;
 							break;
 					}
 					// add all item to $result
@@ -136,6 +144,7 @@ class state extends widget_common {
 						$current_data->id 		= $item->id;
 						$current_data->lang 	= $item->lang;
 						$current_data->value 	= $item->value;
+						$current_data->locator 	= $item->locator;
 						$current_data->column 	= $item->column;
 						$current_data->type		= $item->type;
 
@@ -210,5 +219,52 @@ class state extends widget_common {
 
 		return $value;
 	}//end get_value
+
+
+	/**
+	* get_data_list
+	* @return array objects
+	*/
+	public function get_data_list() {
+
+		$ipo 			= $this->ipo;
+		$data_list = [];
+
+		// every state has a ipo that come from structure (input, process , output), state don't use process.
+		foreach ($ipo as $key => $current_ipo) {
+
+			$input 		= $current_ipo->input;
+			// get the paths to the source data
+			$ar_paths 	= $input->paths;
+
+			// every path has a object with the component and section to locate the final component
+			foreach ($ar_paths as $path) {
+				// get the last path, it point to the list
+				$last_path		= end($path);
+				$section_tipo 	= $last_path->section_tipo;
+				$component_tipo = $last_path->component_tipo;
+				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				// create the component without any section_id, we only want the list fo values.
+				$component = component_common::get_instance($model_name,
+															$component_tipo,
+															null,
+															'list',
+															DEDALO_DATA_NOLAN,
+															$section_tipo);
+
+				// get the list of values
+				$ar_list_of_values = $component->get_ar_list_of_values2();
+				// format the list with the widget name and the array key of the ipo
+				$list = array_map(function($item) use($key){
+					$item->widget 	= get_class($this);
+					$item->key  	= $key;
+					return $item;
+				},$ar_list_of_values->result);
+
+				$data_list = array_merge($data_list, $list);
+			}
+		}
+		return $data_list;
+	}//end get_data_list
 
 }//end state

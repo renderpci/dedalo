@@ -202,7 +202,7 @@ const get_value_element = (i, data, values_container, self) => {
 																&& item.column === 'situation'
 																&& item.lang === lang
 																&& item.type ==='detail')
-					// build the label with the lang
+					// build the label with the lang name
 					const label_situation = ui.create_dom_element({
 						element_type	: 'label',
 						inner_html 		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
@@ -215,16 +215,27 @@ const get_value_element = (i, data, values_container, self) => {
 						inner_html 		: (situation_items_data) ? situation_items_data.value+'%' : '0%',
 						parent 			: situation_detail
 					})
+					// build the label with the list name
+					const datalist_item = (situation_items_data)
+						? self.datalist.find(item => item.value.section_tipo === situation_items_data.locator.section_tipo
+												&& item.value.section_id === situation_items_data.locator.section_id)
+						: {label: ''}
+
+					const label_list_situation = ui.create_dom_element({
+						element_type	: 'label',
+						inner_html 		: datalist_item.label,
+						parent 			: situation_detail
+					})
 					// save the node for reuse later in 'update_widget_value' event
 					ar_nodes.push({
-						node_label 	: label_situation,
-						node_value 	: item_situation,
-						type 		: 'detail',
-						value 		: (situation_items_data) ? situation_items_data.value : 0,
-						lang 		: lang,
-						id			: output_item.id,
-						key 		: i,
-						column		: 'situation'})
+						node_value 			: item_situation,
+						node_label_list 	: label_list_situation,
+						type 				: 'detail',
+						value 				: (situation_items_data) ? situation_items_data.value : 0,
+						lang 				: lang,
+						id					: output_item.id,
+						key 				: i,
+						column				: 'situation'})
 				} // end for (let j = 0; j < situation_length; j++)
 			// State
 				// check if the component is translatable, with the first item in the data of the current column
@@ -298,16 +309,27 @@ const get_value_element = (i, data, values_container, self) => {
 						inner_html 		: (state_item_data) ? state_item_data.value+'%' : '0%',
 						parent 			: detail
 					})
+					// build the label with the list name
+					const datalist_item_status = (state_item_data)
+						? self.datalist.find(item => item.value.section_tipo === state_item_data.locator.section_tipo
+												&& item.value.section_id === state_item_data.locator.section_id)
+						: {label: ''}
+
+					const label_list_state = ui.create_dom_element({
+						element_type	: 'label',
+						inner_html 		: datalist_item_status.label,
+						parent 			: detail
+					})
 					// save the node for reuse later in the event 'update_widget_value'
 					ar_nodes.push({
-						node_label 	: label_state,
-						node_value 	: item_state,
-						type 		: 'detail',
-						value 		: (state_item_data) ? state_item_data.value : 0,
-						lang 		: lang,
-						id			: output_item.id,
-						key 		: i,
-						column		: 'state'
+						node_value 			: item_state,
+						node_label_list 	: label_list_state,
+						type 				: 'detail',
+						value 				: (state_item_data) ? state_item_data.value : 0,
+						lang 				: lang,
+						id					: output_item.id,
+						key 				: i,
+						column				: 'state'
 					})
 				}// end for (let k = 0; k < item_length; k++)
 		}// end for (let o = 0; o < output.length; o++)
@@ -329,8 +351,20 @@ const get_value_element = (i, data, values_container, self) => {
 				// set the new value
 				if(new_data){
 					node.node_value.innerHTML = new_data.value +'%'
+					if(node.type==='detail'){
+						const datalist_item = (new_data.locator)
+							? self.datalist.find(item => item.value.section_tipo === new_data.locator.section_tipo
+													&& item.value.section_id === new_data.locator.section_id)
+							: {label: ''}
+
+						node.node_label_list.innerHTML = datalist_item.label
+					}
+					
 				}else{
 					node.node_value.innerHTML = '0%'
+					if(node.type==='detail'){
+						node.node_label_list.innerHTML = ''
+					}
 				}// end if(new_data){
 			}// end for (let o = node_length - 1; o >= 0; o--)
 		})// end event_manager.subscribe('update_widget_value_'
