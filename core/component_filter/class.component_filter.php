@@ -643,43 +643,6 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		$component  	= component_common::get_instance(get_called_class(),
-														 $tipo,
-														 $parent,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
-
-		if (!empty($value)) {
-			if($ar_val = json_decode($value)){
-				$component->set_dato($ar_val);
-			}
-		}
-
-		$valor = $component->get_valor();
-
-		return $valor;
-	}#end render_list_value
-
-
-
-	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
 	* Note that the first action is always load dato to avoid save empty content
