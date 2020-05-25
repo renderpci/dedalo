@@ -236,7 +236,7 @@ const print_response = (container, api_response) => {
 	// clean (eraser)
 		const eraser = ui.create_dom_element({
 			element_type : 'span',
-			class_name 	 : "clean",
+			class_name 	 : "button reset eraser",
 			parent 		 : container
 		})
 		eraser.addEventListener("mouseup", function(e){
@@ -282,5 +282,129 @@ const buttons = async function(self) {
 
 	return buttons
 }//end buttons
+
+
+
+/**
+* BUILD_FORM
+*/
+export const build_form = async function(widget_object) {
+
+	const self = this
+
+		console.log("widget_object:",widget_object);  
+
+	const trigger			= widget_object.trigger
+	const body_info			= widget_object.body_info
+	const body_response		= widget_object.body_response
+	const print_response	= widget_object.print_response
+
+	const inputs 			= widget_object.inputs
+
+	console.log("body_info:",body_info);
+	// create the form
+		const form_container = ui.create_dom_element({
+			element_type : "form",
+			class_name 	 : "form_container",			
+			parent 		 : body_info
+		})
+		form_container.addEventListener("submit", async function(e){
+			e.preventDefault()
+
+			if (confirm( (get_label["seguro"] || "Sure?") )) {
+
+				// check mandatory values
+					for (let i = 0; i < input_nodes.length; i++) {
+						if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
+							input_nodes[i].focus()
+							input_nodes[i].classList.add("empty")
+							return
+						}
+					}
+
+				// submit data
+					form_container.classList.add("lock")
+					body_response.classList.add("preload")			
+
+					// colect values from inputs
+					const values = input_nodes.map((el)=>{
+						return {
+							name  : el.name,
+							value : el.value
+						}
+					})
+
+					const options = (widget_object.trigger.options)
+						? Object.assign(widget_object.trigger.options, values)
+						: values			
+
+
+					// data_manager
+					const api_response = await data_manager.prototype.request({
+						body : {
+							dd_api		: widget_object.trigger.dd_api,
+							action 		: widget_object.trigger.action,
+							options 	: options
+						}
+					})
+					// console.log("api_response:",api_response);
+
+					print_response(body_response, api_response)
+
+					form_container.classList.remove("lock")
+					body_response.classList.remove("preload")
+			}
+		})	
+
+	// form inputs
+		const input_nodes = []
+		for (let i = 0; i < inputs.length; i++) {
+			
+			const input = inputs[i]
+
+			const class_name = input.mandatory
+				? "mandatory"
+				: ""
+
+			const input_node = ui.create_dom_element({
+				element_type : "input",
+				type 		 : input.type,
+				name 		 : input.name,
+				placeholder  : input.label,
+				class_name 	 : class_name,
+				parent 		 : form_container
+			})
+			input_node.addEventListener("keyup", function(){
+				if (this.value.length>0) {
+					this.classList.remove("empty")
+				}
+			})
+
+			input_nodes.push(input_node)
+		}
+
+	// button submit
+		const button_submit = ui.create_dom_element({
+			element_type : "button",
+			class_name 	 : "light",
+			text_content : "OK",
+			parent 		 : form_container
+		})
+		button_submit.addEventListener("click", function(){
+			// if (confirm( (get_label["seguro"] || "Sure?") )) {
+
+			// 	for (let i = 0; i < input_nodes.length; i++) {
+			// 		if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
+			// 			input_nodes[i].focus()
+			// 			input_nodes[i].classList.add("empty")
+			// 			return
+			// 		}
+			// 	}
+			// }
+		})
+
+		
+	return form_container
+}//end build_form
 
 
