@@ -248,38 +248,6 @@ abstract class common {
 
 
 	/**
-	* LOAD MATRIX DATA
-	* Get data once from matrix about parent, dato, lang
-	*//*
-	protected function load_matrix_data() {
-
-		if( empty($this->id) || intval($this->id)<1 ) {
-
-			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin id)
-			#$this->bl_loaded_matrix_data = true;
-
-			return NULL;
-		}
-
-		if( !$this->bl_loaded_matrix_data ) {
-		# Experimental (si ya se ha intentado cargar pero con sin id, y ahora se hace con id, lo volvemos a intentar)
-		#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->id)<1) ) {
-
-			$matrix_table 		= common::get_matrix_table_from_tipo($this->section_tipo);
-			$RecordObj_matrix	= new RecordObj_matrix($matrix_table,$this->id);
-
-			$this->parent 		= $RecordObj_matrix->get_parent();
-			$this->dato 		= $RecordObj_matrix->get_dato();
-			$this->lang 		= $RecordObj_matrix->get_lang();
-
-			$this->bl_loaded_matrix_data = true;
-		}
-	}
-	*/
-
-
-
-	/**
 	* GET MATRIX_TABLE FROM TIPO
 	* @param string $tipo
 	* @return string $matrix_table
