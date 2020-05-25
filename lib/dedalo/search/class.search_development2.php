@@ -2976,6 +2976,11 @@ class search_development2 {
 				$target_section_tipo  = $locator->section_tipo;
 				$target_section_id 	  = $locator->section_id;
 
+				// avoid save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO)
+				if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO || $target_section_tipo===DEDALO_SECTION_USERS_TIPO) {
+					continue;
+				}
+
 				$ar_insert_values[]   = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
 			}
 			# Exec query (all records at once)
