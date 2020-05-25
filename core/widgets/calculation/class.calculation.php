@@ -10,22 +10,110 @@ class calculation extends widget_common {
 
 	/**
 	* GET_DATO
+	* @param array ipo
+	* can be configurate with need of the widget
+	* for standard calculations data_souce need to be configurated with two params:
+	* 	@param object $input
+	* 	indicate the way to get the data from sections and components
+	* 	data will be calculated before apply the logic
+	* 	the result of the obtain the data return components with var_name defined
+	* 	that will be used to convert to php variables
+	* 	@param object $process
+	* 	indicate the where can find the method to be used for calculate the data
+	* 	file indicate the file with the functions
+	* 	fn indicate the funtion name inside the file
+	* 	options are params that will be send to the function with the result data
+	* 	example of structure config for calcultaion widget with the logic parameters
+	* 	@param array $output
+	* 	the output format to be parse to html, every object will be a span node
+	* 	with label_before, data, label_after
+	*  "widgets": [
+	*    {
+	*      "widget_name": "calculation",
+	*      "widget_info": "sum calc.",
+	*      "path": "/calculation",
+	*      "ipo": [
+	*        {
+	*          "input": {
+	*            "section_tipo": "current",
+	*            "section_id": "current",
+	*            "filter": false,
+	*            "value": "sum",
+	*            "components": [
+	*              {
+	*                "tipo": "test139",
+	*                "var_name": "number"
+	*              },
+	*              {
+	*                "tipo": "test140",
+	*                "var_name": "divisor"
+	*              }
+	*            ]
+	*          },
+	*          "process": {
+	*            "file": "/mdcat/calculation/mdcat.php",
+	*            "fn": "to_euros",
+	*            "options": {
+	*              "label": true,
+	*              "years": true,
+	*              "months": true,
+	*              "days": true,
+	*              "separator": ", ",
+	*              "total": false
+	*            }
+	*          },
+	*		"output": [
+	*      		{
+	*           "id": "total",
+	*            "value": "float",
+	*            "label_after": "euros"
+	*           }
+	*         ]
+	*	  ]
+	*  }
 	* @return
 	*/
 	public function get_dato() {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
-		$data_source 	= $this->data_source;
+		$ipo 			= $this->ipo;
 
-		$dato = $this->preprocess_formula();
+		$dato = [];
+		foreach ($ipo as $key => $ipo) {
 
-		dump($dato, ' result ++ '.to_string());
-		//
-		// $dato = new stdClass();
+			// input
+			$data_input = $this->resolve_data($ipo->input);
+
+			// process
+			if(isset($ipo->process) ){
+				$process = $ipo->process;
+				$result = $this->resolve_logic($process, $data_input);
+			}
+
+			// output
+			foreach ($ipo->output as $data_map) {
+				$current_id = $data_map->id;
+				$found = array_find($result,function($item) use($current_id){
+					return $item->id===$current_id;
+				});
+				if ($found) {
+
+					$value = $found->value;
+
+					$current_data = new stdClass();
+						$current_data->widget 	= get_class($this);
+						$current_data->key  	= $key;
+						$current_data->id 		= $current_id;
+						$current_data->value 	= $value;
+
+					$dato[] = $current_data;
+				}
+			}
+		}
+
 		return $dato;
 	}//end get_dato
-
 
 
 	/**
@@ -34,7 +122,7 @@ class calculation extends widget_common {
 	*	Propiedades formula->data
 	* @return object $data_resolved
 	*/
-	public function resolve_data_for_formula($data) {
+	public function resolve_data($data) {
 
 		if(!isset($data)) return false;
 
@@ -215,7 +303,7 @@ class calculation extends widget_common {
 							#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
 					$data_resolved->false = $valor_from_ar_locators->result;
 					break;
-				case isset($data->flase):
+				case isset($data->false):
 					$data_resolved->false = $data->true;
 					break;
 			}
@@ -225,7 +313,7 @@ class calculation extends widget_common {
 		#dump($data_resolved, ' data_resolved ++ '.to_string());
 
 		return $data_resolved;
-	}//end resolve_data_for_formula
+	}//end resolve_data
 
 
 
@@ -297,60 +385,6 @@ class calculation extends widget_common {
 
 		return $result;
 	}//end exec_dato_filter_data
-
-
-
-	/**
-	* APPLY_FORMULA
-	* @return
-	*/
-	public function preprocess_formula() {
-		$formula 	= $this->data_source;
-			//dump($formula, ' formula ++ '.to_string());
-
-		foreach ($formula as $current_formula) {
-			$data 		= $this->resolve_data_for_formula($current_formula->data);
-			//$rules 		= $current_formula->rules;
-
-			$preprocess_formula 		= new StdClass;
-			$preprocess_formula->data 	= $data;
-			if(isset($current_formula->rules) ){
-				$preprocess_formula->rules 	= $current_formula->rules;
-			}
-			if(isset($current_formula->custom) ){
-				$preprocess_formula->custom = $current_formula->custom;
-			}
-			if(isset($current_formula->result) ){
-				$preprocess_formula->result = $current_formula->result;
-			}
-			break;
-		}
-
-		return $preprocess_formula;
-	}//end apply_formula
-
-
-	/**
-	* GET_AR_COMPONENTS_FORMULA
-	* @return array($ar_components_formula)
-	*/
-	public function get_ar_components_formula(){
-
-		$formula 	= $this->data_source;
-			//dump($formula, ' formula ++ '.to_string());
-		$ar_components_formula =[];
-
-		foreach ($formula as $current_formula) {
-			$ar_components = $current_formula->data->components;
-			foreach ($ar_components as $current_component) {
-				$ar_components_formula[] = $current_component->tipo;
-			}
-		}
-
-		return $ar_components_formula;
-	}//end get_ar_components_formula
-
-
 
 
 	/**
@@ -562,6 +596,56 @@ class calculation extends widget_common {
 
 		return $ar_values;
 	}//end get_values_from_component_tipo
+
+
+
+	/**
+	* resolve_logic
+	* @param object $process
+	* the paths to the file and method that will be used for process the calculation
+	* @param object $data
+	* the pre-calculated data, with the name of the variable and the value
+	* {"number":5}
+	* @return
+	*/
+	private function resolve_logic($process, $data) {
+		// path to the file with the functions, defined in structure
+		$file 	= DEDALO_EXTRAS_PATH . $process->file;
+		// function name, defined in structure
+		$fn		= $process->fn;
+		// merge the process->options defined in structure and the pre-procesed data
+		// in a unique object, for simplify the call
+		$arg 	= (object)[
+			'data' => $data,
+			'options' => $process->options
+		];
+
+		switch ($process->engine) {
+			case 'php':
+			default:
+				// stringify the arguments
+				$arg 	= json_encode($arg);
+				// escape the json slashes, " will be convert to \" it's necesary because the call will be inside a " string
+				$arg 	= addslashes($arg);
+				// escape the total arguments string, \' will be added at begin and end
+				$arg 	= escapeshellarg($arg);
+
+				// command
+					// require load the file with the functions in the path
+					// echo json_encode stringify the result of the method $fn($arg)
+					$command = 'php -r "require(\''.$file.'\'); echo json_encode('.$fn.'('.$arg.'));"';
+
+				// result
+					$result = shell_exec($command);
+				// parse the string result to json.
+					$result = json_decode($result);
+
+				break;
+		}
+
+
+		return $result;
+	}//end resolve_logic
 
 
 }

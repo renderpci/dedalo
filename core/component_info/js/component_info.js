@@ -74,7 +74,7 @@ export const component_info = function(){
 
 		const value = self.data.value
 
-		// self data veification
+		// self data verification
 			if (!value || value.length===0) {
 				return false
 			}
@@ -82,26 +82,24 @@ export const component_info = function(){
 		const widgets_properties = self.context.properties.widgets
 
 		// iterate records
-			const value_length 	= value.length
-			for (let i = value_length - 1; i >= 0; i--) {
-
-				const widget_item = value[i]
-
-				const widget_name 		= widget_item.name
-				const widget_properties = widgets_properties.find(item => item.widget_name===widget_name)
-				const path 				= widget_properties.path
+			for (var i = 0; i < widgets_properties.length; i++) {
+				const current_widget 	= widgets_properties[i]
+				const widget_name 		= current_widget.widget_name
+				const path 				= current_widget.path
 				const widget_id			= self.id + '_'+ widget_name
 
-				const loaded_widget = self.ar_instances.find(item => item.id === widget_id)
+				const loaded_widget 	= self.ar_instances.find(item => item.id === widget_id)
+
+				const widget_value 		= value.filter(item => item.widget === widget_name)
 
 				if(loaded_widget){
-					loaded_widget.value  = widget_item.value
+					loaded_widget.value  = widget_value
 					continue
 				}
 
 				// import widget js file
 				const widget_path = "../../widgets" + path  + "/js/" + widget_name + ".js"
-				
+
 				// import
 				const element_widget = await import(widget_path)
 
@@ -111,18 +109,19 @@ export const component_info = function(){
 					section_id		: self.section_id,
 					lang			: self.lang,
 					mode			: self.mode,
-					value			: widget_item.value
+					value			: widget_value,
+					ipo				: current_widget.ipo
 				}
 
 				// instance
-				const current_widget = new element_widget[widget_name]()
+				const new_widget = new element_widget[widget_name]()
+
 				// init
-				current_widget.init(widget_options)
+				new_widget.init(widget_options)
 
 				// add
-				self.ar_instances.push(current_widget)
+				self.ar_instances.push(new_widget)
 			}//end for loop
-
 
 		return self.ar_instances
 	}//end get_widgets
@@ -135,24 +134,23 @@ export const component_info = function(){
 
 		const self = this
 
-		const value = self.data.value
+		const value = self.data.value || []
 
 		// iterate records
-			const value_length 	= value.length
-			for (let i = value_length - 1; i >= 0; i--) {
+			const widgets_properties = self.context.properties.widgets
+			for (var i = 0; i < widgets_properties.length; i++) {
+				const current_widget 	= widgets_properties[i]
 
-				const widget_item = value[i]
-
-				const widget_name 		= widget_item.name
+				const widget_name 		= current_widget.widget_name
 				const widget_id			= self.id + '_'+ widget_name
 
 				const loaded_widget = self.ar_instances.find(item => item.id === widget_id)
 
+				const widget_value 	= value.filter(item => item.widget === widget_name && item.key === i)
+
 				if(loaded_widget){
-					loaded_widget.value  = widget_item.value
-					event_manager.publish('update_widget_value_'+widget_id, widget_item.value)
-					continue
+					loaded_widget.value  = widget_value
+					event_manager.publish('update_widget_value_'+i+'_'+widget_id, widget_value)
 				}
 			}
-
 	}

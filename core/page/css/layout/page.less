@@ -58,24 +58,39 @@ danger {
 			top: 0;
 			left: 0;
 			position: absolute;
+
 			animation: success_animation_line 2s ease-out;
+			// animation-name: success_animation_line;
+			// animation-duration: 2s;
+			// animation-iteration-count: 1;
+			// animation-timing-function: linear;
+			// animation-fill-mode: forwards;
+
 			width: 0;
 			opacity: 0;
 		}
-	}
-	@keyframes success_animation {
-	    //0%   {background-color: green !important;}
-	    //50%  {background-color: grey;}
-	    //100% {background-color: #F3F3F3 !important;}
-	    from { background-color: green; }
-	    to { background-color: rgb(230, 230, 230); }
-	}
+	}	
+	// @-webkit-keyframes success_animation_line {
+	// 	0%  { width: 1%;   opacity: 0.5; }
+	// 	22% { width: 100%; opacity: 1; }
+	// 	60% { width: 100%; opacity: 1; }
+	// 	100% { width: 100%; opacity: 0; }
+	// }
 	@keyframes success_animation_line {
-	    0%  { width: 1%;   opacity: 0.5; }
-	    22% { width: 100%; opacity: 1; }
-	    60% { width: 100%; opacity: 1; }
-	    100%{ width: 100%; opacity: 0; }
+		0%  { width: 1%;   opacity: 0.5; }
+		22% { width: 100%; opacity: 1; }
+		60% { width: 100%; opacity: 1; }
+		100% { width: 100%; opacity: 0; }
 	}
+	// @keyframes success_animation {
+	// 	//0%   {background-color: green !important;}
+	// 	//50%  {background-color: grey;}
+	// 	//100% {background-color: #F3F3F3 !important;}
+	// 	from { background-color: green; }
+	// 	to { background-color: rgb(230, 230, 230); }
+	// }
+
+
 // loading
 	.loading {
 		opacity: 0.8;

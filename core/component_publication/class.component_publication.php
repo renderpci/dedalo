@@ -29,15 +29,15 @@ class component_publication extends component_relation_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 	}//end __construct
-	
 
-	
+
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
-			
+
 		$dato = $this->get_dato();
 
 		# Test dato format (b4 changed to object)
@@ -45,7 +45,7 @@ class component_publication extends component_relation_common {
 				if (!empty($dato)) foreach ($dato as $key => $value) {
 					if (!empty($value) && !is_object($value)) {
 						if(SHOW_DEBUG===true) {
-							dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));							
+							dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));
 						}
 						debug_log(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true), logger::ERROR);
 						return null;
@@ -57,38 +57,38 @@ class component_publication extends component_relation_common {
 		switch ($this->modo) {
 			case 'diffusion':
 				$valor = 'no';
-				if (!empty($dato)) {				
-					
+				if (!empty($dato)) {
+
 					$object_si = new stdClass();
 						$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
 						$object_si->section_tipo = (string)"dd64";
 
 					$component_locator = reset($dato);
 					$compare_locators  = locator::compare_locators( $component_locator, $object_si, $ar_properties=['section_id','section_tipo']);
-					
+
 					if ($compare_locators===true) {
 						$valor = 'si';
 					}
 				}
 				break;
-			
+
 			default:
 				$valor = null;
-				if (!empty($dato)) {									
+				if (!empty($dato)) {
 
 					# Always run list of values
-					$ar_list_of_values	= $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual				
+					$ar_list_of_values	= $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual
 					$component_locator  = reset($dato);
 					foreach ($ar_list_of_values->result as $key => $item) {
-						
-						$locator = $item->value;											
-						if (true===locator::compare_locators( $component_locator, $locator, $ar_properties=['section_id','section_tipo'])) {						
+
+						$locator = $item->value;
+						if (true===locator::compare_locators( $component_locator, $locator, $ar_properties=['section_id','section_tipo'])) {
 							$valor = $item->label;
 							break;
 						}
 					}
 				}
-				break;				
+				break;
 		}#end switch
 
 
@@ -98,7 +98,7 @@ class component_publication extends component_relation_common {
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
@@ -109,7 +109,7 @@ class component_publication extends component_relation_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -138,7 +138,7 @@ class component_publication extends component_relation_common {
 				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
-		
+
 		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
@@ -164,7 +164,7 @@ class component_publication extends component_relation_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
+
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
@@ -172,42 +172,23 @@ class component_publication extends component_relation_common {
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
-		
+
 		# Use already query calculated values for speed
 		#$ar_records   = (array)json_handler::decode($value);
 		#if (!empty($ar_records)) {
 		#	$component->set_dato($ar_records);
-		#}		
+		#}
 		$component->set_identificador_unico('2'.$component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-	
+
 		if ($modo==='list') {
 			$result = $component->get_valor($lang);
 		}else{
 			$result = $component->get_html();
 		}
-		
-		return  $result;		
+
+		return  $result;
 	}#end render_list_value
 
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*/
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;		
-	}//end get_valor_list_html_to_save
 
 
 

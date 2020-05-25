@@ -267,16 +267,17 @@ const get_input_element_edit = async (i, current_value, inputs_container, self) 
 				// remove the first page / default page of the library
 				PDFViewerApplicationOptions.set('defaultUrl', '');
 				PDFViewerApplicationOptions.set('locale', 'es-ES');
-				console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions);
+					// console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions);
 
 				// load the pdf in the viewer
 				self.pdf_viewer.open(pdf_url).then(function (pdfDocument) {
 					// PDFViewerApplicationOptions.document.webL10n.setLanguage('es-ES')
 					// PDFViewerApplicationOptions.set('locale', 'es-ES');
 					// PDFViewerApplicationOptions.locale = 'es-ES'
-					console.log("slef.pdf_viewer.PdfViewer", self.pdf_viewer);
-					console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions.get('locale'));
-
+					if(SHOW_DEBUG===true) {
+						// console.log("slef.pdf_viewer.PdfViewer", self.pdf_viewer);
+						// console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions.get('locale'));
+					}
 					PDFViewerApplicationOptions.set('locale', 'es-ES');
 					// console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
 				});
