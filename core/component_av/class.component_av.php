@@ -683,46 +683,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $value
-	*
-	* In time machine mode (list_tm) image is always calculated
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		#if ($modo==='portal_list_view_mosaic') {
-			$component	= component_common::get_instance(__CLASS__,
-														 $tipo,
-														 $parent,
-														 $modo,
-														 $lang,
-														 $section_tipo);
-			$value 		= $component->get_html();
-		#}
-		/*
-		# Reset posterframe t var to force regenerate
-		preg_match("/t=(.{1,20})'\)/", $value, $output_array);
-		if (isset($output_array[1])) {
-			$value = str_replace($output_array[1], start_time(), $value);
-		}*/
-
-		return $value;
-	}//end render_list_value
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
