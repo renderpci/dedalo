@@ -325,6 +325,15 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 						delete self.paginator
 					}
 
+				// destroy services
+					if (self.services) {
+						const services_length = self.services.length
+						for (let i = self.services.length - 1; i >= 0; i--) {
+							console.log("removed services:", i, services_length);
+							delete self.services[i]
+						}
+					}
+
 				// remove_dom optional
 					if (remove_dom===true) {
 						const remove_nodes = async () => {
