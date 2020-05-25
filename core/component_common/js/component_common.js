@@ -353,9 +353,12 @@ component_common.prototype.save = async function(changed_data) {
 				// remove save_success. after 1000ms, remove wrapper class to avoid issues on refresh
 					setTimeout(()=>{
 						self.node.map(item => {
-							item.classList.remove("save_success")
+							// item.classList.remove("save_success")
+							// allow restart animation. Not set state pause before animation ends (2 secs)							
+							item.style.animationPlayState = "paused";
+							item.style.webkitAnimationPlayState = "paused";
 						})
-					},1000)
+					},2000)
 			}
 		})
 
