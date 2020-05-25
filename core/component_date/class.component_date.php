@@ -1325,48 +1325,6 @@ class component_date extends component_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-			# nothing to do. Value is final value
-		}else{
-			$component 	= component_common::get_instance(__CLASS__,
-														 $tipo,
-													 	 $parent,
-													 	 $modo,
-														 DEDALO_DATA_NOLAN,
-													 	 $section_tipo);
-
-			# Use already query calculated values for speed
-			#$dato = json_handler::decode($value);
-			#$component->set_dato($dato);
-
-			$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-
-			$value = $component->get_html();
-			#$value = $component->get_valor();
-		}
-
-		return $value;
-	}//end render_list_value
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
