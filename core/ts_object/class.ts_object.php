@@ -2,10 +2,10 @@
 /*
 * CLASS TS_OBJECT
 * Manage tesaurus hierarchycal elements. Every element is a section used as thesaurus term
-* 
+*
 */
 class ts_object extends Accessors {
-	
+
 
 	# int (mandatory)
 	protected $section_id;
@@ -17,7 +17,7 @@ class ts_object extends Accessors {
 	protected $options;
 	# string (default 'edit')
 	protected $modo;
-	# int 
+	# int
 	public $order;
 
 	public $ar_elements;
@@ -32,7 +32,7 @@ class ts_object extends Accessors {
 	*	Default 'edit'
 	*/
 	public function __construct( $section_id, $section_tipo, $options=null, $modo='edit' ) {
-		
+
 		$this->section_id   = $section_id;
 		$this->section_tipo = $section_tipo;
 
@@ -56,9 +56,9 @@ class ts_object extends Accessors {
 	* @return string $html
 	*/
 	public function get_html() {
-		
-		#if(SHOW_DEBUG===true) $start_time = start_time();		
-	
+
+		#if(SHOW_DEBUG===true) $start_time = start_time();
+
 		ob_start();
 		include ( dirname(__FILE__) .'/'. get_class() .'.php' );
 		$html = ob_get_clean();
@@ -67,7 +67,7 @@ class ts_object extends Accessors {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
 			#global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		#}
-		
+
 		return (string)$html;
 	}//end get_html
 
@@ -79,7 +79,7 @@ class ts_object extends Accessors {
 	* @return array ar_elements
 	*/
 	public static function get_ar_elements( $section_tipo, $model=false ) {
-		
+
 		$ar_elements = array();
 
 		// Elements are stored in current section > section_list_thesaurus
@@ -104,13 +104,13 @@ class ts_object extends Accessors {
 																				$recursive=false,
 																				$search_exact=true);
 			}
-		}//end if (!isset($ar_children[0])) 
+		}//end if (!isset($ar_children[0]))
 
 
 		# If element exists (section_list_thesaurus) we get element 'propiedades' json value as array
 		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
 		if (isset($ar_children[0])) {
-			
+
 			$section_list_thesaurus_tipo = $ar_children[0];
 
 			# relation map
@@ -127,7 +127,7 @@ class ts_object extends Accessors {
 			*/
 
 			# SUBSTITUTION : When is set $this->options->model as true, we substitute structure propiedades link_children with link_children_model
-			# for look children in other hierarchy component children 
+			# for look children in other hierarchy component children
 			/*
 			if (isset($this->options->model) && $this->options->model===true) {
 				foreach ($ar_elements as $key => $value_obj) {
@@ -155,14 +155,14 @@ class ts_object extends Accessors {
 			    "type": "link_children_model"
 			  }
 			]
-			*/	
+			*/
 			/*
 			if (isset($this->options->model) && $this->options->model===true) {
 
 				$element_children = new stdClass();
 					$element_children->type = 'link_children';
 					$element_children->tipo = null;
-				
+
 					foreach ($ar_propiedades as $key => $value_obj) {
 						if($value_obj->type === 'link_children_model'){
 							$element_children->tipo = $value_obj->tipo;
@@ -176,16 +176,16 @@ class ts_object extends Accessors {
 						#unset($ar_propiedades[$key]);
 					}else{
 						$ar_elements[] = $value_obj;
-					}					
+					}
 				}
 
 				$ar_elements[] = $element_children;
 			}else{
 				$ar_elements = $ar_propiedades;
-			}			
+			}
 			debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 			*/
-		
+
 			foreach ($ar_propiedades as $key => $value_obj) {
 
 				if (!isset($model) && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
@@ -195,18 +195,18 @@ class ts_object extends Accessors {
 						unset($ar_propiedades[$key]);
 					}else if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model') {
 						$value_obj->type = 'link_children';
-					}					
+					}
 				}
 
 				if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_childrens') {
 					$value_obj->type = 'link_children';
 				}
 
-			}//end foreach ($ar_propiedades as $key => $value_obj) 
-			$ar_elements = $ar_propiedades;		
+			}//end foreach ($ar_propiedades as $key => $value_obj)
+			$ar_elements = $ar_propiedades;
 			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
 		}
-	
+
 		return (array)$ar_elements;
 	}//end get_ar_elements
 
@@ -227,7 +227,7 @@ class ts_object extends Accessors {
 			$children_data->modo 			= 'edit';	//'list_thesaurus';
 			$children_data->lang 			= DEDALO_DATA_LANG;
 			$children_data->is_descriptor	= true;
-			$children_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);			
+			$children_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);
 			$children_data->permissions_button_new		= $this->get_permissions_element('button_new');
 			$children_data->permissions_button_delete 	= $this->get_permissions_element('button_delete');
 			$children_data->permissions_indexation 	= $this->get_permissions_element('component_relation_index');
@@ -235,7 +235,7 @@ class ts_object extends Accessors {
 			$children_data->ar_elements 	= array();
 
 		$model = isset($this->options->model) ? $this->options->model : null;
-		
+
 		# ELEMENTS
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
 			#dump($ar_elements, ' $ar_elements ++ '.to_string($children_data));
@@ -255,12 +255,12 @@ class ts_object extends Accessors {
 			if ($children_data->is_descriptor===false && $render_vars->type==='link_children') {
 				continue;
 			}
-			
+
 			# Each element
 			$element_obj = new stdClass();
 				$element_obj->type = $render_vars->type;
 				$element_obj->tipo = $element_tipo;
-				
+
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 				$component 	 = component_common::get_instance($modelo_name,
 															  $element_tipo,
@@ -274,11 +274,11 @@ class ts_object extends Accessors {
 					$dato = $component->get_valor();
 
 				}else if ($modelo_name==='component_input_text') {
-					
+
 					$dato = $component->get_valor(0);
 						#debug_log(__METHOD__." $dato ".to_string($dato), logger::DEBUG);
 					#$dato = component_common::extract_component_value_fallback($component,DEDALO_DATA_LANG,true);
-				
+
 				}else if ($modelo_name==='component_relation_related') {
 
 					# Add inverse related (bidirectional only)
@@ -290,7 +290,7 @@ class ts_object extends Accessors {
 						#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
 						$dato = array_merge($dato, $component_rel);
 					}
-				}else if ($modelo_name==='component_svg'){						
+				}else if ($modelo_name==='component_svg'){
 						# file exsists check
 						$file_path = $component->get_file_path();
 						if (file_exists($file_path)===true) {
@@ -321,11 +321,11 @@ class ts_object extends Accessors {
 
 				switch (true) {
 					case ($element_obj->type==='term'):
-						# term Is traducible and uses lang fallback here						
+						# term Is traducible and uses lang fallback here
 						// $value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null
 						if (empty($dato)) {
-							$modelo_name_term = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-							$element_value = $modelo_name_term::render_list_value(null, $element_tipo, $this->section_id, 'list_thesaurus', DEDALO_DATA_LANG, $this->section_tipo, $this->section_id);
+							$modelo_name_term 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+							$element_value 		= component_common::extract_component_value_fallback($component);
 						}else{
 							$element_value = $dato;
 						}
@@ -336,7 +336,7 @@ class ts_object extends Accessors {
 						break;
 
 					case ($element_obj->type==='icon'):
-	
+
 						if($render_vars->icon==='CH') {
 							continue 2;
 						}
@@ -356,7 +356,7 @@ class ts_object extends Accessors {
 						$element_obj->value = $render_vars->icon;
 
 						// dato check
-							if(empty($dato)) continue 2; // Skip empty icon value links														
+							if(empty($dato)) continue 2; // Skip empty icon value links
 
 						if ($modelo_name==='component_relation_index' || $modelo_name==='component_relation_struct') {
 							#dump($dato, ' dato ++ '.to_string($element_tipo));
@@ -366,17 +366,17 @@ class ts_object extends Accessors {
 						break;
 
 					case ($element_obj->type==='link_children'):
-						
+
 						# D : Descriptors
 						if($this->have_children_of_type($dato, 'descriptor')===true) {
 							$element_obj->value = 'button show children';
 						}else{
-							$element_obj->value = 'button show children unactive';							
+							$element_obj->value = 'button show children unactive';
 						}
-						
-						# ND : No descriptors case							
-						if($this->have_children_of_type($dato, 'nd')===true) {					
-							
+
+						# ND : No descriptors case
+						if($this->have_children_of_type($dato, 'nd')===true) {
+
 							$nd_element = new stdClass();
 								$nd_element->type = 'link_children_nd';
 								$nd_element->tipo = $element_tipo;
@@ -384,25 +384,25 @@ class ts_object extends Accessors {
 
 							$children_data->ar_elements[] = $nd_element;
 						}
-						break;					
+						break;
 
 					default:
 						$element_obj->value = $dato;
 						break;
-				}		
-				
-			# Add			
+				}
+
+			# Add
 			$children_data->ar_elements[] = $element_obj;
-					
+
 		}
 
 		if(SHOW_DEBUG===true) {
-			$total=round( (microtime(1)-$start_time), 3 );	
+			$total=round( (microtime(1)-$start_time), 3 );
 			#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-			$children_data->total_time = $total;	
+			$children_data->total_time = $total;
 		}
 		#dump($children_data, ' $children_data ++ '.to_string());
-	
+
 		return (object)$children_data;
 	}//end get_children_data
 
@@ -413,7 +413,7 @@ class ts_object extends Accessors {
 	* @return bool
 	*/
 	public function have_children_of_type( $ar_children, $type ) {
-		
+
 		if (empty($ar_children)) return false;
 
 
@@ -423,7 +423,7 @@ class ts_object extends Accessors {
 
 			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );
 				#dump($section_map, ' section_map ++ '.to_string());
-	
+
 			if (!isset($section_map['thesaurus']->is_descriptor)) {
 				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
 				continue;
@@ -438,11 +438,11 @@ class ts_object extends Accessors {
 															 DEDALO_DATA_NOLAN,
 															 $current_locator->section_tipo);
 			$dato = $component->get_dato();
-			
+
 			// When first element is found, return true
 			if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===$descriptor_value) {
 				return true;
-			}		
+			}
 		}
 
 
@@ -453,7 +453,7 @@ class ts_object extends Accessors {
 
 	/**
 	* IS_INDEXABLE
-	* @return 
+	* @return
 	*/
 	public static function is_indexable($section_tipo, $section_id) {
 
@@ -461,7 +461,7 @@ class ts_object extends Accessors {
 			# Root hierarchies are always false
 			return false;
 		}
-		
+
 		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
 		if (!isset($section_map['thesaurus']->is_indexable)) {
 			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
@@ -472,7 +472,7 @@ class ts_object extends Accessors {
 			# Propiedades set as false case
 			return false;
 		}
-		
+
 		$component_tipo = $section_map['thesaurus']->is_indexable;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$component 	 	= component_common::get_instance($modelo_name,
@@ -497,7 +497,7 @@ class ts_object extends Accessors {
 
 	/**
 	* GET_DESCRIPTORS_FROM_CHILDREN
-	* @return 
+	* @return
 	*//*
 	public static function get_descriptors_from_children__DES( $ar_children ) {
 
@@ -505,9 +505,9 @@ class ts_object extends Accessors {
 
 		foreach ((array)$ar_children as $key => $current_locator) {
 
-			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );			
+			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );
 			#dump($section_map['thesaurus']->is_descriptor, ' $section_map ++ '.to_string($current_locator->section_tipo));
-	
+
 			if (!isset($section_map['thesaurus']->is_descriptor)) {
 				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property fro section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
 				continue;
@@ -523,10 +523,10 @@ class ts_object extends Accessors {
 														  DEDALO_DATA_NOLAN,
 														  $current_locator->section_tipo);
 			$dato = $component->get_dato();
-			
+
 			if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===1) {
 				$ar_descriptors[] = $current_locator;
-			}		
+			}
 		}
 
 
@@ -537,12 +537,12 @@ class ts_object extends Accessors {
 
 	/**
 	* SET_TERM_AS_ND
-	* Modifies received array data on term to set as ND (no descriptor) 
+	* Modifies received array data on term to set as ND (no descriptor)
 	*/
 	public static function set_term_as_nd( &$ar_elements ) {
-		
+
 		foreach ($ar_elements as $key => $obj_value) {
-			
+
 			if ($obj_value->type==='term') {
 				if(SHOW_DEBUG===true) {
 					if (!is_string($obj_value->value)) {
@@ -550,7 +550,7 @@ class ts_object extends Accessors {
 						debug_log(__METHOD__."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) ." - value:".to_string($obj_value->value), logger::ERROR);
 					}
 				}
-				$ar_elements[$key]->value = '<span class="no_descriptor">' . $obj_value->value . '</span>';				
+				$ar_elements[$key]->value = '<span class="no_descriptor">' . $obj_value->value . '</span>';
 				break;
 			}
 		}
@@ -558,7 +558,7 @@ class ts_object extends Accessors {
 		return $ar_elements;
 	}//end set_term_as_nd
 
-	
+
 
 
 	/**
@@ -568,13 +568,13 @@ class ts_object extends Accessors {
 	*	Default is bool false
 	*/
 	public static function get_term_by_locator( $locator, $lang=DEDALO_DATA_LANG, $from_cache=false ) {
-	
+
 		if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
 			if(SHOW_DEBUG===true) {
 				#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
 				debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
 			}
-			return false;			
+			return false;
 		}
 
 		# Cache control (session)
@@ -601,7 +601,7 @@ class ts_object extends Accessors {
 				$valor .= '_'. $locator->component_tipo;
 			if(isset($locator->tag_id))
 				$valor .= '_'. $locator->tag_id;
-					
+
 		}else{
 
 			$tipo 		 	= $thesaurus_map->term;
@@ -622,9 +622,9 @@ class ts_object extends Accessors {
 															  $lang,
 															  $section_tipo);
 			$valor = $component->get_valor($lang);
-				//dump($valor, ' valor ++ '.to_string($tipo));	
+				//dump($valor, ' valor ++ '.to_string($tipo));
 			if (empty($valor)) {
-						
+
 				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
 				#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
 				#if($lang!==$main_lang) {
@@ -662,13 +662,13 @@ class ts_object extends Accessors {
 			$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
 		}
 		*/
-		#debug_log(__METHOD__." valor $cache_uid ".htmlentities($valor), logger::DEBUG); 
+		#debug_log(__METHOD__." valor $cache_uid ".htmlentities($valor), logger::DEBUG);
 
-		# Cache control (session)		
+		# Cache control (session)
 		#$_SESSION['dedalo']['config']['term_by_locator'][$cache_uid] = $valor;
 		$term_by_locator_data[$cache_uid] = $valor;
-				
-		
+
+
 		return $valor;
 	}//end get_term_by_locator
 
@@ -679,7 +679,7 @@ class ts_object extends Accessors {
 	* @return string|null $element_tipo
 	*/
 	public static function get_component_order_tipo( $section_tipo ) {
-		
+
 		# Calculated way
 		$element_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'order' );
 		#debug_log(__METHOD__." ORDER TIPO: ".to_string($element_tipo), logger::DEBUG);
@@ -694,7 +694,7 @@ class ts_object extends Accessors {
 	* @return int $permissions
 	*/
 	public function get_permissions_element( $element_name ) {
-	
+
 		switch ($element_name) {
 			case 'button_new':
 				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
@@ -727,9 +727,9 @@ class ts_object extends Accessors {
 						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
 					}else{
 						$permissions = 0;
-					}				
+					}
 				}
-				break;			
+				break;
 			default:
 				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 				# dump($ar_children, ' ar_children ++ '.to_string());
@@ -747,6 +747,6 @@ class ts_object extends Accessors {
 	}//end get_permissions_element
 
 
-	
+
 }//end ts_object
 ?>
