@@ -15,8 +15,12 @@ abstract class process_result {
 	*/
 	public static function add_parents_and_children_recursive($ar_data, $options, $sql_options) {
 
-		$columns = $options->columns;		
+		$columns = $options->columns;
 
+		// $ar_section_id = array_map(function($el){
+		// 	return $el['section_id'];
+		// }, $ar_data);
+		
 		// ar_section_id
 			$ar_section_id = [];
 			$ar_parent_sentences = [];
@@ -49,7 +53,7 @@ abstract class process_result {
 			}, $ar_section_id);
 			$all_sentences = array_merge($children_sentences, $ar_parent_sentences);
 			$sql_filter = implode(' OR ', $all_sentences);
-
+			
 			$sql_options = clone $sql_options;
 				$sql_options->process_result	= false; // avoid recursion
 				$sql_options->sql_filter		= $sql_filter;
@@ -57,8 +61,20 @@ abstract class process_result {
 				
 			$rows_data = web_data::get_rows_data($sql_options);
 
-		// final merged result
-			$new_ar_data = array_merge($ar_data, $rows_data->result);
+		// final merged result (avoiding duplicates)
+			// $new_ar_data = array_merge($ar_data, $rows_data->result);
+			$new_ar_data = $ar_data;
+			foreach ($rows_data->result as $key => $value) {
+				if (!in_array($value, $new_ar_data)) {
+					$new_ar_data[] = $value;
+				}
+			}
+
+			// check duplicates debug
+				// $a = array_map(function($el){
+				// 	return $el['section_id'];
+				// }, $new_ar_data);
+				// dump($a, ' a ++ '.to_string("1022"));
 		
 		// response
 			$response = new stdClass();
