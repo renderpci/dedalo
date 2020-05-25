@@ -500,5 +500,44 @@ class dd_utils_api {
 
 
 
+	/**
+	* REGENERATE_RELATIONS
+	* @return object $response
+	*/
+	public static function regenerate_relations($request_options) {
+		global $start_time;
+
+		$response = new stdClass();
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+
+		session_write_close();
+		
+		// tables value
+			$item_tables = array_find($request_options->options, function($item){
+				return $item->name==='tables';
+			});
+
+			$tables = $item_tables->value;
+			if (empty($tables) || !is_string($tables)) {
+				return $response;
+			}		
+
+		// generate_relations_table_data
+		$response = area_development::generate_relations_table_data($tables);
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end regenerate_relations
+
+
+
 
 }//end dd_utils_api

@@ -1389,7 +1389,11 @@ class tool_administration extends tool_common {
 
 						$component_dato = [];
 						foreach ($datos->relations as $key => $current_locator) {
-							$component_dato[$current_locator->from_component_tipo][] = $current_locator;
+							if (isset($current_locator->from_component_tipo)) {
+								$component_dato[$current_locator->from_component_tipo][] = $current_locator;
+							}else{
+								debug_log(__METHOD__." Error on get from_component_tipo of locator $table - id:$id (ignored) ".to_string($current_locator), logger::ERROR);
+							}
 						}
 
 						foreach ($component_dato as $from_component_tipo => $ar_locators) {

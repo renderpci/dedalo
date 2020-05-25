@@ -8,6 +8,29 @@ class area_development extends area_common {
 
 
 
+	static $ar_tables_with_relations = array(
+		"matrix_users",
+		"matrix_projects",
+		"matrix",
+		"matrix_list",
+		"matrix_activities",
+		"matrix_hierarchy",
+		"matrix_hierarchy_main",
+		"matrix_langs",
+		"matrix_layout",
+		"matrix_notes",
+		"matrix_profiles",
+		"matrix_test",
+		"matrix_indexations",
+		"matrix_structurations",
+		"matrix_dataframe",
+		"matrix_dd",
+		"matrix_layout_dd",
+		"matrix_activity"
+	);
+
+
+
 	/**
 	* GET_AR_WIDGETS
 	* @return array $data_items
@@ -32,6 +55,38 @@ class area_development extends area_common {
 					'options' 	 	=> null
 				];
 			$ar_widgets[] = $item;
+
+
+		// regenerate_relations . Delete and create again table relations records
+			$item = new stdClass();
+				$item->id		= 'regenerate_relations';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'REGENERATE TABLE RELATIONS DATA';
+				$item->info		= null;
+				$item->body		= 'Delete and create again table relations records based on locators data of sections in current table';					
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'inputs' 		=> [
+							(object)[
+								'type' => 'text',
+								'name' => 'tables',
+								'label' => 'Table name/s like "matrix,matrix_hierarcht" or "*" for all',
+								'mandatory' => true
+							]
+						]
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'regenerate_relations',
+					'options' 	=> null
+				];
+			$ar_widgets[] = $item;
+
+
 
 
 		// update_structure
@@ -229,7 +284,7 @@ class area_development extends area_common {
 				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
 			$ar_widgets[] = $item;
 
-
+		
 		// unit test (alpha)
 			$info = posix_getpwuid(posix_geteuid());
 			$item = new stdClass();
@@ -256,6 +311,7 @@ class area_development extends area_common {
 				$item->info 	= null;
 				$item->body     = $response->msg;
 			$ar_widgets[] = $item;
+
 
 		// counters_state
 			$response = counter::check_counters();
@@ -284,6 +340,160 @@ class area_development extends area_common {
 
 		return $ar_widgets;
 	}//end get_ar_widgets
+
+
+
+	/**
+	* GENERATE_RELATIONS_TABLE_DATA
+	* @return object
+	*/
+	public static function generate_relations_table_data($tables='*') {
+		
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= array('Error. Request failed '.__METHOD__);
+		
+
+		// tables to propagate
+			$ar_tables = (function($tables) {
+				
+				if ($tables==='*') {
+					// all relationable tables (implies to truncate relations table)
+					return area_development::$ar_tables_with_relations;
+				}else{
+					// is a list comma separated of tables like matrix,matrix_hierarchy
+					$ar_tables = [];
+					$items = explode(',', $tables);
+					foreach ($items as $key => $table) {
+						$ar_tables[] = trim($table);
+					}
+					return $ar_tables;	
+				}				
+			})($tables);
+
+		// truncate relations table on *
+			if ($tables==='*') {
+
+				// truncate relations table data
+				$strQuery 	= "TRUNCATE \"relations\";";
+				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				if (!$result) {
+					$response->msg = $response->msg[0].' - Unable to truncate table relations!';
+					return $response;
+				}
+				// restart table sequence
+				$strQuery 	= "ALTER SEQUENCE relations_id_seq RESTART WITH 1;";
+				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				if (!$result) {
+					$response->msg = $response->msg[0].' - Unable to alter SEQUENCE relations_id_seq!';
+					return $response;
+				}
+			}	
+
+
+		foreach ($ar_tables as $key => $table) {
+
+			$counter = 1;
+
+			// last id in current table
+				$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
+				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				if (!$result) {
+					$response->msg[] ='Table \''.$table.'\' not found!';
+					$response->msg 	 = implode('<br>', $response->msg);
+					return $response;
+				}
+				$rows 		= pg_fetch_assoc($result);
+				if (!$rows) {
+					continue;
+				}
+				$max 		= $rows['id'];
+
+				$min = 1;
+				if ($table==='matrix_users') {
+					$min = -1;
+				}
+
+			// iterate from 1 to last id
+			for ($i=$min; $i<=$max; $i++) {
+
+				$strQuery 	= "SELECT section_id, section_tipo, datos FROM $table WHERE id = $i";
+				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				if(!$result) {
+					$msg = "Failed Search id $i. Data is not found.";
+					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					continue;
+				}
+				$n_rows = pg_num_rows($result);
+
+				if ($n_rows<1) continue; // empty table case
+
+				while($rows = pg_fetch_assoc($result)) {
+
+					$section_id 	= $rows['section_id'];
+					$section_tipo 	= $rows['section_tipo'];
+					$datos 			= json_decode($rows['datos']);
+
+					if (!empty($datos) && isset($datos->relations)) {
+
+						// component_dato
+							$component_dato = [];
+							foreach ($datos->relations as $key => $current_locator) {
+								if (isset($current_locator->from_component_tipo)) {
+									$component_dato[$current_locator->from_component_tipo][] = $current_locator;
+								}else{
+									debug_log(__METHOD__." Error on get from_component_tipo of locator $table - id:$id (ignored) ".to_string($current_locator), logger::ERROR);
+								}
+							}
+
+						// propagate component dato
+							foreach ($component_dato as $from_component_tipo => $ar_locators) {
+								
+								$propagate_options = new stdClass();
+									$propagate_options->ar_locators  		= $ar_locators;
+									$propagate_options->section_id 	 		= $section_id;
+									$propagate_options->section_tipo 		= $section_tipo;
+									$propagate_options->from_component_tipo = $from_component_tipo;
+								
+								// propagate_component_dato_to_relations_table takes care of delete and insert new relations
+								$propagate_response = search::propagate_component_dato_to_relations_table($propagate_options);
+							}
+
+					}else{
+						debug_log(__METHOD__." ERROR: Empty datos from: $table $section_tipo $section_id ".to_string(), logger::ERROR);
+					}
+				}
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						# Show log msg every 100 id
+						if ($counter===1) {
+							debug_log(__METHOD__." Updated section data table $table $i".to_string(), logger::DEBUG);
+						}
+						$counter++;
+						if ($counter>300) {
+							$counter = 1;
+						}
+					}
+
+			}//end for ($i=$min; $i<=$max; $i++)
+
+			// msg add table
+				$response->msg[] = " Updated table data table $table ";
+
+			// debug
+				// debug_log(__METHOD__." Updated table data table $table  ", logger::WARNING);
+		
+		}//end foreach ($ar_tables as $key => $table)
+
+		// response
+			$response->result = true;
+			$response->msg[0] = "Ok. All data is propagated successfully"; // Override first message
+			$response->msg    = "<br>".implode('<br>', $response->msg);
+
+		
+		return $response;
+	}//end generate_relations_table_data
 
 
 

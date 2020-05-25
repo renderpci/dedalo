@@ -590,28 +590,6 @@ class section extends common {
 			// }
 
 		#
-		# VALOR LIST : Actualizamos el Html del componente en modo list
-			// if(SHOW_DEBUG===true) $start_time = microtime(true);
-
-			// # valor_list is dato for some components
-
-			// # Every component have a method to return value to save in json container 'valor_list'
-			// # (if not, they use component common defined method)
-			// $html = $component_obj->get_valor_list_html_to_save();
-
-			// if(SHOW_DEBUG===true) {
-			// 	$total=round(microtime(true)-$start_time,3);
-			// 	if ($total>1000) {
-			// 		debug_log(__METHOD__." SLOW Time To Generate list html of ".RecordObj_dd::get_termino_by_tipo($component_tipo,null,true)." [$component_tipo]: ". $total );
-			// 	}
-			// }
-			// if($component_lang === $component_valor_lang ){
-			// 	$component_global_dato->valor_list->$component_lang = $html;
-			// }else{
-			// 	$component_global_dato->valor_list->$component_lang = $component_obj->get_dato_unchanged();
-			// }
-
-		#
 		# DATO_SEARCH
 			/*
 			switch ($component_modelo_name) {
@@ -667,7 +645,7 @@ class section extends common {
 	public function set_component_relation_dato( $component_obj ) {
 
 		$component_tipo 		= $component_obj->get_tipo();
-		$component_dato 		= $component_obj->get_dato();
+		$component_dato 		= $component_obj->get_dato_full();
 		$relation_type 		 	= $component_obj->get_relation_type();
 		$from_component_tipo 	= $component_tipo;
 

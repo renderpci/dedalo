@@ -7,7 +7,7 @@
 	import {common} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {render_area_development} from './render_area_development.js'
+	import {render_area_development, build_form} from './render_area_development.js'
 
 
 
@@ -187,5 +187,18 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 
 	return editor
 }//end init_json_editor
+
+
+
+/**
+* INIT_FORM
+* @return DOM node form
+*/
+area_development.prototype.init_form = async function(widget_object) {
+	
+	build_form(widget_object)
+
+
+}//end init_form
 
 

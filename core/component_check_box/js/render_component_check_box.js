@@ -62,9 +62,6 @@ render_component_check_box.prototype.edit = async function(options={render_level
 
 	const self = this
 
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// render_level
 		const render_level = options.render_level || 'full'
 
@@ -89,7 +86,7 @@ render_component_check_box.prototype.edit = async function(options={render_level
 
 	// events
 		add_events(self, wrapper)
-	
+
 	return wrapper
 }//end edit
 
@@ -141,7 +138,6 @@ const add_events = function(self, wrapper) {
 
 			// update / remove
 				if (e.target.matches('input[type="checkbox"]')) {
-
 					const action 		= (e.target.checked===true) ? 'insert' : 'remove'
 					const parsed_value 	= JSON.parse(e.target.value)
 					const changed_key 	= self.get_changed_key(action, parsed_value)
@@ -238,7 +234,8 @@ render_component_check_box.prototype.search = async function() {
 	const self = this
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+
 
 	const content_data = await get_content_data_search(self)
 
@@ -258,7 +255,7 @@ render_component_check_box.prototype.search = async function() {
 
 				// input_value. The standard input for the value of the component
 				if (e.target.matches('input[type="checkbox"]')) {
-					
+
 					console.log("e.target:",e.target.value);
 
 					// input. Get the input node that has changed
@@ -311,6 +308,8 @@ render_component_check_box.prototype.search = async function() {
 	return wrapper
 }//end search
 
+
+
 /**
 * GET_CONTENT_DATA_EDIT
 * @return
@@ -318,7 +317,7 @@ render_component_check_box.prototype.search = async function() {
 const get_content_data_edit = async function(self) {
 
 	const value 		= self.data.value
-	const datalist		= self.data.datalist
+	const datalist		= self.data.datalist || []
 	const mode 			= self.mode
 	const is_inside_tool= self.is_inside_tool
 
@@ -332,7 +331,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// build options
-		const datalist_length 	= datalist.length
+		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			get_input_element_edit(i, datalist[i], inputs_container, self)
 		}
@@ -348,7 +347,7 @@ const get_content_data_edit = async function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-		
+
 		content_data.classList.add("nowrap")
 		content_data.appendChild(fragment)
 
@@ -502,5 +501,3 @@ const get_content_data_search = async function(self) {
 
 	return content_data
 }//end get_content_data_search
-
-
