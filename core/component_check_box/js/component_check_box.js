@@ -40,7 +40,7 @@ export const component_check_box = function(){
 	// lifecycle
 	component_check_box.prototype.init 	 			= component_common.prototype.init
 	component_check_box.prototype.build 			= component_common.prototype.build
-	component_check_box.prototype.render 			= common.prototype.render	
+	component_check_box.prototype.render 			= common.prototype.render
 	component_check_box.prototype.refresh 			= common.prototype.refresh
 	component_check_box.prototype.destroy 	 		= common.prototype.destroy
 
@@ -50,7 +50,7 @@ export const component_check_box = function(){
 	component_check_box.prototype.update_datum		= component_common.prototype.update_datum
 	component_check_box.prototype.change_value 		= component_common.prototype.change_value
 
-	// render	
+	// render
 	component_check_box.prototype.list 				= render_component_check_box.prototype.list
 	component_check_box.prototype.edit 				= render_component_check_box.prototype.edit
 	component_check_box.prototype.edit_in_list		= render_component_check_box.prototype.edit
@@ -67,17 +67,20 @@ component_check_box.prototype.get_changed_key = function(action, value) {
 
 	const self = this
 
+	console.log("action", action);
+	console.log("value", value);
+
 	const changed_key = (() => {
 
 		if (action==='insert') {
-		
+
 			// insert value
-			if (self.data.value[0]) {
-				
+			if (self.data.value) {
+
 				// check if value already exists
 				const ar_found = self.data.value.filter(item => item.section_id===value.section_id && item.section_tipo===value.section_tipo)
 				if (ar_found.length>0) {
-					console.warn("Ignored to add value because already exists:", value)					
+					console.warn("Ignored to add value because already exists:", value)
 				}
 
 				// component common add value and save (without refresh)
@@ -85,13 +88,13 @@ component_check_box.prototype.get_changed_key = function(action, value) {
 			}
 
 		}else{
-			
+
 			// remove value
 			const value_key = self.data.value.findIndex(item => {
 				return (item.section_id===value.section_id && item.section_tipo===value.section_tipo)
 			})
 			if (value_key===-1) {
-				console.warn("Error. item not found in values:", value)				
+				console.warn("Error. item not found in values:", value)
 			}else{
 				return value_key
 			}
@@ -99,7 +102,7 @@ component_check_box.prototype.get_changed_key = function(action, value) {
 
 		return 0;
 	})()
-	
+
 
 	return changed_key
 }//end get_changed_key
@@ -169,5 +172,3 @@ component_check_box.prototype.remove_value = function(value) {
 	return deleted
 }//end remove_value
 */
-
-
