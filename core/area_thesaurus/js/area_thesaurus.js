@@ -37,6 +37,9 @@ export const area_thesaurus = function() {
 		terms_are_model : false //false = the terms are descriptors terms // true = the terms are models (context model of the terms)
 	}
 
+	// display mode: 'default' | 'relation'
+	this.thesaurus_mode
+
 	return true
 }//end area_thesaurus
 
@@ -71,6 +74,9 @@ area_thesaurus.prototype.init = async function(options) {
 
 		const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
 		common.prototype.load_style(css_url2)
+
+	// thesaurus mode
+		self.thesaurus_mode = options.thesaurus_mode || 'default' // 'relation'
 
 	// call the generic commom tool init
 		const common_init = area_common.prototype.init.call(this, options);

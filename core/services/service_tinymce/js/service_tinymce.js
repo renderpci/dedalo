@@ -98,13 +98,31 @@ export const service_tinymce = function() {
 		if (editor.isDirty()!==true) {
 			return false
 		}
-		const value = editor.getContent({format:'raw'})
+		const value = self.get_value()	// editor.getContent({format:'raw'})
 		// const value = self.editor.getBody()
 
 		self.caller.save_value(key, value)
 
 		return true
-	};//end save
+	}//end save
+
+
+
+	/**
+	* GET_VALUE
+	* Get editor value as raw string
+	* @return string
+	*/
+	this.get_value = function() {
+
+		const self = this
+
+		const editor = self.editor
+		
+		const value = editor.getContent({format:'raw'})
+		
+		return value
+	}//end get_value
 
 
 
@@ -303,6 +321,67 @@ export const service_tinymce = function() {
 
 		return editor_content_data
 	}//end get_editor_content_data
+
+
+
+	/**
+	* GET_SELECTION
+	* @return string selection
+	*	Raw string without formatting
+	*/
+	this.get_selection = function() {
+
+		const self = this
+
+		if (!self.editor.selection) {
+			return false
+		}
+
+		const selection = self.editor.selection.getContent({format:'raw'})
+
+		return selection
+	}//end get_selection
+
+
+
+	/**
+	* WRAP_SELECTION_WITH_TAGS
+	* @return bool true
+	*/
+	this.wrap_selection_with_tags = function(tag_node_in, tag_node_out) {
+
+		const self 	 = this
+		const editor = self.editor		
+
+		// Get selection range
+			const range			= editor.selection.getRng(0)
+			const range_clon	= range.cloneRange()
+
+		// Save start and end position
+			const startOffset		= range_clon.startOffset
+			const startContainer	= range_clon.startContainer
+
+		// Go to end of range position
+			range_clon.collapse(false)	
+
+		// Insert end out node
+			range_clon.insertNode(tag_node_out)
+
+		// Positioned to begin of range
+			range_clon.setStart(startContainer, startOffset)
+
+		// Go to start of range position
+			range_clon.collapse(true)
+
+		// Insert start in node
+			range_clon.insertNode(tag_node_in)
+
+		// set editor as dirty to allow save
+			editor.setDirty(true)
+
+
+		return true
+	}//end wrap_selection_with_tags
 
 
 
