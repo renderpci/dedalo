@@ -488,7 +488,7 @@ class diffusion_sql extends diffusion  {
 		#
 		# RESOLVED RECORDS
 		# Store resolved records to avoid infinite loops
-			static $resolved_records;
+			static $columns_data_resolved_records = [];
 
 
 		#
@@ -506,9 +506,9 @@ class diffusion_sql extends diffusion  {
 			#$ar_all_project_langs = array('lg-lvca'); //ONLY ONE NOW FOR TEST
 
 			# RESOLVED_RECORDS_KEY
-			$resolved_records_key = $section_tipo.'-'.$current_section_id.'-'.$build_mode;
-			if (in_array($resolved_records_key, (array)$resolved_records)) {
-				debug_log(__METHOD__." SKIPPED RECORD [$resolved_records_key]. ALREADY RESOLVED. ".to_string(), logger::WARNING);
+			$columns_data_resolved_records_key = $section_tipo.'-'.$current_section_id.'-'.$build_mode;
+			if (true===in_array($columns_data_resolved_records_key, (array)$columns_data_resolved_records)) {
+				debug_log(__METHOD__." SKIPPED RECORD [$columns_data_resolved_records_key]. ALREADY RESOLVED. ".to_string(), logger::WARNING);
 				continue;
 			}
 
@@ -523,7 +523,7 @@ class diffusion_sql extends diffusion  {
 					# Nothing to do. (Configurated from tool_administrator)
 				}else{
 					# RESOLVED_RECORDS (set a resolved)
-					$resolved_records[] = $resolved_records_key;
+					$columns_data_resolved_records[] = $columns_data_resolved_records_key;
 
 					debug_log(__METHOD__." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo). ".to_string(), logger::DEBUG);
 					continue;
@@ -556,7 +556,7 @@ class diffusion_sql extends diffusion  {
 					}
 
 					# RESOLVED_RECORDS (set a resolved)
-					$resolved_records[] = $resolved_records_key;
+					$columns_data_resolved_records[] = $columns_data_resolved_records_key;
 
 					continue;
 				}
@@ -579,7 +579,7 @@ class diffusion_sql extends diffusion  {
 				}
 				if ($to_publish===false) {
 					# RESOLVED_RECORDS (set a resolved)
-					$resolved_records[] = $resolved_records_key;
+					$columns_data_resolved_records[] = $columns_data_resolved_records_key;
 					continue;
 				}
 
@@ -809,7 +809,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 			# RESOLVED_RECORDS
-			$resolved_records[] = $resolved_records_key;
+			$columns_data_resolved_records[] = $columns_data_resolved_records_key;
 
 			// let GC do the memory job
 			// time_nanosleep(0, 10000000); // 50 ms
@@ -921,7 +921,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 			# RESOLVED_RECORDS (set a resolved)
-			#$resolved_records[] = $resolved_records_key;
+			#$columns_data_resolved_records[] = $columns_data_resolved_records_key;
 
 			#continue;
 			$to_publish = false;
@@ -1331,9 +1331,9 @@ class diffusion_sql extends diffusion  {
 			if (true===in_array($resolved_static_key, $ar_resolved_static)) {
 				// response
 				$response->result	= true;
-				$response->msg		= 'Skipped record already resolved: '.$resolved_static_key;
+				$response->msg		= 'Skipped record already updated: '.$resolved_static_key;
 				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__."  ".$response->msg, logger::DEBUG);
+					debug_log(__METHOD__."  ".$response->msg .PHP_EOL.' ----------------------------------------------------------------- ', logger::WARNING);
 				}
 				return $response;
 			}
