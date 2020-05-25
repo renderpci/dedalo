@@ -195,7 +195,6 @@ class component_inverse extends component_common {
 				$list_item = new stdClass();
 				$list_item->label = $component->get_label();
 				$list_item->value = $component->get_valor();
-				#$ar_value[] = $modelo_name::render_list_value($locator, $current_tipo, $locator->section_id, 'list', DEDALO_DATA_LANG, $locator->from_section_tipo, $locator->section_id);
 				$ar_value[] = $list_item;
 			}
 		}
