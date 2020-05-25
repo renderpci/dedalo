@@ -4,8 +4,8 @@
 
 
 // imports
-	import {event_manager} from '../../../common/js/event_manager.js'
-	import {ui} from '../../../common/js/ui.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {ui} from '../../../core/common/js/ui.js'
 
 
 
@@ -47,9 +47,10 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		const header = wrapper.querySelector('.tool_header')
 		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
 		modal.on_close = () => {
-			self.destroy(true, true, true)
+			// tool destroy
+				self.destroy(true, true, true)			
 			// refresh source component text area
-			self.caller.refresh()
+				self.caller.refresh()
 		}
 
 	// events
@@ -71,144 +72,149 @@ const get_content_data_edit = async function(self) {
 	const fragment = new DocumentFragment()
 
 
-	// components container
-		const components_container = ui.create_dom_element({
+	// area thesaurus
+		const thesaurus_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'components_container',
+			class_name 		: 'thesaurus_container',
+			parent 			: fragment
+		})
+		const thesaurus = self.get_thesaurus()
+		thesaurus.then(function(thesaurus_instance){
+			thesaurus_instance.render().then(function(node){
+				thesaurus_container.appendChild(node)
+			})
+		})
+
+
+	// component_text_area
+		const component_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'component_container',
+			parent 			: fragment
+		})
+		// lang selector
+			const lang_selector = ui.build_select_lang({
+				id 			: "index_lang_selector",
+				selected 	: self.lang,
+				class_name 	: 'dd_input',
+				action 	 	: async function(e){
+					// create new one
+					const component = await self.get_component(e.target.value)
+
+					component.render().then(function(node){
+						// remove previous nodeS
+						while (component_container.lastChild && component_container.lastChild.id!==lang_selector.id) {
+							component_container.removeChild(component_container.lastChild)
+						}
+						// add the new one
+						component_container.appendChild(node)
+					})
+				}
+			})
+			console.log("lang_selector", lang_selector);
+			component_container.appendChild(lang_selector)
+		
+		// component. render another node of component caller and append to container
+			const component = await self.get_component(self.lang)
+			component.render().then(function(node){
+				component_container.appendChild(node)
+			})		
+		
+
+	// info container
+		const info_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'info_container',
 			parent 			: fragment
 		})
 
 
-	// source lang select
-		const source_select_lang = ui.build_select_lang({
-			langs  		: self.langs,
-			selected 	: self.source_lang,
-			class_name	: 'source_lang',
-			action 		: on_change_source_select_lang
-		})
-		function on_change_source_select_lang(e) {
-			add_component(self, source_component_container, e.target.value)
-		}
-		components_container.appendChild(source_select_lang)
-
-
-	// target lang select
-		const target_select_lang = ui.build_select_lang({
-			langs  		: self.langs,
-			selected 	: self.target_lang,
-			class_name	: 'target_lang',
-			action 		: on_change_target_select_lang
-		})
-		function on_change_target_select_lang(e) {
-			add_component(self, target_component_container, e.target.value)
-		}
-		components_container.appendChild(target_select_lang)
-
-
-	// source
-		const source_component_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'source_component_container disabled_component',
-			parent 			: components_container
-		})
-
-		// source default value check
-			if (source_select_lang.value) {
-				add_component(self, source_component_container, source_select_lang.value)
-			}
-
-	// target
-		const target_component_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'target_component_container',
-			parent 			: components_container
-		})
-
-		// target default value check
-			if (target_select_lang.value) {
-				add_component(self, target_component_container, target_select_lang.value)
-			}
-
-	// buttons container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: components_container
-		})
-
-		// automatic_translation
-			const translator_engine = self.simple_tool_object.config.translator_engine
-			if (translator_engine) {
-				const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
-				buttons_container.appendChild(automatic_tranlation_node)
-			}//end if (translator_engine)
-
-
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'content_data ' + self.type
+		})
 		content_data.appendChild(fragment)
 
 
 	return content_data
+
+
+
+	// // components container
+	// 	const components_container = ui.create_dom_element({
+	// 		element_type	: 'div',
+	// 		class_name 		: 'components_container',
+	// 		parent 			: fragment
+	// 	})
+
+
+	// // source lang select
+	// 	const source_select_lang = ui.build_select_lang({
+	// 		langs  		: self.langs,
+	// 		selected 	: self.source_lang,
+	// 		class_name	: 'source_lang',
+	// 		action 		: on_change_source_select_lang
+	// 	})
+	// 	function on_change_source_select_lang(e) {
+	// 		add_component(self, source_component_container, e.target.value)
+	// 	}
+	// 	components_container.appendChild(source_select_lang)
+
+
+	// // target lang select
+	// 	const target_select_lang = ui.build_select_lang({
+	// 		langs  		: self.langs,
+	// 		selected 	: self.target_lang,
+	// 		class_name	: 'target_lang',
+	// 		action 		: on_change_target_select_lang
+	// 	})
+	// 	function on_change_target_select_lang(e) {
+	// 		add_component(self, target_component_container, e.target.value)
+	// 	}
+	// 	components_container.appendChild(target_select_lang)
+
+
+	// // source
+	// 	const source_component_container = ui.create_dom_element({
+	// 		element_type	: 'div',
+	// 		class_name 		: 'source_component_container disabled_component',
+	// 		parent 			: components_container
+	// 	})
+
+	// 	// source default value check
+	// 		if (source_select_lang.value) {
+	// 			add_component(self, source_component_container, source_select_lang.value)
+	// 		}
+
+	// // target
+	// 	const target_component_container = ui.create_dom_element({
+	// 		element_type	: 'div',
+	// 		class_name 		: 'target_component_container',
+	// 		parent 			: components_container
+	// 	})
+
+	// 	// target default value check
+	// 		if (target_select_lang.value) {
+	// 			add_component(self, target_component_container, target_select_lang.value)
+	// 		}
+
+	// // buttons container
+	// 	const buttons_container = ui.create_dom_element({
+	// 		element_type	: 'div',
+	// 		class_name 		: 'buttons_container',
+	// 		parent 			: components_container
+	// 	})
+
+	// 	// automatic_translation
+	// 		const translator_engine = self.simple_tool_object.config.translator_engine
+	// 		if (translator_engine) {
+	// 			const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
+	// 			buttons_container.appendChild(automatic_tranlation_node)
+	// 		}//end if (translator_engine)
+
+
 }//end get_content_data_edit
-
-
-
-/**
-* BUILD_AUTOMATIC_TRANSLATION
-*/
-const build_automatic_translation = (self, translator_engine, source_select_lang, target_select_lang, components_container) => {
-
-	// container
-		const automatic_translation_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'automatic_translation_container'
-			//parent 			: buttons_container
-		})
-
-	// button
-		const button_automatic_translation = ui.create_dom_element({
-			element_type 	: 'button',
-			class_name 		: 'warning button_automatic_translation',
-			text_content 	: get_label['traduccion_automatica'] || "Automatic translation",
-			parent 			: automatic_translation_container
-		})
-
-		// const button_automatic_translation = document.createElement('button');
-		// 	  button_automatic_translation.type = 'button'
-		// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-		// 	  automatic_translation_container.appendChild(button_automatic_translation)
-		button_automatic_translation.addEventListener("click", (e) => {
-
-			components_container.classList.add("loading")
-
-			const translator  = translator_engine_select.value
-			const source_lang = source_select_lang.value
-			const target_lang = target_select_lang.value
-			const translation = self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container).then(()=>{
-				components_container.classList.remove("loading")
-			})
-		})
-
-	// select
-		const translator_engine_select = ui.create_dom_element({
-			element_type	: 'select',
-			parent 			: automatic_translation_container
-		})
-		for (let i = 0; i < translator_engine.length; i++) {
-			const engine = translator_engine[i]
-			ui.create_dom_element({
-				element_type	: 'option',
-				value 			: JSON.stringify(engine),
-				text_content 	: engine.label,
-				parent 			: translator_engine_select
-			})
-		}
-
-
-	return automatic_translation_container
-}//end build_automatic_translation
 
 
 
@@ -240,5 +246,3 @@ export const add_component = async (self, component_container, value) => {
 
 	return true
 }//end add_component
-
-
