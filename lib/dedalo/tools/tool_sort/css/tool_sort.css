@@ -140,6 +140,12 @@ body {
   max-width: unset;
   outline: 1px solid #eeeeee;
 }
+.row_container .original {
+  background-color: #99ffaf;
+}
+.row_container .copy {
+  background-color: #f59696;
+}
 .rows_container {
   overflow: unset !important;
   min-width: 550px;
@@ -162,24 +168,24 @@ body {
   outline: 1px solid #cccccc;
   background-color: rgba(249, 249, 249, 0.9);
 }
-.rows_container > .row_container > div:nth-child(-n+4) {
+.rows_container > .row_container > div:nth-child(-n+5) {
   grid-column-start: 1;
 }
-.rows_container > .row_container > div:nth-child(n+5) {
+.rows_container > .row_container > div:nth-child(n+6) {
   grid-row-start: 1;
-  grid-row-end: 5;
-}
-.rows_container > .row_container > div:nth-child(5) {
-  grid-column-start: 2;
+  grid-row-end: 6;
 }
 .rows_container > .row_container > div:nth-child(6) {
-  grid-column-start: 3;
+  grid-column-start: 2;
 }
 .rows_container > .row_container > div:nth-child(7) {
+  grid-column-start: 3;
+}
+.rows_container > .row_container > div:nth-child(8) {
   grid-column-start: 4;
   grid-row-end: 3;
 }
-.rows_container > .row_container > div:nth-child(8) {
+.rows_container > .row_container > div:nth-child(9) {
   grid-column-start: 4;
   grid-row-start: 3;
 }
@@ -343,6 +349,6 @@ body {
 }
 .rows_container > .row_container {
   grid-template-columns: minmax(75px, 1fr) 160px 160px 85px;
-  grid-template-rows: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
 }
 /*# sourceMappingURL=tool_sort.css.map */

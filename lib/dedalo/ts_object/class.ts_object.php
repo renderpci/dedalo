@@ -623,7 +623,7 @@ class ts_object extends Accessors {
 																  $lang,
 																  $section_tipo);
 				$valor = $component->get_valor($lang);
-					//dump($valor, ' valor ++ '.to_string($tipo));	
+					
 				if (empty($valor)) {
 							
 					$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
@@ -651,7 +651,9 @@ class ts_object extends Accessors {
 					#}
 				}
 
-				$ar_value[] = $valor;
+				if (!empty($valor)) {
+					$ar_value[] = $valor;
+				}
 			}//end foreach ($ar_tipo as $tipo) {
 	
 			// final value
@@ -678,6 +680,54 @@ class ts_object extends Accessors {
 		
 		return $final_value;
 	}//end get_term_by_locator
+
+
+
+	/**
+	* GET_TERM_DATO_BY_LOCATOR
+	* @return mixed bool|string $valor
+	*	Default is bool false
+	*/
+	public static function get_term_dato_by_locator($locator) {
+	
+		if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
+			if(SHOW_DEBUG===true) {
+				#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
+				debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+			}
+			return false;			
+		}
+
+		$section_map 	= section::get_section_map($locator->section_tipo);
+		$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+		
+		$ar_tipo 		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+		$section_id 	= $locator->section_id;
+		$section_tipo 	= $locator->section_tipo;
+		
+		$ar_value = [];
+		foreach ($ar_tipo as $tipo) {
+					
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);				
+			$component 		= component_common::get_instance( $modelo_name,
+															  $tipo,
+															  $section_id,
+															  'edit',
+															  DEDALO_DATA_LANG,
+															  $section_tipo);
+			$dato = (array)$component->get_dato();			
+
+			if (!empty($dato)) {
+				$ar_value = array_merge($ar_value, $dato);
+			}
+		}//end foreach ($ar_tipo as $tipo) {
+
+		// final value
+			$final_value = $ar_value;	
+				
+		
+		return $final_value;
+	}//end get_term_dato_by_locator
 
 
 

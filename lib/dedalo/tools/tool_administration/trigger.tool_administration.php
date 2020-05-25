@@ -557,6 +557,10 @@ function propagate_relations($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+	set_time_limit (0); // Set time limit unlimited
+
+	ini_set('memory_limit', -1); // unlimited memory
+
 	session_write_close();	
 	
 	# set vars

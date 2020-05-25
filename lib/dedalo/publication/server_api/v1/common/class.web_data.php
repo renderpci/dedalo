@@ -5,6 +5,7 @@ include(dirname(__FILE__).'/class.free_node.php');
 include(dirname(__FILE__).'/class.full_node.php');
 include(dirname(__FILE__).'/class.video_view_data.php');
 include(dirname(__FILE__).'/class.map.php');
+include(dirname(__FILE__).'/class.process_result.php');
 include(dirname(__FILE__).'/class.image.php');
 include(dirname(__FILE__).'/class.notes.php');
 // none API classes
@@ -110,24 +111,25 @@ class web_data {
 
 			// Options defaults
 				$sql_options = new stdClass();
-					$sql_options->table 		 	= null;
-					$sql_options->ar_fields 	 	= array('*');
-					$sql_options->sql_fullselect 	= false; // default false
-					$sql_options->section_id 	 	= false;
-					$sql_options->sql_filter 	 	= ''; //publicacion = 'si'
-					$sql_options->lang 			 	= null;	//WEB_CURRENT_LANG_CODE;
-					$sql_options->order 			= '`id` ASC';
-					$sql_options->limit 		 	= 0;
-					$sql_options->group 		 	= false;
-					$sql_options->offset 		 	= false;
-					$sql_options->count 		 	= false;
-					$sql_options->resolve_portal 	= false; // bool
+					$sql_options->table				= null;
+					$sql_options->ar_fields			= array('*');
+					$sql_options->sql_fullselect	= false; // default false
+					$sql_options->section_id		= false;
+					$sql_options->sql_filter		= ''; //publicacion = 'si'
+					$sql_options->lang				= null;	//WEB_CURRENT_LANG_CODE;
+					$sql_options->order				= '`id` ASC';
+					$sql_options->limit				= 0;
+					$sql_options->group				= false;
+					$sql_options->offset			= false;
+					$sql_options->count				= false;
+					$sql_options->resolve_portal	= false; // bool
 					$sql_options->resolve_portals_custom = false; // array | bool
 					$sql_options->apply_postprocess = false; //  bool default true
-					$sql_options->map 				= false; //  object | bool (default false). Apply map function to value like [{"field":birthplace_id","function":"resolve_geolocation","otuput_field":"birthplace_obj"}]
-					$sql_options->db_name 			= false;
-					$sql_options->conn 			 	= false;
-					$sql_options->caller		 	= 'default';
+					$sql_options->map				= false; //  object | bool (default false). Apply map function to value like [{"field":birthplace_id","function":"resolve_geolocation","otuput_field":"birthplace_obj"}]
+					$sql_options->process_result	= false;
+					$sql_options->db_name			= false;
+					$sql_options->conn				= false;
+					$sql_options->caller			= 'default';
 
 					foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
@@ -356,9 +358,11 @@ class web_data {
 					$query_options->table 					= $sql_options->table;
 					$query_options->apply_postprocess 		= $sql_options->apply_postprocess;
 					$query_options->map 					= $sql_options->map;
+					$query_options->process_result		 	= $sql_options->process_result;
 					$query_options->lang 					= $sql_options->lang;
 					$query_options->db_name 				= $sql_options->db_name;
 					$query_options->conn 					= $sql_options->conn;
+					$query_options->sql_options 			= $sql_options; // full used options here
 
 				$exec_query_response = self::exec_query($query_options);
 					#dump($exec_query_response, ' exec_query_response ++ '.to_string());
@@ -406,22 +410,23 @@ class web_data {
 
 			# Options defaults
 				$sql_options = new stdClass();
-					$sql_options->table 		 		 = 'publications';
-					$sql_options->ar_fields 	 		 = ['*'];
-					$sql_options->sql_filter 	 		 = '';
-					$sql_options->use_union 	 	 	 = false; // default false
-					$sql_options->lang 			 		 = null;
-					$sql_options->limit 		 		 = 0;
-					$sql_options->offset 		 		 = false;
-					$sql_options->count 		 		 = false;
-					$sql_options->resolve_portal 		 = false; // bool
+					$sql_options->table					 = 'publications';
+					$sql_options->ar_fields				 = ['*'];
+					$sql_options->sql_filter			 = '';
+					$sql_options->use_union				 = false; // default false
+					$sql_options->lang					 = null;
+					$sql_options->limit					 = 0;
+					$sql_options->offset				 = false;
+					$sql_options->count					 = false;
+					$sql_options->resolve_portal		 = false; // bool
 					$sql_options->resolve_portals_custom = false; // array | bool
-					$sql_options->apply_postprocess 	 = false;
-					$sql_options->map 					 = false;
-					$sql_options->db_name 				 = false;
-					$sql_options->conn 					 = false;
-					$sql_options->caller		 		 = 'bibliography_rows';
-
+					$sql_options->apply_postprocess		 = false;
+					$sql_options->map					 = false;
+					$sql_options->process_result		 = false;
+					$sql_options->db_name				 = false;
+					$sql_options->conn					 = false;
+					$sql_options->caller				 = 'bibliography_rows';
+					
 					foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
 			// strQuery
@@ -513,6 +518,7 @@ class web_data {
 					$query_options->table 					= $sql_options->table;
 					$query_options->apply_postprocess 		= $sql_options->apply_postprocess;
 					$query_options->map 					= $sql_options->map;
+					$query_options->process_result			= $sql_options->process_result;
 					$query_options->lang 					= $sql_options->lang;
 					$query_options->db_name 				= $sql_options->db_name;
 					$query_options->conn 					= $sql_options->conn;
@@ -544,19 +550,21 @@ class web_data {
 				$response->msg    = "Error on get data (exec_query)";
 
 			// sort vars
-				$strQuery 				= $options->strQuery;
-				$caller 				= $options->caller;
-				$count 					= $options->count;
+				$strQuery				= $options->strQuery;
+				$caller					= $options->caller;
+				$count					= $options->count;
 				$ar_fields				= $options->ar_fields;
-				$resolve_portal 		= $options->resolve_portal;
+				$resolve_portal			= $options->resolve_portal;
 				$resolve_portals_custom = $options->resolve_portals_custom ?? false;
-				$portal_filter 			= $options->portal_filter ?? false;
-				$table 					= $options->table;
-				$apply_postprocess 		= $options->apply_postprocess ?? false;
-				$map 					= $options->map ?? false;
-				$lang 					= $options->lang;
-				$db_name 				= !empty($options->db_name) ? $options->db_name : false;
-				$conn 	 				= is_resource($options->conn) ? $options->conn : web_data::get_db_connection($db_name);
+				$portal_filter			= $options->portal_filter ?? false;
+				$table					= $options->table;
+				$apply_postprocess		= $options->apply_postprocess ?? false;
+				$map					= $options->map ?? false;
+				$process_result			= $options->process_result ?? false;
+				$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query 
+				$lang					= $options->lang;
+				$db_name				= !empty($options->db_name) ? $options->db_name : false;
+				$conn					= is_resource($options->conn) ? $options->conn : web_data::get_db_connection($db_name);
 
 			// connection check
 				if (empty($conn)) {
@@ -704,6 +712,14 @@ class web_data {
 						}
 					}
 				}//end if ($map!==false)
+
+			// process_result. : function name, ar_data, process_result object, sql_options object, $total
+				if ($process_result!==false && !empty($ar_data)) {
+					$user_func_response = call_user_func($process_result->fn, $ar_data, $process_result, $sql_options);
+
+					// overwrite ar_data (!)
+						$ar_data = $user_func_response->ar_data;
+				}
 
 
 			// response Fixed properties

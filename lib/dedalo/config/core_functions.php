@@ -1399,12 +1399,15 @@ function show_msg($msg, $type='ERROR') {
 * Equivalent of javascript find
 */
 function array_find($xs, $f) {
-  foreach ($xs as $x) {
-    if (call_user_func($f, $x) === true)
-      return $x;
-  }
 
-  return null;
+	if (is_array($xs)) {	
+		foreach ($xs as $x) {
+			if (call_user_func($f, $x) === true)
+			return $x;
+		}
+	}
+
+	return null;
 }//end find
 
 

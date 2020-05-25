@@ -486,16 +486,13 @@ class component_relation_common extends component_common {
 
 			$current_dato = $this->get_dato();
 
-			if (!empty($current_dato)) {
+			$relation_options = new stdClass();
+				$relation_options->section_tipo 		= $section_tipo;
+				$relation_options->section_id 			= $parent;
+				$relation_options->from_component_tipo 	= $tipo;
+				$relation_options->ar_locators 			= $current_dato;
 
-				$relation_options = new stdClass();
-					$relation_options->section_tipo 		= $section_tipo;
-					$relation_options->section_id 			= $parent;
-					$relation_options->from_component_tipo 	= $tipo;
-					$relation_options->ar_locators 			= $current_dato;
-
-				$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
-			}
+			$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);		
 		}
 
 
@@ -601,7 +598,8 @@ class component_relation_common extends component_common {
 
 				$ar_values = [];
 				if ($include_self===true) {
-					$ar_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
+					$current_values = ts_object::get_term_by_locator( $locator, $lang, true );					
+					$ar_values[] = $current_values;
 				}
 
 				#$ar_parents = component_relation_parent::get_parents_recursive( $locator );
@@ -621,7 +619,7 @@ class component_relation_common extends component_common {
 					#	continue;
 					#}
 
-					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
+					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );					
 					if (!empty($current_value)) {
 						$ar_values[]  = $current_value;
 					}
