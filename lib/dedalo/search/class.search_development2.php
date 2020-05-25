@@ -2988,7 +2988,7 @@ class search_development2 {
 						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 						$response->msg[] = $msg;
 					}else{
-						$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
+						$msg = ' Created ' . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo, section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
 						$response->msg[] = $msg;
 						if(SHOW_DEBUG===true) {
 							if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {

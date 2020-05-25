@@ -8,7 +8,8 @@ class logger_backend_file extends logger_backend  {
 
 	private $log_level;
 	private $h_log_file;
-	
+
+
 
 	public function __construct($url_data) {
 
@@ -40,7 +41,9 @@ class logger_backend_file extends logger_backend  {
 		
 		# Set encoding to ISO-8859-1
 		#stream_encoding($this->h_log_file, 'iso-8859-1');
-	}
+	}//end __construct
+
+
 
 	/**
 	* LOG MESSAGES
@@ -117,7 +120,4 @@ class logger_backend_file extends logger_backend  {
 
 
 
-
-}#end class logger_backend
-
-?>
+}//end class logger_backend
