@@ -46,7 +46,7 @@ class component_av extends component_media_common {
 			#dump($dato," dato 1 $modo");
 
 		$need_save=false;
-		if((int)$this->parent>0 && !isset($dato->section_id)) {
+		if((int)$this->section_id>0 && !isset($dato->section_id)) {
 
 			#####################################################################################################
 			# DEFAULT DATO
@@ -61,7 +61,7 @@ class component_av extends component_media_common {
 			$this->set_dato($locator);
 			$need_save=true;
 
-		}#end if(empty($dato->counter) && $this->parent>0)
+		}#end if(empty($dato->counter) && $this->section_id>0)
 
 
 			#
@@ -74,7 +74,7 @@ class component_av extends component_media_common {
 		if ($need_save===true) {
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
-			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
+			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - section_id:$this->section_id - lang:$this->lang)");
 
 		}#end if ($need_save)
 
@@ -168,7 +168,7 @@ class component_av extends component_media_common {
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, parent:$this->parent, section_tipo:$this->section_tipo", logger::WARNING);
+				debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo", logger::WARNING);
 			}
 			return 0;
 		}
