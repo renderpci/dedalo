@@ -29,8 +29,7 @@ abstract class notes {
 			$pattern = TR::get_mark_pattern('note', true, false, false, 'b');
 			$text_clean = preg_replace($pattern, '', $text_clean);
 		}
-		
-		
+				
 
 		return $text_clean;
 	}//end remove_notes
@@ -47,6 +46,10 @@ abstract class notes {
 		$pattern = TR::get_mark_pattern('note', true, false, false, 'b');
 
 		$ar_notes = [];
+
+		return $notes;
+
+		// En curso (Necesita RecordObj_dd de momento)..........................
 
 
 		preg_match_all($pattern, $raw_text, $matches);
