@@ -269,18 +269,18 @@ class calculation extends widget_common {
 			switch (true) {
 				case isset($data->true) && isset($data->true->ar_locators):
 
-					$ar_locators = json_decode( str_replace("'", '"', $data->true->ar_locators) );
-
-					$options = new stdClass();
-						$options->lang 				= DEDALO_DATA_LANG;
-						$options->data_to_be_used 	= 'valor';
-						$options->ar_locators 		= $ar_locators;
-						$options->separator_rows 	= isset($data->true->separator_rows) ? $data->true->separator_rows : false;
-						$options->separator_fields 	= isset($data->true->separator_fields) ? $data->true->separator_fields : false;
-
-						$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
-							#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
-						$data_resolved->true = $valor_from_ar_locators->result;
+					// $ar_locators = json_decode( str_replace("'", '"', $data->true->ar_locators) );
+					//
+					// $options = new stdClass();
+					// 	$options->lang 				= DEDALO_DATA_LANG;
+					// 	$options->data_to_be_used 	= 'valor';
+					// 	$options->ar_locators 		= $ar_locators;
+					// 	$options->separator_rows 	= isset($data->true->separator_rows) ? $data->true->separator_rows : false;
+					// 	$options->separator_fields 	= isset($data->true->separator_fields) ? $data->true->separator_fields : false;
+					//
+					// 	$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
+					// 		#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
+					// 	$data_resolved->true = $valor_from_ar_locators->result;
 					break;
 				case isset($data->true):
 					$data_resolved->true = $data->true;
@@ -290,18 +290,18 @@ class calculation extends widget_common {
 		// false. set the value of false variable
 			switch (true) {
 				case isset($data->false) && isset($data->false->ar_locators):
-					$ar_locators = json_decode( str_replace("'", '"', $data->false->ar_locators) );
-
-					$options = new stdClass();
-						$options->lang 				= DEDALO_DATA_LANG;
-						$options->data_to_be_used 	= 'valor';
-						$options->ar_locators 		= $ar_locators;
-						$options->separator_rows 	= isset($data->false->separator_rows) ? $data->false->separator_rows : false;
-						$options->separator_fields 	= isset($data->false->separator_fields) ? $data->false->separator_fields : false;
-
-					$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
-							#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
-					$data_resolved->false = $valor_from_ar_locators->result;
+					// $ar_locators = json_decode( str_replace("'", '"', $data->false->ar_locators) );
+					//
+					// $options = new stdClass();
+					// 	$options->lang 				= DEDALO_DATA_LANG;
+					// 	$options->data_to_be_used 	= 'valor';
+					// 	$options->ar_locators 		= $ar_locators;
+					// 	$options->separator_rows 	= isset($data->false->separator_rows) ? $data->false->separator_rows : false;
+					// 	$options->separator_fields 	= isset($data->false->separator_fields) ? $data->false->separator_fields : false;
+					//
+					// $valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
+					// 		#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
+					// $data_resolved->false = $valor_from_ar_locators->result;
 					break;
 				case isset($data->false):
 					$data_resolved->false = $data->true;
