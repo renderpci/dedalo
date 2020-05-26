@@ -133,28 +133,6 @@ class component_relation_model extends component_relation_common {
 
 
 	/**
-	* GET_REFERENCED_TIPO
-	* Alias of get_ar_target_section_tipo
-	* Select source section/s
-	* Overrides component common method
-	* @return string $this->referenced_tipo
-	*/
-	public function get_referenced_tipo() {
-
-		if (!$this->tipo) return null;
-		if (isset($this->referenced_tipo)) return $this->referenced_tipo;
-
-		# For future compatibility, we use get_ar_target_section_tipo to obtain section target tipo
-		$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-
-		$this->referenced_tipo = reset($ar_target_section_tipo);
-
-		return (string)$this->referenced_tipo;
-	}//end get_referenced_tipo
-
-
-
-	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
