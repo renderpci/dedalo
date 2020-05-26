@@ -537,29 +537,29 @@ class component_date extends component_common {
 	}//end timestamp_to_date
 
 
-
-	/**
-	* GET_EJEMPLO
-	*/
-	protected function get_ejemplo() {
-		/*
-		if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
-			# American format month/day/year
-			$format = 'MM-DD-YYYY';
-		}else{
-			# European format day.month.year
-			$format = 'DD-MM-YYYY';
-		}
-		*/
-		$date_mode = $this->get_date_mode();
-		if ($date_mode==='time') {
-			$format = 'HH'.dd_date::$time_separator.'MM'.dd_date::$time_separator.'SS';
-		}else{
-			$format = 'DD'.dd_date::$separator.'MM'.dd_date::$separator.'YYYY';
-		}
-
-		return $format;
-	}//end get_ejemplo
+	//
+	// /**
+	// * GET_EJEMPLO
+	// */
+	// protected function get_ejemplo() {
+	// 	/*
+	// 	if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
+	// 		# American format month/day/year
+	// 		$format = 'MM-DD-YYYY';
+	// 	}else{
+	// 		# European format day.month.year
+	// 		$format = 'DD-MM-YYYY';
+	// 	}
+	// 	*/
+	// 	$date_mode = $this->get_date_mode();
+	// 	if ($date_mode==='time') {
+	// 		$format = 'HH'.dd_date::$time_separator.'MM'.dd_date::$time_separator.'SS';
+	// 	}else{
+	// 		$format = 'DD'.dd_date::$separator.'MM'.dd_date::$separator.'YYYY';
+	// 	}
+	//
+	// 	return $format;
+	// }//end get_ejemplo
 
 
 
@@ -610,25 +610,6 @@ class component_date extends component_common {
 
 		return $ar_final;
 	}//end get_stats_value_resolved
-
-
-
-	/*
-	* GET_METHOD
-	* Return the result of the method calculation into the component
-	*/
-	public function get_method( $param ){
-		switch ($param) {
-			case 'Today':
-				//return self::get_timestamp_now_for_db();
-				return self::get_date_now();
-				break;
-
-			default:
-				return false;
-				break;
-		}
-	}//end get_method
 
 
 
