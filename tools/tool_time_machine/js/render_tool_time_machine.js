@@ -188,46 +188,6 @@ const content_data_edit = async function(self) {
 }//end content_data_edit
 
 
-// DES
-	// /**
-	// * GET_LANG_SELECTOR
-	// */
-	// const get_lang_selector = function(langs, selected_lang, class_name='') {
-
-	// 	// components container
-	// 		const select = ui.create_dom_element({
-	// 			element_type	: 'select',
-	// 			class_name 		: class_name
-	// 		})
-
-	// 		const option = ui.create_dom_element({
-	// 				element_type	: 'option',
-	// 				value 			: null,
-	// 				text_content 	: '',
-	// 				parent 			: select
-	// 			})
-
-	// 		const length = langs.length
-	// 		for (let i = 0; i < length; i++) {
-
-	// 			const lang = langs[i]
-	// 			const option = ui.create_dom_element({
-	// 				element_type	: 'option',
-	// 				value 			: lang.value,
-	// 				text_content 	: lang.label,
-	// 				parent 			: select
-	// 			})
-
-	// 			// selected options set on match
-	// 			if (lang.value === selected_lang) {
-	// 				option.selected = true
-	// 			}
-	// 		}
-
-	// 	return select
-	// }//end get_lang_selector
-
-
 
 /**
 * ADD_COMPONENT
