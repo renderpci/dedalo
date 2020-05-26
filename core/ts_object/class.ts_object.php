@@ -277,7 +277,6 @@ class ts_object extends Accessors {
 
 					$dato = $component->get_valor(0);
 						#debug_log(__METHOD__." $dato ".to_string($dato), logger::DEBUG);
-					#$dato = component_common::extract_component_value_fallback($component,DEDALO_DATA_LANG,true);
 
 				}else if ($modelo_name==='component_relation_related') {
 
