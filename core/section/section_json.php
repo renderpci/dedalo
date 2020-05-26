@@ -55,24 +55,6 @@
 			// subdata add
 				$data = $this->get_ar_subdata($value);
 
-			// TEST ONLY
-				// $start_time=microtime(1);
-				// $strQuery = 'SELECT id FROM relations ORDER BY id ASC;';
-				// $result	= JSON_RecordObj_matrix::search_free($strQuery);
-				// $parsed_time = round(microtime(1)-$start_time,3); dump($parsed_time, ' search time ++ ');
-
-				// // $start_time=microtime(1);
-				// // $a = pg_fetch_all($result);
-				// // $parsed_time = round(microtime(1)-$start_time,3); dump($parsed_time, ' pg_fetch_all time ++ ');
-				// // 	// dump($a, ' a ++ '.to_string());
-
-				// // $start_time=microtime(1);
-				// $ar_result = [];
-				// while ($rows = pg_fetch_assoc($result)) {
-				// 	$ar_result[] = (int)$rows['id'];
-				// }
-				// // $parsed_time2 = round(microtime(1)-$start_time,3);	dump($parsed_time2, ' pg_fetch_assoc ++ ');
-				// $data[] = $ar_result;
 
 	}// end if $permissions > 0
 
