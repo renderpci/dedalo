@@ -350,40 +350,40 @@ class component_layout extends component_common {
 				*/
 
 			case 'search':
-
-				if (!empty($dato)) {
-					# Usamos el guardado en matrix como dato del usuario actual
-					# De momento no existe esta opción..
-
-				}else{
-					# Usamos el default definido en estructura
-					# SEARCH LIST
-					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos
-					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'search_list');
-						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
-
-					if(!empty($ar_search_list)) foreach ($ar_search_list as $search_list_tipo) {
-						# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
-						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($search_list_tipo, $cache=false, $simple=true);
-							#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
-
-						if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
-							$layout_map[$search_list_tipo][] = $terminoID;
-						}
-					}else{
-						throw new Exception("search_list not found in structure. Please define search_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
-					}
-				}
-				#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo",true);
-
-				# LOG
-				#$log = logger::get_instance();
-				#$log->log_message("Loaded layout_map for search tipo $section_tipo " , logger::DEBUG, __METHOD__);
-
-				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
-				# and recovered in component_common->get_search_input_name()
-				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
-				$search_input_name = $this->get_search_input_name();
+				// full deprecated 05-2020
+				// if (!empty($dato)) {
+				// 	# Usamos el guardado en matrix como dato del usuario actual
+				// 	# De momento no existe esta opción..
+				//
+				// }else{
+				// 	# Usamos el default definido en estructura
+				// 	# SEARCH LIST
+				// 	# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos
+				// 	$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'search_list');
+				// 		#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
+				//
+				// 	if(!empty($ar_search_list)) foreach ($ar_search_list as $search_list_tipo) {
+				// 		# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
+				// 		$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($search_list_tipo, $cache=false, $simple=true);
+				// 			#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+				//
+				// 		if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
+				// 			$layout_map[$search_list_tipo][] = $terminoID;
+				// 		}
+				// 	}else{
+				// 		throw new Exception("search_list not found in structure. Please define search_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
+				// 	}
+				// }
+				// #if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo",true);
+				//
+				// # LOG
+				// #$log = logger::get_instance();
+				// #$log->log_message("Loaded layout_map for search tipo $section_tipo " , logger::DEBUG, __METHOD__);
+				//
+				// # Search input name (var search_input_name is injected in search -> records_search_list.phtml)
+				// # and recovered in component_common->get_search_input_name()
+				// # Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
+				// $search_input_name = $this->get_search_input_name();
 				break;
 
 			default:
