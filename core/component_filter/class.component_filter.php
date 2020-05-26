@@ -424,25 +424,25 @@ class component_filter extends component_relation_common {
 	}//end get_project_groupers
 
 
-
-	/**
-	* GET_STATS_VALUE
-	*/
-	public static function get_stats_value( $tipo, $ar_value ) {
-
-		if(!isset($stats_value)) static $stats_value;
-
-		if( !is_array($ar_value) ) $ar_value = array('' => 1 );
-
-		foreach ($ar_value as $key => $value) {
-
-			if(!isset($stats_value[$tipo][$key])) $stats_value[$tipo][$key] = 0;
-			$stats_value[$tipo][$key] = $stats_value[$tipo][$key] + 1;
-		}
-
-		return $stats_value[$tipo];
-	}//end get_stats_value
-
+	//
+	// /**
+	// * GET_STATS_VALUE
+	// */
+	// public static function get_stats_value( $tipo, $ar_value ) {
+	//
+	// 	if(!isset($stats_value)) static $stats_value;
+	//
+	// 	if( !is_array($ar_value) ) $ar_value = array('' => 1 );
+	//
+	// 	foreach ($ar_value as $key => $value) {
+	//
+	// 		if(!isset($stats_value[$tipo][$key])) $stats_value[$tipo][$key] = 0;
+	// 		$stats_value[$tipo][$key] = $stats_value[$tipo][$key] + 1;
+	// 	}
+	//
+	// 	return $stats_value[$tipo];
+	// }//end get_stats_value
+	//
 
 
 	/**
