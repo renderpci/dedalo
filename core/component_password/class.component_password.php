@@ -5,10 +5,10 @@
 
 
 class component_password extends component_common {
-	
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
-	
+
 	# GET DATO
 	public function get_dato() {
 		$dato = parent::get_dato();
@@ -21,10 +21,10 @@ class component_password extends component_common {
 	}
 
 	# SET_DATO (NO ENCRYTP THIS VAR !)
-	public function set_dato($dato) {			
+	public function set_dato($dato) {
 		parent::set_dato( (array)$dato );
 	}
-	
+
 	/**
 	* GET_VALOR
 	* Return array dato as comma separated elements string by default
@@ -64,7 +64,7 @@ class component_password extends component_common {
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
 	*/
 	public function Save() {
-			
+
  		if(isset($this->updating_dato) && $this->updating_dato===true) {
 			# Dato is saved plain (unencrypted) only for updates
 		}else{
@@ -72,20 +72,20 @@ class component_password extends component_common {
 			$dato = $this->dato;
 			foreach ((array)$dato as $key => $value) {
 				# code...
-				$this->dato[$key] = component_password::encrypt_password($value);		#dump($dato,'dato md5');	
+				$this->dato[$key] = component_password::encrypt_password($value);		#dump($dato,'dato md5');
 			}
-		}		
-		
+		}
+
 		# A partir de aquí, salvamos de forma estándar
 		return parent::Save();
 	}
 
-	# GET EJEMPLO
-	protected function get_ejemplo() {
-		
-		if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";
-		return parent::get_ejemplo();
-	}
+	// # GET EJEMPLO
+	// protected function get_ejemplo() {
+	//
+	// 	if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";
+	// 	return parent::get_ejemplo();
+	// }
 
 
 	/**
@@ -99,7 +99,7 @@ class component_password extends component_common {
 	public static function encrypt_password($stringArray) {
 
 		$encryption_mode = encryption_mode();
-		
+
 		if( $encryption_mode==='openssl' ) {
 			return dedalo_encrypt_openssl($stringArray, DEDALO_INFORMACION);
 		}else if($encryption_mode==='mcrypt') {
@@ -108,13 +108,13 @@ class component_password extends component_common {
 			debug_log(__METHOD__." UNKNOW ENCRYPT MODE !! ".to_string(), logger::ERROR);
 		}
 
-		return false;	
+		return false;
 	}
 
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @return 
+	* @return
 	*/
 	public static function update_dato_version($request_options) {
 
@@ -131,7 +131,7 @@ class component_password extends component_common {
 			$update_version = $options->update_version;
 			$dato_unchanged = $options->dato_unchanged;
 			$reference_id 	= $options->reference_id;
-			
+
 
 		$update_version = implode(".", $update_version);
 
@@ -162,10 +162,10 @@ class component_password extends component_common {
 
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = "[$reference_id] Dato change for root.<br />";	// to_string($dato_unchanged)." 
+					$response->msg = "[$reference_id] Dato change for root.<br />";	// to_string($dato_unchanged)."
 					return $response;
 				}
-					
+
 				# Compatibility old dedalo instalations
 				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
 
@@ -179,11 +179,11 @@ class component_password extends component_common {
 					$response->new_dato = $new_dato;
 					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					return $response;
-					
+
 				}else{
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
 				}
 		}
