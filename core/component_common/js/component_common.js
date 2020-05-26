@@ -92,7 +92,7 @@ component_common.prototype.init = async function(options) {
 	// events subscription (from component properties)
 	// the ontology can define a observer property that specify the tipo that this component will listen
 	// the event has a scope of the same section_tipo and same section_id for the observer and observable
-		const observe = typeof self.context.properties!=="undefined"
+		const observe = (self.context.properties && typeof self.context.properties.observe!=="undefined")
 			? (self.context.properties.observe || null)
 			: null
 		if(observe){
