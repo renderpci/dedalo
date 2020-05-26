@@ -175,18 +175,19 @@ const add_events = function(self, wrapper) {
 
 			// remove row
 				if (e.target.matches('.button.remove')) {
+					e.preventDefault()
 
 					const changed_data = Object.freeze({
 						action	: 'remove',
 						key		: JSON.parse(e.target.dataset.key),
 						value	: null
 					})
-					self.change_value({
+					const changed = self.change_value({
 						changed_data : changed_data,
 						label 		 : e.target.previousElementSibling.textContent,
 						refresh 	 : false
 					})
-					.then(async (api_response)=>{
+					changed.then(async (api_response)=>{
 
 						// service destroy. change the portal service to false and desactive it.
 							if(self.portal_active===true){
@@ -196,7 +197,7 @@ const add_events = function(self, wrapper) {
 							}
 
 						// update pagination offset
-							self.update_pagination_values()
+							self.update_pagination_values('remove')
 
 						// refresh
 							self.refresh()

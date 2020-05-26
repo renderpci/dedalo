@@ -378,10 +378,13 @@ class section_tm extends common {
 				$element_json = $component->get_json($get_json_options);
 
 			// edit section_id to match section locator data item
-				$current_item = reset($element_json->data);
-					$current_item->matrix_id = $current_record->id;
+				$current_item = reset($element_json->data);					
 
-			$data[] = $current_item;
+				if (!empty($current_item)) {
+					$current_item->matrix_id = $current_record->id;
+					$data[] = $current_item;
+				}
+			
 
 		// timestamp
 			$timestamp_tipo = DEDALO_SECTION_INFO_MODIFIED_DATE; // 'dd201' Modification date

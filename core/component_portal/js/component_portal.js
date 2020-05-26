@@ -60,7 +60,7 @@ export const component_portal = function(){
 	component_portal.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_portal.prototype.save 	 			= component_common.prototype.save
+	component_portal.prototype.save					= component_common.prototype.save
 	// component_portal.prototype.load_data 		= component_common.prototype.load_data
 	// component_portal.prototype.load_datum 		= component_common.prototype.load_datum
 	// component_portal.prototype.get_value 		= component_common.prototype.get_value
@@ -74,6 +74,7 @@ export const component_portal = function(){
 	component_portal.prototype.list					= render_component_portal.prototype.list
 	component_portal.prototype.edit					= render_component_portal.prototype.edit
 	component_portal.prototype.edit_in_list			= render_component_portal.prototype.edit
+	component_portal.prototype.tm					= render_component_portal.prototype.edit
 	component_portal.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -86,7 +87,7 @@ component_portal.prototype.init = async function(options) {
 	const self = this
 
 	// autocomplete. set default values of service autocomplete
-		self.autocomplete 		= null
+		self.autocomplete		= null
 		self.autocomplete_active= false
 
 	// call the generic commom tool init
@@ -121,10 +122,12 @@ component_portal.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_portal.prototype.build  = async function(autoload=false){
+component_portal.prototype.build  = async function(autoload){
 	const t0 = performance.now()
 
 	const self = this
+
+	autoload = typeof autoload==="undefined" ? false : autoload
 
 	// status update
 		self.status = 'building'
@@ -134,6 +137,10 @@ component_portal.prototype.build  = async function(autoload=false){
 
 			const current_data_manager 	= new data_manager()
 			const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
+
+			if(SHOW_DEBUG===true) {
+				console.log("portal build api_response:", api_response)
+			}
 			
 			// Update the self.data into the datum and self instance
 			self.update_datum(api_response)
@@ -191,7 +198,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			//console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}
@@ -222,8 +229,6 @@ component_portal.prototype.add_value = async function(value) {
 		// 	return false
 		// }
 
-	// update pagination total
-		// self.pagination.total = self.data.value ? self.data.value.length : 0
 
 	const key = self.pagination.total || 0
 
@@ -234,41 +239,17 @@ component_portal.prototype.add_value = async function(value) {
 	})
 
 	if(SHOW_DEBUG===true) {
-		console.log("==== add_value - value - changed_data:", value, changed_data);
+		console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
 	}
-
-	// des
-		// const js_promise = self.change_value({
-		// 	changed_data : changed_data,
-		// 	refresh 	 : false
-		// })
-		// .then(async (api_response)=>{
-
-		// 	// destroy. change the portal service to false and desactive it.
-		// 		if(self.portal_active===true){
-		// 			self.portal.destroy()
-		// 			self.portal_active = false
-		// 			self.portal 		 = null
-		// 		}
-
-		// 	// update pagination offset and total
-		// 		self.update_pagination_values()
-		// 		await self.paginator.build()
-
-		// 	// refresh
-		// 		self.refresh()
-
-		// 	return true
-		// })
 
 	// change_value
 		const api_response = await self.change_value({
 			changed_data : changed_data,
-			refresh 	 : false
+			refresh		 : false
 		})
 
 	// update pagination offset
-		self.update_pagination_values()
+		self.update_pagination_values('add')
 
 	// refresh self component
 		self.refresh()
@@ -282,9 +263,25 @@ component_portal.prototype.add_value = async function(value) {
 /**
 * UPDATE_PAGINATION_VALUES
 */
-component_portal.prototype.update_pagination_values = function() {
+component_portal.prototype.update_pagination_values = function(action) {
 
 	const self = this
+
+	// update self.data.pagination
+		switch(action) {
+			case 'remove' :
+				// update pagination total
+				if(self.data.pagination.total && self.data.pagination.total>0) {
+					self.data.pagination.total-- 
+				}
+				break;
+			case 'add' :
+				// update self.data.pagination
+				if(self.data.pagination.total && self.data.pagination.total>=0) {
+					self.data.pagination.total++ 
+				}
+				break;
+		}
 
 	// update pagination offset and total
 		const last_offset 	= self.get_last_offset()

@@ -175,8 +175,6 @@ class locator extends stdClass {
 		# No verification is made now		
 		$this->type_rel = (string)$value;
 	}
-
-
 	/**
 	* SET_SEMANTIC
 	*//*
@@ -197,7 +195,6 @@ class locator extends stdClass {
 		$this->type = (int)$value;
 		
 	}//end set_from_key
-
 	/**
 	* SET_TIPO
 	*/
@@ -207,6 +204,15 @@ class locator extends stdClass {
 		}
 		$this->tipo = (string)$value;
 	}// end set_tipo
+	/**
+	* SET_LANG
+	*/
+	public function set_lang($value) {
+		if(strpos($value, 'lg-')!==0) {
+			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
+		}
+		$this->lang = (string)$value;
+	}// end set_lang
 
 
 

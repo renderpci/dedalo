@@ -55,7 +55,7 @@ component_common.prototype.init = async function(options) {
 	self.context 	= options.context  		|| null // structure context of current component (include properties, tools, etc.)
 	self.data 	 	= options.data 			|| null // current specific data of this component
 	self.datum 	 	= options.datum  		|| null // global data including dependent data (used in portals, etc.)
-	self.pagination = self.data && self.data.pagination
+	self.pagination = (self.data && self.data.pagination)
 		? self.data.pagination
 		: { // pagination info (used in portals, etc.)
 			total : 0,
@@ -188,17 +188,19 @@ component_common.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_common.prototype.build = async function(autoload=false){
+component_common.prototype.build = async function(autoload){
 	const t0 = performance.now()
 
 	const self = this
+
+	autoload = typeof autoload==="undefined" ? false : autoload
 
 	// status update
 		self.status = 'building'
 
 	// load data if is not already received as option
 		if (autoload===true) {
-
+				
 			// sqo_context
 				// create the sqo_context
 				self.sqo_context = {show: []}
@@ -303,7 +305,7 @@ component_common.prototype.save = async function(changed_data) {
 					}
 
 				// Update the new data into the instance and the general datum
-					if (api_response.result) self.update_datum(api_response)
+					// if (api_response.result) self.update_datum(api_response) (!) Use build to update_datum, NOT here
 
 				return api_response
 
@@ -402,6 +404,7 @@ component_common.prototype.set_value = function(value) {
 * Update the datum and the data of the instance with the data changed and saved.
 * changed_data format:
 *	{
+		action : insert,
 *		key	: i,
 *		value : input.value
 *	}
@@ -417,18 +420,26 @@ component_common.prototype.update_datum = async function(api_response) {
 	//on building if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-	// remove the component old data in general datum (from down to top array items)
-	const data_to_change = api_response.result.data
+	// data_to_change
+		const data_to_change		= api_response.result.data
+		const data_to_change_length = data_to_change.length
+			console.log("update_datum --------------------------- data_to_change:",data_to_change);
+			console.log("update_datum --------------------------- self:",self); 
+			console.trace();
 
-	const data_length = data_to_change.length
-	for (let i = data_length - 1; i >= 0; i--) {
-		const current_data = data_to_change[i]			
-		const index_to_delete = self.datum.data.findIndex(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id)
-		if(SHOW_DEBUG===true) {
-			console.log(`:---- [update_datum] DELETE data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
+	// remove the component old data in general datum (from down to top array items)		
+		for (let i = data_to_change_length - 1; i >= 0; i--) {
+			const current_data = data_to_change[i]			
+			const index_to_delete = self.datum.data.findIndex(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id)
+			if (index_to_delete!==-1) {
+				if(SHOW_DEBUG===true) {
+					console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
+				}
+				self.datum.data.splice(index_to_delete, 1);
+			}else{
+				console.warn("(!) Not found index_to_delete:", current_data.tipo, current_data.section_id)
+			}
 		}
-		self.datum.data.splice(index_to_delete, 1);
-	}
 
 		// const datum_data_length = self.datum.data.length
 		// for (let i = datum_data_length - 1; i >= 0; i--) {
@@ -453,14 +464,14 @@ component_common.prototype.update_datum = async function(api_response) {
 		// self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
 			//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
 		const ar_instances = instances.get_all_instances()
-		for (let i = data_length - 1; i >= 0; i--) {
+		for (let i = data_to_change_length - 1; i >= 0; i--) {
 			const current_data = data_to_change[i]
-			const current_instance = ar_instances.find(item =>
-				   item.tipo===current_data.tipo
-				&& item.section_tipo===current_data.section_tipo
-				&& item.section_id==current_data.section_id
-			)
-			current_instance.data = self.datum.data.find(item => item.tipo===current_data.tipo && item.section_id==current_data.section_id) || {}
+			const current_instance = ar_instances.find(item => item.tipo===current_data.tipo && item.section_tipo===current_data.section_tipo && item.section_id===current_data.section_id)
+			if (current_instance) {
+				current_instance.data = self.datum.data.find(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id) || {}
+			}else{
+				console.warn("(!) Not found current instance:", current_data.tipo, current_data.section_tipo, current_data.section_id)
+			}		
 		}
 
 	// check data
@@ -483,6 +494,7 @@ component_common.prototype.update_datum = async function(api_response) {
 			self.pagination.total = self.data.pagination.total
 		}
 
+
 	return true
 }//end update_datum
 
@@ -496,8 +508,8 @@ component_common.prototype.update_datum = async function(api_response) {
 *								value : input.value }
 * @return bool true
 */
-component_common.prototype.update_data_value = async function(changed_data){
-
+component_common.prototype.update_data_value = function(changed_data){
+	
 	const self = this
 
 	if(SHOW_DEBUG===true) {
@@ -563,7 +575,7 @@ component_common.prototype.change_value = async function(options) {
 	//self.status = 'changing'
 
 	// update the data in the instance previous to save
-		await self.update_data_value(changed_data)
+		const update_data = self.update_data_value(changed_data)
 
 	// rebuild and save the component
 		const api_response = await self.save(changed_data)
