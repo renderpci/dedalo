@@ -139,7 +139,6 @@ class component_input_text extends component_common {
 
 				$component = $this;
 				$component->set_lang($lang);
-				#$add_value = component_common::extract_component_value_fallback($component);
 				$add_value = $component->get_valor($lang);
 				if (!empty($add_value) && $add_value!==$valor) {
 					$valor .= ' ('.$add_value.')';
