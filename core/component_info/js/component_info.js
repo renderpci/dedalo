@@ -73,7 +73,7 @@ export const component_info = function(){
 		const self = this
 
 		const value = self.data.value
-
+		const datalist = self.data.datalist
 		// self data verification
 			if (!value || value.length===0) {
 				return false
@@ -91,9 +91,11 @@ export const component_info = function(){
 				const loaded_widget 	= self.ar_instances.find(item => item.id === widget_id)
 
 				const widget_value 		= value.filter(item => item.widget === widget_name)
+				const widget_datalist	= (datalist) ? datalist.filter(item => item.widget === widget_name) : []
 
 				if(loaded_widget){
 					loaded_widget.value  = widget_value
+					loaded_widget.datalist  = widget_datalist
 					continue
 				}
 
@@ -110,6 +112,7 @@ export const component_info = function(){
 					lang			: self.lang,
 					mode			: self.mode,
 					value			: widget_value,
+					datalist 		: widget_datalist,
 					ipo				: current_widget.ipo
 				}
 

@@ -70,41 +70,6 @@ class component_radio_button extends component_relation_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*//*
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		$component 	= component_common::get_instance(__CLASS__,
-													 $tipo,
-												 	 $parent,
-												 	 'list',
-													 DEDALO_DATA_NOLAN,
-												 	 $section_tipo);
-
-
-		# Use already query calculated values for speed
-		$ar_records   = (array)json_handler::decode($value);
-		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-
-		return  $component->get_valor($lang);
-	}//end render_list_value */
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)

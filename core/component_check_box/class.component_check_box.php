@@ -30,7 +30,7 @@ class component_check_box extends component_relation_common {
 				if(SHOW_DEBUG) {
 					dump($dato," dato");
 				}
-				trigger_error(__METHOD__." Wrong dato format. OLD format dato in label:$this->label tipo:$this->tipo parent:$this->parent.Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
+				trigger_error(__METHOD__." Wrong dato format. OLD format dato in label:$this->label tipo:$this->tipo section_id:$this->section_id.Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
 				return null;
 			}
 		}
@@ -65,39 +65,6 @@ class component_check_box extends component_relation_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*//*
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		$component = component_common::get_instance(__CLASS__,
-													$tipo,
-													$parent,
-													'list',
-													DEDALO_DATA_NOLAN,
-													$section_tipo);
-
-		$ar_val = json_decode($value);
-		$component->set_dato($ar_val);
-
-		return $component->get_valor();
-	}#end render_list_value */
-
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
@@ -123,8 +90,4 @@ class component_check_box extends component_relation_common {
 		return $dataframe_value;
 
 	}
-
-
-
 }
-?>

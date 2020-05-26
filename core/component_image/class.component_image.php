@@ -1069,42 +1069,7 @@ class component_image extends component_media_common {
 
 		return $last_file_path;
 	}//end get_deleted_image
-
-
-
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $value
-	*
-	* In time machine mode (list_tm) image is always calculated
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		//if ( (empty($value) && $modo==='portal_list') || $modo==='list_tm' || $modo==='portal_list_view_mosaic' || $modo==='edit' || $modo==='edit_in_list') {
-
-			$component	= component_common::get_instance(__CLASS__,
-														 $tipo,
-														 $parent,
-														 $modo,
-														 $lang,
-														 $section_tipo);
-			$value 		= $component->get_html();
-		//}
-
-		return $value;
-	}//end render_list_value
-
+	
 
 
 	/**
@@ -1333,7 +1298,7 @@ class component_image extends component_media_common {
 
 		// file save
 			$media_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $initial_media_path . '/svg' . $aditional_path;
-			
+
 			# Target folder verify (EXISTS AND PERMISSIONS)
 			if( !is_dir($media_path) ) {
 				if(!mkdir($media_path, 0777,true)) throw new Exception(" Error on read or create directory: svg. Permission denied $media_path (2)");
@@ -1504,10 +1469,10 @@ class component_image extends component_media_common {
 						$aditional_path  		= $image_component->get_aditional_path();
 						$initial_media_path 	= $image_component->get_initial_media_path();
 						$original_extension 	= $image_component->get_original($source_quality, false) ?? 'jpg';
-					
+
 						$base_path 	= DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $source_quality . $aditional_path;
 						$file 		= DEDALO_MEDIA_PATH . $base_path . '/' . $image_id . '.' . $original_extension;
-							
+
 
 						if(file_exists($file)) {
 							$upload_date_timestamp 		= date ("Y-m-d H:i:s", filemtime($file));
@@ -1518,13 +1483,13 @@ class component_image extends component_media_common {
 							$response = new stdClass();
 								$response->result = 2;
 								$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-								return $response;				
+								return $response;
 						}
 
 
 					// create the svg_file
 						$image_component->create_default_svg_file($save_file=true);
-				
+
 					// get the original name
 						$original_file_name = '';
 						$properties = $image_component->get_propiedades();
@@ -1542,7 +1507,7 @@ class component_image extends component_media_common {
 																					 $options->section_tipo);
 
 							$original_file_name = $original_name_component->get_dato();
-							$original_file_name = isset($original_file_name[0]) ? $original_file_name[0] : $original_file_name; 
+							$original_file_name = isset($original_file_name[0]) ? $original_file_name[0] : $original_file_name;
 						}
 
 
@@ -1558,11 +1523,11 @@ class component_image extends component_media_common {
 																					 DEDALO_DATA_NOLAN,
 																					 $options->section_tipo);
 							$original_file_name = $previous_code_component->get_dato();
-							$original_file_name = isset($original_file_name[0]) ? $original_file_name[0] : $original_file_name; 
+							$original_file_name = isset($original_file_name[0]) ? $original_file_name[0] : $original_file_name;
 
 						}
 
-					
+
 					// create new dato
 						$dato = new stdClass();
 							$dato->original_file_name 	= $original_file_name;

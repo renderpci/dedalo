@@ -519,39 +519,6 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		#if (empty($value)) {
-			$modelo_name = 'component_pdf';
-			$component 	 = component_common::get_instance($modelo_name,
-														  $tipo,
-														  $parent,
-														  $modo,
-														  $lang,
-														  $section_tipo);
-			$value = $component->get_html();
-		#}
-
-		return $value;
-	}//end render_list_value
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)

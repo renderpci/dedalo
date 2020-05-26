@@ -2653,28 +2653,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* (Overwrite for non default behaviour)
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		return $value;
-	}//end render_list_value
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffsuion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
@@ -3653,10 +3631,6 @@ abstract class component_common extends common {
 						// Resolve indirect values and exec fallback lang when empty
 							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
 							switch (true) {
-								case $modelo_name==='component_text_area':
-									// Resolve value with component
-									$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', DEDALO_DATA_LANG, $row->section_tipo, $row->section_id, null, null);
-									break;
 								case in_array($modelo_name, $components_with_relations):
 									// Resolve value from locator
 									$value_locators = $value;

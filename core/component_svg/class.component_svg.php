@@ -235,13 +235,13 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_FILE_CONTENT
-	* @return 
+	* @return
 	*/
 	public function get_file_content() {
 
 		$file_path 		= $this->get_file_path();
 		$file_content	= file_get_contents($file_path);
-		
+
 		return $file_content;
 	}//end get_file_content
 
@@ -325,7 +325,7 @@ class component_svg extends component_media_common {
 			$initial_media_path = $this->get_initial_media_path();
 			$file_name 			= $image_id .'.'. DEDALO_SVG_EXTENSION;
 			$image_url 			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $aditional_path . '/' . $file_name;
-			
+
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
 				$file = $this->get_file_path();
@@ -366,41 +366,6 @@ class component_svg extends component_media_common {
 
 		return $url;
 	}//end get_url_from_locator
-
-
-
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $value
-	*
-	* In time machine mode (list_tm) image is always calculated
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		#if ( (empty($value) && $modo==='portal_list') || $modo==='list_tm' || $modo==='portal_list_view_mosaic' || $modo==='edit' || $modo==='edit_in_list') {
-
-			$component	= component_common::get_instance(__CLASS__,
-														 $tipo,
-														 $parent,
-														 $modo,
-														 $lang,
-														 $section_tipo);
-			$value 		= $component->get_html();
-		#}
-
-		return $value;
-	}//end render_list_value
 
 
 
