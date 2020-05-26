@@ -399,49 +399,6 @@ class component_portal extends component_relation_common {
 
 
 
-	/**
-	* GET_COMPONENT_INFO
-	* @return object | json string $component_info
-	*/
-	public function get_component_info($format='json') {
-
-		$component_info_obj = parent::get_component_info(false);
-
-		// external mode check
-			$propiedades = $this->get_propiedades();
-			if(isset($propiedades->source->search)){
-
-				$component_info_obj->external_data = [];
-
-				foreach ($propiedades->source->search as $current_search) {
-					if ($current_search->type === 'external'){
-
-						$external_section_tipo = $current_search->section_tipo;
-						$current_recordObjdd = new RecordObj_dd($external_section_tipo);
-						$external_section_properties = $current_recordObjdd->get_propiedades(true);
-
-						if (isset($external_section_properties->external_data)) {
-
-							$external_data = $external_section_properties->external_data;
-							$external_data->section_tipo = $external_section_tipo;
-
-							$component_info_obj->external_data[] = $external_data;
-						}
-					}
-				}
-			}
-
-			if ($format === 'json') {
-				$component_info =  json_encode($component_info_obj);
-			}else{
-				$component_info = $component_info_obj;
-			}
-
-		return $component_info;
-	}//end get_component_info
-
-
-
 	///////////////// HIERARCHY LEGACY
 		/**
 		* GET_HIERARCHY_SECTIONS_FROM_TYPES
