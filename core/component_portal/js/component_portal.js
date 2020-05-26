@@ -60,7 +60,7 @@ export const component_portal = function(){
 	component_portal.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_portal.prototype.save 	 			= component_common.prototype.save
+	component_portal.prototype.save					= component_common.prototype.save
 	// component_portal.prototype.load_data 		= component_common.prototype.load_data
 	// component_portal.prototype.load_datum 		= component_common.prototype.load_datum
 	// component_portal.prototype.get_value 		= component_common.prototype.get_value
@@ -74,6 +74,7 @@ export const component_portal = function(){
 	component_portal.prototype.list					= render_component_portal.prototype.list
 	component_portal.prototype.edit					= render_component_portal.prototype.edit
 	component_portal.prototype.edit_in_list			= render_component_portal.prototype.edit
+	component_portal.prototype.tm					= render_component_portal.prototype.edit
 	component_portal.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -86,7 +87,7 @@ component_portal.prototype.init = async function(options) {
 	const self = this
 
 	// autocomplete. set default values of service autocomplete
-		self.autocomplete 		= null
+		self.autocomplete		= null
 		self.autocomplete_active= false
 
 	// call the generic commom tool init
@@ -142,7 +143,7 @@ component_portal.prototype.build  = async function(autoload){
 			}
 			
 			// Update the self.data into the datum and self instance
-			// self.update_datum(api_response) // (!) Deactivated because already called in component common Save
+			self.update_datum(api_response)
 		}
 
 	// pagination safe defaults
@@ -231,8 +232,6 @@ component_portal.prototype.add_value = async function(value) {
 
 	const key = self.pagination.total || 0
 
-		console.log("???????????????? add_value key, pagination.total:",key, self.pagination.total);
-
 	const changed_data = Object.freeze({
 		action	: 'insert',
 		key		: key,
@@ -246,7 +245,7 @@ component_portal.prototype.add_value = async function(value) {
 	// change_value
 		const api_response = await self.change_value({
 			changed_data : changed_data,
-			refresh 	 : false
+			refresh		 : false
 		})
 
 	// update pagination offset
