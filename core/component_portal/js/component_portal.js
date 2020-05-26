@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -140,59 +141,66 @@ component_portal.prototype.build  = async function(autoload){
 
 			if(SHOW_DEBUG===true) {
 				console.log("portal build api_response:", api_response)
-			}
+			}			
 			
 			// Update the self.data into the datum and self instance
-			self.update_datum(api_response)
+				if (api_response.result) self.update_datum(api_response) // (!) is not the common update_datum
+
+			// fix data
+				// self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
 		}
 
-	// pagination safe defaults
-		self.pagination.total 	= self.pagination.total  || 0
-		self.pagination.offset 	= self.pagination.offset || 0
-		self.pagination.limit 	= self.pagination.limit  || self.context.properties.max_records || 3
+	// pagination vars only in edit mode
+		if (self.mode==="edit") {
+		
+			// pagination safe defaults
+				self.pagination.total 	= self.pagination.total  || 0
+				self.pagination.offset 	= self.pagination.offset || 0
+				self.pagination.limit 	= self.pagination.limit  || self.context.properties.max_records || 3
 
-	// sqo update filter_by_locators
-		if(self.pagination.total>self.pagination.limit){
+			// sqo update filter_by_locators
+				if(self.pagination.total>self.pagination.limit){
 
-			const show 	= self.sqo_context.show
-			const sqo 	= show.find(item => item.typo==='sqo')
+					const show 	= self.sqo_context.show
+					const sqo 	= show.find(item => item.typo==='sqo')
 
-			const data_value = self.data.value
+					const data_value = self.data.value
 
-			sqo.filter_by_locators = data_value
-		}//end if(self.pagination.total>self.pagination.limit)
+					sqo.filter_by_locators = data_value
+				}//end if(self.pagination.total>self.pagination.limit)
 
-	// paginator
-		if (!self.paginator) {
-			// create new
-			const current_paginator = new paginator()
-			current_paginator.init({
-				caller : self
-			})
-			await current_paginator.build()
-			self.paginator = current_paginator
+			// paginator
+				if (!self.paginator) {
+					// create new
+					const current_paginator = new paginator()
+					current_paginator.init({
+						caller : self
+					})
+					await current_paginator.build()
+					self.paginator = current_paginator
 
-			self.events_tokens.push(
-				event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
-					self.pagination.offset = offset
-					self.refresh()
-				})
-			)//end events push
+					self.events_tokens.push(
+						event_manager.subscribe('paginator_goto_'+current_paginator.id , async (offset) => {
+							self.pagination.offset = offset
+							self.refresh()
+						})
+					)//end events push
 
-		}else{
-			// refresh existing
-			self.paginator.offset = self.pagination.offset
-			self.paginator.total  = self.pagination.total
-			self.paginator.refresh()
-		}
+				}else{
+					// refresh existing
+					self.paginator.offset = self.pagination.offset
+					self.paginator.total  = self.pagination.total
+					self.paginator.refresh()
+				}
 
-	// autocomplete destroy. change the autocomplete service to false and desactive it.
-		if(self.autocomplete && self.autocomplete_active===true){
-			self.autocomplete.destroy()
-			self.autocomplete_active = false
-			self.autocomplete 		 = null			
-		}
-
+			// autocomplete destroy. change the autocomplete service to false and desactive it.
+				if(self.autocomplete && self.autocomplete_active===true){
+					self.autocomplete.destroy()
+					self.autocomplete_active = false
+					self.autocomplete 		 = null			
+				}
+		}//end if (self.mode==="edit")
+	
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
 
@@ -200,7 +208,7 @@ component_portal.prototype.build  = async function(autoload){
 		if(SHOW_DEBUG===true) {
 			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			//console.log("component_portal self +++++++++++ :",self);
-			//console.log("========= build self.pagination.total:",self.pagination.total);
+			//console.log("========= build self.pagination.total:",self.pagination.total);				
 		}
 
 	// status update
@@ -209,6 +217,60 @@ component_portal.prototype.build  = async function(autoload){
 	
 	return true
 }//end component_portal.prototype.build
+
+
+
+/**
+* UPDATE_DATUM
+* Update component data value with changed_data send by the dom element
+* Update the datum and the data of the instance with the data changed and saved.
+* changed_data format:
+*	{
+		action : insert,
+*		key	: i,
+*		value : input.value
+*	}
+* @param object api_response
+*	api_response contains fresh calculated context and data of saved component
+* @return bool true
+*/
+component_portal.prototype.update_datum = function(api_response) {
+
+	const self = this
+
+	//const changed_data = self.data.changed_data
+	
+	// self.datum. On building, if datum is not created, creation is needed
+		if (!self.datum) self.datum = {data:[]}
+
+	// data_to_change
+		const new_data			= api_response.result.data		
+		const new_data_length	= new_data.length			
+			// console.log("update_datum --------------------------- new_data:",JSON.parse(JSON.stringify(new_data)) );
+			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data))); 
+			// console.trace();
+
+	// datum
+		// replace old data with the new one from api
+			self.datum.data = new_data
+				// console.log("update_datum --------------------------- final self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
+
+	// data
+		// update current element data
+			self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
+				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));		
+	
+	// update element pagination vars when are used
+		if (self.data.pagination && typeof self.pagination.total!=="undefined") {
+			self.pagination.total = self.data.pagination.total
+		}
+
+	// dispatch event
+		event_manager.publish('update_data_'+ self.id_base, '')
+	
+
+	return true
+}//end update_datum
 
 
 
@@ -283,9 +345,21 @@ component_portal.prototype.update_pagination_values = function(action) {
 				break;
 		}
 
-	// update pagination offset and total
-		const last_offset 	= self.get_last_offset()
-		//const current_total = self.pagination.total
+	// last_offset
+		const last_offset = (()=>{
+
+			const total = self.pagination.total
+			const limit = self.pagination.limit
+
+			if (total>0 && limit>0) {
+
+				const total_pages = Math.ceil(total / limit)
+
+				return parseInt( limit * (total_pages -1) )
+			}
+
+			return 0
+		})()
 
 	// self pagination update
 		self.pagination.offset 	= last_offset
@@ -303,80 +377,34 @@ component_portal.prototype.update_pagination_values = function(action) {
 /**
 * GET_LAST_OFFSET
 */
-component_portal.prototype.get_last_offset = function() {
-	//console.log("[get_last_offset] self:",self);
+	// component_portal.prototype.get_last_offset = function() {
+	// 	//console.log("[get_last_offset] self:",self);
 
-	const self = this
+	// 	const self = this
 
-	const total = self.pagination.total
-	const limit = self.pagination.limit
+	// 	const total = self.pagination.total
+	// 	const limit = self.pagination.limit
 
-	const _calculate = () => {
+	// 	const _calculate = () => {
 
-		if (total>0 && limit>0) {
+	// 		if (total>0 && limit>0) {
 
-			const total_pages = Math.ceil(total / limit)
+	// 			const total_pages = Math.ceil(total / limit)
 
-			return parseInt( limit * (total_pages -1) )
+	// 			return parseInt( limit * (total_pages -1) )
 
-		}else{
+	// 		}else{
 
-			return 0
-		}
-	}
-	const offset_last = _calculate()
+	// 			return 0
+	// 		}
+	// 	}
+	// 	const offset_last = _calculate()
 
-	if(SHOW_DEBUG===true) {
-		console.log("====get_last_offset offset_last:",offset_last, "total",total, "limit",limit);
-	}
+	// 	if(SHOW_DEBUG===true) {
+	// 		console.log("====get_last_offset offset_last:",offset_last, "total",total, "limit",limit);
+	// 	}
 
-	return offset_last
-}//end get_last_offset
+	// 	return offset_last
+	// }//end get_last_offset
 
 
-
-/**
-* REMOVE_VALUE
-* @param object value (locator)
-* @return bool
-*//*
-component_portal.prototype.remove_value = async function(target) {
-
-	const self = this
-
-	// user confirmation prevents remove accidentally
-		if (!confirm(`Sure to remove value: ${target.previousElementSibling.textContent} ?`)) return false
-
-	const key = parseInt(target.dataset.key)
-
-	// update_data_value.
-		const changed_data = {
-			action	: 'remove',
-			key		: key,
-			value	: null
-		}
-
-	// update the data in the instance previous to save
-		self.update_data_value(changed_data)
-		self.data.changed_data = changed_data
-
-	// rebuild and save the component
-		const js_promise = self.save(self.data.changed_data).then(async api_response => {
-
-			// update offset
-				//self.pagination.offset = get_last_offset(self)
-
-			// update total
-				//self.pagination.total--;
-
-			// refresh self
-				self.refresh()
-
-			// publish event (refresh all identical components)
-				//event_manager.publish('remove_element_'+self.id, key)
-
-		})
-
-	return js_promise
-}//end remove_value
-*/
