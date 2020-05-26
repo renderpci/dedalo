@@ -48,7 +48,7 @@ export const component_date = function(){
 	// lifecycle
 	component_date.prototype.init 	 			= component_common.prototype.init
 	component_date.prototype.build 				= component_common.prototype.build
-	component_date.prototype.render 			= common.prototype.render	
+	component_date.prototype.render 			= common.prototype.render
 	component_date.prototype.refresh 			= common.prototype.refresh
 	component_date.prototype.destroy 	 		= common.prototype.destroy
 
@@ -58,7 +58,7 @@ export const component_date = function(){
 	component_date.prototype.update_datum		= component_common.prototype.update_datum
 	component_date.prototype.change_value 		= component_common.prototype.change_value
 
-	// render	
+	// render
 	component_date.prototype.list 				= render_component_date.prototype.list
 	component_date.prototype.edit 				= render_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_component_date.prototype.edit
@@ -809,5 +809,3 @@ component_date.prototype.update_value_flatpickr = function(selectedDates, dateSt
 
 	return true
 }//end update_value_flatpickr
-
-
