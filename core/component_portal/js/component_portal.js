@@ -121,10 +121,12 @@ component_portal.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_portal.prototype.build  = async function(autoload=false){
+component_portal.prototype.build  = async function(autoload){
 	const t0 = performance.now()
 
 	const self = this
+
+	autoload = typeof autoload==="undefined" ? false : autoload
 
 	// status update
 		self.status = 'building'
@@ -134,9 +136,13 @@ component_portal.prototype.build  = async function(autoload=false){
 
 			const current_data_manager 	= new data_manager()
 			const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
+
+			if(SHOW_DEBUG===true) {
+				console.log("portal build api_response:", api_response)
+			}
 			
 			// Update the self.data into the datum and self instance
-			self.update_datum(api_response)
+			// self.update_datum(api_response) // (!) Deactivated because already called in component common Save
 		}
 
 	// pagination safe defaults
@@ -191,7 +197,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			//console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}
@@ -222,10 +228,10 @@ component_portal.prototype.add_value = async function(value) {
 		// 	return false
 		// }
 
-	// update pagination total
-		// self.pagination.total = self.data.value ? self.data.value.length : 0
 
 	const key = self.pagination.total || 0
+
+		console.log("???????????????? add_value key, pagination.total:",key, self.pagination.total);
 
 	const changed_data = Object.freeze({
 		action	: 'insert',
@@ -234,32 +240,8 @@ component_portal.prototype.add_value = async function(value) {
 	})
 
 	if(SHOW_DEBUG===true) {
-		console.log("==== add_value - value - changed_data:", value, changed_data);
+		console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
 	}
-
-	// des
-		// const js_promise = self.change_value({
-		// 	changed_data : changed_data,
-		// 	refresh 	 : false
-		// })
-		// .then(async (api_response)=>{
-
-		// 	// destroy. change the portal service to false and desactive it.
-		// 		if(self.portal_active===true){
-		// 			self.portal.destroy()
-		// 			self.portal_active = false
-		// 			self.portal 		 = null
-		// 		}
-
-		// 	// update pagination offset and total
-		// 		self.update_pagination_values()
-		// 		await self.paginator.build()
-
-		// 	// refresh
-		// 		self.refresh()
-
-		// 	return true
-		// })
 
 	// change_value
 		const api_response = await self.change_value({
@@ -268,7 +250,7 @@ component_portal.prototype.add_value = async function(value) {
 		})
 
 	// update pagination offset
-		self.update_pagination_values()
+		self.update_pagination_values('add')
 
 	// refresh self component
 		self.refresh()
@@ -282,9 +264,25 @@ component_portal.prototype.add_value = async function(value) {
 /**
 * UPDATE_PAGINATION_VALUES
 */
-component_portal.prototype.update_pagination_values = function() {
+component_portal.prototype.update_pagination_values = function(action) {
 
 	const self = this
+
+	// update self.data.pagination
+		switch(action) {
+			case 'remove' :
+				// update pagination total
+				if(self.data.pagination.total && self.data.pagination.total>0) {
+					self.data.pagination.total-- 
+				}
+				break;
+			case 'add' :
+				// update self.data.pagination
+				if(self.data.pagination.total && self.data.pagination.total>=0) {
+					self.data.pagination.total++ 
+				}
+				break;
+		}
 
 	// update pagination offset and total
 		const last_offset 	= self.get_last_offset()
