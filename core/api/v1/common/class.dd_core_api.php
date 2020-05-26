@@ -214,12 +214,15 @@ class dd_core_api {
 					$lang 			= $context->lang;
 					$changed_data 	= $data->changed_data;
 
+					$RecordObj_dd = new RecordObj_dd($tipo);
+					$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+
 				// build the component
 					$component = component_common::get_instance( $model,
 																 $tipo,
 																 $section_id,
 																 'edit',
-																 $lang,
+																 $component_lang,
 																 $section_tipo);
 				// get the component permisions
 					$permissions = $component->get_component_permissions();
@@ -357,11 +360,14 @@ class dd_core_api {
 					break;
 
 				case strpos($model, 'component')!==false:
+					$RecordObj_dd = new RecordObj_dd($tipo);
+					$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+
 					$element = component_common::get_instance($model,
 															  $tipo,
 															  null,
 															  $mode,
-															  $lang,
+															  $component_lang,
 															  $section_tipo);
 					break;
 
@@ -822,11 +828,13 @@ class dd_core_api {
 						if (strpos($model, 'component')===0) {
 
 							// component
+								$RecordObj_dd = new RecordObj_dd($tipo);
+								$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 								$element = component_common::get_instance($model,
 																		  $tipo,
 																		  $section_id,
 																		  $mode,
-																		  $lang,
+																		  $component_lang,
 																		  $section_tipo);
 
 								if ($mode==='tm') {
@@ -961,11 +969,13 @@ class dd_core_api {
 							if (strpos($model, 'component')===0) {
 
 								// component
+									$RecordObj_dd = new RecordObj_dd($tipo);
+									$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 									$element 	= component_common::get_instance($model,
 																				 $tipo,
 																				 $section_id,
 																				 $mode,
-																				 $lang,
+																				 $component_lang,
 																				 $section_tipo);
 								// pagination. fix pagination vars
 									$pagination = new stdClass();
