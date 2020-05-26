@@ -302,44 +302,49 @@ class component_relation_common extends component_common {
 			foreach ((array)$dato as $key => $current_locator) {
 
 				// is_object check
-				if (!is_object($current_locator)) {
-					$msg = " Error on set locator (is not object) json_ecoded: ".json_encode($current_locator);
-					trigger_error( __METHOD__ . $msg );
-					debug_log( __METHOD__ . $msg, logger::ERROR);
-					throw new Exception("Error Processing Request. Look server log for details", 1);
-				}
+					if (!is_object($current_locator)) {
+						$msg = " Error on set locator (is not object) json_ecoded: ".json_encode($current_locator);
+						trigger_error( __METHOD__ . $msg );
+						debug_log( __METHOD__ . $msg, logger::ERROR);
+						throw new Exception("Error Processing Request. Look server log for details", 1);
+					}
 
 				// section_id
-				if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
-					debug_log(__METHOD__." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::ERROR);
-					continue;
-				}
+					if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
+						debug_log(__METHOD__." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::ERROR);
+						continue;
+					}
 
 				// type
-				if (!isset($current_locator->type)) {
-					debug_log(__METHOD__." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::WARNING);
-					$current_locator->type = $relation_type;
-				}
+					if (!isset($current_locator->type)) {
+						debug_log(__METHOD__." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::WARNING);
+						$current_locator->type = $relation_type;
+					}
+
 				// from_component_tipo
-				if (!isset($current_locator->from_component_tipo)) {
-					$current_locator->from_component_tipo = $from_component_tipo;
-				}else if ($current_locator->from_component_tipo!==$from_component_tipo) {
-					debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".get_called_class().' '.to_string(), logger::WARNING);
-					$current_locator->from_component_tipo = $from_component_tipo;
-				}
+					if (!isset($current_locator->from_component_tipo)) {
+						$current_locator->from_component_tipo = $from_component_tipo;
+					}else if ($current_locator->from_component_tipo!==$from_component_tipo) {
+						debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".get_called_class().' '.to_string(), logger::WARNING);
+						$current_locator->from_component_tipo = $from_component_tipo;
+					}
 
 				// lang
-				if ($translatable==='si') {
-					if (!isset($current_locator->lang)) {
-						$current_locator->lang = $lang;
-					}else if ($current_locator->lang!==$lang) {
-						debug_log(__METHOD__." Fixed bad formed locator (bad lang $current_locator->lang) [$this->section_tipo, $this->parent, $lang] ".get_called_class().' '.to_string(), logger::WARNING);
-						$current_locator->lang = $lang;
-					}// end if (!isset($current_locator->lang))
-				}// end if ($translatable==='si')
+					if ($translatable==='si') {
+						if (!isset($current_locator->lang)) {
+							$current_locator->lang = $lang;
+						}else if ($current_locator->lang!==$lang) {
+							debug_log(__METHOD__." Fixed bad formed locator (bad lang $current_locator->lang) [$this->section_tipo, $this->parent, $lang] ".get_called_class().' '.to_string(), logger::WARNING);
+							$current_locator->lang = $lang;
+						}// end if (!isset($current_locator->lang))
+					}// end if ($translatable==='si')
 
-				# Add
-				$safe_dato[] = $current_locator;
+
+				// normalized locator
+					$nomalized_locator = new locator($current_locator);
+
+				// Add
+					$safe_dato[] = $nomalized_locator;
 			}
 		}
 
