@@ -501,7 +501,6 @@
 
 				if (!is_string($list_value)) {
 					if(SHOW_DEBUG===true) {
-						#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
 						#throw new Exception("Error Processing Request. list_value expected string", 1);
 					}
 

@@ -30,14 +30,14 @@ class component_av extends component_media_common {
 	* __CONSTRUCT
 	*
 	*/
-	function __construct($tipo, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
+	function __construct($tipo, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
 
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
@@ -46,14 +46,14 @@ class component_av extends component_media_common {
 			#dump($dato," dato 1 $modo");
 
 		$need_save=false;
-		if((int)$this->parent>0 && !isset($dato->section_id)) {
+		if((int)$this->section_id>0 && !isset($dato->section_id)) {
 
 			#####################################################################################################
 			# DEFAULT DATO
 			$locator = new locator();
 				$locator->set_component_tipo($this->tipo);
 				$locator->set_section_tipo($this->section_tipo);
-				$locator->set_section_id($this->parent);
+				$locator->set_section_id($this->section_id);
 			# END DEFAULT DATO
 			######################################################################################################
 
@@ -61,7 +61,7 @@ class component_av extends component_media_common {
 			$this->set_dato($locator);
 			$need_save=true;
 
-		}#end if(empty($dato->counter) && $this->parent>0)
+		}#end if(empty($dato->counter) && $this->section_id>0)
 
 
 			#
@@ -74,7 +74,7 @@ class component_av extends component_media_common {
 		if ($need_save===true) {
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
-			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
+			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - section_id:$this->section_id - lang:$this->lang)");
 
 		}#end if ($need_save)
 
@@ -168,7 +168,7 @@ class component_av extends component_media_common {
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, parent:$this->parent, section_tipo:$this->section_tipo", logger::WARNING);
+				debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo", logger::WARNING);
 			}
 			return 0;
 		}
@@ -679,46 +679,6 @@ class component_av extends component_media_common {
 
 		return true;
 	}//end restore_component_media_files
-
-
-
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $value
-	*
-	* In time machine mode (list_tm) image is always calculated
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
-		#if ($modo==='portal_list_view_mosaic') {
-			$component	= component_common::get_instance(__CLASS__,
-														 $tipo,
-														 $parent,
-														 $modo,
-														 $lang,
-														 $section_tipo);
-			$value 		= $component->get_html();
-		#}
-		/*
-		# Reset posterframe t var to force regenerate
-		preg_match("/t=(.{1,20})'\)/", $value, $output_array);
-		if (isset($output_array[1])) {
-			$value = str_replace($output_array[1], start_time(), $value);
-		}*/
-
-		return $value;
-	}//end render_list_value
 
 
 
