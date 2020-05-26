@@ -305,7 +305,7 @@ component_common.prototype.save = async function(changed_data) {
 					}
 
 				// Update the new data into the instance and the general datum
-					if (api_response.result) self.update_datum(api_response)
+					// if (api_response.result) self.update_datum(api_response) (!) Use build to update_datum, NOT here
 
 				return api_response
 
