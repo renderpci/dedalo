@@ -49,7 +49,7 @@ class component_info extends component_common {
 		// set the component info dato with the result
 		$this->dato = $dato;
 
-		dump($this->dato, ' $this->dato ++ '.to_string());
+		// dump($this->dato, ' $this->dato ++ '.to_string());
 
 		return $dato;
 	}//end get_dato
@@ -135,7 +135,7 @@ class component_info extends component_common {
 		// set the component info dato with the result
 		$this->data_list = $data_list;
 
-		dump($data_list, ' $data_list +-----+ '.to_string());
+		// dump($data_list, ' $data_list +-----+ '.to_string());
 
 		return $data_list;
 	}//end get_data_list
