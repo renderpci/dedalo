@@ -217,7 +217,7 @@ export const service_autocomplete = function() {
 			const q = search_value
 			const search_query_object = self.rebuild_search_query_object(q);
 
-		// todo get the serarch engine with the sqo_context
+		// todo get the search engine with the sqo_context
 		//	const context_search = self.sqo_context.filter((current_item)=> current_item.typo === 'ddo')
 		//	context_search.push(search_query_object)
 
@@ -258,12 +258,12 @@ export const service_autocomplete = function() {
 			}
 
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
-			const search_sections = search_query_object.section_tipo
+			const search_sections = self.ar_search_section_tipo
 
 		// filter_by_field_list. Optional. Uses propiedades config params
-			const filter_by_field_list_tipo  	 = false//self.get_filter_by_field_list_tipo(wrap_div)
-			const filter_by_field_list_value 	 = false//self.get_filter_by_field_list_value(wrap_div)
-			const filter_by_field_list_value_len = false//filter_by_field_list_value ? filter_by_field_list_value.length : 0;
+			const filter_by_field_list_tipo  	 = false
+			const filter_by_field_list_value 	 = false
+			const filter_by_field_list_value_len = false
 
 		// filter_fields_data. Optional. Used when you give the user control to the search fields and operators (like component autocomplete)
 			const filter_fields_data = false//self.get_filter_fields_data(wrap_div, q)
@@ -377,14 +377,13 @@ export const service_autocomplete = function() {
 
 			}else{
 
-				let filter_element 	= search_query_object.filter
+				const filter_element 	= search_query_object.filter
 
 				// Iterate current filter
 				for (let operator in filter_element) {
 
 					const current_filter = filter_element[operator]
-
-					for (var i = 0; i < current_filter.length; i++) {
+					for (let i = 0; i < current_filter.length; i++) {
 
 						// Update q property
 						current_filter[i].q 	  = (q !== "") ? "*" + q + "*" : "false_muyflase_de verdad" // Begins with
@@ -429,7 +428,7 @@ export const service_autocomplete = function() {
 
 		// render section on load data
 	 		const api_response = await load_section_data_promise
-	 			//console.log("[service_autocomplete.search_dedalo] api_response:",api_response);
+	 			console.log("[service_autocomplete.search_dedalo] api_response:",api_response);
 
 		return api_response
 	}//end search_dedalo
