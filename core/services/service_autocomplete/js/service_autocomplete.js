@@ -11,7 +11,7 @@
 
 /**
 * SERVICE_AUTOCOMPLETE
-* Used as service by component_autocomplete, component_autocomplete_hi,
+* Used as service by component_portal, (old component_autocomplete, component_autocomplete_hi)
 * component_relation_parent, component_relation_children, component_relation_related
 *
 */
@@ -139,7 +139,8 @@ export const service_autocomplete = function() {
 		const ar_search_sections = self.ar_search_section_tipo
 
 		// get the ar_locator founded in section
-		const ar_locator = data.find((item)=> item.tipo === item.section_tipo).value;
+		const data_locator = data.find((item)=> item.tipo === item.section_tipo);
+		const ar_locator = (data_locator) ? data_locator.value : []
 		const current_section_length = ar_locator.length
 
 		// itterate the sections
