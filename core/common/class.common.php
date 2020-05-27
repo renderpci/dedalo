@@ -2185,15 +2185,15 @@ abstract class common {
 
 								}else{//end if ($options->filter_by_locator!==false)
 
-									if (!empty($options->q)) {
+									// if (!empty($options->q)) {
 										$filter_element = new stdClass();
-											$filter_element->q 		= $options->q;
+											$filter_element->q 		= $options->q ?? '';
 											$filter_element->lang 	= $options->lang;
 											$filter_element->path 	= $path;
 
 										$filter_group = new stdClass();
 											$filter_group->$logical_operator[] = $filter_element;
-									}
+									// }
 								}
 							}//end if ($options->add_filter===true)
 
