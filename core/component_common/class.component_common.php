@@ -71,6 +71,9 @@ abstract class component_common extends common {
 		// changed_data . Fixed when DD_API save call to component update_data_value()
 		public $changed_data;
 
+		// matrix_id
+		public $matrix_id;
+
 
 
 	/**
@@ -2894,6 +2897,11 @@ abstract class component_common extends common {
 
 		// dato full
 			$dato = $this->get_dato();
+
+		// empty case
+			if (empty($dato)) {
+				return $dato;
+			}
 
 		// limit
 			$limit = ($mode==='list')
