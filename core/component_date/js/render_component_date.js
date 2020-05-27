@@ -102,6 +102,8 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 */
 const add_events = function(self, wrapper) {
 
+	const date_mode = self.context.properties.date_mode
+
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
@@ -212,9 +214,7 @@ const add_events = function(self, wrapper) {
 				// 		if (button_email_send) {
 				// 			button_email_send.classList.remove("display_none")
 				// 		}
-				// }
-
-			const date_mode = self.context.properties.date_mode
+				// }	
 
 			//if (e.target.matches('input[type="text"]') && date_mode != 'period' && date_mode != 'time') {
 			if (e.target.matches('.calendar') && date_mode!=='period' && date_mode!=='time') {
