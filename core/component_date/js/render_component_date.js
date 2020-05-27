@@ -595,7 +595,7 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 		class_name 		: 'input_value',
 		dataset 	 	: { key : i },
 		value 			: input_value,
-		placeholder 	: self.get_ejemplo(),
+		placeholder 	: self.get_placeholder_value(),
 		parent 			: inputs_container
 	})
 
@@ -639,7 +639,7 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 			class_name 		: 'form-control',
 			dataset 	 	: { key : i, role: role_name, altinput: true, input: ''},
 			value 		 	: input_value,
-			placeholder 	: self.get_ejemplo(),
+			placeholder 	: self.get_placeholder_value(),
 			parent 		 	: flatpickr_wrap
 		})
 
