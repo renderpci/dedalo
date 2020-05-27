@@ -2151,6 +2151,9 @@ abstract class common {
 			// config_context iteration
 				foreach ($config_context as $source_search_item) {
 
+					// current section tipo
+						$current_section_tipo = $source_search_item->section_tipo;
+
 					foreach ($source_search_item->search as $current_tipo) {
 
 						// check is real component
@@ -2159,13 +2162,10 @@ abstract class common {
 								debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
 								continue;
 							}
-
-						// current section tipo
-							$current_section_tipo = $source_search_item->section_tipo;
-
+				
 						$path = search::get_query_path($current_tipo, $current_section_tipo);
 
-						# FILTER . filter_element (operator_group)
+						# FILTER . filter_element (operator_group) - default is true
 							if ($options->add_filter===true) {
 
 								if ($options->filter_by_locator!==false) {
