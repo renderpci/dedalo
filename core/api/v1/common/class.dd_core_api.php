@@ -977,6 +977,13 @@ class dd_core_api {
 																				 $mode,
 																				 $component_lang,
 																				 $section_tipo);
+									if ($mode==='tm') {
+										// set matrix_id value to component to allow it search dato in
+										// matrix_time_machine component function 'get_dato' will be
+										// overwrited to get time machine dato instead the real dato
+										$element->matrix_id = $ddo_source->matrix_id;
+									}
+								
 								// pagination. fix pagination vars
 									$pagination = new stdClass();
 										$pagination->limit 	= $limit;
