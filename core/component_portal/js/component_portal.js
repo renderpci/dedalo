@@ -62,12 +62,8 @@ export const component_portal = function(){
 
 	// change data
 	component_portal.prototype.save					= component_common.prototype.save
-	// component_portal.prototype.load_data 		= component_common.prototype.load_data
-	// component_portal.prototype.load_datum 		= component_common.prototype.load_datum
-	// component_portal.prototype.get_value 		= component_common.prototype.get_value
-	// component_portal.prototype.set_value 		= component_common.prototype.set_value
 	component_portal.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_portal.prototype.update_datum			= component_common.prototype.update_datum
+	// component_portal.prototype.update_datum		= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
 
@@ -133,6 +129,9 @@ component_portal.prototype.build  = async function(autoload){
 	// status update
 		self.status = 'building'
 
+	// self.datum. On building, if datum is not created, creation is needed
+		if (!self.datum) self.datum = {data:[]}
+
 	// load data if not yet received as an option
 		if (autoload===true) {
 
@@ -144,10 +143,15 @@ component_portal.prototype.build  = async function(autoload){
 			}			
 			
 			// Update the self.data into the datum and self instance
-				if (api_response.result) self.update_datum(api_response) // (!) is not the common update_datum
+				if (api_response.result) {
+					const new_data = api_response.result.data
+					self.update_datum(new_data) // (!) is NOT the common update_datum
+				}
 
-			// fix data
-				// self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
+			// update element pagination vars when are used
+				if (self.data.pagination && typeof self.pagination.total!=="undefined") {
+					self.pagination.total = self.data.pagination.total
+				}
 		}
 
 	// pagination vars only in edit mode
@@ -222,52 +226,29 @@ component_portal.prototype.build  = async function(autoload){
 
 /**
 * UPDATE_DATUM
-* Update component data value with changed_data send by the dom element
 * Update the datum and the data of the instance with the data changed and saved.
-* changed_data format:
-*	{
-		action : insert,
-*		key	: i,
-*		value : input.value
-*	}
-* @param object api_response
-*	api_response contains fresh calculated context and data of saved component
+* @param array new_data
+*	contains fresh calculated data of saved component
 * @return bool true
 */
-component_portal.prototype.update_datum = function(api_response) {
+component_portal.prototype.update_datum = function(new_data) {
 
 	const self = this
 
-	//const changed_data = self.data.changed_data
-	
-	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.datum) self.datum = {data:[]}
+	// (!) Note that portal datum is different to the other components datum. Others have common section datum instead custom datum
 
-	// data_to_change
-		const new_data			= api_response.result.data		
-		const new_data_length	= new_data.length			
-			// console.log("update_datum --------------------------- new_data:",JSON.parse(JSON.stringify(new_data)) );
-			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data))); 
-			// console.trace();
+	// datum. Replace old datum with the new one from api
+		self.datum.data = new_data
+			// console.log("update_datum --------------------------- final self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 
-	// datum
-		// replace old data with the new one from api
-			self.datum.data = new_data
-				// console.log("update_datum --------------------------- final self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
-
-	// data
-		// update current element data
-			self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
-				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));		
-	
-	// update element pagination vars when are used
-		if (self.data.pagination && typeof self.pagination.total!=="undefined") {
-			self.pagination.total = self.data.pagination.total
-		}
+	// data. Update current component self data
+		// self.data = new_data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || []						
+		self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || []
+			//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
 
 	// dispatch event
 		event_manager.publish('update_data_'+ self.id_base, '')
-	
+
 
 	return true
 }//end update_datum
@@ -339,7 +320,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 				break;
 			case 'add' :
 				// update self.data.pagination
-				if(self.data.pagination.total && self.data.pagination.total>=0) {
+				if(self.data.pagination && self.data.pagination.total && self.data.pagination.total>=0) {
 					self.data.pagination.total++ 
 				}
 				break;
@@ -363,7 +344,6 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	// self pagination update
 		self.pagination.offset 	= last_offset
-		//self.pagination.total = current_total
 
 	// // paginator object update
 	// 	self.paginator.offset 	= last_offset

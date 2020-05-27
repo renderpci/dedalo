@@ -198,6 +198,9 @@ component_common.prototype.build = async function(autoload){
 	// status update
 		self.status = 'building'
 
+	// self.datum. On building, if datum is not created, creation is needed
+		if (!self.datum) self.datum = {data:[]}
+
 	// load data if is not already received as option
 		if (autoload===true) {
 				
@@ -218,7 +221,10 @@ component_common.prototype.build = async function(autoload){
 				}
 
 			// Update the self.data into the datum and self instance
-				self.update_datum(api_response)
+				if (api_response.result) {
+					const new_data = api_response.result.data
+					self.update_datum(new_data)
+				}
 		}
 
 	// permissions. calculate and set (used by section records later)
@@ -305,7 +311,7 @@ component_common.prototype.save = async function(changed_data) {
 					}
 
 				// Update the new data into the instance and the general datum
-					// if (api_response.result) self.update_datum(api_response) (!) Use build to update_datum, NOT here
+					// if (api_response.result) self.update_datum(api_response) // (!) Use build to update_datum, NOT here
 
 				return api_response
 
@@ -402,97 +408,85 @@ component_common.prototype.set_value = function(value) {
 * UPDATE_DATUM
 * Update component data value with changed_data send by the dom element
 * Update the datum and the data of the instance with the data changed and saved.
-* changed_data format:
-*	{
-		action : insert,
-*		key	: i,
-*		value : input.value
-*	}
-* @param object api_response
-*	api_response contains fresh calculated context and data of saved component
+* @param object new_data
+*	new_data contains fresh calculated data of saved component
 * @return bool true
 */
-component_common.prototype.update_datum = async function(api_response) {
+component_common.prototype.update_datum = function(new_data) {
 
 	const self = this
 
-	//const changed_data = self.data.changed_data
-	//on building if datum is not created, creation is needed
-		if (!self.datum) self.datum = {data:[]}
+	// (!) Note that component datum is shared with section datum. On the contrary, Portals have custom datum
+	
+	// new_data
+		const new_data_length = new_data.length
+			// console.log("update_datum --------------------------- new_data:",JSON.parse(JSON.stringify(new_data)) );
+			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data))); 
+			// console.trace();
 
-	// data_to_change
-		const data_to_change		= api_response.result.data
-		const data_to_change_length = data_to_change.length
-			console.log("update_datum --------------------------- data_to_change:",data_to_change);
-			console.log("update_datum --------------------------- self:",self); 
-			console.trace();
-
-	// remove the component old data in general datum (from down to top array items)		
-		for (let i = data_to_change_length - 1; i >= 0; i--) {
-			const current_data = data_to_change[i]			
-			const index_to_delete = self.datum.data.findIndex(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id)
-			if (index_to_delete!==-1) {
-				if(SHOW_DEBUG===true) {
-					console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
+	// datum (global shared with section)
+		// remove the component old data in the datum (from down to top array items)		
+			for (let i = new_data_length - 1; i >= 0; i--) {
+				
+				const data_item = new_data[i]
+				
+				const index_to_delete = self.datum.data.findIndex(item => item.tipo===data_item.tipo && item.section_tipo===data_item.section_tipo && item.section_id===data_item.section_id)
+				
+				if (index_to_delete!==-1) {
+					if(SHOW_DEBUG===true) {
+						console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
+					}
+					self.datum.data.splice(index_to_delete, 1);
+				}else{ 
+					console.warn("(!) Not found index_to_delete in datum:", data_item.tipo, data_item.section_tipo, data_item.section_id)
 				}
-				self.datum.data.splice(index_to_delete, 1);
-			}else{
-				console.warn("(!) Not found index_to_delete:", current_data.tipo, current_data.section_id)
 			}
-		}
 
-		// const datum_data_length = self.datum.data.length
-		// for (let i = datum_data_length - 1; i >= 0; i--) {
-		// 	const data_item = self.datum.data[i]
-		// 	// console.log("data_item:",data_item);
-		// 	//if (data_item.parent_tipo===self.tipo && data_item.parent_section_id===self.section_id){
-		// 	if (data_item.tipo===self.tipo && data_item.section_id===self.section_id){
-		// 		if(SHOW_DEBUG===true) {
-		// 			console.log(`:---- [update_datum] DELETE data_item i:${i} `, JSON.parse( JSON.stringify(data_item)) );
-		// 		}
-		// 		self.datum.data.splice(i, 1);
-		// 	}
-		// }
-		if(SHOW_DEBUG===true) {
-			// console.log(" [component_common.update_datum] api_response.result.data:",JSON.parse( JSON.stringify(api_response.result.data)));
-		}
+		// add the new data into the general datum
+			self.datum.data = [...self.datum.data, ...new_data]
+				// console.log("update_datum --------------------------- final self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 
-	// add the new data into the general datum
-		self.datum.data = [...self.datum.data, ...api_response.result.data]
-
-	// current element data
-		// self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || {}
-			//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
-		const ar_instances = instances.get_all_instances()
-		for (let i = data_to_change_length - 1; i >= 0; i--) {
-			const current_data = data_to_change[i]
-			const current_instance = ar_instances.find(item => item.tipo===current_data.tipo && item.section_tipo===current_data.section_tipo && item.section_id===current_data.section_id)
-			if (current_instance) {
-				current_instance.data = self.datum.data.find(item => item.tipo===current_data.tipo && item.section_id===current_data.section_id) || {}
-			}else{
-				console.warn("(!) Not found current instance:", current_data.tipo, current_data.section_tipo, current_data.section_id)
-			}		
-		}
-
-	// check data
-		if (typeof self.data==="undefined") {
-			if(SHOW_DEBUG===true) {
-				console.trace();
-				console.warn("++++++++++++++++++++ self.datum:",self.datum);
+	// data (from current component only)
+		// current element data
+			self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_tipo===self.section_tipo && item.section_id===self.section_id) || []
+				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
+		// data of another components
+			/* 
+			const ar_instances = instances.get_all_instances()
+			for (let i = new_data_length - 1; i >= 0; i--) {
+				const data_item = new_data[i]
+				const current_instance = ar_instances.find(item => item.tipo===data_item.tipo && item.section_tipo===data_item.section_tipo && item.section_id===data_item.section_id)
+				if (current_instance) {
+					// add
+					current_instance.data = self.datum.data.find(item => item.tipo===data_item.tipo && item.section_id===data_item.section_id) || []
+				}else{
+					console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
+				}		
 			}
-			alert("Error on read component data!");
-		}
+			*/
 
-	// dispatch event
-		event_manager.publish('update_data_'+ self.id_base, '')
+		// check data
+			if (typeof self.data==="undefined") {
+				if(SHOW_DEBUG===true) {
+					console.trace();
+					console.warn("++++++++++++++++++++ self.datum:",self.datum);
+				}
+				alert("Error on read component data!");
+			}
+	
 
 	// add as new data the most recent changed_data
 		//self.data.changed_data = changed_data
 
 	// update element pagination vars when are used
+		/*
 		if (self.data.pagination && typeof self.pagination.total!=="undefined") {
 			self.pagination.total = self.data.pagination.total
 		}
+		*/
+
+	// dispatch event
+		event_manager.publish('update_data_'+ self.id_base, '')
 
 
 	return true
@@ -657,13 +651,13 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 component_common.prototype.get_ar_instances = async function(){
 
 	const self 			= this
-	const records_mode 	= self.context.properties.source.records_mode
+	const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
 
 	const lang 			= self.section_lang
 	const value 		= self.data.value || []
 	const value_length 	= value.length
 
-	//console.log("--deep_render value:", JSON.parse(JSON.stringify(value)));
+	// console.log("---- get_ar_instances deep_render value:", JSON.parse(JSON.stringify(value)));
 
 	// iterate rows
 		const ar_instances = []
