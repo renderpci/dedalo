@@ -721,9 +721,9 @@ component_date.prototype.set_default_date = function(dateStr) {
 
 
 /**
-* GET_EJEMPLO
+* GET_PLACEHOLDER_VALUE
 */
-component_date.prototype.get_ejemplo = function() {
+component_date.prototype.get_placeholder_value = function() {
 
 	const self = this
 	/*
@@ -736,16 +736,16 @@ component_date.prototype.get_ejemplo = function() {
 	}
 	*/
 	const date_mode = self.context.properties.date_mode
-	let ejemplo = ''
+	let placeholder_value = ''
 
 	if (date_mode === 'time') {
-		ejemplo = ejemplo.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
+		placeholder_value = placeholder_value.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
 	}else{
-		ejemplo = ejemplo.concat('DD',self.separator,'MM',self.separator,'YYYY')
+		placeholder_value = placeholder_value.concat('DD',self.separator,'MM',self.separator,'YYYY')
 	}
 
-	return ejemplo
-}//end get_ejemplo
+	return placeholder_value
+}//end get_placeholder_value
 
 
 
