@@ -274,7 +274,7 @@ class component_relation_common extends component_common {
 	* insert complete array of locators at once. Use this method in this cases
 	*/
 	public function set_dato($dato) {
-		
+
 		$safe_dato = [];
 
 		$translatable = $this->RecordObj_dd->get_traducible();
