@@ -284,7 +284,9 @@ const get_buttons = (self) => {
 const input_element = (inputs_container, self) => {
 
 	const value 	= self.data.value || []
-	const datalist	= JSON.parse(JSON.stringify(self.data.datalist)) || []
+	const datalist	= self.data.datalist
+		? (JSON.parse(JSON.stringify(self.data.datalist)) || [])
+		: []
 
 	// create li
 		const li = ui.create_dom_element({

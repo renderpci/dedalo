@@ -239,14 +239,14 @@ const add_events = function(self, wrapper) {
 const get_content_data_edit = async function(self) {
 
 	const ar_section_record = await self.get_ar_instances()
-	const is_inside_tool 	= self.is_inside_tool
+	const is_inside_tool 	= self.is_inside_tool	
 
 	const fragment = new DocumentFragment()
 
 	// inputs contaniner
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container'
+			class_name		: 'inputs_container'
 		})
 
 	// build values (add all nodes from the rendered_section_record)
@@ -312,12 +312,12 @@ const get_top = function(self) {
 	}
 
 	// sort vars
-		const is_inside_tool			= self.is_inside_tool
-		const mode						= self.mode
-		const current_data_manager		= new data_manager()
-		const show						= self.sqo_context.show
-		const target_section		 	= show.filter(item => item.model==='section')
-		const target_section_lenght 	= target_section.length
+		const is_inside_tool		= self.is_inside_tool
+		const mode					= self.mode
+		const current_data_manager	= new data_manager()
+		const show					= self.sqo_context.show
+		const target_section		= show.filter(item => item.model==='section')
+		const target_section_lenght	= target_section.length
 		// sort section by label asc
 			target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
@@ -326,8 +326,8 @@ const get_top = function(self) {
 	// select_section
 		const select_section = ui.create_dom_element({
 			element_type	: 'select',
-			class_name 		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
-			parent 			: fragment
+			class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
+			parent			: fragment
 		})
 
 		// options
@@ -335,17 +335,17 @@ const get_top = function(self) {
 				const item = target_section[i]
 				ui.create_dom_element({
 					element_type	: 'option',
-					value 			: item.tipo,
-					inner_html 		: item.label + " [" + item.tipo + "]",
-					parent 			: select_section
+					value			: item.tipo,
+					inner_html		: item.label + " [" + item.tipo + "]",
+					parent			: select_section
 				})
 			}
 
 	// button_add
 		const button_add = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button add',
-			parent 			: fragment
+			class_name		: 'button add',
+			parent			: fragment
 		})
 		button_add.addEventListener("click", async function(e){
 
@@ -376,8 +376,8 @@ const get_top = function(self) {
 		})
 		button_find.addEventListener("click", async function(e){
 
-			const section_tipo  = select_section.value
-			const section_label = select_section.options[select_section.selectedIndex].innerHTML;
+			const section_tipo	= select_section.value
+			const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
 
 			// des
 				// const source = {
@@ -420,9 +420,9 @@ const get_top = function(self) {
 					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
 					const iframe = ui.create_dom_element({
 						element_type	: 'iframe',
-						class_name 		: 'fixed',
-						src 			: '../page/?tipo=' + section_tipo + '&mode=list&initiator='+ self.id,
-						parent 			: iframe_container
+						class_name		: 'fixed',
+						src				: '../page/?tipo=' + section_tipo + '&mode=list&initiator='+ self.id,
+						parent			: iframe_container
 					})
 
 					// fix modal to allow close later, on set value
@@ -504,7 +504,7 @@ const get_top = function(self) {
 	// top container
 		const top = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'top'
+			class_name		: 'top'
 		})
 		// top.addEventListener("click", function(e){
 		// 	e.stopPropagation()

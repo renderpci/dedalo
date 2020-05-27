@@ -374,7 +374,7 @@ const load_section_data_debug = async function(section_tipo, sqo_context, load_s
 
 	console.log("----> request sqo_context:",sqo_context);
 
-	load_section_data_promise
+	// load_section_data_promise
 	if (response.result===false) {
 		console.error("API EXCEPTION:",response.msg);
 	}
