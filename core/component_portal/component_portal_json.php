@@ -27,7 +27,7 @@
 				$sqo_context = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $sqo_context);
+					$current_context = $this->get_structure_context($permissions, $sqo_context);					
 					// add records_mode to properties, if not already defined 
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {
@@ -37,7 +37,7 @@
 							$current_context->properties->source = new stdClass();
 						}
 						$current_context->properties->source->records_mode = 'list';
-					}
+					}					
 					$context[] = $current_context;
 
 				// subcontext from element layout_map items (from_parent, parent_grouper)
@@ -56,21 +56,20 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$section_id	= $this->get_parent();
+		$section_id	= $this->get_section_id();
 		$properties = $this->get_propiedades();
-
+	
 		switch ($modo) {
-			case 'edit':
-				$dato 	= $this->get_dato();
-				$value 	= $this->get_dato_paginated();
-				$limit 	= $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
-
-				break;
-
 			case 'list':
 				$dato 	= $this->get_dato();
 				$value 	= $this->get_dato_paginated(); // $dato;
 				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records;
+				break;
+			case 'edit':
+			default:
+				$dato 	= $this->get_dato();
+				$value 	= $this->get_dato_paginated();
+				$limit 	= $this->pagination->limit ?? $properties->max_records ?? $this->max_records;				
 				break;
 		}
 

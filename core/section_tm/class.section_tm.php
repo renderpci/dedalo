@@ -68,79 +68,6 @@ class section_tm extends common {
 	* Get injected basic context and add fixes ddo elements MODIFIED_BY_USER and MODIFIED_DATE
 	* @return array $context
 	*/
-	// public function get_context() {
-
-	// 	// base context is injected in sections josn controller
-	// 	$context = [];
-
-
-	// 	// component
-	// 		$item = (object)[
-	// 			'model' 		=> 'component_select',
-	// 			'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-	// 			'section_tipo'	=> $this->tipo,
-	// 			'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
-	// 			'mode'			=> 'list',
-	// 			'parent'		=> $this->tipo,
-	// 			'typo'			=> 'ddo',
-	// 			'type'			=> 'component'
-	// 		];
-	// 		array_unshift($context, $item);
-
-
-	// 			    "model": "component_input_text",
-	// 			    "tipo": "test159",
-	// 			    "section_tipo": "test65",
-	// 			    "mode": "list",
-	// 			    "parent": "test158",
-	// 			    "typo": "ddo",
-	// 			    "type": "component",
-	// 			    "label": "Input text X",
-	// 			    "debug_from": "calculated from section list or related terms"
-	// 			  }
-
-
-
-	// 	// modification user id
-	// 		// prepend element to context
-	// 		$item = (object)[
-	// 			'model' 		=> 'component_select',
-	// 			'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-	// 			'section_tipo'	=> $this->tipo,
-	// 			'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
-	// 			'mode'			=> 'list',
-	// 			'parent'		=> $this->tipo,
-	// 			'typo'			=> 'ddo',
-	// 			'type'			=> 'component'
-	// 		];
-	// 		array_unshift($context, $item);
-
-
-	// 	// modification date
-	// 		// prepend element to context
-	// 		$item = (object)[
-	// 			'model' 		=> 'component_date',
-	// 			'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
-	// 			'section_tipo'	=> $this->tipo,
-	// 			'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
-	// 			'mode'			=> 'list',
-	// 			'parent'		=> $this->tipo,
-	// 			'typo'			=> 'ddo',
-	// 			'type'			=> 'component'
-	// 		];
-	// 		array_unshift($context, $item);
-
-
-	// 	return (array)$context;
-	// }//end get_context
-
-
-
-	/**
-	* GET_CONTEXT
-	* Get injected basic context and add fixes ddo elements MODIFIED_BY_USER and MODIFIED_DATE
-	* @return array $context
-	*/
 	public function get_context() {
 
 		$found_sources = array_filter($this->base_context, function($element){
@@ -251,15 +178,18 @@ class section_tm extends common {
 
 
 		// component
+			$RecordObj_dd	= new RecordObj_dd($component_tipo);
+			$properties		= $RecordObj_dd->get_propiedades(true);
 			$item = (object)[
 				'typo'				=> 'ddo',
 				'type'				=> 'component',
-				'model' 			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+				'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 				'tipo'				=> $component_tipo,
 				'section_tipo'		=> $this->tipo,
 				'label'				=> RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true),
 				'mode'				=> 'list',
-				'parent'			=> $this->tipo
+				'parent'			=> $this->tipo,
+				'properties'		=> $properties
 			];
 			$context[] = $item;
 
@@ -270,73 +200,146 @@ class section_tm extends common {
 
 
 	/**
+	* GET_CONTEXT_DES
+	* Get injected basic context and add fixes ddo elements MODIFIED_BY_USER and MODIFIED_DATE
+	* @return array $context
+	*/
+		// public function get_context() {
+
+		// 	// base context is injected in sections josn controller
+		// 	$context = [];
+
+
+		// 	// component
+		// 		$item = (object)[
+		// 			'model' 		=> 'component_select',
+		// 			'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+		// 			'section_tipo'	=> $this->tipo,
+		// 			'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+		// 			'mode'			=> 'list',
+		// 			'parent'		=> $this->tipo,
+		// 			'typo'			=> 'ddo',
+		// 			'type'			=> 'component'
+		// 		];
+		// 		array_unshift($context, $item);
+
+
+		// 			    "model": "component_input_text",
+		// 			    "tipo": "test159",
+		// 			    "section_tipo": "test65",
+		// 			    "mode": "list",
+		// 			    "parent": "test158",
+		// 			    "typo": "ddo",
+		// 			    "type": "component",
+		// 			    "label": "Input text X",
+		// 			    "debug_from": "calculated from section list or related terms"
+		// 			  }
+
+
+
+		// 	// modification user id
+		// 		// prepend element to context
+		// 		$item = (object)[
+		// 			'model' 		=> 'component_select',
+		// 			'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+		// 			'section_tipo'	=> $this->tipo,
+		// 			'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+		// 			'mode'			=> 'list',
+		// 			'parent'		=> $this->tipo,
+		// 			'typo'			=> 'ddo',
+		// 			'type'			=> 'component'
+		// 		];
+		// 		array_unshift($context, $item);
+
+
+		// 	// modification date
+		// 		// prepend element to context
+		// 		$item = (object)[
+		// 			'model' 		=> 'component_date',
+		// 			'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
+		// 			'section_tipo'	=> $this->tipo,
+		// 			'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
+		// 			'mode'			=> 'list',
+		// 			'parent'		=> $this->tipo,
+		// 			'typo'			=> 'ddo',
+		// 			'type'			=> 'component'
+		// 		];
+		// 		array_unshift($context, $item);
+
+
+		// 	return (array)$context;
+		// }//end get_context
+
+
+
+	/**
 	* GET_CONTEXT
 	* Get injected basic context and add fixes ddo elements MODIFIED_BY_USER and MODIFIED_DATE
 	* @return array $context
 	*/
-	public function get_context__DES() {
+		// public function get_context__DES() {
 
-		// base context is injected in sections josn controller.
-		// Called for the first time, it does not contain fixed elements.
-			$context = $this->get_base_context();
-
-
-		// check already defined fixed elements
-			$found_fixed_elements = array_filter($context, function($element){
-				if (isset($element->tipo) && $element->tipo===DEDALO_SECTION_INFO_MODIFIED_BY_USER) {
-					return $element;
-				}
-			});
-			if (empty($found_fixed_elements)) {
-
-				// modification user id
-					// prepend element to context
-					$item = (object)[
-						'typo'			=> 'ddo',
-						'type'			=> 'component',
-						'model' 		=> 'component_select',
-						'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-						'section_tipo'	=> $this->tipo,
-						'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
-						'mode'			=> 'list',
-						'parent'		=> $this->tipo
-					];
-					array_unshift($context, $item);
+		// 	// base context is injected in sections josn controller.
+		// 	// Called for the first time, it does not contain fixed elements.
+		// 		$context = $this->get_base_context();
 
 
-				// modification date
-					// prepend element to context
-					$item = (object)[
-						'typo'			=> 'ddo',
-						'type'			=> 'component',
-						'model' 		=> 'component_date',
-						'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
-						'section_tipo'	=> $this->tipo,
-						'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
-						'mode'			=> 'list',
-						'parent'		=> $this->tipo
-					];
-					array_unshift($context, $item);
+		// 	// check already defined fixed elements
+		// 		$found_fixed_elements = array_filter($context, function($element){
+		// 			if (isset($element->tipo) && $element->tipo===DEDALO_SECTION_INFO_MODIFIED_BY_USER) {
+		// 				return $element;
+		// 			}
+		// 		});
+		// 		if (empty($found_fixed_elements)) {
+
+		// 			// modification user id
+		// 				// prepend element to context
+		// 				$item = (object)[
+		// 					'typo'			=> 'ddo',
+		// 					'type'			=> 'component',
+		// 					'model' 		=> 'component_select',
+		// 					'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+		// 					'section_tipo'	=> $this->tipo,
+		// 					'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+		// 					'mode'			=> 'list',
+		// 					'parent'		=> $this->tipo
+		// 				];
+		// 				array_unshift($context, $item);
 
 
-				// matrix id
-					// prepend element to context
-					$item = (object)[
-						'typo'			=> 'ddo',
-						'type'			=> 'component',
-						'model' 		=> 'component_section_id',
-						'tipo'			=> 'test142',//	'section_id',
-						'section_tipo'	=> $this->tipo,
-						'label'			=> 'matrix ID',
-						'mode'			=> 'list',
-						'parent'		=> $this->tipo
-					];
-					array_unshift($context, $item);
-			}
+		// 			// modification date
+		// 				// prepend element to context
+		// 				$item = (object)[
+		// 					'typo'			=> 'ddo',
+		// 					'type'			=> 'component',
+		// 					'model' 		=> 'component_date',
+		// 					'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
+		// 					'section_tipo'	=> $this->tipo,
+		// 					'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
+		// 					'mode'			=> 'list',
+		// 					'parent'		=> $this->tipo
+		// 				];
+		// 				array_unshift($context, $item);
 
 
-		return (array)$context;
-	}//end get_context
+		// 			// matrix id
+		// 				// prepend element to context
+		// 				$item = (object)[
+		// 					'typo'			=> 'ddo',
+		// 					'type'			=> 'component',
+		// 					'model' 		=> 'component_section_id',
+		// 					'tipo'			=> 'test142',//	'section_id',
+		// 					'section_tipo'	=> $this->tipo,
+		// 					'label'			=> 'matrix ID',
+		// 					'mode'			=> 'list',
+		// 					'parent'		=> $this->tipo
+		// 				];
+		// 				array_unshift($context, $item);
+		// 		}
+
+
+		// 	return (array)$context;
+		// }//end get_context
 
 
 
@@ -350,7 +353,7 @@ class section_tm extends common {
 		$data = [];
 
 		$current_record = $this->get_record();
-
+		
 		// subdata time machine
 			$section_id   	= $current_record->section_id;
 			$section_tipo 	= $current_record->section_tipo;
@@ -416,6 +419,7 @@ class section_tm extends common {
 					$current_item->matrix_id = $current_record->id;
 
 			$data[] = $current_item;
+
 
 		// user_id
 			$user_id_tipo = DEDALO_SECTION_INFO_MODIFIED_BY_USER; // 'dd197' Modified by user
