@@ -116,6 +116,17 @@ class dd_utils_api {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+		// dedalo_prefix_tipos
+			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+				return $item->name==='dedalo_prefix_tipos';
+			})->value;
+			$ar_dedalo_prefix_tipos = array_map(function($item){
+				return trim($item);
+			}, explode(',', $dedalo_prefix_tipos));
+			if (empty($ar_dedalo_prefix_tipos)) {
+				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
+				return $response;
+			}
 
 		# Remote server case
 		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
@@ -146,7 +157,7 @@ class dd_utils_api {
 			}
 
 		# IMPORT
-			$res_import_structure = backup::import_structure();
+			$res_import_structure = backup::import_structure($db_name='dedalo4_development_str.custom', $check_server=true, $ar_dedalo_prefix_tipos);
 
 			if ($res_import_structure->result===false) {
 				$response->msg .= $res_import_structure->msg;

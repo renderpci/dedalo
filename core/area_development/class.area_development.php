@@ -40,19 +40,27 @@ class area_development extends area_common {
 
 		$ar_widgets = [];
 
+
 		// make_backup
 			$item = new stdClass();
-				$item->id 		= 'make_backup';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('hacer_backup');
-				$item->info 	= 'Click to force make a full backup now';
-				$item->body 	= ' ';
+				$item->id		= 'make_backup';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('hacer_backup');
+				$item->info		= null;
+				$file_name 		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
+				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';					
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[						
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
 				$item->trigger 	= (object)[
-					'dd_api' 		=> 'dd_utils_api',
-					'action' 	 	=> 'make_backup',
-					'options' 	 	=> null
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'make_backup',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -76,7 +84,8 @@ class area_development extends area_common {
 								'label' => 'Table name/s like "matrix,matrix_hierarcht" or "*" for all',
 								'mandatory' => true
 							]
-						]
+						],
+						'confirm_text' => label::get_label('seguro')
 					]
 				];
 				$item->trigger 	= (object)[
@@ -87,32 +96,71 @@ class area_development extends area_common {
 			$ar_widgets[] = $item;
 
 
-
-
 		// update_structure
 			$item = new stdClass();
-				$item->id 		= 'update_structure';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('actualizar_estructura');
-				$item->info 	= 'Click to update structure from remote master server';
-				$item->confirm 	= '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
-				$item->confirm .= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
-				$item->confirm .= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
-				$item->confirm .= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
+				$item->id		= 'update_structure';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('actualizar_estructura');
+				$item->info		= null;
 				$item->body 	= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
 					'Current: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .
 					'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
 					label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
 				$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
 				$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
+				$confirm_text	 = '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
+				$confirm_text	.= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
+				$confirm_text	.= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
+				$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;	
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'inputs' => [
+							(object)[
+								'type'		=> 'text',
+								'name'		=> 'dedalo_prefix_tipos',
+								'label'		=> 'Dédalo prefix tipos to update',
+								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'mandatory'	=> true
+							]
+						],
+						'confirm_text' => $confirm_text
+					]
+				];
 				$item->trigger 	= (object)[
 					'dd_api' 	=> 'dd_utils_api',
-					'action' 	 => 'update_structure',
-					'options' 	 => null
+					'action' 	=> 'update_structure',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
+
+
+		// update_structure OLD
+			// $item = new stdClass();
+			// 	$item->id 		= 'update_structure';
+			// 	$item->typo 	= 'widget';
+			// 	$item->tipo 	= $this->tipo;
+			// 	$item->parent 	= $this->tipo;
+			// 	$item->label 	= label::get_label('actualizar_estructura');
+			// 	$item->info 	= 'Click to update structure from remote master server';
+			// 	$item->confirm 	= '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
+			// 	$item->confirm .= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
+			// 	$item->confirm .= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
+			// 	$item->confirm .= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
+			// 	$item->body 	= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
+			// 		'Current: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .
+			// 		'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
+			// 		label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
+			// 	$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
+			// 	$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
+			// 	$item->trigger 	= (object)[
+			// 		'dd_api' 	=> 'dd_utils_api',
+			// 		'action' 	 => 'update_structure',
+			// 		'options' 	 => null
+			// 	];
+			// $ar_widgets[] = $item;
 
 
 		// register_tools
