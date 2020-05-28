@@ -1760,6 +1760,10 @@
 	Valencia 22-05-2020 5.5.58
 		Fix bug in class component_relation_common->Save where table relations data is not deleted when component data is deleted.
 		(!) Its recomended to run adminitration tool 'generate_relations_table_data' to force relations table data regeneration 
+
+
+	Valencia 28-05-2020 5.5.59
+		Fix inspector issue on small screens
 		
 
 
@@ -1782,12 +1786,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.58';
+	$DEDALO_VERSION = '5.5.59';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-05-2020');
+	define('DEDALO_BUILD'	, '28-05-2020');
 
 
 	/*
