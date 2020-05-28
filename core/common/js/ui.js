@@ -1525,9 +1525,16 @@ export const ui = {
 				element_type	: 'div',
 				class_name 		: 'footer ' + footer_class
 			})
+			const on_option_mouseup = function (e){				
+				event_manager.publish('user_option_'+element_id, this.option_id)
+				// modal.remove()
+				modal._closeModal()
+			}
 			const user_options_len = user_options.length
 			for (let i = 0; i < user_options_len; i++) {
+				
 				const option = user_options[i]
+				
 				//user_option
 					const user_option = ui.create_dom_element({
 						element_type	: 'button',
@@ -1535,11 +1542,9 @@ export const ui = {
 						parent 			: footer,
 						text_content 	: option.label
 					})
-					user_option.addEventListener("mouseup", function(e) {
-						event_manager.publish('user_option_'+element_id, option.id)
-						// modal.remove()
-						modal._closeModal()
-					})
+					// add option_id property
+					user_option.option_id = option.id					
+					user_option.addEventListener("mouseup", on_option_mouseup);
 			}
 
 		// modal open
