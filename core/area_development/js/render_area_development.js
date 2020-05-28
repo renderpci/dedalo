@@ -291,27 +291,27 @@ const buttons = async function(self) {
 export const build_form = async function(widget_object) {
 
 	const self = this
-
-		console.log("widget_object:",widget_object);  
-
+ 
+	
 	const trigger			= widget_object.trigger
 	const body_info			= widget_object.body_info
 	const body_response		= widget_object.body_response
 	const print_response	= widget_object.print_response
+	const confirm_text		= widget_object.confirm_text
+	
+	const inputs 			= widget_object.inputs || []
 
-	const inputs 			= widget_object.inputs
-
-	console.log("body_info:",body_info);
+	
 	// create the form
 		const form_container = ui.create_dom_element({
 			element_type : "form",
-			class_name 	 : "form_container",			
+			class_name 	 : "form_container",
 			parent 		 : body_info
 		})
 		form_container.addEventListener("submit", async function(e){
 			e.preventDefault()
 
-			if (confirm( (get_label["seguro"] || "Sure?") )) {
+			if ( confirm( (confirm_text || get_label["seguro"] || "Sure?") ) ) {
 
 				// check mandatory values
 					for (let i = 0; i < input_nodes.length; i++) {
@@ -347,7 +347,7 @@ export const build_form = async function(widget_object) {
 							options 	: options
 						}
 					})
-					// console.log("api_response:",api_response);
+					// *----------console.log("api_response:",api_response); return
 
 					print_response(body_response, api_response)
 
@@ -374,6 +374,9 @@ export const build_form = async function(widget_object) {
 				class_name 	 : class_name,
 				parent 		 : form_container
 			})
+			if (input.value) {
+				input_node.value = input.value
+			}
 			input_node.addEventListener("keyup", function(){
 				if (this.value.length>0) {
 					this.classList.remove("empty")

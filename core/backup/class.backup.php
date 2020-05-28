@@ -613,7 +613,7 @@ abstract class backup {
 	* @param string db_name default 'dedalo4_development_str.custom'
 	* @return string $res_html table of results
 	*/
-	public static function import_structure($db_name='dedalo4_development_str.custom', $check_server=true) {
+	public static function import_structure($db_name='dedalo4_development_str.custom', $check_server=true, $dedalo_prefix_tipos=null) {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -638,7 +638,7 @@ abstract class backup {
 			*/
 
 			# Download once all str files from server
-			$all_str_files = backup::collect_all_str_files();
+			$all_str_files = backup::collect_all_str_files($dedalo_prefix_tipos);
 			foreach ($all_str_files as $key => $obj) {
 				if($obj->type==="main_file") {
 					$file_path  = STRUCTURE_DOWNLOAD_DIR;
@@ -1094,7 +1094,7 @@ abstract class backup {
 	* @return array $ar_files
 	*	Array of objects
 	*/
-	public static function collect_all_str_files() {
+	public static function collect_all_str_files($DEDALO_PREFIX_TIPOS=null) {
 
 		static $ar_files;
 
@@ -1102,6 +1102,8 @@ abstract class backup {
 			debug_log(__METHOD__." Returning previous calculated values ".to_string(), logger::DEBUG);
 			return $ar_files;
 		}
+
+		$DEDALO_PREFIX_TIPOS = $DEDALO_PREFIX_TIPOS ?? (array)unserialize(DEDALO_PREFIX_TIPOS);
 
 		$ar_files = array();
 
@@ -1151,7 +1153,7 @@ abstract class backup {
 
 
 		# EXTRAS
-		$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
+
 		# Check extras folder coherence with config DEDALO_PREFIX_TIPOS
 		foreach ($DEDALO_PREFIX_TIPOS as $current_prefix) {
 			$folder_path = DEDALO_EXTRAS_PATH .'/'. $current_prefix;
