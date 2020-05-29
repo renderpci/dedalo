@@ -73,32 +73,32 @@ export const section_record = function() {
 section_record.prototype.init = async function(options) {
 
 	const self = this
-
+	
 	// options vars
-	self.model 			= options.model
-	self.tipo 			= options.tipo
-	self.section_tipo 	= options.section_tipo
-	self.section_id 	= options.section_id
-	self.mode 			= options.mode
-	self.lang 			= options.lang
-	self.node 	 		= []
+	self.model			= options.model
+	self.tipo			= options.tipo
+	self.section_tipo	= options.section_tipo
+	self.section_id		= options.section_id
+	self.mode			= options.mode
+	self.lang			= options.lang
+	self.node			= []
 	self.sqo_context	= options.sqo_context
-
-	self.datum 			= options.datum
-	self.context 		= options.context
-	self.data 	 		= options.data
-	self.paginated_key 	= options.paginated_key
-	//self.paginator_id 	= options.paginator_id
+	
+	self.datum			= options.datum
+	self.context		= options.context
+	self.data			= options.data
+	self.paginated_key	= options.paginated_key
+	//self.paginator_id	= options.paginator_id
 	self.events_tokens	= []
 	self.ar_instances	= []
 
 	self.type 				= self.model
 	self.label 				= null
-
+	
 	self.caller 			= options.caller || null
-
+	
 	self.matrix_id 			= options.matrix_id || null
-
+	
 	self.modification_date 	= options.modification_date || null
 
 
@@ -251,10 +251,10 @@ section_record.prototype.get_component_data = function(component_tipo){
 	if (typeof(component_data)==='undefined') {
 		// empy component data build
 		component_data = {
-			section_id 	 : self.section_id,
-			tipo 		 : component_tipo,
-			section_tipo : self.section_tipo,
-			value 		 : []
+			section_id		: self.section_id,
+			tipo			: component_tipo,
+			section_tipo	: self.section_tipo,
+			value			: []
 		}
 		self.data.push(component_data)
 	}
