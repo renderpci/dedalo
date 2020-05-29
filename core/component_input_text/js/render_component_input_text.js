@@ -30,8 +30,8 @@ render_component_input_text.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data 		= self.data
-		const value 	= data.value || []
+		const data	= self.data
+		const value	= data.value || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -76,8 +76,8 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 
 	// events
@@ -153,11 +153,11 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action	: 'update',
 						key		: JSON.parse(e.target.dataset.key),
-						value	: (e.target.value.length>0) ? e.target.value : null,
+						value	: (e.target.value.length>0) ? e.target.value : null
 					})
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then((save_response)=>{
 						// event to update the dom elements of the instance
@@ -199,12 +199,12 @@ const add_events = function(self, wrapper) {
 						action	: 'remove',
 						key		: e.target.dataset.key,
 						value	: null,
-						refresh : true
+						refresh	: true
 					})
 					self.change_value({
-						changed_data : changed_data,
-						label 		 : current_value,
-						refresh 	 : true
+						changed_data	: changed_data,
+						label			: current_value,
+						refresh			: true
 					})
 					.then(()=>{
 					})
@@ -350,22 +350,22 @@ render_component_input_text.prototype.search = async function() {
 const get_content_data_edit = async function(self) {
 
 	// sort vars
-		const value 		= self.data.value
-		const mode 			= self.mode
-		const is_inside_tool= self.is_inside_tool
+		const value				= self.data.value
+		const mode				= self.mode
+		const is_inside_tool	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// values (inputs)
-		const inputs_value = value//(value.length<1) ? [''] : value
-		const value_length = inputs_value.length
+		const inputs_value	= value//(value.length<1) ? [''] : value
+		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
 		}
@@ -401,9 +401,9 @@ const get_buttons = (self) => {
 			// })
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button add',
-				title 			: 'Add new input field',
-				parent 			: fragment
+				class_name		: 'button add',
+				title			: 'Add new input field',
+				parent			: fragment
 			})
 			button_add.addEventListener("click",function() {
 
@@ -413,8 +413,8 @@ const get_buttons = (self) => {
 					value	: null
 				})
 				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
+					changed_data	: changed_data,
+					refresh			: false
 				})
 				.then((save_response)=>{
 					// event to update the dom elements of the instance
@@ -444,36 +444,36 @@ const get_buttons = (self) => {
 */
 const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
-	const mode 		 		 = self.mode
-	const multi_line 		 = (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
-	const element_type 		 = (multi_line===true) ? 'textarea' :'input'
-	const is_inside_tool 	 = self.is_inside_tool
-	const with_lang_versions = self.context.properties.with_lang_versions || false
+	const mode					= self.mode
+	const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+	const element_type			= (multi_line===true) ? 'textarea' :'input'
+	const is_inside_tool		= self.is_inside_tool
+	const with_lang_versions	= self.context.properties.with_lang_versions || false
 	
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type	: 'li',
+			parent			: inputs_container
 		})
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: element_type,
-			type 		 	: 'text',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i },
-			value 		 	: current_value,
-			parent 		 	: li
+			element_type	: element_type,
+			type			: 'text',
+			class_name		: 'input_value',
+			dataset			: { key : i },
+			value			: current_value,
+			parent			: li
 		})
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button remove hidden_button',
+				class_name		: 'button remove hidden_button',
 				dataset			: { key : i },
-				parent 			: li
+				parent			: li
 			})
 		}
 
@@ -489,11 +489,11 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 */
 const get_content_data_search = async function(self) {
 
-	const value = self.data.value
-	const mode 	= self.mode
+	const value	= self.data.value
+	const mode	= self.mode
 
-	const fragment 			= new DocumentFragment()
-	const is_inside_tool 	= ui.inside_tool(self)
+	const fragment			= new DocumentFragment()
+	const is_inside_tool	= ui.inside_tool(self)
 
 	// values (inputs)
 		const inputs_value = value//(value.length<1) ? [''] : value
@@ -522,21 +522,21 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 	// q operator (search only)
 		// const q_operator = self.data.q_operator
 		// const input_q_operator = ui.create_dom_element({
-		// 	element_type 	: 'input',
-		// 	type 		 	: 'text',
-		// 	value 		 	: q_operator,
-		// 	class_name 		: 'q_operator',
-		// 	parent 		 	: inputs_container
+		// 	element_type	: 'input',
+		// 	type			: 'text',
+		// 	value			: q_operator,
+		// 	class_name		: 'q_operator',
+		// 	parent			: inputs_container
 		// })
 
 	// input field
 		const input = ui.create_dom_element({
-			element_type 	: 'input',
-			type 		 	: 'text',
-			class_name 		: 'input_value',
-			dataset 	 	: { key : i },
-			value 		 	: current_value,
-			parent 		 	: inputs_container
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_value',
+			dataset			: { key : i },
+			value			: current_value,
+			parent			: inputs_container
 		})
 
 

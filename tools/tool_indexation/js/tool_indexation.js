@@ -189,7 +189,7 @@ tool_indexation.prototype.create_fragment = function ( button_obj, event ) {	//,
 	// Select current editor
 	var ed = tinyMCE.get(component_id);
 	//var ed = tinymce.activeEditor
-		if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") };
+		if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") }
 
 	var current_text_area = document.getElementById(component_id);
 		if (!current_text_area) {

@@ -341,11 +341,11 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		if(mode==='search'){
 			const q_operator = self.data.q_operator
 			const input_q_operator = ui.create_dom_element({
-				element_type 	: 'input',
-				type 		 	: 'text',
-				value 		 	: q_operator,
-				class_name 		: 'q_operator',
-				parent 		 	: li
+				element_type	: 'input',
+				type			: 'text',
+				value			: q_operator,
+				class_name		: 'q_operator',
+				parent			: li
 			})
 		}
 
@@ -362,11 +362,11 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 	// service_tinymce
 		const get_service = () => { return current_service; }
 		// editor_config
-		const editor_config = {}
-			  editor_config.plugins 		= ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
-			  editor_config.toolbar 		= "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save"
-			  editor_config.custom_buttons 	= get_custom_buttons(self, i, get_service)
-			  editor_config.custom_events  	= get_custom_events(self, i, get_service)
+			const editor_config = {}
+				  editor_config.plugins			= ["paste","image","print","searchreplace","code","fullscreen","noneditable"]
+				  editor_config.toolbar			= "bold italic underline undo redo searchreplace pastetext code fullscreen | button_geo button_save"
+				  editor_config.custom_buttons	= get_custom_buttons(self, i, get_service)
+				  editor_config.custom_events	= get_custom_events(self, i, get_service)
 
 		// init editor
 		const current_service = new service_tinymce()
@@ -376,7 +376,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			editor_config 	: editor_config
 		})
 
-		self.services.push(current_service)		
+		self.services.push(current_service)
 		
 
 		// button create fragment
@@ -621,10 +621,10 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'indexIn' :
 				case 'indexOut' :
-					var tipo 			= text_area_component.dataset.tipo
-					var	lang 			= text_area_component.dataset.lang
-					var	section_tipo 	= text_area_component.dataset.section_tipo
-					var	parent 			= text_area_component.dataset.parent
+					var tipo			= text_area_component.dataset.tipo
+					var	lang			= text_area_component.dataset.lang
+					var	section_tipo	= text_area_component.dataset.section_tipo
+					var	parent			= text_area_component.dataset.parent
 
 					switch(page_globals.modo) {
 
@@ -742,8 +742,8 @@ const get_custom_events = (self, i, get_service) => {
 			// 'f2' code: 113
 			case 113:
 				// publish event and receive susbscriptors responses
-				const susbscriptors_responses = event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
-				const susbscriptors_responses_length = susbscriptors_responses.length
+				const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.keyCode)
+				const susbscriptors_responses_length	= susbscriptors_responses.length
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -751,8 +751,8 @@ const get_custom_events = (self, i, get_service) => {
 					}
 				
 				// service. get editor and content data
-					const service 			  = get_service()
-					const editor_content_data = service.get_editor_content_data()
+					const service				= get_service()
+					const editor_content_data	= service.get_editor_content_data()
 
 				// iterate susbscriptors responses
 					for (let i = 0; i < susbscriptors_responses_length; i++) {
@@ -793,10 +793,10 @@ const get_custom_events = (self, i, get_service) => {
 */
 export const build_node_tag = function(data_tag, tag_id) {
 
-	const type 		= data_tag.type
-	const state 	= data_tag.state
-	const label		= data_tag.label
-	const data		= data_tag.data
+	const type	= data_tag.type
+	const state	= data_tag.state
+	const label	= data_tag.label
+	const data	= data_tag.data
 
 	const images_factory_url = "../component_text_area/tag.php"
 
@@ -822,16 +822,16 @@ export const build_node_tag = function(data_tag, tag_id) {
 
 	const dataset = {
 		type	: type,
-		tag_id 	: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
-		state 	: (type==='tc') ? 'n': state,
-		label 	: (type==='tc') ? tag_id : label,
-		data 	: (type==='tc') ? tag_id : data
+		tag_id	: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
+		state	: (type==='tc') ? 'n': state,
+		label	: (type==='tc') ? tag_id : label,
+		data	: (type==='tc') ? tag_id : data
 	}
 
 	const node_tag = ui.create_dom_element({
-		element_type 	: 'img',
-		src 			: src,
-		id 				: id,
+		element_type	: 'img',
+		src				: src,
+		id				: id,
 		class_name		: class_name,
 		dataset			: dataset
 	})
@@ -954,10 +954,10 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 */
 const render_page_selector = function(self, data_tag, tag_id, service){
 
-	const total_pages 	= data_tag.total_pages
-	const offset 		= data_tag.offset
-	const page_in 		= offset
-	const page_out 		= (offset -1) + total_pages
+	const total_pages	= data_tag.total_pages
+	const offset		= data_tag.offset
+	const page_in		= offset
+	const page_out		= (offset -1) + total_pages
 
 
 	const header = ui.create_dom_element({
@@ -974,42 +974,42 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 
 	const body_title = ui.create_dom_element({
 		element_type	: 'span',
-		class_name 		: 'body_title',
+		class_name		: 'body_title',
 		text_node		: label,
 		parent			: body
 	})
 
 	const body_input = ui.create_dom_element({
-		element_type 	: 'input',
-		type 		 	: 'text',
-		class_name 		: 'body_title',
+		element_type	: 'input',
+		type			: 'text',
+		class_name		: 'body_title',
 		parent			: body
 	})
 
 	const error_input = ui.create_dom_element({
-		element_type 	: 'span',
-		class_name 		: 'body_title',
+		element_type	: 'span',
+		class_name		: 'body_title',
 		text_node		: '',
 		parent			: body
 	})
 
 
 	const footer = ui.create_dom_element({
-		element_type 	: 'span'
+		element_type	: 'span'
 	})
 
 	const user_option_cancelar = ui.create_dom_element({
 		element_type	: 'button',
-		class_name 		: 'user_option ',
-		parent 			: footer,
-		text_content 	: get_label.cancelar
+		class_name		: 'user_option ',
+		parent			: footer,
+		text_content	: get_label.cancelar
 	})
 
 	const user_option_ok = ui.create_dom_element({
 		element_type	: 'button',
-		class_name 		: 'user_option ',
-		parent 			: footer,
-		text_content 	: get_label.insertar_etiqueta
+		class_name		: 'user_option ',
+		parent			: footer,
+		text_content	: get_label.insertar_etiqueta
 	})
 
 	const page_selector = ui.attach_to_modal( header, body, footer)
@@ -1021,13 +1021,13 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 			page_selector.renove()
 		}
 		if(user_value > page_out || user_value < page_in){
-			error_input.textContent =	get_label.value_out_of_range || 'Value out of range'
+			error_input.textContent = get_label.value_out_of_range || 'Value out of range'
 			return
 		}
-		const data 		= body_input.value - (offset -1)
-		data_tag.label 	= body_input.value
-		data_tag.data 	= "["+data+"]"
-		const tag 	= build_node_tag(data_tag, tag_id)
+		const data		= body_input.value - (offset -1)
+		data_tag.label	= body_input.value
+		data_tag.data	= "["+data+"]"
+		const tag		= build_node_tag(data_tag, tag_id)
 		service.set_content(tag.outerHTML)
 		page_selector.remove()
 	})

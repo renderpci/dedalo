@@ -259,22 +259,22 @@ const build_id_column = function(self) {
 	// id_column
 		const id_column = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'id_column'
+			class_name		: 'id_column'
 		})
 
 	// edit_line
 		const edit_line = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'edit_line',
-			parent 			: id_column
+			class_name		: 'edit_line',
+			parent			: id_column
 		})
 
 		// section id
 			const section_id_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'section_id',
-				text_content 	: self.section_id,
-				parent 			: edit_line
+				text_content	: self.section_id,
+				parent			: edit_line
 			})
 
 		// initiator. Caller section defined
@@ -288,13 +288,13 @@ const build_id_column = function(self) {
 					const link_button = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button link',
-						parent 			: edit_line
+						parent			: edit_line
 					})
 					link_button.addEventListener("click", function(e){
 						// top window event
 						top.event_manager.publish('initiator_link_' + initiator, {
-							section_tipo : self.section_tipo,
-							section_id 	 : self.section_id
+							section_tipo	: self.section_tipo,
+							section_id		: self.section_id
 						})
 					})
 				// button edit (pen)
@@ -302,14 +302,14 @@ const build_id_column = function(self) {
 						const edit_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button edit',
-							parent 			: edit_line
+							parent			: edit_line
 						})
 						edit_button.addEventListener("click", async function(e){
 							// navigate link
 								event_manager.publish('user_action', {
-									tipo 		: self.section_tipo,
-									section_id 	: self.section_id,
-									mode 		: 'edit'
+									tipo		: self.section_tipo,
+									section_id	: self.section_id,
+									mode		: 'edit'
 								})
 
 							// detail_section
@@ -373,16 +373,16 @@ const build_id_column = function(self) {
 					const edit_button_tm = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button eye',
-						parent 			: edit_line
+						parent			: edit_line
 					})
 					edit_button_tm.addEventListener("click", function(e){
 						// publish event
 						event_manager.publish('tm_edit_record', {
-							tipo 		: self.section_tipo,
-							section_id 	: self.section_id,
-							matrix_id 	: self.matrix_id,
-							date 		: self.modification_date || null,
-							mode 		: 'tm'
+							tipo		: self.section_tipo,
+							section_id	: self.section_id,
+							matrix_id	: self.matrix_id,
+							date		: self.modification_date || null,
+							mode		: 'tm'
 						})
 					})
 				break
@@ -393,14 +393,14 @@ const build_id_column = function(self) {
 						const edit_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button edit',
-							parent 			: edit_line
+							parent			: edit_line
 						})
 						edit_button.addEventListener("click", function(e){
 							// edit_record(this, self)
 							event_manager.publish('user_action', {
-								tipo 		: self.section_tipo,
-								section_id 	: self.section_id,
-								mode 		: 'edit'
+								tipo		: self.section_tipo,
+								section_id	: self.section_id,
+								mode		: 'edit'
 							})
 						})
 					}
@@ -408,13 +408,13 @@ const build_id_column = function(self) {
 					if (permissions>1 && (initiator && initiator.indexOf('component_')!==-1)) {
 						const delete_line = ui.create_dom_element({
 							element_type	: 'div',
-							class_name 		: 'delete_line',
-							parent 			: id_column
+							class_name		: 'delete_line',
+							parent			: id_column
 						})
 						const delete_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button remove',
-							parent 			: delete_line
+							parent			: delete_line
 						})
 						delete_button.addEventListener("click", function(e){
 							delete_record(this, self)
@@ -590,7 +590,8 @@ const delete_record = (button, self) => {
 
 
 
-
-
 	return false
 }//end delete_record
+
+
+
