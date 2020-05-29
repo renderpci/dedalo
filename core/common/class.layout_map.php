@@ -194,7 +194,7 @@ class layout_map {
 									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
 									if ($modelo_name!=='edit_view') continue;
 
-									$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
+									$view_name = RecordObj_dd::get_termino_by_tipo($current_term,null,true);
 									if($view===$view_name){
 										# Use related terms as new list
 										$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
@@ -256,7 +256,7 @@ class layout_map {
 								'model' 		=> 'section',
 								'mode' 			=> $modo,
 								'lang'			=> DEDALO_DATA_NOLAN,
-								'label' 		=> RecordObj_dd::get_termino_by_tipo($current_section_tipo),
+								'label' 		=> RecordObj_dd::get_termino_by_tipo($current_section_tipo,null,true),
 								'parent' 		=> 'root'
 							]);
 
@@ -318,6 +318,7 @@ class layout_map {
 				if(SHOW_DEBUG===true) {
 					# dump($layout_map, ' layout_map ++ '.to_string());
 					foreach ($layout_map as $current_item) {
+						$current_item->debug_label = RecordObj_dd::get_termino_by_tipo($current_item->tipo,null,true);
 						$current_item->debug_from = 'calculated from section list or related terms 1';
 					}
 				}
@@ -495,7 +496,7 @@ class layout_map {
 									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
 									if ($modelo_name!=='edit_view') continue;
 
-									$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
+									$view_name = RecordObj_dd::get_termino_by_tipo($current_term,null,true);
 									if($view===$view_name){
 										# Use related terms as new list
 										$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
