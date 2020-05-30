@@ -844,7 +844,7 @@ class component_relation_parent extends component_relation_common {
 		$hierarchy_sections = !empty($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
 		# Resolve hierarchy_sections for speed
 		if (!empty($hierarchy_types)) {
-			$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+			$hierarchy_sections = component_relation_common::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
 		}
 
 		if (empty($hierarchy_sections)) {
