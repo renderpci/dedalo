@@ -48,7 +48,7 @@ class layout_map {
 			$modo 			= $options->modo;
 			$user_id 		= $options->user_id;
 			$view 			= $options->view;
-			$lang 			= $options->lang;
+			$lang 			= $options->lang ?? DEDALO_DATA_LANG;
 
 		// properties
 			$RecordObj_dd = new RecordObj_dd($tipo);
@@ -66,7 +66,15 @@ class layout_map {
 					if ($model==='section') {
 						if($item->section_tipo===$section_tipo) return $item;
 					}else{
-						if($item->parent===$tipo) return $item;
+						// dump($item->ar_sections_tipo, '  ++ $item->ar_sections_tipo - '.to_string($section_tipo));
+						// dump($item, ' $item ++ '.to_string($tipo));
+						if($item->parent===$tipo) {
+							return $item;
+						}
+						// else if(isset($item->ar_sections_tipo) && in_array($item->parent, $item->ar_sections_tipo)) {
+						// 	// $item->section_tipo = $item->parent;
+						// 	return $item;
+						// }
 					}
 				});
 				#if($tipo==='test175') dump($self_ar_dd_objects, ' self_ar_dd_objects ++ '.to_string($tipo));
@@ -92,7 +100,7 @@ class layout_map {
 
 		// 2. search in user presets
 			if (!isset($layout_map)) {
-				$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);				
+				$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);
 				if (!empty($user_preset)) {
 					// layout_map
 						$layout_map = $user_preset;
@@ -177,7 +185,7 @@ class layout_map {
 							if($view==='full') { // || $view==='view_mosaic'
 
 								if(isset($properties->source->config_context)){
-									
+
 									// v6 definition in properties
 									$config_context = component_common::get_config_context($tipo, $options->external, $options->section_tipo);
 
@@ -256,7 +264,11 @@ class layout_map {
 								'model' 		=> 'section',
 								'mode' 			=> $modo,
 								'lang'			=> DEDALO_DATA_NOLAN,
+<<<<<<< HEAD
+								'label' 		=> RecordObj_dd::get_termino_by_tipo($current_section_tipo, $lang, true, true),
+=======
 								'label' 		=> RecordObj_dd::get_termino_by_tipo($current_section_tipo,null,true),
+>>>>>>> 35e940345f9d8b5f9f385094f6b1f92ae56bad53
 								'parent' 		=> 'root'
 							]);
 
@@ -286,32 +298,23 @@ class layout_map {
 								continue;
 							}
 
+							$builded_ddo = array_find($layout_map, function($ddo) use($current_tipo){
+									return $ddo->tipo === $current_tipo;
+							});
 
 						// component add
 							$dd_object = new dd_object((object)[
-								'tipo' 			=> $current_tipo,
-								'section_tipo' 	=> $current_section_tipo,
-								'model' 		=> $model,
-								'mode' 			=> $modo,
-								'parent' 		=> $parent
+								'tipo' 				=> $current_tipo,
+								'section_tipo' 		=> $current_section_tipo,
+								'model' 			=> $model,
+								'mode' 				=> $modo,
+								'lang'				=> $lang,
+								'label' 			=> RecordObj_dd::get_termino_by_tipo($current_tipo, $lang, true, true),
+								'parent' 			=> $parent
 							]);
-							if(!empty($lang)) $dd_object->lang = $lang;
-
-							// remove non allow components
-								#$allow_models = [
-								#	'component_input_text',
-								#	//'component_number',
-								#	//'component_autocomplete',
-								#	'section',
-								#	'area',
-								#	'area_development',
-								#	'section_group'
-								#];
-								#if (!in_array($model, $allow_models)) {
-								#	continue;
-								#}
 
 							$layout_map[] = $dd_object;
+
 					}//end foreach ($current_section_config->{$config_context_type} as $current_tipo)
 				}//end foreach ($config_context as $current_section_config)
 
@@ -343,6 +346,8 @@ class layout_map {
 	}//end get_layout_map
 
 
+<<<<<<< HEAD
+=======
 
 	/**
 	* GET_LAYOUT_MAP
@@ -693,6 +698,7 @@ class layout_map {
 
 
 
+>>>>>>> 35e940345f9d8b5f9f385094f6b1f92ae56bad53
 	/**
 	* SEARCH_USER_PRESET
 	* @return array | bool
@@ -820,4 +826,3 @@ class layout_map {
 
 
 }
-?>
