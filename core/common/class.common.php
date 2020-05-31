@@ -1805,7 +1805,7 @@ abstract class common {
 				$layout_map_options->config_context_type 	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-
+			
 			if($layout_map) foreach($ar_locators as $current_locator) {
 
 				// check locator format
@@ -2162,7 +2162,7 @@ abstract class common {
 								debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
 								continue;
 							}
-				
+
 						$path = search::get_query_path($current_tipo, $current_section_tipo);
 
 						# FILTER . filter_element (operator_group) - default is true

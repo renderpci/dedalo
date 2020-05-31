@@ -269,6 +269,7 @@ class dd_object extends stdClass {
 		$this->target_sections = $value;
 	}
 
+
 	/**
 	* SET_SQO_CONTEXT
 	*/
@@ -277,6 +278,14 @@ class dd_object extends stdClass {
 		$this->sqo_context = $value;
 	}
 
+
+	/**
+	* SET_AR_SECTIONS_TIPO
+	*/
+	public function set_ar_sections_tipo($value) {
+
+		$this->ar_sections_tipo = $value;
+	}
 
 
 }//end dd_object
