@@ -48,7 +48,7 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		const modal  = ui.attach_to_modal(header, wrapper, null, 'big')
 		modal.on_close = () => {
 			// tool destroy
-				self.destroy(true, true, true)			
+				self.destroy(true, true, true)
 			// refresh source component text area
 				self.caller.refresh()
 		}
@@ -75,8 +75,8 @@ const get_content_data_edit = async function(self) {
 	// area thesaurus
 		const thesaurus_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'thesaurus_container',
-			parent 			: fragment
+			class_name		: 'thesaurus_container',
+			parent			: fragment
 		})
 		const thesaurus = self.get_thesaurus()
 		thesaurus.then(function(thesaurus_instance){
@@ -89,8 +89,8 @@ const get_content_data_edit = async function(self) {
 	// component_text_area
 		const component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'component_container',
-			parent 			: fragment
+			class_name		: 'component_container',
+			parent			: fragment
 		})
 		// lang selector
 			const lang_selector = ui.build_select_lang({
@@ -124,15 +124,15 @@ const get_content_data_edit = async function(self) {
 	// info container
 		const info_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'info_container',
-			parent 			: fragment
+			class_name		: 'info_container',
+			parent			: fragment
 		})
 
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'content_data ' + self.type
+			class_name		: 'content_data ' + self.type
 		})
 		content_data.appendChild(fragment)
 
@@ -144,17 +144,17 @@ const get_content_data_edit = async function(self) {
 	// // components container
 	// 	const components_container = ui.create_dom_element({
 	// 		element_type	: 'div',
-	// 		class_name 		: 'components_container',
-	// 		parent 			: fragment
+	// 		class_name		: 'components_container',
+	// 		parent			: fragment
 	// 	})
 
 
 	// // source lang select
 	// 	const source_select_lang = ui.build_select_lang({
-	// 		langs  		: self.langs,
-	// 		selected 	: self.source_lang,
+	// 		langs		: self.langs,
+	// 		selected	: self.source_lang,
 	// 		class_name	: 'source_lang',
-	// 		action 		: on_change_source_select_lang
+	// 		action		: on_change_source_select_lang
 	// 	})
 	// 	function on_change_source_select_lang(e) {
 	// 		add_component(self, source_component_container, e.target.value)
@@ -232,8 +232,8 @@ export const add_component = async (self, component_container, value) => {
 			return false
 		}
 
-	const component = await self.load_component(value)
-	const node 		= await component.render()
+	const component	= await self.load_component(value)
+	const node		= await component.render()
 
 	// clean container
 		while (component_container.firstChild) {

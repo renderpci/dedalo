@@ -286,11 +286,13 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 							continue;
 						}
 						// console.log("self.ar_instances:",JSON.parse(JSON.stringify(self.ar_instances[i])));
-						// self.ar_instances[i].destroy(true, true, false)
+						// remove from array of instances of current element
 						const destroyed_elements = self.ar_instances.splice(i, 1)
 
-						//ar_to_destroy.push(destroyed_elements[0])
-						destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+						// send instance to general destroy
+						if (typeof destroyed_elements[0].destroy!=="undefined") {
+							destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+						}						
 					}
 
 				// destroy all removed instances

@@ -394,7 +394,7 @@ class component_relation_parent extends component_relation_common {
 			$hierarchy_sections = isset($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
 			# Resolve hierarchy_sections for speed
 			if (!empty($hierarchy_types)) {
-				$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+				$hierarchy_sections = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
 			}
 			#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
 
@@ -844,7 +844,8 @@ class component_relation_parent extends component_relation_common {
 		$hierarchy_sections = !empty($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
 		# Resolve hierarchy_sections for speed
 		if (!empty($hierarchy_types)) {
-			$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+			$hierarchy_types_sections	= component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);
+			$hierarchy_sections			= array_merge((array)$hierarchy_sections, $hierarchy_types_sections);
 		}
 
 		if (empty($hierarchy_sections)) {

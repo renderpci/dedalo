@@ -95,9 +95,9 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons,
-			top 		 : top
+			content_data	: content_data,
+			buttons			: buttons,
+			top				: top
 		})
 
 	// events
@@ -352,15 +352,15 @@ const get_top = function(self) {
 			// data_manager. create new record
 				const api_response = await data_manager.prototype.request({
 					body : {
-						action 		: 'create',
-						section_tipo: select_section.value
+						action			: 'create',
+						section_tipo	: select_section.value
 					}
 				})
 				// add value to current data
 				if (api_response.result && api_response.result>0) {
 					const value = {
-						section_tipo : select_section.value,
-						section_id 	 : api_response.result
+						section_tipo	: select_section.value,
+						section_id		: api_response.result
 					}
 					self.add_value(value)
 				}else{
@@ -368,13 +368,13 @@ const get_top = function(self) {
 				}
 		})
 
-	// button_find
-		const button_find = ui.create_dom_element({
+	// button_link
+		const button_link = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button find',
-			parent 			: fragment
+			class_name		: 'button find',
+			parent			: fragment
 		})
-		button_find.addEventListener("click", async function(e){
+		button_link.addEventListener("click", async function(e){
 
 			const section_tipo	= select_section.value
 			const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
@@ -527,9 +527,9 @@ const input_element = async function(current_section_record, inputs_container){
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			dataset 	 : { key : key },
-			parent 		 : inputs_container
+			element_type	: 'li',
+			dataset			: { key : key },
+			parent			: inputs_container
 		})
 
 	// input field
@@ -539,9 +539,9 @@ const input_element = async function(current_section_record, inputs_container){
 	// button remove
 		const button_remove = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button remove',
+			class_name		: 'button remove',
 			dataset			: { key : key },
-			parent 			: li
+			parent			: li
 		})
 
 

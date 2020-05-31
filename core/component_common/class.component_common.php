@@ -1678,7 +1678,7 @@ abstract class component_common extends common {
 
 		// 			# Resolve hierarchy_sections for speed
 		// 				if (!empty($hierarchy_types)) {
-		// 					$hierarchy_sections_from_types = component_portal::add_hierarchy_sections_from_types($hierarchy_types);
+		// 					$hierarchy_sections_from_types = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);
 
 		// 					# Add hierarchy_sections_from_types
 		// 					foreach ($hierarchy_sections_from_types as $current_section_tipo) {
@@ -2809,7 +2809,7 @@ abstract class component_common extends common {
 					# Resolve hierarchy_sections for speed
 						if (!empty($hierarchy_types)) {
 
-							$hierarchy_sections_from_types = component_portal::add_hierarchy_sections_from_types($hierarchy_types);
+							$hierarchy_sections_from_types = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);
 
 							# Add hierarchy_sections_from_types
 							foreach ($hierarchy_sections_from_types as $current_section_tipo) {

@@ -37,15 +37,15 @@ export const service_tinymce = function() {
 		const self = this
 
 		// options vars
-			const value 		= options.value
-			const key 			= options.key
-			const editor_config = options.editor_config
+			const value			= options.value
+			const key			= options.key
+			const editor_config	= options.editor_config
 
 		// fix vars
-			self.caller 	= caller
-			self.container 	= container
-			self.options 	= options
-			self.key 		= key
+			self.caller		= caller
+			self.container	= container
+			self.options	= options
+			self.key		= key
 
 		// editor options
 			const toolbar = editor_config.toolbar
@@ -63,11 +63,11 @@ export const service_tinymce = function() {
 		// dd-tiny options (to config editor)
 			dd_tinny.options = {
 				// called when tinymce editor is ready
-				onsetup_editor  		: self.onsetup_editor.bind(this),
-				value  	 				: value,
-				toolbar  				: toolbar,
-				plugins 				: plugins,
-				container 				: container
+				onsetup_editor	: self.onsetup_editor.bind(this),
+				value			: value,
+				toolbar			: toolbar,
+				plugins			: plugins,
+				container		: container
 			}
 
 		// add to dom
@@ -91,8 +91,8 @@ export const service_tinymce = function() {
 
 		const self = this
 
-		const editor = self.editor
-		const key 	 = self.key
+		const editor	= self.editor
+		const key		= self.key
 
 		// no user interactions case
 		if (editor.isDirty()!==true) {
@@ -116,10 +116,9 @@ export const service_tinymce = function() {
 	this.get_value = function() {
 
 		const self = this
-
-		const editor = self.editor
 		
-		const value = editor.getContent({format:'raw'})
+		const editor = self.editor		
+		const value	 = editor.getContent({format:'raw'})
 		
 		return value
 	}//end get_value
@@ -134,8 +133,8 @@ export const service_tinymce = function() {
 
 		const editor = this.editor
 
-		const custom_buttons 		= this.options.editor_config.custom_buttons
-		const custom_buttons_length = (custom_buttons) ? custom_buttons.length : 0
+		const custom_buttons		= this.options.editor_config.custom_buttons
+		const custom_buttons_length	= (custom_buttons) ? custom_buttons.length : 0
 		for (let i = 0; i < custom_buttons_length; i++) {
 			
 			const options = custom_buttons[i].options
@@ -183,9 +182,9 @@ export const service_tinymce = function() {
 			editor.on('blur', function(evt) {
 				if (custom_events.blur) {
 					custom_events.blur(evt, {
-						key 	: self.key,
-						value 	: editor.getContent({format:'raw'}),
-						isDirty : editor.isDirty()
+						key		: self.key,
+						value	: editor.getContent({format:'raw'}),
+						isDirty	: editor.isDirty()
 					})
 				}
 			})//end blur event
@@ -224,9 +223,9 @@ export const service_tinymce = function() {
 
 		// KeyPress
 			// prevent that user insert special reserved chars
-			const minor_than_code 	= 60 // <
-			const more_than_code  	= 62 // >
-			const prevent_chars 	= [minor_than_code, more_than_code]
+			const minor_than_code	= 60 // <
+			const more_than_code	= 62 // >
+			const prevent_chars		= [minor_than_code, more_than_code]
 			editor.on('KeyPress', function(evt) {
 				if(prevent_chars.indexOf(evt.keyCode)!==-1) {
 					evt.preventDefault()

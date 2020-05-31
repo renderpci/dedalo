@@ -81,7 +81,7 @@ class area_development extends area_common {
 							(object)[
 								'type' => 'text',
 								'name' => 'tables',
-								'label' => 'Table name/s like "matrix,matrix_hierarcht" or "*" for all',
+								'label' => 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
 								'mandatory' => true
 							]
 						],
@@ -105,7 +105,7 @@ class area_development extends area_common {
 				$item->label	= label::get_label('actualizar_estructura');
 				$item->info		= null;
 				$item->body 	= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
-					'Current: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .
+					'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
 					'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
 					label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
 				$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
@@ -137,39 +137,13 @@ class area_development extends area_common {
 			$ar_widgets[] = $item;
 
 
-		// update_structure OLD
-			// $item = new stdClass();
-			// 	$item->id 		= 'update_structure';
-			// 	$item->typo 	= 'widget';
-			// 	$item->tipo 	= $this->tipo;
-			// 	$item->parent 	= $this->tipo;
-			// 	$item->label 	= label::get_label('actualizar_estructura');
-			// 	$item->info 	= 'Click to update structure from remote master server';
-			// 	$item->confirm 	= '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
-			// 	$item->confirm .= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
-			// 	$item->confirm .= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
-			// 	$item->confirm .= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
-			// 	$item->body 	= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
-			// 		'Current: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .
-			// 		'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
-			// 		label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
-			// 	$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
-			// 	$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
-			// 	$item->trigger 	= (object)[
-			// 		'dd_api' 	=> 'dd_utils_api',
-			// 		'action' 	 => 'update_structure',
-			// 		'options' 	 => null
-			// 	];
-			// $ar_widgets[] = $item;
-
-
 		// register_tools
 			$item = new stdClass();
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('registrar_herramientas');
-				$item->info 	= 'Click to read tools folder and update the tools register in database';
+				$item->id		= 'register_tools';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('registrar_herramientas');				
 				$list = array_map(function($path){
 					// ignore folders with name different from pattern 'tool_*'
 					if (1!==preg_match('/tools\/tool_*/', $path, $output_array)) {
@@ -185,28 +159,40 @@ class area_development extends area_common {
 						return $tool_name;
 					}
 				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
-				$item->body 	= implode('<br>', array_filter($list));
+				$item->body 	= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
+				$item->body 	.= implode('<br>', array_filter($list));					
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[						
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
 				$item->trigger 	= (object)[
-					'dd_api' 		=> 'dd_utils_api',
-					'action' 	 	=> 'register_tools',
-					'options' 	 	=> null
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'register_tools',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
 
 
 		// build_structure_css
 			$item = new stdClass();
-				$item->id 		= 'build_structure_css';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('build_structure_css');
-				$item->info 	= 'Click to regenerate css from actual structure';
-				$item->body 	= ' ';
+				$item->id		= 'build_structure_css';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('build_structure_css');				
+				$item->body 	= 'Regenerate css from actual structure (Ontology)';									
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[						
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
 				$item->trigger 	= (object)[
-					'dd_api' 		=> 'dd_utils_api',
-					'action' 	 	=> 'build_structure_css',
-					'options' 	 	=> null
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'build_structure_css',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
 
