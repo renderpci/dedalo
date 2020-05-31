@@ -568,18 +568,6 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* ADD_HIERARCHY_SECTIONS_FROM_TYPES
-	* Alias of component_autocomplete_hi::add_hierarchy_sections_from_types
-	* @return
-	*/
-	public static function add_hierarchy_sections_from_types($hierarchy_types, $hierarchy_sections) {
-
-		return component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
-	}//end add_hierarchy_sections_from_types
-
-
-
-	/**
 	* GET_SEARCH_FIELDS
 	*/
 	public function get_search_fields($search_tipo) {

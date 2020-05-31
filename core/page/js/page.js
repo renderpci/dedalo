@@ -46,10 +46,10 @@ export const page = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	page.prototype.edit 	= render_page.prototype.edit
-	page.prototype.render  	= common.prototype.render
-	page.prototype.refresh 	= common.prototype.refresh
-	page.prototype.destroy 	= common.prototype.destroy
+	page.prototype.edit		= render_page.prototype.edit
+	page.prototype.render	= common.prototype.render
+	page.prototype.refresh	= common.prototype.refresh
+	page.prototype.destroy	= common.prototype.destroy
 
 
 
@@ -61,15 +61,15 @@ page.prototype.init = async function(options) {
 
 	const self = this
 
-	self.model 			= 'page'
-	self.type 			= 'page'
-	self.mode 			= 'edit' // options.mode 	  // mode like 'section', 'tool', 'thesaurus'...
-	self.node 			= []
-	self.ar_instances 	= []
-	self.elements 		= options.elements // mixed items types like 'sections', 'tools'..
-	self.status 		= null
+	self.model			= 'page'
+	self.type			= 'page'
+	self.mode			= 'edit' // options.mode 	  // mode like 'section', 'tool', 'thesaurus'...
+	self.node			= []
+	self.ar_instances	= []
+	self.elements		= options.elements // mixed items types like 'sections', 'tools'..
+	self.status			= null
 	self.events_tokens	= []
-	self.menu_data 		= options.menu_data
+	self.menu_data		= options.menu_data
 
 
 	// launch preload all components files in parallel
@@ -119,11 +119,11 @@ page.prototype.init = async function(options) {
 						const options_url 	= Object.assign({}, options);
 						delete options_url.event_in_history
 
-						const var_uri 		= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
+						const var_uri		= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
 						const uri_options	= JSON.parse(JSON.stringify(options))
-						const state 		= {options : uri_options}
-						const title 		= ''
-						const url 			= "?"+var_uri //window.location.href
+						const state			= {options : uri_options}
+						const title			= ''
+						const url			= "?"+var_uri //window.location.href
 
 						history.pushState(state, title, url)
 					}
@@ -223,8 +223,8 @@ page.prototype.get_ar_instances = async function(){
 	const self = this
 
 	// instances
-		const elements 			= self.elements
-		const elements_length 	= elements.length
+		const elements			= self.elements
+		const elements_length	= elements.length
 		for (let i = 0; i < elements_length; i++) {
 
 			const element = elements[i]
@@ -267,14 +267,14 @@ const instantiate_page_element = function(self, page_element) {
 
 	// instance options
 		const instance_options = {
-			model 				: page_element.model,
-			tipo 				: page_element.tipo || page_element.section_tipo,
-			section_tipo		: page_element.section_tipo || null,
-			section_id			: page_element.section_id || null,
-			mode				: page_element.mode,
-			lang				: page_element.lang,
-			sqo_context			: page_element.sqo_context || null,
-			datum				: page_element.datum || null
+			model			: page_element.model,
+			tipo			: page_element.tipo || page_element.section_tipo,
+			section_tipo	: page_element.section_tipo || null,
+			section_id		: page_element.section_id || null,
+			mode			: page_element.mode,
+			lang			: page_element.lang,
+			sqo_context		: page_element.sqo_context || null,
+			datum			: page_element.datum || null
 		}
 
 		// id_variant . Propagate a custom instance id to children

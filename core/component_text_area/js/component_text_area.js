@@ -534,7 +534,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 					const current_tag	= ar_struct_tags[i].id;
 					const ar_parts		= current_tag.split('_');				
 
-					const number = (typeof ar_parts[1]!=="udefined")
+					const number = (typeof ar_parts[1]!=="undefined")
 						? parseInt(ar_parts[1])
 						: 0
 
@@ -555,7 +555,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 					const current_tag	= ar_tags[i].id;
 					const ar_parts		= current_tag.split('_');
 					
-					const number = (typeof ar_parts[1]!=="udefined")
+					const number = (typeof ar_parts[1]!=="undefined")
 						? parseInt(ar_parts[1])
 						: 0
 
@@ -575,7 +575,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 					const current_tag	= ar_img[i].id;
 					const ar_parts		= current_tag.split('-');
 					
-					const number = (typeof ar_parts[2]!=="udefined")
+					const number = (typeof ar_parts[2]!=="undefined")
 						? parseInt(ar_parts[2])
 						: 0
 
