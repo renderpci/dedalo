@@ -60,7 +60,7 @@ input, textarea {
 
 .wraper_propiedades {
 	width: 100%;
-	height: 50vh;
+	height: 62vh;
 	//height: 100%;
 	//background-color: #ccca76;
 	}
@@ -88,7 +88,8 @@ input, textarea {
 
 
 .wraper_relations {
-	height:100px;
+	// max-height:100px;
+	// overflow: auto;
 	}
 	.div_spinner_relations {
 		height:100px;
@@ -109,8 +110,20 @@ input, textarea {
 
 #div_keyup {display:none; width:99%; padding:4px; background-color: #FC9; margin:0px; }
 
-.btnTesauro { background-color:#666666;color:#CCC; float:right; margin-right:10px;padding:3px;padding-left:5px;padding-right:5px;border-radius:5px;}
-.btnTesauro:hover { background-color: #333; color:#fff;}
+.btnTesauro {
+	background-color:#666666;
+	color:#CCC;
+	float:right;
+	padding:3px;
+	padding-left:5px;
+	padding-right:5px;
+	border-radius:5px;
+
+	&:hover {
+		background-color: #333;
+		color:#fff;
+	}
+}
 
 .row_border_bottom {
 	border-bottom-width: 1px;
@@ -145,10 +158,25 @@ input, textarea {
 	tr, td {
 		//height: inherit;
 	}
-
-
 }
 
 
+.related_terms {
+	color:#000000;
+	font-size:11px;
+	font-weight:bold
+}
 
+
+.textoIndex {
+	margin:4px;
+
+	.related_terms_rows {
+		max-height: 100px;
+		overflow: auto;
+		width: 100%;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+	}
+}
 
