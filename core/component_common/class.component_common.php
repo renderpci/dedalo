@@ -1649,66 +1649,28 @@ abstract class component_common extends common {
 		if (!$this->tipo) return null;
 
 		// cached
-			if(isset($this->ar_target_section_tipo)) {
-				return $this->ar_target_section_tipo;
-			}
+			// if(isset($this->ar_target_section_tipo)) {
+			// 	return $this->ar_target_section_tipo;
+			// }
 
 		// get_config_context normalized
 			$config_context = (array)component_common::get_config_context($this->tipo, $external=false, $this->section_tipo);
-			$ar_target_section_tipo = array_map(function($item){
-				return $item->section_tipo;
-			}, $config_context);
 
-		// $propiedades = $this->get_propiedades();
-		// if(isset($propiedades->source->config_context)){
-
-		// 	$ar_target_section_tipo = [];
-		// 	foreach ($propiedades->source->config_context as $current_item) {
-		// 		if ($current_item->type!=='internal') continue;
-
-		// 		// resolve self section_tipo
-		// 			if (isset($current_item->section_tipo) && $current_item->section_tipo==='self') {
-		// 				$current_item->section_tipo = $this->section_tipo;
-		// 			}
-
-		// 		//add hierarchy_types
-		// 		if(isset($current_item->hierarchy_types) && !empty($current_item->hierarchy_types)){
-		// 			// get the hierarchy sections from properties
-		// 				$hierarchy_types = !empty($current_item->hierarchy_types) ? $current_item->hierarchy_types : null;
-
-		// 			# Resolve hierarchy_sections for speed
-		// 				if (!empty($hierarchy_types)) {
-		// 					$hierarchy_sections_from_types = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);
-
-		// 					# Add hierarchy_sections_from_types
-		// 					foreach ($hierarchy_sections_from_types as $current_section_tipo) {
-		// 						if (!in_array($current_section_tipo, $ar_target_section_tipo)) {
-		// 							$ar_target_section_tipo[] = $current_section_tipo;
-		// 						}
-		// 					}
-		// 				}
-		// 		}else{
-		// 			$ar_target_section_tipo[] = $current_item->section_tipo;
-		// 		}
-		// 	}
-
-		// }else{
-		// 	$ar_target_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
-		// }
-
-		// avoid array holes
-		$ar_target_section_tipo = array_values($ar_target_section_tipo);
-
-
-		if(SHOW_DEBUG===true) {
-			if ( empty( $ar_target_section_tipo)) {
-				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo,null,true);
-				throw new Exception("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo", 1);
-			}
+		$ar_target_section_tipo = [];
+		foreach ($config_context as $config_context_item) {
+			$ar_target_section_tipo = array_merge($ar_target_section_tipo, $config_context_item->section_tipo);
 		}
 
+		// debug
+			if(SHOW_DEBUG===true) {
+				if ( empty($ar_target_section_tipo)) {
+					$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo,null,true);
+					throw new Exception("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo", 1);
+				}
+			}
+
 		# Fix value
-		$this->ar_target_section_tipo = $ar_target_section_tipo;
+		// $this->ar_target_section_tipo = $ar_target_section_tipo;
 
 		return (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo
@@ -2784,52 +2746,58 @@ abstract class component_common extends common {
 		if(isset($properties->source->config_context)){
 
 			$config_context = [];
-			foreach ($properties->source->config_context as $current_config_context) {
+			foreach ($properties->source->config_context as $item_config_context) {
 
-				if($external===false && $current_config_context->type==='external') continue; // ignore external
+				if($external===false && $item_config_context->type==='external') continue; // ignore external
 
-				if(!isset($current_config_context->select)){
-					$current_config_context->select = $current_config_context->search;
+				if(!isset($item_config_context->select)){
+					$item_config_context->select = $item_config_context->search;
 				}
 
-				if(!isset($current_config_context->show)){
-					$current_config_context->show = $current_config_context->select;
+				if(!isset($item_config_context->show)){
+					$item_config_context->show = $item_config_context->select;
 				}
 
-				// resolve self section
-					if (isset($current_config_context->section_tipo) && $current_config_context->section_tipo==='self') {
-						$current_config_context->section_tipo = is_array($section_tipo) ? reset($section_tipo) : $section_tipo;
-					}
-
-				// add hierarchy_types
-				if(isset($current_config_context->hierarchy_types) && !empty($current_config_context->hierarchy_types)){
-					// get the hierarchy sections from properties
-						$hierarchy_types = $current_config_context->hierarchy_types;
-
-					# Resolve hierarchy_sections for speed
-						if (!empty($hierarchy_types)) {
-
-							$hierarchy_sections_from_types = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);
-
-							# Add hierarchy_sections_from_types
-							foreach ($hierarchy_sections_from_types as $current_section_tipo) {
-
-								// build config_context_item
-									$config_context_item = new stdClass();
-										$config_context_item->type 			= 'internal';
-										$config_context_item->section_tipo 	= $current_section_tipo;
-										$config_context_item->search 		= $current_config_context->search;
-										$config_context_item->select 		= $current_config_context->select;
-										$config_context_item->show 			= $current_config_context->show;
-
-									$config_context[] = $config_context_item;
-
-							}
-						}
-				}else{
-
-					$config_context[] = $current_config_context;
+				if (isset($item_config_context->section_tipo)){
+					$item_config_context->section_tipo = component_relation_common::get_config_context_section_tipo($item_config_context->section_tipo, $section_tipo);
 				}
+
+				$config_context[] = $item_config_context;
+
+				// // resolve self section
+				// 	if (isset($item_config_context->section_tipo) && $item_config_context->section_tipo==='self') {
+				// 		$item_config_context->section_tipo = is_array($section_tipo) ? reset($section_tipo) : $section_tipo;
+				// 	}
+				//
+				// // add hierarchy_types
+				// if(isset($item_config_context->hierarchy_types) && !empty($item_config_context->hierarchy_types)){
+				// 	// get the hierarchy sections from properties
+				// 		$hierarchy_types = $item_config_context->hierarchy_types;
+				//
+				// 	# Resolve hierarchy_sections for speed
+				// 		if (!empty($hierarchy_types)) {
+				//
+				// 			$hierarchy_sections_from_types = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);
+				//
+				// 			# Add hierarchy_sections_from_types
+				// 			foreach ($hierarchy_sections_from_types as $current_section_tipo) {
+				//
+				// 				// build config_context_item
+				// 					$config_context_item = new stdClass();
+				// 						$config_context_item->type 			= 'internal';
+				// 						$config_context_item->section_tipo 	= $current_section_tipo;
+				// 						$config_context_item->search 		= $item_config_context->search;
+				// 						$config_context_item->select 		= $item_config_context->select;
+				// 						$config_context_item->show 			= $item_config_context->show;
+				//
+				// 					$config_context[] = $config_context_item;
+				//
+				// 			}
+				// 		}
+				// }else{
+				//
+				// 	$config_context[] = $item_config_context;
+				// }
 			}
 
 		}else{
@@ -2841,6 +2809,26 @@ abstract class component_common extends common {
 				$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
 				$ar_related_components = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_tipo_exclude_elements=false);
 				$target_section_tipo = $tipo;
+
+			}elseif (in_array($model, layout_map::$groupers)) {
+				// groupers
+				$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+
+				// exclude elements check
+					$ar_excluded = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, 'exclude_elements', 'children', true);
+					if (isset($ar_excluded[0])) {
+						$ar_excluded_terms = RecordObj_dd::get_ar_terminos_relacionados($ar_excluded[0], $cache=true, $simple=true);
+						if (!empty($ar_excluded_terms)) {
+							$ar_related_temp = [];
+							foreach ($ar_related as $current_term) {
+								if (!in_array($current_term, $ar_excluded_terms)) {
+									$ar_related_temp[] = $current_term;
+								}
+							}
+							// overwrite var $ar_related
+							$ar_related = $ar_related_temp;
+						}
+					}
 			}else{
 
 				$ar_related = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
@@ -2870,13 +2858,12 @@ abstract class component_common extends common {
 			// build config_context_item
 			$config_context_item = new stdClass();
 				$config_context_item->type 			= 'internal';
-				$config_context_item->section_tipo 	= $target_section_tipo;
+				$config_context_item->section_tipo 	= is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
 				$config_context_item->search 		= $ar_related_components;
 				$config_context_item->select 		= $ar_related_components;
 				$config_context_item->show 			= $ar_related_components;
 
 			$config_context = [$config_context_item];
-
 		}
 
 		return $config_context;
