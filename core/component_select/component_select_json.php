@@ -21,7 +21,7 @@
 				break;
 
 			default:
-				$item_context = $this->get_structure_context($permissions, true);
+				$item_context = $this->get_structure_context($permissions);
 				break;
 		}
 		$context[] = $item_context;
