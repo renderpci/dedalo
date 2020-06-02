@@ -4,6 +4,47 @@
 	define('API_ROOT', dirname(dirname(__FILE__)));
 
 
+# After load Dédalo config, set API constants 
+# API SERVER 
+
+// API API_ENTITY . Like 'my_organization'
+	define('API_ENTITY', 'my_api_entity_name');
+
+
+// db_name . Optional
+	$db_name = !empty($db_name)
+		? $db_name
+		: 'web_' . API_ENTITY;
+	
+
+
+################################################################
+# DB
+	define('MYSQL_DEDALO_HOSTNAME_CONN'	, 'localhost');
+	define('MYSQL_DEDALO_USERNAME_CONN'	, 'my username');
+	define('MYSQL_DEDALO_PASSWORD_CONN'	, 'my password');
+	define('MYSQL_DEDALO_DATABASE_CONN'	, $db_name);
+	define('MYSQL_DEDALO_DB_PORT_CONN'	, null);
+	define('MYSQL_DEDALO_SOCKET_CONN'	, null);
+	include API_ROOT .'/common/class.DBi.php';
+
+
+
+// Dedalo constants. They are needed because the API uses some references and Dédalo config file is not available here.
+	define('DEDALO_LIB_BASE_PATH'							, dirname(dirname(dirname(API_ROOT))) );
+	define('DEDALO_LIB_BASE_URL'							, '/dedalo/lib/dedalo');
+	define('DEDALO_MEDIA_BASE_URL'							, '/dedalo/media'); // '/dedalo/media'
+	define('DEDALO_AV_QUALITY_DEFAULT' 						, '404');
+	define('DEDALO_AV_FOLDER' 								, '/av');
+	define('DEDALO_AV_POSTERFRAME_EXTENSION' 				, 'jpg');
+	define('SHOW_DEBUG'										, false);
+	# Video components resources
+	define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
+	define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
+	define('DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO'	, 'rsc54');
+	define('DEDALO_COMPONENT_RESOURCES_TR_TIPO'				, 'rsc36');
+	define('DEDALO_NOTES_TEXT_TIPO'							, 'rsc329');
+
 
 ################################################################
 
@@ -16,22 +57,23 @@
 	// API_WEB_USER_CODE . Verification user code (must be identical in config of client and server)
 	if (isset($skip_api_web_user_code_verification) && $skip_api_web_user_code_verification===true) {
 		# Ignore api code verification
+	}else{
 
-		define('API_WEB_USER_CODE', 'xxxxxxxxxxxxxxxxxxxxxx');
+		define('API_WEB_USER_CODE', $API_WEB_USER_CODE);				
 		if (empty($code)) {
 			echo json_encode("Sorry. Empty user code");
 			die();
 		}elseif ($code!==API_WEB_USER_CODE) {
-			echo json_encode("Sorry. Invalid user code");
+			echo json_encode("Sorry. Invalid user code '$code' " . API_ENTITY);
 			die();
 		}
-	}
+	}	
 
 	// WEB_CURRENT_LANG_CODE . Current lang default. If request get 'lang' overwrite value
-	define('WEB_CURRENT_LANG_CODE' 		, !empty($_REQUEST['lang']) ? $_REQUEST['lang'] : 'lg-eng');
-
+	define('WEB_CURRENT_LANG_CODE' 		, !empty($lang) ? $lang : 'lg-eng');
+		
 	// __CONTENT_BASE_URL__ . Web base url where are served the contents
-	define('__CONTENT_BASE_URL__' 		, 'http://www.mydomain.com');
+	define('__CONTENT_BASE_URL__' 		, 'http://localhost:8080');
 
 	// WEB_VIDEO_PATH
 	define('WEB_VIDEO_BASE_URL' 		, '/dedalo/media/av/404');
@@ -68,7 +110,7 @@
 		$table_thesaurus_map = array();
 
 	# Table names
-		define('TABLE_THESAURUS'		 , '');
+		define('TABLE_THESAURUS'		 , 'antropologia,periodos,restringidos');
 		define('TABLE_HIERARCHY'		 , 'hierarchy');
 		define('TABLE_INTERVIEW'		 , 'interview');
 		define('TABLE_AUDIOVISUAL'		 , 'audiovisual');
@@ -107,8 +149,15 @@
 
 
 ################################################################
-# Database to use in this website (for multiple database publication options like 'mht')
-	define('MYSQL_WEB_DATABASE_CONN', 'web_XXXX');
+# Database to use (for multiple database publication options like 'mht'). var $db_name is set in json/index.php file from request
+	if(!empty($db_name)) {
+		// received in json request
+			$MYSQL_WEB_DATABASE_CONN = $db_name;
+	}else{
+		// default from dedalo db config
+			$MYSQL_WEB_DATABASE_CONN = MYSQL_DEDALO_DATABASE_CONN;
+	}	
+	define('MYSQL_WEB_DATABASE_CONN', $MYSQL_WEB_DATABASE_CONN);
 
 
 
