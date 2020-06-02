@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {common} from '../../common/js/common.js'
+	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
@@ -80,7 +80,7 @@ export const component_portal = function(){
 * INIT
 */
 component_portal.prototype.init = async function(options) {
-	
+
 	const self = this
 
 	// autocomplete. set default values of service autocomplete
@@ -132,16 +132,20 @@ component_portal.prototype.build  = async function(autoload){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
+		self.build_sqo_context()
+
 	// load data if not yet received as an option
 		if (autoload===true) {
 
 			const current_data_manager 	= new data_manager()
+
+			console.log("current_data_manager", current_data_manager);
 			const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
 
 			if(SHOW_DEBUG===true) {
 				console.log("portal build api_response:", api_response)
-			}			
-			
+			}
+
 			// Update the self.data into the datum and self instance
 				if (api_response.result) {
 					const new_data = api_response.result.data
@@ -156,7 +160,7 @@ component_portal.prototype.build  = async function(autoload){
 
 	// pagination vars only in edit mode
 		if (self.mode==="edit") {
-		
+
 			// pagination safe defaults
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
@@ -201,10 +205,10 @@ component_portal.prototype.build  = async function(autoload){
 				if(self.autocomplete && self.autocomplete_active===true){
 					self.autocomplete.destroy()
 					self.autocomplete_active = false
-					self.autocomplete 		 = null			
+					self.autocomplete 		 = null
 				}
 		}//end if (self.mode==="edit")
-	
+
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
 
@@ -212,15 +216,183 @@ component_portal.prototype.build  = async function(autoload){
 		if(SHOW_DEBUG===true) {
 			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			//console.log("component_portal self +++++++++++ :",self);
-			//console.log("========= build self.pagination.total:",self.pagination.total);				
+			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}
 
 	// status update
 		self.status = 'builded'
 
-	
+
 	return true
 }//end component_portal.prototype.build
+
+
+
+
+component_portal.prototype.build_sqo_context = function(){
+
+	const self = this
+
+	const config_context 	= self.context.config_context
+	const length 			= config_context.length
+	const sqo_context_ddo 	= self.datum.context.find(item => item.source === 'sqo_context_ddo').value
+	const operator 			= self.context.properties.operator || '$and'
+	const ar_dd_objects		= []
+	const ar_section_tipo 	= []
+	const sqo_context 		= {}
+
+	// source auto create
+	const source = create_source(self,'get_data')
+	ar_dd_objects.push(source)
+
+	console.log("ar_dd_objects", ar_dd_objects);
+
+	for (let i = 0; i < length; i++) {
+
+		const current_item 		= config_context[i]
+		const sections 			= current_item.section_tipo
+
+		const sections_length 	= sections.length
+		// show
+		const show = current_item.search
+		const show_length = show.length
+		//get sections
+		for (let j = 0; j < sections_length; j++) {
+			ar_section_tipo.push(sections[j])
+			// get the fpath array
+			for (let k = 0; k < show_length; k++) {
+				const f_path = show[k].f_path
+				const f_path_length = f_path.length
+
+				// get the current item of the fpath
+				for (let l = 0; l < f_path_length; l++) {
+					const item = f_path[l]==='self'
+						? sections[j]
+						: f_path[l]
+					const exist = ar_dd_objects.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+					if(!exist){
+						const ddo = sqo_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+						// console.log("ddo", ddo, item, sections[j]);
+						if(ddo){
+							ar_dd_objects.push(ddo)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	const sqo = {
+		typo 				: 'sqo',
+		section_tipo 		: ar_section_tipo,
+		filter 				: null,
+		offset 				: self.pagination.offset,
+		limit 				: self.pagination.limit,
+		select 				: [],
+		full_count			: false,
+		filter_by_locators	: null
+	}
+	ar_dd_objects.push(sqo)
+
+	sqo_context.show = ar_dd_objects
+	self.sqo_context = sqo_context
+	console.log("sqo_context", sqo_context);
+	return sqo_context
+}
+
+
+
+component_portal.prototype.build_sqo_search = function(){
+
+	const self = this
+
+	const config_context 		= self.context.config_context
+	const config_context_length = config_context.length
+	const sqo_context_ddo 		= self.datum.context.find(item => item.source === 'sqo_context_ddo').value
+	const operator 				= self.context.properties.operator || '$and'
+	const ar_context_search 	= []
+
+	for (let i = 0; i < config_context_length; i++) {
+
+		const sqo_search		= []
+
+		const current_item 		= config_context[i]
+		const sections 			= current_item.section_tipo
+		const sections_length 	= sections.length
+		const fixed_filter 		= config_context[i].fixed_filter
+		const filter_free 		= {}
+			  filter_free[operator] = []
+
+		// type add
+		sqo_search.push({
+			typo : 'search_engine',
+			value : current_item.search_engine
+		})
+
+		// show
+		const show = current_item.search
+		const show_length = show.length
+		//get sections
+		for (let j = 0; j < sections_length; j++) {
+			// get the fpath array
+			for (let k = 0; k < show_length; k++) {
+				const f_path = show[k].f_path
+				const f_path_length = f_path.length
+				const ar_paths = []
+
+				// get the current item of the fpath
+				for (let l = 0; l < f_path_length; l++) {
+					const item = f_path[l]==='self'
+						? sections[j]
+						: f_path[l]
+					const exist = sqo_search.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+					if(!exist){
+						const ddo = sqo_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+						if (ddo) {
+							sqo_search.push(ddo)
+
+							const path = {
+								section_tipo 	: sections[j],
+								component_tipo 	: item,
+								modelo 			: ddo.model
+							}
+							ar_paths.push(path)
+						}
+					}
+				}
+
+				filter_free[operator].push({
+					q 		: '',
+					path 	: ar_paths
+				})
+			}
+		}
+
+		const filter = {
+			"$and" : []
+		}
+		filter.$and.push(filter_free)
+		if (fixed_filter) {
+			filter.$and.push(fixed_filter)
+		}
+		const sqo = {
+			typo 			: 'sqo',
+			section_tipo 	: sections,
+			filter 			: filter,
+			offset 			: self.pagination.offset,
+			limit 			: self.pagination.limit,
+			select 			: [],
+			full_count		: false
+		}
+		sqo_search.push(sqo)
+
+		ar_context_search.push(sqo_search)
+
+	}//end for (let i = 0; i < length; i++) {
+
+
+	return ar_context_search
+}
 
 
 
@@ -242,7 +414,7 @@ component_portal.prototype.update_datum = function(new_data) {
 			// console.log("update_datum --------------------------- final self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 
 	// data. Update current component self data
-		// self.data = new_data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || []						
+		// self.data = new_data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || []
 		self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || []
 			//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
 
@@ -315,13 +487,13 @@ component_portal.prototype.update_pagination_values = function(action) {
 			case 'remove' :
 				// update pagination total
 				if(self.data.pagination.total && self.data.pagination.total>0) {
-					self.data.pagination.total-- 
+					self.data.pagination.total--
 				}
 				break;
 			case 'add' :
 				// update self.data.pagination
 				if(self.data.pagination && self.data.pagination.total && self.data.pagination.total>=0) {
-					self.data.pagination.total++ 
+					self.data.pagination.total++
 				}
 				break;
 		}
@@ -386,5 +558,3 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	// 	return offset_last
 	// }//end get_last_offset
-
-

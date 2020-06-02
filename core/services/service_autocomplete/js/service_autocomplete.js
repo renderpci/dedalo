@@ -36,9 +36,11 @@ export const service_autocomplete = function() {
 		self.instance_caller 		= options.caller
 		self.id 					= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
 		self.wrapper 				= options.wrapper
-		self.context_search			= self.instance_caller.sqo_context.search
+		self.ar_context_search		= self.instance_caller.build_sqo_search()
+		self.context_search			= self.ar_context_search[0]
 		self.sqo					= self.context_search.find((current_item)=> current_item.typo==='sqo')
 		self.ar_search_section_tipo	= self.sqo.section_tipo
+		self.search_engine			= self.context_search.find((current_item)=> current_item.typo==='search_engine').value
 
 		// Vars
 			self.tipo 				= self.instance_caller.tipo
@@ -68,6 +70,8 @@ export const service_autocomplete = function() {
 		return true
 	}// end destroy
 
+
+
 	/**
 	* RENDER
 	* @return bool
@@ -83,6 +87,9 @@ export const service_autocomplete = function() {
 				parent 			: self.wrapper
 			})
 
+		// build operator selectos
+		const source_selector = self.render_source_selector()
+		searh_container.appendChild(source_selector)
 		// sections select
 		const sections_selector = self.render_sections_selector()
 		searh_container.appendChild(sections_selector)
@@ -112,73 +119,79 @@ export const service_autocomplete = function() {
 	}// end render
 
 
-	// /**
-	// * RENDER_SOURCE_SELECTOR
-	// * @return
-	// */
-	// this.render_source_selector = function(options) {
-	//
-	// 	const self = this
-	//
-	// 	// source elements
-	// 		const ar_source 	= self.properties.source.config_context
-	//
-	//
-	// 		const ar_elements 	= options.ar_elements.map(element => element.section_tipo);
-	// 		const ar_search 	= options.ar_elements.filter( (obj, index) => {
-	// 														return ar_elements.indexOf(obj.section_tipo) === index;
-	// 													})
-	//
-	// 		const ar_fields 	= options.ar_elements.map(element => element.fields_map);
-	//
-	// 	// switcher source
-	// 		const label_select = ui.create_dom_element({
-	// 					element_type 	: "label",
-	// 					class_name 		: "css_label label",
-	// 					parent 			: container,
-	// 					text_content 	: get_label["origen"] || "Source"
-	// 				})
-	//
-	// 		const select = ui.create_dom_element({
-	// 					id 				: 'select_'+options.target_id,
-	// 					element_type 	: "select",
-	// 					parent 			: container,
-	// 					class_name 		: "source_selector",
-	// 					data_set 		: {
-	// 						source : JSON.stringify(options)
-	// 					}
-	// 				})
-	//
-	// 		// others
-	// 			const ar_search_length = ar_search.length
-	// 			for (let i = 0; i < ar_search_length; i++) {
-	//
-	// 				const item = ar_search[i]
-	//
-	// 				const swicher_source = ui.create_dom_element({
-	// 					element_type 	: "option",
-	// 					parent 			: select,
-	// 					value 			: item.section_tipo,
-	// 					text_content 	: item.section_tipo_name,
-	// 					data_set 		: {
-	// 						source : JSON.stringify(item),
-	// 						search_engine: item.search_engine
-	// 					}
-	// 				})
-	// 			}
-	//
-	// 		// add listener to the select
-	// 		select.addEventListener('change',function(){
-	// 					self.build_filter_fields(this.value, options)
-	// 				},false)
-	//
-	// 	// set default value
-	// 		//select.value = "rsc205"
-	// 		self.build_filter_fields(select.value, options)
-	//
-	// 	return true
-	// }//end render_source_selector
-	//
+	/**
+	* RENDER_SOURCE_SELECTOR
+	* @return
+	*/
+	this.render_source_selector = function() {
+
+		const self = this
+
+		// source elements
+			const ar_source 	= self.ar_context_search
+
+		// switcher source
+			const source_selector = ui.create_dom_element({
+				element_type 	: "div",
+				class_name 	 	: "source_selector",
+			})
+
+			const label_select = ui.create_dom_element({
+						element_type 	: "label",
+						class_name 		: "css_label label",
+						text_content 	: get_label["origen"] || "Source",
+						parent 			: source_selector,
+					})
+
+			const select = ui.create_dom_element({
+						element_type 	: "select",
+						class_name 		: "select_source_selector",
+						parent 			: source_selector,
+					})
+
+			// others
+				const ar_search_length = ar_source.length
+				for (let i = 0; i < ar_search_length; i++) {
+
+					const source = ar_source[i]
+					const current_sqo 	= source.find((item) => item.typo === 'sqo')
+					const ar_section 	= current_sqo.section_tipo
+					const ddo_section 	= source.find((item) => item.type === 'section' && item.typo === 'ddo')
+					const search_engine = source.find((current_item)=> current_item.typo==='search_engine').value
+
+					const swicher_source = ui.create_dom_element({
+						element_type 	: "option",
+						parent 			: select,
+						value 			: i+'',
+						text_content 	: ar_section.length > 1
+							? ddo_section.label + ", etc."
+							: ddo_section.label
+					})
+					if (search_engine===self.search_engine) {
+						swicher_source.setAttribute("selected", true)
+					}
+
+				}
+
+			// add listener to the select
+			select.addEventListener('change',function(e){
+				const key = e.target.value
+
+				self.context_search	 		= self.ar_context_search[key]
+				self.sqo					= self.context_search.find((current_item)=> current_item.typo==='sqo')
+				self.ar_search_section_tipo	= self.sqo.section_tipo
+				self.search_engine			= self.context_search.find((current_item)=> current_item.typo==='search_engine').value
+
+				self.destroy()
+				self.render()
+			},false)
+
+		// set default value
+			// self.build_filter_fields(select.value, options)
+
+		return source_selector
+	}//end render_source_selector
+
 
 	/**
 	* BUILD_AUTOCOMPLETE_INPUT
@@ -252,10 +265,11 @@ export const service_autocomplete = function() {
 
 			const ar_sections = self.ar_search_section_tipo
 			const local_storage = JSON.parse(localStorage.getItem(self.id)) || ar_sections
-			const ar_ddo_sections = self.context_search.filter((item) => item.type === 'section' && item.typo === 'ddo')
 
-			for (let i = 0; i < ar_ddo_sections.length; i++) {
-				const ddo_section = ar_ddo_sections[i]
+			for (let i = 0; i < ar_sections.length; i++) {
+				const section = ar_sections[i]
+				const ddo_section = self.context_search.find((item) => item.type === 'section' && item.tipo === section && item.typo === 'ddo')
+
 				const li_section = ui.create_dom_element({
 					element_type 	: "li",
 					parent 			: sections_list
@@ -314,10 +328,10 @@ export const service_autocomplete = function() {
 		})
 
 			const ar_components = []
-			const sqo_leng = self.context_search.length
+			const sqo_length = self.context_search.length
 
 
-			for (let i = sqo_leng - 1; i >= 0; i--) {
+			for (let i = sqo_length - 1; i >= 0; i--) {
 				const item = self.context_search[i]
 				if(item.type === 'component' && item.typo === 'ddo' && ar_components.indexOf(item.tipo) === -1){
 					ar_components.push(item.tipo)
@@ -693,7 +707,6 @@ export const service_autocomplete = function() {
 
 		return sqo
 	}//end rebuild_search_query_object
-
 
 
 	/**
