@@ -1369,20 +1369,20 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_SQO_CONTEXT
+	* GET_CONFIG_CONTEXT_PARSED
 	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
-	* The search_query_object_context (sqo_context) have at least:
+	* The search_query_object_context (config_context) have at least:
 	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
 	* one ddo for the searched section (source ddo)
 	* one ddo for the component searched.
 	* 	is possible create more than one ddo for different components.
 	* @return object | json
 	*/
-	public function get_sqo_context() {
+	public function get_config_context_parsed() {
 
 		// already calculated
-			if (isset($this->sqo_context)) {
-				return $this->sqo_context;
+			if (isset($this->config_context)) {
+				return $this->config_context;
 			}
 
 		// sort vars
@@ -1409,43 +1409,77 @@ class component_relation_common extends component_common {
 
 			// typo SEARCH
 				// filter_custom
-					$filter_custom = [];
+					$config_context_parsed = [];
 					// calculated config_context
 					if (isset($properties->source->config_context)) {
 						foreach ($properties->source->config_context as $item_config_context) {
+
+							$parsed_item = new stdClass();
+
 							// get the ar_sections
 							if (isset($item_config_context->section_tipo)) {
-								$ar_section_tipo = component_relation_common::get_config_context_section_tipo($item_config_context->section_tipo);
+								$parsed_item->section_tipo = component_relation_common::get_config_context_section_tipo($item_config_context->section_tipo);
 							}
 							// get the filter_by_list (to set the prefilter selector)
 							if (isset($item_config_context->filter_by_list)) {
-								$filter_by_list	= component_relation_common::get_filter_list_data($item_config_context->filter_by_list);
+								$parsed_item->filter_by_list	= component_relation_common::get_filter_list_data($item_config_context->filter_by_list);
 							}
 							// fixed_filter
 							if (isset($item_config_context->fixed_filter)) {
-								$fixed_filter = $this->get_fixed_filter($item_config_context->fixed_filter);
+								$parsed_item->fixed_filter = $this->get_fixed_filter($item_config_context->fixed_filter);
 							}
+							// search
+							if (isset($item_config_context->search)) {
+								$parsed_item->search = $item_config_context->search;
+							}
+							// select
+							if (isset($item_config_context->select)) {
+								$parsed_item->select = $item_config_context->select;
+							}
+							// show
+							if (isset($item_config_context->show)) {
+								$parsed_item->show = $item_config_context->show;
+							}
+							// search_engine
+							if (isset($item_config_context->search_engine)) {
+								$parsed_item->search_engine = $item_config_context->search_engine;
+							}
+
+
+							$config_context_parsed[] = $parsed_item;
 						}
 					}
 
 					// LAYOUT MAP // fields for select / show. add ddo
 
-						// subcontext from layout_map items
-						// search
+						// layout_map subcontext from layout_map items
 							$layout_map_options = new stdClass();
-								$layout_map_options->section_tipo 			= $section_tipo;
-								$layout_map_options->tipo 					= $tipo;
-								$layout_map_options->modo 					= $mode;
-								$layout_map_options->add_section 			= true;
-								$layout_map_options->config_context_type 	= 'select';
-							$search = array_merge( $search, layout_map::get_layout_map($layout_map_options) );
+								$layout_map_options->section_tipo 	= $section_tipo;
+								$layout_map_options->tipo 			= $tipo;
+								$layout_map_options->modo 			= $mode;
+								$layout_map_options->add_section 	= true;
+
+						$ddo = [];
+						// select
+							$layout_map_options->config_context_type = 'select';
+							$ddo = array_merge( $ddo, layout_map::get_layout_map($layout_map_options) );
+
+						// search
+							$layout_map_options->config_context_type = 'search';
+							$ddo = array_merge( $ddo, layout_map::get_layout_map($layout_map_options) );
 
 						// show
-							$show= [];
-							$layout_map_options->config_context_type 		= 'show';
-							$show = array_merge( $show, layout_map::get_layout_map($layout_map_options) );
+							$layout_map_options->config_context_type = 'show';
+							$ddo = array_merge( $ddo, layout_map::get_layout_map($layout_map_options) );
 
+						// add ddo to the global storage
+							foreach ($ddo as $ddo) {
+								if (!in_array($ddo, dd_core_api::$sqo_context_ddo)) {
+									dd_core_api::$sqo_context_ddo[] = $ddo;
+								}
+							}
 
+				return $config_context_parsed;
 			die();
 
 				// hierarchy_terms_filter
@@ -1541,9 +1575,9 @@ class component_relation_common extends component_common {
 				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options) );
 
 
-			$sqo_context = new stdClass();
-				$sqo_context->show 		= $show;
-				$sqo_context->search 	= $search;
+			$config_context = new stdClass();
+				$config_context->show 		= $show;
+				$config_context->search 	= $search;
 
 
 			///////////////////////////////////////////
@@ -1634,12 +1668,12 @@ class component_relation_common extends component_common {
 			*/
 
 		// fix
-		$this->sqo_context	= $sqo_context;
+		$this->config_context	= $config_context;
 		$this->pagination	= $pagination;
 
 
-		return $sqo_context;
-	}//end get_sqo_context
+		return $config_context;
+	}//end get_config_context_parsed
 
 
 
@@ -1647,7 +1681,7 @@ class component_relation_common extends component_common {
 	* GET_HIERARCHY_TERMS_FILTER
 	* Create a sqo filter from
 	* @return array $filter_custom
-	* @see get_sqo_context
+	* @see get_config_context
 	*/
 	public function get_hierarchy_terms_filter($ar_terms) {
 

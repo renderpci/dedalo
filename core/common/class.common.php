@@ -63,7 +63,7 @@ abstract class common {
 			// 'component_check_box'
 			// 'component_date'
 			// 'component_email'
-			'component_external',
+			// 'component_external',
 			// 'component_filter'
 			// 'component_filter_master'
 			// 'component_filter_records'
@@ -1805,7 +1805,7 @@ abstract class common {
 				$layout_map_options->config_context_type 	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-			
+
 			if($layout_map) foreach($ar_locators as $current_locator) {
 
 				// check locator format

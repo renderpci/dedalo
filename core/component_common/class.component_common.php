@@ -2748,7 +2748,7 @@ abstract class component_common extends common {
 			$config_context = [];
 			foreach ($properties->source->config_context as $item_config_context) {
 
-				if($external===false && $item_config_context->type==='external') continue; // ignore external
+				// if($external===false && $item_config_context->type==='external') continue; // ignore external
 
 				if(!isset($item_config_context->select)){
 					$item_config_context->select = $item_config_context->search;

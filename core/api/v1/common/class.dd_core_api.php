@@ -11,10 +11,11 @@ class dd_core_api {
 	// Version. Important!
 		static $version = "1.0.0";  // 05-06-2019
 
-	// ar_dd_objects . store current ar_dd_objects received in context to allwo external acces (portals, etc.)
+	// ar_dd_objects . store current ar_dd_objects received in context to allow external access (portals, etc.)
 		static $ar_dd_objects;
 
-
+	// $sqo_context_ddo . store current ddo items added by get_config_context methods (portals, etc.)
+		static $sqo_context_ddo = [];
 
 	/**
 	* __CONSTRUCT
@@ -870,6 +871,10 @@ class dd_core_api {
 
 				// context add
 					$context = $element_json->context;
+					$context[] = (object)[
+						'source' 	=> 'sqo_context_ddo',
+						'value' 	=> dd_core_api::$sqo_context_ddo
+					];
 
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 
