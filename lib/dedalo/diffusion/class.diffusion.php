@@ -424,10 +424,14 @@ abstract class diffusion  {
 			$name = RecordObj_dd::get_termino_by_tipo($current_diffusion_domain_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			if ($name===$diffusion_domain_name) {
 				$diffusion_domain_tipo = $current_diffusion_domain_tipo;
+				break;
 					#dump($diffusion_domain_tipo, ' $diffusion_domain_tipo ++ '.to_string($diffusion_domain_name));
 			}
 		}
-		if (!isset($diffusion_domain_tipo)) return $ar_diffusion_map; // Not found entity name as diffusion domain
+		if (!isset($diffusion_domain_tipo)) {
+			debug_log(__METHOD__." Not found diffusion_domain_tipo for diffusion_domain: ".to_string($diffusion_domain_name), logger::WARNING);
+			return $ar_diffusion_map; // Not found entity name as diffusion domain
+		}
 
 		#
 		# DIFFUSION_GROUP

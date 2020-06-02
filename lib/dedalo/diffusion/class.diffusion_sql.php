@@ -3661,7 +3661,7 @@ class diffusion_sql extends diffusion  {
 	* @return array $ar_diffusion_sections
 	*/
 	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo) {
-
+		
 		$ar_diffusion_sections = array();
 
 		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);

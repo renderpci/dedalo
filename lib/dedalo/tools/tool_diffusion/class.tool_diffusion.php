@@ -284,15 +284,15 @@ class tool_diffusion {
 	* Note: For better control, sections are TR of diffusion_elements. This correspondence always must exists in diffusion map
 	* @return bool true/false
 	*/
-	public static function have_section_diffusion( $section_tipo, $ar_diffusion_map_elements=null ) {
+	public static function have_section_diffusion($section_tipo, $ar_diffusion_map_elements=null) {
 		
 		$have_section_diffusion = false;
-
+		
 		if (is_null($ar_diffusion_map_elements)) {
 			# calculate all
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 		}
-
+		// dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo).' - DEDALO_DIFFUSION_DOMAIN:'.DEDALO_DIFFUSION_DOMAIN);
 		foreach ($ar_diffusion_map_elements as $diffusion_group_tipo => $obj_value) {
 			
 			$diffusion_element_tipo = $obj_value->element_tipo;
