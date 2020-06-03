@@ -102,48 +102,4 @@ class sections extends common {
 
 
 
-	/**
-	* GET_SQO_CONTEXT
-	* @return
-	*//*
-	public function get_sqo_context() {
-
-		$sqo_context = new stdClass();
-
-		$show = [];
-
-		$section_tipo 	= $this->tipo;
-		$section_id 	= $this->section_id;
-		$mode 			= $this->modo;
-		$lang 			= $this->lang;
-
-
-		// Records_html. Render search form html using search.
-		// We know the current record id but we search like a list filtered by id for maintain always the same criterion
-			$self_locator = new locator();
-				$self_locator->set_section_tipo($section_tipo);
-				$self_locator->set_section_id($section_id);
-
-			# SEARCH_QUERY_OBJECT . Add search_query_object to options
-			$search_query_object_options = new stdClass();
-				$search_query_object_options->limit  		= 1;
-				$search_query_object_options->offset 		= 0;
-				$search_query_object_options->filter_by_id 	= [$self_locator];
-				$search_query_object_options->tipo 			= $section_tipo;
-				$search_query_object_options->section_tipo 	= [$section_tipo];
-			#$search_query_object = $this->build_search_query_object($search_query_object_options);
-			$search_query_object = common::build_search_query_object($search_query_object_options);
-
-			# Create new options object
-			$show[] = $search_query_object;
-
-		$sqo_context->show 		= $show;
-		$sqo_context->search 	= [];
-
-		return $sqo_context;
-	}//end get_sqo_context
-	*/
-
-
-
 }//end section

@@ -48,7 +48,7 @@
 	if($options->get_data===true){
 
 		// dato is the full result of a search using the search_query_object
-		$dato = $this->get_dato();								
+		$dato = $this->get_dato();
 
 		if (!empty($dato)) {
 
@@ -95,12 +95,12 @@
 							// $section->set_bl_loaded_matrix_data(true);
 						// }
 
-					// get the JSON context of the related component
+					// get the JSON data of the related component
 						$section_options = new stdClass();
 							$section_options->get_context	= false;
 							$section_options->get_data 	 	= true;
 						$section_json = $section->get_json($section_options);
-
+					
 					$data = array_merge($data, $section_json->data);
 				}//end foreach ($dato as $current_record)
 
@@ -109,6 +109,6 @@
 	}// end if $permissions > 0
 
 
-			
+
 // JSON string
 	return common::build_element_json_output($context, $data);
