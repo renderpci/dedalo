@@ -11,10 +11,11 @@ class dd_core_api {
 	// Version. Important!
 		static $version = "1.0.0";  // 05-06-2019
 
-	// ar_dd_objects . store current ar_dd_objects received in context to allwo external acces (portals, etc.)
+	// ar_dd_objects . store current ar_dd_objects received in context to allow external access (portals, etc.)
 		static $ar_dd_objects;
 
-
+	// $sqo_context_ddo . store current ddo items added by get_config_context methods (portals, etc.)
+		static $sqo_context_ddo = [];
 
 	/**
 	* __CONSTRUCT
@@ -236,7 +237,7 @@ class dd_core_api {
 
 				// force reacalculate dato
 					$dato = $component->get_dato();
-	
+
 				// element json
 					$get_json_options = new stdClass();
 						$get_json_options->get_context 	= true;
@@ -765,11 +766,11 @@ class dd_core_api {
 
 
 		// ar_dd_objects . Array of all dd objects in requested context
-			$ar_dd_objects = array_filter($base_context, function($item) {
+			$ar_dd_objects = array_values( array_filter($base_context, function($item) {
 				 if($item->typo==='ddo') return $item;
-			});
+			}) );
 			// set as static to allow external access
-			dd_core_api::$ar_dd_objects = $ar_dd_objects;
+			dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
 
 		// ddo_source
 			// $ddo_source = array_reduce($base_context, function($carry, $item){
@@ -870,6 +871,10 @@ class dd_core_api {
 
 				// context add
 					$context = $element_json->context;
+					$context[] = (object)[
+						'source' 	=> 'sqo_context_ddo',
+						'value' 	=> dd_core_api::$sqo_context_ddo
+					];
 
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 
@@ -983,7 +988,7 @@ class dd_core_api {
 										// overwrited to get time machine dato instead the real dato
 										$element->matrix_id = $ddo_source->matrix_id;
 									}
-								
+
 								// pagination. fix pagination vars
 									$pagination = new stdClass();
 										$pagination->limit 	= $limit;
@@ -1054,6 +1059,8 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
+					$debug->search_query_object = $search_query_object ?? null;
+					$debug->base_context 		= $base_context;
 					$debug->context_exec_time 	= $context_exec_time;
 					$debug->data_exec_time 		= $data_exec_time;
 					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";

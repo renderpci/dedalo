@@ -63,7 +63,7 @@ abstract class common {
 			// 'component_check_box'
 			// 'component_date'
 			// 'component_email'
-			'component_external',
+			// 'component_external',
 			// 'component_filter'
 			// 'component_filter_master'
 			// 'component_filter_records'
@@ -2162,7 +2162,7 @@ abstract class common {
 								debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
 								continue;
 							}
-				
+
 						$path = search::get_query_path($current_tipo, $current_section_tipo);
 
 						# FILTER . filter_element (operator_group) - default is true

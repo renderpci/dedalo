@@ -14,15 +14,66 @@
 		left: -1px;
 		border-bottom-left-radius: 5px;
 		border-bottom-right-radius: 5px;
+		// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 
-		input {
+		// sections_list. Box of checkboxes with all available sections
+		>ul.sections_list {
+			background-color: #949494;
+			display: table;
+			width: 100%;
+
+			>li {
+				display: flex;
+				float: left;
+				width: 50%;
+				white-space: nowrap;
+				overflow: hidden;
+				padding: 0.5em;
+				color: white;
+
+				direction: rtl;
+				justify-content: flex-end;
+
+				&.all_selector {
+					// background-color: #efc8bf;
+					width: 100%;
+					border-bottom: 1px solid #e6e6e6;
+				}
+
+				label {
+					padding-right: 0.5em;
+				}
+			}			
+		}
+
+		>div.inputs_list {
+			background-color: #e6e6e6;
+			padding: 0.5em;
+		}
+
+		>div.search_operators_div {
+			background-color: #e6e6e6;
+			padding: 0.5em;
+			display: flex;
+			padding-bottom: 1em;
+
+			>* {
+				width: auto;
+				line-height: 1.5em;
+				height: 1.5em;
+				padding-right: 0.5em;
+			}
+		}
+
+		>input.autocomplete_input {		
 			// background: #fff url("../../themes/default/icons/search.svg");
 			// background-repeat: no-repeat;
 			// background-size: auto 80%;
 			// background-position: bottom -1px right 5px;
 		}
 
-		ul {
+
+		>ul.autocomplete_data {
 			padding-top: 0.5em;
 
 			>li {

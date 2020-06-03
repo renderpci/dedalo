@@ -399,119 +399,6 @@ class component_portal extends component_relation_common {
 
 
 
-	///////////////// HIERARCHY LEGACY
-		/**
-		* GET_HIERARCHY_SECTIONS_FROM_TYPES
-		* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
-		* @return array $hierarchy_sections_from_types
-		*/
-		public static function get_hierarchy_sections_from_types( $hierarchy_types ) {
-
-			$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
-			$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
-
-
-			$ar_filter = [];
-			# Active
-			$active_locator = new locator();
-				$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-				$active_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
-
-			$ar_filter[] = '{
-					"q": '.json_encode(json_encode($active_locator)).',
-					"path": [
-						{
-							"section_tipo": "'.$hierarchy_section_tipo.'",
-							"component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'",
-							"modelo": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
-							"name": "Active"
-						}
-					]
-				}';
-			# Typology
-			foreach ((array)$hierarchy_types as $key => $value) {
-
-				$typology_locator = new locator();
-					$typology_locator->set_section_id($value);
-					$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
-					$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-					$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
-
-				$ar_filter[] = '{
-					"q": '.json_encode(json_encode($typology_locator)).',
-					"path": [
-						{
-							"section_tipo": "hierarchy1",
-							"component_tipo": "hierarchy9",
-							"modelo": "component_select",
-							"name": "Typology"
-						}
-					]
-				}';
-			}//end foreach ((array)$hierarchy_types as $key => $value)
-
-			$filter = implode(',',$ar_filter);
-
-			$search_query_object = json_decode('
-				{
-				  "id": "get_hierarchy_sections_from_types",
-				  "section_tipo": "'.$hierarchy_section_tipo.'",
-				  "skip_projects_filter":"true",
-				  "limit":0,
-				  "filter": {
-					"$and": [
-					  '.$filter.'
-					]
-				  }
-				}
-			');
-
-
-			$search = search::get_instance($search_query_object);
-			$result = $search->search();
-
-			// iterate rows
-				$hierarchy_sections_from_types = [];
-				foreach ($result->ar_records as $row) {
-
-					if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
-						debug_log(__METHOD__." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string(), logger::ERROR);
-						continue;
-					}
-
-					$target_dato 		 = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
-					$target_section_tipo = reset($target_dato);
-
-					$hierarchy_sections_from_types[] = $target_section_tipo;
-				}
-
-
-			return (array)$hierarchy_sections_from_types;
-		}//end get_hierarchy_sections_from_types
-
-
-
-		/**
-		* ADD_HIERARCHY_SECTIONS_FROM_TYPES
-		* Merge resolved hierarchy_sections_from_types with received section_to_search
-		* and create an array unique
-		* @return array $section_to_search
-		*/
-		public static function add_hierarchy_sections_from_types($hierarchy_types) {
-
-			$hierarchy_sections_from_types = [];
-			foreach ((array)$hierarchy_types as $current_type) {
-				$sections_from_types = component_portal::get_hierarchy_sections_from_types( $current_type );
-				$hierarchy_sections_from_types = array_merge($hierarchy_sections_from_types, $sections_from_types);
-			}
-
-			return (array)$hierarchy_sections_from_types;
-		}//end add_hierarchy_sections_from_types
-	//////////////////// END HIERARCHY LEGACY
-
-
 
 	// DES
 		// /**
@@ -749,7 +636,7 @@ class component_portal extends component_relation_common {
 		//
 		// 	return $sqo_context;
 		// }//end get_sqo_context
-	
+
 
 
 	// DES
