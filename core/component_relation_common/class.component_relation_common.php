@@ -1920,7 +1920,7 @@ class component_relation_common extends component_common {
 
 		return $ar_fixed_filter;
 	}//end get_fixed_filter
->>>>>>> 8a92c3b40bd19e0f160bceabad06899df6b83b04
+
 
 
 
