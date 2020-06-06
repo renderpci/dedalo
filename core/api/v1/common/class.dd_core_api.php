@@ -90,7 +90,11 @@ class dd_core_api {
 
 	/**
 	* READ
-	* @return array $result
+	* @param object $json_data
+	*	arrray $json_data->context
+	* @return object $result
+	*	array $result->context
+	*	array $result->data
 	*/
 	static function read($json_data) {
 		global $start_time;

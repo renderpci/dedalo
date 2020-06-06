@@ -225,6 +225,10 @@
 
 				#json_editor_container {
 					height: 50vh;
+
+					.jsoneditor {
+						z-index: 1;
+					}
 				}
 			}
 
@@ -541,6 +545,11 @@
 				>.content_data {
 					display: flex;
 					flex-wrap: wrap;
+
+					// only affects when content data has a ONE child
+					div:only-child {
+						flex: 0 1 100%;
+					}
 				}
 
 				// inside another content_data

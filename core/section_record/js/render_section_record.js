@@ -153,25 +153,27 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 	const self = this
 
 	const ar_instances = await self.get_ar_instances()
-
+	
 	const fragment = new DocumentFragment()
 
 	// section_record wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: self.id,
+			id				: self.id,
 			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
 
 	// id column
-		const id_column = build_id_column(self)
-		fragment.appendChild(id_column)
+		if (self.caller.model==='section' || self.caller.mode==='edit') {
+			const id_column = build_id_column(self)
+			fragment.appendChild(id_column)
+		}		
 
 	// regular columns
-		let n_colums 					= 0
-		let n_relation_columns 			= 0
-		const ar_grid_columns 			= [] // remember add id column
-		const components_with_relations = get_components_with_subcolumns()
+		let n_colums					= 0
+		let n_relation_columns			= 0
+		const ar_grid_columns			= [] // remember add id column
+		const components_with_relations	= get_components_with_subcolumns()
 
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
