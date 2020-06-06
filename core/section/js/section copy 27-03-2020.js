@@ -88,7 +88,7 @@ section.prototype.init = async function(options) {
 
 	self.events_tokens		= []
 	self.ar_instances		= []
-	self.sqo_context		= options.sqo_context 	|| null
+	self.rq_context		= options.rq_context 	|| null
 
 	self.datum 	 			= options.datum   		|| null
 	self.context 			= options.context 		|| null
@@ -107,17 +107,17 @@ section.prototype.init = async function(options) {
 	self.id_column_width 	= '7em'
 	self.permissions 		= options.permissions || null
 
-	// source. add to sqo_context if not exists. Be careful not to add a source element twice
+	// source. add to rq_context if not exists. Be careful not to add a source element twice
 	// (!) VERIFICAR QUE REALMENTE HACE FALTA
-		if (self.sqo_context && self.sqo_context.show) {
-			const current_source = self.sqo_context.show.find(element => element.typo==='source')
+		if (self.rq_context && self.rq_context.show) {
+			const current_source = self.rq_context.show.find(element => element.typo==='source')
 			if (current_source) {
-				console.warn("Source alredy exists. Skipped source creation for sqo_context",current_source)
+				console.warn("Source alredy exists. Skipped source creation for rq_context",current_source)
 			}else{
 				const source = create_source(self,'search')
-				self.sqo_context.show.push(source)
+				self.rq_context.show.push(source)
 				if(SHOW_DEBUG===true) {
-					console.warn("Added created 'source' element to sqo_context.show on init section",source)
+					console.warn("Added created 'source' element to rq_context.show on init section",source)
 				}
 			}
 		}
@@ -148,7 +148,7 @@ section.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// sqo
-		const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
+		const sqo = self.rq_context.show.find(element => element.typo==='sqo')
 
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -157,20 +157,20 @@ section.prototype.build = async function(autoload=false) {
 
 			// count rows
 				if (!self.pagination.total) {
-					const current_sqo 		= sqo//self.sqo_context.show.find(element => element.typo==='sqo')
+					const current_sqo 		= sqo//self.rq_context.show.find(element => element.typo==='sqo')
 					self.pagination.total	= (current_sqo.full_count && current_sqo.full_count>0) ? current_sqo.full_count : current_data_manager.count(current_sqo)
 					// console.log("[section.build] self.pagination.total:",self.pagination.total);
 				}
 
 			// get context and data
-				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
+				const api_response = await current_data_manager.section_load_data(self.rq_context.show)
 					// console.log("[section.build] api_response +++++++++++++++++++++++++++++:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
 
 			// debug
-				load_section_data_debug(self.tipo, self.sqo_context, api_response, self)
+				load_section_data_debug(self.tipo, self.rq_context, api_response, self)
 		}
 
 	// set context and data to current instance
@@ -249,7 +249,7 @@ section.prototype.build = async function(autoload=false) {
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
+			//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
 		}
 
 	// status update
@@ -326,7 +326,7 @@ section.prototype.get_ar_instances = async function(){
 * LOAD_SECTION_DATA_DEBUG
 * @return
 */
-const load_section_data_debug = async function(section_tipo, sqo_context, load_section_data_promise, self) {
+const load_section_data_debug = async function(section_tipo, rq_context, load_section_data_promise, self) {
 
 	if(SHOW_DEBUG===false) {
 		return false
@@ -336,7 +336,7 @@ const load_section_data_debug = async function(section_tipo, sqo_context, load_s
 
 	const response = await load_section_data_promise
 
-	console.log("----> request sqo_context:",sqo_context);
+	console.log("----> request rq_context:",rq_context);
 
 	load_section_data_promise
 	if (response.result===false) {
@@ -355,7 +355,7 @@ const load_section_data_debug = async function(section_tipo, sqo_context, load_s
 	}
 
 	// request to api
-		const sqo = sqo_context.show.find(el => el.typo==='sqo')
+		const sqo = rq_context.show.find(el => el.typo==='sqo')
 		const request_pre = ui.create_dom_element({
 			element_type : 'pre',
 			text_content : "search query object sended to api: \n\n" + JSON.stringify(sqo, null, "   "),
@@ -556,10 +556,10 @@ section.prototype.render_content = async function(){
 
 
 /**
-* CREATE_SQO_CONTEXT
+* CREATE_rq_context
 * @return
 *//*
-section.prototype.create_sqo_context = function(){
+section.prototype.create_rq_context = function(){
 
 	const self = this
 
@@ -609,14 +609,14 @@ section.prototype.create_sqo_context = function(){
 				parent			: "root"
 			}
 		]
-	// sqo_context
-		const sqo_context = {
+	// rq_context
+		const rq_context = {
 			show : show,
 			search : []
 		}
 
-	return sqo_context
-}//end create_sqo_context
+	return rq_context
+}//end create_rq_context
 */
 
 

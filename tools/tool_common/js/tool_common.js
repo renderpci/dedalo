@@ -83,8 +83,8 @@ tool_common.prototype.build = async function(autoload=false) {
 					return false
 				}
 
-			// sqo_context. Create the basic sqo_context
-				const sqo_context = {show: []}
+			// rq_context. Create the basic rq_context
+				const rq_context = {show: []}
 
 				// tool source for component json that stores full tool config
 				const source = {
@@ -97,13 +97,13 @@ tool_common.prototype.build = async function(autoload=false) {
 					mode 			: 'edit',
 					lang 			: 'lg-nolan'
 				}
-				sqo_context.show.push(source)
+				rq_context.show.push(source)
 
 			// load data. Load section data from db of the current tool.
 			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
 			// The tool info was generated when it was imported / registered by admin
 				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.section_load_data(sqo_context.show)
+				const api_response 			= await current_data_manager.section_load_data(rq_context.show)
 				const data 					= api_response.result.data
 
 			// config set

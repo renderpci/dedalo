@@ -49,7 +49,7 @@ component_common.prototype.init = async function(options) {
 	//self.paginator_id 	= options.paginator_id // removed unused
 	self.events_tokens	= [] // array of events of current component
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-	self.sqo_context	= options.sqo_context // search query object of current component (used for autocomplete, etc.)
+	self.rq_context	= options.rq_context // search query object of current component (used for autocomplete, etc.)
 
 	// Optional vars
 	self.context 	= options.context  		|| null // structure context of current component (include properties, tools, etc.)
@@ -158,20 +158,20 @@ component_common.prototype.init = async function(options) {
 
 	//event_manager.publish('component_init', self)
 
-	// self.sqo_context. Fill from context.sqo_context if defined
-		if (!self.sqo_context && self.context.sqo_context) {
-			self.sqo_context = self.context.sqo_context
+	// self.rq_context. Fill from context.rq_context if defined
+		if (!self.rq_context && self.context.rq_context) {
+			self.rq_context = self.context.rq_context
 		}
 
-	// source. add to sqo_context show
-		if (self.sqo_context && self.sqo_context.show) {
-			// check if already exists a source into sqo_context.show
-			const show_source = self.sqo_context.show.find(element => element.typo==='source')
+	// source. add to rq_context show
+		if (self.rq_context && self.rq_context.show) {
+			// check if already exists a source into rq_context.show
+			const show_source = self.rq_context.show.find(element => element.typo==='source')
 			if (typeof show_source==="undefined") {
 				const source = create_source(self,'get_data')
-				// deep clone self sqo_context to avoid interactions (!)
-				self.sqo_context = JSON.parse(JSON.stringify(self.sqo_context))
-				self.sqo_context.show.push(source)
+				// deep clone self rq_context to avoid interactions (!)
+				self.rq_context = JSON.parse(JSON.stringify(self.rq_context))
+				self.rq_context.show.push(source)
 			}
 		}
 
@@ -204,16 +204,16 @@ component_common.prototype.build = async function(autoload){
 	// load data if is not already received as option
 		if (autoload===true) {
 				
-			// sqo_context
-				// create the sqo_context
-				self.sqo_context = {show: []}
+			// rq_context
+				// create the rq_context
+				self.rq_context = {show: []}
 				// create the own show ddo element
 				const source = create_source(self, 'get_data')
-				self.sqo_context.show.push(source)
+				self.rq_context.show.push(source)
 
 			// load data
 				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
+				const api_response 			= await current_data_manager.section_load_data(self.rq_context.show)
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -751,7 +751,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 			context 		: current_context,
 			data 			: current_data,
 			datum 			: current_datum,
-			sqo_context 	: current_context.sqo_context
+			rq_context 	: current_context.rq_context
 		})
 
 	// build

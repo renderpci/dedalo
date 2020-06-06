@@ -9,13 +9,13 @@
 
 
 // load page
-	$load_page = function($page_elements){
+	$load_page = function($context){
 		global $page_globals, $html_header;
 
 		// page_options
 			$page_options = new StdClass();
-				$page_options->mode  			= 'default';
-				$page_options->page_elements 	= $page_elements;
+				$page_options->mode		= 'default';
+				$page_options->context	= $context;
 
 		// load base html
 			$page_html = dirname(__FILE__) . '/html/page.phtml';
@@ -32,30 +32,37 @@
 		// check_basic_system (lang and structure files)
 			check_basic_system();
 
+
 		// page elements [login]
-			$page_elements = (function() {
+			$rq_context = (function() {
 
 				$login = new login('edit');
+				$login_source = $login->get_source();
 
-				// login json
-				$get_json_options = new stdClass();
-					$get_json_options->get_context 	= true;
-					$get_json_options->get_data 	= true;
-				$login_json = $login->get_json($get_json_options);
+				// // login json
+				// $get_json_options = new stdClass();
+				// 	$get_json_options->get_context	= true;
+				// 	$get_json_options->get_data		= true;
+				// $login_json = $login->get_json($get_json_options);
 
-				// element
-				$page_element = new StdClass();
-					$page_element->model 		= 'login';
-					$page_element->tipo 		= 'dd229';
-					$page_element->mode 		= 'edit';
-					$page_element->lang 		= DEDALO_APPLICATION_LANG;
-					$page_element->sqo_context  = null;
-					$page_element->datum 		= $login_json;
+				// // element
+				// $page_element = new StdClass();
+				// 	$page_element->model		= 'login';
+				// 	$page_element->tipo			= 'dd229';
+				// 	$page_element->mode			= 'edit';
+				// 	$page_element->lang			= DEDALO_APPLICATION_LANG;
+				// 	$page_element->rq_context	= null;
+				// 	$page_element->datum		= $login_json;
 
-				return [$page_element];
+				return [$login_source];
 			})();
 
-		$load_page($page_elements);
+		$context = (object)[
+			'model' => 'page',
+			'rq_context' => $rq_context
+		];
+
+		$load_page($context);
 
 		exit();
 	}//end if (login::is_logged()!==true)
@@ -65,32 +72,68 @@
 // logged
 	if (login::is_logged()!==true) return null;
 
-	$page_elements = [];
+	$rq_context = [];
 
 	$initiator = $_GET['initiator'] ?? false;
 
 	// menu. Get the mandatory menu element
 		if ($initiator===false) {
-			$menu_element_required = new stdClass();
-				$menu_element_required->options = (object)[
-					'model' 	=> 'menu',
-					'lang' 		=> DEDALO_DATA_LANG
-				];
-			$page_elements[] = dd_core_api::get_page_element($menu_element_required)->result;
+			// $menu_element_required = new stdClass();
+			// 	$menu_element_required->options = (object)[
+			// 		'model' 	=> 'menu',
+			// 		'lang' 		=> DEDALO_DATA_LANG
+			// 	];
+			// // /$page_elements[] = dd_core_api::get_page_element($menu_eleme	nt_required)->result;
+
+			$menu = new menu();
+			$menu->set_lang(DEDALO_DATA_LANG);
+			$menu_source = $menu->get_source();
+
+			$rq_context[] = $menu_source;
 		}
 
 	// section/area/tool. Get the page element from get url vars
-		$element_required = new stdClass();
-			$element_required->options = (object)[
-				'model' 	 => RecordObj_dd::get_modelo_name_by_tipo($tipo, true),
-				'tipo' 		 => $tipo,
-				'lang' 		 => DEDALO_DATA_LANG,
-				'mode' 		 => MODE,
-				'section_id' => $section_id
-			];
-		$page_elements[] = dd_core_api::get_page_element($element_required)->result;
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+		// if (strpos($model,'area')===0) {
 
+			switch (true) {
+				case ($model==='section'):
+					$section = section::get_instance($section_id, $tipo, MODE);
+					$section->set_lang(DEDALO_DATA_LANG);
+					$section_source = $section->get_source();
+
+					$rq_context[] = $section_source;
+					break;
+				case (strpos($model, 'area')===0):
+					$area = area::get_instance($model, $tipo, MODE);
+					$area->set_lang(DEDALO_DATA_LANG);
+					$area_source = $area->get_source();
+
+					$rq_context[] = $area_source;
+					break;
+			
+				default:
+					// code...
+					break;
+			}
+			// dump($source, ' $source ++ '.to_string());
+			// $page_elements[] = $source;
+
+		// }else{
+		// 	$element_required = new stdClass();
+		// 		$element_required->options = (object)[
+		// 			'model' 	 => $model,
+		// 			'tipo' 		 => $tipo,
+		// 			'lang' 		 => DEDALO_DATA_LANG,
+		// 			'mode' 		 => MODE,
+		// 			'section_id' => $section_id
+		// 		];
+		// 	$page_elements[] = dd_core_api::get_page_element($element_required)->result;
+		// }
+
+		$context = (object)[
+			'model' => 'page',
+			'rq_context' => $rq_context
+		];
 	// page load all elements
-		$load_page($page_elements);
-
-
+		$load_page($context);

@@ -271,11 +271,11 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_SQO_CONTEXT
+	* SET_rq_context
 	*/
-	public function set_sqo_context($value) {
+	public function set_rq_context($value) {
 
-		$this->sqo_context = $value;
+		$this->rq_context = $value;
 	}
 
 

@@ -31,7 +31,7 @@ export const page = function () {
 	this.mode
 	this.node
 	this.ar_instances
-	this.elements
+	this.context
 	this.status
 	this.events_tokens
 
@@ -66,7 +66,8 @@ page.prototype.init = async function(options) {
 	self.mode			= 'edit' // options.mode 	  // mode like 'section', 'tool', 'thesaurus'...
 	self.node			= []
 	self.ar_instances	= []
-	self.elements		= options.elements // mixed items types like 'sections', 'tools'..
+	self.context		= options.context // mixed items types like 'sections', 'tools'..
+	self.rq_context		= options.context.rq_context
 	self.status			= null
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
@@ -83,30 +84,38 @@ page.prototype.init = async function(options) {
 			)
 		// user_action fn
 			async function user_action(options) {
+				// console.log("user_action options", options);
 
-				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.get_page_element(options)
 
-				// element context from api server result
-					const page_element = api_response.result
+				// const current_data_manager 	= new data_manager()
+				// const api_response 			= await current_data_manager.get_element_context(options)
+				//
+				// // element context from api server result
+				// 	const page_element = api_response.result
+
+				const source = JSON.parse(JSON.stringify(options))
+					  source.typo = "source"
 
 				// check response page element is valid for instantiate. Element instance loads the file
-					const page_element_instance = await instantiate_page_element(self, page_element)
+					const page_element_instance = await instantiate_page_element(self, source)
 					if (typeof page_element_instance==="undefined" || !page_element_instance) {
-						console.error("[page.user_action] Stopped user action. Element instance not suitable. page_element:", page_element);
+						console.error("[page.user_action] Stopped user action. Element instance not suitable. source:", source);
 						return false
 					}
 
 				// elements to stay
-					const base_types = ['section','tool','area']
+					// const base_models = ['section','tool','area']
+					const base_models = ['menu']
 					// const elements_to_stay 	= self.elements.filter(item => item.model!==page_element.model)
-					const elements_to_stay 	= self.elements.filter(item => !base_types.includes(item.type))
-						  elements_to_stay.push(page_element)
-					self.elements = elements_to_stay
-
+					// const elements_to_stay 	= self.rq_context.filter(item => !base_models.includes(item.model))
+					const elements_to_stay 	= self.rq_context.filter(item => base_models.includes(item.model))
+					// add current source from options
+						 elements_to_stay.push(source)
+					self.rq_context = elements_to_stay
+					
 				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
 					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
-					const instances_to_destroy = self.ar_instances.filter(item => !base_types.includes(item.type))
+					const instances_to_destroy = self.ar_instances.filter(item => !base_models.includes(item.model))
 					for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
 						instances_to_destroy[i].destroyable = false
 					}
@@ -205,7 +214,7 @@ page.prototype.build = async function() {
 	// reset self.node
 		//self.node = []
 
-
+		// console.log("self", self);
 
 	// status update
 		self.status = 'builded'
@@ -223,13 +232,13 @@ page.prototype.get_ar_instances = async function(){
 	const self = this
 
 	// instances
-		const elements			= self.elements
-		const elements_length	= elements.length
-		for (let i = 0; i < elements_length; i++) {
+		const rq_context		= self.rq_context;
+		const rq_context_length	= rq_context.length
+		for (let i = 0; i < rq_context_length; i++) {
 
-			const element = elements[i]
+			const source = rq_context[i]
 			if(SHOW_DEBUG===true) {
-				console.log("page.get_ar_instances element:", element);
+				// console.log("page.get_ar_instances source:", source);
 			}
 
 			// element instance (load file)
@@ -240,10 +249,11 @@ page.prototype.get_ar_instances = async function(){
 				// 	section_id			: element.section_id || null,
 				// 	mode				: element.mode,
 				// 	lang				: element.lang,
-				// 	sqo_context			: element.sqo_context || null,
+				// 	rq_context			: element.rq_context || null,
 				// 	datum				: element.datum || null
 				// })
-				const current_instance = await instantiate_page_element(self, element)
+			const current_instance = await instantiate_page_element(self, source)
+			// console.log("---- page get_ar_instances current_instance", current_instance);
 
 			// build (load data)
 				await current_instance.build(true)
@@ -263,18 +273,22 @@ page.prototype.get_ar_instances = async function(){
 * INSTANTIATE_PAGE_ELEMENT
 * @return promise current_instance_promise
 */
-const instantiate_page_element = function(self, page_element) {
+const instantiate_page_element = function(self, source) {
+
+	const tipo 			= source.tipo
+	const section_tipo 	= source.section_tipo || tipo
 
 	// instance options
 		const instance_options = {
-			model			: page_element.model,
-			tipo			: page_element.tipo || page_element.section_tipo,
-			section_tipo	: page_element.section_tipo || null,
-			section_id		: page_element.section_id || null,
-			mode			: page_element.mode,
-			lang			: page_element.lang,
-			sqo_context		: page_element.sqo_context || null,
-			datum			: page_element.datum || null
+			model			: source.model,
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: source.section_id || null,
+			mode			: source.mode,
+			lang			: source.lang,
+			// rq_context		: source.rq_context || null,
+			// datum			: source.datum || null
+			rq_context 		: [source]
 		}
 
 		// id_variant . Propagate a custom instance id to children
@@ -284,6 +298,7 @@ const instantiate_page_element = function(self, page_element) {
 
 	// page_element instance (load file)
 		const current_instance_promise = get_instance(instance_options)
+
 
 	return current_instance_promise
 }//end instantiate_page_element

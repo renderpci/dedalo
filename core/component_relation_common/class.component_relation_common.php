@@ -1418,7 +1418,7 @@ class component_relation_common extends component_common {
 
 							// get the ar_sections
 							if (isset($item_config_context->section_tipo)) {
-								$parsed_item->section_tipo = component_relation_common::get_config_context_section_tipo($item_config_context->section_tipo);
+								$parsed_item->section_tipo = component_relation_common::get_config_context_section_tipo($item_config_context->section_tipo, $section_tipo);
 							}
 							// get the filter_by_list (to set the prefilter selector)
 							if (isset($item_config_context->filter_by_list)) {
@@ -1444,7 +1444,6 @@ class component_relation_common extends component_common {
 							if (isset($item_config_context->search_engine)) {
 								$parsed_item->search_engine = $item_config_context->search_engine;
 							}
-
 
 							$config_context_parsed[] = $parsed_item;
 						}
@@ -1474,8 +1473,8 @@ class component_relation_common extends component_common {
 
 						// add ddo to the global storage
 							foreach ($ddo as $ddo) {
-								if (!in_array($ddo, dd_core_api::$sqo_context_ddo)) {
-									dd_core_api::$sqo_context_ddo[] = $ddo;
+								if (!in_array($ddo, dd_core_api::$rq_context_ddo)) {
+									dd_core_api::$rq_context_ddo[] = $ddo;
 								}
 							}
 
@@ -1510,6 +1509,7 @@ class component_relation_common extends component_common {
 						$search_sqo_options->add_select 		  = false;
 						$search_sqo_options->filter_custom 		  = !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
 						$search_sqo_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
+						$search_sqo_options->mode 				  = $mode;
 
 					$search_query_object = common::build_search_query_object($search_sqo_options);
 
@@ -1543,8 +1543,9 @@ class component_relation_common extends component_common {
 					$show_sqo_options->add_select 	= false;
 					$show_sqo_options->add_filter 	= true;
 					// paginations options
-					$show_sqo_options->limit 		 = $limit;
-					$show_sqo_options->offset 		 = $offset;
+					$show_sqo_options->limit 		= $limit;
+					$show_sqo_options->offset 		= $offset;
+					$show_sqo_options->mode			= $mode;
 
 				$search_query_object = common::build_search_query_object($show_sqo_options);
 

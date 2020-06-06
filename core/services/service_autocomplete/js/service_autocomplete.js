@@ -36,7 +36,7 @@ export const service_autocomplete = function() {
 		self.instance_caller 		= options.caller
 		self.id 					= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
 		self.wrapper 				= options.wrapper
-		self.ar_context_search		= self.instance_caller.build_sqo_search()
+		self.ar_context_search		= self.instance_caller.build_sqo_search();
 		self.context_search			= self.ar_context_search[0]
 		self.sqo					= self.context_search.find((current_item)=> current_item.typo==='sqo')
 		self.ar_search_section_tipo	= self.sqo.section_tipo
@@ -381,7 +381,7 @@ export const service_autocomplete = function() {
 					})
 					select.addEventListener("change",function(e){
 						// get the new operator selected
-						const new_operator 	= '$'+ e.target.value
+						const new_operator 	= e.target.value
 						const sqo_filter 	= self.sqo.filter
 						// get the old operator
 						const ar_operators 	= Object.keys(sqo_filter)
@@ -395,16 +395,16 @@ export const service_autocomplete = function() {
 					const option_or = ui.create_dom_element({
 						element_type 	: "option",
 						parent 			: select,
-						value 			: "or",
+						value 			: "$or",
 						text_content 	: get_label.o
 						})
 					const option_and = ui.create_dom_element({
 						element_type 	: "option",
 						parent 			: select,
-						value 			: "and",
+						value 			: "$and",
 						text_content 	: get_label.y
 						})
-					if (operator==='or') {
+					if (operator==='$or') {
 						option_or.setAttribute("selected", true)
 					}else{
 						option_and.setAttribute("selected", true)
@@ -672,19 +672,36 @@ export const service_autocomplete = function() {
 
 			}else{
 
-				const filter_element 	= sqo.filter
 
-				// Iterate current filter
-				for (let operator in filter_element) {
+				const fixed_filter 		= self.context_search.find((current_item)=> current_item.typo==='fixed_filter')
+				const filter_free		= self.context_search.find((current_item)=> current_item.typo==='filter_free')
+				// const filter_element[Object.keys(filter_element)[0]]
+				if(filter_free){
+					const filter_free_value = filter_free.value
+					// Iterate current filter
+					for (let operator in filter_free_value) {
 
-					const current_filter = filter_element[operator]
-					for (let i = 0; i < current_filter.length; i++) {
+						const current_filter = filter_free_value[operator]
+						for (let i = 0; i < current_filter.length; i++) {
 
-						// Update q property
-						current_filter[i].q 	  = (q !== "") ? "*" + q + "*" : "false_muyflase_de verdad" // Begins with
-						current_filter[i].q_split = false
+							// Update q property
+							current_filter[i].q 	  = (q !== "") ? "*" + q + "*" : "false_muyflase_de verdad" // Begins with
+							current_filter[i].q_split = false
+						}
+					}
+				
+
+					// filter rebuilded
+					self.sqo.filter = {
+						"$and" : [filter_free_value]
+					}
+					if (fixed_filter) {
+						// sqo.filter.$and.push(fixed_filter)
 					}
 				}
+
+
+
 				// Default basic mode (autocomplete hi)
 				//const operator  = Object.keys(sqo.filter)[0] || '$and'
 				//const key 		= 0
