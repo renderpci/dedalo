@@ -402,20 +402,20 @@ class component_portal extends component_relation_common {
 
 	// DES
 		// /**
-		// * GET_SQO_CONTEXT (!) MOVED TO RELATION_COMMON <----
+		// * GET_rq_context (!) MOVED TO RELATION_COMMON <----
 		// * Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
-		// * The search_query_object_context (sqo_context) have at least:
+		// * The search_query_object_context (rq_context) have at least:
 		// * one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
 		// * one ddo for the searched section (source ddo)
 		// * one ddo for the component searched.
 		// * 	is possible create more than one ddo for different components.
 		// * @return object | json
 		// */
-		// public function get_sqo_context() {
+		// public function get_rq_context() {
 		//
 		// 	// already calculated
-		// 		if (isset($this->sqo_context)) {
-		// 			return $this->sqo_context;
+		// 		if (isset($this->rq_context)) {
+		// 			return $this->rq_context;
 		// 		}
 		//
 		// 	// sort vars
@@ -537,9 +537,9 @@ class component_portal extends component_relation_common {
 		// 			$show = array_merge( $show, layout_map::get_layout_map($layout_map_options));
 		//
 		//
-		// 		$sqo_context = new stdClass();
-		// 			$sqo_context->show 		= $show;
-		// 			$sqo_context->search 	= $search;
+		// 		$rq_context = new stdClass();
+		// 			$rq_context->show 		= $show;
+		// 			$rq_context->search 	= $search;
 		//
 		//
 		// 		///////////////////////////////////////////
@@ -630,12 +630,12 @@ class component_portal extends component_relation_common {
 		// 		*/
 		//
 		// 	// fix
-		// 	$this->sqo_context	= $sqo_context;
+		// 	$this->rq_context	= $rq_context;
 		// 	$this->pagination	= $pagination;
 		//
 		//
-		// 	return $sqo_context;
-		// }//end get_sqo_context
+		// 	return $rq_context;
+		// }//end get_rq_context
 
 
 
@@ -644,7 +644,7 @@ class component_portal extends component_relation_common {
 		// * GET_HIERARCHY_TERMS_FILTER (!) MOVED TO RELATION_COMMON <----
 		// * Create a sqo filter from
 		// * @return array $filter_custom
-		// * @see get_sqo_context
+		// * @see get_rq_context
 		// */
 		// public function get_hierarchy_terms_filter() {
 

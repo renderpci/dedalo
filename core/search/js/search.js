@@ -82,8 +82,8 @@ search.prototype.init = async function(options) {
 	self.parent_node 			= null
 	self.components_list 		= {}
 	self.ar_instances 			= []
-	self.sqo 					= self.caller.sqo_context.show.find(el => el.typo==='sqo')
-	self.source 				= self.caller.sqo_context.show.find(el => el.typo==='source')
+	self.sqo 					= self.caller.rq_context.find(el => el.typo==='sqo')
+	self.source 				= self.caller.rq_context.find(el => el.typo==='source')
 	self.target_section_tipo 	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
 	self.limit 					= self.sqo.limit || 10
 	self.search_layout_state 	= null
@@ -518,7 +518,7 @@ search.prototype.get_component_instance = async function(options) {
 		lang 			: component_context.lang,
 
 		context 		: component_context,
-		sqo_context 	: component_context.sqo_context,
+		rq_context 	: component_context.rq_context,
 		// data 			: current_data,
 		// datum 			: current_datum
 	}
@@ -879,7 +879,7 @@ this.get_search_json_object = function() {
 		// sqo
 			self.sqo.filter = filter_obj
 			self.sqo.limit 	= self.limit
-			// const sqo = section.sqo_context.show.find(el => el.typo==='sqo')
+			// const sqo = section.rq_context.show.find(el => el.typo==='sqo')
 			// sqo.filter = filter_obj
 			// sqo.limit 	= self.limit
 
@@ -1073,5 +1073,3 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 // 	return true;
 // }//end init_tipology_selector
-
-

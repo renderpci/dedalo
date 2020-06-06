@@ -24,15 +24,15 @@ class menu extends common {
 			$this->section_tipo = 'dd1';
 
 			parent::load_structure_data();
-		
+
 	}//end __construct
 
-	
+
 	/**
 	* GET_TREE_DATALIST
 	* Get the autorized areas for current user, datalist will be used for build menu tree.
 	* $data->datalist = [{ontology_items}]
-	* @return 
+	* @return
 	*/
 	public function get_tree_datalist() {
 
@@ -50,12 +50,12 @@ class menu extends common {
 
 			foreach ($ar_permisions_areas as $item) {
 				$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
-			}	
+			}
 		}
 
 		$tree_datalist = $ar_areas;
-		
-		return $tree_datalist;	
+
+		return $tree_datalist;
 	}//end get_tree_datalist
 
 
@@ -63,7 +63,7 @@ class menu extends common {
 	/**
 	* GET_INFO_DATA
 	* get the global information of the current intalation.
-	* @return 
+	* @return
 	*/
 	public function get_info_data() {
 
@@ -84,4 +84,3 @@ class menu extends common {
 
 
 }//end class
-?>

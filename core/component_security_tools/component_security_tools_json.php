@@ -21,9 +21,9 @@
 				break;
 
 			default:
-				$sqo_context = isset($properties->unique) ? true : false;
+				$rq_context = isset($properties->unique) ? true : false;
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $sqo_context);
+					$context[] = $this->get_structure_context($permissions, $rq_context);
 
 				// add buttons
 					$context = array_merge($context, $this->get_structure_buttons($permissions));

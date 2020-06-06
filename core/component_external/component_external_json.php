@@ -23,7 +23,6 @@
 				$context[] = $this->get_structure_context($permissions);
 				break;
 		}
-		dump($context, ' $context +-------------------+ '.to_string());
 	}//end if($options->get_context===true)
 
 

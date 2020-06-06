@@ -93,30 +93,118 @@ data_manager.prototype.request = async function(options) {
 
 
 /**
-* SECTION_LOAD_DATA
+* GET_MENU
 * Generic section data loader (API read)
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.section_load_data = async function(sqo_context) {
+data_manager.prototype.get_menu = async function(rq_context) {
 
 	// data_manager
 		const api_response = this.request({
 			body : {
-				action 	: 'read',
-				context : sqo_context
+				action 	: 'get_menu',
+				dd_api  : 'dd_utils_api',
+				context : rq_context
 			}
 		})
 
 	// debug
 		if(SHOW_DEBUG===true) {
 			api_response.then((response)=>{
-				console.log(`__Time to section_load_data ${response.debug.exec_time} [data_manager.section_load_data] response:`, response, `sqo_context:`, sqo_context);
+				console.log(`__Time to get_menu ${response.debug.exec_time} [data_manager.get_menu] response:`, response, `rq_context:`, rq_context);
 			})
 		}
 
 	return api_response
+}//end get_menu
+
+
+
+/**
+* GET_login
+* Generic section data loader (API read)
+* @param object context
+* @return promise api_response
+*/
+data_manager.prototype.get_login = async function(rq_context) {
+
+	// data_manager
+		const api_response = this.request({
+			body : {
+				action 	: 'get_login',
+				dd_api  : 'dd_utils_api',
+				context : rq_context
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			api_response.then((response)=>{
+				const exec_time = response.debug ? response.debug.exec_time : ''
+				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response, `rq_context:`, rq_context);
+			})
+		}
+
+	return api_response
+}//end get_login
+
+
+
+/**
+* SECTION_LOAD_DATA
+* Generic section data loader (API read)
+* @param object context
+* @return promise api_response
+*/
+data_manager.prototype.section_load_data = async function(rq_context) {
+
+	// // data_manager
+	// 	const api_response = this.request({
+	// 		body : {
+	// 			action 	: 'read',
+	// 			rq_context : rq_context
+	// 		}
+	// 	})
+
+	// // debug
+	// 	if(SHOW_DEBUG===true) {
+	// 		api_response.then((response)=>{
+	// 			console.log(`__Time to section_load_data ${response.debug.exec_time} [data_manager.section_load_data] response:`, response, `rq_context:`, rq_context);
+	// 		})
+	// 	}
+
+	return this.read(rq_context)
 }//end section_load_data
+
+
+
+/**
+* READ
+* Generic section data loader (API read)
+* @param object context
+* @return promise api_response
+*/
+data_manager.prototype.read = async function(rq_context) {
+
+	// data_manager
+		const api_response = this.request({
+			body : {
+				action 	: 'read',
+				rq_context : rq_context
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			api_response.then((response)=>{
+				const exec_time = response.debug ? response.debug.exec_time : '';
+				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `rq_context:`, rq_context);
+			})
+		}
+
+	return api_response
+}//end read
 
 
 
@@ -282,7 +370,7 @@ data_manager.prototype.area_load_data = async function(basic_context) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[data_manager.area_load_data] api_response for sqo_context:", api_response, sqo_context);
+			console.log("[data_manager.area_load_data] api_response for rq_context:", api_response, rq_context);
 		}
 
 	return api_response

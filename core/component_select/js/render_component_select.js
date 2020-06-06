@@ -229,8 +229,8 @@ const get_buttons = (self) => {
 	// button edit
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
-			if (self.sqo_context) {
-				const show						= self.sqo_context.show
+			if (self.rq_context) {
+				const show						= self.rq_context.show
 				const target_section		 	= show.filter(item => item.model==='section')
 				const target_section_lenght 	= target_section.length
 				// sort section by label asc

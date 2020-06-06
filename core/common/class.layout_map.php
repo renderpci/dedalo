@@ -117,8 +117,8 @@ class layout_map {
 		// 3. calculate from section list or related terms
 			if (!isset($layout_map)) {
 
-				// v5, v6 definition in properties or related terms
-				$config_context = component_common::get_config_context($tipo, $options->external, $options->section_tipo);
+				// v5 definition and v6 definition in properties
+				$config_context = common::get_config_context($tipo, $options->external, $options->section_tipo, $modo);
 
 				// layout_map
 				$layout_map = [];
@@ -132,17 +132,21 @@ class layout_map {
 						$config_context_type = $options->config_context_type;
 						foreach ($item_config_context->{$config_context_type} as $item) {
 
+						// $db = debug_backtrace();	dump($db, ' $db ++ '.to_string());
+
 							$ar_ddo = is_string($item)
-								? layout_map::get_component_ddo($config_context_type, $current_section_tipo, $item, $modo, $lang)
+								? [layout_map::get_component_ddo($config_context_type, $current_section_tipo, $item, $modo, $lang)]
 								: layout_map::get_f_path_ddo($item, $config_context_type, $current_section_tipo, $modo, $lang);
 
-							$layout_map = array_merge($layout_map, (array)$ar_ddo);
+							$layout_map = array_merge($layout_map, $ar_ddo);
 						}
 					}// end iterate sections
 				}//end foreach ($config_context as $item_config_context)
 
+				// dump($layout_map, ' $layout_map ++ '.to_string()); die();
+
 				if(SHOW_DEBUG===true) {
-					# dump($layout_map, ' layout_map ++ '.to_string());
+					// dump($layout_map, ' layout_map ++ '.to_string());
 					foreach ($layout_map as $current_item) {
 						$current_item->debug_label = RecordObj_dd::get_termino_by_tipo($current_item->tipo, $lang, true, true);
 						$current_item->debug_from = 'calculated from section list or related terms 1';
@@ -163,6 +167,7 @@ class layout_map {
 				}
 				$layout_map = array_values($layout_map);
 			}
+
 
 		return $layout_map;
 	}//end get_layout_map

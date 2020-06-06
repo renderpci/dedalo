@@ -1426,7 +1426,7 @@ abstract class common {
 				$options->get_context 		= true;
 				$options->context_type 		= 'default';
 				$options->get_data 			= true;
-				$options->get_sqo_context 	= false;
+				$options->get_rq_context 	= false;
 				if($request_options!==false) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$called_model = get_class($this); // get_called_class(); // static::class
@@ -1469,7 +1469,7 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT
 	* @return object $dd_object
 	*/
-	public function get_structure_context($permissions=0, $sqo_object=false) {
+	public function get_structure_context($permissions=0, $add_rq_context=false) {
 
 		// class called (model name too, as component_input_text)
 			$called_model = get_class($this);
@@ -1568,14 +1568,14 @@ abstract class common {
 				return $tool;
 			}, $this->get_tools());
 
-		// sqo_context
-			if($sqo_object===true){
-			 	$sqo_context = $this->get_sqo_context();
-				if ($sqo_context===false || is_null($sqo_context)) {
-				 	$sqo_context = [];
+		// rq_context
+			if($add_rq_context===true){
+			 	$rq_context = $this->get_rq_context();
+				if ($rq_context===false || is_null($rq_context)) {
+				 	$rq_context = [];
 				 }
 			}else{
-				$sqo_context = null;
+				$rq_context = null;
 			}
 
 		// dd_object
@@ -1593,7 +1593,7 @@ abstract class common {
 				'css'			=> $css,
 				'permissions'	=> $permissions,
 				'tools'			=> $tools,
-				'sqo_context' 	=> $sqo_context,
+				'rq_context' 	=> $rq_context,
 			]);
 
 		/*
@@ -1821,6 +1821,7 @@ abstract class common {
 				$section_id 	= $current_locator->section_id;
 				$section_tipo 	= $current_locator->section_tipo;
 
+
 				foreach ((array)$layout_map as $dd_object) {
 
 					if ($dd_object->section_tipo!==$section_tipo) {
@@ -1963,46 +1964,46 @@ abstract class common {
 
 
 	/**
-	* GET_SQO_CONTEXT
+	* GET_RQ_CONTEXT
 	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
-	* The search_query_object_context (sqo_context) have at least:
+	* The search_query_object_context (rq_context) have at least:
 	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
 	* one ddo for the searched section (source ddo)
 	* one ddo for the component searched.
 	* 	is possible create more than one ddo for different components.
 	* @return object | json
 	*/
-	public function get_sqo_context() {
+	public function get_rq_context() {
 
-		// sort vars
-			$section_tipo 	= $this->get_section_tipo();
-			$tipo			= $this->get_tipo();
-			$lang 			= $this->get_lang();
-			$mode 			= $this->get_modo();
-			$section_id 	= $this->get_section_id();
+		$rq_context = [];
+
+		$source = $this->get_source();
+
+		$rq_context[] = $source;
+
+		return $rq_context;
+	}//end get_rq_context
+
+
+
+	/**
+	* GET_SOURCE
+	* @return object | json
+	*/
+	public function get_source() {
 
 		// source
-			$source = new stdClass();
-				$source->typo 			= 'source';
-				$source->action 		= 'search';
-				$source->tipo 			= $tipo;
-				$source->section_tipo 	= $section_tipo;
-				$source->lang 			= $lang;
-				$source->mode 			= $mode;
-				$source->section_id 	= $section_id;
-				$source->model 			= get_class($this);
-				$source->pagination 	= (object)[
-					'total'  => 0,
-					'offset' => 0,
-				];
+		$source = new stdClass();
+			$source->typo 			= 'source';
+			$source->tipo 			= $this->get_tipo();
+			$source->section_tipo 	= $this->get_section_tipo();
+			$source->lang 			= $this->get_lang();
+			$source->mode 			= $this->get_modo();
+			$source->section_id 	= $this->get_section_id();
+			$source->model 			= get_class($this);
 
-		// for now, empty value is returned as generic
-		$sqo_context = new stdClass();
-			$sqo_context->show 		= [$source];
-			$sqo_context->search 	= [];
-
-		return $sqo_context;
-	}//end get_sqo_context
+		return $source;
+	}//end get_source
 
 
 
@@ -2064,6 +2065,7 @@ abstract class common {
 			$options->filter_by_locator	= false;
 			$options->filter_by_locators= false; // different of 'filter_by_locator' (!)
 			$options->direct			= false; // true for section (!)
+			$options->mode				= 'list'; // is necesary to calculate the ddo's to search / show (layout_map)
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$id 			  = $options->id;
@@ -2146,7 +2148,7 @@ abstract class common {
 			$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_propiedades(true);
 
 			// source search. If not defined, use fallback to legacy related terms and build one
-				$config_context = component_common::get_config_context($tipo, $external=false, $section_tipo);
+				$config_context = common::get_config_context($tipo, $external=false, $section_tipo, $mode);
 
 			// config_context iteration
 				foreach ($config_context as $source_search_item) {
@@ -2239,6 +2241,143 @@ abstract class common {
 
 		return (object)$query_object;
 	}//end build_search_query_object
+
+
+
+
+
+	/**
+	* GET_CONFIG_CONTEXT
+	* Resolves the component config context with backward compatibility
+	* The proper config in v6 is on term properties config, NOT as retated terms
+	* Note that section tipo 'self' will be replaced by argument '$section_tipo'
+	* @param string $tipo
+	*	component tipo
+	* @param bool $external
+	*	optional defaul false
+	* @param string $section_tipo
+	*	optional default null
+	* @return object $config_context
+	*/
+	public static function get_config_context($tipo, $external=false, $section_tipo=null, $mode) {
+
+		// if (to_string($section_tipo)==='self') {
+		// 	throw new Exception("Error Processing get_config_context (6) unresolved section_tipo:".to_string($section_tipo), 1);
+		// }
+
+		dump($section_tipo, ' $section_tipo ++ '.to_string());
+
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$properties		= $RecordObj_dd->get_propiedades(true);
+
+		$config_context = [];
+		if(isset($properties->source->config_context)){
+			// V6, properties config_context is defined
+
+			foreach ($properties->source->config_context as $item_config_context) {
+
+				// if($external===false && $item_config_context->type==='external') continue; // ignore external
+
+				if(!isset($item_config_context->select)){
+					$item_config_context->select = $item_config_context->search;
+				}
+
+				if(!isset($item_config_context->show)){
+					$item_config_context->show = $item_config_context->select;
+				}
+
+				if (isset($item_config_context->section_tipo)){
+					$item_config_context->section_tipo = component_relation_common::get_config_context_section_tipo($item_config_context->section_tipo, $section_tipo);
+				}
+
+				$config_context[] = $item_config_context;
+			}
+
+		}else{
+			// V5 model
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+			switch ($mode) {
+				case 'edit':
+					if ($model==='section') {
+						// section
+						$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
+						$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_tipo_exclude_elements=false);
+					}elseif (in_array($model, layout_map::$groupers)) {
+						// groupers
+						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+					}else{
+						// components
+						$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+					}
+					break;
+
+				case 'list':
+				case 'search':
+				case 'portal_list':
+				default:
+					if ($model==='section') {
+						# case section list is defined
+						$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+						if(isset($ar_terms[0])) {
+							# Use found related terms as new list
+							$current_term = $ar_terms[0];
+							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+						}
+					}elseif (in_array($model, layout_map::$groupers)) {
+						// groupers
+						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+					}else{
+						# portal cases
+						# case section list is defined
+						$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+						if(isset($ar_terms[0])) {
+							# Use found related terms as new list
+							$current_term = $ar_terms[0];
+							$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+						}else{
+							# Fallback related when section list is not defined; portal case.
+							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+						}
+					}
+					break;
+			}
+
+			// $ar_related_clean
+			$ar_related_clean 	 = [];
+			$target_section_tipo = $section_tipo;
+			foreach ((array)$ar_related as $key => $current_tipo) {
+				$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				if ($current_model==='section') {
+					$target_section_tipo = $current_tipo; // Overwrite
+					continue;
+				}else if ($current_model==='section' || $current_model==='exclude_elements') {
+					continue;
+				}
+				$ar_related_clean[] = $current_tipo;
+			}
+
+			if (!isset($target_section_tipo)) {
+				$target_section_tipo = $section_tipo;
+			}
+
+			if (empty($ar_related_clean)) {
+				$ar_related_clean = [$tipo];
+			}
+
+			// build config_context_item
+			$config_context_item = new stdClass();
+				$config_context_item->type 			= 'internal';
+				$config_context_item->section_tipo 	= is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
+				$config_context_item->search 		= $ar_related_clean;
+				$config_context_item->select 		= $ar_related_clean;
+				$config_context_item->show 			= $ar_related_clean;
+
+			$config_context = [$config_context_item];
+		}
+
+		return $config_context;
+	}//end get_config_context
 
 
 

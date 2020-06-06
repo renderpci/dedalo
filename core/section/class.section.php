@@ -55,6 +55,11 @@ class section extends common {
 
 		public $layout_map;
 
+		// rq_context
+		public $rq_context;
+
+
+
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
 	# Format is array or null
@@ -2463,7 +2468,7 @@ class section extends common {
 			}
 
 			// Store in cached sections . Important
-				# key for cache
+				# key for CACHE
 				$key = $this->section_id .'_'. $this->tipo;
 				self::$ar_section_instances[$key] = $this;
 
@@ -3382,15 +3387,17 @@ class section extends common {
 
 
 	/**
-	* GET_SQO_CONTEXT
-	* @return object $sqo_context
+	* GET_RQ_CONTEXT
+	* @return object $rq_context
 	*/
-	public function get_sqo_context() {
+	public function get_rq_context() {
 
 		// already calculated
-			if (isset($this->sqo_context)) {
-				return $this->sqo_context;
+			if (isset($this->rq_context)) {
+				return $this->rq_context;
 			}
+
+		$rq_context = [];
 
 		// sort vars
 			$section_tipo 	= $this->get_tipo();
@@ -3399,81 +3406,63 @@ class section extends common {
 			$mode 			= $this->get_modo();
 			$limit 			= ($mode==='list') ? 10 : 1;
 
+		// source
+			$source = $this->get_source();
 
-		// SHOW
-			$show = [];
-			// source
-				$source = new stdClass();
-					$source->typo 			= 'source';
-					$source->action 		= 'search';
-					$source->tipo 			= $section_tipo;
-					$source->section_tipo 	= $section_tipo;
-					$source->lang 			= $lang;
-					$source->mode 			= $mode;
-					$source->section_id 	= $section_id;
-					$source->model 			= get_class($this);
-					$source->pagination 	= (object)[
-						'total'  => 0,
-						'offset' => 0,
-					];
+			$rq_context[] = $source;
 
-				$show[] = $source;
+		// search_query_object
+			$sqo_options = new stdClass();
+				$sqo_options->tipo 			= $section_tipo;
+				$sqo_options->section_tipo 	= [$section_tipo];
+				$sqo_options->full_count 	= false;
+				$sqo_options->add_select 	= false;
+				$sqo_options->direct 		= true;
 
-			// search_query_object
-				$sqo_options = new stdClass();
-					$sqo_options->tipo 			= $section_tipo;
-					$sqo_options->section_tipo 	= [$section_tipo];
-					$sqo_options->full_count 	= false;
-					$sqo_options->add_select 	= false;
-					$sqo_options->direct 		= true;
+				$sqo_options->limit  		= $limit;
+				$sqo_options->offset 		= 0;
+				$sqo_options->mode 			= $mode;
 
-					$sqo_options->limit  		= $limit;
-					$sqo_options->offset 		= 0;
+				// filter_by_locators. when sectio_id is received
+				if (!empty($section_id)) {
+					$self_locator = new locator();
+						$self_locator->set_section_tipo($section_tipo);
+						$self_locator->set_section_id($section_id);
+					$sqo_options->filter_by_locators = [$self_locator];
+				}
 
-					// filter_by_locators. when sectio_id is received
-					if (!empty($section_id)) {
-						$self_locator = new locator();
-							$self_locator->set_section_tipo($section_tipo);
-							$self_locator->set_section_id($section_id);
-						$sqo_options->filter_by_locators = [$self_locator];
-					}
+			$search_query_object = common::build_search_query_object($sqo_options);
 
-				$search_query_object = common::build_search_query_object($sqo_options);
+			// add search_query_object
+				$rq_context[] = $search_query_object;
 
-				// add search_query_object
-					$show[] = $search_query_object;
-
-			// ddo
-				$layout_map_options = new stdClass();
-					$layout_map_options->section_tipo 		 = $section_tipo;
-					$layout_map_options->tipo 				 = $section_tipo;
-					$layout_map_options->modo 				 = $mode;
-					$layout_map_options->add_section 		 = true;
-					$layout_map_options->config_context_type = 'show';
-
+		// ddo
+			$layout_map_options = new stdClass();
+				$layout_map_options->section_tipo 		 = $section_tipo;
+				$layout_map_options->tipo 				 = $section_tipo;
+				$layout_map_options->modo 				 = $mode;
+				$layout_map_options->add_section 		 = true;
+				$layout_map_options->config_context_type = 'show';
+			// show
 				$ar_ddo = layout_map::get_layout_map($layout_map_options);
+				$rq_context = array_merge($rq_context, $ar_ddo);
 
-				// add layout_map ddo's
-					$show = array_merge($show, $ar_ddo);
-
-
-		// SEARCH
-			$search = [];
-			// nothing to do yet
-
-
-		// sqo_context object
-			$sqo_context = new stdClass();
-				$sqo_context->show 	 = $show;
-				$sqo_context->search = $search;
+		// show objects
+			$show_value = array_map(function($ddo){
+				return $ddo->tipo;
+			}, (array)$ar_ddo);
+			$show = (object)[
+				'typo' 	=> 'show',
+				'value' => $show_value
+			];
+			$rq_context[] = $show;
 
 		// fix
-			$this->sqo_context = $sqo_context;
+			$this->rq_context = $rq_context;
+dump($rq_context, ' $rq_context ++ '.to_string());
 
-
-		return $sqo_context;
-	}//end get_sqo_context
-
+		return $rq_context;
+	}//end get_rq_context
 
 
 	/**

@@ -315,7 +315,7 @@ const get_top = function(self) {
 		const is_inside_tool		= self.is_inside_tool
 		const mode					= self.mode
 		const current_data_manager	= new data_manager()
-		const show					= self.sqo_context.show
+		const show					= self.rq_context.show
 		const target_section		= show.filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length
 		// sort section by label asc
@@ -407,7 +407,7 @@ const get_top = function(self) {
 				// 		lang 			: source.lang,
 				// 		section_lang 	: source.lang,
 				// 		type 			: "section",
-				// 		// sqo_context 	: {
+				// 		// rq_context 	: {
 				// 		// 	show : show
 				// 		// }
 				// 		context 		: element_context

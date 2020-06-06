@@ -627,7 +627,7 @@ class login extends common {
 		$response->logged 	= true;
 		$response->msg 		= 'Logged successfully';
 		return $response;
-	}#rest_login
+	}//rest_login
 
 
 
