@@ -245,8 +245,6 @@ component_portal.prototype.build_rq_context = function(){
 	const source = create_source(self,'get_data')
 	ar_dd_objects.push(source)
 
-	console.log("config_context", config_context);
-
 	for (let i = 0; i < length; i++) {
 
 		const current_item 		= config_context[i]
