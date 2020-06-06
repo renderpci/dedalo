@@ -32,10 +32,10 @@ class manager {
 		// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
 
 		// logged
-			if ($options->action!=='login' && login::is_logged()!==true) {
+			if ($options->action!=='login' && $options->action!=='get_login' && login::is_logged()!==true) {
 				$response = new stdClass();
-					$response->result 	= false;
-					$response->msg 		= 'Error. user is not logged !';
+					$response->result	= false;
+					$response->msg		= 'Error. user is not logged ! [action:'.$options->action.']';
 				return $response;
 			}
 
@@ -54,8 +54,8 @@ class manager {
 					$dd_utils_api = new dd_utils_api();
 					if ( !method_exists($dd_utils_api, $options->action) ) {
 						$dedalo_data = new stdClass();
-							$dedalo_data->result = false;
-							$dedalo_data->msg 	 = "Error. Undefined dd_utils_api method (action) : ".$options->action;
+							$dedalo_data->result	= false;
+							$dedalo_data->msg		= "Error. Undefined dd_utils_api method (action) : ".$options->action;
 					}else{
 						$dedalo_data = (object)dd_utils_api::{$options->action}( $options );
 					}

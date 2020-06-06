@@ -23,7 +23,7 @@
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $sqo_context=false);
+					$context[] = $this->get_structure_context($permissions, $rq_context=true);
 
 				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
 					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);

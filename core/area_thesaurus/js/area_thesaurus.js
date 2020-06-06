@@ -104,14 +104,14 @@ area_thesaurus.prototype.build = async function() {
 
 
 	// build_options. Add custom area build_options to source
-		const source = self.sqo_context.show.find(element => element.typo==='source')
+		const source = self.rq_context.show.find(element => element.typo==='source')
 			  source.build_options = self.build_options
 
 	// load data
 		const current_data_manager = new data_manager()
 
 	// get context and data
-		const api_response 	= await current_data_manager.section_load_data(self.sqo_context.show)
+		const api_response 	= await current_data_manager.section_load_data(self.rq_context.show)
 			// console.log("[area_thesaurus.build] api_response++++:",api_response);
 
 	// set the result to the datum
@@ -146,7 +146,7 @@ area_thesaurus.prototype.build = async function() {
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
+			//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
 		}
 
 	// status update

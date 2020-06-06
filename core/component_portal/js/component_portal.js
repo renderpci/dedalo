@@ -132,7 +132,7 @@ component_portal.prototype.build  = async function(autoload){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-		self.build_sqo_context()
+		self.build_rq_context()
 
 	// load data if not yet received as an option
 		if (autoload===true) {
@@ -140,7 +140,7 @@ component_portal.prototype.build  = async function(autoload){
 			const current_data_manager 	= new data_manager()
 
 			console.log("current_data_manager", current_data_manager);
-			const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
+			const api_response 			= await current_data_manager.section_load_data(self.rq_context.show)
 
 			if(SHOW_DEBUG===true) {
 				console.log("portal build api_response:", api_response)
@@ -169,7 +169,7 @@ component_portal.prototype.build  = async function(autoload){
 			// sqo update filter_by_locators
 				if(self.pagination.total>self.pagination.limit){
 
-					const show 	= self.sqo_context.show
+					const show 	= self.rq_context.show
 					const sqo 	= show.find(item => item.typo==='sqo')
 
 					const data_value = self.data.value
@@ -229,23 +229,23 @@ component_portal.prototype.build  = async function(autoload){
 
 
 
-component_portal.prototype.build_sqo_context = function(){
+component_portal.prototype.build_rq_context = function(){
 
 	const self = this
 
 	const config_context 	= self.context.config_context
 	const length 			= config_context.length
-	const sqo_context_ddo 	= self.datum.context.find(item => item.source === 'sqo_context_ddo').value
+	const rq_context_ddo 	= self.datum.context.find(item => item.source === 'rq_context_ddo').value
 	const operator 			= self.context.properties.operator || '$and'
 	const ar_dd_objects		= []
 	const ar_section_tipo 	= []
-	const sqo_context 		= {}
+	const rq_context 		= {}
 
 	// source auto create
 	const source = create_source(self,'get_data')
 	ar_dd_objects.push(source)
 
-	console.log("ar_dd_objects", ar_dd_objects);
+	console.log("config_context", config_context);
 
 	for (let i = 0; i < length; i++) {
 
@@ -271,7 +271,7 @@ component_portal.prototype.build_sqo_context = function(){
 						: f_path[l]
 					const exist = ar_dd_objects.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
 					if(!exist){
-						const ddo = sqo_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+						const ddo = rq_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
 						// console.log("ddo", ddo, item, sections[j]);
 						if(ddo){
 							ar_dd_objects.push(ddo)
@@ -294,10 +294,10 @@ component_portal.prototype.build_sqo_context = function(){
 	}
 	ar_dd_objects.push(sqo)
 
-	sqo_context.show = ar_dd_objects
-	self.sqo_context = sqo_context
-	console.log("sqo_context", sqo_context);
-	return sqo_context
+	rq_context.show = ar_dd_objects
+	self.rq_context = rq_context
+	console.log("rq_context", rq_context);
+	return rq_context
 }
 
 
@@ -308,13 +308,17 @@ component_portal.prototype.build_sqo_search = function(){
 
 	const config_context 		= self.context.config_context
 	const config_context_length = config_context.length
-	const sqo_context_ddo 		= self.datum.context.find(item => item.source === 'sqo_context_ddo').value
-	const operator 				= self.context.properties.operator || '$and'
+	const rq_context_ddo 		= self.datum.context.find(item => item.source === 'rq_context_ddo').value
+	const operator 				= self.context.properties.source.operator || '$and'
 	const ar_context_search 	= []
 
 	for (let i = 0; i < config_context_length; i++) {
 
 		const sqo_search		= []
+
+		// source auto create
+		const source = create_source(self,'get_data')
+		sqo_search.push(source)
 
 		const current_item 		= config_context[i]
 		const sections 			= current_item.section_tipo
@@ -347,7 +351,7 @@ component_portal.prototype.build_sqo_search = function(){
 						: f_path[l]
 					const exist = sqo_search.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
 					if(!exist){
-						const ddo = sqo_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+						const ddo = rq_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
 						if (ddo) {
 							sqo_search.push(ddo)
 
@@ -368,24 +372,35 @@ component_portal.prototype.build_sqo_search = function(){
 			}
 		}
 
-		const filter = {
-			"$and" : []
-		}
-		filter.$and.push(filter_free)
+		// fixed_filter
 		if (fixed_filter) {
-			filter.$and.push(fixed_filter)
+			sqo_search.push({
+				typo : 'fixed_filter',
+				value : fixed_filter
+			})
 		}
-		const sqo = {
+
+		// filter_free
+		if (filter_free) {
+			sqo_search.push({
+				typo : 'filter_free',
+				value : filter_free
+			})
+		}
+
+		// sqo_search
+		sqo_search.push({
 			typo 			: 'sqo',
 			section_tipo 	: sections,
-			filter 			: filter,
+			filter 			: {[operator]:[]},
 			offset 			: self.pagination.offset,
 			limit 			: self.pagination.limit,
 			select 			: [],
 			full_count		: false
-		}
-		sqo_search.push(sqo)
+		})
 
+
+		// add group
 		ar_context_search.push(sqo_search)
 
 	}//end for (let i = 0; i < length; i++) {

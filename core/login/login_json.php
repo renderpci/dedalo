@@ -16,7 +16,7 @@
 	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context = $this->get_structure_context($permissions, $sqo_context=false);
+			$context[] = $this->get_structure_context($permissions, $rq_context=false);
 
 	}//end if($options->get_context===true)
 
@@ -30,8 +30,10 @@
 		$value = new stdClass();
 			$value->dedalo_application_langs = (array)unserialize(DEDALO_APPLICATION_LANGS);
 
-		// add
-			 $data = $value;
+		// data item
+			$item  = $this->get_data_item($value);
+
+		$data[] = $item;
 
 	}// end if $permissions > 0
 

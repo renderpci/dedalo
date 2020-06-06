@@ -24,11 +24,12 @@
 				break;
 
 			default:
-				$sqo_context = true; // overwrite default false to force calculate
+				$rq_context = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $sqo_context);					
-					// add records_mode to properties, if not already defined 
+					$current_context = $this->get_structure_context($permissions, $rq_context);
+					$current_context->config_context 	= $this->get_config_context_parsed();		
+					// add records_mode to properties, if not already defined
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {
 							$current_context->properties = new stdClass();
@@ -57,7 +58,7 @@
 	if($options->get_data===true && $permissions>0){
 
 		$dato = $this->get_dato();
-		
+
 		if (!empty($dato)) {
 
 			$value  	= $this->get_dato_paginated();
@@ -65,7 +66,7 @@
 			$limit 		= ($modo==='list')
 				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
 				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
-		
+
 			// data item
 				$item = $this->get_data_item($value);
 					$item->parent_tipo 			= $tipo;

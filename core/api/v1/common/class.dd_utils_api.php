@@ -9,6 +9,80 @@ class dd_utils_api {
 
 
 	/**
+	* GET_MENU
+	* @return object $response
+	*/
+	public static function get_menu($request_options=null) {
+		global $start_time;
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$menu = new menu();
+
+		// menu json
+			$get_json_options = new stdClass();
+				$get_json_options->get_context 	= true;
+				$get_json_options->get_data 	= true;
+			$menu_json = $menu->get_json($get_json_options);
+
+		$response->msg 		= 'Ok. Request done';
+		$response->result 	= $menu_json;
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end get_menu
+
+
+
+	/**
+	* GET_LOGIN
+	* @return object $response
+	*/
+	public static function get_login($request_options=null) {
+		global $start_time;
+
+		session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$login = new login();
+
+		// login json
+			$get_json_options = new stdClass();
+				$get_json_options->get_context 	= true;
+				$get_json_options->get_data 	= true;
+			$login_json = $login->get_json($get_json_options);			
+
+		$response->msg 		= 'Ok. Request done';
+		$response->result 	= $login_json;
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end get_login
+
+
+
+	/**
 	* DEDALO_VERSION
 	* @return object $response
 	*/
@@ -523,7 +597,7 @@ class dd_utils_api {
 			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
 
 		session_write_close();
-		
+
 		// tables value
 			$item_tables = array_find($request_options->options, function($item){
 				return $item->name==='tables';
@@ -532,7 +606,7 @@ class dd_utils_api {
 			$tables = $item_tables->value;
 			if (empty($tables) || !is_string($tables)) {
 				return $response;
-			}		
+			}
 
 		// generate_relations_table_data
 		$response = area_development::generate_relations_table_data($tables);

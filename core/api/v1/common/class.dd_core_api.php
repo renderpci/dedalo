@@ -14,8 +14,8 @@ class dd_core_api {
 	// ar_dd_objects . store current ar_dd_objects received in context to allow external access (portals, etc.)
 		static $ar_dd_objects;
 
-	// $sqo_context_ddo . store current ddo items added by get_config_context methods (portals, etc.)
-		static $sqo_context_ddo = [];
+	// $rq_context_ddo . store current ddo items added by get_config_context methods (portals, etc.)
+		static $rq_context_ddo = [];
 
 	/**
 	* __CONSTRUCT
@@ -101,14 +101,25 @@ class dd_core_api {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$context = $json_data->context;
-			// dump($context, ' context 1 ++ '.to_string());
-			// if (isset($context[0]->model) && $context[0]->model==='component_text_area') {
-			// 	dump($context, ' context 2 component_html_text ++ '.to_string());
+		// context accept object and array of objects
+			$rq_context = $json_data->rq_context;
+			// $rq_context = is_array($json_data->rq_context)
+			// 	? $json_data->context
+			// 	: (function($item){
+			// 		if (is_object($item)) {
+			// 			$item->typo  = $item->typo ?? 'source';
+			// 			$item->model = $item->model ?? RecordObj_dd::get_modelo_name_by_tipo($item->tipo,true);
+			// 		}
+			// 		return [$item];
+			// 	})($json_data->context);
+			// dump($rq_context, ' context 1 ++ '.to_string());
+			// if (isset($rq_context[0]->model) && $rq_context[0]->model==='component_text_area') {
+			// 	dump($rq_context, ' context 2 component_html_text ++ '.to_string());
 			// }
+			dump($rq_context, ' read - $rq_context ++ '.to_string());
 
 		// test 'test159'
-			$context99 = json_decode('
+			$rq_context99 = json_decode('
 				[
 				  {
 				    "typo": "sqo",
@@ -160,9 +171,9 @@ class dd_core_api {
 				  }
 				]
 			');
-			// dump($context, ' context 2 ++ '.to_string());
+			// dump($rq_context, ' context 2 ++ '.to_string());
 
-		$json_rows = self::build_json_rows($context);
+		$json_rows = self::build_json_rows($rq_context);
 
 		$result = $json_rows;
 
@@ -176,7 +187,7 @@ class dd_core_api {
 
 				$response->debug = $debug;
 			}
-
+		dump($response, ' $response ++ '.to_string());
 
 		return (object)$response;
 	}//end read
@@ -342,7 +353,7 @@ class dd_core_api {
 			$source 		= $json_data->source;
 
 			$tipo 			= $source->tipo;
-			$section_tipo 	= $source->section_tipo;
+			$section_tipo 	= $source->section_tipo ?? $source->tipo;
 			$model 			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang 			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode 			= $source->mode ?? 'list';
@@ -358,6 +369,11 @@ class dd_core_api {
 					$element 		= section_tm::get_instance($section_id, $section_tipo);
 					// set base_context (source)
 					$element->set_base_context([$source]); // inject whole source
+					break;
+
+				case strpos($model, 'area')===0:
+					$element = area::get_instance($model, $tipo, $mode);
+
 					break;
 
 				case strpos($model, 'component')!==false:
@@ -386,7 +402,7 @@ class dd_core_api {
 			$element_json = $element->get_json($get_json_options);
 
 		// context add
-			$context = $element_json->context;
+			$context = $element_json->context; dump($context, ' $context ++ '.to_string($model));
 
 		// response
 			$response->result = $context;
@@ -431,7 +447,7 @@ class dd_core_api {
 
 						$menu = new menu();
 
-						// login json
+						// menu json
 							$get_json_options = new stdClass();
 								$get_json_options->get_context 	= true;
 								$get_json_options->get_data 	= true;
@@ -443,7 +459,7 @@ class dd_core_api {
 							$page_element->tipo 		= 'dd85';
 							$page_element->mode 		= 'edit';
 							$page_element->lang 		= DEDALO_APPLICATION_LANG;
-							$page_element->sqo_context  = null;
+							$page_element->rq_context  = null;
 							$page_element->datum 		= $menu_json;
 
 						return $page_element;
@@ -461,11 +477,11 @@ class dd_core_api {
 							$page_element->lang 	 	= DEDALO_DATA_LANG;
 							$page_element->section_tipo = $tipo;
 
-							// sqo_context
+							// rq_context
 								$area = area::get_instance($model, $tipo, $mode);
-								$sqo_context = $area->get_sqo_context();
+								$rq_context = $area->get_rq_context();
 
-							$page_element->sqo_context = $sqo_context;
+							$page_element->rq_context = $rq_context;
 
 						return $page_element;
 					})();
@@ -476,10 +492,10 @@ class dd_core_api {
 
 						$section_tipo = $tipo;
 
-						// sqo_context
+						// rq_context
 							$section = section::get_instance($section_id, $section_tipo, $mode);
 							$section->set_lang($lang);
-							$sqo_context = $section->get_sqo_context();
+							$rq_context = $section->get_rq_context();
 
 						$page_element = new StdClass();
 							$page_element->model 		 = $model;
@@ -489,7 +505,7 @@ class dd_core_api {
 							$page_element->section_id 	 = $section_id;
 							$page_element->mode 		 = $mode;
 							$page_element->lang 		 = $lang;
-							$page_element->sqo_context	 = $sqo_context;
+							$page_element->rq_context	 = $rq_context;
 
 						return $page_element;
 					})();
@@ -500,10 +516,10 @@ class dd_core_api {
 
 						$section_tipo = $tipo;
 
-						// sqo_context
+						// rq_context
 							$section = section_tm::get_instance($section_id, $section_tipo, $mode);
 							$section->set_lang($lang);
-							$sqo_context = $section->get_sqo_context();
+							$rq_context = $section->get_rq_context();
 
 						$page_element = new StdClass();
 							$page_element->model		 = $model;
@@ -513,7 +529,7 @@ class dd_core_api {
 							$page_element->section_id	 = $section_id;
 							$page_element->mode 		 = $mode;
 							$page_element->lang 		 = $lang;
-							$page_element->sqo_context	 = $sqo_context;
+							$page_element->rq_context	 = $rq_context;
 
 						return $page_element;
 					})();
@@ -533,11 +549,11 @@ class dd_core_api {
 						$section_id		= null;
 						$lang 	 	 	= DEDALO_DATA_LANG;
 
-						// sqo_context
+						// rq_context
 							$section = section::get_instance($section_id, $section_tipo, $mode);
 							$section->set_lang($lang);
 							$section->config = $propiedades->config;
-							$sqo_context = $section->get_sqo_context();
+							$rq_context = $section->get_rq_context();
 
 						$page_element = new StdClass();
 							$page_element->model 		 = 'section';
@@ -546,7 +562,7 @@ class dd_core_api {
 							$page_element->section_id 	 = $section_id;
 							$page_element->mode 	 	 = $mode;
 							$page_element->lang 	 	 = $lang;
-							$page_element->sqo_context   = $sqo_context;
+							$page_element->rq_context   = $rq_context;
 
 						return $page_element;
 					})();
@@ -756,7 +772,7 @@ class dd_core_api {
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
-	private static function build_json_rows($base_context) {
+	private static function build_json_rows($rq_context) {
 		$start_time=microtime(1);
 
 		// default result
@@ -766,20 +782,20 @@ class dd_core_api {
 
 
 		// ar_dd_objects . Array of all dd objects in requested context
-			$ar_dd_objects = array_values( array_filter($base_context, function($item) {
+			$ar_dd_objects = array_values( array_filter($rq_context, function($item) {
 				 if($item->typo==='ddo') return $item;
 			}) );
 			// set as static to allow external access
 			dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
 
 		// ddo_source
-			// $ddo_source = array_reduce($base_context, function($carry, $item){
+			// $ddo_source = array_reduce($rq_context, function($carry, $item){
 			// 	if (isset($item->typo) && $item->typo==='source') {
 			// 		return $item;
 			// 	}
 			// 	return $carry;
 			// });
-			$ar_source = array_filter($base_context, function($item) {
+			$ar_source = array_filter($rq_context, function($item) {
 				 if($item->typo==='source') return $item;
 			});
 			if (count($ar_source)!==1) {
@@ -789,18 +805,18 @@ class dd_core_api {
 			$ddo_source = reset($ar_source);
 
 			// source vars
-				$action 		= $ddo_source->action;
-				$mode 			= $ddo_source->mode;
+				$action 		= $ddo_source->action ?? 'search';
+				$mode 			= $ddo_source->mode ?? 'list';
 				$lang 			= $ddo_source->lang ?? null;
-				$section_tipo 	= $ddo_source->section_tipo ?? null;
+				$section_tipo 	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 				$section_id 	= $ddo_source->section_id ?? null;
 				$tipo 			= $ddo_source->tipo ?? null;
-				$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 				$limit 			= $ddo_source->pagination->limit ?? null;
 				$offset 		= $ddo_source->pagination->offset ?? null;
 
 		// sqo
-			$search_query_object = array_reduce($base_context, function($carry, $item){
+			$search_query_object = array_reduce($rq_context, function($carry, $item){
 				if (isset($item->typo) && $item->typo==='sqo') {
 					return $item;
 				}
@@ -819,7 +835,7 @@ class dd_core_api {
 							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
 
 							if ($mode==='tm') {
-								$element->set_base_context($base_context); // inject whole context
+								$element->set_base_context($rq_context); // inject whole context
 							}
 
 						break;
@@ -872,8 +888,8 @@ class dd_core_api {
 				// context add
 					$context = $element_json->context;
 					$context[] = (object)[
-						'source' 	=> 'sqo_context_ddo',
-						'value' 	=> dd_core_api::$sqo_context_ddo
+						'source' 	=> 'rq_context_ddo',
+						'value' 	=> dd_core_api::$rq_context_ddo
 					];
 
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
@@ -1060,7 +1076,7 @@ class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->search_query_object = $search_query_object ?? null;
-					$debug->base_context 		= $base_context;
+					$debug->rq_context 			= $rq_context;
 					$debug->context_exec_time 	= $context_exec_time;
 					$debug->data_exec_time 		= $data_exec_time;
 					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";

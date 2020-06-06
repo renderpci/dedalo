@@ -658,14 +658,14 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_SQO_CONTEXT
-	* @return object $sqo_context
+	* GET_rq_context
+	* @return object $rq_context
 	*/
-	public function get_sqo_context() {
+	public function get_rq_context() {
 
 		// already calculated
-			if (isset($this->sqo_context)) {
-				return $this->sqo_context;
+			if (isset($this->rq_context)) {
+				return $this->rq_context;
 			}
 
 		// sort vars
@@ -709,6 +709,7 @@ class area_thesaurus extends area_common {
 					$sqo_options->full_count 	= false;
 					$sqo_options->add_select 	= false;
 					$sqo_options->direct 		= true;
+					$sqo_options->mode 			= $mode;
 
 					$sqo_options->limit  		= $limit;
 					$sqo_options->offset 		= 0;
@@ -745,17 +746,17 @@ class area_thesaurus extends area_common {
 			// nothing to do yet
 
 
-		// sqo_context object
-			$sqo_context = new stdClass();
-				$sqo_context->show 	 = $show;
-				$sqo_context->search = $search;
+		// rq_context object
+			$rq_context = new stdClass();
+				$rq_context->show 	 = $show;
+				$rq_context->search = $search;
 
 		// fix
-			$this->sqo_context = $sqo_context;
+			$this->rq_context = $rq_context;
 
 
-		return $sqo_context;
-	}//end get_sqo_context
+		return $rq_context;
+	}//end get_rq_context
 
 
 
