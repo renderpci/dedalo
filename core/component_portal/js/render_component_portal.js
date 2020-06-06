@@ -371,7 +371,7 @@ const get_top = function(self) {
 	// button_link
 		const button_link = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button find',
+			class_name		: 'button link',
 			parent			: fragment
 		})
 		button_link.addEventListener("click", async function(e){

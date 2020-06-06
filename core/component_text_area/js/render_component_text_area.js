@@ -395,14 +395,12 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 						const component_container = li
 						
-						const selection 	= data.selection
-						const button 		= component_container.querySelector(".create_fragment")
+						const selection		= data.selection
+						const button		= component_container.querySelector(".create_fragment")
 						const last_tag_id	= self.get_last_tag_id(i, 'index')
-						const label 		= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
-
-						
-						
-						function create_button(selection) {
+						const label			= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+		
+						const create_button = function(selection) {
 							const button_create_fragment = ui.create_dom_element({
 								element_type	: 'button',
 								class_name 		: 'warning compress create_fragment',
@@ -434,7 +432,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 							}
 						}
 					}
-			}//end if (self.caller && self.caller.constructor.name==="tool_indexation") {
+			}//end if (self.caller && self.caller.constructor.name==="tool_indexation")
 
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
