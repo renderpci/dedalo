@@ -50,8 +50,14 @@ class sections extends common {
 	*/
 	private function __construct($ar_locators, $search_query_object, $caller_tipo, $modo, $lang) {
 
-		if ($search_query_object===false) {
-			throw new Exception("Error: on construct sections : search_query_object is mandatory. ar_locators:$ar_locators, tipo:$caller_tipo, modo:$modo", 1);
+		if (empty($search_query_object)) {
+			// throw new Exception("Error: on construct sections : search_query_object is mandatory. ar_locators:$ar_locators, tipo:$caller_tipo, modo:$modo", 1);
+			$section_tipo = $caller_tipo;
+			$section = section::get_instance(null, $section_tipo);
+			$rq_context = $section->get_rq_context();
+			$search_query_object = array_find($rq_context, function($item){
+				return ($item->typo==='sqo');
+			});
 		}
 
 		if(SHOW_DEBUG===true) {
@@ -95,9 +101,9 @@ class sections extends common {
 	*/
 	public function get_ar_section_tipo() {
 
-		$this->get_ar_section_tipo = $this->search_query_object->section_tipo;
+		$this->ar_section_tipo = $this->search_query_object->section_tipo;
 
-		return $this->get_ar_section_tipo;
+		return $this->ar_section_tipo;
 	}//end get_ar_section_tipo
 
 

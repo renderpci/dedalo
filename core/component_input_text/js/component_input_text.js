@@ -97,7 +97,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 	const unique_config = self.context.properties.unique
 
 	// search item rebuild filter q param and others
-		const sqo = self.sqo_context.search.find(item => item.typo==='sqo')
+		const sqo = self.rq_context.search.find(item => item.typo==='sqo')
 		// set limit on sqo
 		sqo.limit = 1
 		// set skip_projects_filter as true
@@ -133,11 +133,11 @@ component_input_text.prototype.is_unique = async function(new_value){
 			// console.log("sqo:",sqo);
 
 	// add self context as the unique ddo
-		//self.sqo_context.search.push(self.context)
+		//self.rq_context.search.push(self.context)
 
 	// load data
 		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.section_load_data(self.sqo_context.search)
+		const api_response			= await current_data_manager.section_load_data(self.rq_context.search)
 		const data					= api_response.result.data
 
 	// record data results from search

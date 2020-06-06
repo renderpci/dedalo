@@ -13,7 +13,7 @@
 	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions, $sqo_context=false);
+			$context[] = $this->get_structure_context($permissions, $rq_context=false);
 
 	}//end if($options->get_context===true)
 

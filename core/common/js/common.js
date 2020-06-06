@@ -192,13 +192,13 @@ common.prototype.refresh = async function() {
 	const self = this
 
 	// offset update
-		if (self.sqo_context && typeof self.pagination!=="undefined") {
-			const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
+		if (self.rq_context && typeof self.pagination!=="undefined") {
+			const sqo = self.rq_context.show.find(element => element.typo==='sqo')
 			if (sqo) {
 				sqo.offset = self.pagination.offset
 			}
 
-			const source = self.sqo_context.show.find(element => element.typo==='source')
+			const source = self.rq_context.show.find(element => element.typo==='source')
 			if (source) {
 				source.pagination.offset = self.pagination.offset
 			}

@@ -65,7 +65,7 @@ area_common.prototype.init = async function(options) {
 	self.events_tokens		= []
 	self.ar_instances		= []
 
-	self.sqo_context 		= options.sqo_context 	|| null
+	self.rq_context 		= options.rq_context 	|| null
 
 	self.datum 	 			= options.datum   		|| null
 	self.context 			= options.context 		|| null
@@ -82,17 +82,17 @@ area_common.prototype.init = async function(options) {
 	self.permissions 		= options.permissions 	|| null
 
 
-	// source. add to sqo_context if not exists. Be careful not to add a source element twice
+	// source. add to rq_context if not exists. Be careful not to add a source element twice
 	// (!) VERIFICAR QUE REALMENTE HACE FALTA
-		// if (self.sqo_context && self.sqo_context.show) {
-		// 	const current_source = self.sqo_context.show.find(element => element.typo==='source')
+		// if (self.rq_context && self.rq_context.show) {
+		// 	const current_source = self.rq_context.show.find(element => element.typo==='source')
 		// 	if (current_source) {
-		// 		console.warn("Source alredy exists. Skipped source creation for sqo_context",current_source)
+		// 		console.warn("Source alredy exists. Skipped source creation for rq_context",current_source)
 		// 	}else{
 		// 		const source = create_source(self,'get_data')
-		// 		self.sqo_context.show.push(source)
+		// 		self.rq_context.show.push(source)
 		// 		if(SHOW_DEBUG===true) {
-		// 			console.warn("Added created 'source' element to sqo_context.show on init section",source)
+		// 			console.warn("Added created 'source' element to rq_context.show on init section",source)
 		// 		}
 		// 	}
 		// }
@@ -107,7 +107,7 @@ area_common.prototype.init = async function(options) {
 		// 		typo 			: 'source',
 		// 		build_options 	: self.build_options
 		// 	}
-		// 	const sqo_context = [source_context]
+		// 	const rq_context = [source_context]
 
 
 	// events subscription
@@ -137,15 +137,15 @@ area_common.prototype.build___DES = async function() {
 
 
 	// // build_options. Add custom area build_options to source
-	// 	const source = self.sqo_context.show.find(element => element.typo==='source')
+	// 	const source = self.rq_context.show.find(element => element.typo==='source')
 	// 		  source.build_options = self.build_options
 
 	// // load data
 	// 	const current_data_manager = new data_manager()
 
 	// // get context and data
-	// 		console.log("self.sqo_context.show:",self.sqo_context.show);
-	// 	const api_response 	= await current_data_manager.section_load_data(self.sqo_context.show)
+	// 		console.log("self.rq_context.show:",self.rq_context.show);
+	// 	const api_response 	= await current_data_manager.section_load_data(self.rq_context.show)
 	// 		console.log("[area_common.build] api_response++++:",api_response);
 
 	// // set the result to the datum
@@ -169,7 +169,7 @@ area_common.prototype.build___DES = async function() {
 	// 	if(SHOW_DEBUG===true) {
 	// 		//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 	// 		console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
-	// 		//load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
+	// 		//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
 	// 	}
 
 	// // status update
@@ -178,5 +178,3 @@ area_common.prototype.build___DES = async function() {
 
 	// return true
 }//end build
-
-

@@ -92,28 +92,70 @@ login.prototype.init = async function(options) {
 * @return promise
 *	bool true
 */
-login.prototype.build = async function() {
+login.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
 
-	// set context and data to current instance
-		self.context	= self.datum.context
-		self.data 		= self.datum.data
+	// status update
+		self.status = 'building'
 
-	// Update section mode with context declaration
-	 	self.mode 		= self.context.mode
-	 	self.label 		= self.context.label
+	
+	if (autoload===true) {
+
+		// load data
+			const current_data_manager = new data_manager()
+
+		// get context and data
+			const api_response 	= await current_data_manager.get_login(self.rq_context)
+			console.log("login build api_response", api_response);
+
+		// set the result to the datum
+			self.datum = api_response.result
+	}
+
+	// set context and data to current instance	
+			self.context	= self.datum.context.find(element => element.tipo===self.tipo);
+			self.data		= self.datum.data.find(element => element.tipo===self.tipo);
 
 	// debug
 		if(SHOW_DEBUG===true) {
+			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
 		}
 
 	// status update
 		self.status = 'builded'
+		
 
 	return true
+
+
+
+
+
+	// const t0 = performance.now()
+
+	// const self = this
+
+	// // set context and data to current instance
+	// 	self.context	= self.datum.context
+	// 	self.data 		= self.datum.data
+
+	// // Update section mode with context declaration
+	//  	self.mode 		= self.context.mode
+	//  	self.label 		= self.context.label
+
+	// // debug
+	// 	if(SHOW_DEBUG===true) {
+	// 		console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+	// 	}
+
+	// // status update
+	// 	self.status = 'builded'
+
+	// return true
 }//end build
 
 

@@ -506,7 +506,7 @@ const get_components_with_subcolumns = () => {
 	// 			section_id 		: self.section_id,
 	// 			mode 			: "edit",
 	// 			lang 			: self.lang,
-	// 			sqo_context 	: {
+	// 			rq_context 	: {
 	// 				show : [
 	// 					{
 	// 						typo : "sqo",

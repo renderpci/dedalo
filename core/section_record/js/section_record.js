@@ -82,7 +82,7 @@ section_record.prototype.init = async function(options) {
 	self.mode			= options.mode
 	self.lang			= options.lang
 	self.node			= []
-	self.sqo_context	= options.sqo_context
+	self.rq_context	= options.rq_context
 	
 	self.datum			= options.datum
 	self.context		= options.context
@@ -133,7 +133,7 @@ section_record.prototype.build = async function(autoload=false) {
 	// 	//if (!self.datum) {
 	// 	if (autoload===true) {
 	// 		const current_data_manager 	= new data_manager()
-	// 		const api_response 			= await current_data_manager.section_load_data(self.sqo_context)
+	// 		const api_response 			= await current_data_manager.section_load_data(self.rq_context)
 	// 		// set
 	// 		self.datum = api_response.result
 
@@ -201,7 +201,7 @@ section_record.prototype.get_ar_instances = async function(){
 					context 		: current_context,
 					data 			: current_data,
 					datum 			: self.datum,
-					sqo_context 	: current_context.sqo_context
+					rq_context 	: current_context.rq_context
 				}
 				
 				// id_variant . Propagate a custom instance id to children

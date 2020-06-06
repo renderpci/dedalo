@@ -41,7 +41,7 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 		wrapper_page.classList.add('wrapper_page', self.type)
 
 	// menu
-		const element_menu 	= self.elements.find(item => item.model==='menu')
+		const element_menu 	= self.rq_context.find(item => item.model ==='menu')
 		if (typeof element_menu!=='undefined') {
 			const menu_node = get_menu(self)
 			wrapper_page.appendChild(await menu_node)
@@ -61,7 +61,7 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 			const active_component = document.querySelector(".wrapper_component.active")
 			if (active_component) {
 				active_component.classList.remove("active")
-			}				
+			}
 		}
 
 
@@ -128,5 +128,3 @@ const get_menu = async function(self) {
 
 	return null
 }//end get_menu
-
-

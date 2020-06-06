@@ -59,7 +59,7 @@ export const area_development = function() {
 * @return promise
 *	bool true
 */
-area_development.prototype.build = async function() {
+area_development.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
@@ -67,28 +67,21 @@ area_development.prototype.build = async function() {
 	// status update
 		self.status = 'building'
 
-	// area basic context
-		const source_context = {
-			model 			: self.model,
-			tipo  			: self.tipo,
-			lang  			: self.lang,
-			mode  			: self.mode,
-			action 			: 'get_data',
-			typo 			: 'source',
-			build_options 	: self.build_options
-		}
 
-		const sqo_context = [source_context]
+	if (autoload===true) {
 
-	// load data
-		const current_data_manager = new data_manager()
+		// load data
+			const current_data_manager = new data_manager()
+console.log("self", self);
+		// get context and data
+			const source 		= self.rq_context.find(item => item.typo==="source")
+				  source.action = "get_data"
+			const rq_context 	= [source]
+			const api_response 	= await current_data_manager.section_load_data(rq_context)
 
-	// get context and data
-		const api_response 	= await current_data_manager.section_load_data(sqo_context)
-			console.log("[area_development.build] api_response++++:",api_response);
-
-	// set the result to the datum
-		self.datum = api_response.result
+		// set the result to the datum
+			self.datum = api_response.result
+	}
 
 	// set context and data to current instance
 		self.context	= self.datum.context.filter(element => element.tipo===self.tipo)
@@ -102,7 +95,7 @@ area_development.prototype.build = async function() {
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
+			//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
 		}
 
 	// status update
@@ -195,10 +188,8 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 * @return DOM node form
 */
 area_development.prototype.init_form = async function(widget_object) {
-	
+
 	build_form(widget_object)
 
 
 }//end init_form
-
-
