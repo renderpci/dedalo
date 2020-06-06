@@ -1726,6 +1726,8 @@ class component_relation_common extends component_common {
 		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
 		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
 
+
+		$ar_filter = [];
 		# Active
 		$active_locator = new locator();
 			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
@@ -1733,7 +1735,7 @@ class component_relation_common extends component_common {
 			$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 			$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
 
-		$filter_active = '{
+		$ar_filter[] = '{
 				"q": '.json_encode(json_encode($active_locator)).',
 				"path": [
 					{
@@ -1744,10 +1746,8 @@ class component_relation_common extends component_common {
 					}
 				]
 			}';
-
 		# Typology
-		$ar_filter = [];
-		foreach ((array)$hierarchy_types as $value) {
+		foreach ((array)$hierarchy_types as $key => $value) {
 
 			$typology_locator = new locator();
 				$typology_locator->set_section_id($value);
@@ -1766,7 +1766,7 @@ class component_relation_common extends component_common {
 					}
 				]
 			}';
-		}//end foreach ((array)$hierarchy_types as $value)
+		}//end foreach ((array)$hierarchy_types as $key => $value)
 
 		$filter = implode(',',$ar_filter);
 
@@ -1777,12 +1777,8 @@ class component_relation_common extends component_common {
 			  "skip_projects_filter":"true",
 			  "limit":0,
 			  "filter": {
-				  "$and": ['.$filter_active.',
-					{
-						"$or": [
-					  	'.$filter.'
-						]
-					}
+				"$and": [
+				  '.$filter.'
 				]
 			  }
 			}
@@ -1924,6 +1920,7 @@ class component_relation_common extends component_common {
 
 		return $ar_fixed_filter;
 	}//end get_fixed_filter
+>>>>>>> 8a92c3b40bd19e0f160bceabad06899df6b83b04
 
 
 
