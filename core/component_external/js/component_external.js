@@ -5,25 +5,25 @@
 *
 */
 var component_external = new function() {
-	'use strict'; 
-	
+	'use strict';
+
 	// Object vars
-		
+
 
 
 	/**
 	* INIT
-	* @return 
+	* @return
 	*/
-	this.inited = {}
+	this.initiated = {}
 	this.init = function(options) {
 
-		const self = this	
+		const self = this
 
 
 		return true
 	}//end init
-	
+
 
 
 }//end component_external

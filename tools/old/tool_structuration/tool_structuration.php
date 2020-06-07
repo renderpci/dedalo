@@ -7,7 +7,7 @@
 	$component_tipo 		= $tipo;
 	$parent 				= $this->component_obj->get_parent();	#dump($tipo,$parent);
 	$section_id				= $parent;
-	$section_tipo			= $this->component_obj->get_section_tipo();	
+	$section_tipo			= $this->component_obj->get_section_tipo();
 	$label 					= $this->component_obj->get_label();
 	$section_label 			= RecordObj_dd::get_termino_by_tipo($section_tipo);
 	$permissions			= common::get_permissions($section_tipo,$tipo);
@@ -20,14 +20,14 @@
 	$selected_tag_id		= TR::tag2value($this->selected_tagName);
 	$modo 					= $this->get_modo();
 	$file_name 				= $modo;
-	
-	
-	switch($modo) {	
-		
-		case 'button':			
+
+
+	switch($modo) {
+
+		case 'button':
 			$contain_references = search::have_inverse_relations($section_tipo, $section_id);
 			break;
-		
+
 		case 'page':
 
 			# TOOL CSS / JS MAIN FILES
@@ -37,7 +37,7 @@
 			css::$ar_url[] = DEDALO_CORE_URL."/component_publication/css/component_publication.css";
 			#css::$ar_url[] = DEDALO_CORE_URL."/component_text_area/css/text_editor_default.css";
 			css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-							
+
 			js::$ar_url[]  = DEDALO_CORE_URL."/component_input_text_large/js/component_input_text_large.js";
 			#js::$ar_url[]  = DEDALO_CORE_URL."/component_number/js/component_number.js";
 			js::$ar_url[]  = DEDALO_CORE_URL."/component_publication/js/component_publication.js";
@@ -80,7 +80,7 @@
 					return ;
 				}
 			}//end if (!TOP_ID)
-			
+
 
 			# INVERSE_CODE
 			$inverse_code = tool_common::get_inverse_element('code', $parent, $section_tipo);
@@ -96,16 +96,16 @@
 				#js::$ar_url[] = DEDALO_CORE_URL."/$component_name/js/$component_name.js";
 
 			# TESAURO_URL
-			$tesaurus_url = DEDALO_CORE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
+			$tesaurus_url = DEDALO_CORE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;
 
 			# AV_PLAYER_URL
 			$reelID = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $section_tipo.'_'.$parent;
 			$av_player_url   = DEDALO_CORE_URL . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality=' . DEDALO_AV_QUALITY_DEFAULT; // rsc35_rsc167_1
 			$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . '/posterframe/' . $reelID .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
-			
+
 
 			$this->component_obj->set_modo('structuration');
-			# Force change lang  (component is inited in edit mode without $_GET['m'] var set. Because this we need trigger manually force_change_lang)		
+			# Force change lang  (component is initiated in edit mode without $_GET['m'] var set. Because this we need trigger manually force_change_lang)		
 			$original_lang 	= component_text_area::force_change_lang($this->component_obj->get_tipo(),
 																	 $this->component_obj->get_parent(),
 																	 $this->component_obj->get_modo(),
@@ -116,13 +116,13 @@
 			$this->component_obj->set_lang($original_lang);
 
 			$lang = $this->component_obj->get_lang();
-			
+
 			// Change mode
 			$this->component_obj->set_modo('tool_structuration');
 
 			// text area html
 			$component_text_area_html 		= $this->component_obj->get_html();
-			$component_text_area_wrapper 	= 'wrapper_'.$this->component_obj->get_identificador_unico(); 
+			$component_text_area_wrapper 	= 'wrapper_'.$this->component_obj->get_identificador_unico();
 
 			#$dato 				 = $this->component_obj->get_dato();
 			#$final_editable_text = TR::addTagImgOnTheFly($dato);
@@ -130,10 +130,10 @@
 			# BUTTON TOOL TR_PRINT
 				$tool_tr_print 				= new tool_tr_print($this->component_obj,'button');
 				$button_tool_tr_print_html 	= $tool_tr_print->get_html();
-			
+
 			# BUTTON TOOL TIME_MACHINE
 				$tool_time_machine 			= new tool_time_machine($this->component_obj,'button');
-				$button_tool_time_machine_html = $tool_time_machine->get_html();		
+				$button_tool_time_machine_html = $tool_time_machine->get_html();
 
 			#
 			# STATE
@@ -146,7 +146,7 @@
 			break;
 
 	}#end switch
-		
+
 
 
 
@@ -154,5 +154,5 @@
 	$page_html	= DEDALO_CORE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
-	}	
+	}
 ?>

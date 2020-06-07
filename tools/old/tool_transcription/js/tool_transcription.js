@@ -16,9 +16,9 @@ var tool_transcription = new function() {
 
 	/**
 	* INIT
-	* @return 
+	* @return
 	*/
-	this.inited = false
+	this.initiated = false
 	this.init = function(data) {
 
 		const self = this;
@@ -26,7 +26,7 @@ var tool_transcription = new function() {
 		// Set data vars
 		self.textarea_lang = data.textarea_lang
 
-		if (self.inited!==true) {
+		if (self.initiated!==true) {
 
 			// READY (EVENT)
 			//$(function() {
@@ -64,13 +64,13 @@ var tool_transcription = new function() {
 						if (page_globals.context_name==='component_av') {
 							tool_transcription.set_av_add_ons();
 							tool_transcription.set_tag_insert_key();
-						}					
+						}
 						break;
-				}				
+				}
 			});//end ready
 
 
-			// LOAD (EVENT)			
+			// LOAD (EVENT)
 			window.addEventListener("load", function (event) {
 				//tool_transcription.fix_height_of_texteditor()
 				tool_transcription.select_tag_in_editor()
@@ -101,7 +101,7 @@ var tool_transcription = new function() {
 				//tool_transcription.verify_tc_tags(tinyMCE.activeEditor)
 			}, false)//end load
 
-			
+
 			// BEFOREUNLOAD (EVENT)
 			window.addEventListener("beforeunload", function (event) {
 				//console.log("-> triggered beforeunload event (tool_transcription)");
@@ -111,7 +111,7 @@ var tool_transcription = new function() {
 
 					// SAVE ON EXIT
 					tool_transcription.save_on_exit();
-					
+
 					var confirmationMessage = "Leaving tool transcription page.. ";
 					event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
 					return confirmationMessage;					// Gecko, WebKit, Chrome <34
@@ -119,7 +119,7 @@ var tool_transcription = new function() {
 			}, false)//end beforeunload
 
 
-			// UNLOAD (EVENT)			
+			// UNLOAD (EVENT)
 			window.addEventListener("unload", function (event) {
 				//console.log("-> triggered unload event (tool_transcription) saving_state: "+component_common.saving_state);
 				event.preventDefault();
@@ -128,7 +128,7 @@ var tool_transcription = new function() {
 				//tool_transcription.save_on_exit();
 
 				// UPDATE PARENT WINDOW COMPONENT TEXT AREA ON CLOSE WINDOW
-				// Note component_related_obj_tipo is defined globally	
+				// Note component_related_obj_tipo is defined globally
 				tool_transcription.update_related_component( component_related_obj_tipo );
 
 				// Update lock_components state (BLUR)
@@ -138,11 +138,11 @@ var tool_transcription = new function() {
 			}, false)//end unload
 
 
-			// RESIZE (EVENT)		
+			// RESIZE (EVENT)
 			window.addEventListener("resize", function (event) {
 				tool_transcription.fix_height_of_texteditor();
 			}, false)//end resize
-			
+
 
 			// VISIBILITYCHANGE (EVENT)
 			window.addEventListener("visibilitychange", function (event) {
@@ -156,7 +156,7 @@ var tool_transcription = new function() {
 				}
 				if(SHOW_DEBUG===true) {
 					console.warn("[tool_transcription.visibilitychange_action] locator:", locator)
-				}				
+				}
 				tool_common.update_tracking_status(event,{locator:locator})
 			}, false)//end resize
 
@@ -166,9 +166,9 @@ var tool_transcription = new function() {
 				console.log("grid_image_click_event e:",e);
 			}, false)//end grid_image_click_event
 
-		}//end if (this.inited!==true)		
+		}//end if (this.initiated!==true)		
 
-		self.inited = true
+		self.initiated = true
 
 		return true
 	}//end init
@@ -177,10 +177,10 @@ var tool_transcription = new function() {
 
 	/**
 	* VERIFY_TC_TAGS
-	* Test if tc tags order is correct. If not, change wrong tag style to mark it 
+	* Test if tc tags order is correct. If not, change wrong tag style to mark it
 	*/
 	this.verify_tc_tags = function(ed) {
-		
+
 		let tcs = ed.dom.select('img.tc')
 			//console.log(tcs);
 
@@ -191,11 +191,11 @@ var tool_transcription = new function() {
 			var ms 	  = this.get_tg_absolute_value(value)
 				//console.log(value); console.log(ms);
 			// Add resolved values to ar_ms
-			ar_ms.push(ms)			
+			ar_ms.push(ms)
 		}
 
 		//var len = ar_ms.length
-		for (var i = 0; i < len; i++) {		
+		for (var i = 0; i < len; i++) {
 			if ( ar_ms[i] <= ar_ms[i-1] && (ar_ms[i-1] > ar_ms[i-2] && ar_ms[i+1] < ar_ms[i+2])  ) {
 				tcs[i].classList.add('tc_wrong')
 			}else if(ar_ms[i] <= ar_ms[i-1]) {
@@ -229,7 +229,7 @@ var tool_transcription = new function() {
 
 		return miliseconds;
 	};//end get_tg_absolute_value
-	
+
 
 
 	/**
@@ -264,24 +264,24 @@ var tool_transcription = new function() {
 		if(!window.opener) return false;
 
 		// Test if caller is in edit mode or list
-		let record_wrap = null		
+		let record_wrap = null
 		try {
 			record_wrap = window.opener.document.getElementById('current_record_wrap')
 		}catch(e) {
 			window.opener.console.log("[tool_transcriptions.update_related_component] Error:", e)
 		}
-				
+
 		if (record_wrap===null) {
 
 			// EDITING FROM PROCESSES
-	
+
 			// RELOAD_ROWS_LIST
-			const call_uid = 'wrap_' + page_globals.section_tipo + '_' + 'list';		
+			const call_uid = 'wrap_' + page_globals.section_tipo + '_' + 'list';
 			window.opener.search.reload_rows_list(call_uid);
 
 			if(SHOW_DEBUG===true) {
 				window.opener.console.log("[tool_transcriptions.update_related_component] Reloading rows (reload_rows_list).. ", call_uid)
-			}			
+			}
 
 		}else{
 
@@ -289,13 +289,13 @@ var tool_transcription = new function() {
 
 			// REFRESH_COMPONENTS
 			// Calculate wrapper_id and ad to page global var 'components_to_refresh'
-			// Note that when tool window is closed, main page is focused and trigger refresh elements added 
+			// Note that when tool window is closed, main page is focused and trigger refresh elements added
 			const wrapper = window.opener.component_common.get_component_wrapper(component_related_obj_tipo, page_globals._parent, page_globals.section_tipo);
 			if (wrapper) {
 				window.opener.html_page.add_component_to_refresh(wrapper.id)
 			}
 		}
-			
+
 		return true
 	};//end update_related_component
 
@@ -330,11 +330,11 @@ var tool_transcription = new function() {
 
 	/**
 	* UPDATE_AV_SUBTITLE_TRACK
-	* @return 
+	* @return
 	*/
 	this.update_av_subtitle_track = function( lang ) {
 
-		return top.tool_subtitles.add_subtitle_track_to_video()		
+		return top.tool_subtitles.add_subtitle_track_to_video()
 	};//end update_av_subtitle_track
 
 
@@ -480,7 +480,7 @@ var tool_transcription = new function() {
 
 		if (page_globals.modo!=='tool_transcription') {
 			return false;
-		}		
+		}
 
 		if (typeof tinyMCE==="undefined" || !tinyMCE) {
 			if(SHOW_DEBUG===true) {
@@ -508,7 +508,7 @@ var tool_transcription = new function() {
 			if (page_globals.modo==="tool_transcription") {
 				h_adjust = h_adjust + 15
 			}
-			
+
 			//setTimeout(function(){
 			if(tinyMCE.activeEditor)
 				tinyMCE.activeEditor.theme.resizeTo(
@@ -516,15 +516,15 @@ var tool_transcription = new function() {
 					h - h_adjust
 				)
 			//},50)
-			
+
 			// PDF VIEWER IF EXISTS
 			// var pdf_iframe = $('.pdf_viewer_frame')
 			// if ( $(pdf_iframe).length === 1 ) {
 			// 	$(pdf_iframe).height( h -33 )
 			// }
-			const pdf_iframe = document.querySelector('.pdf_viewer_frame')				
+			const pdf_iframe = document.querySelector('.pdf_viewer_frame')
 			if (pdf_iframe) {
-				pdf_iframe.style.height = (h -33) + "px"				
+				pdf_iframe.style.height = (h -33) + "px"
 			}
 
 			// GEOLOCATION VIEWER IF EXISTS
@@ -540,7 +540,7 @@ var tool_transcription = new function() {
 		//}catch(e) {
 		//	console.log("Error: "+e)
 		//}
-		
+
 
 		return true
 	};//end fix_height_of_texteditor
@@ -572,7 +572,7 @@ var tool_transcription = new function() {
 				add_on_av_playpause_key_span   = $(add_on_av_playpause_key_input).next('span').first(),
 				add_on_av_playpause_key_cookie = get_localStorage('av_playpause_key')
 				//console.log(add_on_av_playpause_key_span); console.log(add_on_av_playpause_key_cookie);
-			
+
 			var key_val  = add_on_av_playpause_key_cookie ? add_on_av_playpause_key_cookie : 27, // Default 27 'ESC'
 				key_name = keycode.getKeyCodeValue(key_val)
 
@@ -596,7 +596,7 @@ var tool_transcription = new function() {
 
 
 		// REWIND SECS
-			var add_on_av_rewind_secs_input  = document.getElementById('add_on_av_rewind_secs'),			
+			var add_on_av_rewind_secs_input  = document.getElementById('add_on_av_rewind_secs'),
 				add_on_av_rewind_secs_cookie = get_localStorage('av_rewind_secs')
 				//console.log(add_on_av_rewind_secs_input);
 
@@ -612,7 +612,7 @@ var tool_transcription = new function() {
 					secs_val = event.target.value;
 					set_localStorage('av_rewind_secs',secs_val);
 				})
-				.click(function() {$(this).select();});			
+				.click(function() {$(this).select();});
 	};//end set_av_add_ons
 
 
@@ -621,16 +621,16 @@ var tool_transcription = new function() {
 	* SET_TAG_INSERT_KEY
 	*/
 	this.set_tag_insert_key = function() {
-		
+
 		var tag_insert_key_input  = document.getElementById('tag_insert_key');
 		if(!tag_insert_key_input) return false;
 
 		var	tag_insert_key_span   = $(tag_insert_key_input).next('span').first(),
 			tag_insert_key_cookie = get_localStorage('tag_insert_key')
 				//console.log(tag_insert_key_span); console.log(tag_insert_key_cookie);
-			
+
 			var key_val  = tag_insert_key_cookie ? tag_insert_key_cookie : 113, // Default 113 'F2'
-				key_name = keycode.getKeyCodeValue(key_val)					
+				key_name = keycode.getKeyCodeValue(key_val)
 
 			// Set value from cookie or default
 			tag_insert_key_input.value = key_val
@@ -647,7 +647,7 @@ var tool_transcription = new function() {
 					set_localStorage('tag_insert_key',key_val);
 
 					// Fix value in videFrame vars
-					videoFrame.av_media_player_insert_tc_key = key_val	
+					videoFrame.av_media_player_insert_tc_key = key_val
 				})
 				.click(function() {$(this).select();});
 
@@ -660,7 +660,7 @@ var tool_transcription = new function() {
 	* KEYCODE OBJ
 	*/
 	var keycode = {
-		
+
 		getKeyCode : function(e) {
 			var keycode = null;
 			if(window.event) {
@@ -705,7 +705,7 @@ var tool_transcription = new function() {
 
 	/**
 	* FAST_SWITCH_LANG
-	* @return 
+	* @return
 	*/
 	this.fast_switch_lang = function(selector_obj) {
 
@@ -725,9 +725,9 @@ var tool_transcription = new function() {
 			// update subtitle track
 				if (typeof(tool_subtitles)!=="undefined") {
 					tool_subtitles.add_subtitle_track_to_video()
-				}							
+				}
 		})
-		
+
 		return true
 	};//end fast_switch_lang
 

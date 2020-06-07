@@ -114,7 +114,7 @@ area_common.prototype.init = async function(options) {
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
 	return true

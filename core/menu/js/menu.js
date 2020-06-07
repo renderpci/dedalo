@@ -72,7 +72,7 @@ menu.prototype.init = function(options) {
 	self.events_tokens 	= []
 
 	// status update
-		self.status = 'initied'
+		self.status = 'initiated'
 
 	return true
 }//end init
@@ -118,7 +118,7 @@ menu.prototype.build = async function(autoload=true){
 
 	// status update
 		self.status = 'builded'
-		
+
 
 	return true
 }//end build
