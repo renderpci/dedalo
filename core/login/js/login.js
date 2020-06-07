@@ -79,7 +79,7 @@ login.prototype.init = async function(options) {
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
 	return true
@@ -100,7 +100,7 @@ login.prototype.build = async function(autoload=true) {
 	// status update
 		self.status = 'building'
 
-	
+
 	if (autoload===true) {
 
 		// load data
@@ -114,7 +114,7 @@ login.prototype.build = async function(autoload=true) {
 			self.datum = api_response.result
 	}
 
-	// set context and data to current instance	
+	// set context and data to current instance
 			self.context	= self.datum.context.find(element => element.tipo===self.tipo);
 			self.data		= self.datum.data.find(element => element.tipo===self.tipo);
 
@@ -127,7 +127,7 @@ login.prototype.build = async function(autoload=true) {
 
 	// status update
 		self.status = 'builded'
-		
+
 
 	return true
 
@@ -202,5 +202,3 @@ export const quit = async function() {
 	// window.login = {
 	// 	quit : quit
 	// }
-
-

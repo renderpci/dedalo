@@ -766,7 +766,7 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 	map.addControl(self.drawControl);
 
 		// DRAW HANDLERS
-		// IMPORTANT: The editor is inited every time that user change the layer selected, but the context and handlers for the items is the same
+		// IMPORTANT: The editor is initiated every time that user change the layer selected, but the context and handlers for the items is the same
 		 if(self.draw_editor_is_initated===true) {
 			return false;
 		}
