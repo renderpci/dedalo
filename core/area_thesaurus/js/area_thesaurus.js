@@ -111,7 +111,7 @@ area_thesaurus.prototype.build = async function() {
 		const current_data_manager = new data_manager()
 
 	// get context and data
-		const api_response 	= await current_data_manager.section_load_data(self.rq_context.show)
+		const api_response 	= await current_data_manager.read(self.rq_context.show)
 			// console.log("[area_thesaurus.build] api_response++++:",api_response);
 
 	// set the result to the datum
@@ -171,5 +171,3 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 	return sections_selector_data
 }// end get_sections_selector_data
-
-

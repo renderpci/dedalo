@@ -689,7 +689,7 @@ export const service_autocomplete = function() {
 							current_filter[i].q_split = false
 						}
 					}
-				
+
 
 					// filter rebuilded
 					self.sqo.filter = {
@@ -735,7 +735,7 @@ export const service_autocomplete = function() {
 		console.log("+++ [service_autocomplete.search_dedalo] search_query_object:", search_query_object);
 
 		const current_data_manager 		= new data_manager()
-		const load_section_data_promise = current_data_manager.section_load_data(search_query_object)
+		const load_section_data_promise = current_data_manager.read(search_query_object)
 
 		// render section on load data
 	 		const api_response = await load_section_data_promise

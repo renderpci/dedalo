@@ -213,7 +213,7 @@ component_common.prototype.build = async function(autoload){
 
 			// load data
 				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.section_load_data(self.rq_context.show)
+				const api_response 			= await current_data_manager.read(self.rq_context.show)
 
 			// debug
 				if(SHOW_DEBUG===true) {

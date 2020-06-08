@@ -151,33 +151,6 @@ data_manager.prototype.get_login = async function(rq_context) {
 
 
 
-/**
-* SECTION_LOAD_DATA
-* Generic section data loader (API read)
-* @param object context
-* @return promise api_response
-*/
-data_manager.prototype.section_load_data = async function(rq_context) {
-
-	// // data_manager
-	// 	const api_response = this.request({
-	// 		body : {
-	// 			action 	: 'read',
-	// 			rq_context : rq_context
-	// 		}
-	// 	})
-
-	// // debug
-	// 	if(SHOW_DEBUG===true) {
-	// 		api_response.then((response)=>{
-	// 			console.log(`__Time to section_load_data ${response.debug.exec_time} [data_manager.section_load_data] response:`, response, `rq_context:`, rq_context);
-	// 		})
-	// 	}
-
-	return this.read(rq_context)
-}//end section_load_data
-
-
 
 /**
 * READ

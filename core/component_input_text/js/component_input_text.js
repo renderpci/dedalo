@@ -50,13 +50,13 @@ export const component_input_text = function(){
 	component_input_text.prototype.render				= common.prototype.render
 	component_input_text.prototype.refresh				= common.prototype.refresh
 	component_input_text.prototype.destroy				= common.prototype.destroy
-	
+
 	// change data
 	component_input_text.prototype.save					= component_common.prototype.save
 	component_input_text.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_input_text.prototype.update_datum			= component_common.prototype.update_datum
 	component_input_text.prototype.change_value			= component_common.prototype.change_value
-	
+
 	// render
 	component_input_text.prototype.list					= render_component_input_text.prototype.list
 	component_input_text.prototype.edit					= render_component_input_text.prototype.edit
@@ -137,7 +137,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 	// load data
 		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.section_load_data(self.rq_context.search)
+		const api_response			= await current_data_manager.read(self.rq_context.search)
 		const data					= api_response.result.data
 
 	// record data results from search
@@ -152,5 +152,3 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 	return record
 }//end is_unique
-
-

@@ -132,14 +132,14 @@ component_portal.prototype.build  = async function(autoload){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-		self.build_rq_context()
+		self.rq_context_show = self.build_rq_context_show()
 
 	// load data if not yet received as an option
 		if (autoload===true) {
 
 			const current_data_manager 	= new data_manager()
 
-			const api_response 			= await current_data_manager.section_load_data(self.rq_context.show)
+			const api_response 			= await current_data_manager.read(self.rq_context_show)
 
 			if(SHOW_DEBUG===true) {
 				console.log("portal build api_response:", api_response)
@@ -168,7 +168,7 @@ component_portal.prototype.build  = async function(autoload){
 			// sqo update filter_by_locators
 				if(self.pagination.total>self.pagination.limit){
 
-					const show 	= self.rq_context.show
+					const show 	= self.rq_context_show
 					const sqo 	= show.find(item => item.typo==='sqo')
 
 					const data_value = self.data.value
@@ -228,7 +228,7 @@ component_portal.prototype.build  = async function(autoload){
 
 
 
-component_portal.prototype.build_rq_context = function(){
+component_portal.prototype.build_rq_context_show = function(){
 
 	const self = this
 
@@ -287,8 +287,6 @@ component_portal.prototype.build_rq_context = function(){
 		filter_by_locators	: null
 	}
 	rq_context.push(sqo)
-
-	self.rq_context = rq_context
 
 	return rq_context
 }
