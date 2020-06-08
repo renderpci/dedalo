@@ -176,7 +176,7 @@ component_common.prototype.init = async function(options) {
 		}
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 	return true
 }//end init
@@ -203,7 +203,7 @@ component_common.prototype.build = async function(autoload){
 
 	// load data if is not already received as option
 		if (autoload===true) {
-				
+
 			// rq_context
 				// create the rq_context
 				self.rq_context = {show: []}
@@ -362,7 +362,7 @@ component_common.prototype.save = async function(changed_data) {
 					setTimeout(()=>{
 						self.node.map(item => {
 							// item.classList.remove("save_success")
-							// allow restart animation. Not set state pause before animation ends (2 secs)							
+							// allow restart animation. Not set state pause before animation ends (2 secs)
 							item.style.animationPlayState = "paused";
 							item.style.webkitAnimationPlayState = "paused";
 						})
@@ -417,27 +417,27 @@ component_common.prototype.update_datum = function(new_data) {
 	const self = this
 
 	// (!) Note that component datum is shared with section datum. On the contrary, Portals have custom datum
-	
+
 	// new_data
 		const new_data_length = new_data.length
 			// console.log("update_datum --------------------------- new_data:",JSON.parse(JSON.stringify(new_data)) );
-			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data))); 
+			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 			// console.trace();
 
 	// datum (global shared with section)
-		// remove the component old data in the datum (from down to top array items)		
+		// remove the component old data in the datum (from down to top array items)
 			for (let i = new_data_length - 1; i >= 0; i--) {
-				
+
 				const data_item = new_data[i]
-				
+
 				const index_to_delete = self.datum.data.findIndex(item => item.tipo===data_item.tipo && item.section_tipo===data_item.section_tipo && item.section_id===data_item.section_id)
-				
+
 				if (index_to_delete!==-1) {
 					if(SHOW_DEBUG===true) {
 						console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
 					}
 					self.datum.data.splice(index_to_delete, 1);
-				}else{ 
+				}else{
 					console.warn("(!) Not found index_to_delete in datum:", data_item.tipo, data_item.section_tipo, data_item.section_id)
 				}
 			}
@@ -451,7 +451,7 @@ component_common.prototype.update_datum = function(new_data) {
 			self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_tipo===self.section_tipo && item.section_id===self.section_id) || []
 				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
 		// data of another components
-			/* 
+			/*
 			const ar_instances = instances.get_all_instances()
 			for (let i = new_data_length - 1; i >= 0; i--) {
 				const data_item = new_data[i]
@@ -461,7 +461,7 @@ component_common.prototype.update_datum = function(new_data) {
 					current_instance.data = self.datum.data.find(item => item.tipo===data_item.tipo && item.section_id===data_item.section_id) || []
 				}else{
 					console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
-				}		
+				}
 			}
 			*/
 
@@ -473,7 +473,7 @@ component_common.prototype.update_datum = function(new_data) {
 				}
 				alert("Error on read component data!");
 			}
-	
+
 
 	// add as new data the most recent changed_data
 		//self.data.changed_data = changed_data
@@ -503,7 +503,7 @@ component_common.prototype.update_datum = function(new_data) {
 * @return bool true
 */
 component_common.prototype.update_data_value = function(changed_data){
-	
+
 	const self = this
 
 	if(SHOW_DEBUG===true) {

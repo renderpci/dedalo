@@ -126,7 +126,7 @@ section.prototype.init = async function(options) {
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
 	return true
@@ -705,6 +705,3 @@ section.prototype.load_section_records = function() {
 	return loaded
 }//end load_section_records
 */
-
-
-

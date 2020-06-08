@@ -505,13 +505,13 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		}
 
 		// init
-			describe("init component based on options values to create a component instance: status = inited, lang = lg-eng and permissions = null", function() {
+			describe("init component based on options values to create a component instance: status = initiated, lang = lg-eng and permissions = null", function() {
 
 				for (let i = 0; i < options.length; i++) {
 
 					describe(options[i].model, function() {
 
-						make_test(options[i], 'status', 'inited', 'init')
+						make_test(options[i], 'status', 'initiated', 'init')
 						make_test(options[i], 'lang', options[i].lang, 'init')
 						make_test(options[i], 'permissions', null, 'init')
 					})
