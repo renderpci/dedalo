@@ -24,14 +24,14 @@ class area extends area_common  {
 
 		// gc_disable();
 
+		// /session_start();
+
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		// cache session. If the session has the all_areas return it from cache for speed
-			$current_session_value = $_SESSION['dedalo']['ontology']['all_areas'] ?? null;
-			if ($current_session_value && $current_session_value->lang===DEDALO_APPLICATION_LANG) {
-				return $_SESSION['dedalo']['ontology']['all_areas']->data;
-			}else if ($current_session_value!==null) {
-				unset($_SESSION['dedalo']['ontology']['all_areas']);
+		// cache session. If the session has the all_areas return it from cache for speed			
+			if (isset($_SESSION['dedalo']['ontology']['all_areas'][DEDALO_APPLICATION_LANG])) {
+				dump($_SESSION['dedalo']['ontology']['all_areas'][DEDALO_APPLICATION_LANG], '$_SESSION[dedalo][ontology][all_areas] ++ '.to_string());
+				return $_SESSION['dedalo']['ontology']['all_areas'][DEDALO_APPLICATION_LANG];
 			}
 
 		// get the config_areas file to allow and denny some especific areas defined by installation.
@@ -90,10 +90,7 @@ class area extends area_common  {
 			}//end foreach ($ar_root_areas as $area_tipo)
 
 		# cache session. Store in session for speed
-			$areas_item = new stdClass();
-				$areas_item->lang = DEDALO_APPLICATION_LANG;
-				$areas_item->data = $areas;
-			$_SESSION['dedalo']['ontology']['all_areas'] = $areas_item;
+			$_SESSION['dedalo']['ontology']['all_areas'][DEDALO_APPLICATION_LANG] = $areas;
 
 
 		// debug
