@@ -239,7 +239,7 @@ const add_events = function(self, wrapper) {
 const get_content_data_edit = async function(self) {
 
 	const ar_section_record = await self.get_ar_instances()
-	const is_inside_tool 	= self.is_inside_tool	
+	const is_inside_tool 	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -315,7 +315,7 @@ const get_top = function(self) {
 		const is_inside_tool		= self.is_inside_tool
 		const mode					= self.mode
 		const current_data_manager	= new data_manager()
-		const show					= self.rq_context.show
+		const show					= self.rq_context_show
 		const target_section		= show.filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length
 		// sort section by label asc

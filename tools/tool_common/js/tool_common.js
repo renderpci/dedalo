@@ -103,7 +103,7 @@ tool_common.prototype.build = async function(autoload=false) {
 			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
 			// The tool info was generated when it was imported / registered by admin
 				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.section_load_data(rq_context.show)
+				const api_response 			= await current_data_manager.read(rq_context.show)
 				const data 					= api_response.result.data
 
 			// config set
@@ -258,5 +258,3 @@ const get_label = function(label_name) {
 
 	return label_item
 }//end get_label
-
-

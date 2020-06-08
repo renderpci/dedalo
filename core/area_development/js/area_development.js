@@ -77,7 +77,7 @@ console.log("self", self);
 			const source 		= self.rq_context.find(item => item.typo==="source")
 				  source.action = "get_data"
 			const rq_context 	= [source]
-			const api_response 	= await current_data_manager.section_load_data(rq_context)
+			const api_response 	= await current_data_manager.read(rq_context)
 
 		// set the result to the datum
 			self.datum = api_response.result
