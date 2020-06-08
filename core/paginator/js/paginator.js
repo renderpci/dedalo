@@ -121,9 +121,9 @@ paginator.prototype.build = async function(){
 	// status update
 		self.status = 'builded'
 
-			
 
-			if(SHOW_DEBUG===true) 
+
+			if(SHOW_DEBUG===true)
 			{
 		// console.log("paginator [build] self:",self);
 		// console.log("paginator total:",total);

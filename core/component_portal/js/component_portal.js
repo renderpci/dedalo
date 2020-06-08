@@ -139,7 +139,6 @@ component_portal.prototype.build  = async function(autoload){
 
 			const current_data_manager 	= new data_manager()
 
-			console.log("current_data_manager", current_data_manager);
 			const api_response 			= await current_data_manager.section_load_data(self.rq_context.show)
 
 			if(SHOW_DEBUG===true) {
@@ -237,26 +236,23 @@ component_portal.prototype.build_rq_context = function(){
 	const length 			= config_context.length
 	const rq_context_ddo 	= self.datum.context.find(item => item.source === 'rq_context_ddo').value
 	const operator 			= self.context.properties.operator || '$and'
-	const ar_dd_objects		= []
-	const ar_section_tipo 	= []
-	const rq_context 		= {}
-
+	const rq_context		= []
+	const ar_sections 		= []
 	// source auto create
 	const source = create_source(self,'get_data')
-	ar_dd_objects.push(source)
+	rq_context.push(source)
 
 	for (let i = 0; i < length; i++) {
-
 		const current_item 		= config_context[i]
 		const sections 			= current_item.section_tipo
 
 		const sections_length 	= sections.length
 		// show
-		const show = current_item.search
+		const show = current_item.show
 		const show_length = show.length
 		//get sections
 		for (let j = 0; j < sections_length; j++) {
-			ar_section_tipo.push(sections[j])
+			ar_sections.push(sections[j])
 			// get the fpath array
 			for (let k = 0; k < show_length; k++) {
 				const f_path = show[k].f_path
@@ -267,12 +263,12 @@ component_portal.prototype.build_rq_context = function(){
 					const item = f_path[l]==='self'
 						? sections[j]
 						: f_path[l]
-					const exist = ar_dd_objects.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+					const exist = rq_context.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
 					if(!exist){
 						const ddo = rq_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
 						// console.log("ddo", ddo, item, sections[j]);
 						if(ddo){
-							ar_dd_objects.push(ddo)
+							rq_context.push(ddo)
 						}
 					}
 				}
@@ -282,7 +278,7 @@ component_portal.prototype.build_rq_context = function(){
 
 	const sqo = {
 		typo 				: 'sqo',
-		section_tipo 		: ar_section_tipo,
+		section_tipo 		: ar_sections,
 		filter 				: null,
 		offset 				: self.pagination.offset,
 		limit 				: self.pagination.limit,
@@ -290,11 +286,10 @@ component_portal.prototype.build_rq_context = function(){
 		full_count			: false,
 		filter_by_locators	: null
 	}
-	ar_dd_objects.push(sqo)
+	rq_context.push(sqo)
 
-	rq_context.show = ar_dd_objects
 	self.rq_context = rq_context
-	console.log("rq_context", rq_context);
+
 	return rq_context
 }
 
@@ -331,7 +326,7 @@ component_portal.prototype.build_sqo_search = function(){
 			value : current_item.search_engine
 		})
 
-		// show
+		// search
 		const show = current_item.search
 		const show_length = show.length
 		//get sections

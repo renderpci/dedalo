@@ -3404,7 +3404,7 @@ class section extends common {
 			$section_id 	= $this->get_section_id();
 			$lang 			= $this->get_lang();
 			$mode 			= $this->get_modo();
-			$limit 			= ($mode==='list') ? 10 : 1;
+			$limit 			= ($mode!=='list') ? 1 : 10;
 
 		// source
 			$source = $this->get_source();
@@ -3459,7 +3459,6 @@ class section extends common {
 
 		// fix
 			$this->rq_context = $rq_context;
-dump($rq_context, ' $rq_context ++ '.to_string());
 
 		return $rq_context;
 	}//end get_rq_context

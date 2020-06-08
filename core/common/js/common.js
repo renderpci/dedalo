@@ -193,15 +193,15 @@ common.prototype.refresh = async function() {
 
 	// offset update
 		if (self.rq_context && typeof self.pagination!=="undefined") {
-			const sqo = self.rq_context.show.find(element => element.typo==='sqo')
+			const sqo = self.rq_context.find(element => element.typo==='sqo')
 			if (sqo) {
 				sqo.offset = self.pagination.offset
 			}
 
-			const source = self.rq_context.show.find(element => element.typo==='source')
-			if (source) {
-				source.pagination.offset = self.pagination.offset
-			}
+			// const source = self.rq_context.find(element => element.typo==='source')
+			// if (source) {
+			// 	source.pagination.offset = self.pagination.offset
+			// }
 		}
 
 	// destroy dependences only
@@ -292,7 +292,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 						// send instance to general destroy
 						if (typeof destroyed_elements[0].destroy!=="undefined") {
 							destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
-						}						
+						}
 					}
 
 				// destroy all removed instances

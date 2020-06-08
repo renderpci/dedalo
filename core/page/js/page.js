@@ -84,7 +84,7 @@ page.prototype.init = async function(options) {
 			)
 		// user_action fn
 			async function user_action(options) {
-				// console.log("user_action options", options);
+				console.log("user_action options", options);
 
 
 				// const current_data_manager 	= new data_manager()
@@ -260,8 +260,7 @@ const instantiate_page_element = function(self, source) {
 			section_id		: source.section_id || null,
 			mode			: source.mode,
 			lang			: source.lang,
-			// rq_context		: source.rq_context || null,
-			// datum			: source.datum || null
+			// datum		: source.datum || null
 			rq_context 		: [source]
 		}
 

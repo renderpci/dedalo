@@ -191,7 +191,7 @@ class dd_core_api {
 
 				$response->debug = $debug;
 			}
-		dump($response, ' $response ++ '.to_string());
+		// dump($response, ' $response ++ '.to_string());
 
 		return (object)$response;
 	}//end read
@@ -406,7 +406,7 @@ class dd_core_api {
 			$element_json = $element->get_json($get_json_options);
 
 		// context add
-			$context = $element_json->context; dump($context, ' $context ++ '.to_string($model));
+			$context = $element_json->context; //dump($context, ' $context ++ '.to_string($model));
 
 		// response
 			$response->result = $context;
@@ -744,7 +744,7 @@ class dd_core_api {
 	static function ontology_get_childrens_recursive($json_data){
 		global $start_time;
 
-		session_write_close();
+		// session_write_close();
 
 		$response = new stdClass();
 			$response->result 	= false;

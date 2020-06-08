@@ -31,7 +31,7 @@ class sections extends common {
     * Singleton pattern
     * @returns array array of section objects by key
     */
-    public static function get_instance($ar_locators=[], $search_query_object, $caller_tipo=null, $modo='edit', $lang=DEDALO_DATA_NOLAN) {
+    public static function get_instance($ar_locators=[], $search_query_object=null, $caller_tipo=null, $modo='edit', $lang=DEDALO_DATA_NOLAN) {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $modo, $lang);
 
@@ -53,7 +53,7 @@ class sections extends common {
 		if (empty($search_query_object)) {
 			// throw new Exception("Error: on construct sections : search_query_object is mandatory. ar_locators:$ar_locators, tipo:$caller_tipo, modo:$modo", 1);
 			$section_tipo = $caller_tipo;
-			$section = section::get_instance(null, $section_tipo);
+			$section = section::get_instance(null, $section_tipo, $modo);
 			$rq_context = $section->get_rq_context();
 			$search_query_object = array_find($rq_context, function($item){
 				return ($item->typo==='sqo');
