@@ -22,24 +22,23 @@ class area extends area_common  {
 	*/
 	public static function get_areas() {
 
-		//gc_disable();
+		// gc_disable();
 
+		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		//if(SHOW_DEBUG===true) $start_time=microtime(1);
-
-		// if the session has the all_areas return it for speed
-		$current_session_value = $_SESSION['dedalo']['ontology']['all_areas'] ?? null;
-		if ($current_session_value && $current_session_value->lang===DEDALO_APPLICATION_LANG) {
-			return $_SESSION['dedalo']['ontology']['all_areas']->data;
-		}else if ($current_session_value!==null) {
-			unset($_SESSION['dedalo']['ontology']['all_areas']);
-		}
+		// cache session. If the session has the all_areas return it from cache for speed
+			$current_session_value = $_SESSION['dedalo']['ontology']['all_areas'] ?? null;
+			if ($current_session_value && $current_session_value->lang===DEDALO_APPLICATION_LANG) {
+				return $_SESSION['dedalo']['ontology']['all_areas']->data;
+			}else if ($current_session_value!==null) {
+				unset($_SESSION['dedalo']['ontology']['all_areas']);
+			}
 
 		// get the config_areas file to allow and denny some especific areas defined by installation.
-		$config_areas = self::get_config_areas();
-
-		$ar_root_areas = [];
-		// ROOT_AREAS
+			$config_areas = self::get_config_areas();
+		
+		// root_areas
+			$ar_root_areas 		= [];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
@@ -51,56 +50,60 @@ class area extends area_common  {
 			$areas = [];
 			foreach ($ar_root_areas as $area_tipo) {
 
-				// remove the areas_deny
-				if(in_array($area_tipo, $config_areas->areas_deny)) continue;
-				// get the JSON format of the ontology
-				$areas[]		= ontology::tipo_to_json_item($area_tipo,[
-					'tipo' 			=> true,
-					'tld'			=> false,
-					'is_model'		=> false,
-					'model'			=> true,
-					'model_tipo'	=> false,
-					'parent'		=> true,
-					'order'			=> false,
-					'translatable'	=> false,
-					'properties'	=> false,
-					'relations'		=> false,
-					'descriptors'	=> false,
-					'label'			=> true]);
-				// get the all children areas and sections of current
-				$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
-				// get the JSON format of the ontology for all childrens
-				foreach ($ar_group_areas as $children_area) {
-					$areas[]	= ontology::tipo_to_json_item($children_area,[
-					'tipo' 			=> true,
-					'tld'			=> false,
-					'is_model'		=> false,
-					'model'			=> true,
-					'model_tipo'	=> false,
-					'parent'		=> true,
-					'order'			=> false,
-					'translatable'	=> false,
-					'properties'	=> false,
-					'relations'		=> false,
-					'descriptors'	=> false,
-					'label'			=> true]);
-				}
-			}
+				// skip the areas_deny
+					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
+				
+				// areas. Get the JSON format of the ontology
+					$areas[] = ontology::tipo_to_json_item($area_tipo,[
+						'tipo'			=> true,
+						'tld'			=> false,
+						'is_model'		=> false,
+						'model'			=> true,
+						'model_tipo'	=> false,
+						'parent'		=> true,
+						'order'			=> false,
+						'translatable'	=> false,
+						'properties'	=> false,
+						'relations'		=> false,
+						'descriptors'	=> false,
+						'label'			=> true]);
+				
+				// group_areas. get the all children areas and sections of current
+					$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 
-		# Store in session for speed
+					// get the JSON format of the ontology for all childrens
+					foreach ($ar_group_areas as $children_area) {
+						$areas[] = ontology::tipo_to_json_item($children_area,[
+						'tipo'			=> true,
+						'tld'			=> false,
+						'is_model'		=> false,
+						'model'			=> true,
+						'model_tipo'	=> false,
+						'parent'		=> true,
+						'order'			=> false,
+						'translatable'	=> false,
+						'properties'	=> false,
+						'relations'		=> false,
+						'descriptors'	=> false,
+						'label'			=> true]);
+					}			
+			}//end foreach ($ar_root_areas as $area_tipo)
+
+		# cache session. Store in session for speed
 			$areas_item = new stdClass();
 				$areas_item->lang = DEDALO_APPLICATION_LANG;
 				$areas_item->data = $areas;
-		$_SESSION['dedalo']['ontology']['all_areas'] = $areas_item;
+			$_SESSION['dedalo']['ontology']['all_areas'] = $areas_item;
 
 
-		// if(SHOW_DEBUG===true) {
-		// 	$total 	= round(microtime(1)-$start_time,3);
-		// 	$n 		= count($areas);
-		// 	debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-		// }
+		// debug
+			if(SHOW_DEBUG===true) {
+				$total	= round(microtime(1)-$start_time,3);
+				$n		= count($areas);
+				debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+			}
 
-		 //gc_enable();
+		// gc_enable();
 
 		return $areas;
 	}//end get_areas
