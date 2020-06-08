@@ -1177,43 +1177,35 @@ global $sessiondb;
 	#if (session_status()===PHP_SESSION_ACTIVE) return false;
 
 	$options = new stdClass();
-		$options->save_handler 			= 'files';
-		$options->timeout_seconds 		= 1400;
-		$options->probability 			= 100;
-		$options->cookie_path 			= '/';
-		$options->cookie_domain 		= null;
-		$options->save_path 			= false; # /tmp/php
+		$options->save_handler			= 'files';
+		$options->timeout_seconds		= 1400;
+		$options->probability			= 100;
+		$options->cookie_path			= '/';
+		$options->cookie_domain			= null;
+		$options->save_path				= false; # /tmp/php
 		$options->aditional_save_path	= false; # /session_custom_sec
 		$options->session_name			= false;
 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-	switch ($options->save_handler) {
-		case 'memcached':
-			ini_set('session.save_handler', 'memcached');
-			# Connection type: '127.0.0.1:11211' , '/usr/local/var/memcached/memcached.sock'
-			ini_set('session.save_path', $options->save_path);
-
-			// Start the session!
-			session_start();
-			break;
+	switch ($options->save_handler) {		
 
 		case 'files':
-			$timeout 	 	= $options->timeout_seconds;
-			$probability 	= $options->probability;
-			$cookie_path 	= $options->cookie_path;
-			$cookie_domain 	= $options->cookie_domain;
+			$timeout		= $options->timeout_seconds;
+			$probability	= $options->probability;
+			$cookie_path	= $options->cookie_path;
+			$cookie_domain	= $options->cookie_domain;
 
 			// Set lifetime of cache (this no affect to session duration)
 			session_cache_expire( intval($timeout*60) ); 	#in minutes (*60)	Default php usually : 180
 
 			// Set the max lifetime
-			ini_set("session.gc_maxlifetime", $timeout);
+			ini_set('session.gc_maxlifetime', $timeout);
 
 			// Set the session cookie to timeout
-			ini_set("session.cookie_lifetime", $timeout);
+			ini_set('session.cookie_lifetime', $timeout);
 
 			if ($options->save_path!==false) {
-				ini_set( 'session.save_path', $options->save_path);
+				ini_set('session.save_path', $options->save_path);
 			}
 
 			if ($options->session_name!==false) {
@@ -1226,18 +1218,18 @@ global $sessiondb;
 				// used for all. Therefore, for this to work, the session
 				// must be stored in a directory where only sessions sharing
 				// it's lifetime are. Best to just dynamically create on.
-				$path = ini_get("session.save_path") . $options->aditional_save_path;
+				$path = ini_get('session.save_path') . $options->aditional_save_path;
 				if(!file_exists($path)) {
 					if(!mkdir($path, 0700)) {
 						trigger_error("Failed to create session save path directory '$path'. Check permissions.", E_USER_ERROR);
 					}
 				}
-				ini_set("session.save_path", $path);
+				ini_set('session.save_path', $path);
 			}
 
 			// Set the chance to trigger the garbage collection.
-			ini_set("session.gc_probability", $probability);
-			ini_set("session.gc_divisor", 100); // Should always be 100
+			ini_set('session.gc_probability', $probability);
+			ini_set('session.gc_divisor', 100); // Should always be 100
 
 			// Start the session!
 			session_start();
@@ -1250,6 +1242,15 @@ global $sessiondb;
 				#setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain);
 				setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain, TRUE, TRUE);
 			}
+			break;
+
+		case 'memcached':
+			ini_set('session.save_handler', 'memcached');
+			# Connection type: '127.0.0.1:11211' , '/usr/local/var/memcached/memcached.sock'
+			ini_set('session.save_path', $options->save_path);
+
+			// Start the session!
+			session_start();
 			break;
 
 		case 'postgresql':
@@ -1431,8 +1432,8 @@ function get_current_version_in_db() {
 	#loop the rows
 	while ($rows = pg_fetch_assoc($result)) {
 
-		$id 	= (int)$rows['id'];
-		$datos 	= (string)$rows['datos'];
+		$id		= (int)$rows['id'];
+		$datos	= (string)$rows['datos'];
 		$datos	= (object)json_handler::decode($datos);
 	}
 
@@ -1442,9 +1443,9 @@ function get_current_version_in_db() {
 
 		$ar_version = explode(".", $datos->dedalo_version);
 
-		$current_version[0] = (int)$ar_version[0];
-		$current_version[1] = (int)$ar_version[1];
-		$current_version[2] = (int)$ar_version[2];
+		$current_version[0]	= (int)$ar_version[0];
+		$current_version[1]	= (int)$ar_version[1];
+		$current_version[2]	= (int)$ar_version[2];
 	}
 
 	return $current_version;
