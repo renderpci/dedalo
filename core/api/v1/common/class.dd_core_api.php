@@ -120,7 +120,7 @@ class dd_core_api {
 			// if (isset($rq_context[0]->model) && $rq_context[0]->model==='component_text_area') {
 			// 	dump($rq_context, ' context 2 component_html_text ++ '.to_string());
 			// }
-			dump($rq_context, ' read - $rq_context ++ '.to_string());
+			// dump($rq_context, ' read - $rq_context ++ '.to_string());
 
 		// test 'test159'
 			$rq_context99 = json_decode('
@@ -191,7 +191,11 @@ class dd_core_api {
 
 				$response->debug = $debug;
 			}
+<<<<<<< HEAD
 		// dump($response, ' $response ++ '.to_string());
+=======
+		
+>>>>>>> 9ab224880cd2fa0188c64bbc3a05c3d3f28382ee
 
 		return (object)$response;
 	}//end read
@@ -715,11 +719,11 @@ class dd_core_api {
 		//session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			$user_id 		 	 = navigator::get_user_id();
-			$target_section_tipo = $json_data->target_section_tipo;
+			$user_id			= navigator::get_user_id();
+			$target_section_tipo= $json_data->target_section_tipo;
 
 			$filter_components = search::filter_get_user_presets($user_id, $target_section_tipo);
 
@@ -729,8 +733,8 @@ class dd_core_api {
 					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 			}
 
-		$response->result 		= $filter_components;
-		$response->msg 	  		= 'Ok. Request done';
+		$response->result	= $filter_components;
+		$response->msg		= 'Ok. Request done';
 
 		return (object)$response;
 	}//end filter_get_user_presets
@@ -744,8 +748,11 @@ class dd_core_api {
 	static function ontology_get_childrens_recursive($json_data){
 		global $start_time;
 
+<<<<<<< HEAD
 		// session_write_close();
 
+=======
+>>>>>>> 9ab224880cd2fa0188c64bbc3a05c3d3f28382ee
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -760,8 +767,8 @@ class dd_core_api {
 					$response->debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 			}
 
-		$response->result 		= $childrens;
-		$response->msg 	  		= 'Ok. Request done';
+		$response->result	= $childrens;
+		$response->msg		= 'Ok. Request done';
 
 		return (object)$response;
 	}//end ontology_get_areas
@@ -809,15 +816,15 @@ class dd_core_api {
 			$ddo_source = reset($ar_source);
 
 			// source vars
-				$action 		= $ddo_source->action ?? 'search';
-				$mode 			= $ddo_source->mode ?? 'list';
-				$lang 			= $ddo_source->lang ?? null;
-				$section_tipo 	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-				$section_id 	= $ddo_source->section_id ?? null;
-				$tipo 			= $ddo_source->tipo ?? null;
-				$model 			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
-				$limit 			= $ddo_source->pagination->limit ?? null;
-				$offset 		= $ddo_source->pagination->offset ?? null;
+				$action			= $ddo_source->action ?? 'search';
+				$mode			= $ddo_source->mode ?? 'list';
+				$lang			= $ddo_source->lang ?? null;
+				$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
+				$section_id		= $ddo_source->section_id ?? null;
+				$tipo			= $ddo_source->tipo ?? null;
+				$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
+				$limit			= $ddo_source->pagination->limit ?? null;
+				$offset			= $ddo_source->pagination->offset ?? null;
 
 		// sqo
 			$search_query_object = array_reduce($rq_context, function($carry, $item){

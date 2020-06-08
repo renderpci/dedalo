@@ -64,7 +64,7 @@ class menu extends common {
 	/**
 	* GET_INFO_DATA
 	* get the global information of the current intalation.
-	* @return
+	* @return object $info_data
 	*/
 	public function get_info_data() {
 
@@ -78,6 +78,7 @@ class menu extends common {
 			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'];
 			$info_data->dedalo_version		= DEDALO_VERSION;
 			$info_data->dedalo_build		= DEDALO_BUILD;
+			$info_data->php_sapi_name		= php_sapi_name();
 
 		return $info_data;
 	}//end get_info_data
