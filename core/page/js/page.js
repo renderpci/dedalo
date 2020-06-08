@@ -112,10 +112,10 @@ page.prototype.init = async function(options) {
 					// add current source from options
 						 elements_to_stay.push(source)
 					self.rq_context = elements_to_stay
-					
+
 				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
 					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
-					const instances_to_destroy = self.ar_instances.filter(item => !base_models.includes(item.model))
+					const instances_to_destroy = self.ar_instances.filter(item => base_models.includes(item.model))
 					for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
 						instances_to_destroy[i].destroyable = false
 					}
@@ -184,7 +184,7 @@ page.prototype.init = async function(options) {
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
  	return true
@@ -201,20 +201,6 @@ page.prototype.build = async function() {
 
 	// instances (like section). Instances are returned init and builded
 		await self.get_ar_instances()
-
-	// menu
-	// const page_menu = new menu()
-	// page_menu.init({menu_data : self.menu_data})
-	// page_menu.build()
-	// self.menu = page_menu
-
-	// reset self.ar_instances
-		//self.ar_instances = []
-
-	// reset self.node
-		//self.node = []
-
-		// console.log("self", self);
 
 	// status update
 		self.status = 'builded'
@@ -241,26 +227,14 @@ page.prototype.get_ar_instances = async function(){
 				// console.log("page.get_ar_instances source:", source);
 			}
 
-			// element instance (load file)
-				// const current_instance = await get_instance({
-				// 	model 				: element.model,
-				// 	tipo 				: element.tipo || element.section_tipo,
-				// 	section_tipo		: element.section_tipo || null,
-				// 	section_id			: element.section_id || null,
-				// 	mode				: element.mode,
-				// 	lang				: element.lang,
-				// 	rq_context			: element.rq_context || null,
-				// 	datum				: element.datum || null
-				// })
 			const current_instance = await instantiate_page_element(self, source)
 			// console.log("---- page get_ar_instances current_instance", current_instance);
 
 			// build (load data)
-				await current_instance.build(true)
+			await current_instance.build(true)
 
 			// add
 				self.ar_instances.push(current_instance)
-
 		}//end for (let i = 0; i < elements_length; i++)
 
 

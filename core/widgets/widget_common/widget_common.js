@@ -39,7 +39,7 @@ widget_common.prototype.init = async function(options) {
 		self.ipo			= options.ipo
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
 	return true

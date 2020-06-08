@@ -114,27 +114,11 @@ section.prototype.init = async function(options) {
 	self.permissions 		= options.permissions || null
 
 
-	// source. add to rq_context if not exists. Be careful not to add a source element twice
-	// (!) VERIFICAR QUE REALMENTE HACE FALTA
-		// if (self.rq_context && self.rq_context.show) {
-		// 	const current_source = self.rq_context.show.find(element => element.typo==='source')
-		// 	if (current_source) {
-		// 		console.warn("Source alredy exists. Skipped source creation for rq_context",current_source)
-		// 	}else{
-		// 		const source = create_source(self,'search')
-		// 		self.rq_context.show.push(source)
-		// 		if(SHOW_DEBUG===true) {
-		// 			console.warn("Added created 'source' element to rq_context.show on init section",source)
-		// 		}
-		// 	}
-		// }
-
-
 	// events subscription
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
 	return true
@@ -163,19 +147,6 @@ section.prototype.build = async function(autoload=false) {
 
 			const current_data_manager = new data_manager()
 
-			// count rows
-				// if (!self.pagination.total) {
-				//
-				// 	self.pagination.total = (sqo.full_count && sqo.full_count>0)
-				// 		? sqo.full_count
-				// 		: (async () => {
-				// 			const response = await current_data_manager.count(sqo)
-				// 			return response.result.total
-				// 		})()
-				// }
-				// console.log("self.pagination.total:",self.pagination.total);
-
-
 			// get context and data
 				// const show_tipos 	= self.rq_context.find(item => item.typo==="show").value
 				// const ar_ddo_show 	= self.rq_context.filter(item => item.typo==="ddo" && show_tipos.indexOf(item.tipo)!==-1)
@@ -183,30 +154,53 @@ section.prototype.build = async function(autoload=false) {
 					  source.action = "search"
 				const rq_context 	= [source]
 				const api_response = await current_data_manager.section_load_data(rq_context)
-					console.log("section build api_response", api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
 
+			// set context and data to current instance
+				self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
+				self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
+				self.section_id = self.data
+					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+					: null
+
+			// set rq_context
+				self.rq_context = self.context.find(item => item.tipo===self.tipo && item.model==='section').rq_context
+
+			// sqo
+				const sqo = self.rq_context.find(element => element.typo==='sqo')
+
+			// count rows
+				if (!self.pagination.total) {
+
+					self.pagination.total = (sqo.full_count && sqo.full_count>0)
+						? sqo.full_count
+						: (async () => {
+							const response = await current_data_manager.count(sqo)
+							return response.result.total
+						})()
+				}
+
 			// debug
 				// load_section_data_debug(self.tipo, self.rq_context, api_response, self)
+		}else{
+
+			// set context and data to current instance
+				self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
+				self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
+				self.section_id = self.data
+					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+					: null
+
+			// set rq_context
+				self.rq_context = self.context.find(item => item.tipo===self.tipo && item.model==='section').rq_context
 		}
 
 
-	// set context and data to current instance
-		self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
-		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
-		self.section_id = self.data
-			? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
-			: null
-
-	// set rq_context
-		console.log("self.datum", self.datum);
-		console.log("self.context", self.context);
-		self.rq_context = self.context.find(item => item.tipo===self.tipo && item.model==='section').rq_context
-
 	// sqo
 		const sqo = self.rq_context.find(element => element.typo==='sqo')
+
 
 	// Update section mode/label with context declarations
 		const section_context = self.context.find(element => element.tipo===self.section_tipo) || {
