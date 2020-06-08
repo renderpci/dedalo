@@ -28,6 +28,7 @@ class area extends area_common  {
 
 		// cache session. If the session has the all_areas return it from cache for speed
 			$current_session_value = $_SESSION['dedalo']['ontology']['all_areas'] ?? null;
+
 			if ($current_session_value && $current_session_value->lang===DEDALO_APPLICATION_LANG) {
 				return $_SESSION['dedalo']['ontology']['all_areas']->data;
 			}else if ($current_session_value!==null) {
@@ -36,7 +37,7 @@ class area extends area_common  {
 
 		// get the config_areas file to allow and denny some especific areas defined by installation.
 			$config_areas = self::get_config_areas();
-		
+
 		// root_areas
 			$ar_root_areas 		= [];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
@@ -52,7 +53,7 @@ class area extends area_common  {
 
 				// skip the areas_deny
 					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
-				
+
 				// areas. Get the JSON format of the ontology
 					$areas[] = ontology::tipo_to_json_item($area_tipo,[
 						'tipo'			=> true,
@@ -67,7 +68,7 @@ class area extends area_common  {
 						'relations'		=> false,
 						'descriptors'	=> false,
 						'label'			=> true]);
-				
+
 				// group_areas. get the all children areas and sections of current
 					$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 
@@ -86,7 +87,7 @@ class area extends area_common  {
 						'relations'		=> false,
 						'descriptors'	=> false,
 						'label'			=> true]);
-					}			
+					}
 			}//end foreach ($ar_root_areas as $area_tipo)
 
 		# cache session. Store in session for speed
@@ -94,7 +95,6 @@ class area extends area_common  {
 				$areas_item->lang = DEDALO_APPLICATION_LANG;
 				$areas_item->data = $areas;
 			$_SESSION['dedalo']['ontology']['all_areas'] = $areas_item;
-
 
 		// debug
 			if(SHOW_DEBUG===true) {

@@ -148,12 +148,7 @@ section.prototype.build = async function(autoload=false) {
 			const current_data_manager = new data_manager()
 
 			// get context and data
-				// const show_tipos 	= self.rq_context.find(item => item.typo==="show").value
-				// const ar_ddo_show 	= self.rq_context.filter(item => item.typo==="ddo" && show_tipos.indexOf(item.tipo)!==-1)
-				const source 		= self.rq_context.find(item => item.typo==="source")
-					  source.action = "search"
-				const rq_context 	= [source]
-				const api_response = await current_data_manager.section_load_data(rq_context)
+				const api_response = await current_data_manager.section_load_data(self.rq_context)
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -167,6 +162,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// set rq_context
 				self.rq_context = self.context.find(item => item.tipo===self.tipo && item.model==='section').rq_context
+				console.log("self.rq_context", self.rq_context);
 
 			// sqo
 				const sqo = self.rq_context.find(element => element.typo==='sqo')
@@ -231,6 +227,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// paginator
 		if (!self.paginator) {
+
 			const current_paginator = new paginator()
 			current_paginator.init({
 				caller : self
@@ -245,9 +242,6 @@ section.prototype.build = async function(autoload=false) {
 					self.refresh() // refresh current section
 				})
 			)//end events push
-		}else{
-			// refresh current existing paginator
-			self.paginator.refresh()
 		}
 
 	// filter

@@ -2265,8 +2265,6 @@ abstract class common {
 		// 	throw new Exception("Error Processing get_config_context (6) unresolved section_tipo:".to_string($section_tipo), 1);
 		// }
 
-		dump($section_tipo, ' $section_tipo ++ '.to_string());
-
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$properties		= $RecordObj_dd->get_propiedades(true);
 

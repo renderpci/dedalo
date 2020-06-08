@@ -111,7 +111,7 @@
 
 					$rq_context[] = $area_source;
 					break;
-			
+
 				default:
 					// code...
 					break;
