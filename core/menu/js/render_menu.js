@@ -261,7 +261,7 @@ render_menu.prototype.edit = async function() {
 * @return dom node debug_info_bar
 */
 const get_debug_info_bar = (self) => {
-
+	console.log("self:",self);
 	const debug_info_bar = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'debug_info_bar'
@@ -299,6 +299,13 @@ const get_debug_info_bar = (self) => {
 		element_type	: 'div',
 		class_name		: 'php_memory',
 		text_content 	: 'PHP memory: ' + page_globals.php_memory,
+		parent 			: debug_info_bar
+	})
+
+	const php_sapi_name = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'php_sapi_name',
+		text_content 	: 'PHP sapi. ' + self.data.info_data.php_sapi_name,
 		parent 			: debug_info_bar
 	})
 
