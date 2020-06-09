@@ -191,11 +191,7 @@ class dd_core_api {
 
 				$response->debug = $debug;
 			}
-<<<<<<< HEAD
-		// dump($response, ' $response ++ '.to_string());
-=======
-		
->>>>>>> 9ab224880cd2fa0188c64bbc3a05c3d3f28382ee
+
 
 		return (object)$response;
 	}//end read
@@ -748,11 +744,8 @@ class dd_core_api {
 	static function ontology_get_childrens_recursive($json_data){
 		global $start_time;
 
-<<<<<<< HEAD
 		// session_write_close();
 
-=======
->>>>>>> 9ab224880cd2fa0188c64bbc3a05c3d3f28382ee
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
