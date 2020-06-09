@@ -261,10 +261,10 @@ export const service_tinymce = function() {
 				const container_height  = self.dd_tinny.offsetHeight; // self.container
 
 				const toolbar			= self.dd_tinny.querySelector('.mce-toolbar-grp') // mce-toolbar-grp mce-container mce-panel mce-stack-layout-item mce-first
-				const toolbar_height 	= toolbar ? toolbar.offsetHeight : 0
-
-				const statusbar 		= self.dd_tinny.querySelector('.mce-statusbar') // mce-statusbar mce-container mce-panel mce-stack-layout-item mce-last
-				const statusbar_height  = statusbar ? statusbar.offsetHeight : 0
+				const toolbar_height	= toolbar ? toolbar.offsetHeight : 0
+				
+				const statusbar			= self.dd_tinny.querySelector('.mce-statusbar') // mce-statusbar mce-container mce-panel mce-stack-layout-item mce-last
+				const statusbar_height	= statusbar ? statusbar.offsetHeight : 0
 
 				const h = container_height - toolbar_height - statusbar_height - 3
 
