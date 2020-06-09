@@ -258,3 +258,60 @@ tool_indexation.prototype.create_fragment = function ( button_obj, event ) {	//,
 
 
 
+/**
+* ACTIVE_VALUE
+* @return boolean
+*/
+tool_indexation.prototype.active_value = function(name, callback) {
+
+	self.active_elements = self.active_elements || []
+
+	const found = self.active_elements.find(el => el.name===name && el.callback===callback)
+	if (found) {
+		console.warn("Skip already added active value name:", name);
+		return false
+	}
+
+	// add
+	self.active_elements.push({
+		name		: name,
+		callback	: callback
+	})
+
+	console.log("self.active_elements:",self.active_elements);
+	
+
+	return true
+}//end active_value
+
+
+
+
+/**
+* UPDATE_ACTIVE_VALUES
+* @return boolean
+*/
+tool_indexation.prototype.update_active_values = function(values) {
+
+	for (let i = 0; i < values.length; i++) {
+		
+		const item = values[i]
+
+		const founds = self.active_elements.filter(el => el.name===item.name)
+		for (let j = 0; j < founds.length; j++) {
+			
+			const found = founds[j]
+				console.log("------------------- found:",found);
+
+			if (found.callback) {
+				found.callback(item.value)
+			}
+		}		
+	}
+
+	
+	return true
+}//end update_active_values
+
+
+
