@@ -609,7 +609,7 @@ const get_custom_events = (self, i, get_service) => {
 		// use the observe property into ontology of the components to suscribe to this events
 		// img : click on img
 		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
-			const tag_obj = evt.target
+			const tag_obj = evt.target			
 			switch(evt.target.className) {
 
 				case 'tc':
@@ -617,37 +617,39 @@ const get_custom_events = (self, i, get_service) => {
 					event_manager.publish('click_tag_tc' +'_'+ self.id_base, {tag:tag_obj, caller: self})
 					break;
 
-				case 'indexIn' :
-				case 'indexOut' :
-					var tipo			= text_area_component.dataset.tipo
-					var	lang			= text_area_component.dataset.lang
-					var	section_tipo	= text_area_component.dataset.section_tipo
-					var	parent			= text_area_component.dataset.parent
+				case 'index':
 
-					switch(page_globals.modo) {
+					event_manager.publish('click_tag_index' +'_'+ self.id_base, {tag:tag_obj, caller: self})					
 
-						case 'edit' :
-							// INSPECTOR : Show info about indexations in inspector
-							tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
+					// const tipo			= text_area_component.dataset.tipo
+					// const lang			= text_area_component.dataset.lang
+					// const section_tipo	= text_area_component.dataset.section_tipo
+					// const parent		= text_area_component.dataset.parent
 
-							// RELATIONS
-							//component_text_area.load_relation(tag, tipo, parent, section_tipo);
-							//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
+					// switch(page_globals.modo) {
 
-							// PORTAL SELECT FRAGMENT FROM TAG BUTTON
-							if (page_globals.context_name=='list_into_tool_portal') {
-								// Show hidden button link_fragmet_to_portal and configure to add_resource
-								component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
-							}
-							break;
+					// 	case 'edit' :
+					// 		// inspector : Show info about indexations in inspector
+					// 		tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
 
-						case 'tool_indexation' :
-							// Show info about in tool relation window
-							component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
-							break;
-					}
-					// mask_tags on click image index
-					mce_editor.mask_tags(ed, evt);
+					// 		// relations
+					// 		//component_text_area.load_relation(tag, tipo, parent, section_tipo);
+					// 		//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
+
+					// 		// portal select fragment from tag button
+					// 		if (page_globals.context_name=='list_into_tool_portal') {
+					// 			// Show hidden button link_fragmet_to_portal and configure to add_resource
+					// 			component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
+					// 		}
+					// 		break;
+
+					// 	case 'tool_indexation' :
+					// 		// Show info about in tool relation window
+					// 		component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
+					// 		break;
+					// }
+					// // mask_tags on click image index
+					// mce_editor.mask_tags(ed, evt);
 					break;
 
 				case 'svg' :
