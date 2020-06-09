@@ -43,25 +43,25 @@ export const component_text_area = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_text_area.prototype.init 	 		= component_common.prototype.init
-	component_text_area.prototype.build 		= component_common.prototype.build
-	component_text_area.prototype.render 		= common.prototype.render
-	component_text_area.prototype.refresh 		= common.prototype.refresh
-	component_text_area.prototype.destroy 		= common.prototype.destroy
+	component_text_area.prototype.init		= component_common.prototype.init
+	component_text_area.prototype.build		= component_common.prototype.build
+	component_text_area.prototype.render	= common.prototype.render
+	component_text_area.prototype.refresh	= common.prototype.refresh
+	component_text_area.prototype.destroy	= common.prototype.destroy
 
 	// change data
-	component_text_area.prototype.save 	 			= component_common.prototype.save
-	component_text_area.prototype.change_value 		= component_common.prototype.change_value
+	component_text_area.prototype.save				= component_common.prototype.save
+	component_text_area.prototype.change_value		= component_common.prototype.change_value
 	component_text_area.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_text_area.prototype.update_datum 		= component_common.prototype.update_datum
+	component_text_area.prototype.update_datum		= component_common.prototype.update_datum
 
 	// render
-	component_text_area.prototype.list 			= render_component_text_area.prototype.list
-	component_text_area.prototype.edit 			= render_component_text_area.prototype.edit
+	component_text_area.prototype.list			= render_component_text_area.prototype.list
+	component_text_area.prototype.edit			= render_component_text_area.prototype.edit
 	component_text_area.prototype.edit_in_list	= render_component_text_area.prototype.edit
-	component_text_area.prototype.tm 			= render_component_text_area.prototype.edit // time machine render alias of edit
-	component_text_area.prototype.search 		= render_component_text_area.prototype.search
-	component_text_area.prototype.change_mode 	= component_common.prototype.change_mode
+	component_text_area.prototype.tm			= render_component_text_area.prototype.edit // time machine render alias of edit
+	component_text_area.prototype.search		= render_component_text_area.prototype.search
+	component_text_area.prototype.change_mode	= component_common.prototype.change_mode
 
 
 
@@ -370,10 +370,10 @@ component_text_area.prototype.update_tag = function(options) {
 		return false
 	}
 
-	const type 			= options.type
-	const tag_id 		= options.tag_id
-	const new_data_obj 	= options.dataset
-	const save 			= options.save || false
+	const type			= options.type
+	const tag_id		= options.tag_id
+	const new_data_obj	= options.dataset
+	const save			= options.save || false
 
 	const wrapper 	= self.node[0]
 
@@ -629,14 +629,14 @@ component_text_area.prototype.create_fragment = function(key) {
 
 		// tag images
 			const image_in  = build_node_tag({
-				type 	: "indexIn",
-				state 	: tag_state,
+				type	: "indexIn",
+				state	: tag_state,
 				label	: "label in " + tag_id,
 				data	: ""
 			}, tag_id)
 			const image_out  = build_node_tag({
-				type 	: "indexOut",
-				state 	: tag_state,
+				type	: "indexOut",
+				state	: tag_state,
 				label	: "label in " + tag_id,
 				data	: ""
 			}, tag_id)
