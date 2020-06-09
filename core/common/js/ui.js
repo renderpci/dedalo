@@ -871,7 +871,7 @@ export const ui = {
 		const parent					= element_options.parent
 		const class_name				= element_options.class_name
 		const style						= element_options.style	
-		const data_set					= (typeof data_set==="undefined" && typeof element_options.dataset!=="undefined") ? element_options.dataset : element_options.data_set
+		const data_set					= (typeof element_options.dataset!=="undefined") ? element_options.dataset : element_options.data_set
 		const custom_function_events	= element_options.custom_function_events
 		const title_label				= element_options.title_label || element_options.title
 		const text_node					= element_options.text_node

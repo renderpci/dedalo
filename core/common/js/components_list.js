@@ -2,20 +2,20 @@
 
 
 // 	// section
- 	import '../../section/js/section.js' // + '?v=' + page_globals.dedalo_version
- 	import '../../section/js/render_section.js' // + '?v=' + page_globals.dedalo_version
+	import '../../section/js/section.js' // + '?v=' + page_globals.dedalo_version
+	import '../../section/js/render_section.js' // + '?v=' + page_globals.dedalo_version
 
 // 	// section_record
- 	import '../../section_record/js/section_record.js' // + '?v=' + page_globals.dedalo_version
- 	import '../../section_record/js/render_section_record.js' // + '?v=' + page_globals.dedalo_version
+	import '../../section_record/js/section_record.js' // + '?v=' + page_globals.dedalo_version
+	import '../../section_record/js/render_section_record.js' // + '?v=' + page_globals.dedalo_version
 
 // 	// section_group
- 	import '../../section_group/js/section_group.js' // + '?v=' + page_globals.dedalo_version
- 	import '../../section_group/js/render_section_group.js' // + '?v=' + page_globals.dedalo_version
+	import '../../section_group/js/section_group.js' // + '?v=' + page_globals.dedalo_version
+	import '../../section_group/js/render_section_group.js' // + '?v=' + page_globals.dedalo_version
 
 // 	// common
- 	import '../../common/js/ui.js' // + '?v=' + page_globals.dedalo_version
- 	import '../../component_common/js/component_common.js' // + '?v=' + page_globals.dedalo_version
+	import '../../common/js/ui.js' // + '?v=' + page_globals.dedalo_version
+	import '../../component_common/js/component_common.js' // + '?v=' + page_globals.dedalo_version
 
 // 	// components
  	import '../../component_input_text/js/component_input_text.js' // + '?v=' + page_globals.dedalo_version
@@ -56,7 +56,7 @@
 	import '../../component_text_area/js/render_component_text_area.js' // + '?v=' + page_globals.dedalo_version
 
 // utils
- 	import '../../paginator/js/paginator.js' // + '?v=' + page_globals.dedalo_version
- 	import '../../search/js/search.js' // + '?v=' + page_globals.dedalo_version
- 	import '../../services/service_autocomplete/js/service_autocomplete.js' // + '?v=' + page_globals.dedalo_version
- 	import '../../login/js/login.js' // + '?v=' + page_globals.dedalo_version
+	import '../../paginator/js/paginator.js' // + '?v=' + page_globals.dedalo_version
+	import '../../search/js/search.js' // + '?v=' + page_globals.dedalo_version
+	import '../../services/service_autocomplete/js/service_autocomplete.js' // + '?v=' + page_globals.dedalo_version
+	import '../../login/js/login.js' // + '?v=' + page_globals.dedalo_version
