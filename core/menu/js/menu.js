@@ -40,13 +40,14 @@ export const menu = function(){
 */
 // prototypes assign
 	// lifecycle
-	menu.prototype.render 		= common.prototype.render
-	menu.prototype.destroy 		= common.prototype.destroy
-	menu.prototype.refresh 		= common.prototype.refresh
+	menu.prototype.render			= common.prototype.render
+	menu.prototype.destroy			= common.prototype.destroy
+	menu.prototype.refresh			= common.prototype.refresh
+	menu.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	menu.prototype.list 		= render_menu.prototype.list
-	menu.prototype.edit 		= render_menu.prototype.edit
+	menu.prototype.list				= render_menu.prototype.list
+	menu.prototype.edit				= render_menu.prototype.edit
 
 
 
@@ -58,18 +59,21 @@ menu.prototype.init = function(options) {
 
 	const self = this
 
-	self.tipo 			= options.tipo
-	self.model 			= options.model
-	self.node 			= []
-	self.li_nodes 		= []
-	self.ul_nodes 		= []
-	self.ar_instances 	= []
-	self.mode 			= 'edit'
-	self.rq_context 	= options.rq_context
-	self.datum 			= options.datum
-	self.context 		= options.context
-	self.data 			= options.data
-	self.events_tokens 	= []
+	self.tipo			= options.tipo
+	self.model			= options.model
+	self.node			= []
+	self.li_nodes		= []
+	self.ul_nodes		= []
+	self.ar_instances	= []
+	self.mode			= 'edit'
+	self.datum			= options.datum
+	self.context		= options.context
+	self.data			= options.data
+	self.events_tokens	= []
+
+	self.dd_request = {
+		show : null
+	}
 
 	// status update
 		self.status = 'initiated'
@@ -91,6 +95,9 @@ menu.prototype.build = async function(autoload=true){
 	// status update
 		self.status = 'building'
 
+		// set dd_request
+			self.request_config		= self.context.request_config
+			self.dd_request.show	= self.build_dd_request('show', self.request_config, 'search')
 
 	if (autoload===true) {
 
@@ -98,7 +105,7 @@ menu.prototype.build = async function(autoload=true){
 			const current_data_manager = new data_manager()
 
 		// get context and data
-			const api_response 	= await current_data_manager.get_menu(self.rq_context)
+			const api_response = await current_data_manager.get_menu(self.dd_request.show)
 			console.log("menu build api_response", api_response);
 
 		// set the result to the datum

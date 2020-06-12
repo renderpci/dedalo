@@ -13,8 +13,10 @@
 	if($options->get_context===true){
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$context[] = $this->get_structure_context($permissions, $rq_context=false);
+			$structure_context = $this->get_structure_context($permissions, $add_request_config=false);
+				$structure_context->request_config = [$this->get_source()];
 
+		$context[] = $structure_context;
 	}//end if($options->get_context===true)
 
 
@@ -33,8 +35,8 @@
 				$langs_datalist = [];
 				foreach (unserialize( DEDALO_APPLICATION_LANGS ) as $key => $value) {
 					$obj_langs = new stdClass();
-						$obj_langs->value 	= $key;
-						$obj_langs->label 	= $value;
+						$obj_langs->value	= $key;
+						$obj_langs->label	= $value;
 					$langs_datalist[] = $obj_langs;
 				}
 
@@ -44,11 +46,11 @@
 
 		// data item
 		$item = new stdClass();
-			$item->tipo 				= $this->get_tipo();
-			$item->model 				= 'menu';
-			$item->tree_datalist 		= $tree_datalist;
-			$item->langs_datalist 		= $langs_datalist;
-			$item->info_data			= $info_data;
+			$item->tipo				= $this->get_tipo();
+			$item->model			= 'menu';
+			$item->tree_datalist	= $tree_datalist;
+			$item->langs_datalist	= $langs_datalist;
+			$item->info_data		= $info_data;
 
 
 		$data[] = $item;
