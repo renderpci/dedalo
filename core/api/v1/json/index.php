@@ -8,8 +8,8 @@ $start_time=microtime(1);
 	// includes
 		// config dedalo
 		include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
-		// json manager
-		include dirname(dirname(__FILE__)) .'/common/class.manager.php';
+		// json dd_manager
+		include dirname(dirname(__FILE__)) .'/common/class.dd_manager.php';
 
 
 
@@ -22,12 +22,12 @@ $start_time=microtime(1);
 
 
 
-	// manager
-		$manager = new manager();
+	// dd_dd_manager
+		$dd_manager = new dd_manager();
 
 		if(SHOW_DEBUG===true) {
 
-			$dedalo_data 		= $manager->manage_request( $options );
+			$dedalo_data 		= $dd_manager->manage_request( $options );
 			$error_last  		= error_get_last();
 			$error_last_print 	= print_r(error_get_last(), true);
 
@@ -49,7 +49,7 @@ $start_time=microtime(1);
 		}else{
 
 			try {
-				$dedalo_data = $manager->manage_request( $options );
+				$dedalo_data = $dd_manager->manage_request( $options );
 				$result 	 = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
 			} catch (Exception $e) {
 				$error_obj = new stdClass();

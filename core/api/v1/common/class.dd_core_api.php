@@ -14,8 +14,8 @@ class dd_core_api {
 	// ar_dd_objects . store current ar_dd_objects received in context to allow external access (portals, etc.)
 		static $ar_dd_objects;
 
-	// $rq_context_ddo . store current ddo items added by get_config_context methods (portals, etc.)
-		static $rq_context_ddo = [];
+	// $request_ddo . store current ddo items added by get_config_context methods (portals, etc.)
+		static $request_ddo = [];
 
 	/**
 	* __CONSTRUCT
@@ -102,28 +102,16 @@ class dd_core_api {
 		//session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// context accept object and array of objects
-			$rq_context = $json_data->rq_context;
-			// $rq_context = is_array($json_data->rq_context)
-			// 	? $json_data->context
-			// 	: (function($item){
-			// 		if (is_object($item)) {
-			// 			$item->typo  = $item->typo ?? 'source';
-			// 			$item->model = $item->model ?? RecordObj_dd::get_modelo_name_by_tipo($item->tipo,true);
-			// 		}
-			// 		return [$item];
-			// 	})($json_data->context);
-			// dump($rq_context, ' context 1 ++ '.to_string());
-			// if (isset($rq_context[0]->model) && $rq_context[0]->model==='component_text_area') {
-			// 	dump($rq_context, ' context 2 component_html_text ++ '.to_string());
-			// }
-			// dump($rq_context, ' read - $rq_context ++ '.to_string());
+			$dd_request = $json_data->dd_request;			
+			// dump($dd_request, ' read - $dd_request ++ '.to_string());
+			// debug_log(__METHOD__." API DD_REQUEST ".str_repeat("==", 40).PHP_EOL.json_encode($dd_request, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("==", 84), logger::DEBUG);
 
 		// test 'test159'
-			$rq_context99 = json_decode('
+			$dd_request99 = json_decode('
 				[
 				  {
 				    "typo": "sqo",
@@ -175,9 +163,9 @@ class dd_core_api {
 				  }
 				]
 			');
-			// dump($rq_context, ' context 2 ++ '.to_string());
+			// dump($dd_request, ' context 2 ++ '.to_string());
 
-		$json_rows = self::build_json_rows($rq_context);
+		$json_rows = self::build_json_rows($dd_request);
 
 		$result = $json_rows;
 
@@ -191,7 +179,7 @@ class dd_core_api {
 
 				$response->debug = $debug;
 			}
-			
+
 		return (object)$response;
 	}//end read
 
@@ -416,176 +404,176 @@ class dd_core_api {
 	}//end get_element_context
 
 
-
-	/**
-	* GET_PAGE_ELEMENT
-	* Creates a full ready page element from basic vars (tipo, model, lang, mode, section_id)
-	* @param object $options
-	* @return object $response
-	*/
-	public static function get_page_element($request) {
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-
-		// set options from request
-			if (!$options = $request->options) {
-				return $response;
-			}
-
-		// sort vars
-			$tipo 			= $options->tipo ?? null;
-			$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
-			$lang 			= $options->lang ?? DEDALO_DATA_LANG;
-			$mode 			= $options->mode ?? 'list';
-			$section_id 	= $options->section_id ?? null;
-			$component_tipo = $options->component_tipo ?? null;
-
-		// page elements
-			switch (true) {
-
-				case $model==='menu' :
-					$page_element = (function(){
-
-						$menu = new menu();
-
-						// menu json
-							$get_json_options = new stdClass();
-								$get_json_options->get_context 	= true;
-								$get_json_options->get_data 	= true;
-							$menu_json = $menu->get_json($get_json_options);
-
-						$page_element = new StdClass();
-							$page_element->model 		= 'menu';
-							$page_element->type 		= 'menu';
-							$page_element->tipo 		= 'dd85';
-							$page_element->mode 		= 'edit';
-							$page_element->lang 		= DEDALO_APPLICATION_LANG;
-							$page_element->rq_context  = null;
-							$page_element->datum 		= $menu_json;
-
-						return $page_element;
-					})();
-					break;
-
-				case strpos($model, 'area')===0:
-					$page_element = (function() use ($model, $tipo, $mode){
-
-						$page_element = new StdClass();
-							$page_element->model 		= $model;
-							$page_element->type  		= 'area';
-							$page_element->tipo  		= $tipo;
-							$page_element->mode 	 	= $mode;
-							$page_element->lang 	 	= DEDALO_DATA_LANG;
-							$page_element->section_tipo = $tipo;
-
-							// rq_context
-								$area = area::get_instance($model, $tipo, $mode);
-								$rq_context = $area->get_rq_context();
-
-							$page_element->rq_context = $rq_context;
-
-						return $page_element;
-					})();
-					break;
-
-				case $model==='section':
-					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-
-						$section_tipo = $tipo;
-
-						// rq_context
-							$section = section::get_instance($section_id, $section_tipo, $mode);
-							$section->set_lang($lang);
-							$rq_context = $section->get_rq_context();
-
-						$page_element = new StdClass();
-							$page_element->model 		 = $model;
-							$page_element->type 		 = 'section';
-							$page_element->tipo 		 = $section_tipo;
-							$page_element->section_tipo  = $section_tipo;
-							$page_element->section_id 	 = $section_id;
-							$page_element->mode 		 = $mode;
-							$page_element->lang 		 = $lang;
-							$page_element->rq_context	 = $rq_context;
-
-						return $page_element;
-					})();
-					break;
-
-				case $model==='section_tm':
-					$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-
-						$section_tipo = $tipo;
-
-						// rq_context
-							$section = section_tm::get_instance($section_id, $section_tipo, $mode);
-							$section->set_lang($lang);
-							$rq_context = $section->get_rq_context();
-
-						$page_element = new StdClass();
-							$page_element->model		 = $model;
-							$page_element->type			 = 'section';
-							$page_element->tipo			 = $section_tipo;
-							$page_element->section_tipo  = $section_tipo;
-							$page_element->section_id	 = $section_id;
-							$page_element->mode 		 = $mode;
-							$page_element->lang 		 = $lang;
-							$page_element->rq_context	 = $rq_context;
-
-						return $page_element;
-					})();
-					break;
-
-				case $model==='section_tool':
-					$page_element = (function() use ($model, $tipo, $mode){
-
-						# Configure section from section_tool data
-						$RecordObj_dd = new RecordObj_dd($tipo);
-						$propiedades  = $RecordObj_dd->get_propiedades(true);
-
-						#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
-						#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
-
-						$section_tipo 	= $tipo;
-						$section_id		= null;
-						$lang 	 	 	= DEDALO_DATA_LANG;
-
-						// rq_context
-							$section = section::get_instance($section_id, $section_tipo, $mode);
-							$section->set_lang($lang);
-							$section->config = $propiedades->config;
-							$rq_context = $section->get_rq_context();
-
-						$page_element = new StdClass();
-							$page_element->model 		 = 'section';
-							$page_element->type 		 = 'section';
-							$page_element->section_tipo  = $section_tipo;
-							$page_element->section_id 	 = $section_id;
-							$page_element->mode 	 	 = $mode;
-							$page_element->lang 	 	 = $lang;
-							$page_element->rq_context   = $rq_context;
-
-						return $page_element;
-					})();
-					break;
-
-				default:
-					#throw new Exception("Error Processing Request", 1);
-					$response->msg = 'Error. model not found: '.$model;
-					return $response;
-
-			}//end switch ($model)
-
-
-		$response->result 	= $page_element;
-		$response->msg 	  	= 'Ok. Request done';
-
-
-		return (object)$response;
-	}//end get_page_element
-
+	//
+	// /**
+	// * GET_PAGE_ELEMENT
+	// * Creates a full ready page element from basic vars (tipo, model, lang, mode, section_id)
+	// * @param object $options
+	// * @return object $response
+	// */
+	// public static function get_page_element($request) {
+	//
+	// 	$response = new stdClass();
+	// 		$response->result 	= false;
+	// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+	//
+	// 	// set options from request
+	// 		if (!$options = $request->options) {
+	// 			return $response;
+	// 		}
+	//
+	// 	// sort vars
+	// 		$tipo 			= $options->tipo ?? null;
+	// 		$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
+	// 		$lang 			= $options->lang ?? DEDALO_DATA_LANG;
+	// 		$mode 			= $options->mode ?? 'list';
+	// 		$section_id 	= $options->section_id ?? null;
+	// 		$component_tipo = $options->component_tipo ?? null;
+	//
+	// 	// page elements
+	// 		switch (true) {
+	//
+	// 			case $model==='menu' :
+	// 				$page_element = (function(){
+	//
+	// 					$menu = new menu();
+	//
+	// 					// menu json
+	// 						$get_json_options = new stdClass();
+	// 							$get_json_options->get_context 	= true;
+	// 							$get_json_options->get_data 	= true;
+	// 						$menu_json = $menu->get_json($get_json_options);
+	//
+	// 					$page_element = new StdClass();
+	// 						$page_element->model 		= 'menu';
+	// 						$page_element->type 		= 'menu';
+	// 						$page_element->tipo 		= 'dd85';
+	// 						$page_element->mode 		= 'edit';
+	// 						$page_element->lang 		= DEDALO_APPLICATION_LANG;
+	// 						$page_element->dd_request  = null;
+	// 						$page_element->datum 		= $menu_json;
+	//
+	// 					return $page_element;
+	// 				})();
+	// 				break;
+	//
+	// 			case strpos($model, 'area')===0:
+	// 				$page_element = (function() use ($model, $tipo, $mode){
+	//
+	// 					$page_element = new StdClass();
+	// 						$page_element->model 		= $model;
+	// 						$page_element->type  		= 'area';
+	// 						$page_element->tipo  		= $tipo;
+	// 						$page_element->mode 	 	= $mode;
+	// 						$page_element->lang 	 	= DEDALO_DATA_LANG;
+	// 						$page_element->section_tipo = $tipo;
+	//
+	// 						// dd_request
+	// 							$area = area::get_instance($model, $tipo, $mode);
+	// 							$dd_request = $area->get_dd_request();
+	//
+	// 						$page_element->dd_request = $dd_request;
+	//
+	// 					return $page_element;
+	// 				})();
+	// 				break;
+	//
+	// 			case $model==='section':
+	// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
+	//
+	// 					$section_tipo = $tipo;
+	//
+	// 					// dd_request
+	// 						$section = section::get_instance($section_id, $section_tipo, $mode);
+	// 						$section->set_lang($lang);
+	// 						$dd_request = $section->get_dd_request();
+	//
+	// 					$page_element = new StdClass();
+	// 						$page_element->model 		 = $model;
+	// 						$page_element->type 		 = 'section';
+	// 						$page_element->tipo 		 = $section_tipo;
+	// 						$page_element->section_tipo  = $section_tipo;
+	// 						$page_element->section_id 	 = $section_id;
+	// 						$page_element->mode 		 = $mode;
+	// 						$page_element->lang 		 = $lang;
+	// 						$page_element->dd_request	 = $dd_request;
+	//
+	// 					return $page_element;
+	// 				})();
+	// 				break;
+	//
+	// 			case $model==='section_tm':
+	// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
+	//
+	// 					$section_tipo = $tipo;
+	//
+	// 					// dd_request
+	// 						$section = section_tm::get_instance($section_id, $section_tipo, $mode);
+	// 						$section->set_lang($lang);
+	// 						$dd_request = $section->get_dd_request();
+	//
+	// 					$page_element = new StdClass();
+	// 						$page_element->model		 = $model;
+	// 						$page_element->type			 = 'section';
+	// 						$page_element->tipo			 = $section_tipo;
+	// 						$page_element->section_tipo  = $section_tipo;
+	// 						$page_element->section_id	 = $section_id;
+	// 						$page_element->mode 		 = $mode;
+	// 						$page_element->lang 		 = $lang;
+	// 						$page_element->dd_request	 = $dd_request;
+	//
+	// 					return $page_element;
+	// 				})();
+	// 				break;
+	//
+	// 			case $model==='section_tool':
+	// 				$page_element = (function() use ($model, $tipo, $mode){
+	//
+	// 					# Configure section from section_tool data
+	// 					$RecordObj_dd = new RecordObj_dd($tipo);
+	// 					$propiedades  = $RecordObj_dd->get_propiedades(true);
+	//
+	// 					#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
+	// 					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
+	//
+	// 					$section_tipo 	= $tipo;
+	// 					$section_id		= null;
+	// 					$lang 	 	 	= DEDALO_DATA_LANG;
+	//
+	// 					// dd_request
+	// 						$section = section::get_instance($section_id, $section_tipo, $mode);
+	// 						$section->set_lang($lang);
+	// 						$section->config = $propiedades->config;
+	// 						$dd_request = $section->get_dd_request();
+	//
+	// 					$page_element = new StdClass();
+	// 						$page_element->model 		 = 'section';
+	// 						$page_element->type 		 = 'section';
+	// 						$page_element->section_tipo  = $section_tipo;
+	// 						$page_element->section_id 	 = $section_id;
+	// 						$page_element->mode 	 	 = $mode;
+	// 						$page_element->lang 	 	 = $lang;
+	// 						$page_element->dd_request   = $dd_request;
+	//
+	// 					return $page_element;
+	// 				})();
+	// 				break;
+	//
+	// 			default:
+	// 				#throw new Exception("Error Processing Request", 1);
+	// 				$response->msg = 'Error. model not found: '.$model;
+	// 				return $response;
+	//
+	// 		}//end switch ($model)
+	//
+	//
+	// 	$response->result 	= $page_element;
+	// 	$response->msg 	  	= 'Ok. Request done';
+	//
+	//
+	// 	return (object)$response;
+	// }//end get_page_element
+	//
 
 
 	// search methods ///////////////////////////////////
@@ -775,7 +763,7 @@ class dd_core_api {
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
-	private static function build_json_rows($rq_context) {
+	private static function build_json_rows($dd_request) {
 		$start_time=microtime(1);
 
 		// default result
@@ -785,20 +773,14 @@ class dd_core_api {
 
 
 		// ar_dd_objects . Array of all dd objects in requested context
-			$ar_dd_objects = array_values( array_filter($rq_context, function($item) {
+			$ar_dd_objects = array_values( array_filter($dd_request, function($item) {
 				 if($item->typo==='ddo') return $item;
 			}) );
 			// set as static to allow external access
 			dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
 
 		// ddo_source
-			// $ddo_source = array_reduce($rq_context, function($carry, $item){
-			// 	if (isset($item->typo) && $item->typo==='source') {
-			// 		return $item;
-			// 	}
-			// 	return $carry;
-			// });
-			$ar_source = array_filter($rq_context, function($item) {
+			$ar_source = array_filter($dd_request, function($item) {
 				 if($item->typo==='source') return $item;
 			});
 			if (count($ar_source)!==1) {
@@ -818,13 +800,33 @@ class dd_core_api {
 				$limit			= $ddo_source->pagination->limit ?? null;
 				$offset			= $ddo_source->pagination->offset ?? null;
 
-		// sqo
-			$search_query_object = array_reduce($rq_context, function($carry, $item){
+		// sqo. search_query_object
+			$search_query_object = array_reduce($dd_request, function($carry, $item){
 				if (isset($item->typo) && $item->typo==='sqo') {
 					return $item;
 				}
 				return $carry;
 			});
+			if (empty($search_query_object)) {
+
+				$sqo_options = new stdClass();
+					$sqo_options->tipo			= $section_tipo;
+					$sqo_options->section_tipo	= [$section_tipo];
+					$sqo_options->full_count	= false;
+					$sqo_options->add_select	= false;
+					$sqo_options->limit			= $limit;
+					$sqo_options->offset		= $offset;
+					$sqo_options->mode			= $mode;
+					$sqo_options->direct		= true;
+					// filter_by_locators. when section_id is received
+					if (!empty($section_id)) {
+						$self_locator = new locator();
+							$self_locator->set_section_tipo($section_tipo);
+							$self_locator->set_section_id($section_id);
+						$sqo_options->filter_by_locators = [$self_locator];
+					}
+				$search_query_object = common::build_search_query_object($sqo_options);
+			}
 
 
 		// CONTEXT
@@ -838,7 +840,7 @@ class dd_core_api {
 							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
 
 							if ($mode==='tm') {
-								$element->set_base_context($rq_context); // inject whole context
+								$element->set_base_context($dd_request); // inject whole context
 							}
 
 						break;
@@ -891,8 +893,8 @@ class dd_core_api {
 				// context add
 					$context = $element_json->context;
 					$context[] = (object)[
-						'source' 	=> 'rq_context_ddo',
-						'value' 	=> dd_core_api::$rq_context_ddo
+						'source' 	=> 'request_ddo',
+						'value' 	=> dd_core_api::$request_ddo
 					];
 
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
@@ -1079,7 +1081,7 @@ class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->search_query_object = $search_query_object ?? null;
-					$debug->rq_context 			= $rq_context;
+					$debug->dd_request 			= $dd_request;
 					$debug->context_exec_time 	= $context_exec_time;
 					$debug->data_exec_time 		= $data_exec_time;
 					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
