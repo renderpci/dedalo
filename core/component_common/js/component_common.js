@@ -266,13 +266,13 @@ component_common.prototype.build = async function(autoload=false){
 				// self.update_datum(api_response.result.data)
 				// self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 
-				// build again dd_request with updated request_config
-					// self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
-					console.log("self.context:",self.context);
+			// update instance properties from context
+				set_context_vars(self, self.context)	
 
-			// update instance properties
-				set_context_vars(self, self.context)
-		
+			// dd_request. build again dd_request with updated request_config if exists
+				if (self.context.request_config) {
+					self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+				}
 
 			// Update the self.data into the datum and self instance
 				// if (api_response.result) {
