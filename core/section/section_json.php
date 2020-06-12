@@ -4,9 +4,9 @@
 
 
 // configuration vars
-	$tipo				= $this->get_tipo();
-	$permissions		= common::get_permissions($tipo, $tipo);
-	$modo				= $this->get_modo();
+	$tipo			= $this->get_tipo();
+	$permissions	= common::get_permissions($tipo, $tipo);
+	$modo			= $this->get_modo();
 
 
 
@@ -23,7 +23,7 @@
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $rq_context=true);
+					$context[] = $this->get_structure_context($permissions, $add_request_config=true);
 
 				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
 					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
@@ -43,8 +43,8 @@
 
 		// subdata
 			// default locator build with this section params
-				$section_id 	= $this->get_section_id();
-				$section_tipo 	= $this->get_tipo();
+				$section_id		= $this->get_section_id();
+				$section_tipo	= $this->get_tipo();
 
 				$locator = new locator();
 				 	$locator->set_section_tipo($section_tipo);

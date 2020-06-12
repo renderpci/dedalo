@@ -203,7 +203,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 					parent 			: fragment
 				})
 
-			// button_new section				
+			// button_new section
 				const button_new = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light add',
@@ -223,22 +223,25 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 					if (api_response.result && api_response.result>0) {
 						// launch event 'user_action' tha page is watching
 						event_manager.publish('user_action', {
-							tipo 			 : self.tipo,
-							mode 			 : 'edit',
-							section_id		 : api_response.result
+							tipo		: self.tipo,
+							mode		: 'edit',
+							model		: self.model,
+							section_id	: api_response.result
 						})
 					}
 				})
 
 			// search filter node
-				const filter = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'filter',
-					parent 			: fragment
-				})
-				await self.filter.render().then(filter_wrapper =>{
-					filter.appendChild(filter_wrapper)
-				})
+				if (self.filter) {
+					const filter = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'filter',
+						parent			: fragment
+					})
+					await self.filter.render().then(filter_wrapper =>{
+						filter.appendChild(filter_wrapper)
+					})
+				}
 
 		}//end if (self.mode!=='tm')
 
@@ -247,7 +250,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'paginator',
-			parent 			: fragment
+			parent			: fragment
 		})
 		self.paginator.render().then(paginator_wrapper =>{
 			paginator_div.appendChild(paginator_wrapper)
@@ -266,9 +269,9 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
-			id 				: self.id,
+			id				: self.id,
 			//class_name		: self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name 		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 		})
 		wrapper.appendChild(fragment)
 
@@ -305,7 +308,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 	// 			class_name		: 'buttons',
 	// 			parent 			: fragment
 	// 		})
-	
+
 	// 	// filter node
 	// 		const filter = ui.create_dom_element({
 	// 			element_type	: 'div',
@@ -357,7 +360,7 @@ render_section.prototype.list_header = async function(){
 
 	const self = this
 
-	const components = self.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component")
+	const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component")
 
 	const ar_nodes	 = []
 	const len 		 = components.length
@@ -485,11 +488,8 @@ const no_records_node = () => {
 	const node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'no_records',
-		inner_html 		: get_label["no_records"] || "No records found"
+		inner_html		: get_label["no_records"] || "No records found"
 	})
 
 	return node
 }//end no_records_node
-
-
-
