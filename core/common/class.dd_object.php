@@ -271,11 +271,11 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_rq_context
+	* SET_REQUEST_CONFIG
 	*/
-	public function set_rq_context($value) {
+	public function set_request_config($value) {
 
-		$this->rq_context = $value;
+		$this->request_config = $value;
 	}
 
 
