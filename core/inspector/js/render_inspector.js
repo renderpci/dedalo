@@ -38,7 +38,7 @@ render_inspector.prototype.edit = async function(options) {
 		const label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html 		: 'Inspector'
+			inner_html		: 'Inspector'
 		})
 
 	// wrapper
@@ -111,7 +111,7 @@ const get_content_data = async function(self) {
 				element_type	: 'button',
 				class_name		: 'light add',
 				inner_html		: get_label.nuevo || "New",
-				parent 			: buttons_container
+				parent			: buttons_container
 			})
 			button_new.addEventListener('click', async (e) => {
 				e.stopPropagation()
@@ -119,16 +119,17 @@ const get_content_data = async function(self) {
 				// data_manager. create
 				const api_response = await data_manager.prototype.request({
 					body : {
-						action 		: 'create',
-						section_tipo: self.section_tipo
+						action			: 'create',
+						section_tipo	: self.section_tipo
 					}
 				})
 				if (api_response.result && api_response.result>0) {
 					// launch event 'user_action' that page is watching
 					event_manager.publish('user_action', {
-						tipo 			 : self.caller.tipo,
-						mode 			 : self.caller.mode,
-						section_id		 : api_response.result
+						tipo		: self.caller.tipo,
+						mode		: self.caller.mode,
+						model		: self.caller.model,
+						section_id	: api_response.result
 					})
 				}
 			})
@@ -139,15 +140,15 @@ const get_content_data = async function(self) {
 		const project_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'project_container',
-			parent 			: content_data
+			parent			: content_data
 		})
 
 	// data_link
 		const data_link = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light eye data_link',
-			text_content 	: 'View record data',
-			parent 			: content_data
+			text_content	: 'View record data',
+			parent			: content_data
 		})
 		data_link.addEventListener("click", (e)=>{
 			e.preventDefault()
@@ -161,8 +162,8 @@ const get_content_data = async function(self) {
 			const register_download = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning download register_download',
-				text_content 	: "Download register file",
-				parent 			: content_data
+				text_content	: "Download register file",
+				parent			: content_data
 			})
 			register_download.addEventListener("click", (e)=>{
 				e.preventDefault()

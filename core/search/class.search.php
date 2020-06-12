@@ -497,7 +497,7 @@ class search {
 
 		foreach ($ar_value as $search_object) {
 			if (!is_object($search_object)) {
-				dump($search_object, ' Invalid received object (search_object) : '.to_string());
+				dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
 				debug_log(__METHOD__." Invalid (ignored) non object search_object: ".to_string($search_object), logger::DEBUG);
 				debug_log(__METHOD__." ar_value: ".json_encode($ar_value), logger::DEBUG);
 				throw new Exception("Error Processing Request. search_object must be an object", 1);
@@ -640,7 +640,7 @@ class search {
 					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 				if(SHOW_DEBUG===true) {
 					$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
-					debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::ERROR);
+					// debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::ERROR);
 				}
 				break;
 
