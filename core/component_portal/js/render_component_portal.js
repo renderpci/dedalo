@@ -213,6 +213,9 @@ const add_events = function(self, wrapper) {
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
 
+					// set dd_request
+						self.dd_request.search 	= self.dd_request.search || self.build_dd_request('search', self.context.request_config, 'search')
+
 					self.autocomplete = new service_autocomplete()
 					self.autocomplete.init({
 						caller	: self,
@@ -315,7 +318,7 @@ const get_top = function(self) {
 		const is_inside_tool		= self.is_inside_tool
 		const mode					= self.mode
 		const current_data_manager	= new data_manager()
-		const show					= self.rq_context_show
+		const show					= self.dd_request.show
 		const target_section		= show.filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length
 		// sort section by label asc
