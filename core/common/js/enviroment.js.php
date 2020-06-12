@@ -145,8 +145,8 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 header('Content-type: application/javascript; charset=utf-8');
 ?>
 "use strict";
-var page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : json_encode($page_globals, JSON_UNESCAPED_UNICODE) ?>;
-var <?php // plain_vars
+const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : json_encode($page_globals, JSON_UNESCAPED_UNICODE) ?>;
+const <?php // plain_vars
 echo implode(',', array_map(
     function ($v, $k) { return sprintf("%s=%s", $k, json_encode($v, JSON_UNESCAPED_SLASHES)); },
     $plain_vars,

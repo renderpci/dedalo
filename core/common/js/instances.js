@@ -50,18 +50,18 @@ export const get_instance = async function(options){
 	// key values ['model','tipo','section_tipo','section_id','mode','lang']
 
 	// mandatory vars
-		const tipo 				= options.tipo
-		const section_tipo 		= options.section_tipo
+		const tipo				= options.tipo
+		const section_tipo		= options.section_tipo
 		const section_id		= options.section_id // string format
 
 	// optional vars (only mandatory for build the instance)
 		const mode				= options.mode  || 'list'
 		const lang				= options.lang  || page_globals.dedalo_data_lang
-		const model 			= options.model || await ( async () => {
+		const model				= options.model || await ( async () => {
 		    const current_data_manager 	= new data_manager()
 			const element_context = await current_data_manager.get_element_context({
-				tipo 			: tipo,
-				section_tipo 	: section_tipo,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
 				section_id		: section_id
 			})
 			const current_model = element_context.result[0].model
@@ -72,9 +72,9 @@ export const get_instance = async function(options){
 		    return current_model
 		})();
 		// reasign the optional vars to the options
-			options.model 	= model
-			options.mode 	= mode
-			options.lang 	= lang
+			options.model	= model
+			options.mode	= mode
+			options.lang	= lang
 
 
 	// key. build the key locator of the instance

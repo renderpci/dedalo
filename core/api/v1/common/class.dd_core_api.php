@@ -106,7 +106,7 @@ class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// context accept object and array of objects
-			$dd_request = $json_data->dd_request;			
+			$dd_request = $json_data->dd_request;
 			// dump($dd_request, ' read - $dd_request ++ '.to_string());
 			// debug_log(__METHOD__." API DD_REQUEST ".str_repeat("==", 40).PHP_EOL.json_encode($dd_request, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("==", 84), logger::DEBUG);
 
