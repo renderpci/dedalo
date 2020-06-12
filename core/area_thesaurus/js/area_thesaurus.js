@@ -1,5 +1,5 @@
 // imports
-	import {common} from '../../common/js/common.js'
+	import {common,load_data_debug} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {search} from '../../search/js/search.js'
@@ -33,6 +33,10 @@ export const area_thesaurus = function() {
 
 	this.filter = null
 
+	this.dd_request = {
+		show : null
+	}
+
 	this.build_options = {
 		terms_are_model : false //false = the terms are descriptors terms // true = the terms are models (context model of the terms)
 	}
@@ -50,13 +54,14 @@ export const area_thesaurus = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	// area_thesaurus.prototype.init 		= area_common.prototype.init
-	// area_thesaurus.prototype.build 		= area_common.prototype.build
-	area_thesaurus.prototype.render 	= common.prototype.render
-	area_thesaurus.prototype.refresh 	= common.prototype.refresh
-	area_thesaurus.prototype.destroy 	= common.prototype.destroy
-	area_thesaurus.prototype.edit 		= render_area_thesaurus.prototype.edit
-	area_thesaurus.prototype.list 		= render_area_thesaurus.prototype.list
+	// area_thesaurus.prototype.init			= area_common.prototype.init
+	// area_thesaurus.prototype.build			= area_common.prototype.build
+	area_thesaurus.prototype.render				= common.prototype.render
+	area_thesaurus.prototype.refresh			= common.prototype.refresh
+	area_thesaurus.prototype.destroy			= common.prototype.destroy
+	area_thesaurus.prototype.build_dd_request	= common.prototype.build_dd_request
+	area_thesaurus.prototype.edit				= render_area_thesaurus.prototype.edit
+	area_thesaurus.prototype.list				= render_area_thesaurus.prototype.list
 
 
 
@@ -102,16 +107,21 @@ area_thesaurus.prototype.build = async function() {
 	// status update
 		self.status = 'building'
 
+	// dd_request
+		self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+
+	// debug
+		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
 
 	// build_options. Add custom area build_options to source
-		const source = self.rq_context.show.find(element => element.typo==='source')
+		const source = self.dd_request.show.find(element => element.typo==='source')
 			  source.build_options = self.build_options
 
 	// load data
 		const current_data_manager = new data_manager()
 
 	// get context and data
-		const api_response 	= await current_data_manager.read(self.rq_context.show)
+		const api_response = await current_data_manager.read(self.dd_request.show)
 			// console.log("[area_thesaurus.build] api_response++++:",api_response);
 
 	// set the result to the datum
@@ -119,11 +129,11 @@ area_thesaurus.prototype.build = async function() {
 
 	// set context and data to current instance
 		self.context	= self.datum.context.filter(element => element.tipo===self.tipo)
-		self.data 		= self.datum.data.filter(element => element.tipo===self.tipo)
-		self.widgets 	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
+		self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
+		self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
 
 		const area_ddo	= self.context.find(element => element.type==='area')
-		self.label 		= area_ddo.label
+		self.label		= area_ddo.label
 
 	// permissions. calculate and set (used by section records later)
 		self.permissions = area_ddo.permissions || 0
@@ -144,9 +154,14 @@ area_thesaurus.prototype.build = async function() {
 
 	// debug
 		if(SHOW_DEBUG===true) {
+
+			event_manager.subscribe('render_'+self.id, function(){
+				load_data_debug(self, api_response, dd_request_show_original)
+			})
+			
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
+			//load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
 		}
 
 	// status update
