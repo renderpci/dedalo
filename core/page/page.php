@@ -3,9 +3,9 @@
 
 // page mode and tipo
 	define('MODE', $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list') );
-	$tipo 		= $_GET['t'] ?? $_GET['tipo'] ?? 'test65'; //MAIN_FALLBACK_SECTION;
-	$section_id = $_GET['id'] ?? $_GET['section_id'] ?? null;
-
+	$tipo		= $_GET['t'] ?? $_GET['tipo'] ?? 'test65'; //MAIN_FALLBACK_SECTION;
+	$section_id	= $_GET['id'] ?? $_GET['section_id'] ?? null;
+	
 
 
 // load page
@@ -32,9 +32,10 @@
 		// check_basic_system (lang and structure files)
 			check_basic_system();
 
+		$page_elements = [];
 
 		// page elements [login]
-			$rq_context = (function() {
+			$login_element = (function() {
 
 				$login = new login('edit');
 				$login_source = $login->get_source();
@@ -57,9 +58,11 @@
 				return [$login_source];
 			})();
 
+		$page_elements[] = $login_element;
+
 		$context = (object)[
-			'model' => 'page',
-			'rq_context' => $rq_context
+			'model'			=> 'page',
+			'page_elements'	=> $page_elements
 		];
 
 		$load_page($context);
@@ -72,24 +75,17 @@
 // logged
 	if (login::is_logged()!==true) return null;
 
-	$rq_context = [];
+	$page_elements = [];
 
 	$initiator = $_GET['initiator'] ?? false;
 
 	// menu. Get the mandatory menu element
 		if ($initiator===false) {
-			// $menu_element_required = new stdClass();
-			// 	$menu_element_required->options = (object)[
-			// 		'model' 	=> 'menu',
-			// 		'lang' 		=> DEDALO_DATA_LANG
-			// 	];
-			// // /$page_elements[] = dd_core_api::get_page_element($menu_eleme	nt_required)->result;
 
 			$menu = new menu();
 			$menu->set_lang(DEDALO_DATA_LANG);
-			$menu_source = $menu->get_source();
-
-			$rq_context[] = $menu_source;
+			
+			$page_elements[] = [$menu->get_source()];
 		}
 
 	// section/area/tool. Get the page element from get url vars
@@ -98,18 +94,17 @@
 
 			switch (true) {
 				case ($model==='section'):
+
 					$section = section::get_instance($section_id, $tipo, MODE);
 					$section->set_lang(DEDALO_DATA_LANG);
-					$section_source = $section->get_source();
-
-					$rq_context[] = $section_source;
+					$page_elements[] = [$section->get_source()];
 					break;
+
 				case (strpos($model, 'area')===0):
+
 					$area = area::get_instance($model, $tipo, MODE);
 					$area->set_lang(DEDALO_DATA_LANG);
-					$area_source = $area->get_source();
-
-					$rq_context[] = $area_source;
+					$page_elements[] = [$area->get_source()];
 					break;
 
 				default:
@@ -132,8 +127,10 @@
 		// }
 
 		$context = (object)[
-			'model' => 'page',
-			'rq_context' => $rq_context
+			'model'			=> 'page',
+			'page_elements'	=> $page_elements
 		];
+		// dump($context, ' $context ++ '.to_string());
+
 	// page load all elements
 		$load_page($context);
