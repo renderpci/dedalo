@@ -1654,7 +1654,9 @@ abstract class component_common extends common {
 			// }
 
 		// get_config_context normalized
-			$config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
+			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
+			$config_context = (array)common::get_request_properties_parsed($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
+
 
 		$ar_target_section_tipo = [];
 		foreach ($config_context as $config_context_item) {
@@ -1708,13 +1710,13 @@ abstract class component_common extends common {
 	public static function update_dato_version($request_options) {
 
 		$options = new stdClass();
-			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
-			$options->reference_id 		= null;
-			$options->tipo 				= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version = $options->update_version;
@@ -1722,10 +1724,10 @@ abstract class component_common extends common {
 			$reference_id 	= $options->reference_id;
 
 
-		$response = new stdClass();
-		$modelo_name = get_called_class();
-		$response->result =0;
-		$response->msg = "This component $modelo_name don't have update_dato_version, please check the class of the component <br />";
+		$response			= new stdClass();
+		$modelo_name		= get_called_class();
+		$response->result	=0;
+		$response->msg		= "This component $modelo_name don't have update_dato_version, please check the class of the component <br />";
 
 		return $response;
 	}//end update_dato_version
@@ -2380,16 +2382,16 @@ abstract class component_common extends common {
 					$name = $operator_between;
 					$group->$name = [];
 				foreach ($json_value as $current_value) {
-					$current_value 			= array($current_value);
-					$query_object->type 	= 'jsonb';
-					$query_object_clon 		= clone($query_object);
-					$query_object_clon->q 	= json_encode($current_value);
-					$group->$name[] 		= $query_object_clon;
+					$current_value			= array($current_value);
+					$query_object->type		= 'jsonb';
+					$query_object_clon		= clone($query_object);
+					$query_object_clon->q	= json_encode($current_value);
+					$group->$name[]			= $query_object_clon;
 				}
 				$ar_query_object = $group;
 			}else{
-				$query_object->type = 'jsonb';
-				$ar_query_object 	= $query_object;
+				$query_object->type	= 'jsonb';
+				$ar_query_object	= $query_object;
 			}
 
 		# STRING CASE
