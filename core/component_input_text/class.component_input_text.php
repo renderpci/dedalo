@@ -419,15 +419,15 @@ class component_input_text extends component_common {
 	public function search_operators_info() {
 
 		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null
-			'=' 	 => 'similar_a',
-			'!=' 	 => 'distinto_de',
-			'-' 	 => 'no_contiene',
-			'*text*' => 'contiene',
-			'text*'  => 'empieza_con',
-			'*text'  => 'acaba_con',
-			'\'text\'' => 'literal',
+			'*'			=> 'no_vacio', // not null
+			'!*'		=> 'campo_vacio', // null
+			'='			=> 'similar_a',
+			'!='		=> 'distinto_de',
+			'-'			=> 'no_contiene',
+			'*text*'	=> 'contiene',
+			'text*'		=> 'empieza_con',
+			'*text'		=> 'acaba_con',
+			'\'text\''	=> 'literal'
 		];
 
 		return $ar_operators;
