@@ -143,8 +143,7 @@ const add_events = function(self, wrapper, content_data) {
 const get_content_data = async function(self) {
 
 	const dedalo_application_langs = self.data.value.dedalo_application_langs
-		console.log("self.data:",self.data);
-
+	
 	const fragment = new DocumentFragment()
 
 	// select lang
@@ -312,9 +311,9 @@ const validate_browser = function() {
 
 	const browser_info = get_browser_info()
 	const min_version  = {
-		Chrome  	: 76,
-		Firefox 	: 65,
-		AppleWebKit : 10
+		Chrome		: 76,
+		Firefox		: 65,
+		AppleWebKit	: 10
 	}
 
 	const msg = (browser, version, min_version) => {
