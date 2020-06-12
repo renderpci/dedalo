@@ -1,10 +1,10 @@
 <?php
 /**
-* MANAGER
+* DD_MANAGER
 * Manage api web
 *
 */
-class manager {
+class dd_manager {
 
 
 
@@ -30,6 +30,10 @@ class manager {
 		$api_start_time=microtime(1);
 
 		// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
+		if(SHOW_DEBUG===true) {
+			$lime = " API REQUEST ".str_repeat(">", 70).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 165);
+			debug_log(__METHOD__.$lime, logger::DEBUG);
+		}
 
 		// logged
 			if ($options->action!=='login' && $options->action!=='get_login' && login::is_logged()!==true) {
@@ -74,8 +78,9 @@ class manager {
 			}
 
 		if(SHOW_DEBUG===true) {
+			$total_time = exec_time_unit($api_start_time,'ms')." ms";
 			$api_debug = new stdClass();
-				$api_debug->api_exec_time = exec_time_unit($api_start_time,'ms')." ms";
+				$api_debug->api_exec_time = $total_time;
 
 			if (isset($dedalo_data->debug)) {
 				// add to existing debug properties
@@ -87,6 +92,10 @@ class manager {
 				$dedalo_data->debug = $api_debug;
 			}
 			//dump($dedalo_data->debug, ' $dedalo_data->debug ++ '.to_string($options->action));
+			// debug_log("API REQUEST $total_time ".str_repeat(">", 70).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 171), logger::DEBUG);
+			// debug_log(json_encode($options, JSON_PRETTY_PRINT) .PHP_EOL. "API REQUEST $total_time ".str_repeat(">", 70), logger::DEBUG);
+			// $line = "API REQUEST total_time: $total_time ".str_repeat("<", 89); // 164
+			// debug_log($line, logger::DEBUG);
 		}
 
 
@@ -95,4 +104,4 @@ class manager {
 
 
 
-}//end class manager
+}//end class dd_manager
