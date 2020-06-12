@@ -192,8 +192,9 @@ common.prototype.refresh = async function() {
 	const self = this
 
 	// offset update
-		if (self.rq_context && typeof self.pagination!=="undefined") {
-			const sqo = self.rq_context.find(element => element.typo==='sqo')
+
+		if (self.dd_request.show && typeof self.pagination!=="undefined") {
+			const sqo = self.dd_request.show.find(element => element.typo==='sqo')
 			if (sqo) {
 				sqo.offset = self.pagination.offset
 			}
@@ -397,7 +398,7 @@ export const create_source = function(self, action){
 		section_id		: self.section_id,
 		mode 			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
 		lang 			: self.lang,
-		pagination		: self.pagination || null
+		//pagination		: self.pagination || null
 	}
 
 	// matrix_id optional (used in time machine mode)
@@ -536,3 +537,313 @@ common.prototype.load_script = async function(src) {
 
 	// 	return tool_instance
 // }//end load_tool
+
+
+
+/**
+* BUILD_DD_REQUEST
+*/
+common.prototype.build_dd_request = function(dd_request_type, request_config, action){
+
+	const self = this
+
+	switch (dd_request_type) {
+
+		case 'show':
+			return build_request_show(self, request_config, action)
+
+		case 'search':
+			return build_request_search(self, request_config, action)
+			break;
+
+		case 'select':
+			break;
+	}
+
+	return null
+}//end build_dd_request
+
+
+
+/**
+* BUILD_REQUEST_SHOW
+* @return array dd_request
+*/
+const build_request_show = function(self, request_config, action){
+
+	const dd_request = []
+
+	const rqo = request_config.filter(item => item.typo === 'rqo')
+
+	// source . auto create
+		const source = create_source(self, action)
+		dd_request.push(source)
+
+	// if don't has rqo return the source only
+		if(rqo.length < 1){
+			return dd_request;
+		}
+
+	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
+		const request_ddo	= self.datum.context.find(item => item.source==='request_ddo').value
+
+		console.log("request_ddo", request_ddo);
+		const rqo_length	= rqo.length
+		const ar_sections	= []
+		for (let i = 0; i < rqo_length; i++) {
+
+			const current_rqo		= rqo[i]
+			console.log("current_rqo", current_rqo);
+			const operator			= current_rqo.show.sqo_config.operator || '$and'
+			const sections			= current_rqo.section_tipo
+
+			const sections_length	= sections.length
+			// show
+			const show				= current_rqo.show
+			const ddo_map			= show.ddo_map
+			const ddo_map_length	= ddo_map.length
+			//get sections
+			for (let j = 0; j < sections_length; j++) {
+				ar_sections.push(sections[j])
+				// get the fpath array
+				for (let k = 0; k < ddo_map_length; k++) {
+
+					const f_path = typeof ddo_map[k].fpath !== 'undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
+					const f_path_length = f_path.length
+
+					// get the current item of the fpath
+					for (let l = 0; l < f_path_length; l++) {
+						const item = f_path[l]==='self'
+							? sections[j]
+							: f_path[l]
+						const exist = dd_request.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+
+						if(!exist){
+							const ddo = request_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+
+							if(ddo){
+								dd_request.push(ddo)
+							}
+						}
+					}
+				}
+			}
+		}
+
+	// sqo
+		const sqo = {
+			typo				: 'sqo',
+			section_tipo		: ar_sections,
+			filter				: null,
+			offset				: 0,
+			limit				: self.mode === 'list' ? 10 : 1,
+			select				: [],
+			full_count			: false,
+			filter_by_locators	: null
+		}
+		dd_request.push(sqo)
+
+	return dd_request
+}//end build_request_show
+
+
+
+/**
+* BUILD_REQUEST_SEARCH
+* @return array dd_request
+*/
+const build_request_search = function(self, request_config, action){
+
+	const dd_request	= []
+	const ar_sections	= []
+
+	const rqo = request_config.filter(item => item.typo === 'rqo')
+
+	// get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
+	const request_ddo	= self.datum.context.find(item => item.source === 'request_ddo').value
+	const rqo_length	= rqo.length
+	// const operator	= self.context.properties.source.operator || '$and'
+
+	for (let i = 0; i < rqo_length; i++) {
+
+		const current_rqo		= rqo[i]
+		const operator			= current_rqo.search.sqo_config.operator || '$and'
+		const sections			= current_rqo.section_tipo
+		const sections_length	= sections.length
+		const sqo_search		= []
+
+		// source . auto create
+			const source = create_source(self, action)
+			sqo_search.push(source)
+
+		const fixed_filter	= current_rqo.fixed_filter
+		const filter_free	= {}
+			  filter_free[operator] = []
+
+		// type add
+		sqo_search.push({
+			typo	: 'search_engine',
+			value	: current_rqo.search_engine
+		})
+
+		// search
+		const search			= current_rqo.search
+		const ddo_map			= search.ddo_map
+		const ddo_map_length	= ddo_map.length
+		//get sections
+		for (let j = 0; j < sections_length; j++) {
+			const section_ddo = request_ddo.find(ddo => ddo.tipo === sections[j]  && ddo.section_tipo === sections[j] )
+			sqo_search.push(section_ddo)
+			// get the fpath array
+			for (let k = 0; k < ddo_map_length; k++) {
+
+				const f_path		= typeof ddo_map[k].f_path !== 'undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
+				const f_path_length	= f_path.length
+				const ar_paths		= []
+
+				// get the current item of the fpath
+				for (let l = 0; l < f_path_length; l++) {
+					if(l % 2 !== 0){
+
+						const item = f_path[l]
+						const section_tipo = (f_path[l-1] === 'self')
+							? sections[j]
+							: f_path[l-1]
+
+						const ddo = request_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === section_tipo )
+						if (ddo) {
+							sqo_search.push(ddo)
+							const path = {
+								section_tipo	: section_tipo,
+								component_tipo	: item,
+								modelo			: ddo.model
+							}
+							ar_paths.push(path)
+						}
+					}
+				}
+
+				filter_free[operator].push({
+					q		: '',
+					path	: ar_paths
+				})
+			}
+		}
+
+		// fixed_filter
+		if (fixed_filter) {
+			sqo_search.push({
+				typo : 'fixed_filter',
+				value : fixed_filter
+			})
+		}
+
+		// filter_free
+		if (filter_free) {
+			sqo_search.push({
+				typo 		: 'filter_free',
+				value 		: filter_free,
+				operator 	: operator
+			})
+		}
+		console.log("filter_free", filter_free);
+
+		// sqo_search
+		sqo_search.push({
+			typo			: 'sqo',
+			section_tipo	: sections,
+			filter			: {[operator]:[]},
+			offset			: self.pagination.offset,
+			limit			: self.pagination.limit,
+			select			: [],
+			full_count		: false
+		})
+
+		// add group
+		dd_request.push(sqo_search)
+	}//end for (let i = 0; i < length; i++)
+
+console.log("dd_request--------------", dd_request);
+
+	return dd_request
+}//end build_request_search
+
+
+
+/**
+* LOAD_DATA_DEBUG
+* @return
+*/
+export const load_data_debug = async function(self, load_data_promise, dd_request_show_original) {
+
+	if(SHOW_DEBUG===false) {
+		return false
+	}
+
+	const response		= await load_data_promise
+	const dd_request	= self.dd_request
+
+	console.log("----> request dd_request_show_original:",dd_request_show_original);
+
+	// load_data_promise
+	if (response.result===false) {
+		console.error("API EXCEPTION:",response.msg);
+	}
+	console.log("["+self.model+".load_data_debug] response:",response, " TIME: "+response.debug.exec_time)
+	console.log("["+self.model+".load_data_debug] context:",response.result.context)
+	console.log("["+self.model+".load_data_debug] data:",response.result.data)
+
+	const debug = document.getElementById("debug")
+	// debug.classList.add("hide")
+
+	// clean
+		while (debug.firstChild) {
+			debug.removeChild(debug.firstChild)
+		}
+
+	// request to api
+		const sqo = dd_request_show_original.find(el => el.typo==='sqo') || null
+		const request_pre = ui.create_dom_element({
+			element_type	: 'pre',
+			text_content	: "dd_request sended to api: \n\n" + JSON.stringify(dd_request_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
+			parent			: debug
+		})
+
+
+	// context
+		const context_pre = ui.create_dom_element({
+			element_type	: 'pre',
+			text_content	: "context: " + JSON.stringify(response.result.context, null, "  "),
+			parent			: debug
+		})
+
+	// data
+		const data_pre = ui.create_dom_element({
+			element_type	: 'pre',
+			text_content	: "data: " + JSON.stringify(response.result.data, null, "  "),
+			parent			: debug
+		})
+
+	// const time_info = "" +
+	// 	"Total time: " + response.debug.exec_time +
+	// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
+	// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
+
+	// const time_info_pre = ui.create_dom_element({
+	// 	element_type : "pre",
+	// 	class_name   : "total_time",
+	// 	id   		 : "total_time",
+	// 	inner_html   : time_info,
+	// 	parent 		 : debug
+	// })
+
+	// show
+		// event_manager.subscribe('render_'+self.id, function(node){
+		// 	//console.log("node:",node);
+		// 	debug.classList.remove("hide")
+		// })
+		debug.classList.remove("hide")
+
+
+	return true
+}//end load_data_debug
