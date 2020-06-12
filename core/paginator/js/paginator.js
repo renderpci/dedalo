@@ -51,11 +51,11 @@ export const paginator = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	paginator.prototype.edit 	= render_paginator.prototype.edit
-	paginator.prototype.list 	= render_paginator.prototype.edit // same as edit
+	paginator.prototype.edit	= render_paginator.prototype.edit
+	paginator.prototype.list	= render_paginator.prototype.edit // same as edit
 	paginator.prototype.tm		= render_paginator.prototype.edit // same as edit
-	paginator.prototype.render 	= common.prototype.render
-	paginator.prototype.refresh = common.prototype.refresh
+	paginator.prototype.render	= common.prototype.render
+	paginator.prototype.refresh	= common.prototype.refresh
 
 
 
@@ -72,11 +72,11 @@ paginator.prototype.init = function(options) {
 	}
 
 	// set vars
-		self.model 				= 'paginator'
-		self.mode 				= options.caller.mode
-		self.caller				= options.caller
-		self.events_tokens		= []
-		self.node 				= []
+		self.model			= 'paginator'
+		self.mode			= options.caller.mode
+		self.caller			= options.caller
+		self.events_tokens	= []
+		self.node			= []
 
 	// serialize the paginator.Create the unique token
 		self.id = 'paginator_'+self.caller.id
@@ -103,19 +103,19 @@ paginator.prototype.build = async function(){
 	const offset	= self.get_offset()
 
 	// pages fix vars
-		self.total_pages 		= Math.ceil(total / limit)
-		self.page_number 		= self.get_page_number(limit, offset)
-		self.prev_page_offset 	= offset - limit
-		self.next_page_offset 	= offset + limit
+		self.total_pages		= Math.ceil(total / limit)
+		self.page_number		= self.get_page_number(limit, offset)
+		self.prev_page_offset	= offset - limit
+		self.next_page_offset	= offset + limit
 
-		self.page_row_begin 	= (total===0) ? 0 : offset + 1;
-		self.page_row_end 		= self.get_page_row_end(self.page_row_begin, limit, total);
+		self.page_row_begin		= (total===0) ? 0 : offset + 1;
+		self.page_row_end		= self.get_page_row_end(self.page_row_begin, limit, total);
 
 	// offset fix
-		self.offset_first 	= 0;
-		self.offset_prev 	= (offset>limit) ? offset - limit : 0
-		self.offset_next 	= offset + limit
-		self.offset_last 	= limit * (self.total_pages -1)
+		self.offset_first		= 0;
+		self.offset_prev		= (offset>limit) ? offset - limit : 0
+		self.offset_next		= offset + limit
+		self.offset_last		= limit * (self.total_pages -1)
 
 
 	// status update
