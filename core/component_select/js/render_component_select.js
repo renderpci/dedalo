@@ -122,9 +122,9 @@ const add_events = (self, wrapper) => {
 					const parsed_value = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
 
 					const changed_data = Object.freeze({
-						action  : (parsed_value != null) ? 'update' : 'remove',
-						key 	: (parsed_value != null) ? 0 : false,
-						value 	: parsed_value
+						action	: (parsed_value != null) ? 'update' : 'remove',
+						key		: (parsed_value != null) ? 0 : false,
+						value	: parsed_value
 					})
 
 					self.change_value({
@@ -230,9 +230,9 @@ const get_buttons = (self) => {
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
 			if (self.rq_context) {
-				const show						= self.rq_context.show
-				const target_section		 	= show.filter(item => item.model==='section')
-				const target_section_lenght 	= target_section.length
+				const show					= self.rq_context.show
+				const target_section		= show.filter(item => item.model==='section')
+				const target_section_lenght	= target_section.length
 				// sort section by label asc
 					target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
@@ -246,15 +246,16 @@ const get_buttons = (self) => {
 				
 					const button_edit = ui.create_dom_element({
 						element_type	: 'span',
-						class_name 		: 'button edit',
-						title 			: label,
-						parent 			: fragment
+						class_name		: 'button edit',
+						title			: label,
+						parent			: fragment
 					})
 					button_edit.addEventListener("click", function(){
 						// navigate link
 							event_manager.publish('user_action', {
-								tipo 	: item.tipo,
-								mode 	: 'list'
+								tipo	: item.tipo,
+								model	: 'section',
+								mode	: 'list'
 							})
 					})
 				}
@@ -291,19 +292,19 @@ const input_element = (inputs_container, self) => {
 	// create li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			parent 			: inputs_container
+			parent			: inputs_container
 		})
 
 	// select
 		const select = ui.create_dom_element({
 			element_type	: 'select',
-			parent 			: li
+			parent			: li
 		})
 
 	// add empty option at begining of array
 		const empty_option = {
-			label : '',
-			value : null
+			label	: '',
+			value	: null
 		}
 		datalist.unshift(empty_option);
 
