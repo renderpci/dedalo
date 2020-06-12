@@ -65,7 +65,12 @@ area_common.prototype.init = async function(options) {
 	self.events_tokens		= []
 	self.ar_instances		= []
 
-	self.rq_context 		= options.rq_context 	|| null
+	// dd request
+	self.dd_request			= {
+		show	: null,
+		search	: null,
+		select	: null
+	}
 
 	self.datum 	 			= options.datum   		|| null
 	self.context 			= options.context 		|| null
@@ -82,34 +87,7 @@ area_common.prototype.init = async function(options) {
 	self.permissions 		= options.permissions 	|| null
 
 
-	// source. add to rq_context if not exists. Be careful not to add a source element twice
-	// (!) VERIFICAR QUE REALMENTE HACE FALTA
-		// if (self.rq_context && self.rq_context.show) {
-		// 	const current_source = self.rq_context.show.find(element => element.typo==='source')
-		// 	if (current_source) {
-		// 		console.warn("Source alredy exists. Skipped source creation for rq_context",current_source)
-		// 	}else{
-		// 		const source = create_source(self,'get_data')
-		// 		self.rq_context.show.push(source)
-		// 		if(SHOW_DEBUG===true) {
-		// 			console.warn("Added created 'source' element to rq_context.show on init section",source)
-		// 		}
-		// 	}
-		// }
-
-		// // area basic context
-		// 	const source_context = {
-		// 		model 			: self.model,
-		// 		tipo  			: self.tipo,
-		// 		lang  			: self.lang,
-		// 		mode  			: self.mode,
-		// 		action 			: 'get_data',
-		// 		typo 			: 'source',
-		// 		build_options 	: self.build_options
-		// 	}
-		// 	const rq_context = [source_context]
-
-
+	
 	// events subscription
 
 
@@ -119,62 +97,3 @@ area_common.prototype.init = async function(options) {
 
 	return true
 }//end init
-
-
-
-/**
-* BUILD
-* @return promise
-*	bool true
-*/
-area_common.prototype.build___DES = async function() {
-	// const t0 = performance.now()
-
-	// const self = this
-
-	// // status update
-	// 	self.status = 'building'
-
-
-	// // build_options. Add custom area build_options to source
-	// 	const source = self.rq_context.show.find(element => element.typo==='source')
-	// 		  source.build_options = self.build_options
-
-	// // load data
-	// 	const current_data_manager = new data_manager()
-
-	// // get context and data
-	// 		console.log("self.rq_context.show:",self.rq_context.show);
-	// 	const api_response 	= await current_data_manager.section_load_data(self.rq_context.show)
-	// 		console.log("[area_common.build] api_response++++:",api_response);
-
-	// // set the result to the datum
-	// 	self.datum = api_response.result
-
-	// // set context and data to current instance
-	// 	self.context	= self.datum.context.filter(element => element.tipo===self.tipo)
-	// 	self.data 		= self.datum.data.filter(element => element.tipo===self.tipo)
-	// 	self.widgets 	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
-
-	// 	const area_ddo	= self.context.find(element => element.type==='area')
-	// 	self.label 		= area_ddo.label
-
-	// // permissions. calculate and set (used by section records later)
-	// 	self.permissions = area_ddo.permissions || 0
-
-	// // section tipo
-	// 	self.section_tipo = area_ddo.section_tipo || null
-
-	// // debug
-	// 	if(SHOW_DEBUG===true) {
-	// 		//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-	// 		console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
-	// 		//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
-	// 	}
-
-	// // status update
-	// 	self.status = 'builded'
-
-
-	// return true
-}//end build
