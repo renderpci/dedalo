@@ -203,15 +203,15 @@ const build_widget = (item, self) => {
 			//event_manager.subscribe('render_page', (page_wrapper) => {
 				for (let i = 0; i < item.run.length; i++) {
 
-					const func 			= item.run[i].fn
-					const func_options  = item.run[i].options
+					const func			= item.run[i].fn
+					const func_options	= item.run[i].options
 					
 					const js_promise = self[func].apply(self, [{
 						...item,
 						...func_options,
-						body_info 		: body_info,
-						body_response  	: body_response,
-						print_response 	: print_response
+						body_info		: body_info,
+						body_response	: body_response,
+						print_response	: print_response
 					}])					
 				}
 			//})
@@ -235,9 +235,9 @@ const print_response = (container, api_response) => {
 
 	// clean (eraser)
 		const eraser = ui.create_dom_element({
-			element_type : 'span',
-			class_name 	 : "button reset eraser",
-			parent 		 : container
+			element_type	: 'span',
+			class_name		: "button reset eraser",
+			parent			: container
 		})
 		eraser.addEventListener("mouseup", function(e){
 			e.stopPropagation();
@@ -249,18 +249,18 @@ const print_response = (container, api_response) => {
 
 	// msg
 		const msg = ui.create_dom_element({
-			element_type : 'div',
-			class_name 	 : "",
-			parent 		 : container,
-			inner_html 	 : api_response.msg
+			element_type	: 'div',
+			class_name		: "",
+			parent			: container,
+			inner_html		: api_response.msg
 		})
 
 	// json response result
 		const result = ui.create_dom_element({
-			element_type : 'pre',
-			class_name 	 : "",
-			parent 		 : container,
-			inner_html 	 : JSON.stringify(api_response, null, " ").replace(/\\n/g, "<br>")
+			element_type	: 'pre',
+			class_name		: "",
+			parent			: container,
+			inner_html		: JSON.stringify(api_response, null, " ").replace(/\\n/g, "<br>")
 		})
 
 	container.classList.remove("preload")
@@ -299,7 +299,7 @@ export const build_form = async function(widget_object) {
 	const print_response	= widget_object.print_response
 	const confirm_text		= widget_object.confirm_text
 	
-	const inputs 			= widget_object.inputs || []
+	const inputs			= widget_object.inputs || []
 
 	
 	// create the form
@@ -367,12 +367,12 @@ export const build_form = async function(widget_object) {
 				: ""
 
 			const input_node = ui.create_dom_element({
-				element_type : "input",
-				type 		 : input.type,
-				name 		 : input.name,
-				placeholder  : input.label,
-				class_name 	 : class_name,
-				parent 		 : form_container
+				element_type	: "input",
+				type			: input.type,
+				name			: input.name,
+				placeholder		: input.label,
+				class_name		: class_name,
+				parent			: form_container
 			})
 			if (input.value) {
 				input_node.value = input.value
@@ -388,10 +388,10 @@ export const build_form = async function(widget_object) {
 
 	// button submit
 		const button_submit = ui.create_dom_element({
-			element_type : "button",
-			class_name 	 : "light",
-			text_content : "OK",
-			parent 		 : form_container
+			element_type	: "button",
+			class_name		: "light",
+			text_content	: "OK",
+			parent			: form_container
 		})
 		button_submit.addEventListener("click", function(){
 			// if (confirm( (get_label["seguro"] || "Sure?") )) {
