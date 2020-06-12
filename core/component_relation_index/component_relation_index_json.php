@@ -24,11 +24,11 @@
 				break;
 
 			default:
-				$rq_context = true; // overwrite default false to force calculate
+				$add_request_config = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $rq_context);					
-					// add records_mode to properties, if not already defined 
+					$current_context = $this->get_structure_context($permissions, $add_request_config);					
+					// add records_mode to properties, if not already defined
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {
 							$current_context->properties = new stdClass();
@@ -65,7 +65,7 @@
 			$limit 		= ($modo==='list')
 				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
 				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
-		
+
 			// data item
 				$item = $this->get_data_item($value);
 					$item->parent_tipo 			= $tipo;

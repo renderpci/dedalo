@@ -5,7 +5,7 @@
 	define('MODE', $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list') );
 	$tipo		= $_GET['t'] ?? $_GET['tipo'] ?? 'test65'; //MAIN_FALLBACK_SECTION;
 	$section_id	= $_GET['id'] ?? $_GET['section_id'] ?? null;
-	
+
 
 
 // load page
@@ -40,21 +40,6 @@
 				$login = new login('edit');
 				$login_source = $login->get_source();
 
-				// // login json
-				// $get_json_options = new stdClass();
-				// 	$get_json_options->get_context	= true;
-				// 	$get_json_options->get_data		= true;
-				// $login_json = $login->get_json($get_json_options);
-
-				// // element
-				// $page_element = new StdClass();
-				// 	$page_element->model		= 'login';
-				// 	$page_element->tipo			= 'dd229';
-				// 	$page_element->mode			= 'edit';
-				// 	$page_element->lang			= DEDALO_APPLICATION_LANG;
-				// 	$page_element->rq_context	= null;
-				// 	$page_element->datum		= $login_json;
-
 				return [$login_source];
 			})();
 
@@ -84,7 +69,7 @@
 
 			$menu = new menu();
 			$menu->set_lang(DEDALO_DATA_LANG);
-			
+
 			$page_elements[] = [$menu->get_source()];
 		}
 

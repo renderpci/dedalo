@@ -116,8 +116,7 @@ tool_lang.prototype.load_component = async function(lang) {
 		type 			: component.type,
 		context 		: context,
 		data 			: {value:[]},
-		datum 			: component.datum,
-		//rq_context 	: component.rq_context
+		datum 			: component.datum
 	})
 
 	// set current tool as component caller (to check if component is inside tool or not)

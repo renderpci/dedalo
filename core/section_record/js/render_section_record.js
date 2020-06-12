@@ -77,7 +77,7 @@ const content_data_edit = async function(self) {
 
 			// get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper
-			
+
 			// if the item has the parent the section_tipo is direct children of the section_record
 			// else we has other item parent
 			if(parent_grouper===self.section_tipo || self.mode==="list"){
@@ -153,7 +153,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 	const self = this
 
 	const ar_instances = await self.get_ar_instances()
-	
+
 	const fragment = new DocumentFragment()
 
 	// section_record wrapper
@@ -167,7 +167,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 		if (self.caller.model==='section' || self.caller.mode==='edit') {
 			const id_column = build_id_column(self)
 			fragment.appendChild(id_column)
-		}		
+		}
 
 	// regular columns
 		let n_colums					= 0
@@ -281,7 +281,7 @@ const build_id_column = function(self) {
 
 		// initiator. Caller section defined
 			const initiator = self.caller.initiator || false
-		
+
 		// button
 		switch(true) {
 
@@ -426,7 +426,7 @@ const build_id_column = function(self) {
 					}
 				break
 		}
-	
+
 
 	return id_column
 };//end build_id_column
@@ -490,98 +490,6 @@ const get_components_with_subcolumns = () => {
 }//end get_components_with_subcolumns
 
 
-
-// /**
-// * EDIT_RECORD
-// * Navigate to selected record in edit mode
-// */
-// const edit_record = (button, self) => {
-
-	// 	// old mode (new url)
-	// 		const url = `?t=${self.section_tipo}&id=${self.section_id}`
-	// 		return window.location.href = url;
-
-	// 	// section element
-	// 		const element = {
-	// 			model 		 	: self.caller.model,
-	// 			section_tipo 	: self.section_tipo,
-	// 			section_id 		: self.section_id,
-	// 			mode 			: "edit",
-	// 			lang 			: self.lang,
-	// 			rq_context 	: {
-	// 				show : [
-	// 					{
-	// 						typo : "sqo",
-	// 						section_tipo : [self.section_tipo],
-	// 						filter : false,
-	// 						filter_by_locators : [
-	// 							{
-	// 								section_tipo : self.section_tipo,
-	// 								section_id : self.section_id
-	// 							}
-	// 	                	],
-	// 						select : [],
-	// 						limit : 1,
-	// 						offset : 0,
-	// 						full_count : false
-	// 					},
-	// 					{
-	// 						typo : "ddo",
-	// 						type : "section",
-	// 						model : "section",
-	// 						tipo : self.section_tipo,
-	// 						section_tipo : self.section_tipo,
-	// 						mode : "edit"
-	// 					}
-	// 				]
-	// 			}
-	// 		}
-	// 		console.log("element:",element);
-
-	// 	// update page node
-	// 		const update_page = async () => {
-
-	// 			// const main = document.getElementById("main")
-	// 			// 	  main.classList.add("loading")
-
-	// 			// page instance (recycle actual)
-	// 				const page = await get_instance({
-	// 					model : 'page'
-	// 				})
-
-	// 				page.elements = [element]
-	// 					console.log("page:",page);
-
-	// 			// page instance build and render
-	// 				//const build 	= await page.build()
-	// 				//const wrapper_page 	= await page.render()
-	// 				const refresh = await page.refresh()
-	// 					console.log("refresh:",refresh);
-
-	// 				if (refresh===true) {
-	// 					const state = {'page_id': page.id}
-	// 					const title = ''
-	// 					const url 	= "?t=test65"//window.location.href
-
-	// 					history.pushState(state, title, url)
-	// 				}
-
-	// 			// main add and restore class
-	// 				// while (main.firstChild) {
-	// 				// 	main.removeChild(main.firstChild);
-	// 				// }
-	// 				// main.appendChild(wrapper_page)
-	// 		 	// 	main.classList.remove("loading","hide")
-
-	// 		}
-	// 		update_page()
-
-
-	// 	return false
-// }//end edit_record
-
-
-
 /**
 * DELETE_RECORD
 * Navigate to selected record in edit mode
@@ -596,6 +504,3 @@ const delete_record = (button, self) => {
 
 	return false
 }//end delete_record
-
-
-

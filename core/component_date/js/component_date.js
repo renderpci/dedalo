@@ -46,25 +46,26 @@ export const component_date = function(){
 
 // prototypes assign
 	// lifecycle
-	component_date.prototype.init 	 			= component_common.prototype.init
-	component_date.prototype.build 				= component_common.prototype.build
-	component_date.prototype.render 			= common.prototype.render
-	component_date.prototype.refresh 			= common.prototype.refresh
-	component_date.prototype.destroy 	 		= common.prototype.destroy
+	component_date.prototype.init				= component_common.prototype.init
+	component_date.prototype.build				= component_common.prototype.build
+	component_date.prototype.render				= common.prototype.render
+	component_date.prototype.refresh			= common.prototype.refresh
+	component_date.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_date.prototype.save 	 			= component_common.prototype.save
-	component_date.prototype.update_data_value 	= component_common.prototype.update_data_value
+	component_date.prototype.save				= component_common.prototype.save
+	component_date.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_date.prototype.update_datum		= component_common.prototype.update_datum
-	component_date.prototype.change_value 		= component_common.prototype.change_value
+	component_date.prototype.change_value		= component_common.prototype.change_value
+	component_date.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_date.prototype.list 				= render_component_date.prototype.list
-	component_date.prototype.edit 				= render_component_date.prototype.edit
+	component_date.prototype.list				= render_component_date.prototype.list
+	component_date.prototype.edit				= render_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_component_date.prototype.edit
 	component_date.prototype.tm					= render_component_date.prototype.edit
-	component_date.prototype.search 			= render_component_date.prototype.search
-	component_date.prototype.change_mode 		= component_common.prototype.change_mode
+	component_date.prototype.search				= render_component_date.prototype.search
+	component_date.prototype.change_mode		= component_common.prototype.change_mode
 
 /**
 * LOAD_EDITOR

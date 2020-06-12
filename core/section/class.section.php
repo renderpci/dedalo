@@ -55,9 +55,6 @@ class section extends common {
 
 		public $layout_map;
 
-		// rq_context
-		public $rq_context;
-
 
 
 	# DIFFUSION INFO
@@ -3384,84 +3381,6 @@ class section extends common {
 		return $ar_groupers_models;
 	}//end get_ar_grouper_models
 
-
-
-	/**
-	* GET_RQ_CONTEXT
-	* @return object $rq_context
-	*/
-	public function get_rq_context() {
-
-		// already calculated
-			if (isset($this->rq_context)) {
-				return $this->rq_context;
-			}
-
-		$rq_context = [];
-
-		// sort vars
-			$section_tipo 	= $this->get_tipo();
-			$section_id 	= $this->get_section_id();
-			$lang 			= $this->get_lang();
-			$mode 			= $this->get_modo();
-			$limit 			= ($mode!=='list') ? 1 : 10;
-
-		// source
-			$source = $this->get_source();
-
-			$rq_context[] = $source;
-
-		// search_query_object
-			$sqo_options = new stdClass();
-				$sqo_options->tipo 			= $section_tipo;
-				$sqo_options->section_tipo 	= [$section_tipo];
-				$sqo_options->full_count 	= false;
-				$sqo_options->add_select 	= false;
-				$sqo_options->direct 		= true;
-
-				$sqo_options->limit  		= $limit;
-				$sqo_options->offset 		= 0;
-				$sqo_options->mode 			= $mode;
-
-				// filter_by_locators. when sectio_id is received
-				if (!empty($section_id)) {
-					$self_locator = new locator();
-						$self_locator->set_section_tipo($section_tipo);
-						$self_locator->set_section_id($section_id);
-					$sqo_options->filter_by_locators = [$self_locator];
-				}
-
-			$search_query_object = common::build_search_query_object($sqo_options);
-
-			// add search_query_object
-				$rq_context[] = $search_query_object;
-
-		// ddo
-			$layout_map_options = new stdClass();
-				$layout_map_options->section_tipo 		 = $section_tipo;
-				$layout_map_options->tipo 				 = $section_tipo;
-				$layout_map_options->modo 				 = $mode;
-				$layout_map_options->add_section 		 = true;
-				$layout_map_options->config_context_type = 'show';
-			// show
-				$ar_ddo = layout_map::get_layout_map($layout_map_options);
-				$rq_context = array_merge($rq_context, $ar_ddo);
-
-		// show objects
-			$show_value = array_map(function($ddo){
-				return $ddo->tipo;
-			}, (array)$ar_ddo);
-			$show = (object)[
-				'typo' 	=> 'show',
-				'value' => $show_value
-			];
-			$rq_context[] = $show;
-
-		// fix
-			$this->rq_context = $rq_context;
-
-		return $rq_context;
-	}//end get_rq_context
 
 
 	/**

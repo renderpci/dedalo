@@ -120,7 +120,6 @@ menu.prototype.build = async function(autoload=true){
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
 		}
 
 	// status update

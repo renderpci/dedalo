@@ -38,25 +38,26 @@ export const component_check_box = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_check_box.prototype.init 	 			= component_common.prototype.init
-	component_check_box.prototype.build 			= component_common.prototype.build
-	component_check_box.prototype.render 			= common.prototype.render
-	component_check_box.prototype.refresh 			= common.prototype.refresh
-	component_check_box.prototype.destroy 	 		= common.prototype.destroy
+	component_check_box.prototype.init				= component_common.prototype.init
+	component_check_box.prototype.build				= component_common.prototype.build
+	component_check_box.prototype.render			= common.prototype.render
+	component_check_box.prototype.refresh			= common.prototype.refresh
+	component_check_box.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_check_box.prototype.save 	 			= component_common.prototype.save
-	component_check_box.prototype.update_data_value = component_common.prototype.update_data_value
+	component_check_box.prototype.save				= component_common.prototype.save
+	component_check_box.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_check_box.prototype.update_datum		= component_common.prototype.update_datum
-	component_check_box.prototype.change_value 		= component_common.prototype.change_value
+	component_check_box.prototype.change_value		= component_common.prototype.change_value
+	component_check_box.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_check_box.prototype.list 				= render_component_check_box.prototype.list
-	component_check_box.prototype.edit 				= render_component_check_box.prototype.edit
+	component_check_box.prototype.list				= render_component_check_box.prototype.list
+	component_check_box.prototype.edit				= render_component_check_box.prototype.edit
 	component_check_box.prototype.edit_in_list		= render_component_check_box.prototype.edit
 	component_check_box.prototype.tm				= render_component_check_box.prototype.edit
-	component_check_box.prototype.search 			= render_component_check_box.prototype.search
-	component_check_box.prototype.change_mode 		= component_common.prototype.change_mode
+	component_check_box.prototype.search			= render_component_check_box.prototype.search
+	component_check_box.prototype.change_mode		= component_common.prototype.change_mode
 
 
 
