@@ -73,7 +73,7 @@ export const section_record = function() {
 section_record.prototype.init = async function(options) {
 
 	const self = this
-	
+
 	// options vars
 	self.model			= options.model
 	self.tipo			= options.tipo
@@ -82,8 +82,8 @@ section_record.prototype.init = async function(options) {
 	self.mode			= options.mode
 	self.lang			= options.lang
 	self.node			= []
-	self.rq_context	= options.rq_context
-	
+	self.rq_context		= options.rq_context
+
 	self.datum			= options.datum
 	self.context		= options.context
 	self.data			= options.data
@@ -94,11 +94,11 @@ section_record.prototype.init = async function(options) {
 
 	self.type 				= self.model
 	self.label 				= null
-	
+
 	self.caller 			= options.caller || null
-	
+
 	self.matrix_id 			= options.matrix_id || null
-	
+
 	self.modification_date 	= options.modification_date || null
 
 
@@ -167,7 +167,7 @@ section_record.prototype.build = async function(autoload=false) {
 section_record.prototype.get_ar_instances = async function(){
 
 	const self = this
-	
+
 	// sort vars
 		const mode 			= self.mode
 		const section_tipo 	= self.section_tipo
@@ -176,9 +176,9 @@ section_record.prototype.get_ar_instances = async function(){
 
 	// items. Get the items inside the section/component of the record to render it
 		const items = (mode==="list")
-			? self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
-			: self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
-	
+			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
+			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
+
 	// instances
 		const ar_instances = []
 		const items_length = items.length
@@ -187,7 +187,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 			const current_context 	= items[i]
 			const current_data 		= self.get_component_data(current_context.tipo)
-			
+
 				const instance_options = {
 					model 			: current_context.model,
 					tipo 			: current_context.tipo,
@@ -203,7 +203,7 @@ section_record.prototype.get_ar_instances = async function(){
 					datum 			: self.datum,
 					rq_context 	: current_context.rq_context
 				}
-				
+
 				// id_variant . Propagate a custom instance id to children
 					if (self.id_variant) {
 						instance_options.id_variant = self.id_variant
@@ -222,7 +222,7 @@ section_record.prototype.get_ar_instances = async function(){
 				}
 				// instance build await
 				await current_instance.build()
-	
+
 			// add
 				ar_instances.push(current_instance)
 
