@@ -451,7 +451,7 @@ export const ui = {
 			const tipo 			= instance.tipo 	// like 'rsc26'
 			const mode 			= instance.mode 	// like 'edit'
 			const label 		= mode === 'edit_in_list' ? null : instance.label // instance.context.label
-			const main_context 	= instance.context.find(element => element.tipo===instance.tipo)
+			const main_context 	= instance.context
 			const element_css 	= main_context.css || {}
 
  			const fragment = new DocumentFragment()
@@ -1525,16 +1525,16 @@ export const ui = {
 				element_type	: 'div',
 				class_name 		: 'footer ' + footer_class
 			})
-			const on_option_mouseup = function (e){				
+			const on_option_mouseup = function (e){
 				event_manager.publish('user_option_'+element_id, this.option_id)
 				// modal.remove()
 				modal._closeModal()
 			}
 			const user_options_len = user_options.length
 			for (let i = 0; i < user_options_len; i++) {
-				
+
 				const option = user_options[i]
-				
+
 				//user_option
 					const user_option = ui.create_dom_element({
 						element_type	: 'button',
@@ -1543,7 +1543,7 @@ export const ui = {
 						text_content 	: option.label
 					})
 					// add option_id property
-					user_option.option_id = option.id					
+					user_option.option_id = option.id
 					user_option.addEventListener("mouseup", on_option_mouseup);
 			}
 
