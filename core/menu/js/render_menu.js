@@ -43,8 +43,8 @@ render_menu.prototype.edit = async function() {
 	// quit_button
 		const quit_button = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'quit',
-			parent 			: fragment
+			id				: 'quit',
+			parent			: fragment
 		})
 		quit_button.addEventListener("click", () => {
 			quit()
@@ -53,23 +53,23 @@ render_menu.prototype.edit = async function() {
 	// logo image
 		const dedalo_icon = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'dedalo_icon_top',
-			parent 			: fragment
+			id				: 'dedalo_icon_top',
+			parent			: fragment
 		})
 
 	// areas/sections hierarchy list
 		const hierarchy = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: 'menu_hierarchy',
-			parent 			: fragment
+			id				: 'menu_hierarchy',
+			parent			: fragment
 		})
 		// render first level (root)
 		level_hierarchy({
 			self			: self,
-			datalist 		: self.data.tree_datalist,
+			datalist		: self.data.tree_datalist,
 			root_ul			: hierarchy,
 			current_tipo	: 'dd1',
-			parent_tipo 	: 'dd1'
+			parent_tipo		: 'dd1'
 		})
 
 		// click . Manages global click action on the menu items
@@ -84,12 +84,12 @@ render_menu.prototype.edit = async function() {
 					//reset all nodes to inactive state
 					close_all_drop_menu(self);
 					// get the main li nodes
-					const main_li 	= e.target.parentNode
-					const nodes_li 	= self.li_nodes
+					const main_li	= e.target.parentNode
+					const nodes_li	= self.li_nodes
 					const len		= nodes_li.length
 					//get the main ul nodes
-					const open_id =  main_li.dataset.children
-					const open_ul = document.getElementById(open_id)
+					const open_id	=  main_li.dataset.children
+					const open_ul	= document.getElementById(open_id)
 					//set the css visibility for the ul
 					open_ul.classList.remove("menu_ul_hidden");
 					open_ul.classList.add("menu_ul_displayed");
@@ -139,7 +139,7 @@ render_menu.prototype.edit = async function() {
 		const ontology_link = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'ontology',
-			parent 			: fragment,
+			parent			: fragment,
 			text_content	: 'Ontology'
 		})
 		ontology_link.addEventListener("click", ()=>{
@@ -152,7 +152,7 @@ render_menu.prototype.edit = async function() {
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
-			parent 			: fragment,
+			parent			: fragment,
 			text_content	: page_globals['username']
 		})
 
@@ -160,11 +160,11 @@ render_menu.prototype.edit = async function() {
 	// application lang selector
 		const lang_datalist = self.data.langs_datalist
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
-			id 			: 'dd_app_lang',
-			langs 		: lang_datalist,
-			action 		: change_lang,
+			id			: 'dd_app_lang',
+			langs		: lang_datalist,
+			action		: change_lang,
 			selected	: page_globals['dedalo_application_lang'],
-			class_name 	: 'dedalo_aplication_langs_selector'
+			class_name	: 'dedalo_aplication_langs_selector'
 		})
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
@@ -172,14 +172,14 @@ render_menu.prototype.edit = async function() {
 	// data lang selector
 		const lang_datalist_data = lang_datalist.map(item =>{
 			return {
-				label : (get_label['data'] || 'data') + ': ' + item.label,
-				value : item.value
+				label	: (get_label['data'] || 'data') + ': ' + item.label,
+				value	: item.value
 			}
 		})
 		const dedalo_data_langs_selector = ui.build_select_lang({
-			id 			: 'dd_data_lang',
-			langs 		: lang_datalist_data,
-			action 		: change_lang,
+			id			: 'dd_data_lang',
+			langs		: lang_datalist_data,
+			action		: change_lang,
 			selected	: page_globals['dedalo_data_lang'],
 			class_name	: 'dedalo_aplication_langs_selector'
 		})
@@ -190,7 +190,7 @@ render_menu.prototype.edit = async function() {
 		const menu_spacer = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'menu_spacer',
-			parent 			: fragment
+			parent			: fragment
 		})
 
 
@@ -198,7 +198,7 @@ render_menu.prototype.edit = async function() {
 		const section_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_label',
-			parent 			: fragment,
+			parent			: fragment,
 		})
 		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 			let current_instance
@@ -222,8 +222,9 @@ render_menu.prototype.edit = async function() {
 				// event_manager
 				if (current_instance.mode==='edit'){
 					event_manager.publish('user_action', {
-						tipo : current_instance.tipo,
-						mode : 'list'
+						tipo	: current_instance.tipo,
+						model	: current_instance.model,
+						mode	: 'list'
 					})
 				}
 				self.menu_active = false
@@ -234,7 +235,7 @@ render_menu.prototype.edit = async function() {
 		const toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button_toggle_inspector',
-			parent 			: fragment
+			parent			: fragment
 		})
 		toggle_inspector.addEventListener("click", function(e) {
 			ui.toggle_inspector(e)
@@ -261,7 +262,7 @@ render_menu.prototype.edit = async function() {
 * @return dom node debug_info_bar
 */
 const get_debug_info_bar = (self) => {
-	console.log("self:",self);
+	
 	const debug_info_bar = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'debug_info_bar'
@@ -270,43 +271,43 @@ const get_debug_info_bar = (self) => {
 	const dedalo_version = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'dedalo_version',
-		text_content 	: 'Dédalo v. ' + page_globals.dedalo_version,
-		parent 			: debug_info_bar
+		text_content	: 'Dédalo v. ' + page_globals.dedalo_version,
+		parent			: debug_info_bar
 	})
 
 	const dedalo_db_name = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'dedalo_db_name',
-		text_content 	: 'Database: ' + page_globals.dedalo_db_name,
-		parent 			: debug_info_bar
+		text_content	: 'Database: ' + page_globals.dedalo_db_name,
+		parent			: debug_info_bar
 	})
 
 	const pg_version = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'pg_version',
-		text_content 	: 'PG v. ' + page_globals.pg_version,
-		parent 			: debug_info_bar
+		text_content	: 'PG v. ' + page_globals.pg_version,
+		parent			: debug_info_bar
 	})
 
 	const php_version = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'php_version',
-		text_content 	: 'PHP v. ' + page_globals.php_version,
-		parent 			: debug_info_bar
+		text_content	: 'PHP v. ' + page_globals.php_version,
+		parent			: debug_info_bar
 	})
 
 	const php_memory = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'php_memory',
-		text_content 	: 'PHP memory: ' + page_globals.php_memory,
-		parent 			: debug_info_bar
+		text_content	: 'PHP memory: ' + page_globals.php_memory,
+		parent			: debug_info_bar
 	})
 
 	const php_sapi_name = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'php_sapi_name',
-		text_content 	: 'PHP sapi. ' + self.data.info_data.php_sapi_name,
-		parent 			: debug_info_bar
+		text_content	: 'PHP sapi. ' + self.data.info_data.php_sapi_name,
+		parent			: debug_info_bar
 	})
 
 
@@ -323,32 +324,32 @@ const level_hierarchy = async (options) => {
 
 	// sort vars
 		const self			= options.self
-		const datalist 		= options.datalist
-		const root_ul 		= options.root_ul
+		const datalist		= options.datalist
+		const root_ul		= options.root_ul
 		const current_tipo	= options.current_tipo
 
 	// ul container
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
-			parent 			: root_ul,
-			id 				: current_tipo
+			parent			: root_ul,
+			id				: current_tipo
 		})
 
 	// store in the instance the new ul node
 		self.ul_nodes.push(ul)
 
 	// values (li nodes dependents of the ul)
-		const root_areas 		= datalist.filter(item => item.parent===current_tipo)
-		const root_areas_length = root_areas.length
+		const root_areas		= datalist.filter(item => item.parent===current_tipo)
+		const root_areas_length	= root_areas.length
 		for (let i = 0; i < root_areas_length; i++) {
 			//create the li and a nodes inside the current ul
 			item_hierarchy({
 				self			: self,
-				datalist 		: datalist,
-				root_ul 		: root_ul,
-				ul_container 	: ul,
-				item 			: root_areas[i],
-				current_tipo 	: current_tipo
+				datalist		: datalist,
+				root_ul			: root_ul,
+				ul_container	: ul,
+				item			: root_areas[i],
+				current_tipo	: current_tipo
 			})
 		}
 
@@ -365,18 +366,18 @@ const item_hierarchy = async (options) => {
 
 	// sort vars
 		const self			= options.self
-		const datalist 		= options.datalist
-		const ul_container 	= options.ul_container
-		const root_ul 		= options.root_ul
-		const item 			= options.item
-		const children_item = datalist.find(children_item => children_item.parent === item.tipo)
-		const current_tipo  = options.current_tipo
+		const datalist		= options.datalist
+		const ul_container	= options.ul_container
+		const root_ul		= options.root_ul
+		const item			= options.item
+		const children_item	= datalist.find(children_item => children_item.parent === item.tipo)
+		const current_tipo	= options.current_tipo
 
 	// li
 		const li = ui.create_dom_element({
-			element_type 	: 'li',
-			class_name 		: 'menu_li_inactive',
-			parent 		 	: ul_container,
+			element_type	: 'li',
+			class_name		: 'menu_li_inactive',
+			parent			: ul_container,
 		})
 
 		self.li_nodes.push(li)
@@ -457,16 +458,16 @@ const item_hierarchy = async (options) => {
 		// when the label is not in the current language
 		// and get the label with fallback
 		// and replace it for italic style
-			const is_fallback = item.label.indexOf('<mark>')
-			const text_fallback = is_fallback === -1 ? '' : 'mark'
-			const label_text = item.label.replace(/(<([^>]+)>)/ig,"");
+			const is_fallback	= item.label.indexOf('<mark>')
+			const text_fallback	= is_fallback === -1 ? '' : 'mark'
+			const label_text	= item.label.replace(/(<([^>]+)>)/ig,"");
 
 		// a element with the link to the area or section to go
 			const link = ui.create_dom_element({
 				element_type	: 'a',
 				class_name		: 'area_label ' + text_fallback,
-				inner_html 		: label_text,
-				parent 			: li
+				inner_html		: label_text,
+				parent			: li
 			})
 
 		// click
@@ -488,8 +489,9 @@ const item_hierarchy = async (options) => {
 				}else{
 					// navigate
 					event_manager.publish('user_action', {
-						tipo : item.tipo,
-						mode : 'list'
+						tipo	: item.tipo,
+						model	: item.model,
+						mode	: 'list'
 					})
 				}
 
@@ -502,10 +504,10 @@ const item_hierarchy = async (options) => {
 			li.dataset.children	= item.tipo
 			level_hierarchy({
 				self			: self,
-				datalist 		: datalist,
-				root_ul 		: root_ul,
+				datalist		: datalist,
+				root_ul			: root_ul,
 				current_tipo	: item.tipo,
-				parent_tipo 	: current_tipo
+				parent_tipo		: current_tipo
 			})
 		}//end children_item
 
@@ -561,8 +563,8 @@ const close_all_childrens = async function(tipo){
 			close_ul.classList.add("menu_ul_hidden");
 
 		// get the child nodes of the current ul
-		const ar_children_nodes = close_ul.childNodes
-		const child_len = ar_children_nodes.length
+		const ar_children_nodes	= close_ul.childNodes
+		const child_len			= ar_children_nodes.length
 
 		for (let i = child_len - 1; i >= 0; i--) {
 			// get the children link node of the current li
@@ -586,11 +588,11 @@ const change_lang = async function(event) {
 
 	const api_response = await data_manager.prototype.request({
 		body : {
-			action 	 : 'change_lang',
-			dd_api 	 : 'dd_utils_api',
-			options  : {
-				dedalo_data_lang 		: current_lang,
-				dedalo_application_lang : event.target.id==='dd_data_lang' ? null : current_lang
+			action	: 'change_lang',
+			dd_api	: 'dd_utils_api',
+			options	: {
+				dedalo_data_lang		: current_lang,
+				dedalo_application_lang	: event.target.id==='dd_data_lang' ? null : current_lang
 			}
 		}
 	})

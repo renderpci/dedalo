@@ -14,7 +14,7 @@ class menu extends common {
 	*/
 	public function __construct($modo='edit') {
 
-			$id 	= NULL;
+			$id		= NULL;
 			$tipo	= $this->tipo;
 
 			$this->id			= $id;
