@@ -80,7 +80,7 @@ class DDTiny extends HTMLElement {
 				// schema. enables you to switch between the HTML4 and HTML5 schema
 				schema					: 'html5-strict',
 				// setup. called whens editor setup
-				setup 	 				: (editor) => {
+				setup					: (editor) => {
 					// call to function onsetup_editor to delegate the setup
 					self.options.onsetup_editor(editor)
 					// store instance link
