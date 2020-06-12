@@ -33,19 +33,19 @@ export const service_autocomplete = function() {
 
 		const self = this
 
-		self.instance_caller 		= options.caller
-		self.id 					= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
-		self.wrapper 				= options.wrapper
-		self.ar_context_search		= self.instance_caller.build_sqo_search();
-		self.context_search			= self.ar_context_search[0]
-		self.sqo					= self.context_search.find((current_item)=> current_item.typo==='sqo')
+		self.instance_caller		= options.caller
+		self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
+		self.wrapper				= options.wrapper
+		self.ar_dd_request			= self.instance_caller.dd_request.search
+		self.dd_request				= self.ar_dd_request[0]
+		self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
 		self.ar_search_section_tipo	= self.sqo.section_tipo
-		self.search_engine			= self.context_search.find((current_item)=> current_item.typo==='search_engine').value
+		self.search_engine			= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
 
 		// Vars
-			self.tipo 				= self.instance_caller.tipo
-			self.properties 		= self.instance_caller.context.properties || {}
-			self.list_name 			= 's_'+new Date().getUTCMilliseconds()
+			self.tipo		= self.instance_caller.tipo
+			self.properties	= self.instance_caller.context.properties || {}
+			self.list_name	= 's_'+new Date().getUTCMilliseconds()
 
 		// Custom events defined in propiedades
 			self.custom_events = (self.properties.custom_events) ? self.properties.custom_events : []
@@ -82,9 +82,9 @@ export const service_autocomplete = function() {
 
 		// search container
 			const searh_container = ui.create_dom_element({
-				element_type 	: "div",
-				class_name 	 	: "autocomplete_searh_container", // css_autocomplete_hi_search_field
-				parent 			: self.wrapper
+				element_type	: "div",
+				class_name		: "autocomplete_searh_container", // css_autocomplete_hi_search_field
+				parent			: self.wrapper
 			})
 
 		// build operator selectos
@@ -128,7 +128,7 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// source elements
-			const ar_source 	= self.ar_context_search
+			const ar_source 	= self.ar_dd_request
 
 		// switcher source
 			const source_selector = ui.create_dom_element({
@@ -153,17 +153,17 @@ export const service_autocomplete = function() {
 				const ar_search_length = ar_source.length
 				for (let i = 0; i < ar_search_length; i++) {
 
-					const source = ar_source[i]
-					const current_sqo 	= source.find((item) => item.typo === 'sqo')
-					const ar_section 	= current_sqo.section_tipo
-					const ddo_section 	= source.find((item) => item.type === 'section' && item.typo === 'ddo')
-					const search_engine = source.find((current_item)=> current_item.typo==='search_engine').value
+					const source		= ar_source[i]
+					const current_sqo	= source.find((item) => item.typo === 'sqo')
+					const ar_section	= current_sqo.section_tipo
+					const ddo_section	= source.find((item) => item.type === 'section' && item.typo === 'ddo')
+					const search_engine	= source.find((current_item)=> current_item.typo==='search_engine').value
 
 					const swicher_source = ui.create_dom_element({
-						element_type 	: "option",
-						parent 			: select,
-						value 			: i+'',
-						text_content 	: ar_section.length > 1
+						element_type	: "option",
+						parent			: select,
+						value			: i+'',
+						text_content	: ar_section.length > 1
 							? ddo_section.label + ", etc."
 							: ddo_section.label
 					})
@@ -177,10 +177,10 @@ export const service_autocomplete = function() {
 			select.addEventListener('change',function(e){
 				const key = e.target.value
 
-				self.context_search	 		= self.ar_context_search[key]
-				self.sqo					= self.context_search.find((current_item)=> current_item.typo==='sqo')
+				self.dd_request				= self.ar_dd_request[key]
+				self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
 				self.ar_search_section_tipo	= self.sqo.section_tipo
-				self.search_engine			= self.context_search.find((current_item)=> current_item.typo==='search_engine').value
+				self.search_engine			= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
 
 				self.destroy()
 				self.render()
@@ -204,9 +204,9 @@ export const service_autocomplete = function() {
 
 		// search field
 			const search_input = ui.create_dom_element({
-				element_type 	: "input",
-				type 			: 'text',
-				class_name 	 	: "autocomplete_input",
+				element_type	: "input",
+				type			: 'text',
+				class_name		: "autocomplete_input",
 			})
 			search_input.setAttribute("list", self.list_name)
 			search_input.setAttribute("placeholder", get_label.buscar + '...')
@@ -215,8 +215,8 @@ export const service_autocomplete = function() {
 
 			// event input. changes the input value fire the search
 				search_input.addEventListener('input', async function(e){
-					const api_response = await self.autocomplete_search(this.value)
-					const options = self.render_datalist(api_response)
+					const api_response	= await self.autocomplete_search(this.value)
+					const options		= self.render_datalist(api_response)
 				}, false);
 
 		return search_input
@@ -228,30 +228,32 @@ export const service_autocomplete = function() {
 	* @return
 	*/
 	this.render_sections_selector = function(){
+
 		const self = this
+
 		const ar_section_nodes = []
 
 		const sections_list = ui.create_dom_element({
-			element_type 	: "ul",
-			class_name 	 	: "sections_list", // css_autocomplete_hi_search_field
+			element_type	: "ul",
+			class_name		: "sections_list", // css_autocomplete_hi_search_field
 		})
 			const all_selector = ui.create_dom_element({
-				element_type 	: "li",
-				class_name 	 	: "all_selector", // css_autocomplete_hi_search_field
-				parent 			: sections_list
+				element_type	: "li",
+				class_name		: "all_selector", // css_autocomplete_hi_search_field
+				parent			: sections_list
 			})
 				const all_section_label = ui.create_dom_element({
-					element_type 	: "label",
+					element_type	: "label",
 					inner_html		: get_label.todos, //ddo_section.label ||
-					parent 			: all_selector
+					parent			: all_selector
 				})
 				all_section_label.setAttribute("for", self.list_name + "_all")
 
 				const all_section_input = ui.create_dom_element({
-					element_type 	: "input",
-					id 				: self.list_name + "_all",
+					element_type	: "input",
+					id				: self.list_name + "_all",
 					type			: "checkbox",
-					parent 			: all_selector
+					parent			: all_selector
 				})
 				all_section_input.checked = false
 
@@ -267,27 +269,27 @@ export const service_autocomplete = function() {
 			const local_storage = JSON.parse(localStorage.getItem(self.id)) || ar_sections
 
 			for (let i = 0; i < ar_sections.length; i++) {
-				const section = ar_sections[i]
-				const ddo_section = self.context_search.find((item) => item.type === 'section' && item.tipo === section && item.typo === 'ddo')
+				const section		= ar_sections[i]
+				const ddo_section	= self.dd_request.find((item) => item.type === 'section' && item.tipo === section && item.typo === 'ddo')
 
 				const li_section = ui.create_dom_element({
-					element_type 	: "li",
-					parent 			: sections_list
+					element_type	: "li",
+					parent			: sections_list
 				})
 
 					const section_label = ui.create_dom_element({
-						element_type 	: "label",
+						element_type	: "label",
 						inner_html		: ddo_section.tipo, //ddo_section.label ||
-						parent 			: li_section
+						parent			: li_section
 					})
 					section_label.setAttribute("for", self.list_name + '_'+ ddo_section.tipo)
 
 					const section_input = ui.create_dom_element({
-						element_type 	: "input",
+						element_type	: "input",
 						type			: "checkbox",
-						id 				: self.list_name + '_'+ ddo_section.tipo,
-						value 			: ddo_section.tipo,
-						parent 			: li_section
+						id				: self.list_name + '_'+ ddo_section.tipo,
+						value			: ddo_section.tipo,
+						parent			: li_section
 					})
 
 					if(local_storage.indexOf(ddo_section.tipo)>=0){
@@ -323,29 +325,29 @@ export const service_autocomplete = function() {
 		const self = this
 
 		const inputs_list = ui.create_dom_element({
-			element_type 	: "div",
-			class_name 	 	: "inputs_list", // css_autocomplete_hi_search_field
+			element_type	: "div",
+			class_name		: "inputs_list", // css_autocomplete_hi_search_field
 		})
 
 			const ar_components = []
-			const sqo_length = self.context_search.length
+			const sqo_length = self.dd_request.length
 
 
 			for (let i = sqo_length - 1; i >= 0; i--) {
-				const item = self.context_search[i]
-				if(item.type === 'component' && item.typo === 'ddo' && ar_components.indexOf(item.tipo) === -1){
+				const item = self.dd_request[i]
+				if(item.type==='component' && item.typo==='ddo' && ar_components.indexOf(item.tipo)===-1){
 					ar_components.push(item.tipo)
 				}
 			}
 
 			for (let i = ar_components.length - 1; i >= 0; i--) {
-				const compoment = ar_components[i]
-				const ddo_component = self.context_search.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
+				const compoment		= ar_components[i]
+				const ddo_component	= self.dd_request.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
 
 				const component_input = ui.create_dom_element({
-					element_type 	: "input",
+					element_type	: "input",
 					type			: "text",
-					parent 			: inputs_list
+					parent			: inputs_list
 				})
 				const component_label = ddo_component.label.replace(/(<([^>]+)>)/ig,"");
 				component_input.setAttribute("placeholder", component_label )
@@ -363,29 +365,30 @@ export const service_autocomplete = function() {
 	this.render_operator_selector = function(){
 		const self = this
 		// operator selector
-		const operator = self.properties.source.operator
+		const filter_free 	= self.dd_request.find(item => item.typo ==='filter_free')
+		const operator 		= filter_free.operator
 			const operator_selector = ui.create_dom_element({
 				element_type 	: "div",
 				class_name 	 	: "search_operators_div"
 			})
 				const label = ui.create_dom_element({
-					element_type 	: "label",
-					class_name 		: "css_label label",
-					parent 			: operator_selector,
-					text_content 	: get_label["operadores_de_busqueda"] || "Search operators"
+					element_type	: "label",
+					class_name		: "css_label label",
+					parent			: operator_selector,
+					text_content	: get_label["operadores_de_busqueda"] || "Search operators"
 					})
 				const select = ui.create_dom_element({
-					element_type 	: "select",
-					class_name 		: "operator_selector",
-					parent 			: operator_selector
+					element_type	: "select",
+					class_name		: "operator_selector",
+					parent			: operator_selector
 					})
 					select.addEventListener("change",function(e){
 						// get the new operator selected
-						const new_operator 	= e.target.value
-						const sqo_filter 	= self.sqo.filter
+						const new_operator	= e.target.value
+						const sqo_filter	= self.sqo.filter
 						// get the old operator
-						const ar_operators 	= Object.keys(sqo_filter)
-						const op_length 	= ar_operators.length
+						const ar_operators	= Object.keys(sqo_filter)
+						const op_length		= ar_operators.length
 						// change the operator with the new selected
 						for (let i = op_length - 1; i >= 0; i--) {
 							sqo_filter[new_operator] = sqo_filter[ar_operators[i]]
@@ -393,16 +396,16 @@ export const service_autocomplete = function() {
 						}
 					},false)
 					const option_or = ui.create_dom_element({
-						element_type 	: "option",
-						parent 			: select,
-						value 			: "$or",
-						text_content 	: get_label.o
+						element_type	: "option",
+						parent			: select,
+						value			: "$or",
+						text_content	: get_label.o
 						})
 					const option_and = ui.create_dom_element({
-						element_type 	: "option",
-						parent 			: select,
-						value 			: "$and",
-						text_content 	: get_label.y
+						element_type	: "option",
+						parent			: select,
+						value			: "$and",
+						text_content	: get_label.y
 						})
 					if (operator==='$or') {
 						option_or.setAttribute("selected", true)
@@ -421,42 +424,44 @@ export const service_autocomplete = function() {
 	this.render_datalist = function(api_response) {
 
 		const self = this
+
 		const datalist = self.datalist
-		console.log("datalist", datalist);
+			console.log("render_datalist datalist", datalist);
+
 		//delete the last list
 		while (datalist.firstChild) {
 			datalist.removeChild(datalist.firstChild)
 		}
 		// get the result from the api response
-		const result 	= api_response.result
-		const data 		= result.data
+		const result	= api_response.result
+		const data		= result.data
 		// get the sections that was searched
 		const ar_search_sections = self.ar_search_section_tipo
 
 		// get the ar_locator founded in section
-		const data_locator = data.find((item)=> item.tipo === item.section_tipo);
-		const ar_locator = (data_locator) ? data_locator.value : []
+		const data_locator	= data.find((item)=> item.tipo === item.section_tipo);
+		const ar_locator	= (data_locator) ? data_locator.value : []
 		const current_section_length = ar_locator.length
 
 		// itterate the sections
 		for (const current_locator of ar_locator) {
 
-			const section_tipo 	= current_locator.section_tipo
-			const section_id 	= current_locator.section_id
+			const section_tipo	= current_locator.section_tipo
+			const section_id	= current_locator.section_id
 
 			// get data that mach with the current section from the global data sended by the api
 			// get the full row with all items in the ddo that mach with the section_id
 			const current_row = data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
 			// get dd objects from the context that will be used to build the lists in correct order
 
-			const current_ddo = self.context_search.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
+			const current_ddo = self.dd_request.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
 
 			// create the li node container
 			const li_node = ui.create_dom_element({
 				element_type	: 'li',
-				class_name 	 	: "autocomplete_data_li",
-				dataset 		: {value : JSON.stringify(current_locator)},
-				parent 			: self.datalist
+				class_name		: "autocomplete_data_li",
+				dataset			: {value : JSON.stringify(current_locator)},
+				parent			: self.datalist
 			})
 			// when the user do click in one row send the data to the caller_instance for save it.
 			li_node.addEventListener('click', function(e){
@@ -479,7 +484,7 @@ export const service_autocomplete = function() {
 					ui.create_dom_element({
 						element_type	: 'span',
 						text_content	: current_value,
-						parent 			: li_node
+						parent			: li_node
 					})// end create dom node
 			}// enf for ddo_item
 
@@ -490,7 +495,7 @@ export const service_autocomplete = function() {
 					ui.create_dom_element({
 						element_type	: 'span',
 						inner_html		: current_dd_info_value,
-						parent 			: li_node
+						parent			: li_node
 					})// end create dom node
 				}// end if of check current_dd_info
 
@@ -510,12 +515,12 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// Request term
-			const q = search_value
-			const search_query_object = self.rebuild_search_query_object(q);
+			const q						= search_value
+			const search_query_object	= self.rebuild_search_query_object(q);
 
-		// todo get the search engine with the context_search
-		//	const context_search = self.context_search.filter((current_item)=> current_item.typo === 'ddo')
-		//	context_search.push(search_query_object)
+		// todo get the search engine with the dd_request
+		//	const dd_request = self.dd_request.filter((current_item)=> current_item.typo === 'ddo')
+		//	dd_request.push(search_query_object)
 
 			// search source selector
 			//let search_engine = (search_options.search_engine !== null) ? search_options.search_engine : "search_dedalo";
@@ -526,7 +531,7 @@ export const service_autocomplete = function() {
 			}
 
 		// exec search
-			const js_promise = self[search_engine]( self.context_search )
+			const js_promise = self[search_engine]( self.dd_request )
 
 		// test
 			//const js_promise = this["search_zenon"](search_options)
@@ -556,9 +561,9 @@ export const service_autocomplete = function() {
 			const search_sections = self.ar_search_section_tipo
 
 		// filter_by_field_list. Optional. Uses propiedades config params
-			const filter_by_field_list_tipo  	 = false
-			const filter_by_field_list_value 	 = false
-			const filter_by_field_list_value_len = false
+			const filter_by_field_list_tipo			= false
+			const filter_by_field_list_value		= false
+			const filter_by_field_list_value_len	= false
 
 		// filter_fields_data. Optional. Used when you give the user control to the search fields and operators (like component autocomplete)
 			const filter_fields_data = false//self.get_filter_fields_data(wrap_div, q)
@@ -577,15 +582,15 @@ export const service_autocomplete = function() {
 				}
 
 				// operator. Selector operator
-					const operator_selector = wrap_div.querySelector(".operator_selector")
-					let operator_selected   = (operator_selector) ? "$" + operator_selector.value : "$or";
+					const operator_selector	= wrap_div.querySelector(".operator_selector")
+					let operator_selected	= (operator_selector) ? "$" + operator_selector.value : "$or";
 
 				// split. Selector split
-					const split_selector 	= wrap_div.querySelector(".split_selector")
-					let split_selected   	= (split_selector) ? JSON.parse(split_selector.value) : true;
+					const split_selector	= wrap_div.querySelector(".split_selector")
+					let split_selected		= (split_selector) ? JSON.parse(split_selector.value) : true;
 
-				let clean_group 	= []
-				let filter_element 	= sqo.filter
+				let clean_group		= []
+				let filter_element	= sqo.filter
 
 				// Iterate current filter
 				for (let operator in filter_element) {
@@ -610,9 +615,9 @@ export const service_autocomplete = function() {
 							let sub_group1 = {'$or':[]}
 							for (let k = 0; k < filter_by_field_list_value_len; k++) {
 
-								let locator 		= filter_by_field_list_value[k]
-								let new_search_unit = cloneDeep(search_unit)
-								new_search_unit.q   = JSON.stringify(locator)
+								let locator			= filter_by_field_list_value[k]
+								let new_search_unit	= cloneDeep(search_unit)
+								new_search_unit.q	= JSON.stringify(locator)
 								// Remove all path filter_elements but first
 								new_search_unit.path.splice(1)
 								// Add to group
@@ -673,8 +678,8 @@ export const service_autocomplete = function() {
 			}else{
 
 
-				const fixed_filter 		= self.context_search.find((current_item)=> current_item.typo==='fixed_filter')
-				const filter_free		= self.context_search.find((current_item)=> current_item.typo==='filter_free')
+				const fixed_filter	= self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
+				const filter_free	= self.dd_request.find((current_item)=> current_item.typo==='filter_free')
 				// const filter_element[Object.keys(filter_element)[0]]
 				if(filter_free){
 					const filter_free_value = filter_free.value
@@ -685,7 +690,9 @@ export const service_autocomplete = function() {
 						for (let i = 0; i < current_filter.length; i++) {
 
 							// Update q property
-							current_filter[i].q 	  = (q !== "") ? "*" + q + "*" : "false_muyflase_de verdad" // Begins with
+							current_filter[i].q	= (q !== "")
+								? "*" + q + "*"
+								: "false_muyflase_de verdad"
 							current_filter[i].q_split = false
 						}
 					}
@@ -693,10 +700,13 @@ export const service_autocomplete = function() {
 
 					// filter rebuilded
 					self.sqo.filter = {
-						"$and" : [filter_free_value]
+						// "$and" : [filter_free_value]
+						"$and" : []
 					}
 					if (fixed_filter) {
-						// sqo.filter.$and.push(fixed_filter)
+						for (let i = 0; i < fixed_filter.value.length; i++) {
+							sqo.filter.$and.push(fixed_filter.value[i])
+						}
 					}
 				}
 
@@ -734,8 +744,8 @@ export const service_autocomplete = function() {
 
 		console.log("+++ [service_autocomplete.search_dedalo] search_query_object:", search_query_object);
 
-		const current_data_manager 		= new data_manager()
-		const load_section_data_promise = current_data_manager.read(search_query_object)
+		const current_data_manager		= new data_manager()
+		const load_section_data_promise	= current_data_manager.read(search_query_object)
 
 		// render section on load data
 	 		const api_response = await load_section_data_promise
@@ -758,15 +768,15 @@ export const service_autocomplete = function() {
 			console.log("[search_zenon] source:", search_options);
 		}
 
-		const ar_selected_fields = search_options.selected_fields;
-		const ar_fields = ar_selected_fields.map(field => field.fields_map[0].remote)
+		const ar_selected_fields	= search_options.selected_fields;
+		const ar_fields				= ar_selected_fields.map(field => field.fields_map[0].remote)
 
 		// fields of Zenon "title" for zenon4
-			const fields 		= ar_fields
-			const fields_length = fields.length
+			const fields		= ar_fields
+			const fields_length	= fields.length
 		// section_tipo of Zenon zenon1
-			const section_tipo 	= ar_selected_fields[0].section_tipo
-			const relation_type = self.external_relation_type
+			const section_tipo	= ar_selected_fields[0].section_tipo
+			const relation_type	= self.external_relation_type
 
 		const q = search_options.q
 
@@ -778,9 +788,9 @@ export const service_autocomplete = function() {
 					//console.log("+++ source 1:",source);
 	  			}
 
-				const data_formatted = []
-				const records 		 = data.records || []
-				const records_length = records.length
+				const data_formatted	= []
+				const records			= data.records || []
+				const records_length	= records.length
 				for (let i = 0; i < records_length; i++) {
 
 					const record 	= records[i]
@@ -791,11 +801,11 @@ export const service_autocomplete = function() {
 						switch(field) {
 							case 'authors':
 								// console.log("++ authors:",record[field]);
-								const authors_ar_value  = []
-								const primary 			= record[field].primary
-								const secondary 		= record[field].secondary
-								const corporate 		= record[field].corporate
-								const authors_separator = " - "
+								const authors_ar_value	= []
+								const primary			= record[field].primary
+								const secondary			= record[field].secondary
+								const corporate			= record[field].corporate
+								const authors_separator	= " - "
 
 								if(SHOW_DEBUG===true) {
 									//console.log("primary:",primary);	console.log("secondary:",secondary);	console.log("corporate:",corporate);
@@ -831,17 +841,17 @@ export const service_autocomplete = function() {
 
 					// locator
 						const locator = {
-							section_tipo 		: section_tipo,
-							section_id 	 		: record['id'],
-							type 		 		: self.external_relation_type,
-							from_component_tipo : search_options.component_tipo
+							section_tipo		: section_tipo,
+							section_id			: record['id'],
+							type				: self.external_relation_type,
+							from_component_tipo	: search_options.component_tipo
 						}
 
 					// build formatted item
 						const result_item = {
-							key 	: JSON.stringify(locator),
-							label 	: value,
-							value 	: value
+							key		: JSON.stringify(locator),
+							label	: value,
+							value	: value
 						}
 
 					// insert fomatted item
@@ -859,12 +869,12 @@ export const service_autocomplete = function() {
 		// trigger vars
 			const url_trigger  = "https://zenon.dainst.org/api/v1/search"
 			const trigger_vars = {
-					lookfor 	: q,
-					type 		: "AllFields", // search in all fields
-					sort 		: "relevance",
-					limit 		: 20,
-					prettyPrint : false,
-					lng 		: "de"
+					lookfor		: q,
+					type		: "AllFields", // search in all fields
+					sort		: "relevance",
+					limit		: 20,
+					prettyPrint	: false,
+					lng			: "de"
 				}; // console.log("*** [search_zenon] trigger_vars", trigger_vars, search_options)
 
 			let url_arguments = build_url_arguments_from_vars( trigger_vars )
@@ -983,10 +993,10 @@ export const service_autocomplete = function() {
 				}
 
 		// Vars
-			const tipo 				= wrap_div.dataset.tipo
+			const tipo				= wrap_div.dataset.tipo
 			const component_info	= (wrap_div.dataset.component_info) ? JSON.parse(wrap_div.dataset.component_info) : {}
-			const propiedades 		= component_info.propiedades || {}
-			const wrap_id 			= wrap_div.dataset.section_tipo +'_'+ wrap_div.dataset.tipo+'_'+wrap_div.dataset.parent
+			const propiedades		= component_info.propiedades || {}
+			const wrap_id			= wrap_div.dataset.section_tipo +'_'+ wrap_div.dataset.tipo+'_'+wrap_div.dataset.parent
 
 		// Custom events defined in propiedades
 			const custom_events = (propiedades.custom_events) ? propiedades.custom_events : []
@@ -996,9 +1006,9 @@ export const service_autocomplete = function() {
 
 
 		$(input_obj).autocomplete({
-			delay 		: 300,
-			minLength 	: component_js.min_length || 1,
-			source: function( request, response ) {
+			delay		: 300,
+			minLength	: component_js.min_length || 1,
+			source		: function( request, response ) {
 
 				// Cache
 					//const uid = tipo + '_' + request.term
@@ -1023,10 +1033,10 @@ export const service_autocomplete = function() {
 						let selected_fields = null;
 						const source_selector = document.getElementById('select_autosearch_options_'+wrap_id)
 						if (source_selector) {
-							const selector_source 		= JSON.parse(source_selector.options[source_selector.selectedIndex].dataset.source);
-							search_engine 				= selector_source.search_engine;
-							const original_ar_elements 	= JSON.parse(source_selector.dataset.source);
-							selected_fields 		= original_ar_elements.ar_elements.filter(element => element.section_tipo===selector_source.section_tipo)
+							const selector_source		= JSON.parse(source_selector.options[source_selector.selectedIndex].dataset.source);
+							search_engine				= selector_source.search_engine;
+							const original_ar_elements	= JSON.parse(source_selector.dataset.source);
+							selected_fields				= original_ar_elements.ar_elements.filter(element => element.section_tipo===selector_source.section_tipo)
 						}
 
 					const search_query_object = self.rebuild_search_query_object2(wrap_div, q);
@@ -1034,14 +1044,14 @@ export const service_autocomplete = function() {
 
 				// Search
 					const search_options = {
-						component_tipo 		: wrap_div.dataset.tipo,
-						section_tipo 		: wrap_div.dataset.section_tipo,
-						divisor 			: wrap_div.dataset.divisor || " | ",
-						search_query_object : search_query_object,
-						wrap 				: wrap_div,
+						component_tipo		: wrap_div.dataset.tipo,
+						section_tipo		: wrap_div.dataset.section_tipo,
+						divisor				: wrap_div.dataset.divisor || " | ",
+						search_query_object	: search_query_object,
+						wrap				: wrap_div,
 						search_engine		: search_engine,
-						selected_fields 	: selected_fields,
-						q 					: q
+						selected_fields		: selected_fields,
+						q					: q
 					}
 					self.autocomplete_search(search_options)
 					.then(function(response_data){
@@ -1068,12 +1078,12 @@ export const service_autocomplete = function() {
 					for (let i = 0; i < custom_events_select.length; i++) {
 						const fn = custom_events_select[i].select
 						component_js[fn]({
-							event 		 : event,
-							ui 			 : ui,
-							input_obj 	 : this,
-							params 		 : custom_events_select[i].params || {},
-							component_js : component_js,
-							wrap_div 	 : wrap_div
+							event			: event,
+							ui				: ui,
+							input_obj		: this,
+							params			: custom_events_select[i].params || {},
+							component_js	: component_js,
+							wrap_div		: wrap_div
 						})
 					}
 
@@ -1083,22 +1093,22 @@ export const service_autocomplete = function() {
 					if (typeof component_js.on_select!=="undefined") {
 						// Component specific action
 						component_js.on_select({
-							event 		 : event,
-							ui 			 : ui,
-							input_obj 	 : this,
-							params 		 : {},
-							component_js : component_js,
-							wrap_div 	 : wrap_div
+							event			: event,
+							ui				: ui,
+							input_obj		: this,
+							params			: {},
+							component_js	: component_js,
+							wrap_div		: wrap_div
 						})
 					}else{
 						// Generic action
 						self.on_select({
-							event 		 : event,
-							ui 			 : ui,
-							input_obj 	 : this,
-							params 		 : {},
-							component_js : component_js,
-							wrap_div 	 : wrap_div
+							event			: event,
+							ui				: ui,
+							input_obj		: this,
+							params			: {},
+							component_js	: component_js,
+							wrap_div		: wrap_div
 						})
 					}
 				}
@@ -1163,12 +1173,12 @@ export const service_autocomplete = function() {
 		// trigger vars
 			const url_trigger  = DEDALO_CORE_URL + "/services/service_autocomplete/trigger.service_autocomplete.php"
 			const trigger_vars = {
-					mode 	 			: 'autocomplete_search',
-					component_tipo 		: search_options.component_tipo,
-					section_tipo 		: search_options.section_tipo,
-					top_tipo 			: page_globals.top_tipo,
-					divisor 			: search_options.divisor || " | ",
-					search_query_object : search_options.search_query_object
+					mode				: 'autocomplete_search',
+					component_tipo		: search_options.component_tipo,
+					section_tipo		: search_options.section_tipo,
+					top_tipo			: page_globals.top_tipo,
+					divisor				: search_options.divisor || " | ",
+					search_query_object	: search_options.search_query_object
 				}; //console.log("*** [autocomplete_search.load_rows] trigger_vars", trigger_vars)
 
 		// promise JSON XMLHttpRequest
@@ -1208,15 +1218,15 @@ export const service_autocomplete = function() {
 			console.log("[search_zenon] source:", search_options);
 		}
 
-		const ar_selected_fields = search_options.selected_fields;
-		const ar_fields = ar_selected_fields.map(field => field.fields_map[0].remote)
+		const ar_selected_fields	= search_options.selected_fields;
+		const ar_fields				= ar_selected_fields.map(field => field.fields_map[0].remote)
 
 		// fields of Zenon "title" for zenon4
-			const fields 		= ar_fields
-			const fields_length = fields.length
+			const fields		= ar_fields
+			const fields_length	= fields.length
 		// section_tipo of Zenon zenon1
-			const section_tipo 	= ar_selected_fields[0].section_tipo
-			const relation_type = self.external_relation_type
+			const section_tipo	= ar_selected_fields[0].section_tipo
+			const relation_type	= self.external_relation_type
 
 		const q = search_options.q
 
@@ -1241,11 +1251,11 @@ export const service_autocomplete = function() {
 						switch(field) {
 							case 'authors':
 								// console.log("++ authors:",record[field]);
-								const authors_ar_value  = []
-								const primary 			= record[field].primary
-								const secondary 		= record[field].secondary
-								const corporate 		= record[field].corporate
-								const authors_separator = " - "
+								const authors_ar_value	= []
+								const primary			= record[field].primary
+								const secondary			= record[field].secondary
+								const corporate			= record[field].corporate
+								const authors_separator	= " - "
 
 								if(SHOW_DEBUG===true) {
 									//console.log("primary:",primary);	console.log("secondary:",secondary);	console.log("corporate:",corporate);
@@ -1281,17 +1291,17 @@ export const service_autocomplete = function() {
 
 					// locator
 						const locator = {
-							section_tipo 		: section_tipo,
-							section_id 	 		: record['id'],
-							type 		 		: self.external_relation_type,
-							from_component_tipo : search_options.component_tipo
+							section_tipo		: section_tipo,
+							section_id			: record['id'],
+							type				: self.external_relation_type,
+							from_component_tipo	: search_options.component_tipo
 						}
 
 					// build formatted item
 						const result_item = {
-							key 	: JSON.stringify(locator),
-							label 	: value,
-							value 	: value
+							key		: JSON.stringify(locator),
+							label	: value,
+							value	: value
 						}
 
 					// insert fomatted item
@@ -1309,12 +1319,12 @@ export const service_autocomplete = function() {
 		// trigger vars
 			const url_trigger  = "https://zenon.dainst.org/api/v1/search"
 			const trigger_vars = {
-					lookfor 	: q,
-					type 		: "AllFields", // search in all fields
-					sort 		: "relevance",
-					limit 		: 20,
-					prettyPrint : false,
-					lng 		: "de"
+					lookfor		: q,
+					type		: "AllFields", // search in all fields
+					sort		: "relevance",
+					limit		: 20,
+					prettyPrint	: false,
+					lng			: "de"
 				}; // console.log("*** [search_zenon] trigger_vars", trigger_vars, search_options)
 
 			let url_arguments = build_url_arguments_from_vars( trigger_vars )
@@ -1387,9 +1397,9 @@ export const service_autocomplete = function() {
 		options.input_obj.value = ''
 
 		// Default behavior
-		const ui 	= options.ui
-		const label = ui.item.label
-		const value = JSON.parse(ui.item.value)
+		const ui	= options.ui
+		const label	= ui.item.label
+		const value	= JSON.parse(ui.item.value)
 
 		const wrap_div = options.wrap_div
 
@@ -1423,9 +1433,9 @@ export const service_autocomplete = function() {
 			const search_sections = self.get_search_sections(wrap_div)
 
 		// filter_by_field_list. Optional. Uses propiedades config params
-			const filter_by_field_list_tipo  	 = self.get_filter_by_field_list_tipo(wrap_div)
-			const filter_by_field_list_value 	 = self.get_filter_by_field_list_value(wrap_div)
-			const filter_by_field_list_value_len = filter_by_field_list_value ? filter_by_field_list_value.length : 0;
+			const filter_by_field_list_tipo			= self.get_filter_by_field_list_tipo(wrap_div)
+			const filter_by_field_list_value		= self.get_filter_by_field_list_value(wrap_div)
+			const filter_by_field_list_value_len	= filter_by_field_list_value ? filter_by_field_list_value.length : 0;
 
 		// filter_fields_data. Optional. Used when you give the user control to the search fields and operators (like component autocomplete)
 			const filter_fields_data = self.get_filter_fields_data(wrap_div, q)
@@ -1444,12 +1454,12 @@ export const service_autocomplete = function() {
 				}
 
 				// operator. Selector operator
-					const operator_selector = wrap_div.querySelector(".operator_selector")
-					let operator_selected   = (operator_selector) ? "$" + operator_selector.value : "$or";
+					const operator_selector	= wrap_div.querySelector(".operator_selector")
+					let operator_selected	= (operator_selector) ? "$" + operator_selector.value : "$or";
 
 				// split. Selector split
-					const split_selector 	= wrap_div.querySelector(".split_selector")
-					let split_selected   	= (split_selector) ? JSON.parse(split_selector.value) : true;
+					const split_selector	= wrap_div.querySelector(".split_selector")
+					let split_selected		= (split_selector) ? JSON.parse(split_selector.value) : true;
 
 				let clean_group 	= []
 				let filter_element 	= search_query_object.filter
@@ -1477,9 +1487,9 @@ export const service_autocomplete = function() {
 							let sub_group1 = {'$or':[]}
 							for (let k = 0; k < filter_by_field_list_value_len; k++) {
 
-								let locator 		= filter_by_field_list_value[k]
-								let new_search_unit = cloneDeep(search_unit)
-								new_search_unit.q   = JSON.stringify(locator)
+								let locator			= filter_by_field_list_value[k]
+								let new_search_unit	= cloneDeep(search_unit)
+								new_search_unit.q	= JSON.stringify(locator)
 								// Remove all path filter_elements but first
 								new_search_unit.path.splice(1)
 								// Add to group
@@ -1548,8 +1558,8 @@ export const service_autocomplete = function() {
 					for (var i = 0; i < current_filter.length; i++) {
 
 						// Update q property
-						current_filter[i].q 	  = q + "*" // Begins with
-						current_filter[i].q_split = false
+						current_filter[i].q			= q + "*" // Begins with
+						current_filter[i].q_split	= false
 
 					}
 
@@ -1589,8 +1599,8 @@ export const service_autocomplete = function() {
 
 		const search_sections_list_ul = wrap_div.querySelector('ul.search_sections_list')
 		if (search_sections_list_ul) {
-			const ar_inputs 	= search_sections_list_ul.querySelectorAll('input')
-			const len 			= ar_inputs.length
+			const ar_inputs	= search_sections_list_ul.querySelectorAll('input')
+			const len		= ar_inputs.length
 			for (let i = len - 1; i >= 0; i--) {
 				// skip all option
 					if (ar_inputs[i].value==="all") {
@@ -1630,8 +1640,8 @@ export const service_autocomplete = function() {
 
 		const self = this
 
-		const filter_fields 	= wrap_div.querySelectorAll("input.filter_fields_input")
-		const filter_fields_len = filter_fields.length
+		const filter_fields		= wrap_div.querySelectorAll("input.filter_fields_input")
+		const filter_fields_len	= filter_fields.length
 
 		if (filter_fields_len<1) {
 			return false
@@ -1672,8 +1682,8 @@ export const service_autocomplete = function() {
 		// filter_fields_data
 			const filter_fields_data = {}
 			for (let i = 0; i < filter_fields_len; i++) {
-				const current_tipo 				 = filter_fields[i].dataset.tipo
-				filter_fields_data[current_tipo] = filter_fields[i].value
+				const current_tipo					= filter_fields[i].dataset.tipo
+				filter_fields_data[current_tipo]	= filter_fields[i].value
 			}
 
 
@@ -1787,9 +1797,9 @@ export const service_autocomplete = function() {
 
 		const str  = q
 
-		const regex_code = /^(\W{1,2})?\d+([.,\/-]+[\d\w]*)?(\D)?$/
-		const regex_date = /^(\W{1,2})?([0-9]{1,12})-?([0-9]{1,2})?-?([0-9]{1,2})?$/ 	//  /^(\W{1,2})?(-?[0-9]{1,12})(-[0-9]{1,2})?(-[0-9]{1,2})?$/
-		const regex_int  = /^(\W{1,2})?\d+$/
+		const regex_code	= /^(\W{1,2})?\d+([.,\/-]+[\d\w]*)?(\D)?$/
+		const regex_date	= /^(\W{1,2})?([0-9]{1,12})-?([0-9]{1,2})?-?([0-9]{1,2})?$/ 	//  /^(\W{1,2})?(-?[0-9]{1,12})(-[0-9]{1,2})?(-[0-9]{1,2})?$/
+		const regex_int		= /^(\W{1,2})?\d+$/
 
 		switch(true) {
 
@@ -1886,8 +1896,8 @@ export const service_autocomplete = function() {
 	*/
 	this.toggle_options = function(button_obj) {
 
-		const tipo 		= button_obj.dataset.tipo
-		const container = button_obj.parentNode.parentNode.querySelector('.autosearch_options[data-tipo="'+tipo+'"]')
+		const tipo		= button_obj.dataset.tipo
+		const container	= button_obj.parentNode.parentNode.querySelector('.autosearch_options[data-tipo="'+tipo+'"]')
 
 		if (container.classList.contains("hide")) {
 			// Show
@@ -1970,12 +1980,12 @@ export const service_autocomplete = function() {
 
 		const self = this
 
-		const tipo 				= options.tipo
-		const section_tipo 		= options.section_tipo
-		const ar_elements 		= options.ar_elements
-		const cookie_name 		= 'search_sections_list_' + section_tipo + '_' + tipo;
-		const target_id 		= options.target_id
-		const options_wrapper 	= document.getElementById(target_id)
+		const tipo				= options.tipo
+		const section_tipo		= options.section_tipo
+		const ar_elements		= options.ar_elements
+		const cookie_name		= 'search_sections_list_' + section_tipo + '_' + tipo;
+		const target_id			= options.target_id
+		const options_wrapper	= document.getElementById(target_id)
 		if (!options_wrapper) {
 			console.error("[build_search_sections_list] Error on locate dom element:", target_id);
 			return false
@@ -1985,35 +1995,35 @@ export const service_autocomplete = function() {
 
 			// ul container
 				const ul = ui.create_dom_element({
-					element_type 	: "ul",
-					class_name 	 	: "search_sections_list text_unselectable hide",
-					parent 			: options_wrapper
+					element_type	: "ul",
+					class_name		: "search_sections_list text_unselectable hide",
+					parent			: options_wrapper
 				})
 
 			// li check all
 				const li_all = ui.create_dom_element({
-					element_type 	: "li",
-					parent 			: ul
+					element_type	: "li",
+					parent			: ul
 					})
 					const checkbox_all = ui.create_dom_element({
-						element_type 	: "input",
-						type 			: "checkbox",
-						value 			: "all",
-						id 				: "select_all_" + tipo,
-						parent 			: li_all
+						element_type	: "input",
+						type			: "checkbox",
+						value			: "all",
+						id				: "select_all_" + tipo,
+						parent			: li_all
 						})
 						checkbox_all.addEventListener("change",function(){
 							self.select_all_search_sections(this, cookie_name)
 						},false)
 					const label_all = ui.create_dom_element({
-						element_type 	: "label",
-						parent 			: li_all,
-						text_content 	: get_label["todos"]
+						element_type	: "label",
+						parent			: li_all,
+						text_content	: get_label["todos"]
 						})
 						label_all.setAttribute("for", "select_all_" + tipo)
 					const hr = ui.create_dom_element({
-						element_type 	: "hr",
-						parent 			: ul
+						element_type	: "hr",
+						parent			: ul
 						})
 
  			// li sections
@@ -2022,30 +2032,30 @@ export const service_autocomplete = function() {
 
 					const element = ar_elements[i]
 
-					const current_id 		= "sections_list_" + element.key + "_" + i
-					const current_value 	= element.key
-					const current_label 	= element.label
-					const current_checked 	= false
+					const current_id		= "sections_list_" + element.key + "_" + i
+					const current_value		= element.key
+					const current_label		= element.label
+					const current_checked	= false
 
 					const li = ui.create_dom_element({
 						element_type 	: "li",
 						parent 			: ul
 						})
 						let checkbox = ui.create_dom_element({
-							element_type 	: "input",
-							type 			: "checkbox",
-							value 			: current_value,
-							id 				: current_id,
-							parent 			: li
+							element_type	: "input",
+							type			: "checkbox",
+							value			: current_value,
+							id				: current_id,
+							parent			: li
 							})
 							checkbox.setAttribute("checked", current_checked)
 							checkbox.addEventListener("change",function(){
 								self.save_filter_list(this, cookie_name)
 							},false)
 						let label = ui.create_dom_element({
-							element_type 	: "label",
-							parent 			: li,
-							text_content 	: current_label
+							element_type	: "label",
+							parent			: li,
+							text_content	: current_label
 							})
 							label.setAttribute("for", current_id)
 				}
@@ -2071,7 +2081,7 @@ export const service_autocomplete = function() {
 	this.toggle_search_sections_list = function(button_obj) {
 
 		const wrapper	= component_common.get_wrapper_from_element(button_obj)
-		const container = wrapper.querySelector('ul.search_sections_list')
+		const container	= wrapper.querySelector('ul.search_sections_list')
 
 		if (container.classList.contains("hide")) {
 			container.classList.remove("hide")
@@ -2092,9 +2102,9 @@ export const service_autocomplete = function() {
 	*/
 	this.select_all_search_sections = function(input_obj, cookie_name) {
 
-		const wrap_div 		 	= find_ancestor(input_obj, 'wrap_component')
-		const toponymy_list_ul 	= wrap_div.querySelector('ul.search_sections_list')
-		const ar_inputs 		= toponymy_list_ul.querySelectorAll('input')
+		const wrap_div			= find_ancestor(input_obj, 'wrap_component')
+		const toponymy_list_ul	= wrap_div.querySelector('ul.search_sections_list')
+		const ar_inputs			= toponymy_list_ul.querySelectorAll('input')
 
 		const len = ar_inputs.length
 		for (let i = len - 1; i >= 0; i--) {
@@ -2114,9 +2124,9 @@ export const service_autocomplete = function() {
 	*/
 	this.save_search_sections = function(input, cookie_name) {
 
-		const wrap_div 			  	= input.parentNode.parentNode.parentNode.parentNode;
-		const selected_values 		= service_autocomplete.get_search_sections(wrap_div)
-		const hierarchy_sections  	= JSON.stringify(selected_values)
+		const wrap_div				= input.parentNode.parentNode.parentNode.parentNode;
+		const selected_values		= service_autocomplete.get_search_sections(wrap_div)
+		const hierarchy_sections	= JSON.stringify(selected_values)
 
 		// Store values as cookie to preserve config
 		createCookie(cookie_name, hierarchy_sections, 365)
@@ -2139,12 +2149,12 @@ export const service_autocomplete = function() {
 
 		const self = this
 
-		const tipo 				= options.tipo
-		const section_tipo 		= options.section_tipo
-		const ar_elements 		= options.ar_elements
-		const cookie_name 		= 'filter_by_list_' + section_tipo + '_' + tipo;
-		const target_id 		= options.target_id
-		const options_wrapper 	= document.getElementById(target_id)
+		const tipo				= options.tipo
+		const section_tipo		= options.section_tipo
+		const ar_elements		= options.ar_elements
+		const cookie_name		= 'filter_by_list_' + section_tipo + '_' + tipo;
+		const target_id			= options.target_id
+		const options_wrapper	= document.getElementById(target_id)
 		if (!options_wrapper) {
 			console.error("[build_filter_list] Error on locate dom element:", target_id);
 			return false
@@ -2168,9 +2178,9 @@ export const service_autocomplete = function() {
 
 			// ul container
 				const ul = ui.create_dom_element({
-					element_type 	: "ul",
-					class_name 	 	: "filter_by_list filter_by_field_list text_unselectable",
-					parent 			: options_wrapper
+					element_type	: "ul",
+					class_name		: "filter_by_list filter_by_field_list text_unselectable",
+					parent			: options_wrapper
 				})
 
 			// li check all
