@@ -4,10 +4,10 @@
 
 
 // configuration vars
-	$tipo				= $this->get_tipo();
-	$permissions		= common::get_permissions($tipo, $tipo);
-	$modo				= $this->get_modo();
-	$search_action 		= $this->search_action;
+	$tipo			= $this->get_tipo();
+	$permissions	= common::get_permissions($tipo, $tipo);
+	$modo			= $this->get_modo();
+	$search_action	= $this->search_action;
 
 
 // context
@@ -51,8 +51,8 @@
 					$typology = new stdClass();
 						$typology->section_id	= $hierarchy_data->typology_section_id;
 						$typology->type			= 'typology';
-						$typology->label 		= $this->get_typology_name($hierarchy_data->typology_section_id);
-						$typology->order 		= $this->get_typology_order($hierarchy_data->typology_section_id);
+						$typology->label		= $this->get_typology_name($hierarchy_data->typology_section_id);
+						$typology->order		= $this->get_typology_order($hierarchy_data->typology_section_id);
 
 					$ar_typologies[] = $typology;
 				}
@@ -61,8 +61,8 @@
 			$value = array_merge($ar_typologies,$hierarchy_sections);
 
 		$item = new stdClass();
-			$item->tipo 				= $this->get_tipo();
-			$item->value 				= $value;
+			$item->tipo		= $this->get_tipo();
+			$item->value	= $value;
 
 		// search_action
 			if (!empty($search_action) && $search_action->action==='search') {
