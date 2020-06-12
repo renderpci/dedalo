@@ -4,12 +4,12 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-	$section_tipo 		= $this->section_tipo;
-	$lang 				= $this->lang;
-	$tipo 				= $this->get_tipo();
-	$properties 		= $this->get_propiedades() ?? new stdClass();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$section_tipo	= $this->section_tipo;
+	$lang			= $this->lang;
+	$tipo			= $this->get_tipo();
+	$properties		= $this->get_propiedades() ?? new stdClass();
 
 
 
@@ -24,9 +24,9 @@
 				break;
 
 			default:
-				// Component structure context (tipo, relations, properties, etc.)
-					$current_context 					= $this->get_structure_context($permissions);
-					$current_context->config_context 	= $this->get_config_context_parsed();
+				// Component structure context (tipo, relations, properties, etc.)					
+					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
+
 					// add records_mode to properties, if not already defined
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {
@@ -56,19 +56,19 @@
 	if($options->get_data===true && $permissions>0){
 
 		$section_id	= $this->get_section_id();
-		$properties = $this->get_propiedades();
+		$properties	= $this->get_propiedades();
 
 		switch ($modo) {
 			case 'list':
-				$dato 	= $this->get_dato();
-				$value 	= $this->get_dato_paginated(); // $dato;
-				$limit 	= $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records;
+				$dato	= $this->get_dato();
+				$value	= $this->get_dato_paginated(); // $dato;
+				$limit	= $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records;
 				break;
 			case 'edit':
 			default:
-				$dato 	= $this->get_dato();
-				$value 	= $this->get_dato_paginated();
-				$limit 	= $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
+				$dato	= $this->get_dato();
+				$value	= $this->get_dato_paginated();
+				$limit	= $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
 				break;
 		}
 
@@ -76,13 +76,13 @@
 
 			// data item
 				$item = $this->get_data_item($value);
-					$item->parent_tipo 			= $tipo;
-					$item->parent_section_id 	= $section_id;
+					$item->parent_tipo			= $tipo;
+					$item->parent_section_id	= $section_id;
 					// fix pagination vars
 						$pagination = new stdClass();
 							$pagination->total	= count($dato);
-							$pagination->limit 	= $limit;
-							$pagination->offset = $this->pagination->offset ?? 0;
+							$pagination->limit	= $limit;
+							$pagination->offset	= $this->pagination->offset ?? 0;
 					$item->pagination = $pagination;
 
 				$data[] = $item;
@@ -92,8 +92,10 @@
 
 			// subdata add
 				foreach ($ar_subdata as $current_data) {
-					$current_data->parent_tipo 			= $tipo;
-					$current_data->parent_section_id 	= $section_id;
+					
+					$current_data->parent_tipo			= $tipo;
+					$current_data->parent_section_id	= $section_id;
+					
 					$data[] = $current_data;
 				}
 

@@ -54,11 +54,11 @@ export const component_portal = function(){
 */
 // prototypes assign
 	// lifecycle
-	// component_portal.prototype.init 				= component_common.prototype.init
-	// component_portal.prototype.build 			= component_common.prototype.build
+	// component_portal.prototype.init				= component_common.prototype.init
+	// component_portal.prototype.build				= component_common.prototype.build
 	component_portal.prototype.render				= common.prototype.render
 	component_portal.prototype.refresh				= common.prototype.refresh
-	component_portal.prototype.destroy				= common.prototype.destroy
+	component_portal.prototype.destroy				= common.prototype.destroy	
 
 	// change data
 	component_portal.prototype.save					= component_common.prototype.save
@@ -66,6 +66,7 @@ export const component_portal = function(){
 	// component_portal.prototype.update_datum		= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
+	component_portal.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
 	component_portal.prototype.list					= render_component_portal.prototype.list
@@ -84,8 +85,15 @@ component_portal.prototype.init = async function(options) {
 	const self = this
 
 	// autocomplete. set default values of service autocomplete
-		self.autocomplete		= null
-		self.autocomplete_active= false
+		self.autocomplete			= null
+		self.autocomplete_active	= false
+
+	// dd_request . Object with all possible request (show,select,search)
+		self.dd_request	= {
+			show	: null,
+			search	: null,
+			select	: null
+		}
 
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -119,12 +127,10 @@ component_portal.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_portal.prototype.build  = async function(autoload){
+component_portal.prototype.build  = async function(autoload=false){
 	const t0 = performance.now()
 
 	const self = this
-
-	autoload = typeof autoload==="undefined" ? false : autoload
 
 	// status update
 		self.status = 'building'
@@ -132,18 +138,20 @@ component_portal.prototype.build  = async function(autoload){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-		self.rq_context_show = self.build_rq_context_show()
+	// set dd_request
+		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
 
 	// load data if not yet received as an option
 		if (autoload===true) {
+			
+			// get context and data
+				const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.read(self.dd_request.show)
 
-			const current_data_manager 	= new data_manager()
-
-			const api_response 			= await current_data_manager.read(self.rq_context_show)
-
-			if(SHOW_DEBUG===true) {
-				console.log("portal build api_response:", api_response)
-			}
+			// debug
+				if(SHOW_DEBUG===true) {
+					console.log("portal build api_response:", api_response)
+				}
 
 			// Update the self.data into the datum and self instance
 				if (api_response.result) {
@@ -168,7 +176,7 @@ component_portal.prototype.build  = async function(autoload){
 			// sqo update filter_by_locators
 				if(self.pagination.total>self.pagination.limit){
 
-					const show 	= self.rq_context_show
+					const show 	= self.dd_request.show
 					const sqo 	= show.find(item => item.typo==='sqo')
 
 					const data_value = self.data.value
@@ -197,7 +205,7 @@ component_portal.prototype.build  = async function(autoload){
 					// refresh existing
 					self.paginator.offset = self.pagination.offset
 					self.paginator.total  = self.pagination.total
-					self.paginator.refresh()
+					// self.paginator.refresh()
 				}
 
 			// autocomplete destroy. change the autocomplete service to false and desactive it.
@@ -226,179 +234,6 @@ component_portal.prototype.build  = async function(autoload){
 }//end component_portal.prototype.build
 
 
-
-
-component_portal.prototype.build_rq_context_show = function(){
-
-	const self = this
-
-	const config_context 	= self.context.config_context
-	const length 			= config_context.length
-	const rq_context_ddo 	= self.datum.context.find(item => item.source === 'rq_context_ddo').value
-	const operator 			= self.context.properties.operator || '$and'
-	const rq_context		= []
-	const ar_sections 		= []
-	// source auto create
-	const source = create_source(self,'get_data')
-	rq_context.push(source)
-
-	for (let i = 0; i < length; i++) {
-		const current_item 		= config_context[i]
-		const sections 			= current_item.section_tipo
-
-		const sections_length 	= sections.length
-		// show
-		const show = current_item.show
-		const show_length = show.length
-		//get sections
-		for (let j = 0; j < sections_length; j++) {
-			ar_sections.push(sections[j])
-			// get the fpath array
-			for (let k = 0; k < show_length; k++) {
-				const f_path = show[k].f_path
-				const f_path_length = f_path.length
-
-				// get the current item of the fpath
-				for (let l = 0; l < f_path_length; l++) {
-					const item = f_path[l]==='self'
-						? sections[j]
-						: f_path[l]
-					const exist = rq_context.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
-					if(!exist){
-						const ddo = rq_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
-						// console.log("ddo", ddo, item, sections[j]);
-						if(ddo){
-							rq_context.push(ddo)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	const sqo = {
-		typo 				: 'sqo',
-		section_tipo 		: ar_sections,
-		filter 				: null,
-		offset 				: self.pagination.offset,
-		limit 				: self.pagination.limit,
-		select 				: [],
-		full_count			: false,
-		filter_by_locators	: null
-	}
-	rq_context.push(sqo)
-
-	return rq_context
-}
-
-
-
-component_portal.prototype.build_sqo_search = function(){
-
-	const self = this
-
-	const config_context 		= self.context.config_context
-	const config_context_length = config_context.length
-	const rq_context_ddo 		= self.datum.context.find(item => item.source === 'rq_context_ddo').value
-	const operator 				= self.context.properties.source.operator || '$and'
-	const ar_context_search 	= []
-
-	for (let i = 0; i < config_context_length; i++) {
-
-		const sqo_search		= []
-
-		// source auto create
-		const source = create_source(self,'get_data')
-		sqo_search.push(source)
-
-		const current_item 		= config_context[i]
-		const sections 			= current_item.section_tipo
-		const sections_length 	= sections.length
-		const fixed_filter 		= config_context[i].fixed_filter
-		const filter_free 		= {}
-			  filter_free[operator] = []
-
-		// type add
-		sqo_search.push({
-			typo : 'search_engine',
-			value : current_item.search_engine
-		})
-
-		// search
-		const show = current_item.search
-		const show_length = show.length
-		//get sections
-		for (let j = 0; j < sections_length; j++) {
-			// get the fpath array
-			for (let k = 0; k < show_length; k++) {
-				const f_path = show[k].f_path
-				const f_path_length = f_path.length
-				const ar_paths = []
-
-				// get the current item of the fpath
-				for (let l = 0; l < f_path_length; l++) {
-					const item = f_path[l]==='self'
-						? sections[j]
-						: f_path[l]
-					const exist = sqo_search.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
-					if(!exist){
-						const ddo = rq_context_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
-						if (ddo) {
-							sqo_search.push(ddo)
-
-							const path = {
-								section_tipo 	: sections[j],
-								component_tipo 	: item,
-								modelo 			: ddo.model
-							}
-							ar_paths.push(path)
-						}
-					}
-				}
-
-				filter_free[operator].push({
-					q 		: '',
-					path 	: ar_paths
-				})
-			}
-		}
-
-		// fixed_filter
-		if (fixed_filter) {
-			sqo_search.push({
-				typo : 'fixed_filter',
-				value : fixed_filter
-			})
-		}
-
-		// filter_free
-		if (filter_free) {
-			sqo_search.push({
-				typo : 'filter_free',
-				value : filter_free
-			})
-		}
-
-		// sqo_search
-		sqo_search.push({
-			typo 			: 'sqo',
-			section_tipo 	: sections,
-			filter 			: {[operator]:[]},
-			offset 			: self.pagination.offset,
-			limit 			: self.pagination.limit,
-			select 			: [],
-			full_count		: false
-		})
-
-
-		// add group
-		ar_context_search.push(sqo_search)
-
-	}//end for (let i = 0; i < length; i++) {
-
-
-	return ar_context_search
-}
 
 
 
