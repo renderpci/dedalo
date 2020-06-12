@@ -20,15 +20,15 @@ export const data_manager = function() {
 */
 data_manager.prototype.request = async function(options) {
 
-	this.url 			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
-	this.method 		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-	this.mode 			= options.mode || 'cors' // no-cors, cors, *same-origin
-	this.cache 			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-	this.credentials 	= options.credentials || 'same-origin' // include, *same-origin, omit
-	this.headers 		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-	this.redirect 		= options.redirect || 'follow' // manual, *follow, error
-	this.referrer 		= options.referrer || 'no-referrer' // no-referrer, *client
-	this.body 			= options.body // body data type must match "Content-Type" header
+	this.url			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
+	this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
+	this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
+	this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
+	this.credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
+	this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
+	this.redirect		= options.redirect || 'follow' // manual, *follow, error
+	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
+	this.body			= options.body // body data type must match "Content-Type" header
 
 	const handle_errors = function(response) {
 		if (!response.ok) {
@@ -98,21 +98,21 @@ data_manager.prototype.request = async function(options) {
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.get_menu = async function(rq_context) {
+data_manager.prototype.get_menu = async function(dd_request) {
 
 	// data_manager
 		const api_response = this.request({
 			body : {
-				action 	: 'get_menu',
-				dd_api  : 'dd_utils_api',
-				context : rq_context
+				action	: 'get_menu',
+				dd_api	: 'dd_utils_api',
+				context	: dd_request
 			}
 		})
 
 	// debug
 		if(SHOW_DEBUG===true) {
 			api_response.then((response)=>{
-				console.log(`__Time to get_menu ${response.debug.exec_time} [data_manager.get_menu] response:`, response, `rq_context:`, rq_context);
+				console.log(`__Time to get_menu ${response.debug.exec_time} [data_manager.get_menu] response:`, response, `dd_request:`, dd_request);
 			})
 		}
 
@@ -127,14 +127,14 @@ data_manager.prototype.get_menu = async function(rq_context) {
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.get_login = async function(rq_context) {
+data_manager.prototype.get_login = async function(dd_request) {
 
 	// data_manager
 		const api_response = this.request({
 			body : {
-				action 	: 'get_login',
-				dd_api  : 'dd_utils_api',
-				context : rq_context
+				action	: 'get_login',
+				dd_api	: 'dd_utils_api',
+				context	: dd_request
 			}
 		})
 
@@ -142,7 +142,7 @@ data_manager.prototype.get_login = async function(rq_context) {
 		if(SHOW_DEBUG===true) {
 			api_response.then((response)=>{
 				const exec_time = response.debug ? response.debug.exec_time : ''
-				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response, `rq_context:`, rq_context);
+				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response, `dd_request:`, dd_request);
 			})
 		}
 
@@ -158,13 +158,13 @@ data_manager.prototype.get_login = async function(rq_context) {
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.read = async function(rq_context) {
+data_manager.prototype.read = async function(dd_request) {
 
 	// data_manager
 		const api_response = this.request({
 			body : {
-				action 	: 'read',
-				rq_context : rq_context
+				action		: 'read',
+				dd_request	: dd_request
 			}
 		})
 
@@ -172,7 +172,7 @@ data_manager.prototype.read = async function(rq_context) {
 		if(SHOW_DEBUG===true) {
 			api_response.then((response)=>{
 				const exec_time = response.debug ? response.debug.exec_time : '';
-				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `rq_context:`, rq_context);
+				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `dd_request:`, dd_request);
 			})
 		}
 
@@ -192,8 +192,8 @@ data_manager.prototype.count = async function(sqo) {
 	// data_manager
 		const api_response = this.request({
 			body : {
-				action 	: 'count',
-				sqo 	: sqo
+				action	: 'count',
+				sqo		: sqo
 			}
 		})
 
@@ -221,8 +221,8 @@ data_manager.prototype.count_OLD = async function(sqo) {
 	// data_manager
 		const api_response = await this.request({
 			body : {
-				action 	: 'count',
-				sqo 	: sqo
+				action	: 'count',
+				sqo		: sqo
 			}
 		})
 
@@ -261,8 +261,8 @@ data_manager.prototype.get_element_context = async function(source) {
 		// const api_response = await this.request({
 		const api_response = this.request({
 			body : {
-				action 	: 'get_element_context',
-				source 	: source
+				action	: 'get_element_context',
+				source	: source
 			}
 		})
 
@@ -293,8 +293,8 @@ data_manager.prototype.get_page_element = async function(options) {
 		// const api_response = await this.request({
 		const api_response = this.request({
 			body : {
-				action 	: 'get_page_element',
-				options : options
+				action	: 'get_page_element',
+				options	: options
 			}
 		})
 
@@ -343,7 +343,7 @@ data_manager.prototype.area_load_data = async function(basic_context) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[data_manager.area_load_data] api_response for rq_context:", api_response, rq_context);
+			console.log("[data_manager.area_load_data] api_response for dd_request:", api_response, dd_request);
 		}
 
 	return api_response
@@ -364,9 +364,9 @@ data_manager.prototype.component_load_data = async function() {
 
 	// section_record instance
 		const section_record = await instances.get_instance({
-			model 			: 'section_record',
-			tipo 			: component.section_tipo,
-			section_tipo 	: component.section_tipo,
+			model			: 'section_record',
+			tipo			: component.section_tipo,
+			section_tipo	: component.section_tipo,
 			section_id		: component.section_id,
 			mode			: component.mode,
 			lang			: component.section_lang
@@ -394,9 +394,9 @@ data_manager.prototype.component_load_context = async function(component) {
 
 	// section_record instance
 		const section_record = await instances.get_instance({
-			model 			: 'section_record',
-			tipo 			: component.section_tipo,
-			section_tipo 	: component.section_tipo,
+			model			: 'section_record',
+			tipo			: component.section_tipo,
+			section_tipo	: component.section_tipo,
 			section_id		: component.section_id,
 			mode			: component.mode,
 			lang			: component.section_lang
