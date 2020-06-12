@@ -24,11 +24,11 @@
 				break;
 
 			default:
-				$rq_context = true; // overwrite default false to force calculate
+				$add_request_config = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $rq_context);
-					$current_context->config_context 	= $this->get_request_properties_parsed();		
+					$current_context = $this->get_structure_context($permissions, $add_request_config);
+					$current_context->config_context 	= $this->get_request_properties_parsed();
 					// add records_mode to properties, if not already defined
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {

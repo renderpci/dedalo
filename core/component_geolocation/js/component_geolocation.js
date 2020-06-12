@@ -44,24 +44,25 @@ export const component_geolocation = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_geolocation.prototype.build 	 			= component_common.prototype.build
-	component_geolocation.prototype.render 				= common.prototype.render
-	component_geolocation.prototype.destroy 	 		= common.prototype.destroy
-	component_geolocation.prototype.refresh 			= common.prototype.refresh
-	component_geolocation.prototype.save 	 			= component_common.prototype.save
-	component_geolocation.prototype.load_data 			= component_common.prototype.load_data
-	component_geolocation.prototype.get_value 			= component_common.prototype.get_value
-	component_geolocation.prototype.set_value 			= component_common.prototype.set_value
+	component_geolocation.prototype.build				= component_common.prototype.build
+	component_geolocation.prototype.render				= common.prototype.render
+	component_geolocation.prototype.destroy				= common.prototype.destroy
+	component_geolocation.prototype.refresh				= common.prototype.refresh
+	component_geolocation.prototype.save				= component_common.prototype.save
+	component_geolocation.prototype.load_data			= component_common.prototype.load_data
+	component_geolocation.prototype.get_value			= component_common.prototype.get_value
+	component_geolocation.prototype.set_value			= component_common.prototype.set_value
 	component_geolocation.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_geolocation.prototype.update_datum 		= component_common.prototype.update_datum
-	component_geolocation.prototype.change_value 		= component_common.prototype.change_value
+	component_geolocation.prototype.update_datum		= component_common.prototype.update_datum
+	component_geolocation.prototype.change_value		= component_common.prototype.change_value
+	component_geolocation.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_geolocation.prototype.list 			= render_component_geolocation.prototype.list
-	component_geolocation.prototype.edit 			= render_component_geolocation.prototype.edit
-	component_geolocation.prototype.edit_in_list	= render_component_geolocation.prototype.edit
-	component_geolocation.prototype.search 			= render_component_geolocation.prototype.search
-	component_geolocation.prototype.change_mode 	= component_common.prototype.change_mode
+	component_geolocation.prototype.list				= render_component_geolocation.prototype.list
+	component_geolocation.prototype.edit				= render_component_geolocation.prototype.edit
+	component_geolocation.prototype.edit_in_list		= render_component_geolocation.prototype.edit
+	component_geolocation.prototype.search				= render_component_geolocation.prototype.search
+	component_geolocation.prototype.change_mode			= component_common.prototype.change_mode
 
 
 

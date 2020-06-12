@@ -127,14 +127,13 @@ data_manager.prototype.get_menu = async function(dd_request) {
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.get_login = async function(dd_request) {
+data_manager.prototype.get_login = async function() {
 
 	// data_manager
 		const api_response = this.request({
 			body : {
 				action	: 'get_login',
-				dd_api	: 'dd_utils_api',
-				context	: dd_request
+				dd_api	: 'dd_utils_api'
 			}
 		})
 
@@ -142,7 +141,7 @@ data_manager.prototype.get_login = async function(dd_request) {
 		if(SHOW_DEBUG===true) {
 			api_response.then((response)=>{
 				const exec_time = response.debug ? response.debug.exec_time : ''
-				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response, `dd_request:`, dd_request);
+				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response);
 			})
 		}
 

@@ -44,25 +44,26 @@ export const component_json = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_json.prototype.init 	 			= component_common.prototype.init
-	component_json.prototype.build 	 			= component_common.prototype.build
-	component_json.prototype.render 			= common.prototype.render
-	component_json.prototype.refresh 			= common.prototype.refresh
-	component_json.prototype.destroy 	 		= common.prototype.destroy
+	component_json.prototype.init				= component_common.prototype.init
+	component_json.prototype.build				= component_common.prototype.build
+	component_json.prototype.render				= common.prototype.render
+	component_json.prototype.refresh			= common.prototype.refresh
+	component_json.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_json.prototype.save 	 			= component_common.prototype.save
+	component_json.prototype.save				= component_common.prototype.save
 	component_json.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_json.prototype.update_datum 		= component_common.prototype.update_datum
-	component_json.prototype.change_value 		= component_common.prototype.change_value
+	component_json.prototype.update_datum		= component_common.prototype.update_datum
+	component_json.prototype.change_value		= component_common.prototype.change_value
+	component_json.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_json.prototype.list 				= render_component_json.prototype.list
-	component_json.prototype.edit 				= render_component_json.prototype.edit
+	component_json.prototype.list				= render_component_json.prototype.list
+	component_json.prototype.edit				= render_component_json.prototype.edit
 	component_json.prototype.edit_in_list		= render_component_json.prototype.edit
 	component_json.prototype.tm					= render_component_json.prototype.edit
-	// component_json.prototype.search 			= render_component_json.prototype.search
-	component_json.prototype.change_mode 		= component_common.prototype.change_mode
+	// component_json.prototype.search			= render_component_json.prototype.search
+	component_json.prototype.change_mode		= component_common.prototype.change_mode
 
 
 

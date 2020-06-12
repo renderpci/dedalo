@@ -75,20 +75,27 @@ section_record.prototype.init = async function(options) {
 	const self = this
 
 	// options vars
-	self.model			= options.model
-	self.tipo			= options.tipo
-	self.section_tipo	= options.section_tipo
-	self.section_id		= options.section_id
-	self.mode			= options.mode
-	self.lang			= options.lang
-	self.node			= []
-	self.rq_context		= options.rq_context
+	self.model				= options.model
+	self.tipo				= options.tipo
+	self.section_tipo		= options.section_tipo
+	self.section_id			= options.section_id
+	self.mode				= options.mode
+	self.lang				= options.lang
+	self.node				= []
+	self.request_config		= options.request_config
+
+	// dd request
+	self.dd_request			= {
+		show	: null,
+		search	: null,
+		select	: null
+	}
 
 	self.datum			= options.datum
 	self.context		= options.context
 	self.data			= options.data
 	self.paginated_key	= options.paginated_key
-	//self.paginator_id	= options.paginator_id
+
 	self.events_tokens	= []
 	self.ar_instances	= []
 
@@ -116,48 +123,6 @@ section_record.prototype.init = async function(options) {
 
 	return self
 }//end init
-
-
-
-/**
-* BUILD
-* @params object options
-* @return bool true
-*//*
-section_record.prototype.build = async function(autoload=false) {
-
-	const self = this
-
-
-	// // load data if is not already received as option
-	// 	//if (!self.datum) {
-	// 	if (autoload===true) {
-	// 		const current_data_manager 	= new data_manager()
-	// 		const api_response 			= await current_data_manager.section_load_data(self.rq_context)
-	// 		// set
-	// 		self.datum = api_response.result
-
-	// 		// set context and data to current instance
-	// 			self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
-	// 			self.data 		= self.datum.data.filter(element => element.section_tipo===self.section_tipo)
-
-
-	// 		// Update section mode with context declaration
-	// 			const section_context = self.context.find(element => element.tipo===self.section_tipo)
-	// 			self.mode = section_context.mode
-
-	// 		// set ar_section_id
-	// 			const section_data	= self.datum.data.find(item => item.tipo===self.section_tipo && item.section_tipo===self.section_tipo)
-	// 			self.ar_section_id	= section_data.value
-	// 	}
-
-
-	// status update
-		self.status = 'builded'
-
-	return true
-}//end build
-*/
 
 
 
@@ -201,7 +166,7 @@ section_record.prototype.get_ar_instances = async function(){
 					context 		: current_context,
 					data 			: current_data,
 					datum 			: self.datum,
-					rq_context 	: current_context.rq_context
+					request_config 	: current_context.request_config
 				}
 
 				// id_variant . Propagate a custom instance id to children

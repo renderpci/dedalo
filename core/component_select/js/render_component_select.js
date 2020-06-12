@@ -41,7 +41,7 @@ render_component_select.prototype.list = async function() {
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string);
-	
+
 
 	return wrapper
 }//end list
@@ -229,21 +229,21 @@ const get_buttons = (self) => {
 	// button edit
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
-			if (self.rq_context) {
-				const show					= self.rq_context.show
+			if (self.dd_request) {
+				const show					= self.dd_request.show
 				const target_section		= show.filter(item => item.model==='section')
 				const target_section_lenght	= target_section.length
 				// sort section by label asc
 					target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
 				for (let i = 0; i < target_section_lenght; i++) {
-					
+
 					const item = target_section[i]
 
 					const label = (SHOW_DEBUG===true)
 						? item.label + " [" + item.tipo + "]"
 						: item.label
-				
+
 					const button_edit = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button edit',
@@ -259,7 +259,7 @@ const get_buttons = (self) => {
 							})
 					})
 				}
-			}			
+			}
 		}
 
 	// buttons tools
@@ -314,9 +314,9 @@ const input_element = (inputs_container, self) => {
 		for (let i = 0; i < length; i++) {
 
 			const datalist_item = datalist[i]
-			
+
 			const current_section_id = typeof datalist_item.section_id!=="undefined" ? datalist_item.section_id : null
-			
+
 			const current_label = (SHOW_DEBUG===true)
 				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
 				: datalist_item.label

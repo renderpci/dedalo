@@ -73,7 +73,7 @@ login.prototype.init = async function(options) {
 	self.context		= options.context	|| null
 	self.data			= options.data		|| null
 	self.datum			= options.datum		|| null
-	
+
 	self.type			= 'login'
 	self.label			= null
 
@@ -107,7 +107,7 @@ login.prototype.build = async function(autoload=true) {
 			const current_data_manager = new data_manager()
 
 		// get context and data
-			const api_response = await current_data_manager.get_login(self.rq_context)
+			const api_response = await current_data_manager.get_login()
 
 		// set the result to the datum
 			self.datum = api_response.result
@@ -121,7 +121,6 @@ login.prototype.build = async function(autoload=true) {
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.rq_context, load_section_data_promise)
 		}
 
 	// status update

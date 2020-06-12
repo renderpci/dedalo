@@ -20,7 +20,7 @@
 			$this->from_parent = $tipo;
 
 		// Component structure context (tipo, relations, properties, etc.)
-			$current_context = $this->get_structure_context($permissions, $rq_context=false);
+			$current_context = $this->get_structure_context($permissions, $add_request_config=false);
 
 		// section_tipo. Adaptation of the context with the specific ddo and sqo for used them into the filter.
 		// set the section_tipo with the area_tipo, it will be used to store presets of the search (area_tipo will use as section_tipo)

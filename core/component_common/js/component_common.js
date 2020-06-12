@@ -40,7 +40,7 @@ component_common.prototype.init = async function(options) {
 	self.matrix_id		= options.matrix_id || null // record matrix_id like 1 (list_tm mode only)
 	self.mode			= options.mode // current component mode like 'edit'
 	self.lang			= options.lang // current component lang like 'lg-nolan'
-	
+
 	self.section_lang	= options.section_lang // current section lang like 'lg-eng'
 	self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
 
@@ -49,15 +49,13 @@ component_common.prototype.init = async function(options) {
 	self.data			= options.data		|| null // current specific data of this component
 	self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 
-	// self.rq_context	= options.rq_context // search query object of current component (used for autocomplete, etc.)
-
 	// DOM
 	self.node			= [] // array of component nodes places in lihgt DOM
-	
+
 	//self.paginator_id 	= options.paginator_id // removed unused
 	self.events_tokens	= [] // array of events of current component
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-	
+
 	// dd request
 	self.dd_request = {
 		show	: null,
@@ -76,9 +74,9 @@ component_common.prototype.init = async function(options) {
 
 	// self.type		= self.context.type 	// tipology of current instance, usually 'component'
 	// self.label		= self.context.label // label of current component like 'summary'
-	
+
 	// self.tools		= self.context.tools || [] //set the tools of the component
-	
+
 	// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
 
 	// set_context_vars
@@ -172,24 +170,6 @@ component_common.prototype.init = async function(options) {
 
 	//event_manager.publish('component_init', self)
 
-	// des rq_context (!)
-		// // self.rq_context. Fill from context.rq_context if defined
-		// 	if (!self.rq_context && self.context.rq_context) {
-		// 		self.rq_context = self.context.rq_context
-		// 	}
-
-		// // source. add to rq_context show
-		// 	if (self.rq_context && self.rq_context.show) {
-		// 		// check if already exists a source into rq_context.show
-		// 		const show_source = self.rq_context.show.find(element => element.typo==='source')
-		// 		if (typeof show_source==="undefined") {
-		// 			const source = create_source(self,'get_data')
-		// 			// deep clone self rq_context to avoid interactions (!)
-		// 			self.rq_context = JSON.parse(JSON.stringify(self.rq_context))
-		// 			self.rq_context.show.push(source)
-		// 		}
-		// 	}
-
 	// status update
 		self.status = 'initiated'
 
@@ -204,8 +184,8 @@ component_common.prototype.init = async function(options) {
 const set_context_vars = function(self, context) {
 
 	self.type		= self.context.type 	// tipology of current instance, usually 'component'
-	self.label		= self.context.label // label of current component like 'summary'	
-	self.tools		= self.context.tools || [] //set the tools of the component	
+	self.label		= self.context.label // label of current component like 'summary'
+	self.tools		= self.context.tools || [] //set the tools of the component
 	self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
 
 	return true
@@ -228,26 +208,14 @@ component_common.prototype.build = async function(autoload=false){
 
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
-	
-	
+
+
 	// load data if is not already received as option
 		if (autoload===true) {
-			
-			// des
-				// // rq_context
-				// 	// create the rq_context
-				// 	self.rq_context = {show: []}
-				// 	// create the own show ddo element
-				// 	const source = create_source(self, 'get_data')
-				// 	self.rq_context.show.push(source)
-
-				// // load data
-				// 	const current_data_manager 	= new data_manager()
-				// 	const api_response 			= await current_data_manager.read(self.rq_context.show)
 
 			// set dd_request
 				self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
-						
+
 			// load data
 				const current_data_manager 	= new data_manager()
 				const api_response 			= await current_data_manager.read(self.dd_request.show)
@@ -267,7 +235,7 @@ component_common.prototype.build = async function(autoload=false){
 				// self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 
 			// update instance properties from context
-				set_context_vars(self, self.context)	
+				set_context_vars(self, self.context)
 
 			// dd_request. build again dd_request with updated request_config if exists
 				if (self.context.request_config) {
@@ -804,8 +772,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 			type			: current_context.type,
 			context			: current_context,
 			data			: current_data,
-			datum			: current_datum,
-			// rq_context	: current_context.rq_context
+			datum			: current_datum
 		})
 
 	// build

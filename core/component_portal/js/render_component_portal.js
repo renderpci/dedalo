@@ -382,41 +382,6 @@ const get_top = function(self) {
 			const section_tipo	= select_section.value
 			const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
 
-			// des
-				// const source = {
-				// 	typo 		 : 'source',
-				// 	tipo 		 : section_tipo,
-				// 	section_tipo : section_tipo,
-				// 	section_id 	 : null,
-				// 	model 		 : 'section',
-				// 	lang 		 : page_globals.dedalo_data_lang,
-				// 	pagination 	 : {
-				// 		total  : 0,
-				// 		offset : 0,
-				// 		limit  : 10
-				// 	}
-				// }
-				// const element_context_call 	= await current_data_manager.get_element_context(source)
-				// const element_context 		= element_context_call.result
-				// 	console.log("!-- get_element_context:", element_context_call);
-
-				// // section instance (regular section)
-				// 	const section_instance = await get_instance({
-				// 		model 			: "section",
-				// 		tipo 			: source.section_tipo,
-				// 		section_tipo 	: source.section_tipo,
-				// 		section_id 		: null,
-				// 		mode 			: "list",
-				// 		lang 			: source.lang,
-				// 		section_lang 	: source.lang,
-				// 		type 			: "section",
-				// 		// rq_context 	: {
-				// 		// 	show : show
-				// 		// }
-				// 		context 		: element_context
-				// 	})
-				// 	await section_instance.build(true)
-				// 		console.log("section_instance:",section_instance);
 
 			// iframe
 				( async () => {

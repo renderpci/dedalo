@@ -199,10 +199,6 @@ common.prototype.refresh = async function() {
 				sqo.offset = self.pagination.offset
 			}
 
-			// const source = self.rq_context.find(element => element.typo==='source')
-			// if (source) {
-			// 	source.pagination.offset = self.pagination.offset
-			// }
 		}
 
 	// destroy dependences only

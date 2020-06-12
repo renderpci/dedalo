@@ -145,7 +145,7 @@ search.prototype.build = async function(){
 
 			if(SHOW_DEBUG===true) {
 				console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, editing_preset);
-			}			
+			}
 
 			self.json_filter = {"$and":[]}
 
@@ -495,7 +495,7 @@ search.prototype.get_component_instance = async function(options) {
 			typo			: 'source'
 		}
 
-	// test		
+	// test
 		// instance key. Custom to get unique key
 		const lang		= page_globals.dedalo_data_lang
 		const serial	= performance.now()
@@ -515,47 +515,11 @@ search.prototype.get_component_instance = async function(options) {
 			mode			: 'search',
 			lang			: lang,
 			context			: context,
-			// rq_context	: rq_context
 			// data			: current_data,
 			// datum		: current_datum
 		}
 		const component_instance = await instances.get_instance(component_options)
 
-	// des	
-		// const _data_manager = new data_manager()
-		// const api_response 	= await _data_manager.get_element_context(source)
-
-		// // debug
-		// 	if(SHOW_DEBUG===true) {
-		// 		console.log("[search.get_component_instance] api_response:", model, component_tipo, api_response);
-		// 	}
-
-		// const component_context = api_response.result[0]
-
-		// // instance key. Custom to get unique key
-		// 	const serial	= performance.now()
-		// 	const key		= section_tipo +'_'+ component_tipo +'_search_'+ component_context.lang +'_'+ serial
-
-		// // datum. Create empty dummy datum
-		// 	const current_data	= {value : value}
-		// 	const current_datum	= {context : component_context, data : current_data}
-
-		// const component_options = {
-		// 	key				: key,
-		// 	model			: component_context.model,
-		// 	tipo			: component_context.tipo,
-		// 	section_tipo	: component_context.section_tipo,
-		// 	section_id		: null,
-		// 	mode			: 'search',
-		// 	lang			: component_context.lang,
-		// 	context			: component_context,
-		// 	rq_context		: component_context.rq_context
-		// 	// data			: current_data,
-		// 	// datum		: current_datum
-		// }
-		// const component_instance = await instances.get_instance(component_options)
-
-	
 	// build component to force load datalist etc.
 		await component_instance.build(true)
 
@@ -913,7 +877,6 @@ this.get_search_json_object = function() {
 		// sqo
 			self.sqo.filter = filter_obj
 			self.sqo.limit 	= self.limit
-			// const sqo = section.rq_context.show.find(el => el.typo==='sqo')
 			// sqo.filter = filter_obj
 			// sqo.limit 	= self.limit
 

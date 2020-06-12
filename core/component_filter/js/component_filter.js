@@ -41,25 +41,26 @@ export const component_filter = function(){
 * extend component functions from component common
 */
 // prototypes assign
-	component_filter.prototype.init 	 			= component_common.prototype.init
-	component_filter.prototype.build 	 			= component_common.prototype.build
-	component_filter.prototype.render 				= common.prototype.render
-	component_filter.prototype.destroy 	 			= common.prototype.destroy
-	component_filter.prototype.refresh 				= common.prototype.refresh
-	component_filter.prototype.save 	 			= component_common.prototype.save
-	component_filter.prototype.load_data 			= component_common.prototype.load_data
-	component_filter.prototype.get_value 			= component_common.prototype.get_value
-	component_filter.prototype.set_value 			= component_common.prototype.set_value
+	component_filter.prototype.init					= component_common.prototype.init
+	component_filter.prototype.build				= component_common.prototype.build
+	component_filter.prototype.render				= common.prototype.render
+	component_filter.prototype.destroy				= common.prototype.destroy
+	component_filter.prototype.refresh				= common.prototype.refresh
+	component_filter.prototype.save					= component_common.prototype.save
+	component_filter.prototype.load_data			= component_common.prototype.load_data
+	component_filter.prototype.get_value			= component_common.prototype.get_value
+	component_filter.prototype.set_value			= component_common.prototype.set_value
 	component_filter.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_filter.prototype.update_datum 		= component_common.prototype.update_datum
-	component_filter.prototype.change_value 		= component_common.prototype.change_value
+	component_filter.prototype.update_datum			= component_common.prototype.update_datum
+	component_filter.prototype.change_value			= component_common.prototype.change_value
+	component_filter.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
-	component_filter.prototype.list 		= render_component_filter.prototype.list
-	component_filter.prototype.edit 		= render_component_filter.prototype.edit
-	component_filter.prototype.edit_in_list	= render_component_filter.prototype.edit
-	component_filter.prototype.search 		= render_component_filter.prototype.search
-	component_filter.prototype.change_mode 	= component_common.prototype.change_mode
+	component_filter.prototype.list					= render_component_filter.prototype.list
+	component_filter.prototype.edit					= render_component_filter.prototype.edit
+	component_filter.prototype.edit_in_list			= render_component_filter.prototype.edit
+	component_filter.prototype.search				= render_component_filter.prototype.edit
+	component_filter.prototype.change_mode			= component_common.prototype.change_mode
 
 
 

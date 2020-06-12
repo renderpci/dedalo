@@ -1964,7 +1964,7 @@ abstract class common {
 
 
 	/**
-	* GET_RQ_CONTEXT
+	* BUILD_RERQUEST_CONFIG
 	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
 	* The search_query_object_context (request_config) have at least:
 	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)

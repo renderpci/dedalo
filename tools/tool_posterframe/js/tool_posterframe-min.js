@@ -113,7 +113,6 @@ tool_posterframe.prototype.load_component = async function(lang) {
 		context 		: context,
 		data 			: {value:[]},
 		datum 			: component.datum,
-		//rq_context 	: component.rq_context
 	})
 
 	// set current tool as component caller (to check if component is inside tool or not)
@@ -178,7 +177,7 @@ tool_posterframe.prototype.button_click = function(value, button_obj) {
 	}
 
 	return true
-}//end button_click	
+}//end button_click
 
 /**
 * GENERATE POSTERFRAME
@@ -188,17 +187,17 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 	//TODO - change function code to adapt to the new version, the function contains old code that has been copied
 
 	//if(window.self !== window.top) return alert("Please exec in top window");
-	
+
 	var video_id 		= $(button_obj).data('video_id'),
 		quality			= $(button_obj).data('quality'),
 		parent			= $(button_obj).data('parent');
 
-	if(SHOW_DEBUG===true) console.log("->generate_posterframe vars: " +video_id+' '+quality+ ' '+current_time_in_seconds);		
-	
+	if(SHOW_DEBUG===true) console.log("->generate_posterframe vars: " +video_id+' '+quality+ ' '+current_time_in_seconds);
+
 	// TC
 	var timecode = parseFloat( current_time_in_seconds );
 	// Minimun tc fix
-	if(timecode==0) timecode = 0.001;		
+	if(timecode==0) timecode = 0.001;
 
 	var mode 		= 'generate_posterframe';
 	var mydata		= { 'mode': mode,
@@ -211,14 +210,14 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 
 	/*
 	var video_element 	= top.$('.css_av_video[data-video_id="'+video_id+'"]', window.opener);
-	var wrap_div 		= $(video_element).parents('.wrap_component:first');		
+	var wrap_div 		= $(video_element).parents('.wrap_component:first');
 		//return alert( 'css_av_video lengh: '+$(wrap_div).length )
 	*/
 	var wrap_div 	= top.$('.css_wrap_av[data-dato="'+video_id+'"]', window.opener);
 		//console.log(wrap_div.length); return false;
-		
+
 	var wrap_div_tool = $(button_obj).parents('.wrap_tool:first');
-	html_page.loading_content( wrap_div_tool, 1 );	
+	html_page.loading_content( wrap_div_tool, 1 );
 
 	// AJAX REQUEST
 	$.ajax({
@@ -242,7 +241,7 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 			// Notification msg ok
 			var msg = "<span class='ok'>"+received_data+"</span>";
 				inspector.show_log_msg(msg);
-			
+
 			// Update image av_posterframe
 			if($(wrap_div).length===1) {
 				let wrapper_id 		= $(wrap_div).attr('id')
@@ -252,14 +251,14 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 			}else{
 				console.log("Error: wrap div not found! Sorry, no component update is done.");
 			}
-		}			
+		}
 	})
 	// FAIL ERROR
 	.fail(function(error_data) {
 		// Notify to log messages in top of page
-		var msg = "<span class='error'>ERROR: on generate_posterframe data:" + error_data + "</span>";				
+		var msg = "<span class='error'>ERROR: on generate_posterframe data:" + error_data + "</span>";
 		inspector.show_log_msg(msg);
-		if(SHOW_DEBUG===true) console.log(error_data);	
+		if(SHOW_DEBUG===true) console.log(error_data);
 	})
 	// ALWAYS
 	.always(function() {
@@ -277,14 +276,14 @@ tool_posterframe.prototype.delete_posterframe = function(button_obj) {
 
 
 	//TODO - change function code to adapt to the new version, the function contains old code that has been copied
-	
+
 	//if(window.self !== window.top) return alert("Please exec in top window");
-	
+
 	var video_id 		= $(button_obj).data('video_id'),
 		quality			= $(button_obj).data('quality'),
-		parent			= $(button_obj).data('parent');	
+		parent			= $(button_obj).data('parent');
 
-	if(SHOW_DEBUG===true) console.log("->delete_posterframe vars: " +video_id+' '+quality);		
+	if(SHOW_DEBUG===true) console.log("->delete_posterframe vars: " +video_id+' '+quality);
 
 	var mode 		= 'delete_posterframe';
 	var mydata		= { 'mode': mode,
@@ -293,10 +292,10 @@ tool_posterframe.prototype.delete_posterframe = function(button_obj) {
 						'parent': parent,
 						'top_tipo':page_globals.top_tipo
 					};
-	
+
 	var video_element 	= top.$('.css_av_video[data-video_id="'+video_id+'"]');
-	var wrap_div 		= $(video_element).parents('.wrap_component:first');		
-	
+	var wrap_div 		= $(video_element).parents('.wrap_component:first');
+
 
 	if( !confirm( get_label.borrar +' '+ get_label.fichero + ' posterframe ?') ) return false;
 
@@ -332,14 +331,14 @@ tool_posterframe.prototype.delete_posterframe = function(button_obj) {
 				myarguments = null,
 				callback 	= null;
 			top.component_common.load_component_by_wrapper_id(wrapper_id, myarguments, callback);
-		}			
+		}
 	})
 	// FAIL ERROR
 	.fail(function(error_data) {
 		// Notify to log messages in top of page
-		var msg = "<span class='error'>ERROR: on delete_posterframe data:" + error_data + "</span>";				
+		var msg = "<span class='error'>ERROR: on delete_posterframe data:" + error_data + "</span>";
 		inspector.show_log_msg(msg);
-		if(SHOW_DEBUG===true) console.log(error_data);	
+		if(SHOW_DEBUG===true) console.log(error_data);
 	})
 	// ALWAYS
 	.always(function() {
@@ -355,25 +354,25 @@ tool_posterframe.prototype.delete_posterframe = function(button_obj) {
 */
 tool_posterframe.prototype.generate_identifying_image = function(button_obj, current_time_in_seconds) {
 
-	
+
 	//TODO - change function code to adapt to the new version, the function contains old code that has been copied
 
 	//if(window.self !== window.top) return alert("Please exec in top window");
-	
+
 	var video_id 	= button_obj.dataset.video_id,
 		quality		= button_obj.dataset.quality,
 		parent		= button_obj.dataset.parent
 
 	var select 		= document.getElementById('identifying_image_selector'),
 		select_val 	= select.value
-		
 
-	if(SHOW_DEBUG===true) console.log("->generate_identifying_image vars: " +video_id+' '+quality+ ' '+current_time_in_seconds);		
-	
+
+	if(SHOW_DEBUG===true) console.log("->generate_identifying_image vars: " +video_id+' '+quality+ ' '+current_time_in_seconds);
+
 	// TC
 	var timecode = parseFloat( current_time_in_seconds );
 	// Minimun tc fix
-	if(timecode==0) timecode = 0.001;		
+	if(timecode==0) timecode = 0.001;
 
 	var mydata		= { 'mode' 		: 'generate_identifying_image',
 						'video_id' 	: video_id,
@@ -385,12 +384,12 @@ tool_posterframe.prototype.generate_identifying_image = function(button_obj, cur
 					}
 					//return console.log(mydata);
 
-	
+
 	var wrap_div 	= top.$('.css_wrap_av[data-dato="'+video_id+'"]', window.opener);
 		//console.log(wrap_div.length); return false;
-		
+
 	var wrap_div_tool = $(button_obj).parents('.wrap_tool:first');
-	html_page.loading_content( wrap_div_tool, 1 );	
+	html_page.loading_content( wrap_div_tool, 1 );
 
 	// AJAX REQUEST
 	$.ajax({
@@ -399,7 +398,7 @@ tool_posterframe.prototype.generate_identifying_image = function(button_obj, cur
 		type	: "POST"
 	})
 	// DONE
-	.done(function(received_data) {			
+	.done(function(received_data) {
 
 		// If received_data contains 'error' show alert error with (received_data), else reload the page
 		if(/error/i.test(received_data)) {
@@ -410,15 +409,15 @@ tool_posterframe.prototype.generate_identifying_image = function(button_obj, cur
 		}else{
 			// Notification msg ok
 			var msg = "<span class='ok'>"+received_data+"</span>";
-				inspector.show_log_msg(msg);				
-		}			
+				inspector.show_log_msg(msg);
+		}
 	})
 	// FAIL ERROR
 	.fail(function(error_data) {
 		// Notify to log messages in top of page
-		var msg = "<span class='error'>ERROR: on generate_identifying_image data:" + error_data + "</span>";				
+		var msg = "<span class='error'>ERROR: on generate_identifying_image data:" + error_data + "</span>";
 		inspector.show_log_msg(msg);
-		if(SHOW_DEBUG===true) console.log(error_data);	
+		if(SHOW_DEBUG===true) console.log(error_data);
 	})
 	// ALWAYS
 	.always(function() {
@@ -426,5 +425,3 @@ tool_posterframe.prototype.generate_identifying_image = function(button_obj, cur
 	})
 
 }//end generate_identifying_image
-
-

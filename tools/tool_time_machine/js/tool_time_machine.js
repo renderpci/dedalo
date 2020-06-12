@@ -240,7 +240,7 @@ tool_time_machine.prototype.load_section = async function() {
 			lang 			: self.caller.lang,
 			section_lang 	: self.caller.lang,
 			type 			: "section",
-			rq_context 	: {
+			dd_request 	: {
 				show : show
 			},
 			id_variant 		: 'time_machine' // avoid conflicts
@@ -303,7 +303,6 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 			data 			: {value:[]},
 			datum 			: component.datum,
 			id_variant 		: 'time_machine' // avoid conflicts
-			//rq_context 	: component.rq_context
 		}
 
 		if (matrix_id) {
