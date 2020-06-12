@@ -90,12 +90,12 @@ const content_data_edit = async function(self) {
 					if (current_instance.model==='component_filter') {
 
 						ui.place_element({
-							source_node 		: current_instance_node,
-							source_instance 	: self,
-							target_instance 	: self.caller.inspector,
-							container_selector 	: ".project_container",
-							target_selector 	: ".wrapper_component.component_filter",
-							place_mode 			: 'replace' // add | replace
+							source_node			: current_instance_node,
+							source_instance		: self,
+							target_instance		: self.caller.inspector,
+							container_selector	: ".project_container",
+							target_selector		: ".wrapper_component.component_filter",
+							place_mode			: 'replace' // add | replace
 						})
 
 						continue;
@@ -311,6 +311,7 @@ const build_id_column = function(self) {
 								event_manager.publish('user_action', {
 									tipo		: self.section_tipo,
 									section_id	: self.section_id,
+									model		: self.caller.model,
 									mode		: 'edit'
 								})
 
@@ -402,6 +403,7 @@ const build_id_column = function(self) {
 							event_manager.publish('user_action', {
 								tipo		: self.section_tipo,
 								section_id	: self.section_id,
+								model		: self.caller.model,
 								mode		: 'edit'
 							})
 						})
