@@ -53,22 +53,22 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 // page_globals
 	$page_globals = (function() {
 
-		$mode 			= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
-		$user_id 		= $_SESSION['dedalo']['auth']['user_id'] ?? null;
-		$username 		= $_SESSION['dedalo']['auth']['username'] ?? null;
-		$full_username 	= $_SESSION['dedalo']['auth']['full_username'] ?? null;
+		$mode			= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
+		$user_id		= $_SESSION['dedalo']['auth']['user_id'] ?? null;
+		$username		= $_SESSION['dedalo']['auth']['username'] ?? null;
+		$full_username	= $_SESSION['dedalo']['auth']['full_username'] ?? null;
 
 		$obj = new stdClass();
 			# version
-			$obj->dedalo_entity 				= DEDALO_ENTITY;
+			$obj->dedalo_entity		= DEDALO_ENTITY;
 			# version
-			$obj->dedalo_version 				= DEDALO_VERSION;
+			$obj->dedalo_version	= DEDALO_VERSION;
 			# lang
-			$obj->dedalo_application_langs_default 	= DEDALO_APPLICATION_LANGS_DEFAULT;
-			$obj->dedalo_application_lang 			= DEDALO_APPLICATION_LANG;
-			$obj->dedalo_data_lang 					= DEDALO_DATA_LANG;
-			$obj->dedalo_data_nolan 				= DEDALO_DATA_NOLAN;
-			$obj->dedalo_projects_default_langs 	= array_map(function($current_lang){
+			$obj->dedalo_application_langs_default	= DEDALO_APPLICATION_LANGS_DEFAULT;
+			$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
+			$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
+			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
+			$obj->dedalo_projects_default_langs		= array_map(function($current_lang){
 				$lang_obj = new stdClass();
 					$lang_obj->label = lang::get_name_from_code($current_lang);
 					$lang_obj->value = $current_lang;
@@ -111,17 +111,17 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 			# dedalo_protect_media_files
 			$obj->dedalo_protect_media_files 	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
 			# notifications
-			$obj->DEDALO_NOTIFICATIONS 	  		= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
-			$obj->DEDALO_PUBLICATION_ALERT 		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
+			$obj->DEDALO_NOTIFICATIONS			= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
+			$obj->DEDALO_PUBLICATION_ALERT		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
 			# float_window_features
 			#$obj->float_window_features 		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 			$obj->fallback_image  				= DEDALO_CORE_URL . '/themes/default/0.jpg';
 			// debug only
 			if(SHOW_DEBUG===true) {
-				$obj->dedalo_db_name  				= DEDALO_DATABASE_CONN;
-				$obj->pg_version  					= pg_version(DBi::_getConnection())['server'];
-				$obj->php_version  					= PHP_VERSION;
-				$obj->php_memory  					= to_string(ini_get('memory_limit'));
+				$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
+				$obj->pg_version		= pg_version(DBi::_getConnection())['server'];
+				$obj->php_version		= PHP_VERSION;
+				$obj->php_memory		= to_string(ini_get('memory_limit'));
 			}
 
 
@@ -131,14 +131,14 @@ include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
 
 // plain global vars
 	$plain_vars = [
-		'DEDALO_CORE_URL' 		=> DEDALO_CORE_URL,
-		'DEDALO_ROOT_WEB' 		=> DEDALO_ROOT_WEB,
-		'DEDALO_TOOLS_URL' 		=> DEDALO_TOOLS_URL,
-		'SHOW_DEBUG' 			=> SHOW_DEBUG,
-		'SHOW_DEVELOPER' 		=> SHOW_DEVELOPER,
-		'DEVELOPMENT_SERVER' 	=> DEVELOPMENT_SERVER,
-		'DEDALO_SECTION_ID_TEMP'=> DEDALO_SECTION_ID_TEMP,
-		'USE_CDN' 				=> USE_CDN
+		'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
+		'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
+		'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
+		'SHOW_DEBUG'				=> SHOW_DEBUG,
+		'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
+		'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
+		'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
+		'USE_CDN'					=> USE_CDN
 	];
 
 # Page globals
