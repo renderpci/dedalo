@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -52,7 +52,6 @@ component_common.prototype.init = async function(options) {
 	// DOM
 	self.node			= [] // array of component nodes places in lihgt DOM
 
-	//self.paginator_id 	= options.paginator_id // removed unused
 	self.events_tokens	= [] // array of events of current component
 	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 
@@ -72,17 +71,16 @@ component_common.prototype.init = async function(options) {
 			limit	: 0
 		}
 
-	// self.type		= self.context.type 	// tipology of current instance, usually 'component'
-	// self.label		= self.context.label // label of current component like 'summary'
-
-	// self.tools		= self.context.tools || [] //set the tools of the component
-
+	// self.type	= self.context.type 	// tipology of current instance, usually 'component'
+	// self.label	= self.context.label // label of current component like 'summary'
+	// self.tools	= self.context.tools || [] //set the tools of the component
 	// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
 
-	// set_context_vars
-		set_context_vars(self, self.context)
+	// set_context_vars. context vars re-updated after new build
+	set_context_vars(self, self.context)
 
-	self.change_value_pool = [] // cue of component value changes (needed to avoid parallel change save)
+	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
+	self.change_value_pool = []
 
 	self.permissions = null
 
@@ -99,7 +97,6 @@ component_common.prototype.init = async function(options) {
 					})
 				})
 			)
-
 
 	// events subscription (from component properties)
 	// the ontology can define a observer property that specify the tipo that this component will listen
@@ -129,7 +126,6 @@ component_common.prototype.init = async function(options) {
 				}
 			}
 		}
-
 
 	// component_save (when user change component value) every component is looking if the own the instance was changed.
 		/*
@@ -209,12 +205,20 @@ component_common.prototype.build = async function(autoload=false){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-
-	// load data if is not already received as option
+	// load data on autoload true
 		if (autoload===true) {
 
-			// set dd_request
-				self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
+			// console.log("++++ self.dd_request.show:", JSON.parse(JSON.stringify(self.dd_request.show)));
+			// console.log("self.context:",self.context);
+			// alert("Loading component " + self.model + " - " + self.tipo);
+
+			// set dd_request if not exists
+				if(!self.dd_request.show){
+					self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+				}
+
+			// console.log("self.dd_request", self.dd_request);
+			// console.log("self.dd_request", !self.dd_request.show);
 
 			// load data
 				const current_data_manager 	= new data_manager()
@@ -222,17 +226,12 @@ component_common.prototype.build = async function(autoload=false){
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					console.log("[component_common.build] api_response:",api_response);
+					console.log("[component_common.build] + api_response:",api_response);
 				}
 
-			// set the result to the datum
-				self.datum = api_response.result
-
 			// set context and data to current instance
-				self.context	= self.datum.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-				// self.update_datum(api_response.result.data)
-				// self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				self.update_datum(api_response.result.data)
+				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 
 			// update instance properties from context
 				set_context_vars(self, self.context)
@@ -241,12 +240,6 @@ component_common.prototype.build = async function(autoload=false){
 				if (self.context.request_config) {
 					self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
 				}
-
-			// Update the self.data into the datum and self instance
-				// if (api_response.result) {
-				// 	const new_data = api_response.result.data
-				// 	self.update_datum(new_data)
-				// }
 		}
 
 	// permissions. calculate and set (used by section records later)
@@ -592,7 +585,7 @@ component_common.prototype.change_value = async function(options) {
 
 	// update the data in the instance previous to save
 		const update_data = self.update_data_value(changed_data)
-
+console.log("***********changed_data", changed_data);
 	// rebuild and save the component
 		const api_response = await self.save(changed_data)
 
@@ -802,7 +795,7 @@ component_common.prototype.test_save = async function(component) {
 
 	if (component.model==='component_input_text') {
 
-		for (var i = 1; i <= 1; i++) {
+		for (let i = 1; i <= 1; i++) {
 
 			const time = i * 1000
 			const ar_value = [i,"234"]
