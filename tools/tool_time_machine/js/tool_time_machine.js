@@ -46,10 +46,10 @@ export const tool_time_machine = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_time_machine.prototype.refresh 	= common.prototype.refresh
-	tool_time_machine.prototype.render 		= common.prototype.render
-	tool_time_machine.prototype.destroy 	= common.prototype.destroy
-	tool_time_machine.prototype.edit 		= render_tool_time_machine.prototype.edit
+	tool_time_machine.prototype.refresh	= common.prototype.refresh
+	tool_time_machine.prototype.render	= common.prototype.render
+	tool_time_machine.prototype.destroy	= common.prototype.destroy
+	tool_time_machine.prototype.edit	= render_tool_time_machine.prototype.edit
 
 
 
@@ -98,16 +98,16 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// section_tm. get section full context
 		const current_data_manager = new data_manager()
 		const source = {
-			typo 		 : 'source',
-			tipo 		 : self.caller.tipo,
-			section_tipo : self.caller.section_tipo,
-			section_id 	 : self.caller.section_id,
-			model 		 : 'section_tm',
-			lang 		 : self.caller.lang,
-			pagination 	 : {
-				total  : 0,
-				offset : 0,
-				limit  : 10
+			typo			: 'source',
+			tipo			: self.caller.tipo,
+			section_tipo	: self.caller.section_tipo,
+			section_id		: self.caller.section_id,
+			model			: 'section_tm',
+			lang			: self.caller.lang,
+			pagination		: {
+				total	: 0,
+				offset	: 0,
+				limit	: 10
 			}
 		}
 		const element_context 	= await current_data_manager.get_element_context(source)
@@ -232,18 +232,18 @@ tool_time_machine.prototype.load_section = async function() {
 
 	// section instance (regular section)
 		const section_instance = await get_instance({
-			model 			: "section",
-			tipo 			: self.caller.section_tipo,
-			section_tipo 	: self.caller.section_tipo,
-			section_id 		: self.caller.section_id,
-			mode 			: "list_tm",
-			lang 			: self.caller.lang,
-			section_lang 	: self.caller.lang,
-			type 			: "section",
-			dd_request 	: {
+			model			: "section",
+			tipo			: self.caller.section_tipo,
+			section_tipo	: self.caller.section_tipo,
+			section_id		: self.caller.section_id,
+			mode			: "list_tm",
+			lang			: self.caller.lang,
+			section_lang	: self.caller.lang,
+			type			: "section",
+			dd_request		: {
 				show : show
 			},
-			id_variant 		: 'time_machine' // avoid conflicts
+			id_variant		: 'time_machine' // avoid conflicts
 		})
 
 	// set current tool as component caller (to check if component is inside tool or not)
@@ -290,19 +290,19 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 
 	// component instance
 		const instance_options = {
-			model 			: component.model,
-			tipo 			: component.tipo,
-			section_tipo 	: component.section_tipo,
-			section_id 		: component.section_id,
-			mode 			: mode, // component.mode==='edit_in_list' ? 'edit' : component.mode,
-			lang 			: context.lang,
-			section_lang 	: component.section_lang,
-			//parent 		: component.parent,
-			type 			: component.type,
-			context 		: context,
-			data 			: {value:[]},
-			datum 			: component.datum,
-			id_variant 		: 'time_machine' // avoid conflicts
+			model			: component.model,
+			tipo			: component.tipo,
+			section_tipo	: component.section_tipo,
+			section_id		: component.section_id,
+			mode			: mode, // component.mode==='edit_in_list' ? 'edit' : component.mode,
+			lang			: context.lang,
+			section_lang	: component.section_lang,
+			//parent		: component.parent,
+			type			: component.type,
+			context			: context,
+			data			: {value:[]},
+			datum			: component.datum,
+			id_variant		: 'time_machine' // avoid conflicts
 		}
 
 		if (matrix_id) {
@@ -342,16 +342,16 @@ tool_time_machine.prototype.apply_value = async function() {
 
 	// vars 'section_id','section_tipo','tipo','lang','matrix_id'
 
-	const lang 		= self.lang
-	const matrix_id = self.selected_matrix_id
+	const lang		= self.lang
+	const matrix_id	= self.selected_matrix_id
 
 	const body = {
-		url 			: self.trigger_url,
-		mode 			: 'apply_value',
-		section_id 		: self.caller.section_id,
-		section_tipo  	: self.caller.section_tipo,
-		tipo  			: self.caller.tipo,
-		lang 			: lang,
+		url				: self.trigger_url,
+		mode			: 'apply_value',
+		section_id		: self.caller.section_id,
+		section_tipo	: self.caller.section_tipo,
+		tipo			: self.caller.tipo,
+		lang			: lang,
 		matrix_id		: matrix_id
 	}
 	const trigger_response = await trigger_request(self.trigger_url, body);
