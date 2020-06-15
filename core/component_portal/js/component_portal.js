@@ -58,12 +58,12 @@ export const component_portal = function(){
 	// component_portal.prototype.build				= component_common.prototype.build
 	component_portal.prototype.render				= common.prototype.render
 	component_portal.prototype.refresh				= common.prototype.refresh
-	component_portal.prototype.destroy				= common.prototype.destroy	
+	component_portal.prototype.destroy				= common.prototype.destroy
 
 	// change data
 	component_portal.prototype.save					= component_common.prototype.save
 	component_portal.prototype.update_data_value	= component_common.prototype.update_data_value
-	// component_portal.prototype.update_datum		= component_common.prototype.update_datum
+	component_portal.prototype.update_datum			= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
 	component_portal.prototype.build_dd_request		= common.prototype.build_dd_request
@@ -138,12 +138,13 @@ component_portal.prototype.build  = async function(autoload=false){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
+		console.log("request_config", self.context.request_config);
 	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
+		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
 
 	// load data if not yet received as an option
 		if (autoload===true) {
-			
+
 			// get context and data
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.read(self.dd_request.show)
@@ -156,7 +157,7 @@ component_portal.prototype.build  = async function(autoload=false){
 			// Update the self.data into the datum and self instance
 				if (api_response.result) {
 					const new_data = api_response.result.data
-					self.update_datum(new_data) // (!) is NOT the common update_datum
+					self.update_datum(new_data)
 				}
 
 			// update element pagination vars when are used
@@ -222,7 +223,7 @@ component_portal.prototype.build  = async function(autoload=false){
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			//console.log("component_portal self +++++++++++ :",self);
+			console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}
 
@@ -234,40 +235,6 @@ component_portal.prototype.build  = async function(autoload=false){
 }//end component_portal.prototype.build
 
 
-
-
-
-/**
-* UPDATE_DATUM
-* Update the datum and the data of the instance with the data changed and saved.
-* @param array new_data
-*	contains fresh calculated data of saved component
-* @return bool true
-*/
-component_portal.prototype.update_datum = function(new_data) {
-
-	const self = this
-
-	// (!) Note that portal datum is different to the other components datum. Others have common section datum instead custom datum
-
-	// datum. Replace old datum with the new one from api
-		self.datum.data = new_data
-			// console.log("update_datum --------------------------- final self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
-
-	// data. Update current component self data
-		// self.data = new_data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || []
-		self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_id===self.section_id) || []
-			//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
-
-	// dispatch event
-		event_manager.publish('update_data_'+ self.id_base, '')
-
-
-	return true
-}//end update_datum
-
-
-
 /**
 * ADD_VALUE
 * @param object value (locator)
@@ -277,7 +244,7 @@ component_portal.prototype.add_value = async function(value) {
 
 	const self = this
 
-	// check if value lready exists
+	// check if value already exists
 		// const current_value = self.data.value
 		// const exists 		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id===value.section_id)
 		// if (typeof exists!=="undefined") {
@@ -303,6 +270,8 @@ component_portal.prototype.add_value = async function(value) {
 			changed_data : changed_data,
 			refresh		 : false
 		})
+
+		console.log("api_response", api_response);
 
 	// update pagination offset
 		self.update_pagination_values('add')
