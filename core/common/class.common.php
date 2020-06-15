@@ -1702,11 +1702,15 @@ abstract class common {
 
 		$tipo = $this->tipo;
 
+		$records_mode = isset($this->propiedades->source->records_mode)
+			? $this->propiedades->source->records_mode
+			: $this->get_modo();
+
 		// subcontext from layout_map items
 			$layout_map_options = new stdClass();
 				$layout_map_options->section_tipo 			= $this->get_section_tipo();
 				$layout_map_options->tipo 					= $this->get_tipo();
-				$layout_map_options->modo 					= $this->get_modo();
+				$layout_map_options->modo 					= $records_mode;
 				$layout_map_options->request_config_type 	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
@@ -1982,12 +1986,15 @@ abstract class common {
 
 		$request_config[] = $source;
 
+		$records_mode = isset($this->propiedades->source->records_mode)
+			? $this->propiedades->source->records_mode
+			: $this->get_modo();
+
 		// parse request properties
 		$tipo			= $this->get_tipo();
 		$section_tipo	= $this->get_section_tipo();
 		$section_id		= $this->get_section_id();
-		$mode			= $this->get_modo();
-
+		$mode			= $records_mode;
 
 		$request_config_parsed = common::get_request_properties_parsed($tipo, false ,$section_tipo, $mode, $section_id);
 
@@ -2489,11 +2496,15 @@ abstract class common {
 	*/
 	public function set_request_ddo() {
 
+		$records_mode = isset($this->propiedades->source->records_mode)
+			? $this->propiedades->source->records_mode
+			: $this->get_modo();
+
 		// layout_map subcontext from layout_map items
 			$layout_map_options = new stdClass();
 				$layout_map_options->section_tipo	= $this->get_section_tipo();
 				$layout_map_options->tipo			= $this->get_tipo();
-				$layout_map_options->modo			= $this->get_modo();
+				$layout_map_options->modo			= $records_mode;
 				$layout_map_options->add_section	= true;
 
 		$ddo = [];
