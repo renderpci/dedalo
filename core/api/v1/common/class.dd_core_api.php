@@ -411,169 +411,170 @@ class dd_core_api {
 	// * @param object $options
 	// * @return object $response
 	// */
-	// public static function get_page_element($request) {
-	//
-	// 	$response = new stdClass();
-	// 		$response->result 	= false;
-	// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-	//
-	// 	// set options from request
-	// 		if (!$options = $request->options) {
-	// 			return $response;
-	// 		}
-	//
-	// 	// sort vars
-	// 		$tipo 			= $options->tipo ?? null;
-	// 		$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
-	// 		$lang 			= $options->lang ?? DEDALO_DATA_LANG;
-	// 		$mode 			= $options->mode ?? 'list';
-	// 		$section_id 	= $options->section_id ?? null;
-	// 		$component_tipo = $options->component_tipo ?? null;
-	//
-	// 	// page elements
-	// 		switch (true) {
-	//
-	// 			case $model==='menu' :
-	// 				$page_element = (function(){
-	//
-	// 					$menu = new menu();
-	//
-	// 					// menu json
-	// 						$get_json_options = new stdClass();
-	// 							$get_json_options->get_context 	= true;
-	// 							$get_json_options->get_data 	= true;
-	// 						$menu_json = $menu->get_json($get_json_options);
-	//
-	// 					$page_element = new StdClass();
-	// 						$page_element->model 		= 'menu';
-	// 						$page_element->type 		= 'menu';
-	// 						$page_element->tipo 		= 'dd85';
-	// 						$page_element->mode 		= 'edit';
-	// 						$page_element->lang 		= DEDALO_APPLICATION_LANG;
-	// 						$page_element->dd_request  = null;
-	// 						$page_element->datum 		= $menu_json;
-	//
-	// 					return $page_element;
-	// 				})();
-	// 				break;
-	//
-	// 			case strpos($model, 'area')===0:
-	// 				$page_element = (function() use ($model, $tipo, $mode){
-	//
-	// 					$page_element = new StdClass();
-	// 						$page_element->model 		= $model;
-	// 						$page_element->type  		= 'area';
-	// 						$page_element->tipo  		= $tipo;
-	// 						$page_element->mode 	 	= $mode;
-	// 						$page_element->lang 	 	= DEDALO_DATA_LANG;
-	// 						$page_element->section_tipo = $tipo;
-	//
-	// 						// dd_request
-	// 							$area = area::get_instance($model, $tipo, $mode);
-	// 							$dd_request = $area->get_dd_request();
-	//
-	// 						$page_element->dd_request = $dd_request;
-	//
-	// 					return $page_element;
-	// 				})();
-	// 				break;
-	//
-	// 			case $model==='section':
-	// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-	//
-	// 					$section_tipo = $tipo;
-	//
-	// 					// dd_request
-	// 						$section = section::get_instance($section_id, $section_tipo, $mode);
-	// 						$section->set_lang($lang);
-	// 						$dd_request = $section->get_dd_request();
-	//
-	// 					$page_element = new StdClass();
-	// 						$page_element->model 		 = $model;
-	// 						$page_element->type 		 = 'section';
-	// 						$page_element->tipo 		 = $section_tipo;
-	// 						$page_element->section_tipo  = $section_tipo;
-	// 						$page_element->section_id 	 = $section_id;
-	// 						$page_element->mode 		 = $mode;
-	// 						$page_element->lang 		 = $lang;
-	// 						$page_element->dd_request	 = $dd_request;
-	//
-	// 					return $page_element;
-	// 				})();
-	// 				break;
-	//
-	// 			case $model==='section_tm':
-	// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-	//
-	// 					$section_tipo = $tipo;
-	//
-	// 					// dd_request
-	// 						$section = section_tm::get_instance($section_id, $section_tipo, $mode);
-	// 						$section->set_lang($lang);
-	// 						$dd_request = $section->get_dd_request();
-	//
-	// 					$page_element = new StdClass();
-	// 						$page_element->model		 = $model;
-	// 						$page_element->type			 = 'section';
-	// 						$page_element->tipo			 = $section_tipo;
-	// 						$page_element->section_tipo  = $section_tipo;
-	// 						$page_element->section_id	 = $section_id;
-	// 						$page_element->mode 		 = $mode;
-	// 						$page_element->lang 		 = $lang;
-	// 						$page_element->dd_request	 = $dd_request;
-	//
-	// 					return $page_element;
-	// 				})();
-	// 				break;
-	//
-	// 			case $model==='section_tool':
-	// 				$page_element = (function() use ($model, $tipo, $mode){
-	//
-	// 					# Configure section from section_tool data
-	// 					$RecordObj_dd = new RecordObj_dd($tipo);
-	// 					$propiedades  = $RecordObj_dd->get_propiedades(true);
-	//
-	// 					#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
-	// 					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
-	//
-	// 					$section_tipo 	= $tipo;
-	// 					$section_id		= null;
-	// 					$lang 	 	 	= DEDALO_DATA_LANG;
-	//
-	// 					// dd_request
-	// 						$section = section::get_instance($section_id, $section_tipo, $mode);
-	// 						$section->set_lang($lang);
-	// 						$section->config = $propiedades->config;
-	// 						$dd_request = $section->get_dd_request();
-	//
-	// 					$page_element = new StdClass();
-	// 						$page_element->model 		 = 'section';
-	// 						$page_element->type 		 = 'section';
-	// 						$page_element->section_tipo  = $section_tipo;
-	// 						$page_element->section_id 	 = $section_id;
-	// 						$page_element->mode 	 	 = $mode;
-	// 						$page_element->lang 	 	 = $lang;
-	// 						$page_element->dd_request   = $dd_request;
-	//
-	// 					return $page_element;
-	// 				})();
-	// 				break;
-	//
-	// 			default:
-	// 				#throw new Exception("Error Processing Request", 1);
-	// 				$response->msg = 'Error. model not found: '.$model;
-	// 				return $response;
-	//
-	// 		}//end switch ($model)
-	//
-	//
-	// 	$response->result 	= $page_element;
-	// 	$response->msg 	  	= 'Ok. Request done';
-	//
-	//
-	// 	return (object)$response;
-	// }//end get_page_element
-	//
+		// public static function get_page_element($request) {
+		//
+		// 	$response = new stdClass();
+		// 		$response->result 	= false;
+		// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		//
+		// 	// set options from request
+		// 		if (!$options = $request->options) {
+		// 			return $response;
+		// 		}
+		//
+		// 	// sort vars
+		// 		$tipo 			= $options->tipo ?? null;
+		// 		$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
+		// 		$lang 			= $options->lang ?? DEDALO_DATA_LANG;
+		// 		$mode 			= $options->mode ?? 'list';
+		// 		$section_id 	= $options->section_id ?? null;
+		// 		$component_tipo = $options->component_tipo ?? null;
+		//
+		// 	// page elements
+		// 		switch (true) {
+		//
+		// 			case $model==='menu' :
+		// 				$page_element = (function(){
+		//
+		// 					$menu = new menu();
+		//
+		// 					// menu json
+		// 						$get_json_options = new stdClass();
+		// 							$get_json_options->get_context 	= true;
+		// 							$get_json_options->get_data 	= true;
+		// 						$menu_json = $menu->get_json($get_json_options);
+		//
+		// 					$page_element = new StdClass();
+		// 						$page_element->model 		= 'menu';
+		// 						$page_element->type 		= 'menu';
+		// 						$page_element->tipo 		= 'dd85';
+		// 						$page_element->mode 		= 'edit';
+		// 						$page_element->lang 		= DEDALO_APPLICATION_LANG;
+		// 						$page_element->dd_request  = null;
+		// 						$page_element->datum 		= $menu_json;
+		//
+		// 					return $page_element;
+		// 				})();
+		// 				break;
+		//
+		// 			case strpos($model, 'area')===0:
+		// 				$page_element = (function() use ($model, $tipo, $mode){
+		//
+		// 					$page_element = new StdClass();
+		// 						$page_element->model 		= $model;
+		// 						$page_element->type  		= 'area';
+		// 						$page_element->tipo  		= $tipo;
+		// 						$page_element->mode 	 	= $mode;
+		// 						$page_element->lang 	 	= DEDALO_DATA_LANG;
+		// 						$page_element->section_tipo = $tipo;
+		//
+		// 						// dd_request
+		// 							$area = area::get_instance($model, $tipo, $mode);
+		// 							$dd_request = $area->get_dd_request();
+		//
+		// 						$page_element->dd_request = $dd_request;
+		//
+		// 					return $page_element;
+		// 				})();
+		// 				break;
+		//
+		// 			case $model==='section':
+		// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
+		//
+		// 					$section_tipo = $tipo;
+		//
+		// 					// dd_request
+		// 						$section = section::get_instance($section_id, $section_tipo, $mode);
+		// 						$section->set_lang($lang);
+		// 						$dd_request = $section->get_dd_request();
+		//
+		// 					$page_element = new StdClass();
+		// 						$page_element->model 		 = $model;
+		// 						$page_element->type 		 = 'section';
+		// 						$page_element->tipo 		 = $section_tipo;
+		// 						$page_element->section_tipo  = $section_tipo;
+		// 						$page_element->section_id 	 = $section_id;
+		// 						$page_element->mode 		 = $mode;
+		// 						$page_element->lang 		 = $lang;
+		// 						$page_element->dd_request	 = $dd_request;
+		//
+		// 					return $page_element;
+		// 				})();
+		// 				break;
+		//
+		// 			case $model==='section_tm':
+		// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
+		//
+		// 					$section_tipo = $tipo;
+		//
+		// 					// dd_request
+		// 						$section = section_tm::get_instance($section_id, $section_tipo, $mode);
+		// 						$section->set_lang($lang);
+		// 						$dd_request = $section->get_dd_request();
+		//
+		// 					$page_element = new StdClass();
+		// 						$page_element->model		 = $model;
+		// 						$page_element->type			 = 'section';
+		// 						$page_element->tipo			 = $section_tipo;
+		// 						$page_element->section_tipo  = $section_tipo;
+		// 						$page_element->section_id	 = $section_id;
+		// 						$page_element->mode 		 = $mode;
+		// 						$page_element->lang 		 = $lang;
+		// 						$page_element->dd_request	 = $dd_request;
+		//
+		// 					return $page_element;
+		// 				})();
+		// 				break;
+		//
+		// 			case $model==='section_tool':
+		// 				$page_element = (function() use ($model, $tipo, $mode){
+		//
+		// 					# Configure section from section_tool data
+		// 					$RecordObj_dd = new RecordObj_dd($tipo);
+		// 					$propiedades  = $RecordObj_dd->get_propiedades(true);
+		//
+		// 					#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
+		// 					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
+		//
+		// 					$section_tipo 	= $tipo;
+		// 					$section_id		= null;
+		// 					$lang 	 	 	= DEDALO_DATA_LANG;
+		//
+		// 					// dd_request
+		// 						$section = section::get_instance($section_id, $section_tipo, $mode);
+		// 						$section->set_lang($lang);
+		// 						$section->config = $propiedades->config;
+		// 						$dd_request = $section->get_dd_request();
+		//
+		// 					$page_element = new StdClass();
+		// 						$page_element->model 		 = 'section';
+		// 						$page_element->type 		 = 'section';
+		// 						$page_element->section_tipo  = $section_tipo;
+		// 						$page_element->section_id 	 = $section_id;
+		// 						$page_element->mode 	 	 = $mode;
+		// 						$page_element->lang 	 	 = $lang;
+		// 						$page_element->dd_request   = $dd_request;
+		//
+		// 					return $page_element;
+		// 				})();
+		// 				break;
+		//
+		// 			default:
+		// 				#throw new Exception("Error Processing Request", 1);
+		// 				$response->msg = 'Error. model not found: '.$model;
+		// 				return $response;
+		//
+		// 		}//end switch ($model)
+		//
+		//
+		// 	$response->result 	= $page_element;
+		// 	$response->msg 	  	= 'Ok. Request done';
+		//
+		//
+		// 	return (object)$response;
+		// }//end get_page_element
+		//
+
 
 
 	// search methods ///////////////////////////////////
@@ -982,12 +983,11 @@ class dd_core_api {
 								$i++; }//end iterate records
 								*/
 
-							// setions
+							// sections
 								$element = sections::get_instance(null, $search_query_object, $tipo, $mode, $lang);
 
 							// store search_query_object
 								//$context[] = $current_sqo;
-
 							break;
 
 						case 'get_data':
