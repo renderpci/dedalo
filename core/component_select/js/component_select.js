@@ -43,29 +43,29 @@ export const component_select = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_select.prototype.init 	 			= component_common.prototype.init
-	component_select.prototype.build 	 			= component_common.prototype.build
-	component_select.prototype.render 				= common.prototype.render
-	component_select.prototype.refresh 				= common.prototype.refresh
-	component_select.prototype.destroy 	 			= common.prototype.destroy
+	component_select.prototype.init					= component_common.prototype.init
+	component_select.prototype.build				= component_common.prototype.build
+	component_select.prototype.render				= common.prototype.render
+	component_select.prototype.refresh				= common.prototype.refresh
+	component_select.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_select.prototype.save 	 			= component_common.prototype.save
-	component_select.prototype.update_data_value 	= component_common.prototype.update_data_value
+	component_select.prototype.save					= component_common.prototype.save
+	component_select.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_select.prototype.update_datum			= component_common.prototype.update_datum
-	component_select.prototype.change_value 		= component_common.prototype.change_value
-
-	// component_select.prototype.load_data 		= component_common.prototype.load_data
-	// component_select.prototype.get_value 		= component_common.prototype.get_value
-	// component_select.prototype.set_value 		= component_common.prototype.set_value
-	//component_select.prototype.load_datum 		= component_common.prototype.load_datum
+	component_select.prototype.change_value			= component_common.prototype.change_value
+	component_select.prototype.build_dd_request		= common.prototype.build_dd_request
+	// component_select.prototype.load_data			= component_common.prototype.load_data
+	// component_select.prototype.get_value			= component_common.prototype.get_value
+	// component_select.prototype.set_value			= component_common.prototype.set_value
+	//component_select.prototype.load_datum			= component_common.prototype.load_datum
 
 	// render
-	component_select.prototype.list 				= render_component_select.prototype.list
-	component_select.prototype.edit 				= render_component_select.prototype.edit
+	component_select.prototype.list					= render_component_select.prototype.list
+	component_select.prototype.edit					= render_component_select.prototype.edit
 	component_select.prototype.edit_in_list			= render_component_select.prototype.edit
 	component_select.prototype.tm					= render_component_select.prototype.edit
-	component_select.prototype.search 				= render_component_select.prototype.search
-	component_select.prototype.change_mode 			= component_common.prototype.change_mode
+	component_select.prototype.search				= render_component_select.prototype.search
+	component_select.prototype.change_mode			= component_common.prototype.change_mode
 
 

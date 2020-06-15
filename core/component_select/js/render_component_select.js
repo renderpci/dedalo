@@ -229,7 +229,7 @@ const get_buttons = (self) => {
 	// button edit
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
-			if (self.dd_request) {
+			if (self.dd_request.show) {
 				const show					= self.dd_request.show
 				const target_section		= show.filter(item => item.model==='section')
 				const target_section_lenght	= target_section.length

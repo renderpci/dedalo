@@ -39,21 +39,22 @@ export const component_password = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_password.prototype.init 	 			= component_common.prototype.init
-	component_password.prototype.build 	 			= component_common.prototype.build
-	component_password.prototype.render 			= common.prototype.render
-	component_password.prototype.refresh 			= common.prototype.refresh
-	component_password.prototype.destroy 	 		= common.prototype.destroy
+	component_password.prototype.init				= component_common.prototype.init
+	component_password.prototype.build				= component_common.prototype.build
+	component_password.prototype.render				= common.prototype.render
+	component_password.prototype.refresh			= common.prototype.refresh
+	component_password.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_password.prototype.save 	 			= component_common.prototype.save
+	component_password.prototype.save				= component_common.prototype.save
 	component_password.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_password.prototype.update_datum 		= component_common.prototype.update_datum
-	component_password.prototype.change_value 		= component_common.prototype.change_value
+	component_password.prototype.update_datum		= component_common.prototype.update_datum
+	component_password.prototype.change_value		= component_common.prototype.change_value
+	component_password.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_password.prototype.list 				= render_component_password.prototype.list
-	component_password.prototype.edit 				= render_component_password.prototype.edit
+	component_password.prototype.list				= render_component_password.prototype.list
+	component_password.prototype.edit				= render_component_password.prototype.edit
 	component_password.prototype.edit_in_list		= render_component_password.prototype.edit
 
 /**

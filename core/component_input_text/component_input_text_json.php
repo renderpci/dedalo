@@ -37,7 +37,7 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-
+		
 		// Value
 		switch ($modo) {
 			case 'list':
