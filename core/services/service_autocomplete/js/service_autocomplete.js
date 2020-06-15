@@ -40,7 +40,8 @@ export const service_autocomplete = function() {
 		self.dd_request				= self.ar_dd_request[0]
 		self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
 		self.ar_search_section_tipo	= self.sqo.section_tipo
-		self.search_engine			= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
+		const engine				= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
+		self.search_engine 			= (engine !== null) ? engine : 'search_dedalo';
 
 		// Vars
 			self.tipo		= self.instance_caller.tipo
@@ -96,7 +97,7 @@ export const service_autocomplete = function() {
 		// components fields for inputs_list
 		const inputs_list = self.render_inputs_list()
 		searh_container.appendChild(inputs_list)
-		// build operator selectos
+		// build operator selector
 		const operator_selector = self.render_operator_selector()
 		searh_container.appendChild(operator_selector)
 		// build operator selectos
@@ -163,7 +164,7 @@ export const service_autocomplete = function() {
 						element_type	: "option",
 						parent			: select,
 						value			: i+'',
-						text_content	: ar_section.length > 1
+						inner_html		: ar_section.length > 1
 							? ddo_section.label + ", etc."
 							: ddo_section.label
 					})
@@ -279,7 +280,7 @@ export const service_autocomplete = function() {
 
 					const section_label = ui.create_dom_element({
 						element_type	: "label",
-						inner_html		: ddo_section.tipo, //ddo_section.label ||
+						inner_html		: ddo_section.label +' '+ ddo_section.tipo, //ddo_section.label ||
 						parent			: li_section
 					})
 					section_label.setAttribute("for", self.list_name + '_'+ ddo_section.tipo)
@@ -518,24 +519,16 @@ export const service_autocomplete = function() {
 			const q						= search_value
 			const search_query_object	= self.rebuild_search_query_object(q);
 
-		// todo get the search engine with the dd_request
-		//	const dd_request = self.dd_request.filter((current_item)=> current_item.typo === 'ddo')
-		//	dd_request.push(search_query_object)
-
-			// search source selector
-			//let search_engine = (search_options.search_engine !== null) ? search_options.search_engine : "search_dedalo";
-			const search_engine = "search_dedalo";
-
 			if(SHOW_DEBUG===true) {
-				console.log("[service-autocomplete.autocomplete_search] search_engine:",search_engine);	 //return
+				console.log("[service-autocomplete.autocomplete_search] search_engine:",self.search_engine);	 //return
 			}
 
 		// exec search
-			const js_promise = self[search_engine]( self.dd_request )
+			const js_promise = self[self.search_engine]( self.dd_request )
 
 		// test
 			//const js_promise = this["search_zenon"](search_options)
-			//	console.log("js_promise:",js_promise);
+				console.log("js_promise:",js_promise);
 
 		return js_promise
 	}//end autocomplete_search
@@ -575,107 +568,107 @@ export const service_autocomplete = function() {
 			// sections property
 				//??????????	sqo.section_tipo = search_sections
 			// filter property
-			if (filter_by_field_list_tipo!==false || filter_fields_data!==false) {
-				// Advanced mode
-				if(SHOW_DEBUG===true) {
-					console.log("==== filter_by_field_list_tipo:",filter_by_field_list_tipo, " - filter_fields_data:", filter_fields_data);
-				}
-
-				// operator. Selector operator
-					const operator_selector	= wrap_div.querySelector(".operator_selector")
-					let operator_selected	= (operator_selector) ? "$" + operator_selector.value : "$or";
-
-				// split. Selector split
-					const split_selector	= wrap_div.querySelector(".split_selector")
-					let split_selected		= (split_selector) ? JSON.parse(split_selector.value) : true;
-
-				let clean_group		= []
-				let filter_element	= sqo.filter
-
-				// Iterate current filter
-				for (let operator in filter_element) {
-
-					// Current group
-					let group = filter_element[operator]
-
-					// New group
-					let sub_group2 = {}
-						sub_group2[operator_selected] = []
-
-					// Iterate filter main group
-					group.forEach(function(search_unit, i) {
-						const base_component_tipo = search_unit.path ? search_unit.path[0].component_tipo : false
-						const last_component_tipo = search_unit.path ? search_unit.path[search_unit.path.length-1].component_tipo : false
-
-						// q_split
-						search_unit.q_split = split_selected
-
-						if (base_component_tipo===filter_by_field_list_tipo && filter_by_field_list_value_len>0) {
-							// Add filter_by_field_list value to filter
-							let sub_group1 = {'$or':[]}
-							for (let k = 0; k < filter_by_field_list_value_len; k++) {
-
-								let locator			= filter_by_field_list_value[k]
-								let new_search_unit	= cloneDeep(search_unit)
-								new_search_unit.q	= JSON.stringify(locator)
-								// Remove all path filter_elements but first
-								new_search_unit.path.splice(1)
-								// Add to group
-								sub_group1['$or'].push(new_search_unit)
-							}
-							clean_group.push(sub_group1)
-
-						}else{
-							// Add fields values to filter
-							if (filter_fields_data && typeof filter_fields_data[last_component_tipo]!=="undefined") {
-
-								let value = filter_fields_data[last_component_tipo] || [] // Always use 'last_component_tipo' here (!)
-
-								// If value is empty will be ignored in final object
-								if (value.length>0) {
-
-									// Override q value
-									search_unit.q = value
-									// When filter is not empy, send search_unit to a special subgroup
-									if (filter_by_field_list_value_len>0) {
-										// Add to subgroup2
-										sub_group2[operator_selected].push(search_unit);
-									}else{
-										// Add to subgroup
-										clean_group.push(search_unit)
-									}
-								}//end if (value.length>0)
-							}
-						}
-
-					})//end group.forEach(function(search_unit, i)
-
-					// When filter is not empy, add filled sub_group2
-					if (filter_by_field_list_value_len>0) {
-						clean_group.push(sub_group2)
-					}
-
-					// Overwrite filter value with modified group
-					filter_element[operator] = clean_group
-
-					break; // Only one is expected in fisrt level
-				}//end for (let operator in filter_element) {
-
-				// When filter_sections is not empy, use operator '$and' to exclude results by filter_sections
-				let main_operator = operator_selected
-				if (filter_by_field_list_value_len>0) {
-					// Force and
-					main_operator = '$and'
-				}
-
-				// New clean final filter
-				const clean_filter = {}
-					  clean_filter[main_operator] = clean_group
-
-				// Replaces old filter in sqo
-				sqo.filter = clean_filter
-
-			}else{
+			// if (filter_by_field_list_tipo!==false || filter_fields_data!==false) {
+			// 	// Advanced mode
+			// 	if(SHOW_DEBUG===true) {
+			// 		console.log("==== filter_by_field_list_tipo:",filter_by_field_list_tipo, " - filter_fields_data:", filter_fields_data);
+			// 	}
+			//
+			// 	// operator. Selector operator
+			// 		const operator_selector	= wrap_div.querySelector(".operator_selector")
+			// 		let operator_selected	= (operator_selector) ? "$" + operator_selector.value : "$or";
+			//
+			// 	// split. Selector split
+			// 		const split_selector	= wrap_div.querySelector(".split_selector")
+			// 		let split_selected		= (split_selector) ? JSON.parse(split_selector.value) : true;
+			//
+			// 	let clean_group		= []
+			// 	let filter_element	= sqo.filter
+			//
+			// 	// Iterate current filter
+			// 	for (let operator in filter_element) {
+			//
+			// 		// Current group
+			// 		let group = filter_element[operator]
+			//
+			// 		// New group
+			// 		let sub_group2 = {}
+			// 			sub_group2[operator_selected] = []
+			//
+			// 		// Iterate filter main group
+			// 		group.forEach(function(search_unit, i) {
+			// 			const base_component_tipo = search_unit.path ? search_unit.path[0].component_tipo : false
+			// 			const last_component_tipo = search_unit.path ? search_unit.path[search_unit.path.length-1].component_tipo : false
+			//
+			// 			// q_split
+			// 			search_unit.q_split = split_selected
+			//
+			// 			if (base_component_tipo===filter_by_field_list_tipo && filter_by_field_list_value_len>0) {
+			// 				// Add filter_by_field_list value to filter
+			// 				let sub_group1 = {'$or':[]}
+			// 				for (let k = 0; k < filter_by_field_list_value_len; k++) {
+			//
+			// 					let locator			= filter_by_field_list_value[k]
+			// 					let new_search_unit	= cloneDeep(search_unit)
+			// 					new_search_unit.q	= JSON.stringify(locator)
+			// 					// Remove all path filter_elements but first
+			// 					new_search_unit.path.splice(1)
+			// 					// Add to group
+			// 					sub_group1['$or'].push(new_search_unit)
+			// 				}
+			// 				clean_group.push(sub_group1)
+			//
+			// 			}else{
+			// 				// Add fields values to filter
+			// 				if (filter_fields_data && typeof filter_fields_data[last_component_tipo]!=="undefined") {
+			//
+			// 					let value = filter_fields_data[last_component_tipo] || [] // Always use 'last_component_tipo' here (!)
+			//
+			// 					// If value is empty will be ignored in final object
+			// 					if (value.length>0) {
+			//
+			// 						// Override q value
+			// 						search_unit.q = value
+			// 						// When filter is not empy, send search_unit to a special subgroup
+			// 						if (filter_by_field_list_value_len>0) {
+			// 							// Add to subgroup2
+			// 							sub_group2[operator_selected].push(search_unit);
+			// 						}else{
+			// 							// Add to subgroup
+			// 							clean_group.push(search_unit)
+			// 						}
+			// 					}//end if (value.length>0)
+			// 				}
+			// 			}
+			//
+			// 		})//end group.forEach(function(search_unit, i)
+			//
+			// 		// When filter is not empy, add filled sub_group2
+			// 		if (filter_by_field_list_value_len>0) {
+			// 			clean_group.push(sub_group2)
+			// 		}
+			//
+			// 		// Overwrite filter value with modified group
+			// 		filter_element[operator] = clean_group
+			//
+			// 		break; // Only one is expected in fisrt level
+			// 	}//end for (let operator in filter_element) {
+			//
+			// 	// When filter_sections is not empy, use operator '$and' to exclude results by filter_sections
+			// 	let main_operator = operator_selected
+			// 	if (filter_by_field_list_value_len>0) {
+			// 		// Force and
+			// 		main_operator = '$and'
+			// 	}
+			//
+			// 	// New clean final filter
+			// 	const clean_filter = {}
+			// 		  clean_filter[main_operator] = clean_group
+			//
+			// 	// Replaces old filter in sqo
+			// 	sqo.filter = clean_filter
+			//
+			// }else{
 
 
 				const fixed_filter	= self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
@@ -700,25 +693,16 @@ export const service_autocomplete = function() {
 
 					// filter rebuilded
 					self.sqo.filter = {
-						// "$and" : [filter_free_value]
-						"$and" : []
+						"$and" : [filter_free_value]
+						// "$and" : []
 					}
 					if (fixed_filter) {
 						for (let i = 0; i < fixed_filter.value.length; i++) {
 							sqo.filter.$and.push(fixed_filter.value[i])
 						}
 					}
-				}
+				// }
 
-
-
-				// Default basic mode (autocomplete hi)
-				//const operator  = Object.keys(sqo.filter)[0] || '$and'
-				//const key 		= 0
-
-
-				// Update wrapper dataset (only in this modo)
-				//	wrap_div.dataset.sqo = JSON.stringify(sqo)
 			}
 
 			// allow_sub_select_by_id set to false to allow select deep fields
@@ -1593,7 +1577,7 @@ export const service_autocomplete = function() {
 	* GET_SEARCH_SECTIONS
 	* @return array of checked hierarchy_sections sections
 	*/
-	this.get_search_sections = function(wrap_div) {
+	this.get_search_sections_OLD = function(wrap_div) {
 
 		let selected_values = [] // Default
 
@@ -1636,7 +1620,7 @@ export const service_autocomplete = function() {
 	* GET_FILTER_FIELDS_DATA
 	* @return object filter_fields_data | bool false
 	*/
-	this.get_filter_fields_data = function(wrap_div, q) {
+	this.get_filter_fields_data_OLD = function(wrap_div, q) {
 
 		const self = this
 
@@ -1696,7 +1680,7 @@ export const service_autocomplete = function() {
 	* GET_FILTER_BY_FIELD_LIST_TIPO
 	* @return string | bool false
 	*/
-	this.get_filter_by_field_list_tipo = function(wrap_div) {
+	this.get_filter_by_field_list_tipo_OLD = function(wrap_div) {
 
 		let filter_by_field_list_tipo = false
 
@@ -1722,7 +1706,7 @@ export const service_autocomplete = function() {
 	* GET_FILTER_BY_FIELD_LIST_VALUE
 	* @return array | bool false
 	*/
-	this.get_filter_by_field_list_value = function(wrap_div) {
+	this.get_filter_by_field_list_value_OLD = function(wrap_div) {
 
 		let selected_values = false
 
@@ -1751,7 +1735,7 @@ export const service_autocomplete = function() {
 	* SPLIT_Q
 	* @return array ar_q
 	*/
-	this.split_q = function(q) {
+	this.split_q_OLD = function(q) {
 
 		let ar_q = []
 
@@ -1791,7 +1775,7 @@ export const service_autocomplete = function() {
 	* DETERMINE_Q_TYPE
 	* @return string q_type
 	*/
-	this.determine_q_type = function(q) {
+	this.determine_q_type_OLD = function(q) {
 
 		let q_type = ''
 
