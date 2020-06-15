@@ -16,6 +16,17 @@
 		border-bottom-right-radius: 5px;
 		// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 
+		>.source_selector {
+			display: flex;
+			background-color: #949494;
+    		color: #ffff;
+			>*{
+				margin: .25em;
+				padding: 0.5em;
+			}
+			
+		}
+
 		// sections_list. Box of checkboxes with all available sections
 		>ul.sections_list {
 			background-color: #949494;
@@ -43,7 +54,7 @@
 				label {
 					padding-right: 0.5em;
 				}
-			}			
+			}
 		}
 
 		>div.inputs_list {
@@ -65,7 +76,7 @@
 			}
 		}
 
-		>input.autocomplete_input {		
+		>input.autocomplete_input {
 			// background: #fff url("../../themes/default/icons/search.svg");
 			// background-repeat: no-repeat;
 			// background-size: auto 80%;
@@ -289,5 +300,3 @@
 // 			color: #f5c39f !important;
 // 		}
 // 	*/
-
-
