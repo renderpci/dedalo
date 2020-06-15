@@ -138,7 +138,6 @@ component_portal.prototype.build  = async function(autoload=false){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-		console.log("request_config", self.context.request_config);
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
 
@@ -223,7 +222,7 @@ component_portal.prototype.build  = async function(autoload=false){
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-			console.log("component_portal self +++++++++++ :",self);
+			// console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}
 
@@ -270,8 +269,6 @@ component_portal.prototype.add_value = async function(value) {
 			changed_data : changed_data,
 			refresh		 : false
 		})
-
-		console.log("api_response", api_response);
 
 	// update pagination offset
 		self.update_pagination_values('add')
