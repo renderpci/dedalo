@@ -43,25 +43,26 @@ export const component_text_area = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_text_area.prototype.init		= component_common.prototype.init
-	component_text_area.prototype.build		= component_common.prototype.build
-	component_text_area.prototype.render	= common.prototype.render
-	component_text_area.prototype.refresh	= common.prototype.refresh
-	component_text_area.prototype.destroy	= common.prototype.destroy
+	component_text_area.prototype.init				= component_common.prototype.init
+	component_text_area.prototype.build				= component_common.prototype.build
+	component_text_area.prototype.render			= common.prototype.render
+	component_text_area.prototype.refresh			= common.prototype.refresh
+	component_text_area.prototype.destroy			= common.prototype.destroy
 
 	// change data
 	component_text_area.prototype.save				= component_common.prototype.save
 	component_text_area.prototype.change_value		= component_common.prototype.change_value
 	component_text_area.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_text_area.prototype.update_datum		= component_common.prototype.update_datum
+	component_text_area.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_text_area.prototype.list			= render_component_text_area.prototype.list
-	component_text_area.prototype.edit			= render_component_text_area.prototype.edit
-	component_text_area.prototype.edit_in_list	= render_component_text_area.prototype.edit
-	component_text_area.prototype.tm			= render_component_text_area.prototype.edit // time machine render alias of edit
-	component_text_area.prototype.search		= render_component_text_area.prototype.search
-	component_text_area.prototype.change_mode	= component_common.prototype.change_mode
+	component_text_area.prototype.list				= render_component_text_area.prototype.list
+	component_text_area.prototype.edit				= render_component_text_area.prototype.edit
+	component_text_area.prototype.edit_in_list		= render_component_text_area.prototype.edit
+	component_text_area.prototype.tm				= render_component_text_area.prototype.edit // time machine render alias of edit
+	component_text_area.prototype.search			= render_component_text_area.prototype.search
+	component_text_area.prototype.change_mode		= component_common.prototype.change_mode
 
 
 
@@ -170,14 +171,14 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				// Convert section tags to dedalo internal labels
 				// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">..</section>
 				// [struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]...[/struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]
-				const tag_id 		= section_elements[i].dataset.tag_id
-				const state 		= section_elements[i].dataset.state
-				const label 		= section_elements[i].dataset.label
-				const data 			= section_elements[i].dataset.data
+				const tag_id		= section_elements[i].dataset.tag_id
+				const state			= section_elements[i].dataset.state
+				const label			= section_elements[i].dataset.label
+				const data			= section_elements[i].dataset.data
 				// Compose Dédalo tags
-				const tag_in  		= self.build_data_tag('structIn', tag_id, state, label, data)
-				const tag_out 		= self.build_data_tag('structOut', tag_id, state, label, data)
-				const final_string 	= tag_in + section_elements[i].innerHTML + tag_out
+				const tag_in		= self.build_data_tag('structIn', tag_id, state, label, data)
+				const tag_out		= self.build_data_tag('structOut', tag_id, state, label, data)
+				const final_string	= tag_in + section_elements[i].innerHTML + tag_out
 
 				// Replaces tag content string with new created
 				section_elements[i].innerHTML = final_string
@@ -211,14 +212,14 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				// Convert section tags to dedalo internal labels
 				// <reference class="reference_struct text_unselectable" id="reference_2" data-state="n" data-label="" data-data="{'reference_tipo':'rsc370','reference_id':'3'}">..</reference>
 				// [reference-a-1-1-data:{'reference_tipo':'rsc370','reference_id':'3'}:data]...[/reference-a-1-1-data:{'reference_tipo':'rsc370','reference_id':'3'}:data]
-				const tag_id 		= reference_elements[i].dataset.tag_id
-				const state 		= reference_elements[i].dataset.state
-				const label 		= reference_elements[i].dataset.label
-				const data 		= reference_elements[i].dataset.data
+				const tag_id		= reference_elements[i].dataset.tag_id
+				const state			= reference_elements[i].dataset.state
+				const label			= reference_elements[i].dataset.label
+				const data			= reference_elements[i].dataset.data
 				// Compose Dédalo tags
-				const tag_in  	= self.build_data_tag('referenceIn', tag_id, state, label, data)
-				const tag_out 	= self.build_data_tag('referenceOut', tag_id, state, label, data)
-				const final_string= tag_in + reference_elements[i].innerHTML + tag_out
+				const tag_in		= self.build_data_tag('referenceIn', tag_id, state, label, data)
+				const tag_out		= self.build_data_tag('referenceOut', tag_id, state, label, data)
+				const final_string	= tag_in + reference_elements[i].innerHTML + tag_out
 
 				// Replaces tag content string with new created
 				reference_elements[i].innerHTML = final_string
