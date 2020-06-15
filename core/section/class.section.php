@@ -3032,112 +3032,105 @@ class section extends common {
 
 	/**
 	* BUILD_SEARCH_QUERY_OBJECT
-	* @return object $query_object
-
-	public function build_search_query_object_DES( $request_options=array() ) {
-
-		$start_time=microtime(1);
-
-		$options = new stdClass();
-			$options->q 	 			= null;
-			$options->limit  			= 10;
-			$options->order  			= null;
-			$options->offset 			= 0;
-			$options->lang 				= DEDALO_DATA_LANG;
-			$options->id 				= $this->tipo . '_' .$this->modo;
-			$options->section_tipo		= $this->tipo;
-			$options->select_fields		= 'default';
-			$options->filter_by_id		= false;
-			$options->full_count		= true;
-			$options->remove_distinct	= false;
-
-			#$options->forced_matrix_table = false;
-			if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-
-				#$order_obj = new stdClass();
-				#	$order_obj->direction 	= "DESC";
-				#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');
-				# Defaults for activity
-				$options->limit  		= 30;
-				#$options->order  		= [$order_obj];
-			}
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		# SELECT
-			$select_group = [];
-			if ($options->select_fields===false) {
-				# No fields are required
-			}else{
-				# Default case
-				$layout_map = component_layout::get_layout_map_from_section( $this );
-
-				if (!empty($layout_map)) {
-					$ar_component_tipo = reset($layout_map);
-					foreach ($ar_component_tipo as $key => $component_tipo) {
-						if (empty($component_tipo)) {
-							debug_log(__METHOD__." Ignored empty component tipo (key:$key) received from layout map: ".json_encode($layout_map, JSON_PRETTY_PRINT), logger::ERROR);
-							continue;
-						}
-						$select_element = new stdClass();
-							$select_element->path = search::get_query_path($component_tipo, $options->section_tipo, false);
-						# Add to group
-						$select_group[] = $select_element;
-					}
-				}
-			}
-
-		# FILTER
-			$filter_group = null;
-			if ($options->filter_by_id!==false) {
-
-				// Is an array of objects
-				$ar_section_id = [];
-				foreach ((array)$options->filter_by_id as $locator) {
-					$ar_section_id[] = (int)$locator->section_id;
-				}
-
-				$filter_element = new stdClass();
-					$filter_element->q 		= json_encode($ar_section_id);
-					$filter_element->path 	= json_decode('[
-						{
-							"section_tipo": "'.$options->section_tipo.'",
-							"component_tipo": "section_id",
-							"modelo": "component_section_id",
-							"name": "section_id"
-						}
-					]');
-
-				$op = '$and';
-				$filter_group = new stdClass();
-					$filter_group->$op = [$filter_element];
-			}//end if ($options->filter_by_id!==false)
-
-
-		# QUERY OBJECT
-		$query_object = new stdClass();
-			$query_object->id  	   		= $options->id;
-			$query_object->section_tipo = [$options->section_tipo];
-			$query_object->limit   		= $options->limit;
-			$query_object->order   		= $options->order;
-			$query_object->offset  		= $options->offset;
-			$query_object->full_count  	= $options->full_count;
-			# Used only for time machine list
-			#if ($options->forced_matrix_table!==false) {
-				# add forced_matrix_table (time machine case)
-			#	$query_object->forced_matrix_table = $options->forced_matrix_table;
-			#}
-			$query_object->filter  		= $filter_group;
-			$query_object->select  		= $select_group;
-
-
-		return (object)$query_object;
-	}//end build_search_query_object
-	*/
-
-
-	/**
-	* GET_DATO_IN_PATH
-	* @return string | null
+	*	* @return object $query_object
+	*
+	*	public function build_search_query_object_DES( $request_options=array() ) {
+	*
+	*		$start_time=microtime(1);
+	*
+	*		$options = new stdClass();
+	*			$options->q 	 			= null;
+	*			$options->limit  			= 10;
+	*			$options->order  			= null;
+	*			$options->offset 			= 0;
+	*			$options->lang 				= DEDALO_DATA_LANG;
+	*			$options->id 				= $this->tipo . '_' .$this->modo;
+	*			$options->section_tipo		= $this->tipo;
+	*			$options->select_fields		= 'default';
+	*			$options->filter_by_id		= false;
+	*			$options->full_count		= true;
+	*			$options->remove_distinct	= false;
+	*
+	*			#$options->forced_matrix_table = false;
+	*			if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+	*
+	*				#$order_obj = new stdClass();
+	*				#	$order_obj->direction 	= "DESC";
+	*				#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');
+	*				# Defaults for activity
+	*				$options->limit  		= 30;
+	*				#$options->order  		= [$order_obj];
+	*			}
+	*			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	*
+	*		# SELECT
+	*			$select_group = [];
+	*			if ($options->select_fields===false) {
+	*				# No fields are required
+	*			}else{
+	*				# Default case
+	*				$layout_map = component_layout::get_layout_map_from_section( $this );
+	*
+	*				if (!empty($layout_map)) {
+	*					$ar_component_tipo = reset($layout_map);
+	*					foreach ($ar_component_tipo as $key => $component_tipo) {
+	*						if (empty($component_tipo)) {
+	*							debug_log(__METHOD__." Ignored empty component tipo (key:$key) received from layout map: ".json_encode($layout_map, JSON_PRETTY_PRINT), logger::ERROR);
+	*							continue;
+	*						}
+	*						$select_element = new stdClass();
+	*							$select_element->path = search::get_query_path($component_tipo, $options->section_tipo, false);
+	*						# Add to group
+	*						$select_group[] = $select_element;
+	*					}
+	*				}
+	*			}
+	*
+	*		# FILTER
+	*			$filter_group = null;
+	*			if ($options->filter_by_id!==false) {
+	*
+	*				// Is an array of objects
+	*				$ar_section_id = [];
+	*				foreach ((array)$options->filter_by_id as $locator) {
+	*					$ar_section_id[] = (int)$locator->section_id;
+	*				}
+	*
+	*				$filter_element = new stdClass();
+	*					$filter_element->q 		= json_encode($ar_section_id);
+	*					$filter_element->path 	= json_decode('[
+	*						{
+	*							"section_tipo": "'.$options->section_tipo.'",
+	*							"component_tipo": "section_id",
+	*							"modelo": "component_section_id",
+	*							"name": "section_id"
+	*						}
+	*					]');
+	*
+	*				$op = '$and';
+	*				$filter_group = new stdClass();
+	*					$filter_group->$op = [$filter_element];
+	*			}//end if ($options->filter_by_id!==false)
+	*
+	*
+	*		# QUERY OBJECT
+	*		$query_object = new stdClass();
+	*			$query_object->id  	   		= $options->id;
+	*			$query_object->section_tipo = [$options->section_tipo];
+	*			$query_object->limit   		= $options->limit;
+	*			$query_object->order   		= $options->order;
+	*			$query_object->offset  		= $options->offset;
+	*			$query_object->full_count  	= $options->full_count;
+	*			# Used only for time machine list
+	*			#if ($options->forced_matrix_table!==false) {
+	*				# add forced_matrix_table (time machine case)
+	*			#	$query_object->forced_matrix_table = $options->forced_matrix_table;
+	*			#}
+	*			$query_object->filter  		= $filter_group;
+	*			$query_object->select  		= $select_group;
+	*
+	*
+	*		return (object)$query_object;
 	*/
 	public function get_dato_in_path( $ar_path ) {
 
@@ -3413,4 +3406,3 @@ class section extends common {
 
 
 }//end section
-?>
