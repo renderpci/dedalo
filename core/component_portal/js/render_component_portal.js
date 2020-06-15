@@ -490,7 +490,7 @@ const get_top = function(self) {
 * @return dom element li
 */
 const input_element = async function(current_section_record, inputs_container){
-
+console.log("current_section_record", current_section_record);
 	const key = current_section_record.paginated_key
 
 	// li

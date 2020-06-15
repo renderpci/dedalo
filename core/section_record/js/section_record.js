@@ -85,7 +85,7 @@ section_record.prototype.init = async function(options) {
 	self.request_config		= options.request_config
 
 	// dd request
-	self.dd_request			= {
+	self.dd_request = {
 		show	: null,
 		search	: null,
 		select	: null
@@ -152,21 +152,21 @@ section_record.prototype.get_ar_instances = async function(){
 
 			const current_context 	= items[i]
 			const current_data 		= self.get_component_data(current_context.tipo)
-
+			
 				const instance_options = {
-					model 			: current_context.model,
-					tipo 			: current_context.tipo,
-					section_tipo 	: current_context.section_tipo,
-					section_id 		: section_id,
-					mode 			: current_context.mode,
-					lang 			: current_context.lang,
-					section_lang 	: self.lang,
-					parent 			: current_context.parent,
-					type 			: current_context.type,
-					context 		: current_context,
-					data 			: current_data,
-					datum 			: self.datum,
-					request_config 	: current_context.request_config
+					model			: current_context.model,
+					tipo			: current_context.tipo,
+					section_tipo	: current_context.section_tipo,
+					section_id		: section_id,
+					mode			: current_context.mode,
+					lang			: current_context.lang,
+					section_lang	: self.lang,
+					parent			: current_context.parent,
+					type			: current_context.type,
+					context			: current_context,
+					data			: current_data,
+					datum			: self.datum,
+					request_config	: current_context.request_config
 				}
 
 				// id_variant . Propagate a custom instance id to children

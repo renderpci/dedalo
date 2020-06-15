@@ -44,21 +44,22 @@ export const component_pdf = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_pdf.prototype.init 	 			= component_common.prototype.init
-	//component_pdf.prototype.build 	 		= component_common.prototype.build
-	component_pdf.prototype.render 				= common.prototype.render
-	component_pdf.prototype.refresh 			= common.prototype.refresh
-	component_pdf.prototype.destroy 	 		= common.prototype.destroy
+	component_pdf.prototype.init				= component_common.prototype.init
+	//component_pdf.prototype.build				= component_common.prototype.build
+	component_pdf.prototype.render				= common.prototype.render
+	component_pdf.prototype.refresh				= common.prototype.refresh
+	component_pdf.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_pdf.prototype.save 	 			= component_common.prototype.save
+	component_pdf.prototype.save				= component_common.prototype.save
 	component_pdf.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_pdf.prototype.update_datum 		= component_common.prototype.update_datum
-	component_pdf.prototype.change_value 		= component_common.prototype.change_value
+	component_pdf.prototype.update_datum		= component_common.prototype.update_datum
+	component_pdf.prototype.change_value		= component_common.prototype.change_value
+	component_pdf.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_pdf.prototype.list 				= render_component_pdf.prototype.list
-	component_pdf.prototype.edit 				= render_component_pdf.prototype.edit
+	component_pdf.prototype.list				= render_component_pdf.prototype.list
+	component_pdf.prototype.edit				= render_component_pdf.prototype.edit
 
 
 
@@ -73,10 +74,10 @@ component_pdf.prototype.build = async function(autoload=false) {
 		const common_build = component_common.prototype.build.call(this, autoload);
 
 	// fix the pfd.js viewer
-		self.pdf_viewer 			= null
+		self.pdf_viewer	= null
 	// fix useful vars
-		self.allowed_extensions 	= self.context.allowed_extensions
-		self.default_target_quality = self.context.default_target_quality
+		self.allowed_extensions		= self.context.allowed_extensions
+		self.default_target_quality	= self.context.default_target_quality
 
 
 	return common_build
@@ -113,13 +114,13 @@ component_pdf.prototype.get_data_tag = function(){
 	const total_pages 	= self.pdf_viewer.pagesCount
 
 	const data_tag = {
-		type 			: 'page',
-		tag_id 			: null,
-		state 			: 'n',
-		label 			: '',
-		data 			: '',
-		offset			: offset,
-		total_pages 	: total_pages
+		type		: 'page',
+		tag_id		: null,
+		state		: 'n',
+		label		: '',
+		data		: '',
+		offset		: offset,
+		total_pages	: total_pages
 	}
 
 	return data_tag
@@ -138,10 +139,10 @@ function get_text(){
 	console.log("outerText", self.pdf_viewer.pdfViewer.getPageView(3).textLayer.textLayerDiv.outerText);
 	const ar_divs = self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textDivs
 
-	let page_text 			= ''
-	let previous_offsetTop 	= null
-	const final_puntuation 	= ['.','!','?',':']
-	const accents 			= ['\'','`','´','"','¨','’']
+	let page_text			= ''
+	let previous_offsetTop	= null
+	const final_puntuation	= ['.','!','?',':']
+	const accents			= ['\'','`','´','"','¨','’']
 	let distance			= 0
 	for (let i = 0; i < ar_divs.length; i++) {
 		const currrent_div = ar_divs[i]
@@ -223,13 +224,13 @@ function get_text(){
 
 
 function getHightlightCoords() {
-	const pageIndex = self.pdf_viewer.pdfViewer.currentPageNumber - 1;
-	const page = self.pdf_viewer.pdfViewer.getPageView(pageIndex);
-	const pageRect = page.canvas.getClientRects()[0];
-	const selectionRects = window.getSelection().getRangeAt(0).getClientRects();
-	const selection_text = window.getSelection().toString()
-	const viewport = page.viewport;
-	const selected = selectionRects.map(function (r) {
+	const pageIndex			= self.pdf_viewer.pdfViewer.currentPageNumber - 1;
+	const page				= self.pdf_viewer.pdfViewer.getPageView(pageIndex);
+	const pageRect			= page.canvas.getClientRects()[0];
+	const selectionRects	= window.getSelection().getRangeAt(0).getClientRects();
+	const selection_text	= window.getSelection().toString()
+	const viewport			= page.viewport;
+	const selected			= selectionRects.map(function (r) {
 	  return viewport.convertToPdfPoint(r.left - pageRect.x, r.top - pageRect.y).concat(
 	     viewport.convertToPdfPoint(r.right - pageRect.x, r.bottom - pageRect.y));
 	});
@@ -238,10 +239,10 @@ function getHightlightCoords() {
 
 
 function showHighlight(selected) {
-	const pageIndex = selected.page;
-	const page = self.pdf_viewer.pdfViewer.getPageView(pageIndex);
-	const pageElement = page.canvas.parentElement;
-	const viewport = page.viewport;
+	const pageIndex		= selected.page;
+	const page			= self.pdf_viewer.pdfViewer.getPageView(pageIndex);
+	const pageElement	= page.canvas.parentElement;
+	const viewport		= page.viewport;
 	selected.coords.forEach(function (rect) {
 	  const bounds = viewport.convertToViewportRectangle(rect);
 	  const el = document.createElement('div');

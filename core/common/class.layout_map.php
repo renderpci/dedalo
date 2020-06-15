@@ -100,7 +100,7 @@ class layout_map {
 						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
 						if(SHOW_DEBUG===true) {
 							foreach ($layout_map as $current_item) {
-								$current_item->debug_from = 'dd_core_api::$ar_dd_objects';
+								$current_item->debug_from = 'calculated from dd_core_api::$ar_dd_objects ['.$tipo.'] (1)';
 							}
 						}
 				}
@@ -122,7 +122,7 @@ class layout_map {
 						//dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));
 						if(SHOW_DEBUG===true) {
 							foreach ($layout_map as $current_item) {
-								$current_item->debug_from = 'user_preset';
+								$current_item->debug_from = 'calculated from user_preset ['.$tipo.'] (2)';
 							}
 						}
 				}
@@ -173,7 +173,7 @@ class layout_map {
 							continue;
 						}							
 						$current_item->debug_label = RecordObj_dd::get_termino_by_tipo($current_item->tipo, $lang, true, true);
-						$current_item->debug_from = 'calculated from section list or related terms 1';
+						$current_item->debug_from = 'calculated from section list or related terms ['.$tipo.'] (3)';
 					}
 				}
 			}//end if (!isset($layout_map))
