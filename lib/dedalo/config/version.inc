@@ -1764,7 +1764,12 @@
 
 	Valencia 28-05-2020 5.5.59
 		Fix inspector issue on small screens
+
+
+	Valencia 16-06-2020 5.5.60
+		Fix search 'get_components_from_section' error on show nested section_group_div / tab components in filter selectionable list
 		
+
 
 
 	WORK IN PROGRESS
@@ -1786,12 +1791,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.59';
+	$DEDALO_VERSION = '5.5.60';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '28-05-2020');
+	define('DEDALO_BUILD'	, '16-06-2020');
 
 
 	/*

@@ -3091,96 +3091,130 @@ class search_development2 {
 							$ar_section_group_parsed[] = $tab_tipo;
 						}
 						break;
+					case 'section_group':
+						// dump($current_section_group_modelo, ' current_section_group_modelo ++ '.to_string($section_group_tipo));
+						$ar_section_group_parsed[] = $section_group_tipo;
+						break;
 					default:
 						# Add regular section group
 						$ar_section_group_parsed[] = $section_group_tipo;
 						break;
 				}
-			}
+			}//end foreach ($ar_section_group as $section_group_tipo)
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					// $a = array_map(function($tipo){
+					// 	return (object)[
+					// 		'tipo'		=> $tipo,
+					// 		'model'		=> RecordObj_dd::get_modelo_name_by_tipo($tipo,true),
+					// 		'label'		=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG , true, true),
+					// 		'children'	=> RecordObj_dd::get_ar_childrens($tipo, $order_by='norden')
+					// 	];
+					// }, $ar_section_group);
+					// dump($a, ' a ++ '.to_string());
+					// dump($ar_children, ' ar_children ++ '.to_string());
+				}			
+
+			$ar_added_components = [];
 			foreach ($ar_section_group_parsed as $section_group_tipo) {
 
-				# section_group_label
-				$section_group_label 		= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
-				$ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
-				#$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');
+				// section_group label / model
+					$section_group_label	= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
+					$section_group_model	= RecordObj_dd::get_modelo_name_by_tipo($section_group_tipo,true);
+				
+				// section group childrens (components)
+					// $ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');				
+					$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');
+								
+				
+				// iterate childrens (components)
+					foreach ($ar_section_group_childrens as $component_tipo) {
 
-				foreach ($ar_section_group_childrens as $component_tipo) {
+						if ($section_group_tipo!==DEDALO_SECTION_INFO_SECTION_GROUP && !in_array($component_tipo, $ar_children)) {
+							continue;
+						}
 
-					if ($section_group_tipo!==DEDALO_SECTION_INFO_SECTION_GROUP && !in_array($component_tipo, $ar_children)) {
-						continue;
-					}
-
-					$has_subquery   = false;
-					$target_section = false;
-
-					$element = new stdClass();
-						$element->section_group_tipo  		= $section_group_tipo;
-						$element->section_group_model  		= RecordObj_dd::get_modelo_name_by_tipo($section_group_tipo,true);
-						$element->section_group_label  		= $section_group_label;
-						$element->section_tipo  			= $section_tipo;
-						$element->section_label  			= $section_label;
-						$element->component_tipo  			= $component_tipo;
-						$element->component_label 			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG , true, true);
-						$element->path  					= $path;
-						$element->has_subquery  			= false; // Default (changes when component_portal/component_autocomplete)
-						$element->target_section  			= false; // Default (changes when component_portal/component_autocomplete)
-						$element->ar_tipo_exclude_elements 	= false; // default (changes when component_portal/component_autocomplete and ar_terminos_relacionados_to_exclude)
-
-					// Exclude components
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						if(true===in_array($modelo_name, $ar_components_exclude)) continue; // Skip excluded components
-
-					// Check components with has_subquery
-						if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete') {
-
-							// set has_subquery as true
-							$element->has_subquery 	 = true;
-
-							// set target_section
-							$element->target_section = common::get_ar_related_by_model('section', $component_tipo);
-
-							$current_target_section  = reset($element->target_section);
-
-							if ($user_id_logged!=DEDALO_SUPERUSER &&
-								(!isset($ar_authorized_areas->$current_target_section) || (int)$ar_authorized_areas->$current_target_section<1)) {
-								// user don't have access to current section. skip section
+						// avoid duplicates on deep resolve recursion childrens
+							if (in_array($component_tipo, $ar_added_components)) {
 								continue;
 							}
 
-							// set exclude_elements
-							$ar_exclude_elements_tipo = common::get_ar_related_by_model('exclude_elements', $component_tipo);
-							if (isset($ar_exclude_elements_tipo[0])) {
+						// Exclude some non searchable components
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							if(true===in_array($modelo_name, $ar_components_exclude)) continue; // Skip excluded components
 
-								$tipo_exclude_elements = $ar_exclude_elements_tipo[0];
+						// element object base
+							$element = new stdClass();
+								$element->section_group_tipo		= $section_group_tipo;
+								$element->section_group_model		= $section_group_model;
+								$element->section_group_label		= $section_group_label;
+								$element->section_tipo				= $section_tipo;
+								$element->section_label				= $section_label;
+								$element->component_tipo			= $component_tipo;
+								$element->component_label			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG , true, true);
+								$element->path						= $path;
+								$element->has_subquery				= false; // Default (changes when component_portal/component_autocomplete)
+								$element->target_section			= false; // Default (changes when component_portal/component_autocomplete)
+								$element->ar_tipo_exclude_elements	= false; // default (changes when component_portal/component_autocomplete and ar_terminos_relacionados_to_exclude)
 
-								$ar_terminos_relacionados_to_exclude = RecordObj_dd::get_ar_terminos_relacionados($tipo_exclude_elements, $cache=false, $simple=true);
+						// // Exclude components
+						// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						// 	if(true===in_array($modelo_name, $ar_components_exclude)) continue; // Skip excluded components
 
-								foreach ($ar_terminos_relacionados_to_exclude as $key => $exclude_component_tipo) {
+						// Check components with has_subquery
+							if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete') {
 
-									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($exclude_component_tipo, true);
-									if ($modelo_name==='section_group' || $modelo_name==='section_group_div' || $modelo_name==='section_tab') {
-										$ar_recursive_childrens = (array)section::get_ar_recursive_childrens($exclude_component_tipo);
-										//dump($ar_recursive_childrens,'ar_recursive_childrens');
-										$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
-									}
-								}//end foreach ($ar_terminos_relacionados_to_exclude as $key => $exclude_component_tipo) {
+								// set has_subquery as true
+								$element->has_subquery 	 = true;
 
-								// set ar_tipo_exclude_elements
-								$element->ar_tipo_exclude_elements = $ar_terminos_relacionados_to_exclude;
-							}
-						}//end if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete')
+								// set target_section
+								$element->target_section = common::get_ar_related_by_model('section', $component_tipo);
 
-					// Add modelo_name
-					$element->modelo_name = $modelo_name;
+								$current_target_section  = reset($element->target_section);
 
-					// Add element
-					$ar_result[] = $element;
-				}
+								if ($user_id_logged!=DEDALO_SUPERUSER &&
+									(!isset($ar_authorized_areas->$current_target_section) || (int)$ar_authorized_areas->$current_target_section<1)) {
+									// user don't have access to current section. skip section
+									continue;
+								}
+
+								// set exclude_elements
+								$ar_exclude_elements_tipo = common::get_ar_related_by_model('exclude_elements', $component_tipo);
+								if (isset($ar_exclude_elements_tipo[0])) {
+
+									$tipo_exclude_elements = $ar_exclude_elements_tipo[0];
+
+									$ar_terminos_relacionados_to_exclude = RecordObj_dd::get_ar_terminos_relacionados($tipo_exclude_elements, $cache=false, $simple=true);
+
+									foreach ($ar_terminos_relacionados_to_exclude as $key => $exclude_component_tipo) {
+
+										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($exclude_component_tipo, true);
+										if ($modelo_name==='section_group' || $modelo_name==='section_group_div' || $modelo_name==='section_tab') {
+											$ar_recursive_childrens = (array)section::get_ar_recursive_childrens($exclude_component_tipo);
+											//dump($ar_recursive_childrens,'ar_recursive_childrens');
+											$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
+										}
+									}//end foreach ($ar_terminos_relacionados_to_exclude as $key => $exclude_component_tipo) {
+
+									// set ar_tipo_exclude_elements
+									$element->ar_tipo_exclude_elements = $ar_terminos_relacionados_to_exclude;
+								}
+							}//end if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete')
+
+						// Add modelo_name
+						$element->modelo_name = $modelo_name;
+
+						// Add element
+						$ar_result[] = $element;
+
+						// store as added to avoid duplicates
+						$ar_added_components[] = $component_tipo;
+					}
 			}//end foreach ($ar_section_group_childrens as $component_tipo)
 
 		}
-		#dump($ar_result, ' ar_result ++ '.to_string());
+		// dump($ar_result, ' ar_result ++ '.to_string());
 
 		$response->result 	= $ar_result;
 		$response->msg 		= 'Ok. Request done.';
