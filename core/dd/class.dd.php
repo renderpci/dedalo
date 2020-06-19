@@ -310,11 +310,9 @@ class dd extends dd_elements {
 				$traducible		= $RecordObj_dd->get_traducible();
 				$propiedades	= $RecordObj_dd->get_propiedades();
 				$properties		= $RecordObj_dd->get_properties();
-
 				$RecordObj_dd2	= new RecordObj_dd($terminoID);
 				#$hijosND		= count($RecordObj_dd2->get_ar_childrens_of_this('no'));
 				$hijosND 		= 0;#$this->HNoDescriptores($terminoID);
-
 				$hijosD			= $RecordObj_dd->get_n_hijos_descriptores();
 				$children		= $RecordObj_dd->get_n_hijos();
 				$ncaptaciones	= 0;#$RecordObj_dd->get_n_captaciones();

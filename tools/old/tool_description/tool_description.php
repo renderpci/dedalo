@@ -47,8 +47,8 @@
 			
 			# Propiedaes
 			$RecordObj_dd 	= new RecordObj_dd($tool_tipo);
-			$propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-				#dump($propiedades, ' propiedades ++ '.to_string());				
+			$properties 	= json_decode($RecordObj_dd->get_properties());
+				#dump($properties, ' properties ++ '.to_string());				
 
 			# TOOL CSS / JS MAIN FILES			
 			css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
@@ -66,7 +66,7 @@
 				$inverse_code = tool_common::get_inverse_element('code', $section_id, $section_tipo);
 	
 			# skip_components
-				$skip_components = isset($propiedades->context->skip_components) ? (array)$propiedades->context->skip_components : [];
+				$skip_components = isset($properties->context->skip_components) ? (array)$properties->context->skip_components : [];
 
 			break;		
 	}//end switch

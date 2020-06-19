@@ -48,7 +48,7 @@ export const service_autocomplete = function() {
 			self.properties	= self.instance_caller.context.properties || {}
 			self.list_name	= 's_'+new Date().getUTCMilliseconds()
 
-		// Custom events defined in propiedades
+		// Custom events defined in properties
 			self.custom_events = (self.properties.custom_events) ? self.properties.custom_events : []
 
 		// Build_autocomplete_input
@@ -553,7 +553,7 @@ export const service_autocomplete = function() {
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
 			const search_sections = self.ar_search_section_tipo
 
-		// filter_by_field_list. Optional. Uses propiedades config params
+		// filter_by_field_list. Optional. Uses properties config params
 			const filter_by_field_list_tipo			= false
 			const filter_by_field_list_value		= false
 			const filter_by_field_list_value_len	= false
@@ -979,11 +979,11 @@ export const service_autocomplete = function() {
 		// Vars
 			const tipo				= wrap_div.dataset.tipo
 			const component_info	= (wrap_div.dataset.component_info) ? JSON.parse(wrap_div.dataset.component_info) : {}
-			const propiedades		= component_info.propiedades || {}
+			const properties		= component_info.properties || {}
 			const wrap_id			= wrap_div.dataset.section_tipo +'_'+ wrap_div.dataset.tipo+'_'+wrap_div.dataset.parent
 
-		// Custom events defined in propiedades
-			const custom_events = (propiedades.custom_events) ? propiedades.custom_events : []
+		// Custom events defined in properties
+			const custom_events = (properties.custom_events) ? properties.custom_events : []
 			if(SHOW_DEBUG===true) {
 				console.log("[service_autocomplete.activate] custom_events:",custom_events)
 			}
@@ -1416,7 +1416,7 @@ export const service_autocomplete = function() {
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
 			const search_sections = self.get_search_sections(wrap_div)
 
-		// filter_by_field_list. Optional. Uses propiedades config params
+		// filter_by_field_list. Optional. Uses properties config params
 			const filter_by_field_list_tipo			= self.get_filter_by_field_list_tipo(wrap_div)
 			const filter_by_field_list_value		= self.get_filter_by_field_list_value(wrap_div)
 			const filter_by_field_list_value_len	= filter_by_field_list_value ? filter_by_field_list_value.length : 0;

@@ -9,14 +9,14 @@ class component_relation_related extends component_relation_common {
 	# relation_type . Determines inverse resolutions and locator format
 	# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
 	# protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
-	protected $relation_type ; // Set on construct from propiedades
+	protected $relation_type ; // Set on construct from properties
 
 	# type of rel (like unidirectional, bidirectional, multidirectional, etc..) This info is inside each locator of current component dato
 	# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
 	# DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
 	# DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-	protected $relation_type_rel ; // Set on construct from propiedades
+	protected $relation_type_rel ; // Set on construct from properties
 
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
@@ -41,18 +41,18 @@ class component_relation_related extends component_relation_common {
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		#
-		# RELATION CONFIG . Set current component relation_type Aand relation_type_rel based on propiedades config
-		$propiedades = $this->get_propiedades();
+		# RELATION CONFIG . Set current component relation_type Aand relation_type_rel based on properties config
+		$properties = $this->get_properties();
 		switch (true) {
-			case (isset($propiedades->config_relation->relation_type) && isset($propiedades->config_relation->relation_type_rel)):
-				$this->relation_type 	 = $propiedades->config_relation->relation_type;
-				$this->relation_type_rel = $propiedades->config_relation->relation_type_rel;
+			case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
+				$this->relation_type 	 = $properties->config_relation->relation_type;
+				$this->relation_type_rel = $properties->config_relation->relation_type_rel;
 				break;
 
 			default:
 				$this->relation_type 	 = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
 				$this->relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-				debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'propiedades' for proper control about component behaviour".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behaviour".to_string(), logger::ERROR);
 				break;
 		}
 
@@ -86,8 +86,8 @@ class component_relation_related extends component_relation_common {
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
 
 		$dato   	= $this->get_dato();
-		$propiedades = $this->get_propiedades();
-		$divisor 	= (isset($propiedades->source->divisor)) ? $propiedades->source->divisor : ' | ';
+		$properties = $this->get_properties();
+		$divisor 	= (isset($properties->source->divisor)) ? $properties->source->divisor : ' | ';
 		$ar_values	= array();
 
 		foreach ((array)$dato as $key => $current_locator) {
@@ -363,8 +363,8 @@ class component_relation_related extends component_relation_common {
 				$ar_componets_related[] = $component_tipo;
 			}
 		}
-		$propiedades = json_decode($RecordObj_dd->get_propiedades());
-		$divisor = (isset($propiedades->source->divisor)) ?  $propiedades->source->divisor : ' | ';
+		$properties = json_decode($RecordObj_dd->get_properties());
+		$divisor = (isset($properties->source->divisor)) ?  $properties->source->divisor : ' | ';
 
 		# References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
@@ -451,8 +451,8 @@ class component_relation_related extends component_relation_common {
 				$ar_componets_related[] = $component_tipo;
 			}
 		}
-		$propiedades = json_decode($RecordObj_dd->get_propiedades());
-		$divisor = (isset($propiedades->source->divisor)) ?  $propiedades->source->divisor : ' | ';
+		$properties = json_decode($RecordObj_dd->get_properties());
+		$divisor = (isset($properties->source->divisor)) ?  $properties->source->divisor : ' | ';
 
 
 		$locator = new locator();

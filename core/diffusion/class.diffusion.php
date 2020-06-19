@@ -126,8 +126,8 @@ abstract class diffusion  {
 			$ar_dedalo_countries=array();
 
 			$options = new stdClass();				
-				$options->ts_map 				= false; # name of ts_map from propiedades
-				$options->ts_map_prefix 		= false; # optional name of ts_map_prefix from propiedades, it will put in the name of the field / column
+				$options->ts_map 				= false; # name of ts_map from properties
+				$options->ts_map_prefix 		= false; # optional name of ts_map_prefix from properties, it will put in the name of the field / column
 				$options->curent_children_tipo  = false; # tipo of diffusion element
 				$options->request 				= false; # type of request (fields / columns)
 				$options->parent 				= false; # parent id matrix
@@ -279,7 +279,7 @@ abstract class diffusion  {
 	/**
 	* GET_MY_DIFFUSION_DOMAIN
 	* Get only one diffusion domain by tipo
-	* Note: Define 'class_name' in propiedades of current desired diffusion element like {"class_name":"diffusion_index_ts"}
+	* Note: Define 'class_name' in properties of current desired diffusion element like {"class_name":"diffusion_index_ts"}
 	* @param string $diffusion_domain_name like 'dedalo'
 	* @param string $current_children like 'diffusion_index_ts'
 	* @return string $current_children like 'dd15'
@@ -302,10 +302,10 @@ abstract class diffusion  {
 				foreach ($ar_childrens as $current_children) {
 				 	
 				 	$RecordObj_dd = new RecordObj_dd($current_children);
-					$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );
-						#dump($propiedades, ' propiedades '.$current_children);
+					$properties  = json_decode( $RecordObj_dd->get_properties() );
+						#dump($properties, ' properties '.$current_children);
 
-					if ($propiedades && property_exists($propiedades->diffusion, 'class_name') && $propiedades->diffusion->class_name===$caller_class_name) {
+					if ($properties && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
 					}
 				}
@@ -446,8 +446,8 @@ abstract class diffusion  {
 			foreach ($ar_diffusion_element_tipo as $element_tipo) {
 				
 				$RecordObj_dd = new RecordObj_dd($element_tipo);
-					$propiedades  = json_decode($RecordObj_dd->get_propiedades());					
-					$diffusion_class_name = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : null;
+					$properties  = json_decode($RecordObj_dd->get_properties());					
+					$diffusion_class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
 					$name = RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					# Database of current diffusion element
@@ -620,7 +620,7 @@ abstract class diffusion  {
 
 		// Diffusion element (current column/field)
 			$diffusion_term  = new RecordObj_dd($tipo);
-			$propiedades 	 = $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+			$properties 	 = $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
 			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		
 		// Component 
@@ -636,8 +636,8 @@ abstract class diffusion  {
 																 $section_tipo,
 																 false);
 
-			if(property_exists($propiedades, 'get_field_value') && isset($propiedades->get_field_value->get_dato_method)){
-				$get_dato_method = $propiedades->get_field_value->get_dato_method;
+			if(property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method)){
+				$get_dato_method = $properties->get_field_value->get_dato_method;
 				$dato = $current_component->{$get_dato_method}();
 			}else{
 				$dato = $current_component->get_dato();
@@ -651,8 +651,8 @@ abstract class diffusion  {
 					$field_value = (isset($dato[0]->section_id) && (int)$dato[0]->section_id===NUMERICAL_MATRIX_VALUE_YES) ? true : false;
 					break;
 
-				case (is_object($propiedades) && property_exists($propiedades, 'data_to_be_used')):
-					switch ($propiedades->data_to_be_used) {
+				case (is_object($properties) && property_exists($properties, 'data_to_be_used')):
+					switch ($properties->data_to_be_used) {
 						case 'dato':
 							# Unresolved data
 							/*
@@ -691,20 +691,20 @@ abstract class diffusion  {
 							}
 							break;
 						default:
-							debug_log(__METHOD__." INVALID DATA_TO_BE_USED MODE (ignored tipo: $component_tipo) 'data_to_be_used': ".to_string($propiedades->data_to_be_used), logger::DEBUG);
+							debug_log(__METHOD__." INVALID DATA_TO_BE_USED MODE (ignored tipo: $component_tipo) 'data_to_be_used': ".to_string($properties->data_to_be_used), logger::DEBUG);
 							break;
 					}
 					break;
 
-				case (is_object($propiedades) && property_exists($propiedades, 'process_dato')):						
+				case (is_object($properties) && property_exists($properties, 'process_dato')):						
 					# Process dato with function
 					$options = $request_options;
-						$options->propiedades 	= $propiedades;
+						$options->properties 	= $properties;
 						$options->tipo 			= $tipo;
 						$options->component_tipo= $component_tipo;
 						$options->section_id 	= $section_id;
 
-					$function_name 	= $propiedades->process_dato;
+					$function_name 	= $properties->process_dato;
 					$field_value 	= call_user_func($function_name, $options, $dato);
 					break;
 
@@ -738,7 +738,7 @@ abstract class diffusion  {
 	    # [lang] => lg-fra
 	    # [section_tipo] => mdcat597
 	    # [caler_id] => 3
-	    # [propiedades] => stdClass Object
+	    # [properties] => stdClass Object
 	    #     (
 	    #         [varchar] => 1024
 	    #         [process_dato] => diffusion_sql::resolve_value
@@ -750,7 +750,7 @@ abstract class diffusion  {
 	    #     )
 	    # [diffusion_element_tipo] => mdcat353
 
-		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
+		$process_dato_arguments = (object)$options->properties->process_dato_arguments;
 		$method 				= $process_dato_arguments->component_method;
 		$custom_arguments 		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];					
 

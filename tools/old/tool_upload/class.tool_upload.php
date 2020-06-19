@@ -624,16 +624,16 @@ class tool_upload extends tool_common {
 						#
 						# TARGET_FILENAME 
 						# Save original file name in a component_input_text
-						$propiedades 		 = $this->component_obj->get_propiedades();
+						$properties 		 = $this->component_obj->get_properties();
 						$current_section_id  = $this->component_obj->get_parent();
 						$target_section_tipo = $this->component_obj->get_section_tipo();
 						$file_name 			 = $this->file_obj->f_name;	//pathinfo($this->file_obj->f_name, PATHINFO_BASENAME);
 
-						if (isset($propiedades->target_filename)) {
-							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
+						if (isset($properties->target_filename)) {
+							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
 							$component_target_filename 	= component_common::get_instance(
 																				$modelo_name_target_filename, 
-																				$propiedades->target_filename, 
+																				$properties->target_filename, 
 																				$current_section_id,
 																				'edit',
 																				DEDALO_DATA_NOLAN, 
@@ -667,16 +667,16 @@ class tool_upload extends tool_common {
 						#
 						# TARGET_FILENAME 
 						# Save original file name in a component_input_text
-						$propiedades 		 = $this->component_obj->get_propiedades();
+						$properties 		 = $this->component_obj->get_properties();
 						$current_section_id  = $this->component_obj->get_parent();
 						$target_section_tipo = $this->component_obj->get_section_tipo();
 						$file_name 			 = $this->file_obj->f_name;	//pathinfo($this->file_obj->f_name, PATHINFO_BASENAME);
 
-						if (isset($propiedades->target_filename)) {
-							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
+						if (isset($properties->target_filename)) {
+							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
 							$component_target_filename 	= component_common::get_instance(
 																				$modelo_name_target_filename, 
-																				$propiedades->target_filename, 
+																				$properties->target_filename, 
 																				$current_section_id,
 																				'edit',
 																				DEDALO_DATA_NOLAN, 

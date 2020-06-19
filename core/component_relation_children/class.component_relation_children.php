@@ -67,12 +67,12 @@ class component_relation_children extends component_relation_common {
 			return $this->ar_target_section_tipo;
 		}
 
-		$target_mode = isset($this->propiedades->target_mode) ? $this->propiedades->target_mode : null;
+		$target_mode = isset($this->properties->target_mode) ? $this->properties->target_mode : null;
 		switch ($target_mode) {
 
 			case 'hierarchy_root_values':
 				# Resolve DEDALO_HIERARCHY_TLD2_TIPO data
-				$target_values = (array)$this->propiedades->target_values;
+				$target_values = (array)$this->properties->target_values;
 				foreach ((array)$target_values as $key => $current_component_tipo) {
 					$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 					$component 		 = component_common::get_instance($modelo_name,
@@ -88,7 +88,7 @@ class component_relation_children extends component_relation_common {
 
 			case 'free':
 				# target_values are directly the target section tipo
-				$target_values = (array)$this->propiedades->target_values;
+				$target_values = (array)$this->properties->target_values;
 				$ar_target_section_tipo = $target_values;
 				break;
 

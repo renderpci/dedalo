@@ -228,20 +228,20 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 				<tbody id="otraInfo">
 
 
-				<!-- PROPIEDADES (JSON) -->
+				<!-- properties (JSON) -->
 				<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
 				<tr>
 					<td>
-						<div class="wraper_propiedades">
+						<div class="wraper_properties">
 							<?php /*
-							<label class="left_div propiedades_label">Propiedades (JSON)</label>
+							<label class="left_div properties_label">properties (JSON)</label>
 							*/ ?>
-							<textarea id="propiedades" name="propiedades" class="propiedades_textarea"><?php echo $propiedades ?></textarea>
-							<?php #dump($propiedades, ' propiedades ++ '.to_string()); ?>
+							<textarea id="properties" name="properties" class="properties_textarea"><?php echo $properties ?></textarea>
+							<?php #dump($properties, ' properties ++ '.to_string()); ?>
 							<div id="editor_json" class="editor_json_container"></div>
 							<script>
-							var propiedades_textarea_element = document.getElementById('propiedades')
-							  	propiedades_textarea_element.style.display = 'none';
+							var properties_textarea_element = document.getElementById('properties')
+							  	properties_textarea_element.style.display = 'none';
 							  var options = {
 							    mode: 'code',
 							    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
@@ -251,12 +251,12 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 							  };
 							  // create the editor
 							  var container = document.getElementById('editor_json');
-							  var editor 	= new JSONEditor(container, options, <?php echo !empty($propiedades) ? (string)$propiedades : '""' ?>);
+							  var editor 	= new JSONEditor(container, options, <?php echo !empty($properties) ? (string)$properties : '""' ?>);
 							 	//console.log(editor);
 
 							// Send JSON text to input and force save
 							// document.getElementById('submit_button').onclick = function () {
-							//	    $('#propiedades')
+							//	    $('#properties')
 							//	    	.val(editor.getText())
 							//	    	.trigger('change');
 							// };
@@ -435,7 +435,7 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 							<script type="text/javascript">
 							// Send JSON text to input and force update
 							document.getElementById('submit_button').onclick = function () {
-								$(propiedades_textarea_element)
+								$(properties_textarea_element)
 										.val(editor.getText())
 										.trigger('change');
 								$(properties_textarea_element)

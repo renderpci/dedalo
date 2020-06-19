@@ -9,7 +9,7 @@
 	$section_tipo	= $this->section_tipo;
 	$lang			= $this->lang;
 	$tipo			= $this->get_tipo();
-	$properties		= $this->get_propiedades() ?? new stdClass();
+	$properties		= $this->get_properties() ?? new stdClass();
 
 
 
@@ -56,7 +56,7 @@
 	if($options->get_data===true && $permissions>0){
 
 		$section_id	= $this->get_section_id();
-		$properties	= $this->get_propiedades();
+		$properties	= $this->get_properties();
 
 		switch ($modo) {
 			case 'list':

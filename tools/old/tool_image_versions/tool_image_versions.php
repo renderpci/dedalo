@@ -66,7 +66,7 @@
 			$this->component_obj->set_modo('edit');
 			$thumb_html = $this->component_obj->get_html();
 
-			$properties =  $this->component_obj->get_propiedades();
+			$properties =  $this->component_obj->get_properties();
 
 			$external_source_html = false;
 			$external_source_active = false;

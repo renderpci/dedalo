@@ -55,7 +55,7 @@ class component_svg extends component_media_common {
 	/**
 	* GET SVG ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
-	* Se puede sobreescribir en propiedades con json ej. {"svg_id":"dd851"} y se leerá del contenido del componente referenciado
+	* Se puede sobreescribir en properties con json ej. {"svg_id":"dd851"} y se leerá del contenido del componente referenciado
 	*/
 	public function get_svg_id() {
 
@@ -66,11 +66,11 @@ class component_svg extends component_media_common {
 		$svg_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 
 
-		# CASE REFERENCED NAME : If isset propiedades "svg_id" overwrite name with field ddx content
-		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->svg_id)) {
+		# CASE REFERENCED NAME : If isset properties "svg_id" overwrite name with field ddx content
+		$properties = $this->get_properties();
+		if (isset($properties->svg_id)) {
 
-			$component_tipo 	= $propiedades->svg_id;
+			$component_tipo 	= $properties->svg_id;
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 			$component 			= component_common::get_instance($component_modelo,
 																 $component_tipo,
@@ -100,12 +100,12 @@ class component_svg extends component_media_common {
 
 		$component_tipo = $this->tipo;
 		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$propiedades 	= $parent_section->get_propiedades();
-			#dump($propiedades," propiedades component_tipo:$component_tipo");
-			#dump($propiedades->initial_media_path->$component_tipo," ");
+		$properties 	= $parent_section->get_properties();
+			#dump($properties," properties component_tipo:$component_tipo");
+			#dump($properties->initial_media_path->$component_tipo," ");
 
-		if (isset($propiedades->initial_media_path->$component_tipo)) {
-			$this->initial_media_path = $propiedades->initial_media_path->$component_tipo;
+		if (isset($properties->initial_media_path->$component_tipo)) {
+			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
 			# Add / at begin if not exits
 			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
 				$this->initial_media_path = '/'.$this->initial_media_path;
@@ -121,7 +121,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_ADITIONAL_PATH
-	* Calculate image aditional path from 'propiedades' json config.
+	* Calculate image aditional path from 'properties' json config.
 	*/
 	public function get_aditional_path() {
 
@@ -133,10 +133,10 @@ class component_svg extends component_media_common {
 		$parent 		= $this->get_parent();
 		$section_tipo 	= $this->get_section_tipo();
 
-		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->aditional_path) && !empty($parent) ) {
+		$properties = $this->get_properties();
+		if (isset($properties->aditional_path) && !empty($parent) ) {
 
-			$component_tipo 	= $propiedades->aditional_path;
+			$component_tipo 	= $properties->aditional_path;
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 			= component_common::get_instance($component_modelo,
 																 $component_tipo,
@@ -159,10 +159,10 @@ class component_svg extends component_media_common {
 			$aditional_path = $dato;
 
 			# Auto filled aditional_path path
-			# If the user not enter component dato, dato is filled by auto value when propiedades->max_items_folder is defined
-			if(empty($dato) && isset($propiedades->max_items_folder)) {
+			# If the user not enter component dato, dato is filled by auto value when properties->max_items_folder is defined
+			if(empty($dato) && isset($properties->max_items_folder)) {
 
-				$max_items_folder  = $propiedades->max_items_folder;
+				$max_items_folder  = $properties->max_items_folder;
 				$parent_section_id = $parent;
 
 				$aditional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
@@ -173,14 +173,14 @@ class component_svg extends component_media_common {
 				$component->Save();
 			}
 
-		}else if(isset($propiedades->max_items_folder)) {
+		}else if(isset($properties->max_items_folder)) {
 
-			$max_items_folder  = $propiedades->max_items_folder;
+			$max_items_folder  = $properties->max_items_folder;
 			$parent_section_id = $parent;
 
 			$aditional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
-		}//end if (isset($propiedades->aditional_path) && !empty($parent) )
+		}//end if (isset($properties->aditional_path) && !empty($parent) )
 
 		# Fix
 		$this->aditional_path = $aditional_path;

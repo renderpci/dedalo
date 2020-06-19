@@ -72,7 +72,6 @@ $properties			= $RecordObj_dd->get_properties();
 
 
 
-	
 # Consultamos si está relacionado
 $verificarTR = count(RecordObj_dd::get_ar_terminos_relacionados($terminoID)); #$ts->verificarTR($terminoID);	
 if($verificarTR >0){

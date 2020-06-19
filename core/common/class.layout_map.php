@@ -19,7 +19,7 @@ class layout_map {
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
 	*/
 	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
-		
+
 		$options = new stdClass();
 			$options->section_tipo			= null;
 			$options->tipo					= null;
@@ -61,7 +61,7 @@ class layout_map {
 
 		// properties
 			$RecordObj_dd	= new RecordObj_dd($tipo);
-			$properties		= $RecordObj_dd->get_propiedades(true);
+			$properties		= $RecordObj_dd->get_properties(true);
 
 		#dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
@@ -134,7 +134,7 @@ class layout_map {
 
 				// v5 definition and v6 definition in properties
 				$request_config = common::get_request_properties_parsed($tipo, $options->external, $options->section_tipo, $modo, null);
-				
+
 				// layout_map
 				$layout_map = [];
 				foreach ($request_config as $item_request_config) {
@@ -143,7 +143,7 @@ class layout_map {
 						if ($options->add_section===true) {
 							$layout_map[] = layout_map::get_section_ddo($current_section_tipo, $modo, $lang);
 						}
-						
+
 						// ddo_map
 							$current_ddo_map = $item_request_config->{$request_config_type}->ddo_map ?? false;
 							if ($current_ddo_map!==false) {
@@ -172,7 +172,7 @@ class layout_map {
 						if (!isset($current_item->tipo)) {
 							dump($current_item, ' current_item ++ '.to_string());
 							continue;
-						}							
+						}
 						$current_item->debug_label = RecordObj_dd::get_termino_by_tipo($current_item->tipo, $lang, true, true);
 						$current_item->debug_from = 'calculated from section list or related terms ['.$tipo.'] (3)';
 					}

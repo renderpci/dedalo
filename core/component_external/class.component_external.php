@@ -28,7 +28,7 @@ class component_external extends component_common {
 
 
 		$RecordObj_dd 		 = new RecordObj_dd($section_tipo);
-		$section_propiedades = $RecordObj_dd->get_propiedades(true);
+		$section_properties = $RecordObj_dd->get_properties(true);
 
 		// format reference
 			# {
@@ -49,13 +49,13 @@ class component_external extends component_common {
 			# }
 
 		// check properties config 
-			if (!isset($section_propiedades->external_data)) {
+			if (!isset($section_properties->external_data)) {
 				debug_log(__METHOD__." ERROR. Empty properties section external_data".to_string(), logger::ERROR);
 				return null;
 			}
 		
 		// properties external_data vars
-			$external_data  = $section_propiedades->external_data;
+			$external_data  = $section_properties->external_data;
 			$api_url 		= $external_data->api_url;
 			$response_map 	= $external_data->response_map;
 			$entity 		= $external_data->entity;		
@@ -66,12 +66,12 @@ class component_external extends component_common {
 				$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], true, true, true, false, false);
 				foreach ($ar_component_tipo as $component_tipo) {
 					$RecordObj_dd 		 	= new RecordObj_dd($component_tipo);
-					$component_propiedades 	= $RecordObj_dd->get_propiedades(true);
-					if (empty($component_propiedades)) {
+					$component_properties 	= $RecordObj_dd->get_properties(true);
+					if (empty($component_properties)) {
 						continue;
 					}
 
-					$field_name = array_reduce($component_propiedades->fields_map, function($carry, $item){
+					$field_name = array_reduce($component_properties->fields_map, function($carry, $item){
 						return ($item->local==='dato') ? $item->remote : $carry;
 					});
 					if (!empty($field_name)) {
@@ -132,7 +132,7 @@ class component_external extends component_common {
 			$row_data = $this->load_data_from_remote();
 
 		// properties
-			$properties = $this->get_propiedades();
+			$properties = $this->get_properties();
 
 		// dato
 			$dato = array_reduce($properties->fields_map, function($carry, $item) use($row_data){

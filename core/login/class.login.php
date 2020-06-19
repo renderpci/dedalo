@@ -1195,7 +1195,7 @@ class login extends common {
 			$lang		  = $this->get_lang();
 
 		// properties
-			$properties   = $this->get_propiedades();
+			$properties   = $this->get_properties();
 			if (empty($properties)) {
 				$properties = new stdClass();
 			}

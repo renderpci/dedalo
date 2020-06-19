@@ -29,8 +29,8 @@ abstract class common {
 	# context. Object with information about context of current element
 	public $context;
 
-	# public propiedades
-	public $propiedades;
+	# public properties
+	public $properties;
 
 	# from_parent. Used to link context ddo elements
 	public $from_parent;
@@ -227,10 +227,10 @@ abstract class common {
 				$this->fix_language_nolan();
 			}
 
-			# PROPIEDADES : Always JSON decoded
-			#dump($this->RecordObj_dd->get_propiedades()," ");
-			$propiedades = $this->RecordObj_dd->get_propiedades();
-			$this->propiedades = !empty($propiedades) ? json_handler::decode($propiedades) : false;
+			# properties : Always JSON decoded
+			#dump($this->RecordObj_dd->get_properties()," ");
+			$properties = $this->RecordObj_dd->get_properties();
+			$this->properties = !empty($properties) ? json_handler::decode($properties) : false;
 
 			# MATRIX_TABLE
 			#if(!isset($this->matrix_table))
@@ -373,8 +373,8 @@ abstract class common {
 			if ($modelo_name!=='matrix_table') {
 				continue;
 			}
-			if( $propiedades = json_decode($RecordObj_dd->get_propiedades()) ) {
-				if (property_exists($propiedades,'inverse_relations') && $propiedades->inverse_relations===true) {
+			if( $properties = json_decode($RecordObj_dd->get_properties()) ) {
+				if (property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
 					$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 				}
 			}
@@ -822,38 +822,38 @@ abstract class common {
 
 
 	/**
-	* GET_PROPIEDADES : Alias of $this->RecordObj_dd->get_propiedades() but json decoded
+	* GET_properties : Alias of $this->RecordObj_dd->get_properties() but json decoded
 	*/
-	public function get_propiedades() {
+	public function get_properties() {
 
-		if(isset($this->propiedades)) return $this->propiedades;
+		if(isset($this->properties)) return $this->properties;
 
 		# Read string from database str
-		$propiedades = $this->RecordObj_dd->get_propiedades();
+		$properties = $this->RecordObj_dd->get_properties();
 
-		$propiedades_obj = json_handler::decode($propiedades);
+		$properties_obj = json_handler::decode($properties);
 
-		return $propiedades_obj;
-	}//end get_propiedades
+		return $properties_obj;
+	}//end get_properties
 
 
 
 	/**
-	* SET_PROPIEDADES
+	* SET_properties
 	* @return bool
 	*/
-	public function set_propiedades($value) {
+	public function set_properties($value) {
 		if (is_string($value)) {
-			$propiedades = json_decode($value);
+			$properties = json_decode($value);
 		}else{
-			$propiedades = $value;
+			$properties = $value;
 		}
 
-		# Fix propiedades obj
-		$this->propiedades = (object)$propiedades;
+		# Fix properties obj
+		$this->properties = (object)$properties;
 
 		return true;
-	}//end set_propiedades
+	}//end set_properties
 
 
 	/**
@@ -1483,7 +1483,7 @@ abstract class common {
 			$lang		  = $this->get_lang();
 
 		// properties
-			$properties   = $this->get_propiedades();
+			$properties   = $this->get_properties();
 			if (empty($properties)) {
 				$properties = new stdClass();
 			}
@@ -1498,7 +1498,7 @@ abstract class common {
 			// section overwrite css (virtual sections case)
 			if (strpos($called_model, 'component_')===0) {
 				$RecordObj_dd 		= new RecordObj_dd($section_tipo);
-				$section_properties = $RecordObj_dd->get_propiedades(true);
+				$section_properties = $RecordObj_dd->get_properties(true);
 				if (isset($section_properties->css) && isset($section_properties->css->{$tipo})) {
 					$css = $section_properties->css->{$tipo};
 				}
@@ -1702,11 +1702,15 @@ abstract class common {
 
 		$tipo = $this->tipo;
 
+		$records_mode = isset($this->properties->source->records_mode)
+			? $this->properties->source->records_mode
+			: $this->get_modo();
+
 		// subcontext from layout_map items
 			$layout_map_options = new stdClass();
 				$layout_map_options->section_tipo 			= $this->get_section_tipo();
 				$layout_map_options->tipo 					= $this->get_tipo();
-				$layout_map_options->modo 					= $this->get_modo();
+				$layout_map_options->modo 					= $records_mode;
 				$layout_map_options->request_config_type 	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
@@ -1795,7 +1799,7 @@ abstract class common {
 
 		$source_tipo 		= $this->get_tipo();
 		$source_model 		= RecordObj_dd::get_modelo_name_by_tipo($source_tipo,true);
-		$source_properties 	= $this->get_propiedades();
+		$source_properties 	= $this->get_properties();
 
 		// Iterate dd_object (layout_map) for colums
 			$layout_map_options = new stdClass();
@@ -1982,12 +1986,15 @@ abstract class common {
 
 		$request_config[] = $source;
 
+		$records_mode = isset($this->properties->source->records_mode)
+			? $this->properties->source->records_mode
+			: $this->get_modo();
+
 		// parse request properties
 		$tipo			= $this->get_tipo();
 		$section_tipo	= $this->get_section_tipo();
 		$section_id		= $this->get_section_id();
-		$mode			= $this->get_modo();
-
+		$mode			= $records_mode;
 
 		$request_config_parsed = common::get_request_properties_parsed($tipo, false ,$section_tipo, $mode, $section_id);
 
@@ -2033,7 +2040,7 @@ abstract class common {
 		$section_tipo 	= $locator->section_tipo;
 
 		$RecordObj_dd 	= new RecordObj_dd($source_component_tipo);
-		$properties 	= $RecordObj_dd->get_propiedades(true);
+		$properties 	= $RecordObj_dd->get_properties(true);
 
 		$divisor 		= $properties->source->divisor ?? ' | ';
 
@@ -2161,7 +2168,7 @@ abstract class common {
 		}else{
 
 			$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
-			$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_propiedades(true);
+			$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_properties(true);
 
 			// source search. If not defined, use fallback to legacy related terms and build one
 				$request_config = common::get_request_config($tipo, $external=false, $section_tipo, $mode);
@@ -2289,7 +2296,7 @@ abstract class common {
 			// }
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
-		$properties		= $RecordObj_dd->get_propiedades(true);
+		$properties		= $RecordObj_dd->get_properties(true);
 		$limit			= ($mode!=='list') ? 1 : 10;
 
 		$request_config_parsed = [];
@@ -2490,11 +2497,15 @@ abstract class common {
 	*/
 	public function set_request_ddo() {
 
+		$records_mode = isset($this->properties->source->records_mode)
+			? $this->properties->source->records_mode
+			: $this->get_modo();
+
 		// layout_map subcontext from layout_map items
 			$layout_map_options = new stdClass();
 				$layout_map_options->tipo			= $this->get_tipo();
-				$layout_map_options->section_tipo	= $this->get_section_tipo();			
-				$layout_map_options->modo			= $this->get_modo();
+				$layout_map_options->section_tipo	= $this->get_section_tipo();
+				$layout_map_options->modo			= $records_mode;
 				$layout_map_options->add_section	= true;
 
 		$ddo = [];
@@ -2746,7 +2757,7 @@ abstract class common {
 		$tipo 				= $this->tipo;
 		$is_component 		= strpos($model, 'component_')===0;
 		$translatable 		= $this->traducible;
-		$properties 		= $this->get_propiedades(true);
+		$properties 		= $this->get_properties(true);
 		$with_lang_versions = isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
 		$tools = [];

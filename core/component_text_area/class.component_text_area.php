@@ -295,8 +295,8 @@ class component_text_area extends component_common {
 
 		# Alt_savr
 		# alternative save with relation components for store in relations and matrix relations the locators used inside the text
-		$propiedades = $this->get_propiedades();
-		if(isset($propiedades->alt_save)){
+		$properties = $this->get_properties();
+		if(isset($properties->alt_save)){
 			$this->alt_save();
 		}
 
@@ -320,7 +320,7 @@ class component_text_area extends component_common {
 
 	/**
 	* ALT_SAVE
-	* Executed before save component when component structure propiedades have defined alt_save actions
+	* Executed before save component when component structure properties have defined alt_save actions
 	* @return bool true
 	*/
 	public function alt_save() {
@@ -331,9 +331,9 @@ class component_text_area extends component_common {
 		$section_tipo 	= $this->get_section_tipo();
 
 		//get the alt_save options
-		$propiedades = $this->get_propiedades();
-		$ar_mark_to_process = $propiedades->alt_save->mark;
-		$component_tipo = $propiedades->alt_save->component_tipo;
+		$properties = $this->get_properties();
+		$ar_mark_to_process = $properties->alt_save->mark;
+		$component_tipo = $properties->alt_save->component_tipo;
 
 		$ar_current_locator = [];
 		foreach ($ar_mark_to_process as $current_mark) {
@@ -1409,9 +1409,9 @@ class component_text_area extends component_common {
 	/**
 	* GET_DIFFUSION_OBJ
 	*/
-	public function get_diffusion_obj( $propiedades ) {
+	public function get_diffusion_obj( $properties ) {
 
-		$diffusion_obj = parent::get_diffusion_obj( $propiedades );
+		$diffusion_obj = parent::get_diffusion_obj( $properties );
 		/*
 		$diffusion_obj->component_name		= get_class($this);
 		$diffusion_obj->parent 				= $this->get_parent();
@@ -1424,9 +1424,9 @@ class component_text_area extends component_common {
 
 		$section_tipo = $this->section_tipo;
 
-		if(isset($propiedades['rel_locator'])) {
+		if(isset($properties['rel_locator'])) {
 
-			$rel_locator_obj= $propiedades['rel_locator'];
+			$rel_locator_obj= $properties['rel_locator'];
 			#$rel_locator 	= component_common::build_locator_from_obj( $rel_locator_obj );
 			$fragment_info	= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
 			$texto 			= $this->get_dato();
@@ -1616,19 +1616,19 @@ class component_text_area extends component_common {
 		$section_tipo		= $this->get_section_tipo();
 		$section_top_tipo 	= $top_tipo;
 
-		$propiedades = $this->get_propiedades();
-		if (!isset($propiedades->tags_person)) {
-			debug_log(__METHOD__." Warning: empty properties for tags_persons [propiedades->tags_person] (section_top_tipo: $section_top_tipo) ".to_string($propiedades), logger::WARNING);
+		$properties = $this->get_properties();
+		if (!isset($properties->tags_person)) {
+			debug_log(__METHOD__." Warning: empty properties for tags_persons [properties->tags_person] (section_top_tipo: $section_top_tipo) ".to_string($properties), logger::WARNING);
 			return $tags_person;
 		}
-		elseif (!isset($propiedades->tags_person->$section_top_tipo)) {
-			debug_log(__METHOD__." Warning: bad top_tipo for tags_persons (section_top_tipo: $section_top_tipo) ".to_string($propiedades), logger::WARNING);
+		elseif (!isset($properties->tags_person->$section_top_tipo)) {
+			debug_log(__METHOD__." Warning: bad top_tipo for tags_persons (section_top_tipo: $section_top_tipo) ".to_string($properties), logger::WARNING);
 			return $tags_person;
 		}
 
 		# Resolve obj value
 		$ar_objects = array();
-		foreach ((array)$propiedades->tags_person->$section_top_tipo as $key => $obj_value) {
+		foreach ((array)$properties->tags_person->$section_top_tipo as $key => $obj_value) {
 
 			if ($obj_value->section_tipo===$this->section_tipo) {
 

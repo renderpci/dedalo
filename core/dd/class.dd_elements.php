@@ -314,28 +314,28 @@ class dd_elements {
 		return $obj ;
 	}
 	/*
-	crea el botón P si hay propiedades
+	crea el botón P si hay properties
 	*/
-	protected static function renderBtn_propiedades($terminoID,$propiedades)
+	protected static function renderBtn_properties($terminoID,$properties)
 	{
 		global $mostrar_title ;
-		global $propiedades_title;
+		global $properties_title;
 
 		$add_class='';
-		$ob = json_decode($propiedades);
+		$ob = json_decode($properties);
 		if($ob === null) {
 			// $ob is null because the json cannot be decoded
 			$add_class = 'json_bad_alert';
 		}
 
-		$obj_html 	= '';#"\n <!-- Btn Mostrar propiedades -->";
-		$divDestino = "propiedades_".$terminoID;
+		$obj_html 	= '';#"\n <!-- Btn Mostrar properties -->";
+		$divDestino = "properties_".$terminoID;
 		if($terminoID)
 		{
-			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $propiedades_title\" ";
+			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $properties_title\" ";
 			#$obj_html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
 			#$obj_html .= "></div>";
-			$obj_html 	 .= " <div class=\"cuadroU btn_propiedades $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+			$obj_html 	 .= " <div class=\"cuadroU btn_properties $add_class\" title=\"$mostrar_title $properties_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
 		}
 		return $obj_html ;
 	}
