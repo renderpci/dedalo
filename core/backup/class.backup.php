@@ -10,7 +10,7 @@ abstract class backup {
 
 	# Columns to save (used by copy command, etc.)
 	# Not use id columns NEVER here
-	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades';
+	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties';
 	public static $descriptors_dd_columns = 'parent, dato, tipo, lang';
 
 	public static $checked_download_str_dir = false;
