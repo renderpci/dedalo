@@ -43,8 +43,9 @@ class layout_map {
 			$ar_mandatory = ['section_tipo','tipo','modo'];
 			foreach ($ar_mandatory as $current_property) {
 				if (empty($options->{$current_property})) {
-					debug_log(__METHOD__." Error. property $current_property is mandatory !".to_string(), logger::ERROR);
-					return false;
+					debug_log(__METHOD__." Error. property $current_property is mandatory for $options->tipo ". RecordObj_dd::get_termino_by_tipo($options->tipo,null,true) ." !".to_string(), logger::ERROR);
+					// dump($options, ' get_layout_map options ++ '.to_string());
+					return [];
 				}
 			}
 
@@ -191,11 +192,12 @@ class layout_map {
 				}
 				$layout_map = array_values($layout_map);
 			}
+			// dump($layout_map, ' layout_map ++++++++++++ $resolved_key: '.to_string($resolved_key));
 
 		// cache
 			// $resolved_layout_map[$resolved_key] = $layout_map;
 
-		return $layout_map;
+		return (array)$layout_map;
 	}//end get_layout_map
 
 
