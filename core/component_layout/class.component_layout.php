@@ -114,7 +114,7 @@ class component_layout extends component_common {
 
 		#
 		# SECTION TOOL CASE
-		# When current section is 'section_tool', $section_obj->section_tool was set with section_tool propiedades. In this case
+		# When current section is 'section_tool', $section_obj->section_tool was set with section_tool properties. In this case
 		# section list of referenced 'tool_section_tipo' is used for create this layout_map and var section_tipo is changed here with it
 		if (isset($section_obj->context->tool_section_tipo)) {
 			#dump($section_obj->section_tool, ' var ++ '.to_string());

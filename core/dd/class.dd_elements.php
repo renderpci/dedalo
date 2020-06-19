@@ -14,7 +14,7 @@ class dd_elements {
 	/*
 	* CREA LINEA DE TESAURO CON ICONOS Y TÉRMINO
 	*/
-	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$traducible,$norden) {
+	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$properties,$traducible,$norden) {
 
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
@@ -69,7 +69,7 @@ class dd_elements {
 			# DESPLEGAR OBSERVACIONES DE USO BtnObs
 			if(!empty($obs)) $html .= $this->renderBtnObs($terminoID);
 			# DESPLEGAR OBSERVACIONES DE USO BtnObs
-			if( !empty($propiedades) ) $html .= $this->renderBtn_propiedades($terminoID,$propiedades);
+			if( !empty($properties) ) $html .= $this->renderBtn_properties($terminoID,$properties);
 			# DESPLEGAR NO DESCRIPTORES BtnND
 			#if($hijosND >0) $html .= $this->renderBtnND($terminoID);
 
@@ -93,7 +93,7 @@ class dd_elements {
 			if(count($ar_terminos_relacionados)>0)	$html .= $this->renderDivTR($terminoID); #die('6');
 			if(!empty($def)) 						$html .= $this->renderDivDescripcion($terminoID,$def);
 			if(!empty($obs)) 						$html .= $this->renderDivObservaciones($terminoID,$obs);
-			if(!empty($propiedades)) 				$html .= $this->renderDiv_propiedades($terminoID,$propiedades);
+			if(!empty($properties)) 				$html .= $this->renderDiv_properties($terminoID,$properties);
 			#$html .= $this->renderDivND($terminoID,$hijosND);
 			#$html .= $this->renderDivCintas($terminoID);
 
@@ -311,28 +311,28 @@ class dd_elements {
 		return $obj ;
 	}
 	/*
-	crea el botón P si hay propiedades
+	crea el botón P si hay properties
 	*/
-	protected static function renderBtn_propiedades($terminoID,$propiedades)
+	protected static function renderBtn_properties($terminoID,$properties)
 	{
 		global $mostrar_title ;
-		global $propiedades_title;
+		global $properties_title;
 
 		$add_class='';
-		$ob = json_decode($propiedades);
+		$ob = json_decode($properties);
 		if($ob === null) {
 			// $ob is null because the json cannot be decoded
 			$add_class = 'json_bad_alert';
 		}
 
-		$obj_html 	= '';#"\n <!-- Btn Mostrar propiedades -->";
-		$divDestino = "propiedades_".$terminoID;
+		$obj_html 	= '';#"\n <!-- Btn Mostrar properties -->";
+		$divDestino = "properties_".$terminoID;
 		if($terminoID)
 		{
-			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $propiedades_title\" ";
+			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $properties_title\" ";
 			#$obj_html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
 			#$obj_html .= "></div>";
-			$obj_html 	 .= " <div class=\"cuadroU btn_propiedades $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+			$obj_html 	 .= " <div class=\"cuadroU btn_properties $add_class\" title=\"$mostrar_title $properties_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
 		}
 		return $obj_html ;
 	}
@@ -531,26 +531,26 @@ class dd_elements {
 	}
 
 	/**
-	* crea el div de las propiedades
+	* crea el div de las properties
 	*/
-	protected static function renderDiv_propiedades($terminoID,$propiedades)
+	protected static function renderDiv_properties($terminoID,$properties)
 	{
 		$add_class='';
-		$ob = json_decode($propiedades);
+		$ob = json_decode($properties);
 		if($ob === null) {
 			// $ob is null because the json cannot be decoded
 			$add_class = 'json_bad_alert';
 		}
 
 		$obj_html  = '';
-		$obj_html .= "<div id=\"propiedades_{$terminoID}\" class=\"divLineasInfo div_propiedades none $add_class\" >";
+		$obj_html .= "<div id=\"properties_{$terminoID}\" class=\"divLineasInfo div_properties none $add_class\" >";
 		#$obj_html .= "[ P ] ";
-		#if (empty($propiedades)) {
-		#	$obj_html .= ' propiedades n/d ' ;
+		#if (empty($properties)) {
+		#	$obj_html .= ' properties n/d ' ;
 		#}else{
-			#$p = json_encode($propiedades);
-			#$propiedades = json_encode($propiedades, JSON_PRETTY_PRINT);
-			$obj_html .= "<pre>$propiedades</pre>";
+			#$p = json_encode($properties);
+			#$properties = json_encode($properties, JSON_PRETTY_PRINT);
+			$obj_html .= "<pre>$properties</pre>";
 		#}
 		$obj_html .= '</div>';
 

@@ -117,7 +117,7 @@ class ontology {
 				$item->translatable = $RecordObj_dd->get_traducible()==='si';
 			}
 			if ($options->properties===true) {
-				$item->properties = $RecordObj_dd->get_propiedades(true);
+				$item->properties = $RecordObj_dd->get_properties(true);
 			}
 			if ($options->relations===true) {
 
@@ -192,7 +192,7 @@ class ontology {
 				$RecordObj_dd_edit->set_norden($item->order);
 				$RecordObj_dd_edit->set_traducible($traducible);
 				$RecordObj_dd_edit->set_relaciones($item->relations);
-				$RecordObj_dd_edit->set_propiedades($item->properties);
+				$RecordObj_dd_edit->set_properties($item->properties);
 				$RecordObj_dd_edit->set_modelo($item->model_tipo);
 				$RecordObj_dd_edit->set_tld($item->tld);
 

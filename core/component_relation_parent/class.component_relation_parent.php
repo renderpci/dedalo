@@ -385,13 +385,13 @@ class component_relation_parent extends component_relation_common {
 			#$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
 
 			#
-			# Look in children propiedades different possible sources
+			# Look in children properties different possible sources
 			$RecordObj 								= new RecordObj_dd($from_component_tipo);
-			$my_component_children_tipo_propiedades = $RecordObj->get_propiedades(true);
+			$my_component_children_tipo_properties = $RecordObj->get_properties(true);
 
 			# hierarchy_sections
-			$hierarchy_types 	= isset($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
-			$hierarchy_sections = isset($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
+			$hierarchy_types 	= isset($my_component_children_tipo_properties->source->hierarchy_types) 	 ? $my_component_children_tipo_properties->source->hierarchy_types : null;
+			$hierarchy_sections = isset($my_component_children_tipo_properties->source->hierarchy_sections) ? $my_component_children_tipo_properties->source->hierarchy_sections : null;
 			# Resolve hierarchy_sections for speed
 			if (!empty($hierarchy_types)) {
 				$hierarchy_sections = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
@@ -835,13 +835,13 @@ class component_relation_parent extends component_relation_common {
 		}
 		
 		#
-		# Look in children propiedades different possible sources
+		# Look in children properties different possible sources
 		$RecordObj 								= new RecordObj_dd($from_component_tipo);
-		$my_component_children_tipo_propiedades = $RecordObj->get_propiedades(true);
+		$my_component_children_tipo_properties = $RecordObj->get_properties(true);
 
 		# hierarchy_sections
-		$hierarchy_types 	= !empty($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
-		$hierarchy_sections = !empty($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
+		$hierarchy_types 	= !empty($my_component_children_tipo_properties->source->hierarchy_types) 	 ? $my_component_children_tipo_properties->source->hierarchy_types : null;
+		$hierarchy_sections = !empty($my_component_children_tipo_properties->source->hierarchy_sections) ? $my_component_children_tipo_properties->source->hierarchy_sections : null;
 		# Resolve hierarchy_sections for speed
 		if (!empty($hierarchy_types)) {
 			$hierarchy_types_sections	= component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);

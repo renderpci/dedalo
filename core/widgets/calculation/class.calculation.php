@@ -119,7 +119,7 @@ class calculation extends widget_common {
 	/**
 	* RESOLVE_DATA_FOR_FORMULA
 	* @param object $data
-	*	Propiedades formula->data
+	*	properties formula->data
 	* @return object $data_resolved
 	*/
 	public function resolve_data($data) {

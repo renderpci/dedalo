@@ -145,7 +145,7 @@ class hierarchy {
 			}else{
 				$options->relaciones 	= json_decode('[{"dd6":"hierarchy20"}]');
 			}
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= $name;
 
@@ -172,7 +172,7 @@ class hierarchy {
 			}else{
 				$options->relaciones 	= json_decode('[{"dd6":"hierarchy20"}]');
 			}
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= $name . ' [m]';
 
@@ -197,7 +197,7 @@ class hierarchy {
 			}else{
 				$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
 			}
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Listado';
 
@@ -222,7 +222,7 @@ class hierarchy {
 			}else{
 				$options->relaciones = json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
 			}
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Listado';
 
@@ -243,7 +243,7 @@ class hierarchy {
 			$options->visible 		= 'si';
 			$options->traducible 	= 'no';
 			$options->relaciones 	= json_decode('');
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Excluidos';
 
@@ -264,7 +264,7 @@ class hierarchy {
 			$options->visible 		= 'si';
 			$options->traducible 	= 'no';
 			$options->relaciones 	= json_decode('');
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Excluidos';
 
@@ -285,7 +285,7 @@ class hierarchy {
 			$options->visible 		= 'si';
 			$options->traducible 	= 'no';
 			$options->relaciones 	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Búsqueda';
 
@@ -306,7 +306,7 @@ class hierarchy {
 			$options->visible 		= 'si';
 			$options->traducible 	= 'no';
 			$options->relaciones 	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Búsqueda';
 
@@ -332,7 +332,7 @@ class hierarchy {
 			$RecordObj_dd = new RecordObj_dd('hierarchy44');
 
 			$options->relaciones 	= $RecordObj_dd->get_relaciones();	//json_decode('[{"dd57":"hierarchy24"},{"dd9":"hierarchy25"},{"dd10":"hierarchy28"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd431":"hierarchy35"},{"dd432":"hierarchy40"},{"dd43":"hierarchy41"},{"dd57":"hierarchy23"},{"dd428":"hierarchy27"},{"dd57":"hierarchy26"}]');
-			$options->propiedades 	= $RecordObj_dd->get_propiedades();
+			$options->properties 	= $RecordObj_dd->get_properties();
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Listado tesauro';
 
@@ -353,7 +353,7 @@ class hierarchy {
 			$options->visible 		= 'si';
 			$options->traducible 	= 'no';
 			$options->relaciones 	= json_decode('[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]');
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->tld2 			= $tld2;
 			$options->name 			= 'Listado';
 
@@ -463,7 +463,7 @@ class hierarchy {
 			$options->tld2 			= '';
 			$options->traducible 	= 'no';
 			$options->relaciones 	= '';
-			$options->propiedades 	= '';
+			$options->properties 	= '';
 			$options->name 			= '';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
@@ -495,7 +495,7 @@ class hierarchy {
 		$RecordObj_dd->set_tld($options->tld2);
 		$RecordObj_dd->set_traducible($options->traducible);
 		$RecordObj_dd->set_relaciones($options->relaciones);
-		$RecordObj_dd->set_propiedades($options->propiedades);
+		$RecordObj_dd->set_properties($options->properties);
 
 		$RecordObj_dd->set_force_insert_on_save(true); # important !
 
@@ -713,7 +713,7 @@ class hierarchy {
 		while ($rows = pg_fetch_assoc($result)) {
 
 			# Data from v40 tables (pre-matrix)
-			#id	terminoID	parent	modelo	esmodelo	esdescriptor	visible	norden	usableIndex	traducible	relaciones	propiedades
+			#id	terminoID	parent	modelo	esmodelo	esdescriptor	visible	norden	usableIndex	traducible	relaciones	properties
 			$id 				= (int)$rows['id'];
 			$terminoID 			= (string)$rows['terminoID'];
 			$parent				= (string)$rows['parent'];
@@ -730,7 +730,7 @@ class hierarchy {
 			$usableIndex_orig	= (string)$rows['usableIndex'];
 			#$traducible		= (string)$rows['traducible'];
 			$relaciones			= (string)$rows['relaciones'];
-			$propiedades		= (string)$rows['propiedades'];
+			$properties		= (string)$rows['properties'];
 
 			self::rows_jer_to_matrix_json(	$id,
 											$terminoID,
@@ -742,7 +742,7 @@ class hierarchy {
 											$norden,
 											$usableIndex_orig,
 											$relaciones,
-											$propiedades,
+											$properties,
 											$tld,
 											$modelo);
 
@@ -758,7 +758,7 @@ class hierarchy {
 			unset($norden);
 			unset($usableIndex_orig);
 			unset($relaciones);
-			unset($propiedades);
+			unset($properties);
 			#$i++;
 
 			// let GC do the memory job
@@ -777,7 +777,7 @@ class hierarchy {
 	* ROWS_JER_TO_MATRIX_JSON
 	* @return null
 	*/
-	private static function rows_jer_to_matrix_json($id, $terminoID, $parent, $dato_modelo, $section_tipo_id, $esdescriptor_orig, $visible_orig, $norden, $usableIndex_orig, $relaciones, $propiedades, $tld, $modelo) {
+	private static function rows_jer_to_matrix_json($id, $terminoID, $parent, $dato_modelo, $section_tipo_id, $esdescriptor_orig, $visible_orig, $norden, $usableIndex_orig, $relaciones, $properties, $tld, $modelo) {
 
 		$esdescriptor = new locator();
 			$esdescriptor->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
@@ -1326,7 +1326,7 @@ class hierarchy {
 
 	/**
 	* GET_SECTION_MAP_ELEMETS
-	* Get elements from section_list_thesaurus -> propiedades
+	* Get elements from section_list_thesaurus -> properties
 	* @return array ar_elements
 	*/
 	public static function get_section_map_elemets( $section_tipo ) {
@@ -1367,7 +1367,7 @@ class hierarchy {
 		}//end if (!isset($ar_children[0]))
 
 
-		# If element exists (section_map) we get element 'propiedades' json value as array
+		# If element exists (section_map) we get element 'properties' json value as array
 		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
 		if (isset($ar_children[0])) {
 
@@ -1375,11 +1375,11 @@ class hierarchy {
 
 			# relation map
 			$RecordObj_dd    = new RecordObj_dd($section_map_tipo);
-			$ar_propiedades  = json_decode($RecordObj_dd->get_propiedades());
+			$ar_properties  = json_decode($RecordObj_dd->get_properties());
 				#dump($ar_elements, ' ar_elements ++ '.to_string());
 
-			$ar_elements = (array)$ar_propiedades;
-			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
+			$ar_elements = (array)$ar_properties;
+			#debug_log(__METHOD__." ar_properties ".to_string($ar_properties), logger::DEBUG);
 		}
 
 		# Set static var for reuse

@@ -918,7 +918,7 @@ var tool_common = new function() {
 				section_tipo 	: button_obj.dataset.target_section_tipo,
 				button_tipo	 	: button_obj.dataset.tipo,
 				context_name 	: button_obj.dataset.context_name,
-				custom_params  	: button_obj.dataset.custom_params // optional config from propiedades
+				custom_params  	: button_obj.dataset.custom_params // optional config from properties
 			}
 
 		// URL

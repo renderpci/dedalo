@@ -109,8 +109,8 @@ class component_input_text extends component_common {
 	*//**/
 	public function load_tools( $check_lang_tools=true ) {
 
-		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+		$properties = $this->get_properties();
+		if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 			# Allow tool lang on non translatable components
 			$check_lang_tools = false;
 		}
@@ -134,8 +134,8 @@ class component_input_text extends component_common {
 		}else{
 
 			# Add value of current lang to nolan data
-			$propiedades = $this->get_propiedades();
-			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+			$properties = $this->get_properties();
+			if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 
 				$component = $this;
 				$component->set_lang($lang);

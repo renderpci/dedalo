@@ -60,7 +60,7 @@ class layout_map {
 
 		// properties
 			$RecordObj_dd	= new RecordObj_dd($tipo);
-			$properties		= $RecordObj_dd->get_propiedades(true);
+			$properties		= $RecordObj_dd->get_properties(true);
 
 		#dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 

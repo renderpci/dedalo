@@ -373,12 +373,12 @@ class diffusion_mysql extends diffusion_sql  {
 
 				case ($field_type===$pref.'enum'):
 					$sql_query .= " `$field_name` enum($field_options) COLLATE utf8_unicode_ci COMMENT '$field_coment',\n";
-					if(empty($field_options)) throw new Exception("Error Processing Request. Field enum $field_name don't have 'propiedades'  ", 1);
+					if(empty($field_options)) throw new Exception("Error Processing Request. Field enum $field_name don't have 'properties'  ", 1);
 					break;
 
 				case ($field_type===$pref.'varchar'):
 					$sql_query .= " `$field_name` varchar($field_options) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT '$field_coment',\n";
-					if(empty($field_options)) throw new Exception("Error Processing Request. Field varchar $field_name don't have 'propiedades'  ", 1);
+					if(empty($field_options)) throw new Exception("Error Processing Request. Field varchar $field_name don't have 'properties'  ", 1);
 					break;
 
 				case ($field_type===$pref.'date'):
@@ -475,7 +475,7 @@ class diffusion_mysql extends diffusion_sql  {
 					$table_map			= $diffusion_element_tables_map->{$section_tipo};
 					#$table_name   		= $table_map->name;
 					#$table_tipo 		= $table_map->table;
-					#$table_propiedades = $table_map->propiedades;
+					#$table_properties = $table_map->properties;
 					#$database_name  	= $table_map->database_name;
 					#$database_tipo  	= $table_map->database_tipo;
 					$table_from_alias 	= $table_map->from_alias;

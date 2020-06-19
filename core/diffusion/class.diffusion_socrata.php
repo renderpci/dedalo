@@ -145,10 +145,10 @@ class diffusion_socrata extends diffusion  {
 			$table_obj = $diffusion_element_tables_map->{$options->section_tipo};
 			if ($socrata_config->mode==='pro') {
 				# production mode
-				$path = $table_obj->propiedades->path_pro;
+				$path = $table_obj->properties->path_pro;
 			}else{
 				# pre-production mode
-				$path = $table_obj->propiedades->path_pre;
+				$path = $table_obj->properties->path_pre;
 			}
 
 		// Upsert data

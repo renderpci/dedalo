@@ -45,7 +45,7 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 	#dump($ar_data, ' ar_data'); continue;
 
 	# VERIFY_FILE_NAME
-	if ( isset($this->button_import_propiedades->verify_file_name) && $this->button_import_propiedades->verify_file_name===true ) {
+	if ( isset($this->button_import_properties->verify_file_name) && $this->button_import_properties->verify_file_name===true ) {
 		if( !verify_file_name($ar_data['nombre_fichero_completo']) ) {
 			continue;
 		}
@@ -80,7 +80,7 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 			}
 			$html .= "</td>";
 			$html .= "<td>";
-			if (isset($this->button_import_propiedades->enable_selector) && $this->button_import_propiedades->enable_selector===false) {
+			if (isset($this->button_import_properties->enable_selector) && $this->button_import_properties->enable_selector===false) {
 				# hide selector checkboxes
 			}else{
 				$html .= "<input type=\"checkbox\" name=\"import_image_checkbox[]\" value=\"$key\" checked=\"yes\">";
@@ -227,7 +227,7 @@ if(empty($ar_image_valid_group)) {
 
 		#
 		# SELECT QUALITY
-		if(!isset($this->button_import_propiedades->disable_quality_selector) || $this->button_import_propiedades->disable_quality_selector !== true){
+		if(!isset($this->button_import_properties->disable_quality_selector) || $this->button_import_properties->disable_quality_selector !== true){
 			$html .= "<span>". label::get_label('directorio_de_destino')."</span>: ";
 			$html .= "<select name=\"quality\" class=\"quality_selector\">";
 			foreach ($ar_quality as $current_quality) {
@@ -282,7 +282,7 @@ if(empty($ar_image_valid_group)) {
 
 			#
 			# TARGET ID
-			if (isset($this->button_import_propiedades->enable_target_id) && $this->button_import_propiedades->enable_target_id===false) {
+			if (isset($this->button_import_properties->enable_target_id) && $this->button_import_properties->enable_target_id===false) {
 				# hide target id option
 				$html .= "<input type=\"hidden\" name=\"target_id\" id=\"target_id\" value=\"1\">";
 			}else{

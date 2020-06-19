@@ -1018,17 +1018,17 @@ class component_relation_common extends component_common {
 			}
 			#dump($dato, ' dato ++ '.to_string());
 
-		// propiedades . get the properties for get search section and component
-			$propiedades 				= $this->get_propiedades();
-			$ar_section_to_search 		= $propiedades->source->section_to_search;
-			$ar_component_to_search 	= $propiedades->source->component_to_search;
+		// properties . get the properties for get search section and component
+			$properties 				= $this->get_properties();
+			$ar_section_to_search 		= $properties->source->section_to_search;
+			$ar_component_to_search 	= $properties->source->component_to_search;
 
 		// current section tipo/id
 			$section_id 	= $this->get_parent();
 			$section_tipo 	= $this->get_section_tipo();
 
 		// data source overwrite (tool cataloging case)
-			if (isset($propiedades->source->source_overwrite) && isset($propiedades->source->component_to_search)) {
+			if (isset($properties->source->source_overwrite) && isset($properties->source->component_to_search)) {
 				// overwrite source locator
 					$component_to_search_tipo 	= reset($ar_component_to_search);
 					$modelo_name 	  		   	= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
@@ -1049,7 +1049,7 @@ class component_relation_common extends component_common {
 				// get overwrite source data when exists
 					if (isset($locator)) {
 
-						$data_from_field_tipo		= $propiedades->source->source_overwrite->data_from_field;
+						$data_from_field_tipo		= $properties->source->source_overwrite->data_from_field;
 						$modelo_name 	  		   	= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
 						$component_overwrite 		= component_common::get_instance($modelo_name,
 																					 $data_from_field_tipo,
@@ -1076,8 +1076,8 @@ class component_relation_common extends component_common {
 			$new_dato = [];
 
 		// data_from_field. get if the search need add fields data:
-			if(isset($propiedades->source->data_from_field)){
-				$data_from_field  = $propiedades->source->data_from_field;
+			if(isset($properties->source->data_from_field)){
+				$data_from_field  = $properties->source->data_from_field;
 
 				foreach ($data_from_field as $current_component_tipo) {
 					$modelo_name 	  		   = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
@@ -1274,12 +1274,12 @@ class component_relation_common extends component_common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
+	public static function parse_stats_values($tipo, $section_tipo, $properties, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
 
 		// Search
-			if (isset($propiedades->stats_look_at)) {
-				$related_tipo = reset($propiedades->stats_look_at);
-				if (isset($propiedades->valor_arguments)) {
+			if (isset($properties->stats_look_at)) {
+				$related_tipo = reset($properties->stats_look_at);
+				if (isset($properties->valor_arguments)) {
 					$selector = 'dato';
 				}
 			}else{
@@ -1315,7 +1315,7 @@ class component_relation_common extends component_common {
 				$value = end($item);
 
 				// locators case (like component_select)
-				if (strpos($value, '[{')===0 && !isset($propiedades->valor_arguments)) {
+				if (strpos($value, '[{')===0 && !isset($properties->valor_arguments)) {
 					$ar_locators = $value;
 					foreach ((array)$ar_locators as $locator) {
 
@@ -1343,9 +1343,9 @@ class component_relation_common extends component_common {
 					}
 
 					// Override label with custom component parse
-					if (isset($propiedades->stats_look_at) && isset($propiedades->valor_arguments)) {
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($propiedades->stats_look_at), true);
-						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $propiedades->valor_arguments);
+					if (isset($properties->stats_look_at) && isset($properties->valor_arguments)) {
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($properties->stats_look_at), true);
+						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
 					}
 
 					$uid = $label;

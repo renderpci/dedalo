@@ -11,7 +11,7 @@ class tool_import_kml extends tool_common {
 	# button_import_tipo
 	protected $button_import_tipo;
 	# used to store custom options (script path, etc.)
-	protected $button_import_propiedades;
+	protected $button_import_properties;
 	# allowed extensions in import file
 	protected $valid_extensions;
 	# temporal section id
@@ -63,8 +63,8 @@ class tool_import_kml extends tool_common {
 		$this->button_import_tipo = safe_tipo( safe_tipo($_GET['button_tipo']) );
 
 		$RecordObj_dd = new RecordObj_dd($this->button_import_tipo);
-		# Fix tool propiedades from button propiedades
-		$this->button_import_propiedades = json_decode($RecordObj_dd->get_propiedades());
+		# Fix tool properties from button properties
+		$this->button_import_properties = json_decode($RecordObj_dd->get_properties());
 
 		# Set tool vars
 		#$this->kml_vars = $kml_vars;
@@ -148,16 +148,16 @@ class tool_import_kml extends tool_common {
 			return $ar_created_parent[$type][$name]; // value is component autocomplete value (array of 1 locator)
 		}
 
-		if (!isset($this->button_import_propiedades->tool_import_kml->$type->section_tipo)) {
-			dump($this->button_import_propiedades->tool_import_kml->$type, ' this->button_import_propiedades ++ search section_tipo in '.to_string($type));
-			throw new Exception("Error Processing Request. Buton import 'propiedades' $type section_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
+		if (!isset($this->button_import_properties->tool_import_kml->$type->section_tipo)) {
+			dump($this->button_import_properties->tool_import_kml->$type, ' this->button_import_properties ++ search section_tipo in '.to_string($type));
+			throw new Exception("Error Processing Request. Buton import 'properties' $type section_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
 		}
-		if (!isset($this->button_import_propiedades->tool_import_kml->$type->component_tipo)) {
-			dump($this->button_import_propiedades->tool_import_kml->$type, ' this->button_import_propiedades ++ search component_tipo in '.to_string($type));
-			throw new Exception("Error Processing Request. Buton import 'propiedades' $type component_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
+		if (!isset($this->button_import_properties->tool_import_kml->$type->component_tipo)) {
+			dump($this->button_import_properties->tool_import_kml->$type, ' this->button_import_properties ++ search component_tipo in '.to_string($type));
+			throw new Exception("Error Processing Request. Buton import 'properties' $type component_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
 		}
-		$target_section_tipo 	= $this->button_import_propiedades->tool_import_kml->$type->section_tipo;
-		$target_component_tipo 	= $this->button_import_propiedades->tool_import_kml->$type->component_tipo;
+		$target_section_tipo 	= $this->button_import_properties->tool_import_kml->$type->section_tipo;
+		$target_component_tipo 	= $this->button_import_properties->tool_import_kml->$type->component_tipo;
 
 		#
 		# TARGET SECTION (where component autocomplete points)
@@ -207,15 +207,15 @@ class tool_import_kml extends tool_common {
         [description] => 
         [coordinates] => 
         [type] => root_parent */
-        if (!isset($this->button_import_propiedades->tool_import_kml->$type)) {
-			throw new Exception("Error Processing Request. Buton import 'propiedades' is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
+        if (!isset($this->button_import_properties->tool_import_kml->$type)) {
+			throw new Exception("Error Processing Request. Buton import 'properties' is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
 		}
 
-        $section_tipo 		= $this->button_import_propiedades->tool_import_kml->$type->section_tipo;
-		$name_tipo 			= $this->button_import_propiedades->tool_import_kml->$type->name;
-		$description_tipo	= $this->button_import_propiedades->tool_import_kml->$type->description;
-		$coordinates_tipo	= $this->button_import_propiedades->tool_import_kml->$type->coordinates;
-		$tag_geo_tipo		= $this->button_import_propiedades->tool_import_kml->$type->tag_geo;
+        $section_tipo 		= $this->button_import_properties->tool_import_kml->$type->section_tipo;
+		$name_tipo 			= $this->button_import_properties->tool_import_kml->$type->name;
+		$description_tipo	= $this->button_import_properties->tool_import_kml->$type->description;
+		$coordinates_tipo	= $this->button_import_properties->tool_import_kml->$type->coordinates;
+		$tag_geo_tipo		= $this->button_import_properties->tool_import_kml->$type->tag_geo;
 
 		# Create new section record in target section
 			$section = section::get_instance($section_id=null, $section_tipo, 'edit', $cache=false);
@@ -290,7 +290,7 @@ class tool_import_kml extends tool_common {
 
 
 		# REFERENCES
-		# Root parent and parent are iterated and values set to components defined in button import 'propiedades'
+		# Root parent and parent are iterated and values set to components defined in button import 'properties'
 			foreach ((array)$obj_value->parent_name as $key => $value) {
 				
 				if ($key===0) {
@@ -303,10 +303,10 @@ class tool_import_kml extends tool_common {
 				if (!empty($dato)) {
 
 					# component_tipo
-					if (!isset($this->button_import_propiedades->tool_import_kml->$type->$parent_type)) {
-						throw new Exception("Error Processing Request. Buton import 'propiedades' is not correctly configurated. Set mandatory params: tool_import_kml->$type->$parent_type", 1);			
+					if (!isset($this->button_import_properties->tool_import_kml->$type->$parent_type)) {
+						throw new Exception("Error Processing Request. Buton import 'properties' is not correctly configurated. Set mandatory params: tool_import_kml->$type->$parent_type", 1);			
 					}
-					$component_tipo = $this->button_import_propiedades->tool_import_kml->$type->$parent_type;
+					$component_tipo = $this->button_import_properties->tool_import_kml->$type->$parent_type;
 
 					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 					$component 		= component_common::get_instance($modelo_name,

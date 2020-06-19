@@ -217,9 +217,9 @@ class tool_import_files extends tool_common {
 	* @param string tipo $target_component 
 	* @return (bool)
 	*/
-	public static function set_media_file($current_file, $target_section_tipo, $current_section_id, $tool_propiedades) {
+	public static function set_media_file($current_file, $target_section_tipo, $current_section_id, $tool_properties) {
 
-		$target_component 	= $tool_propiedades->target_component;
+		$target_component 	= $tool_properties->target_component;
 		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($target_component,true);
 
 		switch ($modelo_name) {
@@ -268,9 +268,9 @@ class tool_import_files extends tool_common {
 				#
 				# TARGET_FILENAME 
 				# Save original file name in a component_input_text
-				if (isset($tool_propiedades->target_filename)) {
-					$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($tool_propiedades->target_filename,true);
-					$component_target_filename 	= component_common::get_instance($modelo_name_target_filename, $tool_propiedades->target_filename, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);
+				if (isset($tool_properties->target_filename)) {
+					$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($tool_properties->target_filename,true);
+					$component_target_filename 	= component_common::get_instance($modelo_name_target_filename, $tool_properties->target_filename, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);
 					$component_target_filename->set_dato( $file_name_full );
 					$component_target_filename->Save();
 				}
@@ -278,9 +278,9 @@ class tool_import_files extends tool_common {
 				#
 				# TARGET_DATE (From exif)
 				# Save original file date in a component_date if actual component date is empty
-				if (isset($tool_propiedades->target_date)) {
-					$modelo_name_target_date= RecordObj_dd::get_modelo_name_by_tipo($tool_propiedades->target_date,true);
-					$component_target_date 	= component_common::get_instance($modelo_name_target_date, $tool_propiedades->target_date, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);
+				if (isset($tool_properties->target_date)) {
+					$modelo_name_target_date= RecordObj_dd::get_modelo_name_by_tipo($tool_properties->target_date,true);
+					$component_target_date 	= component_common::get_instance($modelo_name_target_date, $tool_properties->target_date, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);
 					$dato = $component_target_date->get_dato();
 					if (empty($dato)) {
 						# exif try to get date from file
@@ -311,7 +311,7 @@ class tool_import_files extends tool_common {
 							$component_target_date->Save();
 						}
 					}
-				}//end if (isset($tool_propiedades->target_date)) {
+				}//end if (isset($tool_properties->target_date)) {
 
 
 				#
@@ -382,9 +382,9 @@ class tool_import_files extends tool_common {
 
 		#
 		# FILE_PROCESSOR
-		# Global var button propiedades json data array
+		# Global var button properties json data array
 		# Optional aditional file script processor defined in button import propiedaes
-		# Note that var $file_processor_properties is the button propiedades json data, NOT current element processor selection
+		# Note that var $file_processor_properties is the button properties json data, NOT current element processor selection
 		
 		# Iterate each processor
 		foreach ((array)$options->file_processor_properties as $key => $file_processor_obj) {

@@ -248,15 +248,15 @@ class diffusion_section_stats extends diffusion {
 				#if ($current_component_tipo=='dd1061') continue;
 
 				$RecordObj_dd 				= new RecordObj_dd($current_component_tipo);
-				$propiedades 				= $RecordObj_dd->get_propiedades(true);
-					#dump($propiedades, ' propiedades ++ '.to_string());	continue;
+				$properties 				= $RecordObj_dd->get_properties(true);
+					#dump($properties, ' properties ++ '.to_string());	continue;
 
 				#
 				# DIFFUSION_MAP_OBJECT
 				#
 				$current_obj->title		 	= (string)RecordObj_dd::get_termino_by_tipo($current_component_tipo, DEDALO_DATA_LANG, true);
 				$current_obj->graph_type 	= (string)RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-				$current_obj->propiedades 	= $propiedades;
+				$current_obj->properties 	= $properties;
 					#dump($current_obj,'$current_obj '); continue;
 
 				# ar_related_component_tipo
@@ -290,8 +290,8 @@ class diffusion_section_stats extends diffusion {
 							#
 							# PORTALES
 							# Case portals change sql query and current column tipo
-							if (isset($current_obj->propiedades->stats_look_at)) {
-								#dump($current_obj->propiedades->stats_look_at);
+							if (isset($current_obj->properties->stats_look_at)) {
+								#dump($current_obj->properties->stats_look_at);
 
 								#$options_search_portal = clone($options_search_sesion);
 								$options_search_portal = clone($options_search_from_user);
@@ -342,7 +342,7 @@ class diffusion_section_stats extends diffusion {
 								}
 								#dump($filtro_portal_sql ,'$filtro_portal_sql');
 
-								$current_column_tipo = $current_obj->propiedades->stats_look_at[0];
+								$current_column_tipo = $current_obj->properties->stats_look_at[0];
 								$RecordObj_dd 		 = new RecordObj_dd($current_column_tipo);
 								$model_name 		 = $RecordObj_dd->get_modelo_name();
 								$traducible 		 = $RecordObj_dd->get_traducible();
@@ -350,15 +350,15 @@ class diffusion_section_stats extends diffusion {
 								$change_section 	 = true;
 								#$section_tipo_portal = component_common::get_section_tipo_from_component_tipo($current_column_tipo);
 									#dump($section_tipo,'$section_tipo - current_column_tipo:'.$current_column_tipo);
-							}//if (isset($current_obj->propiedades->stats_look_at)){
+							}//if (isset($current_obj->properties->stats_look_at)){
 
 							#PROPERTIES MODIFICATOR
-							#In propiedades is poosible put one modificator of the value. for ex: valor_arguments : year
+							#In properties is poosible put one modificator of the value. for ex: valor_arguments : year
 							#this value change the query for sql going to the depper into the value of the component.
 
-							# propiedades valor_arguments
-							if(isset($current_obj->propiedades->valor_arguments)) {
-								$valor_arguments = ', '.$current_obj->propiedades->valor_arguments;
+							# properties valor_arguments
+							if(isset($current_obj->properties->valor_arguments)) {
+								$valor_arguments = ', '.$current_obj->properties->valor_arguments;
 							}else{
 								$valor_arguments = '';
 							}
@@ -474,7 +474,7 @@ class diffusion_section_stats extends diffusion {
 							foreach ($ar_related_component_tipo as $current_column_tipo) {
 
 								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_column_tipo,true);
-					            $ar_clean 	 = $modelo_name::parse_stats_values($current_column_tipo, $section_tipo, $propiedades);
+					            $ar_clean 	 = $modelo_name::parse_stats_values($current_column_tipo, $section_tipo, $properties);
 
 								// Add to ar_stats
 								foreach ($ar_clean as $c_uid => $c_item) {
@@ -518,7 +518,7 @@ class diffusion_section_stats extends diffusion {
 						}//end if ($limit_viewed>0 && count($ar_stats)>$limit_viewed)
 
 					// Washer data
-						$data = $this->washer($ar_stats, $current_component_tipo, $current_obj->propiedades, $section_tipo);
+						$data = $this->washer($ar_stats, $current_component_tipo, $current_obj->properties, $section_tipo);
 
 					// JS_AR_OBJ : Configure and store current element of array for js build charts
 						$js_obj = new stdClass();
@@ -582,7 +582,7 @@ class diffusion_section_stats extends diffusion {
 		  }
 		]
 	*/
-	public function washer($ar_stats, $component_tipo, $propiedades, $section_tipo) {
+	public function washer($ar_stats, $component_tipo, $properties, $section_tipo) {
 		$ar_stats_obj_resolved 	= array();
 
 		$x_axis = 'x';
@@ -772,7 +772,7 @@ class diffusion_section_stats extends diffusion {
 					# COMPONENT_DATE
 					case ($modelo_name==='component_date'):
 						#dump($tvalue,'$tvalue');
-						if(isset($propiedades->valor_arguments)){
+						if(isset($properties->valor_arguments)){
 							$key_resolved = $key;
 
 						}else{
@@ -922,7 +922,7 @@ class diffusion_section_stats extends diffusion {
 								continue 2; 	# Skip empty data
 							}
 
-						#$stats_value_resolved = component_autocomplete_ts::get_stats_value_resolved( $column_tipo, $ar_stats, 'stats_bar' ,$propiedades ) ;
+						#$stats_value_resolved = component_autocomplete_ts::get_stats_value_resolved( $column_tipo, $ar_stats, 'stats_bar' ,$properties ) ;
 						#dump($stats_value_resolved, 'stats_value_resolved', array());
 
 						$current_value_obj=new stdClass();

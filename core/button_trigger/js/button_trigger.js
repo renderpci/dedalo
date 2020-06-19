@@ -24,19 +24,19 @@ var button_trigger = new function() {
 		}
 		
 		const tipo						= button_obj.dataset.tipo
-		const propiedades 				= JSON.parse( button_obj.dataset.propiedades )
-			  propiedades.section_tipo 	= page_globals.section_tipo
+		const properties 				= JSON.parse( button_obj.dataset.properties )
+			  properties.section_tipo 	= page_globals.section_tipo
 
 		// Check trigger_url
-			if (typeof propiedades.trigger_url == "undefined") {
-				return alert("[button_trigger.trigger] Error Wrong url data [propiedades]")
+			if (typeof properties.trigger_url == "undefined") {
+				return alert("[button_trigger.trigger] Error Wrong url data [properties]")
 			}else{
-				var trigger_url = DEDALO_CORE_URL + propiedades.trigger_url;
+				var trigger_url = DEDALO_CORE_URL + properties.trigger_url;
 			}
 
 		// Check trigger mode
-			if (typeof propiedades.mode == "undefined") {
-				return alert("[button_trigger.trigger] Error Wrong mode data [propiedades]")
+			if (typeof properties.mode == "undefined") {
+				return alert("[button_trigger.trigger] Error Wrong mode data [properties]")
 			}
 			
 		// target_div
@@ -55,8 +55,8 @@ var button_trigger = new function() {
 			button_trigger.button_trigger = true;
 		
 
-		// Assign trigger vars from propiedades
-			const trigger_vars = cloneDeep(propiedades)		
+		// Assign trigger vars from properties
+			const trigger_vars = cloneDeep(properties)		
 
 		// Promise json XMLHttpRequest
 			const js_promise = common.get_json_data(trigger_url, trigger_vars).then(function(response){

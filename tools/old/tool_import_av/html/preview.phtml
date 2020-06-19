@@ -46,7 +46,7 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 
 
 	# VERIFY_FILE_NAME
-	if ( isset($this->button_import_propiedades->verify_file_name) && $this->button_import_propiedades->verify_file_name===true ) {
+	if ( isset($this->button_import_properties->verify_file_name) && $this->button_import_properties->verify_file_name===true ) {
 		if( !verify_file_name($ar_data['nombre_fichero_completo']) ) {
 			continue;
 		}
@@ -80,7 +80,7 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 			}
 			$html .= "</td>";
 			$html .= "<td>";
-			if (isset($this->button_import_propiedades->enable_selector) && $this->button_import_propiedades->enable_selector===false) {
+			if (isset($this->button_import_properties->enable_selector) && $this->button_import_properties->enable_selector===false) {
 				# hide selector checkboxes
 			}else{
 				$html .= "<input type=\"checkbox\" name=\"import_image_checkbox[]\" value=\"$key\" checked=\"yes\">";
@@ -230,7 +230,7 @@ if(empty($ar_image_valid_group)) {
 
 			#
 			# TARGET ID
-			if (isset($this->button_import_propiedades->enable_target_id) && $this->button_import_propiedades->enable_target_id===false) {
+			if (isset($this->button_import_properties->enable_target_id) && $this->button_import_properties->enable_target_id===false) {
 				# hide target id option
 				$html .= "<input type=\"hidden\" name=\"target_id\" id=\"target_id\" value=\"1\">";
 			}else{

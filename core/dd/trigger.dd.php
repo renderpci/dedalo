@@ -367,7 +367,7 @@ if($accion==='editTS') {
 	$parentInicial 	= safe_xss($_POST['parentInicial']);
 	$parentPost 	= safe_xss($_POST['parent']);
 	$esdescriptor	= safe_xss($_POST['esdescriptor']);
-	$propiedades	= safe_xss($_POST['propiedades']);
+	$properties	= safe_xss($_POST['properties']);
 	$nHijos			= intval($nHijos);
 
 	# required fields
@@ -400,7 +400,7 @@ if($accion==='editTS') {
 	if(isset($_POST['esdescriptor']))	$RecordObj_dd_edit->set_esdescriptor( safe_xss($_POST['esdescriptor']) );
 	if(isset($_POST['modelo']))			$RecordObj_dd_edit->set_modelo( safe_xss($_POST['modelo']) );	
 	if(isset($_POST['traducible']))		$RecordObj_dd_edit->set_traducible( safe_xss($_POST['traducible']) );
-	if(isset($_POST['propiedades']) && $_POST['propiedades']!=='{}')	$RecordObj_dd_edit->set_propiedades( safe_xss($_POST['propiedades']) );	
+	if(isset($_POST['properties']) && $_POST['properties']!=='{}')	$RecordObj_dd_edit->set_properties( safe_xss($_POST['properties']) );	
 	
 	# Verificamos si el padre asignado existe. (Antes verificamos el prefijo)
 	$RecordObj_dd_edit_parent	= new RecordObj_dd_edit($parentPost);
@@ -422,8 +422,8 @@ if($accion==='editTS') {
 
 	#
 	# CSS STRUCTURE . For easy css edit, save 
-	if (isset($_POST['propiedades']) && strpos($_POST['propiedades'], '"css"')!==false) {
-		debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($_POST['propiedades']) ), logger::DEBUG);
+	if (isset($_POST['properties']) && strpos($_POST['properties'], '"css"')!==false) {
+		debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($_POST['properties']) ), logger::DEBUG);
 		$result = css::build_structure_css();
 	}
 

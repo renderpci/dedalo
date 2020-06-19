@@ -531,9 +531,9 @@ class dd_core_api {
 		//
 		// 					# Configure section from section_tool data
 		// 					$RecordObj_dd = new RecordObj_dd($tipo);
-		// 					$propiedades  = $RecordObj_dd->get_propiedades(true);
+		// 					$properties  = $RecordObj_dd->get_properties(true);
 		//
-		// 					#$section_tipo = isset($propiedades->config->target_section_tipo) ? $propiedades->config->target_section_tipo :
+		// 					#$section_tipo = isset($properties->config->target_section_tipo) ? $properties->config->target_section_tipo :
 		// 					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo don't exist) ".to_string(), logger::ERROR);
 		//
 		// 					$section_tipo 	= $tipo;
@@ -543,7 +543,7 @@ class dd_core_api {
 		// 					// dd_request
 		// 						$section = section::get_instance($section_id, $section_tipo, $mode);
 		// 						$section->set_lang($lang);
-		// 						$section->config = $propiedades->config;
+		// 						$section->config = $properties->config;
 		// 						$dd_request = $section->get_dd_request();
 		//
 		// 					$page_element = new StdClass();

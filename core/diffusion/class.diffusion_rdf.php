@@ -18,7 +18,7 @@ class diffusion_rdf extends diffusion {
 	public $section_id;
 	public $rdf_wrapper;	// Array of rdf wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
 
-	public $service_name;	// From propiedades of diffusion_element (Fixed on update_record)
+	public $service_name;	// From properties of diffusion_element (Fixed on update_record)
 	public $entity_section_id; //Fixed on update_record
 	public $ar_records; // Inject data here by tool diffusion when update_record
 
@@ -56,11 +56,11 @@ class diffusion_rdf extends diffusion {
 
 		// target_section_tipo
 			$RecordObj_dd 		 = new RecordObj_dd($options->diffusion_element_tipo);
-			$propiedades 		 = $RecordObj_dd->get_propiedades(true);
-			#$target_section_tipo = $propiedades->diffusion->target_section_tipo;
+			$properties 		 = $RecordObj_dd->get_properties(true);
+			#$target_section_tipo = $properties->diffusion->target_section_tipo;
 
 		// Fix vars
-			$this->service_name		 = $propiedades->diffusion->service;
+			$this->service_name		 = $properties->diffusion->service;
 			$this->entity_section_id = $options->section_id;
 
 		// search records (Fichero)
@@ -101,7 +101,7 @@ class diffusion_rdf extends diffusion {
 
 
 		// Filename. Format like: '1.rdf' for multiple or '1_1.rdf' for one record (entity_id.rdf, entity_id_section_id.rdf)
-			$collection_tipo = $propiedades->diffusion->collection_tipo; // expected 'numisdata159'
+			$collection_tipo = $properties->diffusion->collection_tipo; // expected 'numisdata159'
 			$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($collection_tipo,true); // expected 'component_autocomplete'
 			$component 		 = component_common::get_instance($modelo_name,
 															 $collection_tipo,
@@ -263,7 +263,7 @@ class diffusion_rdf extends diffusion {
 		$service_name = $this->service_name;
 
 		$resolved = (object)$this->resolve_rdf_object( $rdf_object, $section_tipo, $section_id, $service_name );
-			#dump($rdf_object->propiedades->is_header, ' rdf_object ++ '.to_string());
+			#dump($rdf_object->properties->is_header, ' rdf_object ++ '.to_string());
 			#dump($resolved, ' resolved ++ '.to_string());
 
 		#
@@ -350,7 +350,7 @@ class diffusion_rdf extends diffusion {
 		$rdf_object->name 		 = $name;
 		$rdf_object->modelo_name = $modelo_name;
 		$rdf_object->tipo 		 = $rdf_tipo;
-		$rdf_object->propiedades = $RecordObj_dd->get_propiedades(true);
+		$rdf_object->properties = $RecordObj_dd->get_properties(true);
 		$rdf_object->ar_related	 = $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
 		$rdf_object->data = array();
 
@@ -384,10 +384,10 @@ class diffusion_rdf extends diffusion {
 		$modelo_name = $rdf_object->modelo_name;
 		$tipo 		 = $rdf_object->tipo;
 		$ar_related  = $rdf_object->ar_related;
-		$propiedades = isset($rdf_object->propiedades) ? $rdf_object->propiedades : false;
-		$type 		 = isset($rdf_object->propiedades->type) ? $rdf_object->propiedades->type : 'default';
-		$separator   = isset($rdf_object->propiedades->separator) ? $rdf_object->propiedades->separator : '/';
-		$format   	 = isset($rdf_object->propiedades->format) ? $rdf_object->propiedades->format : false;
+		$properties = isset($rdf_object->properties) ? $rdf_object->properties : false;
+		$type 		 = isset($rdf_object->properties->type) ? $rdf_object->properties->type : 'default';
+		$separator   = isset($rdf_object->properties->separator) ? $rdf_object->properties->separator : '/';
+		$format   	 = isset($rdf_object->properties->format) ? $rdf_object->properties->format : false;
 
 		$entity_section_id = $this->entity_section_id; // Fixed on update
 
@@ -396,7 +396,7 @@ class diffusion_rdf extends diffusion {
 		$value=''; switch ($type) {
 
 			case 'lang_value':
-				#$fixed_value = isset($propiedades->value) ? $propiedades->value : null;
+				#$fixed_value = isset($properties->value) ? $properties->value : null;
 				#$value = " $name=\"$fixed_value\"";
 				$lang_alpha2 = lang::get_alpha2_from_code(DEDALO_DATA_LANG);
 				$value = ' ' . $name . '="' . $lang_alpha2 .'"';
@@ -404,16 +404,16 @@ class diffusion_rdf extends diffusion {
 
 			case 'fixed_value':
 				// Eg. rdf:datatype="xsd:decimal"
-				$fixed_value = isset($propiedades->value) ? $propiedades->value : null;
+				$fixed_value = isset($properties->value) ? $properties->value : null;
 				$value = " $name=\"$fixed_value\"";
 				break;
 
 			case 'fixed_uri':
 				// base_uri_entity (resolve wit entity service data)
-					if (isset($propiedades->base_uri_entity)) {
-						$base_uri  = $this->resolve_base_uri_entity($propiedades->base_uri_entity);
+					if (isset($properties->base_uri_entity)) {
+						$base_uri  = $this->resolve_base_uri_entity($properties->base_uri_entity);
 					}else{
-						$base_uri  = isset($propiedades->base_uri)  ? $propiedades->base_uri : null;
+						$base_uri  = isset($properties->base_uri)  ? $properties->base_uri : null;
 					}
 
 				$value = " $name=\"$base_uri\"";
@@ -421,12 +421,12 @@ class diffusion_rdf extends diffusion {
 
 			case 'image_uri':
 				// base_uri_entity (resolve wit entity service data)
-					if (isset($propiedades->base_uri_entity)) {
-						$base_uri  = $this->resolve_base_uri_entity($propiedades->base_uri_entity);
+					if (isset($properties->base_uri_entity)) {
+						$base_uri  = $this->resolve_base_uri_entity($properties->base_uri_entity);
 					}else{
-						$base_uri  = isset($propiedades->base_uri) ? $propiedades->base_uri : null;
+						$base_uri  = isset($properties->base_uri) ? $properties->base_uri : null;
 					}
-				$media_uri = isset($propiedades->media_uri) ? $propiedades->media_uri : new stdClass();
+				$media_uri = isset($properties->media_uri) ? $properties->media_uri : new stdClass();
 
 					$quality 	 	= $media_uri->quality;
 					$portal_tipo 	= $media_uri->portal_tipo;
@@ -472,12 +472,12 @@ class diffusion_rdf extends diffusion {
 			case 'add_uri':
 				// Eg. xmlns:dcterms="http://purl.org/dc/terms/" + []
 				// base_uri_entity (resolve wit entity service data)
-					if (isset($propiedades->base_uri_entity)) {
-						$base_uri  = $this->resolve_base_uri_entity($propiedades->base_uri_entity);
+					if (isset($properties->base_uri_entity)) {
+						$base_uri  = $this->resolve_base_uri_entity($properties->base_uri_entity);
 					}else{
-						$base_uri  = isset($propiedades->base_uri)  ? $propiedades->base_uri : null;
+						$base_uri  = isset($properties->base_uri)  ? $properties->base_uri : null;
 					}
-				$add_uri  = isset($propiedades->add_uri) ? $propiedades->add_uri : array();
+				$add_uri  = isset($properties->add_uri) ? $properties->add_uri : array();
 
 				# iterate elements
 				$add_uri_string=''; foreach((array)$add_uri as $object_uri) {
@@ -545,12 +545,12 @@ class diffusion_rdf extends diffusion {
 			case 'var_uri';
 				// base_uri.  Eg. http://domain.com/catalog/ + '?id=14527'
 				// base_uri_entity (resolve wit entity service data)
-					if (isset($propiedades->base_uri_entity)) {
-						$base_uri  = $this->resolve_base_uri_entity($propiedades->base_uri_entity, $section_id);
+					if (isset($properties->base_uri_entity)) {
+						$base_uri  = $this->resolve_base_uri_entity($properties->base_uri_entity, $section_id);
 					}else{
-						$base_uri  = isset($propiedades->base_uri)  ? $propiedades->base_uri : null;
+						$base_uri  = isset($properties->base_uri)  ? $properties->base_uri : null;
 					}
-				$var_uri  = isset($propiedades->var_uri)  ? $propiedades->var_uri : array();
+				$var_uri  = isset($properties->var_uri)  ? $properties->var_uri : array();
 
 				$var_uri_string=''; foreach((array)$var_uri as $key => $component_tipo) {
 
@@ -690,12 +690,12 @@ class diffusion_rdf extends diffusion {
 		$rdf_object->name 		 = $name;
 		$rdf_object->modelo_name = $modelo_name;
 		$rdf_object->tipo 		 = $rdf_tipo;
-		$rdf_object->propiedades = (object)$RecordObj_dd->get_propiedades(true);
+		$rdf_object->properties = (object)$RecordObj_dd->get_properties(true);
 		$rdf_object->ar_related	 = $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
 		$rdf_object->data = array();
 
 		# XML LINE
-		$ar_lines['xml'] = $rdf_object->propiedades->value;	// Like '<?xml version="1.0" encoding="utf-8" ..'
+		$ar_lines['xml'] = $rdf_object->properties->value;	// Like '<?xml version="1.0" encoding="utf-8" ..'
 
 
 		# RDF
@@ -717,9 +717,9 @@ class diffusion_rdf extends diffusion {
 						#dump($head_element_tipo, ' head_element_tipo ++ '.to_string());
 						$head_name 			= RecordObj_dd::get_termino_by_tipo($head_element_tipo);
 						$head_element		= new RecordObj_dd($head_element_tipo);
-						$head_propiedades 	= (object)$head_element->get_propiedades(true);
+						$head_properties 	= (object)$head_element->get_properties(true);
 						// Eg. xmlns:dcterms="http://purl.org/dc/terms/"
-						$base_uri = isset($head_propiedades->base_uri) ? $head_propiedades->base_uri : null;
+						$base_uri = isset($head_properties->base_uri) ? $head_properties->base_uri : null;
 						$value = " $head_name=\"$base_uri\"";
 
 						$rdf_predicates .= $value;
