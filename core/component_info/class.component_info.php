@@ -16,7 +16,7 @@ class component_info extends component_common {
 	*/
 	public function get_dato() {
 
-		$properties			= $this->get_propiedades();
+		$properties			= $this->get_properties();
 		// get the widgets defined in the ontology
 		$widgets = isset($properties->widgets) ? $properties->widgets : null;
 		if (empty($widgets) || !is_array($widgets)) {
@@ -100,7 +100,7 @@ class component_info extends component_common {
 	*/
 	public function get_data_list() {
 
-		$properties			= $this->get_propiedades();
+		$properties			= $this->get_properties();
 		// get the widgets defined in the ontology
 		$widgets = isset($properties->widgets) ? $properties->widgets : null;
 		if (empty($widgets) || !is_array($widgets)) {

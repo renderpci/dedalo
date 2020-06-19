@@ -43,8 +43,8 @@ function export_list($json_data) {
 
 	// diffusion_element
 		$RecordObj_dd		  = new RecordObj_dd($diffusion_element_tipo);
-		$propiedades 		  = $RecordObj_dd->get_propiedades(true);	
-		$diffusion_class_name = $propiedades->diffusion->class_name; 
+		$properties 		  = $RecordObj_dd->get_properties(true);	
+		$diffusion_class_name = $properties->diffusion->class_name; 
 
 	try{
 		# Reset msg

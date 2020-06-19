@@ -45,7 +45,7 @@ require_once( DEDALO_CONFIG_PATH .'/config.php');
 						}
 					}
 					# Trigger button resolution
-					$this->get_button_import();	// Fix propiedades from button
+					$this->get_button_import();	// Fix properties from button
 
 					
 					# CSS includes
@@ -103,8 +103,8 @@ require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 
 							# Include specific process_script
-							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
+							if (isset($this->button_import_properties->process_script)) {
+								require_once(DEDALO_CORE_PATH . $this->button_import_properties->process_script);
 							}							
 							
 							# IMAGES UPLOAD MANAGER
@@ -125,13 +125,13 @@ require_once( DEDALO_CONFIG_PATH .'/config.php');
 							js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_av/js/tool_import_av.js';
 
 							# Include specific process_script
-							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
+							if (isset($this->button_import_properties->process_script)) {
+								require_once(DEDALO_CORE_PATH . $this->button_import_properties->process_script);
 							}
 							
 
-							$default_target_quality 	= $this->button_import_propiedades->quality;								
-							$process_script 			= DEDALO_CORE_PATH . $this->button_import_propiedades->process_script;
+							$default_target_quality 	= $this->button_import_properties->quality;								
+							$process_script 			= DEDALO_CORE_PATH . $this->button_import_properties->process_script;
 								#dump($process_script);
 							$ar_quality 				= unserialize(DEDALO_AV_AR_QUALITY);
 							

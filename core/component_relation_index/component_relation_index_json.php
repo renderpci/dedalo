@@ -9,7 +9,7 @@
 	$section_tipo 		= $this->section_tipo;
 	$lang 				= $this->lang;
 	$tipo 				= $this->get_tipo();
-	$properties 		= $this->get_propiedades() ?? new stdClass();
+	$properties 		= $this->get_properties() ?? new stdClass();
 
 
 

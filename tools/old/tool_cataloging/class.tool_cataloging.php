@@ -20,7 +20,7 @@ class tool_cataloging {
 		}
 	
 		$button_triguer = new RecordObj_dd($button_trigger_tipo);
-		$button_triguer_properties = $button_triguer->get_propiedades(true);
+		$button_triguer_properties = $button_triguer->get_properties(true);
 
 		$this->source_list 			= $button_triguer_properties->source_list;
 		$this->source_thesaurus		= $button_triguer_properties->source_thesaurus;

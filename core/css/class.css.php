@@ -216,19 +216,19 @@ class css {
 		}, unserialize(DEDALO_PREFIX_TIPOS));
 		$filter = implode(' OR ', $ar_pairs);
 
-		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
+		$strQuery = "SELECT \"terminoID\",\"properties\" FROM \"jer_dd\" WHERE \"properties\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
 		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$terminoID 		 = $rows["terminoID"];
-			$propiedades_str = $rows["propiedades"];
-			$propiedades 	 = json_decode($propiedades_str);
-			if (!isset($propiedades->css)) {
-				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
+			$properties_str = $rows["properties"];
+			$properties 	 = json_decode($properties_str);
+			if (!isset($properties->css)) {
+				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. properties: ".to_string($properties_str), logger::ERROR);
 				continue;
 			}
-			$css_obj = $propiedades->css;
+			$css_obj = $properties->css;
 
 			// Debug only
 			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];

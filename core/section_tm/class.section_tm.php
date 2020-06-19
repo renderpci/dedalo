@@ -179,7 +179,7 @@ class section_tm extends common {
 
 		// component
 			$RecordObj_dd	= new RecordObj_dd($component_tipo);
-			$properties		= $RecordObj_dd->get_propiedades(true);
+			$properties		= $RecordObj_dd->get_properties(true);
 			$item = (object)[
 				'typo'				=> 'ddo',
 				'type'				=> 'component',

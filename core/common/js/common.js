@@ -569,7 +569,9 @@ const build_request_show = function(self, request_config, action){
 
 	const dd_request = []
 
-	const rqo = request_config.filter(item => item.typo === 'rqo')
+	const rqo = request_config
+		? request_config.filter(item => item.typo === 'rqo')
+		: []
 
 	// source . auto create
 		const source = create_source(self, action)
@@ -580,16 +582,15 @@ const build_request_show = function(self, request_config, action){
 			return dd_request;
 		}
 
-	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
-		const request_ddo	= self.datum.context.find(item => item.source==='request_ddo').value
+	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
+		const request_ddo_object	= self.datum.context.find(item => item.source==='request_ddo')
+		const request_ddo			= request_ddo_object.value
 
-		console.log("request_ddo", request_ddo);
 		const rqo_length	= rqo.length
 		const ar_sections	= []
 		for (let i = 0; i < rqo_length; i++) {
 
 			const current_rqo		= rqo[i]
-			console.log("current_rqo", current_rqo);
 			const operator			= current_rqo.show.sqo_config.operator || '$and'
 			const sections			= current_rqo.section_tipo
 
@@ -688,7 +689,7 @@ const build_request_search = function(self, request_config, action){
 		const ddo_map_length	= ddo_map.length
 		//get sections
 		for (let j = 0; j < sections_length; j++) {
-			const section_ddo = request_ddo.find(ddo => ddo.tipo === sections[j]  && ddo.section_tipo === sections[j] )
+			const section_ddo = request_ddo.find(ddo => ddo.tipo === sections[j]  && ddo.section_tipo === sections[j])
 			sqo_search.push(section_ddo)
 			// get the fpath array
 			for (let k = 0; k < ddo_map_length; k++) {
@@ -708,6 +709,7 @@ const build_request_search = function(self, request_config, action){
 
 						const ddo = request_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === section_tipo )
 						if (ddo) {
+							ddo.mode = 'list' // enable lang fallback value
 							sqo_search.push(ddo)
 							const path = {
 								section_tipo	: section_tipo,

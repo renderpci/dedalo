@@ -41,13 +41,13 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* GET_PROPIEDADES
+	* GET_properties
 	* Only to enable component_autocomplete_hi compatibility
 	* @return object $properties
 	*/
-	public function get_propiedades() {
+	public function get_properties() {
 
-		$properties = parent::get_propiedades();
+		$properties = parent::get_properties();
 			#dump($properties, ' properties ++ '.to_string($this->tipo));
 
 		// component_portal_hi compatibility
@@ -118,7 +118,7 @@ class component_portal extends component_relation_common {
 
 
 		return $properties;
-	}//end get_propiedades
+	}//end get_properties
 
 
 
@@ -134,10 +134,10 @@ class component_portal extends component_relation_common {
 		// 		return $this->tipo_to_search;
 		// 	}
 		//
-		// 	$propiedades = $this->get_propiedades();
+		// 	$properties = $this->get_properties();
 		//
-		// 	if(isset($propiedades->source->search)){
-		// 			foreach ($propiedades->source->search as $current_search) {
+		// 	if(isset($properties->source->search)){
+		// 			foreach ($properties->source->search as $current_search) {
 		// 				if($current_search->type === "internal"){
 		// 					$ar_terminoID_by_modelo_name =  $current_search->components;
 		// 				}
@@ -230,11 +230,11 @@ class component_portal extends component_relation_common {
 		// 																	  DEDALO_DATA_NOLAN,
 		// 																	  $section_tipo);
 
-		// 	// propiedades
-		// 		$propiedades = $component_portal->get_propiedades();
-		// 		if (!empty($propiedades)) {
+		// 	// properties
+		// 		$properties = $component_portal->get_properties();
+		// 		if (!empty($properties)) {
 
-		// 			if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
+		// 			if (isset($properties->filtered_by)) foreach($properties->filtered_by as $current_tipo => $current_value) {
 
 		// 				$current_lang = DEDALO_DATA_LANG;
 		// 				$RecordObj_dd = new RecordObj_dd($current_tipo);
@@ -255,7 +255,7 @@ class component_portal extends component_relation_common {
 		// 				debug_log(__METHOD__." Updated target section component $current_tipo [$curren_modelo_name] to ".to_string($current_value), logger::DEBUG);
 		// 			}
 		// 		}
-		// 		#dump($propiedades, ' propiedades');	die("section_id: $section_id B");
+		// 		#dump($properties, ' properties');	die("section_id: $section_id B");
 
 		// 	// components
 		// 		# Format:
@@ -307,8 +307,8 @@ class component_portal extends component_relation_common {
 	*/
 	public function regenerate_component() {
 
-		# Custom propiedades external dato
-		$propiedades = $this->get_propiedades();
+		# Custom properties external dato
+		$properties = $this->get_properties();
 
 		# Force loads dato always !IMPORTANT
 		$this->get_dato();

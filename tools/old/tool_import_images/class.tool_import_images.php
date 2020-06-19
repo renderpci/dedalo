@@ -22,7 +22,7 @@ class tool_import_images extends tool_common {
 	
 	
 	protected $component_obj;	# received section
-	protected $button_import_propiedades;
+	protected $button_import_properties;
 	#protected $process_script_folder;
 	protected $valid_extensions;
 
@@ -54,7 +54,7 @@ class tool_import_images extends tool_common {
 	* GET_BUTTON_IMPORT_OBJ
 	* @param string $button_tipo (Request 'button_tipo')
 	* @return button $button_import_obj
-	* Get button tipo fron url vars and build button object and fix $this->button_import_propiedades where are custom options
+	* Get button tipo fron url vars and build button object and fix $this->button_import_properties where are custom options
 	*/
 	function get_button_import_obj( $button_tipo=null ) {
 
@@ -70,11 +70,11 @@ class tool_import_images extends tool_common {
 		$button_import_obj = new button_import($button_tipo, null, $this->section_tipo);
 			#dump($button_import_obj,'button_import_obj');
 
-		$propiedades = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
+		$properties = json_handler::decode($button_import_obj->RecordObj_dd->get_properties());
 
-		# Fix propiedades
-		$this->button_import_propiedades = $propiedades;
-			#dump($propiedades, ' propiedades ++ '.to_string());
+		# Fix properties
+		$this->button_import_properties = $properties;
+			#dump($properties, ' properties ++ '.to_string());
 
 		return $button_import_obj;
 	}
@@ -140,7 +140,7 @@ class tool_import_images extends tool_common {
 	function get_file_data( $dir, $file_name ) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/" 	
 
 		$ar_data = array();
-		#$target_component_tipo = $this->button_import_propiedades->campo_destino;
+		#$target_component_tipo = $this->button_import_properties->campo_destino;
 			#if(empty($target_component_tipo)) throw new Exception("Error Processing Request", 1);
 
 		##
@@ -148,7 +148,7 @@ class tool_import_images extends tool_common {
 		# Para cada caso será distinto oel patrón regex. Incluiremos la definición de la expresión regular al principio del script
 		# en formato tipo imagenes_mupreva : $regex = "/((\w+)-(\d*)).([a-zAZ]+)\z/";
 		$process=0; 
-		#require(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
+		#require(DEDALO_CORE_PATH . $this->button_import_properties->process_script);
 		#$regex = "/((\w+)-(\d*)).([a-zAZ]+)\z/";
 
 

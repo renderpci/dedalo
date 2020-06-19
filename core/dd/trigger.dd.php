@@ -424,8 +424,8 @@ if($accion==='editTS') {
 
 	#
 	# CSS STRUCTURE . For easy css edit, save 
-	if (isset($_POST['propiedades']) && strpos($_POST['propiedades'], '"css"')!==false) {
-		debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($_POST['propiedades']) ), logger::DEBUG);
+	if (isset($_POST['properties']) && strpos($_POST['properties'], '"css"')!==false) {
+		debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($_POST['properties']) ), logger::DEBUG);
 		$result = css::build_structure_css();
 	}
 
