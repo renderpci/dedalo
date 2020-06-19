@@ -46,28 +46,29 @@ $terminoID = trim($terminoID);
 #
 # ACTUALIZAR LA FICHA  #############################################
 if( !empty($_POST["accion"]) ) {	
-	$html 		= '';
+	$html		= '';
 	$accion		= 'editTS';
-	$edicion 	= require_once(DEDALO_CORE_PATH . '/dd/trigger.dd.php');  
+	$edicion	= require_once(DEDALO_CORE_PATH . '/dd/trigger.dd.php');  
 }#fin update
 # ACTUALIZAR LA FICHA  #############################################
 
 
 # Data from current jer (structure)
-$RecordObj_dd	= new RecordObj_dd($terminoID);
-$tld			= $RecordObj_dd->get_tld();
-$parent			= $RecordObj_dd->get_parent();
-$modelo			= $RecordObj_dd->get_modelo();			
-$userID			= $RecordObj_dd->get_userID();
-$esmodelo		= $RecordObj_dd->get_esmodelo();
-$esdescriptor	= $RecordObj_dd->get_esdescriptor();
-$visible		= $RecordObj_dd->get_visible();
-$norden			= $RecordObj_dd->get_norden();
-$traducible		= $RecordObj_dd->get_traducible();
-$propiedades	= $RecordObj_dd->get_propiedades();
-#$usableIndex	= $RecordObj_dd->get_usableIndex();	
-#$codNomenclator= $RecordObj_dd->get_codNomenclator();
-#$type			= $RecordObj_dd->get_jerarquia_type();
+$RecordObj_dd		= new RecordObj_dd($terminoID);
+$tld				= $RecordObj_dd->get_tld();
+$parent				= $RecordObj_dd->get_parent();
+$modelo				= $RecordObj_dd->get_modelo();
+$userID				= $RecordObj_dd->get_userID();
+$esmodelo			= $RecordObj_dd->get_esmodelo();
+$esdescriptor		= $RecordObj_dd->get_esdescriptor();
+$visible			= $RecordObj_dd->get_visible();
+$norden				= $RecordObj_dd->get_norden();
+$traducible			= $RecordObj_dd->get_traducible();
+$propiedades		= $RecordObj_dd->get_propiedades();
+$properties			= $RecordObj_dd->get_properties();
+#$usableIndex		= $RecordObj_dd->get_usableIndex();	
+#$codNomenclator	= $RecordObj_dd->get_codNomenclator();
+#$type				= $RecordObj_dd->get_jerarquia_type();
 
 
 
@@ -81,7 +82,7 @@ if($verificarTR >0){
 }	
 
 # Hijos del término actual
-$hijosArray 	= $RecordObj_dd->get_ar_childrens_of_this();
+$hijosArray		= $RecordObj_dd->get_ar_childrens_of_this();
 $nHijos			= $RecordObj_dd->get_n_hijos();
 $ar_siblings	= $RecordObj_dd->get_ar_siblings_of_this();
 

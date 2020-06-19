@@ -882,23 +882,23 @@ if( cookieOpenDivsString!=='undefined'&& cookieOpenDivsString!==null) {
 /**
 * MULTITOOGLE : TESAURO NAV Multi toogle 
 */
-function multiToogle(divName,activa, desactiva) {
+function multiToogle(divName, activa, desactiva) {
 
 	const div = document.getElementById(divName)
-	if(!div || div===null) {
+	if(!div) {
 	  alert(' Opss. Sorry: Beta function. ' + div1 +' - '+ activa +' - '+ desactiva )
 
 	}else{
 	  if (div.style.display === desactiva || div.style.display === '') {	  
-			$(div).slideDown(100, function(){	
+			// $(div).slideDown(100, function(){	
 				div.style.display = activa
 				div.classList.add('activa')	
-			})
+			// })
 	  }else{
-			$(div).slideUp(100, function(){	
+			// $(div).slideUp(100, function(){	
 				div.style.display = desactiva
 				div.classList.remove('activa')	
-			})
+			// })
 	  }
 	}
 }

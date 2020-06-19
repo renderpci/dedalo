@@ -267,6 +267,46 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 				</tr>
 				<?php } #if (SHOW_DEBUG) ?>
 
+				<!-- properties (JSON) -->
+				<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
+				<tr>
+					<td>
+						<div class="wraper_propiedades">
+							<?php
+							$properties_text = json_encode($properties);
+							?>
+							<h1>Properties</h1>
+							<textarea id="properties" name="properties" class="properties_textarea"><?php echo $properties_text ?></textarea>
+							<?php #dump($properties, ' properties ++ '.to_string()); ?>
+							<div id="editor_json" class="editor_json_container"></div>
+							<script>
+							const properties_textarea_element = document.getElementById('properties')
+								  properties_textarea_element.style.display = 'none';
+							const properties_options = {
+							    mode: 'code',
+							    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+							    error: function (err) {
+							      alert(err.toString());
+							    }
+							  }
+							// create properties_editor
+								const properties_container	= document.getElementById('editor_json');
+								const properties_editor		= new JSONEditor(properties_container, properties_options, <?php echo !empty($properties_text) ? (string)$properties_text : '""' ?>);
+							 	//console.log(editor);
+
+							// Send JSON text to input and force save
+							// document.getElementById('submit_button').onclick = function () {
+							//	    $('#properties')
+							//	    	.val(editor.getText())
+							//	    	.trigger('change');
+							// };
+							</script>
+							<?php /**/ ?>
+						</div><!-- /div_wraper -->
+					</td>
+				</tr>
+				<?php } #if (SHOW_DEBUG) ?>
+
 
 				<!-- HIERARCHIE INFO -->
 				<tr class="row_border_bottom">
@@ -397,7 +437,10 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 							document.getElementById('submit_button').onclick = function () {
 								$(propiedades_textarea_element)
 										.val(editor.getText())
-							   			.trigger('change');
+										.trigger('change');
+								$(properties_textarea_element)
+										.val(properties_editor.getText())
+										.trigger('change');
 							}
 							</script>
 

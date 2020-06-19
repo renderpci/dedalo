@@ -14,7 +14,7 @@ class dd_elements {
 	/*
 	* CREA LINEA DE TESAURO CON ICONOS Y TÉRMINO
 	*/
-	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$traducible,$norden) {
+	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$properties,$traducible,$norden) {
 
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
@@ -70,6 +70,8 @@ class dd_elements {
 			if(!empty($obs)) $html .= $this->renderBtnObs($terminoID);
 			# DESPLEGAR OBSERVACIONES DE USO BtnObs
 			if( !empty($propiedades) ) $html .= $this->renderBtn_propiedades($terminoID,$propiedades);
+			// button show properties
+			if( !empty($properties) ) $html .= $this->renderBtn_properties($terminoID,$properties);
 			# DESPLEGAR NO DESCRIPTORES BtnND
 			#if($hijosND >0) $html .= $this->renderBtnND($terminoID);
 
@@ -94,6 +96,7 @@ class dd_elements {
 			if(!empty($def)) 						$html .= $this->renderDivDescripcion($terminoID,$def);
 			if(!empty($obs)) 						$html .= $this->renderDivObservaciones($terminoID,$obs);
 			if(!empty($propiedades)) 				$html .= $this->renderDiv_propiedades($terminoID,$propiedades);
+			if(!empty($properties)) 				$html .= $this->renderDiv_properties($terminoID,$properties);
 			#$html .= $this->renderDivND($terminoID,$hijosND);
 			#$html .= $this->renderDivCintas($terminoID);
 
@@ -336,6 +339,20 @@ class dd_elements {
 		}
 		return $obj_html ;
 	}
+	/*
+	crea el botón P si hay properties
+	*/
+	protected static function renderBtn_properties($terminoID, $properties) {
+		global $mostrar_title ;
+		global $properties_title;
+
+
+		$divDestino = "properties_".$terminoID;
+		
+		$obj_html = " <div class=\"cuadroU btn_properties\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+		
+		return $obj_html ;
+	}
 
 	/*
 	crea el botón Mostrar ND no descriptores
@@ -533,7 +550,7 @@ class dd_elements {
 	/**
 	* crea el div de las propiedades
 	*/
-	protected static function renderDiv_propiedades($terminoID,$propiedades)
+	protected static function renderDiv_propiedades($terminoID, $propiedades)
 	{
 		$add_class='';
 		$ob = json_decode($propiedades);
@@ -555,6 +572,30 @@ class dd_elements {
 		$obj_html .= '</div>';
 
 		return $obj_html ;
+	}
+
+	/**
+	* RENDERDIV_PROPERTIES
+	* crea el div de las properties
+	*/
+	protected static function renderDiv_properties($terminoID, $properties) {
+		$add_class='';
+		// $ob = json_decode($properties);
+		// if($ob === null) {
+		// 	// $ob is null because the json cannot be decoded
+		// 	$add_class = 'json_bad_alert';
+		// }
+
+		$properties_text = json_encode($properties, JSON_PRETTY_PRINT);
+	
+		$obj_html = "<div id=\"properties_{$terminoID}\" class=\"divLineasInfo div_properties none $add_class\" >";
+		
+		// properties
+		$obj_html .= '<pre>'.$properties_text.'</pre>';
+		
+		$obj_html .= '</div>';
+
+		return $obj_html;
 	}
 
 	/*

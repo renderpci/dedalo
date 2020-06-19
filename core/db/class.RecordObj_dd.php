@@ -12,12 +12,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $modelo;
 	protected $esmodelo;
 	protected $esdescriptor;
-	protected $visible ;
-	protected $norden ;
-	protected $tld ;
-	protected $traducible ;
-	protected $relaciones ;
-	protected $propiedades ;
+	protected $visible;
+	protected $norden;
+	protected $tld;
+	protected $traducible;
+	protected $relaciones;
+	protected $propiedades;
+	protected $properties;
 
 	protected $prefijo ;
 
@@ -25,7 +26,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $filtroTerminos ;
 
 	# OPTIONAL ESPECIFIC LOADS
-	#protected $ar_recursive_childrens_of_this 	= array();
+	#protected $ar_recursive_childrens_of_this     = array();
 	#protected $ar_parents_cache 				= array();
 	#protected $ar_reels_of_this 				= array();
 
@@ -97,19 +98,20 @@ class RecordObj_dd extends RecordDataBoundObject {
 	# DEFINERELATIONMAP : array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() {
 		return (array(
-			# db fieldn ame					# property name
-			//"id" 							=> "ID",
-			"terminoID"						=> "terminoID",
-			"parent" 						=> "parent",
-			"modelo" 						=> "modelo",
-			"esmodelo" 						=> "esmodelo",
-			"esdescriptor" 					=> "esdescriptor",
-			"visible" 						=> "visible",
-			"norden" 						=> "norden",
-			"tld" 							=> "tld",
-			"traducible" 					=> "traducible",
-			"relaciones" 					=> "relaciones",
-			"propiedades" 					=> "propiedades",
+			# db fieldn ame		# property name
+			//'id'			=> 'ID',
+			'terminoID'		=> 'terminoID',
+			'parent'		=> 'parent',
+			'modelo'		=> 'modelo',
+			'esmodelo'		=> 'esmodelo',
+			'esdescriptor'	=> 'esdescriptor',
+			'visible'		=> 'visible',
+			'norden'		=> 'norden',
+			'tld'			=> 'tld',
+			'traducible'	=> 'traducible',
+			'relaciones'	=> 'relaciones',
+			'propiedades'	=> 'propiedades',
+			'properties'	=> 'properties'
 			));
 	}//end defineRelationMap
 
@@ -173,6 +175,20 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return json_decode(parent::get_propiedades());
 		}
 		return parent::get_propiedades();
+	}//end get_propiedades
+
+
+
+	/**
+	* GET_PROPERTIES
+	* Return the value of property 'properties', stored as JSONB in table column 'properties'
+	* Values expected in 'properties' are always JSON.
+	* @param bool $json_decode
+	* @return object / string parent::$propiedades
+	*/
+	public function get_properties() {
+		
+		return json_decode(parent::get_properties());
 	}//end get_propiedades
 
 
