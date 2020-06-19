@@ -2484,40 +2484,49 @@ abstract class common {
 
 
 	/**
-	* $get_request_ddo
-	* @return
+	* SET_REQUEST_DDO
+	* Calculates and set in dd_core_api static var 'request_ddo', ddo items from all modes (show, select, search)
+	* @return array $added_ddo
 	*/
 	public function set_request_ddo() {
 
 		// layout_map subcontext from layout_map items
 			$layout_map_options = new stdClass();
-				$layout_map_options->section_tipo	= $this->get_section_tipo();
 				$layout_map_options->tipo			= $this->get_tipo();
+				$layout_map_options->section_tipo	= $this->get_section_tipo();			
 				$layout_map_options->modo			= $this->get_modo();
 				$layout_map_options->add_section	= true;
 
 		$ddo = [];
+
 		// select
-			$layout_map_options->request_config_type = 'select';
-			$ddo = array_merge( $ddo, layout_map::get_layout_map($layout_map_options) );
+			$layout_map_options->request_config_type	= 'select';
+			$layout_map_result							= layout_map::get_layout_map($layout_map_options);
+			$ddo										= array_merge($ddo, $layout_map_result);
 
 		// search
-			$layout_map_options->request_config_type = 'search';
-			$ddo = array_merge( $ddo, layout_map::get_layout_map($layout_map_options) );
+			$layout_map_options->request_config_type	= 'search';
+			$layout_map_result							= layout_map::get_layout_map($layout_map_options);
+			$ddo										= array_merge($ddo, $layout_map_result);
 
 		// show
-			$layout_map_options->request_config_type = 'show';
-			$ddo = array_merge( $ddo, layout_map::get_layout_map($layout_map_options) );
+			$layout_map_options->request_config_type	= 'show';
+			$layout_map_result							= layout_map::get_layout_map($layout_map_options);
+			$ddo										= array_merge($ddo, $layout_map_result);
 
 
 		// add ddo to the global storage
+			$added_ddo =[];
 			foreach ($ddo as $ddo) {
 				if (!in_array($ddo, dd_core_api::$request_ddo)) {
 					dd_core_api::$request_ddo[] = $ddo;
+					$added_ddo[] = $ddo;
 				}
 			}
 
-	}//end $get_request_ddo
+
+		return $added_ddo;
+	}//end set_request_ddo
 
 
 
