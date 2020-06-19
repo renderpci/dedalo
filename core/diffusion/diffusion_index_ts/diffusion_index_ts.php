@@ -48,9 +48,9 @@
 
 					$RecordObj_dd 	= new RecordObj_dd($head_element_tipo);
 					$current_lang 	= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-					$propiedades 	= $RecordObj_dd->get_propiedades();
-					$propiedades 	= json_decode($propiedades);
-						#dump($propiedades, ' propiedades ++ '.to_string());
+					$properties 	= $RecordObj_dd->get_properties();
+					$properties 	= json_decode($properties);
+						#dump($properties, ' properties ++ '.to_string());
 
 					$related_component_tipo = RecordObj_dd::get_ar_terminos_relacionados($head_element_tipo, $cache=true, $simple=true)[0];
 						#dump($related_component_tipo,'$related_component_tipo');
@@ -65,7 +65,7 @@
 																		 $current_section_tipo);
 					#dump($current_component,'$current_component');
 
-					$ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $propiedades );
+					$ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $properties );
 				}
 				#dump($ar_diffusion_obj_head,'ar_diffusion_obj_head '.to_string($current_section_id));
 				include DEDALO_CORE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_head.phtml';

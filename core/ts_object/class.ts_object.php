@@ -75,7 +75,7 @@ class ts_object extends Accessors {
 
 	/**
 	* GET_AR_ELEMENTS
-	* Get elements from section_list_thesaurus -> propiedades
+	* Get elements from section_list_thesaurus -> properties
 	* @return array ar_elements
 	*/
 	public static function get_ar_elements( $section_tipo, $model=false ) {
@@ -107,7 +107,7 @@ class ts_object extends Accessors {
 		}//end if (!isset($ar_children[0]))
 
 
-		# If element exists (section_list_thesaurus) we get element 'propiedades' json value as array
+		# If element exists (section_list_thesaurus) we get element 'properties' json value as array
 		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
 		if (isset($ar_children[0])) {
 
@@ -115,8 +115,8 @@ class ts_object extends Accessors {
 
 			# relation map
 			$RecordObj_dd    = new RecordObj_dd($section_list_thesaurus_tipo);
-			$ar_propiedades  = json_decode($RecordObj_dd->get_propiedades());
-				#dump($ar_propiedades, ' ar_propiedades ++ '.to_string($section_list_thesaurus_tipo));
+			$ar_properties  = json_decode($RecordObj_dd->get_properties());
+				#dump($ar_properties, ' ar_properties ++ '.to_string($section_list_thesaurus_tipo));
 			/*
 			# Get related terms
 			$related_terms   = (array)RecordObj_dd::get_ar_terminos_relacionados($section_list_thesaurus_tipo, $cache=true, $simple=true);
@@ -126,7 +126,7 @@ class ts_object extends Accessors {
 			}
 			*/
 
-			# SUBSTITUTION : When is set $this->options->model as true, we substitute structure propiedades link_children with link_children_model
+			# SUBSTITUTION : When is set $this->options->model as true, we substitute structure properties link_children with link_children_model
 			# for look children in other hierarchy component children
 			/*
 			if (isset($this->options->model) && $this->options->model===true) {
@@ -163,7 +163,7 @@ class ts_object extends Accessors {
 					$element_children->type = 'link_children';
 					$element_children->tipo = null;
 
-					foreach ($ar_propiedades as $key => $value_obj) {
+					foreach ($ar_properties as $key => $value_obj) {
 						if($value_obj->type === 'link_children_model'){
 							$element_children->tipo = $value_obj->tipo;
 							break;
@@ -171,9 +171,9 @@ class ts_object extends Accessors {
 					}
 
 				$ar_elements = array();
-				foreach ($ar_propiedades as $key => $value_obj) {
+				foreach ($ar_properties as $key => $value_obj) {
 					if($value_obj->type === 'link_children' || $value_obj->type === 'link_children_model'){
-						#unset($ar_propiedades[$key]);
+						#unset($ar_properties[$key]);
 					}else{
 						$ar_elements[] = $value_obj;
 					}
@@ -181,18 +181,18 @@ class ts_object extends Accessors {
 
 				$ar_elements[] = $element_children;
 			}else{
-				$ar_elements = $ar_propiedades;
+				$ar_elements = $ar_properties;
 			}
 			debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 			*/
 
-			foreach ($ar_propiedades as $key => $value_obj) {
+			foreach ($ar_properties as $key => $value_obj) {
 
 				if (!isset($model) && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
-					unset($ar_propiedades[$key]);
+					unset($ar_properties[$key]);
 				}else if (isset($model) && $model===true) {
 					if (($value_obj->type==='link_childrens' || $value_obj->type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-						unset($ar_propiedades[$key]);
+						unset($ar_properties[$key]);
 					}else if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model') {
 						$value_obj->type = 'link_children';
 					}
@@ -202,9 +202,9 @@ class ts_object extends Accessors {
 					$value_obj->type = 'link_children';
 				}
 
-			}//end foreach ($ar_propiedades as $key => $value_obj)
-			$ar_elements = $ar_propiedades;
-			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
+			}//end foreach ($ar_properties as $key => $value_obj)
+			$ar_elements = $ar_properties;
+			#debug_log(__METHOD__." ar_properties ".to_string($ar_properties), logger::DEBUG);
 		}
 
 		return (array)$ar_elements;
@@ -468,7 +468,7 @@ class ts_object extends Accessors {
 		}
 
 		if ($section_map['thesaurus']->is_indexable===false) {
-			# Propiedades set as false case
+			# properties set as false case
 			return false;
 		}
 

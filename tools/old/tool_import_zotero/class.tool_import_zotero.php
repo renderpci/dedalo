@@ -17,7 +17,7 @@ class tool_import_zotero extends tool_common {
 	
 	
 	protected $section_obj;	# received section
-	protected $button_import_propiedades;	# used to store custom options (script path, etc.)
+	protected $button_import_properties;	# used to store custom options (script path, etc.)
 	protected $valid_extensions;
 
 	public static $process_script = false;
@@ -50,14 +50,14 @@ class tool_import_zotero extends tool_common {
 		if (isset($_REQUEST['button_tipo']) && isset($_REQUEST['t']) ) {
 
 			$button_import_obj = new button_import( safe_xss($_REQUEST['button_tipo']), null, safe_xss($_REQUEST['t']) );
-			$propiedades 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
-			if (isset($propiedades->process_script)) {
-				if ( !include_once(DEDALO_CORE_PATH.$propiedades->process_script) ) {
+			$properties 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_properties());
+			if (isset($properties->process_script)) {
+				if ( !include_once(DEDALO_CORE_PATH.$properties->process_script) ) {
 					throw new Exception("Error Processing Request. Error in button import zotero config. Wrong process_script path", 1);
 				}
-				tool_import_zotero::$process_script = $propiedades->process_script;	// Fix current path
+				tool_import_zotero::$process_script = $properties->process_script;	// Fix current path
 				if(SHOW_DEBUG) {
-					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_CORE_PATH.$propiedades->process_script);
+					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_CORE_PATH.$properties->process_script);
 				}
 			}
 		}
@@ -106,7 +106,7 @@ class tool_import_zotero extends tool_common {
 	* GET_BUTTON_IMPORT_OBJ
 	* @param string $button_tipo (Request 'button_tipo')
 	* @return button $button_import_obj
-	* Get button tipo fron url vars and build button object and fix $this->button_import_propiedades where are custom options
+	* Get button tipo fron url vars and build button object and fix $this->button_import_properties where are custom options
 	*//*
 	function get_button_import_obj() {
 
@@ -120,10 +120,10 @@ class tool_import_zotero extends tool_common {
 		$button_import_obj = new button_import($button_tipo,null);
 			#dump($button_import_obj,'button_import_obj');
 
-		$propiedades = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
+		$properties = json_handler::decode($button_import_obj->RecordObj_dd->get_properties());
 
-		# Fix propiedades
-		$this->button_import_propiedades = $propiedades;
+		# Fix properties
+		$this->button_import_properties = $properties;
 
 		return $button_import_obj;
 	}
@@ -426,15 +426,15 @@ class tool_import_zotero extends tool_common {
 				$parent  = $section_id;				
 
 				# DEFAULT
-				# Propiedades : if default dato is set in 'propiedades', save component here
+				# properties : if default dato is set in 'properties', save component here
 				# Example: {"filtered_by":{"rsc235":[{"section_tipo":"rsc229","section_id":"2"}]}}
 				$RecordObj_dd = new RecordObj_dd($section_tipo);
-				$propiedades_current_setion = json_decode($RecordObj_dd->get_propiedades());
-				if (isset($propiedades_current_setion->filtered_by)) {
+				$properties_current_setion = json_decode($RecordObj_dd->get_properties());
+				if (isset($properties_current_setion->filtered_by)) {
 					
-					$component_tipo	 		= key($propiedades_current_setion->filtered_by);
-						#dump($propiedades_current_setion," propiedades_current_setion - component_tipo: $component_tipo");					
-					$component_dato 		= $propiedades_current_setion->filtered_by->$component_tipo;
+					$component_tipo	 		= key($properties_current_setion->filtered_by);
+						#dump($properties_current_setion," properties_current_setion - component_tipo: $component_tipo");					
+					$component_dato 		= $properties_current_setion->filtered_by->$component_tipo;
 					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 					$current_component 		= component_common::get_instance($component_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 					$current_component->set_dato($component_dato);

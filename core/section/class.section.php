@@ -241,7 +241,7 @@ class section extends common {
 			#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->section_id)<1) ) {
 
 				#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-				if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo==='real'){
+				if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
 					$tipo = $this->get_section_real_tipo();
 				}else{
 					$tipo = $this->tipo;
@@ -777,7 +777,7 @@ class section extends common {
 
 
 			# If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-			if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo==='real'){
+			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
 				$tipo = $this->get_section_real_tipo();
 			}
 
@@ -1001,7 +1001,7 @@ class section extends common {
 
 			}else{
 
-				// Counter update : If all is ok, update section counter (counter +1) in structure 'propiedades:section_id_counter'
+				// Counter update : If all is ok, update section counter (counter +1) in structure 'properties:section_id_counter'
 				if ($saved_id_matrix > 0) {
 					if ($options->forced_create_record!==false) {
 						# CONSOLIDATE COUNTER VALUE
@@ -1145,7 +1145,7 @@ class section extends common {
 		$section_tipo = $this->tipo;
 
 		#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-		if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo === "real"){
+		if(isset($this->properties->section_tipo) && $this->properties->section_tipo === "real"){
 			$section_tipo = $this->get_section_real_tipo();
 		}
 
@@ -2911,7 +2911,7 @@ class section extends common {
 
 	/**
 	* GET_SECTION_MAP
-	* Section map data is stored in 'propiedades' of element of model 'section_map' placed in first level of section
+	* Section map data is stored in 'properties' of element of model 'section_map' placed in first level of section
 	*
 	* @return object $setion_map or null
 	*/
@@ -2938,9 +2938,9 @@ class section extends common {
 
 			$tipo 			= $ar_children[0];
 			$RecordObj_dd 	= new RecordObj_dd($tipo);
-			$propiedades 	= $RecordObj_dd->get_propiedades();
+			$properties 	= $RecordObj_dd->get_properties();
 
-			if ($section_map  = json_decode($propiedades)) {
+			if ($section_map  = json_decode($properties)) {
 				$section_map  = (object)$section_map;
 			}else{
 				$section_map  = null;

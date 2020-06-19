@@ -6,7 +6,7 @@
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
-	$properties 		= $this->get_propiedades() ?? new stdClass();
+	$properties 		= $this->get_properties() ?? new stdClass();
 
 
 

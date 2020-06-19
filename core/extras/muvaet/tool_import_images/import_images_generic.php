@@ -125,7 +125,7 @@
 	#dump($button_import_obj,'$button_import_obj'); die();
 
 
-	$propiedades = $button_import_obj->propiedades;
+	$properties = $button_import_obj->properties;
 	#
 	# VARIABLES ESPECÍFICAS DEL SCRIPT DE IMPORTACIÓN
 	#
@@ -133,21 +133,21 @@
 		
 		#
 		# SECCIÓN 'NODRIZA' (1 POR GRUPO)
-		define('MAIN_SECTION_TIPO' 					, $propiedades->MAIN_SECTION_TIPO);  # Ficha (Agrupador)
-		define('MAIN_PORTAL_IDENTIFY_IMAGE'			, $propiedades->MAIN_PORTAL_IDENTIFY_IMAGE);  # Imagen/es identificativas
-		define('MAIN_PORTAL_ADITIONAL_IMAGES'		, $propiedades->MAIN_PORTAL_ADITIONAL_IMAGES);  # Imágenes adicionales	
+		define('MAIN_SECTION_TIPO' 					, $properties->MAIN_SECTION_TIPO);  # Ficha (Agrupador)
+		define('MAIN_PORTAL_IDENTIFY_IMAGE'			, $properties->MAIN_PORTAL_IDENTIFY_IMAGE);  # Imagen/es identificativas
+		define('MAIN_PORTAL_ADITIONAL_IMAGES'		, $properties->MAIN_PORTAL_ADITIONAL_IMAGES);  # Imágenes adicionales	
 		
 		#
 		# SECCIÓN 'RECURSO' (1 POR IMAGEN)
-		define('RESOURCE_SECTION_TIPO' 				, $propiedades->RESOURCE_SECTION_TIPO);	
-		define('RESOURCE_COMPONENT_TIPO_IMAGE'		, $propiedades->RESOURCE_COMPONENT_TIPO_IMAGE);	
-		define('RESOURCE_COMPONENT_TIPO_DIRECTORY'	, $propiedades->RESOURCE_COMPONENT_TIPO_DIRECTORY);	
-		define('RESOURCE_COMPONENT_TIPO_FILENAME'	, $propiedades->RESOURCE_COMPONENT_TIPO_FILENAME);
-		define('RESOURCE_COMPONENT_TIPO_CODE'		, $propiedades->RESOURCE_COMPONENT_TIPO_CODE);
-		define('RESOURCE_COMPONENT_TIPO_CODE_OLD'	, $propiedades->RESOURCE_COMPONENT_TIPO_CODE_OLD);
-		define('RESOURCE_COMPONENT_TIPO_PROJECT'	, $propiedades->RESOURCE_COMPONENT_TIPO_PROJECT);	
-		define('RESOURCE_COMPONENT_DATE_CAPTURE'	, $propiedades->RESOURCE_COMPONENT_DATE_CAPTURE);
-		define('RESOURCE_COMPONENT_TIPO_AUTHOR'		, $propiedades->RESOURCE_COMPONENT_TIPO_AUTHOR);
+		define('RESOURCE_SECTION_TIPO' 				, $properties->RESOURCE_SECTION_TIPO);	
+		define('RESOURCE_COMPONENT_TIPO_IMAGE'		, $properties->RESOURCE_COMPONENT_TIPO_IMAGE);	
+		define('RESOURCE_COMPONENT_TIPO_DIRECTORY'	, $properties->RESOURCE_COMPONENT_TIPO_DIRECTORY);	
+		define('RESOURCE_COMPONENT_TIPO_FILENAME'	, $properties->RESOURCE_COMPONENT_TIPO_FILENAME);
+		define('RESOURCE_COMPONENT_TIPO_CODE'		, $properties->RESOURCE_COMPONENT_TIPO_CODE);
+		define('RESOURCE_COMPONENT_TIPO_CODE_OLD'	, $properties->RESOURCE_COMPONENT_TIPO_CODE_OLD);
+		define('RESOURCE_COMPONENT_TIPO_PROJECT'	, $properties->RESOURCE_COMPONENT_TIPO_PROJECT);	
+		define('RESOURCE_COMPONENT_DATE_CAPTURE'	, $properties->RESOURCE_COMPONENT_DATE_CAPTURE);
+		define('RESOURCE_COMPONENT_TIPO_AUTHOR'		, $properties->RESOURCE_COMPONENT_TIPO_AUTHOR);
 
 		# Verify file name pattern like "1-2"
 		define('VERIFY_FILE_NAME_PATTERN'			, "/(^[0-9]+)-([0-9]+).([a-zA-Z]{3,4})\z/");
@@ -191,7 +191,7 @@
 
 
 	#
-	# VERIFY_FILE_NAME : Defined in button import propiedades
+	# VERIFY_FILE_NAME : Defined in button import properties
 	if(!function_exists('verify_file_name')) { function verify_file_name($full_file_name) {	
 		$pattern = VERIFY_FILE_NAME_PATTERN;
 		preg_match($pattern, $full_file_name, $ar);
@@ -222,7 +222,7 @@
 	#
 	# INITIAL_MEDIA_PATH
 	#
-	$initial_media_path = $propiedades->initial_media_path;
+	$initial_media_path = $properties->initial_media_path;
 	if (strpos($initial_media_path, '/')===false) {
 		$initial_media_path = '/'.$initial_media_path;
 	}
@@ -313,10 +313,10 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 		$html='';
 
 		$max_indentify_items_number = 1; // Número de item que se añaden al portal de identificativas
-		if (isset($button_import_obj->propiedades->max_indentify_items_number)) {
-			$max_indentify_items_number = $button_import_obj->propiedades->max_indentify_items_number;
+		if (isset($button_import_obj->properties->max_indentify_items_number)) {
+			$max_indentify_items_number = $button_import_obj->properties->max_indentify_items_number;
 		}
-		#dump($max_indentify_items_number, ' max_indentify_items_number - '.to_string($button_import_obj->propiedades));die();
+		#dump($max_indentify_items_number, ' max_indentify_items_number - '.to_string($button_import_obj->properties));die();
 
 		# Set special php global options
 		#ob_implicit_flush(true);
@@ -376,14 +376,14 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 			# 
 			# ADITIONAL_PATH : aditional_path de la imagen.			
 				switch (true) {
-					case (isset($button_import_obj->propiedades->aditional_path) && $button_import_obj->propiedades->aditional_path=='numero_to_local_path') :
+					case (isset($button_import_obj->properties->aditional_path) && $button_import_obj->properties->aditional_path=='numero_to_local_path') :
 						$aditional_path = numero_to_local_path($section_general_id);						
 						break;				
 					default:
 						# Por defecto
 						$aditional_path	= null;	// '/'.$section_general_id;					
 				}
-				#dump($button_import_obj->propiedades->aditional_path, ' button_import_obj->aditional_path');
+				#dump($button_import_obj->properties->aditional_path, ' button_import_obj->aditional_path');
 				#dump($aditional_path, ' aditional_path - '.$section_general_id); die();
 				echo "aditional_path: $aditional_path";	
 

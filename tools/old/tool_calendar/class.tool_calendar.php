@@ -9,7 +9,7 @@ class tool_calendar extends tool_common {
 	
 	
 	protected $section_obj;	# received section
-	protected $button_import_propiedades;
+	protected $button_import_properties;
 	
 
 

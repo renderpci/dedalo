@@ -961,16 +961,16 @@ class component_av extends component_media_common {
 
 
 			// target_filename. Save original file name in a component_input_text
-				$propiedades = $this->get_propiedades();
-				if (isset($propiedades->target_filename)) {
+				$properties = $this->get_properties();
+				if (isset($properties->target_filename)) {
 
 					$current_section_id  = $this->get_parent();
 					$target_section_tipo = $this->get_section_tipo();
 
-					$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
+					$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
 					$component_target_filename 	= component_common::get_instance(
 																		$modelo_name_target_filename,
-																		$propiedades->target_filename,
+																		$properties->target_filename,
 																		$current_section_id,
 																		'edit',
 																		DEDALO_DATA_NOLAN,

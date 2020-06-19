@@ -44,7 +44,7 @@ abstract class component_common extends common {
 		# parent section obj (optional, util for component_av...)
 		public $section_obj;
 
-		# referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (propiedades) - aditional to referenced component tipo (TR)- )
+		# referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (properties) - aditional to referenced component tipo (TR)- )
 		public $referenced_section_tipo;
 
 		# CACHE COMPONENTS INTANCES
@@ -322,8 +322,8 @@ abstract class component_common extends common {
 		// lang : Check lang again after structure data is loaded
 		// Establecemos el lenguaje preliminar a partir de la carga de la estructura
 			if ($this->traducible==='no') {
-				$propiedades = $this->get_propiedades();
-				if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+				$properties = $this->get_properties();
+				if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 					# Allow tool lang on non translatable components
 				}else{
 					# Force nolan
@@ -350,17 +350,17 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATO_DEFAULT
-	* Set dato default when propiedades->dato_default exists and current component dato is empty
-	* propiedades are loaded always (structure data) at begining of build component. Because this
+	* Set dato default when properties->dato_default exists and current component dato is empty
+	* properties are loaded always (structure data) at begining of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool true
 	*/
 	private function set_dato_default() {
 
-		# propiedades is object or null
-		$propiedades = $this->get_propiedades();
+		# properties is object or null
+		$properties = $this->get_properties();
 
-		if(isset($propiedades->dato_default)) {
+		if(isset($properties->dato_default)) {
 
 			# MATRIX DATA : Load matrix data
 			$this->load_component_dato();
@@ -368,7 +368,7 @@ abstract class component_common extends common {
 			$dato = $this->dato;
 			if (empty($dato)) {
 
-				$dato_default = $propiedades->dato_default;
+				$dato_default = $properties->dato_default;
 
 				$this->set_dato($dato_default);
 
@@ -378,7 +378,7 @@ abstract class component_common extends common {
 
 				# INFO LOG
 				if(SHOW_DEBUG===true) {
-					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'propiedades': ".json_encode($propiedades->dato_default);
+					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'properties': ".json_encode($properties->dato_default);
 					debug_log(__METHOD__.$msg);
 				}
 
@@ -808,7 +808,7 @@ abstract class component_common extends common {
 	*/
 	public function propagate_to_observers() {
 		// get all observers defined in proporties
-		$properties = $this->get_propiedades();
+		$properties = $this->get_properties();
 		// if the component don't has observers stop the process.
 		if(!isset($properties->observers)){
 			return;
@@ -841,7 +841,7 @@ abstract class component_common extends common {
 
 		// create the observer component
 		$RecordObj_dd = new RecordObj_dd($observer->component_tipo);
-		$properties = $RecordObj_dd->get_propiedades(true);
+		$properties = $RecordObj_dd->get_properties(true);
 
 		$ar_observe = $properties->observe;
 
@@ -1021,9 +1021,9 @@ abstract class component_common extends common {
 		# Default tools
 		$ar_tools_name = $this->ar_tools_name;
 
-		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->ar_tools_name)) {
-			foreach ((array)$propiedades->ar_tools_name as $current_name => $obj_tool) {
+		$properties = $this->get_properties();
+		if (isset($properties->ar_tools_name)) {
+			foreach ((array)$properties->ar_tools_name as $current_name => $obj_tool) {
 				$ar_tools_name[] = $current_name;
 			}
 		}
@@ -1236,13 +1236,13 @@ abstract class component_common extends common {
 		$start_time = microtime(1);
 
 		switch (true) {
-			case isset($this->propiedades->filtered_by_search_dynamic) || isset($this->propiedades->filtered_by_search):
+			case isset($this->properties->filtered_by_search_dynamic) || isset($this->properties->filtered_by_search):
 
 				$filter = [];
-				if(isset($this->propiedades->filtered_by_search_dynamic)){
-					$filter = $this->parse_search_dynamic($this->propiedades->filtered_by_search_dynamic);
+				if(isset($this->properties->filtered_by_search_dynamic)){
+					$filter = $this->parse_search_dynamic($this->properties->filtered_by_search_dynamic);
 				}else{
-					$filter = json_decode( json_encode($this->propiedades->filtered_by_search));
+					$filter = json_decode( json_encode($this->properties->filtered_by_search));
 				}
 
   				$target_section_tipo = $this->get_ar_target_section_tipo();
@@ -1368,8 +1368,8 @@ abstract class component_common extends common {
 			$result[] = $item;
 		}
 		# Sort result for easy user select
-			if(isset($this->propiedades->sort_by)){
-				$custom_sort = reset($this->propiedades->sort_by); // Only one at this time
+			if(isset($this->properties->sort_by)){
+				$custom_sort = reset($this->properties->sort_by); // Only one at this time
 				if ($custom_sort->direction==='DESC') {
 					usort($result, function($a,$b) use($custom_sort){
 						return strnatcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
@@ -1491,9 +1491,9 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DIFFUSION_OBJ
-	* @param stdClass Object $propiedades
+	* @param stdClass Object $properties
 	*/
-	public function get_diffusion_obj( $propiedades ) {
+	public function get_diffusion_obj( $properties ) {
 
 		# Build object
 		$diffusion_obj = new diffusion_component_obj();
@@ -1530,7 +1530,7 @@ abstract class component_common extends common {
 	/**
 	* GET_STATS_VALUE_RESOLVED
 	*/
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
+	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) {
 
 		$caller_component = get_called_class();
 
@@ -2529,15 +2529,15 @@ abstract class component_common extends common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
+	public static function parse_stats_values($tipo, $section_tipo, $properties, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
 
-		if (isset($propiedades->valor_arguments)) {
+		if (isset($properties->valor_arguments)) {
 			$selector = 'dato';
 		}
 
 		// Search
-			if (isset($propiedades->stats_look_at)) {
-				$related_tipo = reset($propiedades->stats_look_at);
+			if (isset($properties->stats_look_at)) {
+				$related_tipo = reset($properties->stats_look_at);
 			}else{
 				$related_tipo = false; //$current_column_tipo;
 			}
@@ -2569,10 +2569,10 @@ abstract class component_common extends common {
 	        	$value = end($item);
 
 	        	// Override label with custom component parse
-	        		if (isset($propiedades->valor_arguments)) {
-	        			$c_component_tipo = isset($propiedades->stats_look_at) ? reset($propiedades->stats_look_at) : $tipo;
+	        		if (isset($properties->valor_arguments)) {
+	        			$c_component_tipo = isset($properties->stats_look_at) ? reset($properties->stats_look_at) : $tipo;
 						$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
-						$value 		 	  = $modelo_name::get_stats_value_with_valor_arguments($value, $propiedades->valor_arguments);
+						$value 		 	  = $modelo_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
 					}
 
 	        	$label = strip_tags(trim($value));
@@ -2640,7 +2640,7 @@ abstract class component_common extends common {
 
 		$dato 				= $this->get_dato();
 		$lang 				= $this->get_lang();
-		$properties 		= $this->get_propiedades();
+		$properties 		= $this->get_properties();
 		$with_lang_versions = $properties->with_lang_versions ?? false;
 
 		// fix changed_data
@@ -2729,7 +2729,7 @@ abstract class component_common extends common {
 	public function get_dato_paginated() {
 
 		// sort vars
-			$properties = $this->get_propiedades();
+			$properties = $this->get_properties();
 			$mode 		= $this->get_modo();
 
 		// dato full

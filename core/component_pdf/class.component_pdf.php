@@ -82,7 +82,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_ADITIONAL_PATH
-	* Calculate image aditional path from 'propiedades' json config.
+	* Calculate image aditional path from 'properties' json config.
 	*/
 	public function get_aditional_path() {
 
@@ -91,11 +91,11 @@ class component_pdf extends component_media_common {
 		#if(isset($ar_aditional_path[$this->pdf_id])) return $ar_aditional_path[$this->pdf_id];
 		if(isset($this->aditional_path)) return $this->aditional_path;
 
-		$propiedades = $this->get_propiedades();
+		$properties = $this->get_properties();
 
-		if (isset($propiedades->aditional_path)) {
+		if (isset($properties->aditional_path)) {
 
-			$component_tipo 	= $propiedades->aditional_path;
+			$component_tipo 	= $properties->aditional_path;
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
@@ -113,9 +113,9 @@ class component_pdf extends component_media_common {
 
 			$ar_aditional_path[$this->pdf_id] = $dato;
 
-			if(isset($propiedades->max_items_folder) && empty($dato)) {
+			if(isset($properties->max_items_folder) && empty($dato)) {
 
-				$max_items_folder  = $propiedades->max_items_folder;
+				$max_items_folder  = $properties->max_items_folder;
 				$parent_section_id = $this->parent;
 
 				$ar_aditional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
@@ -141,10 +141,10 @@ class component_pdf extends component_media_common {
 	public function get_initial_media_path() {
 		$component_tipo = $this->tipo;
 		$parent_section = section::get_instance($this->parent,$this->section_tipo);
-		$propiedades 	= $parent_section->get_propiedades();
+		$properties 	= $parent_section->get_properties();
 
-		if (isset($propiedades->initial_media_path->$component_tipo)) {
-			$this->initial_media_path = $propiedades->initial_media_path->$component_tipo;
+		if (isset($properties->initial_media_path->$component_tipo)) {
+			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
 			# Add / at begin if not exits
 			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
 				$this->initial_media_path = '/'.$this->initial_media_path;
@@ -194,7 +194,7 @@ class component_pdf extends component_media_common {
 	/**
 	* GET PDF ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
-	* TODO:  Se puede sobreescribir en propiedades con json ej. {"image_id":"dd851"} y se leerá del contenido del componente referenciado
+	* TODO:  Se puede sobreescribir en properties con json ej. {"image_id":"dd851"} y se leerá del contenido del componente referenciado
 	*/
 	public function get_pdf_id() {
 
@@ -680,7 +680,7 @@ class component_pdf extends component_media_common {
 			try {
 
 				// target_filename. Save original file name in a component_input_text if defined
-					$properties = $this->get_propiedades();
+					$properties = $this->get_properties();
 					if (isset($properties->target_filename)) {
 
 						$current_section_id  		= $this->get_section_id();

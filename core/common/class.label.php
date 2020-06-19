@@ -146,12 +146,12 @@
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
 			
 			$RecordObj_dd 	= new RecordObj_dd($current_terminoID);			
-			$propiedades 	= $RecordObj_dd->get_propiedades();
-			$vars_obj 		= json_decode($propiedades);
+			$properties 	= $RecordObj_dd->get_properties();
+			$vars_obj 		= json_decode($properties);
 
-			# No data in field 'propiedades'
+			# No data in field 'properties'
 			if(empty($vars_obj) || empty($vars_obj->name)) {
-				trigger_error("Term $current_terminoID with model 'label' dont't have properly configurated 'propiedades'. Please solve this ASAP");
+				trigger_error("Term $current_terminoID with model 'label' dont't have properly configurated 'properties'. Please solve this ASAP");
 				continue;
 			}			
 
@@ -173,7 +173,7 @@
 
 	/**
 	* GET_TERMINOID_FROM_LABEL
-	* Resolve terminoID from label propiedades property 'label'
+	* Resolve terminoID from label properties property 'label'
 	*/
 	public static function get_terminoID_from_label( $label ) {
 
@@ -191,12 +191,12 @@
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
 			
 			$RecordObj_dd 	= new RecordObj_dd($current_terminoID);			
-			$propiedades 	= $RecordObj_dd->get_propiedades();
-			$vars_obj 		= json_decode($propiedades);
+			$properties 	= $RecordObj_dd->get_properties();
+			$vars_obj 		= json_decode($properties);
 
-			# No data in field 'propiedades'
+			# No data in field 'properties'
 			if(empty($vars_obj) || empty($vars_obj->name)) {
-				trigger_error("Term $current_terminoID with model 'label' dont't have properly configurated 'propiedades'. Please solve this ASAP");
+				trigger_error("Term $current_terminoID with model 'label' dont't have properly configurated 'properties'. Please solve this ASAP");
 				continue;
 			}			
 
