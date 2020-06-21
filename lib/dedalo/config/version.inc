@@ -1770,6 +1770,10 @@
 		Fix search 'get_components_from_section' error on show nested section_group_div / tab components in filter selectionable list
 		
 
+	Valencia 21-06-2020 5.5.61
+		Added properties column to manage jer_dd structure table
+
+
 
 
 	WORK IN PROGRESS
@@ -1791,12 +1795,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.60';
+	$DEDALO_VERSION = '5.5.61';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '16-06-2020');
+	define('DEDALO_BUILD'	, '21-06-2020');
 
 
 	/*

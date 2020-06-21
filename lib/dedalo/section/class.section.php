@@ -665,10 +665,10 @@ class section extends common {
 	*/
 	public function set_component_relation_dato( $component_obj ) {
 
-		$component_tipo 		= $component_obj->get_tipo();
-		$component_dato 		= $component_obj->get_dato();
-		$relation_type 		 	= $component_obj->get_relation_type();
-		$from_component_tipo 	= $component_tipo;
+		$component_tipo			= $component_obj->get_tipo();
+		$component_dato			= $component_obj->get_dato();
+		$relation_type			= $component_obj->get_relation_type();
+		$from_component_tipo	= $component_tipo;
 
 		# Remove all previous locators of current component tipo
 		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
@@ -686,7 +686,7 @@ class section extends common {
 				$add_relation = $this->add_relation( $current_locator, 'relations' );
 				// If something fail, advise
 				if($add_relation===false) {
-					debug_log(__METHOD__." ERROR ON ADD LOCATOR:  ".to_string($current_locator), logger::ERROR);
+					debug_log(__METHOD__." ERROR ON ADD RELATION:  ".to_string($current_locator), logger::ERROR);
 					#$result = false;
 				}
 			}
@@ -743,10 +743,10 @@ class section extends common {
 		}
 
 		return array(
-				'top_tipo' 				=> $top_tipo,
-				'portal_section_tipo' 	=> $portal_section_tipo,
-				'portal_tipo' 			=> $portal_tipo
-				);
+			'top_tipo'				=> $top_tipo,
+			'portal_section_tipo'	=> $portal_section_tipo,
+			'portal_tipo'			=> $portal_tipo
+		);
 	}#end build_section_locator
 
 

@@ -13,7 +13,7 @@ class lang {
  
 	/**
 	* RESOLVE
-	* Resolve request lag tld in requested language
+	* Resolve request lang tld in requested language
 	* For example: resolves "Spanish" from $lang_tld='lg-spa', $lang='lg-eng'
 	* or "Español" from $lang_tld='lg-spa', $lang='lg-spa'
 	* @param string $lang_tld
@@ -85,35 +85,36 @@ class lang {
 	*/
 	public static function get_lang_locator_from_code( $code ) {
 		
-		$result 	 = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
+		$result = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
 		if (!isset($result->section_id)) {
 			# Temporal cath error for import v4.0.15 to v4.5.0
 			# When import hierarchy, langs are not imported yet (langs are insise hierarchies)
 			# Remove this catch in next versions
 			switch ($lang) {
-				case 'lg-eng':	$section_id = 5101;		break;
-				case 'lg-spa':	$section_id = 17344;	break;				
-				case 'lg-cat':	$section_id = 3032;		break;
-				case 'lg-ell':	$section_id = 5037;		break;
-				case 'lg-deu':	$section_id = 4253;		break;
-				case 'lg-vlca':	$section_id = 20155;	break;
-				case 'lg-fra':	$section_id = 5450;		break;
-				case 'lg-eus':	$section_id = 5223;		break;
-				case 'lg-por':	$section_id = 14895;	break;
-				case 'lg-ara':	$section_id = 841;		break;
-				case 'lg-rus':	$section_id = 15862;	break;				
-				case 'lg-ita':	$section_id = 7466;		break;
+				case 'lg-eng'	:	$section_id = 5101;		break;
+				case 'lg-spa'	:	$section_id = 17344;	break;
+				case 'lg-cat'	:	$section_id = 3032;		break;
+				case 'lg-ell'	:	$section_id = 5037;		break;
+				case 'lg-deu'	:	$section_id = 4253;		break;
+				case 'lg-vlca'	:	$section_id = 20155;	break;
+				case 'lg-fra'	:	$section_id = 5450;		break;
+				case 'lg-eus'	:	$section_id = 5223;		break;
+				case 'lg-por'	:	$section_id = 14895;	break;
+				case 'lg-ara'	:	$section_id = 841;		break;
+				case 'lg-rus'	:	$section_id = 15862;	break;
+				case 'lg-ita'	:	$section_id = 7466;		break;
 				default:
 					break;
 			}
 		}else{
 			# Normal case
-			$section_id  = $result->section_id;
+			$section_id = $result->section_id;
 		}		
 
 		$locator = new locator();
 			$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);
-			$locator->set_section_id($section_id);		
+			$locator->set_section_id($section_id);
+			$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
 		return (object)$locator;
 	}//end get_lang_locator_from_code
