@@ -4,6 +4,10 @@
 
 *Dédalo*
 
+**IMPORTANT: V6 ontology compatibility for V4 and V5**
+*Starting today, 21-05-2020, the ontology in V4 and V5 need to be update with a new column into the "jer_dd" table named "properties", for compatibility with the upcoming V6, this new column will not affect v4 or V5 normal function but the new exported ontologies files from master will include this column in copy files. If you don't add this column to jer_dd, Dédalo will can't import the new files and you will can lost the ontology data, although you can re-build jer_dd making the import process manually.
+Read the update V5.6.0*
+
 **ATENTION: New v6_developer branch is added, the v6 is in alpha state, the deverloper branch is freeze for new features and only update for bugs or errors**
 
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 

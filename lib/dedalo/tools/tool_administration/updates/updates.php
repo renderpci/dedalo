@@ -6,6 +6,47 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=560; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 6;
+	$updates->$v->version_minor 	 = 0;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 1;
+	$updates->$v->update_from_minor  = 4;
+
+
+	$alert 				 = new stdClass();
+	$alert->notification = 'Attention. Key update. The ontology structure will be updated with new column for V6 compatibility! 
+								<br> Do not update the ontology, "Update structure" link above, before update to 5.6.0 version. You can lost the ontology data.';
+	$alert->command 	 = 'Follow this steps:
+							<br> 1 - Dédalo version. Verify that you are running version code >= 5.5.59 (if not, update to it).
+							<br> 2 - Backup. Make a complete DB backup and make sure is finished and reliable (you can use "Make backup" link above)
+							<br> 3 - Run update.
+							<br> 4 - Verify that the ontology has the new "properties" column in "jer_dd" table.
+							<br> If the column exist you can update the ontology with the link above. "Update structure".
+							<br><br><hr> You can do this update manually in SQL with the command:
+							<br> ALTER TABLE "jer_dd" ADD "properties" jsonb NULL;.
+							<br><hr><br> <b>IMPORTANT</b>
+							<br> Starting today 21-06-2020, the ontology files will be incompatible with the jer_dd columns, if you update the ontology before run this update you will need re-import the ontology data manually, because you can not access to this administrator tool.
+							';
+	$updates->$v->alert_update[] 	= $alert;
+
+
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+
+			ALTER TABLE \"jer_dd\" ADD IF NOT EXISTS \"properties\" jsonb NULL;
+
+			");
+
+
+
+
 $v=514; #####################################################################################
 $updates->$v = new stdClass();
 
