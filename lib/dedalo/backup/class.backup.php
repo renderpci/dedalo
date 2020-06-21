@@ -284,7 +284,7 @@ abstract class backup {
 
 		if (!file_exists($path_file)) {
 			throw new Exception("Error Processing Request. File $path_file not found", 1);
-		}
+		}		
 
 		$command_history = array();
 
@@ -293,6 +293,30 @@ abstract class backup {
 		switch ($table) {
 
 			case 'jer_dd':
+				// verify target table columns
+					$check_column_name	= 'properties';
+					$strQuery			= "SELECT column_name FROM information_schema.columns WHERE table_name='jer_dd' and column_name='$check_column_name'";
+					$result				= JSON_RecordDataBoundObject::search_free($strQuery);
+					if(!$result) {
+						$msg = "Failed Search column_name '$check_column_name'. Error on exec sql query. Please contact with your admin (3)";
+						if(SHOW_DEBUG===true) {
+							throw new Exception($msg, 1);
+						}
+						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+						return false;
+					}
+					while($rows = pg_fetch_assoc($result)) {
+						$found_column_name = $rows['column_name'];
+					}
+					if (empty($found_column_name)) {
+						$msg = "Column '$check_column_name' not found. Please update your Dédalo version or manually add column '$check_column_name' to table 'jer_dd'";
+						if(SHOW_DEBUG===true) {
+							// throw new Exception($msg, 1);
+						}
+						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+						return false;
+					}
+
 				# DELETE . Remove previous records
 				#$strQuery  = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$tld}%'; "; #pg_query(DBi::_getConnection(), $strQuery);
 				$command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
