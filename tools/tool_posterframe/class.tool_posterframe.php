@@ -62,14 +62,14 @@ class tool_posterframe extends tool_common {
 
 		foreach ($ar_portals_tipo as $portal_tipo) {
 
-			$RecordObj_dd = new RecordObj_dd($portal_tipo);
-			$properties  = $RecordObj_dd->get_properties();
+			$RecordObj_dd	= new RecordObj_dd($portal_tipo);
+			$properties		= $RecordObj_dd->get_properties();
 			if ($properties && isset($properties->identifying_image)) {
-				return array('section_id' 		=> $section_id,
-							 'section_tipo' 	=> $section_tipo,
-							 'component_portal' => $portal_tipo,
-							 'component_image'  => $properties->identifying_image
-							 );
+				return array('section_id'		=> $section_id,
+							'section_tipo'		=> $section_tipo,
+							'component_portal'	=> $portal_tipo,
+							'component_image'	=> $properties->identifying_image
+						);
 				break;
 			}
 		}

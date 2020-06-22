@@ -2936,15 +2936,9 @@ class section extends common {
 		$section_map = null;
 		if( isset($ar_children[0]) ) {
 
-			$tipo 			= $ar_children[0];
-			$RecordObj_dd 	= new RecordObj_dd($tipo);
-			$properties 	= $RecordObj_dd->get_properties();
-
-			if ($section_map  = json_decode($properties)) {
-				$section_map  = (object)$section_map;
-			}else{
-				$section_map  = null;
-			}
+			$tipo			= $ar_children[0];
+			$RecordObj_dd	= new RecordObj_dd($tipo);
+			$section_map	= $RecordObj_dd->get_properties() ?? null;
 		}
 		# Store in cache for speed
 		$section_map_cache[$section_tipo] = $section_map;

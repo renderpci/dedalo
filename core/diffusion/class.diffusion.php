@@ -293,7 +293,6 @@ abstract class diffusion  {
 		foreach ($diffusion_domains as $current_tipo) {
 
 			$current_name = RecordObj_dd::get_termino_by_tipo($current_tipo,null,true);
-
 			if($current_name===$diffusion_domain_name) {
 
 				#
@@ -301,9 +300,9 @@ abstract class diffusion  {
 				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
 				foreach ($ar_childrens as $current_children) {
 
-				 	$RecordObj_dd = new RecordObj_dd($current_children);
-					$properties  = json_decode( $RecordObj_dd->get_properties() );
-						#dump($properties, ' properties '.$current_children);
+					$RecordObj_dd	= new RecordObj_dd($current_children);
+					$properties		= $RecordObj_dd->get_properties();
+					#dump($properties, ' properties '.$current_children);
 
 					if ($properties && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
@@ -620,7 +619,7 @@ abstract class diffusion  {
 
 		// Diffusion element (current column/field)
 			$diffusion_term  = new RecordObj_dd($tipo);
-			$properties 	 = $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
+			$properties 	 = $diffusion_term->get_properties();	# Format: {"data_to_be_used": "dato"}
 			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// Component

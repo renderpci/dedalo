@@ -368,16 +368,15 @@ abstract class common {
 		# define('DEDALO_TABLES_LIST_TIPO', 'dd627'); // Matrix tables box elements
 		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
 		foreach ($ar_children_tables as $table_tipo) {
-			$RecordObj_dd = new RecordObj_dd( $table_tipo );
-			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
+			$RecordObj_dd	= new RecordObj_dd( $table_tipo );
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
 			if ($modelo_name!=='matrix_table') {
 				continue;
 			}
-			if( $properties = json_decode($RecordObj_dd->get_properties()) ) {
-				if (property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
-					$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-				}
-			}
+			$properties = $RecordObj_dd->get_properties();		
+			if (property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
+				$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			}			
 		}
 
 		if (empty($ar_tables)) {
@@ -2289,7 +2288,7 @@ abstract class common {
 			// }
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
-		$properties		= $RecordObj_dd->get_properties(true);
+		$properties		= $RecordObj_dd->get_properties();
 		$limit			= ($mode!=='list') ? 1 : 10;
 
 		$request_config_parsed = [];
@@ -2752,7 +2751,7 @@ abstract class common {
 		$tipo 				= $this->tipo;
 		$is_component 		= strpos($model, 'component_')===0;
 		$translatable 		= $this->traducible;
-		$properties 		= $this->get_properties(true);
+		$properties 		= $this->get_properties();
 		$with_lang_versions = isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
 		$tools = [];
