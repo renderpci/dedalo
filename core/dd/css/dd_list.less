@@ -1,4 +1,4 @@
-
+@properties_bg_color : #1b531f;
 
 
 #wrapGeneral {
@@ -206,18 +206,25 @@ select {
 .divLineasInfo pre {
 	background-color: #e9dd9f;
 	opacity: 0.8;
+	border-radius: 3px;
 }
-// properties
-.divLineasInfo.div_properties pre {
-		background-color: #3b8858;
-		opacity: 0.8;
+
+
+
+// v6 properties
+	// button 'P'
+	.cuadroU.btn_properties {
+		background-color: @properties_bg_color;
 		color: #ffffff;
-		border-radius: 3px;
-}
-.cuadroU.btn_properties {
-	background-color: #3b8858;
-	color: #ffffff;
-}
+		opacity: 0.8;
+	}
+	// json viewer div
+	.divLineasInfo.div_properties pre {
+		background-color: @properties_bg_color;	
+		color: #ffffff;	
+	}	
+
+
 
 
 .div_termino {

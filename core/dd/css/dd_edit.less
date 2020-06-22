@@ -58,15 +58,15 @@ input, textarea {
 	width: 100%;
 }
 
+
+
 .wraper_propiedades {
 	width: 100%;
 	height: 62vh;
 	//height: 100%;
 	//background-color: #ccca76;
-	}
-	.wraper_propiedades .propiedades_label {
-	}
-	.wraper_propiedades .propiedades_textarea {
+
+	.propiedades_textarea {
 		width: 100%;
 		height: 240px;
 		margin-top: 4px;
@@ -75,8 +75,13 @@ input, textarea {
 		color: #7f7f7f;
 		width: 100%;
 	}
+}
+	
+	
 
-
+#propiedades_group {
+	display: none;
+}
 
 
 
@@ -141,7 +146,7 @@ input, textarea {
 
 /* JSON EDITOR
 --------------------------------------------- */
-#editor_json {
+.editor_json_container  {
 	// height:277px;
 	height:100%;
 	width:100%;
@@ -177,6 +182,15 @@ input, textarea {
 		width: 100%;
 		display: grid;
 		grid-template-columns: 1fr 1fr;
+	}
+}
+
+
+@properties_bg_color : #3b8858;
+
+#properties_editor_json {
+	.jsoneditor-menu {
+		background-color: @properties_bg_color;
 	}
 }
 
