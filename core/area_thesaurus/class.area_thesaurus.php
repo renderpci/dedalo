@@ -23,18 +23,19 @@ class area_thesaurus extends area_common {
 	* GET_SECTION_TIPO
 	* @return array $section_tipo
 	*/
-		// public function get_section_tipo() {
+	public function get_section_tipo() {
 
-		// 	$hierarchy_sections = $this->get_hierarchy_sections(); // $this->get_data_items();
+		// $hierarchy_sections	= $this->get_hierarchy_sections(); // $this->get_data_items();		
+		// $section_tipo		= array_map(function($item){
 
-		// 	$section_tipo = array_map(function($item){
+		// 	return $item->target_section_tipo;
 
-		// 		return $item->target_section_tipo;
+		// }, $hierarchy_sections);
 
-		// 	}, $hierarchy_sections);
+		$section_tipo = 'dd100';
 
-		// 	return $section_tipo;
-		// }//end get_section_tipo
+		return $section_tipo;
+	}//end get_section_tipo
 
 
 

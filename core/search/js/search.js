@@ -83,7 +83,7 @@ search.prototype.init = async function(options) {
 		self.parent_node			= null
 		self.components_list		= {}
 		self.ar_instances			= []
-		self.sqo					= self.caller.dd_request.show.find(el => el.typo==='sqo')
+		self.sqo					= self.caller.dd_request.show.find(el => el.typo==='sqo');
 		self.source					= self.caller.dd_request.show.find(el => el.typo==='source')
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
 		self.limit					= self.sqo.limit || 10

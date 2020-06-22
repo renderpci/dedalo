@@ -6,11 +6,13 @@
 */
 class area extends area_common  {
 
+
 	static $ar_ts_children_all_areas_hierarchized;
 
 	# CHILDREN AREAS CRITERION
 	static $ar_children_include_modelo_name = array('area','section','section_tool');
 	static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
+
 
 
 	/**
@@ -38,7 +40,7 @@ class area extends area_common  {
 			$config_areas = self::get_config_areas();
 
 		// root_areas
-			$ar_root_areas 		= [];
+			$ar_root_areas		= [];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
@@ -103,6 +105,7 @@ class area extends area_common  {
 
 		return $areas;
 	}//end get_areas
+
 
 
 	/**
