@@ -206,19 +206,25 @@ select {
 .divLineasInfo pre {
 	background-color: #e9dd9f;
 	opacity: 0.8;
-}
-// properties
-.divLineasInfo.div_properties pre {
-	background-color: @properties_bg_color;
-	opacity: .8;
-	color: #ffffff;
 	border-radius: 3px;
 }
-.cuadroU.btn_properties {
-	background-color: @properties_bg_color;
-	color: #ffffff;
-	opacity: .8;
-}
+
+
+
+// v6 properties
+	// button 'P'
+	.cuadroU.btn_properties {
+		background-color: @properties_bg_color;
+		color: #ffffff;
+		opacity: 0.8;
+	}
+	// json viewer div
+	.divLineasInfo.div_properties pre {
+		background-color: @properties_bg_color;	
+		color: #ffffff;	
+	}	
+
+
 
 
 .div_termino {
