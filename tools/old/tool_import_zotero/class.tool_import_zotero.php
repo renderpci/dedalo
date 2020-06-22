@@ -429,7 +429,7 @@ class tool_import_zotero extends tool_common {
 				# properties : if default dato is set in 'properties', save component here
 				# Example: {"filtered_by":{"rsc235":[{"section_tipo":"rsc229","section_id":"2"}]}}
 				$RecordObj_dd = new RecordObj_dd($section_tipo);
-				$properties_current_setion = json_decode($RecordObj_dd->get_properties());
+				$properties_current_setion = $RecordObj_dd->get_properties();
 				if (isset($properties_current_setion->filtered_by)) {
 
 					$component_tipo	 		= key($properties_current_setion->filtered_by);

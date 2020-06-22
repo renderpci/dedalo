@@ -1375,7 +1375,7 @@ class hierarchy {
 
 			# relation map
 			$RecordObj_dd    = new RecordObj_dd($section_map_tipo);
-			$ar_properties  = json_decode($RecordObj_dd->get_properties());
+			$ar_properties  = $RecordObj_dd->get_properties();
 				#dump($ar_elements, ' ar_elements ++ '.to_string());
 
 			$ar_elements = (array)$ar_properties;

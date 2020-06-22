@@ -188,7 +188,7 @@ class diffusion_sql extends diffusion  {
 					#
 					# FIELD
 					$RecordObj_dd 	= new RecordObj_dd($curent_children_tipo);
-					$properties 	= json_decode($RecordObj_dd->get_properties());
+					$properties 	= $RecordObj_dd->get_properties();
 						#dump($properties, ' properties');
 
 					switch (true) {
@@ -676,7 +676,7 @@ class diffusion_sql extends diffusion  {
 						#default: # Normal field case
 
 							$RecordObj_dd 	= new RecordObj_dd($curent_children_tipo);
-							$properties 	= json_decode($RecordObj_dd->get_properties());
+							$properties 	= $RecordObj_dd->get_properties();
 								#dump($properties, ' properties '.$modelo_name );
 
 							switch (true) { # DISCRIMINE BY properties
@@ -2159,7 +2159,7 @@ class diffusion_sql extends diffusion  {
 					$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
 
 					$RecordObj_dd = new RecordObj_dd($current_table_tipo);
-					$properties  = json_decode($RecordObj_dd->get_properties());
+					$properties  = $RecordObj_dd->get_properties();
 					$thesaurus_ar_prefix = isset($properties->diffusion->thesaurus_ar_prefix) ? $properties->diffusion->thesaurus_ar_prefix : array();
 
 					$section_tipo = 'thesaurus';
