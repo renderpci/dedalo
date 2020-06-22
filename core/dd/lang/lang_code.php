@@ -10,7 +10,7 @@ $lang = $_SESSION['lang'] = tools::convert_d4_to_d3_lang(DEDALO_APPLICATION_LANG
 $lang_file = $lang;
 
 
-$lang_path = DEDALO_CORE_PATH . '/dd/lang/'.$lang_file.'.php';
+$lang_path = dirname(__FILE__) . '/'.$lang_file.'.php';
 
 
 # load lang file
@@ -24,4 +24,3 @@ if(file_exists($lang_path)) {
 	$msg .= " <br><a href=\"javascript:top.location='?lang=en';\"> Back </a> ";
 	die($msg);
 }
-?>
