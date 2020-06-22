@@ -29,4 +29,3 @@ if( strlen($termino)>2 ) {
 	echo 	$dd->existeEsteTermino($termino,$terminoID);
 }
 die();
-?>
