@@ -364,8 +364,8 @@ if($accion==='editTS') {
 	if(!$_POST) exit();
 					
 	# varibles recibidas obligatorias
-	$parentInicial 	= safe_xss($_POST['parentInicial']);
-	$parentPost 	= safe_xss($_POST['parent']);
+	$parentInicial	= safe_xss($_POST['parentInicial']);
+	$parentPost		= safe_xss($_POST['parent']);
 	$esdescriptor	= safe_xss($_POST['esdescriptor']);
 	$propiedades	= safe_xss($_POST['propiedades']);
 	$properties		= safe_xss($_POST['properties']);

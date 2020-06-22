@@ -1,7 +1,8 @@
 <?php
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+
 # Old lang vars
-require_once(DEDALO_CORE_PATH . '/dd/lang/lang_code.php');
+require_once(dirname(__FILE__) . '/lang/lang_code.php');
 
 /**
 * LOGIN
