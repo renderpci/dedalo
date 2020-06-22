@@ -6,12 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo DEDALO_ENTITY ?> DD Edit</title>
 <?php
-print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/general.css',null,false);
-print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/edit.css',null,false);
-print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_edit.css',null,false);
+// css
+	print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/general.css',null,false);
+	print css::build_tag(DEDALO_CORE_URL .'/dd/css/legacy/edit.css',null,false);
+	print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_edit.css',null,false);
 ?>
-
-<?php #print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php'); ?>
+<?php // print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php'); ?>
 <script type="text/javascript">
 <?php
 // $page_globals = new stdClass();
@@ -23,61 +23,57 @@ print css::build_tag(DEDALO_CORE_URL .'/dd/css/dd_edit.css',null,false);
 // 	$page_globals->dedalo_data_nolan 		= DEDALO_DATA_NOLAN;
 // 	# modo
 // 	$page_globals->modo 					= isset($modo) ? $modo : null;
-
 /*const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;*/
 ?>
 // vars
-const id = '<?php echo $id ?>',
-	terminoID = '<?php echo $terminoID ?>',
-	esdescriptor = '<?php echo $esdescriptor ?>',
-	parent = '<?php echo $parent;?>',
-	head = '<?php echo $head;?>',
-	debe_introducir_el_tesauro_title = '<?php echo msgJS($debe_introducir_el_tesauro_title) ?>',
-	nHijos = '<?php echo $nHijos;?>',
-	un_termino_con_hijos_title = '<?php echo msgJS($un_termino_con_hijos_title)?>',
-	hasRelation = '<?php echo $hasRelation ?>',
-	un_termino_con_descriptores_title	= '<?php echo msgJS($un_termino_con_descriptores_title)?>',
-	un_no_descriptor_ha_de_depender_title	= '<?php echo msgJS($un_no_descriptor_ha_de_depender_title) ?>',
-	seguro_que_quiere_desvincular_title	= '<?php echo msgJS($seguro_que_quiere_desvincular_title) ?>',
-	descriptor_title = '<?php echo msgJS($descriptor_title) ?>',
-	esta_seguro_de_eliminar_registro_1_title = '<?php echo msgJS($esta_seguro_de_eliminar_registro_1_title) ?>',
-	debe_introducir_title = '<?php echo msgJS($debe_introducir_title)?>';
-	padre_title = '<?php echo msgJS($padre_title);  ?>';
-
-const trsND = '#relTR,#hermanosTR,#hijosTR,#modeloTR,#usableIndexTR';
+	const id										= '<?php echo $id ?>'
+	const terminoID									= '<?php echo $terminoID ?>'
+	const esdescriptor								= '<?php echo $esdescriptor ?>'
+	const parent									= '<?php echo $parent;?>'
+	const head										= '<?php echo $head;?>'
+	const debe_introducir_el_tesauro_title			= '<?php echo msgJS($debe_introducir_el_tesauro_title) ?>'
+	const nHijos									= '<?php echo $nHijos;?>'
+	const un_termino_con_hijos_title				= '<?php echo msgJS($un_termino_con_hijos_title)?>'
+	const hasRelation								= '<?php echo $hasRelation ?>'
+	const un_termino_con_descriptores_title			= '<?php echo msgJS($un_termino_con_descriptores_title)?>'
+	const un_no_descriptor_ha_de_depender_title		= '<?php echo msgJS($un_no_descriptor_ha_de_depender_title) ?>'
+	const seguro_que_quiere_desvincular_title		= '<?php echo msgJS($seguro_que_quiere_desvincular_title) ?>'
+	const descriptor_title							= '<?php echo msgJS($descriptor_title) ?>'
+	const esta_seguro_de_eliminar_registro_1_title	= '<?php echo msgJS($esta_seguro_de_eliminar_registro_1_title) ?>'
+	const debe_introducir_title						= '<?php echo msgJS($debe_introducir_title)?>'
+	const padre_title								= '<?php echo msgJS($padre_title);  ?>'
+	const trsND										= '#relTR,#hermanosTR,#hijosTR,#modeloTR,#usableIndexTR'
 </script>
 <?php
-# JS
-print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php');
-#print js::build_tag(JQUERY_LIB_URL_JS);
-#print js::build_tag(JQUERY_UI_URL_JS);
-print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery.min.js');
-print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery-ui.min.js');
-#print js::build_tag(DEDALO_CORE_URL . '/common/js/common.js');
-#print js::build_tag(DEDALO_CORE_URL . '/login/js/login.js');
-print js::build_tag(DEDALO_CORE_URL . '/dd/inc/javascript.js');
-print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_common.js');
-print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
-
-# Aditional css / js
+// js
+	print js::build_tag(DEDALO_CORE_URL . '/common/js/enviroment.js.php');
+	#print js::build_tag(JQUERY_LIB_URL_JS);
+	#print js::build_tag(JQUERY_UI_URL_JS);
+	print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery.min.js');
+	print js::build_tag(DEDALO_CORE_URL . '/dd/jquery/dist/jquery-ui.min.js');
+	#print js::build_tag(DEDALO_CORE_URL . '/common/js/common.js');
+	#print js::build_tag(DEDALO_CORE_URL . '/login/js/login.js');
+	print js::build_tag(DEDALO_CORE_URL . '/dd/inc/javascript.js');
+	print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_common.js');
+	print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
+// Aditional css / js
 	print css::build_tag(DEDALO_CORE_URL . '/dd/jsoneditor/dist/jsoneditor.min.css');
 	print js::build_tag(DEDALO_CORE_URL . '/dd/jsoneditor/dist/jsoneditor.min.js');
-
 ?>
 </head>
-<body <?php /* onBeforeUnload="closeTesaurus()" */?>>
+<body>
 <div id="wrapGeneral">
+	<form name="form1" id="form1" method="post" onSubmit="return validar(this)">
+		<table class="table_edit">
 
-		<form name="form1" id="form1" method="post" onSubmit="return validar(this)" >
 
-			<table class="table_edit">
-
+			<!-- title -->
 				<tr>
 					<td align="right" nowrap class="topTDround"><?php echo "$editar_title $termino_title  <strong>$terminoID</strong> "?></td>
 				</tr>
 
 
-				<!-- OPCIONES PRINCIPALES -->
+			<!-- opciones principales -->
 				<tr>
 					<td>
 						<table class="table_opciones_principales" width="100%" border="0" cellspacing="2" cellpadding="2">
@@ -132,11 +128,9 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 						</table><!-- /table_opciones_principales -->
 				 </td>
 				</tr>
-				<!-- /OPCIONES PRINCIPALES -->
 
 
-
-				<!-- TERMINO Y TRADUCCIONES -->
+			<!-- termino y traducciones -->
 				<tr>
 					<td>
 						<table id="terminosTable" width="100%" border="0" cellpadding="0" cellspacing="0">
@@ -170,21 +164,21 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 						</table> <!-- /terminosTable -->
 					</td>
 				</tr>
-				<!-- /TERMINO Y TRADUCCIONES -->
 
 
-
-				<!-- INFORMACION -->
+			<!-- informacion -->
 				<tr>
 					<td class="td_header"> <?php echo $informacion_title ?></td>
 				</tr>
 
 
-				<!-- OBSERVACIONES -->
-				<?php echo $descriptors_tr_obs_html ?>
+			<!-- observaciones -->
+				<?php 
+					echo $descriptors_tr_obs_html;
+				?>
 
 
-				<!-- RELACIONES -->
+			<!-- relaciones -->
 				<tr>
 					<td>
 						<div class="div_wraper wraper_relations">
@@ -196,12 +190,10 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 							</div>
 						</div><!-- /div_wraper -->
 					</td>
-				</tr>
-				<!-- /INFORMACION -->
+				</tr>		
 
 
-
-				<!-- V5 Propiedades -->
+			<!-- V5 Propiedades -->
 				<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
 				<tr>
 					<td class="td_header" onClick="simpleToogleTBODY('propiedades_group',this);redimensionarVentana();" style="cursor:pointer">
@@ -233,17 +225,16 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 					</tr>
 				</tbody>
 				<?php } #if (SHOW_DEBUG) ?>
-				
+			
 
-
-				<!-- V6 properties-->
+			<!-- V6 properties-->
 				<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
 				<tr>
 					<td class="td_header" onClick="simpleToogleTBODY('properties_group',this);redimensionarVentana();" style="cursor:pointer">
 						V6 Properties <div class="flecha_close_tboby"></div>
 					</td>
 				</tr>
-				<tbody id="properties_group">					
+				<tbody id="properties_group">
 					<tr>
 						<td>
 							<div class="wraper_propiedades">
@@ -271,11 +262,29 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 					</tr>
 				</tbody>
 				<?php } #if (SHOW_DEBUG) ?>
-				
+			
+
+			<!-- hierarchie info -->
+				<tr class="row_border_bottom">
+					<td>       
+					 <table class="table_hierarchy_info">
+						<!-- PARENT : Dependiente de (padre) -->
+							<tr>
+							 <td align="right" nowrap  ><?php echo $dependiente_de_title ?> </td>
+							 <td align="center" nowrap ><?php echo $parentInicial = $parent ; ?></td>
+							 <td align="left" nowrap  >
+								<?php echo $cambiar_a_title ?>
+								<input name="parent" type="text" id="parent" style="width:90px; text-align:center" value="<?php echo $parent ?>" onFocus="myfocus(this)" onBlur="myblur(this)">
+								<span class="anotacionTexto">(<?php echo $al_cambiar_el_padre_title ?>)</span>
+							 </td>
+							</tr>
+
+					 </table><!-- /table_hierarchy_info -->
+					</td>
+				</tr>
 
 
-
-				<!-- SUBMIT -->
+			<!-- submit -->
 				<tr>
 					<td style="padding:10px; text-align:center">
 						<div class="form_buttons">
@@ -307,13 +316,10 @@ print js::build_tag(DEDALO_CORE_URL . '/dd/js/dd_edit.js');
 						</div><!-- /form_buttons -->
 					</td>
 				</tr>
-				 <!-- /SUBMIT -->
 
 
-			</table><!-- /table_edit -->
-		</form>
-
-
+		</table><!-- /table_edit -->
+	</form>
 </div><!-- wrapGeneral -->
 </body>
 </html>
