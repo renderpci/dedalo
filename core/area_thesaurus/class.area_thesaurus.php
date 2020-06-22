@@ -412,7 +412,7 @@ class area_thesaurus extends area_common {
 	* @return object $response
 	*/
 	public function search_thesaurus($search_query_object) {
-	dump($search_query_object, ' search_query_object ++ '.to_string());
+		dump($search_query_object, ' search_query_object ++ '.to_string());
 		$start_time=microtime(1);
 
 		$response = new stdClass();

@@ -2475,7 +2475,7 @@ abstract class common {
 				$request_config_item->search		= $show;
 				$request_config_item->select		= $show;
 				$request_config_item->show			= $show;
-
+dump($request_config_item, ' request_config_item ++ '.to_string());
 			$request_config_parsed = [$request_config_item];
 		}
 
