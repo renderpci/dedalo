@@ -362,6 +362,7 @@ if($accion==='deleteTS') {
 if($accion==='editTS') {
 	
 	if(!$_POST) exit();
+		dump($_POST, ' _POST ++ '.to_string());
 					
 	# varibles recibidas obligatorias
 	$parentInicial	= safe_xss($_POST['parentInicial']);
