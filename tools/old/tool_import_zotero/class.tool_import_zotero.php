@@ -14,8 +14,8 @@ define('TOOL_IMPORT_ZOTERO_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_PDF_FOLDER .
 
 
 class tool_import_zotero extends tool_common {
-	
-	
+
+
 	protected $section_obj;	# received section
 	protected $button_import_properties;	# used to store custom options (script path, etc.)
 	protected $valid_extensions;
@@ -28,7 +28,7 @@ class tool_import_zotero extends tool_common {
 		if ( get_class($section_obj) !== 'section' ) {
 			throw new Exception("Error Processing Request. Only sections are accepted in this tool", 1);
 		}
-		
+
 		# Fix current component/section
 		$this->section_obj  = $section_obj;
 
@@ -36,9 +36,9 @@ class tool_import_zotero extends tool_common {
 
 		# Fix modo
 		$this->modo = $modo;
-		
+
 		# Valid extensions
-		$this->valid_extensions = array('json');		
+		$this->valid_extensions = array('json');
 	}
 
 
@@ -50,7 +50,7 @@ class tool_import_zotero extends tool_common {
 		if (isset($_REQUEST['button_tipo']) && isset($_REQUEST['t']) ) {
 
 			$button_import_obj = new button_import( safe_xss($_REQUEST['button_tipo']), null, safe_xss($_REQUEST['t']) );
-			$properties 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_properties());
+			$properties 	   = $button_import_obj->RecordObj_dd->get_properties();
 			if (isset($properties->process_script)) {
 				if ( !include_once(DEDALO_CORE_PATH.$properties->process_script) ) {
 					throw new Exception("Error Processing Request. Error in button import zotero config. Wrong process_script path", 1);
@@ -64,15 +64,15 @@ class tool_import_zotero extends tool_common {
 
 		# If not already defined in custom import script, define here
 		if (!defined('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO')) {
-			
+
 			# BIBLIOGRAPHY DEDALO STANDAR TIPOS
 			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO'								, 'rsc137');
 			define('ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA' 								, 'rsc205');
 			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_FILTER'								, 'rsc148');
 			define('ZOTERO_SECTION_TIPO_SERIES_COLECCIONES'	  								, 'rsc212');	# Lista de valores Series / colecciones
 			define('ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES' 								, 'rsc214');	# component_input_text in Lista de valores Series / colecciones
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION'			, 'rsc210');	# rsc210 Transcripción / descripción 
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION' 	, 'rsc260');	# rsc210 Transcripción / descripción 
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION'			, 'rsc210');	# rsc210 Transcripción / descripción
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION' 	, 'rsc260');	# rsc210 Transcripción / descripción
 			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO'							, 'rsc209');	# Bibliografía Documento [rsc209]
 			define('ZOTERO_SECTION_TIPO_LISTA_TIPOLOGIA_BIBLIOGRAFIA'						, 'dd810'); 	# dd810 Lista valores privada tipologia de bibliografía
 
@@ -83,9 +83,9 @@ class tool_import_zotero extends tool_common {
 			define('ZOTERO_COMPONENT_TIPO_AUTORIA_RESPONSABILIDAD' 		, 'rsc349'); # Autoría y responsabilidad
 			define('ZOTERO_COMPONENT_TIPO_RESUMEN' 						, 'rsc221'); # Resumen
 			define('ZOTERO_COMPONENT_TIPO_FECHA_ACTUALIZACION'			, 'rsc143'); # Fecha de actualización o revisión //accessed
-			define('ZOTERO_COMPONENT_TIPO_FECHA'						, 'rsc224'); # Fecha 
-			define('ZOTERO_COMPONENT_TIPO_NOTAS'						, 'rsc145'); # Notas 
-			define('ZOTERO_COMPONENT_TIPO_NUMERO_NORMALIZADO'			, 'rsc147'); # Número normalizado 
+			define('ZOTERO_COMPONENT_TIPO_FECHA'						, 'rsc224'); # Fecha
+			define('ZOTERO_COMPONENT_TIPO_NOTAS'						, 'rsc145'); # Notas
+			define('ZOTERO_COMPONENT_TIPO_NUMERO_NORMALIZADO'			, 'rsc147'); # Número normalizado
 			define('ZOTERO_COMPONENT_TIPO_FUENTE'						, 'rsc218'); # Fuente
 			define('ZOTERO_COMPONENT_TIPO_URL'							, 'rsc217'); # URL
 			define('ZOTERO_COMPONENT_TIPO_EDITOR'						, 'rsc219'); # Editor (Publisher)
@@ -99,7 +99,7 @@ class tool_import_zotero extends tool_common {
 		}
 	}//end set_up
 
-	
+
 
 
 	/**
@@ -115,12 +115,12 @@ class tool_import_zotero extends tool_common {
 
 		if(empty($button_tipo)) {
 			throw new Exception("Error Processing Request. button_tipo not found", 1);
-		}			
+		}
 
 		$button_import_obj = new button_import($button_tipo,null);
 			#dump($button_import_obj,'button_import_obj');
 
-		$properties = json_handler::decode($button_import_obj->RecordObj_dd->get_properties());
+		$properties = $button_import_obj->RecordObj_dd->get_properties();
 
 		# Fix properties
 		$this->button_import_properties = $properties;
@@ -152,7 +152,7 @@ class tool_import_zotero extends tool_common {
 		$dd_date = new dd_date();
 
 		#
-		# Date 
+		# Date
 		$branch_name = 'date-parts';
 
 		if (!is_object($zotero_date)) {
@@ -174,7 +174,7 @@ class tool_import_zotero extends tool_common {
 			return (string)'';
 		}
 
-		if(isset($branch[0][0])) $dd_date->set_year((int)$branch[0][0]); 
+		if(isset($branch[0][0])) $dd_date->set_year((int)$branch[0][0]);
 		if(isset($branch[0][1])) $dd_date->set_month((int)$branch[0][1]);
 		if(isset($branch[0][2])) $dd_date->set_day((int)$branch[0][2]);
 
@@ -208,7 +208,7 @@ class tool_import_zotero extends tool_common {
 		$ar_name=array();
 
 		foreach ($zotero_name as $key => $obj_value) {
-				
+
 			$nombre = '';
 
 			if (property_exists($obj_value, 'literal')) {
@@ -222,7 +222,7 @@ class tool_import_zotero extends tool_common {
 				if (property_exists($obj_value, 'given')) {
 					$nombre .= $obj_value->given;
 				}
-				
+
 				$apellido_madre = '';
 				if (property_exists($obj_value, 'family')) {
 					$apellido_madre .= $obj_value->family;
@@ -231,14 +231,14 @@ class tool_import_zotero extends tool_common {
 				$ar_name[] = $nombre.' '.$apellido_madre;
 			}
 
-						
+
 		}
 		#dump($name, ' name from '.print_r($zotero_name,true));
 
 		switch ($return_type) {
 			case 'string':
 				return (string)implode(', ', $ar_name);
-				break;			
+				break;
 			default:
 				return (array)$ar_name;
 				break;
@@ -275,7 +275,7 @@ class tool_import_zotero extends tool_common {
 		return (int)$first_page;
 	}#end zotero_page_to_first_page
 
-	
+
 
 	/**
 	* GET_DATA_MAP
@@ -294,7 +294,7 @@ class tool_import_zotero extends tool_common {
 			['tipo' => ZOTERO_COMPONENT_TIPO_FECHA_ACTUALIZACION 		, 'name' => 'accessed'],		# Fecha de actualización o revisión //accessed
 			['tipo' => ZOTERO_COMPONENT_TIPO_FECHA 						, 'name' => 'issued'],		# Fecha
 			['tipo' => ZOTERO_COMPONENT_TIPO_NOTAS 						, 'name' => 'note'],			# Notas
-			['tipo' => ZOTERO_COMPONENT_TIPO_NUMERO_NORMALIZADO 		, 'name' => 'ISSN'],			# Número normalizado al ISSN			
+			['tipo' => ZOTERO_COMPONENT_TIPO_NUMERO_NORMALIZADO 		, 'name' => 'ISSN'],			# Número normalizado al ISSN
 			['tipo' => ZOTERO_COMPONENT_TIPO_FUENTE 					, 'name' => 'source'],		# Fuente
 			['tipo' => ZOTERO_COMPONENT_TIPO_URL 						, 'name' => 'URL'],			# URL
 			['tipo' => ZOTERO_COMPONENT_TIPO_EDITOR 					, 'name' => 'publisher'],		# Editor (Publisher)
@@ -303,7 +303,7 @@ class tool_import_zotero extends tool_common {
 			['tipo' => ZOTERO_COMPONENT_TIPO_TITULO_CORTO 				, 'name' => 'shortTitle'],	# Titulo corto
 			['tipo' => ZOTERO_LABEL_NOMBRE_FICHERO_PDF  				, 'name' => 'call-number'],	# Nombre del fichero pdf (label)
 			['tipo' => ZOTERO_COMPONENT_PUBLICATION_PLACE  				, 'name' => 'publisher-place'],# Lugar de publicación
-			['tipo' => ZOTERO_COMPONENT_TIPO_NUMERO_NORMALIZADO 		, 'name' => 'ISBN'],			# Número normalizado al ISBN	
+			['tipo' => ZOTERO_COMPONENT_TIPO_NUMERO_NORMALIZADO 		, 'name' => 'ISBN'],			# Número normalizado al ISBN
 			['tipo' => ZOTERO_COMPONENT_TYPE_SERIE_NUMBER 				, 'name' => 'volume'], # number of volumen.
 			);
 			#dump($data_map, ' data_map ++ '.to_string()); die();
@@ -321,7 +321,7 @@ class tool_import_zotero extends tool_common {
 		if (defined('ZOTERO_TIPOLOGIA_FROM_ZOTERO_TYPE_MAP')) { // overwrite if you need change
 			$map = unserialize(ZOTERO_TIPOLOGIA_FROM_ZOTERO_TYPE_MAP);
 		}else{
-			# DEFAULTS : Using section_id 
+			# DEFAULTS : Using section_id
 			$map = array(
 				'book' 				=> 1,  # Book
 				'magazine' 			=> 2,  # magazine
@@ -347,7 +347,7 @@ class tool_import_zotero extends tool_common {
 				'newspaperArticle'	=> 29
 				);
 		}
-		
+
 		$result = isset($map[$type]) ? $map[$type] : null;
 
 		return $result;
@@ -356,8 +356,8 @@ class tool_import_zotero extends tool_common {
 
 
 	/**
-	* PROCESS_FILE 
-	* @param array $file_data 
+	* PROCESS_FILE
+	* @param array $file_data
 	* @param array $checkbox_values
 	* @return array $ar_response (array of stdClass objects with tracking info about process)
 	*/
@@ -370,7 +370,7 @@ class tool_import_zotero extends tool_common {
 		#dump($checkbox_values, ' checkbox_values');die();
 
 		foreach ( (array)$checkbox_values as $key => $checked) {
-			
+
 			if ($checked!==true) continue; # Skip non checked elements
 
 			#
@@ -411,7 +411,7 @@ class tool_import_zotero extends tool_common {
 				// Import pdf file based on id. Name your pdf like "zotero.org/groups/242232/items/B32XCQR3.pdf" for id http://zotero.org/groups/242232/items/B32XCQR3
 				$file_name = $zotero_id;
 				$import_pdf_file = self::import_pdf_file($zotero_obj, $section_id, $section_tipo, $file_name);
-			}			
+			}
 			#dump($import_pdf_file, ' import_pdf_file ++ '.to_string()); die();
 
 
@@ -423,7 +423,7 @@ class tool_import_zotero extends tool_common {
 				$parent  = $section_id;
 			}else{
 				# Record already exists
-				$parent  = $section_id;				
+				$parent  = $section_id;
 
 				# DEFAULT
 				# properties : if default dato is set in 'properties', save component here
@@ -431,9 +431,9 @@ class tool_import_zotero extends tool_common {
 				$RecordObj_dd = new RecordObj_dd($section_tipo);
 				$properties_current_setion = json_decode($RecordObj_dd->get_properties());
 				if (isset($properties_current_setion->filtered_by)) {
-					
+
 					$component_tipo	 		= key($properties_current_setion->filtered_by);
-						#dump($properties_current_setion," properties_current_setion - component_tipo: $component_tipo");					
+						#dump($properties_current_setion," properties_current_setion - component_tipo: $component_tipo");
 					$component_dato 		= $properties_current_setion->filtered_by->$component_tipo;
 					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 					$current_component 		= component_common::get_instance($component_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
@@ -442,7 +442,7 @@ class tool_import_zotero extends tool_common {
 						#dump($current_component,"current_component section_tipo:$section_tipo");
 				}
 			}*/
-			
+
 			if ($parent<1) throw new Exception("Error Processing Request. Section parent is empty", 1);
 
 			# Response track
@@ -466,7 +466,7 @@ class tool_import_zotero extends tool_common {
 				}else{
 					$component_tipo = reset($ar_filter_result)['tipo'];
 				}
-				
+
 				switch ($name) {
 					case 'id':
 						$current_modelo = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // component_input_text
@@ -489,7 +489,7 @@ class tool_import_zotero extends tool_common {
 						$tipologia_id = self::get_tipologia_from_zotero_type( $zotero_obj->$name ); # !! OJO !! La tipología NO se calcula. Es una tabla fija con array de section_id
 						if (empty($tipologia_id)) {
 							$ar_response[$parent]->$name = "<span class=\"warning\">- Ignored type $name (".to_string($value).") from zotero import process. This typology is not defined in Dedalo</span>";
-							error_log("WARNING : - Ignored typology $name (".to_string($value).") from zotero import process. This typology is not defined in Dedalo");						
+							error_log("WARNING : - Ignored typology $name (".to_string($value).") from zotero import process. This typology is not defined in Dedalo");
 						}else{
 							$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 							$component = component_common::get_instance($current_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
@@ -501,7 +501,7 @@ class tool_import_zotero extends tool_common {
 								$locator->set_type(DEDALO_RELATION_TYPE_LINK);		// Added 9-3-2018
 
 							$component->set_dato( array($locator) );
-							$component->Save();							
+							$component->Save();
 							$ar_response[$parent]->$name ="+ Saved $name value $tipologia_id ($value) from zotero import process";
 						}
 						break;
@@ -513,13 +513,13 @@ class tool_import_zotero extends tool_common {
 						}else{
 							# create a new record in list
 							$section_tipo_colecciones_series = ZOTERO_SECTION_TIPO_SERIES_COLECCIONES; # 'rsc212';  # Lista de valores Series / colecciones
-							$section_container_list = section::get_instance(null,$section_tipo_colecciones_series); 
+							$section_container_list = section::get_instance(null,$section_tipo_colecciones_series);
 							$section_id_list 		= (int)$section_container_list->Save();
 							$component_container_list = component_common::get_instance('component_input_text',ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES, $section_id_list, 'edit', DEDALO_DATA_LANG, $section_tipo_colecciones_series); # Colección / Serie (component_input_text)
-							
+
 							# Eliminamos comillas que no paran de dar problemas
 							$serie_name = str_replace(array("'",'"'), '', $zotero_obj->$name);
-							
+
 							$component_container_list->set_dato($serie_name);
 							$component_container_list->Save();
 						}
@@ -536,16 +536,16 @@ class tool_import_zotero extends tool_common {
 							$locator->set_from_component_tipo($component_tipo);  // Added 8-3-2018
 
 						$component->set_dato( array($locator) );
-						$component->Save();					
+						$component->Save();
 						$ar_response[$parent]->$name ="+ Saved $name value ". json_encode($locator)." from zotero import process";
-						
+
 						break;
-					
+
 					case 'author':
 						$ar_name   = (array)self::zotero_name_to_name( $zotero_obj->$name, 'array' );
 						$component = component_common::get_instance('component_input_text', $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 						$component->set_dato( $ar_name );
-						$component->Save();						
+						$component->Save();
 						$ar_response[$parent]->$name ="+ Saved $name value ".to_string($ar_name)." (".to_string($value).") from zotero import process";
 						break;
 
@@ -581,15 +581,15 @@ class tool_import_zotero extends tool_common {
 																	'edit',
 																	DEDALO_DATA_LANG,
 																	$section_tipo);
-						$current_value = $zotero_obj->$name;						
-						$current_value = array($current_value);	// Is array (component_input_text)					
+						$current_value = $zotero_obj->$name;
+						$current_value = array($current_value);	// Is array (component_input_text)
 						$component->set_dato( $current_value );
 						$component->Save();
 						$ar_response[$parent]->$name ="+ Saved $name value ".to_string($value)." from zotero import process";
 
 						# Save number typology too
 						$_isbn_value = '[{"type":"dd151","section_id":"1","section_tipo":"dd292","from_component_tipo":"rsc249"}]';
-						$_issn_value = '[{"type":"dd151","section_id":"2","section_tipo":"dd292","from_component_tipo":"rsc249"}]';						
+						$_issn_value = '[{"type":"dd151","section_id":"2","section_tipo":"dd292","from_component_tipo":"rsc249"}]';
 						if ($name==='ISBN') {
 							$value = json_decode($_isbn_value);
 						}else{
@@ -603,7 +603,7 @@ class tool_import_zotero extends tool_common {
 																	DEDALO_DATA_NOLAN,
 																	$section_tipo);
 						$component->set_dato( $value );
-						$component->Save();						
+						$component->Save();
 						break;
 
 					default:
@@ -652,10 +652,10 @@ class tool_import_zotero extends tool_common {
 		#debug_log(__METHOD__." Recived: parent:$parent, section_tipo:$section_tipo, name:$name ".to_string(), logger::DEBUG);
 
 		$ar_msg = [];
-		
-		# 
+
+		#
 		# 1 COMPONENT_PDF (ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO rsc209)
-		# Create component pdf to obtain target path of pdf file 
+		# Create component pdf to obtain target path of pdf file
 		$component_tipo = ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO;
 		$component_pdf 	= component_common::get_instance('component_pdf', $component_tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);	# Important: is translatable
 		#$component_pdf->Save();	# Force save to get counter
@@ -715,9 +715,9 @@ class tool_import_zotero extends tool_common {
 			$component->set_dato( $locator );
 			$component->Save();
 			$ar_msg[] ="- Saved transcription for revision: yes.<br>";
-		
-		}else{						
-		
+
+		}else{
+
 			$component_tipo = ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION;
 			$component 		= component_common::get_instance('component_text_area', $component_tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 			$component->set_dato( $pdf_file_text->result );
@@ -725,7 +725,7 @@ class tool_import_zotero extends tool_common {
 			$ar_msg[] ="+ Saved pdf text ".substr($pdf_file_text->result,0,160).".. as pdf transcription.<br>";
 		}
 
-		
+
 		$response->result 	= true;
 		$response->msg 		= implode("<br>", $ar_msg);
 
@@ -749,10 +749,10 @@ class tool_import_zotero extends tool_common {
 			$ar_parts 	= explode('/', $zotero_id);
 			$zotero_id  = end($ar_parts);
 		}
-		
+
 		$section_tipo   = ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;	 # rsc205
 		$tipo 			= ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO; # rsc137
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);			
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$code 			= pg_escape_string($zotero_id);
 
 		// JSON seach_query_object to search
@@ -813,10 +813,10 @@ class tool_import_zotero extends tool_common {
 	* @return int | null
 	*/
 	public static function get_section_id_from_zotero_container_title( $zotero_container_title ) {
-		
+
 		$section_tipo   = ZOTERO_SECTION_TIPO_SERIES_COLECCIONES;		# rsc212 	# Lista de valores Series / Colecciones
 		$tipo 			= ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES;		# rsc214 	# Series / Colecciones (component_input_text)
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);		
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$serie_name 	= pg_escape_string($zotero_container_title);
 
 		// JSON seach_query_object to search
@@ -836,7 +836,7 @@ class tool_import_zotero extends tool_common {
 		                        "modelo": "'.$modelo_name.'",
 		                        "name": "Series / Colecciones"
 		                    }
-		                ]		               
+		                ]
 		            }
 		        ]
 		    }
@@ -858,7 +858,7 @@ class tool_import_zotero extends tool_common {
 	}//end get_section_id_from_zotero_container_title
 
 
-	
+
 }//end class
 
 
