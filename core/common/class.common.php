@@ -230,7 +230,7 @@ abstract class common {
 			# properties : Always JSON decoded
 			#dump($this->RecordObj_dd->get_properties()," ");
 			$properties = $this->RecordObj_dd->get_properties();
-			$this->properties = !empty($properties) ? json_handler::decode($properties) : false;
+			$this->properties = !empty($properties) ? $properties : false;
 
 			# MATRIX_TABLE
 			#if(!isset($this->matrix_table))
@@ -831,9 +831,7 @@ abstract class common {
 		# Read string from database str
 		$properties = $this->RecordObj_dd->get_properties();
 
-		$properties_obj = json_handler::decode($properties);
-
-		return $properties_obj;
+		return $properties;
 	}//end get_properties
 
 

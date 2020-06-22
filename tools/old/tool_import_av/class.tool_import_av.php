@@ -19,8 +19,8 @@ define('TOOL_IMPORT_AV_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_AV_FOLDER .'/tem
 
 
 class tool_import_av extends tool_common {
-	
-	
+
+
 	protected $component_obj;	# received section
 	protected $button_import_properties;
 	#protected $process_script_folder;
@@ -28,7 +28,7 @@ class tool_import_av extends tool_common {
 
 
 	public function __construct($component_obj, $modo='button') {
-				
+
 		# Fix modo
 		$this->modo = $modo;
 
@@ -61,15 +61,15 @@ class tool_import_av extends tool_common {
 			$vars = array('button_tipo');
 				foreach($vars as $name) $$name = common::setVar($name);
 		}
-		
+
 
 		if(empty($button_tipo)) {
 			throw new Exception("Error Processing Request. button_tipo not found", 1);
-		}		
+		}
 
 		$button_import_obj = new button_import($button_tipo, null, $this->section_tipo);
 
-		$properties = json_handler::decode($button_import_obj->RecordObj_dd->get_properties());
+		$properties = $button_import_obj->RecordObj_dd->get_properties();
 
 		# Fix properties
 		$this->button_import_properties = $properties;
@@ -82,7 +82,7 @@ class tool_import_av extends tool_common {
 	* FIND_ALL_AV_FILES
 	* Read dir (can be accessible)
 	*/
-	public function find_all_av_files($dir, $recursive=false) {		
+	public function find_all_av_files($dir, $recursive=false) {
 
 		$ar_data = array();
 		try {
@@ -97,7 +97,7 @@ class tool_import_av extends tool_common {
 		if (!$root) {
 			return array();
 		}
-		
+
 		natsort($root);
 		foreach($root as $value) {
 
@@ -122,7 +122,7 @@ class tool_import_av extends tool_common {
 
 		# SORT ARRAY (By custom core function build_sorter)
 		#usort($ar_data, build_sorter('numero_recurso'));
-		
+
 		return $ar_data;
 	}
 
@@ -134,7 +134,7 @@ class tool_import_av extends tool_common {
 	* Extrae información de la imágen recibida usando una expresión regular para interpretar un patrón dado
 	* Devuelve un array con los datos extraidos
 	*/
-	function get_file_data( $dir, $file_name ) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/" 	
+	function get_file_data( $dir, $file_name ) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/"
 
 		$ar_data = array();
 		#$target_component_tipo = $this->button_import_properties->campo_destino;
@@ -144,36 +144,36 @@ class tool_import_av extends tool_common {
 		# REGEX
 		# Para cada caso será distinto oel patrón regex. Incluiremos la definición de la expresión regular al principio del script
 		# en formato tipo imagenes_mupreva : $regex = "/((\w+)-(\d*)).([a-zAZ]+)\z/";
-		$process=0; 
+		$process=0;
 		#require(DEDALO_CORE_PATH . $this->button_import_properties->process_script);
 		#$regex = "/((\w+)-(\d*)).([a-zAZ]+)\z/";
 
 
-		#if(empty($regex)) throw new Exception("Error Processing Request. Empty var regex in import script. Please define var in first line of script", 1);	
+		#if(empty($regex)) throw new Exception("Error Processing Request. Empty var regex in import script. Please define var in first line of script", 1);
 
 		if (!defined('IMPORT_VERIFY_FILE_NAME')) {
 			define('IMPORT_VERIFY_FILE_NAME', true);
 		}
-		
+
 
 		$nombre_fichero = pathinfo($file_name,PATHINFO_FILENAME);
 		$extension 		= pathinfo($file_name,PATHINFO_EXTENSION);
-		
+
 		# AR_DATA
 		$ar_data['dir_path'] 					= $dir; 				# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/
 		$ar_data['file_path'] 					= $dir.$file_name; 		# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
 		$ar_data['nombre_fichero'] 				= $nombre_fichero; 		# 04582_01_EsCuieram_Terracota_AD_ORIG
 		$ar_data['nombre_fichero_completo'] 	= $file_name; 			# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG
-		$ar_data['extension'] 					= $extension;			# JPG (respetamos mayúsculas/minúsculas)		
-		$ar_data['tamano_archivo'] 				= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB		
+		$ar_data['extension'] 					= $extension;			# JPG (respetamos mayúsculas/minúsculas)
+		$ar_data['tamano_archivo'] 				= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB
 		#$ar_data['imagen']['image_url'] 		= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
 		#$ar_data['imagen']['image_preview_url']	= DEDALO_CORE_URL . '/tools/tool_import_av/foto_preview.php?f='.$ar_data['file_path'];
-		
+
 		return $ar_data;
 	}
 
-	
-	
+
+
 	/**
 	* NUMERO_TO_LOCAL_PATH
 	* Usado para crear 'aditional_path' en archivos que agrupan sus archivos en subcarpetas tipo 45000/45100
@@ -190,25 +190,25 @@ class tool_import_av extends tool_common {
 			return false;
 		}
 
-		$ar_folder=array();		
-		
+		$ar_folder=array();
+
 		# Calcualmos cada una de las carpetas
 		#$numero=42136;
 		#$levels = 2;
-		for ($i=$levels; $i >= 1 ; $i--) { 
+		for ($i=$levels; $i >= 1 ; $i--) {
 			$n = pow(10, $i+1);
 			$ar_folder[$i] = floor($numero / $n) * $n;
 		}
 
 		# Creamos el path final
 		$path_final = '/'.implode('/', $ar_folder);
-	
+
 		return $path_final;
 	}
 
 
 
 
-	
+
 }#end class
 ?>

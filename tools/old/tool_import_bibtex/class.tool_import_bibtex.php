@@ -96,8 +96,8 @@ define('TOOL_IMPORT_BIBTEX_UPLOAD_URL'	, DEDALO_MEDIA_URL  . DEDALO_PDF_FOLDER .
 
 
 class tool_import_bibtex extends tool_common {
-	
-	
+
+
 	protected $section_obj;	# received section
 	protected $button_import_properties;	# used to store custom options (script path, etc.)
 	protected $valid_extensions;
@@ -110,7 +110,7 @@ class tool_import_bibtex extends tool_common {
 		if ( get_class($section_obj) !== 'section' ) {
 			throw new Exception("Error Processing Request. Only sections are accepted in this tool", 1);
 		}
-		
+
 		# Fix current component/section
 		$this->section_obj = $section_obj;
 
@@ -118,9 +118,9 @@ class tool_import_bibtex extends tool_common {
 
 		# Fix modo
 		$this->modo = $modo;
-		
+
 		# Valid extensions
-		$this->valid_extensions = array('bib','pdf');		
+		$this->valid_extensions = array('bib','pdf');
 	}
 
 
@@ -130,11 +130,11 @@ class tool_import_bibtex extends tool_common {
 	public static function set_up() {
 
 		$var_requested 		= common::get_request_var('button_tipo');
-		$var_requested_t	= common::get_request_var('t');		
+		$var_requested_t	= common::get_request_var('t');
 		if (!empty($var_requested) && !empty($var_requested_t) ) {
 
 			$button_import_obj = new button_import($var_requested, null, $var_requested_t);
-			$properties 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_properties());
+			$properties 	   = $button_import_obj->RecordObj_dd->get_properties();
 			if (isset($properties->process_script)) {
 				if ( !include_once(DEDALO_CORE_PATH.$properties->process_script) ) {
 					throw new Exception("Error Processing Request. Error in button import bibtex config. Wrong process_script path", 1);
@@ -148,15 +148,15 @@ class tool_import_bibtex extends tool_common {
 
 		# If not already defined in custom import script, define here
 		if (!defined('BIBLIO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA')) {
-			
+
 			# BIBLIOGRAPHY DEDALO STANDAR TIPOS
 			define('BIBLIO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA' 					, 'rsc205');
-			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO'					, 'rsc137');			
+			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO'					, 'rsc137');
 			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_FILTER'					, 'rsc148');
 			define('BIBLIO_SECTION_TIPO_SERIES_COLECCIONES'	  					, 'rsc212');	# Lista de valores Series / colecciones
-			define('BIBLIO_COMPONENT_TIPO_SERIES_COLECCIONES' 					, 'rsc214');	# component_input_text in Lista de valores Series / colecciones			
-			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION', 'rsc210');	# rsc210 Transcripción / descripción 
-			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION', 'rsc260');	# rsc210 Transcripción / descripción 
+			define('BIBLIO_COMPONENT_TIPO_SERIES_COLECCIONES' 					, 'rsc214');	# component_input_text in Lista de valores Series / colecciones
+			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION', 'rsc210');	# rsc210 Transcripción / descripción
+			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION', 'rsc260');	# rsc210 Transcripción / descripción
 			define('BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO'				, 'rsc209');	# Bibliografía Documento [rsc209]
 			define('BIBLIO_SECTION_TIPO_LISTA_TIPOLOGIA_BIBLIOGRAFIA'			, 'dd810'); 	# dd810 Lista valores privada tipologia de bibliografía
 			define('BIBLIO_COMPONENT_TIPO_DATOS_DE_PUBLICACION'					, 'rsc142');	# Toponimia. Lugar de publicación
@@ -167,7 +167,7 @@ class tool_import_bibtex extends tool_common {
 			define('BIBLIO_PERSONS_COMPONENT_TIPO_NAME' 						, 'rsc85');
 			define('BIBLIO_PERSONS_COMPONENT_TIPO_SURNAME' 						, 'rsc86');
 			define('BIBLIO_PERSONS_COMPONENT_TIPO_TYPOLOGY'						, 'rsc90');
-			
+
 			## DEDALO
 			define('BIBLIO_COMPONENT_TIPO_TIPOLOGIA_DE_BIBLIORAFIA' 			, 'rsc138'); # Tipología bibliográfica select (Nota: Establecer correspondencias tipo 'entry-encyclopedia' => 'Libro electrónico')
 			define('BIBLIO_COMPONENT_TIPO_TITULO' 								, 'rsc140'); # Título
@@ -176,10 +176,10 @@ class tool_import_bibtex extends tool_common {
 			define('BIBLIO_COMPONENT_TIPO_RESUMEN' 								, 'rsc221'); # Resumen
 			define('BIBLIO_COMPONENT_TIPO_EDITION'								, 'rsc141');# Edition
 			define('BIBLIO_COMPONENT_TIPO_FECHA_ACTUALIZACION'					, 'rsc143'); # Fecha de actualización o revisión //accessed
-			define('BIBLIO_COMPONENT_TIPO_FECHA'								, 'rsc224'); # Fecha 
-			define('BIBLIO_COMPONENT_TIPO_NOTAS'								, 'rsc145'); # Notas 
+			define('BIBLIO_COMPONENT_TIPO_FECHA'								, 'rsc224'); # Fecha
+			define('BIBLIO_COMPONENT_TIPO_NOTAS'								, 'rsc145'); # Notas
 			define('BIBLIO_COMPONENT_TIPO_NUMERO_NORMALIZADO'					, 'rsc147'); # Número normalizado
-			
+
 			define('BIBLIO_COMPONENT_TIPO_TYPE_OF_NUMERO_NORMALIZADO'			, 'rsc249'); # Tipo del Número normalizado, como 'issn', 'isbn', 'doi' ..
 			define('BIBLIO_COMPONENT_TIPO_DEPOSITO_LEGAL'						, 'rsc250'); # Depósito legal
 
@@ -207,8 +207,8 @@ class tool_import_bibtex extends tool_common {
 	* Parses bibex file or strig with a proper lubrary and result array with all elements
 	* @return array | null $result
 	*/
-	public static function parse_bibex($file=null, $string=null) {		
-		
+	public static function parse_bibex($file=null, $string=null) {
+
 		# parser lib
 		require(DEDALO_CORE_PATH.'/tools/tool_import_bibtex/lib/BibtexParser/BibtexParser.php');
 
@@ -222,12 +222,12 @@ class tool_import_bibtex extends tool_common {
 
 		# Decode latex chars to utf8 BEFORE send to parser lib
 		$string = latex::latex_decode( $string );
-		
+
 		# Parse as array
         $result = \AudioLabs\BibtexParser\BibtexParser::parse_string($string);
-		
+
 		return $result;
-		
+
 	}#end parse_bibex
 
 
@@ -239,7 +239,7 @@ class tool_import_bibtex extends tool_common {
 	* @return string $filenam
 	*/
 	public static function resolve_filename( $file_name_raw ) {
-		
+
 		$filename = null;
 
 		$path_parts = pathinfo($file_name_raw);
@@ -253,7 +253,7 @@ class tool_import_bibtex extends tool_common {
 			case 'pdf:pdf':
 				$filename = $path_parts['filename'] .'.pdf';
 				break;
-			
+
 			default:
 				$filename = $path_parts['basename'];
 				break;
@@ -266,7 +266,7 @@ class tool_import_bibtex extends tool_common {
 
 	}#end resolve_filename
 
-	
+
 
 	/**
 	* BIBEX_DATE_TO_DD_DATE
@@ -290,7 +290,7 @@ class tool_import_bibtex extends tool_common {
 		$dd_date = new dd_date();
 
 		#
-		# Date 
+		# Date
 		$branch_name = 'date-parts';
 		$branch		 = $bibex_date->$branch_name;
 		if ( !isset($branch[0][0]) ) {
@@ -298,7 +298,7 @@ class tool_import_bibtex extends tool_common {
 			return (string)'';
 		}
 
-		if(isset($branch[0][0])) $dd_date->set_year((int)$branch[0][0]); 
+		if(isset($branch[0][0])) $dd_date->set_year((int)$branch[0][0]);
 		if(isset($branch[0][1])) $dd_date->set_month((int)$branch[0][1]);
 		if(isset($branch[0][2])) $dd_date->set_day((int)$branch[0][2]);
 
@@ -329,7 +329,7 @@ class tool_import_bibtex extends tool_common {
 	* @return object $name_obj
 	*/
 	public static function biblio_name_to_name_obj( string $biblio_name ) {
-		
+
 		$name_obj = new stdClass();
 			$name_obj->name 	= null;
 			$name_obj->surname 	= null;
@@ -346,15 +346,15 @@ class tool_import_bibtex extends tool_common {
 				$name_obj->surname 	= addslashes(trim($biblio_name));
 				break;
 		}
-		
+
 		return $name_obj;
 
 	}#end biblio_name_to_name_obj
 
 
 
-	
-	
+
+
 
 	/**
 	* GET_DATA_MAP
@@ -374,7 +374,7 @@ class tool_import_bibtex extends tool_common {
 			'year'			=> BIBLIO_COMPONENT_TIPO_FECHA,						# Fecha
 			'annote'		=> BIBLIO_COMPONENT_TIPO_NOTAS,						# Notas
 			'isbn'			=> BIBLIO_COMPONENT_TIPO_NUMERO_NORMALIZADO, 		# Número normalizado. (NOTA: 'isbn' no es estándar, pero lo aceptaremos...) |number
-			'issn' 			=> BIBLIO_COMPONENT_TIPO_NUMERO_NORMALIZADO,		# Número normalizado			
+			'issn' 			=> BIBLIO_COMPONENT_TIPO_NUMERO_NORMALIZADO,		# Número normalizado
 			'journal'		=> BIBLIO_COMPONENT_TIPO_FUENTE,					# Fuente
 			'url'			=> BIBLIO_COMPONENT_TIPO_URL,						# URL
 			'publisher'		=> BIBLIO_COMPONENT_TIPO_EDITOR,					# Editor (Publisher)
@@ -396,9 +396,9 @@ class tool_import_bibtex extends tool_common {
 			#BIBLIO_COMPONENT_TIPO_FECHA_ACTUALIZACION 		=> 'accessed',		# Fecha de actualización o revisión //accessed
 			BIBLIO_COMPONENT_TIPO_FECHA 					=> 'year',			# Fecha
 			BIBLIO_COMPONENT_TIPO_NOTAS 					=> 'annote',		# Notas
-			
+
 			BIBLIO_COMPONENT_TIPO_NUMERO_NORMALIZADO 		=> 'isbn',			# Número normalizado. (NOTA: 'isbn' no es estándar, pero lo aceptaremos...) |number
-			BIBLIO_COMPONENT_TIPO_NUMERO_NORMALIZADO 		=> 'issn',			
+			BIBLIO_COMPONENT_TIPO_NUMERO_NORMALIZADO 		=> 'issn',
 
 			BIBLIO_COMPONENT_TIPO_FUENTE 					=> 'journal',		# Fuente
 			BIBLIO_COMPONENT_TIPO_URL 						=> 'url',			# URL
@@ -406,8 +406,8 @@ class tool_import_bibtex extends tool_common {
 			BIBLIO_COMPONENT_TIPO_NUMERO_PAGINAS 			=> 'pages',			# Nº de paginas del artículo
 			BIBLIO_COMPONENT_TIPO_NUMERO_DE_EJEMPLAR 		=> 'number',		# Nº de Ejemplar
 			#BIBLIO_COMPONENT_TIPO_TITULO_CORTO 			=> 'shortTitle',	# Titulo corto
-			BIBLIO_LABEL_NOMBRE_FICHERO_PDF  				=> 'file',			# Nombre del fichero pdf (label)	
-			BIBLIO_COMPONENT_TIPO_EDITION 					=> 'edition',		# Nombre de la edición			
+			BIBLIO_LABEL_NOMBRE_FICHERO_PDF  				=> 'file',			# Nombre del fichero pdf (label)
+			BIBLIO_COMPONENT_TIPO_EDITION 					=> 'edition',		# Nombre de la edición
 			);
 			*/
 	}//end get_data_map
@@ -423,7 +423,7 @@ class tool_import_bibtex extends tool_common {
 		if (defined('BIBLIO_TIPOLOGIA_FROM_BIBLIO_TYPE_MAP')) { // overwrite if you need change
 			$map = unserialize(BIBLIO_TIPOLOGIA_FROM_BIBLIO_TYPE_MAP);
 		}else{
-			# DEFAULTS : Using section_id 
+			# DEFAULTS : Using section_id
 			$map = array(
 				'book' 				=> 1,  # Book
 				'magazine' 			=> 2,  # magazine
@@ -444,7 +444,7 @@ class tool_import_bibtex extends tool_common {
 				'unpublished'		=> 18, # Sin publicar
 				);
 		}
-		
+
 		$result = isset($map[$type]) ? $map[$type] : null;
 		return $result;
 	}//end get_tipologia_from_biblio_type
@@ -452,8 +452,8 @@ class tool_import_bibtex extends tool_common {
 
 
 	/**
-	* PROCESS_FILE 
-	* @param array $file_data 
+	* PROCESS_FILE
+	* @param array $file_data
 	* @param array $checkbox_values
 	* @return array $ar_response (array of stdClass objects with tracking info about process)
 	*/
@@ -467,7 +467,7 @@ class tool_import_bibtex extends tool_common {
 		$ar_excluded_proccess = array("raw","lines");
 
 		foreach ( (array)$checkbox_values as $key => $checked) {
-			
+
 			if ($checked===(string)'false') continue; # Skip (note var $checked is NOT boolean, but string)
 
 			#
@@ -477,18 +477,18 @@ class tool_import_bibtex extends tool_common {
 
 			#
 			# Section id get from biblio data
-			# Behaviour : 
+			# Behaviour :
 			if (!property_exists($current_obj, 'reference')) {
 				trigger_error("Error Processing Request. reference is manadory. Ignored element $key");
 				continue;
 			}
-			$section_id = tool_import_bibtex::get_section_id_from_bibtex_reference($current_obj->reference);		
+			$section_id = tool_import_bibtex::get_section_id_from_bibtex_reference($current_obj->reference);
 
 			#
 			# SECTION : Force create sectión record if not exits
 			if ((int)$section_id>0) {
 				$section = section::get_instance($section_id, $section_tipo);
-				$parent  = $section->get_section_id();				
+				$parent  = $section->get_section_id();
 			}else{
 				$section = section::get_instance(null, $section_tipo);
 				$section->Save();
@@ -500,9 +500,9 @@ class tool_import_bibtex extends tool_common {
 				$RecordObj_dd = new RecordObj_dd($section_tipo);
 				$properties_current_setion = json_decode($RecordObj_dd->get_properties());
 				if (isset($properties_current_setion->filtered_by)) {
-					
+
 					$component_tipo	 		= key($properties_current_setion->filtered_by);
-						#dump($properties_current_setion," properties_current_setion - component_tipo: $component_tipo");					
+						#dump($properties_current_setion," properties_current_setion - component_tipo: $component_tipo");
 					$component_dato 		= $properties_current_setion->filtered_by->$component_tipo;
 					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$current_component 		= component_common::get_instance($component_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
@@ -518,7 +518,7 @@ class tool_import_bibtex extends tool_common {
 
 			# Object foreach
 			foreach ($current_obj as $name => $value) {
-				
+
 				#$component_tipo = array_search($name, $data_map);
 				$component_tipo = isset($data_map[$name]) ? $data_map[$name] : null;
 				/*
@@ -529,14 +529,14 @@ class tool_import_bibtex extends tool_common {
 					continue; # Skip not accepted data
 				}
 				*/
-				
+
 				if ( array_search($name, $ar_excluded_proccess) ) {
 					if(SHOW_DEBUG) {
 						error_log("- Ignored $name from biblio import process (ar_excluded_proccess)");
 					}
 					continue; # Skip not accepted data
 				}
-				
+
 				switch ($name) {
 
 					// Reference correspond to field CODE and is used to test if record already exists. Must be unic
@@ -560,7 +560,7 @@ class tool_import_bibtex extends tool_common {
 						$tipologia_id = self::get_tipologia_from_biblio_type( $current_obj->$name ); # !! OJO !! La tipología NO se calcula. Es una tabla fija con array de section_id
 						if (empty($tipologia_id)) {
 							$ar_response[$parent]->$name = "<span class=\"warning\">- Ignored type $name (".to_string($value).") from bibtex import process. This typology is not defined in Dedalo</span>";
-							error_log("WARNING : - Ignored typology $name (".to_string($value).") from bibtex import process. This typology is not defined in Dedalo");						
+							error_log("WARNING : - Ignored typology $name (".to_string($value).") from bibtex import process. This typology is not defined in Dedalo");
 						}else{
 							$component = component_common::get_instance(null,
 																		$component_tipo,
@@ -574,7 +574,7 @@ class tool_import_bibtex extends tool_common {
 								$locator->set_section_tipo($tipologia_section_tipo);
 
 							$component->set_dato( $locator );
-							$component->Save();							
+							$component->Save();
 							$ar_response[$parent]->$name ="+ Saved $name value $tipologia_id ($value) from bibtex import process";
 						}
 						break;
@@ -607,14 +607,14 @@ class tool_import_bibtex extends tool_common {
 								$locator = new locator();
 									$locator->set_section_tipo(BIBLIO_SECTION_TIPO_VIRTUAL_PERSONS);
 									$locator->set_section_id($author_section_id);
-								
+
 								$dato 	= $component->get_dato();
 								$dato[] = $locator;
 								$component->set_dato( $dato );
 								$component->Save();
 								$ar_response[$parent]->$name .="+ Link existing author $author_name $author_surname from bibtex import process";
 							}
-						}				
+						}
 						#$ar_response[$parent]->$name ="+ Saved $name value ".to_string($value)." (".to_string($value).") from bibtex import process";
 						break;
 
@@ -627,7 +627,7 @@ class tool_import_bibtex extends tool_common {
 						}else{
 							# create a new record in list
 							$section_tipo_colecciones_series = BIBLIO_SECTION_TIPO_SERIES_COLECCIONES; # 'rsc212';  # Lista de valores Series / colecciones
-							$section_container_list   = section::get_instance(null,$section_tipo_colecciones_series); 
+							$section_container_list   = section::get_instance(null,$section_tipo_colecciones_series);
 							$section_id_list 		  = (int)$section_container_list->Save();
 							$component_container_list = component_common::get_instance('component_input_text',
 																						BIBLIO_COMPONENT_TIPO_SERIES_COLECCIONES,
@@ -637,12 +637,12 @@ class tool_import_bibtex extends tool_common {
 																						$section_tipo_colecciones_series); # Colección / Serie (component_input_text)
 							$component_container_list->set_dato($value);
 							$component_container_list->Save();
-						}						
+						}
 						if ($section_id_list<1){
 							$ar_response[$parent]->$name = "! Error Processing Request. section_id_list not found ($value)";
 							if(SHOW_DEBUG) throw new Exception("Error Processing Request", 1);
 						}
-						
+
 						$component  = component_common::get_instance('component_autocomplete',
 																	 $component_tipo,
 																	 $parent,
@@ -653,9 +653,9 @@ class tool_import_bibtex extends tool_common {
 							$locator->set_section_id($section_id_list);
 							$locator->set_section_tipo(BIBLIO_SECTION_TIPO_SERIES_COLECCIONES);
 						$component->set_dato( $locator );
-						$component->Save();					
+						$component->Save();
 						$ar_response[$parent]->$name ="+ Saved $name value ". json_encode($locator)." from biblio import process";
-						break;					
+						break;
 
 					// Pages
 					case 'pages':
@@ -680,7 +680,7 @@ class tool_import_bibtex extends tool_common {
 					case 'chapter':
 					case 'language':
 					case 'language':
-					case 'urldate':	
+					case 'urldate':
 					case 'file':
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(BIBLIO_COMPONENT_TIPO_NOTAS,true);
@@ -703,7 +703,7 @@ class tool_import_bibtex extends tool_common {
 							$topo_locator = self::get_toponym_from_address( $current_obj->$name );
 							if (empty($topo_locator)) {
 								$ar_response[$parent]->$name = "<span class=\"warning\">- Ignored type $name (".to_string($value).") from bibtex import process. This address is not defined in Dedalo toponyms</span>";
-								error_log("WARNING : - Ignored typology $name (".to_string($value).") from bibtex import process. This address is not defined in Dedalo toponyms");			
+								error_log("WARNING : - Ignored typology $name (".to_string($value).") from bibtex import process. This address is not defined in Dedalo toponyms");
 							}else{
 								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(BIBLIO_COMPONENT_TIPO_DATOS_DE_PUBLICACION,true);
 								$component 	 = component_common::get_instance($modelo_name,
@@ -722,7 +722,7 @@ class tool_import_bibtex extends tool_common {
 							}
 						}//end if ($name=='address') {
 						break;
-					
+
 					// Year may be accompanied by month data. In this way component_date store 'year' and 'month' in field 'date' as dd_date object
 					case 'year':
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -737,7 +737,7 @@ class tool_import_bibtex extends tool_common {
 							if (!empty($current_obj->month)) {
 								$dd_date->set_month($value);
 							}
-						
+
 						$component->set_dato( $dd_date );
 						$component->Save();
 						$ar_response[$parent]->$name ="+ Saved $name value ".to_string($value)." from bibtex import process";
@@ -753,9 +753,9 @@ class tool_import_bibtex extends tool_common {
 
 						$file_name = self::resolve_filename( $value );	// Like 'Document with gorgeus name 1 - 99.pdf'
 
-						# 
+						#
 						# 1 COMPONENT_PDF (BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO rsc209)
-						# Create component pdf to obtain target path of pdf file 
+						# Create component pdf to obtain target path of pdf file
 						$component_tipo = BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO;
 						$component_pdf 	= component_common::get_instance('component_pdf',
 																		 $component_tipo,
@@ -774,7 +774,7 @@ class tool_import_bibtex extends tool_common {
 						if (!file_exists($source_pdf_path)) {
 							$ar_response[$parent]->$name .="- Error on acces to file $source_pdf_path. File not exists or is not accessible.";
 							break;
-						}						
+						}
 						if (!rename($source_pdf_path, $target_pdf_path)) {
 							if(SHOW_DEBUG) {
 								error_log("source_pdf_path: $source_pdf_path");
@@ -823,9 +823,9 @@ class tool_import_bibtex extends tool_common {
 								$ar_response[$parent]->$name .="- Saved transcription for revision: yes.<br>";
 
 								#dump($component,'$component');
-							
-							}else{						
-							
+
+							}else{
+
 								$component_tipo = BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION;
 								$component 		= component_common::get_instance('component_text_area', $component_tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 								$component->set_dato( $pdf_file_text->result );
@@ -850,8 +850,8 @@ class tool_import_bibtex extends tool_common {
 							if($name=='issn')
 								$locator->set_section_id(BIBLIO_TYPE_OF_NORMALIZED_NUMBER_ISSN_SECTION_ID);
 							if($name=='isbn')
-								$locator->set_section_id(BIBLIO_TYPE_OF_NORMALIZED_NUMBER_ISBN_SECTION_ID);						
-						 
+								$locator->set_section_id(BIBLIO_TYPE_OF_NORMALIZED_NUMBER_ISBN_SECTION_ID);
+
 						$component->set_dato( $locator );
 						$component->Save();
 						$ar_response[$parent]->name_type_of_normalized_number ="+ Saved name_type_of_normalized_number value ".json_encode($locator)." from biblio import process";
@@ -892,9 +892,9 @@ class tool_import_bibtex extends tool_common {
 
 	/**
 	* FORMAT_PAGES
-	* @return 
+	* @return
 	*/
-	public static function format_pages( $value ) {		
+	public static function format_pages( $value ) {
 		$page_value='';
 
 		if (is_array($value)) {
@@ -918,13 +918,13 @@ class tool_import_bibtex extends tool_common {
 	* @return string $str_response
 	*/
 	public static function transcribe_pdf( $component_pdf, $page=null ) {
-		
+
 		$str_response='';
 
 		$pdf_path 		= $component_pdf->get_pdf_path();
 		$pdf_file_url 	= $component_pdf->get_pdf_url();
 		$parent 		= $component_pdf->get_parent();
-		$section_tipo 	= $component_pdf->get_section_tipo();		
+		$section_tipo 	= $component_pdf->get_section_tipo();
 
 		$page = $page ? (int)$page : 1;
 		$options = new stdClass();
@@ -938,7 +938,7 @@ class tool_import_bibtex extends tool_common {
 		#dump($clean_pdf_file_text,'$clean_pdf_file_text '.strlen($clean_pdf_file_text));
 
 		if (empty($pdf_file_text) || !isset($pdf_file_text->result) || $pdf_file_text->result=='error' || strlen($clean_pdf_file_text)<1 ) {
-			
+
 			$str_response .= "<span class=\"error\">";
 			$str_response .= "- Error in pdf to text transcription. <br>".$pdf_file_text->msg ."<br>";
 			$str_response .= " (There are probably a permissions/security restriction problem like with the pdf file).";
@@ -962,9 +962,9 @@ class tool_import_bibtex extends tool_common {
 			$str_response .="- Saved transcription for revision: yes.<br>";
 
 			#dump($component,'$component');
-		
-		}else{						
-		
+
+		}else{
+
 			$component_tipo = BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION;
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 			$component 		= component_common::get_instance($modelo_name,	//'component_text_area',
@@ -994,11 +994,11 @@ class tool_import_bibtex extends tool_common {
 		$section_id=0;
 
 		$tipo 			= BIBLIO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO;		# Colección / Serie (component_input_text)
-		$section_tipo   = BIBLIO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;		# 'rsc212'; 	# Lista de valores Colecciones / Series 
+		$section_tipo   = BIBLIO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;		# 'rsc212'; 	# Lista de valores Colecciones / Series
 		$lang 			= DEDALO_DATA_NOLAN;
 		$value 			= $reference;
-		$table 			= common::get_matrix_table_from_tipo($section_tipo); 
-		
+		$table 			= common::get_matrix_table_from_tipo($section_tipo);
+
 		$sql_filter  = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$value);
 		$strQuery   = "-- ".__METHOD__."
 		SELECT section_id
@@ -1026,14 +1026,14 @@ class tool_import_bibtex extends tool_common {
 
 	/**
 	* SEARCH_PERSON
-	* @return 
+	* @return
 	*/
 	public static function search_person( $name=null, $surname=null ) {
-		
-		$section_tipo   = BIBLIO_SECTION_TIPO_VIRTUAL_PERSONS;			
-		$lang 			= DEDALO_DATA_NOLAN;		
+
+		$section_tipo   = BIBLIO_SECTION_TIPO_VIRTUAL_PERSONS;
+		$lang 			= DEDALO_DATA_NOLAN;
 		$table 			= common::get_matrix_table_from_tipo($section_tipo);
-		
+
 		$sql_filter = null;
 		if ($surname) {
 			$tipo 		  = BIBLIO_PERSONS_COMPONENT_TIPO_SURNAME;
@@ -1043,7 +1043,7 @@ class tool_import_bibtex extends tool_common {
 			if( strlen($sql_filter) )  $sql_filter  .= " AND ";
 			$tipo 		  = BIBLIO_PERSONS_COMPONENT_TIPO_NAME;
 			$sql_filter  .= JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$name);
-		}		
+		}
 
 
 		$strQuery   = "-- ".__METHOD__."
@@ -1060,7 +1060,7 @@ class tool_import_bibtex extends tool_common {
 		$result		= JSON_RecordObj_matrix::search_free($strQuery);
 		$ar_section_id = array();
 		while ($rows = pg_fetch_assoc($result)) {
-			$ar_section_id = $rows['section_id'];			
+			$ar_section_id = $rows['section_id'];
 		}
 		#dump($section_id, ' section_id '.utf8_decode($strQuery));
 
@@ -1072,10 +1072,10 @@ class tool_import_bibtex extends tool_common {
 
 	/**
 	* ADD_PERSON
-	* @return 
+	* @return
 	*/
 	public static function add_person( $person_obj, $typology=null, $parent ) {
-		
+
 		#dump($person_obj, ' person_obj ++ $typology: '.to_string($typology));
 		#
 		# SECTION PERSONS
@@ -1121,9 +1121,9 @@ class tool_import_bibtex extends tool_common {
 					case 'author':
 						$locator = new locator();
 							$locator->set_section_tipo('dd911');
-							$locator->set_section_id('14');	// Author						
+							$locator->set_section_id('14');	// Author
 						break;
-					
+
 					default:
 						$locator = null;
 						break;
@@ -1136,19 +1136,19 @@ class tool_import_bibtex extends tool_common {
 																  $section_id,
 																  'edit',
 																  DEDALO_DATA_NOLAN,
-																  $section_tipo);					
+																  $section_tipo);
 					$component->set_dato( array($locator) );
 					$component->Save();
-				}			
+				}
 			}//end if ($typology) {
-			
+
 
 		#
 		# SECTION BIBLIOGRAPHY
 		$section_tipo 	= BIBLIO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;
 
 			#
-			# AUTHOR			
+			# AUTHOR
 				$tipo 		 = BIBLIO_COMPONENT_TIPO_AUTORIA_RESPONSABILIDAD;
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component 	 = component_common::get_instance($modelo_name,
@@ -1160,12 +1160,12 @@ class tool_import_bibtex extends tool_common {
 				$locator = new locator();
 					$locator->set_section_tipo(BIBLIO_SECTION_TIPO_VIRTUAL_PERSONS);
 					$locator->set_section_id($section_id);
-				
+
 				$dato 	= $component->get_dato();
 				$dato[] = $locator;
 				$component->set_dato( $dato );
 				$component->Save();
-			
+
 
 		return true;
 
@@ -1176,19 +1176,19 @@ class tool_import_bibtex extends tool_common {
 
 	/**
 	* SEARCH_SERIE
-	* @return 
+	* @return
 	*/
 	public static function search_serie( $serie ) {
-		
+
 		$section_id_list= 0;
 
-		$section_tipo   = BIBLIO_SECTION_TIPO_SERIES_COLECCIONES;			
-		$lang 			= DEDALO_DATA_NOLAN;		
-		$table 			= common::get_matrix_table_from_tipo($section_tipo);		
-		
+		$section_tipo   = BIBLIO_SECTION_TIPO_SERIES_COLECCIONES;
+		$lang 			= DEDALO_DATA_NOLAN;
+		$table 			= common::get_matrix_table_from_tipo($section_tipo);
+
 		$tipo 		  	= BIBLIO_COMPONENT_TIPO_SERIES_COLECCIONES;
 		$sql_filter   	= JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$serie);
-		
+
 
 		$strQuery   = "-- ".__METHOD__."
 		SELECT section_id
@@ -1202,7 +1202,7 @@ class tool_import_bibtex extends tool_common {
 		if(SHOW_DEBUG) {
 			#dump($strQuery, ' strQuery');
 		}
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);		
+		$result		= JSON_RecordObj_matrix::search_free($strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
 			$section_id_list = $rows['section_id'];
 			break;
@@ -1217,11 +1217,11 @@ class tool_import_bibtex extends tool_common {
 
 	/**
 	* GET_TOPONYM_FROM_ADDRESS
-	* NOTE: This method result is an 'aproximation'. Is no safe because only return the first math name without consider model or duplicate names 
+	* NOTE: This method result is an 'aproximation'. Is no safe because only return the first math name without consider model or duplicate names
 	* @return object|null
 	*/
 	public static function get_toponym_from_address( $address ) {
-		
+
 		if (empty($address)) return null;
 
 		$ar_referenced_tipo = array('dz1', 'ad1', 'cu1', 'fr1', 'ma1', 'pt1', 'es1', 'us1');
@@ -1233,7 +1233,7 @@ class tool_import_bibtex extends tool_common {
 			$old_dato = key($ar_data);
 			if (!empty($old_dato)) {
 				return component_autocomplete_ts::convert_dato_to_locator($old_dato);
-			}			
+			}
 		}
 
 		return null;
@@ -1275,7 +1275,7 @@ class tool_import_bibtex extends tool_common {
 
 
 
-	
+
 };#end class
 
 
