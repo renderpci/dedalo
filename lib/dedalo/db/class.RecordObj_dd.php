@@ -115,7 +115,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 		];
 		
 		if (DEDALO_ENTITY==='master') {
+<<<<<<< HEAD
 			$ar_RelationMap['properties'] ='properties';
+=======
+			$ar_RelationMap[] = 'properties';
+>>>>>>> f1350e923c710cdb89d90c77722a09262689b8af
 		}
 
 		return $ar_RelationMap;
