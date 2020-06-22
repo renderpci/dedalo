@@ -114,8 +114,8 @@ class ts_object extends Accessors {
 			$section_list_thesaurus_tipo = $ar_children[0];
 
 			# relation map
-			$RecordObj_dd    = new RecordObj_dd($section_list_thesaurus_tipo);
-			$ar_properties  = $RecordObj_dd->get_properties();
+			$RecordObj_dd	= new RecordObj_dd($section_list_thesaurus_tipo);
+			$ar_properties	= $RecordObj_dd->get_properties();
 				#dump($ar_properties, ' ar_properties ++ '.to_string($section_list_thesaurus_tipo));
 			/*
 			# Get related terms

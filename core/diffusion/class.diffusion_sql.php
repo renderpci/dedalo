@@ -292,7 +292,7 @@ class diffusion_sql extends diffusion  {
 				$ar_field_data['field_coment'] 	= RecordObj_dd::get_termino_by_tipo($termino_relacionado)." - $termino_relacionado";
 
 				$RecordObj_dd 		 			= new RecordObj_dd($options->tipo);
-				$properties 				 	= $RecordObj_dd->get_properties(true);
+				$properties 				 	= $RecordObj_dd->get_properties();
 
 				$diffusion_modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 				switch ($diffusion_modelo_name) {
@@ -961,7 +961,7 @@ class diffusion_sql extends diffusion  {
 				#
 				# Diffusion element
 				$diffusion_term = new RecordObj_dd($options->tipo);
-				$properties 	= $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
+				$properties 	= $diffusion_term->get_properties();	# Format: {"data_to_be_used": "dato"}
 
 				#
 				# Component target
@@ -1358,9 +1358,8 @@ class diffusion_sql extends diffusion  {
 						#$save_options->record_data['table_name'] 		= $table_name; // overwrite default table name
 
 					# engine switch
-						$RecordObj_dd = new RecordObj_dd($database_tipo);
-						$database_properties = $RecordObj_dd->get_properties();
-						$database_properties = json_decode($database_properties);
+						$RecordObj_dd			= new RecordObj_dd($database_tipo);
+						$database_properties	= $RecordObj_dd->get_properties();						
 						if (isset($database_properties->engine)) {
 							$save_options->record_data['engine'] = $database_properties->engine; // If defined in database properties
 						}
@@ -1436,8 +1435,8 @@ class diffusion_sql extends diffusion  {
 							}
 
 						// skip resolve components with dato external (portals)
-							$RecordObj_dd = new RecordObj_dd($current_component_tipo);
-							$current_component_properties = $RecordObj_dd->get_properties(true);
+							$RecordObj_dd					= new RecordObj_dd($current_component_tipo);
+							$current_component_properties	= $RecordObj_dd->get_properties();
 							if (isset($current_component_properties->source->mode) && $current_component_properties->source->mode==='external') {
 								debug_log(__METHOD__." Skipped component with external source mode: ".to_string($current_component_tipo), logger::DEBUG);
 								continue;
@@ -2038,8 +2037,8 @@ class diffusion_sql extends diffusion  {
 
 		# Override in 'properties' the base point for calculate diffusion tables
 		# This is useful for development purposes, and allow publish in different database without duplicate all tables structure for each difusion_element
-		$diffusion_element_tipo_obj = new RecordObj_dd($diffusion_element_tipo);
-		$properties = $diffusion_element_tipo_obj->get_properties(true);
+		$diffusion_element_tipo_obj	= new RecordObj_dd($diffusion_element_tipo);
+		$properties					= $diffusion_element_tipo_obj->get_properties();
 		if (isset($properties->force_source_tables_tipo)) {
 			# Override
 			$diffusion_element_tipo_tables = $properties->force_source_tables_tipo;
@@ -2080,8 +2079,8 @@ class diffusion_sql extends diffusion  {
 			#}
 
 			# properties
-			$table_obj 			= new RecordObj_dd($current_table_tipo);
-			$table_properties 	= json_decode($table_obj->get_properties());
+			$table_obj			= new RecordObj_dd($current_table_tipo);
+			$table_properties	= $table_obj->get_properties();
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
 			switch ($modelo_name) {
@@ -2136,16 +2135,16 @@ class diffusion_sql extends diffusion  {
 
 						if (empty($table_properties)) {
 							# Try with real table when alias is empty
-							$table_obj 			= new RecordObj_dd($real_table);
-							$table_properties 	= json_decode($table_obj->get_properties());
+							$table_obj			= new RecordObj_dd($real_table);
+							$table_properties	= $table_obj->get_properties();
 						}
 						$data = new stdClass();
-							$data->table 		= $real_table;
-							$data->name  		= $name;
-							$data->database_name= $database_name;
-							$data->database_tipo= $database_tipo;
-							$data->properties  = $table_properties;
-							$data->from_alias 	= $current_table_tipo;
+							$data->table			= $real_table;
+							$data->name				= $name;
+							$data->database_name	= $database_name;
+							$data->database_tipo	= $database_tipo;
+							$data->properties		= $table_properties;
+							$data->from_alias		= $current_table_tipo;
 
 						$diffusion_element_tables_map->$section_tipo = $data;
 					}else{

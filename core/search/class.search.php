@@ -2264,15 +2264,12 @@ class search {
 		$ar_query=array();
 		foreach ($ar_tables_to_search as $table) {
 
-			$query   = '';
-			if($count === true){
-				$query  .= PHP_EOL . 'SELECT COUNT(*)';
-			}else{
-				$query  .= PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
-			}
-			$query  .= PHP_EOL . 'FROM "'.$table.'"';
-			$query  .= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
-			#$query  .= PHP_EOL . 'WHERE datos @> \'{"relations":['.$compare.']}\'::jsonb';
+			$query	 = '';
+			$query	.= ($count===true)
+				? PHP_EOL . 'SELECT COUNT(*)'
+				: PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
+			$query	.= PHP_EOL . 'FROM "'.$table.'"';
+			$query	.= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 
 			$ar_query[] = $query;
 		}
@@ -2315,15 +2312,15 @@ class search {
 
 			while ($rows = pg_fetch_assoc($result)) {
 
-				$current_section_id   	= $rows['section_id'];
-				$current_section_tipo 	= $rows['section_tipo'];
-				$current_relations 		= (array)json_decode($rows['relations']);
+				$current_section_id		= $rows['section_id'];
+				$current_section_tipo	= $rows['section_tipo'];
+				$current_relations		= (array)json_decode($rows['relations']);
 
 				foreach ($current_relations as $current_locator) {
 					if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
 						// Add some temporal info to current locator for build component later
-						$current_locator->from_section_tipo = $current_section_tipo;
-						$current_locator->from_section_id 	= $current_section_id;
+						$current_locator->from_section_tipo	= $current_section_tipo;
+						$current_locator->from_section_id	= $current_section_id;
 						// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
 						$ar_inverse_locators[] = $current_locator;
 					}

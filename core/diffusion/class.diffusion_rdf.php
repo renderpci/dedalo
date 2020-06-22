@@ -56,7 +56,7 @@ class diffusion_rdf extends diffusion {
 
 		// target_section_tipo
 			$RecordObj_dd 		 = new RecordObj_dd($options->diffusion_element_tipo);
-			$properties 		 = $RecordObj_dd->get_properties(true);
+			$properties 		 = $RecordObj_dd->get_properties();
 			#$target_section_tipo = $properties->diffusion->target_section_tipo;
 
 		// Fix vars
@@ -341,18 +341,18 @@ class diffusion_rdf extends diffusion {
 	*/
 	public function build_rdf_object( $rdf_tipo ) {
 
-		$RecordObj_dd 	 = new RecordObj_dd($rdf_tipo);
-		$name 		 	 = RecordObj_dd::get_termino_by_tipo($rdf_tipo);
-		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
-		$ar_elements 	 = $RecordObj_dd->get_ar_childrens_of_this();
+		$RecordObj_dd	= new RecordObj_dd($rdf_tipo);
+		$name			= RecordObj_dd::get_termino_by_tipo($rdf_tipo);
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
+		$ar_elements	= $RecordObj_dd->get_ar_childrens_of_this();
 
-		$rdf_object 			 = new stdClass();
-		$rdf_object->name 		 = $name;
-		$rdf_object->modelo_name = $modelo_name;
-		$rdf_object->tipo 		 = $rdf_tipo;
-		$rdf_object->properties = $RecordObj_dd->get_properties(true);
-		$rdf_object->ar_related	 = $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
-		$rdf_object->data = array();
+		$rdf_object = new stdClass();
+			$rdf_object->name			= $name;
+			$rdf_object->modelo_name	= $modelo_name;
+			$rdf_object->tipo			= $rdf_tipo;
+			$rdf_object->properties		= $RecordObj_dd->get_properties();
+			$rdf_object->ar_related		= $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
+			$rdf_object->data			= array();
 
 		#
 		# RDF ELEMENTS
@@ -681,28 +681,28 @@ class diffusion_rdf extends diffusion {
 
 		$ar_lines = array();
 
-		$RecordObj_dd 	 = new RecordObj_dd($rdf_tipo);
-		$name 		 	 = RecordObj_dd::get_termino_by_tipo($rdf_tipo);
-		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
-		$ar_elements 	 = $RecordObj_dd->get_ar_childrens_of_this();
+		$RecordObj_dd	= new RecordObj_dd($rdf_tipo);
+		$name			= RecordObj_dd::get_termino_by_tipo($rdf_tipo);
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($rdf_tipo,true);
+		$ar_elements	= $RecordObj_dd->get_ar_childrens_of_this();
 
-		$rdf_object 			 = new stdClass();
-		$rdf_object->name 		 = $name;
-		$rdf_object->modelo_name = $modelo_name;
-		$rdf_object->tipo 		 = $rdf_tipo;
-		$rdf_object->properties = (object)$RecordObj_dd->get_properties(true);
-		$rdf_object->ar_related	 = $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
-		$rdf_object->data = array();
+		$rdf_object = new stdClass();
+			$rdf_object->name			= $name;
+			$rdf_object->modelo_name	= $modelo_name;
+			$rdf_object->tipo			= $rdf_tipo;
+			$rdf_object->properties		= (object)$RecordObj_dd->get_properties();
+			$rdf_object->ar_related		= $RecordObj_dd::get_ar_terminos_relacionados($rdf_tipo, $cache=true, $simple=true);
+			$rdf_object->data			= array();
 
 		# XML LINE
 		$ar_lines['xml'] = $rdf_object->properties->value;	// Like '<?xml version="1.0" encoding="utf-8" ..'
 
 
 		# RDF
-		$rdf_element 	= new RecordObj_dd($ar_elements[0]);
-		$name 		  	= RecordObj_dd::get_termino_by_tipo($ar_elements[0]);
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($ar_elements[0],true);
-		$ar_elements 	= $rdf_element->get_ar_childrens_of_this();
+		$rdf_element	= new RecordObj_dd($ar_elements[0]);
+		$name			= RecordObj_dd::get_termino_by_tipo($ar_elements[0]);
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($ar_elements[0],true);
+		$ar_elements	= $rdf_element->get_ar_childrens_of_this();
 			#dump($ar_elements, ' ar_elements ++ '.to_string());
 
 			# RDF PREDICATES
@@ -717,7 +717,7 @@ class diffusion_rdf extends diffusion {
 						#dump($head_element_tipo, ' head_element_tipo ++ '.to_string());
 						$head_name 			= RecordObj_dd::get_termino_by_tipo($head_element_tipo);
 						$head_element		= new RecordObj_dd($head_element_tipo);
-						$head_properties 	= (object)$head_element->get_properties(true);
+						$head_properties 	= (object)$head_element->get_properties();
 						// Eg. xmlns:dcterms="http://purl.org/dc/terms/"
 						$base_uri = isset($head_properties->base_uri) ? $head_properties->base_uri : null;
 						$value = " $head_name=\"$base_uri\"";

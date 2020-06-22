@@ -247,11 +247,11 @@ class component_date extends component_common {
 		# Restore modo after
 		#$this->set_modo($previous_modo);
 
-		$ar_dato 		= $this->get_dato();
+		$ar_dato	= $this->get_dato();
 		$properties	= $this->get_properties();
-		$ar_valor		= array();
-		$valor			= '';
-		$date_mode 		= $this->get_date_mode();
+		$ar_valor	= array();
+		$valor		= '';
+		$date_mode	= $this->get_date_mode();
 		foreach ($ar_dato as $key => $current_dato) {
 
 			$ar_valor[$key] = ''; // default
@@ -676,10 +676,10 @@ class component_date extends component_common {
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
-		$component_tipo = end($query_object->path)->component_tipo;
-        $RecordObj   	= new RecordObj_dd($component_tipo);
-        $properties 	= json_decode($RecordObj->get_properties());
-        $date_mode 	 	= isset($properties->date_mode) ? $properties->date_mode : 'date';
+		$component_tipo	= end($query_object->path)->component_tipo;
+		$RecordObj		= new RecordObj_dd($component_tipo);
+		$properties		= $RecordObj->get_properties();
+		$date_mode		= isset($properties->date_mode) ? $properties->date_mode : 'date';
         	#dump($query_object, ' date_mode ++ '.to_string($date_mode));
 
 		$query_object->component_path = ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
