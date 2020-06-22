@@ -124,13 +124,23 @@ area_thesaurus.prototype.build = async function() {
 		const api_response = await current_data_manager.read(self.dd_request.show)
 			// console.log("[area_thesaurus.build] api_response++++:",api_response);
 
-	// set the result to the datum
-		self.datum = api_response.result
+	// Update the self.data into the datum and self instance
+		if (api_response.result) {
+			const new_data = api_response.result
 
-	// set context and data to current instance
-		self.context	= self.datum.context.filter(element => element.tipo===self.tipo)
-		self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
-		self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
+			// set the result to the datum
+				// self.datum = api_response.result
+
+			// set context and data to current instance
+				self.context	= new_data.context.filter(element => element.tipo===self.tipo)
+				self.data		= new_data.data.filter(element => element.tipo===self.tipo)
+				self.widgets	= new_data.context.filter(element => element.parent===self.tipo && element.typo==='widget')
+
+			// dd_request
+				self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+
+				console.log("----------self.dd_request.show", self.dd_request.show);
+		}
 
 		const area_ddo	= self.context.find(element => element.type==='area')
 		self.label		= area_ddo.label
@@ -140,6 +150,7 @@ area_thesaurus.prototype.build = async function() {
 
 	// section tipo
 		self.section_tipo = area_ddo.section_tipo || null
+
 
 
 	// filter
@@ -158,7 +169,7 @@ area_thesaurus.prototype.build = async function() {
 			event_manager.subscribe('render_'+self.id, function(){
 				load_data_debug(self, api_response, dd_request_show_original)
 			})
-			
+
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
 			//load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
