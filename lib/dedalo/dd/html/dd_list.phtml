@@ -15,27 +15,27 @@ echo trim(css::get_css_link_code());
 	<?php	
 	$page_globals = new stdClass();
 		# version
-		$page_globals->dedalo_version 			= DEDALO_VERSION;
+		$page_globals->dedalo_version			= DEDALO_VERSION;
 		# lang
-		$page_globals->dedalo_application_lang 	= DEDALO_APPLICATION_LANG;
-		$page_globals->dedalo_data_lang 		= DEDALO_DATA_LANG;
-		$page_globals->dedalo_data_nolan 		= DEDALO_DATA_NOLAN;
+		$page_globals->dedalo_application_lang	= DEDALO_APPLICATION_LANG;
+		$page_globals->dedalo_data_lang			= DEDALO_DATA_LANG;
+		$page_globals->dedalo_data_nolan		= DEDALO_DATA_NOLAN;
 		# modo
-		$page_globals->modo 					= isset($modo) ? $modo : null;
+		$page_globals->modo						= isset($modo) ? $modo : null;
 	?>
 	const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
 
 	// VARS de mensajes de aviso multi-idioma
-	const el_descriptor_tiene_hijos_title 		= '<?php echo msgJS($el_descriptor_tiene_hijos_title) ?>' ;
-	const el_descriptor_tiene_indexaciones_title	= '<?php echo msgJS($el_descriptor_tiene_indexaciones_title) ?>' ;
+	const el_descriptor_tiene_hijos_title				= '<?php echo msgJS($el_descriptor_tiene_hijos_title) ?>' ;
+	const el_descriptor_tiene_indexaciones_title		= '<?php echo msgJS($el_descriptor_tiene_indexaciones_title) ?>' ;
 	const seguro_que_quiere_borrar_este_termino_title	= '<?php echo msgJS($seguro_que_quiere_borrar_este_termino_title) ?>' ;
-	const hijos_title = '<?php echo msgJS($hijos_title) ?>' ;
+	const hijos_title									= '<?php echo msgJS($hijos_title) ?>' ;
 
 	// Establecemos una cookie de modo para toda la página
-	const modo 	= '<?php echo $modo ?>';
-	const accion 	= '<?php echo $accion ?>';
+	const modo		= '<?php echo $modo ?>';
+	const accion	= '<?php echo $accion ?>';
 	const ts_lang	= '<?php echo $ts_lang ?>';
-	const type	= '<?php echo $type ?>';
+	const type		= '<?php echo $type ?>';
 
 	/*
 	* VAR terminoIDresalte es un string viene del get  cuando se hace una búsqueda.
