@@ -5,9 +5,9 @@
 *
 */
 class tool_import_kml extends tool_common {
-	
+
 	# received section
-	protected $section_obj;	
+	protected $section_obj;
 	# button_import_tipo
 	protected $button_import_tipo;
 	# used to store custom options (script path, etc.)
@@ -28,7 +28,7 @@ class tool_import_kml extends tool_common {
 		if ( get_class($section_obj) !== 'section' ) {
 			throw new Exception("Error Processing Request. Only sections are accepted in this tool", 1);
 		}
-		
+
 		# Fix current section
 		$this->section_obj  = $section_obj;
 
@@ -37,7 +37,7 @@ class tool_import_kml extends tool_common {
 
 		# Fix modo
 		$this->modo = $modo;
-		
+
 		# Fix valid extensions
 		$this->valid_extensions = array('kml');
 
@@ -45,7 +45,7 @@ class tool_import_kml extends tool_common {
 		$this->temp_section_id = $this->section_tipo.'_'.DEDALO_SECTION_ID_TEMP.'_'.navigator::get_user_id();
 
 		# Get and set configuration vars
-		$this->set_up();	
+		$this->set_up();
 	}//end __construct
 
 
@@ -54,7 +54,7 @@ class tool_import_kml extends tool_common {
 	* SET_UP
 	*/
 	private function set_up() {
-		
+
 		if (!isset($_GET['button_tipo'])) {
 			throw new Exception("Error Processing Request. GET 'button_tipo' is mandatory for build this tool", 1);
 		}
@@ -64,7 +64,7 @@ class tool_import_kml extends tool_common {
 
 		$RecordObj_dd = new RecordObj_dd($this->button_import_tipo);
 		# Fix tool properties from button properties
-		$this->button_import_properties = json_decode($RecordObj_dd->get_properties());
+		$this->button_import_properties = $RecordObj_dd->get_properties();
 
 		# Set tool vars
 		#$this->kml_vars = $kml_vars;
@@ -74,14 +74,14 @@ class tool_import_kml extends tool_common {
 
 	/**
 	* PROCESS_FILE
-	* @return 
+	* @return
 	*/
 	public function process_file( $file ) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed process_file';
-	
+
 		if (!file_exists($file)) {
 			$response->msg = 'Error. File not exists: '.$file;
 			return $response;
@@ -101,11 +101,11 @@ class tool_import_kml extends tool_common {
 
 		$i=0; foreach ($data as $key => $obj_value) {
 			#dump($obj_value, ' $obj_value ++ '.to_string($key)); #continue;
-			
+
 			$type = $obj_value->type;
 			switch (true) {
 				case ($type==='root_parent'):
-				case ($type==='parent'):			
+				case ($type==='parent'):
 					// Creates target section record and store locator for reuse
 					$name = $obj_value->name;
 					$this->save_parent($name, $type);
@@ -119,9 +119,9 @@ class tool_import_kml extends tool_common {
 					break;
 			}
 			#if ($i>=1) break;
-			
+
 		$i++; }//end foreach ($data as $key => $obj_value)
-		
+
 
 		$response->result 	= true;
 		$response->msg 		= "Processed $i rows successfully";
@@ -150,11 +150,11 @@ class tool_import_kml extends tool_common {
 
 		if (!isset($this->button_import_properties->tool_import_kml->$type->section_tipo)) {
 			dump($this->button_import_properties->tool_import_kml->$type, ' this->button_import_properties ++ search section_tipo in '.to_string($type));
-			throw new Exception("Error Processing Request. Buton import 'properties' $type section_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
+			throw new Exception("Error Processing Request. Buton import 'properties' $type section_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);
 		}
 		if (!isset($this->button_import_properties->tool_import_kml->$type->component_tipo)) {
 			dump($this->button_import_properties->tool_import_kml->$type, ' this->button_import_properties ++ search component_tipo in '.to_string($type));
-			throw new Exception("Error Processing Request. Buton import 'properties' $type component_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
+			throw new Exception("Error Processing Request. Buton import 'properties' $type component_tipo is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);
 		}
 		$target_section_tipo 	= $this->button_import_properties->tool_import_kml->$type->section_tipo;
 		$target_component_tipo 	= $this->button_import_properties->tool_import_kml->$type->component_tipo;
@@ -165,7 +165,7 @@ class tool_import_kml extends tool_common {
 			$section = section::get_instance($section_id=null, $target_section_tipo, 'edit', $cache=false);
 			$section->forced_create_record();
 			$section_id = $section->get_section_id();
-			
+
 			# Component input text . Set value on data
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo);
 			$component 		= component_common::get_instance($modelo_name,
@@ -185,7 +185,7 @@ class tool_import_kml extends tool_common {
 				$locator->set_section_id($section_id);
 
 			$ar_value = array($locator);
-		
+
 		# Store for reuse
 		$ar_created_parent[$type][$name] = $ar_value;
 		debug_log(__METHOD__." Saved $target_section_tipo - $section_id. Type: $type, name: ".to_string($name), logger::DEBUG);
@@ -198,17 +198,17 @@ class tool_import_kml extends tool_common {
 
 	/**
 	* SAVE_POINT
-	* @return 
+	* @return
 	*/
 	public function save_point($obj_value, $type) {
 		/*
 		[parent_name] => Array( [0] => I. Siglos IV-III a.C. )
         [name] => I. Siglos IV-III a.C.
-        [description] => 
-        [coordinates] => 
+        [description] =>
+        [coordinates] =>
         [type] => root_parent */
         if (!isset($this->button_import_properties->tool_import_kml->$type)) {
-			throw new Exception("Error Processing Request. Buton import 'properties' is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);			
+			throw new Exception("Error Processing Request. Buton import 'properties' is not correctly configurated. Set mandatory params: tool_import_kml->".$type, 1);
 		}
 
         $section_tipo 		= $this->button_import_properties->tool_import_kml->$type->section_tipo;
@@ -221,7 +221,7 @@ class tool_import_kml extends tool_common {
 			$section = section::get_instance($section_id=null, $section_tipo, 'edit', $cache=false);
 			$section->forced_create_record();
 			$section_id = $section->get_section_id();
-			
+
 
         # NAME
 		# Component input text . Set value on data
@@ -266,13 +266,13 @@ class tool_import_kml extends tool_common {
 				$ar_value = explode(",", $obj_value->coordinates);
 				$dato = new stdClass();
 					$dato->lon		= $ar_value[0];
-					$dato->lat		= $ar_value[1];	
+					$dato->lat		= $ar_value[1];
 					$dato->alt		= $ar_value[2];
 					$dato->zoom		= 17;
 
 				$component->set_dato( $dato );
 				$component->Save();
-			
+
 
 		# TAG_GEO
 		# Component text area. Add a geo tag into component text area
@@ -282,7 +282,7 @@ class tool_import_kml extends tool_common {
 																 $section_id,
 																 'edit',
 																 DEDALO_DATA_LANG,
-																 $section_tipo);				
+																 $section_tipo);
 				$value = component_geolocation::build_geolocation_tag_string(1, $dato->lon, $dato->lat);
 				$component->set_dato( $value );
 				$component->Save();
@@ -292,19 +292,19 @@ class tool_import_kml extends tool_common {
 		# REFERENCES
 		# Root parent and parent are iterated and values set to components defined in button import 'properties'
 			foreach ((array)$obj_value->parent_name as $key => $value) {
-				
+
 				if ($key===0) {
-					$parent_type = 'root_parent'; 
+					$parent_type = 'root_parent';
 				}else{
 					$parent_type = 'parent';
-				}				
-				
+				}
+
 				$dato = $this->save_parent($value, $parent_type);
 				if (!empty($dato)) {
 
 					# component_tipo
 					if (!isset($this->button_import_properties->tool_import_kml->$type->$parent_type)) {
-						throw new Exception("Error Processing Request. Buton import 'properties' is not correctly configurated. Set mandatory params: tool_import_kml->$type->$parent_type", 1);			
+						throw new Exception("Error Processing Request. Buton import 'properties' is not correctly configurated. Set mandatory params: tool_import_kml->$type->$parent_type", 1);
 					}
 					$component_tipo = $this->button_import_properties->tool_import_kml->$type->$parent_type;
 
@@ -322,14 +322,14 @@ class tool_import_kml extends tool_common {
 
 		# TEMP_SECTION_DATA
 		# propagate_temp_section_data
-			$temp_data_uid = $this->temp_section_id;			
-			if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {				
+			$temp_data_uid = $this->temp_section_id;
+			if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
 				$temp_section_data = $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
 				#$this->propagate_temp_section_data($temp_section_data, $section_tipo, $section_id);
 				section::propagate_temp_section_data($temp_section_data, $section_tipo, $section_id);
 				debug_log(__METHOD__." Propagated temp_section_data ($temp_data_uid) to:  $section_tipo - $section_id ".to_string(), logger::DEBUG);
 			}
-			
+
 		return true;
 	}//end save_point
 
@@ -346,7 +346,7 @@ class tool_import_kml extends tool_common {
 
 		$contents = file_get_contents($file);
 		$xml      = new SimpleXMLElement($contents);
-			
+
 		$data = array();
 		foreach ($xml->Document->Folder as $key => $folder) {
 			#dump($folder, ' folder ++ '.to_string($key));
@@ -378,12 +378,12 @@ class tool_import_kml extends tool_common {
 			$element = self::get_element_data($value, $parent_name);
 			#if (!empty($element->coordinates)) {
 				$ar_data[] = $element;
-			#}			
+			#}
 
 			# Recursion
 			if (!empty($value->Placemark)) {
-				$element->Placemark = true;					
-				#dump($value->Placemark, ' $value->Placemark ++ '.to_string());				
+				$element->Placemark = true;
+				#dump($value->Placemark, ' $value->Placemark ++ '.to_string());
 				$ar_data = array_merge($ar_data, (array)self::iterate_folder($value->Placemark, array($parent_name, $element->name) ));
 			}
 		}
@@ -400,7 +400,7 @@ class tool_import_kml extends tool_common {
 	* @return object $element
 	*/
 	private static function get_element_data($value, $parent_name) {
-		
+
 		$element = new stdClass();
 			$element->parent_name	= (array)$parent_name;
 			$element->name 			= reset($value->name);
@@ -419,13 +419,13 @@ class tool_import_kml extends tool_common {
 				default:
 					$type = "point";
 					break;
-			}			
-			$element->type = $type;	
+			}
+			$element->type = $type;
 
 			# Empty name case (root_parent case)
 			if (empty($element->name)) {
 				$element->name = reset($element->parent_name);
-			}			
+			}
 
 		return $element;
 	}//end get_element_data
@@ -438,7 +438,7 @@ class tool_import_kml extends tool_common {
 	* @param object $record
 	*
 	* @param array $element_vars
-	* 
+	*
 	* @return string $value
 	*/
 	public static function get_value( $record, $element_vars ) {
@@ -453,7 +453,7 @@ class tool_import_kml extends tool_common {
 
 
 		if (isset($element_vars['Subfield'])) {
-			
+
 			# Only for specific subfield
 			$element = $elementField->getSubfield($element_vars['Subfield']);
 				#dump($element, ' element ++ '.to_string());
@@ -464,7 +464,7 @@ class tool_import_kml extends tool_common {
 			}
 
 		}else{
-     
+
      		# Iterate all subfields
 			$text = '';
 			if( property_exists($elementField, 'subfields') ) {
@@ -472,16 +472,16 @@ class tool_import_kml extends tool_common {
 					#dump($value, ' value ++ '.to_string());
 					$text .=  $value->getData();
 					$text .= " ";
-            	} 
+            	}
 			}else{
 				#dump($elementField, ' elementField without subfields ++ '.to_string());
 			}
 
-		}	    
+		}
 		$value = trim($text);
-	    
+
 	    /*
-		#$nonfiling  = $elementField->getIndicator($element_vars['Indicator']);	
+		#$nonfiling  = $elementField->getIndicator($element_vars['Indicator']);
 		if ($nonfiling) {
 		  // Sort using the subset of the $a subfield
 		  $element = substr($elementField->getSubfield($element_vars['Subfield']), $nonfiling);
@@ -489,7 +489,7 @@ class tool_import_kml extends tool_common {
 		  // Sort using the entire contents of the $a subfield
 		  $element = $elementField->getSubfield($element_vars['Subfield']);
 		}
-		*/		
+		*/
 
 		return (string)$value;
 	}//end get_value
@@ -501,15 +501,15 @@ class tool_import_kml extends tool_common {
 	* @return int|null $section_id
 	*/
 	public function get_section_id_from_code( $code ) {
-		
+
 		$section_id=null;
 
 		$tipo 			= self::kml_CODE_COMPONENT_TIPO;		# 'rsc137' 	# Código
 		$section_tipo   = self::kml_IMPORT_SECTION_TIPO;		# 'rsc205'; # Bibliografia
 		$lang 			= DEDALO_DATA_NOLAN;
 		$value 			= $code;
-		$table 			= common::get_matrix_table_from_tipo($section_tipo); 
-		
+		$table 			= common::get_matrix_table_from_tipo($section_tipo);
+
 		#$sql_filter = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$value);
 		$sql_filter = 'datos @>\'{"components":{"rsc137":{"dato":{"lg-nolan":["'.$value.'"]}}}}\'::jsonb ';
 		$strQuery   = "-- ".__METHOD__."
@@ -535,6 +535,6 @@ class tool_import_kml extends tool_common {
 	}//end get_section_id_from_code
 
 
-	
+
 }#end tool_import_kml class
 ?>

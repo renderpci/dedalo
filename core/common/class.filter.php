@@ -103,14 +103,14 @@ abstract class filter {
 		// projects_name_tipo. Get ts_map for locate name component (for future )
 			$RecordObj_dd = new RecordObj_dd($section_map);
 			$properties  = $RecordObj_dd->get_properties();
-			if (!$properties_obj = json_decode($properties)) {
+			if (!$properties) {
 				dump($properties, ' properties ++ '.to_string($section_map));
 				throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
 			}
-			$projects_name_tipo = $properties_obj->thesaurus->term;
+			$projects_name_tipo = $properties->thesaurus->term;
 
 		// typology tipo
-			$typology_tipo 		= $properties_obj->thesaurus->typology ?? 'dd157';
+			$typology_tipo 		= $properties->thesaurus->typology ?? 'dd157';
 
 
 		// filter by filter_master

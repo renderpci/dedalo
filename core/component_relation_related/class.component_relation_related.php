@@ -363,7 +363,7 @@ class component_relation_related extends component_relation_common {
 				$ar_componets_related[] = $component_tipo;
 			}
 		}
-		$properties = json_decode($RecordObj_dd->get_properties());
+		$properties = $RecordObj_dd->get_properties();
 		$divisor = (isset($properties->source->divisor)) ?  $properties->source->divisor : ' | ';
 
 		# References to me
@@ -451,7 +451,7 @@ class component_relation_related extends component_relation_common {
 				$ar_componets_related[] = $component_tipo;
 			}
 		}
-		$properties = json_decode($RecordObj_dd->get_properties());
+		$properties = $RecordObj_dd->get_properties();
 		$divisor = (isset($properties->source->divisor)) ?  $properties->source->divisor : ' | ';
 
 
