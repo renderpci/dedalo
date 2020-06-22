@@ -1706,10 +1706,10 @@ abstract class common {
 
 		// subcontext from layout_map items
 			$layout_map_options = new stdClass();
-				$layout_map_options->section_tipo 			= $this->get_section_tipo();
-				$layout_map_options->tipo 					= $this->get_tipo();
-				$layout_map_options->modo 					= $records_mode;
-				$layout_map_options->request_config_type 	= 'show';
+				$layout_map_options->section_tipo			= $this->get_section_tipo();
+				$layout_map_options->tipo					= $this->get_tipo();
+				$layout_map_options->modo					= $records_mode;
+				$layout_map_options->request_config_type	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
 
@@ -1801,10 +1801,10 @@ abstract class common {
 
 		// Iterate dd_object (layout_map) for colums
 			$layout_map_options = new stdClass();
-				$layout_map_options->section_tipo 			= $this->get_section_tipo();
-				$layout_map_options->tipo 					= $this->get_tipo();
-				$layout_map_options->modo 					= $this->get_modo();
-				$layout_map_options->request_config_type 	= 'show';
+				$layout_map_options->section_tipo			= $this->get_section_tipo();
+				$layout_map_options->tipo					= $this->get_tipo();
+				$layout_map_options->modo					= $this->get_modo();
+				$layout_map_options->request_config_type	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
 
@@ -1979,28 +1979,25 @@ abstract class common {
 
 		$request_config = [];
 
-		// Source
-		$source = $this->get_source();
+		// source
+			$source = $this->get_source();
+			$request_config[] = $source;
 
-		$request_config[] = $source;
+		// request_config
+			$records_mode 	= isset($this->properties->source->records_mode)
+				? $this->properties->source->records_mode
+				: $this->get_modo();
+			$mode			= $records_mode;	
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
+			$section_id		= $this->get_section_id();			
 
-		$records_mode = isset($this->properties->source->records_mode)
-			? $this->properties->source->records_mode
-			: $this->get_modo();
+			$request_config_parsed	= common::get_request_properties_parsed($tipo, false, $section_tipo, $mode, $section_id);
+			$request_config			= array_merge($request_config, $request_config_parsed);
 
-		// parse request properties
-		$tipo			= $this->get_tipo();
-		$section_tipo	= $this->get_section_tipo();
-		$section_id		= $this->get_section_id();
-		$mode			= $records_mode;
+		// request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
+			$this->set_request_ddo();
 
-		$request_config_parsed = common::get_request_properties_parsed($tipo, false ,$section_tipo, $mode, $section_id);
-
-
-		$request_config = array_merge($request_config, $request_config_parsed);
-
-		// insert into the global dd_objects storage the current dd_objects that will needed
-		$this->set_request_ddo();
 
 		return $request_config;
 	}//end build_request_config
@@ -2047,11 +2044,11 @@ abstract class common {
 		$dd_info_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, $show_parents=true,false, $divisor, false);
 
 		$dd_info = new stdClass();
-			$dd_info->tipo 			= 'ddinfo';
-			$dd_info->section_id 	= $section_id;
+			$dd_info->tipo			= 'ddinfo';
+			$dd_info->section_id	= $section_id;
 			$dd_info->section_tipo	= $section_tipo;
-			$dd_info->value 		= [$dd_info_value];
-			$dd_info->parent 		= $source_component_tipo;
+			$dd_info->value			= [$dd_info_value];
+			$dd_info->parent		= $source_component_tipo;
 
 
 		return $dd_info;
@@ -2265,8 +2262,6 @@ abstract class common {
 
 
 
-
-
 	/**
 	* GET_REQUEST_PROPERTIES_PARSED
 	* Resolves the component config context with backward compatibility
@@ -2305,7 +2300,6 @@ abstract class common {
 
 				// if($external===false && $item_request_config->type==='external') continue; // ignore external
 
-
 				$parsed_item = new stdClass();
 					$parsed_item->typo = 'rqo';
 
@@ -2338,13 +2332,13 @@ abstract class common {
 
 						// search_query_object
 						$sqo_config = new stdClass();
-							$sqo_config->full_count 	= false;
-							$sqo_config->add_select 	= false;
-							$sqo_config->direct 		= true;
-							$sqo_config->limit  		= $limit;
-							$sqo_config->offset 		= 0;
-							$sqo_config->mode 			= $mode;
-							$sqo_config->operator 		= $operator;
+							$sqo_config->full_count	= false;
+							$sqo_config->add_select	= false;
+							$sqo_config->direct		= true;
+							$sqo_config->limit		= $limit;
+							$sqo_config->offset		= 0;
+							$sqo_config->mode		= $mode;
+							$sqo_config->operator	= $operator;
 
 						$parsed_item->search = $item_request_config->search;
 						$parsed_item->search->sqo_config = $sqo_config;
@@ -2363,17 +2357,18 @@ abstract class common {
 							: '$or';
 
 						// search_query_object
-						$sqo_config = new stdClass();
-							$sqo_config->full_count 	= false;
-							$sqo_config->add_select 	= false;
-							$sqo_config->direct 		= true;
-							$sqo_config->limit  		= $limit;
-							$sqo_config->offset 		= 0;
-							$sqo_config->mode 			= $mode;
-							$sqo_config->operator 		= $operator;
+							$sqo_config = new stdClass();
+								$sqo_config->full_count	= false;
+								$sqo_config->add_select	= false;
+								$sqo_config->direct		= true;
+								$sqo_config->limit		= $limit;
+								$sqo_config->offset		= 0;
+								$sqo_config->mode		= $mode;
+								$sqo_config->operator	= $operator;
 
-						$parsed_item->show = $item_request_config->show;
-						$parsed_item->show->sqo_config = $sqo_config;
+							$parsed_item->show				= $item_request_config->show;
+							$parsed_item->show->sqo_config	= $sqo_config;
+
 						dump($parsed_item->show, ' $parsed_item->show ++ '.to_string());
 					}
 
@@ -2430,52 +2425,54 @@ abstract class common {
 					break;
 			}
 
-			// $ar_related_clean
-			$ar_related_clean 	 = [];
-			$target_section_tipo = $section_tipo;
-			foreach ((array)$ar_related as $key => $current_tipo) {
-				$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				if ($current_model==='section') {
-					$target_section_tipo = $current_tipo; // Overwrite
-					continue;
-				}else if ($current_model==='section' || $current_model==='exclude_elements') {
-					continue;
-				}
-				$ar_related_clean[] = $current_tipo;
-			}
-
-			if (!isset($target_section_tipo)) {
+			// related_clean
+				$ar_related_clean 	 = [];
 				$target_section_tipo = $section_tipo;
-			}
+				foreach ((array)$ar_related as $key => $current_tipo) {
+					$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					if ($current_model==='section') {
+						$target_section_tipo = $current_tipo; // Overwrite
+						continue;
+					}else if ($current_model==='section' || $current_model==='exclude_elements') {
+						continue;
+					}
+					$ar_related_clean[] = $current_tipo;
+				}
+				if (empty($ar_related_clean)) {
+					$ar_related_clean = [$tipo];
+				}
 
-			if (empty($ar_related_clean)) {
-				$ar_related_clean = [$tipo];
-			}
+			// target_section_tipo
+				if (!isset($target_section_tipo)) {
+					$target_section_tipo = $section_tipo;
+				}
 
 			// search_query_object
-			$sqo_config = new stdClass();
-				$sqo_config->full_count 	= false;
-				$sqo_config->add_select 	= false;
-				$sqo_config->direct 		= true;
-				$sqo_config->limit  		= $limit;
-				$sqo_config->offset 		= 0;
-				$sqo_config->mode 			= $mode;
-				$sqo_config->operator 		= '$and';
+				$sqo_config = new stdClass();
+					$sqo_config->full_count	= false;
+					$sqo_config->add_select	= false;
+					$sqo_config->direct		= true;
+					$sqo_config->limit		= $limit;
+					$sqo_config->offset		= 0;
+					$sqo_config->mode		= $mode;
+					$sqo_config->operator	= '$and';
 
-			$show = new stdClass();
-				$show->ddo_map 		= $ar_related_clean;
-				$show->sqo_config	= $sqo_config;
+			// show
+				$show = new stdClass();
+					$show->ddo_map 		= $ar_related_clean;
+					$show->sqo_config	= $sqo_config;
 
+			// request_config_item. build 
+				$request_config_item = new stdClass();
+					$request_config_item->typo			= 'rqo';
+					$request_config_item->type			= 'internal';
+					$request_config_item->section_tipo	= is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
+					$request_config_item->search		= $show;
+					$request_config_item->select		= $show;
+					$request_config_item->show			= $show;
 
-			// build request_config_item
-			$request_config_item = new stdClass();
-				$request_config_item->typo			= 'rqo';
-				$request_config_item->type			= 'internal';
-				$request_config_item->section_tipo	= is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
-				$request_config_item->search		= $show;
-				$request_config_item->select		= $show;
-				$request_config_item->show			= $show;
-dump($request_config_item, ' request_config_item ++ '.to_string());
+				dump($request_config_item, ' request_config_item ++ '.to_string());
+
 			$request_config_parsed = [$request_config_item];
 		}
 
