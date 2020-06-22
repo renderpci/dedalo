@@ -1,3 +1,8 @@
+
+@properties_bg_color : #1b531f;
+
+
+
 #wrapGeneral {
   border: none;
   width: 100%;
@@ -202,9 +207,9 @@ select {
 .divLineasInfo.div_properties pre {
   // background-color: #5fd368;
   // opacity: 0.8;
-  background-color: #5fd368;
+  background-color: @properties_bg_color;
   opacity: .8;
-  // color: #fff;
+  color: #fff;
   border-radius: 3px;
 }
 .div_termino {
@@ -381,7 +386,8 @@ table.table_list_ts_used td {
   top: 0px;
 
   &.btn_properties {
-    background-color: #4dcb74;
+    background-color: @properties_bg_color;
+    color: #ffffff;
   }
 }
 .cuadroU:active {

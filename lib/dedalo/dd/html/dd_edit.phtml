@@ -218,7 +218,7 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 					<!-- HEADER OTRA INFO -->
 					<tr>
 						<td class="td_header" onClick="simpleToogleTBODY('otraInfo',this);redimensionarVentana();" style="cursor:pointer"> 
-							<?php echo $otra_informacion_title ?> <div class="flecha_close_tboby"></div> 
+							<?php #echo $otra_informacion_title ?> V5 Propiedades <div class="flecha_close_tboby"></div> 
 						</td>
 					</tr>
 					
@@ -285,7 +285,7 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 						<tr>
 							<td>
 								<div class="wraper_propiedades">																		
-									<textarea id="properties" name="properties" class="propiedades_textarea"><?php echo $properties ?></textarea>							
+									<textarea id="properties" name="properties" class="propiedades_textarea"><?php echo json_encode($properties) ?></textarea>							
 									<div id="properties_editor_json" class="editor_json_container"></div>
 									<script>
 									const properties_textarea_element = document.getElementById('properties')
@@ -299,7 +299,7 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 									}
 									// create the editor
 										const properties_container	= document.getElementById('properties_editor_json');
-										const properties_editor		= new JSONEditor(properties_container, properties_options, <?php echo !empty($properties) ? (string)$properties : '""' ?>);
+										const properties_editor		= new JSONEditor(properties_container, properties_options, <?php echo !empty($properties) ? json_encode($properties) : '""' ?>);
 									</script>			
 								</div><!-- /div_wraper -->
 							</td>

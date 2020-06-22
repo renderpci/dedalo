@@ -354,20 +354,16 @@ class dd_elements {
 		global $properties_title;
 
 		$add_class='';
-		$ob = json_decode($properties);
-		if($ob === null) {
-			// $ob is null because the json cannot be decoded
-			$add_class = 'json_bad_alert';
-		}
+		$ob = $properties;		
 
-		$obj_html 	= '';#"\n <!-- Btn Mostrar properties -->";
+		$obj_html 	= '';
 		$divDestino = "properties_".$terminoID;
 		if($terminoID)
 		{
 			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $properties_title\" ";
 			#$obj_html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
 			#$obj_html .= "></div>";
-			$obj_html 	 .= "\n <div class=\"cuadroU btn_properties $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+			$obj_html 	 .= "\n <div class=\"cuadroU btn_properties $add_class\" title=\"$mostrar_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
 		}
 		return $obj_html ;
 	}
