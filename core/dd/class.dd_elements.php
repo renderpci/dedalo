@@ -343,22 +343,19 @@ class dd_elements {
 	crea el botón P si hay properties
 	*/
 	protected static function renderBtn_properties($terminoID, $properties) {
-		global $mostrar_title ;
+		global $mostrar_title;
 		global $properties_title;
 
-
-		$divDestino = "properties_".$terminoID;
+		$divDestino = 'properties_'.$terminoID;	
+		$obj_html = '<div class="cuadroU btn_properties" title="'.$mostrar_title.'" onclick="multiToogle(\''.$divDestino.'\',\'block\',\'none\')"> P </div>';
 		
-		$obj_html = " <div class=\"cuadroU btn_properties\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
-		
-		return $obj_html ;
+		return $obj_html;
 	}
 
 	/*
 	crea el botón Mostrar ND no descriptores
 	*/
 	protected static function renderBtnND($terminoID) {
-
 		global $mostrar_NO_descriptors_title ;
 
 		$obj = '';
