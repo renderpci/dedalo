@@ -1987,16 +1987,18 @@ abstract class common {
 			$records_mode 	= isset($this->properties->source->records_mode)
 				? $this->properties->source->records_mode
 				: $this->get_modo();
-			$mode			= $records_mode;	
+			$mode			= $records_mode;
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
-			$section_id		= $this->get_section_id();			
+			$section_id		= $this->get_section_id();
 
 			$request_config_parsed	= common::get_request_properties_parsed($tipo, false, $section_tipo, $mode, $section_id);
 			$request_config			= array_merge($request_config, $request_config_parsed);
 
 		// request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
 			$this->set_request_ddo();
+
+			// dump($request_config, ' +++++++++++++++++++++++++++++ $request_config ++ '.to_string());
 
 
 		return $request_config;
@@ -2462,7 +2464,7 @@ abstract class common {
 					$show->ddo_map 		= $ar_related_clean;
 					$show->sqo_config	= $sqo_config;
 
-			// request_config_item. build 
+			// request_config_item. build
 				$request_config_item = new stdClass();
 					$request_config_item->typo			= 'rqo';
 					$request_config_item->type			= 'internal';
@@ -2471,7 +2473,7 @@ abstract class common {
 					$request_config_item->select		= $show;
 					$request_config_item->show			= $show;
 
-				dump($request_config_item, ' request_config_item ++ '.to_string());
+				// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string());
 
 			$request_config_parsed = [$request_config_item];
 		}

@@ -129,38 +129,43 @@ area_thesaurus.prototype.build = async function() {
 			const new_data = api_response.result
 
 			// set the result to the datum
-				// self.datum = api_response.result
+				self.datum = api_response.result
 
 			// set context and data to current instance
-				self.context	= new_data.context.filter(element => element.tipo===self.tipo)
+				self.context	= new_data.context.find(element => element.tipo===self.tipo)
 				self.data		= new_data.data.filter(element => element.tipo===self.tipo)
 				self.widgets	= new_data.context.filter(element => element.parent===self.tipo && element.typo==='widget')
 
 			// dd_request
 				self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
-
-				console.log("----------self.dd_request.show", self.dd_request.show);
+				// console.log("-----------------------self.dd_request.show", self.dd_request.show);
 		}
 
-		const area_ddo	= self.context.find(element => element.type==='area')
-		self.label		= area_ddo.label
+	// label
+		// const area_ddo	= self.context //.find(element => element.type==='area')
+		// self.label		= area_ddo.label
+		self.label 		= self.context.label
 
 	// permissions. calculate and set (used by section records later)
-		self.permissions = area_ddo.permissions || 0
+		// self.permissions = area_ddo.permissions || 0
+		self.permissions = self.context.permissions || 0
 
 	// section tipo
-		self.section_tipo = area_ddo.section_tipo || null
-
-
+		// self.section_tipo = area_ddo.section_tipo || null
+		self.section_tipo = self.context.section_tipo || null
 
 	// filter
 		if (!self.filter && self.permissions>0) {
+			// setTimeout(function(){
+
 			const current_filter = new search()
 			current_filter.init({
 				caller : self
 			})
 			current_filter.build()
 			self.filter = current_filter
+
+			// },3000)
 		}
 
 	// debug
