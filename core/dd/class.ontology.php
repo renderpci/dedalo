@@ -117,7 +117,7 @@ class ontology {
 				$item->translatable = $RecordObj_dd->get_traducible()==='si';
 			}
 			if ($options->properties===true) {
-				$item->properties = $RecordObj_dd->get_properties(true);
+				$item->properties = $RecordObj_dd->get_properties();
 			}
 			if ($options->relations===true) {
 

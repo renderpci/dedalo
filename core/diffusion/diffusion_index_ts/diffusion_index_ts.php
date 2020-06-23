@@ -46,11 +46,9 @@
 				foreach ($current_head_elements as $head_element_tipo) {
 					#dump($current_head_elements,'$current_head_elements');
 
-					$RecordObj_dd 	= new RecordObj_dd($head_element_tipo);
-					$current_lang 	= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-					$properties 	= $RecordObj_dd->get_properties();
-					$properties 	= json_decode($properties);
-						#dump($properties, ' properties ++ '.to_string());
+					$RecordObj_dd	= new RecordObj_dd($head_element_tipo);
+					$current_lang	= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$properties		= $RecordObj_dd->get_properties();
 
 					$related_component_tipo = RecordObj_dd::get_ar_terminos_relacionados($head_element_tipo, $cache=true, $simple=true)[0];
 						#dump($related_component_tipo,'$related_component_tipo');

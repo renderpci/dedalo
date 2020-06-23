@@ -842,7 +842,7 @@ abstract class component_common extends common {
 
 		// create the observer component
 		$RecordObj_dd = new RecordObj_dd($observer->component_tipo);
-		$properties = $RecordObj_dd->get_properties(true);
+		$properties = $RecordObj_dd->get_properties();
 
 		$ar_observe = $properties->observe;
 
