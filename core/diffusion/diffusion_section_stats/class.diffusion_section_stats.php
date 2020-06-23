@@ -247,9 +247,8 @@ class diffusion_section_stats extends diffusion {
 				#if ($current_component_tipo!='dd1061') continue;
 				#if ($current_component_tipo=='dd1061') continue;
 
-				$RecordObj_dd 				= new RecordObj_dd($current_component_tipo);
-				$properties 				= $RecordObj_dd->get_properties(true);
-					#dump($properties, ' properties ++ '.to_string());	continue;
+				$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
+				$properties		= $RecordObj_dd->get_properties();
 
 				#
 				# DIFFUSION_MAP_OBJECT

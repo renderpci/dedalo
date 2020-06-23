@@ -14,9 +14,9 @@ class component_external extends component_common {
 	*/
 	public function load_data_from_remote() {
 
-		$section_id 		 = $this->get_parent();
-		$section_tipo 		 = $this->section_tipo;
-		$lang 				 = DEDALO_DATA_LANG;
+		$section_id		= $this->get_parent();
+		$section_tipo	= $this->section_tipo;
+		$lang			= DEDALO_DATA_LANG;
 
 		// cache
 			static $data_from_remote_cache = [];
@@ -27,8 +27,8 @@ class component_external extends component_common {
 			}
 
 
-		$RecordObj_dd 		 = new RecordObj_dd($section_tipo);
-		$section_properties = $RecordObj_dd->get_properties(true);
+		$RecordObj_dd		= new RecordObj_dd($section_tipo);
+		$section_properties	= $RecordObj_dd->get_properties();
 
 		// format reference
 			# {
@@ -66,7 +66,7 @@ class component_external extends component_common {
 				$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], true, true, true, false, false);
 				foreach ($ar_component_tipo as $component_tipo) {
 					$RecordObj_dd 		 	= new RecordObj_dd($component_tipo);
-					$component_properties 	= $RecordObj_dd->get_properties(true);
+					$component_properties 	= $RecordObj_dd->get_properties();
 					if (empty($component_properties)) {
 						continue;
 					}

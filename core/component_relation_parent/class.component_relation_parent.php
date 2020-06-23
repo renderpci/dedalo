@@ -837,7 +837,7 @@ class component_relation_parent extends component_relation_common {
 		#
 		# Look in children properties different possible sources
 		$RecordObj 								= new RecordObj_dd($from_component_tipo);
-		$my_component_children_tipo_properties = $RecordObj->get_properties(true);
+		$my_component_children_tipo_properties = $RecordObj->get_properties();
 
 		# hierarchy_sections
 		$hierarchy_types 	= !empty($my_component_children_tipo_properties->source->hierarchy_types) 	 ? $my_component_children_tipo_properties->source->hierarchy_types : null;

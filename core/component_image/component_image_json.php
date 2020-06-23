@@ -4,9 +4,9 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-	$properties 		= $this->get_properties();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$properties		= $this->get_properties();
 
 
 
