@@ -106,7 +106,7 @@ menu.prototype.build = async function(autoload=true){
 
 		// get context and data
 			const api_response = await current_data_manager.get_menu(self.dd_request.show)
-			console.log("menu build api_response", api_response);
+				// console.log("menu build api_response", api_response);
 
 		// set the result to the datum
 			self.datum = api_response.result
