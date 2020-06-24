@@ -299,16 +299,17 @@ class dd extends dd_elements {
 				
 				$RecordObj_dd	= new RecordObj_dd($terminoID);
 				
-				$termino 		= RecordObj_dd::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;				
-				$def 			= RecordObj_dd::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
+				$termino		= RecordObj_dd::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;				
+				$def			= RecordObj_dd::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
 				$obs			= RecordObj_dd::get_obs_by_tipo($terminoID,$this->ts_lang);
 				
-				$parent 		= $RecordObj_dd->get_parent();
-				$modelo 		= $RecordObj_dd->get_modelo();
-				#$usableIndex 	= $RecordObj_dd->get_usableIndex();
+				$parent			= $RecordObj_dd->get_parent();
+				$modelo			= $RecordObj_dd->get_modelo();
+				#$usableIndex	= $RecordObj_dd->get_usableIndex();
 				$norden			= $RecordObj_dd->get_norden();
 				$traducible		= $RecordObj_dd->get_traducible();
-				$propiedades	= $RecordObj_dd->get_propiedades();		#dump($propiedades," ");
+				$propiedades	= $RecordObj_dd->get_propiedades();
+				$properties		= $RecordObj_dd->get_properties();
 								
 				$RecordObj_dd2	= new RecordObj_dd($terminoID);
 				#$hijosND		= count($RecordObj_dd2->get_ar_childrens_of_this('no'));
@@ -343,7 +344,7 @@ class dd extends dd_elements {
 				$html .= "\n<div id=\"divCont$terminoID\" class=\"divCont\" style=\"padding-left:$marginLeft" . "px;$display\" >";
 									
 					# generamos la linea con los iconos, etc..
-					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$traducible,$norden);
+					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$properties,$traducible,$norden);
 					
 					# recursive 										
 					if( $children >0 ) {

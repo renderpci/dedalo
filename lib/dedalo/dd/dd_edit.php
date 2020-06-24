@@ -57,7 +57,7 @@ if( !empty($_POST["accion"]) ) {
 $RecordObj_dd	= new RecordObj_dd($terminoID);
 $tld			= $RecordObj_dd->get_tld();
 $parent			= $RecordObj_dd->get_parent();
-$modelo			= $RecordObj_dd->get_modelo();			
+$modelo			= $RecordObj_dd->get_modelo();
 $userID			= $RecordObj_dd->get_userID();
 $esmodelo		= $RecordObj_dd->get_esmodelo();
 $esdescriptor	= $RecordObj_dd->get_esdescriptor();
@@ -65,6 +65,7 @@ $visible		= $RecordObj_dd->get_visible();
 $norden			= $RecordObj_dd->get_norden();
 $traducible		= $RecordObj_dd->get_traducible();
 $propiedades	= $RecordObj_dd->get_propiedades();
+$properties		= $RecordObj_dd->get_properties();
 #$usableIndex	= $RecordObj_dd->get_usableIndex();	
 #$codNomenclator= $RecordObj_dd->get_codNomenclator();
 #$type			= $RecordObj_dd->get_jerarquia_type();
@@ -141,4 +142,4 @@ require_once($page_html);
 session_write_close();
 
 exit();
-?>
+

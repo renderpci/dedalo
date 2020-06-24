@@ -125,13 +125,22 @@ input, textarea {
 
 /* JSON EDITOR
 --------------------------------------------- */
-#editor_json {
+// #editor_json {
+.editor_json_container {
 	// height:277px; 
 	height:100%;	
 	width:100%;
 	text-align:left;
 	@media screen and (min-height: 970px) {		
 		//height:440px;	
+	}
+}
+
+@properties_bg_color : #1b531f;
+
+#properties_editor_json {
+	.jsoneditor-menu {
+		background-color: @properties_bg_color;
 	}
 }
 

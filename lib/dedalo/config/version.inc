@@ -1771,8 +1771,8 @@
 		
 
 	Valencia 21-06-2020 5.5.61
-		Added properties column to manage jer_dd structure table
-
+		Added properties column to manage jer_dd structure table		
+		Add capacity to structure edit 'properties'
 
 
 
@@ -1800,7 +1800,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '21-06-2020');
+	define('DEDALO_BUILD'	, '22-06-2020');
 
 
 	/*

@@ -215,195 +215,231 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 				
 				
 				<!-- OTRA INFO -->
-				<!-- HEADER OTRA INFO -->
-				<tr>
-					<td class="td_header" onClick="simpleToogleTBODY('otraInfo',this);redimensionarVentana();" style="cursor:pointer"> 
-						<?php echo $otra_informacion_title ?> <div class="flecha_close_tboby"></div> 
-					</td>
-				</tr>
-				
-				<!-- TBODY OTRA INFO -->
-				<tbody id="otraInfo">  
-
-				
-				<!-- PROPIEDADES (JSON) -->
-				<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
-				<tr>
-					<td>
-						<div class="wraper_propiedades">
-							<?php /*							
-							<label class="left_div propiedades_label">Propiedades (JSON)</label>
-							*/ ?>											
-							<textarea id="propiedades" name="propiedades" class="propiedades_textarea"><?php echo $propiedades ?></textarea>
-							<?php #dump($propiedades, ' propiedades ++ '.to_string()); ?>
-							<div id="editor_json" class="editor_json_container"></div>
-							<script>
-							var propiedades_textarea_element = document.getElementById('propiedades')
-							  	propiedades_textarea_element.style.display = 'none';
-							  var options = {
-							    mode: 'code',
-							    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-							    error: function (err) {
-							      alert(err.toString());
-							    }
-							  };  
-							  // create the editor
-							  var container = document.getElementById('editor_json');
-							  var editor 	= new JSONEditor(container, options, <?php echo !empty($propiedades) ? (string)$propiedades : '""' ?>);
-							 	//console.log(editor);
-							  
-							// Send JSON text to input and force save
-							// document.getElementById('submit_button').onclick = function () {
-							//	    $('#propiedades')
-							//	    	.val(editor.getText())
-							//	    	.trigger('change');						
-							// };							 						 
-							</script>	
-							<?php /**/ ?>				
-						</div><!-- /div_wraper -->
-					</td>
-				</tr>
-				<?php } #if (SHOW_DEBUG) ?>
-
-
-				<!-- HIERARCHIE INFO -->        
-				<tr class="row_border_bottom">
-					<td>       
-					 <table class="table_hierarchy_info">
-						<?php /*
-						<!-- PARENTS -->
-						<tr>
-							<td align="right" valign="top" nowrap  ><?php echo $jerarquia_title ?>: <?php echo $padres_title ?></td>
-							<td align="center"  valign="top" nowrap bgcolor="#999999">
-								<?php      
-								# PARENTS : SACAMOS RECURSIVAMENTE TODOS LOS PADRES QUE TENDRÁ EL TESAURO ACTUAL                         
-								$matriz = $ar_parents_of_this;	#$padresArray['termino'];#print_r($matriz);
-								$nivel = 0 ;	
-								if(is_array($matriz)) {                
-										$niveles = count($matriz)-1 ;				 
-										foreach( $matriz as $myKey=>$value5) {                
-												echo "$nivel_title " ;
-												echo " $nivel <br>";                
-												$nivel++ ;
-										}
-								}			       
-								?>
-							</td>
-							<td align="left" style="font-size:9px;">
-								<?php        
-								# ordenamos inversamente los padres
-								$nivel = 0 ;
-								if(is_array($matriz)) {
-										krsort($matriz);
-										$niveles = count($matriz)-1 ;					 
-										foreach( $matriz as $key => $value) {					
-												echo $value . '<br> ';
-												$nivel++ ;
-										}
-								}
-								?>
-							</td>
-						</tr>
-						<!-- /PARENTS -->
-
-
-						<!-- HERMANOS -->
-						<tr id="hermanosTR">
-						 <td align="right" valign="top" nowrap  ><?php echo $hermanos_title ?> </td>
-						 <td align="center" valign="top" nowrap bgcolor="#999999">
-								<?php echo "$nivel_title ". ($nivel)   ?>
-						 </td>
-						 <td align="left">
-								<div style="max-height:70px; overflow:auto" >
-								<?php 
-								$nivel +1 ;	            
+					<!-- HEADER OTRA INFO -->
+					<tr>
+						<td class="td_header" onClick="simpleToogleTBODY('otraInfo',this);redimensionarVentana();" style="cursor:pointer"> 
+							<?php #echo $otra_informacion_title ?> V5 Propiedades <div class="flecha_close_tboby"></div> 
+						</td>
+					</tr>
 					
-								# HERMANOS : Array de hermanos del término actual	
-								if(is_array($ar_siblings)) {      				
-									foreach($ar_siblings as $current_terminoID) {      					
-										$ar_hermanosNombres[]	= RecordObj_dd::get_termino_by_tipo($current_terminoID);					
-									}      				
-									echo implode(', ',$ar_hermanosNombres); 
-								}			       
-								?>
-								</div>
-						 </td>
+					<!-- TBODY OTRA INFO -->
+					<tbody id="otraInfo">  
+
+					
+					<!-- PROPIEDADES (JSON) -->
+					<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
+					<tr>
+						<td>
+							<div class="wraper_propiedades">
+								<?php /*							
+								<label class="left_div propiedades_label">Propiedades (JSON)</label>
+								*/ ?>											
+								<textarea id="propiedades" name="propiedades" class="propiedades_textarea"><?php echo $propiedades ?></textarea>
+								<?php #dump($propiedades, ' propiedades ++ '.to_string()); ?>
+								<div id="editor_json" class="editor_json_container"></div>
+								<script>
+								var propiedades_textarea_element = document.getElementById('propiedades')
+								  	propiedades_textarea_element.style.display = 'none';
+								  var options = {
+								    mode: 'code',
+								    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+								    error: function (err) {
+								      alert(err.toString());
+								    }
+								  };  
+								  // create the editor
+								  var container = document.getElementById('editor_json');
+								  var editor 	= new JSONEditor(container, options, <?php echo !empty($propiedades) ? (string)$propiedades : '""' ?>);
+								 	//console.log(editor);
+								  
+								// Send JSON text to input and force save
+								// document.getElementById('submit_button').onclick = function () {
+								//	    $('#propiedades')
+								//	    	.val(editor.getText())
+								//	    	.trigger('change');						
+								// };							 						 
+								</script>	
+								<?php /**/ ?>				
+							</div><!-- /div_wraper -->
+						</td>
+					</tr>
+					<?php } #if (SHOW_DEBUG) ?>
+
+					</tbody><!-- /otraInfo -->
+
+
+
+				<!-- V6 Properties -->
+					<!-- HEADER V6 Properties -->
+					<tr>
+						<td class="td_header" onClick="simpleToogleTBODY('V6_properties',this);redimensionarVentana();" style="cursor:pointer"> 
+							V6 Properties <div class="flecha_close_tboby"></div> 
+						</td>
+					</tr>
+
+					<!-- TBODY V6 Properties -->
+					<tbody id="V6_properties">  
+
+					<!-- PROPERTIES (JSON) -->
+						<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
+						<tr>
+							<td>
+								<div class="wraper_propiedades">																		
+									<textarea id="properties" name="properties" class="propiedades_textarea"><?php echo json_encode($properties) ?></textarea>							
+									<div id="properties_editor_json" class="editor_json_container"></div>
+									<script>
+									const properties_textarea_element = document.getElementById('properties')
+									  	  properties_textarea_element.style.display = 'none';
+									const properties_options = {
+										mode	: 'code',
+										modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+										error	: function (err) {
+											alert(err.toString());
+										}
+									}
+									// create the editor
+										const properties_container	= document.getElementById('properties_editor_json');
+										const properties_editor		= new JSONEditor(properties_container, properties_options, <?php echo !empty($properties) ? json_encode($properties) : '""' ?>);
+									</script>			
+								</div><!-- /div_wraper -->
+							</td>
 						</tr>
-						<!-- /HERMANOS -->
+						<?php } #if (SHOW_DEBUG) ?>
+
+					</tbody><!-- /V6_properties -->
 
 
-						<!-- HIJOS -->
-						<tr id="hijosTR">
-						 <td align="right" nowrap  ><?php echo $hijos_directos_title ?></td>
-						 <td align="center" nowrap bgcolor="#999999"  ><?php echo "$nivel_title " . ($nivel+1);  ?></td>
-						 <td align="left"  >
-								<div style="max-height:70px; overflow:auto" >
-								<?php
-								# HIJOS : Mostramos el deglose de hijos del término actual desde el array de datos 
-								$sizeOf_hijosArray = sizeof($hijosArray);
-								$n=0;
-								if(is_array($hijosArray)) foreach($hijosArray as $hijoActual) {
-										#echo $hijoActual ;
-										echo RecordObj_dd::get_termino_by_tipo($hijoActual);
-										$n++;
-										if($n < $sizeOf_hijosArray) echo ', ';  
-										#echo ",($sizeOf_hijosArray)";      
+				<!-- HIERARCHIE INFO -->
+					<tr class="row_border_bottom">
+						<td>       
+						 <table class="table_hierarchy_info">
+							<?php /*
+							<!-- parents -->
+								<tr>
+									<td align="right" valign="top" nowrap  ><?php echo $jerarquia_title ?>: <?php echo $padres_title ?></td>
+									<td align="center"  valign="top" nowrap bgcolor="#999999">
+										<?php      
+										# PARENTS : SACAMOS RECURSIVAMENTE TODOS LOS PADRES QUE TENDRÁ EL TESAURO ACTUAL                         
+										$matriz = $ar_parents_of_this;	#$padresArray['termino'];#print_r($matriz);
+										$nivel = 0 ;	
+										if(is_array($matriz)) {                
+												$niveles = count($matriz)-1 ;				 
+												foreach( $matriz as $myKey=>$value5) {                
+														echo "$nivel_title " ;
+														echo " $nivel <br>";                
+														$nivel++ ;
+												}
+										}			       
+										?>
+									</td>
+									<td align="left" style="font-size:9px;">
+										<?php        
+										# ordenamos inversamente los padres
+										$nivel = 0 ;
+										if(is_array($matriz)) {
+												krsort($matriz);
+												$niveles = count($matriz)-1 ;					 
+												foreach( $matriz as $key => $value) {					
+														echo $value . '<br> ';
+														$nivel++ ;
+												}
+										}
+										?>
+									</td>
+								</tr>						
+
+							<!-- hermanos -->
+								<tr id="hermanosTR">
+								 <td align="right" valign="top" nowrap  ><?php echo $hermanos_title ?> </td>
+								 <td align="center" valign="top" nowrap bgcolor="#999999">
+										<?php echo "$nivel_title ". ($nivel)   ?>
+								 </td>
+								 <td align="left">
+										<div style="max-height:70px; overflow:auto" >
+										<?php 
+										$nivel +1 ;	            
+							
+										# HERMANOS : Array de hermanos del término actual	
+										if(is_array($ar_siblings)) {      				
+											foreach($ar_siblings as $current_terminoID) {      					
+												$ar_hermanosNombres[]	= RecordObj_dd::get_termino_by_tipo($current_terminoID);					
+											}      				
+											echo implode(', ',$ar_hermanosNombres); 
+										}			       
+										?>
+										</div>
+								 </td>
+								</tr>
+
+							<!-- hijos -->
+								<tr id="hijosTR">
+								 <td align="right" nowrap  ><?php echo $hijos_directos_title ?></td>
+								 <td align="center" nowrap bgcolor="#999999"  ><?php echo "$nivel_title " . ($nivel+1);  ?></td>
+								 <td align="left"  >
+										<div style="max-height:70px; overflow:auto" >
+										<?php
+										# HIJOS : Mostramos el deglose de hijos del término actual desde el array de datos 
+										$sizeOf_hijosArray = sizeof($hijosArray);
+										$n=0;
+										if(is_array($hijosArray)) foreach($hijosArray as $hijoActual) {
+												#echo $hijoActual ;
+												echo RecordObj_dd::get_termino_by_tipo($hijoActual);
+												$n++;
+												if($n < $sizeOf_hijosArray) echo ', ';  
+												#echo ",($sizeOf_hijosArray)";      
+										}
+										?>
+										</div>
+								 </td>
+								</tr>						
+							*/ ?>
+
+							<!-- PARENT : Dependiente de (padre) -->
+								<tr>
+								 <td align="right" nowrap  ><?php echo $dependiente_de_title ?> </td>
+								 <td align="center" nowrap ><?php echo $parentInicial = $parent ; ?></td>
+								 <td align="left" nowrap  >
+									<?php echo $cambiar_a_title ?>
+									<input name="parent" type="text" id="parent" style="width:90px; text-align:center" value="<?php echo $parent ?>" onFocus="myfocus(this)" onBlur="myblur(this)">
+									<span class="anotacionTexto">(<?php echo $al_cambiar_el_padre_title ?>)</span>
+								 </td>
+								</tr>
+
+						 </table><!-- /table_hierarchy_info -->
+						</td>
+					</tr>
+				
+				
+				<!-- submit -->
+					<tr>
+						<td style="padding:10px; text-align:center">
+							<div class="form_buttons">        
+								<input type="hidden" name="terminoID" value="<?php echo $terminoID # el terminoID devuelto por por la búsqueda.(idem que el get) ?>">
+								
+								<!-- Campos obligatorios -->
+								<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
+								<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
+												
+								<input type="hidden" name="MM_insert" value="form1">
+								<input type="hidden" name="accion" value="editTS">
+								
+								<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="submit(this)">
+								<script type="text/javascript">
+								// Send JSON text to input and force update
+								document.getElementById('submit_button').onclick = function () {
+									$(propiedades_textarea_element)
+											.val(editor.getText())
+											.trigger('change');
+									$(properties_textarea_element)
+											.val(properties_editor.getText())
+											.trigger('change');
 								}
-								?>
-								</div>
-						 </td>
-						</tr>
-						<!-- /HIJOS -->
-						<?php */ ?>  
-
-						<!-- PARENT : Dependiente de (padre) -->
-						<tr >
-						 <td align="right" nowrap  ><?php echo $dependiente_de_title ?> </td>
-						 <td align="center" nowrap ><?php echo $parentInicial = $parent ; ?></td>
-						 <td align="left" nowrap  >
-								<?php echo $cambiar_a_title ?>
-								<input name="parent" type="text" id="parent" style="width:90px; text-align:center" value="<?php echo $parent ?>" onFocus="myfocus(this)" onBlur="myblur(this)">
-								<span class="anotacionTexto">(<?php echo $al_cambiar_el_padre_title ?>)</span>
-						 </td>
-						</tr>
-						<!-- /PARENT : Dependiente de (padre) -->
-
-					 </table><!-- /table_hierarchy_info -->       
-					</td>
-				</tr>
-				
-				</tbody><!-- /otraInfo -->
-				
-				
-				
-				<!-- SUBMIT -->
-				<tr>
-					<td style="padding:10px; text-align:center">
-						<div class="form_buttons">        
-							<input type="hidden" name="terminoID" value="<?php echo $terminoID # el terminoID devuelto por por la búsqueda.(idem que el get) ?>">
-							
-							<!-- Campos obligatorios -->
-							<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
-							<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
-											
-							<input type="hidden" name="MM_insert" value="form1">
-							<input type="hidden" name="accion" value="editTS">
-							
-							<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="submit(this)">
-							<script type="text/javascript">
-							// Send JSON text to input and force update
-							document.getElementById('submit_button').onclick = function () {
-								$(propiedades_textarea_element)
-										.val(editor.getText())
-							   			.trigger('change');
-							}
-							</script>
-							
-							<input name="cancelar" type="button" value=" <?php echo $cerrar_title ?> "  onClick="javascript:window.close() ;">
-						</div><!-- /form_buttons -->    
-					</td>
-				</tr>
-				 <!-- /SUBMIT -->
+								</script>
+								
+								<input name="cancelar" type="button" value=" <?php echo $cerrar_title ?> " onClick="javascript:window.close()">
+							</div><!-- /form_buttons -->    
+						</td>
+					</tr>
 					
 					
 			</table><!-- /table_edit -->
