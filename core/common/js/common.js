@@ -577,6 +577,22 @@ const build_request_show = function(self, request_config, action){
 		const source = create_source(self, action)
 		dd_request.push(source)
 
+	// direct request ddo if exists
+		const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
+		if (ar_requested_ddo.length>0) {
+			for (let i = 0; i < ar_requested_ddo.length; i++) {
+				dd_request.push(ar_requested_ddo[i])
+			}
+		}
+
+	// direct request sqo if exists
+		const request_sqo = request_config.find(item => item.typo==='sqo')
+		if (request_sqo) {
+			dd_request.push(request_sqo)			
+		}
+
+			console.log("/// rqo:",rqo);
+
 	// if don't has rqo return the source only
 		if(rqo.length < 1){
 			return dd_request;
