@@ -2250,6 +2250,9 @@ abstract class common {
 				$query_object->offset  				= $options->offset;
 				$query_object->full_count  			= $total_locators ?? $options->full_count;
 
+				if (!empty($options->mode)) {
+					$query_object->mode = $options->mode;
+				}
 				if (!empty($filter_by_locators)) {
 					$query_object->filter_by_locators = $filter_by_locators;
 				}
