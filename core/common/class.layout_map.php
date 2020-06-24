@@ -33,11 +33,11 @@ class layout_map {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// cache
-			// static $resolved_layout_map = [];
-			// $resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->request_config_type;
-			// if (isset($resolved_layout_map[$resolved_key])) {
-			// 	return $resolved_layout_map[$resolved_key];
-			// }
+			static $resolved_layout_map = [];
+			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type;
+			if (isset($resolved_layout_map[$resolved_key])) {
+				return $resolved_layout_map[$resolved_key];
+			}
 
 		// madatory
 			$ar_mandatory = ['section_tipo','tipo','modo'];
