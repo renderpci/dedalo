@@ -7,16 +7,16 @@
 class area_thesaurus extends area_common {
 
 
-	static $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
-	static $typologies_name_tipo 	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
+	static $typologies_section_tipo	= DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
+	static $typologies_name_tipo	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
 	# Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
-	protected $model_view 			= false;
+	protected $model_view			= false;
 	// protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 	public $build_options			= null;
-	public $search_action 			= null;
+	public $search_action			= null;
 
 
 	/**
@@ -32,7 +32,7 @@ class area_thesaurus extends area_common {
 
 		// }, $hierarchy_sections);
 
-		$section_tipo = 'dd100';
+		$section_tipo = DEDALO_TESAURO_TIPO; // 'dd100'
 
 		return $section_tipo;
 	}//end get_section_tipo

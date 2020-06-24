@@ -75,7 +75,7 @@ class sections extends common {
 	public function get_dato() {
 
 		$search_query_object = $this->search_query_object;
-
+			
 		$search 	= search::get_instance($search_query_object);
 		$rows_data	= $search->search();
 

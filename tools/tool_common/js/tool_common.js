@@ -102,17 +102,20 @@ tool_common.prototype.build = async function(autoload=false) {
 			// load data. Load section data from db of the current tool.
 			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
 			// The tool info was generated when it was imported / registered by admin
-				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.read(dd_request.show)
-				const data 					= api_response.result.data
+				const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.read(dd_request.show)
+				const data					= api_response.result.data
 
 			// config set
-				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
-				self.simple_tool_object 	= simple_tool_object[0];
-				const label 				= self.simple_tool_object.label.find(item => item.lang===self.lang);
-				self.label 					= typeof label!=='undefined' ? label.value : self.model
-				const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
-				self.description 			= typeof description!=='undefined' ? description.value : null
+				// simple_tool_object
+					const simple_tool_object	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
+					self.simple_tool_object		= simple_tool_object[0];
+				// label
+					const label					= self.simple_tool_object.label.find(item => item.lang===self.lang);
+					self.label					= typeof label!=='undefined' ? label.value : self.model
+				// description
+					const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
+					self.description			= typeof description!=='undefined' ? description.value : null
 
 			// debug
 				if(SHOW_DEBUG===true) {

@@ -97,7 +97,7 @@ class layout_map {
 					// layout_map
 						$layout_map = array_values($self_ar_dd_objects);
 						#$a = debug_backtrace(); error_log( print_r($a,true) );
-						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo] key:".to_string($resolved_key), logger::DEBUG);
 						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
 						if(SHOW_DEBUG===true) {
 							foreach ($layout_map as $current_item) {
@@ -119,7 +119,7 @@ class layout_map {
 								$layout_map[] = $preset_item;
 							}
 						}
-						debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo]".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo] key:".to_string($resolved_key), logger::DEBUG);
 						//dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));
 						if(SHOW_DEBUG===true) {
 							foreach ($layout_map as $current_item) {
@@ -195,16 +195,15 @@ class layout_map {
 			// dump($layout_map, ' layout_map ++++++++++++ $resolved_key: '.to_string($resolved_key));
 
 		// cache
-			// $resolved_layout_map[$resolved_key] = $layout_map;
+			$resolved_layout_map[$resolved_key] = $layout_map;
 
 		return (array)$layout_map;
 	}//end get_layout_map
 
 
 
-
 	/**
-	* get_section_ddo
+	* GET_SECTION_DDO
 	* @return
 	*/
 	public static function get_section_ddo($section_tipo, $mode, $lang) {
