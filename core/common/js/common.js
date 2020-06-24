@@ -570,7 +570,7 @@ const build_request_show = function(self, request_config, action){
 	const dd_request = []
 
 	const rqo = request_config
-		? request_config.filter(item => item.typo === 'rqo')
+		? request_config.filter(item => item.typo==='rqo')
 		: []
 
 	// source . auto create
@@ -633,7 +633,7 @@ const build_request_show = function(self, request_config, action){
 			section_tipo		: ar_sections,
 			filter				: null,
 			offset				: 0,
-			limit				: self.mode === 'list' ? 10 : 1,
+			limit				: self.mode==='list' ? 10 : 1,
 			select				: [],
 			full_count			: false,
 			filter_by_locators	: null

@@ -6,7 +6,7 @@
 // component configuration vars
 	$ar_section_tipo	= $this->get_ar_section_tipo();
 	$modo				= $this->get_modo();
-	$section_class 		= ($modo==='tm') ? 'section_tm' : 'section';
+	$section_class 		= 'section';
 
 
 // context
