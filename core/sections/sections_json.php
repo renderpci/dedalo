@@ -25,7 +25,7 @@
 					$section = $section_class::get_instance(null, $current_section_tipo, $modo);
 
 					if ($modo==='tm') {
-						$section->set_base_context( $this->get_base_context() ); // inject full context
+						$section->set_dd_request( $this->get_dd_request() ); // inject dd_request
 					}
 
 					// get the JSON context of the related component

@@ -55,6 +55,11 @@ class section extends common {
 
 		public $layout_map;
 
+		// injected 'dd_request'
+		public $dd_request;
+		// injected whole database record, with all columns
+		public $record;
+
 
 
 	# DIFFUSION INFO
