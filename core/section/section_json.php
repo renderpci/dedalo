@@ -22,14 +22,21 @@
 				break;
 
 			default:
-				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $add_request_config=true);
-
-				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
-					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
+				if ($modo==='tm') {
+					// Component structure context (tipo, relations, properties, etc.)
+						$context = $this->get_tm_context($permissions);
+					
+				}else{
+					// Component structure context (tipo, relations, properties, etc.)
+						$context[] = $this->get_structure_context($permissions, $add_request_config=true);
+					
+					// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
+						$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
+						foreach ($ar_subcontext as $current_context) {
+							$context[] = $current_context;
+						}
 					}
+				
 				break;
 		}
 	}//end if($options->get_context===true)
@@ -41,20 +48,27 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		// subdata
-			// default locator build with this section params
-				$section_id		= $this->get_section_id();
-				$section_tipo	= $this->get_tipo();
-
-				$locator = new locator();
-				 	$locator->set_section_tipo($section_tipo);
-				 	$locator->set_section_id($section_id);
-
-				$value = [$locator];
-
+		if ($modo==='tm') {
+			
 			// subdata add
-				$data = $this->get_ar_subdata($value);
+				$data = $this->get_tm_ar_subdata();
 
+		}else{
+
+			// subdata
+				// default locator build with this section params
+					$section_id		= $this->get_section_id();
+					$section_tipo	= $this->get_tipo();
+
+					$locator = new locator();
+					 	$locator->set_section_tipo($section_tipo);
+					 	$locator->set_section_id($section_id);
+
+					$value = [$locator];
+
+				// subdata add
+					$data = $this->get_ar_subdata($value);
+		}
 
 	}// end if $permissions > 0
 
