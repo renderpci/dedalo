@@ -19,7 +19,7 @@ class sections extends common {
 		protected $modo;
 
 		# context. Full context
-		public $base_context;
+		public $dd_request;
 
 		# search_query_object
 		public $search_query_object;

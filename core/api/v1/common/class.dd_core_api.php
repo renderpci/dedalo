@@ -358,8 +358,8 @@ class dd_core_api {
 				case $model==='section_tm':
 					$section_id 	= $source->section_id;
 					$element 		= section_tm::get_instance($section_id, $section_tipo);
-					// set base_context (source)
-					$element->set_base_context([$source]); // inject whole source
+					// set dd_request (source)
+					$element->set_dd_request([$source]); // inject whole source
 					break;
 
 				case strpos($model, 'area')===0:
@@ -841,7 +841,7 @@ class dd_core_api {
 							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
 
 							if ($mode==='tm') {
-								$element->set_base_context($dd_request); // inject whole context
+								$element->set_dd_request($dd_request); // inject whole context
 							}
 
 						break;
