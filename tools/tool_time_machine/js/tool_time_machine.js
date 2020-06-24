@@ -95,42 +95,60 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// section_tm. get section full context
-		const current_data_manager = new data_manager()
-		const source = {
-			typo			: 'source',
-			tipo			: self.caller.tipo,
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			model			: 'section_tm',
-			lang			: self.caller.lang,
-			pagination		: {
-				total	: 0,
-				offset	: 0,
-				limit	: 10
-			}
-		}
-		const element_context 	= await current_data_manager.get_element_context(source)
-		self.section_tm_context = element_context.result
-
+	
 	// call generic commom tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
-
-	// specific actions..
-		// const base_context 			= get_base_context(self)
-		// const current_data_manager 	= new data_manager()
-		// const api_response 			= await current_data_manager.section_load_data(base_context)
-
-	// section_tm context
-		// const base_context 			= get_base_context(self)
-		// const current_data_manager 	= new data_manager()
-		// const api_response 			= await current_data_manager.section_load_data(base_context)
-		// self.section_tm_context 	= api_response.result.context
-		// 	console.log("+++++ api_response.result:",api_response.result);
 
 
 	return common_build
 }//end build_custom
+
+
+
+/**
+* BUILD_CUSTOM OLD
+*/
+// tool_time_machine.prototype.build = async function(autoload=false) {
+
+// 	const self = this
+
+// 	// section_tm. get section full context
+// 		const current_data_manager = new data_manager()
+// 		const source = {
+// 			typo			: 'source',
+// 			tipo			: self.caller.tipo,
+// 			section_tipo	: self.caller.section_tipo,
+// 			section_id		: self.caller.section_id,
+// 			model			: 'section_tm',
+// 			lang			: self.caller.lang,
+// 			pagination		: {
+// 				total	: 0,
+// 				offset	: 0,
+// 				limit	: 10
+// 			}
+// 		}
+// 		const element_context 	= await current_data_manager.get_element_context(source)
+// 		self.section_tm_context = element_context.result
+// 			console.log("element_context:",element_context);
+
+// 	// call generic commom tool build
+// 		const common_build = tool_common.prototype.build.call(self, autoload);
+
+// 	// specific actions..
+// 		// const base_context 			= get_base_context(self)
+// 		// const current_data_manager 	= new data_manager()
+// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
+
+// 	// section_tm context
+// 		// const base_context 			= get_base_context(self)
+// 		// const current_data_manager 	= new data_manager()
+// 		// const api_response 			= await current_data_manager.section_load_data(base_context)
+// 		// self.section_tm_context 	= api_response.result.context
+// 		// 	console.log("+++++ api_response.result:",api_response.result);
+
+
+// 	return common_build
+// }//end build_custom
 
 
 
@@ -227,30 +245,75 @@ tool_time_machine.prototype.load_section = async function() {
 
 	const self = this
 
-	// show . Builded in build_custom self.section_tm_context
-		const show = self.section_tm_context
 
-	// section instance (regular section)
-		const section_instance = await get_instance({
-			model			: "section",
-			tipo			: self.caller.section_tipo,
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			mode			: "list_tm",
-			lang			: self.caller.lang,
-			section_lang	: self.caller.lang,
-			type			: "section",
-			dd_request		: {
-				show : show
-			},
-			id_variant		: 'time_machine' // avoid conflicts
-		})
+		const current_data_manager = new data_manager()
 
-	// set current tool as component caller (to check if component is inside tool or not)
-		section_instance.caller = this
+		const component = self.caller
 
-	// save section instance (necessary to destroy later)
-		self.ar_instances.push(section_instance)
+		// section in tm mode
+			const source = {
+				typo			: 'source',
+				model			: 'section',
+				mode			: 'tm',
+				tipo			: component.section_tipo,
+				section_tipo	: component.section_tipo,
+				section_id		: component.section_id, // needed for create tm sqo
+				component_tipo	: component.tipo, // needed for create tm sqo
+				lang			: component.lang // needed for create tm sqo (from component)
+			}
+			const ddo_component = {
+				typo			: 'ddo',
+				type			: 'component',
+				model			: component.model,
+				mode			: 'list',
+				tipo			: component.tipo,
+				section_tipo	: component.section_tipo,
+				section_id		: component.section_id,	
+				lang			: component.lang
+			}
+			const sqo = {
+				typo				: 'sqo',
+				id					: 'tmp',
+				mode				: 'tm',
+				section_tipo		: [component.section_tipo],
+				filter_by_locators	: [{
+					section_tipo: source.section_tipo,
+					section_id	: source.section_id,
+					tipo		: source.component_tipo,
+					lang		: source.lang
+				}],
+				limit				: 10,
+				offset				: 0,
+				order				: [{
+					direction : 'DESC',
+					path	  : [{component_tipo : 'id'}]
+				}]
+			}					
+			const request_config = [
+				source,
+				ddo_component,
+				sqo
+			]
+			const context 		= {
+				model			: source.model,
+				tipo			: source.tipo,
+				request_config 	: request_config
+			}
+
+			// instance options
+				const instance_options = {
+					model			: source.model,
+					tipo			: source.tipo,
+					section_tipo	: source.section_tipo,
+					section_id		: source.section_id,
+					mode			: source.mode,
+					lang			: source.lang,
+					context			: context,
+					caller			: self,
+					id_variant		: 'time_machine' // avoid conflicts
+				}
+			
+			const section_instance = await get_instance(instance_options)
 
 	// build with autoload as true
 		await section_instance.build(true)
@@ -261,10 +324,7 @@ tool_time_machine.prototype.load_section = async function() {
 		}
 
 	// add
-		// const instance_found = self.ar_instances.find( el => el===section_instance )
-		// if (section_instance!==self.caller && typeof instance_found==="undefined") {
-			self.ar_instances.push(section_instance)
-		// }
+		self.ar_instances.push(section_instance)
 
 
 	return section_instance
@@ -283,8 +343,13 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 	const component = self.caller
 	const context   = JSON.parse(JSON.stringify(component.context))
 
+	// request_config. Create if not exists
+		if (!context.request_config) {
+			context.request_config = []
+		}
+
 	// context lang switch if var lang is received
-		if (typeof lang!=="undefined") {
+		if (typeof lang!=='undefined') {
 			context.lang = lang
 		}
 
@@ -300,8 +365,8 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 			//parent		: component.parent,
 			type			: component.type,
 			context			: context,
-			data			: {value:[]},
-			datum			: component.datum,
+			// data			: {value:[]},
+			// datum		: component.datum,
 			id_variant		: 'time_machine' // avoid conflicts
 		}
 
