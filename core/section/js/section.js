@@ -96,17 +96,18 @@ section.prototype.init = async function(options) {
 	self.events_tokens		= []
 	self.ar_instances		= []
 	
+	self.caller				= options.caller	|| null
 
 	self.datum				= options.datum		|| null
 	self.context			= options.context	|| null
 	self.data				= options.data		|| null
 
 	// dd request
-	self.dd_request			= {
-		show	: null,
-		search	: null,
-		select	: null
-	}
+	self.dd_request			= options.dd_request || {
+								show	: null,
+								search	: null,
+								select	: null
+							}
 
 	// pagination info
 	self.pagination			= {
