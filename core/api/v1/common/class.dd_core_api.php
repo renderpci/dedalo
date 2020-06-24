@@ -808,6 +808,7 @@ class dd_core_api {
 			if (empty($search_query_object)) {
 
 				$sqo_options = new stdClass();
+					$sqo_options->mode			= $mode;
 					$sqo_options->tipo			= $section_tipo;
 					$sqo_options->section_tipo	= [$section_tipo];
 					$sqo_options->full_count	= false;
