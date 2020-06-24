@@ -802,11 +802,8 @@ class dd_core_api {
 				$offset			= $ddo_source->pagination->offset ?? null;
 
 		// sqo. search_query_object
-			$search_query_object = array_reduce($dd_request, function($carry, $item){
-				if (isset($item->typo) && $item->typo==='sqo') {
-					return $item;
-				}
-				return $carry;
+			$search_query_object = array_find($dd_request, function($item){
+				return (isset($item->typo) && $item->typo==='sqo');
 			});
 			if (empty($search_query_object)) {
 
