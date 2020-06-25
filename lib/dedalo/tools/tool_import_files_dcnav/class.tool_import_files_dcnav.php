@@ -15,6 +15,12 @@ class tool_import_files_dcnav extends tool_common {
 	protected $section_obj;	# received section	
 	protected $valid_extensions;
 
+	// alias sections of 'navarra1'
+	// documentation. Every record where xml files are imported one by one [import]
+	public $documentation_section_tipo	= 'navarra60';
+	// catalog. Root record where documents are referenced in a Documents portal [related]
+	public $catalog_section_tipo		= 'navarra57';
+
 
 	/**
 	* __CONSTRUCT
@@ -499,15 +505,35 @@ class tool_import_files_dcnav extends tool_common {
 					}
 
 				// file_data
+					// Example:
+					// {
+					//     "dir_path": "\/master_dedalo\/media_test\/media_development\/image\/temp\/files\/user_-1\/navarra60\/",
+					//     "file_path": "\/master_dedalo\/media_test\/media_development\/image\/temp\/files\/user_-1\/navarra60\/0001-0001.xml",
+					//     "file_name": "0001-0001",
+					//     "file_name_full": "0001-0001.xml",
+					//     "extension": "xml",
+					//     "file_size": "0.002 MB",
+					//     "regex": {
+					//         "full_name": "0001-0001.xml",
+					//         "name": "0001-0001",
+					//         "code": "0001-0001",
+					//         "base_code1": "0001",
+					//         "base_code2": "0001",
+					//         "base_code3": "",
+					//         "extension": "xml"
+					//     }
+					// }
 					$file_data = tool_import_files_dcnav::get_file_data($files_dir, $current_file_name);
-					// dump($file_data, ' file_data ++ import_file_name_mode - '.to_string()); // continue;
+					// dump($file_data, ' file_data ++ import_file_name_mode - '.to_string()); die(); // continue;
 
 				// find existing section or create a new one
-					$code = $file_data['regex']->code;
+					$base_code1	= $file_data['regex']->base_code1; // code value from filename used in Catalog grouper
+					$code		= $file_data['regex']->code; // code value from filename
+					$code_tipo	= 'navarra19'; // tipo of the component_input_text where is stored code value
 					$sqo = json_decode('{
-						"id": "navarra1_list",
+						"id": "'.$section_tipo.'_list",
 						"parsed": false,
-						"section_tipo": "navarra1",
+						"section_tipo": ["'.$section_tipo.'"],
 						"limit": 1,
 						"offset": 0,
 						"type": "search_json_object",
@@ -520,8 +546,8 @@ class tool_import_files_dcnav extends tool_common {
 									"q_operator": null,
 									"path": [
 										{
-											"section_tipo": "navarra1",
-											"component_tipo": "navarra19",
+											"section_tipo": "'.$section_tipo.'",
+											"component_tipo": "'.$code_tipo.'",
 											"modelo": "component_input_text",
 											"name": "Code"
 										}
@@ -1032,7 +1058,7 @@ class tool_import_files_dcnav extends tool_common {
 																		 $section_id,
 																		 'list',
 																		 DEDALO_DATA_NOLAN,
-																		 $section_tipo);						
+																		 $section_tipo);
 						$dato = json_decode('
 						[
 							{
@@ -1048,6 +1074,33 @@ class tool_import_files_dcnav extends tool_common {
 
 						return $result;
 					})('navarra54', $section_tipo, $section_id, $current_file_name);
+
+
+				// attach to 'Catálogo Documental' documents portal
+					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $base_code1) {
+
+						// find existing or creates new setion ($section_tipo, $component_tipo, $value, $filter=null)
+						$locator	= self::get_solved_select_value($this->catalog_section_tipo, $code_tipo, $base_code1);
+
+						// portal add document locator
+						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$component		= component_common::get_instance($modelo_name,
+																		 $tipo,
+																		 $locator->section_id,
+																		 'list',
+																		 DEDALO_DATA_NOLAN,
+																		 $this->catalog_section_tipo);
+						$add_locator = new locator();
+							$add_locator->set_section_tipo($section_tipo);
+							$add_locator->set_section_id($section_id);
+							$add_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+						
+						$component->add_locator($add_locator);
+
+						$result = $component->Save();
+
+						return $result;
+					})('navarra59', $section_tipo, $section_id, $code_tipo, $base_code1);
 
 
 				// Add as processed
