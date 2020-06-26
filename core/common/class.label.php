@@ -135,7 +135,6 @@
 		}		
 		
 		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='label'); 
-			#dump($ar_terminoID_by_modelo_name,'$ar_terminoID_by_modelo_name',"label: label ");
 
 		$ar_label = array();
 		$cached   = true;
@@ -145,9 +144,9 @@
 		}
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
 			
-			$RecordObj_dd 	= new RecordObj_dd($current_terminoID);			
-			$properties 	= $RecordObj_dd->get_properties();
-			$vars_obj 		= json_decode($properties);
+			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
+			$properties		= $RecordObj_dd->get_properties();
+			$vars_obj		= $properties;
 
 			# No data in field 'properties'
 			if(empty($vars_obj) || empty($vars_obj->name)) {
@@ -156,7 +155,7 @@
 			}			
 
 			# Set value			
-			$ar_label[$vars_obj->name] 	= RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
+			$ar_label[$vars_obj->name] = RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
 		}		
 
 		if(SHOW_DEBUG===true) {
