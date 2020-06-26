@@ -3526,20 +3526,40 @@ class section extends common {
 
 
 		// ddo component
-			$RecordObj_dd	= new RecordObj_dd($component_tipo);
-			$properties		= $RecordObj_dd->get_properties();
-			$item = (object)[
-				'typo'			=> 'ddo',
-				'type'			=> 'component',
-				'model'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
-				'tipo'			=> $component_tipo,
-				'section_tipo'	=> $this->tipo,
-				'label'			=> RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true),
-				'mode'			=> 'list',
-				'parent'		=> $this->tipo,
-				'properties'	=> $properties
-			];
-			$context[] = $item;
+			// $RecordObj_dd	= new RecordObj_dd($component_tipo);
+			// $properties		= $RecordObj_dd->get_properties();
+			// $item = (object)[
+			// 	'typo'			=> 'ddo',
+			// 	'type'			=> 'component',
+			// 	'model'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+			// 	'tipo'			=> $component_tipo,
+			// 	'section_tipo'	=> $this->tipo,
+			// 	'label'			=> RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true),
+			// 	'mode'			=> 'list',
+			// 	'parent'		=> $this->tipo,
+			// 	'properties'	=> $properties
+			// ];
+			// $context[] = $item;
+			$context[] = (function($tipo, $section_tipo, $lang) {
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $tipo,
+																 null,
+																 'list',
+																 $lang,
+																 $section_tipo);			
+				// get component json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= true;
+						$get_json_options->get_data		= false;
+					$element_json = $component->get_json($get_json_options);
+
+				// edit section_id to match section locator data item
+					$current_item = reset($element_json->context);
+
+				return $current_item;
+			})($component_tipo, $this->tipo, $component_lang);
 
 
 		return (array)$context;
