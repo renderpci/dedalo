@@ -88,18 +88,39 @@ export const service_autocomplete = function() {
 				parent			: self.wrapper
 			})
 
-		// build operator selectos
+		// options container
+			const options_container = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'options_hidden',
+				parent			: searh_container
+			})
+
+		// build operator selector
 		const source_selector = self.render_source_selector()
-		searh_container.appendChild(source_selector)
+		options_container.appendChild(source_selector)
 		// sections select
 		const sections_selector = self.render_sections_selector()
-		searh_container.appendChild(sections_selector)
+		options_container.appendChild(sections_selector)
 		// components fields for inputs_list
 		const inputs_list = self.render_inputs_list()
-		searh_container.appendChild(inputs_list)
+		options_container.appendChild(inputs_list)
 		// build operator selector
 		const operator_selector = self.render_operator_selector()
-		searh_container.appendChild(operator_selector)
+		options_container.appendChild(operator_selector)
+
+		// button options
+			const button_options = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'options',
+				parent			: searh_container
+			})
+
+		// add listener to the select
+		button_options.addEventListener('mouseup',function(e){
+			options_container.classList.toggle('visible');
+		},false)
+
+
 		// build operator selectos
 		const search_input = self.render_search_input()
 		searh_container.appendChild(search_input)
@@ -211,7 +232,7 @@ export const service_autocomplete = function() {
 			})
 			search_input.setAttribute("list", self.list_name)
 			search_input.setAttribute("placeholder", get_label.buscar + '...')
-			search_input.setAttribute("autocomplete", "off")
+			// search_input.setAttribute("autocomplete", "off")
 			search_input.setAttribute("autocorrect", "off")
 
 			// event input. changes the input value fire the search
@@ -566,7 +587,7 @@ export const service_autocomplete = function() {
 
 		// rebuild sqo filter
 			// sections property
-				//??????????	sqo.section_tipo = search_sections
+			// ??????????	sqo.section_tipo = search_sections
 			// filter property
 			// if (filter_by_field_list_tipo!==false || filter_fields_data!==false) {
 			// 	// Advanced mode
@@ -2120,8 +2141,7 @@ export const service_autocomplete = function() {
 
 
 
-	/* FILTER_BY_LIST INTERFACE //////////////////////////////////////////////////////////////////////
-		*/
+	/* FILTER_BY_LIST INTERFACE //////////////////////////////////////////////////////////////////////*/
 
 
 
@@ -2337,7 +2357,7 @@ export const service_autocomplete = function() {
 
 
 	/* FILTER_FIELDS INTERFACE //////////////////////////////////////////////////////////////////////
-		*/
+	*/
 
 
 
@@ -2651,6 +2671,4 @@ export const service_autocomplete = function() {
 		return true
 	}//end build_source_search_selector
 
-
-
-}//end class
+}//end service_autocomplete
