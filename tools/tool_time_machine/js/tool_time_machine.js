@@ -7,7 +7,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common, trigger_request} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 
@@ -94,7 +94,6 @@ tool_time_machine.prototype.init = async function(options) {
 tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
-
 	
 	// call generic commom tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
@@ -245,77 +244,79 @@ tool_time_machine.prototype.load_section = async function() {
 
 	const self = this
 
+	const current_data_manager = new data_manager()
 
-		const current_data_manager = new data_manager()
+	const component = self.caller
 
-		const component = self.caller
+	// request_config . section in tm mode
+		const source = {
+			typo			: 'source',
+			model			: 'section',
+			mode			: 'tm',
+			tipo			: component.section_tipo,
+			section_tipo	: component.section_tipo,
+			section_id		: component.section_id, // needed for create tm sqo
+			component_tipo	: component.tipo, // needed for create tm sqo
+			lang			: component.lang // needed for create tm sqo (from component)
+		}
+		const ddo_component = {
+			typo			: 'ddo',
+			type			: 'component',
+			model			: component.model,
+			mode			: 'list',
+			tipo			: component.tipo,
+			section_tipo	: component.section_tipo,
+			section_id		: component.section_id,	
+			lang			: component.lang
+		}
+		const sqo = {
+			typo				: 'sqo',
+			id					: 'tmp',
+			mode				: 'tm',
+			section_tipo		: [component.section_tipo],
+			filter_by_locators	: [{
+				section_tipo: source.section_tipo,
+				section_id	: source.section_id,
+				tipo		: source.component_tipo,
+				lang		: source.lang
+			}],
+			limit				: 10,
+			offset				: 0,
+			order				: [{
+				direction : 'DESC',
+				path	  : [{component_tipo : 'id'}]
+			}]
+		}					
+		const request_config = [
+			source,
+			ddo_component,
+			sqo
+		]
 
-		// section in tm mode
-			const source = {
-				typo			: 'source',
-				model			: 'section',
-				mode			: 'tm',
-				tipo			: component.section_tipo,
-				section_tipo	: component.section_tipo,
-				section_id		: component.section_id, // needed for create tm sqo
-				component_tipo	: component.tipo, // needed for create tm sqo
-				lang			: component.lang // needed for create tm sqo (from component)
-			}
-			const ddo_component = {
-				typo			: 'ddo',
-				type			: 'component',
-				model			: component.model,
-				mode			: 'list',
-				tipo			: component.tipo,
-				section_tipo	: component.section_tipo,
-				section_id		: component.section_id,	
-				lang			: component.lang
-			}
-			const sqo = {
-				typo				: 'sqo',
-				id					: 'tmp',
-				mode				: 'tm',
-				section_tipo		: [component.section_tipo],
-				filter_by_locators	: [{
-					section_tipo: source.section_tipo,
-					section_id	: source.section_id,
-					tipo		: source.component_tipo,
-					lang		: source.lang
-				}],
-				limit				: 10,
-				offset				: 0,
-				order				: [{
-					direction : 'DESC',
-					path	  : [{component_tipo : 'id'}]
-				}]
-			}					
-			const request_config = [
-				source,
-				ddo_component,
-				sqo
-			]
-			const context 		= {
-				model			: source.model,
-				tipo			: source.tipo,
-				request_config 	: request_config
-			}
+	// context
+		const context = {
+			model			: source.model,
+			tipo			: source.tipo,
+			request_config	: request_config
+		}
 
-			// instance options
-				const instance_options = {
-					model			: source.model,
-					tipo			: source.tipo,
-					section_tipo	: source.section_tipo,
-					section_id		: source.section_id,
-					mode			: source.mode,
-					lang			: source.lang,
-					context			: context,
-					caller			: self,
-					id_variant		: 'time_machine' // avoid conflicts
-				}
-			
-			const section_instance = await get_instance(instance_options)
+	// instance options
+		const instance_options = {
+			model			: source.model,
+			tipo			: source.tipo,
+			section_tipo	: source.section_tipo,
+			section_id		: source.section_id,
+			mode			: source.mode,
+			lang			: source.lang,
+			context			: context,
+			caller			: self,
+			id_variant		: 'time_machine' // avoid conflicts
+		}
+	
+	// init section instance
+		const section_instance = await get_instance(instance_options)
 
-	// build with autoload as true
+	// build section with autoload as true
 		await section_instance.build(true)
 
 	// debug
@@ -323,7 +324,7 @@ tool_time_machine.prototype.load_section = async function() {
 			console.log("[tool_time_machine.load_section] section_instance:", section_instance);
 		}
 
-	// add
+	// add to self instances list
 		self.ar_instances.push(section_instance)
 
 
@@ -341,17 +342,29 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 	const self = this
 
 	const component = self.caller
-	const context   = JSON.parse(JSON.stringify(component.context))
+
+
+	const context = JSON.parse(JSON.stringify(component.context))
+		
+
+	const source = create_source(component, 'get_data')
+		console.log("// load_component source:",source);
+
+		context.request_config = [source]
+
+	console.log("// load_component context:",context);
 
 	// request_config. Create if not exists
-		if (!context.request_config) {
-			context.request_config = []
-		}
+		// if (!context.request_config) {
+		// 	context.request_config = []
+		// }
 
 	// context lang switch if var lang is received
 		if (typeof lang!=='undefined') {
 			context.lang = lang
 		}
+
+			console.log("/// context:",context);
 
 	// component instance
 		const instance_options = {
