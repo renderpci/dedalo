@@ -151,7 +151,7 @@ section.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')	
+		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
 
 	// debug
 		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
