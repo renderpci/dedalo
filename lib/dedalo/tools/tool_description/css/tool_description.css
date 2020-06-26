@@ -1,1 +1,114 @@
-body{display:flex;flex-direction:column}.html_page_wrap_tool_description,.html_page_wrap_tool_description .content_html{height:100%}.tool_description_icon{background-color:#fd7f26;background-image:url(../../../themes/default/icon_transcription_hover.svg);background-size:18px!important;background-position-y:3px!important;background-position-x:6px!important}.html_page_wrap_tool_description .content_data{width:100%}.header_tool .select_fast_lang_switch{float:left;position:relative;top:3px;left:10px;text-transform:capitalize;padding-right:20px}.header_tool .lang_selector_in_header .select_fast_lang_switch{opacity:1;margin-left:5px;margin-right:10px;color:#000;max-width:84px}.header_tool .lang_selector_in_header{padding:2px;padding-right:10px;padding-left:10px}.header_tool #header_info{display:block;float:left;position:relative;margin-left:15px;top:8px;line-height:1em}.wrap_tool_description_page{margin:0;padding:0;display:block;position:absolute;width:99.9%;height:calc(100% - 30px)}.wrap_tool_description_page .img_image_portal_list_view_mosaic{height:500px}.wrap_tool_description_page .css_wrap_image_portal_list_view_mosaic>.content_data{background-color:transparent!important}.wrap_tool_description_page .css_wrap_portal>.content_data{padding-top:1em}#inspector_log.tool_description_inspector_log{display:block;padding-left:4px;padding-right:4px;z-index:10;min-width:400px;margin-right:72px;margin-left:151px;width:auto;height:2em;position:absolute;margin-top:.7em}#tags_inspector{background-color:#99C9F5;height:24px;width:100%}.view_tool_description_item{text-align:left}.html_page_wrap_tool_description .toponymy_list li{width:100%}/*# sourceMappingURL=tool_description.css.map */
+/* SIZES
+----------------------------------------- */
+/* COLORS
+----------------------------------------- */
+body {
+  display: flex;
+  flex-direction: column;
+}
+.html_page_wrap_tool_description,
+.html_page_wrap_tool_description .content_html {
+  height: 100%;
+}
+.tool_description_icon {
+  background-color: #fd7f26;
+  background-image: url(../../../themes/default/icon_transcription_hover.svg);
+  background-size: 18px !important;
+  background-position-y: 3px !important;
+  background-position-x: 6px !important;
+}
+/* TOOL_DESCRIPTION CASE
+	--------------------------------------------- */
+.html_page_wrap_tool_description .content_data {
+  width: 100%;
+}
+/* HEADER
+------------------------------------------------------ */
+.header_tool .select_fast_lang_switch {
+  float: left;
+  position: relative;
+  top: 3px;
+  left: 10px;
+  text-transform: capitalize;
+  padding-right: 20px;
+}
+.header_tool .lang_selector_in_header .select_fast_lang_switch {
+  opacity: 1;
+  margin-left: 5px;
+  margin-right: 10px;
+  color: #000000;
+  max-width: 84px;
+}
+.header_tool .lang_selector_in_header {
+  padding: 2px;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+.header_tool #header_info {
+  display: block;
+  float: left;
+  position: relative;
+  margin-left: 15px;
+  top: 8px;
+  line-height: 1em;
+}
+/* PAGE
+------------------------------------------------------ */
+.wrap_tool_description_page {
+  margin: 0;
+  padding: 0;
+  display: block;
+  position: absolute;
+  width: 99.9%;
+  height: calc(100% - 30px);
+}
+.wrap_tool_description_page .img_image_portal_list_view_mosaic {
+  height: 400px;
+}
+.wrap_tool_description_page .css_wrap_image_portal_list_view_mosaic > .content_data {
+  background-color: transparent !important;
+}
+.wrap_tool_description_page .css_wrap_portal > .content_data {
+  padding-top: 1em;
+}
+#inspector_log.tool_description_inspector_log {
+  display: block;
+  padding-left: 4px;
+  padding-right: 4px;
+  z-index: 10;
+  min-width: 400px;
+  margin-right: 72px;
+  margin-left: 151px;
+  width: auto;
+  height: 2em;
+  position: absolute;
+  margin-top: 0.7em;
+}
+/* TAGS INSPECTOR
+------------------------------------------------------ */
+#tags_inspector {
+  background-color: #99C9F5;
+  height: 24px;
+  width: 100%;
+}
+.view_tool_description_item {
+  text-align: left;
+}
+.html_page_wrap_tool_description .toponymy_list li {
+  width: 100%;
+}
+/* COMMON
+------------------------------------------------------
+	// All components containers default
+	.component_container {
+		//background-color: #EBD4F5;
+		display: flex;
+		width: 50%;
+
+	}
+	// Components containers inside others
+	.container_look_inside {
+		width: 100%;
+	}
+*/
+/*# sourceMappingURL=tool_description.css.map */
