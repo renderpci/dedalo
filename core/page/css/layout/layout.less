@@ -185,11 +185,14 @@
 
 		.widget_container {
 			//background-color: #d9efd3;
-			background-color: #fce8d2;
+			// background-color: #fce8d2; // #fdf4ea
 			border-radius: 0.5em;
 			margin: 0.35em;
 			//flex: 1 1 32.5%;
 			flex: 1 1 49%;
+
+			display: flex;
+    		flex-direction: column;
 
 			&#search_query_object_test_enviroment, &#dedalo_api_test_enviroment {
 				flex: 1 1 100%;
@@ -276,6 +279,9 @@
 			}
 			>.widget_body {
 				padding: 1em;
+				background-color: #fce8d2;
+
+				flex-grow: 1; // grow vertical to fill
 
 				>.link {
 					cursor: pointer;
@@ -373,7 +379,7 @@
 					}
 
 					>pre {
-						margin-top: 1em;
+						margin-top: 0.25em;
 						white-space: pre-wrap;
 						pre {
 							white-space: initial;

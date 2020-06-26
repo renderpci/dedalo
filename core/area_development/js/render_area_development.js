@@ -136,10 +136,16 @@ const build_widget = (item, self) => {
 		label.addEventListener("click", function(e){
 			e.stopPropagation()
 			const body = e.target.nextElementSibling
-					console.log("e.target:",e.target);
-				console.log("body:",body);
-			body.classList.contains("display_none") ? body.classList.remove("display_none") : body.classList.add("display_none")
-		})
+			if (body.classList.contains("display_none")) {
+				// show
+				body.classList.remove("display_none")				
+				localStorage.removeItem('ad_hide_' + item.id)
+			}else{
+				// hide
+				body.classList.add("display_none")
+				localStorage.setItem('ad_hide_' + item.id, 'true')
+			}
+		})		
 
 	// body
 		const body = ui.create_dom_element({
@@ -147,6 +153,12 @@ const build_widget = (item, self) => {
 			class_name 	 : "widget_body",
 			parent 		 : container
 		})
+
+		// cookie hide value
+		const hide_value = localStorage.getItem('ad_hide_' + item.id)	
+		if (hide_value==='true') {
+			body.classList.add("display_none")
+		}
 
 		// item info
 			if (item.info) {

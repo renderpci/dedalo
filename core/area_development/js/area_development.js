@@ -228,7 +228,6 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 		const trigger			= widget_object.trigger
 		const body_response		= widget_object.body_response
 		const print_response	= widget_object.print_response
-			console.log("trigger:",trigger);
 
 	// load dependences js/css
 		const load_promises = []
