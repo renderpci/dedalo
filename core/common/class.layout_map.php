@@ -17,6 +17,7 @@ class layout_map {
 	* Cases:
 	*	1. Modo 'list' : Uses childrens to build layout map
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
+	* @return 
 	*/
 	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
 
@@ -31,11 +32,12 @@ class layout_map {
 			$options->add_section			= false;
 			$options->external				= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
+		
 		// cache
 			static $resolved_layout_map = [];
-			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type;
+			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
 			if (isset($resolved_layout_map[$resolved_key])) {
+				debug_log(__METHOD__." Returned resolved layout_map with key: ".to_string($resolved_key), logger::ERROR);
 				return $resolved_layout_map[$resolved_key];
 			}
 
