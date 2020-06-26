@@ -17,6 +17,7 @@ class layout_map {
 	* Cases:
 	*	1. Modo 'list' : Uses childrens to build layout map
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
+	* @return 
 	*/
 	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
 
@@ -31,13 +32,14 @@ class layout_map {
 			$options->add_section			= false;
 			$options->external				= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
+		
 		// cache
-			// static $resolved_layout_map = [];
-			// $resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->request_config_type;
-			// if (isset($resolved_layout_map[$resolved_key])) {
-			// 	return $resolved_layout_map[$resolved_key];
-			// }
+			static $resolved_layout_map = [];
+			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
+			if (isset($resolved_layout_map[$resolved_key])) {
+				debug_log(__METHOD__." Returned resolved layout_map with key: ".to_string($resolved_key), logger::ERROR);
+				return $resolved_layout_map[$resolved_key];
+			}
 
 		// madatory
 			$ar_mandatory = ['section_tipo','tipo','modo'];
@@ -97,7 +99,7 @@ class layout_map {
 					// layout_map
 						$layout_map = array_values($self_ar_dd_objects);
 						#$a = debug_backtrace(); error_log( print_r($a,true) );
-						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo] key:".to_string($resolved_key), logger::DEBUG);
 						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
 						if(SHOW_DEBUG===true) {
 							foreach ($layout_map as $current_item) {
@@ -119,7 +121,7 @@ class layout_map {
 								$layout_map[] = $preset_item;
 							}
 						}
-						debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo]".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo] key:".to_string($resolved_key), logger::DEBUG);
 						//dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));
 						if(SHOW_DEBUG===true) {
 							foreach ($layout_map as $current_item) {
@@ -195,16 +197,15 @@ class layout_map {
 			// dump($layout_map, ' layout_map ++++++++++++ $resolved_key: '.to_string($resolved_key));
 
 		// cache
-			// $resolved_layout_map[$resolved_key] = $layout_map;
+			$resolved_layout_map[$resolved_key] = $layout_map;
 
 		return (array)$layout_map;
 	}//end get_layout_map
 
 
 
-
 	/**
-	* get_section_ddo
+	* GET_SECTION_DDO
 	* @return
 	*/
 	public static function get_section_ddo($section_tipo, $mode, $lang) {

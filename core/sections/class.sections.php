@@ -19,7 +19,7 @@ class sections extends common {
 		protected $modo;
 
 		# context. Full context
-		public $base_context;
+		public $dd_request;
 
 		# search_query_object
 		public $search_query_object;
@@ -75,7 +75,7 @@ class sections extends common {
 	public function get_dato() {
 
 		$search_query_object = $this->search_query_object;
-
+			
 		$search 	= search::get_instance($search_query_object);
 		$rows_data	= $search->search();
 

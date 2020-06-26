@@ -258,13 +258,13 @@ page.prototype.get_ar_instances = async function(){
 * @return promise current_instance_promise
 */
 const instantiate_page_element = function(self, request_config) {
-
+	
 	const source = request_config.find(item => item.typo==='source')
 
-	const tipo 			= source.tipo
-	const section_tipo 	= source.section_tipo || tipo
-
-	const context 		= {
+	const tipo			= source.tipo
+	const section_tipo	= source.section_tipo || tipo
+	
+	const context		= {
 		model			: source.model,
 		tipo			: tipo,
 		request_config 	: request_config

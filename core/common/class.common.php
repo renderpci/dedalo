@@ -1711,8 +1711,7 @@ abstract class common {
 				$layout_map_options->request_config_type	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-
-			if($layout_map) foreach($layout_map as $dd_object) {
+			if(!empty($layout_map)) foreach($layout_map as $dd_object) {
 
 				$dd_object 				= (object)$dd_object;
 				$current_tipo 			= $dd_object->tipo;
@@ -1806,8 +1805,7 @@ abstract class common {
 				$layout_map_options->request_config_type	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-
-			if($layout_map) foreach($ar_locators as $current_locator) {
+			if(!empty($layout_map)) foreach($ar_locators as $current_locator) {
 
 				// check locator format
 					if (!is_object($current_locator)) {
@@ -2250,6 +2248,9 @@ abstract class common {
 				$query_object->offset  				= $options->offset;
 				$query_object->full_count  			= $total_locators ?? $options->full_count;
 
+				if (!empty($options->mode)) {
+					$query_object->mode = $options->mode;
+				}
 				if (!empty($filter_by_locators)) {
 					$query_object->filter_by_locators = $filter_by_locators;
 				}
@@ -2369,8 +2370,6 @@ abstract class common {
 
 							$parsed_item->show				= $item_request_config->show;
 							$parsed_item->show->sqo_config	= $sqo_config;
-
-						dump($parsed_item->show, ' $parsed_item->show ++ '.to_string());
 					}
 
 				// add

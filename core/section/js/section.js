@@ -96,17 +96,18 @@ section.prototype.init = async function(options) {
 	self.events_tokens		= []
 	self.ar_instances		= []
 	
+	self.caller				= options.caller	|| null
 
 	self.datum				= options.datum		|| null
 	self.context			= options.context	|| null
 	self.data				= options.data		|| null
 
 	// dd request
-	self.dd_request			= {
-		show	: null,
-		search	: null,
-		select	: null
-	}
+	self.dd_request			= options.dd_request || {
+								show	: null,
+								search	: null,
+								select	: null
+							}
 
 	// pagination info
 	self.pagination			= {
@@ -150,7 +151,7 @@ section.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// set dd_request
-		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')	
+		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
 
 	// debug
 		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
@@ -172,11 +173,10 @@ section.prototype.build = async function(autoload=false) {
 				self.section_id	= self.data
 					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 					: null
-			
+				
 			// recreate and set dd_request with the new configuration
 				self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'search')
-					// console.log("------- section self.dd_request.show:",self.dd_request.show);
-
+				
 			// sqo
 				const sqo = self.dd_request.show.find(element => element.typo==='sqo')
 
@@ -232,7 +232,7 @@ section.prototype.build = async function(autoload=false) {
 		const searchParams = new URLSearchParams(window.location.href);
 		const initiator = searchParams.has("initiator")
 			? searchParams.get("initiator")
-			: typeof self.caller!=="undefined"
+			: self.caller!==null
 				? self.caller.id
 				: false
 		// fix initiator

@@ -133,10 +133,19 @@ const build_widget = (item, self) => {
 			parent 		 : container,
 			inner_html	 : item.label || ''
 		})
-		label.addEventListener("dblclick", function(e){
+		label.addEventListener("click", function(e){
+			e.stopPropagation()
 			const body = e.target.nextElementSibling
-			body.classList.contains("display_none") ? body.classList.remove("display_none") : body.classList.add("display_none")
-		})
+			if (body.classList.contains("display_none")) {
+				// show
+				body.classList.remove("display_none")				
+				localStorage.removeItem('ad_hide_' + item.id)
+			}else{
+				// hide
+				body.classList.add("display_none")
+				localStorage.setItem('ad_hide_' + item.id, 'true')
+			}
+		})		
 
 	// body
 		const body = ui.create_dom_element({
@@ -144,6 +153,12 @@ const build_widget = (item, self) => {
 			class_name 	 : "widget_body",
 			parent 		 : container
 		})
+
+		// cookie hide value
+		const hide_value = localStorage.getItem('ad_hide_' + item.id)	
+		if (hide_value==='true') {
+			body.classList.add("display_none")
+		}
 
 		// item info
 			if (item.info) {
@@ -252,7 +267,7 @@ const print_response = (container, api_response) => {
 			element_type	: 'div',
 			class_name		: "",
 			parent			: container,
-			inner_html		: api_response.msg
+			inner_html		: api_response.msg.replace(/\\n/g, "<br>")
 		})
 
 	// json response result

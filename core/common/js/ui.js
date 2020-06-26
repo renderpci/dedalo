@@ -462,12 +462,12 @@ export const ui = {
 					fragment.appendChild(items.label)
 				}else{
 					// default
-					const component_label = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'label',
-						inner_html		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
-						parent			: fragment
-					})
+					// const component_label = ui.create_dom_element({
+					// 	element_type	: 'div',
+					// 	class_name		: 'label',
+					// 	inner_html		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
+					// 	parent			: fragment
+					// })
 				}
 
 			// inspector

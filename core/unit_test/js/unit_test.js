@@ -10,9 +10,9 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 // utilities
 	function fn_random_string(length=128) {
-		var result           = '';
-		var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789àü\'ñç';
-		var charactersLength = characters.length;
+		var result				= '';
+		var characters			= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789àü\'ñç';
+		var charactersLength	= characters.length;
 		for ( var i = 0; i < length; i++ ) {
 		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
 		}
@@ -570,6 +570,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				}
 			});
 	});
+
 
 
 // components change data functions for any component instance
