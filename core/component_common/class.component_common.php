@@ -85,7 +85,7 @@ abstract class component_common extends common {
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
-				throw new Exception("Error: on construct component : tipo is mandatory. tipo:$tipo, section_id:$section_id, modo:$modo, lanfg:$lang", 1);
+				throw new Exception("Error: on construct component (1): tipo is mandatory. tipo:'$tipo', section_id:'$section_id', modo:'$modo', lang:'$lang'", 1);
 			}
 
 		// model check. Verify 'component_name' and 'tipo' are correct
@@ -96,7 +96,7 @@ abstract class component_common extends common {
 					$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 
 			}else if (!empty($component_name) && $model_name!==$component_name) {
-				throw new Exception("Error: on construct component : tipo is mandatory. tipo:$tipo, section_id:$section_id, modo:$modo, lanfg:$lang", 1);
+				// throw new Exception("Error: on construct component (2): model not match. model_name:'$model_name', component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', modo:'$modo', lang:'$lang'", 1);
 
 				// warn to admin
 					$msg = "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'";
