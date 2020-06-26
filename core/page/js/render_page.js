@@ -31,9 +31,9 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 	const render_level = options.render_level
 
 	// content data
-		const current_content_data = content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper
@@ -48,7 +48,7 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 		}
 
 	// body content_data
-		wrapper_page.appendChild(await current_content_data)
+		wrapper_page.appendChild(await content_data)
 
 	// modal box hidden
 		// const dd_modal = document.createElement('dd-modal')
@@ -71,10 +71,10 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = async function(self) {
 
 	// const fragment = new DocumentFragment()
 
@@ -107,7 +107,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
+}//end get_content_data
 
 
 

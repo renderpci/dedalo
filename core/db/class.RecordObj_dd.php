@@ -388,6 +388,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		return $model;
 	}//end get_modelo_name
 
+
+
 	# GET MODELO NAME BY TIPO (STATIC)
 	public static function get_modelo_name_by_tipo($tipo, $from_cache=false) {
 		#$from_cache=false;

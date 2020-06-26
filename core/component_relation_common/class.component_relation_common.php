@@ -1508,10 +1508,19 @@ class component_relation_common extends component_common {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
-
+					
 			if (is_string($source_item)) {
+
+				// old self section tipo properties definitions
+					// if ($source_item==='self') {
+					// 	$source_item = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
+					// }
+					if ($source_item==='self') {
+						throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+					}
+
 				$ar_section_tipo[] = $source_item;
-				debug_log(__METHOD__." ++++++++++++++++++ Received string source item ".to_string($source_item), logger::ERROR);
+				debug_log(__METHOD__." ++++++++++++++++++++++++++++++++++++ Received string source item ".to_string($source_item), logger::ERROR);
 				continue;
 			}
 
@@ -1521,7 +1530,8 @@ class component_relation_common extends component_common {
 					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
 					break;
 				case 'self':
-					$ar_section_tipo = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
+					// $ar_section_tipo = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
+					$ar_section_tipo = is_array($retrived_section_tipo) ? $retrived_section_tipo : [$retrived_section_tipo];
 					break;
 				case 'section':
 				default:
