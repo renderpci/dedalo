@@ -588,10 +588,10 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 			it(test_title, async function() {
 
 				// get and set element context
-					const current_data_manager 	= new data_manager()
+					const current_data_manager = new data_manager()
 					const element_context = await current_data_manager.get_element_context({
-						tipo 			: options.tipo,
-						section_tipo 	: options.section_tipo,
+						tipo			: options.tipo,
+						section_tipo	: options.section_tipo,
 						section_id		: options.section_id
 					})
 

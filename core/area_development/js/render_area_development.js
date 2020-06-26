@@ -154,11 +154,11 @@ const build_widget = (item, self) => {
 			parent 		 : container
 		})
 
-		// cookie hide value
-		const hide_value = localStorage.getItem('ad_hide_' + item.id)	
-		if (hide_value==='true') {
-			body.classList.add("display_none")
-		}
+		// cookie hide body value
+			const hide_value = localStorage.getItem('ad_hide_' + item.id)	
+			if (hide_value==='true') {
+				body.classList.add("display_none")
+			}
 
 		// item info
 			if (item.info) {

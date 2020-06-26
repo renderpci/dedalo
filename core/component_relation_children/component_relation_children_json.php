@@ -4,12 +4,12 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-	$section_tipo 		= $this->section_tipo;
-	$lang 				= $this->lang;
-	$tipo 				= $this->get_tipo();
-	$properties 		= $this->get_properties() ?? new stdClass();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$section_tipo	= $this->section_tipo;
+	$lang			= $this->lang;
+	$tipo			= $this->get_tipo();
+	$properties		= $this->get_properties() ?? new stdClass();
 
 
 
@@ -24,10 +24,8 @@
 				break;
 
 			default:
-				$add_request_config = true; // overwrite default false to force calculate
-
-				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $add_request_config);					
+				// Component structure context (tipo, relations, properties, etc.)					
+					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
 					// add records_mode to properties, if not already defined
 					if (!isset($current_context->properties->source->records_mode)) {
 						if (!property_exists($current_context, 'properties')) {
@@ -40,7 +38,7 @@
 					}
 					$context[] = $current_context;
 
-				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
+				// subcontext from element layout_map items (from_parent, parent_grouper)
 					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
 					foreach ($ar_subcontext as $current_context) {
 						$context[] = $current_context;

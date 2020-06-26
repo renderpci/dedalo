@@ -33,9 +33,9 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -43,7 +43,7 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.section.build_wrapper_edit(self, {
-			content_data : current_content_data,
+			content_data : content_data,
 			// buttons 	 : current_buttons
 		})
 
@@ -108,10 +108,10 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = async function(self) {
 
 	// section_record instances (initied and builded)
 	const ar_section_record = await self.get_ar_instances()
@@ -153,7 +153,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
+}//end get_content_data
 
 
 
@@ -185,9 +185,9 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 
 
 	// content_data
-		const current_content_data = await content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	const fragment = new DocumentFragment()
@@ -263,7 +263,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 		}
 
 	// content_data append
-		fragment.appendChild(current_content_data)
+		fragment.appendChild(content_data)
 
 
 	// wrapper
