@@ -133,8 +133,11 @@ const build_widget = (item, self) => {
 			parent 		 : container,
 			inner_html	 : item.label || ''
 		})
-		label.addEventListener("dblclick", function(e){
+		label.addEventListener("click", function(e){
+			e.stopPropagation()
 			const body = e.target.nextElementSibling
+					console.log("e.target:",e.target);
+				console.log("body:",body);
 			body.classList.contains("display_none") ? body.classList.remove("display_none") : body.classList.add("display_none")
 		})
 
@@ -252,7 +255,7 @@ const print_response = (container, api_response) => {
 			element_type	: 'div',
 			class_name		: "",
 			parent			: container,
-			inner_html		: api_response.msg
+			inner_html		: api_response.msg.replace(/\\n/g, "<br>")
 		})
 
 	// json response result

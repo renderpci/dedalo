@@ -254,6 +254,34 @@ class area_development extends area_common {
 				$ar_widgets[] = $item;
 			}
 
+		// Dédalo API test enviroment
+			$item = new stdClass();
+				$item->id		= 'dedalo_api_test_enviroment';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'DÉDALO API TEST ENVIROMENT';
+				$item->info		= null;
+				$item->body		= '<textarea id="json_editor_api" class="hide"></textarea>';				
+				$item->body		.= '<label>API base class</label> <input type="text" id="dd_api_base" placeholder="dd_api_base" class="" value="" />';
+				$item->body		.= '<label>API function name</label> <input type="text" id="dd_api_fn" class="" placeholder="dd_api_fn" value="" />';
+				$item->body		.= '<label>API request name</label> <input type="text" id="dd_api_request" placeholder="request" class="" value="" />';
+				$item->body		.= '<label></label> <button id="submit_api" class="border light">OK</button>';
+				$item->body		.= '<div id="json_editor_api_container" class="editor_json"></div>';
+				$item->run[]	= (object)[
+					'fn'		=> 'init_json_editor_api',
+					'options'	=> (object)[
+						'editor_id'	=> 'json_editor_api'										
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api' 	=> 'get_input_value:dd_api_base',
+					'action' 	=> 'get_input_value:dd_api_fn',
+					'options' 	=> null
+				];
+			$ar_widgets[] = $item;
+
+
 
 		// search query object test enviroment
 			$item = new stdClass();
@@ -275,7 +303,7 @@ class area_development extends area_common {
 					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
-
+		
 
 		// dedalo version
 			$item = new stdClass();
