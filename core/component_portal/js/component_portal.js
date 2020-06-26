@@ -136,7 +136,7 @@ component_portal.prototype.build  = async function(autoload=false){
 		self.status = 'building'
 
 	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.datum) self.datum = {data:[]}
+		if (!self.datum) self.datum = {data:[],context:[]}
 
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')

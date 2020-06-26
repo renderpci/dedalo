@@ -226,3 +226,5 @@ export const add_component = async (self, component_container, lang_value, label
 
 	return true
 }//end add_component
+
+

@@ -21,15 +21,13 @@
 				break;
 
 			default:
-				$base_context = $this->get_structure_context($permissions);
+				$structure_context = $this->get_structure_context($permissions);				
+				
+				// geo_provider add
+					$geo_provider = (isset($properties->geo_provider)) ? $properties->geo_provider : DEDALO_GEO_PROVIDER;
+					$structure_context->geo_provider = $geo_provider;
 
-				$geo_provider = (isset($properties->geo_provider)) ? $properties->geo_provider : DEDALO_GEO_PROVIDER;
-
-				$base_context->geo_provider = $geo_provider;
-
-				$context[] = $base_context;
-
-
+				$context[] = $structure_context;
 				break;
 		}
 	}//end if($options->get_context===true)
