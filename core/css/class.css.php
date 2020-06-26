@@ -196,6 +196,13 @@ class css {
 			$response->result = false;
 			$response->msg 	  = null;
 
+
+		$response = new stdClass();
+			$response->result = true;
+			$response->msg 	  = 'Ignored build_structure_css in v6';
+		return $response; // STOPPED METHOD EXECUTION ON V6
+
+
 		include DEDALO_LIB_PATH . '/lessphp/lessc.inc.php';
 		$less = new lessc;
 		$less_code   = [];
@@ -216,19 +223,19 @@ class css {
 		}, unserialize(DEDALO_PREFIX_TIPOS));
 		$filter = implode(' OR ', $ar_pairs);
 
-		$strQuery = "SELECT \"terminoID\",\"properties\" FROM \"jer_dd\" WHERE \"properties\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
+		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
 		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
 
-			$terminoID 		 = $rows["terminoID"];
-			$properties_str = $rows["properties"];
-			$properties 	 = json_decode($properties_str);
-			if (!isset($properties->css)) {
-				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. properties: ".to_string($properties_str), logger::ERROR);
+			$terminoID		= $rows["terminoID"];
+			$propiedades_str	= $rows["propiedades"];
+			$propiedades		= json_decode($propiedades_str);
+			if (!isset($propiedades->css)) {
+				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. propiedades: ".to_string($propiedades_str), logger::ERROR);
 				continue;
 			}
-			$css_obj = $properties->css;
+			$css_obj = $propiedades->css;
 
 			// Debug only
 			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
