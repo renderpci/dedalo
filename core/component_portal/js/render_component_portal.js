@@ -35,9 +35,8 @@ render_component_portal.prototype.list = async function() {
 	const ar_section_record = await self.get_ar_instances()
 
 	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: self.model + '_list ' + self.tipo + ' breakdown'
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : false
 		})
 
 

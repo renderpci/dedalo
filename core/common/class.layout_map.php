@@ -37,7 +37,10 @@ class layout_map {
 			static $resolved_layout_map = [];
 			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
 			if (isset($resolved_layout_map[$resolved_key])) {
-				debug_log(__METHOD__." Returned resolved layout_map with key: ".to_string($resolved_key), logger::ERROR);
+				debug_log(__METHOD__." Returned resolved layout_map with key: ".to_string($resolved_key), logger::DEBUG);
+				// dump($resolved_layout_map[$resolved_key], ' var ++ '.to_string($resolved_key)); //die();
+				// $bt = debug_backtrace();
+				// dump($bt, ' bt ++ '.to_string()); die();				
 				return $resolved_layout_map[$resolved_key];
 			}
 
