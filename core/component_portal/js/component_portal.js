@@ -95,6 +95,7 @@ component_portal.prototype.init = async function(options) {
 			select	: null
 		}
 
+
 	// call the generic commom tool init
 		const common_init = component_common.prototype.init.call(this, options);
 
@@ -164,7 +165,7 @@ component_portal.prototype.build  = async function(autoload=false){
 					self.pagination.total = self.data.pagination.total
 				}
 		}
-
+	
 	// pagination vars only in edit mode
 		if (self.mode==="edit") {
 

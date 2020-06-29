@@ -572,7 +572,7 @@ const build_request_show = function(self, request_config, action){
 	const rqo = request_config
 		? request_config.filter(item => item.typo==='rqo')
 		: []
-
+	
 	// source . auto create
 		const source = create_source(self, action)
 		dd_request.push(source)

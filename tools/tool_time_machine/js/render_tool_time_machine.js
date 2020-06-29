@@ -151,9 +151,9 @@ const content_data_edit = async function(self) {
 		// button apply
 			self.button_apply = ui.create_dom_element({
 				element_type	: 'button',
-				class_name 		: 'warning button_apply hide',
-				text_content    : get_label['aplicar_y_salvar'] || 'Apply and save',
-				parent 			: tool_bar
+				class_name		: 'warning button_apply hide',
+				text_content	: get_label['aplicar_y_salvar'] || 'Apply and save',
+				parent			: tool_bar
 			})
 			self.button_apply.addEventListener("click", self.apply_value.bind(self))
 
@@ -165,8 +165,8 @@ const content_data_edit = async function(self) {
 		// })
 
 	// section list
-		const section 		= await self.load_section()
-		const section_node 	= await section.render()
+		const section		= await self.load_section()
+		const section_node	= await section.render()
 		fragment.appendChild(section_node)
 
 

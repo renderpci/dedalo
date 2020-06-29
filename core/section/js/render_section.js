@@ -360,46 +360,45 @@ render_section.prototype.list_header = async function(){
 
 	const self = this
 
-	const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component")
-
-	const ar_nodes	 = []
-	const len 		 = components.length
-	for (let i = 0;  i < len; i++) {
+	const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component" && item.parent===self.section_tipo)
+	
+	const ar_nodes			= []
+	const components_length	= components.length
+	for (let i = 0;  i < components_length; i++) {
 
 		const component = components[i]
 
 		breakdown_header_items(component, self.datum, ar_nodes, null)
 
-		// const sub_components = self.datum.context.filter(item => item.parent===component.tipo)
- 		// if (sub_components.length>0) {
- 		// 	sub_components.forEach(function(element) {
-		//
- 		// 		// node header_item
- 		// 			const header_item = ui.create_dom_element({
- 		// 				element_type	: "div",
- 		// 				id 				: element.tipo + "_" + element.section_tipo,
- 		// 				inner_html 		: component.label +" - "+ element.label
- 		// 			})
- 		// 			//header_item.column_parent 	= component.tipo
- 		// 			//header_item.column_id 		= element.tipo
- 		// 			ar_nodes.push(header_item)
- 		// 	})
- 		//
- 		// }else{
-		//
-		// 	// node header_item
-		// 		const header_item = ui.create_dom_element({
-		// 			element_type	: "div",
-		// 			id 				: component.tipo + "_" + component.section_tipo,
-		// 			inner_html 		: component.label
-		// 		})
-		// 		//header_item.column_parent 	= null
-		// 		//header_item.column_id 		= component.tipo
-		// 		ar_nodes.push(header_item)
-		// // }
+		// des
+			// const sub_components = self.datum.context.filter(item => item.parent===component.tipo)
+	 		// if (sub_components.length>0) {
+	 		// 	sub_components.forEach(function(element) {
+			//
+	 		// 		// node header_item
+	 		// 			const header_item = ui.create_dom_element({
+	 		// 				element_type	: "div",
+	 		// 				id 				: element.tipo + "_" + element.section_tipo,
+	 		// 				inner_html 		: component.label +" - "+ element.label
+	 		// 			})
+	 		// 			//header_item.column_parent 	= component.tipo
+	 		// 			//header_item.column_id 		= element.tipo
+	 		// 			ar_nodes.push(header_item)
+	 		// 	})
+	 		//
+	 		// }else{
+			//
+			// 	// node header_item
+			// 		const header_item = ui.create_dom_element({
+			// 			element_type	: "div",
+			// 			id 				: component.tipo + "_" + component.section_tipo,
+			// 			inner_html 		: component.label
+			// 		})
+			// 		//header_item.column_parent 	= null
+			// 		//header_item.column_id 		= component.tipo
+			// 		ar_nodes.push(header_item)
+			// // }
 	}
-
-
 
 	// header_wrapper
 		const header_wrapper = ui.create_dom_element({

@@ -1472,15 +1472,15 @@ abstract class common {
 			$called_model = get_class($this);
 
 		// sort vars
-			$tipo 		  = $this->get_tipo();
-			$section_tipo = $this->get_section_tipo();
-			$translatable = $this->RecordObj_dd->get_traducible()==='si' ? true : false;
-			$mode 		  = $this->get_modo();
-			$label 		  = $this->get_label();
-			$lang		  = $this->get_lang();
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
+			$translatable	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;
+			$mode			= $this->get_modo();
+			$label			= $this->get_label();
+			$lang			= $this->get_lang();
 
 		// properties
-			$properties   = $this->get_properties();
+			$properties = $this->get_properties();
 			if (empty($properties)) {
 				$properties = new stdClass();
 			}
@@ -1554,13 +1554,13 @@ abstract class common {
 				//dump($label, ' label ++ '.to_string());
 
 				$tool = new stdClass();
-					$tool->section_id 	= $item->section_id;
-					$tool->section_tipo = $item->section_tipo;
-					$tool->name  		= $item->name;
-					$tool->label 		= $label;
-					$tool->icon 		= DEDALO_TOOLS_URL . '/' . $item->name . '/img/icon.svg';
-					$tool->show_in_inspector = $item->show_in_inspector;
-					$tool->show_in_component = $item->show_in_component;
+					$tool->section_id			= $item->section_id;
+					$tool->section_tipo			= $item->section_tipo;
+					$tool->name					= $item->name;
+					$tool->label				= $label;
+					$tool->icon					= DEDALO_TOOLS_URL . '/' . $item->name . '/img/icon.svg';
+					$tool->show_in_inspector	= $item->show_in_inspector;
+					$tool->show_in_component	= $item->show_in_component;
 
 				return $tool;
 			}, $this->get_tools());
@@ -1635,12 +1635,12 @@ abstract class common {
 			$called_model = get_class($this);
 
 		// sort vars
-			$tipo 		  = $this->get_tipo();
-			$section_tipo = $this->get_section_tipo();
-			$translatable = $this->RecordObj_dd->get_traducible()==='si' ? true : false;
-			$mode 		  = $this->get_modo();
-			$label 		  = $this->get_label();
-			$lang		  = $this->get_lang();
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
+			$translatable	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;
+			$mode			= $this->get_modo();
+			$label			= $this->get_label();
+			$lang			= $this->get_lang();
 
 		// parent
 			// 1 . From requested context
@@ -1672,14 +1672,14 @@ abstract class common {
 
 		// dd_object
 			$dd_object = new dd_object((object)[
-				'label' 		=> $label,
-				'tipo' 			=> $tipo,
-				'section_tipo' 	=> $section_tipo,
-				'model' 		=> $called_model,
-				'parent' 		=> $parent,
-				'lang' 			=> $lang,
-				'mode' 			=> $mode,
-				'translatable' 	=> $translatable,
+				'label'			=> $label,
+				'tipo'			=> $tipo,
+				'section_tipo'	=> $section_tipo,
+				'model'			=> $called_model,
+				'parent'		=> $parent,
+				'lang'			=> $lang,
+				'mode'			=> $mode,
+				'translatable'	=> $translatable,
 				'permissions'	=> $permissions
 			]);
 
@@ -1713,11 +1713,11 @@ abstract class common {
 			$layout_map = layout_map::get_layout_map($layout_map_options);
 			if(!empty($layout_map)) foreach($layout_map as $dd_object) {
 
-				$dd_object 				= (object)$dd_object;
-				$current_tipo 			= $dd_object->tipo;
-				$current_section_tipo 	= $dd_object->section_tipo;
-				$mode 					= $dd_object->mode ?? 'list';
-				$model 					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$dd_object				= (object)$dd_object;
+				$current_tipo			= $dd_object->tipo;
+				$current_section_tipo	= $dd_object->section_tipo;
+				$mode					= $dd_object->mode ?? 'list';
+				$model					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 				// common temporal excluded/mapped models *******
 					// $match_key = array_search($model, common::$ar_temp_map_models);
@@ -1769,8 +1769,8 @@ abstract class common {
 
 						// get the JSON context of the related component
 							$item_options = new stdClass();
-								$item_options->get_context 	 = true;
-								$item_options->get_data 	 = false;
+								$item_options->get_context	= true;
+								$item_options->get_data		= false;
 							$element_json = $related_element->get_json($item_options);
 
 						// temp ar_subcontext
@@ -1793,9 +1793,9 @@ abstract class common {
 
 		$ar_subdata = [];
 
-		$source_tipo 		= $this->get_tipo();
-		$source_model 		= RecordObj_dd::get_modelo_name_by_tipo($source_tipo,true);
-		$source_properties 	= $this->get_properties();
+		$source_tipo		= $this->get_tipo();
+		$source_model		= RecordObj_dd::get_modelo_name_by_tipo($source_tipo,true);
+		$source_properties	= $this->get_properties();
 
 		// Iterate dd_object (layout_map) for colums
 			$layout_map_options = new stdClass();
@@ -1924,41 +1924,6 @@ abstract class common {
 
 		return $ar_subdata;
 	}//end get_ar_subdata
-
-
-
-	/**
-	* GET_LAYOUT_MAP
-	* Calculate common cases for layout_map
-	* Use for shared. Overwrite or continue for custom needs
-	*//*
-	public function get_layout_map($view=null) {
-
-		if (empty($this->layout_map)) {
-
-			// calculate
-				$section_tipo 	= $this->get_section_tipo();
-				$tipo 			= $this->get_tipo();
-				$user_id 		= navigator::get_user_id();
-				$modo 			= $this->get_modo();
-
-			$options = new stdClass();
-				$options->section_tipo 	= $section_tipo;
-				$options->tipo 			= $tipo;
-				$options->modo 			= $modo;
-				$options->user_id 		= $user_id;
-
-				if(!empty($view)) {
-					$options->view 		= $view;
-				}
-
-
-			$this->layout_map = layout_map::get_layout_map($options);
-		}
-
-		return $this->layout_map;
-	}//end get_layout_map
-	*/
 
 
 
@@ -2391,7 +2356,7 @@ abstract class common {
 						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 					}else{
 						// components
-						$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+						$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);						
 					}
 					break;
 				case 'list':
@@ -2425,6 +2390,7 @@ abstract class common {
 					break;
 			}
 
+
 			// related_clean
 				$ar_related_clean 	 = [];
 				$target_section_tipo = $section_tipo;
@@ -2441,6 +2407,7 @@ abstract class common {
 				if (empty($ar_related_clean)) {
 					$ar_related_clean = [$tipo];
 				}
+
 
 			// target_section_tipo
 				if (!isset($target_section_tipo)) {
@@ -2459,8 +2426,9 @@ abstract class common {
 
 			// show
 				$show = new stdClass();
-					$show->ddo_map 		= $ar_related_clean;
+					$show->ddo_map		= $ar_related_clean;
 					$show->sqo_config	= $sqo_config;
+
 
 			// request_config_item. build
 				$request_config_item = new stdClass();
@@ -2498,11 +2466,11 @@ abstract class common {
 
 		// layout_map subcontext from layout_map items
 			$layout_map_options = new stdClass();
-				$layout_map_options->tipo			= $this->get_tipo();
-				$layout_map_options->section_tipo	= $this->get_section_tipo();
-				$layout_map_options->modo			= $records_mode;
-				$layout_map_options->add_section	= true;
-
+				$layout_map_options->tipo					= $this->get_tipo();
+				$layout_map_options->section_tipo			= $this->get_section_tipo();
+				$layout_map_options->modo					= $records_mode;
+				// $layout_map_options->add_section			= true;
+				$layout_map_options->request_config_type	= ''; // overwrite in each case
 		$ddo = [];
 
 		// select

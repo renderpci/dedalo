@@ -17,7 +17,7 @@ class layout_map {
 	* Cases:
 	*	1. Modo 'list' : Uses childrens to build layout map
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
-	* @return 
+	* @return array $layout_map
 	*/
 	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
 
@@ -206,7 +206,7 @@ class layout_map {
 
 	/**
 	* GET_SECTION_DDO
-	* @return
+	* @return object $dd_object
 	*/
 	public static function get_section_ddo($section_tipo, $mode, $lang) {
 
@@ -269,9 +269,10 @@ class layout_map {
 	}//end get_component_ddo
 
 
+
 	/**
-	* GET_FPATH_DDO
-	* @return
+	* GET_F_PATH_DDO
+	* @return array $ar_dd_object
 	*/
 	public static function get_f_path_ddo($f_path_object, $request_config_type, $current_section_tipo, $mode, $lang) {
 
@@ -295,6 +296,7 @@ class layout_map {
 
 		return $ar_dd_object;
 	}//end get_fpath_ddo
+
 
 
 	/**
@@ -400,8 +402,8 @@ class layout_map {
 			#dump($search_query_object, ' search_query_object ++ '.to_string());
 			#error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
 
-		$search 	= search::get_instance($search_query_object);
-		$rows_data 	= $search->search();
+		$search		= search::get_instance($search_query_object);
+		$rows_data	= $search->search();
 			#dump($rows_data, ' rows_data ++ '.to_string());
 
 		$ar_records = $rows_data->ar_records;

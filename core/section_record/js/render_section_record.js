@@ -34,15 +34,15 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.component.build_wrapper_edit(self, {
-			label 		 : null,
-			content_data : current_content_data
+			label			: null,
+			content_data	: content_data
 		})
 
 
@@ -52,10 +52,10 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 
 
 /**
-* CONTENT_DATA_EDIT
-* @return DOM node content_data_edit
+* GET_CONTENT_DATA_EDIT
+* @return DOM node get_content_data_edit
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const ar_instances = await self.get_ar_instances()
 
@@ -72,8 +72,8 @@ const content_data_edit = async function(self) {
 				continue;
 			}
 
-			const current_instance 		= ar_instances[i]
-			const current_instance_node = current_instance.node[0] || await current_instance.render()
+			const current_instance		= ar_instances[i]
+			const current_instance_node	= current_instance.node[0] || await current_instance.render()
 
 			// get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper
@@ -138,7 +138,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -439,8 +439,8 @@ const build_id_column = function(self) {
 */
 const recursive_relation_columns = function(current_instance, datum) {
 
-	let n_relation_columns 	  = 0
-	const component_childrens = datum.context.filter(instance => instance.parent===current_instance.tipo)
+	let n_relation_columns		= 0
+	const component_childrens	= datum.context.filter(instance => instance.parent===current_instance.tipo)
 
 	if(component_childrens.length>0) {
 
@@ -501,6 +501,7 @@ const delete_record = (button, self) => {
 		section_id: ${self.section_id}`)
 
 
-
 	return false
 }//end delete_record
+
+
