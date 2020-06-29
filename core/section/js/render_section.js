@@ -256,14 +256,32 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 			paginator_div.appendChild(paginator_wrapper)
 		})
 
+
+	// list body
+		const list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_body',
+			parent			: fragment
+		})
+
+
 	// list_header_node
 		if (ar_section_record.length>0) {
 			const list_header_node = await self.list_header()
-			fragment.appendChild(list_header_node)
+
+			Object.assign(
+				list_body.style,
+				{
+					//display: 'grid',
+					//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
+					"grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)",
+				}
+			)
+			list_body.appendChild(list_header_node)
 		}
 
 	// content_data append
-		fragment.appendChild(content_data)
+		list_body.appendChild(content_data)
 
 
 	// wrapper
@@ -431,14 +449,14 @@ render_section.prototype.list_header = async function(){
 		}
 
 	// css calculation
-		Object.assign(
-			header_wrapper.style,
-		  {
-		    //display: 'grid',
-		    //"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-		    "grid-template-columns": self.id_column_width + " repeat("+(ar_nodes_length)+", 1fr)",
-		  }
-		)
+		// Object.assign(
+		// 	header_wrapper.style,
+		// 	{
+		// 		//display: 'grid',
+		// 		//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
+		// 		"grid-template-columns": self.id_column_width + " repeat("+(ar_nodes_length)+", 1fr)",
+		// 	}
+		// )
 
 	return header_wrapper
 }//end list_header
@@ -462,15 +480,17 @@ const breakdown_header_items = function(component, datum, ar_nodes, parent){
 	}else{
 
 		// node header_item
-			const header_item = ui.create_dom_element({
+			const id			=  component.tipo + "_" + component.section_tipo + (parent ? "_"+parent.tipo : '')			
+			const header_item	= ui.create_dom_element({
 				element_type	: "div",
-				id 				: component.tipo + "_" + component.section_tipo,
-				inner_html 		: (parent) ? parent.label + "<br>" + component.label : component.label
+				id				: id,
+				// inner_html	: (parent) ? parent.label + "<br>" + component.label : component.label
+				inner_html		: (parent) ? parent.label : component.label
 			})
-			//header_item.column_parent 	= null
-			//header_item.column_id 		= component.tipo
-
-			ar_nodes.push(header_item)
+			// add if not already exists
+			// if (!ar_nodes.find(item => item.id===id)) {
+				ar_nodes.push(header_item)
+			// }		
 	}
 
 	return ar_nodes

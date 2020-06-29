@@ -109,8 +109,11 @@ common.prototype.render = async function(options={render_level:'full'}) {
 
 							const wrapper = self.node[i]
 
-							// old content_data node
-								const old_content_data_node = wrapper.querySelector(":scope >.content_data")
+							// old content_data node								
+								const old_content_data_node = self.model==='section' && self.mode==='list'
+									? wrapper.querySelector(":scope >.list_body >.content_data")
+									: wrapper.querySelector(":scope >.content_data")
+
 								// const old_content_data_nodes = wrapper.querySelectorAll(":scope >.content_data")
 								// const get_content_data_node = () => {
 								// 	let result = null
@@ -141,11 +144,16 @@ common.prototype.render = async function(options={render_level:'full'}) {
 									? node // use already calculated node
 									: await self[render_mode]({render_level : render_level});
 
+								// console.log("-----------------old_content_data_node:",old_content_data_node);
 								// console.log("-----------------new_node:", new_content_data_node, self.model);
 
-							// replace child from parent wrapper
-								wrapper.replaceChild(new_content_data_node, old_content_data_node)
-
+							// replace child from parent wrapper								
+								if (self.model==='section' && self.mode==='list') {
+									const list_body = wrapper.querySelector(":scope >.list_body")
+									list_body.replaceChild(new_content_data_node, old_content_data_node)
+								}else{
+									wrapper.replaceChild(new_content_data_node, old_content_data_node)
+								}
 						}
 
 					return self.node[0]
@@ -590,8 +598,6 @@ const build_request_show = function(self, request_config, action){
 		if (request_sqo) {
 			dd_request.push(request_sqo)			
 		}
-
-			console.log("/// rqo:",rqo);
 
 	// if don't has rqo return the source only
 		if(rqo.length < 1){

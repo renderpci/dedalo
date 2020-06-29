@@ -212,14 +212,16 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
 	// grid css calculation assign
-		const ar_grid_columns_fr = ar_grid_columns.map(n => n + "fr");
-		const id_column_width 	 = self.caller.id_column_width // from section init
-		Object.assign(
-			wrapper.style,
-			{
-				"grid-template-columns": id_column_width + " " + ar_grid_columns_fr.join(" ")
-			}
-		)
+		// const ar_grid_columns_fr	= ar_grid_columns.map(n => n + "fr");
+		// const id_column_width		= self.caller.id_column_width // from section init
+		// Object.assign(
+		// 	wrapper.style,
+		// 	{
+		// 		// "grid-template-columns": id_column_width + " " + ar_grid_columns_fr.join(" ")
+		// 		"grid-template-columns": id_column_width + " repeat("+(ar_grid_columns.length)+", 1fr)",
+		// 	}
+		// )
+	
 
 	// component_info
 		const component_info = self.get_component_info()
@@ -308,12 +310,16 @@ const build_id_column = function(self) {
 						})
 						edit_button.addEventListener("click", async function(e){
 							// navigate link
-								event_manager.publish('user_action', {
+								const user_action_options = {
 									tipo		: self.section_tipo,
 									section_id	: self.section_id,
 									model		: self.caller.model,
 									mode		: 'edit'
-								})
+								}
+								if(SHOW_DEBUG===true) {
+									console.log("// section_record build_id_column user_action_options initiator component:",user_action_options);
+								}								
+								event_manager.publish('user_action', user_action_options)
 
 							// detail_section
 								// ( async () => {
@@ -400,12 +406,16 @@ const build_id_column = function(self) {
 						})
 						edit_button.addEventListener("click", function(e){
 							// edit_record(this, self)
-							event_manager.publish('user_action', {
+							const user_action_options = {
 								tipo		: self.section_tipo,
 								section_id	: self.section_id,
-								model		: self.caller.model,
+								model		: 'section',
 								mode		: 'edit'
-							})
+							}
+							if(SHOW_DEBUG===true) {
+								console.log("// section_record build_id_column user_action_options default:",user_action_options);
+							}
+							event_manager.publish('user_action', user_action_options)
 						})
 					}
 				// delete_line
