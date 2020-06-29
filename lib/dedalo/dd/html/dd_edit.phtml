@@ -273,12 +273,12 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 					<!-- HEADER V6 Properties -->
 					<tr>
 						<td class="td_header" onClick="simpleToogleTBODY('V6_properties',this);redimensionarVentana();" style="cursor:pointer"> 
-							V6 Properties <div class="flecha_close_tboby"></div> 
+							V6 Properties <div class="flecha_open_tboby"></div> 
 						</td>
 					</tr>
 
 					<!-- TBODY V6 Properties -->
-					<tbody id="V6_properties">  
+					<tbody id="V6_properties" style="display: none">  
 
 					<!-- PROPERTIES (JSON) -->
 						<?php if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) { ?>
