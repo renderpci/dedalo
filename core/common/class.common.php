@@ -2258,10 +2258,46 @@ abstract class common {
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$properties		= $RecordObj_dd->get_properties();
 		$limit			= ($mode!=='list') ? 1 : 10;
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		$request_config_parsed = [];
-		if(isset($properties->source->request_config)){
+		if(isset($properties->source->request_config) || $model==='component_autocomplete_hi'){
 			// V6, properties request_config is defined
+
+			// fallback component_autocomplete_hi
+				if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi') {
+					$properties->source->request_config = json_decode('[
+			            {
+			                "show": {
+			                    "ddo_map": [
+			                        "hierarchy25"
+			                    ],
+			                    "sqo_config": {
+			                        "operator": "$or"
+			                    }
+			                },
+			                "search": {
+			                    "ddo_map": [
+			                        "hierarchy25"
+			                    ],
+			                    "sqo_config": {
+			                        "operator": "$or"
+			                    }
+			                },
+			                "records_mode": "list",
+			                "section_tipo": [
+			                    {
+			                        "value": [
+			                            2
+			                        ],
+			                        "source": "hierarchy_types"
+			                    }
+			                ],
+			                "search_engine": "search_dedalo"
+			            }
+			        ]');
+			        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);					
+				}//end if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi')
 
 			foreach ($properties->source->request_config as $item_request_config) {
 
@@ -2343,7 +2379,14 @@ abstract class common {
 
 		}else{
 			// V5 model
-			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			
+
+			// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
+			// 	debug_log(__METHOD__." Invalid configuration of component: '$model', tipo: '$tipo'. Please set 'request_config' in element properties! ".to_string(), logger::ERROR);
+			// 	return [];
+			// 	// throw new Exception("Error Processing Request. Invalid configuration", 1);
+			// 	// die();
+			// }
 
 			switch ($mode) {
 				case 'edit':
@@ -2439,7 +2482,7 @@ abstract class common {
 					$request_config_item->select		= $show;
 					$request_config_item->show			= $show;
 
-				// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string());
+				// dump($request_config_item, ' ------------------------------------------ request_config_item ++ '.to_string()); die();
 
 			$request_config_parsed = [$request_config_item];
 		}
