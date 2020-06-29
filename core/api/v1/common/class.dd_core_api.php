@@ -169,8 +169,8 @@ class dd_core_api {
 
 		$result = $json_rows;
 
-		$response->result 	= $result;
-		$response->msg 	  	= 'Ok. Request done';
+		$response->result	= $result;
+		$response->msg		= 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -196,12 +196,12 @@ class dd_core_api {
 
 		// create the default save response
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// get the context and data sended
-		$context 	= $json_data->context;
-		$data 		= $json_data->data;
+		$context	= $json_data->context;
+		$data		= $json_data->data;
 		$section_id	= $json_data->section_id;
 
 		//get the type of the dd_object that is calling to update
@@ -211,14 +211,14 @@ class dd_core_api {
 			case 'component':
 
 				// get the component information
-					$model 			= $context->model;
-					$tipo 			= $context->tipo;
-					$section_tipo 	= $context->section_tipo;
-					$lang 			= $context->lang;
-					$changed_data 	= $data->changed_data;
+					$model			= $context->model;
+					$tipo			= $context->tipo;
+					$section_tipo	= $context->section_tipo;
+					$lang			= $context->lang;
+					$changed_data	= $data->changed_data;
 
-					$RecordObj_dd = new RecordObj_dd($tipo);
-					$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
 				// build the component
 					$component = component_common::get_instance( $model,
@@ -337,17 +337,17 @@ class dd_core_api {
 		//////////session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// vars from json_data
-			$source 		= $json_data->source;
+			$source			= $json_data->source;
 
-			$tipo 			= $source->tipo;
-			$section_tipo 	= $source->section_tipo ?? $source->tipo;
-			$model 			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$lang 			= $source->lang ?? DEDALO_DATA_LANG;
-			$mode 			= $source->mode ?? 'list';
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo ?? $source->tipo;
+			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$lang			= $source->lang ?? DEDALO_DATA_LANG;
+			$mode			= $source->mode ?? 'list';
 
 		// build element
 			switch (true) {
@@ -368,8 +368,8 @@ class dd_core_api {
 					break;
 
 				case strpos($model, 'component')!==false:
-					$RecordObj_dd = new RecordObj_dd($tipo);
-					$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
 					$element = component_common::get_instance($model,
 															  $tipo,
@@ -388,16 +388,16 @@ class dd_core_api {
 
 		// element json
 			$get_json_options = new stdClass();
-				$get_json_options->get_context 	= true;
-				$get_json_options->get_data 	= false;
+				$get_json_options->get_context	= true;
+				$get_json_options->get_data		= false;
 			$element_json = $element->get_json($get_json_options);
 
 		// context add
 			$context = $element_json->context; //dump($context, ' $context ++ '.to_string($model));
 
 		// response
-			$response->result = $context;
-			$response->msg 	  = 'Ok. Request done';
+			$response->result	= $context;
+			$response->msg		= 'Ok. Request done';
 
 
 		return (object)$response;
@@ -901,15 +901,15 @@ class dd_core_api {
 
 				// element json
 					$get_json_options = new stdClass();
-						$get_json_options->get_context 	= true;
-						$get_json_options->get_data 	= false;
+						$get_json_options->get_context	= true;
+						$get_json_options->get_data		= false;
 					$element_json = $element->get_json($get_json_options);
 
 				// context add
 					$context = $element_json->context;
 					$context[] = (object)[
-						'source' 	=> 'request_ddo',
-						'value' 	=> dd_core_api::$request_ddo
+						'source'	=> 'request_ddo',
+						'value'		=> dd_core_api::$request_ddo
 					];
 
 			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
@@ -1009,14 +1009,14 @@ class dd_core_api {
 							if (strpos($model, 'component')===0) {
 
 								// component
-									$RecordObj_dd = new RecordObj_dd($tipo);
-									$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-									$element 	= component_common::get_instance($model,
-																				 $tipo,
-																				 $section_id,
-																				 $mode,
-																				 $component_lang,
-																				 $section_tipo);
+									$RecordObj_dd	= new RecordObj_dd($tipo);
+									$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+									$element		= component_common::get_instance($model,
+																					 $tipo,
+																					 $section_id,
+																					 $mode,
+																					 $component_lang,
+																					 $section_tipo);
 									if ($mode==='tm') {
 										// set matrix_id value to component to allow it search dato in
 										// matrix_time_machine component function 'get_dato' will be
@@ -1043,8 +1043,8 @@ class dd_core_api {
 								// search_action
 									$search_action = $ddo_source->search_action ?? 'show_all';
 									$obj = new stdClass();
-										$obj->action 				= $search_action;
-										$obj->search_query_object 	= $search_query_object;
+										$obj->action				= $search_action;
+										$obj->search_query_object	= $search_query_object;
 									$element->set_search_action($obj);
 
 							// }else{
@@ -1070,8 +1070,8 @@ class dd_core_api {
 
 							// element json
 								$get_json_options = new stdClass();
-									$get_json_options->get_context 	= false;
-									$get_json_options->get_data 	= true;
+									$get_json_options->get_context	= false;
+									$get_json_options->get_data		= true;
 								$element_json = $element->get_json($get_json_options);
 
 							// data add
@@ -1094,10 +1094,10 @@ class dd_core_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->search_query_object = $search_query_object ?? null;
-					$debug->dd_request 			= $dd_request;
-					$debug->context_exec_time 	= $context_exec_time;
-					$debug->data_exec_time 		= $data_exec_time;
+					$debug->search_query_object	= $search_query_object ?? null;
+					$debug->dd_request			= $dd_request;
+					$debug->context_exec_time	= $context_exec_time;
+					$debug->data_exec_time		= $data_exec_time;
 					$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
 				$result->debug = $debug;
 				#dump($debug, ' debug ++ '.to_string());
