@@ -2514,23 +2514,26 @@ abstract class common {
 				$layout_map_options->modo					= $records_mode;
 				// $layout_map_options->add_section			= true;
 				$layout_map_options->request_config_type	= ''; // overwrite in each case
-		$ddo = [];
-
-		// select
-			$layout_map_options->request_config_type	= 'select';
-			$layout_map_result							= layout_map::get_layout_map($layout_map_options);
-			$ddo										= array_merge($ddo, $layout_map_result);
-
-		// search
-			$layout_map_options->request_config_type	= 'search';
-			$layout_map_result							= layout_map::get_layout_map($layout_map_options);
-			$ddo										= array_merge($ddo, $layout_map_result);
 
 		// show
 			$layout_map_options->request_config_type	= 'show';
-			$layout_map_result							= layout_map::get_layout_map($layout_map_options);
-			$ddo										= array_merge($ddo, $layout_map_result);
+			$layout_map_result							= layout_map::get_layout_map($layout_map_options);		
+			$ddo										= $layout_map_result;
 
+		// only for non list mode (excludding section)
+			if (get_called_class()!=='section' && $this->modo!=='list') {
+			
+				// search
+					$layout_map_options->request_config_type	= 'search';
+					$layout_map_result							= layout_map::get_layout_map($layout_map_options);
+					$ddo										= array_merge($ddo, $layout_map_result);
+
+				// select
+					$layout_map_options->request_config_type	= 'select';
+					$layout_map_result							= layout_map::get_layout_map($layout_map_options);
+					$ddo										= array_merge($ddo, $layout_map_result);
+			}
+		
 
 		// add ddo to the global storage
 			$added_ddo =[];
