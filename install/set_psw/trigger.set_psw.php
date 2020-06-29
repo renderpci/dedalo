@@ -31,18 +31,25 @@ if($mode==='set_psw') {
 			exit();
 		}	
 	
-	$section = section::get_instance( -1, DEDALO_SECTION_USERS_TIPO );
-	$dato 	 = $section->get_dato();
-	$tipo 	 = DEDALO_USER_PASSWORD_TIPO;
-	$lang 	 = DEDALO_DATA_NOLAN;	
+	$section	= section::get_instance(-1, DEDALO_SECTION_USERS_TIPO);
+	$dato		= $section->get_dato();
+	$tipo		= DEDALO_USER_PASSWORD_TIPO;
+	$lang		= DEDALO_DATA_NOLAN;
+
+	// empty component data case
+		if (!isset($dato->components->{$tipo})) {
+			$dato->components->{$tipo}			= new stdClass();
+			$dato->components->{$tipo}->dato	= new stdClass();
+			$dato->components->{$tipo}->valor	= new stdClass();
+		}
 
 	# Set dato 
-	$dato->components->$tipo->dato->$lang  = $password_encripted;
+	$dato->components->{$tipo}->dato->$lang		= $password_encripted;
 	# Set valor
-	$dato->components->$tipo->valor->$lang = $password_encripted;
+	$dato->components->{$tipo}->valor->$lang	= $password_encripted;
 	
-	$strQuery 	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
-	$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
+	$strQuery	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
+	$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
 	if(!$result) {
 		debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::ERROR);
 		if(SHOW_DEBUG) {			
@@ -54,4 +61,6 @@ if($mode==='set_psw') {
 	
 	unset($_SESSION['dedalo4']['auth']);
 
-} #if($mode=='set_psw')
+}//if($mode=='set_psw')
+
+
