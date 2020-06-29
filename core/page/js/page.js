@@ -67,19 +67,18 @@ page.prototype.init = async function(options) {
 	self.node			= []
 	self.ar_instances	= []
 	self.context		= options.context // mixed items types like 'sections', 'tools'..
-	self.page_elements	= options.context.page_elements
+	self.page_elements	= self.context ? self.context.page_elements : []
 	self.status			= null
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
 
 	self.dd_request		= {
-		show	: null
+		show : null
 	}
 
 
 	// launch preload all components files in parallel
 		//import('../../common/js/components_list.js')
-
 
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
@@ -89,7 +88,9 @@ page.prototype.init = async function(options) {
 			)
 		// user_action fn
 			async function user_action(options) {
-				console.log("page user_action options", options);
+				if(SHOW_DEBUG===true) {
+					console.log("// page user_action received options", options);
+				}				
 
 				// const current_data_manager 	= new data_manager()
 				// const api_response 			= await current_data_manager.get_element_context(options)
@@ -97,8 +98,8 @@ page.prototype.init = async function(options) {
 				// // element context from api server result
 				// 	const page_element = api_response.result
 
-				const source = JSON.parse(JSON.stringify(options))
-					  source.typo = "source"
+				const source 		= JSON.parse(JSON.stringify(options))
+					  source.typo	= "source"
 
 				const request_config = [source]
 
