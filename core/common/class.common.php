@@ -1796,6 +1796,9 @@ abstract class common {
 		$source_tipo		= $this->get_tipo();
 		$source_model		= RecordObj_dd::get_modelo_name_by_tipo($source_tipo,true);
 		$source_properties	= $this->get_properties();
+		$records_mode		= isset($source_properties->source->records_mode)
+								? $source_properties->source->records_mode
+								: $this->get_modo();
 
 		// Iterate dd_object (layout_map) for colums
 			$layout_map_options = new stdClass();
@@ -1827,9 +1830,11 @@ abstract class common {
 						continue; // prevents multisection duplicate items
 					}
 
+
+
 					$dd_object 		= (object)$dd_object;
 					$current_tipo 	= $dd_object->tipo;
-					$mode 			= $dd_object->mode ?? 'list';
+					$mode 			= $records_mode;
 					$model			= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					$current_lang 	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 
@@ -2512,7 +2517,7 @@ abstract class common {
 				$layout_map_options->tipo					= $this->get_tipo();
 				$layout_map_options->section_tipo			= $this->get_section_tipo();
 				$layout_map_options->modo					= $records_mode;
-				// $layout_map_options->add_section			= true;
+				$layout_map_options->add_section			= true;
 				$layout_map_options->request_config_type	= ''; // overwrite in each case
 
 		// show
@@ -2525,11 +2530,13 @@ abstract class common {
 			
 				// search
 					$layout_map_options->request_config_type	= 'search';
+					$layout_map_options->add_section			= false;
 					$layout_map_result							= layout_map::get_layout_map($layout_map_options);
 					$ddo										= array_merge($ddo, $layout_map_result);
 
 				// select
 					$layout_map_options->request_config_type	= 'select';
+					$layout_map_options->add_section			= false;
 					$layout_map_result							= layout_map::get_layout_map($layout_map_options);
 					$ddo										= array_merge($ddo, $layout_map_result);
 			}
