@@ -154,11 +154,12 @@ component_portal.prototype.build  = async function(autoload=false){
 					console.log("portal build api_response:", api_response)
 				}
 
-			// Update the self.data into the datum and self instance
-				if (api_response.result) {
-					const new_data = api_response.result.data
-					self.update_datum(new_data)
-				}
+			// set context and data to current instance
+				self.update_datum(api_response.result.data)
+				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+
+			// update instance properties from context (type, label, tools, divisor, permissions)
+				set_context_vars(self, self.context)
 
 			// update element pagination vars when are used
 				if (self.data.pagination && typeof self.pagination.total!=="undefined") {
