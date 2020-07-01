@@ -40,10 +40,15 @@ render_component_input_text.prototype.list = async function() {
 
 	// Value as string
 		const value_string = value.join(self.divisor)
-
+	
 	// Set value
-		wrapper.textContent = value_string
-
+		if (data.fallback_lang_applied===true) {
+			// fallback_lang_applied
+			wrapper.insertAdjacentHTML('afterbegin', "<mark>"+value_string+"</mark")
+		}else{
+			// direct value
+			wrapper.textContent = value_string
+		}
 
 	return wrapper
 }//end list
