@@ -141,6 +141,7 @@ export const service_autocomplete = function() {
 	}// end render
 
 
+
 	/**
 	* RENDER_SOURCE_SELECTOR
 	* @return
@@ -215,6 +216,7 @@ export const service_autocomplete = function() {
 	}//end render_source_selector
 
 
+
 	/**
 	* BUILD_AUTOCOMPLETE_INPUT
 	* Create the html of input search autocomplete
@@ -243,6 +245,7 @@ export const service_autocomplete = function() {
 
 		return search_input
 	}//end get_input
+
 
 
 	/**
@@ -339,6 +342,7 @@ export const service_autocomplete = function() {
 	}//end render_sections_selector
 
 
+
 	/**
 	* BUILD_INPUTS_LIST
 	* @return
@@ -378,6 +382,7 @@ export const service_autocomplete = function() {
 
 		return inputs_list
 	}//end render_inputs_list
+
 
 
 	/**
@@ -437,6 +442,7 @@ export const service_autocomplete = function() {
 
 		return operator_selector
 	}//end render_operator_selector
+
 
 
 	/**
@@ -526,6 +532,7 @@ export const service_autocomplete = function() {
 	}//end render_datalist
 
 
+
 	/**
 	* AUTOCOMPLETE_SEARCH
 	* @param object options {
@@ -541,18 +548,16 @@ export const service_autocomplete = function() {
 			const search_query_object	= self.rebuild_search_query_object(q);
 
 			if(SHOW_DEBUG===true) {
-				console.log("[service-autocomplete.autocomplete_search] search_engine:",self.search_engine);	 //return
+				console.log("[service_autocomplete.autocomplete_search] search_engine:", self.search_engine)
 			}
 
 		// exec search
 			const js_promise = self[self.search_engine]( self.dd_request )
 
-		// test
-			//const js_promise = this["search_zenon"](search_options)
-				console.log("js_promise:",js_promise);
 
 		return js_promise
 	}//end autocomplete_search
+
 
 
 	/**
@@ -697,37 +702,37 @@ export const service_autocomplete = function() {
 				// const filter_element[Object.keys(filter_element)[0]]
 				if(filter_free){
 					const filter_free_value = filter_free.value
+					
 					// Iterate current filter
-					for (let operator in filter_free_value) {
+						for (let operator in filter_free_value) {
 
-						const current_filter = filter_free_value[operator]
-						for (let i = 0; i < current_filter.length; i++) {
+							const current_filter = filter_free_value[operator]
+							for (let i = 0; i < current_filter.length; i++) {
 
-							// Update q property
-							current_filter[i].q	= (q !== "")
-								? "*" + q + "*"
-								: "false_muyflase_de verdad"
-							current_filter[i].q_split = false
-						}
-					}
-
+								// Update q property
+								current_filter[i].q	= (q !== "")
+									? "*" + q + "*"
+									: "false_muyflase_de verdad"
+								current_filter[i].q_split = false
+							}
+						}					
 
 					// filter rebuilded
-					self.sqo.filter = {
-						"$and" : [filter_free_value]
-						// "$and" : []
-					}
-					if (fixed_filter) {
-						for (let i = 0; i < fixed_filter.value.length; i++) {
-							sqo.filter.$and.push(fixed_filter.value[i])
+						self.sqo.filter = {
+							"$and" : [filter_free_value]
+							// "$and" : []
 						}
-					}
-				// }
+						if (fixed_filter) {
+							for (let i = 0; i < fixed_filter.value.length; i++) {
+								sqo.filter.$and.push(fixed_filter.value[i])
+							}
+						}
+				}//end if(filter_free)
 
-			}
+		// }
 
-			// allow_sub_select_by_id set to false to allow select deep fields
-				sqo.allow_sub_select_by_id = false
+		// allow_sub_select_by_id set to false to allow select deep fields
+			sqo.allow_sub_select_by_id = false
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -741,23 +746,34 @@ export const service_autocomplete = function() {
 	}//end rebuild_search_query_object
 
 
+
 	/**
 	* SEARCH_DEDALO
 	* @return promise
 	*/
-	this.search_dedalo = async function(search_query_object) {
+	this.search_dedalo = async function(dd_request) {
 
-		console.log("+++ [service_autocomplete.search_dedalo] search_query_object:", search_query_object);
+		if(SHOW_DEBUG===true) {
+			console.log("+++ [service_autocomplete.search_dedalo] dd_request:", dd_request)
+		}
 
-		const current_data_manager		= new data_manager()
-		const load_section_data_promise	= current_data_manager.read(search_query_object)
+		// verify source is in list mode to allow lang fallback
+			const source	= dd_request.find(item => item.typo==="source")
+			source.mode		= "list"
+
+		// API read request
+			const current_data_manager		= new data_manager()
+			const load_section_data_promise	= current_data_manager.read(dd_request)
 
 		// render section on load data
-	 		const api_response = await load_section_data_promise
-	 			console.log("[service_autocomplete.search_dedalo] api_response:",api_response);
+	 		const api_response = load_section_data_promise
+	 		if(SHOW_DEBUG===true) {
+	 			console.log("[service_autocomplete.search_dedalo] api_response:", api_response);
+	 		}
 
 		return api_response
 	}//end search_dedalo
+
 
 
 	/**
@@ -934,6 +950,7 @@ export const service_autocomplete = function() {
 
 			})//end Promise
 	}//end search_zenon
+
 
 
 	/**************************************************/
@@ -2671,4 +2688,8 @@ export const service_autocomplete = function() {
 		return true
 	}//end build_source_search_selector
 
+
+
 }//end service_autocomplete
+
+
