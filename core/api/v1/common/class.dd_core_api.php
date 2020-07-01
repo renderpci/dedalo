@@ -232,7 +232,7 @@ class dd_core_api {
 				// check if the user can update the component
 					if($permissions < 2) return $response;
 
-				// update the dato with the change data send by client
+				// update the dato with the changed data sended by the client
 					$component->update_data_value($changed_data);
 				// save the new data to the component
 					$component->Save();
