@@ -512,37 +512,29 @@ abstract class component_common extends common {
 	protected function load_component_dato() {
 
 		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
-
-			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin id)
-			#$this->bl_loaded_matrix_data = true;
-			return null;
+			return false;
 		}
 
-		if( $this->bl_loaded_matrix_data!==true ) {
-			# Experimental (si ya se ha intentado cargar pero con sin id, y ahora se hace con id, lo volvemos a intentar)
-			#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->id)<1) ) {
+		if($this->bl_loaded_matrix_data!==true) {
 
-				if (empty($this->section_tipo)) {
-					if(SHOW_DEBUG===true) {
-						$msg = " Error Processing Request. section tipo not found for component $this->tipo";
-						#throw new Exception("$msg", 1);
-						debug_log(__METHOD__.$msg);
-					}
-				}
+			if (empty($this->section_tipo)) {
+				debug_log(__METHOD__." Error Processing Request. section tipo not found for component $this->tipo ".to_string(), logger::ERROR);
+				return false;
+			}
+
+			// section create
 				$section = section::get_instance($this->section_id, $this->section_tipo);
 
+			// fix dato
+				// El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.			
+				// $lang_fallback = ($this->modo==='list') ? true : false;
+				$this->dato = $section->get_component_dato($this->tipo, $this->lang, $lang_fallback=false);
 
-			# Fix dato
-			# El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.
-			$lang_fallback=false;
-			if ($this->modo==='list') {
-				$lang_fallback=true;
-			}
-			$this->dato = $section->get_component_dato($this->tipo, $this->lang, $lang_fallback);
-
-			# Set as loaded
-			$this->bl_loaded_matrix_data = true;
+			// Set as loaded
+				$this->bl_loaded_matrix_data = true;
 		}
+
+		return true;
 	}//end load_component_dato
 
 

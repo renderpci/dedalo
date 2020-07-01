@@ -41,7 +41,9 @@
 		// Value
 		switch ($modo) {
 			case 'list':
-				$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$original_value			= $this->get_dato();
+				$value					= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$fallback_lang_applied	= $original_value!==$value;
 				break;
 			case 'edit':
 			default:
@@ -68,8 +70,9 @@
 
 		// data item
 			$item  = $this->get_data_item($value);
-				$item->parent_tipo			= $this->get_tipo();		// (? used)
- 				$item->parent_section_id	= $this->get_section_id();	// (? used)
+				$item->parent_tipo				= $this->get_tipo();		// (? used)
+				$item->parent_section_id		= $this->get_section_id();	// (? used)
+				$item->fallback_lang_applied	= $fallback_lang_applied;
  		
 
 		$data[] = $item;
