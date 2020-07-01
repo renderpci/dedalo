@@ -1852,6 +1852,20 @@ abstract class component_common extends common {
 	}//end regenerate_component
 
 
+	/**
+	* IS_DATO_EMPTY
+	* @return bool
+	*/
+	public static function is_dato_empty($dato) {
+		foreach ((array)$dato as $value) {
+			if (!empty($value)) {
+				return false;
+			}
+		}
+		return true;
+	}//end is_dato_empty
+	
+
 
 	/**
 	* EXTRACT_COMPONENT_dato_FALLBACK
@@ -1867,7 +1881,7 @@ abstract class component_common extends common {
 			$dato = $component->get_dato();
 
 		// fallback if empty
-			if (empty($dato)) {
+			if (component_common::is_dato_empty($dato)) {
 
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 					if ($lang!==$main_lang) {
@@ -1876,13 +1890,13 @@ abstract class component_common extends common {
 					}
 
 				// Try nolan
-					if (empty($dato)) {
+					if (component_common::is_dato_empty($dato)) {
 						$component->set_lang(DEDALO_DATA_NOLAN);
 						$dato = $component->get_dato(DEDALO_DATA_NOLAN);
 					}
 
 				// Try all projects langs sequence
-					if (empty($dato)) {
+					if (component_common::is_dato_empty($dato)) {
 						$data_langs = common::get_ar_all_langs(); # Langs from config projects
 						foreach ($data_langs as $current_lang) {
 							if ($current_lang===$lang || $current_lang===$main_lang) {
@@ -1890,7 +1904,7 @@ abstract class component_common extends common {
 							}
 							$component->set_lang($current_lang);
 							$dato = $component->get_dato($current_lang);
-							if (!empty($dato)) break; # Stops when first data is found
+							if (!component_common::is_dato_empty($dato)) break; # Stops when first data is found
 						}
 					}
 			}
@@ -2618,12 +2632,12 @@ abstract class component_common extends common {
 	public function get_data_item($value) {
 
 		$item = new stdClass();
-			$item->section_id 			= $this->get_section_id();
-			$item->section_tipo 		= $this->get_section_tipo();
-			$item->tipo 				= $this->get_tipo();
-			$item->lang 				= $this->get_lang();
-			$item->from_component_tipo 	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
-			$item->value 				= $value;
+			$item->section_id			= $this->get_section_id();
+			$item->section_tipo			= $this->get_section_tipo();
+			$item->tipo					= $this->get_tipo();
+			$item->lang					= $this->get_lang();
+			$item->from_component_tipo	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->value				= $value;
 
 		return $item;
 	}//end get_data_item
@@ -2639,15 +2653,16 @@ abstract class component_common extends common {
 	*/
 	public function update_data_value($changed_data) {
 
-		$dato 				= $this->get_dato();
-		$lang 				= $this->get_lang();
-		$properties 		= $this->get_properties();
-		$with_lang_versions = $properties->with_lang_versions ?? false;
+		$dato				= $this->get_dato();
+		$lang				= $this->get_lang();
+		$properties			= $this->get_properties();
+		$with_lang_versions	= $properties->with_lang_versions ?? false;
 
 		// fix changed_data
 			$this->changed_data = $changed_data;
 
 		switch ($changed_data->action) {
+			
 			case 'insert':
 			case 'update':
 				// check if the key exist in the $dato if the key exist chage it directly, else create all positions with null value for coherence
@@ -2668,13 +2683,12 @@ abstract class component_common extends common {
 
 			case 'remove':
 				switch (true) {
-					case ($changed_data->key===false && $changed_data->value===null):
+					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
 						$this->set_dato($value);
 						break;
 
 					case ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)):
-
 						// propagate to other data langs
 						$section = section::get_instance($this->get_section_id(), $this->get_section_tipo());
 
@@ -2713,7 +2727,8 @@ abstract class component_common extends common {
 				break;
 
 			default:
-				# code...
+				// error
+				debug_log(__METHOD__." Error on update_data_value. changed_data->action is not valid! ".to_string($changed_data->action), logger::DEBUG);
 				break;
 		}
 
