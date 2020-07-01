@@ -72,7 +72,7 @@
 			$item  = $this->get_data_item($value);
 				$item->parent_tipo				= $this->get_tipo();		// (? used)
 				$item->parent_section_id		= $this->get_section_id();	// (? used)
-				$item->fallback_lang_applied	= $fallback_lang_applied;
+				$item->fallback_lang_applied	= $fallback_lang_applied ?? false;
  		
 
 		$data[] = $item;
