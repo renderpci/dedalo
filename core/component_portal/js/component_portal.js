@@ -8,7 +8,7 @@
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
-	import {component_common} from '../../component_common/js/component_common.js'
+	import {component_common, set_context_vars} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
 
@@ -172,7 +172,7 @@ component_portal.prototype.build  = async function(autoload=false){
 			// pagination safe defaults
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
-				self.pagination.limit 	= self.pagination.limit  || self.context.properties.max_records || 3
+				self.pagination.limit 	= self.pagination.limit  || (self.context.properties ? self.context.properties.max_records : 3)
 
 			// sqo update filter_by_locators
 				if(self.pagination.total>self.pagination.limit){

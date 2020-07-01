@@ -68,8 +68,9 @@
 
 		// data item
 			$item  = $this->get_data_item($value);
-				$item->parent_tipo		 = $this->get_tipo();		// (? used)
- 				$item->parent_section_id = $this->get_section_id();	// (? used)
+				$item->parent_tipo			= $this->get_tipo();		// (? used)
+ 				$item->parent_section_id	= $this->get_section_id();	// (? used)
+ 		
 
 		$data[] = $item;
 
