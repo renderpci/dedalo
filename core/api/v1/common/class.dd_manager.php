@@ -69,8 +69,8 @@ class dd_manager {
 					$dd_core_api = new dd_core_api();
 					if ( !method_exists($dd_core_api, $options->action) ) {
 						$dedalo_data = new stdClass();
-							$dedalo_data->result = false;
-							$dedalo_data->msg 	 = "Error. Undefined dd_core_api method (action) : ".$options->action;
+							$dedalo_data->result	= false;
+							$dedalo_data->msg		= "Error. Undefined dd_core_api method (action) : ".$options->action;
 					}else{
 						$dedalo_data = (object)dd_core_api::{$options->action}( $options );
 					}
@@ -80,7 +80,8 @@ class dd_manager {
 		if(SHOW_DEBUG===true) {
 			$total_time = exec_time_unit($api_start_time,'ms')." ms";
 			$api_debug = new stdClass();
-				$api_debug->api_exec_time = $total_time;
+				$api_debug->api_exec_time	= $total_time;
+				$api_debug->api_options		= $options;
 
 			if (isset($dedalo_data->debug)) {
 				// add to existing debug properties
