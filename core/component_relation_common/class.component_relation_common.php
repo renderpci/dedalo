@@ -670,20 +670,20 @@ class component_relation_common extends component_common {
 	* Resolve locator to string value to show in list etc.
 	* @return string $locator_value
 	*/
-	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true ) {
+	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true ) {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
-			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string());;
+			#dump($ar_components_related, ' ar_components_related ++ '.to_string());			
 		}
 
 		if (empty($locator) || !is_object($locator)) {
 			return false;
 		}
 		$locator = new locator($locator);
-		if($ar_componets_related!==false && !empty($ar_componets_related)){
+		if($ar_components_related!==false && !empty($ar_components_related)){
 
 			$value = array();
-			foreach ($ar_componets_related as $component_tipo) {
+			foreach ($ar_components_related as $component_tipo) {
 				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				$current_component = component_common::get_instance($modelo_name,
 																	$component_tipo,
@@ -696,7 +696,7 @@ class component_relation_common extends component_common {
 					#dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
 
 				$value[] = $current_value;
-			}//end foreach ($ar_componets_related as $component_tipo)
+			}//end foreach ($ar_components_related as $component_tipo)
 
 			$ar_values_clean = [];
 			foreach ((array)$value as $key => $element_value) {
@@ -721,7 +721,7 @@ class component_relation_common extends component_common {
 				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);
 				#$n_ar_parents = count($ar_parents);
 					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
-
+				
 				foreach ($ar_parents as $current_locator) {
 
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
