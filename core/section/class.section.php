@@ -473,17 +473,19 @@ class section extends common {
 
 		$result = $this->Save( $save_options );
 
-		#
-		# DIFFUSION_INFO
-		# Note that this process can be very long if there are many inverse locators in this section
-		# To optimize save process in scripts of importation, you can dissable this option if is not really necessary
-		#
-		#$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
-		#register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
-		if ($component_obj->update_diffusion_info_propagate_changes===true) {
-			$this->diffusion_info_propagate_changes();
-			# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
-		}
+
+		// Stopped diffusion_info_propagate_changes
+			// #
+			// # DIFFUSION_INFO
+			// # Note that this process can be very long if there are many inverse locators in this section
+			// # To optimize save process in scripts of importation, you can dissable this option if is not really necessary
+			// #
+			// #$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
+			// #register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
+			// if ($component_obj->update_diffusion_info_propagate_changes===true) {
+			// 	$this->diffusion_info_propagate_changes();
+			// 	# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
+			// }
 
 
 		return $result;
