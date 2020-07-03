@@ -52,18 +52,18 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		let year  	= fn_random_number(2020) || 1
 		const time  = component_date.prototype.convert_date_to_seconds({
 			day 	: day,
-            month 	: month,
-            year 	: year
+			month 	: month,
+			year 	: year
 		}, 'date')
 
 		const value =  {
-            start : {
-                day 	: day,
-                time 	: time,
-                year 	: year,
-                month 	: month
-            }
-        }
+			start : {
+				day 	: day,
+				time 	: time,
+				year 	: year,
+				month 	: month
+			}
+		}
 		return value
 	}
 	function fn_random_email() {
@@ -297,9 +297,9 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 			function make_test (options, expected) {
 				it(`${JSON.stringify(options)} => '${expected}'`, function(done) {
-			    	assert.equal( key_instances_builder(options), expected);
-			    	done()
-			    });
+					assert.equal( key_instances_builder(options), expected);
+					done()
+				});
 			}
 
 			// keys: ['model','tipo','section_tipo','section_id','mode','lang']
@@ -343,7 +343,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				it(`${JSON.stringify(options)} => '${expected.name}'`, async function() {
 					const instance = await get_instance(options)
 					assert.instanceOf(instance, expected, 'result is an instance of expected '+instance.name);
-			    });
+				});
 			}
 			// page instance
 				describe("builds page instance from options", function() {
@@ -381,8 +381,8 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 					// console.log("new_instance:",new_instance);
 					const deleted = await delete_instance(options);
-			    	assert.equal(deleted, expected);
-			    });
+					assert.equal(deleted, expected);
+				});
 			}
 
 			// keys: ['model','tipo','section_tipo','section_id','mode','lang']
@@ -487,29 +487,29 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 				if (property) {
 					switch (property) {
-					 	case 'status':
-					     	assert.equal(new_instance.status, expected)
-					     	break;
-					    case 'lang':
-					 		assert.equal(new_instance.lang, expected)
-					     	break;
-					    case 'permissions':
-					 		assert.equal(new_instance.permissions, expected)
-					     	break;
-					    case 'properties':
-					 		assert.notEqual(new_instance.permissions, expected)
-					     	break;
-				     	case 'typo':
-					 		assert.notEqual(new_instance.permissions, expected)
-					     	break;
-					    default:
-					 		assert.equal(new_instance.status, expected)
-					     	break;
+						case 'status':
+							assert.equal(new_instance.status, expected)
+							break;
+						case 'lang':
+							assert.equal(new_instance.lang, expected)
+							break;
+						case 'permissions':
+							assert.equal(new_instance.permissions, expected)
+							break;
+						case 'properties':
+							assert.notEqual(new_instance.permissions, expected)
+							break;
+						case 'typo':
+							assert.notEqual(new_instance.permissions, expected)
+							break;
+						default:
+							assert.equal(new_instance.status, expected)
+							break;
 					}
 				}
 
 				await new_instance.destroy()
-		    });
+			});
 		}
 
 		// init
@@ -590,7 +590,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				// console.log("new_value:",new_value);
 
 			const test_title = (equals===true)
-				? `${options.model} => Save new_value = new_value (` + JSON.stringify(new_value) + ')'
+				? `${options.model} => Save new_value  = new_value (` + JSON.stringify(new_value) + ')'
 				: `${options.model} => Save new_value != old_value (` + JSON.stringify(new_value) + ')'
 
 			it(test_title, async function() {
@@ -604,6 +604,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					// })
 					// options.context = element_context.result[0]
 
+				// create and add request_config
 					const source = create_source(options, 'get_data')
 					options.context = {
 						request_config : [source]
@@ -612,7 +613,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				// first instance
 					const old_instance = await get_instance(options)
 					await old_instance.build(true)
-						console.log("old_instance:",old_instance);
+					
 					const old_value = typeof old_instance.data.value!=="undefined"
 						? old_instance.data.value[0]
 						: null
@@ -623,14 +624,13 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					// save
 						const changed_data = Object.freeze({
 							action	: 'insert',
-							key		: 0,
+							key 	: 0,
 							value	: new_value,
 						})
 						const api_response_save = await old_instance.change_value({
-							changed_data : changed_data,
-							refresh 	 : false
+							changed_data	: changed_data,
+							refresh			: false
 						})
-						console.log("changed_data api_response_save:",api_response_save);
 
 					// destroy
 						if (old_instance) {
@@ -644,21 +644,21 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 					if (equals===true) {
 
-						const reference_value = new_value
-						const data_value      = new_instance.data.value[0]
+						const reference_value	= new_value
+						const data_value		= new_instance.data.value[0]
 
 						// locator case check
 						if (typeof data_value.from_component_tipo!=="undefined" && data_value.from_component_tipo) {
 
 							const a = {
-								section_tipo 		: data_value.section_tipo,
-								section_id 			: data_value.section_id,
-								from_component_tipo : data_value.from_component_tipo
+								section_tipo		: data_value.section_tipo,
+								section_id			: data_value.section_id,
+								from_component_tipo	: data_value.from_component_tipo
 							}
 							const b = {
-								section_tipo 		: reference_value.section_tipo,
-								section_id 			: reference_value.section_id,
-								from_component_tipo : reference_value.from_component_tipo
+								section_tipo		: reference_value.section_tipo,
+								section_id			: reference_value.section_id,
+								from_component_tipo	: reference_value.from_component_tipo
 							}
 							assert.equal( JSON.stringify(a), JSON.stringify(b), "Compares equal saved value and sended value [locator]" )
 
@@ -673,7 +673,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					}
 
 					await new_instance.destroy()
-		    });
+			});
 		}
 
 		describe("save data equals", function() {
