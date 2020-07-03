@@ -30,7 +30,7 @@ render_component_image.prototype.list = function(options) {
 
 	// Options vars
 		const context 	= self.context
-		const datalist 	= self.data.datalist
+		const datalist 	= self.data.datalist || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
