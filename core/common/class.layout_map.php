@@ -20,6 +20,7 @@ class layout_map {
 	* @return array $layout_map
 	*/
 	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
+		// $start_time=microtime(1);
 
 		$options = new stdClass();
 			$options->section_tipo			= null;
@@ -37,11 +38,16 @@ class layout_map {
 			static $resolved_layout_map = [];
 			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
 			if (isset($resolved_layout_map[$resolved_key])) {
+			// if (isset($_SESSION['dedalo']['resolved_layout_map'][$resolved_key])) {
+				
 				debug_log(__METHOD__." Returned resolved layout_map with key: ".to_string($resolved_key), logger::DEBUG);
 				// dump($resolved_layout_map[$resolved_key], ' var ++ '.to_string($resolved_key)); //die();
 				// $bt = debug_backtrace();
-				// dump($bt, ' bt ++ '.to_string()); die();				
-				return $resolved_layout_map[$resolved_key];
+				// dump($bt, ' bt ++ '.to_string()); die();
+				$layout_map = $resolved_layout_map[$resolved_key];
+				// $layout_map = $_SESSION['dedalo']['resolved_layout_map'][$resolved_key];
+
+				return $layout_map;
 			}
 
 		// madatory
@@ -201,6 +207,9 @@ class layout_map {
 
 		// cache
 			$resolved_layout_map[$resolved_key] = $layout_map;
+			// $_SESSION['dedalo']['resolved_layout_map'][$resolved_key] = $layout_map;
+
+		// dump(null, 'Time to get_layout_map '.$model.' '.$tipo.' - time: '.exec_time_unit($start_time,'ms')." ms".to_string());
 
 		return (array)$layout_map;
 	}//end get_layout_map

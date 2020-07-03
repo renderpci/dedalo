@@ -449,15 +449,13 @@ class component_relation_parent extends component_relation_common {
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
 	public static function get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables=null) {
-		#dump($ar_tables, ' $ar_tables ++ '.to_string());
+		if(SHOW_DEBUG===true) {
+			// $start_time=microtime(1);
+		}
 
 		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 			return array(); // We are in last level of parent
-		}
-
-		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);
-		}
+		}		
 
 		# FROM_COMPONENT_TIPO FILTER OPTION
 		$filter ='';
@@ -470,16 +468,16 @@ class component_relation_parent extends component_relation_common {
 				# Calculate current target component_relation_children_tipo from structure
 				$from_component_tipo 	 = component_relation_parent::get_component_relation_children_tipo($component_parent_tipo);
 				*/
-			$filter = ",\"from_component_tipo\":\"$from_component_tipo\"";
+			$filter = ',"from_component_tipo":"'.$from_component_tipo.'"';
 		}
 		
-		$type 	  = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-		$compare  = "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$filter."}";
+		$type		= DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+		$compare	= '{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.$type.'"'.$filter.'}';
 
 		# TABLES strQuery
 		$strQuery  = '';
-		$sql_select = "section_tipo, section_id, datos#>'{relations}' AS relations";
-		$sql_where  = "datos#>'{relations}' @> '[$compare]'::jsonb";
+		$sql_select = 'section_tipo, section_id, datos#>\'{relations}\' AS relations';
+		$sql_where  = 'datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 		if (is_null($ar_tables)) {
 			// Calculated from section_tipo (only search in current table)
 			$table 	   = common::get_matrix_table_from_tipo($section_tipo);
@@ -509,7 +507,7 @@ class component_relation_parent extends component_relation_common {
 		
 
 		// Set order to maintain results stable
-		$strQuery .= " ORDER BY section_id ASC";
+		$strQuery .= ' ORDER BY section_id ASC';
 		
 		if(SHOW_DEBUG) {	
 			component_relation_parent::$get_parents_query = $strQuery;
@@ -518,11 +516,12 @@ class component_relation_parent extends component_relation_common {
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 		
 		$parents = array();
-		while ($rows = pg_fetch_assoc($result)) {
+		while ($row = pg_fetch_object($result)) {
 
-			$current_section_id   	= $rows['section_id'];
-			$current_section_tipo 	= $rows['section_tipo'];
-			$current_relations 		= json_decode($rows['relations']);			
+			$current_section_id		= $row->section_id;
+			$current_section_tipo	= $row->section_tipo;
+			$current_relations		= json_decode($row->relations);	
+
 
 			if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
 				debug_log(__METHOD__." Error on get parent. Parent is set at itself as loop. Ignored locator. ($section_id - $section_tipo) ".to_string(), logger::ERROR);
@@ -576,8 +575,10 @@ class component_relation_parent extends component_relation_common {
 		if(SHOW_DEBUG===true) {
 			#$total=round(microtime(1)-$start_time,3);
 			#debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
+			// $total = exec_time_unit($start_time,'ms')." ms";
+			// dump($total, ' ///////// total ++ '.to_string("$section_id, $section_tipo, $from_component_tipo, $ar_tables") .PHP_EOL. " $strQuery");				
 		}
-			#dump($parents, ' parents ++ '.to_string());
+		
 
 		return (array)$parents;
 	}//end get_parents
@@ -592,6 +593,9 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents_recursive
 	*/
 	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false) {
+		if(SHOW_DEBUG===true) {
+			$start_time=microtime(1);		
+		}
 
 		// static vars set
 			static $ar_parents_recursive_resolved = array();
@@ -610,6 +614,7 @@ class component_relation_parent extends component_relation_common {
 		// Add first level
 			$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
 			$parents_recursive = $ar_parents;
+
 
 		// Self include as resolved
 			$lkey 						= $section_tipo.'_'.$section_id;
