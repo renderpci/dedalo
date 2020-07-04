@@ -69,45 +69,45 @@ echo trim(js::get_js_link_code());
 	
 	<form id="form1" name="form1" method="post" action="trigger.dd.php" onsubmit="return dd.validate_form(this);">
 				
-		<!-- ID -->
-		ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>"">
+		<!-- id -->
+			ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>">
 		
-		<!-- TERMINO -->
-		<?php echo $termino_title ?>		
-		<?php /*<div class="icon-help" onClick="ts.mostrarInfo(this,event);"></div>*/?>
-		<input type="text" name="termino" id="termino" value="<?php echo $termino ?>" onClick="this.select();">
+		<!-- term -->
+			<?php echo $termino_title ?>
+			<?php /*<div class="icon-help" onClick="ts.mostrarInfo(this,event);"></div>*/?>
+			<input type="text" name="termino" id="termino" value="<?php echo $termino ?>" onClick="this.select();">
 
-		<!-- DEF -->
-		<?php echo $definicion_title ?>
-		<input type="text" name="def" id="def" value="<?php echo $def ?>" onClick="this.select();">
+		<!-- definition -->
+			<?php echo $definicion_title ?>
+			<input type="text" name="def" id="def" value="<?php echo $def ?>" onClick="this.select();">
 
-		<?php 
-		echo ' Model ';
-		include 'dd_select_modelos.php';   
-		?>
-
-				
-		<!-- SELECT LANG -->
-		<?php echo $idioma_title ?>: 
-		<?php echo $todos_title ?> <input type="radio" name="ts_lang" value="" checked>
-		<?php if($ts_lang) {?>
-		<?php 
-		$lang_name = lang::get_name_from_code( $ts_lang );
-		echo $lang_name;
-		?> 
-		<input type="radio" name="ts_lang" value="<?php echo $ts_lang ?>" checked > 
-		<?php }#if($ts_lang) {?>
+		<!-- model -->
+			<?php 
+			echo ' Model ';
+			include 'dd_select_modelos.php';
+			?>
+		
+		<!-- select lang -->
+			<?php echo $idioma_title ?>: 
+			<?php echo $todos_title ?> <input type="radio" name="ts_lang" value="" checked>
+			<?php if($ts_lang) {
+				$lang_name = lang::get_name_from_code( $ts_lang );
+				echo $lang_name;
+				?> 
+				<input type="radio" name="ts_lang" value="<?php echo $ts_lang ?>" checked > 
+			<?php }#if($ts_lang) ?>
 		
 		
 		<input name="accion" type="hidden" value="searchTSform">
 		<input name="modo" type="hidden" value="<?php echo $modo ?>">
+		<input name="menu" type="hidden" value="<?php echo $_REQUEST['menu'] ?? '' ?>">
 		
 		<input type="submit" name="button" id="button" value=" OK " class="SubmitButon">
 		
 		<!-- RESET -->
-		<?php if($modo != 'tesauro_rel_DES') {?>
-		<a href="javascript:reset_window_and_reload();" style="margin-left:12px;font-weight:bold"> Reset </a>  <?php #if(SHOW_DEBUG==true) echo " [$modo]" ?>
-		<?php }#if($modo != 'tesauro_rel') {?>
+			<?php if($modo!=='tesauro_rel_DES') {?>
+			<a href="javascript:reset_window_and_reload();" style="margin-left:12px;font-weight:bold"> Reset </a>
+			<?php }#if($modo != 'tesauro_rel')?>
 		
 		<?php /*
 		<a href="javascript:document.location.href='?modo=<?php echo $modo?>&type=<?php echo $type?>';" style="margin-left:6px; margin-right:6px; font-weight:bold"> <?php echo $recargar_title ?> </a>
@@ -118,8 +118,7 @@ echo trim(js::get_js_link_code());
 		
 		<div style="display:inline-block; margin-left:50px;">
 			<?php 
-			if($t=='form')
-			{
+			if($t==='form') {
 				echo " $total_title: $n";
 				if($n>$max) echo " ($mostradas_title $max $de_title $n) ";
 			}

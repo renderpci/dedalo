@@ -1,7 +1,10 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+include( dirname(dirname(__FILE__)).'/config/config4.php');
 # Old lang vars
-require_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+include(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+#include(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
+include(DEDALO_LIB_BASE_PATH .'/dd/class.dd.php');
+include(DEDALO_LIB_BASE_PATH .'/dd/class.RecordObj_dd_edit.php');
 
 /**
 * LOGIN
@@ -20,9 +23,7 @@ if($is_global_admin!==true) {
 	exit();
 }
 
-#require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-require_once(DEDALO_LIB_BASE_PATH .'/dd/class.dd.php');
-require_once(DEDALO_LIB_BASE_PATH .'/dd/class.RecordObj_dd_edit.php');
+
 /*
 *	TS_CLASS_ACTIONS
 *	ACCIONES SOBRE EL DD
@@ -612,9 +613,10 @@ if($accion==='searchTSform') {
 
 		# eliminamos del url "searchTSlist" (para poder recargar la página sin perder los cambios posteriores)
 		# y redireccionamos por javascript a la página general del listado
-		$url   = DEDALO_LIB_BASE_URL . "/dd/dd_list.php?modo=$modo&terminoIDlist=$terminoIDlist&total=$t&n=$n&max=$max&ts_lang={$ts_lang}" . $getString ;
+		$menu_hide = (isset($_REQUEST['menu']) && $_REQUEST['menu']==='no') ? 'menu=no&' : '';
+		$url   = DEDALO_LIB_BASE_URL . '/dd/dd_list.php?'.$menu_hide."modo=$modo&terminoIDlist=$terminoIDlist&total=$t&n=$n&max=$max&ts_lang={$ts_lang}" . $getString ;
 		$html .= "document.location = '$url' ";
-		$html .= "</script>";
+		$html .= '</script>';
 
 	# Write session to unlock session file
 	session_write_close();
