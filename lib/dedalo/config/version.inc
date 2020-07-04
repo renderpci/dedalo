@@ -1777,6 +1777,10 @@
 	
 	Valencia 26-06-2020 5.5.62
 		Improved tool import dcnav to allow documents group sections 
+	
+
+	Valencia 04-07-2020 5.5.63
+		Fix dd edit relation window issues
 
 
 
@@ -1804,7 +1808,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-06-2020');
+	define('DEDALO_BUILD'	, '04-07-2020');
 
 
 	/*
