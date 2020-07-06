@@ -247,7 +247,7 @@ body {
 #sections_select {
   height: 25px;
   float: right;
-  margin: 5px;
+  margin-left: 5px;
   height: 2.3em;
 }
 .button_open_search2 {
@@ -329,12 +329,18 @@ body {
   padding: 0.2em;
 }
 .custom_order_button {
+  border: 1px solid #6e6e6e;
   padding: 0.5em;
 }
+.header_buttons{
+  padding: 0;
+}
 .custom_order_button.active {
+  border: 1px solid #6e6e6e;
   background-color: #79E47F;
 }
 .button_original_duplicate {
+  border: 1px solid #6e6e6e;
   padding: 0.5em;
   margin-left: 1em;
 }

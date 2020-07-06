@@ -1042,7 +1042,7 @@ class tool_import_files_dcnav extends tool_common {
 					}//end foreach ($parsed_data as $parsed_key => $parsed_item)
 
 
-				// xml file. Move file from upload directory to xml_files_path						
+				// xml file. Move file from upload directory to xml_files_path
 					$target_path = $xml_files_path .'/'. $current_file_name;
 					rename($file_full_path, $target_path);
 

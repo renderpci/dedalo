@@ -160,20 +160,23 @@ echo trim(js::get_js_link_code());
 
 <div class="dd_info_bottom">
 	<?php 
-		# Total dd
-		$strQuery = "SELECT count(*) AS exact_count FROM \"jer_dd\" ";
-		$result   = JSON_RecordObj_matrix::search_free($strQuery);
-		$total_dd = pg_fetch_assoc($result)['exact_count'];
+		if (!isset($_REQUEST['menu']) || $_REQUEST['menu']!=='no') {
 		
-		# Total termns
-		$strQuery = "SELECT count(*) AS exact_count FROM \"matrix_descriptors_dd\" ";
-		$result   = JSON_RecordObj_matrix::search_free($strQuery);
-		$total_terms = pg_fetch_assoc($result)['exact_count'];
+			# Total dd
+			$strQuery = "SELECT count(*) AS exact_count FROM \"jer_dd\" ";
+			$result   = JSON_RecordObj_matrix::search_free($strQuery);
+			$total_dd = pg_fetch_assoc($result)['exact_count'];
+			
+			# Total termns
+			$strQuery = "SELECT count(*) AS exact_count FROM \"matrix_descriptors_dd\" ";
+			$result   = JSON_RecordObj_matrix::search_free($strQuery);
+			$total_terms = pg_fetch_assoc($result)['exact_count'];
 
-		echo "
-		<label>Total dd:</label> $total_dd<br>
-		<label>Total terms:</label> $total_terms
-		";
+			echo "
+			<label>Total dd:</label> $total_dd<br>
+			<label>Total terms:</label> $total_terms
+			";
+		}
 	?>
 </div>
 

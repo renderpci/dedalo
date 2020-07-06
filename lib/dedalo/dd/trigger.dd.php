@@ -1,10 +1,10 @@
 <?php
-include( dirname(dirname(__FILE__)).'/config/config4.php');
+include_once( dirname(dirname(__FILE__)).'/config/config4.php');
 # Old lang vars
-include(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
-#include(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-include(DEDALO_LIB_BASE_PATH .'/dd/class.dd.php');
-include(DEDALO_LIB_BASE_PATH .'/dd/class.RecordObj_dd_edit.php');
+include_once(DEDALO_LIB_BASE_PATH . '/dd/lang/lang_code.php');
+#include_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
+include_once(DEDALO_LIB_BASE_PATH .'/dd/class.dd.php');
+include_once(DEDALO_LIB_BASE_PATH .'/dd/class.RecordObj_dd_edit.php');
 
 /**
 * LOGIN

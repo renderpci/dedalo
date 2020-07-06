@@ -2236,7 +2236,7 @@ class component_text_area extends component_common {
 
 	/**
 	* BUILD_GEOLOCATION_DATA
-	* @return
+	* @return array $ar_elements
 	*/
 	public static function build_geolocation_data($raw_text) {
 
@@ -2552,4 +2552,5 @@ class component_text_area extends component_common {
 
 
 }//end component_text_area
-?>
+
+

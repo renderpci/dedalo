@@ -645,7 +645,7 @@ class web_data {
 
 			// rows iterate
 				$ar_data = [];
-				$i=0;while( $rows = $result->fetch_assoc() ) {
+				$i=0;while( $row = $result->fetch_assoc() ) {
 
 					// table is added always as first column
 						$ar_data[$i]['table'] = $table;
@@ -668,8 +668,8 @@ class web_data {
 
 						# field_data. postprocess_field if need
 						$field_data = ($apply_postprocess===true)
-							? self::postprocess_field($current_field, $rows[$current_field])
-							: $rows[$current_field];
+							? self::postprocess_field($current_field, $row[$current_field])
+							: $row[$current_field];
 
 						# Default behaviour
 						$ar_data[$i][$current_field] = $field_data;
@@ -687,7 +687,7 @@ class web_data {
 									$request_options->portal_filter  = $portal_filter;
 									$request_options->map  			 = $map;
 
-								$ar_data[$i][$current_field] = self::portal_resolve($rows,
+								$ar_data[$i][$current_field] = self::portal_resolve($row,
 																					$current_field,
 																					$request_options,
 																					$resolve_portals_custom);
