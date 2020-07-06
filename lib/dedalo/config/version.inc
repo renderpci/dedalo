@@ -1783,6 +1783,10 @@
 		Fix dd edit relation window issues
 
 
+	Valencia 06-07-2020 5.6.3
+		Fix version number error to 5.6.x (data vesion changes to 5.6 on add jer_dd properties column)
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1803,12 +1807,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.5.63b';
+	$DEDALO_VERSION = '5.6.3';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '04-07-2020');
+	define('DEDALO_BUILD'	, '06-07-2020');
 
 
 	/*
