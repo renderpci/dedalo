@@ -196,7 +196,6 @@ class component_number extends component_common {
     	# Always set fixed values
 		$query_object->type = 'number';
 
-
 		$query_object->component_path[] = 'lg-nolan'; 
 		
 		# Always without unaccent
@@ -216,10 +215,12 @@ class component_number extends component_common {
 
 				$query_object_one = clone $query_object;
 					$query_object_one->operator = '>=';
+					$first_val  = str_replace(',', '.', $first_val);
 					$query_object_one->q_parsed	= '\''.$first_val.'\'';
 
 				$query_object_two = clone $query_object;
 					$query_object_two->operator = '<=';
+					$second_val  = str_replace(',', '.', $second_val);
 					$query_object_two->q_parsed	= '\''.$second_val.'\'';
 
 				// Return an array instead object
@@ -256,6 +257,7 @@ class component_number extends component_common {
 			case (substr($q, 0, 2)==='>='):
 				$operator = '>=';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
@@ -263,6 +265,7 @@ class component_number extends component_common {
 			case (substr($q, 0, 2)==='<='):
 				$operator = '<=';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;		
@@ -270,6 +273,7 @@ class component_number extends component_common {
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
@@ -277,13 +281,15 @@ class component_number extends component_common {
 			case (substr($q, 0, 1)==='<'):
 				$operator = '<';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
-				$q_clean  = str_replace('+', '', $q);				
+				$q_clean  = str_replace('+', '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';	
 				break;
