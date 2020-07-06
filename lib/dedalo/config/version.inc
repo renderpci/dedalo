@@ -1788,6 +1788,7 @@
 
 
 
+
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
 					on search fix appearance issue with results css
@@ -1813,6 +1814,7 @@
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
 	define('DEDALO_BUILD'	, '06-07-2020');
+
 
 
 	/*
