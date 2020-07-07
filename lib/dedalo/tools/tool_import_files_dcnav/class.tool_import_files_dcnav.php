@@ -525,10 +525,31 @@ class tool_import_files_dcnav extends tool_common {
 					// }
 					$file_data = tool_import_files_dcnav::get_file_data($files_dir, $current_file_name);
 					// dump($file_data, ' file_data ++ import_file_name_mode - '.to_string()); die(); // continue;
+					$base_code1	= $file_data['regex']->base_code1; // code value from filename used in Catalog grouper like '1001'
+					$code		= $file_data['regex']->code; // code value from filename like '1001-0001'
 
-				// find existing section or create a new one
-					$base_code1	= $file_data['regex']->base_code1; // code value from filename used in Catalog grouper
-					$code		= $file_data['regex']->code; // code value from filename
+				// parse XML file
+					$parsed_data = xml_dcnav_parser::parse_file($file_full_path);
+					if(SHOW_DEBUG===true) {
+						dump($parsed_data, ' parsed_data from file ++++++++++++++++++++++ '.to_string($current_file_name));
+					}
+
+				// check filename match the about info					
+					$about = array_find($parsed_data[0]->value, function($el){
+						return $el->prefix==='rdf' && $el->local==='about';
+					});
+					if ($about->value!==$code) {
+						// incorrect file name, not match about code
+						$msg = 'Error. Filename "'.$code.'" and rdf about value "'.$about->value.'" don\'t match! Review data and file name: '.$current_file_name;
+						trigger_error($msg);
+
+						$response->result	= false;
+						$response->msg		= $msg;
+						return $response;
+						break; // stop current loop and file
+					}					
+
+				// find existing section or create a new one					
 					$code_tipo	= 'navarra19'; // tipo of the component_input_text where is stored code value
 					$sqo = json_decode('{
 						"id": "'.$section_tipo.'_list",
@@ -601,19 +622,13 @@ class tool_import_files_dcnav extends tool_common {
 						$portal_xml_data_component->Save();
 					}
 
-				// parse XML file
-					$parsed_data = xml_dcnav_parser::parse_file($file_full_path);
-					if(SHOW_DEBUG===true) {
-						dump($parsed_data, ' parsed_data from file ++++++++++++++++++++++ '.to_string($current_file_name));
-					}						
-
 				// iterate parsed_data as items. Each item is a rdf node with data. First node is 'description', the others are 'access_point'
-					foreach ($parsed_data as $parsed_key => $parsed_item) {
+					foreach ($parsed_data as $parsed_key => $parsed_item) {						
 
-						$parsed_item_type = $parsed_item->type; // like description / access_point
+						$parsed_item_type	= $parsed_item->type; // like description / access_point						
+						$image_key			= 0; // reset on each parsed_item iteratoin
 						
-						$image_key = 0;
-						foreach ($parsed_item->value as $item_value) {
+						foreach ($parsed_item->value as $item_value) {							
 
 							// create new section on each item
 								$section_xml_data_tipo	= 'navarra34';
@@ -643,6 +658,40 @@ class tool_import_files_dcnav extends tool_common {
 
 									return $result;
 								})('navarra52', $section_xml_data_tipo, $section_xml_data_id, $parsed_key);
+
+							// catalog code. like '0008'
+								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
+
+									$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+									$component		= component_common::get_instance($modelo_name,
+																					 $tipo,
+																					 $section_id,
+																					 'list',
+																					 DEDALO_DATA_NOLAN,
+																					 $section_tipo);
+									$dato = [$value];
+									$component->set_dato($dato);
+									$result = $component->Save();
+
+									return $result;
+								})('navarra73', $section_xml_data_tipo, $section_xml_data_id, $base_code1);
+
+							// document code. like '0008-0001'
+								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
+
+									$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+									$component		= component_common::get_instance($modelo_name,
+																					 $tipo,
+																					 $section_id,
+																					 'list',
+																					 DEDALO_DATA_NOLAN,
+																					 $section_tipo);
+									$dato = [$value];
+									$component->set_dato($dato);
+									$result = $component->Save();
+
+									return $result;
+								})('navarra74', $section_xml_data_tipo, $section_xml_data_id, $code);
 							
 							// prefix (component_select)
 								if (isset($item_value->prefix)) {
@@ -746,7 +795,7 @@ class tool_import_files_dcnav extends tool_common {
 								}
 
 							// images
-								if (isset($item_value->local) && $item_value->local==='hasFormat' && !empty($item_value->value)) {										
+								if (isset($item_value->local) && $item_value->local==='hasFormat' && !empty($item_value->value)) {
 
 									$image_file_name		= $item_value->value;
 									$image_file_full_path	= $files_dir . $image_file_name;
@@ -764,7 +813,7 @@ class tool_import_files_dcnav extends tool_common {
 												$images_code_tipo	= 'rsc21';
 
 												// check already exists image. If not found record, auto create section
-													$locator = self::get_solved_select_value($images_section_tipo, $images_code_tipo, $code);
+													$locator			= self::get_solved_select_value($images_section_tipo, $images_code_tipo, $code);
 													$images_section_id	= $locator->section_id;											
 
 												// save component image
@@ -779,7 +828,7 @@ class tool_import_files_dcnav extends tool_common {
 													$component->set_dato( $image_file_name );
 													$component->Save();
 
-												// set image code 'rsc21'													
+												// set image code 'rsc21'
 													$code_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($images_code_tipo,true);
 													$code_component		= component_common::get_instance($code_modelo_name,
 																										 $images_code_tipo,
