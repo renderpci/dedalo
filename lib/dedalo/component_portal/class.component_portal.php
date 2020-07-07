@@ -973,7 +973,8 @@ class component_portal extends component_relation_common {
 	# [valor] => Array
     #    (
     #        [58] => Array
-    #            (    #                [dd72] => Javier
+    #            (   
+    #				 [dd72] => Javier
     #                [dd77] => Gómez López
     #            )
     #        [61] => Array
@@ -1012,8 +1013,8 @@ class component_portal extends component_relation_common {
 
 				if ( !empty($ar_propiedades_portal_list) && is_array($ar_propiedades_portal_list)) foreach ($ar_propiedades_portal_list as $current_component_tipo) {
 
-					$current_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-					$current_component 		= component_common::get_instance($current_modelo_name, $current_component_tipo, $current_portal_section_id, $this->modo, DEDALO_DATA_NOLAN, $current_rel_locator->section_tipo);
+					$current_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+					$current_component		= component_common::get_instance($current_modelo_name, $current_component_tipo, $current_portal_section_id, $this->modo, DEDALO_DATA_NOLAN, $current_rel_locator->section_tipo);
 						#dump($current_component,"current_component_tipo $current_component_tipo - $this->section_tipo");
 					if(SHOW_DEBUG===true) {
 						#error_log(__METHOD__." NOTA: USADO MUPREVA21 FIJO TEMPORALMENTE ");
@@ -1332,13 +1333,13 @@ class component_portal extends component_relation_common {
 					$ar_resolved=array();
 					foreach( (array)$dato as $key => $value) {
 
-						$section_tipo 	= $value->section_tipo;
-						$section_id 	= $value->section_id;
+						$section_tipo	= $value->section_tipo;
+						$section_id		= $value->section_id;
 
 						foreach ($fields as $current_tipo) {
 
-							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-							$component 		= component_common::get_instance($modelo_name,
+							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$component		= component_common::get_instance($modelo_name,
 																			 $current_tipo,
 																			 $section_id,
 																			 'list',
@@ -1352,11 +1353,12 @@ class component_portal extends component_relation_common {
 					#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
 
 					$diffusion_value = implode(" | ", $ar_resolved);
-
 					break;
+
 			case 'dato_full':
-				$ar_values = null;
-				$dato = $this->get_dato();
+
+				$ar_values	= null;
+				$dato		= $this->get_dato();
 				if (!empty($dato)) {
 					$ar_values = [];
 					foreach ((array)$dato as $current_locator) {
@@ -1373,10 +1375,11 @@ class component_portal extends component_relation_common {
 				}
 				$diffusion_value = $ar_values;
 				break;
+			
 			case 'dato':
 			default:
-				$ar_values = null;
-				$dato = $this->get_dato();
+				$ar_values	= null;
+				$dato		= $this->get_dato();
 				if (!empty($dato)) {
 					$ar_values = [];
 					foreach ((array)$dato as $current_locator) {
