@@ -1569,7 +1569,7 @@ class search_development2 {
 								$search_locator->set_section_tipo($current_project_locator->section_tipo);
 								$search_locator->set_section_id($current_project_locator->section_id);
 								$search_locator->set_type($current_project_locator->type);
-								if ($this->search_query_object->id!=='thesaurus') {
+								if (!isset($this->search_query_object->id) || (isset($this->search_query_object->id) && $this->search_query_object->id!=='thesaurus')) {
 								$search_locator->set_from_component_tipo($component_filter_tipo);
 								}
 
