@@ -27,7 +27,7 @@ class component_input_text extends component_common {
 
 
 	/**
-	*  SET_DATO
+	* SET_DATO
 	* @param array $dato
 	* 	Dato now is multiple. For this expected type is array
 	*	but in some cases can be an array json encoded or some rare times a plain string
@@ -98,7 +98,8 @@ class component_input_text extends component_common {
 				}
 			}
 			if (count($ar)>0) {
-				$valor = implode(',',$ar);
+				// $valor = implode(',',$ar);
+				$valor = implode(' | ', $ar);
 			}
 		}else{
 			$index = (int)$index;
@@ -214,29 +215,26 @@ class component_input_text extends component_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 
-		if (empty($valor)) {
+		$valor = $this->get_valor($lang);
 
-			$valor = $this->get_valor($lang);
+		# Add value of current lang to nolan data
+		$propiedades = $this->get_propiedades();
+		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
 
-		}else{
-
-			# Add value of current lang to nolan data
-			$propiedades = $this->get_propiedades();
-			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
-
-				$component = $this;
-				$component->set_lang($lang);
-				#$add_value = component_common::extract_component_value_fallback($component);
-				$add_value = $component->get_valor($lang);
-				if (!empty($add_value) && $add_value!==$valor) {
-					$valor .= ' ('.$add_value.')';
-				}
+			$component = $this;
+			$component->set_lang($lang);
+			#$add_value = component_common::extract_component_value_fallback($component);
+			$add_value = $component->get_valor($lang);
+			if (!empty($add_value) && $add_value!==$valor) {
+				$valor .= ' ('.$add_value.')';
 			}
 		}
+		
 
 		if (empty($valor)) {
 			$valor = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 		}
+		
 
 		return to_string($valor);
 	}//end get_valor_export
