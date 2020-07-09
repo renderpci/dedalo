@@ -780,7 +780,7 @@ class component_relation_related extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null, $type=false ) {
+	public function get_diffusion_value( $lang=null, $option_obj=null ) {
 
 		$diffusion_value = null;
 
@@ -790,15 +790,15 @@ class component_relation_related extends component_relation_common {
 		# 	dump($dato_with_references, ' dato_with_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
 		
 		$diffusion_value = $this->get_valor($lang, $format='array');
-		$diffusion_value = implode($separator, $diffusion_value);
-		$diffusion_value = strip_tags($diffusion_value, $separator);
-			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
-		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
-			#dump($term, ' term ++ '.to_string());
 
 		// calculated references
-			$calculated_references = $this->get_calculated_references();
-			#dump($calculated_references, ' +++++ calculated_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
+		$calculated_references = $this->get_calculated_references();
+
+		if (empty($option_obj)) {
+
+			$diffusion_value = implode($separator, $diffusion_value);
+			$diffusion_value = strip_tags($diffusion_value, $separator);
+
 			if (!empty($calculated_references)) {
 				$ar_references = [];
 				foreach ($calculated_references as $key => $ref_obj) {
@@ -809,7 +809,75 @@ class component_relation_related extends component_relation_common {
 				}
 				$diffusion_value .= implode($separator, $ar_references);
 			}
-			#dump($diffusion_value, ' diffusion_value ++ '.to_string());	
+			
+
+		}else{
+			
+			$ar_terms = [];
+			// properties options defined
+			foreach ($option_obj as $key => $value) {
+							
+				if ($key==='custom_parents') {
+
+					$divisor 	= $this->get_divisor();
+					
+					if (!empty($diffusion_value)) {
+						$array_values = array_values($diffusion_value);
+						foreach ($array_values as $key => $current_term) {
+							$ar_terms[] = explode($divisor, $current_term);
+						}
+					}
+
+					if (!empty($calculated_references)) {
+						foreach ($calculated_references as $key => $ref_obj) {
+							$ar_terms[] = explode($divisor, $ref_obj->label);
+						}
+					}
+
+					// append whole or part of results when no empty
+
+					if (!empty($ar_terms)) {
+						$final_term = [];
+						foreach ($ar_terms as $term) {				
+							// parents_splice. Selects a portion of the complete parents array
+							if(isset($value->parents_splice)){
+								$splice_values = is_array($value->parents_splice) ? $value->parents_splice : [$value->parents_splice];
+								if (isset($splice_values[1])) {
+									array_splice($term, $splice_values[0], $splice_values[1]);
+								}else{
+									array_splice($term, $splice_values[0]);
+								}											
+							}
+							$final_term[] = implode($divisor, $term);
+
+						}
+					}
+				}
+			}
+			$diffusion_value = implode($separator, $final_term);
+			// $diffusion_value = strip_tags($diffusion_value, $separator);
+		}
+
+		// $diffusion_value = implode($separator, $diffusion_value);
+		// $diffusion_value = strip_tags($diffusion_value, $separator);
+			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
+		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
+			#dump($term, ' term ++ '.to_string());
+
+		// // calculated references
+		// 	$calculated_references = $this->get_calculated_references();
+		// 	#dump($calculated_references, ' +++++ calculated_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
+		// 	if (!empty($calculated_references)) {
+		// 		$ar_references = [];
+		// 		foreach ($calculated_references as $key => $ref_obj) {
+		// 			$ar_references[] = $ref_obj->label;
+		// 		}
+		// 		if (!empty($diffusion_value)) {
+		// 			$diffusion_value .= $separator;
+		// 		}
+		// 		$diffusion_value .= implode($separator, $ar_references);
+		// 	}
+		// 	#dump($diffusion_value, ' diffusion_value ++ '.to_string());	
 		
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
