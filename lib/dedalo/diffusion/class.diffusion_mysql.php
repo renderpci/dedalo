@@ -24,19 +24,29 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
+	* GET_CONN
+	* @return db resource
+	*/
+	public static function get_conn($database_name) {
+		return DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
+										 MYSQL_DEDALO_USERNAME_CONN,
+										 MYSQL_DEDALO_PASSWORD_CONN,
+										 $database_name,
+										 MYSQL_DEDALO_DB_PORT_CONN,
+										 MYSQL_DEDALO_SOCKET_CONN);
+	}//end get_conn
+
+
+
+	/**
 	* EXEC_MYSQL_QUERY
 	* @return
 	*/
-	public static function exec_mysql_query( $sql, $table_name=null, $database_name, $multi_query=false ) {
+	public static function exec_mysql_query($sql, $table_name=null, $database_name, $multi_query=false) {
 
 		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
 
-		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
-										 		MYSQL_DEDALO_USERNAME_CONN,
-										 		MYSQL_DEDALO_PASSWORD_CONN,
-										 		$database_name,
-										 		MYSQL_DEDALO_DB_PORT_CONN,
-										 		MYSQL_DEDALO_SOCKET_CONN);
+		$mysql_conn = self::get_conn($database_name);
 		# Set as class static var
 		#self::$mysql_conn;
 
@@ -205,7 +215,7 @@ class diffusion_mysql extends diffusion_sql  {
 							$field_name 	= $field['field_name'];
 							$field_value 	= $field['field_value'];
 
-							$field_value 	= diffusion_mysql::conform_field_value($field_value);
+							$field_value 	= diffusion_mysql::conform_field_value($field_value, $database_name);
 
 							$sql_query_line .= $field_value.',';
 
@@ -282,7 +292,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* @return string $sql_query
 	* @see diffusion_mysql::create_table
 	*/
-	private static function generate_keys($ar_fields, $table_type = 'default') {
+	private static function generate_keys($ar_fields, $table_type='default') {
 
 		$sql_query 	= '';
 		$pref 		= 'field_';
@@ -295,9 +305,9 @@ class diffusion_mysql extends diffusion_sql  {
 		# KEYS
 		$i=1;foreach ($ar_fields as $key => $ar_data) {
 
-			$field_name 	= $ar_data['field_name'];
-			$field_type 	= $ar_data['field_type'];
-			$field_options 	= $ar_data['field_options'];
+			$field_name		= $ar_data['field_name'];
+			$field_type		= $ar_data['field_type'];
+			$field_options	= $ar_data['field_options'];
 
 
 			if ($field_name==='tld' ) $is_thesaurus = true;
@@ -439,29 +449,29 @@ class diffusion_mysql extends diffusion_sql  {
 			$response->msg 	  = array();
 
 		$options = new stdClass();
-			$options->record_data 			 = null;
-			$options->typology 	  			 = null;
-			$options->delete_previous 		 = true;
-			$options->section_tipo 			 = null;
-			$options->diffusion_element_tipo = null;
+			$options->record_data				= null;
+			$options->typology					= null;
+			$options->delete_previous			= true;
+			$options->section_tipo				= null;
+			$options->diffusion_element_tipo	= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		$database_name  	= $options->record_data['database_name'];
-		$table_name 		= $options->record_data['table_name'];
-		$ar_section_id 		= $options->record_data['ar_fields'];
-		$diffusion_section 	= $options->record_data['diffusion_section'];
-		$engine 			= isset($options->record_data['engine']) ? $options->record_data['engine'] : null;
-		$typology 			= $options->typology;
+		$database_name		= $options->record_data['database_name'];
+		$table_name			= $options->record_data['table_name'];
+		$ar_section_id		= $options->record_data['ar_fields'];
+		$diffusion_section	= $options->record_data['diffusion_section'];
+		$engine				= isset($options->record_data['engine']) ? $options->record_data['engine'] : null;
+		$typology			= $options->typology;
 			#dump( array_keys($ar_section_id), " section_id ".to_string($table_name )); #die();
 			#dump($options->record_data, ' record_data ++ '.to_string($database_name)); die();
 			#dump($database_name, ' $database_name ++ '.to_string()); die();
 
 		if (empty($database_name) || empty($table_name)) {
 			throw new Exception("Error Processing Request. Database / table_name name not found (database_name:$database_name / table_name:$table_name)", 1);
-		}
+		}		
 
 		#
 		# CREATE TABLE IF NOT EXITS
@@ -482,37 +492,37 @@ class diffusion_mysql extends diffusion_sql  {
 						#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
 
 					$table_map			= $diffusion_element_tables_map->{$section_tipo};
-					#$table_name   		= $table_map->name;
-					#$table_tipo 		= $table_map->table;
-					#$table_propiedades = $table_map->propiedades;
-					#$database_name  	= $table_map->database_name;
-					#$database_tipo  	= $table_map->database_tipo;
-					$table_from_alias 	= $table_map->from_alias;
+					#$table_name		= $table_map->name;
+					#$table_tipo		= $table_map->table;
+					#$table_propiedades	= $table_map->propiedades;
+					#$database_name		= $table_map->database_name;
+					#$database_tipo		= $table_map->database_tipo;
+					$table_from_alias	= $table_map->from_alias;
 
 					$table_columns_options = new stdClass();
-						$table_columns_options->table_tipo 	  	 = $diffusion_section;
-						$table_columns_options->table_name 	  	 = $table_name;
-						$table_columns_options->database_name 	 = $database_name;
-						$table_columns_options->table_from_alias = $table_from_alias;
+						$table_columns_options->table_tipo			= $diffusion_section;
+						$table_columns_options->table_name			= $table_name;
+						$table_columns_options->database_name		= $database_name;
+						$table_columns_options->table_from_alias	= $table_from_alias;
 
 					$create_table_ar_fields = self::build_table_columns( $table_columns_options ); // $diffusion_section, $database_name
 				#}
 
 				#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();
-				self::create_table( array('database_name' 	=> $database_name,
-										  'table_name' 		=> $table_name,
-										  'engine' 			=> $engine,
-										  'ar_fields' 		=> $create_table_ar_fields['ar_fields'],
-										  'table_type' 		=> 'default',
+				self::create_table( array('database_name'	=> $database_name,
+										  'table_name'		=> $table_name,
+										  'engine'			=> $engine,
+										  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+										  'table_type'		=> 'default',
 										  ), true);
 
 				if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
 					#create the BBDD clone version for store all publications versions (time marks with unix time stamp)
-					self::create_table( array('database_name' 	=> $database_name,
-											  'table_name' 		=> 'tm_'.$table_name,
-											  'engine' 			=> $engine,
-											  'ar_fields' 		=> $create_table_ar_fields['ar_fields'],
-											  'table_type' 		=> 'tm',
+					self::create_table( array('database_name'	=> $database_name,
+											  'table_name'		=> 'tm_'.$table_name,
+											  'engine'			=> $engine,
+											  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+											  'table_type'		=> 'tm',
 											  ), false);
 				}// end if DEDALO_DIFFUSION_TM
 			}
@@ -536,22 +546,24 @@ class diffusion_mysql extends diffusion_sql  {
 
 			# Create records . Iterate langs
 			foreach ($ar_fields as $lang => $fields) {
-				$ar_field_name=array();
-				$ar_field_value=array();
+				$ar_field_name	= array();
+				$ar_field_value	= array();
 				foreach ($fields as $key => $field) {
-					$field_name  = $field['field_name'];
-					$field_value = $field['field_value'];
+					
+					$field_name		= $field['field_name'];
+					$field_value	= $field['field_value'];
 
 					if (!in_array($field_name, $real_table_fields)) {
 						debug_log(__METHOD__." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]", logger::WARNING);
 						continue; # Skip
 					}
 
-					$field_value = diffusion_mysql::conform_field_value($field_value);
+					$field_value = diffusion_mysql::conform_field_value($field_value, $database_name);
+					
 
-					#$ar_field_name[]  = '`'.$field_name.'`';
-					$ar_field_name[]  = strpos($field_name, '`')===0 ? $field_name : '`'.$field_name.'`'; // 2018-03-16 !!
-					$ar_field_value[] = $field_value;
+					#$ar_field_name[]	= '`'.$field_name.'`';
+					$ar_field_name[]	= strpos($field_name, '`')===0 ? $field_name : '`'.$field_name.'`'; // 2018-03-16 !!
+					$ar_field_value[]	= $field_value;
 				}
 
 				# Insert mysql record
@@ -638,26 +650,30 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* CONFORM_field_VALUE
-	* @return
+	* @return mixed
 	*/
-	public static function conform_field_value($field_value) {
+	public static function conform_field_value($field_value, $database_name) {
+
 
 		switch (true) {
 			case ($field_value==='[]'):
-				$field_value = "NULL";
+				$field_value = 'NULL';
 				break;
 			case (is_array($field_value) || is_object($field_value)):
 				if (empty($field_value)) {
-					$field_value = "NULL";
+					$field_value = 'NULL';
 				}else{
 					# TYPE ARRAY/OBJECT : Convert to json
-					$field_value = "'".json_encode($field_value)."'";
+					$field_value = json_encode($field_value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+					// real escape 
+					$mysql_conn		= self::get_conn($database_name);
+					$field_value	= '\''.$mysql_conn->real_escape_string($field_value).'\'';
 				}
 				#$sql_query_line .= "'$field_value',";
 				break;
 			case is_null($field_value):
 				# TYPE NULL
-				$field_value = "NULL";
+				$field_value = 'NULL';
 				break;
 			case is_bool($field_value):
 				# TYPE BOOL
@@ -673,11 +689,14 @@ class diffusion_mysql extends diffusion_sql  {
 				break;
 			default:
 				# TYPE OTHERS : addslashes
-				$field_value = "'".addslashes($field_value)."'";
+				// $field_value = "'".addslashes($field_value)."'";
+				// real escape 
+				$mysql_conn		= self::get_conn($database_name);
+				$field_value	= '\''.$mysql_conn->real_escape_string($field_value).'\'';
 				#$sql_query_line .= "'$field_value',";
 				break;
-		}
-
+		}		
+		
 
 		return $field_value;
 	}//end conform_field_value
@@ -699,14 +718,14 @@ class diffusion_mysql extends diffusion_sql  {
 
 		# Options defaults
 		$sql_options = new stdClass();
-			$sql_options->table 		= null;
-			$sql_options->ar_fields 	= array('*');
-			$sql_options->lang 			= $lang;
-			$sql_options->sql_filter 	= "publicacion = 'si'";
-			$sql_options->order 		= '`id` ASC';
-			$sql_options->limit 		= null;
-			$sql_options->resolve_portal= false;
-			$sql_options->conn 			= DBi::_getConnection_mysql();
+			$sql_options->table				= null;
+			$sql_options->ar_fields			= array('*');
+			$sql_options->lang				= $lang;
+			$sql_options->sql_filter		= "publicacion = 'si'";
+			$sql_options->order				= '`id` ASC';
+			$sql_options->limit				= null;
+			$sql_options->resolve_portal	= false;
+			$sql_options->conn				= DBi::_getConnection_mysql();
 
 		# Options given ovewrite
 		# $object_vars = get_object_vars($sql_options);	dump($object_vars, ' object_vars');
@@ -1010,4 +1029,5 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 }//end class
-?>
+
+
