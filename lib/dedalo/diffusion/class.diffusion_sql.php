@@ -1147,6 +1147,7 @@ class diffusion_sql extends diffusion  {
 				break;
 
 		}//end switch ($options->typology) {
+		
 
 		return (array)$ar_field_data;
 	}//end build_data_field
@@ -1259,16 +1260,16 @@ class diffusion_sql extends diffusion  {
 					#dump($options, ' options ++ $resolve_references: '.to_string($resolve_references));
 					#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ section_tipo: '.to_string($section_tipo));
 				}
-				debug_log(__METHOD__." ERROR ON UPDATE RECORD[2] section_id: $options->section_id - section_tipo: $options->section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") NOT EXISTS IN SQL. If you want resolve this reference, create a duffusion table for this data ($options->section_tipo) or check mysql tables for problems with table creation. ".to_string(), logger::WARNING);
+				debug_log(__METHOD__." WARNING ON UPDATE RECORD[2] section_id: $options->section_id - section_tipo: $options->section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL."PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") NOT EXISTS IN SQL. If you want resolve this reference, create a duffusion table for this data ($options->section_tipo) or check mysql tables for problems with table creation. ".to_string(), logger::WARNING);
 				return false;
 			}
 			$table_map			= $diffusion_element_tables_map->{$section_tipo};
-			$table_name   		= $table_map->name;
-			$table_tipo 		= $table_map->table;
-			$table_propiedades 	= $table_map->propiedades;
-			$database_name  	= $table_map->database_name;
-			$database_tipo  	= $table_map->database_tipo;
-			$table_from_alias 	= $table_map->from_alias;
+			$table_name			= $table_map->name;
+			$table_tipo			= $table_map->table;
+			$table_propiedades	= $table_map->propiedades;
+			$database_name		= $table_map->database_name;
+			$database_tipo		= $table_map->database_tipo;
+			$table_from_alias	= $table_map->from_alias;
 
 		#
 		# DATABASE_NAME . Resolve database_tipo in current diffusion map. Like 'web_aup'

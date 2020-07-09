@@ -58,18 +58,18 @@ function dump($val, $var_name=NULL, $arguments=array()){
 		switch (true) {
 			case is_array($val):
 				#$value_html .= print_r($val, true);
-				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 				break;
 			case is_object($val):
 				#$value_html .= print_r($val,true);
-				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 				break;
 			default:
 				if(is_string($val) && $val != strip_tags($val)) {
 					$val = htmlspecialchars($val);
 				}
 				#$value_html .= var_export($val,true);
-				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 				break;
 		}
 
@@ -257,7 +257,7 @@ function to_string($var=null) {
 
 	if (is_array($var)) {
 		if ( is_string(current($var)) || is_numeric(current($var)) ) {
-			return implode('|', $var);
+			return implode(' | ', $var);
 		}else if( is_object( current($var) ) ){
 			foreach ($var as $obj) {
 				$ar_ob[] = $obj;
