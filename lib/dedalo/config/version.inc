@@ -1794,6 +1794,13 @@
 	Valencia 09-07-2020 5.6.5
 		Fix publication bug when json encoded strings are not escaped correctly. Now, mysqli real_escape_string is applied to all strings on conform_field_value
 
+	
+	Valencia 09-07-2020 5.6.6
+		Fix publication update record error when recursion_level is not incremented on each recursion loop, generating very long time proccess on complex records
+
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1814,7 +1821,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.5';
+	$DEDALO_VERSION = '5.6.6';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
