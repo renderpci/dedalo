@@ -1799,6 +1799,8 @@
 		Fix publication update record error when recursion_level is not incremented on each recursion loop, generating very long time proccess on complex records
 
 
+	Valencia 10-07-2020 5.6.7
+		Fix publication check error on diffsuion sql 'resolve_value' method
 
 
 
@@ -1821,12 +1823,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.6';
+	$DEDALO_VERSION = '5.6.7';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-07-2020');
+	define('DEDALO_BUILD'	, '10-07-2020');
 
 
 
