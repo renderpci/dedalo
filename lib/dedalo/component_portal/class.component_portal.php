@@ -1331,10 +1331,17 @@ class component_portal extends component_relation_common {
 						}
 
 					$ar_resolved=array();
-					foreach( (array)$dato as $key => $value) {
+					foreach( (array)$dato as $key => $current_locator) {
 
-						$section_tipo	= $value->section_tipo;
-						$section_id		= $value->section_id;
+						// Check target is publicable
+							$current_is_publicable = diffusion::get_is_publicable($current_locator);
+							if ($current_is_publicable!==true) {
+								debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								continue;
+							}
+
+						$section_tipo	= $current_locator->section_tipo;
+						$section_id		= $current_locator->section_id;
 
 						foreach ($fields as $current_tipo) {
 
@@ -1349,7 +1356,7 @@ class component_portal extends component_relation_common {
 
 							$ar_resolved[] = $current_value_export;
 						}
-					}//end foreach( (array)$dato as $key => $value)
+					}//end foreach( (array)$dato as $key => $current_locator)
 					#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
 
 					$diffusion_value = implode(" | ", $ar_resolved);
