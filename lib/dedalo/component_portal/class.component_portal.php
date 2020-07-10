@@ -1305,20 +1305,21 @@ class component_portal extends component_relation_common {
 		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
 
 		switch ($data_to_be_used) {
+			
 			case 'valor_list':
 				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows='<br>', $separator_fields=', ' );
 				break;
 
 			case 'valor':
-
-					$dato = $this->get_dato();
-
+				$dato = $this->get_dato();
+				if (empty($dato)) {
+					$diffusion_value = null;
+				}else{
 					// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
-
-					// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
+					// terminos_relacionados . Obtenemos los terminos relacionados del componente actual
 						$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
 
-					// FIELDS
+					// fields
 						$fields=array();
 						foreach ($ar_terminos_relacionados as $key => $ar_value) {
 							foreach ($ar_value as $current_tipo) {
@@ -1357,17 +1358,17 @@ class component_portal extends component_relation_common {
 							$ar_resolved[] = $current_value_export;
 						}
 					}//end foreach( (array)$dato as $key => $current_locator)
-					#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
 
-					$diffusion_value = implode(" | ", $ar_resolved);
-					break;
+					$diffusion_value = implode(' | ', $ar_resolved);			
+				}
+				break;
 
-			case 'dato_full':
-
-				$ar_values	= null;
-				$dato		= $this->get_dato();
-				if (!empty($dato)) {
-					$ar_values = [];
+			case 'dato_full':				
+				$dato = $this->get_dato();
+				if (empty($dato)) {
+					$diffusion_value = null;
+				}else{
+					$diffusion_value = [];
 					foreach ((array)$dato as $current_locator) {
 
 						// Check target is publicable
@@ -1377,18 +1378,18 @@ class component_portal extends component_relation_common {
 								continue;
 							}
 
-						$ar_values[] = $current_locator;
+						$diffusion_value[] = $current_locator;
 					}
 				}
-				$diffusion_value = $ar_values;
 				break;
 			
 			case 'dato':
 			default:
-				$ar_values	= null;
-				$dato		= $this->get_dato();
-				if (!empty($dato)) {
-					$ar_values = [];
+				$dato = $this->get_dato();
+				if (empty($dato)) {
+					$diffusion_value = null;
+				}else{
+					$diffusion_value = [];
 					foreach ((array)$dato as $current_locator) {
 
 						// Check target is publicable
@@ -1398,12 +1399,12 @@ class component_portal extends component_relation_common {
 								continue;
 							}
 
-						$ar_values[] = $current_locator->section_id;
+						$diffusion_value[] = $current_locator->section_id;
 					}
 				}
-				$diffusion_value = $ar_values;
 				break;
 		}
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value
