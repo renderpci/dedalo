@@ -1789,6 +1789,16 @@
 
 	Valencia 08-07-2020 5.6.4
 		Fix issue where component_input_text export value generates comma separators instead ' | ' in array data
+	
+
+	Valencia 09-07-2020 5.6.5
+		Fix publication bug when json encoded strings are not escaped correctly. Now, mysqli real_escape_string is applied to all strings on conform_field_value
+
+	
+	Valencia 09-07-2020 5.6.6
+		Fix publication update record error when recursion_level is not incremented on each recursion loop, generating very long time proccess on complex records
+
+
 
 
 
@@ -1811,12 +1821,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.4';
+	$DEDALO_VERSION = '5.6.6';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-07-2020');
+	define('DEDALO_BUILD'	, '09-07-2020');
 
 
 
