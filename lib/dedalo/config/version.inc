@@ -1802,6 +1802,13 @@
 	Valencia 10-07-2020 5.6.7
 		Fix publication check error on diffsuion sql 'resolve_value' method
 
+	
+	Valencia 13-07-2020 5.6.8
+		Added tool administration import/export options to manage structure
+
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1823,12 +1830,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.7';
+	$DEDALO_VERSION = '5.6.8';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-07-2020');
+	define('DEDALO_BUILD'	, '13-07-2020');
 
 
 

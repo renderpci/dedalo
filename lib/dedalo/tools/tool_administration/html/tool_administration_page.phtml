@@ -357,6 +357,59 @@
 
 
 			#
+			# EXPORT_STRUCTURE_TO_JSON
+				$html   .= "<div class=\"panel_option form-inline\"> ";
+
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$html   .= " <span>".label::get_label('exportar_estructura').". Create file 'structure.json'. You can apply tld filter using comma sepparated tld</span>";
+
+				$html   .= " <div class=\"panel_option_subcontent\">";
+
+				// $html   .= "  <span title=\"TLD\">".label::get_label('tld')."</span>";
+				// ar_tld
+					$ar_tld			= backup::get_all_tld();
+					$ar_tld_string	= implode(',',$ar_tld);
+				$html   .= "  <input type=\"text\" id=\"ar_tld\" class=\"form-control input-sm\" style=\"width:90.3%;\" autocomplete=\"off\" placeholder=\"ar_tld like dd,rsc,hierarchy,oh\" value=\"$ar_tld_string\" />";
+
+				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('export'))."\" data-mode=\"export_structure_to_json\" onclick=\"tool_administration.export_structure_to_json(this,event)\" />";
+				
+				// file
+				$file_path	= STRUCTURE_DOWNLOAD_DIR . '/' . 'structure.json';
+				if (file_exists($file_path)) {
+					$file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . 'structure.json';
+					$html   .= "<a href=\"$file_url\" target=\"_blank\">$file_url</a>";									
+					$file_structure_size = format_size_units( filesize($file_path) );					
+					$html   .= "<div>File size: $file_structure_size</div>";
+				}
+
+				$html   .= "  <div id=\"export_structure_to_json_response\"></div>";
+				$html   .= " </div>";#end panel_option_subcontent
+
+				$html   .= "</div>";#end panel_option
+
+
+
+			#
+			# IMPORT_STRUCTURE_FROM_JSON
+				$html   .= "<div class=\"panel_option form-inline\"> ";
+
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$html   .= " <span>".label::get_label('importar_estructura').". Import file 'structure.json'. You can apply tld filter using comma sepparated tld or leave blank to import all</span>";
+
+				$html   .= " <div class=\"panel_option_subcontent\">";
+
+				// $html   .= "  <span title=\"TLD\">".label::get_label('tld')."</span>";			
+				$html   .= "  <input type=\"text\" id=\"import_ar_tld\" class=\"form-control input-sm\" style=\"width:90.3%;\" autocomplete=\"off\" placeholder=\"ar_tld like dd,rsc,hierarchy,oh\" value=\"\" />";
+
+				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('import'))."\" data-mode=\"import_structure_from_json\" onclick=\"tool_administration.import_structure_from_json(this,event)\" />";
+				$html   .= "  <div id=\"import_structure_from_json_response\"></div>";
+				$html   .= " </div>";#end panel_option_subcontent
+
+				$html   .= "</div>";#end panel_option
+
+
+
+			#
 			# IMPORT DEDALO CSV FILES
 				$html   .= "<div class=\"panel_option\">";
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
