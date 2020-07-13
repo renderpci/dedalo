@@ -374,7 +374,7 @@
 				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('export'))."\" data-mode=\"export_structure_to_json\" onclick=\"tool_administration.export_structure_to_json(this,event)\" />";
 				
 				// file
-				$file_path	= STRUCTURE_DOWNLOAD_DIR . '/' . 'structure.json';
+				$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
 				if (file_exists($file_path)) {
 					$file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . 'structure.json';
 					$html   .= "<a href=\"$file_url\" target=\"_blank\">$file_url</a>";									
@@ -398,10 +398,14 @@
 
 				$html   .= " <div class=\"panel_option_subcontent\">";
 
-				// $html   .= "  <span title=\"TLD\">".label::get_label('tld')."</span>";			
-				$html   .= "  <input type=\"text\" id=\"import_ar_tld\" class=\"form-control input-sm\" style=\"width:90.3%;\" autocomplete=\"off\" placeholder=\"ar_tld like dd,rsc,hierarchy,oh\" value=\"\" />";
-
-				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('import'))."\" data-mode=\"import_structure_from_json\" onclick=\"tool_administration.import_structure_from_json(this,event)\" />";
+				if (!defined('STRUCTURE_FROM_SERVER') || STRUCTURE_FROM_SERVER===false) {
+					$html   .= "<div>Disable import structure from file</div>";
+				}else{
+					// $html   .= "  <span title=\"TLD\">".label::get_label('tld')."</span>";			
+					$html   .= "  <input type=\"text\" id=\"import_ar_tld\" class=\"form-control input-sm\" style=\"width:90.3%;\" autocomplete=\"off\" placeholder=\"ar_tld like dd,rsc,hierarchy,oh\" value=\"\" />";
+					$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('import'))."\" data-mode=\"import_structure_from_json\" onclick=\"tool_administration.import_structure_from_json(this,event)\" />";
+				}
+				
 				$html   .= "  <div id=\"import_structure_from_json_response\"></div>";
 				$html   .= " </div>";#end panel_option_subcontent
 

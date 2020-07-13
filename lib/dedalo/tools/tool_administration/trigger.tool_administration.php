@@ -790,7 +790,7 @@ function export_structure_to_json($json_data) {
 	$json_data	= backup::structure_to_json($ar_tld);
 
 	$file_name		= 'structure.json';
-	$file_path		= STRUCTURE_DOWNLOAD_DIR . '/' . $file_name;
+	$file_path		= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
 	// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
 
 	if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
@@ -843,7 +843,7 @@ function import_structure_from_json($json_data) {
 
 	
 	$file_name	= 'structure.json';
-	$file_path	= STRUCTURE_DOWNLOAD_DIR . '/' . $file_name;	
+	$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;	
 
 	$data		= json_decode( file_get_contents($file_path) );
 	$response	= backup::import_structure_json_data($data, $ar_tld);
