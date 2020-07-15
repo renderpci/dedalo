@@ -1302,7 +1302,7 @@ class tool_layout_print extends tool_common {
 			$html_file_name = $pages_html_temp.'/'.$pkey.'.html';
 			file_put_contents($html_file_name, $current_page_complete);
 
-			$url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $pkey.'.html';			
+			$url = DEDALO_PROTOCOL . DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $pkey.'.html';			
 			$urls_group_by_section[$main_section_key][] 	= $url;
 			
 		}//end foreach ($ar_pages as $pkey => $current_page) {
@@ -1323,7 +1323,7 @@ class tool_layout_print extends tool_common {
 		foreach ($urls_group_by_section as $key => $ar_url) {
 
 			$pdf_path 	= $pages_html_temp . '/'.$key.'_print.pdf';
-			$pdf_url	= 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'.$key.'_print.pdf';
+			$pdf_url	= DEDALO_PROTOCOL . DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'.$key.'_print.pdf';
 			$label 		= $key;
 
 			$command  = DEDALO_PDF_RENDERER ." ";	//. " --no-stop-slow-scripts --debug-javascript --javascript-delay $javascript_delay ";
