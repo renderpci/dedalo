@@ -345,19 +345,19 @@
 							$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
 							$header_html_file_name = 'header.html';								
 							file_put_contents($pages_html_temp.'/'.$header_html_file_name, $current_page_complete);
-							$header_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $header_html_file_name.'';
+							$header_html_url = DEDALO_PROTOCOL.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $header_html_file_name.'';
 						}
 						*/														
 						$footer_html = "<div class=\"pagination_info\">". sprintf( label::get_label('number_page_of_total_pages'), "<span class=\"var_pdf_page\">0</span>", "<span class=\"var_pdf_topage\">0</span>"). "</div>";
 						$request_options = new stdClass();
 							$request_options->page_html  = $footer_html;	//$result->footer_html;tool_layout_print/css/tool_layout_render.css?15102909
-							$request_options->css_links  = css::build_tag( 'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_render.css" );
-							$request_options->js_links   = js::build_tag(  'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js" );									
+							$request_options->css_links  = css::build_tag( DEDALO_PROTOCOL . DEDALO_HOST .DEDALO_LIB_BASE_URL . "/tools/tool_layout_print/css/tool_layout_render.css" );
+							$request_options->js_links   = js::build_tag(  DEDALO_PROTOCOL . DEDALO_HOST .DEDALO_LIB_BASE_URL . "/tools/tool_layout_print/js/wkhtmltopdf.js" );									
 						$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
 						$footer_html_file_name = 'footer.html';
 						file_put_contents($pages_html_temp.'/'.$footer_html_file_name, $current_page_complete);
-						$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $footer_html_file_name.'';
-						//$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/footer_source.html';
+						$footer_html_url = DEDALO_PROTOCOL . DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $footer_html_file_name.'';
+						//$footer_html_url = DEDALO_PROTOCOL.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/footer_source.html';
 						
 					
 					#
