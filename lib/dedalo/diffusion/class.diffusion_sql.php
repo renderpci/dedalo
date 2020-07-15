@@ -3438,7 +3438,7 @@ class diffusion_sql extends diffusion  {
 	* RESOLVE_VALUE
 	* @return string
 	*/
-	public static function resolve_value($options, $dato, $default_separator=" | ") {
+	public static function resolve_value($options, $dato, $default_separator=' | ') {
 
 		// dump($options, ' options ++ '.to_string());
 		// dump($dato, ' dato ++ '.to_string());
@@ -3482,9 +3482,18 @@ class diffusion_sql extends diffusion  {
 
 		$ar_value = [];
 		foreach ($ar_locator as $key => $locator) {
-			if (empty($locator->section_tipo) || empty($locator->section_id) || empty($modelo_name)) {
-				continue;
-			}
+
+			// empty check
+				if (empty($locator->section_tipo) || empty($locator->section_id) || empty($modelo_name)) {
+					continue;
+				}
+
+			// target is publicable check
+				$current_is_publicable = diffusion::get_is_publicable($locator);
+				if ($current_is_publicable!==true) {
+					debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($locator), logger::DEBUG);
+					continue;
+				}
 
 			$component 	= component_common::get_instance($modelo_name,
 														 $target_component_tipo,
@@ -3494,7 +3503,7 @@ class diffusion_sql extends diffusion  {
 														 $locator->section_tipo,
 														 false);
 
-			$method 	= isset($process_dato_arguments->component_method) ? $process_dato_arguments->component_method : 'get_diffusion_value';
+			$method = isset($process_dato_arguments->component_method) ? $process_dato_arguments->component_method : 'get_diffusion_value';
 
 			// Inject custom properties to target component to manage 'get_diffusion_value' or another called method
 				if (isset($process_dato_arguments->target_component_properties)) {
@@ -3567,21 +3576,21 @@ class diffusion_sql extends diffusion  {
 		switch ($output) {
 			case 'merged':
 				# Merge all arrays values in one only array
-				#$ar_value = array_unique($ar_value);
-				$ar_value = array_values($ar_value); // Restore array keys
-				$value 	  = json_encode($ar_value);
+				#$ar_value	= array_unique($ar_value);
+				$ar_value	= array_values($ar_value); // Restore array keys
+				$value		= json_encode($ar_value);
 				break;
 
 			default:
-				$separator 	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
-				$value 		= implode($separator,$ar_value);
+				$separator	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
+				$value		= implode($separator,$ar_value);
 				break;
 		}
 
 		# Remove duplicates
-		#$uar_value 	= explode(',',$value);
-		#$uar_value 	= array_unique($uar_value);
-		#$value 		= implode(',',$ar_value);
+		#$uar_value	= explode(',',$value);
+		#$uar_value	= array_unique($uar_value);
+		#$value		= implode(',',$ar_value);
 
 		if (empty($value) && $value!='0') {
 			$value = null; // default empty value is 'null'

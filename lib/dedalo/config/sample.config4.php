@@ -541,10 +541,11 @@
 
 ################################################################
 # REMOTE_STRUCTURE_SERVER_CODE
-	define('STRUCTURE_FROM_SERVER'		, true); # bool
-	define('STRUCTURE_SERVER_CODE'		, ''); 	 # string like aZdUs7asdasdhRsw4!sp
-	define('STRUCTURE_SERVER_URL'		, ''); 	 # string like https://master.render.es/dedalo/lib/dedalo/extras/str_manager/
-	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
+	define('STRUCTURE_FROM_SERVER'		 , true); # bool
+	define('STRUCTURE_SERVER_CODE'		 , ''); 	 # string like aZdUs7asdasdhRsw4!sp
+	define('STRUCTURE_SERVER_URL'		 , ''); 	 # string like https://master.render.es/dedalo/lib/dedalo/extras/str_manager/
+	define('STRUCTURE_DOWNLOAD_DIR'		 , DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
+	define('STRUCTURE_DOWNLOAD_JSON_FILE', STRUCTURE_DOWNLOAD_DIR);
 
 
 

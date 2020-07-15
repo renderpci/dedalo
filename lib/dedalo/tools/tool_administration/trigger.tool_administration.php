@@ -765,6 +765,103 @@ function export_hierarchy($json_data) {
 
 
 
+/**
+* EXPORT_STRUCTURE_TO_JSON
+* @return object $response
+*/
+function export_structure_to_json($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('tld_list');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);			
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	$ar_tld		= explode(',', $tld_list);
+	$json_data	= backup::structure_to_json($ar_tld);
+
+	$file_name		= 'structure.json';
+	$file_path		= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+	// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+
+	if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
+		// write error occurred
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']. Impossible to write json file';
+		return $response;
+	}
+
+
+	$response->result	= true;
+	$response->msg		= 'Ok. Request done ['.__FUNCTION__.'].';
+	// $response->url	= $file_url;
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end export_structure_to_json
+
+
+
+/**
+* IMPORT_STRUCTURE_FROM_JSON
+* @return object $response
+*/
+function import_structure_from_json($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('tld_list');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);			
+			// if (empty($$name)) {
+			// 	$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+			// 	return $response;
+			// }
+		}
+
+
+	$ar_tld	= empty($tld_list) ? [] : explode(',', $tld_list);
+
+	
+	$file_name	= 'structure.json';
+	$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;	
+
+	$data		= json_decode( file_get_contents($file_path) );
+	$response	= backup::import_structure_json_data($data, $ar_tld);
+
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end import_structure_from_json
+	
+
+
+
 function long_time_process($json_data) {
 	global $start_time;
 

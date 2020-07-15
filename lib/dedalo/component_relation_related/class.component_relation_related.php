@@ -780,15 +780,14 @@ class component_relation_related extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null, $option_obj=null ) {
-
-		$diffusion_value = null;
+	public function get_diffusion_value($lang=null, $option_obj=null) {
 
 		$separator = '<br>';
 
 		# $dato_with_references = $this->get_dato_with_references();
 		# 	dump($dato_with_references, ' dato_with_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
 		
+		// diffusion_value base
 		$diffusion_value = $this->get_valor($lang, $format='array');
 
 		// calculated references
@@ -796,20 +795,23 @@ class component_relation_related extends component_relation_common {
 
 		if (empty($option_obj)) {
 
-			$diffusion_value = implode($separator, $diffusion_value);
-			$diffusion_value = strip_tags($diffusion_value, $separator);
+			// diffusion_value
+				$diffusion_value = implode($separator, (array)$diffusion_value);
+				$diffusion_value = strip_tags($diffusion_value, $separator);
 
-			if (!empty($calculated_references)) {
-				$ar_references = [];
-				foreach ($calculated_references as $key => $ref_obj) {
-					$ar_references[] = $ref_obj->label;
-				}
-				if (!empty($diffusion_value)) {
-					$diffusion_value .= $separator;
-				}
-				$diffusion_value .= implode($separator, $ar_references);
-			}
-			
+			// references add
+				if (!empty($calculated_references)) {
+					$ar_references = [];
+					foreach ($calculated_references as $key => $ref_obj) {
+						$ar_references[] = $ref_obj->label;
+					}					
+					if (!empty($ar_references)) {
+						if (!empty($diffusion_value)) {
+							$diffusion_value .= $separator;
+						}						
+						$diffusion_value .= implode($separator, $ar_references);
+					}
+				}			
 
 		}else{
 			
@@ -819,7 +821,7 @@ class component_relation_related extends component_relation_common {
 							
 				if ($key==='custom_parents') {
 
-					$divisor 	= $this->get_divisor();
+					$divisor = $this->get_divisor();
 					
 					if (!empty($diffusion_value)) {
 						$array_values = array_values($diffusion_value);
@@ -835,7 +837,6 @@ class component_relation_related extends component_relation_common {
 					}
 
 					// append whole or part of results when no empty
-
 					if (!empty($ar_terms)) {
 						$final_term = [];
 						foreach ($ar_terms as $term) {				
@@ -849,12 +850,11 @@ class component_relation_related extends component_relation_common {
 								}											
 							}
 							$final_term[] = implode($divisor, $term);
-
 						}
 					}
 				}
 			}
-			$diffusion_value = implode($separator, $final_term);
+			$diffusion_value = isset($final_term) ? implode($separator, $final_term) : null;
 			// $diffusion_value = strip_tags($diffusion_value, $separator);
 		}
 

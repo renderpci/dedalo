@@ -904,8 +904,11 @@ abstract class diffusion  {
 	*/
 	public static function get_is_publicable($locator) {
 
+		$section_tipo	= $locator->section_tipo;
+		$section_id		= $locator->section_id;
+
 		// Locate component_publication in current section
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$locator->section_tipo,
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$section_tipo,
 																				'component_publication',
 																				$from_cache=true,
 																				$resolve_virtual=true,
@@ -920,7 +923,7 @@ abstract class diffusion  {
 		$component_publication_tipo = reset($ar_children);
 
 
-		$is_publicable = self::get_component_publication_bool_value( $component_publication_tipo, $locator->section_id, $locator->section_tipo );
+		$is_publicable = self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
 
 		return (bool)$is_publicable;
 	}//end get_is_publicable

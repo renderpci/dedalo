@@ -324,7 +324,7 @@
 					#
 					# SAVE PAGES . Save html files to disk
 					$user_id 		 	= $_SESSION['dedalo4']['auth']['user_id'];
-					$print_files_path	= '/print/'.safe_tipo($tipo).'/'.safe_section_id($user_id);
+					$print_files_path	= '/print/'.safe_tipo($tipo).'/'.(int)$user_id; // dump($print_files_path, ' print_files_path ++ '.to_string($user_id));
 					$pages_html_temp 	= DEDALO_MEDIA_BASE_PATH . $print_files_path;
 					if(!file_exists($pages_html_temp)) mkdir($pages_html_temp, 0775,true);
 					
