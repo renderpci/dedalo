@@ -56,7 +56,7 @@ abstract class component_common_draw {
 			if (empty($def)) {
 				$html 	.= '<label class="css_label label" '.$required_code.'>'.$label.'</label>';
 			}else{
-				$html 	.= '<label class="css_label label tooltip_active" '.$required_code.' title="'.$def.'">'.$label.'</label>';
+				$html 	.= '<label class="css_label label tooltip_active" '.$required_code.' title="'. htmlentities($def) .'">'.$label.'</label>';
 			}
 			//data-title=\"". $label . $def . "\" 
 			#$html 	.= "\n <label class=\"css_label tooltips\" $required_code >$label<span>$label $def</span></label>"; //data-title=\"". $label . $def . "\" 
