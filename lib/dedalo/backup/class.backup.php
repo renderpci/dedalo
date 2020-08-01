@@ -1405,7 +1405,7 @@ abstract class backup {
 				"check_connection" 	=> true
 			);
 		$data_string = "data=" . json_encode($data);
-
+		
 
 		//open connection
 		$ch = curl_init();

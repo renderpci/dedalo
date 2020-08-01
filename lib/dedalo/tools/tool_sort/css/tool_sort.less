@@ -178,6 +178,12 @@ body {
 			// temporal
 				.portal_section {
 
+					.table_row{
+						.column.component_publication{
+	    					display: none;
+	    				}
+					}
+
 					>.row_header {
     					
 
@@ -192,37 +198,42 @@ body {
 	    				
 
 	    				.column.component_image, .column:last-of-type {
-							max-width: unset!important;
-							width: 60%!important;
-							background-color: #fff;
+							// max-width: unset!important;
+							// width: 60%!important;
+							// background-color: #fff;
 	    				}
-
+	    
 	    				.column.component_portal {
 	    					>div {
-	    						display: flex;
-	    						flex-wrap: wrap;
+	    						// display: flex;
+	    						// flex-wrap: wrap;
+	    						background-color: #fff;
 	    					}
 	    				}
-	    				
-	    				>:last-child {
-	    					//background-color: #E1E81F;
-	    					display: flex;
-	    					max-width: unset;
-
-	    					.portal_item_numisdata9 {
-	    						//background-color: #E13418;
-	    						display: flex;
-	    						max-width: unset;
-	    						//height: 120px;
-	    						outline: 1px solid #eeeeee;
-	    						
-
-	    						.div_image_image_in_list {
-	    							//height: 120px;
+	    				.div_image_image_in_list {
+	    							height: 90px;
 	    							//width: 150px;
 	    						}
-	    					}
-	    				}
+	    				
+	    				// >:last-child {
+	    				// 	//background-color: #E1E81F;
+	    				// 	display: flex;
+	    				// 	max-width: unset;
+
+	    				// 	.portal_item_numisdata9 {
+	    				// 		//background-color: #E13418;
+	    				// 		display: flex;
+	    				// 		max-width: unset;
+	    				// 		//height: 120px;
+	    				// 		outline: 1px solid #eeeeee;
+	    						
+
+	    				// 		.div_image_image_in_list {
+	    				// 			height: 100px;
+	    				// 			//width: 150px;
+	    				// 		}
+	    				// 	}
+	    				// }
 					}//end >.rows_wrapper .table_row
 
 				}//end .portal_section
