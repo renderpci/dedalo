@@ -341,4 +341,7 @@ body {
   grid-template-columns: minmax(75px, 1fr) 160px 160px 85px;
   grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
 }
+.header_buttons {
+  padding: unset;
+}
 /*# sourceMappingURL=tool_sort.css.map */
