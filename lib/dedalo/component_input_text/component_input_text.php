@@ -17,11 +17,12 @@
 	$debugger				= $this->get_debugger();
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= "Info about $tipo";
+	$html_title				= trim( $this->get_def() ); // "Info about $tipo";
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
 	$file_name				= $modo;
+
 	
 	if($permissions===0) return null;
 	

@@ -166,11 +166,7 @@ class css {
 		# Add version
 		$url = $url.'?'.DEDALO_VERSION;
 
-
-		$media_attr='';
-		if (!is_null($media)) {
-			$media_attr = " media=\"$media\"";  // Like screen
-		}		
+		$media_attr = (!is_null($media)) ? (' media="'.$media.'"') : '';	
 
 		if(SHOW_DEBUG===true) {
 			if (strpos($url,'structure.css')!==false || $uncacheable===true) {
@@ -178,7 +174,8 @@ class css {
 			}			
 		}		
 
-		$tag = "\n<link href=\"$url\" rel=\"stylesheet\"{$media_attr}\">";
+		$tag = '<link href="'.$url.'" rel="stylesheet"'.$media_attr.'>';
+		
 
 		return $tag;
 	}//edn build_tag

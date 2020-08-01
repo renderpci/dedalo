@@ -19,7 +19,7 @@
 ################################################################
 # DEDALO 4 MAIN VARS
 	define('DEDALO_HOST'			, $_SERVER['HTTP_HOST'] );
-	define('DEDALO_PROTOCOL'		, stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://' );
+	define('DEDALO_PROTOCOL'		, (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
 
 	# Dedalo paths
 	define('DEDALO_ROOT'			, dirname(dirname(dirname(dirname(__FILE__)))));
