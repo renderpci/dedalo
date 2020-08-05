@@ -1166,16 +1166,18 @@ class component_relation_common extends component_common {
 	* @return string $diffusion_value
 	*/
 	public function get_diffusion_dato() {
-
+		
 		$dato = $this->get_dato();
 		if (is_array($dato)) {
-			$ar_id =array();
+			$ar_id = array();
 			foreach ($dato as $current_locator) {
 				$ar_id[] = $current_locator->section_id;
 			}
 			$final_dato = $ar_id;
 		}
-		$diffusion_value = json_encode($final_dato);
+		$diffusion_value = isset($final_dato)
+			? json_encode($final_dato)
+			: json_encode([]);
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_dato

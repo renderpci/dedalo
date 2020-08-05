@@ -3616,10 +3616,10 @@ class diffusion_sql extends diffusion  {
 		$selected_date 	= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
 		$date_format 	= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
 
-			#dump($options, ' options ++ '.to_string());
-			#dump($dato, ' dato ++ '.to_string());
+			// dump($options, ' options ++ '.to_string());
+			// dump($dato, ' dato ++ '.to_string());
 			#dump($process_dato_arguments, ' process_dato_arguments ++ '.to_string());
-			#dump($selected_date, ' selected_date ++ '.to_string());
+			// dump($selected_date, ' selected_date ++ '.to_string());
 
 		// Check array key exists
 			if (!isset($dato[$selected_key])) {
@@ -3652,7 +3652,6 @@ class diffusion_sql extends diffusion  {
 				$value 	 = $dd_date->get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true);
 				break;
 		}
-
 
 		return $value;
 	}//end split_date_range
