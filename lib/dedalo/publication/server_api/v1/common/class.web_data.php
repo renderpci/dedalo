@@ -111,25 +111,25 @@ class web_data {
 
 			// Options defaults
 				$sql_options = new stdClass();
-					$sql_options->table				= null;
-					$sql_options->ar_fields			= array('*');
-					$sql_options->sql_fullselect	= false; // default false
-					$sql_options->section_id		= false;
-					$sql_options->sql_filter		= ''; //publicacion = 'si'
-					$sql_options->lang				= null;	//WEB_CURRENT_LANG_CODE;
-					$sql_options->order				= '`id` ASC';
-					$sql_options->limit				= 0;
-					$sql_options->group				= false;
-					$sql_options->offset			= false;
-					$sql_options->count				= false;
-					$sql_options->resolve_portal	= false; // bool
-					$sql_options->resolve_portals_custom = false; // array | bool
-					$sql_options->apply_postprocess = false; //  bool default true
-					$sql_options->map				= false; //  object | bool (default false). Apply map function to value like [{"field":birthplace_id","function":"resolve_geolocation","otuput_field":"birthplace_obj"}]
-					$sql_options->process_result	= false;
-					$sql_options->db_name			= false;
-					$sql_options->conn				= false;
-					$sql_options->caller			= 'default';
+					$sql_options->table						= null;
+					$sql_options->ar_fields					= array('*');
+					$sql_options->sql_fullselect			= false; // default false
+					$sql_options->section_id				= false;
+					$sql_options->sql_filter				= ''; //publicacion = 'si'
+					$sql_options->lang						= null;	//WEB_CURRENT_LANG_CODE;
+					$sql_options->order						= '`id` ASC';
+					$sql_options->limit						= 0;
+					$sql_options->group						= false;
+					$sql_options->offset					= false;
+					$sql_options->count						= false;
+					$sql_options->resolve_portal			= false; // bool
+					$sql_options->resolve_portals_custom	= false; // array | bool
+					$sql_options->apply_postprocess			= false; //  bool default true
+					$sql_options->map						= false; //  object | bool (default false). Apply map function to value like [{"field":birthplace_id","function":"resolve_geolocation","otuput_field":"birthplace_obj"}]
+					$sql_options->process_result			= false;
+					$sql_options->db_name					= false;
+					$sql_options->conn						= false;
+					$sql_options->caller					= 'default';
 
 					foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
@@ -676,8 +676,8 @@ class web_data {
 
 						#  Portal resolve cases
 						if ($resolve_portals_custom!==false) {
-
-							if ( property_exists($resolve_portals_custom, $current_field)
+							
+							if ( (property_exists($resolve_portals_custom, $current_field) )
 							  && $current_field!==$table // case field image into table image, por example
 							) {
 								// request options
@@ -737,6 +737,11 @@ class web_data {
 					];					
 				}
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					// error_log("++++++ query: " . implode(' ', $query_parts));;
+				}
+				
 
 			return $response;
 		}//end exec_query

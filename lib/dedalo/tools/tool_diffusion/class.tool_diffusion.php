@@ -122,7 +122,7 @@ class tool_diffusion {
 
 		if ($update_record_result && $update_record_result->result) {
 			$response->result = true;
-			$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully</span>",$section_id);			
+			$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully. Levels: ".DEDALO_DIFFUSION_RESOLVE_LEVELS."</span>",$section_id);			
 		}else{
 			$response->result = false;
 			$response->msg = "Error. Error on publish record $section_id";

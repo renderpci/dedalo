@@ -68,7 +68,7 @@ class component_relation_related extends component_relation_common {
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
 		if ($ar_related_terms===false) {
 			$ar_related_terms = $this->RecordObj_dd->get_relaciones();
-			$ar_componets_related = array();			
+			$ar_componets_related = array();
 			foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				if ($modelo_name !== 'section'){
@@ -82,11 +82,11 @@ class component_relation_related extends component_relation_common {
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
 
-		$dato   	= $this->get_dato();
-		$divisor 	= $this->get_divisor();
+		$dato		= $this->get_dato();
+		$divisor	= $this->get_divisor();
 		$ar_values	= array();
 
-		foreach ((array)$dato as $key => $current_locator) {
+		foreach ((array)$dato as $current_locator) {
 
 			$current_locator_json = json_encode($current_locator);
 

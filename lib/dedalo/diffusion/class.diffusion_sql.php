@@ -1257,12 +1257,10 @@ class diffusion_sql extends diffusion  {
 				throw new Exception("Error Processing Request. Sorry, array is not accepted to update_record anymore. Please use int as options->section_id ", 1);
 			}
 
-
 		// short vars
 			$section_tipo			= $options->section_tipo;
 			$section_id				= $options->section_id; // (!) can be an array too
 			$diffusion_element_tipo	= $options->diffusion_element_tipo; // diffusion_element_tipo (structre diffusion_element like oh63 for 'Historia oral web')
-		
 		
 		// table info
 			$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );			
@@ -1281,26 +1279,23 @@ class diffusion_sql extends diffusion  {
 			$database_name		= $table_map->database_name;
 			$database_tipo		= $table_map->database_tipo;
 			$table_from_alias	= $table_map->from_alias;
-
 		
-		// DATABASE_NAME . Resolve database_tipo in current diffusion map. Like 'web_aup'
-			/*
-			if (isset(self::$database_name)) {
-				$database_name = self::$database_name;
-				$database_tipo = self::$database_tipo;
-			}else{
-				# DIFFUSION ELEMENT
-				$diffusion_element 	= self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
-				$database_name 		= $diffusion_element->database_name;
-				if (empty($database_name)) {
-					throw new Exception("Error Processing Request. database_name not defined", 1);
-				}
-				self::$database_name = $database_name; // Set static class var
+		// database_name . Resolve database_tipo in current diffusion map. Like 'web_aup'
+			// if (isset(self::$database_name)) {
+			// 	$database_name = self::$database_name;
+			// 	$database_tipo = self::$database_tipo;
+			// }else{
+			// 	# DIFFUSION ELEMENT
+			// 	$diffusion_element 	= self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
+			// 	$database_name 		= $diffusion_element->database_name;
+			// 	if (empty($database_name)) {
+			// 		throw new Exception("Error Processing Request. database_name not defined", 1);
+			// 	}
+			// 	self::$database_name = $database_name; // Set static class var
 
-				$database_tipo = $diffusion_element->database_tipo;
-				self::$database_tipo = $database_tipo; // Set static class var
-			}*/
-
+			// 	$database_tipo = $diffusion_element->database_tipo;
+			// 	self::$database_tipo = $database_tipo; // Set static class var
+			// }
 		
 		// custom diffusion processor (Defined in propiedades)
 			if (isset($table_propiedades->custom_diffusion)) {
@@ -1317,38 +1312,24 @@ class diffusion_sql extends diffusion  {
 				return $response;
 			}
 
-
 		// cache
 			static $ar_resolved_static = [];			
 			static $ar_unconfigured_diffusion_section;
-			if(SHOW_DEBUG===true) {
-			static $ar_resolved_static_debug;
-			}
-
+			
 			$resolved_static_key = $section_tipo . '_' . $section_id;
 		
-			// Record already resolved check
-			#if (   isset($ar_resolved_static[$options->section_tipo])
-			#	#&& in_array($options->section_id, $ar_resolved_static[$options->section_tipo])
-			#	) {
-			#	 	#dump($options->section_id, ' options->section_id already resolved. Return false ++ '.to_string($options->section_tipo));
-			#	$response->result 	= true;
-			#	$response->msg 		= 'Record already resolved '.$options->section_tipo.'_'.$options->section_id;
-			#	return $response;
-			#}
+			// Record already resolved check			
 			if (true===in_array($resolved_static_key, $ar_resolved_static)) {
 				// response
 				$response->result	= true;
-				$response->msg		= 'Skipped record already updated: '.$resolved_static_key;
+				$response->msg		= 'Skipped record already updated. resolved_static_key: '.$resolved_static_key;
 				if(SHOW_DEBUG===true) {
 					debug_log(__METHOD__."  ".$response->msg .PHP_EOL.' ----------------------------------------------------------------- ', logger::WARNING);
 				}
 				return $response;
 			}
-
-
 		
-		// DIRECT RECORD SAVE
+		// direct record save
 			
 			// diffusion_section . Resolve diffusion section from section tipo
 				if (in_array($section_tipo, (array)$ar_unconfigured_diffusion_section)) {
@@ -1438,19 +1419,15 @@ class diffusion_sql extends diffusion  {
 
 			// cache . update
 				$ar_resolved_static[] = $resolved_static_key;
-				if(SHOW_DEBUG===true) {
-					$time_complete = round(microtime(1)-$start_time,3);
-					$ar_resolved_static_debug[] = array($options->section_tipo, $options->section_id, $time_complete);
-				}
-				#dump($ar_resolved_static, ' ar_resolved_static'); #die();
-
+			
 
 		// thesaurus parent auto publication. If current record is from a thesaurus section, 
 		// recursive parents are publised too (20-05-2020) . 
 		// Allow publish only used terms and parents path for large thesaurus sections like toponyms
 			if (!empty($ar_field_data['ar_fields'])) {
+
 				$current_record_data	= reset($ar_field_data['ar_fields']);
-				$first_lang_data		= reset($current_record_data);			
+				$first_lang_data		= reset($current_record_data);
 				$found_component_relation_parent = array_find($first_lang_data, function($item){
 					return $item['related_model']==='component_relation_parent';
 				});
@@ -1473,146 +1450,134 @@ class diffusion_sql extends diffusion  {
 			}
 
 		#
-		# REFERENCES
-		#
-			$max_recursions = defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2;
-			if ($options->recursion_level>=$max_recursions) {
+		# REFERENCES			
+			$recursion_level	= (int)$options->recursion_level;
+			$max_recursions		= defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2;
+			if ($recursion_level>=$max_recursions) {
 				# Avoid infinite loops like Manolo's item to all references
 				$resolve_references = false;
-				debug_log(__METHOD__." Stopped recursive resolve_references on level '$options->recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
+				debug_log(__METHOD__." (!) Stopped recursive resolve_references on level '$recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::WARNING);
 			}
 			if ($resolve_references===true) {
-
-				#
-				# AR_SECTION_COMPONENTS . Get section components and look for references
+				
+				// ar_section_components . Get section components (portals and autocompletes) and look for references
 					$ar_components_with_references = array( 'component_portal',
 															'component_autocomplete',
 															'component_autocomplete_hi'); #component_relation_common::get_components_with_relations(); # Using modelo name
 					$ar_section_components = section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, $ar_components_with_references, $from_cache=true, $resolve_virtual=true);
-						#dump($ar_section_components, " ar_section_components ");
+					sort($ar_section_components, SORT_NATURAL);	// always sort components_with_references
 
-				#$ar_diffusion_childrens = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section, $modelo_name='field_', $relation_type='children');
-					#dump($ar_diffusion_childrens, " ar_diffusion_childrens ".to_string());die();
-
-				# Sort terms
-					sort($ar_section_components, SORT_NATURAL);
-						#dump($ar_section_components, ' ar_section_components ++ '.to_string());
-
-				#
-				# GET REFERENCES FROM COMPONENTS DATO					
-					$group_by_section_tipo=array();
-					$skip_tipos = isset($options->skip_tipos) ? $options->skip_tipos : [];
+				// Iterate founded components with relations. get references from components dato
+					$group_by_section_tipo	= [];
+					$skip_tipos				= isset($options->skip_tipos) ? $options->skip_tipos : [];
 					foreach ($ar_section_components as $current_component_tipo) {
 
-						if (in_array($current_component_tipo, $skip_tipos)) {
-							continue;
-						}
-
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-						if (!in_array($modelo_name, $ar_components_with_references)) continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
-
-						// autocomplete_hi case. Avoid more recursion after resolve component_autocomplete_hi data 2018-11-16
-							if ($modelo_name==='component_autocomplete_hi') {
-							 	$options->recursion_level = $max_recursions -1;
+						// skip_tipos defined in $options->skip_tipos
+							if (in_array($current_component_tipo, $skip_tipos)) {
+								continue;
 							}
 
+						// model
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+							if (!in_array($modelo_name, $ar_components_with_references)) continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
+
+						// autocomplete_hi case. Avoid more recursion after resolve component_autocomplete_hi data 2018-11-16
+							// if ($modelo_name==='component_autocomplete_hi') {
+							//  	$recursion_level = $max_recursions - 1;
+							// }
+
 						// skip resolve components with dato external (portals)
-							$RecordObj_dd = new RecordObj_dd($current_component_tipo);
-							$current_component_propiedades = $RecordObj_dd->get_propiedades(true);
+							$RecordObj_dd					= new RecordObj_dd($current_component_tipo);
+							$current_component_propiedades	= $RecordObj_dd->get_propiedades(true);
 							if (isset($current_component_propiedades->source->mode) && $current_component_propiedades->source->mode==='external') {
 								debug_log(__METHOD__." Skipped component with external source mode: ".to_string($current_component_tipo), logger::DEBUG);
 								continue;
-								// if (isset($current_component_propiedades->source->component_to_search)) {
-								// 	$skip_tipos = array_merge($skip_tipos, (array)$current_component_propiedades->source->component_to_search);
-								// }
 							}
 
 						// debug_log(__METHOD__." Solving recursive resolve_references on level '$options->recursion_level' tipo: '$current_component_tipo' model: '$modelo_name' label: '".RecordObj_dd::get_termino_by_tipo($current_component_tipo)."' ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
 
+						// component's lang
+							$current_lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);
+						
+						// iterate array of section_id (from options) and group_by_section_tipo
+							foreach ((array)$options->section_id as $section_id) {
 
-						$current_lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);
-						foreach ((array)$options->section_id as $section_id) {
+								$current_component  = component_common::get_instance($modelo_name,
+																					 $current_component_tipo,
+																					 $section_id,
+																					 'list',
+																					 $current_lang,
+																					 $options->section_tipo,
+																					 false);
+								$current_dato = $current_component->get_dato();
+								
+								foreach ((array)$current_dato as $current_locator) {
+																		
+									if ( !isset($group_by_section_tipo[$current_locator->section_tipo]) ||
+										 !in_array($current_locator->section_id, $group_by_section_tipo[$current_locator->section_tipo]) 
+										 ) { // If not exists in group_by_section_tipo, add
 
-							$current_component  = component_common::get_instance($modelo_name,
-																				 $current_component_tipo,
-																				 $section_id,
-																				 'list',
-																				 $current_lang,
-																				 $options->section_tipo,
-																				 false);
-							$dato = $current_component->get_dato();
-								#dump($dato, " dato $current_component_tipo - $modelo_name".to_string(''));
-							foreach ((array)$dato as $current_locator) {
-								$current_section_tipo = $current_locator->section_tipo;
-								$current_section_id   = $current_locator->section_id;
-								if ( !isset($group_by_section_tipo[$current_section_tipo]) ||
-									 !in_array($current_locator->section_id, $group_by_section_tipo[$current_section_tipo]) ) { // If not exists in group_by_section_tipo, add
-
-									// if( !isset($ar_resolved_static[$current_section_tipo]) ||
-										// !in_array($current_section_id, $ar_resolved_static[$current_section_tipo]) ) { // If not exists in ar_resolved_static, add
-									if(!in_array($current_section_tipo.'_'.$current_section_id, $ar_resolved_static)) {
-
-										$group_by_section_tipo[$current_section_tipo][] = $current_section_id;
+										if(!in_array($current_locator->section_tipo.'_'.$current_locator->section_id, $ar_resolved_static)) {
+											$group_by_section_tipo[$current_locator->section_tipo][] = $current_locator->section_id;
+										}
 									}
 								}
-							}
-						}//end foreach ((array)$options->section_id as $section_id) {
+							}//end foreach ((array)$options->section_id as $section_id) 
 
-						#$data_field = self::create_data_field($current_component_tipo, $dato, $is_section_id=false, $options->section_id, $current_lang, $is_portal=false);
-						#dump($data_field, " data_field ".to_string());
-					}
-					#dump($group_by_section_tipo, ' group_by_section_tipo '.$options->section_tipo.'_'.$options->section_id); #die();
-
+					}//end foreach ($ar_section_components as $current_component_tipo)
+					
 				// Prevent infinite loops
 					#$ar_section_tipo_resolved  = array();
 
-				#
-				# RESOLVE REFERENCES RECURSION
-				# Look inside portals of portals, etc..
-					// $current_recursion_level = 1; // (int)$options->recursion_level +1;					
-					foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
-						
-						if (empty($ar_section_id)) {
-							continue;
-						}
+				
+				// resolve references recursion. Look inside portals of portals, etc..
+					$next_recursion_level = ($modelo_name==='component_autocomplete_hi99')
+						? ($max_recursions - 1) // Avoid more recursion after resolve component_autocomplete_hi data 2018-11-16
+						: ($recursion_level + 1);
 
-						// recursion level reset
-							// $current_recursion_level = 1;
-							$current_recursion_level = (int)$options->recursion_level +1;
-							if(SHOW_DEBUG===true) {
-								debug_log(__METHOD__." current_recursion_level: '$current_recursion_level' [$current_section_tipo] label: '".RecordObj_dd::get_termino_by_tipo($current_section_tipo)."' - ar_section_id:".to_string($ar_section_id)." ============================================================================================== ", logger::DEBUG);
+					// debug. show levels resolution calls
+						if(SHOW_DEBUG===true) {							
+							dump($group_by_section_tipo, " REFERENCES group_by_section_tipo ++ recursion_level: $recursion_level - options->section_tipo: $options->section_tipo");
+						}
+						
+					// iterate previous created groups by section tipo
+						foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
+							
+							// skip empty values
+								if (empty($ar_section_id)) {
+									continue;
+								}
+
+							// recursion level reset
+								// $current_recursion_level = 1;
+								if(SHOW_DEBUG===true) {
+									debug_log(__METHOD__." current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] label: '".RecordObj_dd::get_termino_by_tipo($current_section_tipo)."' - ar_section_id:".to_string($ar_section_id)." ============================================================================================== ", logger::DEBUG);
+								}
+
+							foreach ((array)$ar_section_id as $current_section_id) {
+
+								// Recursion with all references
+								$new_options = new stdClass();
+									$new_options->section_tipo				= $current_section_tipo;
+									$new_options->section_id				= $current_section_id;
+									$new_options->diffusion_element_tipo	= $diffusion_element_tipo;
+									$new_options->recursion_level			= $next_recursion_level;
+									$new_options->skip_tipos				= $skip_tipos;
+
+								// Recursion update_record
+								$this->update_record( $new_options, true );
 							}
 
-						foreach ($ar_section_id as $current_section_id) {
-
-							## Recursion with all references
-							$new_options = new stdClass();
-								$new_options->section_tipo				= $current_section_tipo;
-								$new_options->section_id				= $current_section_id;
-								$new_options->diffusion_element_tipo	= $diffusion_element_tipo;
-								$new_options->recursion_level			= $current_recursion_level;
-								$new_options->skip_tipos				= $skip_tipos;
-
-							# Recursion
-							$this->update_record( $new_options, true );
-						}
-
-						#if (!in_array($current_section_tipo, $ar_section_tipo_resolved)) {
-						#	$ar_section_tipo_resolved[] = $current_section_tipo;
-						#}
-					}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id)
-					#dump($ar_section_tipo_resolved, ' ar_section_tipo_resolved ++ '.to_string());
-
+							#if (!in_array($current_section_tipo, $ar_section_tipo_resolved)) {
+							#	$ar_section_tipo_resolved[] = $current_section_tipo;
+							#}
+						}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id)
+					
 					#$ar_uniques = array_unique(array_keys($group_by_section_tipo));
 					#$ar_section_tipo_resolved = array_merge($ar_section_tipo_resolved, $ar_uniques);
 					#debug_log(__METHOD__." ar_section_tipo_resolved ".to_string($ar_section_tipo_resolved), logger::ERROR);
 			}//end if ($resolve_references===true)
 
-			
-			#dump($ar_resolved_static, ' ar_resolved_static ++ '.to_string());
-			if(SHOW_DEBUG===true) {
-				#dump($ar_resolved_static_debug, ' ar_resolved_static_debug ++ '.to_string());;
-			}
 
 		// $this->ar_published_records = $ar_resolved_static;
 
@@ -1627,7 +1592,7 @@ class diffusion_sql extends diffusion  {
 
 		// response
 			$response->result = true;
-			$response->msg .= "Ok. Record updated $options->section_id and n references: ".count($ar_resolved_static);
+			$response->msg .= "Ok. Record updated '$options->section_id' and n references: ".count($ar_resolved_static).' in levels: '.DEDALO_DIFFUSION_RESOLVE_LEVELS.'. ';
 
 
 		return $response;
@@ -3616,10 +3581,10 @@ class diffusion_sql extends diffusion  {
 		$selected_date 	= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
 		$date_format 	= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
 
-			#dump($options, ' options ++ '.to_string());
-			#dump($dato, ' dato ++ '.to_string());
+			// dump($options, ' options ++ '.to_string());
+			// dump($dato, ' dato ++ '.to_string());
 			#dump($process_dato_arguments, ' process_dato_arguments ++ '.to_string());
-			#dump($selected_date, ' selected_date ++ '.to_string());
+			// dump($selected_date, ' selected_date ++ '.to_string());
 
 		// Check array key exists
 			if (!isset($dato[$selected_key])) {
@@ -3652,7 +3617,6 @@ class diffusion_sql extends diffusion  {
 				$value 	 = $dd_date->get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true);
 				break;
 		}
-
 
 		return $value;
 	}//end split_date_range
