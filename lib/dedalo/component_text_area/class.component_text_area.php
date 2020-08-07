@@ -354,7 +354,7 @@ class component_text_area extends component_common {
 	* Return component value sent to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
 		$valor_export = $this->get_valor($lang);
 		#$valor_export = br2nl($valor_export);

@@ -55,7 +55,7 @@ abstract class common {
 		return(false);
 	}
 	# SET
-	final private function SetAccessor($strMember, $strNewValue) {
+	final protected function SetAccessor($strMember, $strNewValue) {
 		
 		if(property_exists($this, $strMember)) {
 			$this->$strMember = $strNewValue;			
@@ -64,7 +64,7 @@ abstract class common {
 		}
 	}
 	# GET
-	final private function GetAccessor($strMember) {
+	final protected function GetAccessor($strMember) {
 		
 		if(property_exists($this, $strMember)) {
 			$strRetVal = $this->$strMember;

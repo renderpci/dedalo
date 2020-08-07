@@ -503,7 +503,7 @@ class component_layout extends component_common {
 	* @param array &$ar_resolved_elements
 	* @param array $ar_exclude_elements
 	*/
-	public static function walk_layout_map( $section_obj, $ar_tipo, &$ar_resolved_elements=array(), $ar_exclude_elements ) {
+	public static function walk_layout_map( $section_obj, $ar_tipo, &$ar_resolved_elements=array(), $ar_exclude_elements=[] ) {
 
 		$section_id				= $section_obj->get_section_id();
 		$modo 					= $section_obj->get_modo();

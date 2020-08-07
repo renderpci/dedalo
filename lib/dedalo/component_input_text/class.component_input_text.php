@@ -213,7 +213,7 @@ class component_input_text extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
 		$valor = $this->get_valor($lang);
 
@@ -339,7 +339,7 @@ class component_input_text extends component_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND'
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search=null, $current_lang=null, $search_value='', $comparison_operator='ILIKE') {//, $logical_operator = 'AND'
 
 		if (empty($search_value)) return false;
 
