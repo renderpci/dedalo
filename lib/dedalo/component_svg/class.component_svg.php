@@ -35,7 +35,7 @@ class component_svg extends component_common {
 		
 		$valor 			= $this->get_url(true);
 		
-		dump($valor,'$valor ');
+		// dump($valor,'$valor ');
 		return $valor;
 	}//end get_valor_export
 
@@ -241,7 +241,7 @@ class component_svg extends component_common {
 	* @param bool $absolute
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url($absolute=false) {
+	public function get_url($absolute=false, $test_file=true, $default_add=false) {
 
 		$aditional_path = $this->get_aditional_path();
 		
@@ -252,6 +252,19 @@ class component_svg extends component_common {
 		if ($absolute) {
 			$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
 		}
+
+		// File exists test : If not, show '0' dedalo image logo
+			if($test_file===true) {
+				$file = component_svg::get_file_path();
+				if(!file_exists($file)) {
+					if ($default_add===false) {
+						return false;
+					}
+					$url = component_svg::get_default_svg_url();
+				}
+			}
+
+
 
 		return $url;
 	}//end get_url
