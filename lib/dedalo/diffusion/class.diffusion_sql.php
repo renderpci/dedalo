@@ -1077,7 +1077,7 @@ class diffusion_sql extends diffusion  {
 										// Check target is publicable
 											$current_is_publicable = diffusion::get_is_publicable($current_locator);
 											if ($current_is_publicable!==true) {
-												debug_log(__METHOD__." + Skipped locator not publicable: ".json_encode($current_locator), logger::WARNING);
+												debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 												continue;
 											}
 
@@ -3346,7 +3346,7 @@ class diffusion_sql extends diffusion  {
 	public static function resolve_multiple($options, $dato, $default_separator=' | ') {
 
 		// check empty dato
-			if (empty($dato) || !isset($dato[0])) {				
+			if (empty($dato) || !isset($dato[0])) {
 				return null;
 			}
 
@@ -3360,9 +3360,9 @@ class diffusion_sql extends diffusion  {
 				// method
 					$current_method = $current_options->process_dato;
 
-				// options
+				// options. Each object inside resolve_multiple process_dato_arguments
 					$new_options = clone $options;
-						$new_options->propiedades = $current_options;	
+						$new_options->propiedades = $current_options;
 
 				// call method
 					$current_value = $current_method($new_options, $dato, $default_separator);
@@ -3546,9 +3546,9 @@ class diffusion_sql extends diffusion  {
 				$value		= json_encode($ar_value);
 				break;
 
-			default:
+			default:				
 				$separator	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
-				$value		= implode($separator,$ar_value);
+				$value		= implode($separator, $ar_value);
 				break;
 		}
 
