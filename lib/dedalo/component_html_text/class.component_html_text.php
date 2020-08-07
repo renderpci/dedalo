@@ -63,8 +63,9 @@ class component_html_text extends component_common {
 	public function get_dato_default_lang() {
 
 		$dato = parent::get_dato_default_lang();
+		
 		return $dato;
-	}
+	}//end get_dato_default_lang
 
 
 
@@ -72,21 +73,17 @@ class component_html_text extends component_common {
 	* GET VALOR
 	* Overwrite common_function
 	*/
-	public function get_valor() {			
+	public function get_valor() {
 		
 		switch ($this->modo) {
 			case 'dummy':
 			case 'diffusion':
-				#$dato = $this->get_dato();
-				$dato = parent::get_dato();		
+				$dato = parent::get_dato();
 				break;
 			
 			default:
-				$dato = parent::get_dato();	
-				#dump($dato,'dato');
-
-				$dato = $this->clean_text($dato);
-					#dump($dato ,'$dato ');				
+				$dato	= parent::get_dato();
+				$dato	= $this->clean_text($dato);
 				break;
 		}		
 
@@ -258,4 +255,3 @@ class component_html_text extends component_common {
 
 	
 }//end component_html_text
-?>
