@@ -3367,9 +3367,15 @@ class diffusion_sql extends diffusion  {
 				// call method
 					$current_value = $current_method($new_options, $dato, $default_separator);
 
-				// add if no empty
-					if($current_value !== null){
-						$ar_value[] = $current_value;
+
+				// empty_value. if defined, force custom empty value from properties arguments to insert into result array
+					if (true===self::empty_value($current_value) && isset($process_dato_arguments->empty_value)) {
+						$current_value	= $process_dato_arguments->empty_value; // any type is accepted: array, object, string ..
+						$ar_value[]		= $current_value;
+					}else{
+						if($current_value!==null){
+							$ar_value[] = $current_value;
+						}
 					}
 			}
 
@@ -3383,13 +3389,13 @@ class diffusion_sql extends diffusion  {
 					break;
 
 				default:
-					$separator 	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
+					$separator 	= $options->propiedades->separator ?? $default_separator;
 					$value 		= implode($separator,$ar_value);
 					break;
 			}
 
 		// check empty values
-			if (empty($value) && $value!='0') {
+			if (true===self::empty_value($value)) {
 				$value = null; // default empty value is 'null'
 			}
 
@@ -3498,23 +3504,45 @@ class diffusion_sql extends diffusion  {
 
 			switch ($output) {
 				case 'merged':
-					if ($value_array = json_decode($value)) {
-						$ar_value = array_merge($ar_value, (array)$value_array);
+					// empty_value. if defined, force custom empty value from properties arguments to insert into result array						
+						if (true===self::empty_value($value) && isset($process_dato_arguments->empty_value)) {
+							$value = $process_dato_arguments->empty_value; // any type is accepted: array, object, string ..
+							$value_array = is_array($value)
+								? $value
+								: json_decode($value);
+						}else{
+							$value_array = json_decode($value);
+						}
+
+					if ($value_array!==null) {
+						foreach ((array)$value_array as $value_array_value) {
+							$ar_value[] = $value_array_value;
+						}
 					}
 					break;
 
 				case 'split_date_range':
-					// used in numisdata935 to get indirect date
-					$current_options = $process_dato_arguments->output_options;	
-					$current_value 	 = self::split_date_range($current_options, $value);
-					$ar_value = [$current_value];
+					// used in numisdata935 to get indirect date					
+					$current_options	= $process_dato_arguments->output_options;
+					$value				= self::split_date_range($current_options, $value);					
+									
+					// store value in array
+						if (isset($process_dato_arguments->empty_value)) {
+							// always store
+							$ar_value[] = $value;
+						}else{
+							// only store if not empty
+							if (!empty($value) && $value!=='[]' && $value!=='{}') {
+								$ar_value[] = $value;
+							}
+						}
 					break;
 
 				default:
-					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
-						if (empty($value) && isset($process_dato_arguments->empty_value)) {
+					// empty_value. if defined, force custom empty value from properties arguments to insert into result array						
+						if (true===self::empty_value($value) && isset($process_dato_arguments->empty_value)) {
 							$value = $process_dato_arguments->empty_value; // any type is accepted: array, object, string ..
-						}
+						}							
 
 					// convert to string always
 						if (is_array($value) || is_object($value)) {
@@ -3557,7 +3585,7 @@ class diffusion_sql extends diffusion  {
 		#$uar_value	= array_unique($uar_value);
 		#$value		= implode(',',$ar_value);
 
-		if (empty($value) && $value!='0') {
+		if (true===self::empty_value($value)) {
 			$value = null; // default empty value is 'null'
 		}
 
@@ -3663,6 +3691,17 @@ class diffusion_sql extends diffusion  {
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element
+
+
+
+	/**
+	* EMPTY_VALUE
+	* Check if a value is considered empty
+	*/
+	public static function empty_value($value) {
+
+		return (bool)( (empty($value) || $value==='[]') && $value!='0' );		
+	}//end empty_value
 
 
 
