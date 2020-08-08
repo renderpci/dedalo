@@ -111,12 +111,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 			'tld'			=> 'tld',
 			'traducible'	=> 'traducible',
 			'relaciones'	=> 'relaciones',
-			'propiedades'	=> 'propiedades'
+			'propiedades'	=> 'propiedades',
+			'properties'	=> 'properties'
 		];
-		
-		if (DEDALO_ENTITY==='master') {
-			$ar_RelationMap['properties'] = 'properties';
-		}
 
 		return $ar_RelationMap;
 	}//end defineRelationMap
