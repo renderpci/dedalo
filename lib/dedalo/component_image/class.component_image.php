@@ -406,6 +406,11 @@ class component_image extends component_common {
 			if(!$quality)
 			$quality 	= $this->get_quality();
 
+		$external_source = $this->get_external_source();
+		if($external_source){
+			return $external_source;
+		}
+
 		// image id
 			$image_id 	= $this->get_image_id();
 
