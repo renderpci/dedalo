@@ -473,7 +473,7 @@ class component_text_area extends component_common {
 	* @param $text_raw
 	* @return $text_raw_updated
 	*/
-	public static function change_tag_state( $ar_tag, $state='r', $text_raw ) {
+	public static function change_tag_state( $ar_tag, $state='r', $text_raw='' ) {
 
 		# Force array
 		if (is_string($ar_tag)) $ar_tag = array($ar_tag);

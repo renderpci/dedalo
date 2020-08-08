@@ -64,12 +64,17 @@ class tool_time_machine extends tool_common {
 	}//end __construct
 
 
+
 	/**
 	* RENDER COMPONENT TIME MACHINE
 	* STATIC COMPOUND ARRAY OF TIME_MACHINE OBJTECTS (ONE FOR EVERY TIME_MACHINE RECORD)
 	* @see Used by trigger.tool_time_machine.php
 	*/
-	public static function get_ar_component_time_machine($tipo, $parent, $lang=null, $section_tipo, $limit=10, $offset=0) {
+	public static function get_ar_component_time_machine($tipo, $parent, $lang=null, $section_tipo=null, $limit=10, $offset=0) {
+
+		if (empty($section_tipo)) {
+			throw new Exception("Error Processing Request", 1);			
+		}
 
 		# creamos un array con las coincidencias existentes
 		$ar_time_machine_records = RecordObj_time_machine::get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo, $limit, $offset);
@@ -287,7 +292,11 @@ class tool_time_machine extends tool_common {
 	* UPDATE_RECORDS_IN_TIME_MACHINE
 	* @return array $ar_time_machine_obj
 	*/
-	public static function update_records_in_time_machine($tipo, $parent, $lang=NULL, $section_tipo) {
+	public static function update_records_in_time_machine($tipo, $parent, $lang=null, $section_tipo=null) {
+
+		if (empty($section_tipo)) {
+			throw new Exception("Error Processing Request", 1);			
+		}
 
 		# Creamos un objeto time_machine con los datos recibidos
 		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);

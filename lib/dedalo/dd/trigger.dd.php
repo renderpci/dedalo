@@ -390,7 +390,7 @@ if($accion==='editTS') {
 
 	# varibles recibidas obligatorias
 	$parentInicial	= safe_xss($_POST['parentInicial']);
-	$parentPost		= safe_xss($_POST['parent']);
+	$parentPost		= safe_xss($_POST['parent']);	
 	$esdescriptor	= safe_xss($_POST['esdescriptor']);
 	$propiedades	= safe_xss($_POST['propiedades']);
 	$properties		= safe_xss($_POST['properties']);
@@ -417,17 +417,25 @@ if($accion==='editTS') {
 	}
 
 	$RecordObj_dd_edit = new RecordObj_dd_edit($terminoID);
-	$RecordObj_dd_edit->get_ID(); # Force load
-	$RecordObj_dd_edit->set_parent($parentPost);
-	$RecordObj_dd_edit->set_esmodelo($esmodelo);
-	#$RecordObj_dd_edit->set_usableIndex($usableIndex);
+		$RecordObj_dd_edit->get_ID(); # Force load
+		$RecordObj_dd_edit->set_parent($parentPost);
+		$RecordObj_dd_edit->set_esmodelo($esmodelo);
+		$RecordObj_dd_edit->set_esdescriptor($esdescriptor);
+		#$RecordObj_dd_edit->set_usableIndex($usableIndex);
+	
+		if(isset($_POST['visible']))		$RecordObj_dd_edit->set_visible( safe_xss($_POST['visible']) );
+		if(isset($_POST['modelo']))			$RecordObj_dd_edit->set_modelo( safe_xss($_POST['modelo']) );
+		if(isset($_POST['traducible']))		$RecordObj_dd_edit->set_traducible( safe_xss($_POST['traducible']) );
+	
+		// propiedades
+			if(!empty($propiedades) && $propiedades!=='{}') {
+				$RecordObj_dd_edit->set_propiedades($propiedades);
+			}
 
-	if(isset($_POST['visible']))		$RecordObj_dd_edit->set_visible( safe_xss($_POST['visible']) );
-	if(isset($_POST['esdescriptor']))	$RecordObj_dd_edit->set_esdescriptor( safe_xss($_POST['esdescriptor']) );
-	if(isset($_POST['modelo']))			$RecordObj_dd_edit->set_modelo( safe_xss($_POST['modelo']) );
-	if(isset($_POST['traducible']))		$RecordObj_dd_edit->set_traducible( safe_xss($_POST['traducible']) );
-	if(isset($_POST['propiedades']) && $_POST['propiedades']!=='{}') $RecordObj_dd_edit->set_propiedades( safe_xss($_POST['propiedades']) );
-	if(isset($_POST['properties']) && $_POST['properties']!=='{}')	 $RecordObj_dd_edit->set_properties( safe_xss($_POST['properties']) );
+		// properties
+			if(!empty($properties) && $properties!=='{}') {
+				$RecordObj_dd_edit->set_properties($properties);
+			}
 
 	# Verificamos si el padre asignado existe. (Antes verificamos el prefijo)
 	$RecordObj_dd_edit_parent	= new RecordObj_dd_edit($parentPost);
@@ -436,7 +444,7 @@ if($accion==='editTS') {
 	#$prefijo = dd::terminoID2prefix($terminoID);
 	$prefijo = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
 	if( strlen($parent_terminoID)>=2 || $parentPost==='dd0' ) {
-
+	
 		# El parent SI existe: Ejecutamos el UPDATE
 		$current_id = $RecordObj_dd_edit->Save();
 
@@ -473,8 +481,10 @@ if($accion==='editTS') {
 
 		$html .= "
 			<script type=\"text/javascript\">
-				window.opener.location.reload();
-				window.close();
+				if(window.opener) {
+					window.opener.location.reload();
+					window.close();
+				}
 			</script>";
 		echo $codHeader . $html ;
 		exit();
@@ -490,8 +500,10 @@ if($accion==='editTS') {
 
 			$html .= "
 			<script type=\"text/javascript\">
-				window.opener.openDivTrack('$parentPost',1,'$parentPost');
-				window.close();
+				if(window.opener) {
+					window.opener.openDivTrack('$parentPost',1,'$parentPost');
+					window.close();
+				}
 			</script>";
 
 		# Si ha cambiado el parent
@@ -515,16 +527,20 @@ if($accion==='editTS') {
 				$html .= "
 				<script type=\"text/javascript\">
 					//alert('parentPost:$parentPost - terminoIDpost:$terminoIDpost')
-					window.opener.location.reload();
-					window.close();
+					if(window.opener) {
+						window.opener.location.reload();
+						window.close();
+					}					
 				</script>";
 			}else{
 				# Reload only de parent div
 				$html .= "
 				<script type=\"text/javascript\">
 					//alert('parentPost:$parentPost - terminoIDpost:$terminoIDpost')
-					window.opener.openDivTrack('$parentPost',1,'$terminoIDpost');
-					window.close();
+					if(window.opener) {
+						window.opener.openDivTrack('$parentPost',1,'$terminoIDpost');
+						window.close();
+					}
 				</script>";
 			}
 

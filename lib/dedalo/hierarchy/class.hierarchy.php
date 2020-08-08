@@ -711,7 +711,7 @@ class hierarchy {
 	* ROW_TO_JSON_OBJ
 	* @return
 	*/
-	private static function row_to_json_obj($tipo, $parent, $dato=null, $lang='lg-spa',$section_tipo) {
+	private static function row_to_json_obj($tipo, $parent, $dato=null, $lang='lg-spa', $section_tipo=null) {
 
 		if(empty($dato)){
 			return false;
@@ -725,8 +725,8 @@ class hierarchy {
 		}
 
 		$modo ='edit';
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$component 		= component_common::get_instance( $modelo_name,
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$component		= component_common::get_instance( $modelo_name,
 														  $tipo,
 														  $parent,
 														  $modo,
@@ -1766,4 +1766,5 @@ class hierarchy {
 
 
 }//end class hierarchy
-?>
+
+

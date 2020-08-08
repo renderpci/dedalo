@@ -31,7 +31,7 @@ class ImageMagick {
 				return true;
 			}
 		}
-	}
+	}//end test_image_magick
 
 
 
@@ -40,14 +40,14 @@ class ImageMagick {
 	* @param $mode (str 'edit,list,..')
 	* @param $f (str filename)
 	*/
-	public static function get_thumb( $mode, $f, $verify=true, $initial_media_path) {
+	public static function get_thumb($mode, $f, $verify=true, $initial_media_path='') {
 
 		if(empty($f)) throw new Exception("Error Processing Request. Few arguments", 1);
 
 		#if(file_exists(DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f)) unlink(DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f);
 
-		$thumb_file_path 	= DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
-		$thumb_file_url 	= DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
+		$thumb_file_path	= DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
+		$thumb_file_url		= DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
 
 		# FAST METHOD (NOT verify)
 		if(!$verify) return $thumb_file_url;
@@ -108,7 +108,7 @@ class ImageMagick {
 	* @param $source_file (full sourcefile path)
 	* @param $target_file (full target thumb file path)
 	*/
-	public static function dd_thumb( $mode, $source_file, $target_file, $dimensions=false, $initial_media_path) {
+	public static function dd_thumb($mode, $source_file, $target_file, $dimensions=false, $initial_media_path=null) {
 
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -213,15 +213,14 @@ class ImageMagick {
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
 		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, 0777,true)) {
+			if(!mkdir($folder_path, 0777, true)) {
 				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
 			}
 		}
 
-
 		# convert 21900.jpg json: : Get info aboout source file Colorspace
 		#$colorspace_info  = shell_exec( MAGICK_PATH . "identify -verbose " .$source_file." | grep \"Colorspace:\" ");
-		$colorspace_info  = shell_exec( MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]" );	//-format "%[EXIF:DateTimeOriginal]"
+		$colorspace_info = shell_exec( MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]" );	//-format "%[EXIF:DateTimeOriginal]"
 			#dump($colorspace_info,'colorspace_info');
 
 		# Layers info
@@ -276,7 +275,7 @@ class ImageMagick {
 
 
 		# EXE COMMAND
-		#$result = exec_::exec_command($command);
+		// $result = exec_::exec_command($command);
 		$result = exec($command.' 2>&1', $output, $worked_result);
 		if(SHOW_DEBUG) {
 			if ($worked_result!=0) {
@@ -319,8 +318,8 @@ class ImageMagick {
 		# 1 single image
 		# 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT OAND CONVERT
 		# 3 true layer tiff
-		$command 		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
-		$tiff_format  	= shell_exec($command);
+		$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
+		$tiff_format	= shell_exec($command);
 
 		$command = MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
 	    $output  = shell_exec($command); 
@@ -340,20 +339,16 @@ class ImageMagick {
 	    		$layer_type = 'REDUCEDIMAGE';
 	    	}else{
 	    		$layer_type = $ar_part2[1];
-	    	}
-	    	
+	    	}	    	
 
 	    	$ar_layers[$layer_key] = $layer_type;
 	    }
-		#dump($ar_layers, ' $ar_layers ++ '.to_string());
 
 	   	return (array)$ar_layers;
 	}//end get_layers_file_info
 
 
-	
-	
 
-	
 }//end ImageMagick
-?>
+
+

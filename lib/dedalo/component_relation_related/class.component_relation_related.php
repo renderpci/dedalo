@@ -450,7 +450,7 @@ class component_relation_related extends component_relation_common {
 	# 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	* @return array $ar_references
 	*/
-	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang) {
+	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang=DEDALO_DATA_LANG) {
 	
 		static $ar_resolved = array();
 

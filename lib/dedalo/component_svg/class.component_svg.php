@@ -54,6 +54,10 @@ class component_svg extends component_common {
 		
 		$diffusion_value = $this->get_url($absolute=false, $test_file=true, $default_add=false);
 
+		if (empty($diffusion_value)) {
+			return null;
+		}
+
 		return (string)$diffusion_value;
 	}//end get_diffusion_value	
 
