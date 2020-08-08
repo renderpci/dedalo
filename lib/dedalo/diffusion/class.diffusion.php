@@ -730,7 +730,7 @@ abstract class diffusion  {
 	* @return mixed $value
 	*/
 	public static function resolve_component_value( $options, $dato ) {
-		#dump($options, ' options ++ '.to_string());
+		// dump($options, ' options ++ '.to_string());
 		#dump($dato, ' dato ++ '.to_string());
 
 		# Ref. $options

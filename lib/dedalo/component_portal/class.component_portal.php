@@ -691,7 +691,7 @@ class component_portal extends component_relation_common {
 	* Este método es casi indéntico a component_relation::get_ar_section_relations_for_current_tipo_section_static() pero NO comprueba el tipo.
 	* Cualquier tipo es válido
 	*/
-	public static function get_ar_section_relations_for_current_section_tipo_static($modo='ar_multiple', $dato) {
+	public static function get_ar_section_relations_for_current_section_tipo_static($modo='ar_multiple', $dato=null) {
 
 		# Recorremos cada registro relacionado
 		$ar_id_records 			= array();

@@ -602,7 +602,7 @@ class component_security_areas extends component_common {
 	*
 	* @see menu :: walk_ar_tesauro($ar_tesauro, $arguments_tree=array(), $option='create_link')
 	*/
-	public static function create_checkbox($tipo, $termino, $modelo_name=NULL, $arguments_tree) {
+	public static function create_checkbox($tipo, $termino, $modelo_name, $arguments_tree) {
 		#dump($arguments_tree,"tipo"); die();
 		#dump($termino,'termino');
 

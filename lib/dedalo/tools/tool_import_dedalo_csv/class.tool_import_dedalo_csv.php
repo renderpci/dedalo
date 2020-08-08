@@ -259,8 +259,11 @@ class tool_import_dedalo_csv extends tool_common {
 
 				// Check if is a json string. Is yes, decode
 					if(strpos($value, '[')===0 || strpos($value, '{')===0) {
-						if($dato_from_json = json_decode($value)) {
+						if($dato_from_json = json_decode($value)) {	// , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 							$value = $dato_from_json;
+						}else{
+							// log json conversion error
+							debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
 						}
 					}
 					# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);

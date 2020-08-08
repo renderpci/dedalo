@@ -42,9 +42,13 @@ class diffusion_mysql extends diffusion_sql  {
 	* EXEC_MYSQL_QUERY
 	* @return
 	*/
-	public static function exec_mysql_query($sql, $table_name=null, $database_name, $multi_query=false) {
+	public static function exec_mysql_query($sql, $table_name=null, $database_name=false, $multi_query=false) {
 
 		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
+
+		if (empty($database_name)) {
+			throw new Exception("Error Processing Request. database_name is mandatory !", 1);			
+		}
 
 		$mysql_conn = self::get_conn($database_name);
 		# Set as class static var

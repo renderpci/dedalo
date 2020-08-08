@@ -803,25 +803,51 @@ class web_data {
 		*/
 		private static function build_sql_where($lang, $sql_filter) {
 
-			$sql  = '';
-			$sql .= 'WHERE section_id IS NOT NULL';
+			// $sql  = '';
+			// $sql .= 'WHERE section_id IS NOT NULL';
 
-			# SQL_FILTER
-			if(!empty($sql_filter) && strlen($sql_filter)>2 ) {
-				if($sql_filter===PUBLICACION_FILTER_SQL) {
-					$sql .= PHP_EOL . $sql_filter;
-				}else{
-					$sql .= PHP_EOL . 'AND ('.$sql_filter.')';
-				}
-			}
+			// # SQL_FILTER
+			// if(!empty($sql_filter) && strlen($sql_filter)>2 ) {
+			// 	if($sql_filter===PUBLICACION_FILTER_SQL) {
+			// 		$sql .= PHP_EOL . $sql_filter;
+			// 	}else{
+			// 		$sql .= PHP_EOL . 'AND ('.$sql_filter.')';
+			// 	}
+			// }
 
-			# LANG
-			if(!empty($lang)) {
-				if (strpos($lang, 'lg-')===false) {
-					$lang = 'lg-'.$lang;
+			// # LANG
+			// if(!empty($lang)) {
+			// 	if (strpos($lang, 'lg-')===false) {
+			// 		$lang = 'lg-'.$lang;
+			// 	}
+			// 	$sql .= PHP_EOL . 'AND lang = \''.$lang.'\'';
+			// }
+
+			$ar_parts = [];
+
+			// sql_filter
+				if(!empty($sql_filter) && strlen($sql_filter)>2) {
+					if($sql_filter===PUBLICACION_FILTER_SQL) {
+						$ar_parts[] = $sql_filter;
+					}else{
+						$sql_filter_clean = ( substr($sql_filter, 0, 1)==='(' && substr($sql_filter, -1)===')' )
+							? trim($sql_filter)
+							: '('.trim($sql_filter).')';
+						$ar_parts[] = $sql_filter_clean;
+					}
 				}
-				$sql .= PHP_EOL . 'AND lang = \''.$lang.'\'';
-			}
+
+			// lang
+				if(!empty($lang)) {
+					
+					$lang_code = (strpos($lang, 'lg-')===false)
+						? 'lg-'.$lang
+						: $lang;
+					$ar_parts[] = '`lang`=\''.$lang_code.'\'';
+				}
+
+			// sql
+				$sql = 'WHERE ' . implode(' AND ', $ar_parts);
 
 
 			return $sql;
@@ -2081,7 +2107,7 @@ class web_data {
 
 						# Resolve parent term name
 						$options_hierarchy = new stdClass();
-							$options_hierarchy->table 		= $options->table;
+							$options_hierarchy->table 		= $table;
 							$options_hierarchy->ar_fields 	= array('term');
 							$options_hierarchy->lang 	 	= $options->lang;
 							$options_hierarchy->sql_filter  = "`section_id` = ".(int)$ar[1];
@@ -2093,22 +2119,28 @@ class web_data {
 						$parent_term = isset($rows_data->result[0]) ? $rows_data->result[0]['term'] : '';
 					}
 
-					$ar_value[] = array('tld'=>$tld, 'term_id'=>$parent, 'term'=>$parent_term );
+					$ar_value[] = [
+						'tld'		=> $tld,
+						'term_id'	=> $parent,
+						'term'		=> $parent_term
+					];
 				}
 				$rows_data = new stdClass();
 					$rows_data->result = $ar_value;
+
 			}else{
 				# DISTINCT TESAURUS (TLD)
 					# Get all different thesaurus tld
 					$rd_options = new stdClass();
-						$rd_options->table 		= $options->table;
+						$rd_options->table 		= $table;
 						$rd_options->ar_fields 	= array('DISTINCT tld AS tld');
 						#$rd_options->order 	= $options->order;
 						$rd_options->order 		= "";
 
 					$rows_data	= (object)web_data::get_rows_data( $rd_options );
+						#dump($rows_data, ' rows_data ++ '.to_string($table));				
 			}
-			#dump($rows_data, ' rows_data ++ '.to_string());
+			
 
 
 			# THESAURUS ROOT LEVEL TERMS
@@ -2116,6 +2148,10 @@ class web_data {
 				$ar_ts_terms=array();
 				$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
 				foreach ((array)$rows_data->result as $ar_value) {
+
+					if (empty($ar_value)) {
+						continue;
+					}
 
 					$current_tld = $ar_value['tld'];
 						# Skip excluded tlds
@@ -2135,8 +2171,11 @@ class web_data {
 						continue;
 					}
 
+					// term
+					$term = $ar_value['term'] ?? '';
+
 					# Table optimized version contains only possible table instead all tables (reduce union query time)
-					$thesaurus_table = $options->table;
+					$thesaurus_table = $table;
 					foreach ($table_thesaurus_map as $tkey => $tvalue) {
 						if (strpos($term_id, $tkey)===0) {
 							$thesaurus_table = $tvalue; break;
@@ -2145,7 +2184,7 @@ class web_data {
 					#dump($thesaurus_table, ' thesaurus_table ++ '.to_string($term_id));
 
 					$ar_children = ts_term::get_ar_children($term_id, $thesaurus_table);
-						#dump($ar_children, '$ar_children ++ '.to_string($term_id));
+						// dump($ar_children, '$ar_children ++ term_id: '.$term_id." - thesaurus_table: ".to_string($thesaurus_table));
 
 					foreach ($ar_children as $current_term_id) {
 
@@ -2157,7 +2196,7 @@ class web_data {
 						# Create a object 'ts_term' and get term info
 						$ts_term_options = new stdClass();
 							$ts_term_options->table 	  = $thesaurus_table;
-							$ts_term_options->parent_term = $ar_value['term'];
+							$ts_term_options->parent_term = $term;
 						$ts_term = ts_term::get_ts_term_instance($current_term_id, $options->lang , $ts_term_options);
 
 						# Force to load data from database
@@ -2172,9 +2211,8 @@ class web_data {
 						#}
 					}
 
-
 				}//end foreach ((array)$rows_data->result) as $current_tld) {
-				#dump($ar_ts_terms, ' $ar_ts_terms ++ '.to_string()); #die();
+				// dump($ar_ts_terms, ' $ar_ts_terms ++ '.to_string()); #die();
 
 			$response = new stdClass();
 				$response->result 	= (array)$ar_ts_terms;

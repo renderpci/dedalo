@@ -8,7 +8,7 @@ class PdfObj extends MediaObj {
 	protected $pdf_id ;			# pdf_id
 	protected $quality ;
 		
-	function __construct($pdf_id, $quality=false, $aditional_path=false, $initial_media_path) {		
+	function __construct($pdf_id, $quality=false, $aditional_path=false, $initial_media_path='') {		
 		
 		# SPECIFIC VARS
 		$this->set_pdf_id($pdf_id);

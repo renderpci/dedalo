@@ -67,7 +67,7 @@
 				}
 				# sort by label
 				uasort($ar_sections, function($a, $b) {
-				    return $a['label'] > $b['label'];
+				    return ($a['label'] > $b['label']) ? 1 : -1;
 				});
 				#dump($ar_sections, ' ar_sections ++ '.to_string($parent)." ".count($ar_sections));
 				break;

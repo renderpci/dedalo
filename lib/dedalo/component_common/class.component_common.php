@@ -72,7 +72,7 @@ abstract class component_common extends common {
 	* Singleton pattern
 	* @returns array array of component objects by key
 	*/
-	public static function get_instance($component_name=null, $tipo, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
+	public static function get_instance($component_name=null, $tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
 
 		# TIPO : MANDATORY
 		if (empty($tipo)) {
@@ -1040,7 +1040,7 @@ abstract class component_common extends common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
 		if (empty($valor)) {
 			$valor = $this->get_valor($lang);
@@ -2909,7 +2909,7 @@ abstract class component_common extends common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND'
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search=null, $current_lang=null, $search_value='', $comparison_operator='ILIKE') {//, $logical_operator = 'AND'
 
 		if (empty($search_value)) return false;
 
@@ -3764,7 +3764,7 @@ abstract class component_common extends common {
 	*	Type of dataframe element (encoded type of uncertainty, time, space, etc.)
 	* @return bool
 	*/
-	public function update_dataframe_element( $locator=null, $from_key, $type ) {
+	public function update_dataframe_element( $locator=null, $from_key=null, $type=null ) {
 
 		$current_dataframe 	= (array)$this->get_dataframe();
 		$final_dataframe 	= array();

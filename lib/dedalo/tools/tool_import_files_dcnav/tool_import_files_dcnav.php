@@ -53,7 +53,7 @@
 						# JS includes
 							# The Templates plugin is included to render the upload/download listings
 							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/javascript-templates/js/tmpl.min.js';
-							# The Templates plugin is included to render the upload/download listings
+							# The load-image plugin is included to manage the image thumbnails
 							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/javascript_load_image/js/load-image.min.js';
 
 							# Bootstrap JS is not required, but included for the responsive demo navigation

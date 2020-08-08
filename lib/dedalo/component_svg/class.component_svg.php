@@ -33,11 +33,33 @@ class component_svg extends component_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 		
-		$valor 			= $this->get_url(true);
+		$valor = $this->get_url(true);
 		
-		// dump($valor,'$valor ');
+		
 		return $valor;
 	}//end get_valor_export
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value($lang=null) {
+		
+		$diffusion_value = $this->get_url($absolute=false, $test_file=true, $default_add=false);
+
+		if (empty($diffusion_value)) {
+			return null;
+		}
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value	
 
 
 
@@ -210,7 +232,7 @@ class component_svg extends component_common {
 
 	/**
 	* GET_TARGET_DIR
-	* @return 
+	* @return string $target_dir
 	*/
 	public function get_target_dir() {
 
@@ -265,7 +287,6 @@ class component_svg extends component_common {
 			}
 
 
-
 		return $url;
 	}//end get_url
 
@@ -284,14 +305,13 @@ class component_svg extends component_common {
 			return null;
 		}
 		
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-		$component 		= component_common::get_instance($modelo_name,
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
+		$component		= component_common::get_instance($modelo_name,
 														 $locator->component_tipo,
 														 $locator->section_id,
 														 'list',
 														 DEDALO_DATA_NOLAN,
-														 $locator->section_tipo
-														 );
+														 $locator->section_tipo);
 		$url = $component->get_url();
 	
 		return $url;
@@ -355,25 +375,6 @@ class component_svg extends component_common {
 
 
 
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( $lang=null ) {
-		
-		$diffusion_value = $this->get_url();
-
-
-		return (string)$diffusion_value;
-	}//end get_diffusion_value	
-
-
-
-
 }//end class component_svg
-?>
+
+

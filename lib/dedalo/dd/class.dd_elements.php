@@ -322,50 +322,43 @@ class dd_elements {
 	/*
 	crea el botón P si hay propiedades
 	*/
-	protected static function renderBtn_propiedades($terminoID,$propiedades)
-	{
-		global $mostrar_title ;
-		global $propiedades_title;
+	protected static function renderBtn_propiedades($terminoID, $propiedades) {
+		global $mostrar_title, $propiedades_title;		
 
-		$add_class='';
-		$ob = json_decode($propiedades);
-		if($ob === null) {
-			// $ob is null because the json cannot be decoded
-			$add_class = 'json_bad_alert';
-		}
+		$html = '';		
+		if(!empty($terminoID)) {
 
-		$obj_html 	= '';#"\n <!-- Btn Mostrar propiedades -->";
-		$divDestino = "propiedades_".$terminoID;
-		if($terminoID)
-		{
-			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $propiedades_title\" ";
-			#$obj_html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
-			#$obj_html .= "></div>";
-			$obj_html 	 .= "\n <div class=\"cuadroU btn_propiedades $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+			$ob = json_decode($propiedades);
+			$add_class = ($ob===null)
+				? 'json_bad_alert'
+				: '';
+			
+			$divDestino = "propiedades_".$terminoID;	
+			#$html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $propiedades_title\" ";
+			#$html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
+			#$html .= "></div>";
+			$html 	 .= " <div class=\"cuadroU btn_propiedades $add_class\" title=\"$mostrar_title $propiedades_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div> ";
 		}
-		return $obj_html ;
+		return $html ;
 	}
 	/*
 	crea el botón P si hay properties
 	*/
-	protected static function renderBtn_properties($terminoID,$properties)
-	{
-		global $mostrar_title ;
-		global $properties_title;
+	protected static function renderBtn_properties($terminoID, $properties)	{
+		global $mostrar_title, $properties_title;
 
-		$add_class='';
-		$ob = $properties;		
+		$html = '';		
+		if(!empty($terminoID)) {
 
-		$obj_html 	= '';
-		$divDestino = "properties_".$terminoID;
-		if($terminoID)
-		{
-			#$obj_html .= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $properties_title\" ";
-			#$obj_html .= "onclick=\"multiToogle('$divDestino','block','none');\" ";
-			#$obj_html .= "></div>";
-			$obj_html 	 .= "\n <div class=\"cuadroU btn_properties $add_class\" title=\"$mostrar_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div>";
+			$add_class	= '';
+			$divDestino	= 'properties_'.$terminoID;
+
+			#$html	.= "\n <div class=\"mostrar-obs\" title=\"$mostrar_title $properties_title\" ";
+			#$html	.= "onclick=\"multiToogle('$divDestino','block','none');\" ";
+			#$html	.= "></div>";
+			$html	.= " <div class=\"cuadroU btn_properties $add_class\" title=\"$mostrar_title\" onclick=\"multiToogle('$divDestino','block','none');\"> P </div> ";
 		}
-		return $obj_html ;
+		return $html ;
 	}
 
 	/*
@@ -375,10 +368,10 @@ class dd_elements {
 
 		global $mostrar_NO_descriptors_title ;
 
-		$obj = "\n <!-- Btn Mostrar No escriptores -->";
-		$obj .= "\n <div class=\"mostrar-nd\" title=\"$mostrar_NO_descriptors_title\" ";
+		$obj  = '';
+		$obj .= "<div class=\"mostrar-nd\" title=\"$mostrar_NO_descriptors_title\" ";
 		$obj .= "onclick=\"multiToogle('nd$terminoID','block','none');\" ";
-		$obj .= "></div>";
+		$obj .= '></div>';
 
 		return $obj ;
 	}
@@ -388,10 +381,10 @@ class dd_elements {
 	*/
 	protected static function renderBtnU($terminoID,$termino,$nIndexaciones)
 	{
-		$html 	 = "\n <!-- Btn Mostrar usados -->";
-		$title 	 = '';#label::get_label('');
+		$html 	 = '';
+		$title 	 = '';
 		$termino = urlencode($termino);
-		$html 	 .= "\n <div class=\"cuadroU\" title=\"$title\" onclick=\"dd.show_indexations('$terminoID','$termino');\">U:$nIndexaciones</div>";
+		$html 	 .= "<div class=\"cuadroU\" title=\"$title\" onclick=\"dd.show_indexations('$terminoID','$termino');\">U:$nIndexaciones</div>";
 
 		return $html ;
 	}
@@ -404,12 +397,12 @@ class dd_elements {
 		global $mostrar_title ;
 		global $modelo_title ;
 
-		$obj = "\n <!-- Btn Mostrar modelo -->";
-		$obj .= "\n <div class=\"mostrar-modelo\" title=\"$mostrar_title $modelo_title\" ";
+		$obj  = '';
+		$obj .= "<div class=\"mostrar-modelo\" title=\"$mostrar_title $modelo_title\" ";
 		$obj .= "onclick=\"$('#m_$terminoID').toggle()\"";
 		$obj .= "></div>";
 
-		$obj .= "\n <span id=\"m_$terminoID\" class=\"btnModelo\">";	
+		$obj .= "<span id=\"m_$terminoID\" class=\"btnModelo\">";	
 
 		$obj .= $modelo_name ;
 		#$obj .= Tesauro::modelo2text($modelo) ;
@@ -421,31 +414,35 @@ class dd_elements {
 	/*
 	crea el botón Flecha Mostrar u ocultar hijos
 	*/
-	protected static function renderBtnFlecha($terminoID, $children=0, $desplegado=0, $parent) {
-
+	protected static function renderBtnFlecha($terminoID, $children=0, $desplegado=0, $parent=null) {
 		global $mostrar_hijos_title, $ocultar_hijos_title ;
 
-		$obj = "\n <!-- Btn Flecha Mostrar / Ocultar hijos -->";
-		if($children >0)
-		{
-			$obj .= "\n <div onclick=\"dd.ToggleTS('$terminoID','abrir',null,'$parent');\" class=\"divflechaC\" >\n";
-			if($desplegado===1)
-			{
+		$html = '';
+		if($children>0) {
+			
+			$html .= '<div onclick="dd.ToggleTS(\''.$terminoID.'\',\'abrir\',null,\''.$parent.'\')" class="divflechaC">';
+			if($desplegado===1){
 				$displayFlechaDer 	= 'none';
 				$displayFlechaDown 	= 'block';
 			}else{
 				$displayFlechaDer	= 'block';
 				$displayFlechaDown	= 'none';
 			}
-			$obj .= "  <img id=\"fopen$terminoID\" src=\"../themes/default/flecha_der.gif\" style=\"display:$displayFlechaDer\" title=\"$mostrar_hijos_title $terminoID\" />";
-			$obj .= "\n  <img id=\"fclose$terminoID\" src=\"../themes/default/flecha_down.gif\" style=\"display:$displayFlechaDown\" title=\"$ocultar_hijos_title\" />";
-			$obj .= "\n </div>\n";
+			$open_img_id = 'fopen' . $terminoID;
+			$html .= '<img id="'.$open_img_id.'" src="../themes/default/flecha_der.gif" style="display:'.$displayFlechaDer.'" title="'.$mostrar_hijos_title.' '.$terminoID.'" />';
+			
+			$close_img_id = 'fclose' . $terminoID;
+			$html .= '<img id="'.$close_img_id.'" src="../themes/default/flecha_down.gif" style="display:'.$displayFlechaDown.'" title="'.$ocultar_hijos_title.'" />';
+			
+			$html .= '</div>';
+
 		}else{
-			$obj .= "\n <div class=\"divflechaC\" ></div>";
+
+			$html .= '<div class="divflechaC"></div>';
 		}
 
-		return $obj ;
-	}
+		return $html;
+	}//end renderBtnFlecha
 
 
 
