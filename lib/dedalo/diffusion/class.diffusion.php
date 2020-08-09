@@ -762,9 +762,19 @@ abstract class diffusion  {
 		$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
+		$section_id = !empty($options->section_id)
+			? $options->section_id
+			: $options->parent;
+
+
+		if ($method==='get_diffusion_value') {
+			// inject mandatory lang
+			array_unshift($custom_arguments, $options->lang);
+		}
+
 		$component 		= component_common::get_instance($modelo_name,
 														 $component_tipo,
-														 $options->section_id,
+														 $section_id,
 														 'list',
 														 $options->lang,
 														 $options->section_tipo,
@@ -798,11 +808,12 @@ abstract class diffusion  {
 
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
 		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
-
+			
 		# Add childrens from table alias too
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
 				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
+
 				# Merge all
 				$ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
 			}
