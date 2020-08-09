@@ -463,8 +463,11 @@ const get_input_element_edit = (i, current_value, ul_container, self, is_inside_
 			parent 			: li
 		})
 
-	//init the map with the wrapper
-		self.get_map(map_container, current_value)
+	// init the map with the wrapper when container node is in DOM
+		event_manager.when_in_dom(map_container, draw_map)
+		function draw_map() {			
+			self.get_map(map_container, current_value)
+		}		
 
 
 
