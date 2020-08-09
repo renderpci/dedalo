@@ -17,6 +17,7 @@
 	$context = [];
 
 	if($options->get_context===true && $permissions>0){
+		// $api_start_time=microtime(1);
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
@@ -38,7 +39,7 @@
 						$current_context->properties->source->records_mode = 'list';
 					}
 					$context[] = $current_context;
-
+					// dump(null, 'Time to context portal BEFORE SUBCONTEXT: '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 				// subcontext from element layout_map items (from_parent, parent_grouper)
 					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
 					foreach ($ar_subcontext as $current_context) {
@@ -46,6 +47,7 @@
 					}
 				break;
 		}
+		// dump(null, 'Time to context portal : '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 	}//end if($options->get_context===true)
 
 
@@ -54,24 +56,24 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
+		// $api_start_time_data=microtime(1);
 
 		$section_id	= $this->get_section_id();
-		$properties	= $this->get_properties();
+		$limit		= $this->pagination->limit;
+		$offset		= $this->pagination->offset;
 
 		switch ($modo) {
 			case 'list':
 				$dato	= $this->get_dato();
-				$value	= $this->get_dato_paginated(); // $dato;
-				$limit	= $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records;
+				$value	= $this->get_dato_paginated();
 				break;
 			case 'edit':
 			default:
 				$dato	= $this->get_dato();
 				$value	= $this->get_dato_paginated();
-				$limit	= $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
 				break;
 		}
-
+		
 		if (!empty($dato)) {
 
 			// data item
@@ -82,11 +84,11 @@
 						$pagination = new stdClass();
 							$pagination->total	= count($dato);
 							$pagination->limit	= $limit;
-							$pagination->offset	= $this->pagination->offset ?? 0;
+							$pagination->offset	= $offset;
 					$item->pagination = $pagination;
 
 				$data[] = $item;
-
+			
 			// subcontext data from layout_map items
 				$ar_subdata = $this->get_ar_subdata($value);
 
@@ -100,6 +102,7 @@
 				}
 
 		}//end if (!empty($dato))
+		// dump(null, 'Time to data portal 2 : '.exec_time_unit($api_start_time_data,'ms')." ms".to_string());
 	}//end if $options->get_data===true && $permissions>0
 
 

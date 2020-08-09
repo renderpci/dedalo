@@ -65,13 +65,13 @@
 	$initiator = $_GET['initiator'] ?? false;
 
 	// menu. Get the mandatory menu element
-		if ($initiator===false) {
+		// if ($initiator===false) {
 
-			$menu = new menu();
-			$menu->set_lang(DEDALO_DATA_LANG);
+		// 	$menu = new menu();
+		// 	$menu->set_lang(DEDALO_DATA_LANG);
 
-			$page_elements[] = [$menu->get_source()];
-		}
+		// 	$page_elements[] = [$menu->get_source()];
+		// }
 
 	// section/area/tool. Get the page element from get url vars
 		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);

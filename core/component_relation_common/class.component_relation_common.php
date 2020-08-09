@@ -25,9 +25,9 @@ class component_relation_common extends component_common {
 
 		// $dato_full. component dato with all langs
 		public $dato_full;
+		
 
-
-
+	
 	/**
 	* GET_COMPONENTS_WITH_RELATIONS
 	* Array of components modelo name that usin locators in dato and extends component_relation_common
@@ -101,6 +101,7 @@ class component_relation_common extends component_common {
 		// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 		// 	}
 		// }
+		
 
 		return true;
 	}//end __construct
@@ -400,7 +401,7 @@ class component_relation_common extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			// if not already receved 'valor', force component load 'dato' from DB

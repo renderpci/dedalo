@@ -78,8 +78,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	* GET_AR_TIME_MACHINE_OF_THIS		
 	* AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
 	*/
-	public static function get_ar_time_machine_of_this($tipo=null, $parent, $lang=null, $section_tipo, $limit=10, $offset=0) {
-
+	public static function get_ar_time_machine_of_this($tipo=null, $parent=null, $lang=null, $section_tipo=null, $limit=10, $offset=0) {
 
 		/// Temporal !!!
 		#$limit = 1000000;

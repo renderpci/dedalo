@@ -17,9 +17,6 @@ class component_relation_children extends component_relation_common {
 	// ar_target_section_tipo
 	public $ar_target_section_tipo;		# Used to fix section tipo (calculado a partir del componente relacionado de tipo section) Puede ser virtual o real
 
-	// default paginated max rows
-	public $max_records = 5;
-
 
 
 	/**

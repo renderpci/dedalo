@@ -99,6 +99,30 @@ const event_manager_class = function(){
 
 
 
+	/**
+	* WHEN_IN_DOM
+	* Exec a callback when node element is placed in the DOM (then is possible to know their size, etc.)
+	* Useful to render leaflet maps and so forth
+	* @return mutation observer
+	*/
+	this.when_in_dom = function(node, callback) {
+
+		const observer = new MutationObserver(function(mutations) {
+			if (document.contains(node)) {
+				// console.log("It's in the DOM!");
+				observer.disconnect();
+
+				callback()
+			}
+		});
+
+		observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
+
+		return observer
+	}//end when_in_dom
+
+
+
 }//end event_manager
 
 
