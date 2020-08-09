@@ -212,7 +212,6 @@ class dd_utils_api {
 
 			if(SHOW_DEBUG===true) {
 				$check_status_exec_time = exec_time_unit($start_time,'ms')." ms";
-				// dump($remote_server_status, ' remote_server_status ++ check_status_exec_time: '.$check_status_exec_time);
 				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_status), logger::DEBUG);
 			}				
 			
