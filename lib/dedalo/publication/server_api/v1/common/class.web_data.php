@@ -2096,7 +2096,12 @@ class web_data {
 				$options->lang 		 		= WEB_CURRENT_LANG_CODE;
 				$options->order 			= "`norder` ASC";
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-					#dump($options->parents, '$options->parents ++ '.to_string());
+					// dump($options, '$options ++ '.to_string());
+
+			// table is always a string. If array is received, implode as comma separated string
+				$table = (is_array($options->table))
+					? implode(',', $options->table)
+					: trim($options->table);				
 
 			if ($options->parents!==false) {
 
