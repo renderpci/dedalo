@@ -1105,6 +1105,9 @@ class diffusion_sql extends diffusion  {
 																			 $options->section_tipo,
 																			 false);
 					}
+					# Fix diffusion element propiedades on target component to enable configure response value
+					$current_component->set_diffusion_properties($propiedades);
+
 					$options->component = $current_component;
 
 				if(is_object($propiedades) && property_exists($propiedades, 'get_field_value') && isset($propiedades->get_field_value->get_dato_method)){
@@ -1120,8 +1123,7 @@ class diffusion_sql extends diffusion  {
 				$diffusion_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 
 
-				# Fix diffusion element propiedades on target component to enable configure response value
-				$current_component->set_diffusion_properties($propiedades);
+				
 
 				# switch cases
 				switch (true) {

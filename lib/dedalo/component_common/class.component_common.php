@@ -55,7 +55,7 @@ abstract class component_common extends common {
 		# generate_json component
 		public $generate_json_element = false;
 
-		# diffusion_properties
+		# diffusion_properties. Used to inject diffusion element properties in current component (useful to configure custom value resolutions)
 		public $diffusion_properties;
 
 		# update_diffusion_info_propagate_changes bool
