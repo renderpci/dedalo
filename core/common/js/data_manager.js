@@ -30,7 +30,7 @@ data_manager.prototype.request = async function(options) {
 	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 	this.body			= options.body // body data type must match "Content-Type" header
 
-	const handle_errors = function(response) {		
+	const handle_errors = function(response) {
 		if (!response.ok) {
 			console.warn("-> HANDLE_ERRORS response:",response);
 			throw Error(response.statusText);
