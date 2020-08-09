@@ -369,7 +369,7 @@ class web_data {
 
 			// response
 				$response->result 	= $exec_query_response->result;
-				$response->total 	= $exec_query_response->total;
+				$response->total 	= $exec_query_response->total ?? false;
 				$response->msg    	= 'Ok get rows_data done. ' . $exec_query_response->msg;
 
 			// debug
@@ -961,21 +961,37 @@ class web_data {
 		private static function portal_resolve($rows, $current_field, $options, $resolve_portals_custom) {
 			$ar_portal=array();
 
+				// dump($rows, ' rows ++ '.to_string());
+				// dump($current_field, ' current_field ++ '.to_string());
+				// dump($options, ' options ++ '.to_string());
+				// dump($resolve_portals_custom, ' resolve_portals_custom ++ '.to_string());
+
 			if ($resolve_portals_custom!==false) {
 				# resolve_portals_custom is received
-				$current_field_ar_id = $current_field;	//in_array($current_field, (array)$resolve_portals_custom);
-				$table 				 = $resolve_portals_custom->{$current_field};
+				$current_field_ar_id	= $current_field;	//in_array($current_field, (array)$resolve_portals_custom);
+				$table					= $resolve_portals_custom->{$current_field};
 
 			}else{
 				# default case
-				$current_field_ar_id = str_replace('_table', '_id', $current_field); // los datos apunta al nombre de esta columna (XX_table) pero están en XX_id
-				$table 				 = $rows[$current_field];
+				$current_field_ar_id	= str_replace('_table', '_id', $current_field); // los datos apunta al nombre de esta columna (XX_table) pero están en XX_id
+				$table					= $rows[$current_field];
 			}
-			if(empty($rows[$current_field_ar_id])) return $ar_portal;
+
+			// table with additional column name whe match values, like 'hoard.term_id'
+				$match_column = 'section_id';  // default
+				if (strpos($table, '.')!==false) {
+					$ar_bits		= explode('.', $table);
+					$table			= $ar_bits[0]; // overwite table var name (!)
+					$match_column	= $ar_bits[1]; // overwite var match_column (!)
+				}
+					
 			$current_ar_value = json_decode($rows[$current_field_ar_id]);
+			if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
 
-
-		 	if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
+				// skip empty values
+					if (empty($p_value)) {
+						continue;
+					}
 
 		 		$portal_options = new stdClass();
 		 			$portal_options->table = $table;
@@ -995,12 +1011,12 @@ class web_data {
 	 					$portal_options->resolve_portals_custom = new stdClass();
 	 					# (!) Note that $resolve_portals_custom is different that $options->resolve_portals_custom because is already parsed
 		 				foreach ($resolve_portals_custom as $name => $target) {
-		 					$field = explode('.', $name);
-		 					if (isset($field[1])) {
-		 						$field = $field[1];
-		 						$portal_options->resolve_portals_custom->{$field} = $target;
-		 					}
+		 					$field_bits = explode('.', $name);		 					
+		 					if (isset($field_bits[1])) {
+		 						$portal_options->resolve_portals_custom->{$field_bits[1]} = $target;
+		 					}		 					
 		 				}
+		 				// dump($portal_options->resolve_portals_custom, ' portal_options->resolve_portals_custom ++ ---------------------------- '.to_string($table));
 	 				}
 
 		 			$filter = PUBLICACION_FILTER_SQL;
@@ -1010,8 +1026,15 @@ class web_data {
 		 					$filter = $options->portal_filter[$portal_options->table];
 		 			}
 
-					$portal_options->sql_filter = "section_id = $p_value " . $filter;
-					$portal_options->caller 	= 'portal_resolve';
+		 			// format value for sql filter (add quotes or not)
+		 			$p_value_filter = $match_column==='section_id'
+		 				? $p_value // treated as int
+		 				: '\'' . $p_value . '\''; // rteated as string
+
+					$portal_options->sql_filter	= '`' . $match_column . '`' . ' = ' . $p_value_filter . (!empty($filter) ? $filter : '');
+					$portal_options->order		= false;
+					$portal_options->caller		= 'portal_resolve';
+						
 
 		 		$rows_data = (array)self::get_rows_data($portal_options)->result;
 		 		//error_log( 'rows_data: '. to_string($portal_options) );
@@ -2280,14 +2303,15 @@ class web_data {
 		public static function get_thesaurus_search( $request_options ) {
 
 			$options = new stdClass();
-				$options->q 					 = false;
-				$options->table 	 	 		 = TABLE_THESAURUS;
-				$options->lang 					 = WEB_CURRENT_LANG_CODE;
-				$options->rows_per_page 		 = 1;
-				$options->page_number 			 = 1;
-				$options->exclude_tld 			 = array("xx");
-				$options->tree_root 			 = 'last_parent'; # first_parent | last_parent
-				$options->publicacion_filter_sql = '';
+				$options->q							= false;
+				$options->table						= TABLE_THESAURUS;
+				$options->lang						= WEB_CURRENT_LANG_CODE;
+				$options->rows_per_page				= 1;
+				$options->page_number				= 1;
+				$options->exclude_tld				= array("xx");
+				$options->tree_root					= 'last_parent'; # first_parent | last_parent
+				// $options->publicacion_filter_sql	= '';
+				$options->publication_filter_sql	= '';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$field_term = FIELD_TERM;
@@ -2310,7 +2334,7 @@ class web_data {
 				$rd_options->table 			= $options->table;
 				$rd_options->ar_fields 		= array('*');
 				#$rd_options->ar_fields 	= array('section_id','descriptor','tld','term_id',FIELD_TERM,'index','lang','childrens','related','time','space','code');
-				$rd_options->sql_filter 	= "`$field_term` LIKE '%".$q."%' " . $options->publicacion_filter_sql;
+				$rd_options->sql_filter 	= "`$field_term` LIKE '%".$q."%' " . $options->publication_filter_sql;
 				$rd_options->lang 			= $options->lang;
 				$rd_options->order 			= null;
 				$rd_options->limit 			= $options->rows_per_page;
@@ -2326,25 +2350,25 @@ class web_data {
 			#dump($search_data, ' search_data ++ '.to_string());
 
 			# Add vars for pagination
-			$search_data->page_number 	 = $options->page_number;
-			$search_data->rows_per_page  = $options->rows_per_page;
+			$search_data->page_number	= $options->page_number;
+			$search_data->rows_per_page	= $options->rows_per_page;
 
-			$ar_ts_terms=array();
-			$ar_highlight=array();
-			$ar_parent=array();
+			$ar_ts_terms	= array();
+			$ar_highlight	= array();
+			$ar_parent		= array();
 			foreach ((array)$search_data->result as $ar_value) {
 
-				$tld 		= $ar_value['tld'];
-				$term_id 	= $ar_value['term_id'];
-				$term 		= $ar_value[$field_term];
-				$parent 	= $ar_value['parent'];
-				$descriptor = $ar_value['descriptor']; // es descriptor: no | yes
-				$indexation = $ar_value['indexation'];
+				$tld		= $ar_value['tld'];
+				$term_id	= $ar_value['term_id'];
+				$term		= $ar_value[$field_term];
+				$parent		= $ar_value['parent'];
+				$descriptor	= $ar_value['descriptor']; // es descriptor: no | yes
+				$indexation	= $ar_value['indexation'];
 
 				if (strpos($parent,'[')===0) {
 					# is json array
-					$ar_parent  = json_decode($parent);
-					$parent 	= reset($ar_parent); // Select first (only one expected)
+					$ar_parent	= json_decode($parent);
+					$parent		= reset($ar_parent); // Select first (only one expected)
 				}
 
 				#
@@ -2412,10 +2436,10 @@ class web_data {
 			#dump($ar_ts_terms, ' ar_ts_terms ++ '.to_string()); die();
 
 			$response = new stdClass();
-				$response->search_data 	= $search_data;
-				$response->ar_ts_terms 	= $ar_ts_terms;
-				$response->ar_highlight = $ar_highlight;
-				$response->ar_parent 	= $ar_parent;
+				$response->search_data	= $search_data;
+				$response->ar_ts_terms	= $ar_ts_terms;
+				$response->ar_highlight	= $ar_highlight;
+				$response->ar_parent	= $ar_parent;
 			#dump($response, ' response ++ '.to_string()); #exit();
 
 			return $response;
@@ -2438,12 +2462,12 @@ class web_data {
 				# Search parent descriptor
 				# Search in DDBB
 				$rd_options = new stdClass();
-					$rd_options->table 			= $term_obj->table;
-					$rd_options->ar_fields 		= array('*');
-					$rd_options->sql_filter 	= FIELD_TERM_ID ." = '$term_obj->parent'";
-					$rd_options->lang 			= $term_obj->lang;
-					$rd_options->order 			= null;
-					$rd_options->limit 			= 1;
+					$rd_options->table		= $term_obj->table;
+					$rd_options->ar_fields	= array('*');
+					$rd_options->sql_filter	= FIELD_TERM_ID ." = '$term_obj->parent'";
+					$rd_options->lang		= $term_obj->lang;
+					$rd_options->order		= null;
+					$rd_options->limit		= 1;
 				$search_data = (object)web_data::get_rows_data( $rd_options );
 
 				if (!empty($search_data->result)) {
@@ -2476,11 +2500,11 @@ class web_data {
 		public static function get_thesaurus_autocomplete( $request_options ) {
 
 			$options = new stdClass();
-				$options->q 		= false;
-				$options->limit 	= 25;
-				$options->table 	= TABLE_THESAURUS;
-				$options->lang 		= WEB_CURRENT_LANG_CODE;
-				$options->format 	= 'simple'; // simple | full
+				$options->q			= false;
+				$options->limit		= 25;
+				$options->table		= TABLE_THESAURUS;
+				$options->lang		= WEB_CURRENT_LANG_CODE;
+				$options->format	= 'simple'; // simple | full
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$field_term = FIELD_TERM;
@@ -2493,12 +2517,12 @@ class web_data {
 			if ($options->q!==false) {
 
 				$sd_options = new stdClass();
-					$sd_options->table 	 	= $options->table;
-					$sd_options->ar_fields  = array($field_term, 'term_id');
-					$sd_options->sql_filter = "`$field_term` LIKE '%".$options->q."%'";
-					$sd_options->order 	 	= $field_term ." ASC";
-					$sd_options->lang 	 	= $options->lang ;
-					$sd_options->limit 	 	= $options->limit;
+					$sd_options->table		= $options->table;
+					$sd_options->ar_fields	= array($field_term, 'term_id');
+					$sd_options->sql_filter	= "`$field_term` LIKE '%".$options->q."%'";
+					$sd_options->order		= $field_term ." ASC";
+					$sd_options->lang		= $options->lang ;
+					$sd_options->limit		= $options->limit;
 
 				$search_data	= (object)web_data::get_rows_data( $sd_options );
 
@@ -2515,13 +2539,13 @@ class web_data {
 				}
 
 				$response = new stdClass();
-					$response->result 	= $result;
-					$response->msg 		= 'Ok. Request done';
+					$response->result	= $result;
+					$response->msg		= 'Ok. Request done';
 			}else{
 
 				$response = new stdClass();
-					$response->result 	= false;
-					$response->msg 		= 'Error. Empty search value (q)';
+					$response->result	= false;
+					$response->msg		= 'Error. Empty search value (q)';
 			}
 
 			return (object)$response;
@@ -2540,11 +2564,11 @@ class web_data {
 			global $table_thesaurus_map;
 
 			$options = new stdClass();
-				$options->ar_term_id 		= null;
-				$options->lang 		 		= WEB_CURRENT_LANG_CODE;
-				$options->table 	 		= (string)TABLE_THESAURUS;
-				$options->combine 			= false;  # false | combined | cumulative
-				$options->get_matching_terms= false; # boolean
+				$options->ar_term_id			= null;
+				$options->lang					= WEB_CURRENT_LANG_CODE;
+				$options->table					= (string)TABLE_THESAURUS;
+				$options->combine				= false;  # false | combined | cumulative
+				$options->get_matching_terms	= false; # boolean
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			if (is_array($options->ar_term_id)) {
@@ -2589,19 +2613,19 @@ class web_data {
 			$matching_terms = false;
 			if ($options->combine!==false && count($options->ar_term_id)>1) {
 				$combine_options = new stdClass();
-					$combine_options->ar_term_id 		= $options->ar_term_id;
-					$combine_options->mode 		 		= $options->combine;
-					$combine_options->ar_ts_terms 		= $ar_thesaurus_term;
-					$combine_options->get_matching_terms= $options->get_matching_terms;
-					$combine_options->lang 				= $options->lang;
+					$combine_options->ar_term_id			= $options->ar_term_id;
+					$combine_options->mode					= $options->combine;
+					$combine_options->ar_ts_terms			= $ar_thesaurus_term;
+					$combine_options->get_matching_terms	= $options->get_matching_terms;
+					$combine_options->lang					= $options->lang;
 				$combine_result = web_data::combine_terms( $combine_options ); // $ar_thesaurus_term =
 				$matching_terms = $combine_result->matching_terms;
 			}
 
 			$response = new stdClass();
-				$response->result 				= $ar_thesaurus_term;
-				$response->matching_terms 		= $matching_terms;
-				$response->msg 					= 'Ok. Request done';
+				$response->result			= $ar_thesaurus_term;
+				$response->matching_terms	= $matching_terms;
+				$response->msg				= 'Ok. Request done';
 
 
 			return $response;
@@ -2622,11 +2646,11 @@ class web_data {
 
 			$options = new stdClass();
 				# options to send at 'get_thesaurus_term'
-				$options->ar_term_id 		= array();
-				$options->ar_ts_terms 		= array();
-				$options->lang 				= WEB_CURRENT_LANG_CODE;
-				$options->mode 	 	 		= 'combined'; # Available: combined | cumulative
-				$options->get_matching_terms= false;
+				$options->ar_term_id			= array();
+				$options->ar_ts_terms			= array();
+				$options->lang					= WEB_CURRENT_LANG_CODE;
+				$options->mode					= 'combined'; # Available: combined | cumulative
+				$options->get_matching_terms	= false;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			#$ts_terms 	 = web_data::get_thesaurus_term( $options );
@@ -2727,10 +2751,10 @@ class web_data {
 			#dump($options->ar_ts_terms, '$options->ar_ts_terms ++ '.to_string());
 
 			$response = new stdClass();
-				$response->result 				= true;
-				$response->ar_ts_terms 			= $options->ar_ts_terms;
-				$response->matching_terms 		= $matching_terms;
-				$response->msg 					= 'Ok. Request successful';
+				$response->result			= true;
+				$response->ar_ts_terms		= $options->ar_ts_terms;
+				$response->matching_terms	= $matching_terms;
+				$response->msg				= 'Ok. Request successful';
 
 			return $response;
 		}//end combine_terms
@@ -2746,21 +2770,21 @@ class web_data {
 		public static function get_thesaurus_indexation_node( $request_options ) {
 
 			$options = new stdClass();
-				$options->term_id  		= null;
-				$options->ar_locators  	= null;
-				$options->lang 		   	= WEB_CURRENT_LANG_CODE;
-				$options->image_type   	= 'posterframe'; # posterframe | identify_image
-				$options->table   		= null; // only used when ar_locators is empty
+				$options->term_id		= null;
+				$options->ar_locators	= null;
+				$options->lang			= WEB_CURRENT_LANG_CODE;
+				$options->image_type	= 'posterframe'; # posterframe | identify_image
+				$options->table			= null; // only used when ar_locators is empty
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			// empty ar_locators case
 				if (empty($options->ar_locators)) {
 
 					$ind_options = new stdClass();
-						$ind_options->table 		= (string)$options->table;
-						$ind_options->ar_fields 	= array('section_id',FIELD_INDEX);
-						$ind_options->lang 			= $options->lang;
-						$ind_options->sql_filter 	= '`term_id` = \''.$options->term_id.'\' ';
+						$ind_options->table			= (string)$options->table;
+						$ind_options->ar_fields		= array('section_id',FIELD_INDEX);
+						$ind_options->lang			= $options->lang;
+						$ind_options->sql_filter	= '`term_id` = \''.$options->term_id.'\' ';
 
 					$indexation_response = (object)web_data::get_rows_data( $ind_options );
 					if (isset($indexation_response->result[0])) {
@@ -2775,8 +2799,8 @@ class web_data {
 			# Valid ar_locators is mandatory
 			if (empty($options->ar_locators)) {
 				$response = new stdClass();
-					$response->result 	= array();
-					$response->msg 		= 'Error. Valid ar_locators is mandatory. Received: '.to_string($options->ar_locators);
+					$response->result	= array();
+					$response->msg		= 'Error. Valid ar_locators is mandatory. Received: '.to_string($options->ar_locators);
 				return $response;
 			}
 
@@ -2785,8 +2809,8 @@ class web_data {
 			foreach ( (array)$options->ar_locators as $current_locator ) {
 
 				# Safe ar_locators (avoid show info of locators without interview / audiovisual)
-				$locator_av_section_id 			= $current_locator->section_id;
-				$locator_interview_section_id 	= $current_locator->section_top_id;
+				$locator_av_section_id			= $current_locator->section_id;
+				$locator_interview_section_id	= $current_locator->section_top_id;
 				if(false===web_data::record_is_active(TABLE_INTERVIEW, $locator_interview_section_id)) {
 					debug_log(__METHOD__." INTERVIEW NOT ACTIVE SKIPPED !! ".to_string($locator_interview_section_id), logger::DEBUG);
 					continue;
@@ -2797,9 +2821,9 @@ class web_data {
 				}
 
 				$indexation_node = indexation_node::get_indexation_node_instance($options->term_id, $current_locator, null);
-				$indexation_node->image_type  = $options->image_type;
-				$indexation_node->indexations = $options->ar_locators;
-				$indexation_node->lang 		  = $options->lang;
+				$indexation_node->image_type	= $options->image_type;
+				$indexation_node->indexations	= $options->ar_locators;
+				$indexation_node->lang			= $options->lang;
 				$indexation_node->load_data(); # Force load object data from DDBB
 				# Unset temporal property of indexation_node object for clean json data
 				unset($indexation_node->indexations);
@@ -2812,8 +2836,8 @@ class web_data {
 			#dump($ar_indexation_node, ' ar_indexation_node ++ '.to_string()); die();
 
 			$response = new stdClass();
-				$response->result 	= $ar_indexation_node;
-				$response->msg 		= 'Ok. Request thesaurus_indexation_node done';
+				$response->result	= $ar_indexation_node;
+				$response->msg		= 'Ok. Request thesaurus_indexation_node done';
 
 
 			return $response;
@@ -2830,10 +2854,10 @@ class web_data {
 			$record_is_active = false;
 
 			$s_options = new stdClass();
-				$s_options->table 		= (string)$table;
-				$s_options->ar_fields 	= array('section_id');
-				$s_options->lang 		= $lang;
-				$s_options->section_id 	= $section_id;
+				$s_options->table		= (string)$table;
+				$s_options->ar_fields	= array('section_id');
+				$s_options->lang		= $lang;
+				$s_options->section_id	= $section_id;
 
 			$response = (object)web_data::get_rows_data( $s_options );
 
@@ -2854,19 +2878,19 @@ class web_data {
 		public static function get_thesaurus_video_view_data( $request_options ) {
 
 			$options = new stdClass();
-				$options->term_id 	  	  		= null;
-				$options->ar_locators 	  		= null;
-				$options->ar_locators_key 		= 0;
-				$options->lang 					= WEB_CURRENT_LANG_CODE;
-				$options->raw_text 				= false;
+				$options->term_id				= null;
+				$options->ar_locators			= null;
+				$options->ar_locators_key		= 0;
+				$options->lang					= WEB_CURRENT_LANG_CODE;
+				$options->raw_text				= false;
 				$options->raw_text_unrestricted	= false;
 				$options->add_subtitles			= false;
-				$options->image_type 	 		= 'posterframe';
+				$options->image_type			= 'posterframe';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$video_view_options = new stdClass();
-				$video_view_options->lang 			= $options->lang;
-				$video_view_options->add_subtitles 	= $options->add_subtitles;
+				$video_view_options->lang			= $options->lang;
+				$video_view_options->add_subtitles	= $options->add_subtitles;
 			$video_view_data = new video_view_data( $video_view_options );
 			$video_view_data->load_thesaurus_video_view_data( $options->term_id, $options->ar_locators, $options->ar_locators_key );
 
@@ -2891,33 +2915,33 @@ class web_data {
 			global $table_thesaurus_map; // From server api config
 
 			$options = new stdClass();
-				$options->term_id  				= null;
-				$options->recursive 			= false;
-				$options->lang 		   			= WEB_CURRENT_LANG_CODE;
-				$options->ar_fields 			= array('*');
-				$options->only_descriptors 		= true;
-				$options->remove_restricted 	= true;
-				$options->remove_unused_terms 	= false; // If true, exclude of results the childrens without indexations and childrens
+				$options->term_id				= null;
+				$options->recursive				= false;
+				$options->lang					= WEB_CURRENT_LANG_CODE;
+				$options->ar_fields				= array('*');
+				$options->only_descriptors		= true;
+				$options->remove_restricted		= true;
+				$options->remove_unused_terms	= false; // If true, exclude of results the childrens without indexations and childrens
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$section_tipo = explode('_', $options->term_id)[0];
 
 			if (empty($section_tipo) || empty($table_thesaurus_map[$section_tipo])) {
 				$response = new stdClass();
-					$response->result 	= [];
-					$response->msg 		= 'Error. Invalid section tipo ('.to_string($section_tipo).') or not defined in table_thesaurus_map (see API server config) ';
-					$response->total 	= 0;
+					$response->result	= [];
+					$response->msg		= 'Error. Invalid section tipo ('.to_string($section_tipo).') or not defined in table_thesaurus_map (see API server config) ';
+					$response->total	= 0;
 
 				return $response;
 			}
 
-			$table 				= $table_thesaurus_map[$section_tipo];
-			$lang 				= $options->lang;
-			$recursive 			= $options->recursive;
-			$ar_fields 			= $options->ar_fields;
-			$only_descriptors 	= $options->only_descriptors;
-			$remove_restricted 	= $options->remove_restricted;
-			$remove_unused_terms= $options->remove_unused_terms;
+			$table					= $table_thesaurus_map[$section_tipo];
+			$lang					= $options->lang;
+			$recursive				= $options->recursive;
+			$ar_fields				= $options->ar_fields;
+			$only_descriptors		= $options->only_descriptors;
+			$remove_restricted		= $options->remove_restricted;
+			$remove_unused_terms	= $options->remove_unused_terms;
 
 
 			if (!is_array($ar_fields)) {
@@ -2963,13 +2987,13 @@ class web_data {
 				}
 				#error_log($term_filter);
 
-
+				
 				$sd_options = new stdClass();
-					$sd_options->table 	 	= $table;
-					$sd_options->ar_fields  = $ar_fields;
-					$sd_options->sql_filter = $term_filter; //"parent = '".$term_id_search."' ";
-					$sd_options->lang 	 	= $lang;
-					$sd_options->limit 	 	= 0;
+					$sd_options->table		= $table;
+					$sd_options->ar_fields	= $ar_fields;
+					$sd_options->sql_filter	= $term_filter; //"parent = '".$term_id_search."' ";
+					$sd_options->lang		= $lang;
+					$sd_options->limit		= 0;
 
 				$search_data = (object)web_data::get_rows_data( $sd_options );
 					#debug_log(__METHOD__." search data ".to_string($search_data), logger::DEBUG);

@@ -2863,16 +2863,14 @@ class search_development2 {
 			# FROM
 			$sql_query .= PHP_EOL . 'FROM "'.self::$relations_table.'"';
 			# WHERE
-			$sql_query .= PHP_EOL . 'WHERE "target_section_id"=' . $target_section_id .' AND "target_section_tipo"=\''. $target_section_tipo.'\'';
+			$sql_query .= PHP_EOL . 'WHERE target_section_id=' . $target_section_id .' AND target_section_tipo=\''. $target_section_tipo.'\'';
 			# LIMIT
 			$sql_query .= PHP_EOL . 'LIMIT 1';
 			# END
 			$sql_query .= ';';
 
-			debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
-
 		$result		= JSON_RecordObj_matrix::search_free($sql_query);
-		$num_rows 	= pg_num_rows($result);
+		$num_rows	= pg_num_rows($result);
 
 		if ($num_rows>0) {
 			$have_inverse_relations = true;

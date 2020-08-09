@@ -104,6 +104,8 @@ abstract class component_common extends common {
 		if(SHOW_DEBUG===true) {
 			if ( !empty($component_name) && strpos($component_name, 'component_')===false ) {
 				dump($tipo," tipo");
+				$bt = debug_backtrace();
+				debug_log(__METHOD__." DEBUG WARNING: TRIGGERED section or ($component_name) intented to load as component: bt : ".to_string($bt), logger::ERROR);
 				throw new Exception("Error Processing Request. section or ($component_name) intented to load as component", 1);
 			}
 			if ( is_numeric($tipo) || !is_string($tipo) || !RecordObj_dd::get_prefix_from_tipo($tipo) ) {

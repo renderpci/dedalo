@@ -40,7 +40,7 @@ class RecordObj_dd_edit extends RecordObj_dd {
 		# TERMINO ID EXISTS : UPDATE RECORD
 		if (!empty($this->terminoID) && verify_dedalo_prefix_tipos($this->prefijo)) {
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Saving with parent save ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Saving term ".to_string($this->terminoID), logger::DEBUG);
 			}
 			return parent::Save();
 		}

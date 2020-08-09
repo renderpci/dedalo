@@ -140,7 +140,7 @@ class tool_export extends tool_common {
 	* EXPORT_TO
 	* @return string $export_str_data
 	*/
-	public function export_to($format, $ar_records=null, $encoding='UTF-8', $section_tipo) {
+	public function export_to($format, $ar_records=null, $encoding='UTF-8', $section_tipo=null) {
 
 		$quotes 			= tool_export::$quotes;
 		$delimiter			= tool_export::$delimiter;
@@ -188,10 +188,10 @@ class tool_export extends tool_common {
 								if (empty($ar_found)) {
 									// add
 										$h_item = new stdClass();
-											$h_item->component_tipo 	  	= $item->component_tipo;
-											$h_item->section_tipo   	  	= $item->section_tipo;
-											$h_item->from_section_tipo    = $item->from_section_tipo;
-											$h_item->from_component_tipo  = $item->from_component_tipo;
+											$h_item->component_tipo			= $item->component_tipo;
+											$h_item->section_tipo			= $item->section_tipo;
+											$h_item->from_section_tipo		= $item->from_section_tipo;
+											$h_item->from_component_tipo	= $item->from_component_tipo;
 										$header_tipos[] = $h_item;
 								}
 						}

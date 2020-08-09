@@ -93,6 +93,20 @@ class component_html_text extends component_common {
 
 
 	/**
+	* GET_VALOR_EXPORT
+	* Return component value to export data (tool export)
+	* @return string $valor_export
+	*/
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+
+		$valor_export = $this->get_valor($lang);
+		
+		return $valor_export;
+	}//end get_valor_export
+
+
+
+	/**
 	* CLEAN_TEXT
 	* Anclaje para futuros preprocesados del texto. De momento sólo haremos un trim
 	*/

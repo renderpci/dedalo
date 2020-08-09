@@ -233,7 +233,11 @@ class relation_list extends common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null ) {
+	public function get_diffusion_value($lang=null) {
+
+			// dump(func_get_args(), 'func_get_args() ++ '.to_string());
+			// dump($this, ' this ++ '.to_string());
+			// dump($this->tipo, ' this->tipo ++ '.to_string());
 
 		$diffusion_value = null;
 
@@ -248,7 +252,6 @@ class relation_list extends common {
 			case 'valor':
 
 				$ar_inverse_references 	= $this->get_inverse_references($limit=false, $offset=0, $count=false);
-
 
 				foreach ($ar_inverse_references as $current_locator) {
 				// Check target is publicable
@@ -295,10 +298,10 @@ class relation_list extends common {
 						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 						continue;
 					}
-					$ar_values[] = $current_locator->section_tipo;
+					$ar_values[] = $current_locator->section_tipo;					
 				}
 
-				$diffusion_value = array_unique($ar_values);
+				$diffusion_value = array_unique($ar_values);				
 				break;
 		}
 
