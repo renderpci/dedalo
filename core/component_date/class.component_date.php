@@ -437,15 +437,6 @@ class component_date extends component_common {
 		}
 
 
-		#$valor = strip_tags($valor); // Removes the span tag used in list mode
-		/*
-		$previous_modo = $this->get_modo();
-		$this->set_modo('list'); // Force list mode
-		$valor = $this->get_html();
-		# Restore modo after
-		$this->set_modo($previous_modo);
-		*/
-
 		return (string)$valor;
 	}//end get_valor_export
 
