@@ -337,7 +337,7 @@ class component_relation_related extends component_relation_common {
 	# 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	* @return array $ar_references
 	*/
-	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang) {
+	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang=DEDALO_DATA_LANG) {
 
 		static $ar_resolved = array();
 
@@ -346,8 +346,8 @@ class component_relation_related extends component_relation_common {
 				$ar_resolved = [];
 			}
 
-		$pseudo_locator = $locator->section_tipo .'_'. $locator->section_id . '_'. $lang;
-		$ar_resolved[]  = $pseudo_locator; # set self as resolved
+		$pseudo_locator	= $locator->section_tipo .'_'. $locator->section_id . '_'. $lang;
+		$ar_resolved[]	= $pseudo_locator; # set self as resolved
 
 		$ar_references 	= [];
 
@@ -396,12 +396,12 @@ class component_relation_related extends component_relation_common {
 				}
 
 				$element = new stdClass();
-					$element->section_tipo 			= $dato_locator->section_tipo;
-					$element->section_id 			= $dato_locator->section_id;
-					$element->from_component_tipo 	= $dato_locator->from_component_tipo;
-					#$element->label 				= ts_object::get_term_by_locator( $dato_locator, DEDALO_DATA_LANG, $from_cache=true);
+					$element->section_tipo			= $dato_locator->section_tipo;
+					$element->section_id			= $dato_locator->section_id;
+					$element->from_component_tipo	= $dato_locator->from_component_tipo;
+					#$element->label				= ts_object::get_term_by_locator( $dato_locator, DEDALO_DATA_LANG, $from_cache=true);
 					// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=false
-					$element->label 				= self::get_locator_value($dato_locator, DEDALO_DATA_LANG, false, $ar_componets_related, $divisor);
+					$element->label					= self::get_locator_value($dato_locator, DEDALO_DATA_LANG, false, $ar_componets_related, $divisor);
 
 				# Only add dato when is recursion, not at the first call
 				if ($recursion===true) {
@@ -412,15 +412,15 @@ class component_relation_related extends component_relation_common {
 
 				# References to dato
 				# Recursion (dato)
-				$ar_result 		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true, $lang);
-				$ar_references 	= array_merge($ar_references, $ar_result);
+				$ar_result		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true, $lang);
+				$ar_references	= array_merge($ar_references, $ar_result);
 			}
 
 			# References to references
 			foreach ($ar_references as $key => $current_locator) {
 				# Recursion (references)
-				$ar_result = self::get_references_recursive($tipo, $current_locator, $type_rel, true, $lang);
-				$ar_references = array_merge($ar_references, $ar_result);
+				$ar_result		= self::get_references_recursive($tipo, $current_locator, $type_rel, true, $lang);
+				$ar_references	= array_merge($ar_references, $ar_result);
 			}
 			#dump($ar_resolved, ' ar_resolved ++ '.to_string());
 

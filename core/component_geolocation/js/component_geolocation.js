@@ -320,12 +320,13 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				self.load_layer(layer)
 			}
 
-			// force refresh map (apply 'invalidateSize')
-			const current_map = this
-			setTimeout(()=>{
-				// map.invalidateSize();
-				self.refresh_map(current_map)
-			}, 20)
+			// needless (!)
+				// force refresh map (apply 'invalidateSize')
+				// const current_map = this
+				// setTimeout(()=>{
+				// 	// map.invalidateSize();
+				// 	self.refresh_map(current_map)
+				// }, 20)
 		});
 
 	return true
