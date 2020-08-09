@@ -990,23 +990,6 @@ class login extends common {
 
 
 
-	/**
-	* GET HTML CODE .
-	* Return include file __class__.php
-	*/
-	public function get_html() {
-
-		$file_include	= DEDALO_CORE_PATH .'/'. __CLASS__ . '/' . __CLASS__ . '.php' ;
-
-		ob_start();
-		include ( $file_include );
-		$html =  ob_get_clean();
-
-
-		return $html;
-	}//end get_html
-
-
 
 	/**
 	* QUIT
