@@ -1811,6 +1811,11 @@
 		Fixed recursive resolve references issue on diffusion update_record when level (DEDALO_DIFFUSION_RESOLVE_LEVELS) is higher than 2
 
 
+	Valencia 08-08-2020 5.6.11
+		Fixed web_data public api issues
+
+	Valencia 09-08-2020 5.6.12
+		Add diffsuion option to overwrite diffusion table element from table_alias
 
 
 
@@ -1836,12 +1841,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.10';
+	$DEDALO_VERSION = '5.6.12';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-08-2020');
+	define('DEDALO_BUILD'	, '09-08-2020');
 
 
 
