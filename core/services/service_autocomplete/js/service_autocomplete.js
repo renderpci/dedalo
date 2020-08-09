@@ -111,26 +111,24 @@ export const service_autocomplete = function() {
 		// button options
 			const button_options = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'options',
+				class_name		: 'button_options button gear',
 				parent			: searh_container
 			})
+			// add listener to the select
+			button_options.addEventListener('mouseup',function(e){
+				options_container.classList.toggle('visible');
+			},false)
 
-		// add listener to the select
-		button_options.addEventListener('mouseup',function(e){
-			options_container.classList.toggle('visible');
-		},false)
-
-
-		// build operator selectos
-		const search_input = self.render_search_input()
-		searh_container.appendChild(search_input)
+		// search_input
+			const search_input = self.render_search_input()
+			searh_container.appendChild(search_input)
 
 		// datalist
 			const datalist = ui.create_dom_element({
 				element_type	: 'ul',
-				id 				: self.list_name,
-				class_name 	 	: "autocomplete_data",
-				parent 			: searh_container
+				id				: self.list_name,
+				class_name		: "autocomplete_data",
+				parent			: searh_container
 			})
 
 		self.searh_container 	= searh_container
