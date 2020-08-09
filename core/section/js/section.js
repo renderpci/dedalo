@@ -163,6 +163,7 @@ section.prototype.build = async function(autoload=false) {
 			// get context and data
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.read(self.dd_request.show)
+					console.log("///// api_response:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -242,7 +243,7 @@ section.prototype.build = async function(autoload=false) {
 		self.pagination.limit	= sqo.limit
 		self.pagination.offset	= sqo.offset
 		self.pagination.total	= self.pagination.total || sqo.full_count || 0
-
+	console.log("self.pagination:",self.pagination);
 	// paginator
 		if (!self.paginator) {
 
@@ -263,16 +264,16 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// filter
-		if (!self.filter && self.permissions>0) {
-			const current_filter = new search()
-			current_filter.init({
-				caller : self
-			})
-			current_filter.build()
-			// fix section filter
-			self.filter = current_filter
-		}
-		// console.log("section build filter unactive (remember) ");
+		// if (!self.filter && self.permissions>0) {
+		// 	const current_filter = new search()
+		// 	current_filter.init({
+		// 		caller : self
+		// 	})
+		// 	current_filter.build()
+		// 	// fix section filter
+		// 	self.filter = current_filter
+		// }
+		console.log("section build filter unactive (remember) ");
 
 	// inspector
 		if (!self.inspector && self.permissions) {

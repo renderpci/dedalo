@@ -542,7 +542,7 @@ class component_pdf extends component_media_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB

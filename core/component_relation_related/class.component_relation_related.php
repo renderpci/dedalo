@@ -24,9 +24,6 @@ class component_relation_related extends component_relation_common {
 	// sql query stored for debug only
 	static $get_inverse_related_query;
 
-	// default paginated max rows
-	public $max_records = 5;
-
 
 
 	/**

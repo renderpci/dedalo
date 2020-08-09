@@ -20,10 +20,7 @@ class component_portal extends component_relation_common {
 
 	# referenced component tipo
 	// public $tipo_to_search;
-
-	// default max records to show (paginated)
-	public $max_records = 5;
-
+	
 
 
 	// /** (!) Used parent method

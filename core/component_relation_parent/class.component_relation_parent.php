@@ -16,9 +16,6 @@ class component_relation_parent extends component_relation_common {
 	# sql query stored for debug only
 	static $get_parents_query;
 
-	// default paginated max rows
-	public $max_records = 10;
-
 
 
 	/**

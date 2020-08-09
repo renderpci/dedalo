@@ -74,6 +74,9 @@ abstract class component_common extends common {
 		// matrix_id
 		public $matrix_id;
 
+		// pagination. object used to paginate portals, etc.
+		public $pagination;
+
 
 
 	/**
@@ -81,7 +84,7 @@ abstract class component_common extends common {
 	* Singleton pattern
 	* @returns array array of component objects by key
 	*/
-	public static function get_instance($component_name=null, $tipo, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
+	public static function get_instance($component_name=null, $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -320,10 +323,12 @@ abstract class component_common extends common {
 		// y fijar de nuevo el lenguaje en caso de no ser traducible
 			parent::load_structure_data();
 
+		// properties
+			$properties = $this->get_properties();
+
 		// lang : Check lang again after structure data is loaded
 		// Establecemos el lenguaje preliminar a partir de la carga de la estructura
-			if ($this->traducible==='no') {
-				$properties = $this->get_properties();
+			if ($this->traducible==='no') {				
 				if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 					# Allow tool lang on non translatable components
 				}else{
@@ -342,6 +347,13 @@ abstract class component_common extends common {
 			if ( $this->modo==='edit' && !is_null($this->section_id) ) {
 				$this->set_dato_default();
 			}
+
+		$properties = $this->get_properties();
+
+		// pagination
+			$this->pagination = new stdClass();
+				$this->pagination->offset	= 0; // default
+				$this->pagination->limit	= isset($properties->list_max_records) ? (int)$properties->list_max_records : 5;
 
 
 		return true;
@@ -1056,7 +1068,7 @@ abstract class component_common extends common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			$valor = $this->get_valor($lang);
@@ -2095,7 +2107,7 @@ abstract class component_common extends common {
 	*	Type of dataframe element (encoded type of uncertainty, time, space, etc.)
 	* @return bool
 	*/
-	public function update_dataframe_element( $locator=null, $from_key, $type ) {
+	public function update_dataframe_element($locator, $from_key, $type) {
 
 		$current_dataframe 	= (array)$this->get_dataframe();
 		$final_dataframe 	= array();
@@ -2729,6 +2741,7 @@ abstract class component_common extends common {
 	}//end update_data_value
 
 
+
 	/**
 	* GET_DATO_PAGINATED
 	* It slices the component array of locators to allocate pagination options
@@ -2749,12 +2762,10 @@ abstract class component_common extends common {
 			}
 
 		// limit
-			$limit = ($mode==='list')
-				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
-				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
+			$limit = $this->pagination->limit;
 
 		// offset
-			$offset = $this->pagination->offset ?? 0;
+			$offset = $this->pagination->offset;
 
 		// array_lenght. avoid use zero as limit. Instead this, use null
 			$array_lenght = $limit>0 ? $limit : null;

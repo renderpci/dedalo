@@ -59,21 +59,20 @@
 
 		if (!empty($dato)) {
 
-			$value  	= $this->get_dato_paginated();
+			$value		= $this->get_dato_paginated();
 			$section_id	= $this->get_parent();
-			$limit 		= ($modo==='list')
-				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
-				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
+			$limit		= $this->pagination->limit;
+			$offset		= $this->pagination->offset;
 
 			// data item
 				$item = $this->get_data_item($value);
-					$item->parent_tipo 			= $tipo;
-					$item->parent_section_id 	= $section_id;
+					$item->parent_tipo			= $tipo;
+					$item->parent_section_id	= $section_id;
 					// fix pagination vars
 						$pagination = new stdClass();
 							$pagination->total	= count($dato);
-							$pagination->limit 	= $limit;
-							$pagination->offset = $this->pagination->offset ?? 0;
+							$pagination->limit	= $limit;
+							$pagination->offset	= $offset;
 					$item->pagination = $pagination;
 
 				$data[] = $item;
@@ -83,8 +82,8 @@
 
 			// subdata add
 				foreach ($ar_subdata as $current_data) {
-					$current_data->parent_tipo 			= $tipo;
-					$current_data->parent_section_id 	= $section_id;
+					$current_data->parent_tipo			= $tipo;
+					$current_data->parent_section_id	= $section_id;
 					$data[] = $current_data;
 				}
 		}//end if (!empty($dato))

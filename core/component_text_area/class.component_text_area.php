@@ -397,7 +397,7 @@ class component_text_area extends component_common {
 	* Return component value sent to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		$valor_export = $this->get_valor($lang);
 		#$valor_export = br2nl($valor_export);
@@ -516,7 +516,7 @@ class component_text_area extends component_common {
 	* @param $text_raw
 	* @return $text_raw_updated
 	*/
-	public static function change_tag_state( $ar_tag, $state='r', $text_raw ) {
+	public static function change_tag_state($ar_tag, $state='r', $text_raw='') {
 
 		# Force array
 		if (is_string($ar_tag)) $ar_tag = array($ar_tag);
