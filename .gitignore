@@ -6,6 +6,7 @@ config4*
 config.php
 server_config_api.php
 json_config.php
+server_config_headers.php
 
 # various
 acc
