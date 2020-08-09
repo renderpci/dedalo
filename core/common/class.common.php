@@ -373,10 +373,10 @@ abstract class common {
 			if ($modelo_name!=='matrix_table') {
 				continue;
 			}
-			$properties = $RecordObj_dd->get_properties();		
+			$properties = $RecordObj_dd->get_properties();
 			if (property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
 				$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-			}			
+			}
 		}
 
 		if (empty($ar_tables)) {
@@ -917,141 +917,6 @@ abstract class common {
 
 
 	/**
-	* GET_REFERENCES
-	* Return all references to current dato (usually rel_locator or section_id)
-	* @param object $new_options
-	* @return array $ar_references
-	*
-	* NOTA : Se buscan (to_find) 'section_id' pero el resultado devuelto es organizado por id_matrix !!!
-	*/
-	public static function get_references__DEPRECATED( stdClass $new_options ) {
-		$ar_references=array();
-
-		if(SHOW_DEBUG===true) {
-			$star_time = microtime(1);
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);
-		}
-
-		$options = new stdClass();
-			$options->to_find 				= false;
-			$options->matrix_table 			= 'matrix';
-			$options->filter_by_modelo_name = false;
-			$options->tipo 					= false;
-
-		# NEW_OPTIONS : overwrite options defaults
-		foreach ((object)$new_options as $key => $value) {
-			# Si la propiedad recibida en el array new_options existe en options, la sobreescribimos
-			if (property_exists($options, $key)) {
-				$options->$key = $value;
-				#dump($value, "key: $key changed from ", array());
-			}
-		}
-		#dump($options,"options"); dump($new_options,"new_options");die();
-
-		# TO_FIND : madatory
-		if (!$options->to_find) {
-			trigger_error("Error: get_references property 'to_find' is mandatory");
-			if(SHOW_DEBUG===true) {
-				#throw new Exception("Error: get_references property 'to_find' is mandatory", 1);
-			}
-			return $ar_references;
-		}
-
-		# TIPO : mandatory
-		if (!$options->tipo) {
-			trigger_error("Error: get_references property 'tipo' is mandatory");
-			if(SHOW_DEBUG===true) {
-				#throw new Exception("Error: get_references property 'tipo' is mandatory", 1);
-			}
-			return $ar_references;
-		}
-		/*
-		$matrix_table = common::get_matrix_table_from_tipo($options->section_tipo);
-		*/
-		#$matrix_table = $options->matrix_table;
-
-
-			#
-			# REFERENCES
-			switch ($options->filter_by_modelo_name) {
-				case 'component_portal':
-					#$ar_portales 	 = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('component_portal');
-					$ar_portals_map = (array)component_portal::get_ar_portals_map();
-					$result 		= (array)array_keys($ar_portals_map,$options->tipo);
-						#dump($ar_portals_map,"ar_portals_map ");dump($result,"result ");die();
-
-					$ar_search_tipos = $result;
-					break;
-
-				case 'component_relation';
-					$ar_relaciones 	 = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('component_relation');
-					$ar_search_tipos = $ar_relaciones;
-					break;
-
-				default:
-					if(SHOW_DEBUG===true) {
-						error_log("Warning: No usar este modo!!!!!");
-					}
-					$ar_portales 	 = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('component_portal');
-					$ar_relaciones 	 = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('component_relation');
-					$ar_search_tipos = (array)array_merge($ar_portales,$ar_relaciones);
-					break;
-			}
-			#dump($ar_search_tipos,"ar_search_tipos [".$options->filter_by_modelo_name."] total: ".round(microtime(1)-$star_time,3));die();
-			#dump($options->to_find, '$options->to_find', array());die();
-
-			if (empty($ar_search_tipos)) {
-				return array();
-			}
-
-			# QUERY SQL
-			$indexes_code='';
-			#$strQuery='-- '.__METHOD__."\nSELECT id, datos#>>'{section_tipo}' as section_tipo \nFROM matrix WHERE \n";
-			$strQuery='-- '.__METHOD__."\nSELECT id, section_tipo \nFROM matrix WHERE \n";
-			foreach ($ar_search_tipos as $current_tipo) {
-
-				$strQuery.= "datos@>'{\"components\":{\"$current_tipo\":{\"dato\":{\"lg-nolan\":[{\"section_id\":\"{$options->to_find}\"}]}}}}'::jsonb ";
-
-				if($current_tipo!=end($ar_search_tipos)) $strQuery.= "OR \n"; else $strQuery.= "\n";
-
-				/*
-				$indexes_code .= "
-				CREATE INDEX matrix_dedalo_portal_{$current_tipo}_2
-				  ON matrix
-				  ((datos #>> '{components, $current_tipo,dato,lg-nolan}'));
-				  ";
-				 $indexes_code .= "
-				--drop INDEX matrix_dedalo_portal_{$current_tipo}_2 ; ";
-				*/
-			}
-			if(SHOW_DEBUG===true) {
-				#dump($options->to_find,"strQuery total: total ".round(microtime(1)-$star_time,3).print_r($strQuery,true));
-				#dump(null,"indexes_code ".print_r($indexes_code,true));
-				#dump($strQuery,"strQuery ".print_r($strQuery,true));die();
-			}
-			$result	= JSON_RecordObj_matrix::search_free($strQuery);
-
-			$ar_id=array();
-			while ($rows = pg_fetch_assoc($result)) {
-
-				# AR_REFERENCES
-				$id 			= $rows['id'];
-				$section_tipo	= $rows['section_tipo'];
-
-				$ar_references[$id] = $section_tipo;
-			}//end while
-
-
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
-		}
-
-		return (array)$ar_references;
-	}//end get_references
-
-
-
-	/**
 	* GET_ALLOWED_RELATION_TYPES
 	* Search in structure and return an array of tipos
 	* @return array $allowed_relations
@@ -1417,7 +1282,7 @@ abstract class common {
 
 		// Debug
 			if(SHOW_DEBUG===true) $start_time = start_time();
-	
+
 		// options parse
 			$options = new stdClass();
 				$options->get_context			= true;
@@ -1440,7 +1305,7 @@ abstract class common {
 			// dump($options, ' options ++ '.to_string($called_model) .' - '.$resolved_get_json_key);
 
 		// path. Class name is called class (ex. component_input_text), not this class (common)
-			$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';				
+			$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
 				// dump($resolved_get_json_key, ' show path ++ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH '.$called_model .' - '. $called_tipo.' - '. ($options->get_context===true ? 'context' : '' ) . ' ' .($options->get_data===true ? 'data' : '' ) );
 
 		// controller include
@@ -1485,7 +1350,7 @@ abstract class common {
 
 		// class called (model name too, as component_input_text)
 			$called_model = get_class($this);
-	
+
 		// sort vars
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
@@ -1806,7 +1671,7 @@ abstract class common {
 	* @return array $ar_subcontext
 	*/
 	public function get_ar_subdata($ar_locators) {
-	
+
 		$ar_subdata = [];
 
 		$source_tipo		= $this->get_tipo();
@@ -1824,7 +1689,7 @@ abstract class common {
 				$layout_map_options->request_config_type	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-			
+
 			if(!empty($layout_map)) foreach($ar_locators as $current_locator) {
 
 				// check locator format
@@ -1845,7 +1710,7 @@ abstract class common {
 
 					if ($dd_object->section_tipo!==$section_tipo) {
 						continue; // prevents multisection duplicate items
-					}					
+					}
 
 					$dd_object 		= (object)$dd_object;
 					$current_tipo 	= $dd_object->tipo;
@@ -1939,7 +1804,7 @@ abstract class common {
 						$dd_info = common::get_ddinfo_parents($current_locator, $source_tipo);
 
 						$ar_subdata[] = $dd_info;
-					}// end $value_with_parent = true					
+					}// end $value_with_parent = true
 
 
 			}//end foreach ($ar_locators as $current_locator)
@@ -2324,7 +2189,7 @@ abstract class common {
 			                "search_engine": "search_dedalo"
 			            }
 			        ]');
-			        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);					
+			        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);
 				}//end if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi')
 
 			foreach ($properties->source->request_config as $item_request_config) {
@@ -2407,7 +2272,7 @@ abstract class common {
 
 		}else{
 			// V5 model
-			
+
 
 			// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
 			// 	debug_log(__METHOD__." Invalid configuration of component: '$model', tipo: '$tipo'. Please set 'request_config' in element properties! ".to_string(), logger::ERROR);
@@ -2427,7 +2292,7 @@ abstract class common {
 						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 					}else{
 						// components
-						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);						
+						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
 					}
 					break;
 				case 'list':
@@ -2545,12 +2410,12 @@ abstract class common {
 
 		// show
 			$layout_map_options->request_config_type	= 'show';
-			$layout_map_result							= layout_map::get_layout_map($layout_map_options);		
+			$layout_map_result							= layout_map::get_layout_map($layout_map_options);
 			$ddo										= $layout_map_result;
 
 		// only for non list mode (excludding section)
 			if (get_called_class()!=='section' && $this->modo!=='list') {
-			
+
 				// search
 					$layout_map_options->request_config_type	= 'search';
 					$layout_map_options->add_section			= false;
@@ -2563,7 +2428,7 @@ abstract class common {
 					$layout_map_result							= layout_map::get_layout_map($layout_map_options);
 					$ddo										= array_merge($ddo, $layout_map_result);
 			}
-		
+
 
 		// add ddo to the global storage
 			$added_ddo =[];
