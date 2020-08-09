@@ -1314,15 +1314,14 @@ abstract class backup {
 	public static function check_remote_server() {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		$data = array(
-				"code" 				=> STRUCTURE_SERVER_CODE,
-				"check_connection" 	=> true
-			);
+			"code"				=> STRUCTURE_SERVER_CODE,
+			"check_connection"	=> true
+		);
 		$data_string = "data=" . json_encode($data);
-
 
 		//open connection
 		$ch = curl_init();
@@ -1353,17 +1352,20 @@ abstract class backup {
 		# Generate msg human readable
 		switch ($httpcode) {
 			case 200:
-				$response->result 	= true;
-				$msg 	= "Ok. check_remote_server passed successfully (status code: $httpcode)";
+				$response->result = true;
+				$msg	= "Ok. check_remote_server passed successfully (status code: $httpcode)";
 				break;
 			case 401:
-				$msg 	= "Error. Unauthorized code (status code: $httpcode)";
+				$response->result = false;
+				$msg	= "Error. Unauthorized code (status code: $httpcode)";
 				break;
 			case 400:
-				$msg 	= "Error. Server has problems collect structure files (status code: $httpcode)";
+				$response->result = false;
+				$msg	= "Error. Server has problems collect structure files (status code: $httpcode)";
 				break;
 			default:
-				$msg 	= "Error. check_remote_server problem found (status code: $httpcode)";
+				$response->result = false;
+				$msg	= "Error. check_remote_server problem found (status code: $httpcode)";
 				break;
 		}
 

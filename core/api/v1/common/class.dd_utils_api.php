@@ -205,8 +205,17 @@ class dd_utils_api {
 		# Remote server case
 		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
 
+			debug_log(__METHOD__." Checking remote_server status. Expected header code 200 .... ".to_string(), logger::DEBUG);
+
 			# Check remote server status before begins
 			$remote_server_status = (object)backup::check_remote_server();
+
+			if(SHOW_DEBUG===true) {
+				$check_status_exec_time = exec_time_unit($start_time,'ms')." ms";
+				// dump($remote_server_status, ' remote_server_status ++ check_status_exec_time: '.$check_status_exec_time);
+				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_status), logger::DEBUG);
+			}				
+			
 			if ($remote_server_status->result===true) {
 				$response->msg		.= $remote_server_status->msg;
 			}else{
