@@ -1335,7 +1335,7 @@ abstract class backup {
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);    // we want headers
 		#curl_setopt($ch, CURLOPT_NOBODY, true);    // we don't need body
-		curl_setopt($ch, CURLOPT_TIMEOUT,10);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 		#curl_setopt($ch, CURLOPT_VERBOSE,true);
 
 		# Avoid verify ssl certificates (very slow)
@@ -1345,7 +1345,7 @@ abstract class backup {
 		$result = curl_exec($ch);
 
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		debug_log(__METHOD__." ".STRUCTURE_SERVER_URL." status code: ".to_string($httpcode), logger::WARNING);
+		debug_log(__METHOD__." ".STRUCTURE_SERVER_URL." STATUS CODE: ".to_string($httpcode), logger::WARNING);
 
 		//close connection
 		curl_close($ch);
