@@ -165,13 +165,7 @@ class component_iri extends component_common {
 
 		$valor = $this->get_valor($lang);
 		$valor = strip_tags($valor); // Removes the span tag used in list mode
-		/*
-		$previous_modo = $this->get_modo();
-		$this->set_modo('list'); // Force list mode
-		$valor = $this->get_html();
-		# Restore modo after
-		$this->set_modo($previous_modo);
-		*/
+
 		if(SHOW_DEBUG===true) {
 			#return "DATE: ".$valor;
 		}

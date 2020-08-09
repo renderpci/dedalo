@@ -241,11 +241,6 @@ class component_date extends component_common {
 	*/
 	public function get_valor() {
 
-		#$previous_modo = $this->get_modo();
-		#$this->set_modo('list'); // Force list mode
-		#$valor = $this->get_html();
-		# Restore modo after
-		#$this->set_modo($previous_modo);
 
 		$ar_dato	= $this->get_dato();
 		$properties	= $this->get_properties();
@@ -436,15 +431,6 @@ class component_date extends component_common {
 			#$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-
-		#$valor = strip_tags($valor); // Removes the span tag used in list mode
-		/*
-		$previous_modo = $this->get_modo();
-		$this->set_modo('list'); // Force list mode
-		$valor = $this->get_html();
-		# Restore modo after
-		$this->set_modo($previous_modo);
-		*/
 
 		return (string)$valor;
 	}//end get_valor_export
