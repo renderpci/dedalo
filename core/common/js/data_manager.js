@@ -30,9 +30,9 @@ data_manager.prototype.request = async function(options) {
 	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 	this.body			= options.body // body data type must match "Content-Type" header
 
-	const handle_errors = function(response) {
+	const handle_errors = function(response) {		
 		if (!response.ok) {
-			console.warn("-> handle_errors response:",response);
+			console.warn("-> HANDLE_ERRORS response:",response);
 			throw Error(response.statusText);
 		}
 		return response;
@@ -54,9 +54,10 @@ data_manager.prototype.request = async function(options) {
 		.then(response => {
 			// console.log("-> json response 1 ok:",response.body);
 			const json_parsed = response.json().then((result)=>{
-				//console.log("-> json result 2:",result);
+				// console.log("-> json result 2:",result);
 				return result
 			})
+			// console.log("-> json_parsed:",json_parsed);
 			return json_parsed
 		})// parses JSON response into native Javascript objects
 		.catch(error => {
@@ -67,6 +68,7 @@ data_manager.prototype.request = async function(options) {
 				error 	: error
 			}
 		});
+
 
 	// const api_response = await fetch(this.url, {
 	// 		method		: this.method,

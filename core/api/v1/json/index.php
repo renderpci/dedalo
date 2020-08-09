@@ -49,21 +49,22 @@ $start_time=microtime(1);
 		// 	}
 
 		// }else{
-
+	
 			try {
 				$dedalo_data	= $dd_manager->manage_request( $options );
-				$result			= json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
+				$result			= json_encode($dedalo_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 			} catch (Exception $e) {
 				$error_obj = new stdClass();
 					$error_obj->result	= false;
 					$error_obj->msg		= (SHOW_DEBUG===true)
 						? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
 						: 'Exception when calling Dédalo API. Contact with your admin';
-				$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE);
+				$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 				trigger_error($e->getMessage());
 			}
 		// }
+
 
 
 		// verify result type
@@ -76,8 +77,10 @@ $start_time=microtime(1);
 					$error_obj->msg		= 'Error when calling Dédalo API. Invalid result!';
 				$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE);
 			}
-
-
+		
+		// debug output raw
+			// error_log($result);
+		
 		// output the result json string
 			echo $result;
 

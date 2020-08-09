@@ -58,11 +58,10 @@
 
 		if (!empty($dato)) {
 
-			$value  	= $this->get_dato_paginated();
+			$value		= $this->get_dato_paginated();
 			$section_id	= $this->get_parent();
-			$limit 		= ($modo==='list')
-				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
-				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
+			$limit		= $this->pagination->limit;
+			$offset		= $this->pagination->offset;
 
 			// data item
 				$item = $this->get_data_item($value);
@@ -72,7 +71,7 @@
 						$pagination = new stdClass();
 							$pagination->total	= count($dato);
 							$pagination->limit 	= $limit;
-							$pagination->offset = $this->pagination->offset ?? 0;
+							$pagination->offset = $offset;
 					$item->pagination = $pagination;
 
 				$data[] = $item;

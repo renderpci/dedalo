@@ -626,10 +626,14 @@ class hierarchy {
 	* ROW_TO_JSON_OBJ
 	* @return
 	*/
-	private static function row_to_json_obj($tipo, $parent, $dato=null, $lang='lg-spa',$section_tipo) {
+	private static function row_to_json_obj($tipo, $parent, $dato=null, $lang='lg-spa', $section_tipo=null) {
 
 		if(empty($dato)){
 			return false;
+		}
+
+		if(empty($section_tipo)){
+			throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);			
 		}
 
 		# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)

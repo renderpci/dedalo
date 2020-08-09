@@ -65,7 +65,7 @@ class dd_manager {
 					}
 					break;
 
-				case 'dd_core_api':
+				case 'dd_core_api':					
 					$dd_core_api = new dd_core_api();
 					if ( !method_exists($dd_core_api, $options->action) ) {
 						$dedalo_data = new stdClass();

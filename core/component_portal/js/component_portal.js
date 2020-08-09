@@ -1,5 +1,5 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
-/*eslint no-undef: "error"*/
+/* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/* eslint no-undef: "error" */
 
 
 
@@ -173,18 +173,18 @@ component_portal.prototype.build  = async function(autoload=false){
 			// pagination safe defaults
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
-				self.pagination.limit 	= self.pagination.limit  || (self.context.properties ? self.context.properties.max_records : 3)
+				self.pagination.limit 	= self.pagination.limit  || (self.context.properties ? self.context.properties.max_records : 5)
 
 			// sqo update filter_by_locators
-				if(self.pagination.total>self.pagination.limit){
+				// if(self.pagination.total>self.pagination.limit){
 
-					const show 	= self.dd_request.show
-					const sqo 	= show.find(item => item.typo==='sqo')
+				// 	const show 	= self.dd_request.show
+				// 	const sqo 	= show.find(item => item.typo==='sqo')
 
-					const data_value = self.data.value
+				// 	const data_value = self.data.value
 
-					sqo.filter_by_locators = data_value
-				}//end if(self.pagination.total>self.pagination.limit)
+				// 	sqo.filter_by_locators = data_value
+				// }//end if(self.pagination.total>self.pagination.limit)
 
 			// paginator
 				if (!self.paginator) {
@@ -234,6 +234,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	return true
 }//end component_portal.prototype.build
+
 
 
 /**
@@ -329,6 +330,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// // paginator object update
 	// 	self.paginator.offset 	= last_offset
 	// 	self.paginator.total 	= current_total
+	// console.log("update_pagination_values self.pagination:",self.pagination);
 
 	return true
 }//end update_pagination_values
@@ -367,3 +369,5 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	// 	return offset_last
 	// }//end get_last_offset
+
+

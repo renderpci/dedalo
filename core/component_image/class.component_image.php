@@ -193,7 +193,7 @@ class component_image extends component_media_common {
 	* Return component value sended to export data
 	* @return string $valor_export
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 
 		#$valor = $this->get_valor();

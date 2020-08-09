@@ -35,12 +35,12 @@ function isArray(obj) {
 }
 
 
+
 /*
+* DD_ABRIRTSLIST
 * Abrir listado de tesauro para hacer relaciones
 */
-if (typeof relwindow==='undefined') {
-	var relwindow ;
-}
+var relwindow = null;
 function dd_abrirTSlist(modo,type) {
 
 	// Already open
@@ -49,10 +49,12 @@ function dd_abrirTSlist(modo,type) {
 		return false;
 	}
 	
-	const theUrl = DEDALO_CORE_URL + '/dd/dd_list.php?modo=' + modo +'&type=' + type ;
-	relwindow = window.open(theUrl ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=900,height=650');//resizable
+	const theUrl = DEDALO_CORE_URL + '/dd/dd_list.php?menu=no&modo=' + modo +'&type=' + type ;
+	relwindow = window.open(theUrl ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=920,height=1280');//resizable
 	if (relwindow) relwindow.moveTo(-10,1);
 	if (window.focus) { relwindow.focus() }
-	//return false;
-}
+	
+	return false
+}//end dd_abrirTSlist
+
 

@@ -241,8 +241,8 @@ common.prototype.refresh = async function() {
 	//const isPromise = (val) => {
 	//  return (
 	//  	(val !== undefined && val !== null) &&
-	//    typeof val.then === 'function' &&
-	//    typeof val.catch === 'function'
+	//    typeof val.then==='function' &&
+	//    typeof val.catch==='function'
 	//  )
 	//}
 
@@ -627,7 +627,7 @@ const build_request_show = function(self, request_config, action){
 				// get the fpath array
 				for (let k = 0; k < ddo_map_length; k++) {
 
-					const f_path = typeof ddo_map[k].fpath !== 'undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
+					const f_path = typeof ddo_map[k].fpath!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
 					const f_path_length = f_path.length
 
 					// get the current item of the fpath
@@ -635,10 +635,10 @@ const build_request_show = function(self, request_config, action){
 						const item = f_path[l]==='self'
 							? sections[j]
 							: f_path[l]
-						const exist = dd_request.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+						const exist = dd_request.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
 						if(!exist){
-							const ddo = request_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === sections[j])
+							const ddo = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
 							if(ddo){
 								dd_request.push(ddo)
@@ -649,18 +649,27 @@ const build_request_show = function(self, request_config, action){
 			}
 		}
 
+	// rqo
+		const limit	= rqo_length>0 
+			? rqo[0].show.sqo_config.limit
+			: 10
+		const offset = rqo_length>0 
+			? rqo[0].show.sqo_config.offset
+			: 0	
+
 	// sqo
 		const sqo = {
 			typo				: 'sqo',
 			section_tipo		: ar_sections,
 			filter				: null,
-			offset				: 0,
-			limit				: self.mode==='list' ? 10 : 1,
+			limit				: limit,
+			offset				: offset,
 			select				: [],
 			full_count			: false,
 			filter_by_locators	: null
 		}
 		dd_request.push(sqo)
+
 
 	return dd_request
 }//end build_request_show
@@ -676,10 +685,10 @@ const build_request_search = function(self, request_config, action){
 	const dd_request	= []
 	const ar_sections	= []
 
-	const rqo = request_config.filter(item => item.typo === 'rqo')
+	const rqo = request_config.filter(item => item.typo==='rqo')
 
 	// get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
-	const request_ddo	= self.datum.context.find(item => item.source === 'request_ddo').value
+	const request_ddo	= self.datum.context.find(item => item.source==='request_ddo').value
 	const rqo_length	= rqo.length
 	// const operator	= self.context.properties.source.operator || '$and'
 
@@ -711,12 +720,12 @@ const build_request_search = function(self, request_config, action){
 		const ddo_map_length	= ddo_map.length
 		//get sections
 		for (let j = 0; j < sections_length; j++) {
-			const section_ddo = request_ddo.find(ddo => ddo.tipo === sections[j]  && ddo.section_tipo === sections[j])
+			const section_ddo = request_ddo.find(ddo => ddo.tipo===sections[j]  && ddo.section_tipo===sections[j])
 			sqo_search.push(section_ddo)
 			// get the fpath array
 			for (let k = 0; k < ddo_map_length; k++) {
 
-				const f_path		= typeof ddo_map[k].f_path !== 'undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
+				const f_path		= typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
 				const f_path_length	= f_path.length
 				const ar_paths		= []
 
@@ -725,11 +734,11 @@ const build_request_search = function(self, request_config, action){
 					if(l % 2 !== 0){
 
 						const item = f_path[l]
-						const section_tipo = (f_path[l-1] === 'self')
+						const section_tipo = (f_path[l-1]==='self')
 							? sections[j]
 							: f_path[l-1]
 
-						const ddo = request_ddo.find(ddo => ddo.tipo === item  && ddo.section_tipo === section_tipo )
+						const ddo = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===section_tipo )
 						if (ddo) {
 							ddo.mode = 'list' // enable lang fallback value
 							sqo_search.push(ddo)
@@ -766,7 +775,7 @@ const build_request_search = function(self, request_config, action){
 				operator 	: operator
 			})
 		}
-		console.log("filter_free", filter_free);
+		console.log("build_request_search: filter_free--------------", filter_free);
 
 		// sqo_search
 		sqo_search.push({
@@ -783,7 +792,7 @@ const build_request_search = function(self, request_config, action){
 		dd_request.push(sqo_search)
 	}//end for (let i = 0; i < length; i++)
 
-console.log("dd_request--------------", dd_request);
+	console.log("build_request_search : dd_request--------------", dd_request);
 
 	return dd_request
 }//end build_request_search
