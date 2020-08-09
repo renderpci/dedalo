@@ -369,7 +369,7 @@ class dd_elements {
 	/**
 	* RENDERBTNU : crea el botón Mostrar U usado por (Si este termino tiene indexaciones, se mostrará este botón)
 	*/
-	protected static function renderBtnU($terminoID,$termino,$nIndexaciones)
+	protected static function renderBtnU($terminoID, $termino, $nIndexaciones)
 	{
 		$html 	 = '';
 		$termino = urlencode($termino);
@@ -381,7 +381,7 @@ class dd_elements {
 	/*
 	crea el botón Mostrar Modelo (tipo Provincia...)
 	*/
-	protected static function renderBtnM($terminoID,$modelo,$modelo_name) {
+	protected static function renderBtnM($terminoID, $modelo, $modelo_name) {
 
 		global $mostrar_title ;
 		global $modelo_title ;
@@ -403,8 +403,7 @@ class dd_elements {
 	/*
 	crea el botón Flecha Mostrar u ocultar hijos
 	*/
-	protected static function renderBtnFlecha($terminoID, $children=0, $desplegado=0, $parent) {
-
+	protected static function renderBtnFlecha($terminoID, $children=0, $desplegado=0, $parent=null) {
 		global $mostrar_hijos_title, $ocultar_hijos_title ;
 
 		$obj = '';
@@ -429,10 +428,6 @@ class dd_elements {
 
 		return $obj;
 	}
-
-
-
-
 
 
 

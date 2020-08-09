@@ -60,6 +60,8 @@ class section extends common {
 		// injected whole database record, with all columns
 		public $record;
 
+		public $pagination;
+
 
 
 	# DIFFUSION INFO
@@ -145,16 +147,15 @@ class section extends common {
 		}
 
 		// Set general vars
-			$this->lang 		= DEDALO_DATA_NOLAN;
-			$this->section_id 	= $section_id;
-			$this->tipo 		= $tipo;
-			$this->modo 		= $modo;
-			$this->parent 		= 0;
+			$this->lang			= DEDALO_DATA_NOLAN;
+			$this->section_id	= $section_id;
+			$this->tipo			= $tipo;
+			$this->modo			= $modo;
+			$this->parent		= 0;
 
 
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
-
 
 
 		// active_section_section_id : Set global var
@@ -165,6 +166,13 @@ class section extends common {
 					// fix active_section_id
 						section::$active_section_id = $this->get_section_id();
 			}
+
+		// pagination
+			$this->pagination = new stdClass();
+				$this->pagination->offset	= 0; // default
+				$this->pagination->limit	= isset($properties->list_max_records)
+					? (int)$properties->list_max_records 
+					: ($modo==='list' ? 10 : 1);
 
 		// debug
 			if(SHOW_DEBUG===true) {
