@@ -577,13 +577,14 @@ const build_request_show = function(self, request_config, action){
 
 	const dd_request = []
 
-	const rqo = request_config
-		? request_config.filter(item => item.typo==='rqo')
-		: []
-	
 	// source . auto create
-		const source = create_source(self, action)
+		const source = create_source(self, action);
 		dd_request.push(source)
+
+	// empty request_config cases
+		if(!request_config) {
+			return dd_request;
+		}
 
 	// direct request ddo if exists
 		const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
@@ -594,12 +595,13 @@ const build_request_show = function(self, request_config, action){
 		}
 
 	// direct request sqo if exists
-		const request_sqo = request_config.find(item => item.typo==='sqo')
+		const request_sqo = request_config.find(item => item.typo==='sqo')			
 		if (request_sqo) {
-			dd_request.push(request_sqo)			
+			dd_request.push(request_sqo)
 		}
 
-	// if don't has rqo return the source only
+	// rqo. If don't has rqo, return the source only
+		const rqo = request_config.filter(item => item.typo==='rqo')	
 		if(rqo.length < 1){
 			return dd_request;
 		}
