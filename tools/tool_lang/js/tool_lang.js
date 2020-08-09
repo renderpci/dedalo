@@ -104,25 +104,26 @@ tool_lang.prototype.load_component = async function(lang) {
 	const context = JSON.parse(JSON.stringify(component.context))
 		  context.lang = lang
 
-	const component_instance = await get_instance({
-		model 			: component.model,
-		tipo 			: component.tipo,
-		section_tipo 	: component.section_tipo,
-		section_id 		: component.section_id,
-		mode 			: component.mode==='edit_in_list' ? 'edit' : component.mode,
-		lang 			: lang,
-		section_lang 	: component.lang,
-		//parent 			: component.parent,
-		type 			: component.type,
-		context 		: context,
-		data 			: {value:[]},
-		datum 			: component.datum
-	})
+	const instance_options = {
+		model			: component.model,
+		tipo			: component.tipo,
+		section_tipo	: component.section_tipo,
+		section_id		: component.section_id,
+		mode			: component.mode==='edit_in_list' ? 'edit' : component.mode,
+		lang			: lang,
+		section_lang	: component.lang,
+		//parent		: component.parent,
+		type			: component.type,
+		context			: context	
+	}
+
+	const component_instance = await get_instance(instance_options)
 
 	// set current tool as component caller (to check if component is inside tool or not)
 		component_instance.caller = this
 
-	await component_instance.build(true)
+	// build component (load data from API)
+		await component_instance.build(true)
 
 	// add
 		const instance_found = self.ar_instances.find( el => el===component_instance )
