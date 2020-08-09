@@ -1723,36 +1723,37 @@ class component_portal extends component_relation_common {
 			$filter_by_locator = (array)$dato;
 
 			$context = new stdClass();
-				$context->context_name 	= 'list_in_portal';
-				$context->portal_tipo 	= $tipo;
-				$context->portal_parent = $parent;
+				$context->context_name	= 'list_in_portal';
+				$context->portal_tipo	= $tipo;
+				$context->portal_parent	= $parent;
 
 			# OPTIONS
 			#$search_options = new stdClass();
-			#	$search_options->modo  		= 'portal_list';
-			#	$search_options->context 	= $context;
+			#	$search_options->modo		= 'portal_list';
+			#	$search_options->context	= $context;
 
 			#
 			# SEARCH_QUERY_OBJECT . Add search_query_object to options
 			$search_query_object_options = new stdClass();
-				$search_query_object_options->filter_by_locator  = $filter_by_locator;
-				$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-				$search_query_object_options->tipo 		 		 = $this->tipo;
-				#$search_query_object_options->limit 		 	 = 0;
+				$search_query_object_options->filter_by_locator	= $filter_by_locator;
+				$search_query_object_options->section_tipo		= reset($ar_target_section_tipo);
+				$search_query_object_options->tipo				= $this->tipo;
+				#$search_query_object_options->limit			= 0;
 
 				# paginations options
-				$search_query_object_options->limit 		 	= $max_records;
-				$search_query_object_options->offset 		 	= $offset;
-				#$search_query_object_options->full_count 		= count($dato);
+				$search_query_object_options->limit			= $max_records;
+				$search_query_object_options->offset		= $offset;
+				#$search_query_object_options->full_count	= count($dato);
 
 				// Order . Below 1000 locators
-					if (count($dato)<=1000) {
+					$portal_max_ordered_locators = 2000;
+					if (count($dato)<=$portal_max_ordered_locators) {
 						$order_values = array_map(function($locator){
 							return (int)$locator->section_id;
 						}, $dato);
 						$item = new stdClass();
-							$item->column_name 	 = 'section_id';
-							$item->column_values = $order_values;
+							$item->column_name		= 'section_id';
+							$item->column_values	= $order_values;
 						$search_query_object_options->order_custom = [$item];
 					}
 			$search_query_object = component_portal::build_search_query_object($search_query_object_options);
@@ -1813,9 +1814,9 @@ class component_portal extends component_relation_common {
 			}
 
 			$column_data = new stdClass();
-				$column_data->label = $c_label;
-				$column_data->name 	= $name;
-				$column_data->tipo 	= $c_tipo;
+				$column_data->label	= $c_label;
+				$column_data->name	= $name;
+				$column_data->tipo	= $c_tipo;
 
 			#$ar_columns_plus[$c_tipo] = array('label'=>$c_label,'name'=>$name);
 			$ar_columns_plus[] = $column_data;
@@ -1823,29 +1824,29 @@ class component_portal extends component_relation_common {
 		//dump($ar_columns, ' ar_columns ++ '.to_string($tipo));
 
 		$json_d = new stdClass();
-			$json_d->dato 					= $dato;
-			$json_d->propiedades 			= $propiedades;
-			$json_d->label 					= $label;
-			$json_d->permissions 			= $permissions;
-			$json_d->component_info 		= $component_info;
-			$json_d->exclude_elements 		= $exclude_elements;
-			$json_d->html_options 			= $this->html_options;
-			$json_d->context 				= $context;
-			$json_d->rows_data 				= $rows_data;
-			$json_d->ar_columns 			= $ar_columns_plus;
-			$json_d->ar_target_section_tipo = $ar_target_section_tipo;
-			$json_d->show_button_new 		= $show_button_new;
-			$json_d->dragable_connectWith 	= $dragable_connectWith;
-			$json_d->n_rows 				= $n_rows;
-			$json_d->max_records 			= $max_records;
-			$json_d->offset 				= $offset;
+			$json_d->dato					= $dato;
+			$json_d->propiedades			= $propiedades;
+			$json_d->label					= $label;
+			$json_d->permissions			= $permissions;
+			$json_d->component_info			= $component_info;
+			$json_d->exclude_elements		= $exclude_elements;
+			$json_d->html_options			= $this->html_options;
+			$json_d->context				= $context;
+			$json_d->rows_data				= $rows_data;
+			$json_d->ar_columns				= $ar_columns_plus;
+			$json_d->ar_target_section_tipo	= $ar_target_section_tipo;
+			$json_d->show_button_new		= $show_button_new;
+			$json_d->dragable_connectWith	= $dragable_connectWith;
+			$json_d->n_rows					= $n_rows;
+			$json_d->max_records			= $max_records;
+			$json_d->offset					= $offset;
 
 			/*
-			$json_data->edit_view 			= $edit_view;
-			$json_data->file_view 			= $file_view;
-			$json_data->file_name 			= $file_name;
+			$json_data->edit_view			= $edit_view;
+			$json_data->file_view			= $file_view;
+			$json_data->file_name			= $file_name;
 			*/
-			$json_d->rows_data_values 		= array();
+			$json_d->rows_data_values		= array();
 
 
 			$row_number=0; foreach((array)$dato as $key => $current_locator) {
@@ -1868,10 +1869,10 @@ class component_portal extends component_relation_common {
 					continue; # Skip invalid locator
 				}
 
-				$current_section_id 	= $current_locator->section_id;
-				$current_section_tipo 	= $current_locator->section_tipo;
-				$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
-				$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
+				$current_section_id		= $current_locator->section_id;
+				$current_section_tipo	= $current_locator->section_tipo;
+				$current_component_tipo	= isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
+				$current_tag_id			= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
 				$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );
 					#dump($current_row, ' current_row ++ '.to_string());
@@ -1887,13 +1888,13 @@ class component_portal extends component_relation_common {
 
 				#
 				# REL_LOCATOR : locator like object
-					$rel_locator 								= json_encode($current_locator);
-					$json_d->rows_data_values[$key]['locator'] 	= $rel_locator;
+					$rel_locator								= json_encode($current_locator);
+					$json_d->rows_data_values[$key]['locator']	= $rel_locator;
 
 				#
 				# SECTION ID
-					$section_id 		 = $current_section_id;
-					$target_section_tipo = $current_section_tipo;
+					$section_id				= $current_section_id;
+					$target_section_tipo	= $current_section_tipo;
 
 				#debug_log(__METHOD__." **************** here  - modo:$modo - key:$key - ar_columns ".json_encode($ar_columns, JSON_PRETTY_PRINT), logger::DEBUG);
 

@@ -1428,7 +1428,8 @@ class component_relation_common extends component_common {
 			$total_ar_result = count($ar_result);
 			$total_ar_dato   = count($dato);
 
-			if ($total_ar_result>1000) {
+			$portal_max_ordered_locators = 2000;
+			if ($total_ar_result>$portal_max_ordered_locators) {
 				# Not maintain order, is too expensive above 1000 locators
 				if ($total_ar_dato!==$total_ar_result) {
 					$changed = false; // avoid expensive save
