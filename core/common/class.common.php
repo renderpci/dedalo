@@ -579,46 +579,6 @@ abstract class common {
 
 
 	/**
-	* GET_AR_LOADED_MODELOS
-	*//*
-	public static function get_ar_loaded_modelos() {
-		if(is_array(common::$ar_loaded_modelos)){
-			#dump(common::$ar_loaded_modelos); echo "<hr>";
-			return array_unique(common::$ar_loaded_modelos);
-		}else{
-			return common::$ar_loaded_modelos;
-		}
-	}//end get_ar_loaded_modelos
-	*/
-
-
-
-	/**
-	* SHOW_LOADED_MODELOS
-	* @return array $debug
-	*//*
-	public static function show_loaded_modelos() {
-
-		$debug = array();
-		#$ar_all_loaded_modelos = common::get_ar_all_loaded_modelos();
-		$ar_all_loaded_modelos = common::$ar_loaded_modelos;
-		foreach((array)$ar_all_loaded_modelos as $modeloID) {
-			$modelo_name = RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
-			$debug[] 	 = " $modeloID - $modelo_name ";
-		}
-
-		# DEBUG
-		if(SHOW_DEBUG===true) {
-			$_SESSION['debug_content'][__METHOD__] = to_string($debug);
-		}
-
-		return $debug;
-	}//end show_loaded_modelos
-	*/
-
-
-
-	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
 	*/
 	public static function notify_load_lib_element_tipo($modelo_name, $modo) {
@@ -851,6 +811,7 @@ abstract class common {
 
 		return true;
 	}//end set_properties
+
 
 
 	/**
