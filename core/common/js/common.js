@@ -109,7 +109,7 @@ common.prototype.render = async function(options={render_level:'full'}) {
 
 							const wrapper = self.node[i]
 
-							// old content_data node								
+							// old content_data node
 								const old_content_data_node = self.model==='section' && self.mode==='list'
 									? wrapper.querySelector(":scope >.list_body >.content_data")
 									: wrapper.querySelector(":scope >.content_data")
@@ -147,7 +147,7 @@ common.prototype.render = async function(options={render_level:'full'}) {
 								// console.log("-----------------old_content_data_node:",old_content_data_node);
 								// console.log("-----------------new_node:", new_content_data_node, self.model);
 
-							// replace child from parent wrapper								
+							// replace child from parent wrapper
 								if (self.model==='section' && self.mode==='list') {
 									const list_body = wrapper.querySelector(":scope >.list_body")
 									list_body.replaceChild(new_content_data_node, old_content_data_node)
@@ -580,7 +580,7 @@ const build_request_show = function(self, request_config, action){
 	const rqo = request_config
 		? request_config.filter(item => item.typo==='rqo')
 		: []
-	
+
 	// source . auto create
 		const source = create_source(self, action)
 		dd_request.push(source)
@@ -596,7 +596,7 @@ const build_request_show = function(self, request_config, action){
 	// direct request sqo if exists
 		const request_sqo = request_config.find(item => item.typo==='sqo')
 		if (request_sqo) {
-			dd_request.push(request_sqo)			
+			dd_request.push(request_sqo)
 		}
 
 	// if don't has rqo return the source only
@@ -627,7 +627,7 @@ const build_request_show = function(self, request_config, action){
 				// get the fpath array
 				for (let k = 0; k < ddo_map_length; k++) {
 
-					const f_path = typeof ddo_map[k].fpath!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
+					const f_path = typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
 					const f_path_length = f_path.length
 
 					// get the current item of the fpath
@@ -650,12 +650,12 @@ const build_request_show = function(self, request_config, action){
 		}
 
 	// rqo
-		const limit	= rqo_length>0 
+		const limit	= rqo_length>0
 			? rqo[0].show.sqo_config.limit
 			: 10
-		const offset = rqo_length>0 
+		const offset = rqo_length>0
 			? rqo[0].show.sqo_config.offset
-			: 0	
+			: 0
 
 	// sqo
 		const sqo = {
@@ -669,7 +669,6 @@ const build_request_show = function(self, request_config, action){
 			filter_by_locators	: null
 		}
 		dd_request.push(sqo)
-
 
 	return dd_request
 }//end build_request_show
@@ -775,7 +774,7 @@ const build_request_search = function(self, request_config, action){
 				operator 	: operator
 			})
 		}
-		console.log("build_request_search: filter_free--------------", filter_free);
+		// console.log("build_request_search: filter_free--------------", filter_free);
 
 		// sqo_search
 		sqo_search.push({
@@ -792,7 +791,7 @@ const build_request_search = function(self, request_config, action){
 		dd_request.push(sqo_search)
 	}//end for (let i = 0; i < length; i++)
 
-	console.log("build_request_search : dd_request--------------", dd_request);
+	// console.log("build_request_search : dd_request--------------", dd_request);
 
 	return dd_request
 }//end build_request_search

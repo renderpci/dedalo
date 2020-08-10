@@ -328,7 +328,7 @@ abstract class component_common extends common {
 
 		// lang : Check lang again after structure data is loaded
 		// Establecemos el lenguaje preliminar a partir de la carga de la estructura
-			if ($this->traducible==='no') {				
+			if ($this->traducible==='no') {
 				if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 					# Allow tool lang on non translatable components
 				}else{
@@ -538,7 +538,7 @@ abstract class component_common extends common {
 				$section = section::get_instance($this->section_id, $this->section_tipo);
 
 			// fix dato
-				// El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.			
+				// El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.
 				// $lang_fallback = ($this->modo==='list') ? true : false;
 				$this->dato = $section->get_component_dato($this->tipo, $this->lang, $lang_fallback=false);
 
@@ -838,6 +838,7 @@ abstract class component_common extends common {
 	}//end propagate_to_observers
 
 
+
 	/**
 	* UPDATE_OBSERVER_DATO
 	* @return
@@ -916,6 +917,7 @@ abstract class component_common extends common {
 
 		return $ar_data;
 	}//end update_observers_dato
+
 
 
 	/**
@@ -1868,7 +1870,7 @@ abstract class component_common extends common {
 		}
 		return true;
 	}//end is_dato_empty
-	
+
 
 
 	/**
@@ -2666,7 +2668,7 @@ abstract class component_common extends common {
 			$this->changed_data = $changed_data;
 
 		switch ($changed_data->action) {
-			
+
 			case 'insert':
 			case 'update':
 				// check if the key exist in the $dato if the key exist chage it directly, else create all positions with null value for coherence

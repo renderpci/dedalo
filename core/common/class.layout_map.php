@@ -33,13 +33,13 @@ class layout_map {
 			$options->add_section			= false;
 			$options->external				= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		
+
 		// cache
 			static $resolved_layout_map = [];
 			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
 			if (isset($resolved_layout_map[$resolved_key])) {
 			// if (isset($_SESSION['dedalo']['resolved_layout_map'][$resolved_key])) {
-				
+
 				debug_log(__METHOD__." Returned resolved layout_map with key: ".to_string($resolved_key), logger::DEBUG);
 				// dump($resolved_layout_map[$resolved_key], ' var ++ '.to_string($resolved_key)); //die();
 				// $bt = debug_backtrace();
@@ -276,6 +276,11 @@ class layout_map {
 				'label'			=> RecordObj_dd::get_termino_by_tipo($current_tipo, $lang, true, true),
 				'parent'		=> $current_parent
 			]);
+
+			if($current_model === 'component_external'){
+				$RecordObj_dd = new RecordObj_dd($current_tipo);
+				$dd_object->properties = $RecordObj_dd->get_properties();
+			}
 
 			return $dd_object;
 	}//end get_component_ddo
