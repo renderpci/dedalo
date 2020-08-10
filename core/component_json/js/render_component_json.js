@@ -206,7 +206,8 @@ const get_content_data_edit = async function(self) {
 			console.warn("More than one value in component_json is not allowed at now. Ignored next values. N values: ",value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
-			get_input_element(i, inputs_value[i], inputs_container, self)
+			const li = await get_input_element(i, inputs_value[i], inputs_container, self)
+			inputs_container.appendChild(li)
 			break; // only one is used for the time being
 		}
 
@@ -284,8 +285,8 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type	: 'li',
+			// parent		: inputs_container
 		})
 
 	// button_save
@@ -336,8 +337,6 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				})
 		})
 
-	// load
-		await self.load_editor()
 
 	// create the editor
 		const editor_options = {
@@ -385,7 +384,21 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		    // 	alert("content changed");
 		    // }
 		}
-		const editor = new JSONEditor(li, editor_options, current_value)
+
+	
+	// load editor files (js/css)
+		await self.load_editor()
+					
+	
+	// create a new instace of the editor when DOM element is ready	
+		event_manager.when_in_dom(li, function(){
+			
+			const editor = new JSONEditor(li, editor_options, current_value)
+
+			// append current editor
+			self.editors.push(editor)
+		})
+		
 
 		// blur event
 			// const ace_editor = editor.aceEditor
@@ -402,11 +415,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			// 	if (confirm("Save json data changes?")) {
 			// 		button_save.click()
 			// 	}
-			// })
-						
-
-	// append current editor
-		self.editors.push(editor)
+			// })	
 
 
 	return li
