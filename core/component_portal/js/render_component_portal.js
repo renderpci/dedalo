@@ -331,6 +331,9 @@ const get_top = function(self) {
 			class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
 			parent			: fragment
 		})
+		select_section.addEventListener("click", function(e){
+			e.stopPropagation()
+		})
 
 		// options
 			for (let i = 0; i < target_section_lenght; i++) {
