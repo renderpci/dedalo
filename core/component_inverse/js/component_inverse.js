@@ -28,7 +28,7 @@ export const component_inverse = function(){
 		this.id
 
 	return true
-}//end component_inverse
+};//end component_inverse
 
 
 
@@ -48,4 +48,3 @@ export const component_inverse = function(){
 	component_inverse.prototype.render				= common.prototype.render
 	component_inverse.prototype.list				= render_component_inverse.prototype.list
 	component_inverse.prototype.edit				= render_component_inverse.prototype.edit
-

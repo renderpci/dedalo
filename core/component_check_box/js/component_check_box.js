@@ -28,7 +28,7 @@ export const component_check_box = function(){
 		this.id
 
 	return true
-}//end component_check_box
+};//end component_check_box
 
 
 
@@ -106,6 +106,4 @@ component_check_box.prototype.get_changed_key = function(action, value) {
 
 
 	return changed_key
-}//end get_changed_key
-
-
+};//end get_changed_key

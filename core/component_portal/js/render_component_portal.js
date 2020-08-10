@@ -19,7 +19,7 @@
 export const render_component_portal = function() {
 
 	return true
-}//end render_component_portal
+};//end  render_component_portal
 
 
 
@@ -61,7 +61,7 @@ render_component_portal.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end  list
 
 
 
@@ -104,7 +104,7 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 
 
 	return wrapper
-}//end edit
+};//end  edit
 
 
 
@@ -230,7 +230,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end  add_events
 
 
 
@@ -270,7 +270,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end  get_content_data_edit
 
 
 
@@ -297,7 +297,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end  get_buttons
 
 
 
@@ -483,7 +483,7 @@ const get_top = function(self) {
 
 
 	return top
-}//end get_top
+};//end  get_top
 
 
 
@@ -516,4 +516,4 @@ console.log("current_section_record", current_section_record);
 
 
 	return li
-}//end input_element
+};//end  input_element

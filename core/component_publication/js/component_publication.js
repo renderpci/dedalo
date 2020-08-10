@@ -24,7 +24,7 @@ export const component_publication = function(){
 
 
 	return true
-}//end component_publication
+};//end component_publication
 
 
 /**
@@ -46,7 +46,7 @@ export const component_publication = function(){
 	component_publication.prototype.change_value		= component_common.prototype.change_value
 	component_publication.prototype.build_dd_request	= common.prototype.build_dd_request
 
-	// render	
+	// render
 	component_publication.prototype.list				= render_component_publication.prototype.list
 	component_publication.prototype.edit				= render_component_publication.prototype.edit
 	component_publication.prototype.edit_in_list		= render_component_publication.prototype.edit

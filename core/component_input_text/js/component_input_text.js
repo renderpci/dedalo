@@ -35,7 +35,7 @@ export const component_input_text = function(){
 
 
 	return true
-}//end component_input_text
+};//end component_input_text
 
 
 
@@ -77,7 +77,7 @@ component_input_text.prototype.active = function() {
 	//console.log("Yujuu! This is my component custom active test triggered after ui.active. id:", this.id )
 
 	return true
-}//end active
+};//end active
 
 
 
@@ -151,4 +151,4 @@ component_input_text.prototype.is_unique = async function(new_value){
 		}
 
 	return record
-}//end is_unique
+};//end is_unique

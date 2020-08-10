@@ -18,7 +18,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_indexation = function () {
-
+	
 	this.id
 	this.model
 	this.mode
@@ -35,7 +35,7 @@ export const tool_indexation = function () {
 
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -67,7 +67,7 @@ tool_indexation.prototype.init = async function(options) {
 
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -85,7 +85,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+};//end build_custom
 
 
 
@@ -130,7 +130,7 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 
 	return instance
-}//end get_component
+};//end get_component
 
 
 
@@ -152,7 +152,7 @@ tool_indexation.prototype.get_thesaurus = async function() {
 			section_tipo	: tipo,
 			mode			: mode,
 			lang			: lang
-		}	
+		}
 		const instance = await get_instance(options)
 
 	// set instance in thesaurus mode 'relation'
@@ -163,7 +163,7 @@ tool_indexation.prototype.get_thesaurus = async function() {
 
 
 	return instance
-}//end get_thesaurus
+};//end get_thesaurus
 
 
 
@@ -173,6 +173,7 @@ tool_indexation.prototype.get_thesaurus = async function() {
 * y salva los datos
 */
 tool_indexation.prototype.create_fragment = function ( button_obj, event ) {	//, component_name
+
 	event.preventDefault()
 	event.stopPropagation()
 
@@ -251,7 +252,7 @@ tool_indexation.prototype.create_fragment = function ( button_obj, event ) {	//,
 	button_obj.style.display = 'none'
 
 	return true
-}//end create_fragment
+};//end create_fragment
 
 
 
@@ -276,10 +277,10 @@ tool_indexation.prototype.active_value = function(name, callback) {
 	})
 
 	console.log("self.active_elements:",self.active_elements);
-	
+
 
 	return true
-}//end active_value
+};//end active_value
 
 
 
@@ -291,24 +292,21 @@ tool_indexation.prototype.active_value = function(name, callback) {
 tool_indexation.prototype.update_active_values = function(values) {
 
 	for (let i = 0; i < values.length; i++) {
-		
+
 		const item = values[i]
 
 		const founds = self.active_elements.filter(el => el.name===item.name)
 		for (let j = 0; j < founds.length; j++) {
-			
+
 			const found = founds[j]
 				console.log("------------------- found:",found);
 
 			if (found.callback) {
 				found.callback(item.value)
 			}
-		}		
+		}
 	}
 
-	
+
 	return true
-}//end update_active_values
-
-
-
+};//end update_active_values

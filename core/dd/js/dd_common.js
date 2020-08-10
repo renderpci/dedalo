@@ -19,10 +19,10 @@ function getValue(name) {
 			resultado = null ;
 		else
 			resultado = results[1];
-	}catch(e){	 
+	}catch(e){
 		alert(e)
 	}
-	
+
 	return resultado ;
 }
 
@@ -48,13 +48,11 @@ function dd_abrirTSlist(modo,type) {
 		relwindow.focus()
 		return false;
 	}
-	
+
 	const theUrl = DEDALO_CORE_URL + '/dd/dd_list.php?menu=no&modo=' + modo +'&type=' + type ;
 	relwindow = window.open(theUrl ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=920,height=1280');//resizable
 	if (relwindow) relwindow.moveTo(-10,1);
 	if (window.focus) { relwindow.focus() }
-	
+
 	return false
 }//end dd_abrirTSlist
-
-

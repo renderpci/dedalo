@@ -14,9 +14,9 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_indexation = function() {
-
+	
 	return true
-}//end render_tool_indexation
+};//end render_tool_indexation
 
 
 
@@ -55,9 +55,9 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 	get_tag_info(self)
 
-	// events		
+	// events
 		event_manager.subscribe('click_tag_index' +'_'+ self.caller.id_base, function(options){
-						
+
 			self.update_active_values([{
 				name	: "tag_id",
 				value	: options.tag.dataset.tag_id
@@ -71,7 +71,7 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 
 	return wrapper
-}//end render_tool_indexation
+};//end render_tool_indexation
 
 
 
@@ -83,7 +83,7 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 const get_tag_info = function(self) {
 
 	// const self = this
-	
+
 	// tag dom node
 	// const tag		= options.tag || null
 	// const tag_id	= tag.dataset.tag_id || null
@@ -125,7 +125,7 @@ const get_tag_info = function(self) {
 			class_name		: 'wrap_tag_state_selector',
 			inner_html		: get_label.state || "State",
 			parent			: common_line
-		})		
+		})
 	// state selector
 		const tag_state_selector = ui.create_dom_element({
 			element_type	: 'select',
@@ -153,7 +153,7 @@ const get_tag_info = function(self) {
 			class_name		: 'div_delete_tag',
 			dataset			: {tag_id : tag_id},
 			parent			: common_line
-		})			
+		})
 		// button delete
 			const button_delete = ui.create_dom_element({
 				element_type	: 'span',
@@ -181,7 +181,7 @@ const get_tag_info = function(self) {
 
 
 	return true;
-}//end get_tag_info
+};//end get_tag_info
 
 
 
@@ -190,7 +190,6 @@ const get_tag_info = function(self) {
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
-
 
 	const fragment = new DocumentFragment()
 
@@ -235,13 +234,13 @@ const get_content_data_edit = async function(self) {
 				}
 			})
 			component_container.appendChild(lang_selector)
-		
+
 		// component. render another node of component caller and append to container
 			const component = await self.get_component(self.lang)
 			component.render().then(function(node){
 				component_container.appendChild(node)
-			})		
-		
+			})
+
 
 	// info container
 		const info_container = ui.create_dom_element({
@@ -338,7 +337,7 @@ const get_content_data_edit = async function(self) {
 	// 		}//end if (translator_engine)
 
 
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -369,4 +368,4 @@ export const add_component = async (self, component_container, value) => {
 
 
 	return true
-}//end add_component
+};//end add_component

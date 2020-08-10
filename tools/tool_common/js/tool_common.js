@@ -12,9 +12,9 @@
 
 
 export const tool_common = function(){
-
+	
 	return true
-}//end tool_common
+};//end tool_common
 
 
 
@@ -46,7 +46,7 @@ tool_common.prototype.init = async function(options) {
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -54,6 +54,7 @@ tool_common.prototype.init = async function(options) {
 * BUILD
 */
 tool_common.prototype.build = async function(autoload=false) {
+
 	const t0 = performance.now()
 
 	const self = this
@@ -134,7 +135,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -185,7 +186,7 @@ export const load_tool = async (options) => {
 
 
 	return tool_instance
-}//end load_tool
+};//end load_tool
 
 
 
@@ -193,6 +194,7 @@ export const load_tool = async (options) => {
 * TRIGGER_REQUEST
 */
 export const trigger_request = async function(trigger_url, body) {
+
 	const t0 = performance.now()
 
 	const handle_errors = function(response) {
@@ -233,7 +235,7 @@ export const trigger_request = async function(trigger_url, body) {
 
 
 	return trigger_response
-}//end trigger_request
+};//end trigger_request
 
 
 
@@ -260,4 +262,4 @@ const get_label = function(label_name) {
 	}
 
 	return label_item
-}//end get_label
+};//end get_label

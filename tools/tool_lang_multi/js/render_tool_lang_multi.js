@@ -14,9 +14,9 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_lang_multi = function() {
-
+	
 	return true
-}//end render_tool_lang_multi
+};//end render_tool_lang_multi
 
 
 
@@ -51,7 +51,7 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 
 	return wrapper
-}//end render_tool_lang_multi
+};//end render_tool_lang_multi
 
 
 
@@ -60,7 +60,6 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
-
 
 	const fragment = new DocumentFragment()
 
@@ -100,7 +99,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -145,7 +144,7 @@ const build_automatic_tranlation = (self, translator_engine, source_select_lang,
 		}
 
 	return automatic_translation_container
-}//end build_automatic_tranlation
+};//end build_automatic_tranlation
 
 
 
@@ -160,7 +159,7 @@ export const add_component = async (self, component_container, value) => {
 	component_container.appendChild(node)
 
 	return true
-}//end add_component
+};//end add_component
 
 
 
@@ -192,4 +191,4 @@ export const add_target_component = async (lang, components_container, self) => 
 	target_component_title.appendChild(node)
 
 	return true
-}//end add_target_component
+};//end add_target_component

@@ -33,7 +33,7 @@ export function wait_for_global(name, timeout=300) {
 
     wait(30)
   })
-}
+};//end wait_for_global
 
 
 export async function observe_changes(element, config, once) {
@@ -70,4 +70,4 @@ export async function observe_changes(element, config, once) {
 		// Start observing the target node for configured mutations
 		observer.observe(element, config);
 	})
-}//end observe_changes
+};//end observe_changes

@@ -14,9 +14,9 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_posterframe = function() {
-
+	
 	return true
-}//end render_tool_posterframe
+};//end render_tool_posterframe
 
 
 
@@ -54,7 +54,7 @@ render_tool_posterframe.prototype.edit = async function (options={render_level:'
 
 
 	return wrapper
-}//end render_tool_tc
+};//end render_tool_tc
 
 
 
@@ -86,7 +86,7 @@ const content_data_edit = async function(self) {
 			class_name 		: 'video_container',
 			parent 			: wrap_component_container
 		})
-	
+
 	// source tag
 		const source = document.createElement("source")
 			  source.src  = self.caller.data.video_url
@@ -125,7 +125,7 @@ const content_data_edit = async function(self) {
 
 	//adding buttons
 		add_button(self, video_controls_container, "Play", "av_player_btn")
-		
+
 		const tc_div = ui.create_dom_element({
 			id              : 'TCdiv',
 			element_type	: 'span',
@@ -179,7 +179,7 @@ const content_data_edit = async function(self) {
 			self.button_click('Delete Posterframe', button_delete_posterframe)
 
 		})
-	
+
 	// content_data
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
@@ -187,7 +187,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+};//end content_data_edit
 
 
 
@@ -195,7 +195,7 @@ const content_data_edit = async function(self) {
 * ADD_BUTTON
 */
 export const add_button = async (self, component_container, value, class_name = "secondary button_preview") => {
-// apply button
+	// apply button
 		const new_button = ui.create_dom_element({
 			element_type 	: 'button',
 			class_name 		: class_name, //'css_button_generic css_av_video_controls_rew av_player_btn',
@@ -214,4 +214,4 @@ export const add_button = async (self, component_container, value, class_name = 
 		})
 
 	return true
-}//end add_button
+};//end add_button

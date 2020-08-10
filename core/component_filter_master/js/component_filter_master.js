@@ -33,7 +33,7 @@ export const component_filter_master = function(){
 	this.tools
 
 	return true
-}//end component_filter_master
+};//end component_filter_master
 
 
 
@@ -63,5 +63,3 @@ export const component_filter_master = function(){
 
 	// others (from component_filter_master)
 	component_filter_master.prototype.get_changed_key	= component_filter.prototype.get_changed_key
-
-
