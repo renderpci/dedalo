@@ -6,7 +6,7 @@
 */
 var button_trigger = new function() {
 
-	'use strict';	
+	'use strict';
 
 
 	this.executing = false;
@@ -17,12 +17,12 @@ var button_trigger = new function() {
 	*
 	*/
 	this.trigger = function (button_obj) {
-	
+
 		if (button_trigger.button_trigger === true) {
 			console.log("[button_trigger.trigger] Please wait process finish");
 			return false;
 		}
-		
+
 		const tipo						= button_obj.dataset.tipo
 		const properties 				= JSON.parse( button_obj.dataset.properties )
 			  properties.section_tipo 	= page_globals.section_tipo
@@ -38,14 +38,14 @@ var button_trigger = new function() {
 			if (typeof properties.mode == "undefined") {
 				return alert("[button_trigger.trigger] Error Wrong mode data [properties]")
 			}
-			
+
 		// target_div
 			const target_div = document.getElementById('button_trigger_'+tipo);
 				if (!target_div) {
 					return alert("[button_trigger.trigger] Error target_div not found!");
-				}	
+				}
 
-		// Spinner ON		
+		// Spinner ON
 			target_div.innerHTML 	 = ''
 			target_div.style.display = 'block'
 			target_div.classList.add("button_trigger_response_loading")
@@ -53,10 +53,10 @@ var button_trigger = new function() {
 
 		// Set active
 			button_trigger.button_trigger = true;
-		
+
 
 		// Assign trigger vars from properties
-			const trigger_vars = cloneDeep(properties)		
+			const trigger_vars = cloneDeep(properties)
 
 		// Promise json XMLHttpRequest
 			const js_promise = common.get_json_data(trigger_url, trigger_vars).then(function(response){
@@ -89,7 +89,7 @@ var button_trigger = new function() {
 				// log
 				console.log("[component_state.update_state_locator] Error.", error);
 				top.inspector.show_log_msg( "<span class='error'>Error on " + getFunctionName() + " update_state_locator</span>" + error );
-				
+
 				// Spinner OFF
 				html_page.loading_content( target_div, 0 );
 				button_trigger.button_trigger = false;
@@ -97,8 +97,7 @@ var button_trigger = new function() {
 
 
 		return js_promise
-	}//end this.trigger
-
+	};//end  this.trigger
 
 
 };//end button_trigger

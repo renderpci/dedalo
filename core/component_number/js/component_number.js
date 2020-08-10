@@ -24,7 +24,7 @@ export const component_number = function(){
 	this.node
 
 	return true
-}//end component_number
+};//end component_number
 
 
 
@@ -68,7 +68,7 @@ component_number.prototype.fix_number_format = function( number ) {
 	const new_number = number.replace(/,/g, ".");
 
 	return Number(new_number)
-}//end fix_number_format
+};//end fix_number_format
 
 
 
@@ -93,5 +93,5 @@ component_email.prototype.update_data_value_from_dom = function() {
 		self.data.value = ar_value
 
 	return true
-}//end update_data_value_from_dom
+};//end update_data_value_from_dom
 */

@@ -7,7 +7,7 @@
 	* @return true
 	*/
 	export const load_search_preset = function(button_obj) {
-
+		
 		const self = this
 
 		const li 		  	 = button_obj.parentNode
@@ -35,9 +35,9 @@
 		// Reset all selections
 		const all_selected = li.parentNode.childNodes
 		const len = all_selected.length
-			for (let i = len - 1; i >= 0; i--) {
-				all_selected[i].classList.remove("selected")
-			}
+		for (let i = len - 1; i >= 0; i--) {
+			all_selected[i].classList.remove("selected")
+		}
 		// Select current
 		li.classList.add("selected")
 
@@ -50,7 +50,7 @@
 
 
 		return true
-	}//end load_search_preset
+	};//end load_search_preset
 
 
 
@@ -138,6 +138,7 @@
 			}
 
 			if (response) {
+
 				// Add component html to target div
 				new_preset_div.innerHTML = response.result
 
@@ -156,7 +157,7 @@
 					self.save_new_preset(this)
 				},false)
 
-			}//end if (response)
+			};//end if (response)
 
 		}, function(error) {
 			console.log("[search2.new_preset] Error.", error);
@@ -164,7 +165,7 @@
 		})
 
 		return js_promise
-	}//end new_preset
+	};//end new_preset
 
 
 
@@ -199,9 +200,8 @@
 			self.new_preset()
 		})
 
-
 		return true
-	}//end save_new_preset
+	};//end save_new_preset
 
 
 
@@ -257,7 +257,7 @@
 					// Hide button
 					button_obj.classList.remove("show")
 
-				}//end if (response)
+				};//end if (response)
 
 				html_page.loading_content( wrap_div, 0 );
 
@@ -268,7 +268,7 @@
 
 
 		return js_promise
-	}//end save_preset
+	};//end save_preset
 
 
 
@@ -327,7 +327,7 @@
 					// Re-Load user presets list
 					self.get_component_presets({target_section_tipo : section_tipo})
 
-				}//end if (response)
+				};//end if (response)
 
 				html_page.loading_content( wrap_div, 0 );
 
@@ -338,7 +338,7 @@
 
 
 		return js_promise
-	}//end delete_preset
+	};//end delete_preset
 
 
 
@@ -444,7 +444,7 @@
 					})
 				}
 
-			}//end if (response)
+			};//end if (response)
 
 		}, function(error) {
 			console.log("[search2.edit_preset] Error.", error);
@@ -452,6 +452,4 @@
 		})
 
 		return js_promise
-	}//end edit_preset
-
-
+	};//end edit_preset

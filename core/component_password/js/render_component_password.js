@@ -16,7 +16,7 @@
 export const render_component_password = function() {
 
 	return true
-}//end render_component_password
+};//end render_component_password
 
 
 
@@ -48,7 +48,7 @@ render_component_password.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -83,7 +83,7 @@ render_component_password.prototype.edit = async function(options={render_level:
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -132,7 +132,7 @@ const add_events = function(self, wrapper) {
 		}, false)
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -164,7 +164,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -192,6 +192,4 @@ const input_element = (inputs_container, self) => {
 		input.autocomplete = 'new-password'
 
 	return li
-}//end input_element
-
-
+};//end input_element

@@ -15,7 +15,7 @@
 export const render_page = function() {
 
 	return true
-}//end render_page
+};//end render_page
 
 
 
@@ -66,7 +66,7 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 
 
  	return wrapper_page
-}//end render_page.prototype.edit
+};//end render_page.prototype.edit
 
 
 
@@ -107,7 +107,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-}//end get_content_data
+};//end get_content_data
 
 
 
@@ -127,4 +127,4 @@ const get_menu = async function(self) {
 	}
 
 	return null
-}//end get_menu
+};//end get_menu

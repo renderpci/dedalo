@@ -20,7 +20,7 @@ export const vector_editor = function(){
 	this.active_fill_color = null
 
 	return true
-}//end component_image
+};//end component_image
 
 
 
@@ -176,7 +176,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 		}// end full_screen_change
 
 	return true
-}//end init_canvas
+};//end init_canvas
 
 
 
@@ -364,7 +364,7 @@ vector_editor.prototype.init_tools = function(self){
 						default:
 							console.log("Ignored hitResult.type :", hitResult.type)
 							break;
-					}//end switch
+					};//end switch
 					//console.log(hitResult.type);
 				}
 				/*if (movePath)
@@ -615,7 +615,7 @@ vector_editor.prototype.init_tools = function(self){
 						default:
 							console.log("Ignored hitResult.type :", hitResult.type)
 							break;
-					}//end switch
+					};//end switch
 					//console.log(hitResult.type);
 				}
 				/*if (movePath)
@@ -685,7 +685,7 @@ vector_editor.prototype.init_tools = function(self){
 		}
 
 	return true
-}//end init_tools
+};//end init_tools
 
 
 
@@ -943,7 +943,7 @@ vector_editor.prototype.render_tools_buttons = function(self){
 			activate_status(pointer)
 
 	return true
-}//end render_tools_buttons
+};//end render_tools_buttons
 
 
 
@@ -963,7 +963,7 @@ vector_editor.prototype.set_color_picker = function(item){
 	// set the color picker with the selected path color
 		this.color_picker.color.rgbaString = color
 
-}// end set_color_picker
+};//end set_color_picker
 
 
 
@@ -1034,7 +1034,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 					console.log("-> using existing current_layer: ", current_layer.name);
 					break;
 				}
-			}//end for
+			};//end for
 			if (create_new_current_layer === true) {
 				const current_layer 	= new Layer()
 					// set the name to the paper layer name
@@ -1085,8 +1085,8 @@ vector_editor.prototype.load_layer = function(self, layer) {
 						// apply the original layer bounds to the new layer situation
 						raster.layer.bounds = layer_bounds
 				}// end onLoad
-			}//end img_quality_change
-		}//end if layer_id==0
+			};//end img_quality_change
+		};//end if layer_id==0
 
 		// Bring the main layer with the crop reference to to top of the layers
 		const main_layer = project.layers['main']
@@ -1096,7 +1096,8 @@ vector_editor.prototype.load_layer = function(self, layer) {
 		const raster_layer = project.layers['raster']
 		raster_layer.sendToBack()
 	return true
-}//end load_layer
+};//end load_layer
+
 
 
 /**
@@ -1130,7 +1131,8 @@ vector_editor.prototype.create_raster_layer = function(self){
 		raster.layer.scale(ratio_layer, self.current_paper.view.center)
 
 	return raster
-}//end create_raster_layer
+};//end create_raster_layer
+
 
 
 vector_editor.prototype.activate_layer = function(self, layer, load=full) {
@@ -1218,7 +1220,7 @@ vector_editor.prototype.render_layer_selector = function(self){
 			const layer_li = this.render_layer_row(self, layer)
 			layer_ul.appendChild(layer_li)
 
-		}// end for
+		};//end for
 
 	// layer_selector
 		const layer_selector = ui.create_dom_element({
@@ -1228,7 +1230,7 @@ vector_editor.prototype.render_layer_selector = function(self){
 		layer_selector.appendChild(fragment)
 
 	return layer_selector
-}//end layer_selector
+};//end layer_selector
 
 
 
@@ -1282,7 +1284,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 					layer.layer_id === active_layer.data.layer_id
 						?	layer_li.classList.add('active')
 						:	layer_li.classList.remove('active')
-				}// end change_layer
+				};//end change_layer
 
 		// layer_icon
 			const layer_icon = ui.create_dom_element({
@@ -1320,7 +1322,7 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 						this.active_layer = viewed_layer
 					}
 				}
-			}) // end click event
+			}) //end click event
 
 
 		// layer_id
@@ -1452,4 +1454,4 @@ vector_editor.prototype.render_layer_row = function(self, layer){
 
 
 	return layer_li
-}//end layer_selector
+};//end layer_selector

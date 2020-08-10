@@ -12,7 +12,7 @@
 export const render_inspector = function() {
 
 	return true
-}//end render_inspector
+};//end render_inspector
 
 
 
@@ -56,7 +56,7 @@ render_inspector.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -76,7 +76,7 @@ const add_events = (wrapper, self) => {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -178,4 +178,4 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-}// end get_content_data
+};//end get_content_data

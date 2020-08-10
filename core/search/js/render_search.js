@@ -17,7 +17,7 @@
 export const render_search = function() {
 
 	return true
-}//end render_section
+};//end render_section
 
 
 
@@ -164,7 +164,7 @@ render_search.prototype.render_base = async function() {
 
 
 	return wrapper
-}//end render_base
+};//end render_base
 
 
 
@@ -324,16 +324,16 @@ render_search.prototype.render_components_list = async function(options) {
 
 				}
 				break;
-		}//end switch (true)
+		};//end switch (true)
 
-	}//end for (let i = 0; i < len; i++)
+	};//end for (let i = 0; i < len; i++)
 
 	// Scroll window to top always
 		window.scrollTo(0, 0);
 
 
 	return true
-}//end render_components_list
+};//end render_components_list
 
 
 
@@ -367,7 +367,7 @@ render_search.prototype.render_filter = async function(options){
 
 
 	return true
-}//end render_filter
+};//end render_filter
 
 
 
@@ -455,7 +455,7 @@ render_search.prototype.render_search_buttons = function(){
 
 
 	return search_buttons_container
-}//end render_search_buttons
+};//end render_search_buttons
 
 
 
@@ -551,7 +551,7 @@ render_search.prototype.build_search_group = async function(parent_div, options)
 
 
 	return search_group
-}//end build_search_group
+};//end build_search_group
 
 
 
@@ -629,7 +629,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 
 
 	return true
-}//end build_search_component
+};//end build_search_component
 
 
 
@@ -756,11 +756,11 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 		// add
 			ar_nodes.push(li_element)
 
-	}//end for (var i = 0; i < ar_elements.length; i++)
+	};//end for (var i = 0; i < ar_elements.length; i++)
 
 
 	return ar_nodes
-}//end render_user_preset_list
+};//end render_user_preset_list
 
 
 
@@ -827,7 +827,7 @@ const render_sections_selector = (self) => {
 
 
 	return wrapper_sections_selector
-}//end render_sections_selector
+};//end render_sections_selector
 
 
 
@@ -908,7 +908,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 	return true
-}//end build_sections_check_boxes
+};//end build_sections_check_boxes
 
 
 
@@ -965,7 +965,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}
 
 		return false;
-	}//end toggle_search_panel
+	};//end toggle_search_panel
 
 
 
@@ -1006,7 +1006,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 		return true
-	}//end toggle_fields
+	};//end toggle_fields
 
 
 
@@ -1047,7 +1047,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 		return true
-	}//end toggle_presets
+	};//end toggle_presets
 
 
 
@@ -1083,7 +1083,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}
 
 		return true
-	}//end toggle_operator_value
+	};//end toggle_operator_value
 
 
 
@@ -1092,7 +1092,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	* @return string localized
 	*/
 	const localize_operator = (operator) => {
-
+		
 		// Remove '$' (first char)
 		const clean_operator = operator.slice(1)
 
@@ -1103,4 +1103,4 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		const localized = get_label[name] || ''
 
 		return localized
-	}//end localize_operator
+	};//end localize_operator

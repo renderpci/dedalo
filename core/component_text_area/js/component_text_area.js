@@ -33,7 +33,7 @@ export const component_text_area = function(){
 		this.services = []
 
 	return true
-}//end component_text_area
+};//end component_text_area
 
 
 
@@ -69,7 +69,7 @@ export const component_text_area = function(){
 /**
 * TAGS_TO_HTML
 * Parses Dédalo server side tags to html tags
-* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />' 
+* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
 */
 component_text_area.prototype.tags_to_html = function(value) {
 
@@ -78,7 +78,7 @@ component_text_area.prototype.tags_to_html = function(value) {
 		: null
 
 	return html
-}// end
+};//end tags_to_html
 
 
 /**
@@ -90,7 +90,7 @@ component_text_area.prototype.tags_to_html = function(value) {
 *	value from active text editor
 */
 component_text_area.prototype.set_value = async function(value) {
-	
+
 	const self = this
 
 	const changed_data = Object.freeze({
@@ -104,7 +104,7 @@ component_text_area.prototype.set_value = async function(value) {
 	})
 
 	return true
-}//end set_value
+};//end set_value
 
 
 
@@ -141,7 +141,7 @@ component_text_area.prototype.save_value = async function(key, value) {
 	})
 
 	return true
-}//end save_value
+};//end save_value
 
 
 
@@ -156,7 +156,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 	const self = this
 
 	// clone text. Avoid interactions between html nodes
-		const cloned_text = document.createElement('div')	
+		const cloned_text = document.createElement('div')
 			  cloned_text.insertAdjacentHTML('afterbegin', html_value);
 
 	// section tags (struct)
@@ -193,8 +193,8 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				}
 
 				ar_section_id.push(tag_id)
-			}//end for (var i = len - 1; i >= 0; i--) {
-		}//end section_elements
+			};//end for (var i = len - 1; i >= 0; i--) {
+		};//end section_elements
 		//console.log("ar_section_id",ar_section_id);
 		if (ar_section_id_duplicates.length>0) {
 			if(SHOW_DEBUG===true) {
@@ -226,15 +226,15 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 
 				// Unwrap section tag node (removes tags and leaves only contents)
 				unwrap_element(reference_elements[i]);
-			}//end for (var i = len - 1; i >= 0; i--) {
-		}//end reference_elements
+			};//end for (var i = len - 1; i >= 0; i--) {
+		};//end reference_elements
 
 	// img tags (index, tc, svg, geo, person, etc.)
 		const image_elements = cloned_text.querySelectorAll('img') // ! use querySelectorAll to avoid loop problems on i++
 		if (image_elements) {
-			
+
 			const ar_svg_used_tag_id = [] // for renumerate on the fly
-			
+
 			const image_elements_len = image_elements.length
 			for (let i = 0; i < image_elements_len; i++) {
 
@@ -270,7 +270,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 					unwrap_element(current_element)
 				}
 			}
-		}//end if (image_elements)
+		};//end if (image_elements)
 
 	// temporal elements. Remove after use
 		let temp_elements = []
@@ -316,7 +316,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 	}
 
 	return cloned_text.innerHTML
-}//end preprocess_text_to_save
+};//end preprocess_text_to_save
 
 
 
@@ -325,7 +325,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 * @return
 */
 const unwrap_element = function(el) {
-	
+
 	// get the element's parent node
 	const parent = el.parentNode;
 
@@ -336,7 +336,7 @@ const unwrap_element = function(el) {
 	parent.removeChild(el);
 
 	return true
-}//end unwrap_element
+};//end unwrap_element
 
 
 
@@ -351,7 +351,7 @@ const is_tiny = function(ed) {
 		: true  // USING TINYMCE EDITOR
 
 	return is_tiny
-}//end is_tiny
+};//end is_tiny
 
 
 
@@ -443,14 +443,14 @@ component_text_area.prototype.update_tag = function(options) {
 	}
 
 	return true
-}//end update_tag
+};//end update_tag
 
 
 
 /**
 * BUILD_DATA_TAG
 * Unified way of create Dedalo internal custom tags from javascript
-* i.e. '[index-d-7--data::data][/index-d-7--data::data]' 
+* i.e. '[index-d-7--data::data][/index-d-7--data::data]'
 * @return string tag
 */
 component_text_area.prototype.build_data_tag = function(type, tag_id, state, label, data) {
@@ -473,7 +473,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 	// type_name. Removes sufixes 'In' and 'Out'
 		const type_name = type.replace(/In|Out/, '')
 
-	// label. Truncate and replace - avoid future errors		
+	// label. Truncate and replace - avoid future errors
 		const safe_label = (typeof label==="undefined")
 			? ''
 			: (label.substring(0,22)).replace(new RegExp('-', 'g'), '_');
@@ -490,7 +490,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 
 	return dedalo_tag
-}//end build_data_tag
+};//end build_data_tag
 
 
 
@@ -526,14 +526,14 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 			case 'struct':
 				// section : Select all sections in text
 				const ar_struct_tags = container.getElementsByTagName('section')
-				
+
 				// iterate to find tipo_tag
 				const ar_struct_tags_length = ar_struct_tags.length
 				for (let i = ar_struct_tags_length - 1; i >= 0; i--) {
 
 					// current tag like [svg-n-1]
 					const current_tag	= ar_struct_tags[i].id;
-					const ar_parts		= current_tag.split('_');				
+					const ar_parts		= current_tag.split('_');
 
 					const number = (typeof ar_parts[1]!=="undefined")
 						? parseInt(ar_parts[1])
@@ -548,14 +548,14 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 				// reference : Select all reference in text
 				const ar_tags = container.getElementsByTagName('reference')
 
-				// iterate to find tipo_tag			
+				// iterate to find tipo_tag
 				const ar_tags_length = ar_tags.length
 				for (let i = ar_tags_length - 1; i >= 0; i--) {
 
 					// current tag like [svg-n-1]
 					const current_tag	= ar_tags[i].id;
 					const ar_parts		= current_tag.split('_');
-					
+
 					const number = (typeof ar_parts[1]!=="undefined")
 						? parseInt(ar_parts[1])
 						: 0
@@ -575,7 +575,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 
 					const current_tag	= ar_img[i].id;
 					const ar_parts		= current_tag.split('-');
-					
+
 					const number = (typeof ar_parts[2]!=="undefined")
 						? parseInt(ar_parts[2])
 						: 0
@@ -588,7 +588,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 
 	// last id
 		const last_tag_id = parseInt( Math.max.apply(null, ar_id_final) );
-		
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
@@ -596,7 +596,7 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 
 
 	return last_tag_id
-}//end get_last_tag_id
+};//end get_last_tag_id
 
 
 
@@ -606,11 +606,11 @@ component_text_area.prototype.get_last_tag_id = function(key, tag_type) {
 * y salva los datos
 */
 component_text_area.prototype.create_fragment = function(key) {
-	
+
 	const self = this
 
 	// service
-		const service = self.services[key]	
+		const service = self.services[key]
 	// selection text
 		const selection_raw = service.get_selection()
 		if (!selection_raw || selection_raw.length<1) {
@@ -731,6 +731,4 @@ component_text_area.prototype.create_fragment = function(key) {
 	// button_obj.style.display = 'none'
 
 	// return true
-}//end create_fragment
-
-
+};//end create_fragment

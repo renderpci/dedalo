@@ -33,7 +33,7 @@ export const component_info = function(){
 	this.tools
 
 	return true
-}//end component_info
+};//end component_info
 
 
 
@@ -125,10 +125,10 @@ export const component_info = function(){
 
 				// add
 				self.ar_instances.push(new_widget)
-			}//end for loop
+			};//end for loop
 
 		return self.ar_instances
-	}//end get_widgets
+	};//end get_widgets
 
 
 	/**
@@ -156,5 +156,5 @@ export const component_info = function(){
 					loaded_widget.value  = widget_value
 					event_manager.publish('update_widget_value_'+i+'_'+widget_id, widget_value)
 				}
-			}
-	}
+			};
+	};

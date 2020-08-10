@@ -28,7 +28,7 @@ export const component_section_id = function(){
 		this.id
 
 	return true
-}//end component_section_id
+};//end component_section_id
 
 
 
@@ -57,5 +57,3 @@ export const component_section_id = function(){
 	component_section_id.prototype.tm					= render_component_section_id.prototype.edit
 	component_section_id.prototype.search				= render_component_section_id.prototype.search
 	component_section_id.prototype.change_mode			= component_common.prototype.change_mode
-
-

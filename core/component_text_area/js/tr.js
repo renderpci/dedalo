@@ -141,7 +141,7 @@ export const tr = {
 	* @param string text
 	* @return string text
 	*/
-	add_tag_img_on_the_fly : (text)  => {
+	add_tag_img_on_the_fly : (text) => {
 
 		if (!text || text.lenght<1) {
 			return text
@@ -209,12 +209,9 @@ export const tr = {
 			// 	text = text.replace(pattern_structOut, "</section>");
 			// }
 
-
-		return text;
+		return text
 	}//end add_tag_img_on_the_fly
 
 
 
-}//end tr
-
-
+};//end tr

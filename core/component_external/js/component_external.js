@@ -22,8 +22,8 @@ var component_external = new function() {
 
 
 		return true
-	}//end init
+	};//end init
 
 
 
-}//end component_external
+};//end component_external

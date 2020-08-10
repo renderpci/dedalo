@@ -18,7 +18,7 @@
 export const render_component_security_access = function() {
 
 	return true
-}//end render_component_security_access
+};//end render_component_security_access
 
 
 
@@ -48,7 +48,7 @@ render_component_security_access.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -87,7 +87,7 @@ render_component_security_access.prototype.edit = async function(options={render
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -122,7 +122,7 @@ const add_events = function(self, wrapper) {
 
 		// })
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -197,7 +197,7 @@ render_component_security_access.prototype.search = async function() {
 
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -229,7 +229,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -256,7 +256,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -308,7 +308,7 @@ const get_buttons = (self) => {
 
 
 // 	return li
-// }//end input_element
+// };//end input_element
 
 /**
 * LEVEL HIERARCHY
@@ -461,7 +461,7 @@ const item_hierarchy = async (options) => {
 			})
 		}
 
-}//end item_hierarchy
+};//end item_hierarchy
 
 const parents_node = async(child_node, checked) => {
 
@@ -480,8 +480,4 @@ const parents_node = async(child_node, checked) => {
 
 		parents_node(parent_node, checked)
 	}
-
-
-}
-
-
+};//end parents_node

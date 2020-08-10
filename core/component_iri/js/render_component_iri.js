@@ -16,7 +16,7 @@
 export const render_component_iri = function() {
 
 	return true
-}//end render_component_iri
+};//end render_component_iri
 
 
 
@@ -65,7 +65,7 @@ render_component_iri.prototype.list = async function() {
 		wrapper.innerHTML = value_string
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -102,7 +102,7 @@ render_component_iri.prototype.edit = async function(options={render_level : 'fu
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 /**
@@ -284,7 +284,7 @@ render_component_iri.prototype.search = async function() {
 			})
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -320,7 +320,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -356,7 +356,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -420,7 +420,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 	}
 
 	return li
-}//end get_input_element_edit
+};//end get_input_element_edit
 
 
 /**
@@ -449,7 +449,7 @@ const get_content_data_search = async function(self) {
 
 
 	return content_data
-}//end get_content_data_search
+};//end get_content_data_search
 
 
 /**
@@ -470,4 +470,4 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 
 	return input
-}//end get_input_element_search
+};//end get_input_element_search

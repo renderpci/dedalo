@@ -36,7 +36,7 @@ export const login = function() {
 	this.status
 
 	return true
-}//end login
+};//end login
 
 
 
@@ -83,7 +83,7 @@ login.prototype.init = async function(options) {
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -150,7 +150,7 @@ login.prototype.build = async function(autoload=true) {
 	// 	self.status = 'builded'
 
 	// return true
-}//end build
+};//end build
 
 
 
@@ -188,7 +188,7 @@ export const quit = async function() {
 
 
 	return api_response
-}//end quit
+};//end quit
 
 
 

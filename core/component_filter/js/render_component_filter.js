@@ -16,7 +16,7 @@
 export const render_component_filter = function() {
 
 	return true
-}//end render_component_filter
+};//end render_component_filter
 
 
 
@@ -48,7 +48,7 @@ render_component_filter.prototype.list = function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -86,7 +86,7 @@ render_component_filter.prototype.edit = async function(options={render_level:'f
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -234,7 +234,7 @@ const add_events = function(self, wrapper) {
 		},true)
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -295,7 +295,7 @@ const render_content_data = async function(self) {
 
 
 	return content_data
-}//end render_content_data
+};//end render_content_data
 
 
 
@@ -336,7 +336,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -366,7 +366,7 @@ const grouper_element = (i, datalist_item, inputs_container, self) => {
 		})
 
 	return grouper
-}//end grouper_element
+};//end grouper_element
 
 
 
@@ -423,5 +423,4 @@ const input_element = (i, current_value, inputs_container, self) => {
 
 
 	return li
-}//end input_element
-
+};//end input_element

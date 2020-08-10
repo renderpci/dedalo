@@ -15,9 +15,9 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_section = function() {
-
+	
 	return true
-}//end render_section
+};//end render_section
 
 
 
@@ -103,7 +103,7 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -153,7 +153,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-}//end get_content_data
+};//end get_content_data
 
 
 
@@ -167,7 +167,7 @@ const buttons = async function(self) {
 
 
 	return buttons
-}//end buttons
+};//end buttons
 
 
 
@@ -293,9 +293,8 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 		})
 		wrapper.appendChild(fragment)
 
-
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -366,7 +365,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 
 
 	// 	return wrapper
-// }//end list_tm
+// };//end list_tm
 
 
 
@@ -379,7 +378,7 @@ render_section.prototype.list_header = async function(){
 	const self = this
 
 	const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component" && item.parent===self.section_tipo)
-	
+
 	const ar_nodes			= []
 	const components_length	= components.length
 	for (let i = 0;  i < components_length; i++) {
@@ -459,7 +458,7 @@ render_section.prototype.list_header = async function(){
 		// )
 
 	return header_wrapper
-}//end list_header
+};//end list_header
 
 
 
@@ -480,7 +479,7 @@ const breakdown_header_items = function(component, datum, ar_nodes, parent){
 	}else{
 
 		// node header_item
-			const id			=  component.tipo + "_" + component.section_tipo + (parent ? "_"+parent.tipo : '')			
+			const id			=  component.tipo + "_" + component.section_tipo + (parent ? "_"+parent.tipo : '')
 			const header_item	= ui.create_dom_element({
 				element_type	: "div",
 				id				: id,
@@ -490,11 +489,11 @@ const breakdown_header_items = function(component, datum, ar_nodes, parent){
 			// add if not already exists
 			// if (!ar_nodes.find(item => item.id===id)) {
 				ar_nodes.push(header_item)
-			// }		
+			// }
 	}
 
 	return ar_nodes
-}//end breakdown_header_items
+};//end breakdown_header_items
 
 
 
@@ -511,4 +510,4 @@ const no_records_node = () => {
 	})
 
 	return node
-}//end no_records_node
+};//end no_records_node

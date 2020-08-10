@@ -16,7 +16,7 @@
 export const render_component_info = function() {
 
 	return true
-}//end render_component_info
+};//end render_component_info
 
 
 
@@ -46,7 +46,7 @@ render_component_info.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -85,7 +85,7 @@ render_component_info.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -124,7 +124,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -151,7 +151,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -179,4 +179,4 @@ const get_input_element_edit = async (i, current_widget, inputs_container, self)
 
 
 	return li
-}//end input_element
+};//end input_element
