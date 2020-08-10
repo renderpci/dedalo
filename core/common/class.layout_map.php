@@ -22,6 +22,11 @@ class layout_map {
 	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
 		// $start_time=microtime(1);
 
+		// debug
+			// $bt = debug_backtrace();
+			// 	dump($bt[0], ' bt[0] ++ '.to_string($request_options->tipo));
+			// 	dump($bt[1], ' bt[1] ++ '.to_string($request_options->tipo));
+
 		$options = new stdClass();
 			$options->section_tipo			= null;
 			$options->tipo					= null;

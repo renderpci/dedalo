@@ -187,11 +187,11 @@ function debug_log($info, $level=logger::DEBUG) {
 	$msg = 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
 
 	if ($level<11) {
-		$msg .= ' -------------------------------------------------------------------------------------------- ';
+		$msg = str_repeat("!", 10) . ' ' . $msg . ' ' . str_repeat("!", 90);
 	}
 	error_log($msg);
 
-	$GLOBALS['log_messages'][] = $msg;
+	// $GLOBALS['log_messages'][] = $msg;
 }//end debug_log
 
 
