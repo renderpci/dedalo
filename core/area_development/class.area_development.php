@@ -137,6 +137,81 @@ class area_development extends area_common {
 			$ar_widgets[] = $item;
 
 
+		// export_structure_to_json
+			$item = new stdClass();
+				$item->id		= 'export_structure_to_json';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('exportar_estructura_json');
+				$item->info		= null;				
+
+				$file_name		= 'structure.json';
+				$file_path		= 'Target: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+				$item->body		= $file_path;
+				$confirm_text	= label::get_label('seguro');
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'inputs' => [
+							(object)[
+								'type'		=> 'text',
+								'name'		=> 'dedalo_prefix_tipos',
+								'label'		=> 'Dédalo prefix tipos to export',
+								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'mandatory'	=> true
+							]
+						],
+						'confirm_text' => $confirm_text
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'structure_to_json',
+					'options' 	=> null
+				];
+			$ar_widgets[] = $item;
+
+
+		// import_structure_from_json
+			$item = new stdClass();
+				$item->id		= 'import_structure_from_json';
+				$item->class	= 'danger';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('importar_estructura_json');
+				$item->info		= null;				
+
+				$file_name		= 'structure.json';
+				$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+				$item->body		= $file_path;
+				$confirm_text	= label::get_label('seguro');
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'inputs' => [
+							(object)[
+								'type'		=> 'text',
+								'name'		=> 'dedalo_prefix_tipos',
+								'label'		=> 'Dédalo prefix tipos to import',
+								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'mandatory'	=> false
+							]
+						],
+						'confirm_text' => $confirm_text
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'import_structure_from_json',
+					'options' 	=> null
+				];
+			$ar_widgets[] = $item;
+
+
 		// register_tools
 			$item = new stdClass();
 				$item->id		= 'register_tools';
@@ -254,9 +329,11 @@ class area_development extends area_common {
 				$ar_widgets[] = $item;
 			}
 
+		
 		// Dédalo API test enviroment
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_enviroment';
+				$item->class	= 'blue';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
@@ -282,10 +359,10 @@ class area_development extends area_common {
 			$ar_widgets[] = $item;
 
 
-
 		// search query object test enviroment
 			$item = new stdClass();
 				$item->id 		= 'search_query_object_test_enviroment';
+				$item->class	= 'blue';
 				$item->typo 	= 'widget';
 				$item->tipo 	= $this->tipo;
 				$item->parent 	= $this->tipo;

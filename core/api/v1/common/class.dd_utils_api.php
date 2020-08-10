@@ -310,6 +310,117 @@ class dd_utils_api {
 
 
 	/**
+	* STRUCTURE_TO_JSON
+	* @return object $response
+	*/
+	public static function structure_to_json($request_options=null) {
+		global $start_time;
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// dedalo_prefix_tipos
+			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+				return $item->name==='dedalo_prefix_tipos';
+			})->value;
+			$ar_dedalo_prefix_tipos = array_map(function($item){
+				return trim($item);
+			}, explode(',', $dedalo_prefix_tipos));
+			if (empty($ar_dedalo_prefix_tipos)) {
+				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
+				return $response;
+			}
+
+
+		$ar_tld		= $ar_dedalo_prefix_tipos;
+		$json_data	= backup::structure_to_json($ar_tld);
+
+		$file_name	= 'structure.json';
+		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+		// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+			// dump($file_path, ' file_path ++ '.to_string());
+
+		if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
+			// write error occurred
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']. Impossible to write json file';
+			return $response;
+		}
+
+		$response->result	= true;
+		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+
+		return (object)$response;
+	}//end structure_to_json
+
+
+
+
+
+	/**
+	* IMPORT_STRUCTURE_FROM_JSON
+	* @return object $response
+	*/
+	public static function import_structure_from_json($request_options=null) {
+		global $start_time;
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// dedalo_prefix_tipos
+			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+				return $item->name==='dedalo_prefix_tipos';
+			})->value;
+			$ar_dedalo_prefix_tipos = array_map(function($item){
+				return trim($item);
+			}, explode(',', $dedalo_prefix_tipos));
+			
+
+		$ar_tld	= empty($ar_dedalo_prefix_tipos) ? [] : $ar_dedalo_prefix_tipos;
+	
+		$file_name	= 'structure.json';
+		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+
+		$data		= json_decode( file_get_contents($file_path) );
+		$response	= backup::import_structure_json_data($data, $ar_tld);
+
+		$response->result	= true;
+		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+
+		return (object)$response;
+	}//end import_structure_from_json
+
+
+
+
+
+	/**
 	* REGISTER_TOOLS
 	* @return object $response
 	*/
