@@ -25,9 +25,9 @@ class component_relation_common extends component_common {
 
 		// $dato_full. component dato with all langs
 		public $dato_full;
-		
 
-	
+
+
 	/**
 	* GET_COMPONENTS_WITH_RELATIONS
 	* Array of components modelo name that usin locators in dato and extends component_relation_common
@@ -101,7 +101,7 @@ class component_relation_common extends component_common {
 		// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 		// 	}
 		// }
-		
+
 
 		return true;
 	}//end __construct
@@ -674,7 +674,7 @@ class component_relation_common extends component_common {
 	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true ) {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
-			#dump($ar_components_related, ' ar_components_related ++ '.to_string());			
+			#dump($ar_components_related, ' ar_components_related ++ '.to_string());
 		}
 
 		if (empty($locator) || !is_object($locator)) {
@@ -722,7 +722,7 @@ class component_relation_common extends component_common {
 				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);
 				#$n_ar_parents = count($ar_parents);
 					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
-				
+
 				foreach ($ar_parents as $current_locator) {
 
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
@@ -1509,7 +1509,7 @@ class component_relation_common extends component_common {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
-					
+
 			if (is_string($source_item)) {
 
 				// old self section tipo properties definitions
@@ -1608,7 +1608,7 @@ class component_relation_common extends component_common {
 				case 'hierarchy_terms':
 					$hierarchy_terms_filter = component_relation_common::get_hierarchy_terms_filter($search_item->value);
 					if(empty($hierarchy_terms_filter)) break;
-					$dato_filter->{$operator}[] =  $hierarchy_terms_filter;
+					$dato_filter->{$operator} =  $hierarchy_terms_filter;
 					break;
 			}
 
