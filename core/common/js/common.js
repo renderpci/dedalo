@@ -16,7 +16,7 @@
 export const common = function(){
 
 	return true
-}//end common
+};//end common
 
 
 
@@ -27,7 +27,7 @@ export const common = function(){
 * (!) For components, remember use always component_common.build()
 * @return bool true
 */
-common.prototype.build = async function(){
+common.prototype.build = async function () {
 
 	const self = this
 
@@ -42,7 +42,7 @@ common.prototype.build = async function(){
 
 
 	return true
-}//end common.prototype.build
+};//end common.prototype.build
 
 
 
@@ -53,7 +53,7 @@ common.prototype.build = async function(){
 * @return promise
 *	node first dom node stored in instance 'node' array
 */
-common.prototype.render = async function(options={render_level:'full'}) {
+common.prototype.render = async function (options={render_level:'full'}) {
 	const t0 = performance.now()
 
 	const self = this
@@ -186,7 +186,7 @@ common.prototype.render = async function(options={render_level:'full'}) {
 		}
 
 	return result_node
-}//end render
+};//end render
 
 
 
@@ -194,7 +194,7 @@ common.prototype.render = async function(options={render_level:'full'}) {
 * REFRESH
 * @return promise
 */
-common.prototype.refresh = async function() {
+common.prototype.refresh = async function () {
 	const t0 = performance.now()
 
 	const self = this
@@ -253,7 +253,7 @@ common.prototype.refresh = async function() {
 
 
 	return true
-}//end refresh
+};//end refresh
 
 
 
@@ -382,7 +382,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 
 	//console.log("self.ar_instances final:",JSON.parse(JSON.stringify(self.ar_instances)));
 	return result
-}//end destroy
+};//end destroy
 
 
 
@@ -391,7 +391,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 * @param object options
 * @return object source
 */
-export const create_source = function(self, action){
+export const create_source = function (self, action) {
 
 	const source = { // source object
 		typo			: "source",
@@ -411,7 +411,7 @@ export const create_source = function(self, action){
 		}
 
 	return source
-}//end create_source
+};//end create_source
 
 
 
@@ -419,7 +419,7 @@ export const create_source = function(self, action){
 * LOAD_STYLE
 * @param object self
 */
-common.prototype.load_style = function(src){
+common.prototype.load_style = function (src) {
 
 	const js_promise = new Promise(function(resolve, reject) {
 
@@ -458,7 +458,7 @@ common.prototype.load_style = function(src){
 	}
 
 	return js_promise
-}//end load_style
+};//end load_style
 
 
 
@@ -505,7 +505,7 @@ common.prototype.load_script = async function(src) {
 	}
 
 	return js_promise
-}//end load_script
+};//end load_script
 
 
 
@@ -540,7 +540,7 @@ common.prototype.load_script = async function(src) {
 	// 	tool_instance.render()
 
 	// 	return tool_instance
-// }//end load_tool
+// };//end load_tool
 
 
 
@@ -565,7 +565,7 @@ common.prototype.build_dd_request = function(dd_request_type, request_config, ac
 	}
 
 	return null
-}//end build_dd_request
+};//end build_dd_request
 
 
 
@@ -673,7 +673,7 @@ const build_request_show = function(self, request_config, action){
 		dd_request.push(sqo)
 
 	return dd_request
-}//end build_request_show
+};//end build_request_show
 
 
 
@@ -796,7 +796,7 @@ const build_request_search = function(self, request_config, action){
 	// console.log("build_request_search : dd_request--------------", dd_request);
 
 	return dd_request
-}//end build_request_search
+};//end build_request_search
 
 
 
@@ -876,4 +876,4 @@ export const load_data_debug = async function(self, load_data_promise, dd_reques
 
 
 	return true
-}//end load_data_debug
+};//end load_data_debug

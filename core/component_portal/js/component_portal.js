@@ -166,7 +166,7 @@ component_portal.prototype.build  = async function(autoload=false){
 					self.pagination.total = self.data.pagination.total
 				}
 		}
-	
+
 	// pagination vars only in edit mode
 		if (self.mode==="edit") {
 
@@ -369,5 +369,3 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	// 	return offset_last
 	// }//end get_last_offset
-
-
