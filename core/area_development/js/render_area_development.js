@@ -123,7 +123,7 @@ const build_widget = (item, self) => {
 		id 			 : item.id,
 		element_type : 'div',
 		dataset 	 : {},
-		class_name 	 : "widget_container"
+		class_name 	 : "widget_container " + (item.class || '')
 	})
 
 	// label
