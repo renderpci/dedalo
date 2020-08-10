@@ -208,10 +208,13 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 	const sample_data	= null
 	const saved_value	= localStorage.getItem('json_editor_sqo')
 	const editor_value	= JSON.parse(saved_value) || sample_data
-	const editor		= new JSONEditor(container, options, editor_value)
 
+	event_manager.when_in_dom(container, function(){
+		const editor = new JSONEditor(container, options, editor_value)
+	})
+	
 
-	return editor
+	return true
 }//end init_json_editor
 
 
