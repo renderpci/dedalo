@@ -147,15 +147,15 @@ export const tr = {
 			return text
 		}
 
-		const tag_url = '../component_text_area/tag.php';
+		const tag_url = '../component_text_area/tag.php?';
 
 		// INDEX IN
 			const pattern_indexIn = tr.get_mark_pattern('indexIn'); // id,state,label,data
-			text = text.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}/[$2-$3-$4-$6]" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// INDEX OUT
 			const pattern_indexOut = tr.get_mark_pattern('indexOut');
-			text = text.replace(pattern_indexOut, `<img id="[/\$2-$3-$4-$6]" src="${tag_url}/[/\$2-$3-$4-$6]" class="index" data-type="indexOut" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_indexOut, `<img id="[/\$2-$3-$4-$6]" src="${tag_url}[/\$2-$3-$4-$6]" class="index" data-type="indexOut" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// REFERENCE IN
 			const pattern_referenceIn = tr.get_mark_pattern('referenceIn');
@@ -167,31 +167,31 @@ export const tr = {
 
 		// TC. [TC_00:00:25.091_TC]
 			const pattern_tc = tr.get_mark_pattern('tc');
-			text = text.replace(pattern_tc, `<img id="$1" src="${tag_url}/$1" class="tc" data-type="tc" data-tag_id="$1" data-state="n" data-label="$2" data-data="$2">`);
+			text = text.replace(pattern_tc, `<img id="$1" src="${tag_url}$1" class="tc" data-type="tc" data-tag_id="$1" data-state="n" data-label="$2" data-data="$2">`);
 
 		// SVG
 			const pattern_svg = tr.get_mark_pattern('svg');
-			text = text.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}/$7" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}$7" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// DRAW
 			const pattern_draw = tr.get_mark_pattern('draw');
-			text = text.replace(pattern_draw, `<img id="[$2-$3-$4-$6]" src="${tag_url}/[$2-$3-$4-$6]" class="draw" data-type="draw" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_draw, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="draw" data-type="draw" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// GEO
 			const pattern_geo = tr.get_mark_pattern('geo');
-			text = text.replace(pattern_geo, `<img id="[$2-$3-$4-$6]" src="${tag_url}/[$2-$3-$4-$6]" class="geo" data-type="geo" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_geo, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="geo" data-type="geo" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// PAGE
 			const pattern_page = tr.get_mark_pattern('page');
-			text = text.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}/[$2-$3-$4-$5]" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
+			text = text.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
 
 		// PERSON
 			const pattern_person = tr.get_mark_pattern('person');
-			text = text.replace(pattern_person, `<img id="[$2-$3-$4-$5]" src="${tag_url}/[$2-$3-$4-$5]" class="person" data-type="person" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$6">`);
+			text = text.replace(pattern_person, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" class="person" data-type="person" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$6">`);
 
 		// NOTE
 			const pattern_note = tr.get_mark_pattern('note');
-			text = text.replace(pattern_note, `<img id="[$2-$3-$4-$6]" src="${tag_url}/[$2-$3-$4-$6]" class="note" data-type="note" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_note, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="note" data-type="note" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// STRUCT IN V5 Incompatible
 			// const pattern_structIn 	= tr.get_mark_pattern('structIn');
