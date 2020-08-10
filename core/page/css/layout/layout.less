@@ -105,6 +105,50 @@
 		//flex: 0 1 auto;
 		z-index: auto; // (!) important to allow fullscreen configs like tinymce
 
+		// input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
+
+		// 	li & {
+		// 		width: 100%;
+		// 		outline: 1px solid #eeebeb;
+		// 		outline-offset: 0;
+		// 	}
+		// 	font-size: 1em;
+		// 	height: 2.0em;
+		// 	width: 100%;
+		// 	margin-right: 0.5em;
+
+		// 	// padding: 0.5em;
+		// 	//border-radius: 3px;
+		// 	border: none;
+		// 	outline: 1px solid #eeebeb;
+
+		// 	transition: all .5s ease, padding 0s;
+		// 	//transition: padding 0s;
+		// 	opacity: 0.75;
+
+		// 	padding: 0;
+		// 	padding-left: 0.5em;
+		// 	padding-right: 0.5em;
+
+		// 	// on focus inputs, adds a soft shadow and outline
+		// 	&:focus {
+		// 		.hilite;
+		// 	}
+		// }
+
+		// select  {
+		// 	li & {
+		// 		margin-right: 0.5em;
+		// 	}
+		// }
+		// input[type="radio"] {
+		// 	//height: 1.2em;
+		// 	font-size: 1em;
+		// }
+	}//end .component_base
+
+	// general definition of html input/form elements
+	// If you need build a variant, apply 'reset_input' class
 		input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
 
 			li & {
@@ -135,17 +179,65 @@
 				.hilite;
 			}
 		}
-
 		select  {
 			li & {
 				margin-right: 0.5em;
 			}
 		}
 		input[type="radio"] {
-			//height: 1.2em;
 			font-size: 1em;
 		}
-	}//end .component_base
+
+
+
+	// .reset_input Restore default appearance of html input/form elements
+		.reset_input {
+			&,input[type="text"], &,input[type="number"], &,input[type="url"], &,input[type="password"], &,button[type="submit"], &,textarea, &,select, &.contenteditable {
+
+				li & {
+					width: unset;
+					outline: unset;
+					outline-offset: unset;
+				}
+				font-size: unset;
+				height: unset;
+				width: unset;
+				margin-right: unset;
+
+				border: unset;
+				outline: unset;
+
+				transition: unset;
+				//transition: padding 0s;
+				opacity: unset;
+
+				padding: unset;
+				padding-left: unset;
+				padding-right: unset;
+
+				// on focus inputs, adds a soft shadow and outline
+				&:focus {
+					// .hilite;
+					outline-offset: unset;
+					outline: unset;
+					box-shadow: unset; //rgba(26, 154, 245, .5);
+					opacity: unset;
+					z-index: unset;
+					
+					&.input_value {
+						padding-right: unset;
+					}
+				}
+			}
+			&,select  {
+				li & {
+					margin-right: unset;
+				}
+			}
+			&,input[type="radio"] {
+				font-size: unset;
+			}			
+		}//end .reset_input
 
 
 
