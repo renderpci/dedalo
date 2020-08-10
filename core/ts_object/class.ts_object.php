@@ -93,8 +93,17 @@ class ts_object extends Accessors {
 																				$resolve_virtual=false,
 																				$recursive=false,
 																				$search_exact=true);
+		# relation map defined in properties
+		$ar_properties = (function($ar_children){
+			if (!isset($ar_children[0])) {
+				return false;
+			}
+			$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
+			return $RecordObj_dd->get_properties();
+		})($ar_children);
+		
 		// Fallback to real section when in virtual
-		if (!isset($ar_children[0])) {
+		if (empty($ar_properties)) {
 			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 			if ($section_tipo!==$section_real_tipo) {
 				$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo,
@@ -103,88 +112,72 @@ class ts_object extends Accessors {
 																				$resolve_virtual=false,
 																				$recursive=false,
 																				$search_exact=true);
-			}
+				# relation map defined in properties
+				$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
+				$ar_properties	= $RecordObj_dd->get_properties();
+			}			
 		}//end if (!isset($ar_children[0]))
 
 
 		# If element exists (section_list_thesaurus) we get element 'properties' json value as array
 		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
-		if (isset($ar_children[0])) {
+		if ( !empty($ar_properties) ) {
 
-			$section_list_thesaurus_tipo = $ar_children[0];
+			// DES
+				// # SUBSTITUTION : When is set $this->options->model as true, we substitute structure properties link_children with link_children_model
+				// # for look children in other hierarchy component children				
+				// if (isset($this->options->model) && $this->options->model===true) {
+				// 	foreach ($ar_elements as $key => $value_obj) {
+				// 		if ($value_obj->type==='link_children') {
+				// 			unset($ar_elements[$key]);
+				// 		}elseif ($value_obj->type==='link_children_model') {
+				// 			$value_obj->type = 'link_children';
+				// 		}
+				// 	}
+				// }
+				
+				// [
+				//   {
+				//     "tipo": "hierarchy5",
+				//     "type": "term"
+				//   },
+				//   {
+				//     "tipo": "hierarchy45",
+				//     "type": "link_children"
+				//   },
+				//   {
+				//     "tipo": "hierarchy59",
+				//     "type": "link_children_model"
+				//   }
+				// ]				
+				
+				// if (isset($this->options->model) && $this->options->model===true) {
 
-			# relation map
-			$RecordObj_dd	= new RecordObj_dd($section_list_thesaurus_tipo);
-			$ar_properties	= $RecordObj_dd->get_properties();
-				#dump($ar_properties, ' ar_properties ++ '.to_string($section_list_thesaurus_tipo));
-			/*
-			# Get related terms
-			$related_terms   = (array)RecordObj_dd::get_ar_terminos_relacionados($section_list_thesaurus_tipo, $cache=true, $simple=true);
-				#dump($related_terms, ' related_terms ++ '.to_string());
-			foreach ($related_terms as $related_tipo) {
-				# code...
-			}
-			*/
+				// 	$element_children = new stdClass();
+				// 		$element_children->type = 'link_children';
+				// 		$element_children->tipo = null;
 
-			# SUBSTITUTION : When is set $this->options->model as true, we substitute structure properties link_children with link_children_model
-			# for look children in other hierarchy component children
-			/*
-			if (isset($this->options->model) && $this->options->model===true) {
-				foreach ($ar_elements as $key => $value_obj) {
-					if ($value_obj->type==='link_children') {
-						unset($ar_elements[$key]);
-					}elseif ($value_obj->type==='link_children_model') {
-						$value_obj->type = 'link_children';
-					}
-				}
-			}
-			*/
+				// 		foreach ($ar_properties as $key => $value_obj) {
+				// 			if($value_obj->type === 'link_children_model'){
+				// 				$element_children->tipo = $value_obj->tipo;
+				// 				break;
+				// 			}
+				// 		}
 
-			/*
-			[
-			  {
-			    "tipo": "hierarchy5",
-			    "type": "term"
-			  },
-			  {
-			    "tipo": "hierarchy45",
-			    "type": "link_children"
-			  },
-			  {
-			    "tipo": "hierarchy59",
-			    "type": "link_children_model"
-			  }
-			]
-			*/
-			/*
-			if (isset($this->options->model) && $this->options->model===true) {
+				// 	$ar_elements = array();
+				// 	foreach ($ar_properties as $key => $value_obj) {
+				// 		if($value_obj->type === 'link_children' || $value_obj->type === 'link_children_model'){
+				// 			#unset($ar_properties[$key]);
+				// 		}else{
+				// 			$ar_elements[] = $value_obj;
+				// 		}
+				// 	}
 
-				$element_children = new stdClass();
-					$element_children->type = 'link_children';
-					$element_children->tipo = null;
-
-					foreach ($ar_properties as $key => $value_obj) {
-						if($value_obj->type === 'link_children_model'){
-							$element_children->tipo = $value_obj->tipo;
-							break;
-						}
-					}
-
-				$ar_elements = array();
-				foreach ($ar_properties as $key => $value_obj) {
-					if($value_obj->type === 'link_children' || $value_obj->type === 'link_children_model'){
-						#unset($ar_properties[$key]);
-					}else{
-						$ar_elements[] = $value_obj;
-					}
-				}
-
-				$ar_elements[] = $element_children;
-			}else{
-				$ar_elements = $ar_properties;
-			}
-			debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
-			*/
+				// 	$ar_elements[] = $element_children;
+				// }else{
+				// 	$ar_elements = $ar_properties;
+				// }
+				// debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);				
 
 			foreach ($ar_properties as $key => $value_obj) {
 
@@ -203,7 +196,7 @@ class ts_object extends Accessors {
 				}
 
 			}//end foreach ($ar_properties as $key => $value_obj)
-			$ar_elements = $ar_properties;
+			$ar_elements = array_values($ar_properties);
 			#debug_log(__METHOD__." ar_properties ".to_string($ar_properties), logger::DEBUG);
 		}
 
