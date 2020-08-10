@@ -2111,11 +2111,11 @@ abstract class common {
 		// }
 
 		// cache
-			// static $resolved_request_properties_parsed = [];
-			// $resolved_key = $tipo .'_'. $external .'_'. $section_tipo .'_'. $mode .'_'. $section_id;
-			// if (isset($resolved_request_properties_parsed[$resolved_key])) {
-			// 	return $resolved_request_properties_parsed[$resolved_key];
-			// }
+			static $resolved_request_properties_parsed = [];
+			$resolved_key = $tipo .'_'. $external .'_'. $section_tipo .'_'. $mode .'_'. $section_id;
+			if (isset($resolved_request_properties_parsed[$resolved_key])) {
+				return $resolved_request_properties_parsed[$resolved_key];
+			}
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$properties		= $RecordObj_dd->get_properties();
@@ -2349,7 +2349,7 @@ abstract class common {
 		}
 
 		// cache
-			// $resolved_request_properties_parsed[$resolved_key] = $request_config_parsed;
+			$resolved_request_properties_parsed[$resolved_key] = $request_config_parsed;
 
 
 		return $request_config_parsed;
