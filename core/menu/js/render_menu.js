@@ -164,7 +164,7 @@ render_menu.prototype.edit = async function() {
 			langs		: lang_datalist,
 			action		: change_lang,
 			selected	: page_globals['dedalo_application_lang'],
-			class_name	: 'dedalo_aplication_langs_selector'
+			class_name	: 'reset_input dedalo_aplication_langs_selector'
 		})
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
@@ -181,7 +181,7 @@ render_menu.prototype.edit = async function() {
 			langs		: lang_datalist_data,
 			action		: change_lang,
 			selected	: page_globals['dedalo_data_lang'],
-			class_name	: 'dedalo_aplication_langs_selector'
+			class_name	: 'reset_input dedalo_aplication_langs_selector'
 		})
 		fragment.appendChild(dedalo_data_langs_selector)
 

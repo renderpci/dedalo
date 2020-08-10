@@ -16,8 +16,12 @@
 		border-bottom-right-radius: 5px;
 		// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 
-		>.options_hidden{
+		// hide autocomplete_searh_container when parent element .component_portal is not .active
+		.component_portal:not(.active) & {
+			display: none;
+		}
 
+		>.options_hidden {
 			display: none;
 
 
