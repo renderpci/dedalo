@@ -8,7 +8,7 @@
 */
 export const data_manager = function() {
 
-}//end data_manager
+};//end data_manager
 
 
 
@@ -90,7 +90,7 @@ data_manager.prototype.request = async function(options) {
 	// }
 
 	return api_response
-}//end request
+};//end request
 
 
 
@@ -119,7 +119,7 @@ data_manager.prototype.get_menu = async function(dd_request) {
 		}
 
 	return api_response
-}//end get_menu
+};//end get_menu
 
 
 
@@ -148,7 +148,7 @@ data_manager.prototype.get_login = async function() {
 		}
 
 	return api_response
-}//end get_login
+};//end get_login
 
 
 
@@ -178,7 +178,7 @@ data_manager.prototype.read = async function(dd_request) {
 		}
 
 	return api_response
-}//end read
+};//end read
 
 
 
@@ -207,7 +207,7 @@ data_manager.prototype.count = async function(sqo) {
 		}
 
 	return api_response
-}//end count
+};//end count
 
 
 
@@ -238,7 +238,7 @@ data_manager.prototype.count_OLD = async function(sqo) {
 		}
 
 	return total
-}//end count
+};//end count
 
 
 
@@ -269,7 +269,7 @@ data_manager.prototype.get_element_context = async function(source) {
 
 
 	return api_response
-}//end get_element_context
+};//end get_element_context
 
 
 
@@ -301,7 +301,7 @@ data_manager.prototype.get_page_element = async function(options) {
 
 
 	return api_response
-}//end get_page_element
+};//end get_page_element
 
 
 
@@ -322,7 +322,7 @@ export function download_url(url, filename) {
 		}
 		);
 	});
-}//end download_url
+};//end download_url
 
 
 
@@ -348,7 +348,7 @@ data_manager.prototype.area_load_data = async function(basic_context) {
 		}
 
 	return api_response
-}//end area_load_data
+};//end area_load_data
 */
 
 
@@ -380,7 +380,7 @@ data_manager.prototype.component_load_data = async function() {
 		component.data = data
 
 	return data
-}//end component_load_data
+};//end component_load_data
 */
 
 
@@ -410,5 +410,5 @@ data_manager.prototype.component_load_context = async function(component) {
 		component.context = context
 
 	return context
-}//end component_load_context
+};//end component_load_context
 */
