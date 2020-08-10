@@ -1321,11 +1321,12 @@ abstract class common {
 			$lang			= $this->get_lang();
 
 		// properties
-			$properties = $this->get_properties();
-			if (empty($properties)) {
-				$properties = new stdClass();
-			}
+			$properties = $this->get_properties() ?? new stdClass();
+			// if (empty($properties)) {
+			// 	$properties = new stdClass();
+			// }
 
+		
 		// css
 			$css = new stdClass();
 			if (isset($properties->css)) {
@@ -1333,10 +1334,10 @@ abstract class common {
 				// remove from properties object
 				unset($properties->css);
 			}
-			// section overwrite css (virtual sections case)
+			// (!) new. Section overwrite css (virtual sections case)
 			if (strpos($called_model, 'component_')===0) {
 				$RecordObj_dd 		= new RecordObj_dd($section_tipo);
-				$section_properties = $RecordObj_dd->get_properties(true);
+				$section_properties = $RecordObj_dd->get_properties();
 				if (isset($section_properties->css) && isset($section_properties->css->{$tipo})) {
 					$css = $section_properties->css->{$tipo};
 				}
@@ -1378,6 +1379,8 @@ abstract class common {
 
 			// 3 . From structure (fallback)
 			if (!isset($parent)) {
+
+				// use section tipo as parent
 				$parent = $this->get_section_tipo();
 			}
 
@@ -1390,9 +1393,13 @@ abstract class common {
 		// tools
 			$tools = array_map(function($item){
 
-				$label = array_reduce($item->label, function($carry, $el){
-					return ($el->lang===DEDALO_DATA_LANG) ? $el->value : $carry;
-				}, null);
+				// $label = array_reduce($item->label, function($carry, $el){
+				// 	return ($el->lang===DEDALO_DATA_LANG) ? $el->value : $carry;
+				// }, null);
+				$label = array_find($item->label, function($el){
+					return $el->lang===DEDALO_DATA_LANG;
+				})->value ?? reset($item->label)->value;
+
 				//dump($label, ' label ++ '.to_string());
 
 				$tool = new stdClass();
@@ -2234,14 +2241,13 @@ abstract class common {
 		}else{
 			// V5 model
 
-
 			// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
 			// 	debug_log(__METHOD__." Invalid configuration of component: '$model', tipo: '$tipo'. Please set 'request_config' in element properties! ".to_string(), logger::ERROR);
 			// 	return [];
 			// 	// throw new Exception("Error Processing Request. Invalid configuration", 1);
 			// 	// die();
 			// }
-
+	
 			switch ($mode) {
 				case 'edit':
 					if ($model==='section') {
