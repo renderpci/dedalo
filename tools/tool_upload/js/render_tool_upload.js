@@ -14,9 +14,9 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_upload = function() {
-
+	
 	return true
-}//end render_tool_upload
+};//end render_tool_upload
 
 
 
@@ -81,7 +81,7 @@ render_tool_upload.prototype.edit = async function (options={render_level:'full'
 
 
 	return wrapper
-}//end render_tool_upload
+};//end render_tool_upload
 
 
 
@@ -90,7 +90,6 @@ render_tool_upload.prototype.edit = async function (options={render_level:'full'
 * @return DOM node content_data
 */
 const get_content_data = async function(self) {
-
 
 	const fragment = new DocumentFragment()
 
@@ -285,7 +284,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-}//end get_content_data
+};//end get_content_data
 
 
 
@@ -318,7 +317,7 @@ const get_progress_bar = function(self) {
 
 
 	return progress_bar_container
-}//end get_progress_bar
+};//end get_progress_bar
 
 
 
@@ -326,6 +325,7 @@ const get_progress_bar = function(self) {
 * FILE_DRAG_HOVER
 */
 const file_drag_hover = function(e) {
+
 	e.stopPropagation();
 	e.preventDefault();
 
@@ -336,7 +336,7 @@ const file_drag_hover = function(e) {
 	}
 
 	return true
-}//end file_drag_hover
+};//end file_drag_hover
 
 
 
@@ -366,7 +366,7 @@ const file_select_handler = function(e) {
 	}
 
 	return true
-}//end file_select_handler
+};//end file_select_handler
 
 
 // Removed for the time being (!)
@@ -410,4 +410,4 @@ const file_select_handler = function(e) {
 // 	}
 
 // 	return true
-// }//end parse_local_file
+// };//end parse_local_file

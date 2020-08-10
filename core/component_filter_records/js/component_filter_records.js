@@ -31,7 +31,7 @@ export const component_filter_records = function(){
 	this.tools
 
 	return true
-}//end component_filter_records
+};//end component_filter_records
 
 
 
@@ -61,5 +61,3 @@ export const component_filter_records = function(){
 	component_filter_records.prototype.edit_in_list			= render_component_filter_records.prototype.edit
 	component_filter_records.prototype.search				= render_component_filter_records.prototype.search
 	component_filter_records.prototype.change_mode			= component_common.prototype.change_mode
-
-

@@ -25,7 +25,7 @@ export const component_iri = function(){
 	this.node
 
 	return true
-}//end component_iri
+};//end component_iri
 
 
 
@@ -64,7 +64,7 @@ export const component_iri = function(){
 // component_iri.prototype.build = function() {
 
 // 	return true
-// }//end build
+// };//end build
 
 
 
@@ -81,7 +81,7 @@ component_iri.prototype.open_iri = function(component_obj) {
 	window.open(iri, '_blank')
 
 	return true
-}//end open_iri
+};//end open_iri
 
 
 
@@ -137,7 +137,4 @@ component_iri.prototype.set_value = function(node, key) {
 	const value = (title_value.length > 0 || iri_value.length > 0) ? {iri 	: iri_value, title	: title_value}: null
 
 	return value
-}//end set_value
-
-
-
+};//end set_value

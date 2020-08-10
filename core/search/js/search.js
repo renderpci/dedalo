@@ -32,12 +32,11 @@
 * SEARCH
 */
 export const search = function() {
-
-
+	
 	this.id_variant
 
 	return true
-}//end search
+};//end search
 
 
 
@@ -118,7 +117,7 @@ search.prototype.init = async function(options) {
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -207,7 +206,7 @@ search.prototype.build = async function(){
 		self.status = 'builded'
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -263,7 +262,7 @@ search.prototype.render = async function() {
 
 
 	return filter_wrapper
-}//end render
+};//end render
 
 
 
@@ -310,7 +309,7 @@ search.prototype.get_section_elements_context = async function(options) {
 
 
 	return components
-}//end get_section_elements_context
+};//end get_section_elements_context
 
 
 
@@ -355,7 +354,7 @@ search.prototype.load_component_context = async function(options) {
 
 
 	return components
-}//end load_component_context
+};//end load_component_context
 
 
 
@@ -394,7 +393,7 @@ search.prototype.calculate_component_path = function(component_context, path) {
 	})
 
 	return calculate_component_path
-}//end calculate_component_path
+};//end calculate_component_path
 
 
 
@@ -461,11 +460,11 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 					self.build_dom_group(current_json_object, current_search_group, options)
 				}
 		}
-	}//end for (const key in filter)
+	};//end for (const key in filter)
 
 
 	return dom_group
-}//end build_dom_group
+};//end build_dom_group
 
 
 
@@ -537,7 +536,7 @@ search.prototype.get_component_instance = async function(options) {
 
 
 	return component_instance
-}//end get_component_instance
+};//end get_component_instance
 
 
 
@@ -579,7 +578,7 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 
 	return json_query_obj
-}//end parse_dom_to_json_filter
+};//end parse_dom_to_json_filter
 
 
 
@@ -655,10 +654,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			}
 
 		}
-	}//end for (let i = 0; i < len; i++) {
+	};//end for (let i = 0; i < len; i++) {
 
 	return query_group
-}//end recursive_groups
+};//end recursive_groups
 
 
 
@@ -684,7 +683,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	}
 
 	return operator_value
-}//end get_search_group_operator
+};//end get_search_group_operator
 
 
 
@@ -762,7 +761,7 @@ this.get_search_json_object = function() {
 		}
 
 	return search_json_object
-}//end get_search_json_object
+};//end get_search_json_object
 */
 
 
@@ -817,7 +816,7 @@ this.get_search_json_object = function() {
 
 
 		return true
-	}//end update_state
+	};//end update_state
 
 
 
@@ -843,7 +842,7 @@ this.get_search_json_object = function() {
 			})
 
 		return api_response
-	}//end save_temp_preset
+	};//end save_temp_preset
 
 
 
@@ -892,7 +891,7 @@ this.get_search_json_object = function() {
 			})
 
 		return js_promise
-	}//end search
+	};//end search
 
 
 
@@ -930,7 +929,7 @@ this.get_search_json_object = function() {
 			})
 
 		return js_promise
-	}//end show_all
+	};//end show_all
 
 
 
@@ -953,7 +952,7 @@ this.get_search_json_object = function() {
 		self.render_search_buttons()
 
 		return true
-	}//end reset
+	};//end reset
 
 
 
@@ -990,7 +989,7 @@ search.prototype.track_show_panel = function(options) {
 	}
 
 	return true
-}//end track_show_panel
+};//end track_show_panel
 
 
 
@@ -1010,7 +1009,7 @@ search.prototype.cookie_track = function(cookie_name) {
 	const cookie_track 	= (cookie_obj[section_tipo]) ? cookie_obj[section_tipo][cookie_name] : false
 
 	return cookie_track
-}//end cookie_track
+};//end cookie_track
 
 
 
@@ -1019,6 +1018,7 @@ search.prototype.cookie_track = function(cookie_name) {
 * @return
 */
 search.prototype.search_from_enter_key = function(button_submit) {
+
 	if(SHOW_DEBUG===true) {
 		//console.log("[saerch2.search_from_enter_key] search_panel_is_open:",button_submit, search2.search_panel_is_open);
 	}
@@ -1032,7 +1032,7 @@ search.prototype.search_from_enter_key = function(button_submit) {
 	}
 
 	return true
-}//end search_from_enter_key
+};//end search_from_enter_key
 
 
 
@@ -1048,7 +1048,7 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 
 	return is_empty
-}//end filter_is_empty
+};//end filter_is_empty
 
 
 
@@ -1069,4 +1069,4 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 
 // 	return true;
-// }//end init_tipology_selector
+// };//end init_tipology_selector

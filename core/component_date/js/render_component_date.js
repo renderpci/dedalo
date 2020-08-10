@@ -17,7 +17,7 @@
 export const render_component_date = function() {
 
 	return true
-}//end render_component_date
+};//end render_component_date
 
 
 
@@ -46,7 +46,7 @@ render_component_date.prototype.list = async function() {
 		wrapper.textContent = value_string
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -93,7 +93,7 @@ render_component_date.prototype.edit = async function(options={render_level : 'f
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -214,7 +214,7 @@ const add_events = function(self, wrapper) {
 				// 		if (button_email_send) {
 				// 			button_email_send.classList.remove("display_none")
 				// 		}
-				// }	
+				// }
 
 			//if (e.target.matches('input[type="text"]') && date_mode != 'period' && date_mode != 'time') {
 			if (e.target.matches('.calendar') && date_mode!=='period' && date_mode!=='time') {
@@ -294,7 +294,7 @@ const add_events = function(self, wrapper) {
 		})//end click
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -355,7 +355,7 @@ render_component_date.prototype.search = async function() {
 			}, false)
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -393,7 +393,7 @@ const get_content_data_edit = async function(self) {
 		content_data.appendChild(fragment)
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -429,7 +429,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -481,7 +481,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 
 	return li
-}//end get_input_element_edit
+};//end get_input_element_edit
 
 
 
@@ -507,7 +507,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container, self)
 
 	return true
-}//end input_element_range
+};//end input_element_range
 
 
 
@@ -576,7 +576,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 	})
 
 	return true
-}//end input_element_period
+};//end input_element_period
 
 
 
@@ -600,7 +600,7 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 	})
 
 	return true
-}//end input_element_time
+};//end input_element_time
 
 
 
@@ -615,7 +615,7 @@ const input_element_default = (i, current_value, inputs_container, self) => {
 	input_element_flatpicker(i, 'default', input_value, inputs_container, self)
 
 	return true
-}//end input_element_default
+};//end input_element_default
 
 
 
@@ -660,7 +660,7 @@ const input_element_flatpicker = (i, role_name, input_value, inputs_container, s
 		})
 
 	return true
-}//end input_element_flatpicker
+};//end input_element_flatpicker
 
 
 
@@ -690,7 +690,7 @@ const get_content_data_search = async function(self) {
 
 
 	return content_data
-}//end get_content_data_search
+};//end get_content_data_search
 
 
 
@@ -721,6 +721,4 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 		})
 
 	return input
-}//end get_input_element_search
-
-
+};//end get_input_element_search

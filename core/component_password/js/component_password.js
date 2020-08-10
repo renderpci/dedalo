@@ -29,7 +29,7 @@ export const component_password = function(){
 	this.duplicates = false
 
 	return true
-}//end component_password
+};//end component_password
 
 
 
@@ -61,13 +61,13 @@ export const component_password = function(){
 * PASSWORD VALIDATOR 0.1
 * (c) 2007 Steven Levithan <stevenlevithan.com>
 * MIT License
-*/ 
+*/
 component_password.prototype.validate_password_format = function (pw, options) {
 
 	if (pw.length<1) {
 		return true;
 	}
-	
+
 	// default options (allows any password)
 	var o = {
 		lower:    1,
@@ -82,10 +82,10 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		noQwertySequences: false,
 		noSequential:      false
 	};
-	
+
 	for (var property in options)
 		o[property] = options[property];
-	
+
 	var	re = {
 			lower:   /[a-z]/g,
 			upper:   /[A-Z]/g,
@@ -94,13 +94,13 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			special: /[\W_]/g
 		},
 		rule, i;
-	
+
 	// enforce min/max length
 	if (pw.length < o.length[0] || pw.length > o.length[1]) {
 		alert("Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars ");
 		return false;
 	}
-	
+
 	// enforce lower/upper/alpha/numeric/special rules
 	for (rule in re) {
 		if ((pw.match(re[rule]) || []).length < o[rule]) {
@@ -108,7 +108,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			return false;
 		}
 	}
-	
+
 	// enforce word ban (case insensitive)
 	for (i = 0; i < o.badWords.length; i++) {
 		if (pw.toLowerCase().indexOf(o.badWords[i].toLowerCase()) > -1) {
@@ -116,11 +116,11 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			return false;
 		}
 	}
-	
+
 	// enforce the no sequential, identical characters rule
 	if (o.noSequential && /([\S\s])\1/.test(pw))
 		return false;
-	
+
 	// enforce alphanumeric/qwerty sequence ban rules
 	if (o.badSequenceLength) {
 		var	lower   = "abcdefghijklmnopqrstuvwxyz",
@@ -153,7 +153,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 				return false;
 		}
 	}
-	
+
 	// great success!
 	return true;
-}//end password validator
+};//end password validator

@@ -15,7 +15,7 @@
 export const render_paginator = function() {
 
 	return true
-}//end render_paginator
+};//end render_paginator
 
 
 
@@ -50,7 +50,7 @@ render_paginator.prototype.edit = async function(options={render_level:'full'}) 
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -70,7 +70,7 @@ const add_wrapper_events = (wrapper, self) => {
 
 
 	return true
-}//end add_wrapper_events
+};//end add_wrapper_events
 
 
 
@@ -240,6 +240,4 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
-
-
+};//end content_data

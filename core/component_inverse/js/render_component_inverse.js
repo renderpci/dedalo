@@ -23,7 +23,7 @@ export const render_component_inverse = function(component) {
 	this.id 				= component.id
 
 	return true
-}//end render_component_inverse
+};//end render_component_inverse
 
 
 
@@ -51,7 +51,7 @@ render_component_inverse.prototype.list = function(options) {
 		})
 
 	return node
-}//end list
+};//end list
 
 
 
@@ -90,7 +90,7 @@ render_component_inverse.prototype.edit = function() {
 		})
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -130,6 +130,4 @@ const input_element = (i, current_value, inputs_container, self) => {
 		}
 
 	return li
-}//end input_element
-
-
+};//end input_element

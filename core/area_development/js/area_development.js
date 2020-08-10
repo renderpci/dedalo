@@ -15,7 +15,7 @@
 * AREA_DEVELOPMENT
 */
 export const area_development = function() {
-
+	
 	this.id
 
 	// element properties declare
@@ -39,7 +39,7 @@ export const area_development = function() {
 	}
 
 	return true
-}//end area_development
+};//end area_development
 
 
 
@@ -114,7 +114,7 @@ area_development.prototype.build = async function(autoload=true) {
 		self.status = 'builded'
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -215,7 +215,7 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 	
 
 	return true
-}//end init_json_editor
+};//end init_json_editor
 
 
 
@@ -223,7 +223,7 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 * INIT_JSON_EDITOR_API
 */
 area_development.prototype.init_json_editor_api = async function(widget_object) {
-	
+
 	const self = this
 
 	// short vars
@@ -249,7 +249,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 	// dom elements
 		const widget_container		= document.getElementById(widget_object.id) // "dedalo_api_test_enviroment"
-		
+
 	// inputs
 		const input_dd_api_base		= widget_container.querySelector('#dd_api_base')
 		input_dd_api_base.value		= localStorage.getItem('input_dd_api_base') || 'dd_core_api'
@@ -267,12 +267,12 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 		input_dd_api_request.value	= localStorage.getItem('input_dd_api_request') || 'dd_request'
 		input_dd_api_request.addEventListener("change", function(){
 			 localStorage.setItem('input_dd_api_request', this.value)
-		})		
+		})
 
 	// button submit
 		const button_submit = widget_container.querySelector("#submit_api")
 		button_submit.addEventListener("click",async function(e){
-			
+
 			const editor_text = editor.getText()
 
 			if (editor_text.length<3) {
@@ -303,7 +303,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 			return api_response
 		},false)
-	
+
 	// text area hiden
 		const editor_text_area = document.getElementById(editor_id)
 			  // Hide real data container
@@ -329,7 +329,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 					const body_options = JSON.parse(editor_text)
 					if (body_options) {
 						window.localStorage.setItem('json_editor_api', editor_text);
-					}					
+					}
 			    }
 			}
 		// localStorage.removeItem('json_editor_api');
@@ -340,7 +340,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 
 	return editor
-}//end init_json_editor_api
+};//end init_json_editor_api
 
 
 
@@ -353,4 +353,4 @@ area_development.prototype.init_form = async function(widget_object) {
 	build_form(widget_object)
 
 
-}//end init_form
+};//end init_form

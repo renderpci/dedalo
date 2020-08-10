@@ -18,11 +18,11 @@ var render_component_external = new function() {
 	*/
 	this.list = function(options) {
 
-		// Options vars 
+		// Options vars
 			const context 			= options.context
 			const data 				= options.data
-		
-		// Value as string 
+
+		// Value as string
 			const value_string = data.value.join(' | ')
 
 		// Node create
@@ -37,7 +37,7 @@ var render_component_external = new function() {
 			//console.log("++ data:", data);
 
 		return node
-	}//end list
+	};//end list
 
 
 
@@ -47,14 +47,14 @@ var render_component_external = new function() {
 	* @return DOM node
 	*/
 	this.edit = function(options) {
-		
-		// Options vars 
+
+		// Options vars
 			const context 			= options.context
 			const data 				= options.data
 			const node_type 		= "div"
 			const node_class_name 	= this.model + "_edit"
-		
-		// Value as string 
+
+		// Value as string
 			const value_string = "Hello world " + this.model
 
 		// Node create
@@ -69,8 +69,8 @@ var render_component_external = new function() {
 			//console.log("++ data:", data);
 
 		return node
-	}//end edit
+	};//end edit
 
 
 
-}//end render_component_external
+};//end render_component_external

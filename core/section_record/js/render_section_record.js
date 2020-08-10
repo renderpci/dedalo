@@ -16,9 +16,9 @@
 * Manage the components logic and appearance in client side
 */
 export const render_section_record = function() {
-
+	
 	return true
-}//end render_section_record
+};//end render_section_record
 
 
 
@@ -47,7 +47,7 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -138,7 +138,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -221,7 +221,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 		// 		"grid-template-columns": id_column_width + " repeat("+(ar_grid_columns.length)+", 1fr)",
 		// 	}
 		// )
-	
+
 
 	// component_info
 		const component_info = self.get_component_info()
@@ -247,7 +247,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 
 	return wrapper
-}//end render_section_record.prototype.list
+};//end render_section_record.prototype.list
 
 
 
@@ -318,7 +318,7 @@ const build_id_column = function(self) {
 								}
 								if(SHOW_DEBUG===true) {
 									console.log("// section_record build_id_column user_action_options initiator component:",user_action_options);
-								}								
+								}
 								event_manager.publish('user_action', user_action_options)
 
 							// detail_section
@@ -470,7 +470,7 @@ const recursive_relation_columns = function(current_instance, datum) {
 	}
 
 	return n_relation_columns
-}//end recursive_relation_columns
+};//end recursive_relation_columns
 
 
 
@@ -479,6 +479,7 @@ const recursive_relation_columns = function(current_instance, datum) {
 * Return an array of component models with relations (equivalent to method class.component_relation_common.php)
 */
 const get_components_with_subcolumns = () => {
+
 	return [
 			// 'component_autocomplete',
 			//'component_autocomplete_hi',
@@ -497,7 +498,7 @@ const get_components_with_subcolumns = () => {
 			//'component_select',
 			//'component_select_lang'
 	]
-}//end get_components_with_subcolumns
+};//end get_components_with_subcolumns
 
 
 /**
@@ -512,6 +513,4 @@ const delete_record = (button, self) => {
 
 
 	return false
-}//end delete_record
-
-
+};//end delete_record

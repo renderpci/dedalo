@@ -12,9 +12,9 @@
 * Manages the area apperance in client side
 */
 export const render_area_thesaurus = function() {
-
+	
 	return true
-}//end render_area_thesaurus
+};//end render_area_thesaurus
 
 
 
@@ -33,7 +33,7 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 		// set mode. Note that ts_object is NOT an instance
 		ts_object.thesaurus_mode = self.thesaurus_mode
 		// parse data
-		const data = self.data.find(item => item.tipo==='dd100')	
+		const data = self.data.find(item => item.tipo==='dd100')
 		if (data.ts_search) {
 			const node_content_data = self.node[0].querySelector('.content_data .area')
 			ts_object.parse_search_result(data.ts_search.result, null, false)
@@ -41,7 +41,7 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 		}
 
 	// content_data
-		const current_content_data = await content_data(self)	
+		const current_content_data = await content_data(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
@@ -58,12 +58,12 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 			//buttons 	 : current_buttons
 		})
 		wrapper.appendChild(fragment)
-	
+
 	// change the mode of the thesaurus
 	// when the user do click publish the tipo to go and set the mode in list
 	// the action can be executed mainly in page, but it can be used for any instance.
 
-	// swicht_term_model 
+	// swicht_term_model
 		const swicht_term_model = ui.create_dom_element({
 			element_type 	: 'div',
 			class_name		:'swicht_term_model',
@@ -78,7 +78,7 @@ render_area_thesaurus.prototype.list = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -110,7 +110,7 @@ render_area_thesaurus.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -130,7 +130,7 @@ const content_data = async function(self) {
 
 		// 	const widget_dom = build_widget(widget, self);
 		// 	fragment.appendChild(widget_dom)
-		// }	
+		// }
 
 	// container for list
 		const ul = ui.create_dom_element({
@@ -140,7 +140,7 @@ const content_data = async function(self) {
 		})
 
 	// elements
-		const data 				= self.data.find(item => item.tipo==='dd100')	
+		const data 				= self.data.find(item => item.tipo==='dd100')
 		const ts_nodes  		= data.value
 		const typology_nodes 	= ts_nodes.filter(node => node.type==='typology' )
 		const typology_length 	= typology_nodes.length
@@ -157,7 +157,7 @@ const content_data = async function(self) {
 					element_type : 'li',
 					parent 		 : ul,
 				})
-			// typology_header 
+			// typology_header
 				const typology_header = ui.create_dom_element({
 					element_type 	: 'div',
 					parent 		 	: li,
@@ -179,9 +179,9 @@ const content_data = async function(self) {
 				for (let j = 0; j < hierarchy_sections_length; j++) {
 					hierarchy_sections[j]
 
-					// hierarchy wrapper 
+					// hierarchy wrapper
 						const hierarchy_wrapper = ui.create_dom_element({
-							element_type 	: 'div',							
+							element_type 	: 'div',
 							class_name		: 'wrap_ts_object hierarchy_root_node',
 							dataset			: {
 												node_type			: 'hierarchy_node',
@@ -191,17 +191,17 @@ const content_data = async function(self) {
 											 },
 							parent 		 	: li,
 						})
-					
+
 					// hierarchy elements container
 						const elements_contanier = ui.create_dom_element({
 							element_type 	: 'div',
 							class_name		:'elements_contanier',
 							parent 		 	: hierarchy_wrapper,
-							
+
 						})
-						// hierarchy link_children 
+						// hierarchy link_children
 							const link_children = ui.create_dom_element({
-								element_type 	: 'div',							
+								element_type 	: 'div',
 								class_name		:'list_thesaurus_element',
 								id 				: hierarchy_sections[j].section_tipo+'_'+hierarchy_sections[j].section_id+'_root',
 								dataset			: {
@@ -210,9 +210,9 @@ const content_data = async function(self) {
 												 },
 								parent 		 	: elements_contanier,
 							})
-					// hierarchy children_container 
+					// hierarchy children_container
 							const children_container = ui.create_dom_element({
-								element_type 	: 'div',							
+								element_type 	: 'div',
 								class_name		:'children_container',
 								dataset			: {
 													section_id	: hierarchy_sections[j].section_id,
@@ -222,20 +222,20 @@ const content_data = async function(self) {
 							})
 
 					// ts_object render
-						ts_object.get_children(link_children)											
+						ts_object.get_children(link_children)
 				}
 		}
 
-			
+
 
 			// const hierarchy_root_nodes   = hierarchy_nodes.map(node => node.section_tipo+'_'+node.section_id+'_root')
 			// const hierarchy_nodes_length = hierarchy_root_nodes.length
-			// for (let i = 0; i < hierarchy_nodes_length; i++) {		
-			
-			// 	const root_node_id = hierarchy_root_nodes[i]				
-				
+			// for (let i = 0; i < hierarchy_nodes_length; i++) {
+
+			// 	const root_node_id = hierarchy_root_nodes[i]
+
 			// 	// Launch ajax call promise
-			// 		ts_object.get_children(root_node_id)			
+			// 		ts_object.get_children(root_node_id)
 			// }
 
 
@@ -252,10 +252,10 @@ const content_data = async function(self) {
 		const content_data = document.createElement("div")
 			  content_data.classList.add("content_data", self.type)
 			  content_data.appendChild(fragment)
-	
+
 
 	return content_data
-}//end content_data
+};//end content_data
 
 
 
@@ -326,7 +326,7 @@ const build_widget = (item, self) => {
 					widget_info.classList.remove("lock")
 					body_response.classList.remove("preload")
 				})
-		}//end if (item.info) {
+		};//end if (item.info) {
 
 		// body info
 		const body_info = ui.create_dom_element({
@@ -363,7 +363,7 @@ const build_widget = (item, self) => {
 
 
 	return container
-}//end build_widget
+};//end  build_widget
 
 
 
@@ -410,7 +410,7 @@ const print_response = (container, api_response) => {
 	container.classList.remove("preload")
 
 	return container
-}//end print_response
+};//end  print_response
 
 
 
@@ -421,9 +421,7 @@ const print_response = (container, api_response) => {
 const buttons = async function(self) {
 
 	const buttons = []
-	
+
 
 	return buttons
-}//end buttons
-
-
+};//end  buttons

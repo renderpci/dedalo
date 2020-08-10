@@ -424,7 +424,7 @@ export const ui = {
 
 
 			return true
-		}//end add_image_fallback
+		}//end  add_image_fallback
 
 
 
@@ -564,7 +564,7 @@ export const ui = {
 
 
 			return wrapper
-		}//end build_wrapper_edit
+		}//end  build_wrapper_edit
 
 
 
@@ -650,7 +650,7 @@ export const ui = {
 
 
 			return wrapper
-		}//end build_wrapper_edit
+		}//end  build_wrapper_edit
 
 
 
@@ -1548,7 +1548,7 @@ export const ui = {
 
 
 		return footer
-	}//end create_dialog
+	}//end  create_dialog
 
 
 
@@ -1600,11 +1600,11 @@ export const ui = {
 
 
 	// 	return js_promise;
-	// }//end exec_scripts_inside
+	// };//end  exec_scripts_inside
 
 
 
-}//end  ui
+};//end   ui
 
 
 

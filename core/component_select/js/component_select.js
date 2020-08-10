@@ -33,7 +33,7 @@ export const component_select = function(){
 	this.datum
 
 	return true
-}//end component_select
+};//end component_select
 
 
 
@@ -67,5 +67,3 @@ export const component_select = function(){
 	component_select.prototype.tm					= render_component_select.prototype.edit
 	component_select.prototype.search				= render_component_select.prototype.search
 	component_select.prototype.change_mode			= component_common.prototype.change_mode
-
-

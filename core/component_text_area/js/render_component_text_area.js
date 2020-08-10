@@ -17,7 +17,7 @@
 export const render_component_text_area = function() {
 
 	return true
-}//end render_component_text_area
+};//end render_component_text_area
 
 
 
@@ -49,7 +49,7 @@ render_component_text_area.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -91,7 +91,7 @@ render_component_text_area.prototype.edit = async function(options={render_level
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -232,7 +232,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -281,7 +281,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -318,7 +318,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -331,7 +331,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 	const mode = self.mode
 	// value is a raw html without parse into nodes (txt format)
 	const value = self.tags_to_html(current_value)
-	
+
 		// li container
 		const li = ui.create_dom_element({
 			element_type : 'li'
@@ -377,7 +377,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 		})
 
 		self.services.push(current_service)
-		
+
 
 		// button create fragment
 			if (self.caller && self.caller.constructor.name==="tool_indexation") {
@@ -394,12 +394,12 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 					function show_button_create_fragment(data) {
 
 						const component_container = li
-						
+
 						const selection		= data.selection
 						const button		= component_container.querySelector(".create_fragment")
 						const last_tag_id	= self.get_last_tag_id(i, 'index')
 						const label			= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
-		
+
 						const create_button = function(selection) {
 							const button_create_fragment = ui.create_dom_element({
 								element_type	: 'button',
@@ -407,7 +407,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 								inner_html 		: label,
 								parent 			: component_container
 							})
-							
+
 							// event create_fragment add publish on click
 								// button_create_fragment.addEventListener("click", publish)
 								// function publish() {
@@ -432,7 +432,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 							}
 						}
 					}
-			}//end if (self.caller && self.caller.constructor.name==="tool_indexation")
+			};//end if (self.caller && self.caller.constructor.name==="tool_indexation")
 
 	// button remove
 		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -446,7 +446,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 
 	return li
-}//end get_input_element
+};//end get_input_element
 
 
 
@@ -576,7 +576,7 @@ const get_custom_buttons = (self, i, get_service) => {
 
 
 	return custom_buttons
-}//end get_custom_buttons
+};//end get_custom_buttons
 
 
 
@@ -597,19 +597,19 @@ const get_custom_events = (self, i, get_service) => {
 	custom_events.focus = (evt, options) => {
 
 		event_manager.publish('active_component', self)
-	}//end focus
+	};//end focus
 
 	custom_events.blur = (evt, options) => {
 		// save. service save function calls current component save_value()
 			const service = get_service()
 			service.save()
-	}//end blur
+	};//end blur
 
 	custom_events.click = (evt, options) => {
 		// use the observe property into ontology of the components to suscribe to this events
 		// img : click on img
 		if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
-			const tag_obj = evt.target			
+			const tag_obj = evt.target
 			switch(evt.target.className) {
 
 				case 'tc':
@@ -619,7 +619,7 @@ const get_custom_events = (self, i, get_service) => {
 
 				case 'index':
 
-					event_manager.publish('click_tag_index' +'_'+ self.id_base, {tag:tag_obj, caller: self})					
+					event_manager.publish('click_tag_index' +'_'+ self.id_base, {tag:tag_obj, caller: self})
 
 					// const tipo			= text_area_component.dataset.tipo
 					// const lang			= text_area_component.dataset.lang
@@ -711,7 +711,7 @@ const get_custom_events = (self, i, get_service) => {
 				default:
 					// nothing to do here
 					break;
-			}//end switch
+			};//end switch
 		}else if(evt.target.nodeName==='LABEL') {
 			// Fix text area selection values
 			if (page_globals.modo==='tool_lang') {
@@ -722,14 +722,14 @@ const get_custom_events = (self, i, get_service) => {
 			// if (ed.dom.select('img').length>0) {
 			// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
 			// }
-		}//end click on img
-	}//end click
+		};//end click on img
+	};//end click
 
 	custom_events.MouseUp = (evt, options) => {
 		// user text selection event
 			const selection = options.selection
 			event_manager.publish('text_selection' +'_'+ self.id, {selection:selection, caller: self})
-	}//end MouseUp
+	};//end MouseUp
 
 	custom_events.KeyUp = (evt, options) => {
 		// use the observe property into ontology of the components to suscribe to this events
@@ -749,7 +749,7 @@ const get_custom_events = (self, i, get_service) => {
 					if(SHOW_DEBUG===true) {
 						console.log("[render_component_text_area.get_custom_events] susbscriptors_responses (key_up_f2):", susbscriptors_responses);
 					}
-				
+
 				// service. get editor and content data
 					const service				= get_service()
 					const editor_content_data	= service.get_editor_content_data()
@@ -776,11 +776,11 @@ const get_custom_events = (self, i, get_service) => {
 					}
 				break;
 		}
-	}//end KeyUp
+	};//end KeyUp
 
 
 	return custom_events
-}//end get_custom_events
+};//end get_custom_events
 
 
 
@@ -838,7 +838,7 @@ export const build_node_tag = function(data_tag, tag_id) {
 
 
 	return node_tag
-}//end build_node_tag
+};//end build_node_tag
 
 
 
@@ -944,7 +944,7 @@ const render_layer_selector = function(self, data_tag, tag_id, service){
 	self.node[0].appendChild(layer_selector)
 
 	return fragment
-}//end render_layer_selector
+};//end render_layer_selector
 
 
 
@@ -1037,7 +1037,7 @@ const render_page_selector = function(self, data_tag, tag_id, service){
 	})
 
 	return
-}//end render_page_selector
+};//end render_page_selector
 
 
 
@@ -1106,7 +1106,7 @@ const get_contenteditable_buttons = () => {
 
 
 	return contenteditable_buttons
-}//end get_contenteditable_buttons
+};//end get_contenteditable_buttons
 */
 
 

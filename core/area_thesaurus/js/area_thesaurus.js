@@ -11,7 +11,7 @@
 * AREA_THESAURUS
 */
 export const area_thesaurus = function() {
-
+	
 	this.id
 
 	// element properties declare
@@ -45,7 +45,7 @@ export const area_thesaurus = function() {
 	this.thesaurus_mode
 
 	return true
-}//end area_thesaurus
+};//end area_thesaurus
 
 
 
@@ -87,7 +87,7 @@ area_thesaurus.prototype.init = async function(options) {
 		const common_init = area_common.prototype.init.call(this, options);
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -186,7 +186,7 @@ area_thesaurus.prototype.build = async function() {
 
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -202,4 +202,4 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 
 	return sections_selector_data
-}// end get_sections_selector_data
+};//end get_sections_selector_data
