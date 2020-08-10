@@ -28,193 +28,191 @@ abstract class TR {
 
 			# TC . Select timecode from tag like '00:01:25.627'
 			case 'tc' :
-					$string = "(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\])";
-					break;
+				$string = "(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\])";
+				break;
 
 			# TC_FULL . Select complete tag like '[TC_00:01:25.627_TC]'
 			case 'tc_full' :
-					$string = "(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\])";
-					break;
+				$string = "(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\])";
+				break;
 
 			# TC_VALUE . Select elements from value tc like '00:01:25.627'. Used by OptimizeTC
 			case 'tc_value' :
-					$string = "([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})(\.([0-9]{1,3}))?";
-					break;
+				$string = "([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})(\.([0-9]{1,3}))?";
+				break;
 
 			/* PROPOSAL TO VERSION 4.7
 			case 'tc2' :
-					if ($id) {
-						$string = "\[tc2-[a-z]-{$id}-.{0,22}-data:.*?:data\]";
-					}else{
-						$string = "(\[(tc2)-([a-z]{1})-([0-9]{1,6})-(.{0,22})-data:([0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,3})?):data\])";
-					}
-					break;*/
+				if ($id) {
+					$string = "\[tc2-[a-z]-{$id}-.{0,22}-data:.*?:data\]";
+				}else{
+					$string = "(\[(tc2)-([a-z]{1})-([0-9]{1,6})-(.{0,22})-data:([0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,3})?):data\])";
+				}
+				break;*/
 
 			# INDEX
 			case 'index' :
-					if ($id!==false) {
-						$string = "\[\/{0,1}index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
-					}elseif ($state!==false) {
-						$string = "\[\/{0,1}(index)-{$state}-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
-					}else{
-						$string = "\[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
-					}
-					break;
+				if ($id!==false) {
+					$string = "\[\/{0,1}index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
+				}elseif ($state!==false) {
+					$string = "\[\/{0,1}(index)-{$state}-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}else{
+					$string = "\[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}
+				break;
 
 			case 'indexIn' :
-					if ($id) {
-						$string = "(\[index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
 
 			case 'indexOut':
-					if ($id) {
-						$string = "(\[\/index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[\/index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
 
 			# STRUCT
 			case 'struct' :
-					if ($id) {
-						$string = "\[\/{0,1}struct-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
-					}elseif ($state!==false) {
-						$string = "\[\/{0,1}(struct)-{$state}-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
-					}else{
-						$string = "\[\/{0,1}(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
-					}
-					break;
+				if ($id) {
+					$string = "\[\/{0,1}struct-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
+				}elseif ($state!==false) {
+					$string = "\[\/{0,1}(struct)-{$state}-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}else{
+					$string = "\[\/{0,1}(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}
+				break;
 
 			case 'structIn' :
-					if ($id) {
-						$string = "(\[struct-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[struct-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
 
 			case 'structOut' :
-					if ($id) {
-						$string = "(\[\/struct-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[\/(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[\/struct-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[\/(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
 
 			# REFERENCE
 			case 'reference' :
-					if ($id) {
-						$string = "\[\/{0,1}reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
-					}else{
-						$string = "\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
-					}
-					break;
+				if ($id) {
+					$string = "\[\/{0,1}reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
+				}else{
+					$string = "\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}
+				break;
 
 			case 'referenceIn' :
-					if ($id) {
-						$string = "(\[reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
 
 			case 'referenceOut' :
-					if ($id) {
-						$string = "(\[\/reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[\/(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[\/reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[\/(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
 
 			# SVG (From now 18-05-2018 v4.9.0, will be used to manage tags from the component component_svg)
 			case 'svg' :
-					if ($id) {
-						$string = "(\[svg-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[(svg)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[svg-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(svg)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+				}
+				break;
 			case 'svg_full_text' :
-
-					$string = "\[svg-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\]";
-
-					break;
+				$string = "\[svg-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\]";
+				break;
 
 			# DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Now manage images over draws js paper data)
 			case 'draw' :
-					if ($id) {
-						$string = "(\[draw-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[(draw)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[draw-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(draw)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+				}
+				break;
 
 			# GEO
 			case 'geo' :
-					if ($id) {
-						$string = "(\[geo-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
-					}
-					break;
+				if ($id) {
+					$string = "(\[geo-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+				}
+				break;
 			# GEO_FULL . Select complete tag
 			case 'geo_full' :
-					$string = "(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])";
-					break;
+				$string = "(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])";
+				break;
 
 			# PAGE (pdf) [page-n-3]
 			case 'page' :
-					if ($id) {
-						$string = "\[page-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
-					}else{
-						$string = "(\[(page)-([a-z])-([0-9]{1,6})-([-0-9]{0,22})-(data:(.*?):data)?\])";
-					}
-					break;
+				if ($id) {
+					$string = "\[page-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
+				}else{
+					$string = "(\[(page)-([a-z])-([0-9]{1,6})-([-0-9]{0,22})-(data:(.*?):data)?\])";
+				}
+				break;
 
 			# PERSON (transcription spoken person) like [person-a-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
 			case 'person' :
-					if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
-						$string = "(\[person-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else{
-						$string = "(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])";
-					}
-					break;
+				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+					$string = "(\[person-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])";
+				}
+				break;
 
 			# NOTE (transcription annotations) like [note-n-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
 			case 'note' :
-					if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
-						$string = "(\[note-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
-					}else if($state!==false){
-						$string = "(\[(note)-($state)-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
-						}else{
-							$string = "(\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
-						}
-					break;
+				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+					$string = "(\[note-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else if($state!==false){
+					$string = "(\[(note)-($state)-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}else{
+						$string = "(\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}
+				break;
 
 			# OTHERS
 			case 'br' :
-					$string = '\<br>';
-					break;
+				$string = '\<br>';
+				break;
 
 			case 'strong' :
-					#$string = '(\<strong\>|\<\/strong\>)';
-					$string = '(\<\/?strong\>)';
-					break;
+				#$string = '(\<strong\>|\<\/strong\>)';
+				$string = '(\<\/?strong\>)';
+				break;
 
 			case 'em' :
-					#$string = '(\<em\>|\<\/em\>)';
-					$string = '(\<\/?em\>)';
-					break;
+				#$string = '(\<em\>|\<\/em\>)';
+				$string = '(\<\/?em\>)';
+				break;
 
 			case 'apertium-notrans' :
-					$string = '(\<apertium-notrans\>|\<\/apertium-notrans\>)';
-					break;
+				$string = '(\<apertium-notrans\>|\<\/apertium-notrans\>)';
+				break;
 
 			default :
-					throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
+				throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
 		}
 
 		# default mark have in and out slash (pattern standalone)
@@ -255,134 +253,133 @@ abstract class TR {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 			}
 
-		# Hilite
-		if($options->hilite===true) {
-			$codeHiliteIn	= "<span class=\"hilite\">";
-			$codeHiliteOut	= "</span>";
-		}else{
-			$codeHiliteIn	= '';
-			$codeHiliteOut	= '';
-		}
+		// hilite
+			$codeHiliteIn = ($options->hilite===true)
+				? '<span class="hilite">'
+				: '';
+			$codeHiliteOut = ($options->hilite===true)
+				? '</span>'
+				: '';
 
-		# tag_URL. url path to php script thats render image
-		$tag_url = $options->tag_url;
-		if(defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false) {
-			$tag_url = TR_TAGS_CDN;
-		}
+		// tag_URL. url path to php script thats render image		
+			$tag_url = (defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false)
+				? TR_TAGS_CDN . '?'
+				: $options->tag_url . '?';
 
 		# INDEX IN
-		$pattern 	= TR::get_mark_pattern('indexIn'); // id,state,label,data
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}/[$2-$3-$4-$6]\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+			$pattern	= TR::get_mark_pattern('indexIn'); // id,state,label,data
+			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
 		# INDEX OUT
-		$pattern 	= TR::get_mark_pattern('indexOut');
-		$text		= preg_replace($pattern, "<img id=\"[/\$2-$3-$4-$6]\" src=\"{$tag_url}/[/\$2-$3-$4-$6]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+			$pattern	= TR::get_mark_pattern('indexOut');
+			$text		= preg_replace($pattern, "<img id=\"[/\$2-$3-$4-$6]\" src=\"{$tag_url}[/\$2-$3-$4-$6]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
 		# STRUCT IN
-		$pattern 	= TR::get_mark_pattern('structIn');
-		if ($options->struct_as_labels===true) {
-			$text	= preg_replace($pattern, "<div class=\"structuration_label stl_in\">structuration $4</div>", $text);
-		}else{
-			// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
-			$text	= preg_replace($pattern, "<section id=\"section_$4\" class=\"section_struct text_selectable text_unselectable\" data-type=\"struct\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
-		}
+			$pattern	= TR::get_mark_pattern('structIn');
+			if ($options->struct_as_labels===true) {
+				$text	= preg_replace($pattern, "<div class=\"structuration_label stl_in\">structuration $4</div>", $text);
+			}else{
+				// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
+				$text	= preg_replace($pattern, "<section id=\"section_$4\" class=\"section_struct text_selectable text_unselectable\" data-type=\"struct\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+			}
 
 		# STRUCT OUT
-		$pattern 	= TR::get_mark_pattern('structOut');
-		if ($options->struct_as_labels===true) {
-			$text		= preg_replace($pattern, "<div class=\"structuration_label stl_out\"> /structuration $4</div>", $text);
-		}else{
-			$text		= preg_replace($pattern, "</section>", $text);
-		}
+			$pattern	= TR::get_mark_pattern('structOut');
+			if ($options->struct_as_labels===true) {
+				$text	= preg_replace($pattern, "<div class=\"structuration_label stl_out\"> /structuration $4</div>", $text);
+			}else{
+				$text	= preg_replace($pattern, "</section>", $text);
+			}
 
 		# REFERENCE IN
-		$pattern 	= TR::get_mark_pattern('referenceIn');
-		// <reference class="reference" id="reference_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
-		$text		= preg_replace($pattern, "<reference id=\"reference_$4\" class=\"reference\" data-type=\"reference\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+			$pattern	= TR::get_mark_pattern('referenceIn');
+			// <reference class="reference" id="reference_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
+			$text		= preg_replace($pattern, "<reference id=\"reference_$4\" class=\"reference\" data-type=\"reference\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
 		# REFERENCE OUT
-		$pattern 	= TR::get_mark_pattern('referenceOut');
-		$text		= preg_replace($pattern, "</reference>", $text);
+			$pattern	= TR::get_mark_pattern('referenceOut');
+			$text		= preg_replace($pattern, "</reference>", $text);
 
 		# TC
-		$pattern 	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
-		/*$text		= preg_replace_callback(
-            $pattern,
-            function($matches) {
-            	#dump($matches, ' matches ++ '.to_string());
-            	$_1 = $matches[1];
-            	$_2 = $matches[2];
-            	$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
-            	$a = "<img id=\"$id\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$_1\" data-state=\"n\" data-label=\"$_2\" data-data=\"$_2\">";
-				#dump($a, ' a ++ '.to_string());
-            	return $a;
-            },
-            $text);*/
+			$pattern	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
+			$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
+			// $text	= preg_replace_callback(
+			// 	$pattern,
+			// 	function($matches) {
+			// 		#dump($matches, ' matches ++ '.to_string());
+			// 		$_1 = $matches[1];
+			// 		$_2 = $matches[2];
+			// 		$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
+			// 		$a = "<img id=\"$id\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$_1\" data-state=\"n\" data-label=\"$_2\" data-data=\"$_2\">";
+			// 		#dump($a, ' a ++ '.to_string());
+			// 		return $a;
+			// 	},
+			// 	$text);
 
 		# SVG
-		$pattern 	= TR::get_mark_pattern('svg');
-		preg_match($pattern, $text, $matches);
-		if (!empty($matches)) {
-			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}/[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-			#$text		= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
-			$text = preg_replace_callback(
-		        $pattern,
-		        function ($matches) {
+			$pattern	= TR::get_mark_pattern('svg');
+			preg_match($pattern, $text, $matches);
+			if (!empty($matches)) {
+				#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+				#$text		= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
+				$text = preg_replace_callback(
+					$pattern,
+					function ($matches) {
 
-		        	$new_text = null;
+						$new_text = null;
 
-		        	$_2 = $matches[2];
-		        	$_3 = $matches[3];
-		        	$_4 = $matches[4];
-		        	$_5 = $matches[5];
-		        	$_6 = $matches[6];
-		        	$_7 = $matches[7];
+						$_2 = $matches[2];
+						$_3 = $matches[3];
+						$_4 = $matches[4];
+						$_5 = $matches[5];
+						$_6 = $matches[6];
+						$_7 = $matches[7];
 
-		        	# data is a locator encoded as text
-		        	# Restore double quotes from saved safe locator string
-		        	$locator_text = str_replace('\'','"',$_7);
-		        	if($locator = json_decode($locator_text) ) {
+						# data is a locator encoded as text
+						# Restore double quotes from saved safe locator string
+						$locator_text = str_replace('\'','"',$_7);
+						if($locator = json_decode($locator_text) ) {
 
-		        		$url  = component_svg::get_url_from_locator($locator);
+							$url = component_svg::get_url_from_locator($locator);
 
-		        		# Replace double quotes for safe management in text editor
-			        	$data = str_replace('"','\'',$_7);
+							# Replace double quotes for safe management in text editor
+							$data = str_replace('"','\'',$_7);
 
-			            $new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
+							$new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
 
-		        	}
-		        	return $new_text;
-		        },
-		        $text
-		    );
-		}
+						}
+						return $new_text;
+					},
+					$text
+				);
+			}
 
 		# DRAW
-		$pattern 	= TR::get_mark_pattern('draw');
-		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"svg\" />$codeHiliteOut", $text);
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}/[$2-$3-$4-$6]\" class=\"draw\" data-type=\"draw\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+			$pattern	= TR::get_mark_pattern('draw');
+			#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"svg\" />$codeHiliteOut", $text);
+			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"draw\" data-type=\"draw\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 		# GEO
-		$pattern 	= TR::get_mark_pattern('geo');
-		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"geo\" />$codeHiliteOut", $text);
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}/[$2-$3-$4-$6]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+			$pattern 	= TR::get_mark_pattern('geo');
+			#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"geo\" />$codeHiliteOut", $text);
+			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 		# PAGE
-		$pattern 	= TR::get_mark_pattern('page');
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}/[$2-$3-$4-$5]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$7\">", $text);
+			$pattern	= TR::get_mark_pattern('page');
+			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$7\">", $text);
 
 		# PERSON
-		$pattern 	= TR::get_mark_pattern('person'); // $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}/[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}/[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
+			$pattern	= TR::get_mark_pattern('person'); // $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";
+			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
+			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
 
 		# NOTE
-		$pattern 	= TR::get_mark_pattern('note'); // $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}/[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+			$pattern	= TR::get_mark_pattern('note'); // $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
+			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+
 
 		return (string)$text;
 	}//end addTagImgOnTheFly
@@ -410,7 +407,7 @@ abstract class TR {
 						 //'strong','em',
 			);
 		foreach ($ar_tags as $tag) {
-			$pattern 	= TR::get_mark_pattern($tag);
+			$pattern	= TR::get_mark_pattern($tag);
 			#$text		= preg_replace($pattern, "<apertium-notrans>$1</apertium-notrans>", $text);
 			$text		= preg_replace($pattern, "<apertium-notrans>$0</apertium-notrans>", $text);
 			#if ($tag=='reference') {
@@ -436,16 +433,16 @@ abstract class TR {
 		}
 
 		$options = new stdClass();
-			$options->deleteTC 			= true;
-			$options->deleteIndex 		= true;
-			$options->deleteSvg 		= true;
-			$options->deleteDraw 		= true;
-			$options->deleteGeo 		= true;
-			$options->delete_page 		= true;
-			$options->delete_person 	= true;
-			$options->delete_note   	= true;
-			$options->delete_struct 	= true;
-			$options->delete_reference 	= true;
+			$options->deleteTC			= true;
+			$options->deleteIndex		= true;
+			$options->deleteSvg			= true;
+			$options->deleteDraw		= true;
+			$options->deleteGeo			= true;
+			$options->delete_page		= true;
+			$options->delete_person		= true;
+			$options->delete_note		= true;
+			$options->delete_struct		= true;
+			$options->delete_reference	= true;
 			if (is_object($request_options)) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 			}
@@ -614,11 +611,11 @@ abstract class TR {
 	*/
 	public static function tag2data($tag, $type='index') {
 
-		$match_pattern 		= TR::match_pattern_index_from_tag($tag, $type);
-		$string 			= $match_pattern[6][0];
-		#$value_string		= preg_replace("'", '"', $string);
-		$value_string		= str_replace("'", '"', $string);
-		$value 				= json_decode($value_string);
+		$match_pattern	= TR::match_pattern_index_from_tag($tag, $type);
+		$string			= $match_pattern[6][0];
+		#$value_string	= preg_replace("'", '"', $string);
+		$value_string	= str_replace("'", '"', $string);
+		$value			= json_decode($value_string);
 
 		return $value;
 	}//end tag2data
@@ -713,7 +710,7 @@ abstract class TR {
 		#$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexIn|$patternIndexOut)\<\/h5\>\<p\> {0,2}\<strong\>/", "XXXXXXXXXX", $string); #</strong><h5>$1</h5><strong>
 
 		# </strong> </p> <h5> [indexOut] </h5> <p>	-->	</strong> <h5> [indexOut] </h5> <br>
- 		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexOut)\<\/h5\>\<p\> {0,2}/", "</strong><h5>$1</h5><br />", $string);
+		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexOut)\<\/h5\>\<p\> {0,2}/", "</strong><h5>$1</h5><br />", $string);
 
 		# </strong> </p> <h5> [indexOut] </h5> <p> --> </strong> <br> <h5> [indexOut] </h5>
 		$string		= preg_replace("/\<\/strong\> {0,2}\<\/p\> {0,2}\<h5\>($patternIndexIn)\<\/h5\>\<p\> {0,2}/", "</strong><br /><h5>$1</h5>", $string);
@@ -763,7 +760,7 @@ abstract class TR {
 		#$string		= "V3 CONVERTED ($today) !!!!!!!!!!!!!!  <br />".$string ;
 
 		return($string) ;
-	}
+	}//end convertParagraph2br
 
 
 
@@ -799,35 +796,35 @@ abstract class TR {
 
 
 	# cleanTexGarbage V3
-	public static function cleanTexGarbage_DEPRECATED($string) {
+	// public static function cleanTexGarbage_DEPRECATED($string) {
 
-		# patterns
-		$patternIndexIn 	= TR::get_mark_pattern('indexIn',false);
-		$patternIndexOut 	= TR::get_mark_pattern('indexOut',false);
-		$patternTC		 	= TR::get_mark_pattern('tc',false);
-		$patternBr			= TR::get_mark_pattern('br',false);
+		// 	# patterns
+		// 	$patternIndexIn		= TR::get_mark_pattern('indexIn',false);
+		// 	$patternIndexOut	= TR::get_mark_pattern('indexOut',false);
+		// 	$patternTC			= TR::get_mark_pattern('tc',false);
+		// 	$patternBr			= TR::get_mark_pattern('br',false);
 
-		# em
-		$string	= preg_replace("/\<em\> {0,3}\<em\>/"					, 	"<em>"		, $string);
-		$string	= preg_replace("/\<\/em\> {0,3}\<\/em\>/"				, 	"<\em>"		, $string);
-		$string	= preg_replace("/\<em\> {0,3}\<\/em\>/"					, 	''			, $string);
-		$string	= preg_replace("/\<em\> {0,3}- {0,3}\<\/em\>/"			, 	'-'			, $string);
+		// 	# em
+		// 	$string	= preg_replace("/\<em\> {0,3}\<em\>/"					, 	"<em>"		, $string);
+		// 	$string	= preg_replace("/\<\/em\> {0,3}\<\/em\>/"				, 	"<\em>"		, $string);
+		// 	$string	= preg_replace("/\<em\> {0,3}\<\/em\>/"					, 	''			, $string);
+		// 	$string	= preg_replace("/\<em\> {0,3}- {0,3}\<\/em\>/"			, 	'-'			, $string);
 
-		# strong
-		$string	= preg_replace("/\<strong\> {0,3}\<strong\>/"			, 	"<strong>"	, $string);
-		$string	= preg_replace("/\<\/strong\> {0,3}\<\/strong\>/"		, 	"<\strong>"	, $string);
-		$string	= preg_replace("/\<strong\> {0,3}\<\/strong\>/"			, 	''			, $string);
-		$string	= preg_replace("/\<strong\> {0,3}- {0,3}\<\/strong\>/"	, 	'-'			, $string);
+		// 	# strong
+		// 	$string	= preg_replace("/\<strong\> {0,3}\<strong\>/"			, 	"<strong>"	, $string);
+		// 	$string	= preg_replace("/\<\/strong\> {0,3}\<\/strong\>/"		, 	"<\strong>"	, $string);
+		// 	$string	= preg_replace("/\<strong\> {0,3}\<\/strong\>/"			, 	''			, $string);
+		// 	$string	= preg_replace("/\<strong\> {0,3}- {0,3}\<\/strong\>/"	, 	'-'			, $string);
 
-		# br
-		#$string	= preg_replace("/ {0,3}$patternBr {0,3}($patternBr|)/"	, 	'<br />'	, $string);
+		// 	# br
+		// 	#$string	= preg_replace("/ {0,3}$patternBr {0,3}($patternBr|)/"	, 	'<br />'	, $string);
 
-		#$string = str_replace('<br /><br />','<br />', $string);
+		// 	#$string = str_replace('<br /><br />','<br />', $string);
 
-		$string = str_replace('’', "'", $string);
+		// 	$string = str_replace('’', "'", $string);
 
-		return $string ;
-	}
+		// 	return $string ;
+	// }
 
 
 	# cleanTexGarbage V2
@@ -962,15 +959,15 @@ abstract class TR {
 	# fix posible unions between mark and text like 'casa[TAG] or '[TAG]casa'. Insert a space like 'casa [TAG]' or '[TAG] casa'
 	public static function adjustSpaceBetweenMarkText($string) {
 
-		$pattern[] 			= TR::get_mark_pattern('indexIn',false);
-		$pattern[] 			= TR::get_mark_pattern('indexOut',false);
-		$pattern[] 			= TR::get_mark_pattern('tc',false);
+		$pattern[]			= TR::get_mark_pattern('indexIn',false);
+		$pattern[]			= TR::get_mark_pattern('indexOut',false);
+		$pattern[]			= TR::get_mark_pattern('tc',false);
 
-		$patternIndexIn 	= TR::get_mark_pattern('indexIn',false);
-		$patternIndexOut 	= TR::get_mark_pattern('indexOut',false);
-		$patternTC		 	= TR::get_mark_pattern('tc',false);
-		$patternStrong	 	= TR::get_mark_pattern('strong',false);
-		$patternEm	 		= TR::get_mark_pattern('em',false);
+		$patternIndexIn		= TR::get_mark_pattern('indexIn',false);
+		$patternIndexOut	= TR::get_mark_pattern('indexOut',false);
+		$patternTC			= TR::get_mark_pattern('tc',false);
+		$patternStrong		= TR::get_mark_pattern('strong',false);
+		$patternEm			= TR::get_mark_pattern('em',false);
 
 		$string				= preg_replace("/ {0,2}($patternIndexIn|$patternIndexOut|$patternTC) {0,2}/", "$1", $string);
 		/*
@@ -986,12 +983,13 @@ abstract class TR {
 	}
 
 
+
 	# trCommonErrors . Devuelve Errores comununes en transcripción
-	public static function trCommonErrors($textoFull)
-	{
-		$html 			= false ;
-		$error 			= false ;
-		$ar_errorSX 	= array();
+	public static function trCommonErrors($textoFull) {
+
+		$html			= false ;
+		$error			= false ;
+		$ar_errorSX		= array();
 		$ar_patterns	= array("[<em>\n<h6>]",
 								"[<h6><em>]",
 								"[<h6><strong>]",
@@ -1016,15 +1014,19 @@ abstract class TR {
 			$html =  "<span style='color:red'>". substr($error,0,-4) . '</span>';
 		}
 
-		return $html ;
-	}
+		return $html;
+	}//end trCommonErrors
 
 
-	# Info de los TC e Indexaciones de un texto (transcripción)
-	public static function trInfo($texto)
-	{
-		$fragmentoFull = $texto ;
-		$html = false;
+
+	/**
+	* trInfo
+	* Info de los TC e Indexaciones de un texto (transcripción)
+	*/	
+	public static function trInfo($texto) {
+
+		$fragmentoFull	= $texto ;
+		$html			= false;
 
 		// TC
 		$pattern = TR::get_mark_pattern('tc');
@@ -1039,12 +1041,9 @@ abstract class TR {
 		if($nIndex >0) 	$html .= "<div class='h5div'> Index: $nIndex </div>";
 		if($nTCs >0)	$html .= "<div class='h6div'> TC's: $nTCs  </div> ";
 
-		return $html ;
-	}
+		return $html;
+	}//end trInfo
 
-	public static function plainText($string, $removeTags=true) {
-
-	}
 
 
 	# clean text for list
@@ -1062,12 +1061,11 @@ abstract class TR {
 
 		# cortamos elegantemente el fragmento
 		return self::truncate_text($string, $limit, $break=" ", $pad="...");
-	}
+	}//end limpiezaFragmentoEnListados
 
 
 	/**
 	* TRUNCATE_TEXT
-	*
 	*/
 	public static function truncate_text( $string, $limit, $break=" ", $pad="...") {
 
@@ -1080,7 +1078,7 @@ abstract class TR {
 	  }
 
 	  return $string . $pad;
-	}
+	}//end truncate_text
 
 
 
@@ -1155,5 +1153,7 @@ abstract class TR {
 	}//end get_tags_of_type_in_text
 
 
-}
-?>
+
+}//end class tr
+
+
