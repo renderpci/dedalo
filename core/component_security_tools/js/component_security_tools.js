@@ -5,10 +5,10 @@
 
 
 var component_security_tools = new function() {
-	
+
 
 	this.save_arguments = {} // End save_arguments
-	
+
 
 	this.Save = function(component_obj) {
 
@@ -17,6 +17,4 @@ var component_security_tools = new function() {
 	};
 
 
-}//end component_security_tools
-
-
+};//end component_security_tools

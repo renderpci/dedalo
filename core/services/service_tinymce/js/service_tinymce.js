@@ -18,7 +18,6 @@
 export const service_tinymce = function() {
 
 
-
 	// self vars
 		this.caller
 		this.container
@@ -75,7 +74,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	}//end init
+	};//end init
 
 
 
@@ -104,7 +103,7 @@ export const service_tinymce = function() {
 		self.caller.save_value(key, value)
 
 		return true
-	}//end save
+	};//end save
 
 
 
@@ -116,12 +115,12 @@ export const service_tinymce = function() {
 	this.get_value = function() {
 
 		const self = this
-		
-		const editor = self.editor		
+
+		const editor = self.editor
 		const value	 = editor.getContent({format:'raw'})
-		
+
 		return value
-	}//end get_value
+	};//end get_value
 
 
 
@@ -136,7 +135,7 @@ export const service_tinymce = function() {
 		const custom_buttons		= this.options.editor_config.custom_buttons
 		const custom_buttons_length	= (custom_buttons) ? custom_buttons.length : 0
 		for (let i = 0; i < custom_buttons_length; i++) {
-			
+
 			const options = custom_buttons[i].options
 
 			// button add
@@ -144,7 +143,7 @@ export const service_tinymce = function() {
 		}
 
 		return custom_buttons
-	}//end add_editor_buttons
+	};//end add_editor_buttons
 
 
 
@@ -262,7 +261,7 @@ export const service_tinymce = function() {
 
 				const toolbar			= self.dd_tinny.querySelector('.mce-toolbar-grp') // mce-toolbar-grp mce-container mce-panel mce-stack-layout-item mce-first
 				const toolbar_height	= toolbar ? toolbar.offsetHeight : 0
-				
+
 				const statusbar			= self.dd_tinny.querySelector('.mce-statusbar') // mce-statusbar mce-container mce-panel mce-stack-layout-item mce-last
 				const statusbar_height	= statusbar ? statusbar.offsetHeight : 0
 
@@ -277,7 +276,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	}//end onsetup_editor
+	};//end onsetup_editor
 
 
 
@@ -301,7 +300,7 @@ export const service_tinymce = function() {
 		self.caller.save_value(self.key, value)
 
 		return true
-	}//end set_content
+	};//end set_content
 
 
 
@@ -319,7 +318,7 @@ export const service_tinymce = function() {
 		const editor_content_data = self.editor.getBody();
 
 		return editor_content_data
-	}//end get_editor_content_data
+	};//end get_editor_content_data
 
 
 
@@ -339,7 +338,7 @@ export const service_tinymce = function() {
 		const selection = self.editor.selection.getContent({format:'raw'})
 
 		return selection
-	}//end get_selection
+	};//end get_selection
 
 
 
@@ -350,7 +349,7 @@ export const service_tinymce = function() {
 	this.wrap_selection_with_tags = function(tag_node_in, tag_node_out) {
 
 		const self 	 = this
-		const editor = self.editor		
+		const editor = self.editor
 
 		// Get selection range
 			const range			= editor.selection.getRng(0)
@@ -361,7 +360,7 @@ export const service_tinymce = function() {
 			const startContainer	= range_clon.startContainer
 
 		// Go to end of range position
-			range_clon.collapse(false)	
+			range_clon.collapse(false)
 
 		// Insert end out node
 			range_clon.insertNode(tag_node_out)
@@ -380,8 +379,8 @@ export const service_tinymce = function() {
 
 
 		return true
-	}//end wrap_selection_with_tags
+	};//end wrap_selection_with_tags
 
 
 
-}//end class
+};//end class

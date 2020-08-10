@@ -18,7 +18,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_time_machine = function () {
-
+	
 	this.id
 	this.model
 	this.mode
@@ -37,7 +37,7 @@ export const tool_time_machine = function () {
 	this.modal_container
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -84,7 +84,7 @@ tool_time_machine.prototype.init = async function(options) {
 
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -94,13 +94,13 @@ tool_time_machine.prototype.init = async function(options) {
 tool_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
-	
+
 	// call generic commom tool build
 		const common_build = tool_common.prototype.build.call(self, autoload);
 
 
 	return common_build
-}//end build_custom
+};//end build_custom
 
 
 
@@ -147,7 +147,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 // 	return common_build
-// }//end build_custom
+// };//end build_custom
 
 
 
@@ -233,7 +233,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 	// 	return base_context
-// }//end get_base_context
+// };//end get_base_context
 
 
 
@@ -266,7 +266,7 @@ tool_time_machine.prototype.load_section = async function() {
 			mode			: 'list',
 			tipo			: component.tipo,
 			section_tipo	: component.section_tipo,
-			section_id		: component.section_id,	
+			section_id		: component.section_id,
 			lang			: component.lang
 		}
 		const sqo = {
@@ -286,7 +286,7 @@ tool_time_machine.prototype.load_section = async function() {
 				direction : 'DESC',
 				path	  : [{component_tipo : 'id'}]
 			}]
-		}					
+		}
 		const request_config = [
 			source,
 			ddo_component,
@@ -312,7 +312,7 @@ tool_time_machine.prototype.load_section = async function() {
 			caller			: self,
 			id_variant		: 'time_machine' // avoid conflicts
 		}
-	
+
 	// init section instance
 		const section_instance = await get_instance(instance_options)
 
@@ -329,7 +329,7 @@ tool_time_machine.prototype.load_section = async function() {
 
 
 	return section_instance
-}//end load_section
+};//end load_section
 
 
 
@@ -345,7 +345,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 
 
 	const context = JSON.parse(JSON.stringify(component.context))
-		
+
 
 	const source = create_source(component, 'get_data')
 		console.log("// load_component source:",source);
@@ -406,7 +406,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode='tm', mat
 
 
 	return component_instance
-}//end load_component
+};//end load_component
 
 
 
@@ -455,4 +455,4 @@ tool_time_machine.prototype.apply_value = async function() {
 
 
 	return trigger_response
-}//end apply_value
+};//end apply_value

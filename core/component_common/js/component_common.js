@@ -15,7 +15,7 @@
 export const component_common = function(){
 
 	return true
-}//end component_common
+};//end component_common
 
 
 
@@ -170,7 +170,7 @@ component_common.prototype.init = async function(options) {
 		self.status = 'initiated'
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -187,7 +187,7 @@ export const set_context_vars = function(self, context) {
 	self.permissions	= self.context.permissions
 
 	return true
-}//end set_context_vars
+};//end set_context_vars
 
 
 
@@ -265,7 +265,7 @@ component_common.prototype.build = async function(autoload=false){
 
 
 	return true
-}//end component_common.prototype.build
+};//end component_common.prototype.build
 
 
 
@@ -388,7 +388,7 @@ component_common.prototype.save = async function(changed_data) {
 		})
 
 	return save_promise
-}//end save
+};//end save
 
 
 
@@ -402,7 +402,7 @@ component_common.prototype.get_value = function() {
 	const value = this.data.value
 
 	return value
-}//end get_value
+};//end get_value
 
 
 
@@ -417,7 +417,7 @@ component_common.prototype.set_value = function(value) {
 	this.data.value = value
 
 	return true
-}//end set_value
+};//end set_value
 
 
 
@@ -507,7 +507,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 
 	return true
-}//end update_datum
+};//end update_datum
 
 
 
@@ -551,7 +551,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 
 	return true
-}//end update_data_value
+};//end update_data_value
 
 
 
@@ -608,7 +608,7 @@ console.log("***********changed_data", changed_data);
 			}
 
 	return api_response
-}//end change_value
+};//end change_value
 
 
 
@@ -636,7 +636,7 @@ const function_queue = function(context, pool, fn, options) {
 
 
 	return fun
-}//end function_queue
+};//end function_queue
 
 
 
@@ -658,7 +658,7 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 	//current_node.parentNode.replaceChild(new_node, current_node);
 
 	return current_node
-}//end update_node_contents
+};//end update_node_contents
 
 
 
@@ -717,13 +717,13 @@ component_common.prototype.get_ar_instances = async function(){
 			// add instance
 				ar_instances.push(current_section_record)
 
-		}//end for loop
+		};//end for loop
 
 	// set
 		self.ar_instances = ar_instances
 
 	return ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
 
 
 
@@ -786,7 +786,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 
 
 	return true
-}//end change_mode
+};//end change_mode
 
 
 
@@ -811,4 +811,4 @@ component_common.prototype.test_save = async function(component) {
 			},time)
 		}
 	}
-}//end test_save
+};//end test_save

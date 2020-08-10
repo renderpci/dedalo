@@ -17,7 +17,7 @@
 export const inspector = function() {
 
 	return true
-}//end inspector
+};//end inspector
 
 
 
@@ -49,7 +49,7 @@ inspector.prototype.init = function(options) {
 	self.caller 		= options.caller
 
 	return true
-}// end init
+};//end init
 
 
 
@@ -63,5 +63,4 @@ inspector.prototype.build = async function(){
 
 
 	return true
-}// end build
-
+};//end build

@@ -47,7 +47,7 @@ export const section = function() {
 	this.id_variant
 
 	return true
-}//end section
+};//end section
 
 
 
@@ -95,7 +95,7 @@ section.prototype.init = async function(options) {
 
 	self.events_tokens		= []
 	self.ar_instances		= []
-	
+
 	self.caller				= options.caller	|| null
 
 	self.datum				= options.datum		|| null
@@ -133,7 +133,7 @@ section.prototype.init = async function(options) {
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -143,6 +143,7 @@ section.prototype.init = async function(options) {
 *	bool true
 */
 section.prototype.build = async function(autoload=false) {
+
 	const t0 = performance.now()
 
 	const self = this
@@ -155,7 +156,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// debug
 		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
-		
+
 
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -174,10 +175,10 @@ section.prototype.build = async function(autoload=false) {
 				self.section_id	= self.data
 					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
 					: null
-				
+
 			// recreate and set dd_request with the new configuration
 				self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'search')
-				
+
 			// sqo
 				const sqo = self.dd_request.show.find(element => element.typo==='sqo')
 
@@ -197,7 +198,7 @@ section.prototype.build = async function(autoload=false) {
 					event_manager.subscribe('render_'+self.id, function(){
 						load_data_debug(self, api_response, dd_request_show_original)
 					})
-				}				
+				}
 		}
 		// else{
 		//
@@ -306,7 +307,7 @@ section.prototype.build = async function(autoload=false) {
 		self.status = 'builded'
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -314,7 +315,7 @@ section.prototype.build = async function(autoload=false) {
 * GET_AR_INSTANCES
 */
 section.prototype.get_ar_instances = async function(){
-
+	
 	const self = this
 
 	// self data veification
@@ -374,7 +375,7 @@ section.prototype.get_ar_instances = async function(){
 
 
 	return self.ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
 
 
 
@@ -484,7 +485,7 @@ section.prototype.render__DES = async function(){
 
 
 	return node
-}//end render
+};//end render
 */
 
 
@@ -527,7 +528,7 @@ section.prototype.render_content = async function(){
 
 
 	return self.node[0]
-}//end render_content
+};//end render_content
 */
 
 
@@ -594,7 +595,7 @@ section.prototype.create_request_config = function(){
 		}
 
 	return request_config
-}//end create_request_config
+};//end create_request_config
 */
 
 
@@ -622,7 +623,7 @@ section.prototype.load_data = async function() {
 		self.ar_section_id 		= ar_section_id
 
 	return true
-}//end load_data
+};//end load_data
 */
 
 
@@ -681,5 +682,5 @@ section.prototype.load_section_records = function() {
 	})//end loaded
 
 	return loaded
-}//end load_section_records
+};//end load_section_records
 */

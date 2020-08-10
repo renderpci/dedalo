@@ -16,7 +16,7 @@
 export const render_component_select = function(component) {
 
 	return true
-}//end render_component_select
+};//end render_component_select
 
 
 /**
@@ -44,7 +44,7 @@ render_component_select.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -82,7 +82,7 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -178,7 +178,7 @@ const add_events = (self, wrapper) => {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -210,7 +210,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -273,7 +273,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -338,4 +338,4 @@ const input_element = (inputs_container, self) => {
 
 	return li
 
-}//end input_element
+};//end input_element

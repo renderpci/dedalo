@@ -31,7 +31,7 @@ export const component_filter = function(){
 	this.tools
 
 	return true
-}//end component_filter
+};//end component_filter
 
 
 
@@ -99,5 +99,4 @@ component_filter.prototype.get_changed_key = function(action, value) {
 	}
 
 	return false
-}//end get_changed_key
-
+};//end get_changed_key

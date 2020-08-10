@@ -17,7 +17,7 @@
 export const render_component_html_text = function() {
 
 	return true
-}//end render_component_html_text
+};//end render_component_html_text
 
 
 /**
@@ -46,7 +46,7 @@ render_component_html_text.prototype.list = async function() {
 		wrapper.innerHTML = value_string
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -87,7 +87,7 @@ render_component_html_text.prototype.edit = async function(options={render_level
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -181,7 +181,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -218,7 +218,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -254,7 +254,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -330,7 +330,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	return li
 
-}//end input_element
+};//end input_element
 
 
 
@@ -367,7 +367,7 @@ const get_custom_buttons = (self, i, get_service) => {
 
 
 	return custom_buttons
-}//end get_custom_buttons
+};//end get_custom_buttons
 
 
 
@@ -385,14 +385,14 @@ const get_custom_events = (self, i, get_service) => {
 	custom_events.focus = (evt, options) => {
 
 		event_manager.publish('active_component', self)
-	}//end focus
+	};//end focus
 
 	custom_events.blur = (evt, options) => {
 		// save. service save function calls current component save_value()
 			const actual_value 	= self.data.value[i]
 			const service 		= get_service()
 			service.save(actual_value)
-	}//end blur
+	};//end blur
 
 	custom_events.click = (evt, options) => {
 		// img : click on img
@@ -500,7 +500,7 @@ const get_custom_events = (self, i, get_service) => {
 				default:
 					// nothing to do here
 					break;
-			}//end switch
+			};//end switch
 		}else if(evt.target.nodeName==='LABEL') {
 			// Fix text area selection values
 			if (page_globals.modo==='tool_lang') {
@@ -511,14 +511,14 @@ const get_custom_events = (self, i, get_service) => {
 			// if (ed.dom.select('img').length>0) {
 			// 	ed.dom.setStyles(ed.dom.select('img'), {'opacity':'0.8'});
 			// }
-		}//end click on img
-	}//end click
+		};//end click on img
+	};//end click
 
 	custom_events.MouseUp = (evt, options) => {
 		// console.log("options.selection:",options.selection);
 		// CREATE_FRAGMENT_COMMAND
 		// mce_editor.create_fragment_command(ed,evt,text_area_component)
-	}//end MouseUp
+	};//end MouseUp
 
 	return custom_events
-}//end get_custom_events
+};//end get_custom_events

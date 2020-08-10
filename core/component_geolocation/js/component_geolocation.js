@@ -35,7 +35,7 @@ export const component_geolocation = function(){
 	this.events_tokens
 
 	return true
-}//end component_geolocation
+};//end component_geolocation
 
 
 
@@ -115,7 +115,7 @@ component_geolocation.prototype.init = async function(options) {
 			})
 
 	return common_init
-}//end init
+};//end init
 
 /**
 * get_MAP
@@ -284,7 +284,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				});
 
 				break;
-		}//end switch(self.context.geo_provider)
+		};//end switch(self.context.geo_provider)
 
 
 	// disable zoom handlers
@@ -331,7 +331,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 		});
 
 	return true
-}//end get_map
+};//end get_map
 
 
 
@@ -367,7 +367,7 @@ component_geolocation.prototype.update_input_values = function(data, map_contain
 		self.current_value[key].alt 	= data.alt
 
 	return true
-}//end update_input_values
+};//end update_input_values
 
 
 
@@ -381,7 +381,7 @@ component_geolocation.prototype.refresh_map = function(map) {
 	map.invalidateSize(); // Force refresh map
 
 	return true
-}//end refresh_map
+};//end refresh_map
 
 
 
@@ -423,8 +423,8 @@ component_geolocation.prototype.load_geo_editor = function(options) {
 
 		default:
 		break;
-	}//end switch
-}// end load_geo_editor
+	};//end switch
+};//end load_geo_editor
 
 
 
@@ -482,7 +482,7 @@ component_geolocation.prototype.load_layer = function(layer){
 						const content = self.get_popup_content(current_data_layer);
 							if (content) {
 								current_data_layer.bindPopup(content);
-							}//end if(content)
+							};//end if(content)
 
 		            // Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 						current_data_layer.on('click', function(e) {
@@ -528,7 +528,7 @@ component_geolocation.prototype.load_layer = function(layer){
 						 // console.log("self.ar_FeatureGroup[layer_id]:",self.ar_FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
 						self.ar_FeatureGroup[layer_id].addLayer(current_data_layer)
 		    	}// end if (current_data_layer)
-			}//end onEachFeature
+			}// end onEachFeature
 		})// end L.geoJson
 	}// end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
 
@@ -539,7 +539,7 @@ component_geolocation.prototype.load_layer = function(layer){
 
 	// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
 	self.active_layer_id = layer_id;
-}//end load_geo_editor
+};//end load_geo_editor
 
 
 /**
@@ -559,7 +559,7 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 			layer_id 	: parseInt(ar_layer_id[i])
 		})
 	}
-}// load_tag_into_geo_editor
+};//end load_tag_into_geo_editor
 
 
 
@@ -593,7 +593,7 @@ component_geolocation.prototype.get_data_tag = function(){
 	}
 
 	return data_tag
-}// end get_data_tag
+};//end get_data_tag
 
 
 /**
@@ -614,7 +614,7 @@ component_geolocation.prototype.get_lib_data = function(){
 
 
 	return lib_data
-}//get_lib_data
+};//end get_lib_data
 
 
 
@@ -632,7 +632,7 @@ component_geolocation.prototype.get_last_layer_id = function(){
 	const last_layer_id = Math.max(...ar_layer_id)
 
 	return last_layer_id
-}//end get_last_layer_id
+};//end get_last_layer_id
 
 
 
@@ -675,7 +675,6 @@ component_geolocation.prototype.get_popup_content = function(layer) {
     }
     return null;
 };//end get_popup_content
-
 
 
 
@@ -838,7 +837,7 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 	self.draw_editor_is_initated = true;
 
 	return true
-}//end init_draw_editor
+};//end init_draw_editor
 
 
 
@@ -870,4 +869,4 @@ component_geolocation.prototype.update_draw_data = function() {
 	self.current_value[key].lib_data 			= self.ar_layer_loaded
 
 	return true
-}//end update_draw_data
+};//end update_draw_data

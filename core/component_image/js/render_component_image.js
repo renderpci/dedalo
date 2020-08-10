@@ -15,7 +15,7 @@
 export const render_component_image = function(component) {
 
 	return true
-}//end render_component_image
+};//end render_component_image
 
 
 
@@ -62,7 +62,7 @@ render_component_image.prototype.list = function(options) {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -100,7 +100,7 @@ render_component_image.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -200,7 +200,7 @@ const content_data_edit = async function(self) {
 	// })
 
 	return content_data
-}//end content_data_edit
+};//end content_data_edit
 
 
 
@@ -264,7 +264,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -307,6 +307,4 @@ const get_quality_selector = (self) => {
 		}
 
 	return quality_selector
-}//end get_quality_selector
-
-
+};//end get_quality_selector

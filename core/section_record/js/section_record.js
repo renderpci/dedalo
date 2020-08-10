@@ -47,7 +47,7 @@ export const section_record = function() {
 	this.id_variant
 
 	return true
-}//end section
+};//end section
 
 
 
@@ -122,7 +122,7 @@ section_record.prototype.init = async function(options) {
 
 
 	return self
-}//end init
+};//end init
 
 
 
@@ -152,7 +152,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 			const current_context 	= items[i]
 			const current_data 		= self.get_component_data(current_context.tipo)
-			
+
 				const instance_options = {
 					model			: current_context.model,
 					tipo			: current_context.tipo,
@@ -198,7 +198,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 
 	return ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
 
 
 
@@ -226,7 +226,7 @@ section_record.prototype.get_component_data = function(component_tipo){
 
 
 	return component_data
-}//end get_component_data
+};//end get_component_data
 
 
 
@@ -235,13 +235,13 @@ section_record.prototype.get_component_data = function(component_tipo){
 * @return object component_data
 */
 section_record.prototype.get_component_info = function(component_tipo){
-
+	
 	const self = this
 
 	const component_info = self.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
 
 	return component_info
-}//end get_component_info
+};//end get_component_info
 
 
 
@@ -256,7 +256,7 @@ section_record.prototype.get_component_context = function(component_tipo) {
 	const context = self.context.filter(item => item.tipo===component_tipo && item.section_tipo===self.section_tipo)[0]
 
 	return context
-}//end get_component_context
+};//end get_component_context
 */
 
 
@@ -275,7 +275,7 @@ section_record.prototype.build = function() {
 	return Promise.all([components]).then(function(){
 		self.builded = true
 	})
-}//end build
+};//end build
 */
 
 
@@ -343,7 +343,7 @@ section_record.prototype.load_items = function() {
 
 
 	return load_items_promise
-}//end load_items
+};//end load_items
 */
 
 
@@ -358,5 +358,5 @@ section_record.prototype.get_context_childrens = function(component_tipo){
 	const group_childrens = self.context.filter(item => item.parent===component_tipo)
 
 	return group_childrens
-}//end get_context_childrens
+};//end get_context_childrens
 */

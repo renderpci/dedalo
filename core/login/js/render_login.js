@@ -16,7 +16,7 @@
 export const render_login = function() {
 
 	return true
-}//end render_login
+};//end render_login
 
 
 
@@ -57,7 +57,7 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	},600)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -131,7 +131,7 @@ const add_events = function(self, wrapper, content_data) {
 		})
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -143,7 +143,7 @@ const add_events = function(self, wrapper, content_data) {
 const get_content_data = async function(self) {
 
 	const dedalo_application_langs = self.data.value.dedalo_application_langs
-	
+
 	const fragment = new DocumentFragment()
 
 	// select lang
@@ -268,7 +268,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-}//end get_content_data
+};//end get_content_data
 
 
 
@@ -299,7 +299,7 @@ const get_browser_info = function() {
 	  name: M[0],
 	  version: M[1]
 	};
-}//end get_browser_info
+};//end get_browser_info
 
 
 
@@ -354,6 +354,4 @@ const validate_browser = function() {
 	}
 
 	return true;
-}//end validate_browser
-
-
+};//end validate_browser

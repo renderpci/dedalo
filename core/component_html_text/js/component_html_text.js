@@ -5,7 +5,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_component_html_text} from '../../component_html_text/js/render_component_html_text.js'
-	
+
 
 
 export const component_html_text = function(){
@@ -27,7 +27,7 @@ export const component_html_text = function(){
 	this.node
 
 	return true
-}//end component_html_text
+};//end component_html_text
 
 
 
@@ -42,7 +42,7 @@ export const component_html_text = function(){
 	component_html_text.prototype.render 			= common.prototype.render
 	component_html_text.prototype.refresh 			= common.prototype.refresh
 	component_html_text.prototype.destroy 			= common.prototype.destroy
-	
+
 	// change data
 	component_html_text.prototype.save 	 			= component_common.prototype.save
 	//component_html_text.prototype.load_data 		= component_common.prototype.load_data
@@ -87,7 +87,7 @@ component_html_text.prototype.save_value = async function(key, value) {
 	})
 
 	return true
-}//end save_value
+};//end save_value
 
 
 
@@ -103,14 +103,14 @@ component_html_text.prototype.save_value = async function(key, value) {
 // 	if (text_area.length==1) {
 // 		tinyMCE.get( text_area[0].id ).focus()
 // 	}
-// }//end select_component
+// };//end select_component
 
 
 
 // /**
 // * SAVE_COMMAND
 // */
-// component_html_text.prototype.save_command = function(ed, evt, obj_html_text, self) {	
+// component_html_text.prototype.save_command = function(ed, evt, obj_html_text, self) {
 // 	// DATO : Overwrite
 // 	// Reemplazamos el dato a guardar (que sería el contenido del textarea real) por el contenido del editor (tinyMCE)
 // 	// eliminando los saltos de línea (IMPORTANTE!)
@@ -162,16 +162,16 @@ component_html_text.prototype.save_value = async function(key, value) {
 // 		alert("text editor obj_html_text not found "+ text_area_id);
 // 	}
 
-// }//end save_command
+// };//end save_command
 
 // component_html_text.prototype.click_event = function(e, wrapper) {
-	
+
 // 	//const wrapper = e.target
 // 	const all_buttons_remove =wrapper.parentNode.querySelectorAll('.remove')
 // 		for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
 // 			all_buttons_remove[i].classList.add("display_none")
 // 		}
-							
+
 // 	// insert
 // 	if (e.target.matches('.button.add')) {
 
@@ -214,7 +214,7 @@ component_html_text.prototype.save_value = async function(key, value) {
 
 // 		return true
 // 	}
-	
+
 // 	if (e.target.matches('.button.close')) {
 // 		//change mode
 // 		self.change_mode('list', true)

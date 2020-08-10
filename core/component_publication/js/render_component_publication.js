@@ -16,7 +16,7 @@
 export const render_component_publication = function() {
 
 	return true
-}//end render_component_publication
+};//end render_component_publication
 
 
 
@@ -45,7 +45,7 @@ render_component_publication.prototype.list = async function() {
 		wrapper.textContent = value_string
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -84,7 +84,7 @@ render_component_publication.prototype.edit = async function(options={render_lev
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -156,7 +156,7 @@ const add_events = function(self, wrapper) {
 		},true)
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -194,7 +194,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -221,7 +221,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -270,7 +270,4 @@ const input_element = (i, current_value, inputs_container, self) => {
 		switch_label.setAttribute("for",input_id)
 
 	return li
-}//end input_element
-
-
-
+};//end input_element

@@ -16,7 +16,7 @@
 export const render_component_input_text = function() {
 
 	return true
-}//end render_component_input_text
+};//end render_component_input_text
 
 
 
@@ -40,7 +40,7 @@ render_component_input_text.prototype.list = async function() {
 
 	// Value as string
 		const value_string = value.join(self.divisor)
-	
+
 	// Set value
 		if (data.fallback_lang_applied===true) {
 			// fallback_lang_applied
@@ -51,7 +51,7 @@ render_component_input_text.prototype.list = async function() {
 		}
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -90,7 +90,7 @@ render_component_input_text.prototype.edit = async function(options={render_leve
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -265,7 +265,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -344,7 +344,7 @@ render_component_input_text.prototype.search = async function() {
 
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -381,7 +381,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -439,7 +439,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -484,7 +484,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 
 	return li
-}//end input_element
+};//end input_element
 
 
 
@@ -514,7 +514,7 @@ const get_content_data_search = async function(self) {
 
 
 	return content_data
-}//end get_content_data_search
+};//end get_content_data_search
 
 
 
@@ -546,4 +546,4 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 
 	return input
-}//end get_input_element_search
+};//end get_input_element_search

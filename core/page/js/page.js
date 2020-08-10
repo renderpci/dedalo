@@ -37,7 +37,7 @@ export const page = function () {
 
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -90,7 +90,7 @@ page.prototype.init = async function(options) {
 			async function user_action(options) {
 				if(SHOW_DEBUG===true) {
 					console.log("// page user_action received options", options);
-				}				
+				}
 
 				// const current_data_manager 	= new data_manager()
 				// const api_response 			= await current_data_manager.get_element_context(options)
@@ -146,7 +146,7 @@ page.prototype.init = async function(options) {
 					}
 
 				return true
-			}//end user_action
+			};//end user_action
 
 
 	// window onpopstate
@@ -196,7 +196,7 @@ page.prototype.init = async function(options) {
 
 
  	return true
-}//end init
+};//end init
 
 
 
@@ -214,7 +214,7 @@ page.prototype.build = async function() {
 		self.status = 'builded'
 
  	return true
-}//end build
+};//end build
 
 
 
@@ -246,11 +246,11 @@ page.prototype.get_ar_instances = async function(){
 
 			// add
 				self.ar_instances.push(current_instance)
-		}//end for (let i = 0; i < elements_length; i++)
+		};//end for (let i = 0; i < elements_length; i++)
 
 
 	return self.ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
 
 
 
@@ -259,12 +259,12 @@ page.prototype.get_ar_instances = async function(){
 * @return promise current_instance_promise
 */
 const instantiate_page_element = function(self, request_config) {
-	
+
 	const source = request_config.find(item => item.typo==='source')
 
 	const tipo			= source.tipo
 	const section_tipo	= source.section_tipo || tipo
-	
+
 	const context		= {
 		model			: source.model,
 		tipo			: tipo,
@@ -293,7 +293,7 @@ const instantiate_page_element = function(self, request_config) {
 
 
 	return instance_promise
-}//end instantiate_page_element
+};//end instantiate_page_element
 
 
 
@@ -346,4 +346,4 @@ page.prototype.build_element = async function(){
 // 		history.pushState(state, title, url)
 
 // 	return true
-// }//end user_action
+// };//end user_action

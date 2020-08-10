@@ -31,7 +31,7 @@ export const tool_posterframe = function () {
 
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -50,7 +50,7 @@ export const tool_posterframe = function () {
 * INIT
 */
 tool_posterframe.prototype.init = async function(options) {
-
+	
 	const self = this
 
 	// set the self specific vars not defined by the generic init (in tool_common)
@@ -66,7 +66,7 @@ tool_posterframe.prototype.init = async function(options) {
 
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -84,7 +84,7 @@ tool_posterframe.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+};//end build_custom
 
 
 
@@ -128,7 +128,7 @@ tool_posterframe.prototype.load_component = async function(lang) {
 
 
 	return component_instance
-}//end load_component
+};//end load_component
 
 /**
 * BUTTON CLICK
@@ -143,7 +143,7 @@ tool_posterframe.prototype.button_click = function(value, button_obj) {
 
 		case 'Play':
 
-//TODO - cambiar la llamada
+	//TODO - cambiar la llamada
 			self.generate_posterframe(button_obj, 45);
 			break;
 
@@ -155,7 +155,7 @@ tool_posterframe.prototype.button_click = function(value, button_obj) {
 		case '5 seg >':
 
 
-//TODO - cambiar la llamada
+	//TODO - cambiar la llamada
 			self.generate_posterframe(button_obj, 45);
 			break;
 
@@ -177,7 +177,7 @@ tool_posterframe.prototype.button_click = function(value, button_obj) {
 	}
 
 	return true
-}//end button_click
+};//end button_click
 
 /**
 * GENERATE POSTERFRAME
@@ -265,7 +265,7 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 		html_page.loading_content( wrap_div_tool, 0 );
 	})
 
-}//end generate_posterframe
+};//end generate_posterframe
 
 
 
@@ -273,7 +273,6 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 * DELETE POSTERFRAME
 */
 tool_posterframe.prototype.delete_posterframe = function(button_obj) {
-
 
 	//TODO - change function code to adapt to the new version, the function contains old code that has been copied
 
@@ -345,7 +344,7 @@ tool_posterframe.prototype.delete_posterframe = function(button_obj) {
 		html_page.loading_content( wrap_div_tool, 0 );
 	})
 
-}//end delete_posterframe
+};//end delete_posterframe
 
 
 
@@ -353,7 +352,6 @@ tool_posterframe.prototype.delete_posterframe = function(button_obj) {
 * GENERATE_IDENTIFYING_IMAGE
 */
 tool_posterframe.prototype.generate_identifying_image = function(button_obj, current_time_in_seconds) {
-
 
 	//TODO - change function code to adapt to the new version, the function contains old code that has been copied
 
@@ -424,4 +422,4 @@ tool_posterframe.prototype.generate_identifying_image = function(button_obj, cur
 		html_page.loading_content( wrap_div_tool, 0 );
 	})
 
-}//end generate_identifying_image
+};//end generate_identifying_image

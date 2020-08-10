@@ -7,19 +7,21 @@
 	* @return bool true
 	*/
 	export const on_dragstart = function(obj, event) {
+
 		event.stopPropagation();
 
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', obj.dataset.path);
 
 		return true
-	}//end ondrag_start
+	};//end ondrag_start
 
 
 	/**
 	* ON_DRAGOVER
 	*/
 	export const on_dragover = function(obj, event) {
+
 		event.preventDefault();
 		event.stopPropagation();
 		//console.log("dragover");
@@ -27,7 +29,7 @@
 
 		// Add drag_over class
 		//	obj.classList.add('drag_over')
-	}//end on_dragover
+	};//end on_dragover
 
 
 
@@ -38,7 +40,7 @@
 
 		//console.log("dragleave");
 		//obj.classList.remove('drag_over')
-	}//end on_dragleave
+	};//end on_dragleave
 
 
 
@@ -48,6 +50,7 @@
 	* @return bool true
 	*/
 	export const on_drop = function(obj, event) {
+
 		event.preventDefault() // Necessary. Allows us to drop.
 		event.stopPropagation()
 
@@ -65,4 +68,4 @@
 		});
 
 		return true
-	}//end on_drop
+	};//end on_drop

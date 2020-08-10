@@ -14,9 +14,9 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_pdf_extractor = function() {
-
+	
 	return true
-}//end render_tool_pdf_extractor
+};//end render_tool_pdf_extractor
 
 
 
@@ -81,7 +81,7 @@ render_tool_pdf_extractor.prototype.edit = async function (options={render_level
 
 
 	return wrapper
-}//end render_tool_pdf_extractor
+};//end render_tool_pdf_extractor
 
 
 
@@ -255,4 +255,4 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-}//end get_content_data
+};//end get_content_data

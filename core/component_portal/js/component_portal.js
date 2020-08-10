@@ -44,7 +44,7 @@ export const component_portal = function(){
 	this.autocomplete_active
 
 	return true
-}//end component_portal
+};//end  component_portal
 
 
 
@@ -119,7 +119,7 @@ component_portal.prototype.init = async function(options) {
 
 
 	return common_init
-}//end init
+};//end  init
 
 
 
@@ -233,7 +233,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 
 	return true
-}//end component_portal.prototype.build
+};//end  component_portal.prototype.build
 
 
 
@@ -281,7 +281,7 @@ component_portal.prototype.add_value = async function(value) {
 
 
 	return true
-}//end add_value
+};//end  add_value
 
 
 
@@ -333,7 +333,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// console.log("update_pagination_values self.pagination:",self.pagination);
 
 	return true
-}//end update_pagination_values
+};//end  update_pagination_values
 
 
 
@@ -368,4 +368,4 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// 	}
 
 	// 	return offset_last
-	// }//end get_last_offset
+	// };//end  get_last_offset

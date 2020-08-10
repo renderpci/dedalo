@@ -23,7 +23,7 @@ export const component_radio_button = function(){
 	this.node
 
 	return true
-}//end component_radio_button
+};//end component_radio_button
 
 
 
@@ -35,7 +35,7 @@ export const component_radio_button = function(){
 	// lifecycle
 	component_radio_button.prototype.init				= component_common.prototype.init
 	component_radio_button.prototype.build				= component_common.prototype.build
-	component_radio_button.prototype.render				= common.prototype.render	
+	component_radio_button.prototype.render				= common.prototype.render
 	component_radio_button.prototype.refresh			= common.prototype.refresh
 	component_radio_button.prototype.destroy			= common.prototype.destroy
 
@@ -46,7 +46,7 @@ export const component_radio_button = function(){
 	component_radio_button.prototype.change_value		= component_common.prototype.change_value
 	component_radio_button.prototype.build_dd_request	= common.prototype.build_dd_request
 
-	// render	
+	// render
 	component_radio_button.prototype.list				= render_component_radio_button.prototype.list
 	component_radio_button.prototype.edit				= render_component_radio_button.prototype.edit
 	component_radio_button.prototype.edit_in_list		= render_component_radio_button.prototype.edit
@@ -62,7 +62,7 @@ export const component_radio_button = function(){
 component_radio_button.prototype.get_checked_value_label = function() {
 
 	const self = this
-	
+
 	if (self.data.value[0] !=null) {
 
 		const checked_key = self.data.datalist.findIndex( (item) => {
@@ -76,5 +76,5 @@ component_radio_button.prototype.get_checked_value_label = function() {
 		return ''
 
 	}
-	
-}//end get_checked_value_label
+
+};//end get_checked_value_label

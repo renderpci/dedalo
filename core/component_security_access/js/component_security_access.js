@@ -31,7 +31,7 @@ export const component_security_access = function(){
 	this.tools
 
 	return true
-}//end component_security_access
+};//end component_security_access
 
 
 
@@ -60,6 +60,3 @@ export const component_security_access = function(){
 	component_security_access.prototype.edit_in_list		= render_component_security_access.prototype.edit
 	component_security_access.prototype.search				= render_component_security_access.prototype.search
 	component_security_access.prototype.change_mode			= component_common.prototype.change_mode
-
-
-
