@@ -547,14 +547,22 @@ export const service_autocomplete = function() {
 			const q						= search_value
 			const search_query_object	= self.rebuild_search_query_object(q);
 
+		// debug
 			if(SHOW_DEBUG===true) {
 				console.log("[service_autocomplete.autocomplete_search] search_engine:", self.search_engine)
 				console.log("self.dd_request", self.dd_request);
 			}
 
+		// check valid function name (defined in component properties search_engine)
+			if (typeof self[self.search_engine]!=="function") {
+				console.error("ERROR. Received search_engine function not exists. Review your component properties source->request_config->search_engine :", self.search_engine);
+				return new Promise(()=>{})
+			}
+
+		// search options
 			const options = {
-				dd_request 	: self.dd_request,
-				q 			: q
+				dd_request	: self.dd_request,
+				q			: q
 			}
 
 		// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
