@@ -1640,17 +1640,17 @@ abstract class common {
 		$source_properties	= $this->get_properties();
 		$records_mode		= isset($source_properties->source->records_mode)
 								? $source_properties->source->records_mode
-								: $this->get_modo();
+								: (in_array($source_model, component_relation_common::get_components_with_relations()) ? 'list' : $this->get_modo());
 
 		// Iterate dd_object (layout_map) for colums
 			$layout_map_options = new stdClass();
 				$layout_map_options->section_tipo			= $this->get_section_tipo();
 				$layout_map_options->tipo					= $this->get_tipo();
-				$layout_map_options->modo					= $this->get_modo();
+				$layout_map_options->modo					= $records_mode; // $this->get_modo(); (!) To verify [10-08-2020]
 				$layout_map_options->request_config_type	= 'show';
 
 			$layout_map = layout_map::get_layout_map($layout_map_options);
-
+			
 			if(!empty($layout_map)) foreach($ar_locators as $current_locator) {
 
 				// check locator format
@@ -1673,11 +1673,11 @@ abstract class common {
 						continue; // prevents multisection duplicate items
 					}
 
-					$dd_object 		= (object)$dd_object;
-					$current_tipo 	= $dd_object->tipo;
-					$mode 			= $records_mode;
+					$dd_object		= (object)$dd_object;
+					$current_tipo	= $dd_object->tipo;
+					$mode			= $records_mode;
 					$model			= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					$current_lang 	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
+					$current_lang	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 
 					switch (true) {
 
