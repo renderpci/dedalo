@@ -2187,6 +2187,24 @@ abstract class common {
 						$parsed_item->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->fixed_filter, $section_tipo, $section_id);
 					}
 
+				// show (mandatory)
+					$operator = isset($item_request_config->show->sqo_config->operator)
+						? $item_request_config->show->sqo_config->operator
+						: '$or';
+
+					// search_query_object
+						$sqo_config = new stdClass();
+							$sqo_config->full_count	= false;
+							$sqo_config->add_select	= false;
+							$sqo_config->direct		= true;
+							$sqo_config->limit		= $limit;
+							$sqo_config->offset		= 0;
+							$sqo_config->mode		= $mode;
+							$sqo_config->operator	= $operator;
+
+						$parsed_item->show				= $item_request_config->show;
+						$parsed_item->show->sqo_config	= $sqo_config;				
+
 				// search
 					if (isset($item_request_config->search)) {
 
@@ -2204,35 +2222,22 @@ abstract class common {
 							$sqo_config->mode		= $mode;
 							$sqo_config->operator	= $operator;
 
-						$parsed_item->search = $item_request_config->search;
-						$parsed_item->search->sqo_config = $sqo_config;
+						$parsed_item->search				= $item_request_config->search;
+						$parsed_item->search->sqo_config	= $sqo_config;
+					}else{
+						// fallback to show
+						$parsed_item->search				= $item_request_config->show;
+						$parsed_item->search->sqo_config	= $sqo_config;
 					}
 
 				// select
 					if (isset($item_request_config->select)) {
 						$parsed_item->select = $item_request_config->select;
+					}else{
+						// fallback to show
+						$parsed_item->select = $item_request_config->show;
 					}
-
-				// show
-					if (isset($item_request_config->show)) {
-
-						$operator = isset($item_request_config->show->sqo_config->operator)
-							? $item_request_config->show->sqo_config->operator
-							: '$or';
-
-						// search_query_object
-							$sqo_config = new stdClass();
-								$sqo_config->full_count	= false;
-								$sqo_config->add_select	= false;
-								$sqo_config->direct		= true;
-								$sqo_config->limit		= $limit;
-								$sqo_config->offset		= 0;
-								$sqo_config->mode		= $mode;
-								$sqo_config->operator	= $operator;
-
-							$parsed_item->show				= $item_request_config->show;
-							$parsed_item->show->sqo_config	= $sqo_config;
-					}
+					// dump($parsed_item, ' parsed_item ++ '.to_string());
 
 				// add
 					$request_config_parsed[] = $parsed_item;
