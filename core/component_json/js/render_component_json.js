@@ -337,6 +337,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				})
 		})
 
+	let editor
 
 	// create the editor
 		const editor_options = {
@@ -391,13 +392,13 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 					
 	
 	// create a new instace of the editor when DOM element is ready	
-		event_manager.when_in_dom(li, function(){
+		// event_manager.when_in_dom(li, function(){
 			
-			const editor = new JSONEditor(li, editor_options, current_value)
+			editor = new JSONEditor(li, editor_options, current_value)
 
 			// append current editor
 			self.editors.push(editor)
-		})
+		// })
 		
 
 		// blur event
