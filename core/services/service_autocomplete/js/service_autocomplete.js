@@ -56,7 +56,7 @@ export const service_autocomplete = function() {
 		self.render()
 
 		return true
-	}//end init
+	};//end init
 
 
 
@@ -70,7 +70,7 @@ export const service_autocomplete = function() {
 		self.searh_container.remove()
 
 		return true
-	}// end destroy
+	};//end destroy
 
 
 
@@ -137,7 +137,7 @@ export const service_autocomplete = function() {
 		self.datalist 			= datalist
 
 		return true
-	}// end render
+	};// end render
 
 
 
@@ -212,7 +212,7 @@ export const service_autocomplete = function() {
 			// self.build_filter_fields(select.value, options)
 
 		return source_selector
-	}//end render_source_selector
+	};//end render_source_selector
 
 
 
@@ -243,7 +243,7 @@ export const service_autocomplete = function() {
 				}, false);
 
 		return search_input
-	}//end get_input
+	};//end get_input
 
 
 
@@ -338,7 +338,7 @@ export const service_autocomplete = function() {
 			}
 
 		return sections_list
-	}//end render_sections_selector
+	};//end render_sections_selector
 
 
 
@@ -380,7 +380,7 @@ export const service_autocomplete = function() {
 
 
 		return inputs_list
-	}//end render_inputs_list
+	};//end render_inputs_list
 
 
 
@@ -440,7 +440,7 @@ export const service_autocomplete = function() {
 					}
 
 		return operator_selector
-	}//end render_operator_selector
+	};//end render_operator_selector
 
 
 
@@ -514,7 +514,7 @@ export const service_autocomplete = function() {
 						text_content	: current_value,
 						parent			: li_node
 					})// end create dom node
-			}// enf for ddo_item
+			};// enf for ddo_item
 
 			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
 			const current_dd_info 	= current_row.find((item)=> item.tipo==='ddinfo')
@@ -525,11 +525,11 @@ export const service_autocomplete = function() {
 						inner_html		: current_dd_info_value,
 						parent			: li_node
 					})// end create dom node
-				}// end if of check current_dd_info
+				};// end if of check current_dd_info
 
 
-		}// end for of current_section (section_tipo)
-	}//end render_datalist
+		};// end for of current_section (section_tipo)
+	};//end render_datalist
 
 
 
@@ -570,7 +570,7 @@ export const service_autocomplete = function() {
 
 
 		return js_promise
-	}//end autocomplete_search
+	};//end autocomplete_search
 
 
 
@@ -638,7 +638,7 @@ export const service_autocomplete = function() {
 
 
 		return sqo
-	}//end rebuild_search_query_object
+	};//end rebuild_search_query_object
 
 
 
@@ -670,7 +670,7 @@ export const service_autocomplete = function() {
 	 		}
 
 		return api_response
-	}//end dedalo_engine
+	};//end dedalo_engine
 
 
 
@@ -869,6 +869,6 @@ export const service_autocomplete = function() {
 					request.send();
 
 			})//end Promise
-	}//end zenon_engine
+	};//end zenon_engine
 
-}//end service_autocomplete
+};//end service_autocomplete
