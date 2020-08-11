@@ -352,5 +352,7 @@ area_development.prototype.init_form = async function(widget_object) {
 
 	build_form(widget_object)
 
-
+	return true
 };//end init_form
+
+
