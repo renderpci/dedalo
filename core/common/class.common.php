@@ -2202,8 +2202,9 @@ abstract class common {
 							$sqo_config->mode		= $mode;
 							$sqo_config->operator	= $operator;
 
-						$parsed_item->show				= $item_request_config->show;
-						$parsed_item->show->sqo_config	= $sqo_config;				
+					// set item
+					$parsed_item->show				= $item_request_config->show;
+					$parsed_item->show->sqo_config	= $sqo_config;				
 
 				// search
 					if (isset($item_request_config->search)) {
@@ -2213,15 +2214,16 @@ abstract class common {
 							: '$or';
 
 						// search_query_object
-						$sqo_config = new stdClass();
-							$sqo_config->full_count	= false;
-							$sqo_config->add_select	= false;
-							$sqo_config->direct		= true;
-							$sqo_config->limit		= $limit;
-							$sqo_config->offset		= 0;
-							$sqo_config->mode		= $mode;
-							$sqo_config->operator	= $operator;
+							$sqo_config = new stdClass();
+								$sqo_config->full_count	= false;
+								$sqo_config->add_select	= false;
+								$sqo_config->direct		= true;
+								$sqo_config->limit		= $limit;
+								$sqo_config->offset		= 0;
+								$sqo_config->mode		= $mode;
+								$sqo_config->operator	= $operator;
 
+						// set item
 						$parsed_item->search				= $item_request_config->search;
 						$parsed_item->search->sqo_config	= $sqo_config;
 					}else{
@@ -2232,14 +2234,14 @@ abstract class common {
 
 				// select
 					if (isset($item_request_config->select)) {
-						$parsed_item->select = $item_request_config->select;
+						// set item
+						$parsed_item->select = $item_request_config->select;					
 					}else{
 						// fallback to show
 						$parsed_item->select = $item_request_config->show;
 					}
-					// dump($parsed_item, ' parsed_item ++ '.to_string());
 
-				// add
+				// add parsed item
 					$request_config_parsed[] = $parsed_item;
 			}
 
