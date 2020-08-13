@@ -294,7 +294,7 @@ export const service_autocomplete = function() {
 					local_storage_ar_id.push(section)
 				}
 
-				const filter_node = self.build_filter(filter_items)
+				const filter_node = self.build_filter(filter_items, get_label.secciones)
 				filters_container.appendChild(filter_node)
 			}
 
@@ -346,7 +346,7 @@ export const service_autocomplete = function() {
 
 						local_storage_ar_id.push(id)
 					}
-					const filter_node = self.build_filter(filter_items)
+					const filter_node = self.build_filter(filter_items, component_tipo)
 					filters_container.appendChild(filter_node)
 				}
 			}
@@ -367,7 +367,7 @@ export const service_autocomplete = function() {
 	* build_filter
 	* @return DOM node
 	*/
-	this.build_filter = function(filter_items) {
+	this.build_filter = function(filter_items, filter_name) {
 
 		const self = this
 
@@ -384,7 +384,7 @@ export const service_autocomplete = function() {
 			})
 			const all_section_label = ui.create_dom_element({
 				element_type	: "label",
-				inner_html		: get_label.todos, //ddo_section.label ||
+				inner_html		: get_label.todos + " " + filter_name, //ddo_section.label ||
 				parent			: all_selector
 			})
 			all_section_label.setAttribute("for", self.list_name + "_all")
