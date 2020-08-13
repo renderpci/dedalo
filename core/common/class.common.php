@@ -1663,7 +1663,7 @@ abstract class common {
 
 		$show			= $rqo->show;
 		$source_model	= $source->model;
-		
+
 		if(!empty($ar_ddo)) foreach($ar_locators as $current_locator) {
 
 			// check locator format
@@ -1769,7 +1769,7 @@ abstract class common {
 				}
 
 			}//end iterate display_items
-							
+
 
 			// dd_info, additional information about row
 				// value_with_parents. Check optional API request (for example, from service_autocomplete)
@@ -1778,7 +1778,7 @@ abstract class common {
 					});
 					$value_with_parents = ($value_with_parents_object)
 						? ($value_with_parents_object->value ?? false) // from request objrct
-						: ($show->value_with_parents ?? false); // from properties source->show			
+						: ($show->value_with_parents ?? false); // from properties source->show
 
 					if ($value_with_parents===true) {
 						$dd_info = common::get_ddinfo_parents($current_locator, $source_tipo);
@@ -1811,7 +1811,7 @@ abstract class common {
 			$source = $this->get_source();
 			$request_config[] = $source;
 
-		// rqo. request_config			
+		// rqo. request_config
 			$records_mode	= $this->get_records_mode();
 			$mode			= $records_mode;
 			$tipo			= $this->get_tipo();
@@ -1881,13 +1881,13 @@ abstract class common {
 	* @return object $dd_info
 	*/
 	public static function get_ddinfo_parents($locator, $source_component_tipo) {
-	
+
 		$section_id 	= $locator->section_id;
 		$section_tipo 	= $locator->section_tipo;
 
 		// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
 		$dd_info_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, true, false, null, false, false);
-		
+
 		$dd_info = new stdClass();
 			$dd_info->tipo			= 'ddinfo';
 			$dd_info->section_id	= $section_id;
@@ -2214,7 +2214,7 @@ abstract class common {
 							$parsed_item->show->sqo_config->operator = '$or';
 						}
 					}else{
-						// fallback non defined sqo_config		
+						// fallback non defined sqo_config
 						$sqo_config = new stdClass();
 							$sqo_config->full_count	= false;
 							$sqo_config->add_select	= false;
@@ -2255,14 +2255,15 @@ abstract class common {
 
 				// select
 					if (isset($item_request_config->select)) {
+						// set item
 						$parsed_item->select = $item_request_config->select;
 					}else{
 						// fallback to show
 						$parsed_item->select = $parsed_item->show;
 					}
-				
 
-				// add
+
+				// add parsed item
 					$request_config_parsed[] = $parsed_item;
 			}
 
