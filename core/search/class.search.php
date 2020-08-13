@@ -521,10 +521,13 @@ class search {
 
 				// Case object is a end search object
 				$path				= $search_object->path;
-				$search_component 	= end($path);
-				#$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
-				$modelo_name 		= $search_component->modelo;
-				$ar_query_object 	= $modelo_name::get_search_query2($search_object);
+				$search_component	= end($path);
+				// model (with fallback if not exists)
+				if (!isset($search_component->modelo)) {
+					$search_component->modelo = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
+				}
+				$model_name			= $search_component->modelo;
+				$ar_query_object	= $model_name::get_search_query2($search_object);
 				#debug_log(__METHOD__." ar_query_object $op - ".to_string($ar_query_object), logger::DEBUG);
 				#if (empty(reset($ar_query_object))) {
 				#	continue;
