@@ -2228,7 +2228,7 @@ abstract class common {
 
 				// search
 					if (isset($item_request_config->search)) {
-
+						// set item
 						$parsed_item->search = $item_request_config->search;
 						if (isset($parsed_item->search->sqo_config)) {
 							// fallback non defined operator
@@ -2250,7 +2250,7 @@ abstract class common {
 
 					}else{
 						// fallback to show
-						$parsed_item->search = $item_request_config->show;
+						$parsed_item->search = $parsed_item->show;
 					}
 
 				// select
