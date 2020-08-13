@@ -229,12 +229,12 @@ class layout_map {
 
 		// section add
 		$dd_object = new dd_object((object)[
+			'label'			=> RecordObj_dd::get_termino_by_tipo($section_tipo, $lang, true, true),
 			'tipo'			=> $section_tipo,
 			'section_tipo'	=> $section_tipo,
 			'model'			=> 'section',
 			'mode'			=> $mode,
 			'lang'			=> DEDALO_DATA_NOLAN,
-			'label'			=> RecordObj_dd::get_termino_by_tipo($section_tipo, $lang, true, true),
 			'parent'		=> 'root'
 		]);
 
@@ -273,12 +273,12 @@ class layout_map {
 
 		// component add
 			$dd_object = new dd_object((object)[
+				'label'			=> RecordObj_dd::get_termino_by_tipo($current_tipo, $lang, true, true),
 				'tipo'			=> $current_tipo,
 				'section_tipo'	=> $current_section_tipo,
 				'model'			=> $current_model,
 				'mode'			=> $mode,
-				'lang'			=> $lang,
-				'label'			=> RecordObj_dd::get_termino_by_tipo($current_tipo, $lang, true, true),
+				'lang'			=> $lang,				
 				'parent'		=> $current_parent
 			]);
 
@@ -339,56 +339,57 @@ class layout_map {
 
 		// filter
 			$filter = 	[
-							(object)[
-								'q' 	=> '\''.$tipo.'\'',
-								'path' 	=> [(object)[
-									'section_tipo'	 => $preset_section_tipo,
-									'component_tipo' => 'dd1242',
-									'modelo'		 => 'component_input_text',
-									'name'			 => 'Tipo'
-								]]
-							],
-							(object)[
-								'q' 	=> '\''.$section_tipo.'\'',
-								'path' 	=> [(object)[
-									'section_tipo' 	 => $preset_section_tipo,
-									'component_tipo' => 'dd642',
-									'modelo' 		 => 'component_input_text',
-									'name' 			 => 'Section tipo'
-								]]
-							],
-							(object)[
-								'q' 	=> $user_locator,
-								'path' 	=> [(object)[
-									'section_tipo' 	 => $preset_section_tipo,
-									'component_tipo' => 'dd654',
-									'modelo' 		 => 'component_select',
-									'name' 			 => 'User'
-								]]
-							],
-							(object)[
-								'q' 	=> '\''.$modo.'\'',
-								'path' 	=> [(object)[
-									'section_tipo' 	 => $preset_section_tipo,
-									'component_tipo' => 'dd1246',
-									'modelo' 		 => 'component_input_text',
-									'name' 			 => 'Modo'
-								]]
-							]
-						];
+				(object)[
+					'q'		=> '\''.$tipo.'\'',
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd1242',
+						'modelo'			=> 'component_input_text',
+						'name'				=> 'Tipo'
+					]]
+				],
+				(object)[
+					'q'		=> '\''.$section_tipo.'\'',
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd642',
+						'modelo'			=> 'component_input_text',
+						'name'				=> 'Section tipo'
+					]]
+				],
+				(object)[
+					'q'		=> $user_locator,
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd654',
+						'modelo'			=> 'component_select',
+						'name'				=> 'User'
+					]]
+				],
+				(object)[
+					'q'		=> '\''.$modo.'\'',
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd1246',
+						'modelo'			=> 'component_input_text',
+						'name'				=> 'Modo'
+					]]
+				]
+			];
+
 			// add filter view if exists
 			if (!empty($view)) {
 				$filter[] = (object)[
-								'q' 	=> '\''.$view.'\'',
-								'path' 	=> [
-									(object)[
-										'section_tipo' 	 => $preset_section_tipo,
-										'component_tipo' => 'dd1247',
-										'modelo' 		 => 'component_input_text',
-										'name' 			 => 'view'
-									]
-								]
-							];
+					'q'		=> '\''.$view.'\'',
+					'path'	=> [
+						(object)[
+							'section_tipo'		=> $preset_section_tipo,
+							'component_tipo'	=> 'dd1247',
+							'modelo'			=> 'component_input_text',
+							'name'				=> 'view'
+						]
+					]
+				];
 			}
 
 		// search query object
@@ -398,7 +399,7 @@ class layout_map {
 				'section_tipo'	=> 'dd1244',
 				'limit'			=> 1,
 				'full_count'	=> false,
-				'filter' 		=> (object)[
+				'filter'		=> (object)[
 					'$and' => $filter
 				]//,
 				// 'select' 		=> [
@@ -426,21 +427,51 @@ class layout_map {
 
 		$search		= search::get_instance($search_query_object);
 		$rows_data	= $search->search();
-			#dump($rows_data, ' rows_data ++ '.to_string());
 
 		$ar_records = $rows_data->ar_records;
 		if (empty($ar_records)) {
-			$result 		= false;
+		
+			$result = false;
+
 		}else{
 			$dato = reset($ar_records);
 			if (isset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN})) {
+				
 				$json_data		= reset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN});
 				$preset_value	= is_array($json_data) ? $json_data : [$json_data];
-				$result			= $preset_value;
+
+				// check proper config of items
+				$valid_items = [];
+				foreach ($preset_value as $key => $item) {
+
+					// typo
+						if (!isset($item->typo) || $item->typo!=='ddo') {
+							debug_log(__METHOD__." Ignored invalid user preset typo ! ".to_string($item), logger::DEBUG);
+							continue;
+						}
+
+					// tipo
+						if (!isset($item->tipo)) {
+							debug_log(__METHOD__." Invalid user preset item ! ".to_string($item), logger::ERROR);
+							continue;
+						}
+
+					// label
+						if (!property_exists($item, 'label')) {
+							$item->label = RecordObj_dd::get_termino_by_tipo($item->tipo, DEDALO_DATA_LANG, true, true);
+						}
+
+					$valid_items[] = $item;
+				}
+
+				$result = $valid_items;
+			
 			}else{
-				$result 		= false;
+
+				$result = false;
 			}
 		}
+
 
 		return $result;
 	}//end search_user_preset

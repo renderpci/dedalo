@@ -10,6 +10,7 @@
 	$lang			= $this->lang;
 	$tipo			= $this->get_tipo();
 	$properties		= $this->get_properties() ?? new stdClass();
+	$dd_request		= dd_core_api::$dd_request;
 
 
 
@@ -29,16 +30,17 @@
 					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
 
 					// add records_mode to properties, if not already defined
-					if (!isset($current_context->properties->source->records_mode)) {
-						if (!property_exists($current_context, 'properties')) {
-							$current_context->properties = new stdClass();
-						}
-						if (!property_exists($current_context->properties, 'source')) {
-							$current_context->properties->source = new stdClass();
-						}
-						$current_context->properties->source->records_mode = 'list';
-					}
+					// if (!isset($current_context->properties->source->records_mode)) {
+					// 	if (!property_exists($current_context, 'properties')) {
+					// 		$current_context->properties = new stdClass();
+					// 	}
+					// 	if (!property_exists($current_context->properties, 'source')) {
+					// 		$current_context->properties->source = new stdClass();
+					// 	}
+					// 	$current_context->properties->source->records_mode = 'list';
+					// }
 					$context[] = $current_context;
+					
 					// dump(null, 'Time to context portal BEFORE SUBCONTEXT: '.exec_time_unit($api_start_time,'ms')." ms".to_string());
 				// subcontext from element layout_map items (from_parent, parent_grouper)
 					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);

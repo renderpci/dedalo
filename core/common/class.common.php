@@ -1326,7 +1326,7 @@ abstract class common {
 			// 	$properties = new stdClass();
 			// }
 
-		
+
 		// css
 			$css = new stdClass();
 			if (isset($properties->css)) {
@@ -1546,11 +1546,7 @@ abstract class common {
 
 		$ar_subcontext = [];
 
-		$tipo = $this->tipo;
-
-		$records_mode = isset($this->properties->source->records_mode)
-			? $this->properties->source->records_mode
-			: $this->get_modo();
+		$records_mode = $this->get_records_mode();
 
 		// subcontext from layout_map items
 			$layout_map_options = new stdClass();
@@ -1565,7 +1561,7 @@ abstract class common {
 				$dd_object				= (object)$dd_object;
 				$current_tipo			= $dd_object->tipo;
 				$current_section_tipo	= $dd_object->section_tipo;
-				$mode					= $dd_object->mode ?? 'list';
+				$mode					= $records_mode;
 				$model					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 				// common temporal excluded/mapped models *******
@@ -1642,140 +1638,154 @@ abstract class common {
 
 		$ar_subdata = [];
 
-		$source_tipo		= $this->get_tipo();
-		$source_model		= RecordObj_dd::get_modelo_name_by_tipo($source_tipo,true);
-		$source_properties	= $this->get_properties();
-		$records_mode		= isset($source_properties->source->records_mode)
-								? $source_properties->source->records_mode
-								: (in_array($source_model, component_relation_common::get_components_with_relations()) ? 'list' : $this->get_modo());
+		// context (new way)
+			$json_options = new stdClass();
+				$json_options->get_context	= true;
+				$json_options->get_data		= false;
+			$context = $this->get_json($json_options)->context;
 
-		// Iterate dd_object (layout_map) for colums
-			$layout_map_options = new stdClass();
-				$layout_map_options->section_tipo			= $this->get_section_tipo();
-				$layout_map_options->tipo					= $this->get_tipo();
-				$layout_map_options->modo					= $records_mode; // $this->get_modo(); (!) To verify [10-08-2020]
-				$layout_map_options->request_config_type	= 'show';
+		// source
+			$source_tipo = $this->get_tipo();
+			$source = array_find($context, function($item) use($source_tipo) {
+				return $item->tipo===$source_tipo;
+			});
 
-			$layout_map = layout_map::get_layout_map($layout_map_options);
-			
-			if(!empty($layout_map)) foreach($ar_locators as $current_locator) {
+		// ar_ddo
+			$ar_ddo = array_values(array_filter($context, function($item) use($source_tipo) {
+				return $item->tipo!==$source_tipo && $item->typo==='ddo';
+			}));
 
-				// check locator format
-					if (!is_object($current_locator)) {
-						if(SHOW_DEBUG===true) {
-							dump($current_locator, ' current_locator ++ '.to_string());
-							dump($ar_locators, ' ar_locators ++ '.to_string());
-							throw new Exception("Error Processing Request. current_locator is not an object", 1);
-						}
-						continue;
+		// rqo. (Request Query Object)
+			$request_config = $source->request_config;
+			$rqo = array_find($request_config, function($item) {
+				return $item->typo==='rqo';
+			});
+
+		$show			= $rqo->show;
+		$source_model	= $source->model;
+
+		if(!empty($ar_ddo)) foreach($ar_locators as $current_locator) {
+
+			// check locator format
+				if (!is_object($current_locator)) {
+					if(SHOW_DEBUG===true) {
+						dump($current_locator, ' current_locator ++ '.to_string());
+						dump($ar_locators, ' ar_locators ++ '.to_string());
+						throw new Exception("Error Processing Request. current_locator is not an object", 1);
 					}
+					continue;
+				}
 
-				$section_id 	= $current_locator->section_id;
-				$section_tipo 	= $current_locator->section_tipo;
+			$section_id		= $current_locator->section_id;
+			$section_tipo	= $current_locator->section_tipo;
+
+			foreach ((array)$ar_ddo as $dd_object) {
+
+				if ($dd_object->section_tipo!==$section_tipo) {
+					continue; // prevents multisection duplicate items
+				}
+
+				$dd_object		= (object)$dd_object;
+				$current_tipo	= $dd_object->tipo;
+				$mode			= $dd_object->mode; // $records_mode;
+				$model			= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$current_lang	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
+
+				switch (true) {
+
+					// section case
+					case ($model==='section'):
+
+						$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
+
+						// section
+							$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
+							if (!is_null($datos)) {
+								$section->set_dato($datos);
+								$section->set_bl_loaded_matrix_data(true);
+							}
+
+						// get component json
+							$get_json_options = new stdClass();
+								$get_json_options->get_context 	= false;
+								$get_json_options->get_data 	= true;
+							$element_json = $section->get_json($get_json_options);
+						break;
+
+					// components case
+					case (strpos($model, 'component_')===0):
+						// components
+							$current_component  = component_common::get_instance($model,
+																				 $current_tipo,
+																				 $section_id,
+																				 $mode,
+																				 $current_lang,
+																				 $section_tipo
+																				);
+						// properties
+							if (isset($dd_object->properties)){
+								$current_component->set_properties($dd_object->properties);
+							}
+						// Inject this tipo as related component from_component_tipo
+							if (strpos($source_model, 'component_')===0){
+								$current_component->from_component_tipo = $this->tipo;
+								$current_component->from_section_tipo 	= $this->section_tipo;
+							}
+
+						// get component json
+							$get_json_options = new stdClass();
+								$get_json_options->get_context 	= false;
+								$get_json_options->get_data 	= true;
+							$element_json = $current_component->get_json($get_json_options);
+						break;
+
+					// grouper case
+					case (in_array($model, layout_map::$groupers)):
+
+						$related_element = new $model($current_tipo, $section_tipo, $mode);
+
+						// inject section_id
+							$related_element->section_id = $section_id;
+
+						// get component json
+							$get_json_options = new stdClass();
+								$get_json_options->get_context 	= false;
+								$get_json_options->get_data 	= true;
+							$element_json = $related_element->get_json($get_json_options);
+						break;
+
+					// oters
+					default:
+						# not defined model from context / data
+						debug_log(__METHOD__." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
+						break;
+				}
+
+				if (isset($element_json)) {
+					// data add
+						$ar_subdata = array_merge($ar_subdata, $element_json->data);
+					// data add
+						#$ar_subdata[] = $element_json->data;
+				}
+
+			}//end iterate display_items
 
 
-				foreach ((array)$layout_map as $dd_object) {
+			// dd_info, additional information about row
+				// value_with_parents. Check optional API request (for example, from service_autocomplete)
+					$value_with_parents_object = array_find(dd_core_api::$dd_request, function($element){
+						return $element->typo==='value_with_parents';
+					});
+					$value_with_parents = ($value_with_parents_object)
+						? ($value_with_parents_object->value ?? false) // from request objrct
+						: ($show->value_with_parents ?? false); // from properties source->show
 
-					if ($dd_object->section_tipo!==$section_tipo) {
-						continue; // prevents multisection duplicate items
-					}
-
-					$dd_object		= (object)$dd_object;
-					$current_tipo	= $dd_object->tipo;
-					$mode			= $records_mode;
-					$model			= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					$current_lang	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
-
-					switch (true) {
-
-						// section case
-						case ($model==='section'):
-
-							$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
-
-							// section
-								$section = section::get_instance($section_id, $section_tipo, $mode, $cache=true);
-								if (!is_null($datos)) {
-									$section->set_dato($datos);
-									$section->set_bl_loaded_matrix_data(true);
-								}
-
-							// get component json
-								$get_json_options = new stdClass();
-									$get_json_options->get_context 	= false;
-									$get_json_options->get_data 	= true;
-								$element_json = $section->get_json($get_json_options);
-							break;
-
-						// components case
-						case (strpos($model, 'component_')===0):
-							// components
-								$current_component  = component_common::get_instance($model,
-																					 $current_tipo,
-																					 $section_id,
-																					 $mode,
-																					 $current_lang,
-																					 $section_tipo
-																					);
-							// properties
-								if (isset($dd_object->properties)){
-									$current_component->set_properties($dd_object->properties);
-								}
-							// Inject this tipo as related component from_component_tipo
-								if (strpos($source_model, 'component_')===0){
-									$current_component->from_component_tipo = $this->tipo;
-									$current_component->from_section_tipo 	= $this->section_tipo;
-								}
-
-							// get component json
-								$get_json_options = new stdClass();
-									$get_json_options->get_context 	= false;
-									$get_json_options->get_data 	= true;
-								$element_json = $current_component->get_json($get_json_options);
-							break;
-
-						// grouper case
-						case (in_array($model, layout_map::$groupers)):
-
-							$related_element = new $model($current_tipo, $section_tipo, $mode);
-
-							// inject section_id
-								$related_element->section_id = $section_id;
-
-							// get component json
-								$get_json_options = new stdClass();
-									$get_json_options->get_context 	= false;
-									$get_json_options->get_data 	= true;
-								$element_json = $related_element->get_json($get_json_options);
-							break;
-
-						// oters
-						default:
-							# not defined model from context / data
-							debug_log(__METHOD__." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
-							break;
-					}
-
-					if (isset($element_json)) {
-						// data add
-							$ar_subdata = array_merge($ar_subdata, $element_json->data);
-						// data add
-							#$ar_subdata[] = $element_json->data;
-					}
-
-				}//end iterate display_items
-
-
-				// dd_info, additional information about row
-					if (isset($source_properties->value_with_parents) && $source_properties->value_with_parents===true){
-
+					if ($value_with_parents===true) {
 						$dd_info = common::get_ddinfo_parents($current_locator, $source_tipo);
-
 						$ar_subdata[] = $dd_info;
-					}// end $value_with_parent = true
+					}
 
-
-			}//end foreach ($ar_locators as $current_locator)
+		}//end foreach ($ar_locators as $current_locator)
 
 
 		return $ar_subdata;
@@ -1802,9 +1812,7 @@ abstract class common {
 			$request_config[] = $source;
 
 		// rqo. request_config
-			$records_mode 	= isset($this->properties->source->records_mode)
-				? $this->properties->source->records_mode
-				: $this->get_modo();
+			$records_mode	= $this->get_records_mode();
 			$mode			= $records_mode;
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
@@ -1824,6 +1832,26 @@ abstract class common {
 
 		return $request_config;
 	}//end build_request_config
+
+
+
+	/**
+	* GET_RECORDS_MODE
+	* @return string $records_mode
+	*/
+	public function get_records_mode() {
+
+		$model			= get_called_class();
+		$properties		= $this->get_properties();
+		$records_mode	= isset($properties->source->records_mode)
+							? $properties->source->records_mode
+							: (in_array($model, component_relation_common::get_components_with_relations())
+								? 'list'
+								: $this->get_modo()
+							);
+
+		return $records_mode;
+	}//end get_records_mode
 
 
 
@@ -1853,28 +1881,19 @@ abstract class common {
 	* @return object $dd_info
 	*/
 	public static function get_ddinfo_parents($locator, $source_component_tipo) {
-		// $start_time_data=microtime(1);
 
 		$section_id 	= $locator->section_id;
 		$section_tipo 	= $locator->section_tipo;
 
-		$RecordObj_dd 	= new RecordObj_dd($source_component_tipo);
-		$properties 	= $RecordObj_dd->get_properties(true);
-
-		$divisor 		= $properties->source->divisor ?? ' | ';
-
-		//$source_term_model  = section::get_section_model($locator);
-
-		$dd_info_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, $show_parents=true, false, $divisor, false);
+		// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
+		$dd_info_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, true, false, null, false, false);
 
 		$dd_info = new stdClass();
 			$dd_info->tipo			= 'ddinfo';
 			$dd_info->section_id	= $section_id;
 			$dd_info->section_tipo	= $section_tipo;
-			$dd_info->value			= [$dd_info_value];
+			$dd_info->value			= $dd_info_value;
 			$dd_info->parent		= $source_component_tipo;
-
-		// dump(null, 'Time to get_ddinfo_parents '.$section_tipo.' - '.$section_id.' : '.exec_time_unit($start_time_data,'ms')." ms".to_string($source_component_tipo));
 
 
 		return $dd_info;
@@ -2188,11 +2207,14 @@ abstract class common {
 					}
 
 				// show (mandatory)
-					$operator = isset($item_request_config->show->sqo_config->operator)
-						? $item_request_config->show->sqo_config->operator
-						: '$or';
-
-					// search_query_object
+					$parsed_item->show = $item_request_config->show;
+					if (isset($parsed_item->show->sqo_config)) {
+						// fallback non defined operator
+						if (!isset($parsed_item->show->sqo_config->operator)) {
+							$parsed_item->show->sqo_config->operator = '$or';
+						}
+					}else{
+						// fallback non defined sqo_config
 						$sqo_config = new stdClass();
 							$sqo_config->full_count	= false;
 							$sqo_config->add_select	= false;
@@ -2201,19 +2223,20 @@ abstract class common {
 							$sqo_config->offset		= 0;
 							$sqo_config->mode		= $mode;
 							$sqo_config->operator	= $operator;
-
-					// set item
-					$parsed_item->show				= $item_request_config->show;
-					$parsed_item->show->sqo_config	= $sqo_config;				
+						$parsed_item->show->sqo_config = $sqo_config;
+					}
 
 				// search
 					if (isset($item_request_config->search)) {
-
-						$operator = isset($item_request_config->search->sqo_config->operator)
-							? $item_request_config->search->sqo_config->operator
-							: '$or';
-
-						// search_query_object
+						// set item
+						$parsed_item->search = $item_request_config->search;
+						if (isset($parsed_item->search->sqo_config)) {
+							// fallback non defined operator
+							if (!isset($parsed_item->search->sqo_config->operator)) {
+								$parsed_item->search->sqo_config->operator = '$or';
+							}
+						}else{
+							// fallback non defined sqo_config
 							$sqo_config = new stdClass();
 								$sqo_config->full_count	= false;
 								$sqo_config->add_select	= false;
@@ -2222,24 +2245,23 @@ abstract class common {
 								$sqo_config->offset		= 0;
 								$sqo_config->mode		= $mode;
 								$sqo_config->operator	= $operator;
+							$parsed_item->search->sqo_config = $sqo_config;
+						}
 
-						// set item
-						$parsed_item->search				= $item_request_config->search;
-						$parsed_item->search->sqo_config	= $sqo_config;
 					}else{
 						// fallback to show
-						$parsed_item->search				= $item_request_config->show;
-						$parsed_item->search->sqo_config	= $sqo_config;
+						$parsed_item->search = $parsed_item->show;
 					}
 
 				// select
 					if (isset($item_request_config->select)) {
 						// set item
-						$parsed_item->select = $item_request_config->select;					
+						$parsed_item->select = $item_request_config->select;
 					}else{
 						// fallback to show
-						$parsed_item->select = $item_request_config->show;
+						$parsed_item->select = $parsed_item->show;
 					}
+
 
 				// add parsed item
 					$request_config_parsed[] = $parsed_item;
@@ -2254,7 +2276,7 @@ abstract class common {
 			// 	// throw new Exception("Error Processing Request. Invalid configuration", 1);
 			// 	// die();
 			// }
-	
+
 			switch ($mode) {
 				case 'edit':
 					if ($model==='section') {
@@ -2371,9 +2393,7 @@ abstract class common {
 	*/
 	public function set_request_ddo() {
 
-		$records_mode = isset($this->properties->source->records_mode)
-			? $this->properties->source->records_mode
-			: $this->get_modo();
+		$records_mode = $this->get_records_mode();
 
 		// layout_map subcontext from layout_map items
 			$layout_map_options = new stdClass();

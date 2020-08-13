@@ -1562,7 +1562,7 @@ class search {
 			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
 		}
 
-		$sql_filter = PHP_EOL . implode(' OR ', $ar_parts);
+		$sql_filter = PHP_EOL . '-- filter_by_locators' . PHP_EOL . implode(' OR ', $ar_parts);
 
 		return $sql_filter;
 	}//end build_sql_filter_by_locators
