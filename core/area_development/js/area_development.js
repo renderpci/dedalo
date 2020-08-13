@@ -136,83 +136,68 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 	}
 
 	// load dependences js/css
-		const load_promises = []
+	const js_promise = load_json_editor_files().then(()=>{	
 
-		const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
-		load_promises.push( common.prototype.load_style(lib_css_file) )
+		const editor_text_area = document.getElementById(editor_id)
+			  // Hide real data container
+			  editor_text_area.style.display = "none"
 
-		// const lib_js_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.js'
-		// load_promises.push( common.prototype.load_script(lib_js_file) )
-		const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
-		load_promises.push( load_promise )
+		const result_div = document.getElementById("convert_search_object_to_sql_query_response")
 
-		const load_all = await Promise.all(load_promises).then(async function(response){
-			//console.log("JSONEditor:",response);
-		})
-
-	const editor_text_area = document.getElementById(editor_id)
-		  // Hide real data container
-		  editor_text_area.style.display = "none"
-
-	const result_div = document.getElementById("convert_search_object_to_sql_query_response")
-
-	// create the editor
-	const container	= document.getElementById(editor_id + '_container')
-	const options	= {
-			mode: 'code',
-			modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-			onError: function (err) {
-			  alert(err.toString());
+		// create the editor
+		const container	= document.getElementById(editor_id + '_container')
+		const options	= {
+			mode	: 'code',
+			modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+			onError	: function (err) {
+				alert(err.toString());
 			},
 			onChange: async function () {
+				const editor_text = editor.getText()
+				if (editor_text.length<3) return
 
-				//setTimeout(async function(){
+				// check is json valid and store
+					const body_options = JSON.parse(editor_text)
+					if (body_options) {
+						window.localStorage.setItem('json_editor_sqo', editor_text);
+					}
 
-					const editor_text = editor.getText()
+				const dd_api = trigger.dd_api.indexOf("get_input_value:")!==-1
+					? get_input_value( trigger.dd_api.replace('get_input_value:', '') )
+					: trigger.dd_api
 
-					if (editor_text.length<3) return
+				const action = trigger.action.indexOf("get_input_value:")!==-1
+					? get_input_value( trigger.action.replace('get_input_value:', '') )
+					: trigger.action
 
-					// check is json valid and store
-						const body_options = JSON.parse(editor_text)
-						if (body_options) {
-							window.localStorage.setItem('json_editor_sqo', editor_text);
-						}
+				// data_manager
+				const api_response = await data_manager.prototype.request({
+					body : {
+						dd_api	: dd_api,
+						action	: action,
+						options	: editor_text
+					}
+				})
+				console.log("api_response:",api_response);
 
-					const dd_api = trigger.dd_api.indexOf("get_input_value:")!==-1
-						? get_input_value( trigger.dd_api.replace('get_input_value:', '') )
-						: trigger.dd_api
+				print_response(body_response, api_response)
 
-					const action = trigger.action.indexOf("get_input_value:")!==-1
-						? get_input_value( trigger.action.replace('get_input_value:', '') )
-						: trigger.action
-
-					// data_manager
-					const api_response = await data_manager.prototype.request({
-						body : {
-							dd_api	: dd_api,
-							action	: action,
-							options	: editor_text
-						}
-					})
-					console.log("api_response:",api_response);
-
-					print_response(body_response, api_response)
-
-					return api_response
-
-				//}, 650)
-		    }
+				return api_response
+			}
 		}
-	// const editor_value	= null; //'{"id":"temp","filter":[{"$and":[{"$or":[{"q":"{\"section_id\":\"4\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]},{"q":"{\"section_id\":\"2\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]}]},{"q":"1932","lang":"all","path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]}]}],"select":[{"path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"},{"name":"Catálogo","modelo":"component_input_text","section_tipo":"numisdata300","component_tipo":"numisdata303"}]},{"path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]},{"path":[{"name":"Ceca","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata30"},{"name":"Ceca","modelo":"component_input_text","section_tipo":"numisdata6","component_tipo":"numisdata16"}]},{"path":[{"name":"Autoridad","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata29"},{"name":"Apellidos","modelo":"component_input_text","section_tipo":"numisdata22","component_tipo":"rsc86"}]},{"path":[{"name":"Denominación","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata34"},{"name":"Denominación","modelo":"component_input_text","section_tipo":"numisdata33","component_tipo":"numisdata97"}]}],"limit":50,"offset":0}'
-	// localStorage.removeItem('json_editor_api');
-	const sample_data	= null
-	const saved_value	= localStorage.getItem('json_editor_sqo')
-	const editor_value	= JSON.parse(saved_value) || sample_data
 
-	// event_manager.when_in_dom(container, function(){
-		const editor = new JSONEditor(container, options, editor_value)
-	// })
-	
+		// const editor_value	= null; //'{"id":"temp","filter":[{"$and":[{"$or":[{"q":"{\"section_id\":\"4\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]},{"q":"{\"section_id\":\"2\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]}]},{"q":"1932","lang":"all","path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]}]}],"select":[{"path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"},{"name":"Catálogo","modelo":"component_input_text","section_tipo":"numisdata300","component_tipo":"numisdata303"}]},{"path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]},{"path":[{"name":"Ceca","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata30"},{"name":"Ceca","modelo":"component_input_text","section_tipo":"numisdata6","component_tipo":"numisdata16"}]},{"path":[{"name":"Autoridad","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata29"},{"name":"Apellidos","modelo":"component_input_text","section_tipo":"numisdata22","component_tipo":"rsc86"}]},{"path":[{"name":"Denominación","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata34"},{"name":"Denominación","modelo":"component_input_text","section_tipo":"numisdata33","component_tipo":"numisdata97"}]}],"limit":50,"offset":0}'
+		// localStorage.removeItem('json_editor_api');
+		const sample_data	= null
+		const saved_value	= localStorage.getItem('json_editor_sqo')
+		const editor_value	= JSON.parse(saved_value) || sample_data
+		
+		// editor instance
+		const editor = new JSONEditor(container, options, editor_value)	
+
+		return editor
+	})
+
 
 	return true
 };//end init_json_editor
@@ -232,96 +217,84 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 		const body_response		= widget_object.body_response
 		const print_response	= widget_object.print_response
 
+
 	// load dependences js/css
-		const load_promises = []
+	const js_promise = load_json_editor_files().then(()=>{	
 
-		const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
-		load_promises.push( common.prototype.load_style(lib_css_file) )
+		// dom elements
+			const widget_container = document.getElementById(widget_object.id) // "dedalo_api_test_enviroment"
 
-		// const lib_js_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.js'
-		// load_promises.push( common.prototype.load_script(lib_js_file) )
-		const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
-		load_promises.push( load_promise )
-
-		const load_all = await Promise.all(load_promises).then(async function(response){
-			//console.log("JSONEditor:",response);
-		})
-
-	// dom elements
-		const widget_container		= document.getElementById(widget_object.id) // "dedalo_api_test_enviroment"
-
-	// inputs
-		const input_dd_api_base		= widget_container.querySelector('#dd_api_base')
-		input_dd_api_base.value		= localStorage.getItem('input_dd_api_base') || 'dd_core_api'
-		input_dd_api_base.addEventListener("change", function(){
-			 localStorage.setItem('input_dd_api_base', this.value)
-		})
-
-		const input_dd_api_fn		= widget_container.querySelector('#dd_api_fn')
-		input_dd_api_fn.value		= localStorage.getItem('input_dd_api_fn') || 'read'
-		input_dd_api_fn.addEventListener("change", function(){
-			 localStorage.setItem('input_dd_api_fn', this.value)
-		})
-
-		const input_dd_api_request	= widget_container.querySelector('#dd_api_request')
-		input_dd_api_request.value	= localStorage.getItem('input_dd_api_request') || 'dd_request'
-		input_dd_api_request.addEventListener("change", function(){
-			 localStorage.setItem('input_dd_api_request', this.value)
-		})
-
-	// button submit
-		const button_submit = widget_container.querySelector("#submit_api")
-		button_submit.addEventListener("click",async function(e){
-
-			const editor_text = editor.getText()
-
-			if (editor_text.length<3) {
-				return false
-			}
-
-			const body_options = JSON.parse(editor_text)
-			if (!body_options) {
-				console.warn("Invalid editor text", body_options);
-				return false
-			}
-
-			const dd_api			= input_dd_api_base.value
-			const action			= input_dd_api_fn.value
-			const dd_api_request	= input_dd_api_request.value
-
-			// data_manager
-			const api_response = await data_manager.prototype.request({
-				body : {
-					dd_api				: dd_api,
-					action				: action,
-					[dd_api_request]	: body_options
-				}
+		// inputs
+			const input_dd_api_base		= widget_container.querySelector('#dd_api_base')
+			input_dd_api_base.value		= localStorage.getItem('input_dd_api_base') || 'dd_core_api'
+			input_dd_api_base.addEventListener("change", function(){
+				 localStorage.setItem('input_dd_api_base', this.value)
 			})
-			console.log("/// json_editor_api api_response:",api_response);
 
-			print_response(body_response, api_response)
+			const input_dd_api_fn		= widget_container.querySelector('#dd_api_fn')
+			input_dd_api_fn.value		= localStorage.getItem('input_dd_api_fn') || 'read'
+			input_dd_api_fn.addEventListener("change", function(){
+				 localStorage.setItem('input_dd_api_fn', this.value)
+			})
 
-			return api_response
-		},false)
+			const input_dd_api_request	= widget_container.querySelector('#dd_api_request')
+			input_dd_api_request.value	= localStorage.getItem('input_dd_api_request') || 'dd_request'
+			input_dd_api_request.addEventListener("change", function(){
+				 localStorage.setItem('input_dd_api_request', this.value)
+			})
 
-	// text area hiden
-		const editor_text_area = document.getElementById(editor_id)
-			  // Hide real data container
-			  editor_text_area.style.display = "none"
+		// button submit
+			const button_submit = widget_container.querySelector("#submit_api")
+			button_submit.addEventListener("click",async function(e){
 
-	// result container
-		const result_div = document.getElementById("convert_search_object_to_sql_query_response")
+				const editor_text = editor.getText()
 
-	// json editor
-		const container	= document.getElementById(editor_id + '_container')
-		const options	= {
-				mode: 'code',
-				modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-				onError: function (err) {
-				  alert(err.toString());
+				if (editor_text.length<3) {
+					return false
+				}
+
+				const body_options = JSON.parse(editor_text)
+				if (!body_options) {
+					console.warn("Invalid editor text", body_options);
+					return false
+				}
+
+				const dd_api			= input_dd_api_base.value
+				const action			= input_dd_api_fn.value
+				const dd_api_request	= input_dd_api_request.value
+
+				// data_manager
+				const api_response = await data_manager.prototype.request({
+					body : {
+						dd_api				: dd_api,
+						action				: action,
+						[dd_api_request]	: body_options
+					}
+				})
+				console.log("/// json_editor_api api_response:",api_response);
+
+				print_response(body_response, api_response)
+
+				return api_response
+			},false)
+
+		// text area hiden
+			const editor_text_area = document.getElementById(editor_id)
+				  // Hide real data container
+				  editor_text_area.style.display = "none"
+
+		// result container
+			const result_div = document.getElementById("convert_search_object_to_sql_query_response")
+
+		// json editor
+			const container	= document.getElementById(editor_id + '_container')
+			const options	= {
+				mode	: 'code',
+				modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+				onError	: function (err) {
+					alert(err.toString());
 				},
 				onChange: async function () {
-
 					const editor_text = editor.getText()
 					if (editor_text.length<3) return
 
@@ -330,17 +303,45 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 					if (body_options) {
 						window.localStorage.setItem('json_editor_api', editor_text);
 					}
-			    }
+				}
 			}
-		// localStorage.removeItem('json_editor_api');
-		const sample_data	= [{"typo":"source","type":"component","action":"get_data","model":"component_input_text","tipo":"test159","section_tipo":"test65","section_id":"1","mode":"edit","lang":"lg-eng"}]
-		const saved_value	= localStorage.getItem('json_editor_api')
-		const editor_value	= JSON.parse(saved_value) || sample_data
-		const editor		= new JSONEditor(container, options, editor_value)
+			// localStorage.removeItem('json_editor_api');
+			const sample_data	= [{"typo":"source","type":"component","action":"get_data","model":"component_input_text","tipo":"test159","section_tipo":"test65","section_id":"1","mode":"edit","lang":"lg-eng"}]
+			const saved_value	= localStorage.getItem('json_editor_api')
+			const editor_value	= JSON.parse(saved_value) || sample_data
+			const editor		= new JSONEditor(container, options, editor_value)
+
+		return editor
+	})
 
 
-	return editor
+	return js_promise
 };//end init_json_editor_api
+
+
+
+/**
+* LOAD_JSON_EDITOR_FILES
+*/
+const load_json_editor_files = function() {
+
+	// load dependences js/css
+	const load_promises = []
+
+	const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
+	load_promises.push( common.prototype.load_style(lib_css_file) )
+
+	// const lib_js_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.js'
+	// load_promises.push( common.prototype.load_script(lib_js_file) )
+	const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
+	load_promises.push( load_promise )
+
+	const load_all = Promise.all(load_promises).then(async function(response){
+		//console.log("JSONEditor:",response);
+	})
+
+	return load_all
+};//end load_json_editor_files
 
 
 
