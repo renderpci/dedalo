@@ -5,7 +5,7 @@
 * Not store his own data, only manage component_relation_childrens data in 'reverse' mode
 */
 class component_relation_parent extends component_relation_common {
-	
+
 
 	# Current component relation_type (used to filter locators in 'relations' container data)
 	public $relation_type = false;	// Not used. DEDALO_RELATION_TYPE_PARENT_TIPO;
@@ -42,19 +42,19 @@ class component_relation_parent extends component_relation_common {
 	*	$dato is always an array of locators
 	*/
 	public function get_dato() {
-		
+
 		// always get dato calculated from my parents
 			$dato = $this->get_my_parents();
-	
+
 		// check dato format
-			if (!empty($dato) && !is_array($dato)) {	
+			if (!empty($dato) && !is_array($dato)) {
 				debug_log(__METHOD__." Re-saved invalid dato. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent", logger::ERROR);
 				$dato = array();
 				$this->set_dato( $dato );
 				$this->Save();
 			}
-			
-		// rebuild dato option 
+
+		// rebuild dato option
 			/*
 			if (empty($dato)) {
 				$dato_clean = $dato;
@@ -62,7 +62,7 @@ class component_relation_parent extends component_relation_common {
 				$tipo 		 = $this->get_tipo();
 				$dato_clean = [];
 				foreach ((array)$dato as $key => $item) {
-					
+
 					// create a new locator and change from component tipo. Note that this component dont have relation type (!)
 					$locator = new locator();
 						$locator->set_section_tipo($item->section_tipo);
@@ -75,7 +75,7 @@ class component_relation_parent extends component_relation_common {
 
 			return (array)$dato_clean;
 			*/
-	
+
 		return (array)$dato;
 	}//end get_dato
 
@@ -90,7 +90,7 @@ class component_relation_parent extends component_relation_common {
 	*	When dato is string is because is a json encoded dato
 	*/
 	public function set_dato($dato) {
-		
+
 		// format check
 			if (is_string($dato)) { # Tool Time machine case, dato is string
 				$dato = json_decode($dato);
@@ -112,7 +112,7 @@ class component_relation_parent extends component_relation_common {
 		// Add (used only in importations and similar) Note that this call SAVE (component_relation_children) !!
 			// $component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
 			// foreach ($dato as $current_locator) {
-				
+
 			// 	$children_section_tipo 	= $current_locator->section_tipo;
 			// 	$children_section_id 	= $current_locator->section_id;
 			// 	if (empty($children_section_tipo) || empty($children_section_id))  {
@@ -148,17 +148,17 @@ class component_relation_parent extends component_relation_common {
 					case 'insert':
 					case 'update':
 						if (isset($dato[$changed_data->key])) {
-							$locator = $dato[$changed_data->key];													
+							$locator = $dato[$changed_data->key];
 							$result = (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
-						}							
+						}
 						break;
 					default:
 						debug_log(__METHOD__." Error. action: '$action' not defined ! ".to_string(), logger::ERROR);
 						break;
-				}				
+				}
 			}
 
-		
+
 			// $this->update_parents($dato);
 
 		return true;
@@ -182,13 +182,13 @@ class component_relation_parent extends component_relation_common {
 			if (empty($component_relation_children_tipo)) {
 				$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
 			}
-		
+
 		// model. Expected 'component_relation_children'
 			$model = RecordObj_dd::get_modelo_name_by_tipo($component_relation_children_tipo,true);
 			if ($model!=='component_relation_children') {
 				debug_log(__METHOD__." Wrong target model: '$model' ".to_string(), logger::ERROR);
 			}
-		
+
 		// component instance
 			$component_relation_children   = component_common::get_instance($model,
 														  					$component_relation_children_tipo,
@@ -197,12 +197,12 @@ class component_relation_parent extends component_relation_common {
 														  					DEDALO_DATA_NOLAN,
 														  					$children_section_tipo);
 
-		// change link to me in relation_children 
+		// change link to me in relation_children
 			switch ($action) {
 				case 'remove':
 					$changed = (bool)$component_relation_children->remove_me_as_your_children($section_tipo, $section_id);
 					break;
-				
+
 				case 'add':
 					$changed = (bool)$component_relation_children->make_me_your_children($section_tipo, $section_id);
 					break;
@@ -211,14 +211,14 @@ class component_relation_parent extends component_relation_common {
 					$changed = false;
 					debug_log(__METHOD__." Error on update_children. Invalid action '$action' ".to_string(), logger::ERROR);
 					break;
-			}			
-			
+			}
+
 		// save if changed
 			if ($changed===true) {
 				$saved = $component_relation_children->Save();
 				if ($saved && $saved>0) {
 					$result = true;
-				}			
+				}
 			}
 
 
@@ -232,7 +232,7 @@ class component_relation_parent extends component_relation_common {
 	* @return bool
 	*/
 	public function add_parent($children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
-		
+
 		$action = 'add';
 
 		return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
@@ -245,7 +245,7 @@ class component_relation_parent extends component_relation_common {
 	* @return bool
 	*/
 	public function remove_parent($children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
-		
+
 		$action = 'remove';
 
 		return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
@@ -259,9 +259,9 @@ class component_relation_parent extends component_relation_common {
 		// * Add a children to referenced component_relation_children
 		// * @return bool $result
 		// */
-		// public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id) {		
+		// public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id) {
 		// 	// dump($tipo, 'ADD_PARENT '."tipo:'$tipo', parent:'$parent', section_tipo:'$section_tipo', children_section_tipo:'$children_section_tipo', children_section_id:'$children_section_id'");
-			
+
 		// 	// model to search in current children_section
 		// 		$model = 'component_relation_children';
 
@@ -274,17 +274,17 @@ class component_relation_parent extends component_relation_common {
 		// 																							true, # search_exact
 		// 																							false); # ar_tipo_exclude_elements
 		// 	$children_component_tipo = reset($ar_children_component_tipo);
-			
+
 		// 	$component_relation_children = component_common::get_instance($model,
 		// 																  $children_component_tipo,
 		// 																  $children_section_id,
 		// 																  'edit',
 		// 																  DEDALO_DATA_NOLAN,
 		// 																  $children_section_tipo);
-			
+
 		// 	$result = false;
 
-		// 	$added  = (bool)$component_relation_children->make_me_your_children( $section_tipo, $parent );		
+		// 	$added  = (bool)$component_relation_children->make_me_your_children( $section_tipo, $parent );
 		// 	if ($added===true) {
 		// 		$component_relation_children->Save();
 		// 		$result = true;
@@ -308,13 +308,13 @@ class component_relation_parent extends component_relation_common {
 		// 		if (empty($component_relation_children_tipo)) {
 		// 			$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
 		// 		}
-			
+
 		// 	// model. Expected 'component_relation_children'
 		// 		$model = RecordObj_dd::get_modelo_name_by_tipo($component_relation_children_tipo,true);
 		// 		if ($model!=='component_relation_children') {
 		// 			debug_log(__METHOD__." Wrong target model: '$model' ".to_string(), logger::ERROR);
 		// 		}
-			
+
 		// 	// component instance
 		// 		$component_relation_children   = component_common::get_instance($model,
 		// 													  					$component_relation_children_tipo,
@@ -323,13 +323,13 @@ class component_relation_parent extends component_relation_common {
 		// 													  					DEDALO_DATA_NOLAN,
 		// 													  					$children_section_tipo);
 
-		// 	// remove link to me in relation_children 
+		// 	// remove link to me in relation_children
 		// 		$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $parent );
 		// 		if ($removed===true) {
 		// 			$saved = $component_relation_children->Save();
 		// 			if ($saved && $saved>0) {
 		// 				$result = true;
-		// 			}			
+		// 			}
 		// 		}
 
 
@@ -343,7 +343,7 @@ class component_relation_parent extends component_relation_common {
 	* @return string $component_relation_children_tipo
 	*/
 	public static function get_component_relation_children_tipo( $component_tipo ) {
-		
+
 		$modelo_name 	 = 'component_relation_children';
 		$ar_children 	 = (array)common::get_ar_related_by_model($modelo_name, $component_tipo);
 		$ar_children_len = count($ar_children);
@@ -365,12 +365,12 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents
 	*/
 	protected function get_my_parents() {
-	
+
 		$target_component_children_tipos = (array)component_relation_parent::get_target_component_children_tipos($this->tipo);
 
 		$parents = [];
 		foreach ($target_component_children_tipos as $children_component_tipo) {
-			$parents = array_merge($parents, component_relation_parent::get_parents($this->parent, $this->section_tipo, $children_component_tipo));
+			$parents = array_merge($parents, component_relation_parent::get_parents($this->section_id, $this->section_tipo, $children_component_tipo));
 		}
 
 		return (array)$parents;
@@ -378,7 +378,7 @@ class component_relation_parent extends component_relation_common {
 		/*
 			# Calculate current target component_relation_children_tipo from structure
 			$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
-		
+
 			#$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
 
 			#
@@ -452,7 +452,7 @@ class component_relation_parent extends component_relation_common {
 
 		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 			return array(); // We are in last level of parent
-		}		
+		}
 
 		# FROM_COMPONENT_TIPO FILTER OPTION
 		$filter ='';
@@ -467,7 +467,7 @@ class component_relation_parent extends component_relation_common {
 				*/
 			$filter = ',"from_component_tipo":"'.$from_component_tipo.'"';
 		}
-		
+
 		$type		= DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 		$compare	= '{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.$type.'"'.$filter.'}';
 
@@ -483,7 +483,7 @@ class component_relation_parent extends component_relation_common {
 			// Iterate tables and make union search
 			$ar_query=array();
 			foreach ((array)$ar_tables as $table) {
-				$ar_query[] = "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";				
+				$ar_query[] = "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
 			}
 			$strQuery .= implode(" UNION ALL ", $ar_query);
 		}
@@ -500,24 +500,24 @@ class component_relation_parent extends component_relation_common {
 			$sql_where    = "datos#>'{relations}' @> '[$main_compare]'::jsonb";
 			$table 	   	  = hierarchy::$table;
 			$strQuery .= "\nUNION ALL \nSELECT $sql_select FROM \"$table\" WHERE $sql_where ";
-		}		
-		
+		}
+
 
 		// Set order to maintain results stable
 		$strQuery .= ' ORDER BY section_id ASC';
-		
-		if(SHOW_DEBUG) {	
+
+		if(SHOW_DEBUG) {
 			component_relation_parent::$get_parents_query = $strQuery;
 			#dump($strQuery, ' $strQuery ++ '.to_string($ar_tables));
 		}
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		
+
 		$parents = array();
 		while ($row = pg_fetch_object($result)) {
 
 			$current_section_id		= $row->section_id;
 			$current_section_tipo	= $row->section_tipo;
-			$current_relations		= json_decode($row->relations);	
+			$current_relations		= json_decode($row->relations);
 
 
 			if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
@@ -528,10 +528,10 @@ class component_relation_parent extends component_relation_common {
 			# Hierarchy parent case locator, force from_component_tipo
 			if ($current_section_tipo==='hierarchy1') {
 				$from_component_tipo = DEDALO_HIERARCHY_CHILDREN_TIPO;
-			}	
+			}
 
 			// Search 'from_component_tipo' in locators when no is received
-			if (empty($from_component_tipo)) {				
+			if (empty($from_component_tipo)) {
 
 				$reference_locator = new locator();
 					$reference_locator->set_section_tipo($section_tipo);
@@ -547,7 +547,7 @@ class component_relation_parent extends component_relation_common {
 						}
 						$calculated_from_component_tipo = $current_locator->from_component_tipo;
 						break;
-					}					
+					}
 				}
 			}//end if (empty($from_component_tipo)) {
 
@@ -573,9 +573,9 @@ class component_relation_parent extends component_relation_common {
 			#$total=round(microtime(1)-$start_time,3);
 			#debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
 			// $total = exec_time_unit($start_time,'ms')." ms";
-			// dump($total, ' ///////// total ++ '.to_string("$section_id, $section_tipo, $from_component_tipo, $ar_tables") .PHP_EOL. " $strQuery");				
+			// dump($total, ' ///////// total ++ '.to_string("$section_id, $section_tipo, $from_component_tipo, $ar_tables") .PHP_EOL. " $strQuery");
 		}
-		
+
 
 		return (array)$parents;
 	}//end get_parents
@@ -591,12 +591,12 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false) {
 		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);		
+			$start_time=microtime(1);
 		}
 
 		// static vars set
 			static $ar_parents_recursive_resolved = array();
-			static $locators_resolved 			  = array();		
+			static $locators_resolved 			  = array();
 
 		// key_resolve
 			$key_resolve = $section_tipo.'_'.$section_id;
@@ -607,7 +607,7 @@ class component_relation_parent extends component_relation_common {
 
 		// parents_recursive set
 			$parents_recursive = array();
-		
+
 		// Add first level
 			$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
 			$parents_recursive = $ar_parents;
@@ -619,14 +619,14 @@ class component_relation_parent extends component_relation_common {
 
 		// iterate ar_parents
 			foreach ($ar_parents as $current_locator) {
-				
+
 				// Check self recursion
 					$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
 					if (array_key_exists($lkey, $locators_resolved)) {
 						#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
 						$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
 						continue;
-					}			
+					}
 
 				// Add every parent level
 					$current_ar_parents		 = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root, $is_recursion=true);
@@ -634,9 +634,9 @@ class component_relation_parent extends component_relation_common {
 					foreach ($current_ar_parents as $c_parent) {
 						#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
 						if ($skip_root===true) {
-							if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term 
+							if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term
 						}
-						
+
 						// Add to array
 							$current_ar_parents_safe[] = $c_parent;
 
@@ -645,16 +645,16 @@ class component_relation_parent extends component_relation_common {
 					}
 
 				// Self include as resolved
-					$locators_resolved[$lkey] = $current_ar_parents_safe;	
-				
+					$locators_resolved[$lkey] = $current_ar_parents_safe;
+
 				// add
-					$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);				
+					$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);
 			}
 
 		// Set as resolved
 			$ar_parents_recursive_resolved[$key_resolve] = $parents_recursive;
-		
-		
+
+
 		return $parents_recursive;
 	}//end get_parents_recursive
 
@@ -667,13 +667,13 @@ class component_relation_parent extends component_relation_common {
 		// */
 		// public static function get_parent_recursive2__UNUSED($section_id, $section_tipo) {
 
-		// 	# Sólo test de momento 
-			
+		// 	# Sólo test de momento
+
 		// 	$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
 		// 	$strQuery = 'SELECT section_id FROM '.$matrix_table.' WHERE section_tipo = \''.$section_tipo.'\' AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.DEDALO_RELATION_TYPE_CHILDREN_TIPO.'"}]\' LIMIT 1;';
 		// 	$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-			
+
 		// 	$parents = array();
 		// 	while ($rows = pg_fetch_assoc($result)) {
 		// 		$current_section_id = $rows['section_id'];
@@ -681,20 +681,20 @@ class component_relation_parent extends component_relation_common {
 		// 		$locator = new locator();
 		// 			$locator->set_section_tipo($section_tipo);
 		// 			$locator->set_section_id($current_section_id);
-		// 			$locator->set_component_tipo('hierarchy49');		
-				
+		// 			$locator->set_component_tipo('hierarchy49');
+
 		// 		# Add current
 		// 		$parents[] = $locator;
 
 		// 		# Recursion
-		// 		$parents = array_merge($parents, self::get_parent_recursive2($current_section_id, $section_tipo));		
+		// 		$parents = array_merge($parents, self::get_parent_recursive2($current_section_id, $section_tipo));
 		// 	}
 
 		// 	return $parents;
 		// }//end get_parent_recursive2
 
 
-	
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
@@ -706,8 +706,8 @@ class component_relation_parent extends component_relation_common {
 		if (empty($dato)) {
 			return null;
 		}
-		
-		$ar_valor = [];				
+
+		$ar_valor = [];
 		foreach ((array)$dato as $key => $current_locator) {
 			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
 		}
@@ -720,20 +720,20 @@ class component_relation_parent extends component_relation_common {
 					if(end($ar_valor)!=$value) $valor .= ', ';
 				}
 			}
-		
+
 		return (string)$valor;
-	}//end get_valor	
+	}//end get_valor
 
 
 
 	/**
 	* RESOLVE_CHILDRENS
-	* @return 
+	* @return
 	*/
-	private function resolve_childrens() {
-		
+	private function resolve_children() {
+
 		return true;
-	}//end resolve_childrens
+	}//end resolve_children
 
 
 
@@ -742,7 +742,7 @@ class component_relation_parent extends component_relation_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
+
 		$q = $query_object->q;
 
 		# Like
@@ -755,10 +755,10 @@ class component_relation_parent extends component_relation_common {
 		if (!is_array($parent_locators)) {
 			$parent_locators = [$parent_locators];
 		}
-		
+
 		$ar_childrens = [];
 		foreach ($parent_locators as $key => $current_locator) {
-			
+
 			$current_component_relation_parent_tipo = $current_locator->from_component_tipo;
 			$target_component_children_tipos 		= component_relation_parent::get_target_component_children_tipos($current_component_relation_parent_tipo);
 
@@ -779,7 +779,7 @@ class component_relation_parent extends component_relation_common {
 			}
 		}
 		#dump($ar_childrens, ' ar_childrens ++ '.to_string());
-		
+
 		# Always set fixed values
 		$query_object->type = 'number';
 
@@ -788,13 +788,13 @@ class component_relation_parent extends component_relation_common {
 
 		# component path
 		$query_object->component_path = ['section_id'];
-		
+
 		# unaccent
 		$query_object->unaccent = false;
 
 
 		$ar_parts 	= $ar_childrens;
-		$ar_result  = []; 
+		$ar_result  = [];
 		foreach ($ar_parts as $key => $value) {
 			$value = (int)$value;
 			if ($value<1) continue;
@@ -828,14 +828,14 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		$target_component_children_tipos = [];
-		
+
 		# Calculate current target component_relation_children_tipo from structure
 		$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($component_tipo);
 		if (empty($from_component_tipo)) {
 			debug_log(__METHOD__." Error on get from_component_tipo of component:'$component_tipo'. Strucure item don't have relation with a component_relation_children ".to_string(), logger::ERROR);
 			return null;
 		}
-		
+
 		#
 		# Look in children properties different possible sources
 		$RecordObj 								= new RecordObj_dd($from_component_tipo);
@@ -855,7 +855,7 @@ class component_relation_parent extends component_relation_common {
 			$target_component_children_tipos[] = $from_component_tipo;
 		}else{
 			# Look component children across all related sections
-			$modelo_name = 'component_relation_children';			
+			$modelo_name = 'component_relation_children';
 			foreach ($hierarchy_sections as $children_section_tipo) {
 				# Resolve children component tipo from children_section_tipo
 				$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo,
@@ -885,16 +885,16 @@ class component_relation_parent extends component_relation_common {
 	* @return array $dato_export
 	*/
 	public function get_dato_export() {
-		
+
 		$dato = $this->get_dato();
 		$tipo = $this->get_tipo();
-		
+
 		if (empty($dato)) {
 			$dato_export = $dato;
 		}else{
 			$dato_export = [];
 			foreach ((array)$dato as $key => $item) {
-				
+
 				// create a new locator and change from component tipo. Note that this component dont have relation type (!)
 				$locator = new locator();
 					$locator->set_section_tipo($item->section_tipo);
@@ -909,5 +909,5 @@ class component_relation_parent extends component_relation_common {
 	}//end get_dato_export
 
 
-	
+
 }//end component_relation_parent
