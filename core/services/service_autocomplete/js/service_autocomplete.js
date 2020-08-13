@@ -770,9 +770,10 @@ export const service_autocomplete = function() {
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
 			const search_sections = self.ar_search_section_tipo
 
-			const fixed_filter	= self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
-			const filter_free	= self.dd_request.find((current_item)=> current_item.typo==='filter_free')
-			// const filter_element[Object.keys(filter_element)[0]]
+			const fixed_filter		= self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
+			const filter_free		= self.dd_request.find((current_item)=> current_item.typo==='filter_free')
+			const filter_by_list 	= self.ar_filter_by_list.map(item => item.value)
+
 			if(filter_free){
 
 				const filter_free_value = filter_free.value
@@ -801,8 +802,11 @@ export const service_autocomplete = function() {
 							sqo.filter.$and.push(fixed_filter.value[i])
 						}
 					}
+					if(filter_by_list){
+						sqo.filter.$and.push(...filter_by_list)
+					}
 			}//end if(filter_free)
-
+			console.log("sqo", sqo);
 
 		// allow_sub_select_by_id set to false to allow select deep fields
 			sqo.allow_sub_select_by_id = false
