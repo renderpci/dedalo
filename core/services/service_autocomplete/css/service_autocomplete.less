@@ -50,11 +50,12 @@
 				display: table;
 				width: 100%;
 				padding: 0.5em;
+				border-bottom: 1px solid #fff;
 
 				>li {
 					display: flex;
 					float: left;
-					width: 50%;
+					width: 33.2%;
 					white-space: nowrap;
 					overflow: hidden;
 					padding: 0.5em;
@@ -67,7 +68,11 @@
 					&.all_selector {
 						// background-color: #efc8bf;
 						width: 100%;
-						border-bottom: 1px solid #e6e6e6;
+						// border-bottom: 1px solid #e6e6e6;
+
+						label {
+							font-weight: bold;
+						}
 					}
 
 					label {
@@ -112,7 +117,7 @@
 		}
 
 		>input.autocomplete_input {
-			width: 90% !important;
+			width: calc(100% - 4.5em);
 			background: #fff url("../../themes/default/icons/search.svg");
 			background-repeat: no-repeat;
 			background-size: auto 60%;
