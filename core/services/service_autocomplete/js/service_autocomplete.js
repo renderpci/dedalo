@@ -18,8 +18,6 @@
 export const service_autocomplete = function() {
 
 
-	this.external_relation_type = 'dd687'
-
 	// sections_without_filter_fields . exclude this section to build dom filter fields
 	this.sections_without_filter_fields = ['zenon1']
 
@@ -36,13 +34,14 @@ export const service_autocomplete = function() {
 		self.instance_caller		= options.caller
 		self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
 		self.wrapper				= options.wrapper
-		self.divisor 				= self.instance_caller.divisor || ' | '
 		self.ar_dd_request			= self.instance_caller.dd_request.search
 		self.dd_request				= self.ar_dd_request[0]
 		self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
 		self.ar_search_section_tipo	= self.sqo.section_tipo
+		self.ar_filter_by_list 		= []
+		//get the search_engine sended or set the default value
 		const engine				= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
-		self.search_engine 			= (engine !== null) ? engine : 'dedalo_engine';
+		self.search_engine 			= (engine) ? engine : 'dedalo_engine';
 
 		// Vars
 			self.tipo		= self.instance_caller.tipo
@@ -102,12 +101,16 @@ export const service_autocomplete = function() {
 		// sections select
 		const sections_selector = self.render_sections_selector()
 		options_container.appendChild(sections_selector)
+
 		// components fields for inputs_list
 		const inputs_list = self.render_inputs_list()
 		options_container.appendChild(inputs_list)
 		// build operator selector
 		const operator_selector = self.render_operator_selector()
 		options_container.appendChild(operator_selector)
+		// search_input
+		const search_input = self.render_search_input()
+		searh_container.appendChild(search_input)
 
 		// button options
 			const button_options = ui.create_dom_element({
@@ -116,13 +119,9 @@ export const service_autocomplete = function() {
 				parent			: searh_container
 			})
 			// add listener to the select
-			button_options.addEventListener('mouseup',function(e){
+			button_options.addEventListener('mouseup',function(){
 				options_container.classList.toggle('visible');
 			},false)
-
-		// search_input
-			const search_input = self.render_search_input()
-			searh_container.appendChild(search_input)
 
 		// datalist
 			const datalist = ui.create_dom_element({
@@ -157,13 +156,13 @@ export const service_autocomplete = function() {
 				element_type 	: "div",
 				class_name 	 	: "source_selector"
 			})
-
-			const label_select = ui.create_dom_element({
-						element_type 	: "label",
-						class_name 		: "css_label label",
-						text_content 	: get_label["origen"] || "Source",
-						parent 			: source_selector
-					})
+			// label
+				ui.create_dom_element({
+					element_type 	: "label",
+					class_name 		: "css_label label",
+					text_content 	: get_label["origen"] || "Source",
+					parent 			: source_selector
+				})
 
 			const select = ui.create_dom_element({
 						element_type 	: "select",
@@ -203,7 +202,7 @@ export const service_autocomplete = function() {
 				self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
 				self.ar_search_section_tipo	= self.sqo.section_tipo
 				self.search_engine			= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
-				console.log("self.ar_search_section_tipo", self.ar_search_section_tipo);
+				// console.log("self.ar_search_section_tipo", self.ar_search_section_tipo);
 				self.destroy()
 				self.render()
 			},false)
@@ -229,7 +228,7 @@ export const service_autocomplete = function() {
 			const search_input = ui.create_dom_element({
 				element_type	: "input",
 				type			: 'text',
-				class_name		: "autocomplete_input",
+				class_name		: "autocomplete_input"
 			})
 			search_input.setAttribute("list", self.list_name)
 			search_input.setAttribute("placeholder", get_label.buscar + '...')
@@ -237,9 +236,9 @@ export const service_autocomplete = function() {
 			search_input.setAttribute("autocorrect", "off")
 
 			// event input. changes the input value fire the search
-				search_input.addEventListener('input', async function(e){
+				search_input.addEventListener('input', async function(){
 					const api_response	= await self.autocomplete_search(this.value)
-					const options		= self.render_datalist(api_response)
+					self.render_datalist(api_response)
 				}, false);
 
 		return search_input
@@ -256,89 +255,250 @@ export const service_autocomplete = function() {
 		const self = this
 
 		const ar_section_nodes = []
+		const filter_by_list = self.dd_request.find(item => item.typo === 'filter_by_list') || false
+		const local_storage_name = 'service_autocomplete'
+		const local_storage = []
 
-		const sections_list = ui.create_dom_element({
-			element_type	: "ul",
-			class_name		: "sections_list", // css_autocomplete_hi_search_field
+
+		const container = ui.create_dom_element({
+			element_type	: "div",
+			class_name		: "container" // css_autocomplete_hi_search_field
 		})
+
+		// sections filter
+			const ar_sections = self.ar_search_section_tipo
+			if (ar_sections.length>0) {
+
+				// get the datalist of all sections to create the checkbox
+				const filter_items = []
+				for (let i = 0; i < ar_sections.length; i++) {
+					const section		= ar_sections[i]
+					const ddo_section	= self.dd_request.find((item) => item.type === 'section' && item.tipo === section && item.typo === 'ddo')
+					const datalist_item = {
+						grouper : 'sections',
+						id		: section,
+						value	: section,
+						label 	: ddo_section.label,
+						change  : function(e){
+							const index = self.ar_search_section_tipo.indexOf(e.dd_value)
+							if (e.checked===true) {
+								if (index===-1) {
+									self.ar_search_section_tipo.push(e.dd_value)
+								}
+							}else{
+								self.ar_search_section_tipo.splice(index, 1);
+							}
+							// console.log("e", e);
+							// console.log("e.dd_value", e.dd_value);
+							console.log("self.ar_search_section_tipo", self.ar_search_section_tipo);
+						}
+					}
+					filter_items.push(datalist_item)
+
+					local_storage.push(section)
+				}
+
+				const filter_node = self.build_filter(filter_items)
+				container.appendChild(filter_node)
+			}
+
+			// filter_by_list . if the component caller has a filter_by_list we add the datalist of the compoment
+			if(filter_by_list) {
+
+				for (let i = 0; i < filter_by_list.value.length; i++) {
+					const current_filter 		= filter_by_list.value[i]
+					const section 				= current_filter.section_tipo
+					const component_tipo 		= current_filter.tipo
+					const component_datalist 	= current_filter.datalist
+
+					const filter_items = []
+					for (let j = 0; j < component_datalist.length; j++) {
+						const current_datalist = component_datalist[j]
+						const id = section +'_'+ component_tipo +'_'+ current_datalist.section_id
+						const q = {
+							section_id 			: current_datalist.value.section_id,
+							section_tipo		: current_datalist.value.section_tipo,
+							from_component_tipo	: component_tipo
+						}
+						const path =[{
+							section_tipo	: section,
+							component_tipo	: component_tipo,
+						}]
+						const datalist_item = {
+							grouper : component_tipo,
+							id		: id,
+							value	: {
+								q		: q,
+								path	: path
+							},
+							label 	: current_datalist.label,
+							change  : function(e){
+
+								const index = self.ar_filter_by_list.findIndex(item => item.id === e.id)
+								if (e.checked===true && index === -1) {
+									self.ar_filter_by_list.push({
+										id 		: e.id,
+										value	: e.dd_value
+									})
+								}else{
+									self.ar_filter_by_list.splice(index, 1);
+								}
+								console.log("self.ar_filter_by_list", self.ar_filter_by_list);
+								console.log("e", e);
+								console.log("e.dd_value", e.dd_value);
+							}
+						}
+						filter_items.push(datalist_item)
+						self.ar_filter_by_list.push(datalist_item)
+
+						local_storage.push(id)
+					}
+					const filter_node = self.build_filter(filter_items)
+					container.appendChild(filter_node)
+				}
+			}
+
+			// for (let i = 0; i < datalist.length; i++) {
+			// 	const datalist_item		= datalist[i]
+			// 	const option_chekbox = self.render_option_chekbox(datalist_item)
+			// 	ar_section_nodes.push(option_chekbox)
+			// 	sections_list.appendChild(option_chekbox)
+			// }
+
+			if (!localStorage.getItem(local_storage_name)) {
+				localStorage.setItem(local_storage_name, JSON.stringify(local_storage) )
+			}
+
+			console.log("localStorage.getItem(local_storage_name)", JSON.parse(localStorage.getItem(local_storage_name)) );
+
+		return container
+	};//end render_sections_selector
+
+
+	/**
+	* build_filter
+	* @return DOM node
+	*/
+	this.build_filter = function(filter_items) {
+
+		const self = this
+
+		const filter_node = ui.create_dom_element({
+			element_type	: "ul",
+			class_name		: "filter_node" // css_autocomplete_hi_search_field
+		})
+
+		// select all
 			const all_selector = ui.create_dom_element({
 				element_type	: "li",
 				class_name		: "all_selector", // css_autocomplete_hi_search_field
-				parent			: sections_list
+				parent			: filter_node
 			})
-				const all_section_label = ui.create_dom_element({
-					element_type	: "label",
-					inner_html		: get_label.todos, //ddo_section.label ||
-					parent			: all_selector
-				})
-				all_section_label.setAttribute("for", self.list_name + "_all")
+			const all_section_label = ui.create_dom_element({
+				element_type	: "label",
+				inner_html		: get_label.todos, //ddo_section.label ||
+				parent			: all_selector
+			})
+			all_section_label.setAttribute("for", self.list_name + "_all")
 
-				const all_section_input = ui.create_dom_element({
-					element_type	: "input",
-					id				: self.list_name + "_all",
-					type			: "checkbox",
-					parent			: all_selector
-				})
-				all_section_input.checked = false
+			const all_section_input = ui.create_dom_element({
+				element_type	: "input",
+				id				: self.list_name + "_all",
+				type			: "checkbox",
+				parent			: all_selector
+			})
+			all_section_input.checked = false
+			all_section_input.addEventListener('change', async function(e){
+				const checked_value = e.target.checked
+				const inputs = filter_node.querySelectorAll("input")
+				for (let i = 0; i < inputs.length; i++) {
+					if (inputs[i]==all_section_input) continue;
+					inputs[i].checked = checked_value
+					inputs[i].dispatchEvent(new Event('change'));
+				}
+			}, false);
 
-				all_section_input.addEventListener('change', async function(e){
-					for (let i = ar_section_nodes.length - 1; i >= 0; i--) {
-						ar_section_nodes[i].checked = e.target.checked
-						ar_section_nodes[i].dispatchEvent(new Event('change'));
-					}
-				}, false);
-
-
-			const ar_sections = self.ar_search_section_tipo
-			const local_storage = JSON.parse(localStorage.getItem(self.id)) || ar_sections
-
-			for (let i = 0; i < ar_sections.length; i++) {
-				const section		= ar_sections[i]
-				const ddo_section	= self.dd_request.find((item) => item.type === 'section' && item.tipo === section && item.typo === 'ddo')
-
-				const li_section = ui.create_dom_element({
-					element_type	: "li",
-					parent			: sections_list
-				})
-
-					const section_label = ui.create_dom_element({
-						element_type	: "label",
-						inner_html		: ddo_section.label +' '+ ddo_section.tipo, //ddo_section.label ||
-						parent			: li_section
-					})
-					section_label.setAttribute("for", self.list_name + '_'+ ddo_section.tipo)
-
-					const section_input = ui.create_dom_element({
-						element_type	: "input",
-						type			: "checkbox",
-						id				: self.list_name + '_'+ ddo_section.tipo,
-						value			: ddo_section.tipo,
-						parent			: li_section
-					})
-
-					if(local_storage.indexOf(ddo_section.tipo)>=0){
-						section_input.checked = true
-					}else{
-						const index = ar_sections.indexOf(ddo_section.tipo)
-						section_input.checked = false
-						ar_sections.splice(index, 1);
-					}
-
-					section_input.addEventListener('change', async function(e){
-						const in_array_index = ar_sections.indexOf(e.target.value)
-						if(in_array_index === -1 && e.target.checked){
-							ar_sections.push(e.target.value)
-						}else{
-							ar_sections.splice(in_array_index, 1);
-						}
-						localStorage.setItem(self.id, JSON.stringify(ar_sections) )
-					}, false);
-
-				ar_section_nodes.push(section_input)
+		// items
+			for (let i = 0; i < filter_items.length; i++) {
+				const chekbox_node = self.render_option_chekbox(filter_items[i])
+				filter_node.appendChild(chekbox_node)
 			}
 
-		return sections_list
-	};//end render_sections_selector
+		return filter_node
+	};//end build_filter
+
+
+
+	/**
+	* render_option_chekbox
+	* @return
+	*/
+	this.render_option_chekbox = function(datalist_item) {
+
+		const label = datalist_item.label
+		const value = datalist_item.value
+		const id 	= datalist_item.id
+		const change = datalist_item.change
+		const local_storage_name = 'service_autocomplete'
+		const local_storage = JSON.parse(localStorage.getItem(local_storage_name)) || []
+
+		const li = ui.create_dom_element({
+			element_type	: "li"
+		})
+
+		console.log("label", label);
+		console.log("value", value);
+		console.log("id", id);
+
+		// label
+			const section_label = ui.create_dom_element({
+				element_type	: "label",
+				inner_html		: label,
+				parent			: li
+			})
+			section_label.setAttribute("for", id)
+
+		// input
+			const input_checkbox = ui.create_dom_element({
+				element_type	: "input",
+				type			: "checkbox",
+				id				: id,
+				parent			: li
+			})
+			input_checkbox.dd_value = value
+
+			if(local_storage.indexOf(id)>=0){
+				input_checkbox.checked = true
+			}else{
+				input_checkbox.checked = false
+				// const index = ar_sections.indexOf(option_chekbox.id)
+				// ar_sections.splice(index, 1);
+			}
+
+			input_checkbox.addEventListener('change', async function(e){
+				change(this)
+				// const in_array_index = ar_sections.indexOf(e.target.value)
+				// if(in_array_index === -1 && e.target.checked){
+				// 	ar_sections.push(e.target.value)
+				// }else{
+				// 	ar_sections.splice(in_array_index, 1);
+				// }
+				const local_storage = JSON.parse(localStorage.getItem(local_storage_name)) || []
+				const key = local_storage.indexOf(id)
+				console.log("/// this.checked", this.checked, key);
+				if (this.checked===true) {
+					if (key===-1) {
+						local_storage.push(id)
+					}
+				}else{
+					local_storage.splice(key, 1);
+				}
+				localStorage.setItem(local_storage_name, JSON.stringify(local_storage) )
+			}, false);
+
+
+		return li
+	};//end render_option_chekbox
 
 
 
@@ -347,11 +507,12 @@ export const service_autocomplete = function() {
 	* @return
 	*/
 	this.render_inputs_list = function(){
+
 		const self = this
 
 		const inputs_list = ui.create_dom_element({
 			element_type	: "div",
-			class_name		: "inputs_list", // css_autocomplete_hi_search_field
+			class_name		: "inputs_list" // css_autocomplete_hi_search_field
 		})
 
 			const ar_components = []
@@ -397,7 +558,8 @@ export const service_autocomplete = function() {
 				element_type 	: "div",
 				class_name 	 	: "search_operators_div"
 			})
-				const label = ui.create_dom_element({
+				//label
+				ui.create_dom_element({
 					element_type	: "label",
 					class_name		: "css_label label",
 					parent			: operator_selector,
@@ -453,7 +615,6 @@ export const service_autocomplete = function() {
 		const self = this
 
 		const datalist = self.datalist
-			console.log("render_datalist datalist", datalist);
 
 		//delete the last list
 		while (datalist.firstChild) {
@@ -468,9 +629,8 @@ export const service_autocomplete = function() {
 		// get the ar_locator founded in section
 		const data_locator	= data.find((item)=> item.tipo === item.section_tipo);
 		const ar_locator	= (data_locator) ? data_locator.value : []
-		const current_section_length = ar_locator.length
 
-		// itterate the sections
+		// iterate the sections
 		for (const current_locator of ar_locator) {
 
 			const section_tipo	= current_locator.section_tipo
@@ -480,9 +640,14 @@ export const service_autocomplete = function() {
 			// get the full row with all items in the ddo that mach with the section_id
 			const current_row = data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
 			// get dd objects from the context that will be used to build the lists in correct order
-			const show		 	= self.instance_caller.dd_request.show
+			const select = self.instance_caller.dd_request.select || self.instance_caller.dd_request.show
+
+			const select_divisor = select.find(item => item.typo === 'divisor')
+			const divisor = (select_divisor)
+				? select_divisor.value
+				: ' - '
 			// const current_ddo = self.dd_request.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
-			const current_ddo = show.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
+			const current_ddo = select.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
 
 			// create the li node container
 			const li_node = ui.create_dom_element({
@@ -498,37 +663,39 @@ export const service_autocomplete = function() {
 				self.instance_caller.add_value(value)
 			}, false);
 
-			// build the text of the row with label nodes in correct order (the ddo order in context).
-			for(const ddo_item of current_ddo){
-				// value_element
-					const current_value_element = current_row.find((item)=> item.tipo===ddo_item.tipo)
-					if (typeof current_value_element==="undefined") {
-						console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
-						continue
-					}
 
-				// span node
-					const current_value = current_value_element.value
-					ui.create_dom_element({
-						element_type	: 'span',
-						text_content	: current_value,
-						parent			: li_node
-					})// end create dom node
-			};// enf for ddo_item
+			// values. build the text of the row with label nodes in correct order (the ddo order in context).
+				for(const ddo_item of current_ddo){
+
+					// value_element
+						const current_value_element = current_row.find((item)=> item.tipo===ddo_item.tipo)
+						if (typeof current_value_element==="undefined") {
+							console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
+							continue
+						}
+
+					// span node
+						const current_value = current_value_element.value
+						ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: current_value,
+							parent			: li_node
+						})// end create dom node
+
+				}//end for ddo_item
 
 			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
-			const current_dd_info 	= current_row.find((item)=> item.tipo==='ddinfo')
+				const current_dd_info = current_row.find((item)=> item.tipo==='ddinfo')
 				if(current_dd_info){
-					const current_dd_info_value = current_dd_info.value
+					const current_dd_info_value = divisor + current_dd_info.value.join(divisor)
 					ui.create_dom_element({
 						element_type	: 'span',
 						inner_html		: current_dd_info_value,
 						parent			: li_node
 					})// end create dom node
-				};// end if of check current_dd_info
+				}// end if of check current_dd_info
 
-
-		};// end for of current_section (section_tipo)
+		}// end for of current_section (section_tipo)
 	};//end render_datalist
 
 
@@ -544,8 +711,8 @@ export const service_autocomplete = function() {
 		const self = this
 
 		// Request term
-			const q						= search_value
-			const search_query_object	= self.rebuild_search_query_object(q);
+			const q	= search_value
+			self.rebuild_search_query_object(q);
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -558,10 +725,20 @@ export const service_autocomplete = function() {
 				console.error("ERROR. Received search_engine function not exists. Review your component properties source->request_config->search_engine :", self.search_engine);
 				return new Promise(()=>{})
 			}
+		//recombine the select ddo with the search ddo to get the list
+			const select = self.instance_caller.dd_request.select
+			const dd_request = (select)
+				? self.dd_request.filter(item => item.typo!=='ddo')
+				: [...self.dd_request]
+
+			if(select){
+				const ddo_select = select.filter(item => item.typo === 'ddo' || item.typo === 'value_with_parents')
+				dd_request.push(...ddo_select)
+			}
 
 		// search options
 			const options = {
-				dd_request	: self.dd_request,
+				dd_request	: dd_request,
 				q			: q
 			}
 
@@ -597,6 +774,7 @@ export const service_autocomplete = function() {
 			const filter_free	= self.dd_request.find((current_item)=> current_item.typo==='filter_free')
 			// const filter_element[Object.keys(filter_element)[0]]
 			if(filter_free){
+
 				const filter_free_value = filter_free.value
 
 				// Iterate current filter
@@ -649,7 +827,6 @@ export const service_autocomplete = function() {
 	this.dedalo_engine = async function(options) {
 
 		const dd_request 	= options.dd_request
-		const q 			= options.q
 
 		if(SHOW_DEBUG===true) {
 			console.log("+++ [service_autocomplete.dedalo_engine] dd_request:", dd_request)
@@ -698,7 +875,7 @@ export const service_autocomplete = function() {
 			const fields_length	= fields.length
 		// section_tipo of Zenon zenon1
 			const section_tipo	= ar_selected_fields[0].section_tipo
-			const relation_type	= self.external_relation_type
+
 
 	  	// format data
 	  		const format_data = function(data){
@@ -711,35 +888,33 @@ export const service_autocomplete = function() {
 				const components_data	= []
 				const records			= data.records || []
 				const records_length	= records.length
+				const separator = " - "
 				for (let i = 0; i < records_length; i++) {
 					const record 	= records[i]
 					const ar_value 	= []
 					for (let j = 0; j < fields_length; j++) {
 
 						const field = fields[j]
+						const authors_ar_value	= []
+
 						switch(field) {
 							case 'authors':
 								// console.log("++ authors:",record[field]);
-								const authors_ar_value	= []
-								const primary			= record[field].primary
-								const secondary			= record[field].secondary
-								const corporate			= record[field].corporate
-								const authors_separator	= " - "
 
 								if(SHOW_DEBUG===true) {
 									//console.log("primary:",primary);	console.log("secondary:",secondary);	console.log("corporate:",corporate);
 								}
 
-								if (Object.keys(primary).length > 0) {
-									authors_ar_value.push(Object.keys(primary).join(authors_separator))
+								if (Object.keys(record[field].primary).length > 0) {
+									authors_ar_value.push(Object.keys(record[field].primary).join(separator))
 								}
-								if (Object.keys(secondary).length > 0) {
-									authors_ar_value.push(Object.keys(secondary).join(authors_separator))
+								if (Object.keys(record[field].secondary).length > 0) {
+									authors_ar_value.push(Object.keys(record[field].secondary).join(separator))
 								}
-								if (Object.keys(corporate).length > 0) {
-									authors_ar_value.push(Object.keys(corporate).join(authors_separator))
+								if (Object.keys(record[field].corporate).length > 0) {
+									authors_ar_value.push(Object.keys(record[field].corporate).join(separator))
 								}
-								ar_value.push(authors_ar_value.join(authors_separator))
+								ar_value.push(authors_ar_value.join(separator))
 								break;
 							default:
 								if (Array.isArray(record[field])) {
@@ -756,18 +931,19 @@ export const service_autocomplete = function() {
 					}//end iterate fields
 
 					// value
-						const value = ar_value.join(self.divisor)
+						const divisor = self.instance_caller.divisor || ' | '
+						const value = ar_value.join(divisor)
 
 					//locator
 					const locator = {
 						section_tipo		: section_tipo,
-						section_id			: record['id'],
+						section_id			: record['id']
 					}
 					// record_data
 						const record_data = {
 							section_tipo		: section_tipo,
 							section_id			: record['id'],
-							type				: self.external_relation_type,
+							type				: 'dd687',
 							// from_component_tipo	: ar_selected_fields[0].tipo,
 							tipo				: ar_selected_fields[0].tipo,
 							value				: value
@@ -792,7 +968,7 @@ export const service_autocomplete = function() {
 					msg		: "Ok. Request done",
 					result 	: {
 						context : ar_selected_fields,
-						data 	: data_formatted,
+						data 	: data_formatted
 					}
 				}
 
@@ -843,7 +1019,7 @@ export const service_autocomplete = function() {
 						request.open("POST", url_trigger + "?" + url_arguments, true);
 
 					// onload event
-						request.onload = function(e) {
+						request.onload = function() {
 							if (request.status === 200) {
 
 								// data format
@@ -859,10 +1035,10 @@ export const service_autocomplete = function() {
 						};
 
 					// request error
-						request.onerror = function(e) {
+						request.onerror = function() {
 							// Also deal with the case when the entire request fails to begin with
 							// This is probably a network error, so reject the promise with an appropriate message
-							reject(Error('There was a network error. data_send: '+url+"?"+ data_send + "statusText:" + request.statusText));
+							reject(Error('There was a network error. data_send: '+url_trigger+"?"+ url_arguments + "statusText:" + request.statusText));
 						};
 
 				// send the request

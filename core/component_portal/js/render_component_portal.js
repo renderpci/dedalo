@@ -211,9 +211,10 @@ const add_events = function(self, wrapper) {
 
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
-
+					console.log("self.context.request_config", self.context.request_config);
 					// set dd_request
 						self.dd_request.search 	= self.dd_request.search || self.build_dd_request('search', self.context.request_config, 'search')
+						self.dd_request.select 	= self.dd_request.select || self.build_dd_request('select', self.context.request_config, 'get_data')
 
 					self.autocomplete = new service_autocomplete()
 					self.autocomplete.init({
@@ -286,6 +287,23 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
+	// button tree terms selector
+	if(self.context.properties.source.mode === 'tree'){
+		const button_tree_selector = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button gear',
+			parent			: fragment
+		})
+		// add listener to the select
+		button_tree_selector.addEventListener('mouseup',function(){
+
+		},false)
+	}
+
+
+
+
+
 	// buttons tools
 		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
@@ -294,6 +312,8 @@ const get_buttons = (self) => {
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		buttons_container.appendChild(fragment)
+
+
 
 
 	return buttons_container

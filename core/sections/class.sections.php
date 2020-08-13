@@ -18,7 +18,7 @@ class sections extends common {
 		# modo
 		protected $modo;
 
-		# context. Full context
+		# dd_request. Full dd_request
 		public $dd_request;
 
 		# search_query_object

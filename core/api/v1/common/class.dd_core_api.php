@@ -17,6 +17,10 @@ class dd_core_api {
 	// $request_ddo . store current ddo items added by get_config_context methods (portals, etc.)
 		static $request_ddo = [];
 
+	// dd_request . store current dd_request received in context to allow external access (portals, etc.)
+		static $dd_request;
+
+
 	/**
 	* __CONSTRUCT
 	* @return bool
@@ -110,7 +114,7 @@ class dd_core_api {
 			// dump($dd_request, ' read - $dd_request ++ '.to_string());
 			// debug_log(__METHOD__." API DD_REQUEST ".str_repeat("==", 40).PHP_EOL.json_encode($dd_request, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("==", 84), logger::DEBUG);
 
-		// test 'test159'
+		// test 'test159' (Checking time machine)
 			$dd_request99 = json_decode('
 				[
 				  {
@@ -772,6 +776,8 @@ class dd_core_api {
 				$result->context = [];
 				$result->data 	 = [];
 
+		// fix dd_request
+			self::$dd_request = $dd_request;
 
 		// ar_dd_objects . Array of all dd objects in requested context
 			$ar_dd_objects = array_values( array_filter($dd_request, function($item) {
@@ -855,9 +861,8 @@ class dd_core_api {
 						// sections
 							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
 
-							if ($mode==='tm') {
-								$element->set_dd_request($dd_request); // inject whole context
-							}
+							// set always
+							// $element->set_dd_request($dd_request); // inject whole dd_request context						
 
 						break;
 
@@ -897,7 +902,7 @@ class dd_core_api {
 						# not defined modelfro context / data
 						debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
 						break;
-				}// end switch (true)
+				}// end switch (true)				
 
 
 				// element json

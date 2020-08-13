@@ -75,7 +75,10 @@ abstract class component_common extends common {
 		public $matrix_id;
 
 		// pagination. object used to paginate portals, etc.
-		public $pagination;
+		public $pagination;	
+
+		// context
+		// public $context;	
 
 
 
@@ -1353,7 +1356,8 @@ abstract class component_common extends common {
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
 					if ($modelo_name==='component_autocomplete_hi') {
 						# resolve
-						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
+						// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
+						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ', true, true);
 					}elseif ($modelo_name==='component_section_id') {
 						$current_label = $current_row->{$related_tipo};
 					}else{
@@ -2522,14 +2526,16 @@ abstract class component_common extends common {
 
 	/**
 	* GET_MY_SECTION
-	* @return
+	* @return object $section
 	*/
 	public function get_my_section() {
 
-		return section::get_instance($this->section_id, $this->section_tipo);
+		$section = section::get_instance($this->section_id, $this->section_tipo);
+		
+		return $section;
 	}//end get_my_section
 
-
+	
 
 	/**
 	* GET_CALCULATION_DATA

@@ -671,7 +671,7 @@ class component_relation_common extends component_common {
 	* Resolve locator to string value to show in list etc.
 	* @return string $locator_value
 	*/
-	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true ) {
+	public static function get_locator_value($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true) {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
 			#dump($ar_components_related, ' ar_components_related ++ '.to_string());
@@ -681,6 +681,9 @@ class component_relation_common extends component_common {
 			return false;
 		}
 		$locator = new locator($locator);
+
+		$ar_value = [];
+
 		if($ar_components_related!==false && !empty($ar_components_related)){
 
 			$value = array();
@@ -705,15 +708,16 @@ class component_relation_common extends component_common {
 				$ar_values_clean[] = $element_value;
 			}
 
-			$locator_value = implode($divisor, $ar_values_clean);
+			// $locator_value = implode($divisor, $ar_values_clean);
+			$ar_value = array_merge($ar_value, $ar_values_clean);
 
 		}else{
 
 			if ($show_parents===true) {
 
-				$ar_values = [];
+				$ar_current_values = [];
 				if ($include_self===true) {
-					$ar_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
+					$ar_current_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
 				}
 
 				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
@@ -727,16 +731,17 @@ class component_relation_common extends component_common {
 
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
 					if (!empty($current_value)) {
-						$ar_values[]  = $current_value;
+						$ar_current_values[]  = $current_value;
 					}
 				}
 
-				#debug_log(__METHOD__."  ".to_string($ar_parents_values), logger::DEBUG);
-				$locator_value = implode($divisor, $ar_values);
+				// $locator_value = implode($divisor, $ar_current_values);
+				$ar_value = array_merge($ar_value, $ar_current_values);
 
 			}else{
 
-				$locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
+				// $locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
+				$ar_value[] = ts_object::get_term_by_locator( $locator, $lang, true );
 
 			}//end if ($show_parents===true)
 		}
@@ -746,8 +751,12 @@ class component_relation_common extends component_common {
 			#debug_log(__METHOD__." Total time $total ".to_string(), logger::DEBUG);
 		}
 
+		$locator_value = ($glue===true)
+			? implode($divisor, $ar_value)
+			: $ar_value;
 
-		return (string)$locator_value;
+
+		return $locator_value;
 	}//end get_locator_value
 
 
@@ -1263,7 +1272,7 @@ class component_relation_common extends component_common {
 				$get_json_options = new stdClass();
 					$get_json_options->get_context 	= false;
 					$get_json_options->get_data 	= true;
-				$filter_list_data[] = $current_component->get_json($get_json_options);
+				$filter_list_data[] = $current_component->get_json($get_json_options)->data[0];
 		}
 
 		return $filter_list_data;
@@ -1540,7 +1549,7 @@ class component_relation_common extends component_common {
 					break;
 			}
 		}
-
+		$ar_section_tipo = array_unique($ar_section_tipo);
 		return $ar_section_tipo;
 	}//end get_request_config_section_tipo
 
