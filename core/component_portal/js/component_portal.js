@@ -142,6 +142,8 @@ component_portal.prototype.build  = async function(autoload=false){
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
 
+		console.log("self.context.request_config", self.context.request_config);
+
 	// load data if not yet received as an option
 		if (autoload===true) {
 
@@ -173,7 +175,7 @@ component_portal.prototype.build  = async function(autoload=false){
 			// pagination safe defaults
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
-				self.pagination.limit 	= self.pagination.limit  || (self.context.properties ? self.context.properties.max_records : 5)
+				self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
 
 			// sqo update filter_by_locators
 				// if(self.pagination.total>self.pagination.limit){

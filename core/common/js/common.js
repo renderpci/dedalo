@@ -558,9 +558,9 @@ common.prototype.build_dd_request = function(dd_request_type, request_config, ac
 
 		case 'search':
 			return build_request_search(self, request_config, action)
-			break;
 
 		case 'select':
+			return build_request_select(self, request_config, action)
 			break;
 	}
 
@@ -649,6 +649,22 @@ const build_request_show = function(self, request_config, action){
 					}
 				}
 			}
+
+			//value_with_parents
+			if(show.value_with_parents){
+				dd_request.push({
+					typo : 'value_with_parents',
+					value : show.value_with_parents
+				})
+			}
+
+			//divisor
+			if(show.divisor){
+				dd_request.push({
+					typo : 'divisor',
+					value : show.divisor
+				})
+			}
 		}
 
 	// rqo
@@ -690,6 +706,7 @@ const build_request_search = function(self, request_config, action){
 
 	// get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
 	const request_ddo	= self.datum.context.find(item => item.source==='request_ddo').value
+
 	const rqo_length	= rqo.length
 	// const operator	= self.context.properties.source.operator || '$and'
 
@@ -704,6 +721,7 @@ const build_request_search = function(self, request_config, action){
 		// source . auto create
 			const source = create_source(self, action)
 			sqo_search.push(source)
+
 
 		const fixed_filter	= current_rqo.fixed_filter
 		const filter_free	= {}
@@ -723,6 +741,7 @@ const build_request_search = function(self, request_config, action){
 		for (let j = 0; j < sections_length; j++) {
 			const section_ddo = request_ddo.find(ddo => ddo.tipo===sections[j]  && ddo.section_tipo===sections[j])
 			sqo_search.push(section_ddo)
+
 			// get the fpath array
 			for (let k = 0; k < ddo_map_length; k++) {
 
@@ -776,27 +795,167 @@ const build_request_search = function(self, request_config, action){
 				operator 	: operator
 			})
 		}
-		// console.log("build_request_search: filter_free--------------", filter_free);
+
+		// filter_by_list if exists
+		const filter_by_list = current_rqo.filter_by_list
+		if (filter_by_list) {
+			sqo_search.push({
+				typo : 'filter_by_list',
+				value : filter_by_list
+			})
+		}
+
+		// rqo
+			const limit	= current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.limit
+				? current_rqo.select.sqo_config.limit
+				: search.sqo_config.limit
+			const offset = current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.offset
+				? current_rqo.select.sqo_config.offset
+				: search.sqo_config.offset
 
 		// sqo_search
 		sqo_search.push({
 			typo			: 'sqo',
 			section_tipo	: sections,
 			filter			: {[operator]:[]},
-			offset			: self.pagination.offset,
-			limit			: self.pagination.limit,
+			offset			: offset,
+			limit			: limit,
 			select			: [],
 			full_count		: false
 		})
+
+		// if(current_rqo.select){
+		// 	const select = self.build_dd_request('select', request_config, 'get_data')
+		// 	const ddo_select = select.filter(item => item.typo === 'ddo')
+		// 	sqo_search.push(...ddo_select)
+		// 	console.log("ddo_select", sqo_search);
+		// }
+
+		//value_with_parents
+		if(search.value_with_parents){
+			sqo_search.push({
+				typo : 'value_with_parents',
+				value : search.value_with_parents
+			})
+		}
+
+		//divisor
+		if(search.divisor){
+			sqo_search.push({
+				typo : 'divisor',
+				value : search.divisor
+			})
+		}
 
 		// add group
 		dd_request.push(sqo_search)
 	}//end for (let i = 0; i < length; i++)
 
-	// console.log("build_request_search : dd_request--------------", dd_request);
-
+console.log("dd_request", dd_request);
 	return dd_request
 };//end build_request_search
+
+
+
+/**
+* BUILD_REQUEST_SELECT
+* @return array dd_request
+*/
+const build_request_select = function(self, request_config, action){
+
+	const dd_request = []
+
+	// source . auto create
+		const source = create_source(self, action);
+		dd_request.push(source)
+
+	// empty request_config cases
+		if(!request_config) {
+			return dd_request;
+		}
+
+	// direct request ddo if exists
+		const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
+		if (ar_requested_ddo.length>0) {
+			for (let i = 0; i < ar_requested_ddo.length; i++) {
+				dd_request.push(ar_requested_ddo[i])
+			}
+		}
+
+	// direct request sqo if exists
+		const request_sqo = request_config.find(item => item.typo==='sqo')
+		if (request_sqo) {
+			dd_request.push(request_sqo)
+		}
+
+	// rqo. If don't has rqo, return the source only
+		const rqo = request_config.filter(item => item.typo==='rqo')
+		if(rqo.length < 1){
+			return dd_request;
+		}
+
+	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
+		const request_ddo_object	= self.datum.context.find(item => item.source==='request_ddo')
+		const request_ddo			= request_ddo_object.value
+
+		const rqo_length	= rqo.length
+		const ar_sections	= []
+		for (let i = 0; i < rqo_length; i++) {
+
+			const current_rqo		= rqo[i]
+			const sections			= current_rqo.section_tipo
+
+			const sections_length	= sections.length
+			// select
+			const select			= current_rqo.select
+			const ddo_map			= select.ddo_map
+			const ddo_map_length	= ddo_map.length
+			//get sections
+			for (let j = 0; j < sections_length; j++) {
+				ar_sections.push(sections[j])
+				// get the fpath array
+				for (let k = 0; k < ddo_map_length; k++) {
+
+					const f_path = typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
+					const f_path_length = f_path.length
+
+					// get the current item of the fpath
+					for (let l = 0; l < f_path_length; l++) {
+						const item = f_path[l]==='self'
+							? sections[j]
+							: f_path[l]
+						const exist = dd_request.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+
+						if(!exist){
+							const ddo = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+
+							if(ddo){
+								dd_request.push(ddo)
+							}
+						}
+					}
+				}
+			}
+
+			//value_with_parents
+			if(select.value_with_parents){
+				dd_request.push({
+					typo : 'value_with_parents',
+					value : select.value_with_parents
+				})
+			}
+
+			//divisor
+			if(select.divisor){
+				dd_request.push({
+					typo : 'divisor',
+					value : select.divisor
+				})
+			}
+		}
+	return dd_request
+};//end build_request_show
+
 
 
 

@@ -12,7 +12,7 @@
 
 
 export const tool_common = function(){
-	
+
 	return true
 };//end tool_common
 
