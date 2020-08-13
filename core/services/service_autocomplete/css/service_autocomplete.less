@@ -24,23 +24,32 @@
 		>.options_hidden {
 			display: none;
 
-
 			>.source_selector {
 				display: flex;
 				background-color: #949494;
 	    		color: #ffff;
+	    		line-height: 1.25em;
 				>*{
 					margin: .25em;
 					padding: 0.5em;
 				}
-
+				select {
+					background-color: transparent;
+					outline: none;
+					color: #ffff;
+				}
 			}
 
-			// sections_list. Box of checkboxes with all available sections
-			>ul.sections_list {
+			>.filters_container {
+				margin-bottom: 0.25em;
+			}
+
+			// filter_node. Box of checkboxes with all available sections
+			ul.filter_node {
 				background-color: #949494;
 				display: table;
 				width: 100%;
+				padding: 0.5em;
 
 				>li {
 					display: flex;
@@ -49,6 +58,7 @@
 					white-space: nowrap;
 					overflow: hidden;
 					padding: 0.5em;
+					margin-top: 1px;
 					color: white;
 
 					direction: rtl;
@@ -61,7 +71,9 @@
 					}
 
 					label {
+						padding-left: 0.5em;
 						padding-right: 0.5em;
+						line-height: .75em;
 					}
 				}
 			}
@@ -94,6 +106,9 @@
 			margin: 1em;
 			margin-top: 1.5em;
 			// cursor: default;
+			position: absolute;
+			top: 0;
+			right: 0;
 		}
 
 		>input.autocomplete_input {

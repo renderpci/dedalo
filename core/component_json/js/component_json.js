@@ -68,10 +68,10 @@ export const component_json = function(){
 
 
 /**
-* LOAD_EDITOR
+* LOAD_EDITOR_FILES
 * @return promise
 */
-component_json.prototype.load_editor = async function() {
+component_json.prototype.load_editor_files = function() {
 
 	const self = this
 
@@ -91,7 +91,8 @@ component_json.prototype.load_editor = async function() {
 
 
 	return js_promise
-};//end load_editor
+};//end load_editor_files
+
 
 
 /**
