@@ -56,7 +56,8 @@ class section extends common {
 		public $layout_map;
 
 		// injected 'dd_request'
-		public $dd_request;
+		// public $dd_request;
+
 		// injected whole database record, with all columns
 		public $record;
 
@@ -100,8 +101,8 @@ class section extends common {
 		# key for cache
 		$key = $section_id .'_'. $tipo;
 
-		$max_cache_instances = 300*4; // Default 300
-		$cache_slice_on 	 = 100*4; // Default 100
+		$max_cache_instances = 300*5; // Default 300
+		$cache_slice_on 	 = 100*5; // Default 100
 
 		# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
 		# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
@@ -3421,16 +3422,18 @@ class section extends common {
 	*/
 	public function get_tm_context() {
 
+		$dd_request = dd_core_api::$dd_request; // $this->dd_request
+
 		// source form dd_request		
-		$source = array_find($this->dd_request, function($element){
+		$source = array_find($dd_request, function($element){
 			return (isset($element->typo) && $element->typo==='source');
 		});
 		
-		$ddo = array_find($this->dd_request, function($element){
+		$ddo = array_find($dd_request, function($element){
 			return (isset($element->typo) && $element->typo==='ddo');
 		});
 
-		$sqo = array_find($this->dd_request, function($element){
+		$sqo = array_find($dd_request, function($element){
 			return (isset($element->typo) && $element->typo==='sqo');
 		});
 
@@ -3473,7 +3476,7 @@ class section extends common {
 				'label'			=> RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true),
 				'mode'			=> 'tm',
 				'parent'		=> null,
-				'request_config'=> $this->dd_request
+				'request_config'=> $dd_request
 			];
 			$context[] = $item;
 
