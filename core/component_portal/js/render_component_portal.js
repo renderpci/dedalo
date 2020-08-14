@@ -264,6 +264,12 @@ const get_content_data_edit = async function(self) {
 		}
 		fragment.appendChild(inputs_container)
 
+	// build references
+		if(self.data.references && self.data.references.length > 0){
+			const references_node = render_references(self.data.references)
+			fragment.appendChild(references_node)
+		}
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add("nowrap")
@@ -415,9 +421,28 @@ const get_top = function(self) {
 						parent			: iframe_container
 					})
 
+					const header = ui.create_dom_element({
+						element_type	: 'div',
+						text_content	: section_label,
+						class_name		: 'label'
+					})
+
+
+					// header custom
+					const header_custom = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'cataplasma'
+					})
+					header_custom.appendChild(header)
+					header_custom.appendChild(select_section)
+
+					header_custom.addEventListener("click", function(){
+						alert("2");
+					})
+
 					// fix modal to allow close later, on set value
-					const header = ui.create_dom_element({element_type : 'div', text_content : section_label, class_name: "label"})
-					self.modal   = ui.attach_to_modal(header, iframe_container, null, 'big')
+
+					self.modal   = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
 
 				})()
 				return
@@ -512,7 +537,7 @@ const get_top = function(self) {
 * @return dom element li
 */
 const input_element = async function(current_section_record, inputs_container){
-console.log("current_section_record", current_section_record);
+
 	const key = current_section_record.paginated_key
 
 	// li
@@ -537,3 +562,51 @@ console.log("current_section_record", current_section_record);
 
 	return li
 };//end  input_element
+
+
+/**
+* render_references
+* @return
+*/
+const render_references = function(ar_references) {
+	console.log("ar_references----------", ar_references);
+	const fragment = new DocumentFragment()
+console.log("get_label.referencias", get_label);
+	// ul
+		const ul = ui.create_dom_element({
+			element_type	: 'ul',
+			inner_html 		: get_label.references,
+			parent			: fragment
+		})
+
+	const ref_length = ar_references.length
+	for (let i = 0; i < ref_length; i++) {
+		const reference = ar_references[i]
+
+		// li
+			const li = ui.create_dom_element({
+				element_type	: 'li',
+				parent			: ul
+			})
+			// button_link
+				const button_link = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button link',
+					parent			: li
+				})
+				button_link.addEventListener("click", function(){
+					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
+					// window.open(url,'ref_edit')
+				})
+			// label
+				const button_edit = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					inner_html		: reference.label,
+					parent			: li
+				})
+	}
+
+	return fragment
+
+}//end render_references
