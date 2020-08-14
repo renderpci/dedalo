@@ -1270,9 +1270,13 @@ class component_relation_common extends component_common {
 																 $f_section_tipo);
 			// get section json
 				$get_json_options = new stdClass();
-					$get_json_options->get_context 	= false;
+					$get_json_options->get_context 	= true;
+					$get_json_options->context_type = 'simple';
 					$get_json_options->get_data 	= true;
-				$filter_list_data[] = $current_component->get_json($get_json_options)->data[0];
+				$filter_list = new stdClass();
+					$filter_list->context = $current_component->get_json($get_json_options)->context[0];
+					$filter_list->datalist =$current_component->get_json($get_json_options)->data[0]->datalist;
+				$filter_list_data[] = $filter_list;
 		}
 
 		return $filter_list_data;
