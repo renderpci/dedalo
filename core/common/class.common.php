@@ -1654,15 +1654,9 @@ abstract class common {
 			$ar_ddo = array_values(array_filter($context, function($item) use($source_tipo) {
 				return $item->tipo!==$source_tipo && $item->typo==='ddo';
 			}));
+		
 
-		// rqo. (Request Query Object)
-			$request_config = $source->request_config;
-			$rqo = array_find($request_config, function($item) {
-				return $item->typo==='rqo';
-			});
-
-		$show			= $rqo->show;
-		$source_model	= $source->model;
+		$source_model= $source->model;
 
 		if(!empty($ar_ddo)) foreach($ar_locators as $current_locator) {
 
@@ -1772,14 +1766,20 @@ abstract class common {
 
 
 			// dd_info, additional information about row
+				// rqo. (Request Query Object)
+					$request_config = $source->request_config;
+					$rqo = array_find($request_config, function($item) {
+						return $item->typo==='rqo';
+					});
 				// value_with_parents. Check optional API request (for example, from service_autocomplete)
 					$value_with_parents_object = array_find(dd_core_api::$dd_request, function($element){
 						return $element->typo==='value_with_parents';
 					});
 					$value_with_parents = ($value_with_parents_object)
 						? ($value_with_parents_object->value ?? false) // from request objrct
-						: ($show->value_with_parents ?? false); // from properties source->show
-
+						: (($rqo && isset($rqo->show))
+							? ($rqo->show->value_with_parents ?? false)// from properties source->request_config->show
+							: false);
 					if ($value_with_parents===true) {
 						$dd_info = common::get_ddinfo_parents($current_locator, $source_tipo);
 						$ar_subdata[] = $dd_info;
@@ -1832,6 +1832,33 @@ abstract class common {
 
 		return $request_config;
 	}//end build_request_config
+
+
+
+	/**
+	* GET_REQUEST_QUERY_OBJECT
+	*
+	* @return object | json
+	*/
+	public function get_request_query_object() {
+
+		// rqo. from request_config
+			$records_mode	= $this->get_records_mode();
+			$mode			= $records_mode;
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
+			$section_id		= $this->get_section_id();
+
+			// limit (from properties or default component definitions)
+				$limit = $this->pagination->limit ?? null;
+
+			$request_config_parsed = common::get_request_properties_parsed($tipo, false, $section_tipo, $mode, $section_id, $limit);
+			
+		$request_config = reset($request_config_parsed);
+
+	
+		return $request_config;
+	}//end get_request_query_object
 
 
 
@@ -2222,7 +2249,7 @@ abstract class common {
 							$sqo_config->limit		= $limit;
 							$sqo_config->offset		= 0;
 							$sqo_config->mode		= $mode;
-							$sqo_config->operator	= $operator;
+							$sqo_config->operator	= '$or';
 						$parsed_item->show->sqo_config = $sqo_config;
 					}
 
@@ -2244,7 +2271,7 @@ abstract class common {
 								$sqo_config->limit		= $limit;
 								$sqo_config->offset		= 0;
 								$sqo_config->mode		= $mode;
-								$sqo_config->operator	= $operator;
+								$sqo_config->operator	= '$or';
 							$parsed_item->search->sqo_config = $sqo_config;
 						}
 
