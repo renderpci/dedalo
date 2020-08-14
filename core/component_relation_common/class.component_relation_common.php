@@ -170,7 +170,7 @@ class component_relation_common extends component_common {
 	*/
 	protected function load_component_dato() {
 
-		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
+		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
 			return null;
 		}
 
