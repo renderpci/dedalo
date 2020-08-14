@@ -24,20 +24,10 @@
 				break;
 
 			default:
-				$add_request_config = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $add_request_config);					
-					// // add records_mode to properties, if not already defined
-					// if (!isset($current_context->properties->source->records_mode)) {
-					// 	if (!property_exists($current_context, 'properties')) {
-					// 		$current_context->properties = new stdClass();
-					// 	}
-					// 	if (!property_exists($current_context->properties, 'source')) {
-					// 		$current_context->properties->source = new stdClass();
-					// 	}
-					// 	$current_context->properties->source->records_mode = 'list';
-					// }
+					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
+
 					$context[] = $current_context;
 
 				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
@@ -56,12 +46,11 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$dato = $this->get_dato();
-
-		if (!empty($dato)) {
+		$dato 		= $this->get_dato();
+		$references = $this->get_calculated_references();
 
 			$value		= $this->get_dato_paginated();
-			$section_id	= $this->get_parent();
+			$section_id	= $this->get_section_id();
 			$limit		= $this->pagination->limit;
 			$offset		= $this->pagination->offset;
 
@@ -69,25 +58,33 @@
 				$item = $this->get_data_item($value);
 					$item->parent_tipo			= $tipo;
 					$item->parent_section_id	= $section_id;
-					// fix pagination vars
-						$pagination = new stdClass();
-							$pagination->total	= count($dato);
-							$pagination->limit	= $limit;
-							$pagination->offset	= $offset;
-					$item->pagination = $pagination;
 
-				$data[] = $item;
+			if (!empty($dato)) {
+				// fix pagination vars
+					$pagination = new stdClass();
+						$pagination->total	= count($dato);
+						$pagination->limit	= $limit;
+						$pagination->offset	= $offset;
+				$item->pagination = $pagination;
 
-			// subcontext data from layout_map items
+				// subcontext data from layout_map items
 				$ar_subdata = $this->get_ar_subdata($value);
 
-			// subdata add
+				// subdata add
 				foreach ($ar_subdata as $current_data) {
 					$current_data->parent_tipo			= $tipo;
 					$current_data->parent_section_id	= $section_id;
 					$data[] = $current_data;
 				}
-		}//end if (!empty($dato))
+			}//end if (!empty($dato))
+
+		// references
+		if (isset($references)) {
+			$item->references = $references;
+		}
+
+		dump($item, ' $item +---------------+ '.to_string());
+		$data[] = $item;
 	}//end if $options->get_data===true && $permissions>0
 
 
