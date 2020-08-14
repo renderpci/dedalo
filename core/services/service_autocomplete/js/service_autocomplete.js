@@ -39,7 +39,7 @@ export const service_autocomplete = function() {
 		self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
 		self.ar_search_section_tipo	= self.sqo.section_tipo
 		self.ar_filter_by_list		= []
-		
+
 		// engine. get the search_engine sended or set the default value
 			const engine			= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
 			self.search_engine		= (engine) ? engine : 'dedalo_engine';
@@ -101,7 +101,7 @@ export const service_autocomplete = function() {
 		const source_selector = self.render_source_selector()
 		options_container.appendChild(source_selector)
 		// sections select
-		const sections_selector = self.render_sections_selector()
+		const sections_selector = self.render_filters_selector()
 		options_container.appendChild(sections_selector)
 
 		// components fields for inputs_list
@@ -249,14 +249,14 @@ export const service_autocomplete = function() {
 
 
 	/**
-	* BUILD_SECTIONS_SELECTOR
+	* RENDER_FILTERS_SELECTOR
 	* @return
 	*/
-	this.render_sections_selector = function(){
+	this.render_filters_selector = function(){
 
 		const self = this
 
-		const local_storage_ar_id	= []		
+		const ar_id = []
 
 		// container. Filters container
 			const filters_container = ui.create_dom_element({
@@ -272,9 +272,11 @@ export const service_autocomplete = function() {
 				// get the datalist of all sections to create the checkbox
 				const filter_items = []
 				for (let i = 0; i < ar_sections_length; i++) {
+
 					const section		= ar_sections[i]
-					const ddo_section	= self.dd_request.find((item) => item.type === 'section' && item.tipo === section && item.typo === 'ddo')
-					const datalist_item = {
+					const id			= section
+					const ddo_section	= self.dd_request.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
+					const datalist_item	= {
 						grouper	: 'sections',
 						id		: section,
 						value	: section,
@@ -282,7 +284,7 @@ export const service_autocomplete = function() {
 						change	: function(input_node){
 							const index = ar_sections.indexOf(input_node.dd_value)
 							if (input_node.checked===true && index===-1) {
-								ar_sections.push(input_node.dd_value)							
+								ar_sections.push(input_node.dd_value)
 							}else{
 								ar_sections.splice(index, 1);
 							}
@@ -290,7 +292,7 @@ export const service_autocomplete = function() {
 					}
 					filter_items.push(datalist_item)
 
-					local_storage_ar_id.push(section)
+					ar_id.push(id) // add to global array of id
 				}
 
 				const filter_id		= self.list_name
@@ -300,7 +302,7 @@ export const service_autocomplete = function() {
 			}
 
 		// filter_by_list . if the component caller has a filter_by_list we add the datalist of the compoment
-			const filter_by_list = self.dd_request.find(item => item.typo==='filter_by_list') || false			
+			const filter_by_list = self.dd_request.find(item => item.typo==='filter_by_list') || false
 			if(filter_by_list) {
 
 				const ar_filter_by_list	= self.ar_filter_by_list
@@ -308,13 +310,15 @@ export const service_autocomplete = function() {
 				const filter_by_list_value_length = filter_by_list.value.length
 				for (let i = 0; i < filter_by_list_value_length; i++) {
 
-					const current_filter		= filter_by_list.value[i]
-					const section				= current_filter.section_tipo
-					const component_tipo		= current_filter.tipo
+					const current_filter		= filter_by_list.value[i]; 	console.log("current_filter:",current_filter); 	console.log("self:",self);
+					const section				= current_filter.context.section_tipo
+					const component_tipo		= current_filter.context.tipo
 					const component_datalist	= current_filter.datalist
+					const filter_label			= current_filter.context.label
 
 					const filter_items = []
 					for (let j = 0; j < component_datalist.length; j++) {
+
 						const current_datalist	= component_datalist[j]
 						const id				= section +'_'+ component_tipo +'_'+ current_datalist.section_id
 						const q					= {
@@ -345,16 +349,14 @@ export const service_autocomplete = function() {
 								}else{
 									ar_filter_by_list.splice(index, 1);
 								}
-								console.log("ar_filter_by_list 1:",ar_filter_by_list);								
 							}
 						}
 						filter_items.push(datalist_item)
 						ar_filter_by_list.push(datalist_item)
 
-						local_storage_ar_id.push(id)
+						ar_id.push(id) // add to global array of id
 					}
-					const filter_id		= "filter_by_list_" + component_tipo + "_" + i
-					const filter_label	= component_tipo
+					const filter_id		= "filter_by_list_" + component_tipo + "_" + i					
 					const filter_node	= self.build_filter(filter_items, filter_label,  filter_id)
 					filters_container.appendChild(filter_node)
 				}
@@ -363,14 +365,14 @@ export const service_autocomplete = function() {
 		// localStorage
 			if (!localStorage.getItem(self.id)) {
 				// add full the first time
-				localStorage.setItem(self.id, JSON.stringify(local_storage_ar_id) )
+				localStorage.setItem(self.id, JSON.stringify(ar_id) )
 			}
 
 			// console.log("localStorage.getItem(self.id)", JSON.parse(localStorage.getItem(self.id)) );
 			console.log("ar_filter_by_list 2:",self.ar_filter_by_list);
 
 		return filters_container
-	};//end render_sections_selector
+	};//end render_filters_selector
 
 
 	/**
@@ -406,16 +408,16 @@ export const service_autocomplete = function() {
 				parent			: all_selector
 			})
 			all_section_input.checked = false
-			all_section_input.addEventListener('change', function(e){				
+			all_section_input.addEventListener('change', function(e){
 				const checked_value	= e.target.checked
 				const container		= e.target.parentNode.parentNode
 				const inputs		= container.querySelectorAll("input")
 				for (let i = 0; i < inputs.length; i++) {
-					if (inputs[i]==all_section_input) continue;					
+					if (inputs[i]==all_section_input) continue;
 					if (inputs[i].checked!==checked_value) {
 						inputs[i].checked = checked_value
 						inputs[i].dispatchEvent(new Event('change'));
-					}					
+					}
 				}
 			}, false);
 
@@ -442,13 +444,13 @@ export const service_autocomplete = function() {
 		const value		= datalist_item.value
 		const id		= datalist_item.id
 		const change	= datalist_item.change
-		
+
 
 		const li = ui.create_dom_element({
 			element_type	: "li"
 		})
 
-		// console.log("label", id, label, value);		
+		// console.log("label", id, label, value);
 
 		// label
 			const section_label = ui.create_dom_element({
@@ -473,7 +475,7 @@ export const service_autocomplete = function() {
 				if (local_storage_ar_id) {
 
 					const current_state = input_checkbox.checked
-					
+
 					if(local_storage_ar_id.indexOf(id)!==-1){
 						if (current_state!==true) {
 							input_checkbox.checked = true
@@ -487,11 +489,11 @@ export const service_autocomplete = function() {
 					}
 				}
 
-			// event change				
+			// event change
 				input_checkbox.addEventListener('change', function(){
 
 					change(this) // caller callback function
-					
+
 					update_local_storage_ar_id(this)
 
 					// force re-search with new options
@@ -502,7 +504,7 @@ export const service_autocomplete = function() {
 								setTimeout(()=>{
 									self.search_fired = true
 									self.search_input.dispatchEvent(new Event('input'))
-									
+
 									// restore state after 250 miliseconds.
 									// prevents fire multiple events when user selects 'All' option
 									// setTimeout(()=>{
@@ -512,7 +514,7 @@ export const service_autocomplete = function() {
 								},250)
 							}
 						}
-					
+
 				}, false);
 
 
@@ -524,7 +526,7 @@ export const service_autocomplete = function() {
 				const local_storage_ar_id = JSON.parse(localStorage.getItem(self.id))
 				if (local_storage_ar_id) {
 					// search current id in local_storage_ar_id array
-					const key = local_storage_ar_id.indexOf(id)					
+					const key = local_storage_ar_id.indexOf(id)
 					if (current_state===true && key===-1) {
 						local_storage_ar_id.push(id)
 					}else{
