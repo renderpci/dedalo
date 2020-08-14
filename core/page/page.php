@@ -2,14 +2,23 @@
 // PAGE CONTROLLER
 
 // page mode and tipo
-	define('MODE', $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list') );
-	$tipo		= $_GET['t'] ?? $_GET['tipo'] ?? 'test65'; //MAIN_FALLBACK_SECTION;
-	$section_id	= $_GET['id'] ?? $_GET['section_id'] ?? null;
+	$default_section_tipo = 'test65';
+	if (isset($_GET['locator'])) {
+		$locator	= json_decode($_GET['locator']);
+		$tipo		= $locator->section_tipo ?? $default_section_tipo;
+		$section_id	= $locator->section_id ?? null;
+		$mode		= !empty($section_id) ? 'edit' : 'list';
+	}else{
+		$tipo		= $_GET['t'] 	?? $_GET['tipo']		?? $default_section_tipo; //MAIN_FALLBACK_SECTION;
+		$section_id	= $_GET['id']	?? $_GET['section_id']	?? null;
+		$mode		= $_GET['m'] 	?? $_GET['mode']		?? (!empty($section_id) ? 'edit' : 'list');	
+	}
+	define('MODE', $mode);
 
 
 
 // load page
-	$load_page = function($context){
+	$load_page = function($context) use($tipo, $section_id, $mode){
 		global $page_globals, $html_header;
 
 		// page_options
