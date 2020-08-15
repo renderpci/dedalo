@@ -38,20 +38,21 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	// data is not longer necessary for section_group
+		// if($options->get_data===true && $permissions>0){
 
-		$section_id 	= $this->get_section_id();
-		$section_tipo 	= $this->get_section_tipo();
+		// 	$section_id 	= $this->get_section_id();
+		// 	$section_tipo 	= $this->get_section_tipo();
 
-		$locator = new locator();
-			$locator->set_section_tipo($section_tipo);
-			$locator->set_section_id($section_id);
+		// 	$locator = new locator();
+		// 		$locator->set_section_tipo($section_tipo);
+		// 		$locator->set_section_id($section_id);
 
-		$value = [$locator];
+		// 	$value = [$locator];
 
-		$data = $this->get_ar_subdata($value);
+		// 	$data = $this->get_ar_subdata($value);
 
-	}//end if($options->get_data===true && $permissions>0)
+		// }//end if($options->get_data===true && $permissions>0)
 
 
 
