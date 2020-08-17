@@ -1560,7 +1560,9 @@ abstract class common {
 				$layout_map_options->modo					= $records_mode;
 				$layout_map_options->request_config_type	= 'show';
 
-			$layout_map = layout_map::get_layout_map($layout_map_options);
+			$layout_map = layout_map::get_layout_map($layout_map_options); 	
+				// dump($layout_map, ' layout_map ++ '.$this->tipo." ".to_string() );
+				// dump(debug_backtrace()[3], 'debug_backtrace()[3] ++ '.to_string());
 			if(!empty($layout_map)) foreach($layout_map as $dd_object) {
 
 				$dd_object				= (object)$dd_object;
@@ -1648,7 +1650,7 @@ abstract class common {
 				$json_options->get_context	= true;
 				$json_options->get_data		= false;
 			$context = $this->get_json($json_options)->context;
-
+	
 		// source
 			$source_tipo = $this->get_tipo();
 			$source = array_find($context, function($item) use($source_tipo) {
@@ -1657,7 +1659,7 @@ abstract class common {
 
 		// ar_ddo
 			$ar_ddo = array_values(array_filter($context, function($item) use($source_tipo) {
-				return $item->tipo!==$source_tipo && $item->typo==='ddo';
+				return $item->tipo!==$source_tipo && $item->typo==='ddo' && $item->parent===$source_tipo;
 			}));
 
 
@@ -2314,7 +2316,7 @@ abstract class common {
 					if ($model==='section') {
 						// section
 						$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
-						$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_tipo_exclude_elements=false);
+						$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
 					}elseif (in_array($model, layout_map::$groupers)) {
 						// groupers
 						$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);

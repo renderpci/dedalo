@@ -25,10 +25,10 @@
 					$context[] = $this->get_structure_context($permissions);
 
 				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
-					$ar_subcontext = $this->get_ar_subcontext($section_tipo, $tipo);
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
+					// $ar_subcontext = $this->get_ar_subcontext($section_tipo, $tipo);
+					// foreach ($ar_subcontext as $current_context) {
+					// 	$context[] = $current_context;
+					// }
 				break;
 		}
 	}//end if($options->get_context===true)
