@@ -434,7 +434,7 @@ class hierarchy {
 															 			  'edit',
 															 			  DEDALO_DATA_NOLAN,
 															 			  $options->section_tipo);
-			$component_relation_children->make_me_your_children( $current_section_tipo, $section_id );
+			$component_relation_children->make_me_your_child( $current_section_tipo, $section_id );
 			$component_relation_children->Save();
 
 			debug_log(__METHOD__." Added first record of thesaurus section $current_section_tipo - $section_id as children of hierarchy $component_relation_children_tipo ".to_string(), logger::DEBUG);
@@ -633,7 +633,7 @@ class hierarchy {
 		}
 
 		if(empty($section_tipo)){
-			throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);			
+			throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);
 		}
 
 		# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
