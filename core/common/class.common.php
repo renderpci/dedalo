@@ -6,39 +6,44 @@
 */
 abstract class common {
 
-	# permissions. int value from 0 to 3
+	// permissions. int value from 0 to 3
 	public $permissions;
 
-	# ar_loaded_modelos_name. List of all components/sections modelo name used in current page (without duplicates). Used to determine
-	# the css and css files to load
+	// ar_loaded_modelos_name. List of all components/sections modelo name used in current page (without duplicates). Used to determine
+	// the css and css files to load
 	static $ar_loaded_modelos_name = array();
 
-	# identificador_unico. UID used to set dom elements id unic bsen on section_tipo, section_id, lang, modo, etc.
+	// identificador_unico. UID used to set dom elements id unic bsen on section_tipo, section_id, lang, modo, etc.
 	public $identificador_unico;
-	# variant. Modifier of identificador_unico
+	// variant. Modifier of identificador_unico
 	public $variant;
 
-	# bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
+	// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 	protected $bl_loaded_structure_data;
-	#bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
+	//bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
 	protected $bl_loaded_matrix_data;
 
-	# TABLE  matrix_table
-	#public $matrix_table;
+	// TABLE  matrix_table
+	// public $matrix_table;
 
-	# context. Object with information about context of current element
+	// context. Object with information about context of current element
 	public $context;
 
-	# public properties
+	// public properties
 	public $properties;
 
-	# from_parent. Used to link context ddo elements
+	// from_parent. Used to link context ddo elements
 	public $from_parent;
 
-	# parent_grouper
+	// parent_grouper
 	public $parent_grouper;
 
-	# REQUIRED METHODS
+	// build options sended by the client into show ddo to modify the standard get data.
+	// in area_thesaurus it send if the thesaurus need get models or terms.
+	// in component_portal it send if the source external need to be updated.
+	public $build_options			= null;
+
+	// REQUIRED METHODS
 	#abstract protected function define_id($id);
 	#abstract protected function define_tipo();
 	#abstract protected function define_lang();
@@ -1654,7 +1659,7 @@ abstract class common {
 			$ar_ddo = array_values(array_filter($context, function($item) use($source_tipo) {
 				return $item->tipo!==$source_tipo && $item->typo==='ddo';
 			}));
-		
+
 
 		$source_model= $source->model;
 
@@ -1853,10 +1858,10 @@ abstract class common {
 				$limit = $this->pagination->limit ?? null;
 
 			$request_config_parsed = common::get_request_properties_parsed($tipo, false, $section_tipo, $mode, $section_id, $limit);
-			
+
 		$request_config = reset($request_config_parsed);
 
-	
+
 		return $request_config;
 	}//end get_request_query_object
 

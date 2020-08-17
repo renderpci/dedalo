@@ -15,7 +15,6 @@ class area_thesaurus extends area_common {
 	// protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
 
-	public $build_options			= null;
 	public $search_action			= null;
 
 
@@ -25,7 +24,7 @@ class area_thesaurus extends area_common {
 	*/
 	public function get_section_tipo() {
 
-		// $hierarchy_sections	= $this->get_hierarchy_sections(); // $this->get_data_items();		
+		// $hierarchy_sections	= $this->get_hierarchy_sections(); // $this->get_data_items();
 		// $section_tipo		= array_map(function($item){
 
 		// 	return $item->target_section_tipo;

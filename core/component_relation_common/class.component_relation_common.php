@@ -110,7 +110,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_DATO
-	* Returns dato from container 'relations', not for component dato container
+	* Returns dato from container 'relations', not from component dato container
 	* @return array $dato
 	*	$dato is always an array of locators or an empy array
 	*/
@@ -351,7 +351,7 @@ class component_relation_common extends component_common {
 
 		parent::set_dato( (array)$safe_dato );
 
-
+		
 		// translatable cases
 		if ($translatable==='si') {
 			$new_dato_full = [];
@@ -366,6 +366,7 @@ class component_relation_common extends component_common {
 		}else{
 			$this->dato_full =  (array)$safe_dato;
 		}
+
 
 		return true;
 	}//end set_dato
@@ -1036,7 +1037,6 @@ class component_relation_common extends component_common {
 		// current section tipo/id
 			$section_id 	= $this->get_section_id();
 			$section_tipo 	= $this->get_section_tipo();
-			dump($section_id, ' $section_id +************************------*******************+ '.to_string());
 		// data source overwrite (tool cataloging case)
 			if (isset($properties->source->source_overwrite) && isset($properties->source->component_to_search)) {
 				// overwrite source locator
@@ -1112,7 +1112,6 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 			$new_dato[] = $locator;
-			dump($new_dato, ' $new_dato +----------///////------------+ '.to_string());
 			$ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 
 			$total_ar_result = count($ar_result);
@@ -1166,11 +1165,20 @@ class component_relation_common extends component_common {
 																		DEDALO_DATA_NOLAN,
 																		$current_section->section_tipo,
 																		false);
+
+					// set the dato in all instances, included the same instance that current instance.
 					$component_to_update->set_dato($dato);
 					if ($save===true) {
 						$component_to_update->Save();
 						debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
 					}
+
+					// if the current section_id is the same of the current instace update the dato of the current instance
+					// else update the dato of the other instances (references witht the same dato)
+					if($current_section->section_id == $this->section_id){
+						$this->set_dato($dato);
+					}
+
 				}
 			}
 

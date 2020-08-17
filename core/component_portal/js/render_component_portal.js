@@ -383,7 +383,7 @@ const get_buttons = (self) => {
 							class_name		: 'header_custom'
 						})
 						header_custom.appendChild(header)
-						header_custom.appendChild(select_section)					
+						header_custom.appendChild(select_section)
 
 					// fix modal to allow close later, on set value
 					self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
@@ -404,6 +404,28 @@ const get_buttons = (self) => {
 			button_tree_selector.addEventListener('mouseup',function(){
 
 			},false)
+		}
+
+
+		if(self.context.properties.source.mode === 'external'){
+
+			// button_update data external
+				const button_update_data_external = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button sync',
+					parent			: fragment
+				})
+				button_update_data_external.addEventListener("click", async function(e){
+					const source = self.dd_request.show.find(item => item.typo === 'source')
+					source.build_options = {
+						get_dato_external : true
+					}
+					const builded = await self.build(true)
+					// render
+					if (builded) {
+						self.render({render_level : 'content'})
+					}
+				})
 		}
 
 	// buttons tools
@@ -457,7 +479,7 @@ const get_top = function(self) {
 		// select_section.addEventListener("change", function(e){
 		// 		console.log("iframe_container:",iframe_container);
 		// })
-		
+
 		// // options for select_section
 		// 	for (let i = 0; i < target_section_lenght; i++) {
 		// 		const item = target_section[i]
@@ -528,9 +550,9 @@ const get_top = function(self) {
 		// 				select_section.addEventListener("click", function(e){
 		// 					// e.stopPropagation()
 		// 				})
-		// 				select_section.addEventListener("change", function(){							
+		// 				select_section.addEventListener("change", function(){
 		// 					iframe.src = '../page/?tipo=' + this.value + '&mode=list&initiator='+ self.id
-		// 				})						
+		// 				})
 		// 				// options for select_section
 		// 					for (let i = 0; i < target_section_lenght; i++) {
 		// 						const item = target_section[i]
@@ -555,7 +577,7 @@ const get_top = function(self) {
 		// 					class_name		: 'header_custom'
 		// 				})
 		// 				header_custom.appendChild(header)
-		// 				header_custom.appendChild(select_section)					
+		// 				header_custom.appendChild(select_section)
 
 		// 			// fix modal to allow close later, on set value
 		// 			self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
@@ -687,7 +709,7 @@ const input_element = async function(current_section_record, inputs_container){
 const render_references = function(ar_references) {
 
 	const fragment = new DocumentFragment()
-	
+
 	// ul
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
@@ -697,7 +719,7 @@ const render_references = function(ar_references) {
 
 	const ref_length = ar_references.length
 	for (let i = 0; i < ref_length; i++) {
-		
+
 		const reference = ar_references[i]
 
 		// li
@@ -726,5 +748,3 @@ const render_references = function(ar_references) {
 
 	return fragment
 };//end render_references
-
-
