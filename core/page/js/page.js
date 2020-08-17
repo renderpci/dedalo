@@ -87,9 +87,16 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('user_action', user_action)
 			)
 		// user_action fn
-			async function user_action(options) {
+			async function user_action(user_action_options) {
 				if(SHOW_DEBUG===true) {
-					console.log("// page user_action received options", options);
+					console.log("// page user_action received user_action_options", user_action_options);
+				}
+
+				const options = {}
+				for(const name in user_action_options) {
+					if (name!=='sqo') {					
+						options[name] = user_action_options[name]
+					}
 				}
 
 				// const current_data_manager 	= new data_manager()
@@ -98,10 +105,18 @@ page.prototype.init = async function(options) {
 				// // element context from api server result
 				// 	const page_element = api_response.result
 
-				const source 		= JSON.parse(JSON.stringify(options))
-					  source.typo	= "source"
+				const request_config = []
+				
+				// source
+					const source = JSON.parse(JSON.stringify(options))
+						  source.typo	 = "source"
+					request_config.push(source)				
 
-				const request_config = [source]
+				// sqo
+					if (user_action_options.sqo) {
+						request_config.push(user_action_options.sqo)
+					}
+				
 
 				// check response page element is valid for instantiate. Element instance loads the file
 					const page_element_instance = await instantiate_page_element(self, request_config)

@@ -26,6 +26,14 @@
 
 					// set dd_request always to allow components know request context
 						// $section->set_dd_request( $this->get_dd_request() ); // inject dd_request
+
+					// pagination. fix pagination vars (defined in class component_common)
+						$limit	= $this->search_query_object->limit;
+						$offset	= $this->search_query_object->offset;
+						$pagination = new stdClass();
+							$pagination->limit	= $limit;
+							$pagination->offset	= $offset;
+						$section->pagination = $pagination;
 				
 					// get the JSON context of the related component
 						$section_options = new stdClass();

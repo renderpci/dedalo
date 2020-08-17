@@ -260,6 +260,9 @@ const build_id_column = function(self) {
 
 	const permissions = self.caller.permissions
 
+	// offset
+		const offset = self.offset
+
 	// id_column
 		const id_column = ui.create_dom_element({
 			element_type	: 'div',
@@ -406,16 +409,30 @@ const build_id_column = function(self) {
 						})
 						edit_button.addEventListener("click", function(e){
 							// edit_record(this, self)
+
+							const sqo = {
+								typo			: "sqo",
+								mode			: 'edit',
+								section_tipo	: [self.section_tipo],
+								filter			: null,
+								limit			: 1,
+								offset			: offset,
+								select			: [],
+								full_count		: false
+							}
+
 							const user_action_options = {
 								tipo		: self.section_tipo,
-								section_id	: self.section_id,
-								model		: 'section',
-								mode		: 'edit'
+								// section_id	: null,//self.section_id,	
+								// offset		: offset,
+								// model		: 'section',
+								mode		: 'edit',
+								sqo			: sqo
 							}
 							if(SHOW_DEBUG===true) {
 								console.log("// section_record build_id_column user_action_options default:",user_action_options);
 							}
-							event_manager.publish('user_action', user_action_options)
+							event_manager.publish('user_action', user_action_options, 'patata')
 						})
 					}
 				// delete_line
