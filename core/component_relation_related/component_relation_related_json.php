@@ -83,7 +83,6 @@
 			$item->references = $references;
 		}
 
-		dump($item, ' $item +---------------+ '.to_string());
 		$data[] = $item;
 	}//end if $options->get_data===true && $permissions>0
 
