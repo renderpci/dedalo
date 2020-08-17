@@ -151,7 +151,7 @@ component_portal.prototype.build  = async function(autoload=false){
 			for(const element of self.datum.data) {
 				const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo)
 				if (index!==-1) {
-					console.error("ERROR. self.datum.data contains duplicated elements:", self.datum.data);
+					console.error("PORTAL ERROR. self.datum.data contains duplicated elements:", self.datum.data);
 				}else{
 					ar_used.push(element)
 				}
