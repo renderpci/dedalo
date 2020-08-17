@@ -200,11 +200,11 @@ class component_relation_parent extends component_relation_common {
 		// change link to me in relation_children
 			switch ($action) {
 				case 'remove':
-					$changed = (bool)$component_relation_children->remove_me_as_your_children($section_tipo, $section_id);
+					$changed = (bool)$component_relation_children->remove_me_as_your_child($section_tipo, $section_id);
 					break;
 
 				case 'add':
-					$changed = (bool)$component_relation_children->make_me_your_children($section_tipo, $section_id);
+					$changed = (bool)$component_relation_children->make_me_your_child($section_tipo, $section_id);
 					break;
 
 				default:
@@ -284,7 +284,7 @@ class component_relation_parent extends component_relation_common {
 
 		// 	$result = false;
 
-		// 	$added  = (bool)$component_relation_children->make_me_your_children( $section_tipo, $parent );
+		// 	$added  = (bool)$component_relation_children->make_me_your_child( $section_tipo, $parent );
 		// 	if ($added===true) {
 		// 		$component_relation_children->Save();
 		// 		$result = true;
@@ -324,7 +324,7 @@ class component_relation_parent extends component_relation_common {
 		// 													  					$children_section_tipo);
 
 		// 	// remove link to me in relation_children
-		// 		$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $parent );
+		// 		$removed = (bool)$component_relation_children->remove_me_as_your_child( $section_tipo, $parent );
 		// 		if ($removed===true) {
 		// 			$saved = $component_relation_children->Save();
 		// 			if ($saved && $saved>0) {

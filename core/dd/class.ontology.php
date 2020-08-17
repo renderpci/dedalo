@@ -287,13 +287,13 @@ class ontology {
 
 
 	/**
-	* GET_CHILDRENS_RECURSIVE . TS TREE FULL FROM PARENT
+	* GET_CHILDREN_RECURSIVE . TS TREE FULL FROM PARENT
 	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group
 	* @param string $terminoID
 	* @return array $ar_tesauro
 	*	array recursive of tesauro structure childrens
 	*/
-	public static function get_childrens_recursive($tipo) {
+	public static function get_children_recursive($tipo) {
 
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
@@ -360,7 +360,7 @@ class ontology {
 						'descriptors'	=> false,
 						'label'			=> true]);
 
-			$ar_elements = array_merge( $ar_elements, self::get_childrens_recursive($element_tipo));
+			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo));
 		}
 
 		# STORE CACHE DATA
@@ -372,7 +372,7 @@ class ontology {
 		}
 
 		return $ar_elements;
-	}//end get_childrens_recursive
+	}//end get_children_recursive
 
 
 
@@ -481,4 +481,3 @@ $ontology_data = json_decode('[
 #ontology::import($ontology_data);
 ontology::import_tools();
 */
-

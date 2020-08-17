@@ -351,7 +351,7 @@ class component_relation_common extends component_common {
 
 		parent::set_dato( (array)$safe_dato );
 
-		
+
 		// translatable cases
 		if ($translatable==='si') {
 			$new_dato_full = [];
@@ -812,9 +812,9 @@ class component_relation_common extends component_common {
 																		  $lang,
 																		  $current_section_tipo);
 
-			# NOTE: remove_me_as_your_children deletes current section references from component_relation_children and section->relations container
-			# $removed = (bool)$component_relation_children->remove_children_and_save($children_locator);
-			$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $section_id );
+			# NOTE: remove_me_as_your_child deletes current section references from component_relation_children and section->relations container
+			# $removed = (bool)$component_relation_children->remove_child_and_save($child_locator);
+			$removed = (bool)$component_relation_children->remove_me_as_your_child( $section_tipo, $section_id );
 			if ($removed===true) {
 				$component_relation_children->Save();
 				debug_log(__METHOD__." Removed references in component_relation_children ($current_section_id, $current_section_tipo) to $section_id, $section_tipo ".to_string(), logger::DEBUG);
@@ -1413,7 +1413,7 @@ class component_relation_common extends component_common {
 		foreach ($ar_terms as $current_item) {
 			$resursive = (bool)$current_item->recursive;
 			# Get childrens
-			$ar_childrens = component_relation_children::get_childrens($current_item->section_id, $current_item->section_tipo, null, $resursive);
+			$ar_childrens = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $resursive);
 			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_item->section_tipo, ['component_section_id'], true, true, true, true, false);
 
 			$path = new stdClass();
@@ -1536,7 +1536,7 @@ class component_relation_common extends component_common {
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo($ar_section_tipo_sources, $retrived_section_tipo=null) {
+	public static function get_request_config_section_tipo($ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
@@ -1564,6 +1564,24 @@ class component_relation_common extends component_common {
 				case 'self':
 					// $ar_section_tipo = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
 					$ar_section_tipo = is_array($retrived_section_tipo) ? $retrived_section_tipo : [$retrived_section_tipo];
+					break;
+				case 'field_value':
+						// this case is used in component_relation_children in the hierarchy section
+						// in these case the array of sections will get from the value of specific field
+						$target_values = $source_item->value;
+						foreach ((array)$target_values as $key => $current_component_tipo) {
+							$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+							$component 		 = component_common::get_instance($model_name,
+																			  $current_component_tipo,
+																			  $section_id,
+																			  $modo='edit',
+																			  $lang=DEDALO_DATA_LANG,
+																			  $retrived_section_tipo);
+
+							$dato = $component->get_dato();
+							$ar_section_tipo = $dato; // Like ['es1']
+						}
+						break;
 					break;
 				case 'section':
 				default:
