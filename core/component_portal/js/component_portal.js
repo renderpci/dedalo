@@ -142,7 +142,6 @@ component_portal.prototype.build  = async function(autoload=false){
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
 
-		console.log("self.context.request_config", self.context.request_config);
 
 	// load data if not yet received as an option
 		if (autoload===true) {

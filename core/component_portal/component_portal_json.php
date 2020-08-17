@@ -53,26 +53,25 @@
 		$limit		= $this->pagination->limit;
 		$offset		= $this->pagination->offset;
 
+		# Custom propiedades external dato
+		if(	!empty($this->build_options)
+			&& $this->build_options->get_dato_external === true
+			&& isset($properties->source->mode)
+			&& $properties->source->mode==='external') {
+			$this->set_dato_external(true, true);	// Forces update dato with calculated external dato
+		}
+
 		switch ($modo) {
 			case 'list':
-				# Custom propiedades external dato
-				if(isset($properties->source->mode) && $properties->source->mode==='external') {
-					// $this->set_dato_external(true);	// Forces update dato with calculated external dato
-				}
 				$dato	= $this->get_dato();
 				$value	= $this->get_dato_paginated();
 				break;
 			case 'edit':
 			default:
-				# Custom propiedades external dato
-				if(isset($properties->source->mode) && $properties->source->mode==='external') {
-					// $this->set_dato_external(true);	// Forces update dato with calculated external dato
-				}
 				$dato	= $this->get_dato();
 				$value	= $this->get_dato_paginated();
 				break;
 		}
-
 		if (!empty($dato)) {
 
 			// data item

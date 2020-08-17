@@ -437,6 +437,8 @@ abstract class component_common extends common {
 
 		parent::set_dato($dato);
 
+		$this->dato_resolved = $dato;
+
 		# Fix this component as data loaded to avoid overwite current dato setted, with database dato
 		# Set as loaded
 		$this->bl_loaded_matrix_data = true;

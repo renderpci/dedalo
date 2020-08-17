@@ -803,7 +803,7 @@ class dd_core_api {
 				$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 				$section_id		= $ddo_source->section_id ?? null;
 				$tipo			= $ddo_source->tipo ?? null;
-				$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);				
+				$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 
 		// sqo. search_query_object
 			$search_query_object = array_find($dd_request, function($item){
@@ -849,7 +849,7 @@ class dd_core_api {
 			// pagination vars from sqo
 				$limit	= $search_query_object->limit ?? null;
 				$offset	= $search_query_object->offset ?? null;
-				
+
 
 		// CONTEXT
 			$context = [];
@@ -862,7 +862,7 @@ class dd_core_api {
 							$element = sections::get_instance(null, $search_query_object, $section_tipo, $mode, $lang);
 
 							// set always
-							// $element->set_dd_request($dd_request); // inject whole dd_request context						
+							// $element->set_dd_request($dd_request); // inject whole dd_request context
 
 						break;
 
@@ -902,7 +902,7 @@ class dd_core_api {
 						# not defined modelfro context / data
 						debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
 						break;
-				}// end switch (true)				
+				}// end switch (true)
 
 
 				// element json
@@ -1002,7 +1002,7 @@ class dd_core_api {
 
 								$i++; }//end iterate records
 								*/
-							
+
 							// sections
 								$element = sections::get_instance(null, $search_query_object, $tipo, $mode, $lang);
 
@@ -1042,10 +1042,6 @@ class dd_core_api {
 								// areas
 									$element = area::get_instance($model, $tipo, $mode);
 
-								// build_options
-									$build_options = $ddo_source->build_options ?? null;
-									$element->set_build_options($build_options);
-
 								// search_action
 									$search_action = $ddo_source->search_action ?? 'show_all';
 									$obj = new stdClass();
@@ -1074,6 +1070,10 @@ class dd_core_api {
 					// add if exists
 						if (isset($element)) {
 
+							// build_options
+								$build_options = $ddo_source->build_options ?? null;
+								$element->set_build_options($build_options);
+
 							// element json
 								$get_json_options = new stdClass();
 									$get_json_options->get_context	= false;
@@ -1091,7 +1091,7 @@ class dd_core_api {
 
 			$data_exec_time	= exec_time_unit($data_start_time,'ms')." ms";
 
-		
+
 		// Set result object
 			$result->context = $context;
 			$result->data 	 = $data;
