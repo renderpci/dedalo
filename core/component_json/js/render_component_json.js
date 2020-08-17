@@ -283,6 +283,8 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 	const mode = self.mode
 
 	let validated = false
+	let editor
+
 
 	// li
 		const li = ui.create_dom_element({
@@ -339,8 +341,11 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 		})	
 
 	// load editor files (js/css)
-	self.load_editor_files()
-	.then(()=>{		
+	await self.load_editor_files()
+	// .then(()=>{
+	// setTimeout(()=>{
+
+
 
 		// editor_options
 			const editor_options = {
@@ -354,8 +359,12 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				onValidationError : function() {
 					validated = false
 				},			
-				onChange : function(json) {				
-					on_change(self, editor)
+				onChange : function(json) {
+					if (editor) {
+						on_change(self, editor)
+					}else{
+						console.error("Error. editor is not available!:");
+					}				
 				},
 				onValidate: function() {
 					validated = true
@@ -390,15 +399,16 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			}	
 		
 		// create a new instace of the editor when DOM element is ready	
-			event_manager.when_in_dom(li, function(){
-				console.log("container in DOM:",li);	
-			})
+			// event_manager.when_in_dom(li, function(){
+			// 	console.log("container in DOM:",li);	
+			// })
 
-			const editor = new JSONEditor(li, editor_options, current_value)
+			editor = new JSONEditor(li, editor_options, current_value)
 
 			// append current editor
-			self.editors.push(editor)		
-	})
+			self.editors.push(editor)
+	// })
+	// }, 2000)
 
 	// blur event
 			// const ace_editor = editor.aceEditor
@@ -428,20 +438,33 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 */
 const on_change = function(self, editor) {
 
-	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
-	const edited_value 	= editor.get()
-	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
-	const editor_wrapper= editor.frame
-	const button_save 	= editor_wrapper.previousElementSibling
+	const editor_wrapper	= editor.frame
+	const button_save		= editor_wrapper.previousElementSibling
+	const db_value			= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
 
-	if (changed) {
+	button_save.classList.add("warning")
+	editor_wrapper.classList.add("isDirty")
+
+	try {
+		const edited_value 	= editor.get()
+	}catch(e){
+		// console.log("e:",e);
 		editor_wrapper.classList.add("isDirty")
-		button_save.classList.add("warning")
-	}else{
-		if (editor_wrapper.classList.contains("isDirty")) {
-			editor_wrapper.classList.remove("isDirty")
-			button_save.classList.remove("warning")
-		}		
+
+	}
+
+	if (typeof edited_value!=="undefined") {
+			
+		const changed = JSON.stringify(db_value)!==JSON.stringify(edited_value)
+		if (changed) {
+			editor_wrapper.classList.add("isDirty")
+			button_save.classList.add("warning")
+		}else{
+			if (editor_wrapper.classList.contains("isDirty")) {
+				editor_wrapper.classList.remove("isDirty")
+				button_save.classList.remove("warning")
+			}		
+		}
 	}
 	
 	return true
