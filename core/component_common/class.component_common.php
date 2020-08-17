@@ -831,6 +831,9 @@ abstract class component_common extends common {
 			$current_locator->set_section_tipo($this->section_tipo);
 			$current_locator->set_section_id($this->section_id);
 
+		// $observable_dato is defined by the type of the event fired by the user,
+		// if event fired is update we will use the final dato with all changes, the data that will stored in BBDD
+		// but if the event is delete, we will use the previous data, before delete the info, because we need know the sections referenced that need delete and update your own state
 		$observable_dato = $this->get_observable_dato();
 
 		$observers_data = [];
@@ -859,7 +862,7 @@ abstract class component_common extends common {
 		$properties = $RecordObj_dd->get_properties();
 
 		$ar_observe = $properties->observe;
-
+		// get the current observe preference in ontology to be processed
 		$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
 			return $item->component_tipo === $observable_tipo;
 		});
@@ -894,9 +897,12 @@ abstract class component_common extends common {
 			$result = $search->search();
 			$ar_section = $result->ar_records;
 		}else{
+			// if observer don't has filter to get the sections to be updated, get the obervable section to use
+			// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
 			$ar_section = [$locator];
 		}
-
+		// get the dato of the observable component to be used to create the observer component
+		// in case of any relation component will be used to find "the compoment that I call" or "use my relations"
 		if(isset($current_observer->mode) && $current_observer->mode=== 'use_observable_dato'){
 			$ar_section = array_merge($ar_section, $observable_dato);
 		}
@@ -904,7 +910,7 @@ abstract class component_common extends common {
 		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
 		$ar_data = [];
 
-		dump($ar_section, ' $ar_section +----------------------------+ '.to_string());
+		// with all locators collected by the differents methods, it will create the observables components to be updated.
 		foreach ($ar_section as $current_section) {
 			// create the observer component that will be update
 			$component = component_common::get_instance($component_name,
@@ -913,17 +919,8 @@ abstract class component_common extends common {
 														'list',
 														DEDALO_DATA_LANG,
 														$current_section->section_tipo);
-
+			// get the specific event function in preferences to be fired (instead the default get_dato)
 			if(isset($current_observer->server_event)){
-
-				// $component->set_dato_external(true);
-
-				// $current_observer->server_event->function[0] = ($current_observer->server_event->function[0]==='this')
-				// 	? $component
-				// 	: $current_observer->server_event->function[0];
-
-				// dump($current_observer->server_event->function[0]->section_id, '  +*******************/////***********+ '.to_string());
-
 				$function = $current_observer->server_event->function;
 				$params = $current_observer->server_event->params;
 
@@ -935,9 +932,7 @@ abstract class component_common extends common {
 
 				// save the new dato into the database, this will be used for search into components calculations of infos
 				$component->Save();
-
 			}
-
 
 			// only will be send the result of the observer component to the current section_tipo and section_id,
 			// this section is the section that user is changed and need to be update width the new data
