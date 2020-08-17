@@ -1207,11 +1207,42 @@
 			}
 
 			// component portal
-			&.component_portal {
+			&.component_portal, &.component_relation_related {
+				
+				>.content_data {
+					flex-wrap: wrap;
+
+					ul {
+						background-color: #55f550;
+						flex: 0 0 100%;					
+					}
+					ul.references {					
+						background-color: #83e1ee;
+					}
+				}
+				
 				
 				// section selector
 				.select_section {
 					margin-left: 1em;
+				}
+				// @import "./layout/patata.less";
+				&.view_autocomplete {
+					background-color: #83e1ee;
+
+					.section_record {
+						outline: unset;
+						background-color: #8bf451;
+						margin-bottom: 1px;
+						line-height: 0.5em;
+						>div {
+							padding-top: 0.25em;
+							padding-bottom: 0.25em;
+							outline: unset;
+							background-color: unset;
+							line-height: 0.5em;
+						}
+					}
 				}
 			}
 
