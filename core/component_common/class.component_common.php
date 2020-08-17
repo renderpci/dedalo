@@ -75,10 +75,13 @@ abstract class component_common extends common {
 		public $matrix_id;
 
 		// pagination. object used to paginate portals, etc.
-		public $pagination;	
+		public $pagination;
+
+		// observable data, used for propagate to other components that are seeing this component changes.
+		public $observable_dato;
 
 		// context
-		// public $context;	
+		// public $context;
 
 
 
@@ -828,11 +831,17 @@ abstract class component_common extends common {
 			$current_locator->set_section_tipo($this->section_tipo);
 			$current_locator->set_section_id($this->section_id);
 
+		// $observable_dato is defined by the type of the event fired by the user,
+		// if event fired is update we will use the final dato with all changes, the data that will stored in BBDD
+		// but if the event is delete, we will use the previous data, before delete the info, because we need know the sections referenced that need delete and update your own state
+		$observable_dato = $this->get_observable_dato();
+
 		$observers_data = [];
 		foreach ($ar_observers as $current_observer) {
-			$current_observer_data = component_common::update_observer_dato($current_observer, $current_locator, $this->tipo);
+			$current_observer_data = component_common::update_observer_dato($current_observer, $current_locator, $observable_dato, $this->tipo);
 			$observers_data = array_merge($observers_data, $current_observer_data);
 		}
+
 
 		// store data to accces later in api
 		$this->observers_data = $observers_data;
@@ -846,14 +855,14 @@ abstract class component_common extends common {
 	* UPDATE_OBSERVER_DATO
 	* @return
 	*/
-	public static function update_observer_dato($observer, $locator, $observable_tipo) {
+	public static function update_observer_dato($observer, $locator, $observable_dato, $observable_tipo) {
 
 		// create the observer component
 		$RecordObj_dd = new RecordObj_dd($observer->component_tipo);
 		$properties = $RecordObj_dd->get_properties();
 
 		$ar_observe = $properties->observe;
-
+		// get the current observe preference in ontology to be processed
 		$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
 			return $item->component_tipo === $observable_tipo;
 		});
@@ -888,11 +897,20 @@ abstract class component_common extends common {
 			$result = $search->search();
 			$ar_section = $result->ar_records;
 		}else{
+			// if observer don't has filter to get the sections to be updated, get the obervable section to use
+			// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
 			$ar_section = [$locator];
+		}
+		// get the dato of the observable component to be used to create the observer component
+		// in case of any relation component will be used to find "the compoment that I call" or "use my relations"
+		if(isset($current_observer->mode) && $current_observer->mode=== 'use_observable_dato'){
+			$ar_section = array_merge($ar_section, $observable_dato);
 		}
 
 		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
 		$ar_data = [];
+
+		// with all locators collected by the differents methods, it will create the observables components to be updated.
 		foreach ($ar_section as $current_section) {
 			// create the observer component that will be update
 			$component = component_common::get_instance($component_name,
@@ -901,16 +919,24 @@ abstract class component_common extends common {
 														'list',
 														DEDALO_DATA_LANG,
 														$current_section->section_tipo);
+			// get the specific event function in preferences to be fired (instead the default get_dato)
+			if(isset($current_observer->server_event)){
+				$function = $current_observer->server_event->function;
+				$params = $current_observer->server_event->params;
 
-			// force to update the dato of the observer component
-			$dato = $component->get_dato();
+				call_user_func_array(array($component, $function), $params);
+			}else{
 
-			// save the new dato into the database, this will be used for search into components calculations of infos
-			$component->Save();
+				// force to update the dato of the observer component
+				$dato = $component->get_dato();
 
-			// only will be send the result of the observer compoent to the current section_tipo and section_id,
-			// this section is the section that user is changed and need to be update witht the new data
-			// the sections that are not the current user changed/ viewed will be save but don't return the result to the client.
+				// save the new dato into the database, this will be used for search into components calculations of infos
+				$component->Save();
+			}
+
+			// only will be send the result of the observer component to the current section_tipo and section_id,
+			// this section is the section that user is changed and need to be update width the new data
+			// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
 			if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
 				// get the json of the component to send witht the save of the observable compoment data
 				$component_json = $component->get_json();
@@ -2531,11 +2557,11 @@ abstract class component_common extends common {
 	public function get_my_section() {
 
 		$section = section::get_instance($this->section_id, $this->section_tipo);
-		
+
 		return $section;
 	}//end get_my_section
 
-	
+
 
 	/**
 	* GET_CALCULATION_DATA
@@ -2691,9 +2717,18 @@ abstract class component_common extends common {
 				}
 
 				$this->set_dato($dato);
+				//set the obdservable data used to send other components that observe you, if insert it will need the final dato, with new references
+				$this->observable_dato = (get_called_class() === 'component_relation_related')
+					? $this->get_dato_with_references()
+					: $dato;
 				break;
 
 			case 'remove':
+				//set the obdservable data used to send other components that observe you, if remove it will need the old dato, with old references
+				$this->observable_dato = (get_called_class() === 'component_relation_related')
+					? $this->get_dato_with_references()
+					: $dato;
+
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
