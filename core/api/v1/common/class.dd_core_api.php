@@ -1090,6 +1090,10 @@ class dd_core_api {
 							// data add
 								$data = array_merge($data, $element_json->data);
 
+							// ar_all_section_id (experimental)
+								// $ar_all_section_id = $element->get_ar_all_section_id();
+								// 	dump($ar_all_section_id, ' ar_all_section_id ++ '.to_string());
+
 						}//end if (isset($element))
 
 
