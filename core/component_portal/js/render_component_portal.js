@@ -730,7 +730,8 @@ const render_references = function(ar_references) {
 					class_name		: 'button link',
 					parent			: li
 				})
-				button_link.addEventListener("click", function(){
+				button_link.addEventListener("click", function(e){
+					e.stopPropagation()
 					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
 					// window.open(url,'ref_edit')
 				})

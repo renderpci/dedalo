@@ -2292,50 +2292,47 @@ li .section_record.list .id_column {
   outline-color: #2b2b2b;
   color: white;
 }
-.wrapper_component.edit.component_portal > .content_data,
-.wrapper_component.search.component_portal > .content_data,
-.wrapper_component.edit.component_relation_related > .content_data,
-.wrapper_component.search.component_relation_related > .content_data {
-  flex-wrap: wrap;
+.wrapper_component.edit.portal > .content_data,
+.wrapper_component.search.portal > .content_data {
+  flex-wrap: wrap !important;
 }
-.wrapper_component.edit.component_portal > .content_data ul,
-.wrapper_component.search.component_portal > .content_data ul,
-.wrapper_component.edit.component_relation_related > .content_data ul,
-.wrapper_component.search.component_relation_related > .content_data ul {
-  background-color: #55f550;
+.wrapper_component.edit.portal > .content_data ul,
+.wrapper_component.search.portal > .content_data ul {
   flex: 0 0 100%;
 }
-.wrapper_component.edit.component_portal > .content_data ul.references,
-.wrapper_component.search.component_portal > .content_data ul.references,
-.wrapper_component.edit.component_relation_related > .content_data ul.references,
-.wrapper_component.search.component_relation_related > .content_data ul.references {
-  background-color: #83e1ee;
+.wrapper_component.edit.portal > .content_data ul.references,
+.wrapper_component.search.portal > .content_data ul.references {
+  margin-top: 0.75em;
 }
-.wrapper_component.edit.component_portal .select_section,
-.wrapper_component.search.component_portal .select_section,
-.wrapper_component.edit.component_relation_related .select_section,
-.wrapper_component.search.component_relation_related .select_section {
+.wrapper_component.edit.portal > .content_data ul.references > *,
+.wrapper_component.search.portal > .content_data ul.references > * {
+  width: 100%;
+}
+.wrapper_component.edit.portal > .content_data ul.references > div,
+.wrapper_component.search.portal > .content_data ul.references > div {
+  margin-bottom: 0.5em;
+}
+.wrapper_component.edit.portal > .content_data ul.references > li,
+.wrapper_component.search.portal > .content_data ul.references > li {
+  padding-left: 2em;
+}
+.wrapper_component.edit.portal .select_section,
+.wrapper_component.search.portal .select_section {
   margin-left: 1em;
 }
-.wrapper_component.edit.component_portal.view_autocomplete,
-.wrapper_component.search.component_portal.view_autocomplete,
-.wrapper_component.edit.component_relation_related.view_autocomplete,
-.wrapper_component.search.component_relation_related.view_autocomplete {
+.wrapper_component.edit.portal.view_autocomplete,
+.wrapper_component.search.portal.view_autocomplete {
   background-color: #83e1ee;
 }
-.wrapper_component.edit.component_portal.view_autocomplete .section_record,
-.wrapper_component.search.component_portal.view_autocomplete .section_record,
-.wrapper_component.edit.component_relation_related.view_autocomplete .section_record,
-.wrapper_component.search.component_relation_related.view_autocomplete .section_record {
+.wrapper_component.edit.portal.view_autocomplete .section_record,
+.wrapper_component.search.portal.view_autocomplete .section_record {
   outline: unset;
   background-color: #8bf451;
   margin-bottom: 1px;
   line-height: 0.5em;
 }
-.wrapper_component.edit.component_portal.view_autocomplete .section_record > div,
-.wrapper_component.search.component_portal.view_autocomplete .section_record > div,
-.wrapper_component.edit.component_relation_related.view_autocomplete .section_record > div,
-.wrapper_component.search.component_relation_related.view_autocomplete .section_record > div {
+.wrapper_component.edit.portal.view_autocomplete .section_record > div,
+.wrapper_component.search.portal.view_autocomplete .section_record > div {
   padding-top: 0.25em;
   padding-bottom: 0.25em;
   outline: unset;

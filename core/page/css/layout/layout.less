@@ -1206,18 +1206,28 @@
 				}
 			}
 
-			// component portal
-			&.component_portal, &.component_relation_related {
+			// component portal and similar
+			&.portal {
 				
 				>.content_data {
-					flex-wrap: wrap;
+					flex-wrap: wrap !important;
 
 					ul {
-						background-color: #55f550;
+						// background-color: #55f550;
 						flex: 0 0 100%;					
 					}
-					ul.references {					
-						background-color: #83e1ee;
+					ul.references {				
+						// background-color: #83e1ee;
+						margin-top: 0.75em;
+						>*{
+							width: 100%;
+						}
+						>div {
+							margin-bottom: 0.5em;
+						}
+						>li {
+							padding-left: 2em;
+						}
 					}
 				}
 				
