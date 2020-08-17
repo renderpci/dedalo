@@ -1206,6 +1206,62 @@ button.gear:before {
   mask-position: center;
   -webkit-mask-position: center;
 }
+button.reload:before {
+  content: " ";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
+  vertical-align: baseline;
+  background-color: #3f3f3f;
+  opacity: 1;
+  mask: url("../../themes/default/icons/reload.svg");
+  -webkit-mask: url("../../themes/default/icons/reload.svg");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
+.button.reload {
+  mask: url("../../themes/default/icons/reload.svg");
+  -webkit-mask: url("../../themes/default/icons/reload.svg");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
+button.sync:before {
+  content: " ";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
+  vertical-align: baseline;
+  background-color: #3f3f3f;
+  opacity: 1;
+  mask: url("../../themes/default/icons/sync.svg");
+  -webkit-mask: url("../../themes/default/icons/sync.svg");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
+.button.sync {
+  mask: url("../../themes/default/icons/sync.svg");
+  -webkit-mask: url("../../themes/default/icons/sync.svg");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
 .contenteditable_buttons {
   position: absolute;
   top: -1.54em;
