@@ -340,6 +340,8 @@ section.prototype.get_ar_instances = async function(){
 		const value			= self.data.value || []
 		const value_length	= value.length
 
+		const offset = self.pagination.offset
+
 		for (let i = 0; i < value_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
@@ -360,7 +362,8 @@ section.prototype.get_ar_instances = async function(){
 					context			: current_context,
 					data			: current_data,
 					datum			: self.datum,
-					caller			: self
+					caller			: self,
+					offset			: (offset+i)
 			}
 
 			// id_variant . Propagate a custom instance id to children

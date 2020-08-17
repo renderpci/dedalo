@@ -1826,9 +1826,10 @@ abstract class common {
 			$section_id		= $this->get_section_id();
 
 			// limit (from properties or default component definitions)
-				$limit = $this->pagination->limit ?? null;
+				$limit	= $this->pagination->limit ?? null;
+				$offset	= $this->pagination->offset ?? null;
 
-			$request_config_parsed	= common::get_request_properties_parsed($tipo, false, $section_tipo, $mode, $section_id, $limit);
+			$request_config_parsed	= common::get_request_properties_parsed($tipo, false, $section_tipo, $mode, $section_id, $limit, $offset);
 			$request_config			= array_merge($request_config, $request_config_parsed);
 
 		// request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
@@ -2157,7 +2158,7 @@ abstract class common {
 	*	optional default null
 	* @return object $request_config
 	*/
-	public static function get_request_properties_parsed($tipo, $external=false, $section_tipo=null, $mode='list', $section_id=null, $limit=10) {
+	public static function get_request_properties_parsed($tipo, $external=false, $section_tipo=null, $mode='list', $section_id=null, $limit=10, $offset=0) {
 
 		// if (to_string($section_tipo)==='self') {
 		// 	throw new Exception("Error Processing get_request_config (6) unresolved section_tipo:".to_string($section_tipo), 1);
@@ -2254,7 +2255,7 @@ abstract class common {
 							$sqo_config->add_select	= false;
 							$sqo_config->direct		= true;
 							$sqo_config->limit		= $limit;
-							$sqo_config->offset		= 0;
+							$sqo_config->offset		= $offset;
 							$sqo_config->mode		= $mode;
 							$sqo_config->operator	= '$or';
 						$parsed_item->show->sqo_config = $sqo_config;
@@ -2276,7 +2277,7 @@ abstract class common {
 								$sqo_config->add_select	= false;
 								$sqo_config->direct		= true;
 								$sqo_config->limit		= $limit;
-								$sqo_config->offset		= 0;
+								$sqo_config->offset		= $offset;
 								$sqo_config->mode		= $mode;
 								$sqo_config->operator	= '$or';
 							$parsed_item->search->sqo_config = $sqo_config;
@@ -2387,7 +2388,7 @@ abstract class common {
 					$sqo_config->add_select	= false;
 					$sqo_config->direct		= true;
 					$sqo_config->limit		= $limit;
-					$sqo_config->offset		= 0;
+					$sqo_config->offset		= $offset;
 					$sqo_config->mode		= $mode;
 					$sqo_config->operator	= '$and';
 

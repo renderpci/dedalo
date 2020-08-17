@@ -46,6 +46,8 @@ export const section_record = function() {
 	this.matrix_id
 	this.id_variant
 
+	this.offset
+
 	return true
 };//end section
 
@@ -108,7 +110,8 @@ section_record.prototype.init = async function(options) {
 
 	self.modification_date 	= options.modification_date || null
 
-
+	self.offset				= options.offset 
+	
 	// events subscription
 		// event active (when user focus in dom)
 		//event_manager.subscribe('section_record_rendered', (active_section_record) => {
