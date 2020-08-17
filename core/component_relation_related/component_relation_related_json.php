@@ -45,44 +45,48 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
+		
 		// get the data into DDBB
 		$dato 		= $this->get_dato();
 		// get the references calculated by relations with other sections
 		$references = $this->get_calculated_references();
 
-			$value		= $this->get_dato_paginated();
-			$section_id	= $this->get_section_id();
-			$limit		= $this->pagination->limit;
-			$offset		= $this->pagination->offset;
+		$value		= $this->get_dato_paginated();
+		$section_id	= $this->get_section_id();
+		$limit		= $this->pagination->limit;
+		$offset		= $this->pagination->offset;
 
-			// data item
-				$item = $this->get_data_item($value);
-					$item->parent_tipo			= $tipo;
-					$item->parent_section_id	= $section_id;
+		// data item
+			$item = $this->get_data_item($value);
+				$item->parent_tipo			= $tipo;
+				$item->parent_section_id	= $section_id;
 
-			if (!empty($dato)) {
-				// fix pagination vars
-					$pagination = new stdClass();
-						$pagination->total	= count($dato);
-						$pagination->limit	= $limit;
-						$pagination->offset	= $offset;
-				$item->pagination = $pagination;
+		if (!empty($dato)) {
 
-				// subcontext data from layout_map items
-				$ar_subdata = $this->get_ar_subdata($value);
+			// fix pagination vars
+				$pagination = new stdClass();
+					$pagination->total	= count($dato);
+					$pagination->limit	= $limit;
+					$pagination->offset	= $offset;
+			$item->pagination = $pagination;
 
-				// subdata add
+			
+			// subdata.
+				$ar_subdata = $this->get_ar_subdata($value);				
 				foreach ($ar_subdata as $current_data) {
+					// add parent info
 					$current_data->parent_tipo			= $tipo;
 					$current_data->parent_section_id	= $section_id;
+					
 					$data[] = $current_data;
 				}
-			}//end if (!empty($dato))
 
-		// references
-		if (isset($references)) {
-			$item->references = $references;
-		}
+		}//end if (!empty($dato))
+
+		// references. Add to item if exists
+			if (isset($references)) {
+				$item->references = $references;
+			}
 
 		$data[] = $item;
 	}//end if $options->get_data===true && $permissions>0

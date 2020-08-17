@@ -244,7 +244,7 @@ section.prototype.build = async function(autoload=false) {
 		self.pagination.limit	= sqo.limit
 		self.pagination.offset	= sqo.offset
 		self.pagination.total	= self.pagination.total || sqo.full_count || 0
-	console.log("self.pagination:",self.pagination);
+		
 	// paginator
 		if (!self.paginator) {
 
@@ -301,6 +301,17 @@ section.prototype.build = async function(autoload=false) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			// load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+
+			// debug duplicates check
+				const ar_used = []
+				for(const element of self.datum.data) {
+					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo)
+					if (index!==-1) {
+						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
+					}else{
+						ar_used.push(element)
+					}
+				}			
 		}
 
 	// status update

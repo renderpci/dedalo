@@ -148,9 +148,12 @@ class layout_map {
 		// 3. calculate from section list or related terms
 			if (!isset($layout_map)) {
 
-				// v5 definition and v6 definition in properties
+				// v5 definition (related terms) and v6 definition (properties)
 				$request_config = common::get_request_properties_parsed($tipo, $options->external, $options->section_tipo, $modo, null);
-
+				
+				// debug check request_config result 
+					// dump($request_config, " request_config ++ section_tipo: $options->section_tipo, tipo: $tipo, model: $model, key: $resolved_key ");
+				
 				// layout_map
 				$layout_map = [];
 				foreach ($request_config as $item_request_config) {
