@@ -673,7 +673,7 @@ var tool_cataloging = new function() {
 							ts_object.update_arrow_state(link_childrens_element, true)
 
 						// refresh children container
-							ts_object.get_childrens(link_childrens_element).then(function(){
+							ts_object.get_children(link_childrens_element).then(function(){
 
 								// open editor in new window
 									//ts_object.edit(button_obj, null, section_id, section_tipo)

@@ -426,13 +426,13 @@ export const ts_object = new function() {
 												link_add.addEventListener("click", function(e){
 
 													// mode set in dataset
-														this.dataset.mode = (node_type==='hierarchy_node') ? "add_children_from_hierarchy" : "add_children"
+														this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
 
-													// add_children
-														ts_object.add_children(this).then(function(response){
+													// add_child
+														ts_object.add_child(this).then(function(response){
 
 															// vars from response
-																// new_section_id . Generated as response by the trigger add_children
+																// new_section_id . Generated as response by the trigger add_child
 																	const new_section_id 	= response.result
 																// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
 																	const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
@@ -441,7 +441,7 @@ export const ts_object = new function() {
 																// children_element. list_thesaurus_element of current wrapper
 																	const children_element 	= ts_object.get_link_children_from_wrap(response.wrap)
 																	if(!children_element) {
-																		return console.log("[ts_object.add_children] Error on find children_element 'link_children'");
+																		return console.log("[ts_object.add_child] Error on find children_element 'link_children'");
 																	}
 
 															// refresh children container
@@ -996,9 +996,9 @@ export const ts_object = new function() {
 
 				// add children
 					const button_obj = event.target
-					// set mode to button for add_children
-						button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1') ? 'add_children_from_hierarchy' : 'add_children';
-					ts_object.add_children(button_obj).then(function(response){
+					// set mode to button for add_child
+						button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1') ? 'add_child_from_hierarchy' : 'add_child';
+					ts_object.add_child(button_obj).then(function(response){
 						if(SHOW_DEBUG===true) {
 							//console.log("response:",response);
 						}
@@ -1006,7 +1006,7 @@ export const ts_object = new function() {
 						// falback
 							if (typeof data_obj.manager!=="undefined" && typeof data_obj.fallback!=="undefined") {
 
-							 	// set_new_thesaurus_value on finish add_children
+							 	// set_new_thesaurus_value on finish add_child
 							 		if (typeof window[data_obj.manager][data_obj.fallback]==="function") {
 										// call fallback
 							 				window[data_obj.manager][data_obj.fallback](response, data_obj, wrap_target)
@@ -1456,48 +1456,48 @@ export const ts_object = new function() {
 
 
 	/**
-	* ADD_CHILDREN
+	* ADD_CHILD
 	* @param object button_obj
 	*/
-	this.add_children = function(button_obj) {
+	this.add_child = function(button_obj) {
 
 		// wrap
 			const wrap = button_obj.parentNode.parentNode;
 			//const wrap = find_ancestor(button_obj, "wrap_ts_object")
 				if(!wrap || !wrap.classList.contains('wrap_ts_object')) {
-					console.log("[add_children] Error on find wrap");
+					console.log("[add_child] Error on find wrap");
 					return false
 				}
 
 		// children_element
 			const children_element = ts_object.get_link_children_from_wrap(wrap)
 				if(!children_element) {
-					console.log("[ts_object.add_children] Error on find children_element 'link_children'");
+					console.log("[ts_object.add_child] Error on find children_element 'link_children'");
 					return false
 				}
 
 		// tipo
 			const tipo = children_element.dataset.tipo
 				if (!tipo) {
-					console.log("[ts_object.add_children] Error on find tipo on children_element 'link_children'");
+					console.log("[ts_object.add_child] Error on find tipo on children_element 'link_children'");
 					return false
 				}
 
 		// mode
-			const mode = button_obj.dataset.mode || "add_children"
+			const mode = button_obj.dataset.mode || "add_child"
 
-		// target_section_tipo check on add_children_from_hierarchy mode
-			if (mode==="add_children_from_hierarchy") {
+		// target_section_tipo check on add_child_from_hierarchy mode
+			if (mode==="add_child_from_hierarchy") {
 				if (typeof wrap.dataset.target_section_tipo==='undefined') {
 					alert("Please, define a target_section_tipo in current hierarchy before add terms")
-					console.log("[ts_object.add_children] Error on find target_section_tipo dataset on wrap");
+					console.log("[ts_object.add_child] Error on find target_section_tipo dataset on wrap");
 					return false
 				}
 			}
 
 		// trigger_vars
 			const trigger_vars = {
-					mode 		 		: mode, // default is 'add_children',
+					mode 		 		: mode, // default is 'add_child',
 					section_id 			: wrap.dataset.section_id,
 					section_tipo 		: wrap.dataset.section_tipo,
 					node_type 			: wrap.dataset.node_type || null,
@@ -1510,13 +1510,13 @@ export const ts_object = new function() {
 		// Response is int new created section id
 		const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
 				if(SHOW_DEBUG===true) {
-					console.log("[ts_object.add_children] response",response)
+					console.log("[ts_object.add_child] response",response)
 				}
 
 				if (response===null) {
 
 					// Server script error
-						alert("Error on add_children. See server log for details");
+						alert("Error on add_child. See server log for details");
 
 				}else{
 
@@ -1530,7 +1530,7 @@ export const ts_object = new function() {
 							// Refresh children container
 							// ts_object.get_children(children_element).then(function(){
 							// 	// On children refresh is done, trigger edit button
-							// 	console.log("[ts_object.add_children] update_children_promise done");
+							// 	console.log("[ts_object.add_child] update_children_promise done");
 							// 	//console.log(response);
 							// 	// Open edit window
 							// 	let new_section_id = response.result
@@ -1551,44 +1551,44 @@ export const ts_object = new function() {
 			});
 
 		return js_promise
-	};//end add_children
+	};//end add_child
 
 
 
 	/**
-	* ADD_CHILDREN_FROM_HIERARCHY
+	* ADD_CHILD_FROM_HIERARCHY
 	* @return
 	*//*
-	this.add_children_from_hierarchy = function(button_obj) {
+	this.add_child_from_hierarchy = function(button_obj) {
 
 		const wrap = button_obj.parentNode.parentNode;
 			if(!wrap) {
-				return console.log("[ts_object.add_children_from_hierarchy] Error on find wrap");
+				return console.log("[ts_object.add_child_from_hierarchy] Error on find wrap");
 			}
 		//var children_element = wrap.querySelector('.list_thesaurus_element[data-type="link_children"]')
 		const children_element = ts_object.get_link_children_from_wrap(wrap)
 			if(!children_element) {
-				return console.log("[ts_object.add_children_from_hierarchy] Error on find children_element 'link_children'");
+				return console.log("[ts_object.add_child_from_hierarchy] Error on find children_element 'link_children'");
 			}
 		const tipo = children_element.dataset.tipo
 			if (!tipo) {
-				return console.log("[ts_object.add_children_from_hierarchy] Error on find tipo on children_element 'link_children'");
+				return console.log("[ts_object.add_child_from_hierarchy] Error on find tipo on children_element 'link_children'");
 			}
 
 			if (typeof wrap.dataset.target_section_tipo === 'undefined') {
 				alert("Please, define a target_section_tipo in current hierarchy before add terms")
-				return console.log("[ts_object.add_children_from_hierarchy] Error on find target_section_tipo dataset on wrap");
+				return console.log("[ts_object.add_child_from_hierarchy] Error on find target_section_tipo dataset on wrap");
 			}
 
 		const trigger_vars = {
-				mode 		 			: 'add_children_from_hierarchy',
+				mode 		 			: 'add_child_from_hierarchy',
 				section_id 				: wrap.dataset.section_id,
 				section_tipo 			: wrap.dataset.section_tipo,
 				node_type 				: wrap.dataset.node_type || null,
 				tipo	 				: tipo,
 				target_section_tipo 	: wrap.dataset.target_section_tipo
 			}
-			//return console.log("[ts_object.add_children_from_hierarchy] trigger_vars",trigger_vars);
+			//return console.log("[ts_object.add_child_from_hierarchy] trigger_vars",trigger_vars);
 
 		// JSON GET CALL
 		const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
@@ -1596,7 +1596,7 @@ export const ts_object = new function() {
 					if (response) {
 						response.trigger_vars = trigger_vars
 					}
-					console.log("[ts_object.add_children_from_hierarchy] response", response);
+					console.log("[ts_object.add_child_from_hierarchy] response", response);
 				}
 
 				// Refresh children container
@@ -1604,7 +1604,7 @@ export const ts_object = new function() {
 
 					// On children refresh is done, trigger edit button
 					update_children_promise.then(function() {
-						//console.log("[ts_object.add_children_from_hierarchy] update_children_promise done.");
+						//console.log("[ts_object.add_child_from_hierarchy] update_children_promise done.");
 						//console.log(response);
 
 						// Open edit window
@@ -1613,11 +1613,11 @@ export const ts_object = new function() {
 					})
 
 			}, function(error) {
-				console.error("[ts_object.add_children_from_hierarchy] Failed get_json!", error);
+				console.error("[ts_object.add_child_from_hierarchy] Failed get_json!", error);
 			});
 
 		return js_promise
-	};//end add_children_from_hierarchy
+	};//end add_child_from_hierarchy
 	*/
 
 

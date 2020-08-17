@@ -444,7 +444,7 @@ const item_hierarchy = async (options) => {
 
 					const api_response = await current_data_manager.request({
 						body : {
-							action 		: 'ontology_get_childrens_recursive',
+							action 		: 'ontology_get_children_recursive',
 							target_tipo : item.tipo
 						}
 					})
