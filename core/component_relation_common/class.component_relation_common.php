@@ -1290,10 +1290,13 @@ class component_relation_common extends component_common {
 				$get_json_options = new stdClass();
 					$get_json_options->get_context 	= true;
 					$get_json_options->context_type = 'simple';
-					$get_json_options->get_data 	= true;
+					$get_json_options->get_data 	= true;				
+
+				$json_data = $current_component->get_json($get_json_options);
+
 				$filter_list = new stdClass();
-					$filter_list->context = $current_component->get_json($get_json_options)->context[0];
-					$filter_list->datalist =$current_component->get_json($get_json_options)->data[0]->datalist;
+					$filter_list->context	= $json_data->context[0];
+					$filter_list->datalist	= $json_data->data[0]->datalist ?? [];
 				$filter_list_data[] = $filter_list;
 		}
 
