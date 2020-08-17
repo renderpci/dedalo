@@ -89,7 +89,7 @@
 
 			// subcontext data from layout_map items
 				$ar_subdata = $this->get_ar_subdata($value);
-
+			
 			// subdata add
 				foreach ($ar_subdata as $current_data) {
 

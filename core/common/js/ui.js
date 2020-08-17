@@ -110,6 +110,7 @@ export const ui = {
 			const type			= instance.type 	// like 'component'
 			const tipo			= instance.tipo 	// like 'rsc26'
 			const mode			= instance.mode 	// like 'edit'
+			const view			= instance.view || null
 			const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
 			const component_css	= instance.context.css || {}
 
@@ -196,7 +197,8 @@ export const ui = {
  				})
  				// css
 	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
-					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
+					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
+					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
 				// event click activate component

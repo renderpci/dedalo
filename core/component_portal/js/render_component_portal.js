@@ -10,6 +10,8 @@
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 
+	import {view_autocomplete} from './view_autocomplete.js'
+
 
 
 /**
@@ -76,33 +78,50 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 	// render_level
 		const render_level = options.render_level
 
-	// reset service state portal_active
-		self.portal_active = false
+	self.view = null // 'view_autocomplete'
 
-	// content_data
-		const content_data = await get_content_data_edit(self)
-		if (render_level==='content') {
-			return content_data
-		}
+	const view = self.view || null
 
-	// buttons
-		const buttons = get_buttons(self)
+	let wrapper
+	switch(view) {
 
-	// top
-		// const top = get_top(self)
+		case 'view_autocomplete99':
+			wrapper = view_autocomplete(self, options)
+			// return wrapper;
+			break;
 
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper =	ui.component.build_wrapper_edit(self, {
-			content_data	: content_data,
-			buttons			: buttons
-			// top			: top
-		})
+		default:
+			// reset service state portal_active
+				// self.portal_active = false
 
-	// events
-		add_events(self, wrapper)
+			// content_data
+				const content_data = await get_content_data_edit(self)
+				if (render_level==='content') {
+					return content_data
+				}
 
+			// buttons
+				const buttons = get_buttons(self)
 
-	return wrapper
+			// top
+				// const top = get_top(self)
+
+			// wrapper. ui build_edit returns component wrapper
+				wrapper =	ui.component.build_wrapper_edit(self, {
+					content_data	: content_data,
+					buttons			: buttons
+					// top			: top
+				})
+				wrapper.classList.add("portal")
+
+			// events
+				add_events(self, wrapper)
+			break;
+	}
+
+	const js_promise = wrapper
+
+	return js_promise
 };//end  edit
 
 
@@ -187,13 +206,6 @@ const add_events = function(self, wrapper) {
 					})
 					changed.then(async (api_response)=>{
 
-						// service destroy. change the portal service to false and desactive it.
-							if(self.portal_active===true){
-								const destroyed = self.portal.destroy()
-								self.portal_active = false
-								self.portal 		 = null
-							}
-
 						// update pagination offset
 							self.update_pagination_values('remove')
 
@@ -210,7 +222,7 @@ const add_events = function(self, wrapper) {
 
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
-					console.log("self.context.request_config", self.context.request_config);
+					
 					// set dd_request
 						self.dd_request.search 	= self.dd_request.search || self.build_dd_request('search', self.context.request_config, 'search')
 						self.dd_request.select 	= self.dd_request.select || self.build_dd_request('select', self.context.request_config, 'get_data')
@@ -704,7 +716,7 @@ const input_element = async function(current_section_record, inputs_container){
 
 /**
 * RENDER_REFERENCES
-* @return
+* @return DOM node fragment
 */
 const render_references = function(ar_references) {
 
@@ -713,8 +725,15 @@ const render_references = function(ar_references) {
 	// ul
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
-			inner_html 		: get_label.references,
+			class_name		: 'references',
 			parent			: fragment
+		})
+
+	// references label
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html 		: get_label.references,
+			parent			: ul
 		})
 
 	const ref_length = ar_references.length
@@ -733,7 +752,8 @@ const render_references = function(ar_references) {
 					class_name		: 'button link',
 					parent			: li
 				})
-				button_link.addEventListener("click", function(){
+				button_link.addEventListener("click", function(e){
+					e.stopPropagation()
 					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
 					// window.open(url,'ref_edit')
 				})
