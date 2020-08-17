@@ -201,7 +201,8 @@ class component_relation_related extends component_relation_common {
 				$references = [];
 				break;
 		}
-		// return the locators without label, used by merge with the real data of the component ($dato_full or get_dato_with_references())
+		// return the locators without label,
+		// used by merge with the real data of the component ($dato_full or get_dato_with_references())
 		if($only_data===true){
 			return $references;
 		}
@@ -311,7 +312,7 @@ class component_relation_related extends component_relation_common {
 
 				# References to dato
 				# Recursion (dato)
-				$ar_result		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true, $lang);
+				$ar_result		= self::get_references_recursive($tipo, $dato_locator, $type_rel, true, $lang);
 				$ar_references	= array_merge($ar_references, $ar_result);
 			}
 
