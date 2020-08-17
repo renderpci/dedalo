@@ -1560,7 +1560,7 @@ abstract class common {
 				$layout_map_options->modo					= $records_mode;
 				$layout_map_options->request_config_type	= 'show';
 
-			$layout_map = layout_map::get_layout_map($layout_map_options); 	
+			$layout_map = layout_map::get_layout_map($layout_map_options);
 				// dump($layout_map, ' layout_map ++ '.$this->tipo." ".to_string() );
 				// dump(debug_backtrace()[3], 'debug_backtrace()[3] ++ '.to_string());
 			if(!empty($layout_map)) foreach($layout_map as $dd_object) {
@@ -1650,7 +1650,7 @@ abstract class common {
 				$json_options->get_context	= true;
 				$json_options->get_data		= false;
 			$context = $this->get_json($json_options)->context;
-	
+
 		// source
 			$source_tipo = $this->get_tipo();
 			$source = array_find($context, function($item) use($source_tipo) {
@@ -2222,7 +2222,7 @@ abstract class common {
 
 				// section_tipo. get the ar_sections
 					if (isset($item_request_config->section_tipo)){
-						$parsed_item->section_tipo = component_relation_common::get_request_config_section_tipo($item_request_config->section_tipo, $section_tipo);
+						$parsed_item->section_tipo = component_relation_common::get_request_config_section_tipo($item_request_config->section_tipo, $section_tipo, $section_id);
 					}
 
 				// search_engine
