@@ -5,9 +5,9 @@
 *
 */
 class component_relation_children extends component_relation_common {
-	
-	
-	
+
+
+
 	// relation_type
 	protected $relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
@@ -25,13 +25,13 @@ class component_relation_children extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
-		
+
 		$dato = $this->get_dato();
 		if (empty($dato)) {
 			return null;
 		}
 
-		$ar_valor = array();		
+		$ar_valor = array();
 		foreach ((array)$dato as $key => $current_locator) {
 			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
 		}
@@ -44,73 +44,19 @@ class component_relation_children extends component_relation_common {
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
 		}
-		
+
 
 		return (string)$valor;
 	}//end get_valor
 
 
-
 	/**
-	* GET_AR_TARGET_SECTION_TIPO
-	* Select source section/s
-	* Overrides component common method
-	*/
-	public function get_ar_target_section_tipo() {
-
-		if (!$this->tipo) return null;
-
-		if(isset($this->ar_target_section_tipo)) {
-			return $this->ar_target_section_tipo;
-		}
-
-		$target_mode = isset($this->properties->target_mode) ? $this->properties->target_mode : null;
-		switch ($target_mode) {
-
-			case 'hierarchy_root_values':
-				# Resolve DEDALO_HIERARCHY_TLD2_TIPO data
-				$target_values = (array)$this->properties->target_values;
-				foreach ((array)$target_values as $key => $current_component_tipo) {
-					$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-					$component 		 = component_common::get_instance($modelo_name,
-																	  $current_component_tipo,
-																	  $this->parent,
-																	  $modo='edit',
-																	  $lang=DEDALO_DATA_LANG,
-																	  $this->section_tipo);
-					$valor = $component->get_valor(DEDALO_DATA_LANG);
-					$ar_target_section_tipo[] = strtolower($valor).'1'; // Like 'es1'
-				}
-				break;
-
-			case 'free':
-				# target_values are directly the target section tipo
-				$target_values = (array)$this->properties->target_values;
-				$ar_target_section_tipo = $target_values;
-				break;
-
-			default:
-				# Default is self section
-				$ar_target_section_tipo = array($this->section_tipo);
-				break;
-		}
-
-		# Fix value
-		$this->ar_target_section_tipo = $ar_target_section_tipo;
-		
-
-		return (array)$ar_target_section_tipo;
-	}//end get_ar_target_section_tipo
-
-
-
-	/**
-	* MAKE_ME_YOUR_CHILDREN
+	* MAKE_ME_YOUR_CHILD
 	* Add one locator to current 'dato' from parent side
 	* NOTE: This method updates component 'dato' and save
 	* @return bool
 	*/
-	public function make_me_your_children( $section_tipo, $section_id ) {
+	public function make_me_your_child( $section_tipo, $section_id ) {
 
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
@@ -119,20 +65,20 @@ class component_relation_children extends component_relation_common {
 			$locator->set_from_component_tipo($this->tipo);
 
 		# Add children locator
-		if (!$add_children = $this->add_children($locator)) {
+		if (!$add_child = $this->add_child($locator)) {
 			return false;
 		}
 
 		return true;
-	}//end make_me_your_children
+	}//end make_me_your_child
 
 
 
 	/**
-	* REMOVE_ME_AS_YOUR_CHILDREN
+	* REMOVE_ME_AS_YOUR_CHILD
 	* @return bool
 	*/
-	public function remove_me_as_your_children( $section_tipo, $section_id ) {
+	public function remove_me_as_your_child( $section_tipo, $section_id ) {
 
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
@@ -140,23 +86,23 @@ class component_relation_children extends component_relation_common {
 			$locator->set_type($this->relation_type);
 			$locator->set_from_component_tipo($this->tipo);
 
-		# Remove children locator
-		if (!$remove_children = $this->remove_children($locator)) {
+		# Remove child locator
+		if (!$remove_child = $this->remove_child($locator)) {
 			return false;
 		}
 
 		return true;
-	}//end remove_me_as_your_children
+	}//end remove_me_as_your_child
 
 
 
 	/**
-	* ADD_CHILDREN
+	* ADD_CHILD
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
 	* NOTE: This method updates component 'dato' and save
 	* @return bool
 	*/
-	public function add_children( $locator ) {
+	public function add_child( $locator ) {
 
 		if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->parent) {
 			return false; // Avoid autoreferences
@@ -173,17 +119,17 @@ class component_relation_children extends component_relation_common {
 		}
 
 		return true;
-	}//end add_children
+	}//end add_child
 
 
 
 	/**
-	* REMOVE_CHILDREN
+	* REMOVE_CHILD
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
 	* NOTE: This method updates component 'dato'
 	* @return bool
 	*/
-	public function remove_children( $locator ) {
+	public function remove_child( $locator ) {
 
 		# Add current locator to component dato
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
@@ -191,15 +137,15 @@ class component_relation_children extends component_relation_common {
 		}
 
 		return true;
-	}//end remove_children
+	}//end remove_child
 
 
 
 	/**
-	* GET_CHILDRENS
-	* @return array $ar_childrens_recursive
+	* GET_CHILDREN
+	* @return array $ar_children_recursive
 	*/
-	public static function get_childrens($section_id, $section_tipo, $component_tipo=null, bool $recursive=true, $is_recursion=false) {
+	public static function get_children($section_id, $section_tipo, $component_tipo=null, bool $recursive=true, $is_recursion=false) {
 
 		static $locators_resolved = array();
 
@@ -208,7 +154,7 @@ class component_relation_children extends component_relation_common {
 				$locators_resolved = [];
 			}
 
-		$ar_childrens_recursive = [];
+		$ar_children_recursive = [];
 
 		# Infinite loops prevention
 		$pseudo_locator = $section_id .'_'. $section_tipo;
@@ -239,26 +185,26 @@ class component_relation_children extends component_relation_common {
 
 		if ($recursive!==true) {
 
-			$ar_childrens_recursive = $dato;
+			$ar_children_recursive = $dato;
 
 		}else{
 
 			if (!empty($dato)) {
 
-				$ar_childrens_recursive = array_merge($ar_childrens_recursive, $dato);
+				$ar_children_recursive = array_merge($ar_children_recursive, $dato);
 
 				# Set as resolved to avoid loops
 				$locators_resolved[] = $section_id .'_'. $section_tipo;
 
 				foreach ((array)$dato as $key => $current_locator) {
-					$ar_childrens_recursive = array_merge($ar_childrens_recursive, self::get_childrens($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive, $is_recursion=true));
+					$ar_children_recursive = array_merge($ar_children_recursive, self::get_children($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive, $is_recursion=true));
 				}
 			}
 		}
 
 
-		return $ar_childrens_recursive;
-	}//end get_childrens
+		return $ar_children_recursive;
+	}//end get_children
 
 
 

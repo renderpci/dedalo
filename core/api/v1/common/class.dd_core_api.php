@@ -733,7 +733,7 @@ class dd_core_api {
 	* ONTOLOGY_GET_AREAS
 	* @return object $response
 	*/
-	static function ontology_get_childrens_recursive($json_data){
+	static function ontology_get_children_recursive($json_data){
 		global $start_time;
 
 		// session_write_close();
@@ -744,7 +744,7 @@ class dd_core_api {
 
 			$target_tipo = $json_data->target_tipo;
 
-			$childrens = ontology::get_childrens_recursive($target_tipo);
+			$childrens = ontology::get_children_recursive($target_tipo);
 
 		// Debug
 			if(SHOW_DEBUG===true) {

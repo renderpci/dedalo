@@ -124,10 +124,10 @@ function get_children_data($json_data) {
 
 
 /**
-* ADD_CHILDREN
+* ADD_CHILD
 * @return object $response
 */
-function add_children($json_data) {
+function add_child($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
@@ -150,8 +150,8 @@ function add_children($json_data) {
 		$new_section 	= section::get_instance(null,$section_tipo);
 		$new_section_id	= $new_section->Save();
 						if (empty($new_section_id)) {
-							#debug_log(__METHOD__." Error on create new section from parent. Stoped add_children process !".to_string(), logger::ERROR);
-							$response->msg 		= 'Error on create new section from parent. Stoped add_children process !';
+							#debug_log(__METHOD__." Error on create new section from parent. Stoped add_child process !".to_string(), logger::ERROR);
+							$response->msg 		= 'Error on create new section from parent. Stoped add_child process !';
 							return $response;
 						}
 
@@ -210,7 +210,7 @@ function add_children($json_data) {
 																	  $lang,
 																	  $section_tipo);
 	// add
-		$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $new_section_id );
+		$added = (bool)$component_relation_children->make_me_your_child( $section_tipo, $new_section_id );
 		if ($added===true) {
 
 			# Save relation children data
@@ -233,15 +233,15 @@ function add_children($json_data) {
 
 
 	return (object)$response;
-}//end add_children
+}//end add_child
 
 
 
 /**
-* ADD_CHILDREN_FROM_HIERARCHY
+* add_child_FROM_HIERARCHY
 * @return object $response
 */
-function add_children_from_hierarchy($json_data) {
+function add_child_from_hierarchy($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
@@ -264,8 +264,8 @@ function add_children_from_hierarchy($json_data) {
 		$new_section 	= section::get_instance(null,$target_section_tipo);
 		$new_section_id	= $new_section->Save();
 						if (empty($new_section_id)) {
-							debug_log(__METHOD__." Error on create new section from parent. Stoped add_children process !".to_string(), logger::ERROR);
-							$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on create new section from parent. Stoped add_children process !';
+							debug_log(__METHOD__." Error on create new section from parent. Stoped add_child process !".to_string(), logger::ERROR);
+							$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on create new section from parent. Stoped add_child process !';
 							return $response;
 						}
 	// section map
@@ -317,7 +317,7 @@ function add_children_from_hierarchy($json_data) {
 																	  $section_tipo);
 
 	// add
-		$added = (bool)$component_relation_children->make_me_your_children( $target_section_tipo, $new_section_id );
+		$added = (bool)$component_relation_children->make_me_your_child( $target_section_tipo, $new_section_id );
 		if ($added===true) {
 			$component_relation_children->Save();
 
@@ -338,7 +338,7 @@ function add_children_from_hierarchy($json_data) {
 		}
 
 	return (object)$response;
-}//end add_children_from_hierarchy
+}//end add_child_from_hierarchy
 
 
 
@@ -464,7 +464,7 @@ function update_parent_data($json_data) {
 																	  $lang,
 																	  $parent_section_tipo);
 
-		$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $section_id );
+		$added = (bool)$component_relation_children->make_me_your_child( $section_tipo, $section_id );
 		if ($added===true) {
 
 			$component_relation_children->Save();
@@ -629,5 +629,3 @@ public function link_term($json_data) {
 		$locator->set_section_id($section_id);
 }//end link_term
 */
-
-
