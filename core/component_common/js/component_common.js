@@ -438,7 +438,7 @@ component_common.prototype.update_datum = function(new_data) {
 	// new_data
 		const new_data_length = new_data.length
 			// console.log("update_datum --------------------------- new_data:",JSON.parse(JSON.stringify(new_data)) );
-			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
+			console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 			// console.trace();
 
 	// datum (global shared with section)
