@@ -1034,9 +1034,9 @@ class component_relation_common extends component_common {
 			$ar_component_to_search 	= $properties->source->component_to_search;
 
 		// current section tipo/id
-			$section_id 	= $this->get_parent();
+			$section_id 	= $this->get_section_id();
 			$section_tipo 	= $this->get_section_tipo();
-
+			dump($section_id, ' $section_id +************************------*******************+ '.to_string());
 		// data source overwrite (tool cataloging case)
 			if (isset($properties->source->source_overwrite) && isset($properties->source->component_to_search)) {
 				// overwrite source locator
@@ -1112,8 +1112,9 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 			$new_dato[] = $locator;
+			dump($new_dato, ' $new_dato +----------///////------------+ '.to_string());
+			$ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 
-			$ar_result 		 = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 			$total_ar_result = count($ar_result);
 			$total_ar_dato   = count($dato);
 
@@ -1157,10 +1158,19 @@ class component_relation_common extends component_common {
 		// changed true
 			if ($changed===true) {
 				$dato = array_values($dato);
-				$this->set_dato($dato);
-				if ($save===true) {
-					$this->Save();
-					debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+				foreach ($new_dato as $current_section) {
+					$component_to_update = component_common::get_instance(get_called_class(),
+																		$this->tipo,
+																		$current_section->section_id,
+																		'list',
+																		DEDALO_DATA_NOLAN,
+																		$current_section->section_tipo,
+																		false);
+					$component_to_update->set_dato($dato);
+					if ($save===true) {
+						$component_to_update->Save();
+						debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+					}
 				}
 			}
 
