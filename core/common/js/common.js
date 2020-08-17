@@ -200,7 +200,6 @@ common.prototype.refresh = async function () {
 	const self = this
 
 	// offset update
-
 		if (self.dd_request.show && typeof self.pagination!=="undefined") {
 			const sqo = self.dd_request.show.find(element => element.typo==='sqo')
 			if (sqo) {
@@ -231,7 +230,7 @@ common.prototype.refresh = async function () {
 
 	// render
 		if (self.status==='builded') {
-			await self.render({render_level : 'content'})
+			await self.render({render_level : 'content'})		
 		}else{
 			console.warn("/// render fail with status:", self.model, self.status);
 			return false
@@ -969,18 +968,23 @@ export const load_data_debug = async function(self, load_data_promise, dd_reques
 		return false
 	}
 
+	if (self.model!=="section" && self.model!=="area" && self.model.indexOf("area_")===-1) {
+		return false
+	}
+
 	const response		= await load_data_promise
 	const dd_request	= self.dd_request
 
-	console.log("----> request dd_request_show_original:",dd_request_show_original);
+	console.log("----> load_data_debug request dd_request_show_original "+self.model +" "+self.tipo+ ":", dd_request_show_original);
+	// console.trace()
 
 	// load_data_promise
 	if (response.result===false) {
 		console.error("API EXCEPTION:",response.msg);
 	}
 	console.log("["+self.model+".load_data_debug] response:",response, " TIME: "+response.debug.exec_time)
-	console.log("["+self.model+".load_data_debug] context:",response.result.context)
-	console.log("["+self.model+".load_data_debug] data:",response.result.data)
+	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
+	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
 
 	const debug = document.getElementById("debug")
 	// debug.classList.add("hide")

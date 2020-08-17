@@ -153,7 +153,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
-
+	
 	// debug
 		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
 
@@ -164,7 +164,7 @@ section.prototype.build = async function(autoload=false) {
 			// get context and data
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.read(self.dd_request.show)
-					console.log("///// api_response:",api_response);
+					console.log("///// section autoload=true api_response:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
