@@ -137,12 +137,27 @@ component_portal.prototype.build  = async function(autoload=false){
 		self.status = 'building'
 
 	// self.datum. On building, if datum is not created, creation is needed
-		if (!self.datum) self.datum = {data:[],context:[]}
+		if (!self.datum) self.datum = {data:[],context:[]}				
 
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
 
-		console.log("self.context.request_config", self.context.request_config);
+		
+
+	// debug check
+		if(SHOW_DEBUG===true) {	
+			// console.log("-- component_portal.prototype.build self.context.request_config", self.context.request_config);
+			// console.log("/// update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
+			const ar_used = []
+			for(const element of self.datum.data) {
+				const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo)
+				if (index!==-1) {
+					console.error("ERROR. self.datum.data contains duplicated elements:", self.datum.data);
+				}else{
+					ar_used.push(element)
+				}
+			}
+		}
 
 	// load data if not yet received as an option
 		if (autoload===true) {
@@ -225,6 +240,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// debug
 		if(SHOW_DEBUG===true) {
+			console.log("/// component_portal build self.datum.data:",self.datum.data);
 			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			// console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
