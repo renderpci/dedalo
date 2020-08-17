@@ -55,11 +55,19 @@
 
 		switch ($modo) {
 			case 'list':
+				# Custom propiedades external dato
+				if(isset($properties->source->mode) && $properties->source->mode==='external') {
+					// $this->set_dato_external(true);	// Forces update dato with calculated external dato
+				}
 				$dato	= $this->get_dato();
 				$value	= $this->get_dato_paginated();
 				break;
 			case 'edit':
 			default:
+				# Custom propiedades external dato
+				if(isset($properties->source->mode) && $properties->source->mode==='external') {
+					// $this->set_dato_external(true);	// Forces update dato with calculated external dato
+				}
 				$dato	= $this->get_dato();
 				$value	= $this->get_dato_paginated();
 				break;

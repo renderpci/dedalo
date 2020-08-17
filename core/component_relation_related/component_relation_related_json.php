@@ -45,8 +45,9 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-
+		// get the data into DDBB
 		$dato 		= $this->get_dato();
+		// get the references calculated by relations with other sections
 		$references = $this->get_calculated_references();
 
 			$value		= $this->get_dato_paginated();
@@ -83,7 +84,6 @@
 			$item->references = $references;
 		}
 
-		dump($item, ' $item +---------------+ '.to_string());
 		$data[] = $item;
 	}//end if $options->get_data===true && $permissions>0
 

@@ -171,8 +171,8 @@ class component_relation_related extends component_relation_common {
 	public function get_dato_with_references() {
 
 		$dato 		= $this->get_dato();
-		$references = $this->get_calculated_references();
 
+		$references = $this->get_calculated_references(true);
 		$dato_with_references = array_merge($dato, $references);
 
 		return $dato_with_references;
@@ -185,7 +185,7 @@ class component_relation_related extends component_relation_common {
 	* used for get the references, this function call the the get_references that make the recursive loop of the calculation
 	* @return
 	*/
-	public function get_calculated_references() {
+	public function get_calculated_references($only_data=false) {
 
 		switch ($this->relation_type_rel) {
 			case DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO:
@@ -194,13 +194,19 @@ class component_relation_related extends component_relation_common {
 					$current_locator->section_tipo 			= $this->section_tipo;
 					$current_locator->section_id 			= $this->section_id;
 					$current_locator->from_component_tipo 	= $this->tipo;
-				$references = component_relation_related::get_references_recursive($this->tipo, $current_locator, $show, $this->relation_type_rel, false, $this->lang );
+				$references = component_relation_related::get_references_recursive($this->tipo, $current_locator, $this->relation_type_rel, false, $this->lang );
 				break;
 			case DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO:
 			default:
 				$references = [];
 				break;
 		}
+		// return the locators without label,
+		// used by merge with the real data of the component ($dato_full or get_dato_with_references())
+		if($only_data===true){
+			return $references;
+		}
+
 
 		// get the request_config of the componet to get the show object, it will use to format the label of the reference.
 		$request_config = $this->get_request_query_object();
@@ -245,7 +251,7 @@ class component_relation_related extends component_relation_common {
 	# 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	* @return array $ar_references
 	*/
-	public static function get_references_recursive($tipo, $locator, $show, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang=DEDALO_DATA_LANG) {
+	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang=DEDALO_DATA_LANG) {
 
 		static $ar_resolved = array();
 
@@ -306,14 +312,14 @@ class component_relation_related extends component_relation_common {
 
 				# References to dato
 				# Recursion (dato)
-				$ar_result		= self::get_references_recursive($tipo, $dato_locator, $show, $type_rel , true, $lang);
+				$ar_result		= self::get_references_recursive($tipo, $dato_locator, $type_rel, true, $lang);
 				$ar_references	= array_merge($ar_references, $ar_result);
 			}
 
 			# References to references
 			foreach ($ar_references as $key => $current_locator) {
 				# Recursion (references)
-				$ar_result		= self::get_references_recursive($tipo, $current_locator, $show, $type_rel, true, $lang);
+				$ar_result		= self::get_references_recursive($tipo, $current_locator, $type_rel, true, $lang);
 				$ar_references	= array_merge($ar_references, $ar_result);
 			}
 			#dump($ar_resolved, ' ar_resolved ++ '.to_string());
