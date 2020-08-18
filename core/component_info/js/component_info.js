@@ -57,6 +57,7 @@ export const component_info = function(){
 	// component_info.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_info.prototype.mini					= render_component_info.prototype.mini
 	component_info.prototype.list					= render_component_info.prototype.list
 	component_info.prototype.edit					= render_component_info.prototype.edit
 	// component_info.prototype.edit_in_list		= render_component_info.prototype.edit
