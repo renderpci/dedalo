@@ -19,6 +19,35 @@ export const render_component_password = function() {
 };//end render_component_password
 
 
+/**
+* LIST
+* Render node to be used by service autocomplete or any datali
+* It shouldn't be use but just in case someone added it to a list the page would work properly
+* @return DOM node
+*/
+render_component_password.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = value
+
+	// Set value
+		wrapper.textContent = value_string
+		wrapper.type = 'password'
+
+
+	return wrapper
+};//end mini
+
 
 /**
 * LIST
