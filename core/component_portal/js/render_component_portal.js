@@ -24,6 +24,30 @@ export const render_component_portal = function() {
 };//end  render_component_portal
 
 
+/**
+* MINI
+* Render node for use in list
+* @return DOM node wrapper
+*/
+render_component_portal.prototype.mini = async function() {
+
+	const self = this
+
+	const ar_section_record = await self.get_ar_instances()
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// add all nodes
+		const length = ar_section_record.length
+		for (let i = 0; i < length; i++) {
+			const child_item = await ar_section_record[i].render()
+			wrapper.appendChild(child_item)
+		}
+
+	return wrapper
+};//end  mini
+
 
 /**
 * LIST
@@ -222,7 +246,7 @@ const add_events = function(self, wrapper) {
 
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
-					
+
 					// set dd_request
 						self.dd_request.search 	= self.dd_request.search || self.build_dd_request('search', self.context.request_config, 'search')
 						self.dd_request.select 	= self.dd_request.select || self.build_dd_request('select', self.context.request_config, 'get_data')
