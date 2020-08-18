@@ -48,6 +48,7 @@ export const component_number = function(){
 	component_number.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
+	component_number.prototype.mini					= render_component_number.prototype.mini
 	component_number.prototype.list					= render_component_number.prototype.list
 	component_number.prototype.edit					= render_component_number.prototype.edit
 	component_number.prototype.edit_in_list			= render_component_number.prototype.edit
