@@ -310,6 +310,25 @@ export const ui = {
 		},//end build_wrapper_list
 
 
+		build_wrapper_mini : (instance) => {
+			// if(SHOW_DEBUG===true) {
+			// 	//console.log("[ui.build_wrapper_mini] instance:",instance)
+			// }
+			// const model			= instance.model 	// like component_input-text
+			// const type			= instance.type 	// like 'component'
+			// const tipo			= instance.tipo 	// like 'rsc26'
+			// const mode			= instance.mode 	// like 'edit'
+
+			// wrapper
+				const wrapper = ui.create_dom_element({
+					element_type	: 'span',
+					// class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+ 				})
+
+			return wrapper
+		},//end build_wrapper_mini
+
+
 
 		/**
 		* ACTIVE

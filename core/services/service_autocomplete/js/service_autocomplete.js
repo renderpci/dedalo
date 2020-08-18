@@ -6,6 +6,7 @@
 // imports
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {ui} from '../../../common/js/ui.js'
+	import * as instances from '../../../common/js/instances.js'
 
 
 
@@ -356,7 +357,7 @@ export const service_autocomplete = function() {
 
 						ar_id.push(id) // add to global array of id
 					}
-					const filter_id		= "filter_by_list_" + component_tipo + "_" + i					
+					const filter_id		= "filter_by_list_" + component_tipo + "_" + i
 					const filter_node	= self.build_filter(filter_items, filter_label,  filter_id)
 					filters_container.appendChild(filter_node)
 				}
@@ -655,7 +656,7 @@ export const service_autocomplete = function() {
 	* AUTOCOMPLETE_BUILD_OPTIONS
 	* @return
 	*/
-	this.render_datalist = function(api_response) {
+	this.render_datalist = async function(api_response) {
 
 		const self = this
 
@@ -668,6 +669,7 @@ export const service_autocomplete = function() {
 		// get the result from the api response
 		const result	= api_response.result
 		const data		= result.data
+		const context 	= result.context
 		// get the sections that was searched
 		// const ar_search_sections = self.ar_search_section_tipo
 
@@ -683,7 +685,7 @@ export const service_autocomplete = function() {
 
 			// get data that mach with the current section from the global data sended by the api
 			// get the full row with all items in the ddo that mach with the section_id
-			const current_row = data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
+			const current_row 			= data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
 			// get dd objects from the context that will be used to build the lists in correct order
 			const select = self.instance_caller.dd_request.select || self.instance_caller.dd_request.show
 
@@ -692,7 +694,7 @@ export const service_autocomplete = function() {
 				? select_divisor.value
 				: ' - '
 			// const current_ddo = self.dd_request.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
-			const current_ddo = select.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
+			const current_ddo = select.filter((item) => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
 
 			// create the li node container
 			const li_node = ui.create_dom_element({
@@ -713,19 +715,40 @@ export const service_autocomplete = function() {
 				for(const ddo_item of current_ddo){
 
 					// value_element
-						const current_value_element = current_row.find((item)=> item.tipo===ddo_item.tipo)
-						if (typeof current_value_element==="undefined") {
+						const current_element_context = context.find((item)=> item.tipo===ddo_item.tipo)
+						const current_element_data = current_row.find((item)=> item.tipo===ddo_item.tipo)
+
+						const options = {
+							context 		: current_element_context,
+							data 			: current_element_data,
+							datum 			: {data : data, context: context},
+							tipo 			: current_element_context.tipo,
+							section_tipo 	: current_element_context.section_tipo,
+							model 			: current_element_context.model,
+							section_id 		: current_element_data.section_id,
+							mode 			: 'mini',
+							lang 			: current_element_context.lang,
+							id_variant 		: self.id
+						}
+
+						const current_instance = await instances.get_instance(options)
+
+						//const current_instance.build()
+						const node = await current_instance.render()
+						li_node.appendChild(node)
+
+						if (typeof current_element_data==="undefined") {
 							console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
 							continue
 						}
 
 					// span node
-						const current_value = current_value_element.value
-						ui.create_dom_element({
-							element_type	: 'span',
-							inner_html		: current_value,
-							parent			: li_node
-						})// end create dom node
+						// const current_value = current_value_element.value
+						// ui.create_dom_element({
+						// 	element_type	: 'span',
+						// 	inner_html		: current_value,
+						// 	parent			: li_node
+						// })// end create dom node
 
 				}//end for ddo_item
 
