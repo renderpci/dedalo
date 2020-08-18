@@ -47,6 +47,7 @@ export const component_radio_button = function(){
 	component_radio_button.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_radio_button.prototype.mini				= render_component_radio_button.prototype.mini
 	component_radio_button.prototype.list				= render_component_radio_button.prototype.list
 	component_radio_button.prototype.edit				= render_component_radio_button.prototype.edit
 	component_radio_button.prototype.edit_in_list		= render_component_radio_button.prototype.edit
