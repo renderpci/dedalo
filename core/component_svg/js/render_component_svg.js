@@ -16,8 +16,45 @@
 export const render_component_svg = function(component) {
 
 	return true
-}//end render_component_svg
+};//end render_component_svg
 
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_svg.prototype.mini = function(options) {
+
+	const self = this
+
+	// value
+		const value	= self.data.value || []
+
+	const fragment = new DocumentFragment()
+
+	// svg elements
+		const value_length = value.length
+		for (let i = 0; i < value_length; i++) {
+
+			const item_value = value[i]
+			const url 		 = item_value.url
+
+			const image = ui.create_dom_element({
+				element_type	: "img",
+				src 			: url,
+				parent 			: fragment
+			})
+			fragment.appendChild(image)
+		}
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self})
+		wrapper.appendChild(fragment)
+
+	return wrapper
+};//end mini
 
 
 /**
@@ -58,7 +95,7 @@ render_component_svg.prototype.list = function(options) {
 		wrapper.appendChild(fragment)
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -91,7 +128,7 @@ render_component_svg.prototype.edit = async function(options={render_level:'full
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -129,7 +166,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 /**
@@ -155,7 +192,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -168,7 +205,7 @@ const get_svg_element = function(item_value) {
 	const url = (typeof item_value==="undefined")
 		? DEDALO_CORE_URL + "/themes/icons/dedalo_icon_grey.svg"
 		: item_value.url
-	
+
 	// li
 		const li = ui.create_dom_element({
 			element_type : 'li'
@@ -187,6 +224,4 @@ const get_svg_element = function(item_value) {
 
 
 	return li
-}//end get_svg_element
-
-
+};//end get_svg_element
