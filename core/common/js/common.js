@@ -59,7 +59,7 @@ common.prototype.render = async function (options={render_level:'full'}) {
 	const self = this
 
 	const render_level 	= options.render_level || 'full'
-	const render_mode 	= self.mode
+	let render_mode 	= self.mode
 
 	// status update
 		self.status = 'rendering'
@@ -75,8 +75,9 @@ common.prototype.render = async function (options={render_level:'full'}) {
 
 	// render node. Method name is element node like 'edit' or 'list'
 		if (typeof self[render_mode]!=='function') {
-			console.warn(`Invalid function (render_mode: ${render_mode} ) ` +
+			console.warn(`Invalid function (render_mode: ${render_mode} ) using fallbact to LIST mode on ` +
 						 'instance: ', self);
+			render_mode = 'list'
 		}
 		const node = await self[render_mode]({
 			render_level : render_level
