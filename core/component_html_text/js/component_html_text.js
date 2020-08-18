@@ -53,6 +53,7 @@ export const component_html_text = function(){
 	component_html_text.prototype.change_value 		= component_common.prototype.change_value
 
 	// render
+	component_html_text.prototype.mini 				= render_component_html_text.prototype.mini
 	component_html_text.prototype.list 				= render_component_html_text.prototype.list
 	component_html_text.prototype.edit 				= render_component_html_text.prototype.edit
 	component_html_text.prototype.edit_in_list		= render_component_html_text.prototype.edit
