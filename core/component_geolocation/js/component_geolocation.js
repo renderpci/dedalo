@@ -58,6 +58,7 @@ export const component_geolocation = function(){
 	component_geolocation.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_geolocation.prototype.mini				= render_component_geolocation.prototype.mini
 	component_geolocation.prototype.list				= render_component_geolocation.prototype.list
 	component_geolocation.prototype.edit				= render_component_geolocation.prototype.edit
 	component_geolocation.prototype.edit_in_list		= render_component_geolocation.prototype.edit

@@ -19,6 +19,34 @@ export const render_component_geolocation = function() {
 };//end render_component_geolocation
 
 
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_geolocation.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = value.join(' | ')
+
+	// Set value
+		wrapper.textContent = value_string
+
+
+	return wrapper
+};//end mini
+
+
 
 /**
 * LIST
@@ -467,7 +495,7 @@ const get_input_element_edit = (i, current_value, ul_container, self, is_inside_
 		event_manager.when_in_dom(map_container, draw_map)
 		function draw_map() {
 			self.get_map(map_container, current_value)
-		}		
+		}
 
 	return li
 };//end get_input_element_edit
