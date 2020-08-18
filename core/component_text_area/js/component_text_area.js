@@ -57,6 +57,7 @@ export const component_text_area = function(){
 	component_text_area.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_text_area.prototype.mini				= render_component_text_area.prototype.mini
 	component_text_area.prototype.list				= render_component_text_area.prototype.list
 	component_text_area.prototype.edit				= render_component_text_area.prototype.edit
 	component_text_area.prototype.edit_in_list		= render_component_text_area.prototype.edit
