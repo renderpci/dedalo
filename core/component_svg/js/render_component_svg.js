@@ -50,7 +50,7 @@ render_component_svg.prototype.mini = function(options) {
 		}
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self})
+		const wrapper = ui.component.build_wrapper_mini(self)
 		wrapper.appendChild(fragment)
 
 	return wrapper
