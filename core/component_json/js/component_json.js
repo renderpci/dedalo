@@ -58,6 +58,7 @@ export const component_json = function(){
 	component_json.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_json.prototype.mini				= render_component_json.prototype.mini
 	component_json.prototype.list				= render_component_json.prototype.list
 	component_json.prototype.edit				= render_component_json.prototype.edit
 	component_json.prototype.edit_in_list		= render_component_json.prototype.edit

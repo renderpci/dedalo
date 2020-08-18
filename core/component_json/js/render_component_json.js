@@ -16,7 +16,51 @@
 export const render_component_json = function(options) {
 
 	return true
-}//end render_component_json
+}; //end render_component_json
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_json.prototype.mini = function() {
+
+	const self = this
+
+	// Options vars
+		const data = self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Set value
+		if(self.section_tipo==='dd542'){
+			// activity section case
+			const value_len = data.value.length
+			const node = []
+			for (let i = 0; i < value_len; i++) {
+				const value_map = new Map(Object.entries(data.value[i]))
+				for (let [key, value] of value_map) {
+					node.push(key+ ": " +value)
+				}
+			}
+			// wrapper.innerHTML = node.join('<br>')
+			wrapper.insertAdjacentHTML('afterbegin', node.join('<br>'));
+		}else{
+
+			// Value as string
+			const list_show_key = typeof self.context.properties!=="undefined"
+				? self.context.properties.list_show_key
+				: 'msg'
+			const value_string = (typeof data.value[0][list_show_key]!=='undefined')
+					? data.value[0][list_show_key]
+					: JSON.stringify(data.value).substring(0,100)+" ..."
+			wrapper.textContent = value_string
+		}
+
+	return wrapper
+}; //end mini
 
 
 
@@ -68,7 +112,7 @@ render_component_json.prototype.list = function() {
 
 
 	return wrapper
-}//end list
+}; //end list
 
 
 
@@ -110,7 +154,7 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end edit
+}; //end edit
 
 
 
@@ -176,7 +220,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+}; //end add_events
 
 
 
@@ -219,7 +263,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}; //end get_content_data_edit
 
 
 
@@ -270,7 +314,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+}; //end get_buttons
 
 
 
@@ -338,7 +382,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 					on_change(self, editor)
 				})
-		})	
+		})
 
 	// load editor files (js/css)
 	await self.load_editor_files()
@@ -358,13 +402,13 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				},
 				onValidationError : function() {
 					validated = false
-				},			
+				},
 				onChange : function(json) {
 					if (editor) {
 						on_change(self, editor)
 					}else{
 						console.error("Error. editor is not available!:");
-					}				
+					}
 				},
 				onValidate: function() {
 					validated = true
@@ -396,11 +440,11 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 				    // 	console.log('content changed:', this);
 				    // 	alert("content changed");
 			    }
-			}	
-		
-		// create a new instace of the editor when DOM element is ready	
+			}
+
+		// create a new instace of the editor when DOM element is ready
 			// event_manager.when_in_dom(li, function(){
-			// 	console.log("container in DOM:",li);	
+			// 	console.log("container in DOM:",li);
 			// })
 
 			editor = new JSONEditor(li, editor_options, current_value)
@@ -414,7 +458,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			// const ace_editor = editor.aceEditor
 			// ace_editor.on("blur", function(e){
 			// 	e.stopPropagation()
-			// 
+			//
 			// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
 			// 	const edited_value 	= editor.get()
 			// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
@@ -425,11 +469,11 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			// 	if (confirm("Save json data changes?")) {
 			// 		button_save.click()
 			// 	}
-			// })	
+			// })
 
 
 	return li
-}//end get_input_element
+}; //end get_input_element
 
 
 
@@ -454,7 +498,7 @@ const on_change = function(self, editor) {
 	}
 
 	if (typeof edited_value!=="undefined") {
-			
+
 		const changed = JSON.stringify(db_value)!==JSON.stringify(edited_value)
 		if (changed) {
 			editor_wrapper.classList.add("isDirty")
@@ -463,12 +507,12 @@ const on_change = function(self, editor) {
 			if (editor_wrapper.classList.contains("isDirty")) {
 				editor_wrapper.classList.remove("isDirty")
 				button_save.classList.remove("warning")
-			}		
+			}
 		}
 	}
-	
+
 	return true
-}//end on_change
+}; //end on_change
 
 
 
@@ -490,6 +534,4 @@ const download_object_as_json = function(export_obj, export_name){
     download_anchor_node.remove();
 
     return true
-}//end download_object_as_json
-
-
+}; //end download_object_as_json
