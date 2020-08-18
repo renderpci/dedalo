@@ -59,6 +59,7 @@ export const component_input_text = function(){
 	component_input_text.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
+	component_input_text.prototype.mini					= render_component_input_text.prototype.mini
 	component_input_text.prototype.list					= render_component_input_text.prototype.list
 	component_input_text.prototype.edit					= render_component_input_text.prototype.edit
 	component_input_text.prototype.edit_in_list			= render_component_input_text.prototype.edit
