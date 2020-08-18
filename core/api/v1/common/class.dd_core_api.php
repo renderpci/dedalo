@@ -111,65 +111,9 @@ class dd_core_api {
 
 		// context accept object and array of objects
 			$dd_request = $json_data->dd_request;
-			// dump($dd_request, ' read - $dd_request ++ '.to_string());
-			// debug_log(__METHOD__." API DD_REQUEST ".str_repeat("==", 40).PHP_EOL.json_encode($dd_request, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("==", 84), logger::DEBUG);
-
-		// test 'test159' (Checking time machine)
-			$dd_request99 = json_decode('
-				[
-				  {
-				    "typo": "sqo",
-				    "id": "a",
-				    "mode": "tm",
-				    "section_tipo": [
-				      "test65"
-				    ],
-				    "filter_by_locators": [{
-				        "section_tipo": "test65",
-				        "section_id": "1",
-				        "tipo": "test159",
-				        "lang": "lg-eng"
-				      }],
-				    "full_count": false,
-				    "limit": 10,
-				    "offset": 0,
-				    "order": [{
-				        "direction": "DESC",
-				        "path": [{
-				            "component_tipo": "id"
-				          }]
-				      }]
-				  },
-				  {
-				    "model": "component_input_text",
-				    "tipo": "test159",
-				    "section_tipo": "test65",
-				    "mode": "list",
-				    "parent": "test158",
-				    "typo": "ddo",
-				    "type": "component",
-				    "label": "Input text X",
-				    "debug_from": "calculated from section list or related terms"
-				  },
-				  {
-				    "typo": "source",
-				    "action": "search",
-				    "model": "section",
-				    "tipo": "test65",
-				    "section_tipo": "test65",
-				    "section_id": null,
-				    "mode": "tm",
-				    "lang": "lg-eng",
-				    "pagination": {
-				      "total": {},
-				      "offset": 0
-				    }
-				  }
-				]
-			');
-			// dump($dd_request, ' context 2 ++ '.to_string());
-
-		$json_rows = self::build_json_rows($dd_request);
+		
+		// build rows (context & data)
+			$json_rows = self::build_json_rows($dd_request);
 
 		$result = $json_rows;
 
@@ -806,12 +750,12 @@ class dd_core_api {
 				$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 
 		// sqo. search_query_object
-			$sqo_id = $section_tipo . '_' . $mode;
+			$sqo_id = implode('_', [$model,$section_tipo,$mode]);
 			$search_query_object = array_find($dd_request, function($item){
 				return (isset($item->typo) && $item->typo==='sqo');
 			});
 			if (empty($search_query_object)) {
-				if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+				if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 					$search_query_object = $_SESSION['dedalo']['config']['sqo'][$sqo_id];
 				}else{
 
@@ -1015,8 +959,8 @@ class dd_core_api {
 							// store search_query_object
 								//$context[] = $current_sqo;
 								if ($model==='section') {
-									// $_SESSION['dedalo']['config']['sqo'][$sqo_id] = $search_query_object;
-								}
+									$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $search_query_object;
+								}								
 							break;
 
 						case 'get_data':
