@@ -1917,40 +1917,58 @@ abstract class component_common extends common {
 
 		// Try directe dato
 			$dato = $component->get_dato();
+			$dato = !empty($dato)
+				? $dato
+				: [null];
 
+		$dato_fb = [];
 		// fallback if empty
-			if (component_common::is_dato_empty($dato)) {
+		foreach ($dato as $key => $value) {
+			if(empty($value)){
 
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 					if ($lang!==$main_lang) {
 						$component->set_lang($main_lang);
-						$dato = $component->get_dato();
+						$dato_lang = $component->get_dato();
+						$dato_fb[$key] = isset($dato_lang[$key])
+							? $dato_lang[$key]
+							: null;
 					}
 
 				// Try nolan
-					if (component_common::is_dato_empty($dato)) {
+					if (empty($dato_fb[$key])) {
 						$component->set_lang(DEDALO_DATA_NOLAN);
-						$dato = $component->get_dato(DEDALO_DATA_NOLAN);
+						$dato_lang = $component->get_dato(DEDALO_DATA_NOLAN);
+						$dato_fb[$key] = isset($dato_lang[$key])
+							? $dato_lang[$key]
+							: null;
 					}
 
 				// Try all projects langs sequence
-					if (component_common::is_dato_empty($dato)) {
-						$data_langs = common::get_ar_all_langs(); # Langs from config projects
+					if (empty($dato_fb[$key])) {
+						$data_langs = common::get_ar_all_langs(); # Langs from config projectsç
 						foreach ($data_langs as $current_lang) {
 							if ($current_lang===$lang || $current_lang===$main_lang) {
 								continue; // Already checked
 							}
 							$component->set_lang($current_lang);
-							$dato = $component->get_dato($current_lang);
-							if (!component_common::is_dato_empty($dato)) break; # Stops when first data is found
+							$dato_lang = $component->get_dato($current_lang);
+							$dato_fb[$key] = isset($dato_lang[$key])
+								? $dato_lang[$key]
+								: null;
+							if (!empty($dato_fb[$key])) break; # Stops when first data is found
 						}
 					}
-			}
+				}else{
+					$dato_fb[$key] = null;
+				}
+		}
 
 		// restore initial lang
 			$component->set_lang($inital_lang);
 
-		return $dato;
+		return $dato_fb;
+
 	}//end extract_component_dato_fallback
 
 

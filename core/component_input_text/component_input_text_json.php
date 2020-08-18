@@ -37,17 +37,18 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-		
+
 		// Value
 		switch ($modo) {
 			case 'list':
-				$original_value			= $this->get_dato();
-				$value					= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-				$fallback_lang_applied	= $original_value!==$value;
+				$value					= $this->get_dato();
+				$fallback_value			= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				// $fallback_lang_applied	= $value!==$fallback_value;
 				break;
 			case 'edit':
 			default:
-				$value = $this->get_dato();
+				$value 					= $this->get_dato();
+				$fallback_value			= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 				break;
 		}
 
@@ -72,8 +73,9 @@
 			$item  = $this->get_data_item($value);
 				$item->parent_tipo				= $this->get_tipo();		// (? used)
 				$item->parent_section_id		= $this->get_section_id();	// (? used)
-				$item->fallback_lang_applied	= $fallback_lang_applied ?? false;
- 		
+				$item->fallback_value			= $fallback_value;
+				// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
+
 
 		$data[] = $item;
 
