@@ -21,6 +21,39 @@ export const render_component_input_text = function() {
 
 
 /**
+* MINI
+* Render component node to use in mini
+* @return DOM node wrapper
+*/
+render_component_input_text.prototype.mini = async function() {
+
+	const self = this
+
+	// short vars
+		const data	= self.data
+		const value	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = value.join(self.divisor)
+
+	// Set value
+		if (data.fallback_lang_applied===true) {
+			// fallback_lang_applied
+			wrapper.insertAdjacentHTML('afterbegin', "<mark>"+value_string+"</mark")
+		}else{
+			// direct value
+			wrapper.textContent = value_string
+		}
+
+	return wrapper
+};//end mini
+
+
+
+/**
 * LIST
 * Render component node to use in list
 * @return DOM node wrapper
