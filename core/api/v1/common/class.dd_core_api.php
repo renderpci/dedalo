@@ -1014,7 +1014,9 @@ class dd_core_api {
 
 							// store search_query_object
 								//$context[] = $current_sqo;
-								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $search_query_object;
+								if ($model==='section') {
+									// $_SESSION['dedalo']['config']['sqo'][$sqo_id] = $search_query_object;
+								}
 							break;
 
 						case 'get_data':
