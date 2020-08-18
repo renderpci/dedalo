@@ -56,6 +56,7 @@ export const component_filter = function(){
 	component_filter.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
+	component_filter.prototype.mini					= render_component_filter.prototype.mini
 	component_filter.prototype.list					= render_component_filter.prototype.list
 	component_filter.prototype.edit					= render_component_filter.prototype.edit
 	component_filter.prototype.edit_in_list			= render_component_filter.prototype.edit
