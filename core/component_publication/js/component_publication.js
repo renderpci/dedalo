@@ -47,6 +47,7 @@ export const component_publication = function(){
 	component_publication.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_publication.prototype.mini				= render_component_publication.prototype.mini
 	component_publication.prototype.list				= render_component_publication.prototype.list
 	component_publication.prototype.edit				= render_component_publication.prototype.edit
 	component_publication.prototype.edit_in_list		= render_component_publication.prototype.edit

@@ -19,6 +19,33 @@ export const render_component_publication = function() {
 };//end render_component_publication
 
 
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_publication.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value //'component_publication not finish yet!'
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return wrapper
+};//end mini
+
+
+
 
 /**
 * LIST
