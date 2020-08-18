@@ -51,6 +51,7 @@ export const component_section_id = function(){
 	component_section_id.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
+	component_section_id.prototype.mini					= render_component_section_id.prototype.mini
 	component_section_id.prototype.list					= render_component_section_id.prototype.list
 	component_section_id.prototype.edit					= render_component_section_id.prototype.edit
 	component_section_id.prototype.edit_in_list			= render_component_section_id.prototype.edit
