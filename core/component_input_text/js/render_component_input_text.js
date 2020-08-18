@@ -22,7 +22,7 @@ export const render_component_input_text = function() {
 
 /**
 * MINI
-* Render node for used by service autocomplete or any datalist
+* Render node to be used by service autocomplete or any datalist
 * @return DOM node wrapper
 */
 render_component_input_text.prototype.mini = async function() {
