@@ -55,6 +55,7 @@ export const component_security_access = function(){
 	component_security_access.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_security_access.prototype.mini				= render_component_security_access.prototype.mini
 	component_security_access.prototype.list				= render_component_security_access.prototype.list
 	component_security_access.prototype.edit				= render_component_security_access.prototype.edit
 	component_security_access.prototype.edit_in_list		= render_component_security_access.prototype.edit
