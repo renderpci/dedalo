@@ -58,6 +58,7 @@ export const component_pdf = function(){
 	component_pdf.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_pdf.prototype.mini				= render_component_pdf.prototype.mini
 	component_pdf.prototype.list				= render_component_pdf.prototype.list
 	component_pdf.prototype.edit				= render_component_pdf.prototype.edit
 

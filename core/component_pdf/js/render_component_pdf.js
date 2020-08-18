@@ -16,7 +16,39 @@
 export const render_component_pdf = function(component) {
 
 	return true
-}//end render_component_pdf
+};//end render_component_pdf
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_pdf.prototype.mini = function(options) {
+
+	const self = this
+
+	// Options vars
+		// const context 	= self.context
+		// const data 		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// url
+		// const value = data.value
+		const url 	= DEDALO_CORE_URL + "/themes/default/pdf_icon.png"
+
+	// image
+		const image = ui.create_dom_element({
+			element_type	: "img",
+			src 			: url,
+			parent 			: wrapper
+		})
+
+
+	return wrapper
+}; //end mini
 
 
 
@@ -51,7 +83,7 @@ render_component_pdf.prototype.list = function(options) {
 
 
 	return wrapper
-}//end list
+}; //end list
 
 
 
@@ -87,7 +119,7 @@ render_component_pdf.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end edit
+}; //end edit
 
 
 
@@ -149,7 +181,7 @@ const add_events = function(self, wrapper) {
 		})
 
 	return true
-}//end add_events
+}; //end add_events
 
 
 
@@ -186,7 +218,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}; //end get_content_data_edit
 
 
 
@@ -310,7 +342,7 @@ const get_input_element_edit = async (i, current_value, inputs_container, self) 
 			})
 
 	return li
-}//end input_element
+}; //end input_element
 
 
 
@@ -349,4 +381,4 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+}; //end get_buttons
