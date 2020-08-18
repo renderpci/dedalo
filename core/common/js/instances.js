@@ -68,7 +68,6 @@ export const get_instance = async function(options){
 			if(typeof options.context==='undefined'){
 				options.context = element_context.result[0]
 			}
-
 		    return current_model
 		})();
 		// reasign the optional vars to the options
