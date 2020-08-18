@@ -69,6 +69,7 @@ export const component_portal = function(){
 	component_portal.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
+	component_portal.prototype.mini					= render_component_portal.prototype.mini
 	component_portal.prototype.list					= render_component_portal.prototype.list
 	component_portal.prototype.edit					= render_component_portal.prototype.edit
 	component_portal.prototype.edit_in_list			= render_component_portal.prototype.edit
