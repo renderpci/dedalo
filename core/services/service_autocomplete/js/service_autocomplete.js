@@ -37,12 +37,13 @@ export const service_autocomplete = function() {
 		self.wrapper				= options.wrapper
 		self.ar_dd_request			= self.instance_caller.dd_request.search
 		self.dd_request				= self.ar_dd_request[0]
-		self.sqo					= self.dd_request.find((current_item)=> current_item.typo==='sqo')
+		console.log("dd_request", self.ar_dd_request);
+		self.sqo					= self.dd_request.find(item => item.typo==='sqo')
 		self.ar_search_section_tipo	= self.sqo.section_tipo
 		self.ar_filter_by_list		= []
 
 		// engine. get the search_engine sended or set the default value
-			const engine			= self.dd_request.find((current_item)=> current_item.typo==='search_engine').value
+			const engine			= self.dd_request.find(item => item.typo==='search_engine').value
 			self.search_engine		= (engine) ? engine : 'dedalo_engine';
 
 		// Vars
@@ -178,10 +179,12 @@ export const service_autocomplete = function() {
 				for (let i = 0; i < ar_search_length; i++) {
 
 					const source		= ar_source[i]
-					const current_sqo	= source.find((item) => item.typo === 'sqo')
+
+					const current_sqo	= source.find(item => item.typo === 'sqo')
 					const ar_section	= current_sqo.section_tipo
-					const ddo_section	= source.find((item) => item.type === 'section' && item.typo === 'ddo')
-					const search_engine	= source.find((current_item)=> current_item.typo==='search_engine').value
+					const request_ddo 	= source.find(item => item.typo === 'request_ddo').value
+					const ddo_section	= request_ddo.find(item => item.type === 'section' && item.typo === 'ddo')
+					const search_engine	= source.find(current_item=> current_item.typo==='search_engine').value
 
 					const swicher_source = ui.create_dom_element({
 						element_type	: "option",
@@ -276,7 +279,8 @@ export const service_autocomplete = function() {
 
 					const section		= ar_sections[i]
 					const id			= section
-					const ddo_section	= self.dd_request.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
+					const request_ddo 	= self.dd_request.find(item => item.typo === 'request_ddo').value
+					const ddo_section	= request_ddo.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
 					const datalist_item	= {
 						grouper	: 'sections',
 						id		: section,
@@ -562,11 +566,12 @@ export const service_autocomplete = function() {
 		})
 
 			const ar_components = []
-			const sqo_length = self.dd_request.length
+			const request_ddo = self.dd_request.find(item => item.typo === 'request_ddo').value
+			const sqo_length = request_ddo.length
 
 
 			for (let i = sqo_length - 1; i >= 0; i--) {
-				const item = self.dd_request[i]
+				const item = request_ddo[i]
 				if(item.type==='component' && item.typo==='ddo' && ar_components.indexOf(item.tipo)===-1){
 					ar_components.push(item.tipo)
 				}
@@ -574,7 +579,7 @@ export const service_autocomplete = function() {
 
 			for (let i = ar_components.length - 1; i >= 0; i--) {
 				const compoment		= ar_components[i]
-				const ddo_component	= self.dd_request.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
+				const ddo_component	= request_ddo.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
 
 				const component_input = ui.create_dom_element({
 					element_type	: "input",
@@ -694,7 +699,8 @@ export const service_autocomplete = function() {
 				? select_divisor.value
 				: ' - '
 			// const current_ddo = self.dd_request.filter((item) => item.typo === 'ddo'&& item.section_tipo === section_tipo)
-			const current_ddo = select.filter((item) => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
+			const request_ddo = select.find(item => item.typo === 'request_ddo').value
+			const current_ddo = request_ddo.filter(item => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
 
 			// create the li node container
 			const li_node = ui.create_dom_element({
@@ -709,7 +715,6 @@ export const service_autocomplete = function() {
 				const value = JSON.parse(this.dataset.value)
 				self.instance_caller.add_value(value)
 			}, false);
-
 
 			// values. build the text of the row with label nodes in correct order (the ddo order in context).
 				for(const ddo_item of current_ddo){
@@ -796,12 +801,16 @@ export const service_autocomplete = function() {
 		//recombine the select ddo with the search ddo to get the list
 			const select = self.instance_caller.dd_request.select
 			const dd_request = (select)
-				? self.dd_request.filter(item => item.typo!=='ddo')
+				? self.dd_request.filter(item => item.typo!=='request_ddo')
 				: [...self.dd_request]
 
 			if(select){
-				const ddo_select = select.filter(item => item.typo === 'ddo' || item.typo === 'value_with_parents')
-				dd_request.push(...ddo_select)
+				const ddo_select = select.find(item => item.typo === 'request_ddo')
+				const value_with_parents = select.find(item => item.typo === 'value_with_parents')
+				dd_request.push(ddo_select)
+				if(value_with_parents){
+					dd_request.push(value_with_parents)
+				}
 			}
 
 		// search options
@@ -832,7 +841,7 @@ export const service_autocomplete = function() {
 			const sqo = self.sqo
 
 			if(SHOW_DEBUG===true) {
-				//console.log("sqo:",sqo);
+				console.log("sqo:",sqo);
 			}
 
 		// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
@@ -938,8 +947,8 @@ export const service_autocomplete = function() {
 			//console.log("[zenon_engine] dd_request:",dd_request);
 			console.log("[zenon_engine] source:", dd_request);
 		}
-
-		const ar_selected_fields		= dd_request.filter(item => item.model === 'component_external');
+		const request_ddo 				= dd_request.find(item => item.typo === 'request_ddo').value
+		const ar_selected_fields		= request_ddo.filter(item => item.model === 'component_external');
 		const ar_fields					= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
 
 		// fields of Zenon "title" for zenon4
