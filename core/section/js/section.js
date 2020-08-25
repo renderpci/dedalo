@@ -153,10 +153,9 @@ section.prototype.build = async function(autoload=false) {
 
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
-	
+
 	// debug
 		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
-
 
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -181,6 +180,8 @@ section.prototype.build = async function(autoload=false) {
 
 			// sqo
 				const sqo = self.dd_request.show.find(element => element.typo==='sqo')
+				// console.log("self.context.request_config", self.context.request_config);
+				// console.log(" self.dd_request.show",  self.dd_request.show);
 
 			// count rows
 				if (!self.pagination.total) {
@@ -244,7 +245,7 @@ section.prototype.build = async function(autoload=false) {
 		self.pagination.limit	= sqo.limit
 		self.pagination.offset	= sqo.offset
 		self.pagination.total	= self.pagination.total || sqo.full_count || 0
-		
+
 	// paginator
 		if (!self.paginator) {
 
@@ -305,13 +306,13 @@ section.prototype.build = async function(autoload=false) {
 			// debug duplicates check
 				const ar_used = []
 				for(const element of self.datum.data) {
-					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo)
+					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id)
 					if (index!==-1) {
 						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
 					}else{
 						ar_used.push(element)
 					}
-				}			
+				}
 		}
 
 	// status update
@@ -326,7 +327,7 @@ section.prototype.build = async function(autoload=false) {
 * GET_AR_INSTANCES
 */
 section.prototype.get_ar_instances = async function(){
-	
+
 	const self = this
 
 	// self data veification

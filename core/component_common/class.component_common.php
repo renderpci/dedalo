@@ -1377,12 +1377,12 @@ abstract class component_common extends common {
 			#$label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
 
 			// Build label
-				$label 	  = '';
 				$ar_label = [];
 				foreach ($ar_componets_related as $related_tipo) {
 
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
-					if ($modelo_name==='component_autocomplete_hi') {
+					// if ($modelo_name==='component_autocomplete_hi') {
+					if (in_array($modelo_name, component_relation_common::get_components_with_relations())) {
 						# resolve
 						// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
 						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ', true, true);
@@ -1694,7 +1694,7 @@ abstract class component_common extends common {
 
 		// get_config_context normalized
 			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
-			$config_context = (array)common::get_request_properties_parsed($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
+			$config_context = (array)common::get_ar_request_query_objects($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
 
 
 		$ar_target_section_tipo = [];
