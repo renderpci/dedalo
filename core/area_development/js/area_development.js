@@ -15,7 +15,7 @@
 * AREA_DEVELOPMENT
 */
 export const area_development = function() {
-	
+
 	this.id
 
 	// element properties declare
@@ -136,7 +136,7 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 	}
 
 	// load dependences js/css
-	const js_promise = load_json_editor_files().then(()=>{	
+	const js_promise = load_json_editor_files().then(()=>{
 
 		const editor_text_area = document.getElementById(editor_id)
 			  // Hide real data container
@@ -191,9 +191,9 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 		const sample_data	= null
 		const saved_value	= localStorage.getItem('json_editor_sqo')
 		const editor_value	= JSON.parse(saved_value) || sample_data
-		
+
 		// editor instance
-		const editor = new JSONEditor(container, options, editor_value)	
+		const editor = new JSONEditor(container, options, editor_value)
 
 		return editor
 	})
@@ -219,7 +219,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 
 	// load dependences js/css
-	const js_promise = load_json_editor_files().then(()=>{	
+	const js_promise = load_json_editor_files().then(()=>{
 
 		// dom elements
 			const widget_container = document.getElementById(widget_object.id) // "dedalo_api_test_enviroment"
@@ -355,5 +355,3 @@ area_development.prototype.init_form = async function(widget_object) {
 
 	return true
 };//end init_form
-
-

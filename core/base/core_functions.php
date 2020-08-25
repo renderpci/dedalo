@@ -36,7 +36,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 
 		# VAR_NAME
 		if(isset($var_name))
-			$html .= PHP_EOL . " name: <strong>".$var_name."</strong>";
+			$html .= PHP_EOL . " name: <strong>". $var_name . '</strong>';
 
 		# EXPECTED
 		if(isset($expected))

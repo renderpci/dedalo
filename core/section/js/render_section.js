@@ -15,7 +15,7 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_section = function() {
-	
+
 	return true
 };//end render_section
 
@@ -221,7 +221,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 						}
 					})
 					if (api_response.result && api_response.result>0) {
-						// launch event 'user_action' tha page is watching
+						// launch event 'user_action' that page is watching
 						event_manager.publish('user_action', {
 							tipo		: self.tipo,
 							mode		: 'edit',

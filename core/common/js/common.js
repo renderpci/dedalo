@@ -231,7 +231,7 @@ common.prototype.refresh = async function () {
 
 	// render
 		if (self.status==='builded') {
-			await self.render({render_level : 'content'})		
+			await self.render({render_level : 'content'})
 		}else{
 			console.warn("/// render fail with status:", self.model, self.status);
 			return false
@@ -607,11 +607,12 @@ const build_request_show = function(self, request_config, action){
 		}
 
 	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
-		const request_ddo_object	= self.datum.context.find(item => item.source==='request_ddo')
-		const request_ddo			= request_ddo_object.value
+		const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
+		const all_request_ddo		= request_ddo_object.value
 
 		const rqo_length	= rqo.length
 		const ar_sections	= []
+		const request_ddo 	= []
 		for (let i = 0; i < rqo_length; i++) {
 
 			const current_rqo		= rqo[i]
@@ -637,13 +638,13 @@ const build_request_show = function(self, request_config, action){
 						const item = f_path[l]==='self'
 							? sections[j]
 							: f_path[l]
-						const exist = dd_request.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+						const exist = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
 						if(!exist){
-							const ddo = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+							const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
 							if(ddo){
-								dd_request.push(ddo)
+								request_ddo.push(ddo)
 							}
 						}
 					}
@@ -667,11 +668,18 @@ const build_request_show = function(self, request_config, action){
 			}
 		}
 
-	// rqo
-		const limit	= rqo_length>0
+		// set the selected ddos into new request_ddo for do the call with the selection
+		dd_request.push({
+			typo : 'request_ddo',
+			value : request_ddo
+		})
+
+
+	// get the limit and offset
+		const limit	= (rqo[0].show.sqo_config.limit)
 			? rqo[0].show.sqo_config.limit
 			: 10
-		const offset = rqo_length>0
+		const offset = (rqo[0].show.sqo_config.offset)
 			? rqo[0].show.sqo_config.offset
 			: 0
 
@@ -687,6 +695,9 @@ const build_request_show = function(self, request_config, action){
 			filter_by_locators	: null
 		}
 		dd_request.push(sqo)
+
+		//add the full rqo to the dd_request
+		dd_request.push(rqo[0])
 
 	return dd_request
 };//end build_request_show
@@ -705,10 +716,11 @@ const build_request_search = function(self, request_config, action){
 	const rqo = request_config.filter(item => item.typo==='rqo')
 
 	// get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
-	const request_ddo	= self.datum.context.find(item => item.source==='request_ddo').value
+	const all_request_ddo	= self.datum.context.find(item => item.typo==='request_ddo').value
 
 	const rqo_length	= rqo.length
 	// const operator	= self.context.properties.source.operator || '$and'
+	const request_ddo 		= []
 
 	for (let i = 0; i < rqo_length; i++) {
 
@@ -737,10 +749,11 @@ const build_request_search = function(self, request_config, action){
 		const search			= current_rqo.search
 		const ddo_map			= search.ddo_map
 		const ddo_map_length	= ddo_map.length
+
 		//get sections
 		for (let j = 0; j < sections_length; j++) {
-			const section_ddo = request_ddo.find(ddo => ddo.tipo===sections[j]  && ddo.section_tipo===sections[j])
-			sqo_search.push(section_ddo)
+			const section_ddo = all_request_ddo.find(ddo => ddo.tipo===sections[j]  && ddo.section_tipo===sections[j])
+			request_ddo.push(section_ddo)
 
 			// get the fpath array
 			for (let k = 0; k < ddo_map_length; k++) {
@@ -758,10 +771,10 @@ const build_request_search = function(self, request_config, action){
 							? sections[j]
 							: f_path[l-1]
 
-						const ddo = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===section_tipo )
+						const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===section_tipo )
 						if (ddo) {
 							ddo.mode = 'list' // enable lang fallback value
-							sqo_search.push(ddo)
+							request_ddo.push(ddo)
 							const path = {
 								section_tipo	: section_tipo,
 								component_tipo	: item,
@@ -778,7 +791,6 @@ const build_request_search = function(self, request_config, action){
 				})
 			}
 		}
-
 		// fixed_filter
 		if (fixed_filter) {
 			sqo_search.push({
@@ -805,10 +817,13 @@ const build_request_search = function(self, request_config, action){
 			})
 		}
 
-		// rqo
+		// limit and offset
+			// check if limit and offset exist in select
 			const limit	= current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.limit
 				? current_rqo.select.sqo_config.limit
-				: search.sqo_config.limit
+				: (search.sqo_config.limit)
+					? search.sqo_config.limit
+					: current_rqo.show.sqo_config.limit
 			const offset = current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.offset
 				? current_rqo.select.sqo_config.offset
 				: search.sqo_config.offset
@@ -818,8 +833,8 @@ const build_request_search = function(self, request_config, action){
 			typo			: 'sqo',
 			section_tipo	: sections,
 			filter			: {[operator]:[]},
-			offset			: offset,
-			limit			: limit,
+			offset			: offset || 0,
+			limit			: limit || 10,
 			select			: [],
 			full_count		: false
 		})
@@ -847,11 +862,18 @@ const build_request_search = function(self, request_config, action){
 			})
 		}
 
+		// set the selected ddos into new request_ddo for do the call with the selection
+		sqo_search.push({
+			typo : 'request_ddo',
+			value : request_ddo
+		})
+
+
 		// add group
 		dd_request.push(sqo_search)
 	}//end for (let i = 0; i < length; i++)
 
-console.log("dd_request", dd_request);
+
 	return dd_request
 };//end build_request_search
 
@@ -895,8 +917,10 @@ const build_request_select = function(self, request_config, action){
 		}
 
 	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
-		const request_ddo_object	= self.datum.context.find(item => item.source==='request_ddo')
-		const request_ddo			= request_ddo_object.value
+		const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
+		const all_request_ddo			= request_ddo_object.value
+
+		const request_ddo 			= []
 
 		const rqo_length	= rqo.length
 		const ar_sections	= []
@@ -924,19 +948,18 @@ const build_request_select = function(self, request_config, action){
 						const item = f_path[l]==='self'
 							? sections[j]
 							: f_path[l]
-						const exist = dd_request.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+						const exist = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
 						if(!exist){
-							const ddo = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+							const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
 
 							if(ddo){
-								dd_request.push(ddo)
+								request_ddo.push(ddo)
 							}
 						}
 					}
 				}
 			}
-
 			//value_with_parents
 			if(select.value_with_parents){
 				dd_request.push({
@@ -953,6 +976,13 @@ const build_request_select = function(self, request_config, action){
 				})
 			}
 		}
+
+		// set the selected ddos into new request_ddo for do the call with the selection
+		dd_request.push({
+			typo : 'request_ddo',
+			value : request_ddo
+		})
+
 	return dd_request
 };//end build_request_show
 
