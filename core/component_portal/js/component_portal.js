@@ -241,7 +241,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("/// component_portal build self.datum.data:",self.datum.data);
+			// console.log("/// component_portal build self.datum.data:",self.datum.data);
 			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			// console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
@@ -352,7 +352,56 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// console.log("update_pagination_values self.pagination:",self.pagination);
 
 	return true
-};//end  update_pagination_values
+};//end update_pagination_values
+
+
+
+/**
+* GET_PORTAL_ITEMS
+* @return array of components context
+*/
+component_portal.prototype.get_portal_items = function() {
+
+	const self = this
+
+		console.log("self:",self);
+
+	const portal_items = []
+
+	// ddo map
+		const rqo = self.context.request_config.find(item => item.typo==='rqo')
+		if (rqo) {
+			const ddo_map			= rqo.show.ddo_map
+			const ddo_map_length	= ddo_map.length
+			for (let j = 0; j < ddo_map_length; j++) {
+
+				const component_tipo = ddo_map[j]
+					console.log("component_tipo:",component_tipo);
+
+				const item_context = self.datum.context.find(item => item.tipo===component_tipo && item.parent===self.tipo)
+
+				portal_items.push(item_context)
+				// // iterate portal records
+				// for (let k = 0; k < portal_data.length; k++) {
+				// 	// if (!portal_data[k] || !portal_data[k].section_id) continue;
+
+				// 	const portal_section_id		= portal_data[k].section_id
+				// 	const portal_section_tipo	= portal_data[k].section_tipo
+				// 		console.log("portal_section_id:",portal_section_id,portal_section_tipo);
+
+				// 	break;
+				// }
+
+				// await add_instance(current_context, section_id)
+
+				// const current_data = portal_data.find(item => item.from_component_tipo===component_tipo)
+					// console.log("////// current_data "+component_tipo, current_data);
+			}
+		}
+
+
+	return portal_items
+}//end get_portal_items
 
 
 
