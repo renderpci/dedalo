@@ -141,7 +141,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
-
+			console.log("/// PORTAL BUILD self.dd_request.show:",self.dd_request.show);
 
 	// debug check
 		if(SHOW_DEBUG===true) {
@@ -162,6 +162,8 @@ component_portal.prototype.build  = async function(autoload=false){
 	// load data if not yet received as an option
 		if (autoload===true) {
 
+				console.log("// portal request (autoload=true): self.dd_request.show:",self.dd_request.show);
+
 			// get context and data
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.read(self.dd_request.show)
@@ -180,7 +182,9 @@ component_portal.prototype.build  = async function(autoload=false){
 
 			// update element pagination vars when are used
 				if (self.data.pagination && typeof self.pagination.total!=="undefined") {
-					self.pagination.total = self.data.pagination.total
+					// console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++ self.data.pagination:",self.data.pagination);
+					self.pagination.total	= self.data.pagination.total
+					self.pagination.offset	= self.data.pagination.offset					
 				}
 		}
 
@@ -191,7 +195,7 @@ component_portal.prototype.build  = async function(autoload=false){
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
 				self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
-
+				console.log("//////////\\ PORTAL "+self.tipo+" self.pagination:",self.pagination);
 			// sqo update filter_by_locators
 				// if(self.pagination.total>self.pagination.limit){
 
@@ -225,7 +229,10 @@ component_portal.prototype.build  = async function(autoload=false){
 					self.paginator.offset = self.pagination.offset
 					self.paginator.total  = self.pagination.total
 					// self.paginator.refresh()
+					// await self.paginator.build()
+					// self.paginator.render()
 				}
+				console.log("//////////\\ PORTAL "+self.tipo+" self.paginator:",self.paginator);
 
 			// autocomplete destroy. change the autocomplete service to false and desactive it.
 				if(self.autocomplete && self.autocomplete_active===true){
@@ -240,7 +247,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("/// component_portal build self.datum.data:",self.datum.data);
+			// console.log("/// component_portal build self.datum.data:",self.datum.data);
 			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 			// console.log("component_portal self +++++++++++ :",self);
 			//console.log("========= build self.pagination.total:",self.pagination.total);
@@ -310,21 +317,28 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 	const self = this
 
+		console.log("self.data.pagination:",self.data.pagination);
+		console.log("self.pagination:",self.pagination);
+
 	// update self.data.pagination
 		switch(action) {
 			case 'remove' :
 				// update pagination total
 				if(self.data.pagination.total && self.data.pagination.total>0) {
-					self.data.pagination.total--
+					// self.data.pagination.total--
+					self.pagination.total--
 				}
 				break;
 			case 'add' :
 				// update self.data.pagination
 				if(self.data.pagination && self.data.pagination.total && self.data.pagination.total>=0) {
-					self.data.pagination.total++
+					// self.data.pagination.total++
+					self.pagination.total++
 				}
 				break;
 		}
+		// self.pagination.total = self.data.pagination.total
+
 
 	// last_offset
 		const last_offset = (()=>{
@@ -345,9 +359,12 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// self pagination update
 		self.pagination.offset 	= last_offset
 
+
+	self.data.pagination = self.pagination // sync pagination info
+
 	// // paginator object update
-	// 	self.paginator.offset 	= last_offset
-	// 	self.paginator.total 	= current_total
+		self.paginator.offset 	= self.pagination.offset
+		self.paginator.total 	= self.pagination.total
 	// console.log("update_pagination_values self.pagination:",self.pagination);
 
 	return true

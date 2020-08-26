@@ -359,7 +359,16 @@ abstract class component_common extends common {
 		// pagination
 			$this->pagination = new stdClass();
 				$this->pagination->offset	= 0; // default
-				$this->pagination->limit	= isset($properties->list_max_records) ? (int)$properties->list_max_records : 5;
+				// $this->pagination->limit	= isset($properties->list_max_records) ? (int)$properties->list_max_records : 5;
+				$this->pagination->limit	= (function() use($properties){
+					if (isset($properties->source->request_config) && isset($properties->source->request_config[0])) {
+						// show						
+						if (isset($properties->source->request_config[0]->show) && isset($properties->source->request_config[0]->show->sqo_config->limit)) {
+							return $properties->source->request_config[0]->show->sqo_config->limit;
+						}
+					}
+					return 5;
+				})();
 
 
 		return true;
