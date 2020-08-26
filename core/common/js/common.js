@@ -509,6 +509,91 @@ common.prototype.load_script = async function(src) {
 
 
 
+
+/**
+* GET_COLUMNS
+*/
+common.prototype.get_columns = async function(){
+
+	const self = this
+
+	const ar_columns 	= []
+
+	// get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
+	const ddo_map 		= self.dd_request.show.find(item => item.typo === 'rqo').show.ddo_map
+	// get the sub elements with the ddo_map, the method is recursive,
+	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
+	const sub_columns 	= get_sub_columns(self, ddo_map, [])
+	ar_columns.push(...sub_columns)
+
+	return ar_columns
+};//end get_columns
+
+
+/**
+* GET_SUB_COLUMNS
+* @param self instance_caller (section, component_portal)
+* @param ddo_map the requested tipos
+* @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
+* @return array ar_columns
+*/
+const get_sub_columns = function(self, ddo_map, sub_ddo){
+
+	const ddo_length 	= ddo_map.length
+	const ar_columns 	= []
+	// every ddo will be checked if it is a component_portal or if is the last compomnet in the chain
+	for (let i = 0; i < ddo_length; i++) {
+		const ar_sub_ddo 	= sub_ddo
+		const current_ddo 	= ddo_map[i]
+		// check if the ddo_map is a f_path, if true get the last component, it will use for show the information
+		const current_tipo = typeof current_ddo.f_path==='undefined' ? current_ddo : current_ddo.f_path[current_ddo.f_path.length - 1]
+		// get the ddo context of the compoment from the datum
+		const ddo = self.datum.context.find(item => item.tipo === current_tipo)
+		// if the ddo has a request_config it has sub-components and it will be not used
+		if(ddo.request_config){
+			// get the rqo of the component and the ddo_map for show
+			const rqo = ddo.request_config.find(item => item.typo==='rqo')
+			if (rqo) {
+				const sub_ddo_map = rqo.show.ddo_map
+				// add the section_tipo and tipo of ddo for create the parent_f_path
+				ar_sub_ddo.push(ddo.section_tipo)
+				ar_sub_ddo.push(current_tipo)
+				// recursive with the sub_ddo_map
+				const sub_columns = get_sub_columns(self, sub_ddo_map, ar_sub_ddo)
+				ar_columns.push(...sub_columns)
+				// reset the parent_f_path
+				ar_sub_ddo.splice(0, ar_sub_ddo.length)
+			}
+
+		}else{
+			if(ar_sub_ddo.length > 0){
+				// add the section_tipo and tipo of ddo for create the parent_f_path
+				ar_sub_ddo.push(ddo.section_tipo)
+				ar_sub_ddo.push(ddo.tipo)
+				// add the parente_f_path to the ddo
+				ddo.parent_f_path = [...ar_sub_ddo]
+			}
+			ar_columns.push(ddo)
+		}
+	}
+
+	return ar_columns
+};//end build_request_show
+
+
+
+/**
+* get_rows
+*/
+common.prototype.get_row = async function(){
+
+
+	return row
+};//end get_rows
+
+
+
+
 /**
 * LOAD_TOOL
 * @param tool_object options

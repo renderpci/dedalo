@@ -66,6 +66,7 @@ export const component_portal = function(){
 	component_portal.prototype.update_datum			= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
+	component_portal.prototype.get_columns			= common.prototype.get_columns
 	component_portal.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
@@ -95,6 +96,9 @@ component_portal.prototype.init = async function(options) {
 			search	: null,
 			select	: null
 		}
+
+	// columns
+		self.columns = []
 
 
 	// call the generic commom tool init
@@ -150,7 +154,7 @@ component_portal.prototype.build  = async function(autoload=false){
 			// console.log("/// update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 			const ar_used = []
 			for(const element of self.datum.data) {
-				const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo)
+				const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo &&  item.parent_section_id===element.parent_section_id)
 				if (index!==-1) {
 					console.error("PORTAL ERROR. self.datum.data contains duplicated elements:", self.datum.data);
 				}else{
@@ -238,6 +242,12 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
+
+
+	// columns
+		if(self.mode === 'edit'){
+			self.columns = self.get_columns()
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -363,8 +373,6 @@ component_portal.prototype.update_pagination_values = function(action) {
 component_portal.prototype.get_portal_items = function() {
 
 	const self = this
-
-		console.log("self:",self);
 
 	const portal_items = []
 

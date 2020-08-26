@@ -692,7 +692,7 @@ component_common.prototype.get_ar_instances = async function(){
 
 			const instance_options = {
 				model 			: 'section_record',
-				tipo 			: current_section_tipo,
+				tipo 			: self.tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
 				mode			: records_mode,
@@ -701,7 +701,8 @@ component_common.prototype.get_ar_instances = async function(){
 				data			: current_data,
 				datum 			: self.datum,
 				paginated_key 	: locator.paginated_key, // used by autocomplete / portal
-				caller 			: self
+				caller 			: self,
+				columns 		: self.columns
 			}
 
 			// id_variant . Propagate a custom instance id to children
@@ -711,7 +712,6 @@ component_common.prototype.get_ar_instances = async function(){
 
 			// section_record instance
 				const current_section_record = await instances.get_instance(instance_options)
-
 				await current_section_record.build()
 
 			// add instance

@@ -1448,7 +1448,7 @@ abstract class common {
 				$request_config = null;
 			}
 
-			dump($request_config, ' $request_config +===============////////==============+ '.to_string($this->tipo));
+			// dump($request_config, ' $request_config +===============////////==============+ '.to_string($this->tipo) .' '. get_called_class() );
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -1585,7 +1585,7 @@ abstract class common {
 			return $item->config_type === 'show' && $item->tipo!==$this->tipo && $item->typo==='ddo' && $item->model!=='section';
 		});
 
-		dump($request_ddo_value, ' $request_ddo_value +------///////---------+ '.to_string($this->tipo));
+		// dump($request_ddo_value, ' $request_ddo_value +------///////---------+ '.to_string($this->tipo).' '. get_called_class());
 
 
 
@@ -1706,7 +1706,7 @@ abstract class common {
 					});
 			}
 
-		// ar_ddo . Filter from precalculated contex			
+		// ar_ddo . Filter from precalculated contex
 			$ar_ddo = array_values(array_filter($context_dd_objects, function($item){
 				return $item->parent===$this->tipo && $item->type==='component';
 			}));
