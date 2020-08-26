@@ -21,6 +21,51 @@ export const render_component_iri = function() {
 
 
 /**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_iri.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_length = data.value.length
+		let ar_value_string = [];
+
+		for (let i = 0; i < value_length; i++) {
+			const ar_line = []
+
+			if (data.value[i].title) {
+				ar_line.push(data.value[i].title)
+			}
+			if (data.value[i].iri) {
+				ar_line.push(data.value[i].iri)
+			}
+
+			if (ar_line && ar_line.length) {
+				ar_value_string.push(ar_line.join(' | '))
+			}
+		}
+
+		const value_string = (ar_value_string && ar_value_string.length) ? ar_value_string.join(' - ') : '';
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return wrapper
+};//end mini
+
+
+
+/**
 * LIST
 * Render node for use in list
 * @return DOM node

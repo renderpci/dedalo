@@ -55,6 +55,7 @@ export const component_email = function(){
 	component_email.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_email.prototype.mini				= render_component_email.prototype.mini
 	component_email.prototype.list				= render_component_email.prototype.list
 	component_email.prototype.edit				= render_component_email.prototype.edit
 	component_email.prototype.edit_in_list		= render_component_email.prototype.edit

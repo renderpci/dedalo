@@ -59,6 +59,7 @@ export const component_svg = function(){
 
 
 	// render
+	component_svg.prototype.mini				= render_component_svg.prototype.mini
 	component_svg.prototype.list				= render_component_svg.prototype.list
 	component_svg.prototype.edit				= render_component_svg.prototype.edit
 

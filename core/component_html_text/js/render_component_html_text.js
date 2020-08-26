@@ -21,6 +21,35 @@ export const render_component_html_text = function() {
 
 
 /**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_html_text.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 		= self.context
+		const data 			= self.data
+		const value 		= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self, {
+			autoload : false
+		})
+
+	// Value as string
+		const value_string = value.join(self.divisor)
+
+	// Set value
+		wrapper.innerHTML = value_string
+
+	return wrapper
+};//end mini
+
+
+/**
 * LIST
 * Render node for use in list
 * @return DOM node

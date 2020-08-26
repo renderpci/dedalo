@@ -288,5 +288,120 @@ class dd_object extends stdClass {
 	}
 
 
+	/**
+	* SET_CONFIG_TYPE
+	*/
+	public function set_config_type($value) {
+
+		$this->config_type = $value;
+	}
+
+
+
+
+	/**
+	* COMPARE_DDO
+	* @return bool $equal
+	*/
+	public static function compare_ddo($ddo1, $ddo2, $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) {
+
+		if (!is_object($ddo1) || !is_object($ddo2)) {
+			return false;
+		}
+
+		if (empty($ar_properties)){
+			foreach ($ddo1 as $property => $value) {
+				if (!in_array($property, $ar_exclude_properties)) {
+					$ar_properties[] = $property;
+				}
+			}
+
+			foreach ($ddo2 as $property => $value) {
+				if (!in_array($property, $ar_exclude_properties)) {
+					$ar_properties[] = $property;
+				}
+			}
+
+			$ar_properties = array_unique($ar_properties);
+		}
+
+
+		$equal = true;
+
+		foreach ((array)$ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
+
+			#if (!is_object($ddo1) || !is_object($ddo2)) {
+			#	$equal = false;
+			#	break;
+			#}
+
+			$property_exists_in_l1 = property_exists($ddo1, $current_property);
+			$property_exists_in_l2 = property_exists($ddo2, $current_property);
+
+
+			# Test property exists in all items
+			#if (!property_exists($ddo1, $current_property) && !property_exists($ddo2, $current_property)) {
+			if ($property_exists_in_l1===false && $property_exists_in_l2===false) {
+				# Skip not existing properties
+				#debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::DEBUG);
+				continue;
+			}
+
+			# Test property exists only in one locator
+			#if (property_exists($ddo1, $current_property) && !property_exists($ddo2, $current_property)) {
+			if ($property_exists_in_l1===true && $property_exists_in_l2===false) {
+				#debug_log(__METHOD__." Property $current_property exists in ddo1 but not exits in ddo2 (false is returned): ".to_string($ddo1).to_string($ddo2), logger::DEBUG);
+				$equal = false;
+				break;
+			}
+			#if (property_exists($ddo2, $current_property) && !property_exists($ddo1, $current_property)) {
+			if ($property_exists_in_l2===true && $property_exists_in_l1===false) {
+				#debug_log(__METHOD__." Property $current_property exists in ddo2 but not exits in ddo1 (false is returned): ".to_string($ddo1).to_string($ddo2), logger::DEBUG);
+				$equal = false;
+				break;
+			}
+
+			# Compare verified existing properties
+			if ($current_property==='section_id') {
+				if( $ddo1->$current_property != $ddo2->$current_property ) {
+					$equal = false;
+					break;
+				}
+			}else{
+				if( $ddo1->$current_property !== $ddo2->$current_property ) {
+					$equal = false;
+					break;
+				}
+			}
+		}
+
+		return (bool)$equal;
+	}//end compare_ddo
+
+
+
+	/**
+	* IN_ARRAY_DDO
+	* @return bool $founded
+	*/
+	public static function in_array_ddo($ddo, $ar_ddo, $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) {
+		$founded = false;
+
+		foreach ((array)$ar_ddo as $current_ddo) {
+			$founded = self::compare_ddo( $ddo, $current_ddo, $ar_properties );
+			if($founded===true) break;
+		}
+
+		#$ar = array_filter(
+		#		$ar_ddo,
+		#		function($current_ddo) use($ddo, $ar_properties){
+		#			return self::compare_ddos( $ddo, $current_ddo, $ar_properties );
+		#		}
+		#); return $ar;
+
+
+		return $founded;
+	}//end in_array_ddo
+
+
 }//end dd_object
-?>

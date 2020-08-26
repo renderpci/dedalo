@@ -19,6 +19,34 @@ export const render_component_filter_records = function() {
 };//end render_component_filter_records
 
 
+/**
+* LIST
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_filter_records.prototype.min = function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_min(self)
+
+	// Value as string
+		const value_string = value.join(' | ')
+
+	// Set value
+		wrapper.textContent = value_string
+
+
+	return wrapper
+};//end min
+
+
 
 /**
 * LIST

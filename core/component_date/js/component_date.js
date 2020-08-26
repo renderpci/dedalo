@@ -60,6 +60,7 @@ export const component_date = function(){
 	component_date.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_date.prototype.mini				= render_component_date.prototype.mini
 	component_date.prototype.list				= render_component_date.prototype.list
 	component_date.prototype.edit				= render_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_component_date.prototype.edit

@@ -20,6 +20,35 @@ export const render_component_text_area = function() {
 };//end render_component_text_area
 
 
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_text_area.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = tr.add_tag_img_on_the_fly( value.join(self.divisor) )
+
+	// Set value
+		// wrapper.innerHTML = value_string
+		wrapper.insertAdjacentHTML('afterbegin', value_string);
+
+
+	return wrapper
+};//end mini
+
+
 
 /**
 * LIST

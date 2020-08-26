@@ -21,6 +21,31 @@ export const render_component_security_access = function() {
 };//end render_component_security_access
 
 
+/**
+* LIST
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_security_access.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const data 		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value.join(self.divisor)
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return wrapper
+};//end mini
+
+
 
 /**
 * LIST

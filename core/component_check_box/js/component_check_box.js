@@ -52,6 +52,7 @@ export const component_check_box = function(){
 	component_check_box.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_check_box.prototype.mini				= render_component_check_box.prototype.mini
 	component_check_box.prototype.list				= render_component_check_box.prototype.list
 	component_check_box.prototype.edit				= render_component_check_box.prototype.edit
 	component_check_box.prototype.edit_in_list		= render_component_check_box.prototype.edit

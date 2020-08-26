@@ -12,13 +12,19 @@ class dd_core_api {
 		static $version = "1.0.0";  // 05-06-2019
 
 	// ar_dd_objects . store current ar_dd_objects received in context to allow external access (portals, etc.)
-		static $ar_dd_objects;
+		// static $ar_dd_objects;
 
-	// $request_ddo . store current ddo items added by get_config_context methods (portals, etc.)
-		static $request_ddo = [];
+	// $request_ddo_value . store current ddo items added by get_config_context methods (portals, etc.)
+		static $request_ddo_value = [];
 
 	// dd_request . store current dd_request received in context to allow external access (portals, etc.)
 		static $dd_request;
+
+	// context_dd_objects . store calculated context dd_objects
+		static $context_dd_objects;
+
+	// context . Whole calculated context
+		// static $context;
 
 
 	/**
@@ -111,7 +117,7 @@ class dd_core_api {
 
 		// context accept object and array of objects
 			$dd_request = $json_data->dd_request;
-		
+
 		// build rows (context & data)
 			$json_rows = self::build_json_rows($dd_request);
 
@@ -169,12 +175,12 @@ class dd_core_api {
 					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
 				// build the component
-					$component = component_common::get_instance( $model,
-																 $tipo,
-																 $section_id,
-																 'edit',
-																 $component_lang,
-																 $section_tipo);
+					$component = component_common::get_instance($model,
+																$tipo,
+																$section_id,
+																'edit',
+																$component_lang,
+																$section_tipo);
 				// get the component permisions
 					$permissions = $component->get_component_permissions();
 				// check if the user can update the component
@@ -721,14 +727,14 @@ class dd_core_api {
 				$result->data 	 = [];
 
 		// fix dd_request
-			self::$dd_request = $dd_request;
+			dd_core_api::$dd_request = $dd_request;
 
-		// ar_dd_objects . Array of all dd objects in requested context
-			$ar_dd_objects = array_values( array_filter($dd_request, function($item) {
-				 if($item->typo==='ddo') return $item;
-			}) );
-			// set as static to allow external access
-			dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
+		// // ar_dd_objects . Array of all dd objects in requested context
+		// 	$ar_dd_objects = array_values( array_filter($dd_request, function($item) {
+		// 		 if($item->typo==='ddo') return $item;
+		// 	}) );
+		// 	// set as static to allow external access
+		// 	dd_core_api::$ar_dd_objects = array_values($ar_dd_objects);
 
 		// ddo_source
 			$ar_source = array_filter($dd_request, function($item) {
@@ -821,14 +827,14 @@ class dd_core_api {
 						if (strpos($model, 'component')===0) {
 
 							// component
-								$RecordObj_dd = new RecordObj_dd($tipo);
-								$component_lang = $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-								$element = component_common::get_instance($model,
-																		  $tipo,
-																		  $section_id,
-																		  $mode,
-																		  $component_lang,
-																		  $section_tipo);
+								$RecordObj_dd	= new RecordObj_dd($tipo);
+								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+								$element		= component_common::get_instance($model,
+																				 $tipo,
+																				 $section_id,
+																				 $mode,
+																				 $component_lang,
+																				 $section_tipo);
 
 								if ($mode==='tm') {
 									// set matrix_id value to component to allow it search dato in
@@ -864,12 +870,15 @@ class dd_core_api {
 				// context add
 					$context = $element_json->context;
 					$context[] = (object)[
-						'source'	=> 'request_ddo',
-						'value'		=> dd_core_api::$request_ddo
+						// 'source'	=> 'request_ddo',
+						'typo'	=> 'request_ddo',
+						'value'	=> dd_core_api::$request_ddo_value
 					];
 
-			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
+				// fix final static var context
+					// dd_core_api::$context = $context;
 
+			$context_exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 		// DATA
 			$data = [];
@@ -960,7 +969,7 @@ class dd_core_api {
 								//$context[] = $current_sqo;
 								if ($model==='section') {
 									$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $search_query_object;
-								}								
+								}
 							break;
 
 						case 'get_data':

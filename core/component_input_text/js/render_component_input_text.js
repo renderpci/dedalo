@@ -22,7 +22,7 @@ export const render_component_input_text = function() {
 
 /**
 * MINI
-* Render component node to use in mini
+* Render node to be used by service autocomplete or any datalist
 * @return DOM node wrapper
 */
 render_component_input_text.prototype.mini = async function() {
@@ -30,23 +30,20 @@ render_component_input_text.prototype.mini = async function() {
 	const self = this
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data				= self.data
+		const value				= data.value || []
+		const fallback_value 	= data.fallback_value || []
+
+		const fallback = get_fallback_value(value, fallback_value)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(self.divisor)
+		const value_string = fallback.join(self.divisor)
 
 	// Set value
-		if (data.fallback_lang_applied===true) {
-			// fallback_lang_applied
-			wrapper.insertAdjacentHTML('afterbegin', "<mark>"+value_string+"</mark")
-		}else{
-			// direct value
-			wrapper.textContent = value_string
-		}
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
 };//end mini
@@ -63,8 +60,11 @@ render_component_input_text.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data				= self.data
+		const value				= data.value || []
+		const fallback_value 	= data.fallback_value || []
+
+		const fallback = get_fallback_value(value, fallback_value)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -72,16 +72,10 @@ render_component_input_text.prototype.list = async function() {
 		})
 
 	// Value as string
-		const value_string = value.join(self.divisor)
+		const value_string = fallback.join(self.divisor)
 
 	// Set value
-		if (data.fallback_lang_applied===true) {
-			// fallback_lang_applied
-			wrapper.insertAdjacentHTML('afterbegin', "<mark>"+value_string+"</mark")
-		}else{
-			// direct value
-			wrapper.textContent = value_string
-		}
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
 };//end list
@@ -502,7 +496,8 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 			class_name		: 'input_value',
 			dataset			: { key : i },
 			value			: current_value,
-			parent			: li
+			parent			: li,
+			placeholder 	: (current_value) ? '' : self.data.fallback_value[i]
 		})
 
 	// button remove
@@ -580,3 +575,27 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 	return input
 };//end get_input_element_search
+
+/**
+* GET_FALLBACK_VALUE
+* @return array values data with fallback
+*/
+const get_fallback_value = (value, fallback_value)=>{
+
+	//get the fallback values when the current language version of the data is missing
+	const fallback = []
+	const value_length = value.length === 0
+		? 1
+		:value.length
+	for (let i = 0; i < value_length; i++) {
+		if(value[i]){
+			fallback.push(value[i])
+		}else{
+			const marked_value = (fallback_value)
+				? "<mark>"+fallback_value[i]+"</mark>"
+				: ""
+			fallback.push(marked_value)
+		}
+	}
+	return fallback
+};

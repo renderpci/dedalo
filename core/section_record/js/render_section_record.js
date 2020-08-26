@@ -16,7 +16,7 @@
 * Manage the components logic and appearance in client side
 */
 export const render_section_record = function() {
-	
+
 	return true
 };//end render_section_record
 
@@ -153,6 +153,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 	const self = this
 
 	const ar_instances = await self.get_ar_instances()
+	// console.log("ar_instances------------", ar_instances);
 
 	const fragment = new DocumentFragment()
 
@@ -177,6 +178,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
+		// console.log("/// ar_instances", ar_instances);
 		for (let i = 0; i < ar_instances_length; i++) {
 
 			const current_instance = ar_instances[i]
@@ -191,22 +193,43 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 				// 	self.modification_date = current_instance.data.value
 				// }
 
-			const current_instance_node = await current_instance.render()
+			if (current_instance.model==='component_portal' && self.mode==='list') {
 
-			// add
-				fragment.appendChild(current_instance_node)
+				// console.log("PORTAL -- current_instance", current_instance);
+
+				const current_instance_section_record_node = await current_instance.render()
+				// if (current_instance_section_record_node) {
+				// 	fragment.appendChild(current_instance_section_record_node.childNodes)
+				// }
+				// console.log("///// current_instance_section_record_node", current_instance_section_record_node.childNodes);
+
+				if (current_instance_section_record_node && current_instance_section_record_node.childNodes) {
+					for (let j = 0; j < current_instance_section_record_node.childNodes.length; j++) {
+						console.log("///// current_instance_section_record_node[j]", current_instance_section_record_node.childNodes[j]);
+						fragment.appendChild( current_instance_section_record_node.childNodes[j] )
+					}
+				}
+
+			}else{
+				const current_instance_node = await current_instance.render()
+
+				// add
+					fragment.appendChild(current_instance_node)
+			}
+
+
 
 			// grid . add columns
-				if (components_with_relations.indexOf(current_instance.model)!==-1) {
+				// if (components_with_relations.indexOf(current_instance.model)!==-1) {
 
 					// grid . calculate recursively all children columns to set the total grid fr in current section_record
-					n_colums = recursive_relation_columns(current_instance, self.datum)
+					// n_colums = recursive_relation_columns(current_instance, self.datum)
 
-				}else{
+				// }else{
 
 					// grid
 					n_colums = 1
-				}
+				// }
 				ar_grid_columns.push(n_colums)
 
 		}//end for (let i = 0; i < ar_instances_length; i++)
@@ -221,7 +244,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 		// 		"grid-template-columns": id_column_width + " repeat("+(ar_grid_columns.length)+", 1fr)",
 		// 	}
 		// )
-
+		
 
 	// component_info
 		const component_info = self.get_component_info()
@@ -423,7 +446,7 @@ const build_id_column = function(self) {
 
 							const user_action_options = {
 								tipo		: self.section_tipo,
-								// section_id	: null,//self.section_id,	
+								// section_id	: null,//self.section_id,
 								// offset		: offset,
 								// model		: 'section',
 								mode		: 'edit',

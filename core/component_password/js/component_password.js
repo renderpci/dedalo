@@ -53,6 +53,7 @@ export const component_password = function(){
 	component_password.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_password.prototype.mini				= render_component_password.prototype.mini
 	component_password.prototype.list				= render_component_password.prototype.list
 	component_password.prototype.edit				= render_component_password.prototype.edit
 	component_password.prototype.edit_in_list		= render_component_password.prototype.edit
@@ -141,7 +142,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			}
 		}
 	}
-	
+
 	// enforce custom regex/function rules
 	for (i = 0; i < o.custom.length; i++) {
 		rule = o.custom[i];
