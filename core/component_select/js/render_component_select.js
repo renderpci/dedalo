@@ -20,6 +20,33 @@ export const render_component_select = function(component) {
 
 
 /**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_select.prototype.mini = async function() {
+
+	const self = this
+
+	// short vars
+		const data = self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value
+
+	// Set value
+		wrapper.insertAdjacentHTML('afterbegin', value_string);
+
+
+	return wrapper
+};//end mini
+
+
+
+/**
 * LIST
 * Render node for use in list
 * @return DOM node

@@ -59,6 +59,7 @@ export const component_av = function(){
 	component_av.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
+	component_av.prototype.mini					= render_component_av.prototype.mini
 	component_av.prototype.list					= render_component_av.prototype.list
 	component_av.prototype.edit					= render_component_av.prototype.edit
 	component_av.prototype.edit_in_list			= render_component_av.prototype.edit

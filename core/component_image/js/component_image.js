@@ -60,6 +60,7 @@ export const component_image = function(){
 	component_image.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_image.prototype.mini				= render_component_image.prototype.mini
 	component_image.prototype.list				= render_component_image.prototype.list
 	component_image.prototype.edit				= render_component_image.prototype.edit
 	component_image.prototype.search			= render_component_image.prototype.search

@@ -46,5 +46,6 @@ export const component_inverse = function(){
 
 // render
 	component_inverse.prototype.render				= common.prototype.render
+	component_inverse.prototype.mini				= render_component_inverse.prototype.mini
 	component_inverse.prototype.list				= render_component_inverse.prototype.list
 	component_inverse.prototype.edit				= render_component_inverse.prototype.edit

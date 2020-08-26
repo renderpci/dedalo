@@ -1386,12 +1386,12 @@ abstract class component_common extends common {
 			#$label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
 
 			// Build label
-				$label 	  = '';
 				$ar_label = [];
 				foreach ($ar_componets_related as $related_tipo) {
 
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
-					if ($modelo_name==='component_autocomplete_hi') {
+					// if ($modelo_name==='component_autocomplete_hi') {
+					if (in_array($modelo_name, component_relation_common::get_components_with_relations())) {
 						# resolve
 						// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
 						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ', true, true);
@@ -1703,7 +1703,7 @@ abstract class component_common extends common {
 
 		// get_config_context normalized
 			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
-			$config_context = (array)common::get_request_properties_parsed($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
+			$config_context = (array)common::get_ar_request_query_objects($this->tipo, $external=false, $this->section_tipo, $this->modo, null);
 
 
 		$ar_target_section_tipo = [];
@@ -1926,40 +1926,58 @@ abstract class component_common extends common {
 
 		// Try directe dato
 			$dato = $component->get_dato();
+			$dato = !empty($dato)
+				? $dato
+				: [null];
 
+		$dato_fb = [];
 		// fallback if empty
-			if (component_common::is_dato_empty($dato)) {
+		foreach ($dato as $key => $value) {
+			if(empty($value)){
 
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 					if ($lang!==$main_lang) {
 						$component->set_lang($main_lang);
-						$dato = $component->get_dato();
+						$dato_lang = $component->get_dato();
+						$dato_fb[$key] = isset($dato_lang[$key])
+							? $dato_lang[$key]
+							: null;
 					}
 
 				// Try nolan
-					if (component_common::is_dato_empty($dato)) {
+					if (empty($dato_fb[$key])) {
 						$component->set_lang(DEDALO_DATA_NOLAN);
-						$dato = $component->get_dato(DEDALO_DATA_NOLAN);
+						$dato_lang = $component->get_dato(DEDALO_DATA_NOLAN);
+						$dato_fb[$key] = isset($dato_lang[$key])
+							? $dato_lang[$key]
+							: null;
 					}
 
 				// Try all projects langs sequence
-					if (component_common::is_dato_empty($dato)) {
-						$data_langs = common::get_ar_all_langs(); # Langs from config projects
+					if (empty($dato_fb[$key])) {
+						$data_langs = common::get_ar_all_langs(); # Langs from config projectsç
 						foreach ($data_langs as $current_lang) {
 							if ($current_lang===$lang || $current_lang===$main_lang) {
 								continue; // Already checked
 							}
 							$component->set_lang($current_lang);
-							$dato = $component->get_dato($current_lang);
-							if (!component_common::is_dato_empty($dato)) break; # Stops when first data is found
+							$dato_lang = $component->get_dato($current_lang);
+							$dato_fb[$key] = isset($dato_lang[$key])
+								? $dato_lang[$key]
+								: null;
+							if (!empty($dato_fb[$key])) break; # Stops when first data is found
 						}
 					}
-			}
+				}else{
+					$dato_fb[$key] = null;
+				}
+		}
 
 		// restore initial lang
 			$component->set_lang($inital_lang);
 
-		return $dato;
+		return $dato_fb;
+
 	}//end extract_component_dato_fallback
 
 

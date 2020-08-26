@@ -27,7 +27,7 @@
 						$context = $this->get_tm_context($permissions);
 					
 				}else{
-					// Component structure context (tipo, relations, properties, etc.)
+					// section structure context (tipo, relations, properties, etc.)
 						$context[] = $this->get_structure_context($permissions, $add_request_config=true);
 					
 					// subcontext from element layout_map items (from_parent_tipo, parent_grouper)

@@ -102,6 +102,14 @@ class component_relation_common extends component_common {
 		// 	}
 		// }
 
+		$properties = $this->get_properties();
+
+		$this->pagination->limit = isset($properties->source->request_config)
+		&& isset($properties->source->request_config[0]->show)
+		&& isset($properties->source->request_config[0]->show->sqo_config)
+		&& isset($properties->source->request_config[0]->show->sqo_config->limit)
+			? $properties->source->request_config[0]->show->sqo_config->limit
+			: 5;
 
 		return true;
 	}//end __construct
@@ -1290,7 +1298,7 @@ class component_relation_common extends component_common {
 				$get_json_options = new stdClass();
 					$get_json_options->get_context 	= true;
 					$get_json_options->context_type = 'simple';
-					$get_json_options->get_data 	= true;				
+					$get_json_options->get_data 	= true;
 
 				$json_data = $current_component->get_json($get_json_options);
 

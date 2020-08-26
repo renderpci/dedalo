@@ -26,6 +26,31 @@ export const render_component_inverse = function(component) {
 };//end render_component_inverse
 
 
+/**
+* LIST
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_inverse.prototype.mini = function(options) {
+
+	const self = this
+
+	// Options vars
+		const context 			= self.context
+		const data 				= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value[0].locator.from_section_id
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return node
+};//end mini
+
 
 /**
 * LIST

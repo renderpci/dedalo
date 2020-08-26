@@ -49,6 +49,7 @@ export const component_iri = function(){
 	component_iri.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
+	component_iri.prototype.mini				= render_component_iri.prototype.mini
 	component_iri.prototype.list				= render_component_iri.prototype.list
 	component_iri.prototype.edit				= render_component_iri.prototype.edit
 	component_iri.prototype.edit_in_list		= render_component_iri.prototype.edit

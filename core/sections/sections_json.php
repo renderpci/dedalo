@@ -3,7 +3,7 @@
 
 
 
-// component configuration vars
+// element configuration vars
 	$ar_section_tipo	= $this->get_ar_section_tipo();
 	$modo				= $this->get_modo();
 	$section_class 		= 'section';
@@ -35,7 +35,7 @@
 							$pagination->offset	= $offset;
 						$section->pagination = $pagination;
 				
-					// get the JSON context of the related component
+					// section JSON context
 						$section_options = new stdClass();
 							$section_options->get_context	= true;
 							$section_options->get_data 	 	= false;

@@ -20,6 +20,42 @@ export const render_component_image = function(component) {
 
 
 /**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_image.prototype.mini = function(options) {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const datalist 	= self.data.datalist || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// url
+		const quality 			= "thumb"
+		const url_object 		= datalist.filter(item => item.quality===quality)[0]
+		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
+
+	// image
+		const image = ui.create_dom_element({
+			element_type	: "img",
+			src 			: url,
+			parent 			: wrapper
+		})
+		// ui.component.add_image_fallback(image)
+
+
+	return wrapper
+};//end list
+
+
+
+
+/**
 * LIST
 * Render node for use in list
 * @return DOM node

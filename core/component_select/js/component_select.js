@@ -61,6 +61,7 @@ export const component_select = function(){
 	//component_select.prototype.load_datum			= component_common.prototype.load_datum
 
 	// render
+	component_select.prototype.mini					= render_component_select.prototype.mini
 	component_select.prototype.list					= render_component_select.prototype.list
 	component_select.prototype.edit					= render_component_select.prototype.edit
 	component_select.prototype.edit_in_list			= render_component_select.prototype.edit

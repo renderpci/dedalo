@@ -110,8 +110,8 @@ section_record.prototype.init = async function(options) {
 
 	self.modification_date 	= options.modification_date || null
 
-	self.offset				= options.offset 
-	
+	self.offset				= options.offset
+
 	// events subscription
 		// event active (when user focus in dom)
 		//event_manager.subscribe('section_record_rendered', (active_section_record) => {
@@ -126,6 +126,55 @@ section_record.prototype.init = async function(options) {
 
 	return self
 };//end init
+
+
+
+/**
+* ADD_INSTANCE
+*/
+const add_instance = async (self, current_context, section_id, current_data) => {
+
+
+	const instance_options = {
+		model			: current_context.model,
+		tipo			: current_context.tipo,
+		section_tipo	: current_context.section_tipo,
+		section_id		: section_id,
+		mode			: current_context.mode,
+		lang			: current_context.lang,
+		section_lang	: self.lang,
+		parent			: current_context.parent,
+		type			: current_context.type,
+		context			: current_context,
+		data			: current_data,
+		datum			: self.datum,
+		request_config	: current_context.request_config
+	}
+
+	// id_variant . Propagate a custom instance id to children
+		if (self.id_variant) {
+			instance_options.id_variant = self.id_variant
+		}
+	// time machine matrix_id
+		if (self.matrix_id) {
+			instance_options.matrix_id = self.matrix_id
+		}
+
+	// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
+		const current_instance = await instances.get_instance(instance_options)
+
+		if(!current_instance || typeof current_instance.build!=='function'){
+			console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
+			return
+		}
+		// instance build await
+		await current_instance.build()
+
+	// add
+		// ar_instances.push(current_instance)
+
+	return current_instance
+}//end add_instance
 
 
 
@@ -153,46 +202,51 @@ section_record.prototype.get_ar_instances = async function(){
 		for (let i = 0; i < items_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
-			const current_context 	= items[i]
-			const current_data 		= self.get_component_data(current_context.tipo)
+			const current_context = items[i]
 
-				const instance_options = {
-					model			: current_context.model,
-					tipo			: current_context.tipo,
-					section_tipo	: current_context.section_tipo,
-					section_id		: section_id,
-					mode			: current_context.mode,
-					lang			: current_context.lang,
-					section_lang	: self.lang,
-					parent			: current_context.parent,
-					type			: current_context.type,
-					context			: current_context,
-					data			: current_data,
-					datum			: self.datum,
-					request_config	: current_context.request_config
+			if (current_context.model==='component_portal' && current_context.mode==='list') {
+
+				const portal_data = self.get_component_data(current_context.tipo, current_context.section_tipo, self.section_id)
+
+				// portal items calculate
+					const options = Object.assign({
+						section_id 		: self.section_id,
+						section_lang	: self.lang,
+						context			: current_context,
+						data			: portal_data,
+						datum			: self.datum,
+						request_config	: current_context.request_config
+					}, current_context)
+
+				const portal_instance = await instances.get_instance(options)
+				// await portal_instance.build(false)
+
+				const portal_items			= portal_instance.get_portal_items()
+				const portal_items_length	= portal_items.length
+				for (let g = 0; g < portal_items_length; g++) {
+
+					const portal_item_context = portal_items[g]
+
+					for(const current_portal_data of portal_data.value) {
+
+						const current_data		= self.datum.data.find(item => item.tipo===portal_item_context.tipo && item.section_id===current_portal_data.section_id)
+						const current_instance	= await add_instance(self, portal_item_context, current_data.section_id, current_data)
+
+						// add
+							ar_instances.push(current_instance)
+
+						break; // only first for now
+					}
 				}
 
-				// id_variant . Propagate a custom instance id to children
-					if (self.id_variant) {
-						instance_options.id_variant = self.id_variant
-					}
-				// time machine matrix_id
-					if (self.matrix_id) {
-						instance_options.matrix_id = self.matrix_id
-					}
+			}else{
 
-			// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
-				const current_instance = await instances.get_instance(instance_options)
+				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+				const current_instance	= await add_instance(self, current_context, section_id, current_data)
 
-				if(!current_instance || typeof current_instance.build!=='function'){
-					console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
-					continue;
-				}
-				// instance build await
-				await current_instance.build()
-
-			// add
-				ar_instances.push(current_instance)
+				// add
+					ar_instances.push(current_instance)
+			}
 
 		}//end for loop
 
@@ -209,19 +263,19 @@ section_record.prototype.get_ar_instances = async function(){
 * GET_COMPONENT_DATA
 * @return object component_data
 */
-section_record.prototype.get_component_data = function(component_tipo){
+section_record.prototype.get_component_data = function(component_tipo, section_tipo, section_id){
 
 	const self = this
 
-	let component_data = self.data.find(item => item.tipo===component_tipo && item.section_id===self.section_id)
+	let component_data = self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
 
 	// undefined case. If the current item don't has data will be instanciated with the current section_id
 	if (typeof(component_data)==='undefined') {
 		// empy component data build
 		component_data = {
-			section_id		: self.section_id,
 			tipo			: component_tipo,
-			section_tipo	: self.section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
 			value			: []
 		}
 		self.data.push(component_data)
@@ -238,7 +292,7 @@ section_record.prototype.get_component_data = function(component_tipo){
 * @return object component_data
 */
 section_record.prototype.get_component_info = function(component_tipo){
-	
+
 	const self = this
 
 	const component_info = self.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
