@@ -152,9 +152,10 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	const self = this
 
-	const ar_instances = await self.get_ar_instances()
-	// console.log("ar_instances------------", ar_instances);
+	const ar_instances = await self.get_ar_row_instances()
 
+// const ar_instances = await self.get_ar_instances()
+// console.log("ar_instances------------", ar_instances);
 	const fragment = new DocumentFragment()
 
 	// section_record wrapper
@@ -244,7 +245,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 		// 		"grid-template-columns": id_column_width + " repeat("+(ar_grid_columns.length)+", 1fr)",
 		// 	}
 		// )
-		
+
 
 	// component_info
 		const component_info = self.get_component_info()
