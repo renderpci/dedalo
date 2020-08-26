@@ -31,8 +31,11 @@ class dd_manager {
 
 		// dump($options, ' MANAGE_REQUEST OPTIONS ++++++++++++++++++++++++++++++ '.to_string());
 		if(SHOW_DEBUG===true) {
-			$lime = " API REQUEST ".$options->action.' '.str_repeat(">", 70).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 165);
-			debug_log(__METHOD__.$lime, logger::DEBUG);
+			$text			= 'API REQUEST ' . $options->action;
+			$text_lenght	= strlen($text) +1;
+			$nchars			= 200;
+			$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($options, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
+			debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 		}
 
 		// logged
