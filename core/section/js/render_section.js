@@ -183,6 +183,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 	const render_level 		= options.render_level
 	const ar_section_record = self.ar_instances
 
+	const row 		= await self.get_ar_rows()
 
 	// content_data
 		const content_data = await get_content_data(self)
@@ -377,44 +378,43 @@ render_section.prototype.list_header = async function(){
 
 	const self = this
 
-	const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component" && item.parent===self.section_tipo)
+	// const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component" && item.parent===self.section_tipo)
+
+	const columns 		= await self.columns
 
 	const ar_nodes			= []
-	const components_length	= components.length
-	for (let i = 0;  i < components_length; i++) {
+	const columns_length	= columns.length
+	for (let i = 0;  i < columns_length; i++) {
 
-		const component = components[i]
+		const component = columns[i]
 
-		breakdown_header_items(component, self.datum, ar_nodes, null)
+		const label = []
 
-		// des
-			// const sub_components = self.datum.context.filter(item => item.parent===component.tipo)
-	 		// if (sub_components.length>0) {
-	 		// 	sub_components.forEach(function(element) {
-			//
-	 		// 		// node header_item
-	 		// 			const header_item = ui.create_dom_element({
-	 		// 				element_type	: "div",
-	 		// 				id 				: element.tipo + "_" + element.section_tipo,
-	 		// 				inner_html 		: component.label +" - "+ element.label
-	 		// 			})
-	 		// 			//header_item.column_parent 	= component.tipo
-	 		// 			//header_item.column_id 		= element.tipo
-	 		// 			ar_nodes.push(header_item)
-	 		// 	})
-	 		//
-	 		// }else{
-			//
-			// 	// node header_item
-			// 		const header_item = ui.create_dom_element({
-			// 			element_type	: "div",
-			// 			id 				: component.tipo + "_" + component.section_tipo,
-			// 			inner_html 		: component.label
-			// 		})
-			// 		//header_item.column_parent 	= null
-			// 		//header_item.column_id 		= component.tipo
-			// 		ar_nodes.push(header_item)
-			// // }
+		if(component.parent === self.section_tipo){
+			label.push( component.label )
+		}else {
+			const component_parent = self.datum.context.find(item => item.tipo===component.parent && item.section_tipo===self.section_tipo)
+			if(component_parent){
+				label.push( component_parent.label + ': '+ component.label )
+			}else{
+				label.push(': '+ component.label)
+			}
+		}
+			 // && item.type==="component")
+
+		// if(label)
+
+		// node header_item
+			const id			=  component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+			const header_item	= ui.create_dom_element({
+				element_type	: "div",
+				id				: id,
+				inner_html		: label.join('')
+			})
+			// add if not already exists
+			// if (!ar_nodes.find(item => item.id===id)) {
+				ar_nodes.push(header_item)
+			// }
 	}
 
 	// header_wrapper
@@ -459,41 +459,6 @@ render_section.prototype.list_header = async function(){
 
 	return header_wrapper
 };//end list_header
-
-
-
-/**
-* BREAKDOWN_HEADER_ITEMS
-* @return array ar_nodes
-*/
-const breakdown_header_items = function(component, datum, ar_nodes, parent){
-
-	const sub_components = datum.context.filter(item => item.parent===component.tipo)
-
-	if (sub_components.length>0) {
-		sub_components.forEach(function(element) {
-			// recursion
-			breakdown_header_items(element, datum, ar_nodes, component)
-		})
-
-	}else{
-
-		// node header_item
-			const id			=  component.tipo + "_" + component.section_tipo + (parent ? "_"+parent.tipo : '')
-			const header_item	= ui.create_dom_element({
-				element_type	: "div",
-				id				: id,
-				// inner_html	: (parent) ? parent.label + "<br>" + component.label : component.label
-				inner_html		: (parent) ? parent.label : component.label
-			})
-			// add if not already exists
-			// if (!ar_nodes.find(item => item.id===id)) {
-				ar_nodes.push(header_item)
-			// }
-	}
-
-	return ar_nodes
-};//end breakdown_header_items
 
 
 

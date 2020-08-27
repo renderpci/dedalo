@@ -61,12 +61,16 @@ export const section = function() {
 	section.prototype.destroy			= common.prototype.destroy
 	section.prototype.refresh			= common.prototype.refresh
 	section.prototype.build_dd_request	= common.prototype.build_dd_request
+
 	// render
 	section.prototype.edit				= render_section.prototype.edit
 	section.prototype.list				= render_section.prototype.list
 	section.prototype.list_portal		= render_section.prototype.list
 	section.prototype.tm				= render_section.prototype.list
 	section.prototype.list_header		= render_section.prototype.list_header
+
+	section.prototype.get_columns		= common.prototype.get_columns
+
 
 
 
@@ -114,6 +118,8 @@ section.prototype.init = async function(options) {
 		total : 0,
 		offset: 0
 	}
+
+	self.columns 			= []
 
 	self.type				= 'section'
 	self.label				= null
@@ -297,6 +303,11 @@ section.prototype.build = async function(autoload=false) {
 			// }
 		}
 
+	// columns
+		if(self.mode === 'list'){
+			self.columns = self.get_columns()
+		}
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
@@ -306,7 +317,7 @@ section.prototype.build = async function(autoload=false) {
 			// debug duplicates check
 				const ar_used = []
 				for(const element of self.datum.data) {
-					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id)
+					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id )
 					if (index!==-1) {
 						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
 					}else{
@@ -391,6 +402,81 @@ section.prototype.get_ar_instances = async function(){
 
 	return self.ar_instances
 };//end get_ar_instances
+
+
+
+/**
+* GET_AR_ROWS
+*/
+section.prototype.get_ar_rows = async function(){
+
+	const self = this
+
+	// self data veification
+		if (typeof self.data==="undefined") {
+			self.data = {
+				value : []
+			}
+		}
+
+	// iterate records
+		const value			= self.data.value || []
+		const value_length	= value.length
+
+		const offset = self.pagination.offset
+
+		for (let i = 0; i < value_length; i++) {
+			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
+
+			const current_section_id	= value[i].section_id
+			const current_section_tipo	= value[i].section_tipo
+			const current_data			= (self.mode==='tm')
+				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+			const current_context 		= self.context
+
+			const instance_options = {
+					model			: 'section_record',
+					tipo			: current_section_tipo,
+					section_tipo	: current_section_tipo,
+					section_id		: current_section_id,
+					mode			: 'list',
+					lang			: self.lang,
+					context			: current_context,
+					data			: current_data,
+					datum			: self.datum,
+					caller			: self,
+					offset			: (offset+i),
+					columns 		: self.columns
+			}
+
+			// id_variant . Propagate a custom instance id to children
+				if (self.id_variant) {
+					instance_options.id_variant = self.id_variant
+				}
+
+			// time machine options
+				if (self.mode==='tm') {
+					instance_options.matrix_id			= value[i].matrix_id
+					instance_options.modification_date	= value[i].timestamp
+					// instance_options.state			= value[i].state
+				}
+
+			// section_record. init and build
+				const current_section_record = await instances.get_instance(instance_options);
+				await current_section_record.build()
+
+			// add
+				// self.ar_instances.push(current_section_record)
+
+		}//end for loop
+
+
+	// return self.ar_instances
+};//end get_ar_instances
+
+
+
 
 
 
