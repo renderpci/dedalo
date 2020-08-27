@@ -84,7 +84,7 @@ section_record.prototype.init = async function(options) {
 	self.mode				= options.mode
 	self.lang				= options.lang
 	self.node				= []
-	self.request_config		= options.request_config
+	self.columns			= options.columns
 
 	// dd request
 	self.dd_request = {
@@ -243,7 +243,6 @@ section_record.prototype.get_ar_instances = async function(){
 
 				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
 				const current_instance	= await add_instance(self, current_context, section_id, current_data)
-
 				// add
 					ar_instances.push(current_instance)
 			}
@@ -256,6 +255,65 @@ section_record.prototype.get_ar_instances = async function(){
 
 	return ar_instances
 };//end get_ar_instances
+
+
+
+
+
+
+/**
+* GET_AR_INSTANCES
+*/
+section_record.prototype.get_ar_row_instances = async function(){
+
+	const self = this
+
+	// sort vars
+		const mode 			= self.mode
+		const tipo 			= self.tipo
+		const section_tipo 	= self.section_tipo
+		const section_id 	= self.section_id
+		const columns		= await self.columns
+		const data 			= self.data
+
+	// instances
+		const ar_instances = []
+		const columns_length =  columns.length
+
+		for (let i = 0; i < columns_length; i++) {
+
+			const current_context = columns[i]
+
+			// the component has direct data into the section
+			if(current_context.parent === tipo){
+				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+				const current_instance	= await add_instance(self, current_context, section_id, current_data)
+				//add
+				ar_instances.push(current_instance)
+			}else{
+				// the component don't has direct data into the section, it has a locator that will use for located the data of the column
+				const current_data		= self.get_component_relation_data(current_context, section_id)
+				// sometimes the section_tipo can be different (es1, fr1, ...)
+				//the context get the first component, but the instance can be with the section_tipo data
+				current_context.section_tipo = current_data.section_tipo
+				const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
+				//add
+				ar_instances.push(current_instance)
+
+			}
+
+		}//end for loop
+
+	// fix
+		self.ar_instances = ar_instances
+
+
+	return ar_instances
+};//end get_ar_instances
+
+
+
+
 
 
 
@@ -276,7 +334,8 @@ section_record.prototype.get_component_data = function(component_tipo, section_t
 			tipo			: component_tipo,
 			section_tipo	: section_tipo,
 			section_id		: section_id,
-			value			: []
+			value			: [],
+			fallback_value	: [""]
 		}
 		self.data.push(component_data)
 	}
@@ -284,6 +343,54 @@ section_record.prototype.get_component_data = function(component_tipo, section_t
 
 	return component_data
 };//end get_component_data
+
+
+/**
+* GET_COMPONENT_DATA
+* @return object component_data
+*/
+section_record.prototype.get_component_relation_data = function(component, section_id){
+
+	const self = this
+
+	const parent 			= component.parent
+	const section_tipo 		= component.section_tipo
+	const component_data 	= {}
+	// get the f_path it has full path from the main section to last component in the chain, (sectui b¡)
+	const f_path 			= component.parent_f_path
+	// get the first compoment, position 2, this component has the locator into the data of the main section.
+	const component_tipo 	= f_path[1]
+	const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
+	// Get the data of the component selected in the show, normally the last compoment of the chain.
+	// It's the column in the list
+	const parent_data = self.datum.data.find(item =>
+		item.tipo === component.tipo
+		&& item.parent_section_id 	=== section_id
+		&& item.parent_tipo 		=== first_locator.tipo)
+	// if the component has data set it, if not create a null data
+	if(parent_data){
+		component_data.value = parent_data
+	}else{
+		component_data.value = null
+	}
+
+	// undefined case. If the current item don't has data will be instanciated with the current section_id
+	if (component_data.value === null) {
+		// empy component data build
+		component_data.value = {
+			section_id				: section_id,
+			section_tipo			: section_tipo,
+			tipo					: component.tipo,
+			from_component_tipo		: parent,
+			value					: [],
+			fallback_value			: [""]
+		}
+
+	}
+	self.data.push(component_data.value)
+	return component_data.value
+};//end get_component_data
+
 
 
 
