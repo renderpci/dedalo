@@ -326,7 +326,7 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 	const mode = self.mode
 
-	let validated = false
+	let validated = true
 	let editor
 
 
@@ -350,12 +350,23 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 			// check json format and validate
 				if (validated!==true) {
-					// styles as error
-						self.node.map(item => {
-							item.classList.add("error")
-						})
-					alert("Error: component_json. Trying so save non validated json value!");
-					return false
+
+					// manual check valid value
+					let v = false
+					try {
+						v = JSON.parse(JSON.stringify(current_value))
+					}catch(e) {
+						console.warn("Error. JSON value is invalid!",);
+					}
+					
+					if (!v) {
+						// styles as error
+							self.node.map(item => {
+								item.classList.add("error")
+							})
+						alert("Error: component_json. Trying so save non validated json value!");
+						return false
+					}
 				}
 
 			// check data has really changed. If not, stop save
@@ -381,6 +392,9 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 					event_manager.publish('update_value_'+self.id, changed_data)
 
 					on_change(self, editor)
+
+					editor.frame.classList.remove("isDirty")
+					button_save.classList.remove("warning")
 				})
 		})
 
@@ -535,3 +549,5 @@ const download_object_as_json = function(export_obj, export_name){
 
     return true
 }; //end download_object_as_json
+
+
