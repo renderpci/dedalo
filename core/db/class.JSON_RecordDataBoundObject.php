@@ -176,7 +176,7 @@ abstract class JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
 				#$_SESSION['debug_content'][__METHOD__][] = "". str_replace("\n",'',$strQuery) ." [$total_time_ms ms]";
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." - LOAD_SLOW_QUERY: $strQuery - records:".count($dato));
+				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." ms - LOAD_SLOW_QUERY: $strQuery - records:".count($dato));
 			}
 		}
 
@@ -188,8 +188,10 @@ abstract class JSON_RecordDataBoundObject {
 
 		# DEBUG
 		if(SHOW_DEBUG===true) {
-			#$totaltime = exec_time_unit($start_time,'ms');
-			#debug_log(__METHOD__." Total: $totaltime - $strQuery ".to_string(), logger::DEBUG);
+			// $totaltime = exec_time_unit($start_time,'ms');
+			// static $totaltime_static2;
+			// $totaltime_static2 = $totaltime_static2 + $totaltime;
+			// debug_log(__METHOD__." Total: $totaltime ms - $strQuery + sum ms: $totaltime_static2 ".to_string(), logger::DEBUG);
 		}
 	}//end load
 
