@@ -720,32 +720,33 @@ export const service_autocomplete = function() {
 				for(const ddo_item of current_ddo){
 
 					// value_element
-						const current_element_context = context.find((item)=> item.tipo===ddo_item.tipo)
-						const current_element_data = current_row.find((item)=> item.tipo===ddo_item.tipo)
-
-						const options = {
-							context 		: current_element_context,
-							data 			: current_element_data,
-							datum 			: {data : data, context: context},
-							tipo 			: current_element_context.tipo,
-							section_tipo 	: current_element_context.section_tipo,
-							model 			: current_element_context.model,
-							section_id 		: current_element_data.section_id,
-							mode 			: 'mini',
-							lang 			: current_element_context.lang,
-							id_variant 		: self.id
-						}
-
-						const current_instance = await instances.get_instance(options)
-
-						//const current_instance.build()
-						const node = await current_instance.render()
-						li_node.appendChild(node)
+						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
+						const current_element_data		= current_row.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
 
 						if (typeof current_element_data==="undefined") {
 							console.warn("[render_datalist] Ignored tipo not found in row:", ddo_item.tipo, ddo_item);
 							continue
 						}
+
+						const instance_options = {
+							context			: current_element_context,
+							data			: current_element_data,
+							datum			: {data : data, context: context},
+							tipo			: current_element_context.tipo,
+							section_tipo	: current_element_context.section_tipo,
+							model			: current_element_context.model,
+							section_id		: current_element_data.section_id,
+							mode			: 'mini',
+							lang			: current_element_context.lang,
+							id_variant		: self.id
+						}
+
+						const current_instance = await instances.get_instance(instance_options)
+						// current_instance.build(false)
+						const node = await current_instance.render()
+
+						// append node (span)
+						li_node.appendChild(node)
 
 					// span node
 						// const current_value = current_value_element.value
@@ -760,13 +761,26 @@ export const service_autocomplete = function() {
 			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
 				const current_dd_info = current_row.find((item)=> item.tipo==='ddinfo')
 				if(current_dd_info){
-					const current_dd_info_value = divisor + current_dd_info.value.join(divisor)
+					const current_dd_info_value = "- " + current_dd_info.value.join(divisor)
 					ui.create_dom_element({
 						element_type	: 'span',
+						class_name		: 'attenuated',
 						inner_html		: current_dd_info_value,
 						parent			: li_node
 					})// end create dom node
 				}// end if of check current_dd_info
+
+			// debug
+				if(SHOW_DEBUG===true) {
+
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'attenuated',
+						inner_html		: " [" + current_locator.section_tipo + "-" + current_locator.section_id + "]",
+						parent			: li_node
+					});
+				}
+
 
 		}// end for of current_section (section_tipo)
 	};//end render_datalist
