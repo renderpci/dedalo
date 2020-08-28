@@ -282,6 +282,8 @@ class layout_map {
 				return false;
 			}
 
+		$component_lang = common::get_element_lang($current_tipo, $lang);
+
 		// component add
 			$dd_object = new dd_object((object)[
 				'label'			=> RecordObj_dd::get_termino_by_tipo($current_tipo, $lang, true, true),
@@ -289,7 +291,7 @@ class layout_map {
 				'section_tipo'	=> $current_section_tipo,
 				'model'			=> $current_model,
 				'mode'			=> $mode,
-				'lang'			=> $lang,
+				'lang'			=> $component_lang,
 				'parent'		=> $current_parent,
 				'config_type'	=> $request_config_type
 			]);
