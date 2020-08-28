@@ -392,6 +392,9 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 					event_manager.publish('update_value_'+self.id, changed_data)
 
 					on_change(self, editor)
+
+					editor.frame.classList.remove("isDirty")
+					button_save.classList.remove("warning")
 				})
 		})
 
