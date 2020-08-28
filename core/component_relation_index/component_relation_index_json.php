@@ -24,7 +24,7 @@
 				break;
 
 			default:
-				// Component structure context (tipo, relations, properties, etc.)					
+				// Component structure context (tipo, relations, properties, etc.)
 					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
 					// // add records_mode to properties, if not already defined
 					// if (!isset($current_context->properties->source->records_mode)) {
@@ -80,10 +80,18 @@
 				$ar_subdata = $this->get_ar_subdata($value);
 
 			// subdata add
-				foreach ($ar_subdata as $current_data) {
-					$current_data->parent_tipo			= $tipo;
-					$current_data->parent_section_id	= $section_id;
-					$data[] = $current_data;
+				if ($modo==='list') {
+					foreach ($ar_subdata as $current_data) {
+
+						$current_data->parent_tipo			= $tipo;
+						$current_data->parent_section_id	= $section_id;
+
+						$data[] = $current_data;
+					}
+				}else{
+					foreach ($ar_subdata as $current_data) {
+						$data[] =$current_data;
+					}
 				}
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0

@@ -71,10 +71,18 @@
 				$ar_subdata = $this->get_ar_subdata($value);
 
 			// subdata add
-				foreach ($ar_subdata as $current_data) {
-					$current_data->parent_tipo			= $tipo;
-					$current_data->parent_section_id	= $section_id;
-					$data[] = $current_data;
+				if ($modo==='list') {
+					foreach ($ar_subdata as $current_data) {
+
+						$current_data->parent_tipo			= $tipo;
+						$current_data->parent_section_id	= $section_id;
+
+						$data[] = $current_data;
+					}
+				}else{
+					foreach ($ar_subdata as $current_data) {
+						$data[] =$current_data;
+					}
 				}
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0

@@ -174,9 +174,14 @@ class layout_map {
 							if ($current_ddo_map!==false) {
 								foreach ((array)$current_ddo_map as $item) {
 									// $db = debug_backtrace();	dump($db, ' $db ++ '.to_string());
+									$current_mode = isset($item->mode) ? $item->mode : $modo;
+									if(isset($item->tipo)){
+										$item = $item->tipo;
+									}
+									dump($item, ' $item +///////-------///////////+ '.to_string());
 									$ar_ddo = is_string($item)
-										? [layout_map::get_component_ddo($request_config_type, $current_section_tipo, $item, $modo, $lang, $parent)]
-										: layout_map::get_f_path_ddo($item, $request_config_type, $current_section_tipo, $modo, $lang, $parent);
+										? [layout_map::get_component_ddo($request_config_type, $current_section_tipo, $item, $current_mode, $lang, $parent)]
+										: layout_map::get_f_path_ddo($item, $request_config_type, $current_section_tipo, $current_mode, $lang, $parent);
 
 									$layout_map = array_merge($layout_map, $ar_ddo);
 								}
