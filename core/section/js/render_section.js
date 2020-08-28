@@ -183,7 +183,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 	const render_level 		= options.render_level
 	const ar_section_record = self.ar_instances
 
-	const row 		= await self.get_ar_rows()
+	// const row 		= self.get_ar_instances()
 
 	// content_data
 		const content_data = await get_content_data(self)

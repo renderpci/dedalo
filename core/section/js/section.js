@@ -375,7 +375,8 @@ section.prototype.get_ar_instances = async function(){
 					data			: current_data,
 					datum			: self.datum,
 					caller			: self,
-					offset			: (offset+i)
+					offset			: (offset+i),
+					columns 		: self.columns || null
 			}
 
 			// id_variant . Propagate a custom instance id to children
@@ -404,77 +405,77 @@ section.prototype.get_ar_instances = async function(){
 };//end get_ar_instances
 
 
-
-/**
-* GET_AR_ROWS
-*/
-section.prototype.get_ar_rows = async function(){
-
-	const self = this
-
-	// self data veification
-		if (typeof self.data==="undefined") {
-			self.data = {
-				value : []
-			}
-		}
-
-	// iterate records
-		const value			= self.data.value || []
-		const value_length	= value.length
-
-		const offset = self.pagination.offset
-
-		for (let i = 0; i < value_length; i++) {
-			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
-
-			const current_section_id	= value[i].section_id
-			const current_section_tipo	= value[i].section_tipo
-			const current_data			= (self.mode==='tm')
-				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-			const current_context 		= self.context
-
-			const instance_options = {
-					model			: 'section_record',
-					tipo			: current_section_tipo,
-					section_tipo	: current_section_tipo,
-					section_id		: current_section_id,
-					mode			: 'list',
-					lang			: self.lang,
-					context			: current_context,
-					data			: current_data,
-					datum			: self.datum,
-					caller			: self,
-					offset			: (offset+i),
-					columns 		: self.columns
-			}
-
-			// id_variant . Propagate a custom instance id to children
-				if (self.id_variant) {
-					instance_options.id_variant = self.id_variant
-				}
-
-			// time machine options
-				if (self.mode==='tm') {
-					instance_options.matrix_id			= value[i].matrix_id
-					instance_options.modification_date	= value[i].timestamp
-					// instance_options.state			= value[i].state
-				}
-
-			// section_record. init and build
-				const current_section_record = await instances.get_instance(instance_options);
-				await current_section_record.build()
-
-			// add
-				// self.ar_instances.push(current_section_record)
-
-		}//end for loop
-
-
-	// return self.ar_instances
-};//end get_ar_instances
-
+//
+// /**
+// * GET_AR_ROWS
+// */
+// section.prototype.get_ar_rows = async function(){
+//
+// 	const self = this
+//
+// 	// self data veification
+// 		if (typeof self.data==="undefined") {
+// 			self.data = {
+// 				value : []
+// 			}
+// 		}
+//
+// 	// iterate records
+// 		const value			= self.data.value || []
+// 		const value_length	= value.length
+//
+// 		const offset = self.pagination.offset
+//
+// 		for (let i = 0; i < value_length; i++) {
+// 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
+//
+// 			const current_section_id	= value[i].section_id
+// 			const current_section_tipo	= value[i].section_tipo
+// 			const current_data			= (self.mode==='tm')
+// 				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+// 				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+// 			const current_context 		= self.context
+//
+// 			const instance_options = {
+// 					model			: 'section_record',
+// 					tipo			: current_section_tipo,
+// 					section_tipo	: current_section_tipo,
+// 					section_id		: current_section_id,
+// 					mode			: 'list',
+// 					lang			: self.lang,
+// 					context			: current_context,
+// 					data			: current_data,
+// 					datum			: self.datum,
+// 					caller			: self,
+// 					offset			: (offset+i),
+// 					columns 		: self.columns
+// 			}
+//
+// 			// id_variant . Propagate a custom instance id to children
+// 				if (self.id_variant) {
+// 					instance_options.id_variant = self.id_variant
+// 				}
+//
+// 			// time machine options
+// 				if (self.mode==='tm') {
+// 					instance_options.matrix_id			= value[i].matrix_id
+// 					instance_options.modification_date	= value[i].timestamp
+// 					// instance_options.state			= value[i].state
+// 				}
+//
+// 			// section_record. init and build
+// 				const current_section_record = await instances.get_instance(instance_options);
+// 				await current_section_record.build()
+//
+// 			// add
+// 				// self.ar_instances.push(current_section_record)
+//
+// 		}//end for loop
+//
+//
+// 	// return self.ar_instances
+// };//end get_ar_instances
+//
 
 
 
