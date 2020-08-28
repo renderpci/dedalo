@@ -45,7 +45,7 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0){
-		
+
 		// get the data into DDBB
 		$dato 		= $this->get_dato();
 		// get the references calculated by relations with other sections
@@ -68,19 +68,25 @@
 					$pagination->total	= count($dato);
 					$pagination->limit	= $limit;
 					$pagination->offset	= $offset;
-			$item->pagination = $pagination;
+				$item->pagination = $pagination;
 
-			
+
 			// subdata.
-				$ar_subdata = $this->get_ar_subdata($value);				
-				foreach ($ar_subdata as $current_data) {
-					// add parent info
-					$current_data->parent_tipo			= $tipo;
-					$current_data->parent_section_id	= $section_id;
-					
-					$data[] = $current_data;
-				}
+				$ar_subdata = $this->get_ar_subdata($value);
+			// subdata add
+				if ($modo==='list') {
+					foreach ($ar_subdata as $current_data) {
 
+						$current_data->parent_tipo			= $tipo;
+						$current_data->parent_section_id	= $section_id;
+
+						$data[] = $current_data;
+					}
+				}else{
+					foreach ($ar_subdata as $current_data) {
+						$data[] =$current_data;
+					}
+				}
 		}//end if (!empty($dato))
 
 		// references. Add to item if exists
