@@ -521,9 +521,10 @@ common.prototype.get_columns = async function(){
 
 	// get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
 	const ddo_map 		= self.dd_request.show.find(item => item.typo === 'rqo').show.ddo_map
+	console.log("self.dd_request", self.dd_request);
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-	const sub_columns 	= get_sub_columns(self, ddo_map, [])
+	const sub_columns 	= get_sub_columns(self, self.tipo, ddo_map, [])
 	ar_columns.push(...sub_columns)
 
 	return ar_columns
@@ -533,11 +534,12 @@ common.prototype.get_columns = async function(){
 /**
 * GET_SUB_COLUMNS
 * @param self instance_caller (section, component_portal)
+* @param caller_tipo tipo from section or portal that call to get the sub_columns
 * @param ddo_map the requested tipos
 * @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
 * @return array ar_columns
 */
-const get_sub_columns = function(self, ddo_map, sub_ddo){
+const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
 
 	const ddo_length 	= ddo_map.length
 	const ar_columns 	= []
@@ -545,10 +547,18 @@ const get_sub_columns = function(self, ddo_map, sub_ddo){
 	for (let i = 0; i < ddo_length; i++) {
 		const ar_sub_ddo 	= sub_ddo
 		const current_ddo 	= ddo_map[i]
-		// check if the ddo_map is a f_path, if true get the last component, it will use for show the information
-		const current_tipo = typeof current_ddo.f_path==='undefined' ? current_ddo : current_ddo.f_path[current_ddo.f_path.length - 1]
-		// get the ddo context of the compoment from the datum
-		const ddo = self.datum.context.find(item => item.tipo === current_tipo)
+		// check if the item in ddo_map is a object, if true, get the tipo,
+		// if ddo is a f_path, get the last component, it will use for show the information
+		// else get the string with the tipo.
+		const current_tipo = typeof current_ddo.tipo!=='undefined'
+			? current_ddo.tipo
+			: typeof current_ddo.f_path!=='undefined'
+				? current_ddo.f_path[current_ddo.f_path.length - 1]
+				: current_ddo
+		// get the ddo context of the compoment from the datum,
+		// is necesary the match with the caller_tipo if the section has a relation with itself
+		// (the last component in the chain can had different parent, multiple portals can call same component)
+		const ddo = self.datum.context.find(item => item.tipo === current_tipo && item.parent === caller_tipo)
 		// if the ddo has a request_config it has sub-components and it will be not used
 		if(ddo.request_config){
 			// get the rqo of the component and the ddo_map for show
@@ -559,13 +569,13 @@ const get_sub_columns = function(self, ddo_map, sub_ddo){
 				ar_sub_ddo.push(ddo.section_tipo)
 				ar_sub_ddo.push(current_tipo)
 				// recursive with the sub_ddo_map
-				const sub_columns = get_sub_columns(self, sub_ddo_map, ar_sub_ddo)
+				const sub_columns = get_sub_columns(self, ddo.tipo, sub_ddo_map, ar_sub_ddo)
 				ar_columns.push(...sub_columns)
 				// reset the parent_f_path
 				ar_sub_ddo.splice(0, ar_sub_ddo.length)
 			}
-
 		}else{
+			// the component don't has sub-components and it is the last in the chain.
 			if(ar_sub_ddo.length > 0){
 				// add the section_tipo and tipo of ddo for create the parent_f_path
 				ar_sub_ddo.push(ddo.section_tipo)
@@ -715,7 +725,11 @@ const build_request_show = function(self, request_config, action){
 				// get the fpath array
 				for (let k = 0; k < ddo_map_length; k++) {
 
-					const f_path = typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
+					const f_path = typeof ddo_map[k].tipo!=='undefined'
+						? ['self', ddo_map[k].tipo]
+						: typeof ddo_map[k].f_path!=='undefined'
+							? ddo_map[k].f_path
+							: ['self', ddo_map[k]]
 					const f_path_length = f_path.length
 
 					// get the current item of the fpath
@@ -723,10 +737,10 @@ const build_request_show = function(self, request_config, action){
 						const item = f_path[l]==='self'
 							? sections[j]
 							: f_path[l]
-						const exist = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+						const exist = request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
 
 						if(!exist){
-							const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+							const ddo = all_request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
 
 							if(ddo){
 								request_ddo.push(ddo)

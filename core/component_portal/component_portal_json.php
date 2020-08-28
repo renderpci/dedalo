@@ -89,8 +89,9 @@
 
 			// subcontext data from layout_map items
 				$ar_subdata = $this->get_ar_subdata($value);
-			
+
 			// subdata add
+			if ($modo==='list') {
 				foreach ($ar_subdata as $current_data) {
 
 					$current_data->parent_tipo			= $tipo;
@@ -98,6 +99,12 @@
 
 					$data[] = $current_data;
 				}
+			}else{
+				foreach ($ar_subdata as $current_data) {
+					$data[] =$current_data;
+				}
+			}
+
 
 		}//end if (!empty($dato))
 		// dump(null, 'Time to data portal 2 : '.exec_time_unit($api_start_time_data,'ms')." ms".to_string());
