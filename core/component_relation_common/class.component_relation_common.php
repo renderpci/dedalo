@@ -67,14 +67,13 @@ class component_relation_common extends component_common {
 		# Force always DEDALO_DATA_NOLAN
 		// $lang = $this->lang;
 
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$translatable = $RecordObj_dd->get_traducible();
-		if ($translatable==='si') {
+		$translatable = RecordObj_dd::get_translatable($tipo);
+		if ($translatable===true) {
 			if (empty($lang)) {
 				$lang = DEDALO_DATA_LANG;
 			}else{
 				if ($lang===DEDALO_DATA_NOLAN) {
-					debug_log(__METHOD__." Changed component wrong lang [translatable $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
+					debug_log(__METHOD__." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
 					$lang = DEDALO_DATA_LANG;
 				}
 			}
@@ -83,7 +82,9 @@ class component_relation_common extends component_common {
 				$lang = DEDALO_DATA_NOLAN;
 			}else{
 				if ($lang!==DEDALO_DATA_NOLAN) {
-					debug_log(__METHOD__." Changed component wrong lang [non translatable $section_tipo - $tipo] from $lang to ".DEDALO_DATA_NOLAN, logger::ERROR);
+					$bt = debug_backtrace()[1];
+					debug_log(__METHOD__." Changed component wrong lang [NON TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_NOLAN, logger::ERROR);
+						dump($bt, ' bt ++ '.to_string());
 					$lang = DEDALO_DATA_NOLAN;
 				}
 			}
