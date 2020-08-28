@@ -243,7 +243,7 @@ export const delete_instance = async function(options) {
 */
 export const key_instances_builder = function(options){
 
-	const order = ['model','tipo','section_tipo','section_id','mode','lang','matrix_id','id_variant']
+	const order = ['model','tipo','section_tipo','section_id','mode','lang','parent','matrix_id','id_variant']
 	const key_parts = []
 
 	const l = order.length

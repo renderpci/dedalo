@@ -285,6 +285,12 @@ section_record.prototype.get_ar_row_instances = async function(){
 			const current_context = columns[i]
 
 			// the component has direct data into the section
+			// console.log("current_context.parent", current_context.parent);
+			// console.log("section_id", section_id);
+			// console.log("tipo", tipo);
+			// console.log("current_context", current_context);
+			// console.log("self.datum.data", self.datum.data);
+
 			if(current_context.parent === tipo){
 				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
 				const current_instance	= await add_instance(self, current_context, section_id, current_data)
@@ -293,6 +299,7 @@ section_record.prototype.get_ar_row_instances = async function(){
 			}else{
 				// the component don't has direct data into the section, it has a locator that will use for located the data of the column
 				const current_data		= self.get_component_relation_data(current_context, section_id)
+
 				// sometimes the section_tipo can be different (es1, fr1, ...)
 				//the context get the first component, but the instance can be with the section_tipo data
 				current_context.section_tipo = current_data.section_tipo
@@ -310,9 +317,6 @@ section_record.prototype.get_ar_row_instances = async function(){
 
 	return ar_instances
 };//end get_ar_instances
-
-
-
 
 
 
@@ -337,7 +341,6 @@ section_record.prototype.get_component_data = function(component_tipo, section_t
 			value			: [],
 			fallback_value	: [""]
 		}
-		self.data.push(component_data)
 	}
 
 
@@ -361,12 +364,16 @@ section_record.prototype.get_component_relation_data = function(component, secti
 	// get the first compoment, position 2, this component has the locator into the data of the main section.
 	const component_tipo 	= f_path[1]
 	const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
+
+
 	// Get the data of the component selected in the show, normally the last compoment of the chain.
 	// It's the column in the list
-	const parent_data = self.datum.data.find(item =>
-		item.tipo === component.tipo
-		&& item.parent_section_id 	=== section_id
-		&& item.parent_tipo 		=== first_locator.tipo)
+	const parent_data = (first_locator)
+		? self.datum.data.find(item =>
+			item.tipo === component.tipo
+			&& item.parent_section_id 	=== section_id
+			&& item.parent_tipo 		=== first_locator.tipo)
+		: null
 	// if the component has data set it, if not create a null data
 	if(parent_data){
 		component_data.value = parent_data
@@ -382,12 +389,13 @@ section_record.prototype.get_component_relation_data = function(component, secti
 			section_tipo			: section_tipo,
 			tipo					: component.tipo,
 			from_component_tipo		: parent,
+			parent					: parent,
 			value					: [],
 			fallback_value			: [""]
 		}
-
 	}
-	self.data.push(component_data.value)
+	// self.data.push(component_data.value)
+
 	return component_data.value
 };//end get_component_data
 

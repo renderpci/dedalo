@@ -1609,7 +1609,7 @@ abstract class common {
 				$dd_object				= (object)$dd_object;
 				$current_tipo			= $dd_object->tipo;
 				$current_section_tipo	= $dd_object->section_tipo;
-				$mode					= $dd_object->mode ?? $this->get_records_mode();
+				$mode					= $dd_object->mode ?? $this->get_modo();
 				$model					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 				// common temporal excluded/mapped models *******
@@ -1894,12 +1894,12 @@ abstract class common {
 
 			}else{
 
-				$records_mode	= $this->get_records_mode();
-				$mode			= $records_mode;
+				// $records_mode	= $this->get_records_mode();
+				$mode			= $this->get_modo();
 				$tipo			= $this->get_tipo();
 				$section_tipo	= $this->get_section_tipo();
 				$section_id		= $this->get_section_id();
-
+dump($mode, ' $mode +------//////-----------+ '.to_string());
 				// 1. From user preset
 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
 						// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:navigator::get_user_id(), mode:$mode ".to_string());
@@ -2264,7 +2264,7 @@ abstract class common {
 	public function get_request_query_object() {
 
 		// rqo. from request_config
-			$records_mode	= $this->get_records_mode();
+			$records_mode	= $this->get_modo();
 			$mode			= $records_mode;
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
@@ -2380,8 +2380,11 @@ abstract class common {
 						$parsed_item->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->fixed_filter, $section_tipo, $section_id);
 					}
 
-				// show (mandatory)
-					$parsed_item->show = $item_request_config->show;
+				// show (mandatory) it change when the mode is list, since is possible define a different show named show_list
+				dump($mode, ' $mode ++ '.to_string($tipo));
+					$parsed_item->show = ($mode==='list' && isset($item_request_config->show_list))
+						? $item_request_config->show_list
+						: $item_request_config->show;
 					if (isset($parsed_item->show->sqo_config)) {
 						// fallback non defined operator
 						if (!isset($parsed_item->show->sqo_config->operator)) {

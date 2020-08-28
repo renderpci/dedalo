@@ -668,7 +668,8 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 component_common.prototype.get_ar_instances = async function(){
 
 	const self 			= this
-	const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
+	// const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
+	const records_mode 	= null
 
 	const lang 			= self.section_lang
 	const value 		= self.data.value || []
