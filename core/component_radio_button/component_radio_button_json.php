@@ -48,9 +48,11 @@
 		$item = $this->get_data_item($value);
 
 		// datalist
-		if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-			$item->datalist = $ar_list_of_values->result;
+		if (isset($ar_list_of_values)) {
+			$result = isset($ar_list_of_values->result) ? $ar_list_of_values->result : [];
+			$item->datalist = $result;
 		}
+			dump($item, ' item ++ '.to_string());
 
 		$data[] = $item;
 
