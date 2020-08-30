@@ -174,7 +174,7 @@ const add_instance = async (self, current_context, section_id, current_data) => 
 		// ar_instances.push(current_instance)
 
 	return current_instance
-}//end add_instance
+}; //end add_instance
 
 
 
@@ -203,49 +203,10 @@ section_record.prototype.get_ar_instances = async function(){
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
 			const current_context = items[i]
-
-			if (current_context.model==='component_portal' && current_context.mode==='list') {
-
-				const portal_data = self.get_component_data(current_context.tipo, current_context.section_tipo, self.section_id)
-
-				// portal items calculate
-					const options = Object.assign({
-						section_id 		: self.section_id,
-						section_lang	: self.lang,
-						context			: current_context,
-						data			: portal_data,
-						datum			: self.datum,
-						request_config	: current_context.request_config
-					}, current_context)
-
-				const portal_instance = await instances.get_instance(options)
-				// await portal_instance.build(false)
-
-				const portal_items			= portal_instance.get_portal_items()
-				const portal_items_length	= portal_items.length
-				for (let g = 0; g < portal_items_length; g++) {
-
-					const portal_item_context = portal_items[g]
-
-					for(const current_portal_data of portal_data.value) {
-
-						const current_data		= self.datum.data.find(item => item.tipo===portal_item_context.tipo && item.section_id===current_portal_data.section_id)
-						const current_instance	= await add_instance(self, portal_item_context, current_data.section_id, current_data)
-
-						// add
-							ar_instances.push(current_instance)
-
-						break; // only first for now
-					}
-				}
-
-			}else{
-
-				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
-				const current_instance	= await add_instance(self, current_context, section_id, current_data)
-				// add
-					ar_instances.push(current_instance)
-			}
+			const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+			const current_instance	= await add_instance(self, current_context, section_id, current_data)
+			// add
+				ar_instances.push(current_instance)
 
 		}//end for loop
 
@@ -262,7 +223,7 @@ section_record.prototype.get_ar_instances = async function(){
 
 
 /**
-* GET_AR_INSTANCES
+* GET_AR_ROW_INSTANCES
 */
 section_record.prototype.get_ar_row_instances = async function(){
 
@@ -285,12 +246,6 @@ section_record.prototype.get_ar_row_instances = async function(){
 			const current_context = columns[i]
 
 			// the component has direct data into the section
-			// console.log("current_context.parent", current_context.parent);
-			// console.log("section_id", section_id);
-			// console.log("tipo", tipo);
-			// console.log("current_context", current_context);
-			// console.log("self.datum.data", self.datum.data);
-
 			if(current_context.parent === tipo){
 				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
 				const current_instance	= await add_instance(self, current_context, section_id, current_data)
@@ -365,7 +320,6 @@ section_record.prototype.get_component_relation_data = function(component, secti
 	const component_tipo 	= f_path[1]
 	const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
 
-
 	// Get the data of the component selected in the show, normally the last compoment of the chain.
 	// It's the column in the list
 	const parent_data = (first_locator)
@@ -375,11 +329,9 @@ section_record.prototype.get_component_relation_data = function(component, secti
 			&& item.parent_tipo 		=== first_locator.tipo)
 		: null
 	// if the component has data set it, if not create a null data
-	if(parent_data){
-		component_data.value = parent_data
-	}else{
-		component_data.value = null
-	}
+	component_data.value = (parent_data)
+		? parent_data
+		: null
 
 	// undefined case. If the current item don't has data will be instanciated with the current section_id
 	if (component_data.value === null) {

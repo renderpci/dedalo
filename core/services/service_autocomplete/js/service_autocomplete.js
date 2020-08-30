@@ -675,6 +675,7 @@ export const service_autocomplete = function() {
 		const result	= api_response.result
 		const data		= result.data
 		const context 	= result.context
+
 		// get the sections that was searched
 		// const ar_search_sections = self.ar_search_section_tipo
 
@@ -691,8 +692,9 @@ export const service_autocomplete = function() {
 			// get data that mach with the current section from the global data sended by the api
 			// get the full row with all items in the ddo that mach with the section_id
 			const current_row 			= data.filter((item)=> item.section_tipo === section_tipo && item.section_id === section_id )
+
 			// get dd objects from the context that will be used to build the lists in correct order
-			const select = self.instance_caller.dd_request.select || self.instance_caller.dd_request.show
+			const select = self.instance_caller.dd_request.select // || self.instance_caller.dd_request.show
 
 			const select_divisor = select.find(item => item.typo === 'divisor')
 			const divisor = (select_divisor)
@@ -710,6 +712,8 @@ export const service_autocomplete = function() {
 				parent			: self.datalist
 			})
 			// when the user do click in one row send the data to the caller_instance for save it.
+
+
 			li_node.addEventListener('click', function(e){
 				e.stopPropagation()
 				const value = JSON.parse(this.dataset.value)
@@ -720,7 +724,7 @@ export const service_autocomplete = function() {
 				for(const ddo_item of current_ddo){
 
 					// value_element
-						const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
+						// const current_element_context	= context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
 						const current_element_data		= current_row.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===ddo_item.section_tipo)
 
 						if (typeof current_element_data==="undefined") {
@@ -729,15 +733,15 @@ export const service_autocomplete = function() {
 						}
 
 						const instance_options = {
-							context			: current_element_context,
+							context			: ddo_item,
 							data			: current_element_data,
 							datum			: {data : data, context: context},
-							tipo			: current_element_context.tipo,
-							section_tipo	: current_element_context.section_tipo,
-							model			: current_element_context.model,
+							tipo			: ddo_item.tipo,
+							section_tipo	: ddo_item.section_tipo,
+							model			: ddo_item.model,
 							section_id		: current_element_data.section_id,
 							mode			: 'mini',
-							lang			: current_element_context.lang,
+							lang			: ddo_item.lang,
 							id_variant		: self.id
 						}
 

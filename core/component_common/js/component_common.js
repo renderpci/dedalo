@@ -179,7 +179,7 @@ component_common.prototype.init = async function(options) {
 * type, label, tools, divisor, permissions
 */
 export const set_context_vars = function(self, context) {
-
+// console.log("context", self);
 	self.type			= self.context.type 	// tipology of current instance, usually 'component'
 	self.label			= self.context.label // label of current component like 'summary'
 	self.tools			= self.context.tools || [] //set the tools of the component

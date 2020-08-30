@@ -19,7 +19,7 @@
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
 
-			default:
+			default:				
 				foreach ((array)$ar_section_tipo as $current_section_tipo) {
 
 					$section = $section_class::get_instance(null, $current_section_tipo, $modo);
@@ -43,6 +43,16 @@
 
 					$context = array_merge($context, $section_json->context);
 				}
+
+				$dd_request = dd_core_api::$dd_request;
+				$request_ddo = array_find($dd_request, function($item){
+					return $item->typo==='request_ddo';
+				});
+				// when no empty request_ddo->value
+				if ($request_ddo && !empty($request_ddo->value)) {
+					dd_core_api::$context_dd_objects = $request_ddo->value;
+					$context						 = $request_ddo->value;
+				}		
 				break;
 		}
 	}//end if($options->get_context===true)
@@ -87,20 +97,20 @@
 				foreach ($dato as $current_record) {
 
 					$section_id   	= $current_record->section_id;
-					$section_tipo 	= $current_record->section_tipo;
-					// $datos			= isset($current_record->datos) ? json_decode($current_record->datos) : null;
+					$section_tipo 	= $current_record->section_tipo;					
 
 					$section 		= $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
 
 					if ($modo==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
+					}else{
+						// inject datos to section ans set as loaded
+						$datos = $current_record->datos ?? null;
+						if (!is_null($datos)) {
+							$section->set_dato($datos);
+							$section->set_bl_loaded_matrix_data(true);
+						}
 					}
-
-					// inject datos
-						// if (!is_null($datos)) {
-							// $section->set_dato($datos);
-							// $section->set_bl_loaded_matrix_data(true);
-						// }
 
 					// get the JSON data of the related component
 						$section_options = new stdClass();

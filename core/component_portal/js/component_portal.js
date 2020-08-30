@@ -200,7 +200,6 @@ component_portal.prototype.build  = async function(autoload=false){
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
 				self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
-				console.log("//////////\\ PORTAL "+self.tipo+" self.pagination:",self.pagination);
 			// sqo update filter_by_locators
 				// if(self.pagination.total>self.pagination.limit){
 
@@ -281,6 +280,8 @@ component_portal.prototype.build  = async function(autoload=false){
 component_portal.prototype.add_value = async function(value) {
 
 	const self = this
+
+	// console.log("self", self);
 
 	// check if value already exists
 		// const current_value = self.data.value
@@ -426,7 +427,7 @@ component_portal.prototype.get_portal_items = function() {
 
 
 	return portal_items
-}//end get_portal_items
+}; //end get_portal_items
 
 
 
