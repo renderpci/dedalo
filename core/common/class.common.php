@@ -1738,7 +1738,7 @@ abstract class common {
 					// component case
 					case (strpos($model, 'component_')===0):
 
-						$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
+						$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);						
 						$related_element	= component_common::get_instance($model,
 																			 $current_tipo,
 																			 null,
@@ -2762,8 +2762,8 @@ abstract class common {
 	*/
 	public static function get_element_lang($tipo, $data_lang=DEDALO_DATA_LANG) {
 
-		$RecordObj_dd 	= new RecordObj_dd($tipo);
-		$lang 			= ($RecordObj_dd->get_traducible()==='si') ? $data_lang : DEDALO_DATA_NOLAN;
+		$translatable 	= RecordObj_dd::get_translatable($tipo);
+		$lang 			= ($translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
 
 		return $lang;
 	}//end get_element_lang

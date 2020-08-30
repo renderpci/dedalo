@@ -1165,5 +1165,20 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
+	/**
+	* GET_TRANSLATABLE
+	* @return bool
+	*/
+	public static function get_translatable($tipo) {
+		
+		$RecordObj_dd = new RecordObj_dd($tipo);
+		$translatable = $RecordObj_dd->get_traducible();
+		
+		return ($translatable==='si');
+	}//end get_translatable
+
+
+
 }//end RecordObj_dd
-?>
+
+
