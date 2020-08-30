@@ -178,7 +178,7 @@ class layout_map {
 									if(isset($item->tipo)){
 										$item = $item->tipo;
 									}
-									dump($item, ' $item +///////-------///////////+ '.to_string());
+									// dump($item, ' $item +///////-------///////////+ '.to_string());
 									$ar_ddo = is_string($item)
 										? [layout_map::get_component_ddo($request_config_type, $current_section_tipo, $item, $current_mode, $lang, $parent)]
 										: layout_map::get_f_path_ddo($item, $request_config_type, $current_section_tipo, $current_mode, $lang, $parent);

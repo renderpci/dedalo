@@ -190,103 +190,64 @@ class section extends common {
 	*/
 	public function get_dato() {
 
-		# If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
-		if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
-			$this->save_handler = 'session';
-		}
+		// check valid call
+			if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+				if(SHOW_DEBUG===true) {
+					if ($this->section_id==='result') {
+						throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
+					};
+				}
+				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
+			}
 
+		// save_handler. If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
+			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
+				$this->save_handler = 'session';
+			}
 
-		#
-		# SAVE_HANDLER DIFFERENT TO DATABASE CASE
-		# Sometimes we need use section as temporal element without save real data to database. Is this case
-		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+		// save_handler session
+			// Sometimes we need use section as temporal element without save real data to database. Is this case
+			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
-
 				if (!isset($this->dato)) {
-
 					$temp_data_uid = $this->tipo.'_'.$this->section_id;
 					# Fix dato as object
-					if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-						$section_temp_data = clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
-						$this->dato = $section_temp_data;
-						#$this->bl_loaded_matrix_data = true;
-					}else{
-
-						$this->dato = new stdClass();
-					}
-
+					$this->dato = isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])
+						? clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]
+						: new stdClass();
 				}
-
 				return $this->dato;
-			}//end if (isset($this->save_handler) && $this->save_handler==='session')
+			}		
 
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				#$start_time = start_time();
-				#global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-			}
-
-		// Cache dato
-			// static $section_dato_static;
-			// if(isset($section_dato_static[$this->section_id])) {
-			// 	#trigger_error("Cacheado dato in section $this->section_id ($this->tipo)");
-			// 	#return($section_dato_static[$this->section_id]);
-			// }
-
-
-		if( empty($this->section_id) || (abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
-
-			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin section_id)
-			#$this->bl_loaded_matrix_data = true;
-			#debug_log(__METHOD__." error on get dato . Trying get dato from section $this->tipo, section_id = ".to_string($this->section_id), logger::DEBUG);
-			if(SHOW_DEBUG===true) {
-				#throw new Exception("Error on get dato:  Trying get dato in modo edit without section_id section. Section section_id = ($this->section_id) in modo $this->modo", 1);
-			}
-
-			#return null;
-			#$initial_dato = new stdClass();
-			#return $initial_dato;
-		}
-
-		// is not loaded
+		// data is not loaded. Load once
 			if($this->bl_loaded_matrix_data!==true) {
-			# Experimental (si ya se ha intentado cargar pero con sin section_id, y ahora se hace con section_id, lo volvemos a intentar)
-			#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->section_id)<1) ) {
 
-				#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-				if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
-					$tipo = $this->get_section_real_tipo();
-				}else{
-					$tipo = $this->tipo;
-				}
+				// if virtual section have section_tipo "real" in properties, change the tipo of the section to the real					
+					$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
+						? $this->get_section_real_tipo()
+						: $this->tipo;
 
-				$section_tipo 			= $this->tipo;
-				$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
+				$section_tipo			= $this->tipo;
+				$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
 				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
 
-				$dato = $JSON_RecordObj_matrix->get_dato();
+				// load dato from db
+					$dato = $JSON_RecordObj_matrix->get_dato();
+					// dump(null, ' dato from DB ++ ->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->-> '.to_string($this->tipo.'-'.$this->section_id.'-'. RecordObj_dd::get_termino_by_tipo($this->tipo) ));
 
-				# Fix dato as object
-				$this->dato = (object)$dato;
+				// fix dato (force object)
+					$this->dato = (object)$dato;
 
-				/* modificar esta verificación. con secciones virtuales no funciona..
-				if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
-					if(SHOW_DEBUG===true) {
-						dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
-					}
-					throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
-				}
-				*/
+				// modificar esta verificación. con secciones virtuales no funciona..
+					// if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
+					// 	if(SHOW_DEBUG===true) {
+					// 		dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
+					// 	}
+					// 	throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
+					// }				
 
 				// set as loaded
-				$this->bl_loaded_matrix_data = true;
-
-				// cache dato
-					// trigger_error("Loaded dato in section $this->section_id ($this->tipo)");
-					// $section_dato_static[$this->section_id] = $this->dato;
-
-				#debug_log(__METHOD__." LOADED DATA FROM DB ++++ ".to_string($this->tipo), logger::ERROR);
+					$this->bl_loaded_matrix_data = true;
 			}//end if($this->bl_loaded_matrix_data!==true)
 
 		// debug
@@ -308,56 +269,29 @@ class section extends common {
 	*/
 	public function get_component_dato($component_tipo, $lang, $lang_fallback=false) {
 
-		$component_dato = null;
+		$all_component_data = $this->get_all_component_data($component_tipo);
 
-		if(SHOW_DEBUG===true) {
-			#$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-		if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-			if(SHOW_DEBUG===true) {
-				if ($this->section_id==='result') {
-					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
-				};
-			}
-			throw new Exception("Error Processing Request. get_component_dato of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
-		}
-
-		$section_tipo 	= $this->tipo;
-		$datos 			= $this->get_dato();
-
-
-		if (is_object($datos)) {
-
-			if ($lang_fallback===true) { // case mode list (see component common)
-				if (isset($datos->components->$component_tipo->dato->$lang) && !empty($datos->components->$component_tipo->dato->$lang)) {
-					$component_dato = $datos->components->$component_tipo->dato->$lang;
-				}else{
-					$lang_default = DEDALO_DATA_LANG_DEFAULT;
-					if ($lang !== $lang_default && !empty($datos->components->$component_tipo->dato->$lang_default)) {
-						$component_dato = $datos->components->$component_tipo->dato->$lang_default;
-					}
-				}
+		if ($lang_fallback===true) { // case mode list (see component common)
+			
+			if (isset($all_component_data->dato->{$lang}) && !empty($all_component_data->dato->{$lang})) {
+				// lang data exists
+				$component_dato = $all_component_data->dato->{$lang};
 			}else{
-
-				if (isset($datos->components->$component_tipo->dato->$lang)) {
-					$component_dato = $datos->components->$component_tipo->dato->$lang;
-				}
+				// fallback to default lang
+				$component_dato = ($lang!==$lang_default && !empty($all_component_data->dato->{$lang_default}))
+					? $all_component_data->dato->{$lang_default}
+					: null;
 			}
 
 		}else{
-			trigger_error("[get_component_dato] Error on read component_dato (datos is not object) ". safe_tipo($component_tipo) .' - gettype: '. gettype($datos) );
-		}
 
-		if(SHOW_DEBUG===true) {
-			#$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			$component_dato = isset($all_component_data->dato->{$lang})
+				? $all_component_data->dato->{$lang}
+				: null;
 		}
-		#debug_log(__METHOD__." component_dato ".to_string($component_dato), logger::DEBUG);
-
+		
 		return $component_dato;
-	}#end get_component_dato
+	}//end get_component_dato
 
 
 
@@ -369,38 +303,15 @@ class section extends common {
 	*/
 	public function get_all_component_data($component_tipo) {
 
-		$component_data = null;
+		$section_data = $this->get_dato();
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$component_tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		if (!is_object($section_data)) {
+			trigger_error("[get_all_component_data] Error on read component_data component_tipo: $component_tipo" );
 		}
 
-		if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-			if(SHOW_DEBUG===true) {
-				if ($this->section_id==='result') {
-					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
-				};
-			}
-			throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
-		}
-
-		$section_tipo 	= $this->tipo;
-		$section_data 	= $this->get_dato();
-
-
-		if (is_object($section_data)) {
-
-			if (isset($section_data->components->$component_tipo)) {
-				$component_data = $section_data->components->$component_tipo;
-			}
-		}else{
-			trigger_error("Error on read component_data $component_tipo" );
-		}
-
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$component_tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
+		$component_data = isset($section_data->components->{$component_tipo})
+			? $section_data->components->{$component_tipo}
+			: null;
 
 		return $component_data;
 	}//end get_all_component_data
@@ -662,10 +573,10 @@ class section extends common {
 	*/
 	public function set_component_relation_dato( $component_obj ) {
 
-		$component_tipo 		= $component_obj->get_tipo();
-		$component_dato 		= $component_obj->get_dato_full();
-		$relation_type 		 	= $component_obj->get_relation_type();
-		$from_component_tipo 	= $component_tipo;
+		$component_tipo			= $component_obj->get_tipo();
+		$component_dato			= $component_obj->get_dato_full();
+		$relation_type			= $component_obj->get_relation_type();
+		$from_component_tipo	= $component_tipo;
 
 		# Remove all previous locators of current component tipo
 		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
@@ -709,7 +620,6 @@ class section extends common {
 
 
 
-
 	/**
 	* BUILD_AR_SECTION_CREATOR
 	* Construye el array con los datos de creación de la sección
@@ -740,9 +650,9 @@ class section extends common {
 		}
 
 		return array(
-				'top_tipo' 				=> $top_tipo,
-				'portal_section_tipo' 	=> $portal_section_tipo,
-				'portal_tipo' 			=> $portal_tipo
+				'top_tipo'				=> $top_tipo,
+				'portal_section_tipo'	=> $portal_section_tipo,
+				'portal_tipo'			=> $portal_tipo
 				);
 	}#end build_section_locator
 

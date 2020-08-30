@@ -35,11 +35,11 @@
 		// Value
 		switch ($modo) {
 			case 'list':
-				$value 				= $this->get_valor();
+				$value				= $this->get_valor();
 				break;
 			case 'edit':
 			default:
-				$value 				= $this->get_dato();
+				$value				= $this->get_dato();
 				$ar_list_of_values	= $this->get_ar_list_of_values2();
 				break;
 		}
@@ -52,7 +52,6 @@
 			$result = isset($ar_list_of_values->result) ? $ar_list_of_values->result : [];
 			$item->datalist = $result;
 		}
-			dump($item, ' item ++ '.to_string());
 
 		$data[] = $item;
 

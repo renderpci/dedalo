@@ -543,50 +543,50 @@ abstract class common {
 
 
 	}//end set_default_value
-
-
-
-	/**
-	* GET IDENTIFICADOR UNICO
-	* Se fija al hacer la primera llamada.
-	* Para sobreescribirlo, simplemente llamarlo inicialmente pasándo un string
-	*/
-	public function get_identificador_unico() {
-
-		# Nota: estaba desactivo ¿? en 25-11-2015. Cambiado porque tool_time_machine lo necesita activo (ver trigger.tool_time_machine )
-		if (isset($this->identificador_unico) && $this->get_modo()==='tool_time_machine') {
-			return $this->identificador_unico;
-		}
-
-		$id 			= $this->get_id();
-		$tipo 			= $this->get_tipo();
-		$parent 		= $this->get_parent();
-		$lang 			= $this->get_lang();
-		$modo 			= $this->get_modo();
-		$variant 		= $this->get_variant();
-		$section_tipo 	= $this->get_section_tipo();
-
-		$this->identificador_unico = $id.'_'.$tipo.'_'.$parent.'_'.$lang.'_'.$modo.'_'.$variant.'_'.$section_tipo;
-
-		// Allow show more than one component with same tipo in search mode creating unique uid for each one
-		if ($modo==='search') {
-			$time_suffix = microtime(false);
-			$this->identificador_unico = $this->identificador_unico .'_'. str_replace(['.',' '], '', $time_suffix);
-		}
-
-		return (string)$this->identificador_unico;
-	}//end get_identificador_unico
-
-
-
-	/**
-	* SET IDENTIFICADOR UNICO
-	* Se fija al hacer la primera llamada.
-	*/
-	public function set_identificador_unico($string) {
-		$this->identificador_unico = $string;
-	}//end set_identificador_unico
-
+	//
+	//
+	//
+	// /**
+	// * GET IDENTIFICADOR UNICO
+	// * Se fija al hacer la primera llamada.
+	// * Para sobreescribirlo, simplemente llamarlo inicialmente pasándo un string
+	// */
+	// public function get_identificador_unico() {
+	//
+	// 	# Nota: estaba desactivo ¿? en 25-11-2015. Cambiado porque tool_time_machine lo necesita activo (ver trigger.tool_time_machine )
+	// 	if (isset($this->identificador_unico) && $this->get_modo()==='tool_time_machine') {
+	// 		return $this->identificador_unico;
+	// 	}
+	//
+	// 	$id 			= $this->get_id();
+	// 	$tipo 			= $this->get_tipo();
+	// 	$parent 		= $this->get_parent();
+	// 	$lang 			= $this->get_lang();
+	// 	$modo 			= $this->get_modo();
+	// 	$variant 		= $this->get_variant();
+	// 	$section_tipo 	= $this->get_section_tipo();
+	//
+	// 	$this->identificador_unico = $id.'_'.$tipo.'_'.$parent.'_'.$lang.'_'.$modo.'_'.$variant.'_'.$section_tipo;
+	//
+	// 	// Allow show more than one component with same tipo in search mode creating unique uid for each one
+	// 	if ($modo==='search') {
+	// 		$time_suffix = microtime(false);
+	// 		$this->identificador_unico = $this->identificador_unico .'_'. str_replace(['.',' '], '', $time_suffix);
+	// 	}
+	//
+	// 	return (string)$this->identificador_unico;
+	// }//end get_identificador_unico
+	//
+	//
+	//
+	// /**
+	// * SET IDENTIFICADOR UNICO
+	// * Se fija al hacer la primera llamada.
+	// */
+	// public function set_identificador_unico($string) {
+	// 	$this->identificador_unico = $string;
+	// }//end set_identificador_unico
+	//
 
 
 	/**
@@ -608,18 +608,18 @@ abstract class common {
 
 
 
-	/**
-	* GET TIPO NAME OF CURRENT OBJECT
-	* @see RecordObj_dd::get_termino_by_tipo($tipo)
-	* @return $tipo_name
-	*	String like 'Proyectos'
-	*/
-	public function get_tipo_name() {
-		$tipo 	 	= $this->get_tipo();
-		$tipo_name 	= RecordObj_dd::get_termino_by_tipo($tipo,null,true);
-
-		return $tipo_name;
-	}
+	// /**
+	// * GET TIPO NAME OF CURRENT OBJECT
+	// * @see RecordObj_dd::get_termino_by_tipo($tipo)
+	// * @return $tipo_name
+	// *	String like 'Proyectos'
+	// */
+	// public function get_tipo_name() {
+	// 	$tipo 	 	= $this->get_tipo();
+	// 	$tipo_name 	= RecordObj_dd::get_termino_by_tipo($tipo,null,true);
+	//
+	// 	return $tipo_name;
+	// }
 
 
 
@@ -1265,7 +1265,7 @@ abstract class common {
 
 			$called_model = get_class($this); // get_called_class(); // static::class
 			$called_tipo  = $this->get_tipo();
-
+			
 		// cache context
 			// static $resolved_get_json = [];
 			// $resolved_get_json_key = $called_model .'_'. $called_tipo .'_'. ($this->section_tipo ?? '') .'_'. $this->modo .'_'. (int)$options->context_type . '_'. (int)$options->get_request_config;
@@ -1276,12 +1276,23 @@ abstract class common {
 			// }
 			// dump($options, ' options ++ '.to_string($called_model) .' - '.$resolved_get_json_key);
 
-		// path. Class name is called class (ex. component_input_text), not this class (common)
-			$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
-				// dump($resolved_get_json_key, ' show path ++ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH '.$called_model .' - '. $called_tipo.' - '. ($options->get_context===true ? 'context' : '' ) . ' ' .($options->get_data===true ? 'data' : '' ) );
 
-		// controller include
-			$json = include( $path );
+		// old way
+			// path. Class name is called class (ex. component_input_text), not this class (common)
+				$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
+					// dump($resolved_get_json_key, ' show path ++ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH '.$called_model .' - '. $called_tipo.' - '. ($options->get_context===true ? 'context' : '' ) . ' ' .($options->get_data===true ? 'data' : '' ) );
+
+			// controller include
+				$json = include( $path );
+
+		// new way
+			// $json = new stdClass();
+			// 	if (true===$options->get_context) {
+			// 		$json->context = $this->get_context($options);
+			// 	}
+			// 	if (true===$options->get_data) {
+			// 		$json->data = $this->get_data($options);
+			// 	}
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -1311,6 +1322,81 @@ abstract class common {
 
 		return $json;
 	}//end get_json
+
+
+
+	/**
+	* GET_CONTEXT
+	* @return array $context
+	*/
+	public function get_context__DES($options) {
+
+		$called_model = get_class($this); // get_called_class(); // static::class
+
+		// context and subcontext from API dd_request if already exists sections
+			if ($called_model!=='sections' && isset(dd_core_api::$dd_request)) {
+				
+				// get request_ddo object
+					$dd_request		= dd_core_api::$dd_request;
+					$request_ddo	= array_find($dd_request, function($item){
+						return $item->typo==='request_ddo';
+					});
+				
+				// when no empty request_ddo->value
+					if ($request_ddo && !empty($request_ddo->value)) {
+						// $context = array_values(array_filter($request_ddo->value, function($ddo){							
+						// 	return $ddo->tipo===$this->tipo || $ddo->parent===$this->tipo || $ddo->section_tipo===$this->tipo;
+						// }));
+						$context = $request_ddo->value;
+						dd_core_api::$context_dd_objects = $context;
+						return $context; // stop here (!)
+
+						// if (!empty($context)) {
+						// 		dump($context, ' context ///////////////////////////////////////////////////////////////////////////////////////////////// '.to_string(get_class($this).' - '.$this->tipo));
+						// 	// edit and add to static
+						// 		foreach ($context as $element) {
+						// 			// $element->parent				= $this->tipo;
+						// 			// $element->get_request_config	= $options->get_request_config;
+									
+						// 			dd_core_api::$context_dd_objects[] = $element;
+						// 		}
+
+						// 	return $context; // stop here (!)
+						// }
+					}
+			}
+		
+		
+		// path. Class name is called class (ex. component_input_text), not this class (common)
+			$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
+				// dump($resolved_get_json_key, ' show path ++ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH '.$called_model .' - '. $called_tipo.' - '. ($options->get_context===true ? 'context' : '' ) . ' ' .($options->get_data===true ? 'data' : '' ) );
+
+		// controller include
+			$json = include( $path );
+		
+		return $json->context;
+	}//end get_context
+
+
+
+	/**
+	* GET_DATA
+	* @return array $data
+	*/
+	public function get_data__DES($options) {
+
+		$called_model = get_class($this); // get_called_class(); // static::class
+
+		// path. Class name is called class (ex. component_input_text), not this class (common)
+			$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
+				// dump($resolved_get_json_key, ' show path ++ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH '.$called_model .' - '. $called_tipo.' - '. ($options->get_context===true ? 'context' : '' ) . ' ' .($options->get_data===true ? 'data' : '' ) );
+
+		// controller include
+			$json = include( $path );
+
+
+		return $json->data;
+	}//end get_data
 
 
 
@@ -1581,36 +1667,62 @@ abstract class common {
 
 		$ar_subcontext = [];
 
-		$request_ddo_value = array_filter($this->request_ddo_value,function($item){
-			return $item->config_type === 'show' && $item->tipo!==$this->tipo && $item->typo==='ddo' && $item->model!=='section';
+		// already_calculated
+			static $ar_subcontext_calculated = [];
+
+		// (!) En proceso: eliminar var $this->request_ddo_value y buscar en un único cajón '$this->request_ddo_value'. Por acabar ..
+		$request_ddo_value = array_filter($this->request_ddo_value, function($item){
+		// $request_ddo_value = array_filter(dd_core_api::$request_ddo_value, function($item){
+			$section_tipo = $this->get_section_tipo() ?? $this->tipo;
+			return ($item->config_type==='show' && $item->tipo!==$this->tipo && $item->typo==='ddo' && $item->tipo!==$section_tipo);
 		});
+		// dump($this->request_ddo_value, ' this->request_ddo_value ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.$this->get_section_tipo().' - '.$this->tipo.' - '. get_called_class() );
+		// dump(dd_core_api::$request_ddo_value, 'dd_core_api::$request_ddo_value ++**************************************************************************'. count(dd_core_api::$request_ddo_value).' '.to_string($this->tipo));
+		// dump($this->request_ddo_value, '$this->request_ddo_value ++****************************************************************************************'. count($this->request_ddo_value).' '.to_string($this->tipo));
+		// dump($request_ddo_value, ' $request_ddo_value +------///////---------+ '.$this->get_section_tipo().' - '.$this->tipo.' - '. get_called_class() );
 
-		// dump($request_ddo_value, ' $request_ddo_value +------///////---------+ '.to_string($this->tipo).' '. get_called_class());
 
+			// subcontext from layout_map items
+				// $layout_map_options = new stdClass();
+				// 	$layout_map_options->tipo					= $this->get_tipo();
+				// 	$layout_map_options->section_tipo			= $this->get_section_tipo();
+				// 	$layout_map_options->modo					= $records_mode;
+				// 	$layout_map_options->add_section			= false;
+				// 	$layout_map_options->request_config_type	= 'show';
 
-
-		// subcontext from layout_map items
-			// $layout_map_options = new stdClass();
-			// 	$layout_map_options->tipo					= $this->get_tipo();
-			// 	$layout_map_options->section_tipo			= $this->get_section_tipo();
-			// 	$layout_map_options->modo					= $records_mode;
-			// 	$layout_map_options->add_section			= false;
-			// 	$layout_map_options->request_config_type	= 'show';
-
-			// $layout_map = layout_map::get_layout_map($layout_map_options, $request_config);
-			// 	// dump($layout_map, ' layout_map ++ '.$this->tipo." ".to_string() );
-			// 	// dump(debug_backtrace()[3], 'debug_backtrace()[3] ++ '.to_string());
+				// $layout_map = layout_map::get_layout_map($layout_map_options, $request_config);
+				// 	// dump($layout_map, ' layout_map ++ '.$this->tipo." ".to_string() );
+				// 	// dump(debug_backtrace()[3], 'debug_backtrace()[3] ++ '.to_string());
 			if(!empty($request_ddo_value)) foreach($request_ddo_value as $dd_object) {
 
-				if ($dd_object->tipo===$this->tipo || $dd_object->model === 'section') {
-					continue; // self exclude
+				if($dd_object->model==='section'){				
+					if (!dd_object::in_array_ddo($dd_object, dd_core_api::$context_dd_objects, ['model','tipo','section_tipo','mode'])) {
+						$ar_subcontext[] = $dd_object;
+						dd_core_api::$context_dd_objects[] = $dd_object;
+					}
+					continue;
 				}
 
-				$dd_object				= (object)$dd_object;
-				$current_tipo			= $dd_object->tipo;
-				$current_section_tipo	= $dd_object->section_tipo;
-				$mode					= $dd_object->mode ?? $this->get_modo();
-				$model					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				// if ($dd_object->tipo===$this->tipo || $dd_object->model==='section')  { // || $dd_object->model==='section'
+					// continue; // self exclude
+				// }
+				// dump($dd_object, ' $dd_object +/////--------///////////+ '.to_string($this->tipo));
+				// dump(dd_core_api::$context_dd_objects, ' dd_core_api::$context_dd_objects +---------********----------+ '.to_string());
+				
+
+				// short vars
+					$dd_object				= (object)$dd_object;
+					$current_tipo			= $dd_object->tipo;
+					$current_section_tipo	= $dd_object->section_tipo;
+					$mode					= $dd_object->mode ?? $this->get_modo();
+					$model					= $dd_object->model; //RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+
+				// ar_subcontext_calculated
+					$cid = $current_tipo . '_' . $current_section_tipo;
+					if (in_array($cid, $ar_subcontext_calculated)) {
+						debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
+						// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);						
+					}
 
 				// common temporal excluded/mapped models *******
 					// $match_key = array_search($model, common::$ar_temp_map_models);
@@ -1670,6 +1782,9 @@ abstract class common {
 							$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
 				}
 
+				// add calculated subcontext
+					$ar_subcontext_calculated[] = $cid;
+
 			}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 
 
@@ -1687,7 +1802,7 @@ abstract class common {
 		$ar_subdata = [];
 
 		$source_model		= get_called_class();
-		$context_dd_objects	= dd_core_api::$context_dd_objects;
+		$context_dd_objects	= dd_core_api::$context_dd_objects ?? [];
 
 
 		// source. calculate context if not already calculated
@@ -1710,6 +1825,7 @@ abstract class common {
 			$ar_ddo = array_values(array_filter($context_dd_objects, function($item){
 				return $item->parent===$this->tipo && $item->type==='component';
 			}));
+			// dump($ar_ddo, ' SUBDATA ar_ddo '.$this->tipo.'++ ********************************************************************************************** '.to_string($this->tipo));
 
 
 		if(!empty($ar_ddo)) foreach($ar_locators as $current_locator) {
@@ -1819,24 +1935,24 @@ abstract class common {
 
 
 			// dd_info, additional information about row
-				// rqo. (Request Query Object)
-					$request_config = $source->request_config;
-					$rqo = array_find($request_config, function($item) {
-						return $item->typo==='rqo';
-					});
-				// value_with_parents. Check optional API request (for example, from service_autocomplete)
-					$value_with_parents_object = array_find(dd_core_api::$dd_request, function($element){
-						return $element->typo==='value_with_parents';
-					});
-					$value_with_parents = ($value_with_parents_object)
-						? ($value_with_parents_object->value ?? false) // from request objrct
-						: (($rqo && isset($rqo->show))
-							? ($rqo->show->value_with_parents ?? false)// from properties source->request_config->show
-							: false);
-					if ($value_with_parents===true) {
-						$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
-						$ar_subdata[] = $dd_info;
-					}
+				// // rqo. (Request Query Object)
+				// 	$request_config = $source->request_config; 	dump($request_config, ' request_config ++ '.to_string($this->tipo));
+				// 	$rqo = array_find($request_config, function($item) {
+				// 		return $item->typo==='rqo';
+				// 	});
+				// // value_with_parents. Check optional API request (for example, from service_autocomplete)
+				// 	$value_with_parents_object = array_find(dd_core_api::$dd_request, function($element){
+				// 		return $element->typo==='value_with_parents';
+				// 	});
+				// 	$value_with_parents = ($value_with_parents_object)
+				// 		? ($value_with_parents_object->value ?? false) // from request objrct
+				// 		: (($rqo && isset($rqo->show))
+				// 			? ($rqo->show->value_with_parents ?? false)// from properties source->request_config->show
+				// 			: false);
+				// 	if ($value_with_parents===true) {
+				// 		$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
+				// 		$ar_subdata[] = $dd_info;
+				// 	}
 
 		}//end foreach ($ar_locators as $current_locator)
 
@@ -1861,6 +1977,11 @@ abstract class common {
 		if (isset($this->request_config)) {
 			return $this->request_config;
 		}
+
+		if(SHOW_DEBUG===true) {
+			$idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
+		}
+
 
 		// dump(dd_core_api::$dd_request, 'dd_core_api::$dd_request ++ '.to_string($this->tipo)." - ". debug_backtrace()[1] );
 
@@ -1899,7 +2020,7 @@ abstract class common {
 				$tipo			= $this->get_tipo();
 				$section_tipo	= $this->get_section_tipo();
 				$section_id		= $this->get_section_id();
-dump($mode, ' $mode +------//////-----------+ '.to_string());
+
 				// 1. From user preset
 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
 						// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:navigator::get_user_id(), mode:$mode ".to_string());
@@ -1908,7 +2029,7 @@ dump($mode, ' $mode +------//////-----------+ '.to_string());
 						$ar_request_query_objects = array_filter($user_preset, function($item){
 							return $item->typo==='rqo';
 						});
-							dump($ar_request_query_objects, ' ar_request_query_objects ++ [1] '.to_string());
+						// dump($ar_request_query_objects, ' ar_request_query_objects ++ [1] '.to_string());
 						debug_log(__METHOD__." request_query_objects calculated from user preset [$section_tipo-$tipo] ", logger::DEBUG);
 					}
 
@@ -1920,60 +2041,47 @@ dump($mode, ' $mode +------//////-----------+ '.to_string());
 							$offset	= $this->pagination->offset ?? null;
 
 						$ar_request_query_objects = common::get_ar_request_query_objects($tipo, false, $section_tipo, $mode, $section_id, $limit, $offset);
-							// dump($ar_request_query_objects, ' ar_request_query_objects [2] ++ '.to_string($this->tipo));
+						// dump($ar_request_query_objects, ' ar_request_query_objects [2] ++ '.to_string($this->tipo));
 					}
 			}
 
 		// request_config value
 			$request_config = array_merge([$source], $ar_request_query_objects);
-			// fix value
-			$this->request_config = $request_config;
+			// fix request_config value
+				$this->request_config = $request_config;
 
 		// request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
 			// received request_ddo
 				$request_ddo = array_find($dd_request, function($item) {
 					return $item->typo==='request_ddo';
 				});
-				if (!empty($request_ddo)) {
-					$request_ddo_value = array_filter($request_ddo->value, function($item){
-						return $item->parent === $this->tipo;
-					});
-					if(!empty($request_ddo_value)){
-						$request_ddo = new stdClass();
-							$request_ddo->typo = 'request_ddo';
-							$request_ddo->value = $request_ddo_value;
-					}else{
-						$request_ddo = null;
-					}
-				}
-			// preset request_ddo
-				if (empty($request_ddo)) {
-					if (!isset($user_preset)) {
-						$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
-					}
-					if (!empty($user_preset)) {
-						$request_ddo = array_find($user_preset, function($item){
-							return $item->typo==='request_ddo';
-						});
-					}
-				}
-			// calculated request_ddo
-				if (empty($request_ddo)) {
-					$request_ddo = $this->get_request_ddo();
+			// not received request_ddo
+				if(empty($request_ddo)) {
+					// preset request_ddo
+						if (!isset($user_preset)) {
+							$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
+						}
+						if (!empty($user_preset)) {
+							$request_ddo = array_find($user_preset, function($item){
+								return $item->typo==='request_ddo';
+							});
+						}
+
+					// calculated request_ddo
+						if (empty($request_ddo)) {
+							$request_ddo = $this->get_request_ddo();
+						}
 				}
 
+			// fix request_ddo_value for current element
 				$this->request_ddo_value = $request_ddo->value;
 
-			// add non existent ddo's
-			foreach ($request_ddo->value as $ddo) {
-				if (!dd_object::in_array_ddo($ddo, dd_core_api::$request_ddo_value, ['model','tipo','section_tipo','mode','lang', 'parent','typo','type'])) {
-					dd_core_api::$request_ddo_value[] = $ddo;
+			// add non existent ddo's to static var dd_core_api::$request_ddo_value
+				foreach ($request_ddo->value as $ddo) {
+					if (!dd_object::in_array_ddo($ddo, dd_core_api::$request_ddo_value, ['model','tipo','section_tipo','mode','lang', 'parent','typo','type'])) {
+						dd_core_api::$request_ddo_value[] = $ddo;
+					}
 				}
-			}
-
-
-
-		// dump($request_config, ' +++++++++++++++++++++++++++++ $request_config ++ '.to_string());
 
 
 		return $request_config;
@@ -2381,7 +2489,7 @@ dump($mode, ' $mode +------//////-----------+ '.to_string());
 					}
 
 				// show (mandatory) it change when the mode is list, since is possible define a different show named show_list
-				dump($mode, ' $mode ++ '.to_string($tipo));
+					// dump($mode, ' $mode ++ '.to_string($tipo));
 					$parsed_item->show = ($mode==='list' && isset($item_request_config->show_list))
 						? $item_request_config->show_list
 						: $item_request_config->show;

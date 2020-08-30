@@ -869,11 +869,11 @@ class dd_core_api {
 
 				// context add
 					$context = $element_json->context;
-					$context[] = (object)[
-						// 'source'	=> 'request_ddo',
-						'typo'	=> 'request_ddo',
-						'value'	=> dd_core_api::$request_ddo_value
-					];
+					// $context[] = (object)[
+					// 	// 'source'	=> 'request_ddo',
+					// 	'typo'	=> 'request_ddo',
+					// 	'value'	=> dd_core_api::$request_ddo_value
+					// ];
 
 				// fix final static var context
 					// dd_core_api::$context = $context;
