@@ -166,8 +166,8 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// load data if not yet received as an option
 		if (autoload===true) {
-
-				console.log("// portal request (autoload=true): self.dd_request.show:",self.dd_request.show);
+			
+			// console.log("// portal request (autoload=true): self.dd_request.show:",self.dd_request.show);
 
 			// get context and data
 				const current_data_manager	= new data_manager()
@@ -175,17 +175,18 @@ component_portal.prototype.build = async function(autoload=false){
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					console.log("portal build api_response:", api_response)
+					// console.log("portal data:", JSON.parse(JSON.stringify(self.data)) )
+					// console.log("portal build api_response.result.data:", JSON.parse(JSON.stringify(api_response.result.data)) )
 				}
 
 			// set context and data to current instance
-				self.update_datum(api_response.result.data)
-				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				// self.update_datum(api_response.result.data) // (!) Already udated on save (add/delete elements)
 
-			// update instance properties from context (type, label, tools, divisor, permissions)
+			// context. update instance properties from context (type, label, tools, divisor, permissions)
+				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				set_context_vars(self, self.context)
 
-			// update element pagination vars when are used
+			// pagination. update element pagination vars when are used
 				if (self.data.pagination && typeof self.pagination.total!=="undefined") {
 					// console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++ self.data.pagination:",self.data.pagination);
 					self.pagination.total	= self.data.pagination.total

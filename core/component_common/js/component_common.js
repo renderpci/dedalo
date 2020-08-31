@@ -354,7 +354,6 @@ component_common.prototype.save = async function(changed_data) {
 			// result expected is current section_id. False is returned if a problem found
 			const result = response.result
 			if (result===false) {
-				// error
 
 				self.node.map(item => {
 					item.classList.add("error")
@@ -372,7 +371,7 @@ component_common.prototype.save = async function(changed_data) {
 			}else{
 				// success
 
-				// update datum
+				// update datum (centralized update datum call)
 					self.update_datum(result.data)
 
 				// success. add save_success class to component wrappers (green line animation)
@@ -466,7 +465,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 		// add the new data into the general datum
 			self.datum.data = [...self.datum.data, ...new_data]
-				// console.log("update_datum --------------------------- final self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
+				console.log("update_datum --------------------------- final self.datum.data:",new_data, JSON.parse(JSON.stringify(self.datum.data)));
 
 	// data (from current component only)
 		// current element data
