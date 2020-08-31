@@ -354,20 +354,23 @@ abstract class component_common extends common {
 				$this->set_dato_default();
 			}
 
-		$properties = $this->get_properties();
+		
 
 		// pagination
 			$this->pagination = new stdClass();
 				$this->pagination->offset	= 0; // default
 				// $this->pagination->limit	= isset($properties->list_max_records) ? (int)$properties->list_max_records : 5;
-				$this->pagination->limit	= (function() use($properties){
-					if (isset($properties->source->request_config) && isset($properties->source->request_config[0])) {
-						// show						
-						if (isset($properties->source->request_config[0]->show) && isset($properties->source->request_config[0]->show->sqo_config->limit)) {
-							return $properties->source->request_config[0]->show->sqo_config->limit;
+				$this->pagination->limit	= (function(){
+					// structure properties
+						$properties = $this->get_properties();
+						if (isset($properties->source->request_config) && isset($properties->source->request_config[0])) {
+							// show
+							if (isset($properties->source->request_config[0]->show) && isset($properties->source->request_config[0]->show->sqo_config->limit)) {
+								return (int)$properties->source->request_config[0]->show->sqo_config->limit;
+							}
 						}
-					}
-					return 5;
+					// default
+						return 5;
 				})();
 
 
@@ -2819,11 +2822,7 @@ abstract class component_common extends common {
 	* It slices the component array of locators to allocate pagination options
 	* @return arrray $dato_paginated
 	*/
-	public function get_dato_paginated() {
-
-		// sort vars
-			$properties = $this->get_properties();
-			$mode 		= $this->get_modo();
+	public function get_dato_paginated($custom_limit=null) {
 
 		// dato full
 			$dato = $this->get_dato();
@@ -2834,7 +2833,9 @@ abstract class component_common extends common {
 			}
 
 		// limit
-			$limit = $this->pagination->limit;
+			$limit = isset($custom_limit)
+				? $custom_limit
+				: $this->pagination->limit;
 
 		// offset
 			$offset = $this->pagination->offset;
@@ -2845,7 +2846,7 @@ abstract class component_common extends common {
 		// slice
 			$dato_paginated = array_slice($dato, $offset, $array_lenght);
 
-		// pagination keys. Set a offset relative key to each element of paginated array
+		// pagination keys. Set an offset relative key to each element of paginated array
 			foreach ($dato_paginated as $key => $value) {
 				$paginated_key = $key + $offset;
 				$value->paginated_key = $paginated_key;
