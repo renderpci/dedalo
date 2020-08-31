@@ -19,6 +19,7 @@ export const render_component_select = function(component) {
 };//end render_component_select
 
 
+
 /**
 * MINI
 * Render node to be used by service autocomplete or any datalist
@@ -29,13 +30,11 @@ render_component_select.prototype.mini = async function() {
 	const self = this
 
 	// short vars
-		const data = self.data
+		const data			= self.data
+		const value_string	= data.value || ''
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
-
-	// Value as string
-		const value_string = data.value
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string);
@@ -56,15 +55,13 @@ render_component_select.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data = self.data
+		const data			= self.data
+		const value_string	= data.value || ''
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : true
 		})
-
-	// Value as string
-		const value_string = data.value
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string);

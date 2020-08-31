@@ -133,7 +133,7 @@ component_portal.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_portal.prototype.build  = async function(autoload=false){
+component_portal.prototype.build = async function(autoload=false){
 	const t0 = performance.now()
 
 	const self = this
@@ -146,7 +146,7 @@ component_portal.prototype.build  = async function(autoload=false){
 
 	// set dd_request
 		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'get_data')
-			console.log("/// PORTAL BUILD self.dd_request.show:",self.dd_request.show);
+			// console.log("/// PORTAL BUILD self.dd_request.show:",self.dd_request.show);
 
 	// debug check
 		if(SHOW_DEBUG===true) {
@@ -236,7 +236,7 @@ component_portal.prototype.build  = async function(autoload=false){
 					// await self.paginator.build()
 					// self.paginator.render()
 				}
-				console.log("//////////\\ PORTAL "+self.tipo+" self.paginator:",self.paginator);
+				// console.log("//////////\\ PORTAL "+self.tipo+" self.paginator:",self.paginator);
 
 			// autocomplete destroy. change the autocomplete service to false and desactive it.
 				if(self.autocomplete && self.autocomplete_active===true){

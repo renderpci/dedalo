@@ -537,59 +537,6 @@ abstract class common {
 
 
 	/**
-	* SET_DEFAULT_VALUE
-	*/
-	protected function set_default_value() {
-
-
-	}//end set_default_value
-	//
-	//
-	//
-	// /**
-	// * GET IDENTIFICADOR UNICO
-	// * Se fija al hacer la primera llamada.
-	// * Para sobreescribirlo, simplemente llamarlo inicialmente pasándo un string
-	// */
-	// public function get_identificador_unico() {
-	//
-	// 	# Nota: estaba desactivo ¿? en 25-11-2015. Cambiado porque tool_time_machine lo necesita activo (ver trigger.tool_time_machine )
-	// 	if (isset($this->identificador_unico) && $this->get_modo()==='tool_time_machine') {
-	// 		return $this->identificador_unico;
-	// 	}
-	//
-	// 	$id 			= $this->get_id();
-	// 	$tipo 			= $this->get_tipo();
-	// 	$parent 		= $this->get_parent();
-	// 	$lang 			= $this->get_lang();
-	// 	$modo 			= $this->get_modo();
-	// 	$variant 		= $this->get_variant();
-	// 	$section_tipo 	= $this->get_section_tipo();
-	//
-	// 	$this->identificador_unico = $id.'_'.$tipo.'_'.$parent.'_'.$lang.'_'.$modo.'_'.$variant.'_'.$section_tipo;
-	//
-	// 	// Allow show more than one component with same tipo in search mode creating unique uid for each one
-	// 	if ($modo==='search') {
-	// 		$time_suffix = microtime(false);
-	// 		$this->identificador_unico = $this->identificador_unico .'_'. str_replace(['.',' '], '', $time_suffix);
-	// 	}
-	//
-	// 	return (string)$this->identificador_unico;
-	// }//end get_identificador_unico
-	//
-	//
-	//
-	// /**
-	// * SET IDENTIFICADOR UNICO
-	// * Se fija al hacer la primera llamada.
-	// */
-	// public function set_identificador_unico($string) {
-	// 	$this->identificador_unico = $string;
-	// }//end set_identificador_unico
-	//
-
-
-	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
 	*/
 	public static function notify_load_lib_element_tipo($modelo_name, $modo) {
@@ -605,28 +552,6 @@ abstract class common {
 
 		return true;
 	}//end notify_load_lib_element_tipo
-
-
-
-	// /**
-	// * GET TIPO NAME OF CURRENT OBJECT
-	// * @see RecordObj_dd::get_termino_by_tipo($tipo)
-	// * @return $tipo_name
-	// *	String like 'Proyectos'
-	// */
-	// public function get_tipo_name() {
-	// 	$tipo 	 	= $this->get_tipo();
-	// 	$tipo_name 	= RecordObj_dd::get_termino_by_tipo($tipo,null,true);
-	//
-	// 	return $tipo_name;
-	// }
-
-
-
-	# __TOSTRING
-	public function __toString() {
-		return 'Obj: '.get_called_class();
-	}
 
 
 
@@ -2678,7 +2603,7 @@ abstract class common {
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
 
-
+		
 		return $ar_request_query_objects;
 	}//end get_ar_request_query_objects
 

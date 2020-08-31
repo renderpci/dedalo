@@ -24,6 +24,7 @@ export const render_component_portal = function() {
 };//end  render_component_portal
 
 
+
 /**
 * MINI
 * Render node for use in list
@@ -41,12 +42,13 @@ render_component_portal.prototype.mini = async function() {
 	// add all nodes
 		const length = ar_section_record.length
 		for (let i = 0; i < length; i++) {
-			const child_item = await ar_section_record[i].render()
+			const child_item = await ar_section_record[i].render()			
 			wrapper.appendChild(child_item)
 		}
 
 	return wrapper
 };//end  mini
+
 
 
 /**
@@ -58,7 +60,7 @@ render_component_portal.prototype.list = async function() {
 
 	const self = this
 
-	const ar_section_record = await self.get_ar_instances()
+	const ar_section_record = await self.get_ar_instances()	
 
 	const ar_nodes = []
 
@@ -66,8 +68,6 @@ render_component_portal.prototype.list = async function() {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
-
-		console.log("ar_section_record", ar_section_record);
 
 	// add all nodes
 		const length = ar_section_record.length
