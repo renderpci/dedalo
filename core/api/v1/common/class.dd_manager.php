@@ -84,7 +84,7 @@ class dd_manager {
 			$total_time = exec_time_unit($api_start_time,'ms')." ms";
 			$api_debug = new stdClass();
 				$api_debug->api_exec_time	= $total_time;
-				$api_debug->api_options		= $options;
+				// $api_debug->api_options		= $options;
 
 			if (isset($dedalo_data->debug)) {
 				// add to existing debug properties
@@ -100,6 +100,9 @@ class dd_manager {
 			// debug_log(json_encode($options, JSON_PRETTY_PRINT) .PHP_EOL. "API REQUEST $total_time ".str_repeat(">", 70), logger::DEBUG);
 			// $line = "API REQUEST total_time: $total_time ".str_repeat("<", 89); // 164
 			// debug_log($line, logger::DEBUG);
+			// if ($options->action==='read') {
+			// 	dump($dedalo_data, ' dedalo_data ++ '.to_string());
+			// }
 		}
 
 

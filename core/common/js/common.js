@@ -206,7 +206,6 @@ common.prototype.refresh = async function () {
 			if (sqo) {
 				sqo.offset = self.pagination.offset
 			}
-
 		}
 
 	// destroy dependences only
@@ -509,7 +508,6 @@ common.prototype.load_script = async function(src) {
 
 
 
-
 /**
 * GET_COLUMNS
 */
@@ -517,18 +515,21 @@ common.prototype.get_columns = async function(){
 
 	const self = this
 
-	const ar_columns 	= []
+	const ar_columns = []
 
 	// get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
-	const ddo_map 		= self.dd_request.show.find(item => item.typo === 'rqo').show.ddo_map
-	console.log("self.dd_request", self.dd_request);
+	const ddo_map = self.dd_request.show.find(item => item.typo === 'rqo').show.ddo_map
+	
+	// console.log("self.dd_request", self.dd_request);
+	
 	// get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-	const sub_columns 	= get_sub_columns(self, self.tipo, ddo_map, [])
+	const sub_columns = get_sub_columns(self, self.tipo, ddo_map, [])
 	ar_columns.push(...sub_columns)
 
 	return ar_columns
 };//end get_columns
+
 
 
 /**
@@ -682,12 +683,12 @@ const build_request_show = function(self, request_config, action){
 		}
 
 	// // direct request ddo if exists
-	// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
-	// 	if (ar_requested_ddo.length>0) {
-	// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
-	// 			dd_request.push(ar_requested_ddo[i])
-	// 		}
-	// 	}
+		// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
+		// 	if (ar_requested_ddo.length>0) {
+		// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
+		// 			dd_request.push(ar_requested_ddo[i])
+		// 		}
+		// 	}
 
 	// direct request sqo if exists
 		const request_sqo = request_config.find(item => item.typo==='sqo')
@@ -799,14 +800,13 @@ const build_request_show = function(self, request_config, action){
 				}
 			}
 
-			for (var i = 0; i < all_request_ddo.length; i++) {
+			for (let i = 0; i < all_request_ddo.length; i++) {
 
 				const ddo = all_request_ddo[i]
 				// if(ddo.tipo === self.tipo && ddo.section_tipo === self.section_tipo && self.model==='section') continue
 				ddo.config_type = 'show'
 				request_ddo.push( ddo )
 			}
-
 		}
 
 
@@ -840,7 +840,13 @@ const build_request_show = function(self, request_config, action){
 
 		//add the full rqo to the dd_request
 		dd_request.push(rqo[0])
-console.log("dd_request", dd_request);
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			// console.log("// dd_request [build_request_show]", dd_request);
+		}
+		
+	
 	return dd_request
 };//end build_request_show
 
@@ -1157,7 +1163,7 @@ export const load_data_debug = async function(self, load_data_promise, dd_reques
 	const response		= await load_data_promise
 	const dd_request	= self.dd_request
 
-	console.log("----> load_data_debug request dd_request_show_original "+self.model +" "+self.tipo+ ":", dd_request_show_original);
+	// console.log("----> load_data_debug request dd_request_show_original "+self.model +" "+self.tipo+ ":", dd_request_show_original);
 	// console.trace()
 
 	// load_data_promise

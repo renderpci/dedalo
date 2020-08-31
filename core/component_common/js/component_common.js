@@ -304,13 +304,13 @@ component_common.prototype.save = async function(changed_data) {
 				data.changed_data = changed_data
 
 				// data_manager
-					const current_data_manager 	= new data_manager()
-					const api_response 			= await current_data_manager.request({
+					const current_data_manager	= new data_manager()
+					const api_response			= await current_data_manager.request({
 						body : {
-							action 		: 'save',
-							context 	: self.context,
+							action		: 'save',
+							context		: self.context,
 							data		: data,
-							section_id  : self.section_id
+							section_id	: self.section_id
 						}
 					})
 
@@ -336,9 +336,9 @@ component_common.prototype.save = async function(changed_data) {
 
 			  	console.error("+++++++ COMPONENT SAVE ERROR:", error);
 			  	return {
-			  		result 	: false,
-			  		msg 	: error.message,
-			  		error 	: error
+					result	: false,
+					msg		: error.message,
+					error	: error
 			  	}
 			}
 		}
@@ -354,6 +354,7 @@ component_common.prototype.save = async function(changed_data) {
 			// result expected is current section_id. False is returned if a problem found
 			const result = response.result
 			if (result===false) {
+				// error
 
 				self.node.map(item => {
 					item.classList.add("error")
@@ -369,13 +370,17 @@ component_common.prototype.save = async function(changed_data) {
 				console.error("response:",response);
 
 			}else{
+				// success
+
+				// update datum
+					self.update_datum(result.data)
 
 				// success. add save_success class to component wrappers (green line animation)
 					self.node.map(item => {
 						item.classList.add("save_success")
 					})
 
-				// remove save_success. after 1000ms, remove wrapper class to avoid issues on refresh
+				// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
 					setTimeout(()=>{
 						self.node.map(item => {
 							// item.classList.remove("save_success")
@@ -438,7 +443,7 @@ component_common.prototype.update_datum = function(new_data) {
 	// new_data
 		const new_data_length = new_data.length
 			// console.log("update_datum --------------------------- new_data:",JSON.parse(JSON.stringify(new_data)) );
-			console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
+			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 			// console.trace();
 
 	// datum (global shared with section)
@@ -525,7 +530,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 	if(SHOW_DEBUG===true) {
 		const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
-		console.log("***** update_data_value PRE:",JSON.parse(JSON.stringify(data_value)));
+		console.log("======= update_data_value PRE:",JSON.parse(JSON.stringify(data_value)));
 	}
 
 	const data_key 		= changed_data.key
@@ -571,7 +576,7 @@ component_common.prototype.change_value = async function(options) {
 				resolve( function_queue(self, self.change_value_pool, self.change_value, options) );
 			})
 		}
-
+	
 	const changed_data 	= options.changed_data
 	const action 		= changed_data.action
 	const label 		= options.label
@@ -587,8 +592,8 @@ component_common.prototype.change_value = async function(options) {
 
 	// update the data in the instance previous to save
 		const update_data = self.update_data_value(changed_data)
-console.log("***********changed_data", changed_data);
-	// rebuild and save the component
+
+	// save. save and rebuild the component
 		const api_response = await self.save(changed_data)
 
 		// fix instance changed_data
