@@ -380,7 +380,7 @@ render_section.prototype.list_header = async function(){
 
 	// const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component" && item.parent===self.section_tipo)
 
-	const columns 		= await self.columns
+	const columns = await self.columns
 
 	const ar_nodes			= []
 	const columns_length	= columns.length
@@ -391,13 +391,22 @@ render_section.prototype.list_header = async function(){
 		const label = []
 
 		if(component.parent === self.section_tipo){
-			label.push( component.label )
+			const current_label = SHOW_DEBUG
+				? component.label + " [" + component.tipo + "]"
+				: component.label
+			label.push(current_label)
 		}else {
 			const component_parent = self.datum.context.find(item => item.tipo===component.parent && item.section_tipo===self.section_tipo)
 			if(component_parent){
-				label.push( component_parent.label + ': '+ component.label )
+				const current_label = SHOW_DEBUG
+					? component_parent.label + " [" + component_parent.tipo + "]" + ': '+ component.label + " [" + component.tipo + "]"
+					: component_parent.label + ': '+ component.label					
+				label.push(current_label)
 			}else{
-				label.push(': '+ component.label)
+				const current_label = SHOW_DEBUG
+					? ': '+ component.label + " [" + component.tipo + "]"
+					: ': '+ component.label	
+				label.push(current_label)
 			}
 		}
 			 // && item.type==="component")

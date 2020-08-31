@@ -32,9 +32,12 @@ render_component_input_text.prototype.mini = async function() {
 	// short vars
 		const data				= self.data
 		const value				= data.value || []
-		const fallback_value 	= data.fallback_value || []
+		const fallback_value	= data.fallback_value || []
+		const fallback			= get_fallback_value(value, fallback_value)
 
-		const fallback = get_fallback_value(value, fallback_value)
+		// console.log("> value:",value);
+		// console.log("> fallback_value:",fallback_value);
+		// console.log("> fallback:",fallback);
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
@@ -62,17 +65,18 @@ render_component_input_text.prototype.list = async function() {
 	// short vars
 		const data				= self.data
 		const value				= data.value || []
-		const fallback_value 	= data.fallback_value || []
+		const fallback_value	= data.fallback_value || []
+		const fallback			= get_fallback_value(value, fallback_value)
+		const value_string		= fallback.join(self.divisor)
 
-		const fallback = get_fallback_value(value, fallback_value)
+		// console.log(">>>>>>>>>>>>>>>>> value:",value);
+		// console.log(">>>>>>>>>>>>>>>>> fallback_value:",fallback_value);
+		// console.log(">>>>>>>>>>>>>>>>> fallback:",fallback);
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
-
-	// Value as string
-		const value_string = fallback.join(self.divisor)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
@@ -576,26 +580,37 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 	return input
 };//end get_input_element_search
 
+
+
 /**
 * GET_FALLBACK_VALUE
+* Get the fallback values when the current language version of the data is missing
 * @return array values data with fallback
 */
 const get_fallback_value = (value, fallback_value)=>{
-
-	//get the fallback values when the current language version of the data is missing
-	const fallback = []
-	const value_length = value.length === 0
+	
+	const fallback		= []
+	const value_length	= (value.length===0)
 		? 1
-		:value.length
+		: value.length
+	
 	for (let i = 0; i < value_length; i++) {
+		
 		if(value[i]){
+
 			fallback.push(value[i])
+		
 		}else{
-			const marked_value = (fallback_value)
+
+			const marked_value = (fallback_value && fallback_value[i])
 				? "<mark>"+fallback_value[i]+"</mark>"
 				: ""
+
 			fallback.push(marked_value)
 		}
 	}
+
 	return fallback
-};
+};//end get_fallback_value
+
+
