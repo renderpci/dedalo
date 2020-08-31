@@ -94,7 +94,8 @@
 		switch ($modo) {
 			case 'list':
 				$dato	= $this->get_dato();
-				$value	= $this->get_dato_paginated();
+				$limit  = 2; // (!) note than in list mode, limit is always 2
+				$value	= $this->get_dato_paginated($limit);
 				break;
 			case 'edit':
 			default:
@@ -104,7 +105,7 @@
 		}
 		if (!empty($dato)) {
 
-			// data item
+			// data item (list mode result don't include self data, only subdata)								
 				$item = $this->get_data_item($value);
 					$item->parent_tipo			= $tipo;
 					$item->parent_section_id	= $section_id;
@@ -116,24 +117,24 @@
 					$item->pagination = $pagination;
 
 				$data[] = $item;
+			
 
-			// subcontext data from layout_map items
+			// subdata from subcontext items
 				$ar_subdata = $this->get_ar_subdata($value);
+				if ($modo==='list') {
+					foreach ($ar_subdata as $current_data) {
 
-			// subdata add
-			if ($modo==='list') {
-				foreach ($ar_subdata as $current_data) {
+						// add subdata items parent_tipo/parent_section_id to identify indirect data
+							$current_data->parent_tipo			= $tipo;
+							$current_data->parent_section_id	= $section_id;
 
-					$current_data->parent_tipo			= $tipo;
-					$current_data->parent_section_id	= $section_id;
-
-					$data[] = $current_data;
+						$data[] = $current_data;
+					}
+				}else{
+					foreach ($ar_subdata as $current_data) {
+						$data[] = $current_data;
+					}
 				}
-			}else{
-				foreach ($ar_subdata as $current_data) {
-					$data[] =$current_data;
-				}
-			}
 
 
 		}//end if (!empty($dato))
