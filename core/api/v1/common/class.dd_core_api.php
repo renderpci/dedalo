@@ -765,6 +765,19 @@ class dd_core_api {
 					$search_query_object = $_SESSION['dedalo']['config']['sqo'][$sqo_id];
 				}else{
 
+					// user preset check (defined sqo limit)
+						$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, $view=null);
+						if (!empty($user_preset)) {
+							$rqo = array_find($user_preset, function($item) use($tipo){
+								return $item->tipo===$tipo && $item->typo==='rqo';
+							});
+							if ($rqo && isset($rqo->show->sqo_config->limit)) {
+								$limit = $rqo->show->sqo_config->limit;
+							}
+						}
+
+					$limit = $limit ?? ($mode==='list' ? 10 : 1);
+
 					$sqo_options = new stdClass();
 						$sqo_options->id			= $sqo_id;
 						$sqo_options->mode			= $mode;
@@ -772,7 +785,7 @@ class dd_core_api {
 						$sqo_options->section_tipo	= [$section_tipo];
 						$sqo_options->full_count	= false;
 						$sqo_options->add_select	= false;
-						$sqo_options->limit			= ($mode==='list') ? 10 : 1;
+						$sqo_options->limit			= $limit;
 						$sqo_options->offset		= 0;
 						$sqo_options->mode			= $mode;
 						$sqo_options->direct		= true;
