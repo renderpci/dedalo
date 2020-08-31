@@ -200,7 +200,7 @@ class layout_map {
 					// dump($layout_map, ' layout_map ++ '.to_string());
 					foreach ($layout_map as $current_item) {
 						if (!isset($current_item->tipo)) {
-							dump($current_item, ' current_item ++ '.to_string());
+							// dump($current_item, ' current_item ++ '.to_string());
 							continue;
 						}
 						$current_item->debug_label = RecordObj_dd::get_termino_by_tipo($current_item->tipo, $lang, true, true);
