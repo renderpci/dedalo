@@ -45,7 +45,7 @@
 						}
 					}
 
-					/* FORMATO DE PROPIEDADES DEL BOTON
+					/* FORMATO DE properties DEL BOTON
 					{
 					"tool_name":"tool_import_images",
 					"inventario_tipo":"mupreva1",
@@ -56,8 +56,8 @@
 					"quality":"original"
 					}
 					*/
-					$this->get_button_import();	// Fix propiedades from button
-					#$propiedades = 
+					$this->get_button_import();	// Fix properties from button
+					#$properties = 
 					#dump($button_import_obj, ' button_import_obj');
 
 					
@@ -115,8 +115,8 @@
 
 
 							# Include specific process_script
-							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
+							if (isset($this->button_import_properties->process_script)) {
+								require_once(DEDALO_CORE_PATH . $this->button_import_properties->process_script);
 							}							
 							
 							# IMAGES UPLOAD MANAGER
@@ -136,8 +136,8 @@
 							js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_images/js/tool_import_images.js';
 
 							# Include specific process_script
-							if (isset($this->button_import_propiedades->process_script)) {
-								require_once(DEDALO_CORE_PATH . $this->button_import_propiedades->process_script);
+							if (isset($this->button_import_properties->process_script)) {
+								require_once(DEDALO_CORE_PATH . $this->button_import_properties->process_script);
 							}	
 
 							# formato :
@@ -154,11 +154,11 @@
 							# PROCESS SCRIPT FORM
 							# OPTIONS
 							/*
-							$campo_destino 					= $this->button_import_propiedades->campo_destino;
+							$campo_destino 					= $this->button_import_properties->campo_destino;
 							$campo_destino_name 			= RecordObj_dd::get_termino_by_tipo($campo_destino);
-							$portal_destino 				= $this->button_import_propiedades->portal_destino;
+							$portal_destino 				= $this->button_import_properties->portal_destino;
 							$portal_destino_name 			= RecordObj_dd::get_termino_by_tipo($portal_destino);
-							$campo_referencia_seccion 		= $this->button_import_propiedades->campo_referencia_seccion;
+							$campo_referencia_seccion 		= $this->button_import_properties->campo_referencia_seccion;
 							if ($campo_referencia_seccion=='section_id') {
 								$campo_referencia_seccion_name 	= $campo_referencia_seccion;
 							}else{
@@ -167,8 +167,8 @@
 							*/
 							
 
-							$default_target_quality 		= $this->button_import_propiedades->quality;								
-							$process_script 				= DEDALO_CORE_PATH . $this->button_import_propiedades->process_script;
+							$default_target_quality 		= $this->button_import_properties->quality;								
+							$process_script 				= DEDALO_CORE_PATH . $this->button_import_properties->process_script;
 								#dump($process_script);
 							$ar_quality 					= unserialize(DEDALO_IMAGE_AR_QUALITY);
 							

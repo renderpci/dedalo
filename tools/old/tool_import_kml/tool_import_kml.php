@@ -40,7 +40,7 @@
 
 					# Layout map formatted
 					$custom_layout_map = array();
-					foreach ((array)$this->button_import_propiedades->layout as $current_component_tipo) {
+					foreach ((array)$this->button_import_properties->layout as $current_component_tipo) {
 						$custom_layout_map[$current_component_tipo] = array();
 					}	
 					#dump($custom_layout_map, ' custom_layout_map ++ '.to_string()); die();
@@ -50,8 +50,8 @@
 					$section_temp = section::get_instance($temp_section_id, $section_tipo, 'edit');
 					$layout_map = $section_temp->get_layout_map();
 							
-					# Add custom layout map defined in propiedades of current component portal		
-					$section_temp->layout_map = $custom_layout_map;	// Inject custom layout map from 'propiedades'
+					# Add custom layout map defined in properties of current component portal		
+					$section_temp->layout_map = $custom_layout_map;	// Inject custom layout map from 'properties'
 					# Section config custom				
 					$section_temp->show_inspector = (bool)false;					
 

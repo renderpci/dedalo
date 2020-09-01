@@ -26,7 +26,7 @@ export const get_archive_weights = function(){
 	this.status
 
 	return true
-}//end get_archive_weights
+};//end get_archive_weights
 
 
 
@@ -64,7 +64,7 @@ get_archive_weights.prototype.init = async function(options) {
 	//
 	//
 	// return js_promise
-}//end init
+};//end init
 
 
 
@@ -85,4 +85,4 @@ get_archive_weights.prototype.render = async function(options={render_level:'ful
 	self.node.push(node)
 
 	return node
-}//end render
+};//end render

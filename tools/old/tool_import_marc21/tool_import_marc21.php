@@ -49,8 +49,8 @@
 					$section_temp = section::get_instance($temp_id, $target_section_tipo, 'edit');
 					$layout_map = $section_temp->get_layout_map();
 							
-					# Add custom layout map defined in propiedades of current component portal		
-					$section_temp->layout_map = $custom_layout_map;	// Inject custom layout map from 'propiedades'
+					# Add custom layout map defined in properties of current component portal		
+					$section_temp->layout_map = $custom_layout_map;	// Inject custom layout map from 'properties'
 
 					$section_temp->get_dato();
 					# Section config custom				

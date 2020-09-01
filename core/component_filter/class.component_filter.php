@@ -254,7 +254,7 @@ class component_filter extends component_relation_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -448,7 +448,7 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_STATS_VALUE_RESOLVED
 	*/
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
+	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) {
 
 		$caller_component = get_called_class();
 
@@ -701,11 +701,11 @@ class component_filter extends component_relation_common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='dato') {
+	public static function parse_stats_values($tipo, $section_tipo, $properties, $lang=DEDALO_DATA_LANG, $selector='dato') {
 
 		// Search
-			if (isset($propiedades->stats_look_at)) {
-				$related_tipo = reset($propiedades->stats_look_at);
+			if (isset($properties->stats_look_at)) {
+				$related_tipo = reset($properties->stats_look_at);
 			}else{
 				$related_tipo = false; //$current_column_tipo;
 			}
@@ -739,8 +739,8 @@ class component_filter extends component_relation_common {
 
 				foreach ((array)$ar_locators as $locator) {
 
-					if (isset($propiedades->stats_look_at)) {
-						$c_tipo 		= reset($propiedades->stats_look_at);
+					if (isset($properties->stats_look_at)) {
+						$c_tipo 		= reset($properties->stats_look_at);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
 						$component 		= component_common::get_instance( $modelo_name,
 																		  $c_tipo,

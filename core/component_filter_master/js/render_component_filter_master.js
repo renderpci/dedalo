@@ -16,7 +16,7 @@
 // export const render_component_filter_master = function() {
 
 // 	return true
-// }//end render_component_filter_master
+// };//end render_component_filter_master
 
 
 
@@ -48,7 +48,7 @@
 
 
 // 	return wrapper
-// }//end list
+// };//end list
 
 
 
@@ -81,7 +81,7 @@
 // 		add_events(self, wrapper)
 
 // 	return wrapper
-// }//end edit
+// };//end edit
 
 
 
@@ -229,7 +229,7 @@
 // 		},true)
 
 // 	return true
-// }//end add_events
+// };//end add_events
 
 
 
@@ -311,7 +311,7 @@
 
 
 // 	return content_data
-// }//end render_content_data
+// };//end render_content_data
 
 
 
@@ -341,7 +341,7 @@
 // 		})
 
 // 	return grouper
-// }//end grouper_element
+// };//end grouper_element
 
 
 
@@ -398,5 +398,4 @@
 
 
 // 	return li
-// }//end input_element
-
+// };//end input_element

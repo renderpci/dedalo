@@ -46,8 +46,10 @@ export const section_record = function() {
 	this.matrix_id
 	this.id_variant
 
+	this.offset
+
 	return true
-}//end section
+};//end section
 
 
 
@@ -75,20 +77,27 @@ section_record.prototype.init = async function(options) {
 	const self = this
 
 	// options vars
-	self.model 			= options.model
-	self.tipo 			= options.tipo
-	self.section_tipo 	= options.section_tipo
-	self.section_id 	= options.section_id
-	self.mode 			= options.mode
-	self.lang 			= options.lang
-	self.node 	 		= []
-	self.sqo_context	= options.sqo_context
+	self.model				= options.model
+	self.tipo				= options.tipo
+	self.section_tipo		= options.section_tipo
+	self.section_id			= options.section_id
+	self.mode				= options.mode
+	self.lang				= options.lang
+	self.node				= []
+	self.columns			= options.columns
 
-	self.datum 			= options.datum
-	self.context 		= options.context
-	self.data 	 		= options.data
-	self.paginated_key 	= options.paginated_key
-	//self.paginator_id 	= options.paginator_id
+	// dd request
+	self.dd_request = {
+		show	: null,
+		search	: null,
+		select	: null
+	}
+
+	self.datum			= options.datum
+	self.context		= options.context
+	self.data			= options.data
+	self.paginated_key	= options.paginated_key
+
 	self.events_tokens	= []
 	self.ar_instances	= []
 
@@ -101,6 +110,7 @@ section_record.prototype.init = async function(options) {
 
 	self.modification_date 	= options.modification_date || null
 
+	self.offset				= options.offset
 
 	// events subscription
 		// event active (when user focus in dom)
@@ -115,49 +125,56 @@ section_record.prototype.init = async function(options) {
 
 
 	return self
-}//end init
+};//end init
 
 
 
 /**
-* BUILD
-* @params object options
-* @return bool true
-*//*
-section_record.prototype.build = async function(autoload=false) {
-
-	const self = this
-
-
-	// // load data if is not already received as option
-	// 	//if (!self.datum) {
-	// 	if (autoload===true) {
-	// 		const current_data_manager 	= new data_manager()
-	// 		const api_response 			= await current_data_manager.section_load_data(self.sqo_context)
-	// 		// set
-	// 		self.datum = api_response.result
-
-	// 		// set context and data to current instance
-	// 			self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
-	// 			self.data 		= self.datum.data.filter(element => element.section_tipo===self.section_tipo)
-
-
-	// 		// Update section mode with context declaration
-	// 			const section_context = self.context.find(element => element.tipo===self.section_tipo)
-	// 			self.mode = section_context.mode
-
-	// 		// set ar_section_id
-	// 			const section_data	= self.datum.data.find(item => item.tipo===self.section_tipo && item.section_tipo===self.section_tipo)
-	// 			self.ar_section_id	= section_data.value
-	// 	}
-
-
-	// status update
-		self.status = 'builded'
-
-	return true
-}//end build
+* ADD_INSTANCE
 */
+const add_instance = async (self, current_context, section_id, current_data) => {
+
+
+	const instance_options = {
+		model			: current_context.model,
+		tipo			: current_context.tipo,
+		section_tipo	: current_context.section_tipo,
+		section_id		: section_id,
+		mode			: current_context.mode,
+		lang			: current_context.lang,
+		section_lang	: self.lang,
+		parent			: current_context.parent,
+		type			: current_context.type,
+		context			: current_context,
+		data			: current_data,
+		datum			: self.datum,
+		request_config	: current_context.request_config
+	}
+
+	// id_variant . Propagate a custom instance id to children
+		if (self.id_variant) {
+			instance_options.id_variant = self.id_variant
+		}
+	// time machine matrix_id
+		if (self.matrix_id) {
+			instance_options.matrix_id = self.matrix_id
+		}
+
+	// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
+		const current_instance = await instances.get_instance(instance_options)
+
+		if(!current_instance || typeof current_instance.build!=='function'){
+			console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
+			return
+		}
+		// instance build await
+		await current_instance.build()
+
+	// add
+		// ar_instances.push(current_instance)
+
+	return current_instance
+}; //end add_instance
 
 
 
@@ -167,7 +184,7 @@ section_record.prototype.build = async function(autoload=false) {
 section_record.prototype.get_ar_instances = async function(){
 
 	const self = this
-	
+
 	// sort vars
 		const mode 			= self.mode
 		const section_tipo 	= self.section_tipo
@@ -176,53 +193,18 @@ section_record.prototype.get_ar_instances = async function(){
 
 	// items. Get the items inside the section/component of the record to render it
 		const items = (mode==="list")
-			? self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
-			: self.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
-	
+			? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo)
+			: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo)
+
 	// instances
 		const ar_instances = []
 		const items_length = items.length
 		for (let i = 0; i < items_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
-			const current_context 	= items[i]
-			const current_data 		= self.get_component_data(current_context.tipo)
-			
-				const instance_options = {
-					model 			: current_context.model,
-					tipo 			: current_context.tipo,
-					section_tipo 	: current_context.section_tipo,
-					section_id 		: section_id,
-					mode 			: current_context.mode,
-					lang 			: current_context.lang,
-					section_lang 	: self.lang,
-					parent 			: current_context.parent,
-					type 			: current_context.type,
-					context 		: current_context,
-					data 			: current_data,
-					datum 			: self.datum,
-					sqo_context 	: current_context.sqo_context
-				}
-				
-				// id_variant . Propagate a custom instance id to children
-					if (self.id_variant) {
-						instance_options.id_variant = self.id_variant
-					}
-				// time machine matrix_id
-					if (self.matrix_id) {
-						instance_options.matrix_id = self.matrix_id
-					}
-
-			// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
-				const current_instance = await instances.get_instance(instance_options)
-
-				if(!current_instance || typeof current_instance.build!=='function'){
-					console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
-					continue;
-				}
-				// instance build await
-				await current_instance.build()
-	
+			const current_context = items[i]
+			const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+			const current_instance	= await add_instance(self, current_context, section_id, current_data)
 			// add
 				ar_instances.push(current_instance)
 
@@ -233,7 +215,64 @@ section_record.prototype.get_ar_instances = async function(){
 
 
 	return ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
+
+
+
+
+
+
+/**
+* GET_AR_ROW_INSTANCES
+*/
+section_record.prototype.get_ar_row_instances = async function(){
+
+	const self = this
+
+	// sort vars
+		const mode 			= self.mode
+		const tipo 			= self.tipo
+		const section_tipo 	= self.section_tipo
+		const section_id 	= self.section_id
+		const columns		= await self.columns
+		const data 			= self.data
+
+	// instances
+		const ar_instances = []
+		const columns_length =  columns.length
+
+		for (let i = 0; i < columns_length; i++) {
+
+			const current_context = columns[i]
+
+			// the component has direct data into the section
+			if(current_context.parent === tipo){
+				const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
+				const current_instance	= await add_instance(self, current_context, section_id, current_data)
+				//add
+				ar_instances.push(current_instance)
+			}else{
+				// the component don't has direct data into the section, it has a locator that will use for located the data of the column
+				const current_data		= self.get_component_relation_data(current_context, section_id)
+
+				// sometimes the section_tipo can be different (es1, fr1, ...)
+				//the context get the first component, but the instance can be with the section_tipo data
+				current_context.section_tipo = current_data.section_tipo
+				const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
+				//add
+				ar_instances.push(current_instance)
+
+			}
+
+		}//end for loop
+
+	// fix
+		self.ar_instances = ar_instances
+
+
+	return ar_instances
+};//end get_ar_instances
+
 
 
 
@@ -241,27 +280,77 @@ section_record.prototype.get_ar_instances = async function(){
 * GET_COMPONENT_DATA
 * @return object component_data
 */
-section_record.prototype.get_component_data = function(component_tipo){
+section_record.prototype.get_component_data = function(component_tipo, section_tipo, section_id){
 
 	const self = this
 
-	let component_data = self.data.find(item => item.tipo===component_tipo && item.section_id===self.section_id)
+	let component_data = self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
 
 	// undefined case. If the current item don't has data will be instanciated with the current section_id
 	if (typeof(component_data)==='undefined') {
 		// empy component data build
 		component_data = {
-			section_id 	 : self.section_id,
-			tipo 		 : component_tipo,
-			section_tipo : self.section_tipo,
-			value 		 : []
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			value			: [],
+			fallback_value	: [""]
 		}
-		self.data.push(component_data)
 	}
 
 
 	return component_data
-}//end get_component_data
+};//end get_component_data
+
+
+/**
+* GET_COMPONENT_DATA
+* @return object component_data
+*/
+section_record.prototype.get_component_relation_data = function(component, section_id){
+
+	const self = this
+
+	const parent 			= component.parent
+	const section_tipo 		= component.section_tipo
+	const component_data 	= {}
+	// get the f_path it has full path from the main section to last component in the chain, (sectui b¡)
+	const f_path 			= component.parent_f_path
+	// get the first compoment, position 2, this component has the locator into the data of the main section.
+	const component_tipo 	= f_path[1]
+	const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
+
+	// Get the data of the component selected in the show, normally the last compoment of the chain.
+	// It's the column in the list
+	const parent_data = (first_locator)
+		? self.datum.data.find(item =>
+			item.tipo === component.tipo
+			&& item.parent_section_id 	=== section_id
+			&& item.parent_tipo 		=== first_locator.tipo)
+		: null
+	// if the component has data set it, if not create a null data
+	component_data.value = (parent_data)
+		? parent_data
+		: null
+
+	// undefined case. If the current item don't has data will be instanciated with the current section_id
+	if (component_data.value === null) {
+		// empy component data build
+		component_data.value = {
+			section_id				: section_id,
+			section_tipo			: section_tipo,
+			tipo					: component.tipo,
+			from_component_tipo		: parent,
+			parent					: parent,
+			value					: [],
+			fallback_value			: [""]
+		}
+	}
+	// self.data.push(component_data.value)
+
+	return component_data.value
+};//end get_component_data
+
 
 
 
@@ -276,7 +365,7 @@ section_record.prototype.get_component_info = function(component_tipo){
 	const component_info = self.data.find(item => item.tipo==='ddinfo' && item.section_id===self.section_id)
 
 	return component_info
-}//end get_component_info
+};//end get_component_info
 
 
 
@@ -291,7 +380,7 @@ section_record.prototype.get_component_context = function(component_tipo) {
 	const context = self.context.filter(item => item.tipo===component_tipo && item.section_tipo===self.section_tipo)[0]
 
 	return context
-}//end get_component_context
+};//end get_component_context
 */
 
 
@@ -310,7 +399,7 @@ section_record.prototype.build = function() {
 	return Promise.all([components]).then(function(){
 		self.builded = true
 	})
-}//end build
+};//end build
 */
 
 
@@ -378,7 +467,7 @@ section_record.prototype.load_items = function() {
 
 
 	return load_items_promise
-}//end load_items
+};//end load_items
 */
 
 
@@ -393,5 +482,5 @@ section_record.prototype.get_context_childrens = function(component_tipo){
 	const group_childrens = self.context.filter(item => item.parent===component_tipo)
 
 	return group_childrens
-}//end get_context_childrens
+};//end get_context_childrens
 */

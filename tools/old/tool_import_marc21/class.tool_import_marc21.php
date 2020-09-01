@@ -8,7 +8,7 @@ class tool_import_marc21 extends tool_common {
 	
 	
 	protected $section_obj;	# received section
-	protected $button_import_propiedades;	# used to store custom options (script path, etc.)
+	protected $button_import_properties;	# used to store custom options (script path, etc.)
 	protected $valid_extensions;
 	protected $marc21_vars;
 

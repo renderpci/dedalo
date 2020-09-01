@@ -10,7 +10,7 @@ abstract class backup {
 
 	# Columns to save (used by copy command, etc.)
 	# Not use id columns NEVER here
-	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades';
+	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties';
 	public static $descriptors_dd_columns = 'parent, dato, tipo, lang';
 
 	public static $checked_download_str_dir = false;
@@ -613,7 +613,7 @@ abstract class backup {
 	* @param string db_name default 'dedalo4_development_str.custom'
 	* @return string $res_html table of results
 	*/
-	public static function import_structure($db_name='dedalo4_development_str.custom', $check_server=true) {
+	public static function import_structure($db_name='dedalo4_development_str.custom', $check_server=true, $dedalo_prefix_tipos=null) {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -638,7 +638,7 @@ abstract class backup {
 			*/
 
 			# Download once all str files from server
-			$all_str_files = backup::collect_all_str_files();
+			$all_str_files = backup::collect_all_str_files($dedalo_prefix_tipos);
 			foreach ($all_str_files as $key => $obj) {
 				if($obj->type==="main_file") {
 					$file_path  = STRUCTURE_DOWNLOAD_DIR;
@@ -1094,7 +1094,7 @@ abstract class backup {
 	* @return array $ar_files
 	*	Array of objects
 	*/
-	public static function collect_all_str_files() {
+	public static function collect_all_str_files($DEDALO_PREFIX_TIPOS=null) {
 
 		static $ar_files;
 
@@ -1102,6 +1102,8 @@ abstract class backup {
 			debug_log(__METHOD__." Returning previous calculated values ".to_string(), logger::DEBUG);
 			return $ar_files;
 		}
+
+		$DEDALO_PREFIX_TIPOS = $DEDALO_PREFIX_TIPOS ?? (array)unserialize(DEDALO_PREFIX_TIPOS);
 
 		$ar_files = array();
 
@@ -1151,7 +1153,7 @@ abstract class backup {
 
 
 		# EXTRAS
-		$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
+
 		# Check extras folder coherence with config DEDALO_PREFIX_TIPOS
 		foreach ($DEDALO_PREFIX_TIPOS as $current_prefix) {
 			$folder_path = DEDALO_EXTRAS_PATH .'/'. $current_prefix;
@@ -1312,15 +1314,14 @@ abstract class backup {
 	public static function check_remote_server() {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		$data = array(
-				"code" 				=> STRUCTURE_SERVER_CODE,
-				"check_connection" 	=> true
-			);
+			"code"				=> STRUCTURE_SERVER_CODE,
+			"check_connection"	=> true
+		);
 		$data_string = "data=" . json_encode($data);
-
 
 		//open connection
 		$ch = curl_init();
@@ -1333,7 +1334,7 @@ abstract class backup {
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);    // we want headers
 		#curl_setopt($ch, CURLOPT_NOBODY, true);    // we don't need body
-		curl_setopt($ch, CURLOPT_TIMEOUT,10);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 		#curl_setopt($ch, CURLOPT_VERBOSE,true);
 
 		# Avoid verify ssl certificates (very slow)
@@ -1343,7 +1344,7 @@ abstract class backup {
 		$result = curl_exec($ch);
 
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		debug_log(__METHOD__." ".STRUCTURE_SERVER_URL." status code: ".to_string($httpcode), logger::WARNING);
+		debug_log(__METHOD__." ".STRUCTURE_SERVER_URL." STATUS CODE: ".to_string($httpcode), logger::WARNING);
 
 		//close connection
 		curl_close($ch);
@@ -1351,17 +1352,20 @@ abstract class backup {
 		# Generate msg human readable
 		switch ($httpcode) {
 			case 200:
-				$response->result 	= true;
-				$msg 	= "Ok. check_remote_server passed successfully (status code: $httpcode)";
+				$response->result = true;
+				$msg	= "Ok. check_remote_server passed successfully (status code: $httpcode)";
 				break;
 			case 401:
-				$msg 	= "Error. Unauthorized code (status code: $httpcode)";
+				$response->result = false;
+				$msg	= "Error. Unauthorized code (status code: $httpcode)";
 				break;
 			case 400:
-				$msg 	= "Error. Server has problems collect structure files (status code: $httpcode)";
+				$response->result = false;
+				$msg	= "Error. Server has problems collect structure files (status code: $httpcode)";
 				break;
 			default:
-				$msg 	= "Error. check_remote_server problem found (status code: $httpcode)";
+				$response->result = false;
+				$msg	= "Error. check_remote_server problem found (status code: $httpcode)";
 				break;
 		}
 
@@ -1429,6 +1433,208 @@ abstract class backup {
 
 		return (string)$res;
 	}//end optimize_tables
+
+
+
+	/**
+	* STRUCTURE_TO_JSON
+	* Creates a compatible JSON data from table 'jer_dd' and 'matrix_descriptors_dd' using the 
+	* given tlds
+	* @param array $ar_tld
+	*	array of strings like ['dd','rsc'...]
+	* @return object $response
+	*/
+	public static function structure_to_json($ar_tld) {
+		
+		$ar_data = [];
+		foreach ($ar_tld as $tld) {
+
+			$tld = trim($tld);
+
+			// check valid tld
+				if(!preg_match('/^[a-z]{2,}(_[a-z]{2,})?$/', $tld)) {
+					throw new Exception("Error Processing Request. Error on structure_to_json. Invalid tld ".to_string($tld), 1);
+				}
+			
+			$jer_dd_tld_data				= backup::get_jer_dd_tld_data($tld); 	dump($jer_dd_tld_data, ' jer_dd_tld_data ++ '.to_string());
+			$matrix_descriptors_tld_data	= backup::get_matrix_descriptors_tld_data($tld);
+
+			foreach ($jer_dd_tld_data as $row) {
+				
+				// add descriptors data (from 'matrix_descriptors') to jer_dd row object
+				$descriptors = array_filter($matrix_descriptors_tld_data, function($item) use($row) {
+					return $item->parent===$row->terminoID;
+				});
+				foreach ($descriptors as $descriptor_item) {
+
+					$item = new stdClass();
+						$item->type		= $descriptor_item->tipo;
+						$item->lang		= $descriptor_item->lang;
+						$item->value	= $descriptor_item->dato;
+
+					$row->descriptors[] = $item;
+				}
+
+				// store complete object
+				$ar_data[] = $row;
+			}//end foreach ($jer_dd_tld_data as $row)
+		}
+
+
+		return $ar_data;
+	}//end structure_to_json
+
+
+
+	/**
+	* GET_JER_DD_TLD_DATA
+	* Get all database table 'jer_dd' rows from given tld
+	* @param string $tld
+	*	like 'ts'
+	* @return array $tld_data
+	*	array of objects
+	*/
+	public static function get_jer_dd_tld_data($tld) {
+
+		$tld_data = [];
+		
+		$columns	= '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties"';
+		$strQuery	= 'SELECT '.$columns.' FROM "jer_dd" WHERE tld = \''.$tld.'\' ORDER BY "terminoID" ASC';
+		$result		= JSON_RecordObj_matrix::search_free($strQuery);		
+		while ($row = pg_fetch_object($result)) {
+			
+			// decode jsonb properties
+			$row->properties = json_decode($row->properties);
+
+			$tld_data[] = $row;
+		}
+
+		// sort terminoID in natural way (dd1, dd2.. instead dd1, dd10)
+			uasort($tld_data, function($a, $b){
+				return strnatcmp($a->terminoID, $b->terminoID);
+			});
+
+		return $tld_data;
+	}//end get_jer_dd_tld_data
+
+
+
+	/**
+	* GET_MATRIX_DESCRIPTORS_TLD_DATA
+	* Get all database table 'matrix_descriptors_dd' rows from given tld
+	* @param string $tld
+	*	like 'ts'
+	* @return array $tld_data
+	*	array of objects
+	*/
+	public static function get_matrix_descriptors_tld_data($tld) {
+
+		$tld_data = [];
+		
+		$columns	= '"parent", "dato", "tipo", "lang"';
+		$strQuery	= 'SELECT '.$columns.' FROM "matrix_descriptors_dd" WHERE parent ~ \'^'.$tld.'[0-9]\' ORDER BY "parent" ASC';
+		$result		= JSON_RecordObj_matrix::search_free($strQuery);
+		while ($row = pg_fetch_object($result)) {
+			$tld_data[] = $row;
+		}
+
+		return $tld_data;
+	}//end get_matrix_descriptors_tld_data
+
+
+
+	/**
+	* IMPORT_STRUCTURE_JSON_DATA
+	* Insert data terms into tables 'jer_dd' and 'matrix_descriptors_dd' deleting previous row if exists
+	* @param array $data
+	*  data is a vertical array of objects from parsed JSON file 'structure.json'
+	* @return object $response
+	*/
+	public static function import_structure_json_data($data, $ar_tld=[]) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// conn . get db connection
+		$conn = DBi::_getConnection();
+
+		$updated_tipo = [];
+
+		// iterate all objects and replace existing data in each table (jer_dd, matrix_descriptors_dd)
+		foreach ($data as $item) {
+			
+			// short vars
+				$terminoID		= $item->terminoID;
+				$parent			= empty($item->parent) ? null : $item->parent;
+				$modelo			= empty($item->modelo) ? null : $item->modelo;
+				$esmodelo		= empty($item->esmodelo) ? null : $item->esmodelo;
+				$esdescriptor	= empty($item->esdescriptor) ? null : $item->esdescriptor;
+				$visible		= empty($item->visible) ? null : $item->visible;
+				$norden			= (empty($item->norden) && $item->norden!='0') ? null : (int)$item->norden;
+				$tld			= $item->tld;
+				$traducible		= empty($item->traducible) ? null : $item->traducible;
+				$relaciones		= empty($item->relaciones) ? null : $item->relaciones;
+				$propiedades	= empty($item->propiedades) ? null : $item->propiedades; // pg_escape_string($item->propiedades); // string
+				$properties		= json_encode($item->properties); // jsonb
+				$descriptors	= $item->descriptors ?? [];
+
+			// tld filter optional from $ar_tld param
+				if (!empty($ar_tld) && !in_array($tld, $ar_tld)) {
+					continue;
+				}
+
+			// jer_dd
+				// delete previous
+					$strQuery  = PHP_EOL . 'DELETE FROM "jer_dd" WHERE "terminoID" = \''.$terminoID.'\' ;';
+					if (!$result = pg_query($conn, $strQuery)) {
+						throw new Exception("Error Processing Request. Error on delete term ".to_string($terminoID), 1);
+					}
+				// insert new 
+					$fields = '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties"';
+					// $values = '\''.$terminoID.'\', \''.$parent.'\', \''.$modelo.'\', \''.$esmodelo.'\', \''.$esdescriptor.'\', \''.$visible.'\', '.$norden.', \''.$tld.'\', \''.$traducible.'\', \''.$relaciones.'\', \''.$propiedades.'\', \''.$properties.'\'';
+					// $strQuery .= PHP_EOL . 'INSERT INTO "jer_dd" ('.$fields.') VALUES '. PHP_EOL. '('.$values.');'.PHP_EOL;
+					$strQuery = 'INSERT INTO "jer_dd" ('.$fields.') VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)';
+					if (!$result = pg_query_params($conn, $strQuery, array($terminoID, $parent, $modelo, $esmodelo, $esdescriptor, $visible, $norden, $tld, $traducible, $relaciones, $propiedades, $properties)) ) {
+						throw new Exception("Error Processing Request. Error on import_structure_json_data (1) Invalid jer_dd query ".to_string($strQuery), 1);
+					}					
+				
+
+			// matrix_descriptors_dd
+				foreach ($descriptors as $descriptor_item) {
+
+					$parent	= $terminoID;
+					$dato	= empty($descriptor_item->value) ? null : $descriptor_item->value;
+					$tipo	= empty($descriptor_item->type) ? null : $descriptor_item->type;
+					$lang	= empty($descriptor_item->lang) ? null : $descriptor_item->lang;
+					
+					// delete previous
+						$strQuery  = PHP_EOL . 'DELETE FROM "matrix_descriptors_dd" WHERE "parent" = \''.$terminoID.'\' AND tipo = \''.$descriptor_item->type.'\' AND lang = \''.$descriptor_item->lang.'\' ;';
+						if (!$result = pg_query($conn, $strQuery)) {
+							throw new Exception("Error Processing Request. Error on import_structure_json_data (2) Invalid descriptor query ".to_string($strQuery), 1);				
+						}
+					// insert
+						$fields = '"parent", "dato", "tipo", "lang"';
+						// $values = '\''.$terminoID.'\', \''. pg_escape_string($descriptor_item->value).'\', \''.$descriptor_item->type.'\', \''.$descriptor_item->lang.'\'';
+						// $strQuery .= PHP_EOL . 'INSERT INTO "matrix_descriptors_dd" ('.$fields.') VALUES '. PHP_EOL. '('.$values.');'.PHP_EOL;
+						$strQuery = 'INSERT INTO "matrix_descriptors_dd" ('.$fields.') VALUES ($1, $2, $3, $4)';
+						if (!$result = pg_query_params($conn, $strQuery, array($parent, $dato, $tipo, $lang)) ) {
+							throw new Exception("Error Processing Request. Error on import_structure_json_data (1) Invalid jer_dd query ".to_string($strQuery), 1);
+						}
+					
+				}
+
+			$updated_tipo[] = $terminoID;
+
+			debug_log(__METHOD__." + Updated structure item '$terminoID' ".to_string(), logger::DEBUG);
+		}
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done. Updated '.count($updated_tipo) .' from file data total '. count($data).' structure terms from tld: '. implode(', ',$ar_tld);
+		
+
+		return $response;
+	}//end import_structure_json_data
 
 
 

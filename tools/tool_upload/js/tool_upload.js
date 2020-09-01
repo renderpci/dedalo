@@ -12,7 +12,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_upload = function () {
-
+	
 	this.id
 	this.model
 	this.mode
@@ -26,7 +26,7 @@ export const tool_upload = function () {
 	this.max_size_bytes
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -56,7 +56,7 @@ tool_upload.prototype.init = async function(options) {
 
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -75,7 +75,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+};//end build_custom
 
 
 
@@ -128,7 +128,7 @@ const get_system_info = async function(self) {
 
 
 	return trigger_response.result
-}//end get_system_info
+};//end get_system_info
 
 
 
@@ -177,22 +177,22 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 			preview_image.src 	   = ''
 			progress_line.value    = 0;
 			response_msg.innerHTML = '<span class="blink">Loading file '+file.name+'</span>'
-		}//end upload_loadstart
+		};//end upload_loadstart
 
 	// upload_load
 		const upload_load = function(evt) {
 			response_msg.innerHTML = '<span class="blink">Processing file '+file.name+'</span>'
-		}//end upload_load
+		};//end upload_load
 
 	// upload_error
 		const upload_error = function(evt) {
 			response_msg.innerHTML = `<span class="error">${get_label.error_al_subir_el_archivo} ${file.name}</span>`
-		}//end upload_error
+		};//end upload_error
 
 	// upload_abort
 		const upload_abort = function(evt) {
 			response_msg.innerHTML = '<span class="error">User aborts upload</span>'
-		}//end upload_abort
+		};//end upload_abort
 
 	// upload_progress
 		const upload_progress = function(evt) {
@@ -201,7 +201,7 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 		    progress_info.innerHTML = 'Upload progress: ' + percent + ' %'
 		    // progress line show graphic percentage of load
 		    progress_line.value = percent
-		}//end upload_progress
+		};//end upload_progress
 
 	// xhr_load
 		const xhr_load = function(evt) {
@@ -243,7 +243,7 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 				// }, 20000)
 
 			return true
-		}//end xhr_load
+		};//end xhr_load
 
 
 	// XMLHttpRequest
@@ -280,4 +280,4 @@ tool_upload.prototype.upload_file = async function(file, content_data, response_
 
 
 	return true
-}//end upload_file
+};//end upload_file

@@ -16,7 +16,7 @@ class component_info extends component_common {
 	*/
 	public function get_dato() {
 
-		$properties			= $this->get_propiedades();
+		$properties			= $this->get_properties();
 		// get the widgets defined in the ontology
 		$widgets = isset($properties->widgets) ? $properties->widgets : null;
 		if (empty($widgets) || !is_array($widgets)) {
@@ -77,7 +77,7 @@ class component_info extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		#if (empty($valor)) {
 
@@ -100,7 +100,7 @@ class component_info extends component_common {
 	*/
 	public function get_data_list() {
 
-		$properties			= $this->get_propiedades();
+		$properties			= $this->get_properties();
 		// get the widgets defined in the ontology
 		$widgets = isset($properties->widgets) ? $properties->widgets : null;
 		if (empty($widgets) || !is_array($widgets)) {

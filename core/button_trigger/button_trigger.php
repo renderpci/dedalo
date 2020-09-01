@@ -18,14 +18,14 @@
 		case 'list':
 		case 'edit':		
 				$file_name 		= 'edit';
-				$propiedades 	= $this->get_propiedades();
+				$properties 	= $this->get_properties();
 				
-				$propiedades->component_parent 	= $this->parent;	# add current parent section_id to vars
-				$propiedades->lang_filter 		= DEDALO_DATA_LANG;	# add current lang to vars
-				$propiedades_json 				= json_handler::encode($propiedades);
+				$properties->component_parent 	= $this->parent;	# add current parent section_id to vars
+				$properties->lang_filter 		= DEDALO_DATA_LANG;	# add current lang to vars
+				$properties_json 				= json_handler::encode($properties);
 	
 				# Custom js_exec_function (instead default 'trigger')
-					$js_exec_function = isset($propiedades->js_exec_function) ? $propiedades->js_exec_function : false;
+					$js_exec_function = isset($properties->js_exec_function) ? $properties->js_exec_function : false;
 				break;
 		
 		default:

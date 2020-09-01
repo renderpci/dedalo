@@ -16,7 +16,7 @@
 export const render_get_archive_weights = function() {
 
 	return true
-}//end render_get_archive_weights
+};//end render_get_archive_weights
 
 
 
@@ -44,7 +44,7 @@ render_get_archive_weights.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -81,7 +81,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -122,4 +122,4 @@ const get_value_element = (i, current_value, values_container, self) => {
 		})
 
 	return li
-}//end get_value_element
+};//end get_value_element

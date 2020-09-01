@@ -14,9 +14,9 @@
 * Manages the component's logic and apperance in client side
 */
 export const render_tool_dd_label = function() {
-
+	
 	return true
-}//end render_tool_dd_label
+};//end render_tool_dd_label
 
 
 
@@ -60,7 +60,7 @@ render_tool_dd_label.prototype.edit = async function (options={render_level:'ful
 
 
 	return wrapper
-}//end render_tool_dd_label
+};//end render_tool_dd_label
 
 
 
@@ -118,7 +118,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-}//end get_content_data
+};//end get_content_data
 
 
 
@@ -207,7 +207,7 @@ const get_rows = async function(self, ar_langs, header=false, name, key) {
 	}
 
 	return li
-}// end get_rows
+};//end get_rows
 
 
 
@@ -270,4 +270,4 @@ const get_inputs = async function(self, current_lang, header, name, key, li) {
 		label_language.addEventListener("keydown", (e) =>{
 			if(e.keyCode === 13) label_language.blur()
 		})
-}// end get_inputs
+};//end get_inputs

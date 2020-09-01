@@ -11,8 +11,32 @@ export const render_component_section_id = function(component) {
 
 
 	return true
-}//end render_component_section_id
+};//end render_component_section_id
 
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_section_id.prototype.mini = function(options) {
+
+	const self = this
+
+	// Options vars
+		const data 		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return node
+};//end mini
 
 
 /**
@@ -43,7 +67,7 @@ render_component_section_id.prototype.list = function(options) {
 		//console.log("++ data:", data);
 
 	return node
-}//end list
+};//end list
 
 
 
@@ -75,7 +99,7 @@ render_component_section_id.prototype.edit = async function(options={render_leve
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -136,7 +160,7 @@ render_component_section_id.prototype.search = async function() {
 
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -161,7 +185,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -191,7 +215,7 @@ const get_content_data_search = async function(self) {
 
 
 	return content_data
-}//end get_content_data_search
+};//end get_content_data_search
 
 
 
@@ -213,5 +237,4 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 
 	return input
-}//end get_input_element_search
-
+};//end get_input_element_search

@@ -16,7 +16,33 @@
 export const render_component_number = function() {
 
 	return true
-}//end render_component_number
+};//end render_component_number
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_number.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+
+	// wrapper
+	const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value.join(self.divisor)
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return wrapper
+};//end mini
 
 
 
@@ -45,7 +71,7 @@ render_component_number.prototype.list = async function() {
 		wrapper.textContent = value_string
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -82,7 +108,7 @@ render_component_number.prototype.edit = async function(options={render_level : 
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -191,11 +217,11 @@ const add_events = function(self, wrapper) {
 
 				return true
 			}
-			
+
 		})
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -256,7 +282,7 @@ render_component_number.prototype.search = async function() {
 			}, false)
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -292,7 +318,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -328,7 +354,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -338,7 +364,7 @@ const get_buttons = (self) => {
 */
 const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
-	const mode 				= self.mode	
+	const mode 				= self.mode
 	const is_inside_tool	= self.is_inside_tool
 
 	// li
@@ -368,7 +394,9 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 		}
 
 	return li
-}//end input_element
+};//end input_element
+
+
 
 /**
 * GET_CONTENT_DATA_SEARCH
@@ -396,7 +424,7 @@ const get_content_data_search = async function(self) {
 
 
 	return content_data
-}//end get_content_data_search
+};//end get_content_data_search
 
 
 
@@ -418,4 +446,4 @@ const get_input_element_search = (i, current_value, inputs_container, self) => {
 
 
 	return input
-}//end get_input_element_search
+};//end get_input_element_search

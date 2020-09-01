@@ -35,7 +35,7 @@ export const component_input_text = function(){
 
 
 	return true
-}//end component_input_text
+};//end component_input_text
 
 
 
@@ -45,25 +45,27 @@ export const component_input_text = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_input_text.prototype.init 	 			= component_common.prototype.init
-	component_input_text.prototype.build 	 			= component_common.prototype.build
-	component_input_text.prototype.render 				= common.prototype.render
-	component_input_text.prototype.refresh 				= common.prototype.refresh
-	component_input_text.prototype.destroy 	 			= common.prototype.destroy
+	component_input_text.prototype.init					= component_common.prototype.init
+	component_input_text.prototype.build				= component_common.prototype.build
+	component_input_text.prototype.render				= common.prototype.render
+	component_input_text.prototype.refresh				= common.prototype.refresh
+	component_input_text.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_input_text.prototype.save 	 			= component_common.prototype.save
+	component_input_text.prototype.save					= component_common.prototype.save
 	component_input_text.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_input_text.prototype.update_datum 		= component_common.prototype.update_datum
-	component_input_text.prototype.change_value 		= component_common.prototype.change_value
+	component_input_text.prototype.update_datum			= component_common.prototype.update_datum
+	component_input_text.prototype.change_value			= component_common.prototype.change_value
+	component_input_text.prototype.build_dd_request		= common.prototype.build_dd_request
 
 	// render
-	component_input_text.prototype.list 				= render_component_input_text.prototype.list
-	component_input_text.prototype.edit 				= render_component_input_text.prototype.edit
+	component_input_text.prototype.mini					= render_component_input_text.prototype.mini
+	component_input_text.prototype.list					= render_component_input_text.prototype.list
+	component_input_text.prototype.edit					= render_component_input_text.prototype.edit
 	component_input_text.prototype.edit_in_list			= render_component_input_text.prototype.edit
 	component_input_text.prototype.tm					= render_component_input_text.prototype.edit
-	component_input_text.prototype.search 				= render_component_input_text.prototype.search
-	component_input_text.prototype.change_mode 			= component_common.prototype.change_mode
+	component_input_text.prototype.search				= render_component_input_text.prototype.search
+	component_input_text.prototype.change_mode			= component_common.prototype.change_mode
 
 
 
@@ -76,7 +78,7 @@ component_input_text.prototype.active = function() {
 	//console.log("Yujuu! This is my component custom active test triggered after ui.active. id:", this.id )
 
 	return true
-}//end active
+};//end active
 
 
 
@@ -97,7 +99,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 	const unique_config = self.context.properties.unique
 
 	// search item rebuild filter q param and others
-		const sqo = self.sqo_context.search.find(item => item.typo==='sqo')
+		const sqo = self.dd_request.search.find(item => item.typo==='sqo')
 		// set limit on sqo
 		sqo.limit = 1
 		// set skip_projects_filter as true
@@ -118,10 +120,10 @@ component_input_text.prototype.is_unique = async function(new_value){
 					q 	 : '!=' + self.section_id,
 					path : [
 						{
-							component_tipo  : 'section_id',
-							modelo 			: 'component_section_id',
-							name 			: 'Dummy section id',
-							section_tipo 	: [self.section_tipo]
+							component_tipo	: 'section_id',
+							modelo			: 'component_section_id',
+							name			: 'Dummy section id',
+							section_tipo	: [self.section_tipo]
 						}
 					]
 				}
@@ -132,13 +134,12 @@ component_input_text.prototype.is_unique = async function(new_value){
 			//console.log("new_item_filter:",new_item_filter);
 			// console.log("sqo:",sqo);
 
-	// add self context as the unique ddo
-		//self.sqo_context.search.push(self.context)
+
 
 	// load data
-		const current_data_manager 	= new data_manager()
-		const api_response 			= await current_data_manager.section_load_data(self.sqo_context.search)
-		const data 					= api_response.result.data
+		const current_data_manager	= new data_manager()
+		const api_response			= await current_data_manager.read(self.dd_request.search)
+		const data					= api_response.result.data
 
 	// record data results from search
 		const record = data.find(item => item.tipo===self.tipo)
@@ -151,6 +152,4 @@ component_input_text.prototype.is_unique = async function(new_value){
 		}
 
 	return record
-}//end is_unique
-
-
+};//end is_unique

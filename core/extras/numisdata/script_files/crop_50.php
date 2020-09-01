@@ -45,8 +45,8 @@ function crop_50($request_options, $custom_arguments) {
 
 			# Portal target_section_tipo
 			$target_section_tipo = $component_portal->get_ar_target_section_tipo()[0];
-			$propiedades 		 = $component_portal->get_propiedades();
-			$tool_propiedades 	 = $propiedades->ar_tools_name->tool_import_files;
+			$properties 		 = $component_portal->get_properties();
+			$tool_properties 	 = $properties->ar_tools_name->tool_import_files;
 
 			$request_options = new stdClass();
 				$request_options->section_target_tipo 	= $target_section_tipo;
@@ -68,7 +68,7 @@ function crop_50($request_options, $custom_arguments) {
 			$file_crop_data = (array)tool_import_files::get_file_data($file_data->dir_path, $crop_file_name); 
 
 			# Save file and verions
-			tool_import_files::set_media_file($file_crop_data, $target_section_tipo, $current_section_id, $tool_propiedades);
+			tool_import_files::set_media_file($file_crop_data, $target_section_tipo, $current_section_id, $tool_properties);
 
 			$crop_number++;
 		}

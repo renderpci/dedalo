@@ -5,7 +5,7 @@
 *
 */
 var tool_indexation = new function() {
-	
+
 
 	// LOCAL VARS
 	this.url_trigger = DEDALO_CORE_URL + '/tools/tool_indexation/trigger.tool_indexation.php'
@@ -15,17 +15,17 @@ var tool_indexation = new function() {
 	/**
 	* INIT
 	*/
-	//this.inited = false
+	//this.initiated = false
 	this.init = function(data) {
 
 		const self = this;
-		
-		//if (this.inited!==true) {
+
+		//if (this.initiated!==true) {
 
 			// Set data vars
 			self.textarea_lang = data.textarea_lang
 
-			var current_tool_obj = self	
+			var current_tool_obj = self
 
 			// Init split pane
 			Split(['#left_side', '#right_side'], {
@@ -33,7 +33,7 @@ var tool_indexation = new function() {
 				minSize: '40%'
 			});
 
-			// READY (EVENT)	
+			// READY (EVENT)
 			window.ready(function(event){
 
 				// DELETE_USER_SECTION_EVENTS
@@ -47,18 +47,18 @@ var tool_indexation = new function() {
 					console.log("->load event: no window.opener available. "+e);
 					//console.log(e); // pass exception object to error handler
 				}
-				// Update lock_components state (FOCUS)				
+				// Update lock_components state (FOCUS)
 				if(typeof lock_components!='undefined') {
 					lock_components.update_lock_components_state( tool_indexation.get_tool_text_area_wrapper(), 'focus' );
 				}
 			})
 
-		
-			// LOAD (EVENT)			
+
+			// LOAD (EVENT)
 			window.addEventListener("load", function (event) {
-				tool_indexation.fix_height() 
-				tool_indexation.select_tag_in_editor()				
-			}, false)			
+				tool_indexation.fix_height()
+				tool_indexation.select_tag_in_editor()
+			}, false)
 
 
 			// BEFOREUNLOAD (EVENT)
@@ -70,24 +70,24 @@ var tool_indexation = new function() {
 
 					// SAVE ON EXIT
 					tool_indexation.save_on_exit();
-					
+
 					var confirmationMessage = "Leaving tool page.. ";
 					event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
 					return confirmationMessage;					// Gecko, WebKit, Chrome <34
 				}
 			}, false)//end beforeunload
-			
 
-			// UNLOAD (EVENT)			
+
+			// UNLOAD (EVENT)
 			window.addEventListener("unload", function (event) {
 				//event.preventDefault();
-			
-				// Reload opener page list				
+
+				// Reload opener page list
 				if (window.opener && window.opener.page_globals.modo && window.opener.page_globals.modo==='list') {
 					//window.opener.location.reload();
-				
+
 					// EDITING FROM PROCESSES
-			
+
 					// RELOAD_ROWS_LIST
 					var call_uid = 'wrap_' + page_globals.section_tipo + '_' + 'list';	// wrap_dd1140_list
 					window.opener.search.reload_rows_list(call_uid);
@@ -105,7 +105,7 @@ var tool_indexation = new function() {
 			// VISIBILITYCHANGE (EVENT)
 			document.addEventListener("visibilitychange", function(event) {
 				if (document.hidden===true) return false;
-				
+
 				let locator = {
 					section_tipo 	: page_globals.section_tipo,
 					section_id 		: page_globals._parent,
@@ -114,19 +114,19 @@ var tool_indexation = new function() {
 				}
 				if(SHOW_DEBUG===true) {
 					console.warn("[tool_indexation.visibilitychange_action] locator:", locator);
-				}				
+				}
 				tool_common.update_tracking_status(event,{locator:locator})
 			}, false)
 
 
-			// RESIZE (EVENT)			
+			// RESIZE (EVENT)
 			window.addEventListener("resize", function (event) {
 				//tool_indexation.fix_height()
 			}, false)
 
-		//}//end if (this.inited!==true)
+		//}//end if (this.initiated!==true)
 
-		//this.inited = true
+		//this.initiated = true
 	};//end init
 
 
@@ -176,19 +176,19 @@ var tool_indexation = new function() {
 
 	/**
 	* FIX_TOOL_VARS
-	* 
+	*
 	*/
 	this.fix_tool_vars = function(tag_obj, tipo, parent, section_tipo, lang) {
-		
-		// Fix global selected_tag and selected_tipo for index		
+
+		// Fix global selected_tag and selected_tipo for index
 		this.tag_obj 			= tag_obj
 		this.tag_id 			= tag_obj.dataset.tag_id+"" // maintain value as text for now
-		
+
 		this.section_top_tipo 	= page_globals.top_tipo
 		this.section_top_id 	= page_globals.top_id
 		this.section_tipo 		= section_tipo
 		this.section_id 		= parent+"" // maintain value as text for now
-		this.component_tipo		= tipo					
+		this.component_tipo		= tipo
 		this.lang 				= lang
 		this.locator 			= {
 									section_top_tipo 	: this.section_top_tipo,
@@ -205,11 +205,11 @@ var tool_indexation = new function() {
 
 	/**
 	* FRAGMENT_INFO
-	* Loads all fragment information in a container below the text editor 
+	* Loads all fragment information in a container below the text editor
 	* for change tag state, delete tag or add indexation terms
 	*/
 	this.fragment_info = function(tag_obj, tipo, section_id, section_tipo, lang) {
-		//return console.log(tagName+", "+tipo+", "+section_id+", "+section_tipo+", "+lang) 
+		//return console.log(tagName+", "+tipo+", "+section_id+", "+section_tipo+", "+lang)
 		//return console.log(tag_obj)
 
 		// Fix vars
@@ -249,7 +249,7 @@ var tool_indexation = new function() {
 						var myNode = wrap_div; while (myNode.firstChild) {
 							myNode.removeChild(myNode.firstChild);
 						}
-					}								
+					}
 
 					// Tag info
 					const data =  {
@@ -272,10 +272,10 @@ var tool_indexation = new function() {
 					}
 
 					Promise.resolve( tool_indexation.build_fragment_info(data, wrap_div) ).then(function(res){
-	
+
 						// Term list
 						const ul = tool_indexation.build_term_list(response.indexations_list)
-						
+
 						// Clean and update terminos_list container
 						const terminos_list_container = document.getElementById("terminos_list_container")
 						if(terminos_list_container) {
@@ -288,8 +288,8 @@ var tool_indexation = new function() {
 						if (typeof section_tabs!=="undefined") {
 							//section_tabs.select_tab_active()
 							tool_indexation.select_tab_active()
-						}						
-					})														
+						}
+					})
 				}
 				html_page.loading_content( wrap_div, 0 );
 		})
@@ -302,40 +302,40 @@ var tool_indexation = new function() {
 
 	/**
 	* SET_TAB_ACTIVE
-	* @return 
+	* @return
 	*/
 	this.set_tab_active = function(button) {
 
 		set_localStorage('section_tab_active', button.id)
 
-		const container			= button.parentNode		
-		
+		const container			= button.parentNode
+
 		// Buttons
 		const button_tabs 		= container.getElementsByClassName('section_tab_label')
 		const button_tabs_len	= button_tabs.length
-		for (let i = button_tabs_len - 1; i >= 0; i--) {				
+		for (let i = button_tabs_len - 1; i >= 0; i--) {
 			if (button_tabs[i].classList.contains("section_tab_active")) {
 				button_tabs[i].classList.remove("section_tab_active")
-			}			
+			}
 		}
 		button.classList.add("section_tab_active")
 
-		// Containers		
+		// Containers
 		const section_tabs 		= container.getElementsByClassName('section_tab')
 		const section_tabs_len	= section_tabs.length
 		for (let i = section_tabs_len - 1; i >= 0; i--) {
 			if(section_tabs[i].id === button.id + '_content' ){
-				section_tabs[i].style.display = 'table';						
+				section_tabs[i].style.display = 'table';
 			}else{
 				section_tabs[i].style.display = 'none';
 			}
-		}	
+		}
 	};//end set_tab_active
 
 
 	/**
 	* SELECT_TAB_ACTIVE
-	* @return 
+	* @return
 	*/
 	this.select_tab_active = function() {
 
@@ -343,7 +343,7 @@ var tool_indexation = new function() {
 
 		var selected = false
 
-		const cookie_tab_active = get_localStorage('section_tab_active');		
+		const cookie_tab_active = get_localStorage('section_tab_active');
 		if (cookie_tab_active) {
 			// Previously set on cookie
 			var tab_active_element = document.getElementById(cookie_tab_active)
@@ -351,22 +351,22 @@ var tool_indexation = new function() {
 				self.set_tab_active(tab_active_element)
 				selected = true
 		}
-	
+
 		if (selected===false) {
 			const buttons 		= document.getElementsByClassName('section_tab_label')
 			const buttons_len 	= buttons.length
 			//const section_tabs 	= document.getElementsByClassName('section_tab')
-			
+
 			for (let i = buttons_len - 1; i >= 0; i--) {
 				const button 	= buttons[i]
-				if(button.classList.contains("section_tab_active")){				
-					const content = document.getElementById(button.id + "_content")	
+				if(button.classList.contains("section_tab_active")){
+					const content = document.getElementById(button.id + "_content")
 					content.style.display = 'table';
 					return true
 				}
 			}
 		}
-	
+
 
 		return false
 	};//end select_tab_active
@@ -378,7 +378,7 @@ var tool_indexation = new function() {
 	* Loads tag indexations list in inspector when in modo "edit"
 	*/
 	this.load_inspector_indexation_list = function(tag_object, tipo, parent, section_tipo, lang) {
-	
+
 		if (typeof page_globals.context_name!=="undefined" && page_globals.context_name==="list_into_tool_portal") {
 			return false;
 		}
@@ -394,10 +394,10 @@ var tool_indexation = new function() {
 			section_tipo 	: this.section_tipo,
 			section_id 	 	: this.section_id,
 			component_tipo  : this.component_tipo,
-			tag_id 	 		: this.tag_id,			
+			tag_id 	 		: this.tag_id,
 			lang 		 	: this.lang
 		}; //console.log(trigger_vars); return
-		
+
 
 		// Return a promise of XMLHttpRequest
 		const js_promise = common.get_json_data(trigger_url, trigger_vars).then(function(response) {
@@ -415,9 +415,9 @@ var tool_indexation = new function() {
 
 					// Term list
 					const ul = tool_indexation.build_term_list(response.indexations_list)
-					
+
 					// Clean and update terminos_list container
-					const terminos_list_container = document.getElementById("inspector_indexations")				
+					const terminos_list_container = document.getElementById("inspector_indexations")
 					while (terminos_list_container.firstChild) {
 						terminos_list_container.removeChild(terminos_list_container.firstChild);
 					}
@@ -438,9 +438,9 @@ var tool_indexation = new function() {
 	* @return DOM node
 	*/
 	this.build_fragment_info = function( data, div ) {
-	
+
 		const self = this
-		
+
 		if (!div) {
 			div = document.createElement('div')
 		}
@@ -465,7 +465,7 @@ var tool_indexation = new function() {
 					wrap_tag_state_selector.appendChild(t)
 
 				const select = document.createElement('select')
-					  select.classList.add('tag_state_selector')				
+					  select.classList.add('tag_state_selector')
 					//Create and append the options
 					for(var k in data.tag_options){
 						var option = document.createElement("option");
@@ -485,30 +485,30 @@ var tool_indexation = new function() {
 				common_line.appendChild(wrap_tag_state_selector)
 
 			const div_delete_tag = document.createElement('div')
-				  div_delete_tag.classList.add('div_delete_tag')			
+				  div_delete_tag.classList.add('div_delete_tag')
 
 				const icon_delete_tag = document.createElement('div')
-					  icon_delete_tag.classList.add("icon_bs","tool_indexation_delete_icon","link")				
-					  icon_delete_tag.title = "Delete tag"				
+					  icon_delete_tag.classList.add("icon_bs","tool_indexation_delete_icon","link")
+					  icon_delete_tag.title = "Delete tag"
 
 					  icon_delete_tag.addEventListener("click", function(e){
 						tool_indexation.delete_tag(this)
 					  })
 
-				var label = document.createElement('label')				
+				var label = document.createElement('label')
 				var t = document.createTextNode("Delete tag")
 					label.appendChild(t)
 
 				div_delete_tag.appendChild(icon_delete_tag)
-				div_delete_tag.appendChild(label)			
+				div_delete_tag.appendChild(label)
 
 				// Add element
 				common_line.appendChild(div_delete_tag)
 
 		// Add element
-		div.appendChild(common_line)		
+		div.appendChild(common_line)
 
-		// Tabs		
+		// Tabs
 		const button_tab_2 = common.create_dom_element({
 			element_type: "span",
 			id 			: "section_tab_2",
@@ -535,7 +535,7 @@ var tool_indexation = new function() {
 			  tab_1.id = "section_tab_1_content"
 			  tab_1.classList.add("section_tab")
 			  // Add element
-			  div.appendChild(tab_1)			
+			  div.appendChild(tab_1)
 
 			const icon_show_fragment = document.createElement('div')
 				  icon_show_fragment.classList.add("icon_bs","tool_indexation_show_fragment","link")
@@ -548,7 +548,7 @@ var tool_indexation = new function() {
 				tab_1.appendChild(icon_show_fragment)
 
 			const selected_fragment = document.createElement('div')
-				  selected_fragment.classList.add("selected_fragment")		
+				  selected_fragment.classList.add("selected_fragment")
 				  selected_fragment.innerHTML = data.selected_fragment_text // use innerHTML to parse the html content
 
 				// Add element
@@ -574,10 +574,10 @@ var tool_indexation = new function() {
 
 		const tab_2 = document.createElement('section')
 			  tab_2.id = "section_tab_2_content"
-			  tab_2.classList.add("section_tab")	
+			  tab_2.classList.add("section_tab")
 			  // Add element
-			  div.appendChild(tab_2)			
-			
+			  div.appendChild(tab_2)
+
 			if (data.info_notes && data.info_notes.html!==null) {
 				var notes = document.createElement("div")
 					notes.innerHTML = data.info_notes.html
@@ -598,7 +598,7 @@ var tool_indexation = new function() {
 					// Add element
 					tab_2.appendChild(button_add_note)
 			}
-				
+
 
 		return div
 	};//end build_fragment_info
@@ -608,10 +608,10 @@ var tool_indexation = new function() {
 	/**
 	* NEW_INDEX_DATA_RECORD
 	* Insert a new record in table matrix_idexations and inject the locator in current tag dataset
-	* @return 
+	* @return
 	*/
 	this.new_index_data_record = function(button_ob, evt) {
-		
+
 		const trigger_vars = {
 			mode		: 'new_index_data_record',
 			tag_id		: tool_indexation.tag_id,
@@ -622,11 +622,11 @@ var tool_indexation = new function() {
 				if(SHOW_DEBUG===true) {
 					console.log("[tool_indexation.new_index_data_record] response",response);
 				}
-					
+
 				if (response===null) {
 					alert("Error on create new_index_data_record ")
 				}else{
-					
+
 					var data = JSON.stringify(response.result)
 						// Format data Important !!
 						data = replaceAll('"', '\'', data);
@@ -653,7 +653,7 @@ var tool_indexation = new function() {
 												  tool_indexation.section_id,
 												  tool_indexation.section_tipo,
 												  tool_indexation.lang) // tag_obj, tipo, parent, section_tipo, lang
-				}	
+				}
 		}, function(error) {
 				console.log("[tool_indexation.new_index_data_record] error",error)
 		});
@@ -665,18 +665,18 @@ var tool_indexation = new function() {
 
 	/**
 	* BUILD_TERM_LIST
-	* @return 
+	* @return
 	*/
 	this.build_term_list = function(result) {
 
 		const ul = document.createElement('ul')
-								
+
 		const len = result.length
 		for (var i = 0; i < len; i++) {
 			var element = result[i]
-			
+
 			if (page_globals.modo==='tool_indexation') {
-	
+
 				// Delete icon
 				var icon = document.createElement('div')
 					icon.classList.add('icon_bs','tool_indexation_delete_icon','link')
@@ -695,13 +695,13 @@ var tool_indexation = new function() {
 				// Label icon
 				var icon = document.createElement('div')
 					icon.classList.add('icon_bs','tool_current_indexation_icon','link')
-			}		
+			}
 
 			// Term
 			var t  = document.createTextNode(element.term)
-			
+
 			// li
-			var li = document.createElement('li')				
+			var li = document.createElement('li')
 				li.appendChild(icon)
 				li.appendChild(t)
 
@@ -765,7 +765,7 @@ var tool_indexation = new function() {
 					setTimeout(function(){
 						component_text_area.load_tr( document.querySelector('.css_text_area'), tinymce.activeEditor );
 					},1000)
-					
+
 
 					// Clean selected fragment info
 					var indexation_page_list = document.getElementById('indexation_page_list')
@@ -837,7 +837,7 @@ var tool_indexation = new function() {
 						if(SHOW_DEBUG===true) {
 							console.warn("[tool_indexation.add_index] ", response.msg);
 						}
-					}											  
+					}
 				}
 				html_page.loading_content( container, 0 );
 		})
@@ -894,8 +894,8 @@ var tool_indexation = new function() {
 	* TOGGLE_SELECTED_FRAGMENT
 	*/
 	this.toggle_selected_fragment = function( button_obj ) {
-		
-		$(button_obj).next('.selected_fragment').toggle();		
+
+		$(button_obj).next('.selected_fragment').toggle();
 	};
 
 
@@ -914,22 +914,22 @@ var tool_indexation = new function() {
 		var tipo				= button_obj.dataset.tipo
 		var section_tipo		= button_obj.dataset.section_tipo
 		var lang				= button_obj.dataset.lang
-		var component_id		= identificador_unico		
+		var component_id		= identificador_unico
 
 		// Select current editor
 		var ed = tinyMCE.get(component_id);
 		//var ed = tinymce.activeEditor
 			if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") };
-		
+
 		var current_text_area = document.getElementById(component_id);
 			if (!current_text_area) {
 				return alert("Editor " + component_id + " not found [2]!")
 			}
-		
+
 		//var last_tag_index_id = parseInt(current_text_area.dataset.last_tag_index_id);
 		var last_tag_index_id = parseInt( component_text_area.get_last_tag_id(ed, 'index') )
 			//console.log(last_tag_index_id); return;
-		
+
 		var string_selected 	= ed.selection.getContent({format : 'raw'}); // Get the selected text in raw format
 		var string_len 			= string_selected.length ;
 			if(string_len<1) return alert("Please, select a text fragment before ! " +string_len);
@@ -940,7 +940,7 @@ var tool_indexation = new function() {
 		// State. Default is 'n' (normal)
 		var state = 'n';
 
-		// Final string to replace 
+		// Final string to replace
 		var image_in  = component_text_area.build_dom_element_from_data('indexIn', tag_id, state, "label in "+tag_id, '')
 		var image_out = component_text_area.build_dom_element_from_data('indexOut', tag_id, state, "label out "+tag_id, '')
 
@@ -953,7 +953,7 @@ var tool_indexation = new function() {
 			range_clon.collapse(false)	// Go to end of range position
 
 		// Insert end out image
-		range_clon.insertNode(image_out)		
+		range_clon.insertNode(image_out)
 
 		// Positioned to begin of range
 		range_clon.setStart(startContainer, startOffset)
@@ -962,22 +962,22 @@ var tool_indexation = new function() {
 		range_clon.insertNode(image_in)
 
 		// Force dirty state
-		ed.setDirty(true);		
-		
-		// Update last_tag_index_id data on current text area		
-		//$(current_text_area).data('last_tag_index_id',tag_id);		
+		ed.setDirty(true);
+
+		// Update last_tag_index_id data on current text area
+		//$(current_text_area).data('last_tag_index_id',tag_id);
 		current_text_area.dataset.last_tag_index_id = tag_id
 
-		// FORCE UPDATE REAL TEXT AREA CONTENT (and save is triggered when text area changes)												
+		// FORCE UPDATE REAL TEXT AREA CONTENT (and save is triggered when text area changes)
 		//tinyMCE.triggerSave();	//console.log(tinyMCE)
-		// TEXT EDITOR : Force save		
+		// TEXT EDITOR : Force save
 		var evt = null;
 		//var js_promise = text_editor.save_command(ed, evt, current_text_area);
 		var js_promise = component_text_area.Save(current_text_area, null, ed)
 			js_promise.then(function(response) {
 				// fragment_info
-				tool_indexation.fragment_info(image_in, tipo, parent, section_tipo, lang);	//tag_obj, tipo, parent, section_tipo, lang	
-			})			
+				tool_indexation.fragment_info(image_in, tipo, parent, section_tipo, lang);	//tag_obj, tipo, parent, section_tipo, lang
+			})
 
 		// Hide "Create New Fragment" button
 		//$(button_obj).hide()
@@ -1007,10 +1007,10 @@ var tool_indexation = new function() {
 
 	/**
 	* SELECT_TAG_IN_EDITOR
-	* Select first tag (index in) image in text editor and scroll to he 
+	* Select first tag (index in) image in text editor and scroll to he
 	*/
 	this.select_tag_in_editor = function() {
-		
+
 		try {
 			if(tinyMCE.activeEditor && page_globals.tag_id) {
 
@@ -1039,7 +1039,7 @@ var tool_indexation = new function() {
 	* FIX_HEIGHT
 	*/
 	this.fix_height = function() {
-		
+
 		if (page_globals.modo!=='tool_indexation') {
 			return false;
 		}
@@ -1063,7 +1063,7 @@ var tool_indexation = new function() {
 
 	/**
 	* FAST_SWITCH_LANG
-	* @return 
+	* @return
 	*/
 	this.fast_switch_lang = function(selector_obj) {
 
@@ -1077,7 +1077,7 @@ var tool_indexation = new function() {
 			self.textarea_lang = selector_obj.value
 
 		})
-		
+
 	};//end fast_switch_lang
 
 

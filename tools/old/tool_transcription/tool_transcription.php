@@ -32,8 +32,8 @@
 				return null; 	# media sin transcripción asociada
 			}
 
-			$propiedades = $this->component_related_obj->get_propiedades();
-				#dump($propiedades, ' $propiedades ++ '.to_string());
+			$properties = $this->component_related_obj->get_properties();
+				#dump($properties, ' $properties ++ '.to_string());
 
 
 			# SVG case check if related to text area

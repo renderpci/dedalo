@@ -34,8 +34,8 @@ var dd = new function() {
 			}
 
 			if (e.ctrlKey===true && e.keyCode===80) { // m=80 (P) 
-				// Toggle propiedades
-				dd.toggle_propiedades()
+				// Toggle properties
+				dd.toggle_properties()
 			}
 
 			if (e.ctrlKey===true && e.keyCode===84) { // t=84	 
@@ -155,16 +155,16 @@ var dd = new function() {
 
 
 	/**
-	* TOGGLE PROPIEDADES
+	* TOGGLE properties
 	*/
-	this.visible_propiedades = 0 ;
-	this.toggle_propiedades = function() {
-		if(this.visible_propiedades==0){
-			$('.div_propiedades').show()
-			this.visible_propiedades = 1
+	this.visible_properties = 0 ;
+	this.toggle_properties = function() {
+		if(this.visible_properties==0){
+			$('.div_properties').show()
+			this.visible_properties = 1
 		}else{
-			$('.div_propiedades').hide()
-			this.visible_propiedades = 0
+			$('.div_properties').hide()
+			this.visible_properties = 0
 		}
 	};
 	
@@ -882,23 +882,23 @@ if( cookieOpenDivsString!=='undefined'&& cookieOpenDivsString!==null) {
 /**
 * MULTITOOGLE : TESAURO NAV Multi toogle 
 */
-function multiToogle(divName,activa, desactiva) {
+function multiToogle(divName, activa, desactiva) {
 
 	const div = document.getElementById(divName)
-	if(!div || div===null) {
+	if(!div) {
 	  alert(' Opss. Sorry: Beta function. ' + div1 +' - '+ activa +' - '+ desactiva )
 
 	}else{
 	  if (div.style.display === desactiva || div.style.display === '') {	  
-			$(div).slideDown(100, function(){	
+			// $(div).slideDown(100, function(){	
 				div.style.display = activa
 				div.classList.add('activa')	
-			})
+			// })
 	  }else{
-			$(div).slideUp(100, function(){	
+			// $(div).slideUp(100, function(){	
 				div.style.display = desactiva
 				div.classList.remove('activa')	
-			})
+			// })
 	  }
 	}
 }

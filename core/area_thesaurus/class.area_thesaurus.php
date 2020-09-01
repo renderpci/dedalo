@@ -7,34 +7,34 @@
 class area_thesaurus extends area_common {
 
 
-	static $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
-	static $typologies_name_tipo 	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
+	static $typologies_section_tipo	= DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
+	static $typologies_name_tipo	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
 	# Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
-	protected $model_view 			= false;
+	protected $model_view			= false;
 	// protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
 
-	public $build_options			= null;
-	public $search_action 			= null;
+	public $search_action			= null;
 
 
 	/**
 	* GET_SECTION_TIPO
 	* @return array $section_tipo
 	*/
-		// public function get_section_tipo() {
+	public function get_section_tipo() {
 
-		// 	$hierarchy_sections = $this->get_hierarchy_sections(); // $this->get_data_items();
+		// $hierarchy_sections	= $this->get_hierarchy_sections(); // $this->get_data_items();
+		// $section_tipo		= array_map(function($item){
 
-		// 	$section_tipo = array_map(function($item){
+		// 	return $item->target_section_tipo;
 
-		// 		return $item->target_section_tipo;
+		// }, $hierarchy_sections);
 
-		// 	}, $hierarchy_sections);
+		$section_tipo = DEDALO_TESAURO_TIPO; // 'dd100'
 
-		// 	return $section_tipo;
-		// }//end get_section_tipo
+		return $section_tipo;
+	}//end get_section_tipo
 
 
 
@@ -412,7 +412,7 @@ class area_thesaurus extends area_common {
 	* @return object $response
 	*/
 	public function search_thesaurus($search_query_object) {
-	dump($search_query_object, ' search_query_object ++ '.to_string());
+		dump($search_query_object, ' search_query_object ++ '.to_string());
 		$start_time=microtime(1);
 
 		$response = new stdClass();
@@ -654,109 +654,5 @@ class area_thesaurus extends area_common {
 
 		return $ar_mix;
 	}//end walk_hierarchy_data
-
-
-
-	/**
-	* GET_SQO_CONTEXT
-	* @return object $sqo_context
-	*/
-	public function get_sqo_context() {
-
-		// already calculated
-			if (isset($this->sqo_context)) {
-				return $this->sqo_context;
-			}
-
-		// sort vars
-			$section_tipo 	= $this->get_tipo();
-			$lang 			= $this->get_lang();
-			$mode 			= $this->get_modo();
-			$limit 			= ($mode==='list') ? 10 : 1;
-
-
-		// ar_section_tipo. Get the sections of the thesaurus that will be used in the filter
-			$hierarchy_sections = $this->get_hierarchy_sections();
-			$ar_section_tipo = array_map(function($item){
-				return $item->target_section_tipo;
-			}, $hierarchy_sections);
-
-
-		// SHOW
-			$show = [];
-			// source
-				$source = new stdClass();
-					$source->typo 			= 'source';
-					$source->action 		= 'get_data'; //  'search';
-					$source->tipo 			= $section_tipo;
-					$source->section_tipo 	= $ar_section_tipo;
-					$source->lang 			= $lang;
-					$source->mode 			= $mode;
-					$source->section_id 	= null;
-					$source->model 			= get_class($this);
-					$source->pagination 	= (object)[
-						'total'  => 0,
-						'offset' => 0,
-					];
-					$source->loaded 			= false;
-				// add source
-					$show[] = $source;
-
-			// search_query_object
-				$sqo_options = new stdClass();
-					$sqo_options->tipo 			= $section_tipo;
-					$sqo_options->section_tipo 	= $ar_section_tipo;
-					$sqo_options->full_count 	= false;
-					$sqo_options->add_select 	= false;
-					$sqo_options->direct 		= true;
-
-					$sqo_options->limit  		= $limit;
-					$sqo_options->offset 		= 0;
-
-					// filter_by_locators. when sectio_id is received
-					if (!empty($section_id)) {
-						$self_locator = new locator();
-							$self_locator->set_section_tipo($section_tipo);
-							$self_locator->set_section_id($section_id);
-						$sqo_options->filter_by_locators = [$self_locator];
-					}
-
-					$search_query_object = common::build_search_query_object($sqo_options);
-
-				// add search_query_object
-					$show[] = $search_query_object;
-
-			// // ddo
-			// 	$layout_map_options = new stdClass();
-			// 		$layout_map_options->section_tipo 		 = $section_tipo;
-			// 		$layout_map_options->tipo 				 = $section_tipo;
-			// 		$layout_map_options->modo 				 = $mode;
-			// 		$layout_map_options->add_section 		 = true;
-			// 		$layout_map_options->config_context_type = 'show';
-
-			// 	$ar_ddo = layout_map::get_layout_map($layout_map_options);
-
-			// 	// add layout_map ddo's
-			// 		$show = array_merge($show, $ar_ddo);
-
-
-		// SEARCH
-			$search = [];
-			// nothing to do yet
-
-
-		// sqo_context object
-			$sqo_context = new stdClass();
-				$sqo_context->show 	 = $show;
-				$sqo_context->search = $search;
-
-		// fix
-			$this->sqo_context = $sqo_context;
-
-
-		return $sqo_context;
-	}//end get_sqo_context
-
-
 
 }//end area_thesaurus

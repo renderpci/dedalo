@@ -23,8 +23,33 @@ export const render_component_inverse = function(component) {
 	this.id 				= component.id
 
 	return true
-}//end render_component_inverse
+};//end render_component_inverse
 
+
+/**
+* LIST
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_inverse.prototype.mini = function(options) {
+
+	const self = this
+
+	// Options vars
+		const context 			= self.context
+		const data 				= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value[0].locator.from_section_id
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return node
+};//end mini
 
 
 /**
@@ -51,7 +76,7 @@ render_component_inverse.prototype.list = function(options) {
 		})
 
 	return node
-}//end list
+};//end list
 
 
 
@@ -90,7 +115,7 @@ render_component_inverse.prototype.edit = function() {
 		})
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -130,6 +155,4 @@ const input_element = (i, current_value, inputs_container, self) => {
 		}
 
 	return li
-}//end input_element
-
-
+};//end input_element

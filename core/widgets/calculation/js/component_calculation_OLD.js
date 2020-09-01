@@ -17,11 +17,11 @@ var component_calculation = new function() {
 	/**
 	* INIT
 	*/
-	this.inited = []
+	this.initiated = []
 	this.init = function(options) {
 
 		const self = this
-	
+
 		const component_name 		= options.component_name
 		const uid 			 		= options.uid
 		const aditional_save_event 	= options.aditional_save_event
@@ -37,11 +37,11 @@ var component_calculation = new function() {
 				return false
 			}
 
-		const init_uid = wrapper_obj.dataset.section_tipo +"_"+ wrapper_obj.dataset.parent +"_"+ wrapper_obj.dataset.tipo	
-			//console.log("this.inited", init_uid, this.inited, this.inited[init_uid]);
+		const init_uid = wrapper_obj.dataset.section_tipo +"_"+ wrapper_obj.dataset.parent +"_"+ wrapper_obj.dataset.tipo
+			//console.log("this.initiated", init_uid, this.initiated, this.initiated[init_uid]);
 
 		//this.get_dato(wrapper_obj)
-		if (typeof component_calculation.inited[init_uid]==="undefined" || component_calculation.inited[init_uid]!==true) {
+		if (typeof component_calculation.initiated[init_uid]==="undefined" || component_calculation.initiated[init_uid]!==true) {
 
 			const formula   	 		= wrapper_obj.dataset.formula
 			const formula_parsed 		= JSON.parse(formula)
@@ -50,16 +50,16 @@ var component_calculation = new function() {
 			const custom  				= formula_parsed.custom
 			// Merge and remove duplicates
 			const ar_component_save 	= Array.from(new Set(data.concat(aditional_save_event))); //data.concat(aditional_save_event)
-				
+
 			// Load custom script for do calculations ex: in ../extra/mdcat/calulation/expresos.js
 				if(custom){
 					common.load_script(DEDALO_CORE_URL +"/extras"+custom.file, {"async":false})
-				}	
+				}
 
 			// Load page event
 				window.addEventListener("load", function (event) {
 					component_calculation.get_dato(wrapper_obj)
-				});			
+				});
 
 			// Save component event. Triggerred on save component with tipo inckuded in formula
 				window.addEventListener('component_save', function(event){
@@ -69,12 +69,12 @@ var component_calculation = new function() {
 						console.log("[component_calculation.init] event component_save saved_tipo, ar_component_save tipo: ", saved_tipo, ar_component_save, uid);
 					}
 					if(ar_component_save.includes(saved_tipo)){
-						
+
 						// Re select wrapper and reload twice
 							const current_wrapper = document.getElementById(id_wrapper)
 							if (current_wrapper) {
 								const js_promise = component_common.load_component_by_wrapper_id(id_wrapper).then(function(response){
-									//update the dato 
+									//update the dato
 									const new_component = document.getElementById(id_wrapper)
 									const dato_promise  = self.get_dato(new_component)
 
@@ -83,13 +83,13 @@ var component_calculation = new function() {
 									},false)
 								})
 							}
-					}								
+					}
 				},false)
 
-		}//end if (this.inited!==true)
+		}//end if (this.initiated!==true)
 
 		// Set as initied
-		component_calculation.inited[init_uid] = true
+		component_calculation.initiated[init_uid] = true
 
 		return true
 	};//end init
@@ -98,26 +98,26 @@ var component_calculation = new function() {
 
 	/**
 	* GET_DATO
-	* @return 
+	* @return
 	*/
 	this.get_dato = function(wrapper_obj) {
 
 		const self = this
 
 		if (wrapper_obj.dataset.modo === 'search'){
-			return  wrapper_obj.querySelector('input.css_calculation').value	
+			return  wrapper_obj.querySelector('input.css_calculation').value
 		}
-		
+
 		//console.log(wrapper_obj);
 		return new Promise(function(resolve, reject) {
 
-			const saved_dato 	= wrapper_obj.dataset.dato			
+			const saved_dato 	= wrapper_obj.dataset.dato
 			const content_data 	= wrapper_obj.querySelector('div.css_calculation')
 			self.solve_the_formula(content_data).then(function(dato_solved){
 
-				// unify numbers format				
+				// unify numbers format
 					const saved_dato_sure = common.safe_number(saved_dato)
-					
+
 				//console.log("saved_dato", dato);
 				//console.log("new dato",dato);
 				//console.log("dato != saved_dato", dato != saved_dato);
@@ -143,9 +143,9 @@ var component_calculation = new function() {
 					resolve(dato_solved);
 				}
 
-			})				
-				
-		})	
+			})
+
+		})
 	};//end get_dato
 
 
@@ -154,7 +154,7 @@ var component_calculation = new function() {
 	* SAVE
 	* @return
 	*/
-	this.save_arguments = {}	
+	this.save_arguments = {}
 	this.Save = function(component_obj) {
 
 		const self = this
@@ -175,7 +175,7 @@ var component_calculation = new function() {
 
 	/**
 	* SOLVE_THE_FORMULA
-	* @return 
+	* @return
 	*/
 	this.solve_the_formula = function(content_data) {
 
@@ -192,23 +192,23 @@ var component_calculation = new function() {
 				if(custom){
 					const options = custom.options
 					      options.data = data
-				
+
 					const ar_paths 	= custom.process.split('.')
 
 					if (typeof window[ar_paths[0]][ar_paths[1]]==="undefined") {
 
 						console.warn("custom.process is not function:",custom.process, typeof window[custom.process]);
-					
+
 						resolve(false)
 
 					}else{
 
-						const result = window[ar_paths[0]][ar_paths[1]](options)		
-						
+						const result = window[ar_paths[0]][ar_paths[1]](options)
+
 						resolve(result)
-					}				
-				}	
-			
+					}
+				}
+
 			// standard way
 
 				console.log("formula_result:",formula_result);
@@ -243,7 +243,7 @@ var component_calculation = new function() {
 
 			if(formula_result && formula_result.process){
 				const proces_result = self[formula_result.process]({
-					result:	result, 
+					result:	result,
 					options: formula_result.options})
 				result = proces_result
 			}
@@ -260,16 +260,16 @@ var component_calculation = new function() {
 
 	/**
 	* REFRESH_DATO
-	* @return 
+	* @return
 	*/
 	this.refresh_dato = function(wrapper_obj) {
 
 		const self = this
 
 		const id_wrapper = wrapper_obj.id
-		
+
 		const js_promise = component_common.load_component_by_wrapper_id(id_wrapper).then(function(response){
-			//update the dato 
+			//update the dato
 			return new Promise(function(resolve, reject) {
 				let new_component = document.getElementById(id_wrapper)
 				resolve(self.get_dato(new_component))
@@ -277,14 +277,14 @@ var component_calculation = new function() {
 			})
 		})
 
-		return js_promise		
+		return js_promise
 	};//end refresh_dato
 
 
 
 	/**
 	* PREPROCES_DATA_DATE
-	* @return 
+	* @return
 	*/
 	this.preproces_data_date = function(data, rules, options) {
 
@@ -296,20 +296,20 @@ var component_calculation = new function() {
 				const item = rules[operator][i].var
 				const dd_date = data[item]
 				const date = {}
-			
-				if (data[item].format==='date'){					
+
+				if (data[item].format==='date'){
 					date[item] = new Date(dd_date.year, dd_date.month -1, dd_date.day);
 				}else{
 					date[item] = dd_date
 				}
-				
+
 				if (i===0) {
-					result = date[item]					
+					result = date[item]
 				}else{
-	
+
 					if (data[item].format==='period') {
 
-						if(data[item].day && result){							
+						if(data[item].day && result){
 							const day = parseInt(operator + data[item].day);
 							result.setDate(result.getDate() + day )
 						}
@@ -323,7 +323,7 @@ var component_calculation = new function() {
 							const year = parseInt(operator + data[item].year);
 							result.setFullYear(result.getFullYear() + year)
 						}
-					
+
 					}else{
 						// TO DEFINE WHEN THE CASE WIL DONE
 						if (date[item] ===0){
@@ -331,12 +331,12 @@ var component_calculation = new function() {
 						}else{
 							result = result + date[item]
 						}
-						
+
 					}
 				}
 			}
 		}//end for(var operator in rules)
-		
+
 
 		// Format date using locale format
 			const locale = common.get_locale_from_code(page_globals.dedalo_data_lang)
@@ -349,7 +349,7 @@ var component_calculation = new function() {
 
 	/**
 	* PROCES_SECONS_TO_PERIOD
-	* @return 
+	* @return
 	*/
 	this.proces_secons_to_period = function(request_options){
 
@@ -429,13 +429,13 @@ var component_calculation = new function() {
 			break;
 
 		}
-			
+
 		let period = []
 
 		if(years > 0 && options.years === true){
 			const year_label = years == 1 ? get_label["anyo"] : get_label["anyos"]
 			const year_value = (options.label===true) ? years + ' ' + year_label : years
-			period.push(year_value)	
+			period.push(year_value)
 		}
 
 		if(months > 0 && options.months === true){
@@ -446,7 +446,7 @@ var component_calculation = new function() {
 			}else{
 				months_value = (options.label===true) ? months + ' ' + months_label : months
 			}
-			period.push(months_value)	
+			period.push(months_value)
 		}
 
 		if(days > 0 && options.days === true){
@@ -456,9 +456,9 @@ var component_calculation = new function() {
 				days_value = (options.label===true) ? total_days + ' ' + days_label : total_days
 			}else{
 				days_value = (options.label===true) ? days + ' ' + days_label : days
-				
+
 			}
-			period.push(days_value)	
+			period.push(days_value)
 		}
 
 		const result = period.join(', ')

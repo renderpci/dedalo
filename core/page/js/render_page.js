@@ -15,7 +15,7 @@
 export const render_page = function() {
 
 	return true
-}//end render_page
+};//end render_page
 
 
 
@@ -31,9 +31,9 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 	const render_level = options.render_level
 
 	// content data
-		const current_content_data = content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper
@@ -41,14 +41,14 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 		wrapper_page.classList.add('wrapper_page', self.type)
 
 	// menu
-		const element_menu 	= self.elements.find(item => item.model==='menu')
+		const element_menu = self.page_elements.find(el => el.filter(item => item.model==='menu').length>0 )
 		if (typeof element_menu!=='undefined') {
 			const menu_node = get_menu(self)
 			wrapper_page.appendChild(await menu_node)
 		}
 
 	// body content_data
-		wrapper_page.appendChild(await current_content_data)
+		wrapper_page.appendChild(await content_data)
 
 	// modal box hidden
 		// const dd_modal = document.createElement('dd-modal')
@@ -61,20 +61,20 @@ render_page.prototype.edit = async function(options={render_level:'full'}) {
 			const active_component = document.querySelector(".wrapper_component.active")
 			if (active_component) {
 				active_component.classList.remove("active")
-			}				
+			}
 		}
 
 
  	return wrapper_page
-}//end render_page.prototype.edit
+};//end render_page.prototype.edit
 
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = async function(self) {
 
 	// const fragment = new DocumentFragment()
 
@@ -107,7 +107,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
+};//end get_content_data
 
 
 
@@ -127,6 +127,4 @@ const get_menu = async function(self) {
 	}
 
 	return null
-}//end get_menu
-
-
+};//end get_menu

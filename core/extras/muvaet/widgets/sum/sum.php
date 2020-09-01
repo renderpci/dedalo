@@ -55,7 +55,7 @@
 					[filter_by_id] => 
 					[filter_by_locator] => 
 					[filter_by_search] => 
-					[filter_by_propiedades] => 
+					[filter_by_properties] => 
 					[filter_by_section_creator_portal_tipo] => 
 					[filter_by_inverse_locators] => 
 					[filter_custom] => 

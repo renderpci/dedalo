@@ -69,9 +69,9 @@ function set_new_thesaurus_value($json_data) {
 																	 DEDALO_DATA_LANG,
 																	 $update_component_section_tipo);
 
-				# Custom propiedades external dato 
-				$update_propiedades = $update_component->get_propiedades();
-				if(isset($update_propiedades->source->mode) && $update_propiedades->source->mode==='external') {
+				# Custom properties external dato 
+				$update_properties = $update_component->get_properties();
+				if(isset($update_properties->source->mode) && $update_properties->source->mode==='external') {
 					$update_component->set_dato_external(true);	// Forces update dato with calculated external dato					
 				}
 				$update_dato = $update_component->get_dato(); // force update					

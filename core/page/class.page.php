@@ -6,6 +6,8 @@
 */
 abstract class page {
 
+
+
 	/**
 	* STATIC METHOD GET_HTML
 	* @param $content (String or Obj)
@@ -20,5 +22,5 @@ abstract class page {
 	}//end get_html
 
 
-}
-?>
+
+}//end class page

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title></title>
+	<title><?php echo $tipo .' ' . $section_id ?></title>
 	<link href="../page/css/main.css?v=<?php echo DEDALO_VERSION ?>" rel="stylesheet">
 	<?php /*<link href="<?php echo DEDALO_CORE_URL ?>/common/css/structure.css" rel="stylesheet"> */?>
+	<link rel="shortcut icon" href="../../favicon.ico" />
 </head>
 <body>
 	<div id="main" class="hide"></div>
@@ -20,18 +21,17 @@
 	( async () => {
 
 		const main = document.getElementById("main")
-		  	  main.classList.add("loading")
+			  main.classList.add("loading")
 
 		// page instance
 			const page = await get_instance({
-				model 		: 'page',
-				//mode		: <?php echo json_encode($page_options->mode) ?> || 'edit',
-				elements 	: <?php echo json_encode($page_options->page_elements, JSON_UNESCAPED_UNICODE) ?>
+				model	: 'page',
+				context	: <?php echo json_encode($page_options->context, JSON_UNESCAPED_UNICODE) ?>
 			})
 
 		// page instance build and render
-			const build 		= await page.build()
-			const wrapper_page 	= await page.render()
+			const build			= await page.build()
+			const wrapper_page	= await page.render()
 
 		// main add and restore class
 			main.appendChild(wrapper_page)

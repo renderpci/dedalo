@@ -347,13 +347,13 @@ class tool_diffusion {
 
 
 		$RecordObj_dd = new RecordObj_dd($diffusion_element_tipo);
-		$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );		
-		$schema_obj   = isset($propiedades->publication_schema) ? $propiedades->publication_schema : false;
+		$properties  = json_decode( $RecordObj_dd->get_properties() );		
+		$schema_obj   = isset($properties->publication_schema) ? $properties->publication_schema : false;
 		if (!$schema_obj) {
 			return $response;
 		}
 
-		$class_name   = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;		
+		$class_name   = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : false;		
 
 		switch ($class_name) {
 			case 'diffusion_mysql':

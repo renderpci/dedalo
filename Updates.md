@@ -115,7 +115,7 @@ Tools:
 
 	tool_import_files : Added new options: 
 						Import file name mode (to process smart numered images)
-						Image processor selector (to trigger predefined in 'propiedades' scripts and commands)
+						Image processor selector (to trigger predefined in 'properties' scripts and commands)
 						Target component (to select different target components from importer)
 
 Diffusion:
@@ -782,7 +782,7 @@ norden	|	numeric(4,0) NULL
 usableIndex	|	sino NULL
 traducible	|	sino NULL
 relaciones	|	text NULL
-propiedades	|	text NULL
+properties	|	text NULL
 
 *jerarquia:*
 

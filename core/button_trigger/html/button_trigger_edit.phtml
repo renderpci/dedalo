@@ -13,7 +13,7 @@
 			// Action js
 				// Default (when not defined)
 				$js_action = 'button_trigger.trigger(this)';
-				// Custom (defined in propiedades)
+				// Custom (defined in properties)
 				if ($js_exec_function!==false) {
 					$js_action = $js_exec_function .'(this, event)';
 				}
@@ -24,7 +24,7 @@
 				$html_contenido .= 'data-parent="'.$this->parent.'" ';
 				$html_contenido .= 'data-tipo="'.$tipo.'" ';
 				$html_contenido .= 'data-section_tipo="'.$section_tipo.'" ';
-				$html_contenido .= 'data-propiedades=\''.$propiedades_json.'\' ';
+				$html_contenido .= 'data-properties=\''.$properties_json.'\' ';
 				$html_contenido .= '>';
 				$html_contenido .= $label;
 				$html_contenido .= '</div>';

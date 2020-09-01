@@ -28,8 +28,8 @@
 				css::$ar_url[] = DEDALO_CORE_URL."/tools/".$tool_name."/css/".$tool_name.".css";			
 				js::$ar_url[]  = DEDALO_CORE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
-				$propiedades = $this->component_obj->get_propiedades();
-					dump($propiedades, ' $propiedades ++ '.to_string());
+				$properties = $this->component_obj->get_properties();
+					dump($properties, ' $properties ++ '.to_string());
 
 
 				# INVERSE_CODE

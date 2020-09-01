@@ -3,16 +3,16 @@
 	# VISUALIZADOR HTML	
 
 	# Tabla informativa en el lateral superior que muestra variables globales para la importación. 
-	# Generalmente definidas en propiedades
+	# Generalmente definidas en properties
 	
 	$html    = "";
-	#dump($button_import_obj->propiedades, ' $button_import_obj->propiedades');
-	#$html .= build_table((array)$button_import_obj->propiedades);
+	#dump($button_import_obj->properties, ' $button_import_obj->properties');
+	#$html .= build_table((array)$button_import_obj->properties);
 
 	if(SHOW_DEBUG) {
 		$html .= "<table class=\"import_options\">";
-		$html .= "<caption>Propiedades</caption>";
-		foreach ((array)$button_import_obj->propiedades as $key => $value) {
+		$html .= "<caption>properties</caption>";
+		foreach ((array)$button_import_obj->properties as $key => $value) {
 			$html .= "<tr><th>$key</th><td>$value</td></tr>";
 		}
 		$html .= "</table>";

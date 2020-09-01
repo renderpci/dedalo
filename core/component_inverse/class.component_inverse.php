@@ -67,7 +67,7 @@ class component_inverse extends component_common {
 		}
 
 
-		$inverse_show = $this->get_propiedades()->inverse_show;
+		$inverse_show = $this->get_properties()->inverse_show;
 
 		$ar_lines = [];
 		foreach ($dato as $key => $current_locator) {

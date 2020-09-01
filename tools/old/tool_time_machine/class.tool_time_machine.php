@@ -107,9 +107,9 @@ class tool_time_machine extends tool_common {
 
 		#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
 		$RecordObj_dd = new RecordObj_dd($section_tipo);
-		$propiedades  = $RecordObj_dd->get_propiedades();
-		$propiedades  = json_decode($propiedades);
-		if(isset($propiedades->section_tipo) && $propiedades->section_tipo === "real"){
+		$properties  = $RecordObj_dd->get_properties();
+		$properties  = json_decode($properties);
+		if(isset($properties->section_tipo) && $properties->section_tipo === "real"){
 			$section_tipo = section::get_section_real_tipo_static($section_tipo);
 		}
 

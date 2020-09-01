@@ -18,7 +18,32 @@
 export const render_component_security_access = function() {
 
 	return true
-}//end render_component_security_access
+};//end render_component_security_access
+
+
+/**
+* LIST
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_security_access.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const data 		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value.join(self.divisor)
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return wrapper
+};//end mini
 
 
 
@@ -48,7 +73,7 @@ render_component_security_access.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -87,7 +112,7 @@ render_component_security_access.prototype.edit = async function(options={render
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -122,7 +147,7 @@ const add_events = function(self, wrapper) {
 
 		// })
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -197,7 +222,7 @@ render_component_security_access.prototype.search = async function() {
 
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -229,7 +254,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -256,7 +281,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -308,7 +333,7 @@ const get_buttons = (self) => {
 
 
 // 	return li
-// }//end input_element
+// };//end input_element
 
 /**
 * LEVEL HIERARCHY
@@ -444,7 +469,7 @@ const item_hierarchy = async (options) => {
 
 					const api_response = await current_data_manager.request({
 						body : {
-							action 		: 'ontology_get_childrens_recursive',
+							action 		: 'ontology_get_children_recursive',
 							target_tipo : item.tipo
 						}
 					})
@@ -461,7 +486,7 @@ const item_hierarchy = async (options) => {
 			})
 		}
 
-}//end item_hierarchy
+};//end item_hierarchy
 
 const parents_node = async(child_node, checked) => {
 
@@ -480,8 +505,4 @@ const parents_node = async(child_node, checked) => {
 
 		parents_node(parent_node, checked)
 	}
-
-
-}
-
-
+};//end parents_node

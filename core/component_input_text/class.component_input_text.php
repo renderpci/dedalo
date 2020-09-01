@@ -109,8 +109,8 @@ class component_input_text extends component_common {
 	*//**/
 	public function load_tools( $check_lang_tools=true ) {
 
-		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+		$properties = $this->get_properties();
+		if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 			# Allow tool lang on non translatable components
 			$check_lang_tools = false;
 		}
@@ -125,7 +125,7 @@ class component_input_text extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 
@@ -134,8 +134,8 @@ class component_input_text extends component_common {
 		}else{
 
 			# Add value of current lang to nolan data
-			$propiedades = $this->get_propiedades();
-			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+			$properties = $this->get_properties();
+			if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 
 				$component = $this;
 				$component->set_lang($lang);
@@ -419,15 +419,15 @@ class component_input_text extends component_common {
 	public function search_operators_info() {
 
 		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null
-			'=' 	 => 'similar_a',
-			'!=' 	 => 'distinto_de',
-			'-' 	 => 'no_contiene',
-			'*text*' => 'contiene',
-			'text*'  => 'empieza_con',
-			'*text'  => 'acaba_con',
-			'\'text\'' => 'literal',
+			'*'			=> 'no_vacio', // not null
+			'!*'		=> 'campo_vacio', // null
+			'='			=> 'similar_a',
+			'!='		=> 'distinto_de',
+			'-'			=> 'no_contiene',
+			'*text*'	=> 'contiene',
+			'text*'		=> 'empieza_con',
+			'*text'		=> 'acaba_con',
+			'\'text\''	=> 'literal'
 		];
 
 		return $ar_operators;

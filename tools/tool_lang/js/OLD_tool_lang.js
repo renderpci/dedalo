@@ -12,7 +12,7 @@ var tool_lang = new function() {
 	this.textarea_lang
 	this.trigger_url = DEDALO_CORE_URL + '/tools/tool_lang/trigger.tool_lang.php'
 	this.last_target_lang
-	
+
 	// GLOBAL PARAGRAPH INITIAL VALUES
 	this.paragraphsLeftNumber	= null
 	this.paragraphsRightNumber	= null
@@ -25,12 +25,12 @@ var tool_lang = new function() {
 	/**
 	* INIT
 	*/
-	this.inited = false
+	this.initiated = false
 	this.init = function(data) {
 
 		const self = this;
-		
-		if (self.inited!==true) {
+
+		if (self.initiated!==true) {
 
 			// Set data vars
 			self.textarea_lang = data.textarea_lang
@@ -39,7 +39,7 @@ var tool_lang = new function() {
 			// READY (EVENT)
 			//$(function() {
 			window.ready(function(){
-				
+
 				// TARGET LANG. Set selector selected option (stored as cookie) and load target selected lang
 				const last_target_lang = get_localStorage('last_target_lang');
 				if (typeof last_target_lang !== 'undefined') {
@@ -48,8 +48,8 @@ var tool_lang = new function() {
 						selector_obj.value 	= last_target_lang;
 						//console.log(last_target_lang)
 					tool_lang.render_component(selector_obj)
-				}							
-			});//end $(function()			
+				}
+			});//end $(function()
 
 
 			// LOAD (EVENT)
@@ -80,7 +80,7 @@ var tool_lang = new function() {
 						}
 						break;
 				}
-			}, false);			
+			}, false);
 
 
 			// BEFOREUNLOAD (EVENT)
@@ -92,29 +92,29 @@ var tool_lang = new function() {
 
 					// SAVE ON EXIT
 					tool_lang.save_on_exit();
-					
+
 					var confirmationMessage = "Leaving tool page.. ";
 					event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
 					return confirmationMessage;					// Gecko, WebKit, Chrome <34
 				}
 			}, false)//end beforeunload
 
-			
-			// UNLOAD (EVENT)			
+
+			// UNLOAD (EVENT)
 			window.addEventListener("unload", function (event) {
 				//event.preventDefault();
 				// Reload opener page list
 				if (window.opener && window.opener.page_globals && window.opener.page_globals.modo && window.opener.page_globals.modo==='list') {
 					//window.opener.location.reload();
-				
+
 					// EDITING FROM PROCESSES
-			
+
 					// RELOAD_ROWS_LIST
 					const call_uid = 'wrap_' + page_globals.section_tipo + '_' + 'list';	// wrap_dd1140_list
 					window.opener.search.reload_rows_list(call_uid);
 
 					window.opener.console.log("Reloading rows (reload_rows_list).. "+call_uid)
-					
+
 					// Update lock_components state (BLUR)
 					if(typeof lock_components!=='undefined') {
 						lock_components.update_lock_components_state( self.get_tool_text_area_source_lang_wrapper(), 'blur' );
@@ -127,9 +127,9 @@ var tool_lang = new function() {
 			/*window.addEventListener("blur", function(event){
 				var wrap_tool_lang_component_source = document.getElementById('wrap_tool_lang_component_source')
 				var wrap_tool_lang_source 			= wrap_tool_lang_component_source.querySelector(".wrap_component")
-				
+
 				// PSEUDO CODE TEST only valid for tinyMCE
-				var textarea  	  = wrap_tool_lang_source.getElementsByTagName('textarea')[0]				
+				var textarea  	  = wrap_tool_lang_source.getElementsByTagName('textarea')[0]
 				if (textarea) {
 					var	component_obj = textarea
 					var	ed 			  = tinyMCE.get(textarea.id)
@@ -159,13 +159,13 @@ var tool_lang = new function() {
 				}
 				if(SHOW_DEBUG===true) {
 					//console.warn("[tool_lang.visibilitychange_action] source locator:", locator)
-				}				
+				}
 				tool_common.update_tracking_status(event,{locator:locator})
 
-				const wrap_tool_lang_component_target 	= document.getElementById('wrap_tool_lang_component_target')					
+				const wrap_tool_lang_component_target 	= document.getElementById('wrap_tool_lang_component_target')
 				const wrap_tool_lang_target 			= wrap_tool_lang_component_target.querySelector(".wrap_component")
 				if (wrap_tool_lang_target) {
-					const target_lang 					= wrap_tool_lang_target.dataset.lang			
+					const target_lang 					= wrap_tool_lang_target.dataset.lang
 					const target_locator = {
 						section_tipo 	: page_globals.section_tipo,
 						section_id 		: page_globals._parent,
@@ -176,19 +176,19 @@ var tool_lang = new function() {
 						//console.warn("[tool_lang.visibilitychange_action] target locator:", locator)
 					}
 					tool_common.update_tracking_status(event,{locator:target_locator})
-				}				
+				}
 			}, false);//end visibilitychange
 
 
-		}//end if (this.inited!==true)
+		}//end if (this.initiated!==true)
 
 		if(SHOW_DEBUG===true) {
 			//console.log("selector_source_selected_lang",this.selector_source_selected_lang);
 			//console.log("selector_target_selected_lang",this.selector_target_selected_lang);
 		}
-		
 
-		this.inited = true
+
+		this.initiated = true
 	}//end init
 
 
@@ -246,21 +246,21 @@ var tool_lang = new function() {
 	this.check_equal_langs = function(selector_obj) {
 
 		//console.log("selector_target_selected_lang:",this.selector_target_selected_lang,"selector_source_selected_lang:",this.selector_source_selected_lang);
-	
+
 		let compare_to = null
 		if (selector_obj.dataset.role==="selector_source") {
 			// CASE CHANGING SOURCE SELECTOR
 			compare_to = this.selector_target_selected_lang
 		}else if (selector_obj.dataset.role==="selector_target") {
 			// CASE CHANGING TARGET SELECTOR
-			compare_to = this.selector_source_selected_lang			
+			compare_to = this.selector_source_selected_lang
 		}
 
 
 		// Comapre current with oposite selector value
 		if (selector_obj.value == compare_to) {
 			return true
-		}		
+		}
 
 		return false;
 	}//end check_equal_langs
@@ -273,14 +273,14 @@ var tool_lang = new function() {
 	* @return bool
 	*/
 	this.restore_previous_value = function(selector_obj) {
-		
+
 		if (selector_obj.dataset.role==="selector_source") {
-			// CASE CHANGING SOURCE SELECTOR			
+			// CASE CHANGING SOURCE SELECTOR
 			selector_obj.value = this.selector_source_selected_lang
-		}else 
-		if (selector_obj.dataset.role==="selector_target") {		
-			// CASE CHANGING TARGET SELECTOR		
-			selector_obj.value = this.selector_target_selected_lang			
+		}else
+		if (selector_obj.dataset.role==="selector_target") {
+			// CASE CHANGING TARGET SELECTOR
+			selector_obj.value = this.selector_target_selected_lang
 		}
 
 		return true
@@ -324,7 +324,7 @@ var tool_lang = new function() {
 			// Alerts of forgoten action
 			this.alert_source_and_target_langs_error();
 			return false
-		}		
+		}
 
 		var wrap_div = null
 		switch(role) {
@@ -343,10 +343,10 @@ var tool_lang = new function() {
 				if(SHOW_DEBUG===true) {
 					console.log("[tool_lang.render_component] "+role+" response",response)
 				}
-				
-				if (response && response.result) {				
+
+				if (response && response.result) {
 					switch(role) {
-						case 'selector_source':							
+						case 'selector_source':
 								//wrap_div.style.opacity = 0;
 								wrap_div.innerHTML = response.result
 								exec_scripts_inside( wrap_div ) //.then((successMessage) => { })
@@ -354,14 +354,14 @@ var tool_lang = new function() {
 								// Fix new value
 								tool_lang.selector_source_selected_lang = lang
 								break;
-						case 'selector_target':							
+						case 'selector_target':
 								//wrap_div.style.opacity = 0;
 								wrap_div.innerHTML = response.result
 								exec_scripts_inside( wrap_div )//.then((successMessage) => { })
 								// Fix new value
 								tool_lang.selector_target_selected_lang = lang
 								// Store last_target_lang
-								set_localStorage('last_target_lang',lang)																
+								set_localStorage('last_target_lang',lang)
 								break;
 					}
 					// Update tol_lang header
@@ -388,7 +388,7 @@ var tool_lang = new function() {
 
 	/**
 	* ALERT_SOURCE_AND_TARGET_LANGS_ERROR
-	* Open and error alert when the source and target langs are the same 
+	* Open and error alert when the source and target langs are the same
 	*/
 	this.alert_source_and_target_langs_error = function() {
 
@@ -430,15 +430,15 @@ var tool_lang = new function() {
 	* vars: caller_component_tipo, caller_element
 	*/
 	this.update_tool_header = function(tipo, parent, section_tipo, lang, tool_locator) {
-		
-		const wrap_div	= document.getElementById("component_state_place")	//$('#component_state_place');		
-		
+
+		const wrap_div	= document.getElementById("component_state_place")	//$('#component_state_place');
+
 		const trigger_vars		= {
 				mode 			: 'update_tool_header',
 				tipo 			: tipo,
 				parent 			: parent,
 				section_tipo 	: section_tipo,
-				lang 			: lang,				
+				lang 			: lang,
 				tool_locator 	: tool_locator,
 				top_tipo 		: page_globals.top_tipo
 			}
@@ -450,13 +450,13 @@ var tool_lang = new function() {
 				if(SHOW_DEBUG===true) {
 					console.log("[tool_lang.update_tool_header] response",response)
 				}
-				
-				if (response && response.result!==false) {				
-					
+
+				if (response && response.result!==false) {
+
 					//$(wrap_div).html(response.result);
 					wrap_div.innerHTML = response.result
 					exec_scripts_inside( wrap_div )//.then((successMessage) => { })
-					
+
 				}else{
 					alert("[tool_lang.update_tool_header] Error. Null response is received")
 				}
@@ -480,15 +480,15 @@ var tool_lang = new function() {
 
 		// Select current source editor and get attr id
 		const id = $('#wrap_tool_lang_component_source').find('.css_text_area:input').first().attr('id'); //return alert(id);
-		
+
 		// unload editor
-		this.toggleEditor(id);				
-		
+		this.toggleEditor(id);
+
 		// load editor
 		component_text_area.init(id, 'text_editor_hideAll.css');
 
 		// select all
-		tinymce.activeEditor.selection.select(tinymce.activeEditor.getBody(), true);		
+		tinymce.activeEditor.selection.select(tinymce.activeEditor.getBody(), true);
 	}//end select_source_text
 
 
@@ -516,13 +516,13 @@ var tool_lang = new function() {
 	*/
 	this.reload_source_component = function() {
 
-		const id = $('#wrap_tool_lang_component_source').find('.css_text_area:input').first().attr('id'); 
-		
+		const id = $('#wrap_tool_lang_component_source').find('.css_text_area:input').first().attr('id');
+
 		// unload editor
-		this.toggleEditor(id);				
-		
+		this.toggleEditor(id);
+
 		// load editor
-		component_text_area.init(id);		
+		component_text_area.init(id);
 	}//end reload_source_component
 
 
@@ -547,7 +547,7 @@ var tool_lang = new function() {
 					//console.log( get_label.seleccione_un_idioma_de_destino  );
 				return alert( get_label.seleccione_un_idioma_de_destino );
 			}
-		
+
 
 		// Source lang
 		var source_lang = wrap_tool_lang_source.dataset.lang;	//return alert(source_lang)
@@ -560,13 +560,13 @@ var tool_lang = new function() {
 			if (target_lang.length<5){
 				return alert("Error: target lang is not valid: "+target_lang);
 			}
-		
+
 		// Tipo
 		var tipo = wrap_tool_lang_target.dataset.tipo
 			if (tipo.length<3){
 				return alert("Error: tipo is not valid: "+tipo);
 			}
-		
+
 		// Parent
 		var parent = wrap_tool_lang_target.dataset.parent ;
 			if ( typeof parent === 'undefined' || !parent || parent.length<1 ) {
@@ -601,7 +601,7 @@ var tool_lang = new function() {
 				top_tipo	  	: page_globals.top_tipo,
 				section_tipo 	: page_globals.section_tipo
 			}
-			//return console.log("[tool_lang.automatic_translation] trigger_vars:",trigger_vars);	
+			//return console.log("[tool_lang.automatic_translation] trigger_vars:",trigger_vars);
 
 		let wrap_div = wrap_tool_lang_target
 		html_page.loading_content( wrap_div, 1 );
@@ -610,16 +610,16 @@ var tool_lang = new function() {
 				if(SHOW_DEBUG===true) {
 					console.log("[tool_lang.automatic_translation] response",response)
 				}
-				//html_page.loading_content( wrap_div, 0 );			
-				if (response && response.result) {					
+				//html_page.loading_content( wrap_div, 0 );
+				if (response && response.result) {
 
 					// Exec load_component_by_wrapper_id as promise
-					component_common.load_component_by_wrapper_id( wrap_tool_lang_target.id, null, null ).then(function(response) {							
-							setTimeout(tool_lang.writeRightParagraphsNumber, 600)							
+					component_common.load_component_by_wrapper_id( wrap_tool_lang_target.id, null, null ).then(function(response) {
+							setTimeout(tool_lang.writeRightParagraphsNumber, 600)
 						}, function(xhrObj) {
 							console.log("xhrObj:",xhrObj);
 						});
-					
+
 					//inspector.show_log_msg(msg);
 					top.component_common.changed_original_content = 1;
 				}else{
@@ -661,7 +661,7 @@ var tool_lang = new function() {
 		var source_text 			= null
 		switch(true) {
 			case (wrap_tool_lang_component_source.querySelector("input,textarea")!==null) :
-				wrap_tool_lang_source 	= wrap_tool_lang_component_source.querySelector("input,textarea")				
+				wrap_tool_lang_source 	= wrap_tool_lang_component_source.querySelector("input,textarea")
 				source_text 			= wrap_tool_lang_source.value
 				break;
 			case (wrap_tool_lang_component_source.querySelector(".text_area_content")!==null) :
@@ -692,36 +692,36 @@ var tool_lang = new function() {
 			// CASE TINYMCE
 			// if ( $('#wrap_tool_lang_component_target').find('textarea').first().length >0) {
 			if (text_area_element) {
-				
-				//var input_element = $('#wrap_tool_lang_component_target').find('textarea').first();	
+
+				//var input_element = $('#wrap_tool_lang_component_target').find('textarea').first();
 
 				// Select current source editor and get attr id
 				//var id 			= $(input_element).attr('id'); //return alert(id);
 				var id  		= text_area_element.id
-				var target_ed	= tinyMCE.get(id);		
+				var target_ed	= tinyMCE.get(id);
 				//var target_text	= target_ed.getContent();
 
-				//target_ed.focus();				
+				//target_ed.focus();
 				target_ed.setContent(source_text);
 
-				// Set editor as dirty				
-				target_ed.setDirty(true) // Force dirty state		
+				// Set editor as dirty
+				target_ed.setDirty(true) // Force dirty state
 				target_ed.isNotDirty = false; // Force not dirty state
-				
+
 				// Force sync content textarea / tinymce
 				//tinyMCE.triggerSave();
 
 				// Resolve wrapper
-				let wrapper = component_common.get_wrapper_from_element(text_area_element)	
-				
+				let wrapper = component_common.get_wrapper_from_element(text_area_element)
+
 				//component_text_area.Save( text_area_element, null, target_ed );
 				window[wrapper.dataset.component_name].Save( text_area_element, null, target_ed );
-			
+
 			// CASE INPUT
 			//}else if ( $('#wrap_tool_lang_component_target').find('input').first().length >0 ) {
 			}else if ( input_element ) {
-				//var input_element = $('#wrap_tool_lang_component_target').find('input').first();				
-				
+				//var input_element = $('#wrap_tool_lang_component_target').find('input').first();
+
 				// Set new value
 				//$(input_element).val( source_text );
 				input_element.value = source_text
@@ -732,9 +732,9 @@ var tool_lang = new function() {
 
 				//component_input_text.Save( $(input_element) );
 				component_input_text.Save( input_element )
-			};			
+			};
 
-		}catch(error){if(SHOW_DEBUG===true) console.log(error)}		
+		}catch(error){if(SHOW_DEBUG===true) console.log(error)}
 	}//end copy_source_text_to_target
 
 
@@ -762,7 +762,7 @@ var tool_lang = new function() {
 
 
 		// Ony for textareas (tinymce) Verify this
-		var first_text_area = $('#wrap_tool_lang_component_source').find('textarea').first();		
+		var first_text_area = $('#wrap_tool_lang_component_source').find('textarea').first();
 		if ( $(first_text_area).length <1 ) {
 			alert("propagate_marks is not possible for this component");
 			return false;
@@ -770,10 +770,10 @@ var tool_lang = new function() {
 
 		// Verify match source and target number of paragraph
 		var same_n_paragraphs 		= this.validate_translation();	if(!same_n_paragraphs){ alert('Nothing propagated!'); return false; }
-		
-		var rpAlltags 				= $('#rpAlltags:checked').val() ;	
+
+		var rpAlltags 				= $('#rpAlltags:checked').val() ;
 		var confirmAllIndexReview 	= $('#confirmAllIndexReview:checked').val();
-		
+
 		var ed_id	= $('#wrap_tool_lang_component_target').find('textarea').first().attr('id');
 		var ed		= tinyMCE.get(ed_id);		//alert(ed)
 		var texto	= ed.getContent();
@@ -789,40 +789,40 @@ var tool_lang = new function() {
 			'top_tipo': page_globals.top_tipo,
 			'section_tipo': page_globals.section_tipo
 		};
-		
+
 		return alert( mydata.toString() )
 			/*
-			$.ajax({			
+			$.ajax({
 				url			: '../trans/trans_trigger.php',
 				data		: mydata,
 				type		: 'POST',
 				beforeSend	: function() {
-								ed.setProgressState(1); 		// Show progress en texto 
+								ed.setProgressState(1); 		// Show progress en texto
 								$('#propagate_marks_btn').hide(0);			// Hide propagate_marks_btn btn
 							},
 				error		: function(){
-								alert('PROPAGATE: ' +errorNetwork);							
+								alert('PROPAGATE: ' +errorNetwork);
 							},
 				success		: function(data){
-								alert(data);							
+								alert(data);
 								if(indexID>0) {
 									//alert(window.location.href);
 									var mySplitResult = window.location.href.split("?");
 									var url = mySplitResult[0] + "?sourceID="+sourceID+"&targetID="+targetID+"&indexID=review";
 									if(url!=-1) window.location = url ; return false;
-								}							
+								}
 								loadText();
 								update_logIndexChanges();		// update list of index to review after save text
-								$("#rpAlltags").removeAttr("checked"); 					
+								$("#rpAlltags").removeAttr("checked");
 							},
-				complete	: function(){						
-								ed.setProgressState(0); 		// Hide progress en texto	
-								$('#propagate_marks_btn').hide(0);			// Show propagate_marks_btn btn			
+				complete	: function(){
+								ed.setProgressState(0); 		// Hide progress en texto
+								$('#propagate_marks_btn').hide(0);			// Show propagate_marks_btn btn
 							}
-			});	
+			});
 			*/
 		// Hide propagate_marks_btn btn
-		$('#propagate_marks_btn').hide(0);			
+		$('#propagate_marks_btn').hide(0);
 
 		// AJAX REQUEST
 		$.ajax({
@@ -833,10 +833,10 @@ var tool_lang = new function() {
 		// DONE
 		.done(function(received_data) {
 			alert(received_data);
-			$(wrap_div).html(received_data)				
+			$(wrap_div).html(received_data)
 		})
-		// FAIL ERROR 
-		.fail(function(error_data) {					
+		// FAIL ERROR
+		.fail(function(error_data) {
 			inspector.show_log_msg("<span class='error'>PROPAGATE ERROR: no data is saved!</span>");
 		})
 		// ALWAYS
@@ -844,7 +844,7 @@ var tool_lang = new function() {
 			// Reset checkbox
 			$("#rpAlltags").removeAttr("checked");
 			// Show propagate_marks_btn btn
-			$('#propagate_marks_btn').show(0);	
+			$('#propagate_marks_btn').show(0);
 			html_page.loading_content( wrap_div, 0 );
 		});
 	}//end propagate marks
@@ -856,31 +856,31 @@ var tool_lang = new function() {
 	* Verify number of paragraphs from source and target fields is the same
 	*/
 	this.validate_translation = function () {
-	
+
 		this.writeRightParagraphsNumber();
-	
+
 		if (paragraphsLeftNumber != paragraphsRightNumber) {
-		
-			var msg  = "Two langs must be have same number of paragraphs ! \n\n Please match number of paragraphs for make this translation accessible and searchable. \n\n source lang: "+paragraphsLeftNumber+ "\n target lang: "+paragraphsRightNumber;	
+
+			var msg  = "Two langs must be have same number of paragraphs ! \n\n Please match number of paragraphs for make this translation accessible and searchable. \n\n source lang: "+paragraphsLeftNumber+ "\n target lang: "+paragraphsRightNumber;
 			//msg 	+= "\n\n If you continue, you save the current text, but you will lose all marks (tc and indexes), and this translation is set not available for consultation.";
 			alert(msg);
-			return false;   	
+			return false;
 		}
-		
-		msjExit = 1;	// avoid alert msg on leave this page (defined to 0 in page vars)	  
-		return true ;  
+
+		msjExit = 1;	// avoid alert msg on leave this page (defined to 0 in page vars)
+		return true ;
 	}//end validate_translation
-	
+
 
 
 	/**
-	* WRITE SOURCE (LEFT) PARAGRAPHS NUMBER 
+	* WRITE SOURCE (LEFT) PARAGRAPHS NUMBER
 	*/
 	this.writeLeftParagraphsNumber = function() {
 	return null;
 		//var text_area 	= $('#wrap_tool_lang_component_source').find('textarea').first();
 		let wrapper 	= document.getElementById("wrap_tool_lang_component_source")
-		let text_area 	= wrapper.getElementsByTagName('textarea')			
+		let text_area 	= wrapper.getElementsByTagName('textarea')
 			if (!text_area || text_area.length<1) {
 				if(SHOW_DEBUG===true) {
 					console.warn('[tool_lang.writeLeftParagraphsNumber] element textarea not found in #wrap_tool_lang_component_source');
@@ -894,14 +894,14 @@ var tool_lang = new function() {
 		}
 		let text = ed.getContent()
 		let arr  = text.split('<br />')
-	
-		this.paragraphsLeftNumber = arr.length;	
-		
+
+		this.paragraphsLeftNumber = arr.length;
+
 		//$('#nParagrapsLeft').hide().html( paragraphsLeftNumber ).fadeIn(300);
 		let nParagrapsLeft = document.getElementById("nParagrapsLeft")
 			if (nParagrapsLeft) {
 				nParagrapsLeft.innerHTML = this.paragraphsLeftNumber
-			}				
+			}
 			//nParagrapsLeft.style.opacity = 1
 		if(SHOW_DEBUG===true) {
 			console.log("[tool_lang.writeLeftParagraphsNumber] paragraphsLeftNumber",this.paragraphsLeftNumber);
@@ -911,16 +911,16 @@ var tool_lang = new function() {
 		return this.paragraphsLeftNumber
 		/*
 		try{
-	
+
 		}catch(err){
 			console.log('writeLeftParagraphsNumber: ',err);
-		}*/	
+		}*/
 	}//end writeLeftParagraphsNumber
 
 
 
 	/**
-	* WRITE TARGET (RIGHT) PARAGRAPHS NUMBER 
+	* WRITE TARGET (RIGHT) PARAGRAPHS NUMBER
 	*/
 	this.writeRightParagraphsNumber = function() {
 	return null;
@@ -933,7 +933,7 @@ var tool_lang = new function() {
 				return false
 			}
 
-		
+
 		let wrapper 	= document.getElementById("wrap_tool_lang_component_target")
 		let text_area 	= wrapper.getElementsByTagName('textarea')
 			if (!text_area || text_area.length<1) {
@@ -942,22 +942,22 @@ var tool_lang = new function() {
 				}
 				return false
 			}
-				
-		
+
+
 		let ed		= tinyMCE.get(text_area.id);
 		if (!ed) {
 			return false;
 		}
-		let text	= ed.getContent(); 		//alert(text)//textoG = encodeURI(textoG);		
-		let arr 	= text.split('<br />');		
-	
+		let text	= ed.getContent(); 		//alert(text)//textoG = encodeURI(textoG);
+		let arr 	= text.split('<br />');
+
 		this.paragraphsRightNumber = arr.length		//alert(paragraphsRightNumber)
-		
+
 		//$('#nParagrapsRight').hide().html( paragraphsRightNumber ) ;
 		let nParagrapsRight = document.getElementById("nParagrapsRight")
 			nParagrapsRight.innerHTML = this.paragraphsRightNumber
-		
-		// If number of paragraphs is different, hilite number in red			
+
+		// If number of paragraphs is different, hilite number in red
 		if( parseInt(this.paragraphsLeftNumber) != parseInt(this.paragraphsRightNumber) ) {
 			//$('#nParagrapsRight').addClass('nParagrapsRight_red');	//alert(paragraphsLeftNumber + " " +paragraphsRightNumber)
 			nParagrapsRight.classList.add("nParagrapsRight_red")
@@ -965,7 +965,7 @@ var tool_lang = new function() {
 		}else{
 			//$('#nParagrapsRight').removeClass('nParagrapsRight_red');
 			nParagrapsRight.classList.remove("nParagrapsRight_red")
-			//$('.propagate_marks_btnBTNred').removeClass().addClass("propagate_marks_btnBTNgrey");	
+			//$('.propagate_marks_btnBTNred').removeClass().addClass("propagate_marks_btnBTNgrey");
 		}
 		//$('#nParagrapsRight').fadeIn(300);
 		if(SHOW_DEBUG===true) {
@@ -975,7 +975,7 @@ var tool_lang = new function() {
 		return this.paragraphsRightNumber
 
 		/*
-		try{					
+		try{
 		}catch(err){
 			console.log('->Error: writeRightParagraphsNumber: ',err);
 		}*/
@@ -987,19 +987,19 @@ var tool_lang = new function() {
 	* FIX_HEIGHT_OF_TEXTEDITOR
 	*/
 	this.fix_height_of_texteditor = function() {
-		
+
 		if (page_globals.modo!=="tool_lang" || typeof tinyMCE=="undefined" || !tinyMCE) {
 			return false
 		}
-	
+
 		// Resize editor height
 		let warp_height = window.innerHeight - 250
-		let len = tinyMCE.editors.length		
+		let len = tinyMCE.editors.length
 		for (var i = 0; i < len; i++) {
 			if (warp_height>100 && tinyMCE.editors[i].theme) {
 				tinyMCE.editors[i].theme.resizeTo ('100%', warp_height)
 			}
-		}	
+		}
 
 		return true
 	}//end fix_height_of_texteditor
@@ -1063,14 +1063,14 @@ var tool_lang = new function() {
 		if (title) {
 			title = title.innerHTML
 		}
-		
+
 		// Remove previous selections
 		//ed.dom.removeClass(ed.selection.getNode(), 'text_active')
 		// Activate selected section
 		//section.classList.add("text_active")
 		if (confirm("Delete chapter: " + title + "\n\n" + get_label.seguro)) {
 			// Delete title h2 element too
-			let child_nodes = section.childNodes;			
+			let child_nodes = section.childNodes;
 			let to_delete = []
 			for (var i = 0; i < child_nodes.length; i++) {
 				if(child_nodes[i].tagName == "H2"){
@@ -1084,14 +1084,14 @@ var tool_lang = new function() {
 
 			// Unwrap element removes section tag from dom
 			component_text_area.unwrap_element(section)
-			
+
 			// Set editor as dirty
 			ed.setDirty(true); // Set editor content as changed
 			ed.isNotDirty = false; // Force not dirty state
 
-			// Let the user decide when saves..			
-		}	
-		
+			// Let the user decide when saves..
+		}
+
 		return true
 	};//end delete_structuration
 
@@ -1099,11 +1099,11 @@ var tool_lang = new function() {
 
 	/**
 	* ADD_STRUCTURATION
-	* @return 
+	* @return
 	*/
 	this.selected_section_id = null
 	this.add_structuration = function(ed, evt, text_area_component) {
-		
+
 		// Selection. Check valid user text selection in editor
 		var text = ed.selection.getContent({'format': 'html'});
 		if(!text || text.length < 2) {
@@ -1123,13 +1123,13 @@ var tool_lang = new function() {
 		ed.setDirty(false);
 		ed.isNotDirty = true;
 
-		// Open a dialog with all source lang existing structuration elements to select one		
+		// Open a dialog with all source lang existing structuration elements to select one
 		this.open_structuration_selector( 	"add_structuration",
 											text_area_component.dataset.section_tipo,
 											text_area_component.dataset.parent,
 											text_area_component.dataset.tipo,
 											text_area_component.dataset.lang )
-		
+
 		return true
 	};//end add_structuration
 
@@ -1137,10 +1137,10 @@ var tool_lang = new function() {
 
 	/**
 	* CHANGE_STRUCTURATION
-	* @return 
-	*/	
+	* @return
+	*/
 	this.change_structuration = function(ed, evt, text_area_component) {
-		
+
 		// NODE . Get current text area selected node in editor
 		let node = ed.selection.getNode()
 
@@ -1163,13 +1163,13 @@ var tool_lang = new function() {
 			alert("No structuration section (chapter) selected");
 			return false;
 		}
-		
+
 		// Remove previous selections
 		//ed.dom.removeClass(ed.selection.getNode(), 'text_active')
 		// Activate selected section
 		//section.classList.add("text_active")
 		//if (confirm(get_label.seguro)) {
-			
+
 			// Changes the chapter section id to enable update later
 			//section.id = "temporal_structuration_id"
 			tool_lang.selected_section_id = section.id
@@ -1178,15 +1178,15 @@ var tool_lang = new function() {
 			ed.setDirty(false);
 			ed.isNotDirty = true;
 
-			// Open a dialog with all source lang existing structuration elements to select one		
-			this.open_structuration_selector(	"change_structuration", 
+			// Open a dialog with all source lang existing structuration elements to select one
+			this.open_structuration_selector(	"change_structuration",
 												text_area_component.dataset.section_tipo,
 												text_area_component.dataset.parent,
 												text_area_component.dataset.tipo,
 												text_area_component.dataset.lang )
 		//}
 
-		
+
 		return true
 	};//end change_structuration
 
@@ -1194,7 +1194,7 @@ var tool_lang = new function() {
 
 	/**
 	* OPEN_STRUCTURATION_SELECTOR
-	* @return 
+	* @return
 	*/
 	this.open_structuration_selector = function(action, section_tipo, section_id, component_tipo, lang) {
 
@@ -1218,27 +1218,27 @@ var tool_lang = new function() {
 			}
 
 			if (!response) {
-				
-				alert("[component_text_area.open_structuration_selector] Warning: Null value is received. Check your server log for details");	
-			
+
+				alert("[component_text_area.open_structuration_selector] Warning: Null value is received. Check your server log for details");
+
 			}else{
 
 				// TARGET_LANG_CONTAINER . Inject received text to container and parse as dom
 				let target_lang_container = document.createElement("div")
 					target_lang_container.innerHTML = response.result
-					//console.log("target_lang_container",target_lang_container);				
+					//console.log("target_lang_container",target_lang_container);
 
 				let ar_section 		= target_lang_container.getElementsByTagName("section")
-				let ar_section_len 	= ar_section.length 
+				let ar_section_len 	= ar_section.length
 				let ar_list = []
-				for (var i = 0; i < ar_section_len; i++) {				
-					//console.log("element",ar_section[i])			
+				for (var i = 0; i < ar_section_len; i++) {
+					//console.log("element",ar_section[i])
 					ar_list.push({
 						id 			 : ar_section[i].id,
 						class 		 : ar_section[i].classList,
 						dataset 	 : ar_section[i].dataset,
 						title 		 : ar_section[i].getElementsByTagName('h2')[0].firstChild.innerHTML || "",
-						already_used : (tinymce.activeEditor.dom.get(ar_section[i].id)!==null) ? true : false	
+						already_used : (tinymce.activeEditor.dom.get(ar_section[i].id)!==null) ? true : false
 					})
 				}
 				//console.log("ar_list",ar_list); return
@@ -1248,15 +1248,15 @@ var tool_lang = new function() {
 					header.appendChild( document.createTextNode("Select a source lang title to set to selected chapter") )
 
 				let body 	= document.createElement("div")
-					body.classList.add("body_dialog_structuration_selector")					
+					body.classList.add("body_dialog_structuration_selector")
 				let ul 		= document.createElement("ul")
-				for (var i = 0; i < ar_list.length; i++) {					
+				for (var i = 0; i < ar_list.length; i++) {
 					let li = document.createElement("li")
 						li.dataset.info = JSON.stringify(ar_list[i])
 						//li.dataset.dismiss = "modal"
 
 					let title = ar_list[i].title.length > 0 ? ar_list[i].title : "no title"
-						title += " [" + ar_list[i].dataset.tag_id + "]"						
+						title += " [" + ar_list[i].dataset.tag_id + "]"
 
 					if(ar_list[i].already_used===true) {
 						li.classList.add("unactivated")
@@ -1268,12 +1268,12 @@ var tool_lang = new function() {
 						}, false);
 					}
 
-					li.appendChild( document.createTextNode(title) )					
+					li.appendChild( document.createTextNode(title) )
 
 					ul.appendChild(li)
 				}
 				body.appendChild(ul)
-				
+
 				// modal dialog
 				let modal_dialog = common.build_modal_dialog({
 					id 			: "open_structuration_selector",
@@ -1298,16 +1298,16 @@ var tool_lang = new function() {
 							let ds_data = section.dataset.data
 							if (typeof ds_data=="undefined") {
 								component_text_area.unwrap_element(section);
-							}						
+							}
 						}
-					}					
-					// Removes modal element from DOM on close					
-					$(this).remove()							
+					}
+					// Removes modal element from DOM on close
+					$(this).remove()
 				})
-			}	
-			
+			}
+
 		}, function(error) {
-			console.log("[component_text_area.open_structuration_selector] error:",error)	
+			console.log("[component_text_area.open_structuration_selector] error:",error)
 			html_page.loading_content( wrap_div, 0 )
 		})
 	};//end open_structuration_selector
@@ -1316,7 +1316,7 @@ var tool_lang = new function() {
 
 	/**
 	* SET_TITLE_TO_CHAPTER
-	* @return 
+	* @return
 	*/
 	this.set_title_to_chapter = function(button_obj, event) {
 		//console.log("set_title_to_chapter button_obj",button_obj);
@@ -1326,15 +1326,15 @@ var tool_lang = new function() {
 			if(SHOW_DEBUG===true) {
 				console.log("[tool_lang.set_title_to_chapter] info",info);;
 			}
-			
+
 
 		let ed = tinymce.activeEditor
 
 		// Search current selected target section
 		//let section = ed.dom.get('temporal_structuration_id') //tinymce.activeEditor.dom.addClass('someid', 'someclass');
-		let section = ed.dom.get( tool_lang.selected_section_id ) 
+		let section = ed.dom.get( tool_lang.selected_section_id )
 			//console.log("setion",section);
-			
+
 		if (section) {
 
 			// Check if already exists to avoid duplicates
@@ -1346,12 +1346,12 @@ var tool_lang = new function() {
 			let existsing_same_section = ed.dom.get(info.id)
 			if (existsing_same_section===null) {
 				// Configure dom element to mimic source lang equivalent
-				section.id 				= info.id 
-				section.dataset.data 	= info.dataset.data 
-				section.dataset.label 	= info.dataset.label 
-				section.dataset.state 	= info.dataset.state 
-				section.dataset.tag_id 	= info.dataset.tag_id 
-				section.dataset.type 	= info.dataset.type 
+				section.id 				= info.id
+				section.dataset.data 	= info.dataset.data
+				section.dataset.label 	= info.dataset.label
+				section.dataset.state 	= info.dataset.state
+				section.dataset.tag_id 	= info.dataset.tag_id
+				section.dataset.type 	= info.dataset.type
 
 				// Set editor as dirty
 				ed.setDirty(true); // Set editor content as changed
@@ -1362,9 +1362,9 @@ var tool_lang = new function() {
 
 				// Save content editor
 				let component_obj = document.getElementById(ed.id)
-				component_text_area.Save(component_obj, null, ed) 		
+				component_text_area.Save(component_obj, null, ed)
 
-				return true	
+				return true
 			}else{
 				if (existsing_same_section.dataset.state==="d") {
 					component_text_area.unwrap_element(existsing_same_section);
@@ -1379,11 +1379,11 @@ var tool_lang = new function() {
 					alert("[tool_lang.set_title_to_chapter] \nError: selected section '"+info.dataset.label +"' already exists in current lang");
 				}
 				return false
-			}			
+			}
 		}else{
 			console.log("[tool_lang.set_title_to_chapter] Error on find section");
 			return false
-		}		
+		}
 	};//end set_title_to_chapter
 
 

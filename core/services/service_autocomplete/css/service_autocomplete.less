@@ -14,15 +14,124 @@
 		left: -1px;
 		border-bottom-left-radius: 5px;
 		border-bottom-right-radius: 5px;
+		// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
 
-		input {
-			// background: #fff url("../../themes/default/icons/search.svg");
-			// background-repeat: no-repeat;
-			// background-size: auto 80%;
-			// background-position: bottom -1px right 5px;
+		// hide autocomplete_searh_container when parent element .component_portal is not .active
+		.wrapper_component:not(.active) & {
+			display: none;
 		}
 
-		ul {
+		>.options_hidden {
+			display: none;
+
+			>.source_selector {
+				display: flex;
+				background-color: #888888;
+	    		color: #ffff;
+	    		line-height: 1.25em;
+				>*{
+					margin: .25em;
+					padding: 0.5em;
+				}
+				select {
+					background-color: transparent;
+					-webkit-appearance: caret;
+					outline: none;
+					color: #ffff;
+				}
+			}
+
+			>.filters_container {
+				margin-bottom: 0.25em;
+			}
+
+			// filter_node. Box of checkboxes with all available sections
+			ul.filter_node {
+				background-color: #949494;
+				display: table;
+				width: 100%;
+				padding: 0.5em;
+				border-bottom: 1px solid #fff;
+
+				>li {
+					display: flex;
+					float: left;
+					width: 33.2%;
+					white-space: nowrap;
+					overflow: hidden;
+					padding: 0.25em;
+					margin-top: 1px;
+					color: white;
+
+					direction: rtl;
+					justify-content: flex-end;
+
+					&.all_selector {
+						// background-color: #efc8bf;
+						width: 100%;
+						// border-bottom: 1px solid #e6e6e6;
+
+						label {
+							font-weight: bold;
+						}
+					}
+
+					label {
+						padding-left: 0.5em;
+						padding-right: 0.5em;
+						line-height: .75em;
+					}
+				}
+			}
+
+			>div.inputs_list {
+				background-color: #e6e6e6;
+				padding: 0.5em;
+			}
+
+			>div.search_operators_div {
+				background-color: #e6e6e6;
+				padding: 0.25em;
+				padding-left: 0.5em;
+				display: flex;				
+
+				>* {
+					width: auto;
+					line-height: 1.5em;
+					height: 1.5em;
+					padding-right: 0.5em;
+				}
+			}
+		}
+
+		// button to hide/show search options box
+		>.button_options {
+			// content: " ";
+			// .fn_build_button('gear.svg', black, 0.7, 2em);
+			float: right;
+			margin: 1em;
+			// margin-top: 1.5em;
+			// cursor: default;
+			position: absolute;
+			top: 0;
+			right: 0;
+		}
+
+		>input.autocomplete_input {
+			width: calc(100% - 3.5em);
+			background: #fff url("../../themes/default/icons/search.svg");
+			background-repeat: no-repeat;
+			background-size: auto 60%;
+			background-position: bottom 6px right 10px;
+			margin: 0.5em;
+		}
+
+		
+		>span.visible{
+			display: block;
+		}
+
+		>ul.autocomplete_data {
 			padding-top: 0.5em;
 
 			>li {
@@ -40,8 +149,16 @@
 				&:active{
 					background-color: darken(@service_bg_color, 14%);
 				}
+
+				>span {
+					padding-right: 0.5em;
+				}
 			}
 		}
+	}
+
+	.attenuated {
+		opacity: 0.5;
 	}
 
 
@@ -238,5 +355,3 @@
 // 			color: #f5c39f !important;
 // 		}
 // 	*/
-
-

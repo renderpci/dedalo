@@ -32,12 +32,11 @@
 * SEARCH
 */
 export const search = function() {
-
-
+	
 	this.id_variant
 
 	return true
-}//end search
+};//end search
 
 
 
@@ -46,24 +45,24 @@ export const search = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	search.prototype.render_base 				= render_search.prototype.render_base
-	search.prototype.render_components_list 	= render_search.prototype.render_components_list
-	search.prototype.render_search_buttons 		= render_search.prototype.render_search_buttons
-	search.prototype.render_filter 				= render_search.prototype.render_filter
-	search.prototype.build_search_group 		= render_search.prototype.build_search_group
-	search.prototype.build_search_component 	= render_search.prototype.build_search_component
+	search.prototype.render_base			= render_search.prototype.render_base
+	search.prototype.render_components_list	= render_search.prototype.render_components_list
+	search.prototype.render_search_buttons	= render_search.prototype.render_search_buttons
+	search.prototype.render_filter			= render_search.prototype.render_filter
+	search.prototype.build_search_group		= render_search.prototype.build_search_group
+	search.prototype.build_search_component	= render_search.prototype.build_search_component
 	// drag
-	search.prototype.on_dragstart 				= on_dragstart
-	search.prototype.on_dragover 				= on_dragover
-	search.prototype.on_dragleave 				= on_dragleave
-	search.prototype.on_drop 					= on_drop
+	search.prototype.on_dragstart			= on_dragstart
+	search.prototype.on_dragover			= on_dragover
+	search.prototype.on_dragleave			= on_dragleave
+	search.prototype.on_drop				= on_drop
 	// user presets
-	search.prototype.load_search_preset 		= load_search_preset
-	search.prototype.new_preset 				= new_preset
-	search.prototype.save_new_preset 			= save_new_preset
-	search.prototype.save_preset 				= save_preset
-	search.prototype.delete_preset 				= delete_preset
-	search.prototype.edit_preset 				= edit_preset
+	search.prototype.load_search_preset		= load_search_preset
+	search.prototype.new_preset				= new_preset
+	search.prototype.save_new_preset		= save_new_preset
+	search.prototype.save_preset			= save_preset
+	search.prototype.delete_preset			= delete_preset
+	search.prototype.edit_preset			= edit_preset
 
 
 
@@ -75,50 +74,50 @@ search.prototype.init = async function(options) {
 
 	const self = this
 
-	self.caller					= options.caller
-	self.context				= options.caller.context
-	self.section_tipo 	 		= self.caller.section_tipo
-	self.events_tokens			= []
-	self.parent_node 			= null
-	self.components_list 		= {}
-	self.ar_instances 			= []
-	self.sqo 					= self.caller.sqo_context.show.find(el => el.typo==='sqo')
-	self.source 				= self.caller.sqo_context.show.find(el => el.typo==='source')
-	self.target_section_tipo 	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
-	self.limit 					= self.sqo.limit || 10
-	self.search_layout_state 	= null
-	self.search_panel_is_open 	= false
-	self.modo 					= null
+	// set vars
+		self.caller					= options.caller
+		self.context				= options.caller.context
+		self.section_tipo			= self.caller.section_tipo
+		self.events_tokens			= []
+		self.parent_node			= null
+		self.components_list		= {}
+		self.ar_instances			= []
+		self.source					= self.caller.dd_request.show.find(el => el.typo==='source')
+		self.sqo					= self.caller.dd_request.show.find(el => el.typo==='sqo')
+		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
+		self.limit					= self.sqo.limit || 10
+		self.search_layout_state	= null
+		self.search_panel_is_open	= false
+		self.modo					= null
 
-
-	self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined"
-		? self.caller.get_sections_selector_data()
-		: null
-
+	// sections_selector_data
+		self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined"
+			? self.caller.get_sections_selector_data()
+			: null
 
 	// dom stored pointers
-		self.wrapper 							= undefined
-		self.search_global_container 			= undefined
-		self.search_container_selector  		= undefined
-		self.search_group_container 			= undefined
-		self.search_container_selection_presets = undefined
-		self.wrapper_sections_selector 			= undefined
+		self.wrapper							= undefined
+		self.search_global_container			= undefined
+		self.search_container_selector			= undefined
+		self.search_group_container				= undefined
+		self.search_container_selection_presets	= undefined
+		self.wrapper_sections_selector			= undefined
 
 
 	// events subscription
 	// update value, subscription to the changes: if the dom input value was changed,
 	// observers dom elements will be changed own value with the observable value
-	self.events_tokens.push(
-		event_manager.subscribe('change_search_element', (instance)=>{
-			self.parse_dom_to_json_filter({mode:self.mode})
-			// Set as changed
-			self.update_state({state:'changed'})
-		})
-	)
+		self.events_tokens.push(
+			event_manager.subscribe('change_search_element', (instance)=>{
+				self.parse_dom_to_json_filter({mode:self.mode})
+				// Set as changed
+				self.update_state({state:'changed'})
+			})
+		)
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -135,15 +134,17 @@ search.prototype.build = async function(){
 	// load editing preset data
 		const editing_preset = await current_data_manager.request({
 			body : {
-				action 	 	 		: "filter_get_editing_preset",
-				target_section_tipo : self.section_tipo,
+				action				: "filter_get_editing_preset",
+				target_section_tipo	: self.section_tipo,
 			}
 		})
 
 	// Set json_filter
 		if (!editing_preset.result || !editing_preset.result.json_filter) {
 
-			console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, editing_preset);
+			if(SHOW_DEBUG===true) {
+				console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, editing_preset);
+			}
 
 			self.json_filter = {"$and":[]}
 
@@ -205,7 +206,7 @@ search.prototype.build = async function(){
 		self.status = 'builded'
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -222,15 +223,15 @@ search.prototype.render = async function() {
 
 	// render section component list [left]
 		await self.render_components_list({
-			section_tipo : self.target_section_tipo,
-			target_div 	 : self.search_container_selector,
-			path 		 : []
+			section_tipo	: self.target_section_tipo,
+			target_div		: self.search_container_selector,
+			path			: []
 		})
 
 	// render components from temp preset [center]
 		await self.render_filter({
-			editing_preset 	 : self.json_filter,
-			allow_duplicates : true
+			editing_preset		: self.json_filter,
+			allow_duplicates	: true
 		})
 
 	// render buttons
@@ -261,7 +262,7 @@ search.prototype.render = async function() {
 
 
 	return filter_wrapper
-}//end render
+};//end render
 
 
 
@@ -292,9 +293,9 @@ search.prototype.get_section_elements_context = async function(options) {
 					const api_response 			= await current_data_manager.request({
 						//url  : self.url_trigger,
 						body : {
-							action 	 	 	: "get_section_elements_context",
+							action			: "get_section_elements_context",
 							context_type	: 'simple',
-							ar_section_tipo : section_tipo
+							ar_section_tipo	: section_tipo
 						}
 					})
 
@@ -308,7 +309,7 @@ search.prototype.get_section_elements_context = async function(options) {
 
 
 	return components
-}//end get_section_elements_context
+};//end get_section_elements_context
 
 
 
@@ -338,8 +339,8 @@ search.prototype.load_component_context = async function(options) {
 					const current_data_manager 	= new data_manager()
 					const api_response 			= await current_data_manager.request({
 						body : {
-							action 	 	 	: "get_section_components",
-							ar_section_tipo : [section_tipo]
+							action			: "get_section_components",
+							ar_section_tipo	: [section_tipo]
 						}
 					})
 
@@ -353,7 +354,7 @@ search.prototype.load_component_context = async function(options) {
 
 
 	return components
-}//end load_component_context
+};//end load_component_context
 
 
 
@@ -392,7 +393,7 @@ search.prototype.calculate_component_path = function(component_context, path) {
 	})
 
 	return calculate_component_path
-}//end calculate_component_path
+};//end calculate_component_path
 
 
 
@@ -459,11 +460,11 @@ search.prototype.build_dom_group = async function(filter, dom_element, options) 
 					self.build_dom_group(current_json_object, current_search_group, options)
 				}
 		}
-	}//end for (const key in filter)
+	};//end for (const key in filter)
 
 
 	return dom_group
-}//end build_dom_group
+};//end build_dom_group
 
 
 
@@ -476,53 +477,47 @@ search.prototype.get_component_instance = async function(options) {
 
 	const self = this
 
-	const section_tipo 		= options.section_tipo
-	const component_tipo 	= options.component_tipo
-	const model 			= options.model
-	const value 			= options.value || []
-	const q_operator 		= options.q_operator
-	const path 				= options.path
+	const section_tipo		= options.section_tipo
+	const component_tipo	= options.component_tipo
+	const model				= options.model
+	const value				= options.value || []
+	const q_operator		= options.q_operator
+	const path				= options.path
 
-	const source = {
-		model 			: model,
-		tipo 			: component_tipo,
-		section_tipo 	: section_tipo,
-		section_id 		: null,
-		mode 			: 'search'
-	}
-	const _data_manager = new data_manager()
-	const api_response 	= await _data_manager.get_element_context(source)
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[search.get_component_instance] api_response:", model, component_tipo, api_response);
+	// source
+		const source = {
+			model			: model,
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			section_id		: null,
+			mode			: 'search',
+			typo			: 'source'
 		}
 
-	const component_context = api_response.result[0]
-
-	// instance key. Custom to get unique key
-		const serial = performance.now()
-		const key 	 = section_tipo +'_'+ component_tipo +'_search_'+ component_context.lang +'_'+ serial
-
-	// datum. Create empty dummy datum
-		const current_data 	= {value : value}
-		const current_datum = {context : component_context, data : current_data}
-
-	const component_options = {
-		key 			: key,
-		model 			: component_context.model,
-		tipo 			: component_context.tipo,
-		section_tipo 	: component_context.section_tipo,
-		section_id 		: null,
-		mode 			: 'search',
-		lang 			: component_context.lang,
-
-		context 		: component_context,
-		sqo_context 	: component_context.sqo_context,
-		// data 			: current_data,
-		// datum 			: current_datum
-	}
-	const component_instance = await instances.get_instance(component_options)
+	// test
+		// instance key. Custom to get unique key
+		const lang		= page_globals.dedalo_data_lang
+		const serial	= performance.now()
+		const key		= section_tipo +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
+		// context
+		const context = {
+			model			: model,
+			tipo			: component_tipo,
+			request_config 	: [source]
+		}
+		const component_options = {
+			key				: key,
+			model			: model,
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			section_id		: null,
+			mode			: 'search',
+			lang			: lang,
+			context			: context,
+			// data			: current_data,
+			// datum		: current_datum
+		}
+		const component_instance = await instances.get_instance(component_options)
 
 	// build component to force load datalist etc.
 		await component_instance.build(true)
@@ -531,15 +526,17 @@ search.prototype.get_component_instance = async function(options) {
 		component_instance.datum.data[0].value = value
 
 	// add search options to the instance
-		component_instance.data.q_operator 	= q_operator
-		component_instance.path 			= path
+		component_instance.data.q_operator	= q_operator
+		component_instance.path				= path
 
 	// add instance
 		self.ar_instances.push(component_instance)
 
+			console.log("//// component_instance:",component_instance);
+
 
 	return component_instance
-}//end get_component_instance
+};//end get_component_instance
 
 
 
@@ -553,8 +550,8 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 	const self = this
 
 	// Mode. Used to indicate that q values for search must be converted to usable search values by the components (search)
-	const mode 				= options.mode || 'default'
-	const save_arguments 	= options.save_arguments
+	const mode				= options.mode || 'default'
+	const save_arguments	= options.save_arguments
 
 	const json_query_obj = {
 		id 		: "temp",
@@ -581,7 +578,7 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 
 	return json_query_obj
-}//end parse_dom_to_json_filter
+};//end parse_dom_to_json_filter
 
 
 
@@ -621,12 +618,12 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			// add_arguments . if true, calculate and save inputs value to preset (temp preset)
 			if (add_arguments!==false) {
 
-				const component_wrapper 	= element.querySelector('.wrapper_component')
-				const component_instance 	= self.ar_instances.find(instance => instance.id===component_wrapper.id)
+				const component_wrapper		= element.querySelector('.wrapper_component')
+				const component_instance	= self.ar_instances.find(instance => instance.id===component_wrapper.id)
 				// overwrite
 				if (typeof component_instance!=="undefined") {
-					q 						= component_instance.data.value
-					q_operator 				= component_instance.data.q_operator
+					q			= component_instance.data.value
+					q_operator	= component_instance.data.q_operator
 				}
 			}
 
@@ -640,27 +637,27 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 						q = "only_operator"
 					}
 					query_group[operator].push({
-						q 	 		: q,
-						q_operator 	: q_operator,
-						path 		: JSON.parse(element.dataset.path),
-						type 		: "jsonb"
+						q			: q,
+						q_operator	: q_operator,
+						path		: JSON.parse(element.dataset.path),
+						type		: "jsonb"
 					})
 				}
 			}else{
 				// Add always
 				query_group[operator].push({
-					q 	 		: q,
-					q_operator 	: q_operator,
-					path 		: JSON.parse(element.dataset.path),
-					type 		: "jsonb"
+					q			: q,
+					q_operator	: q_operator,
+					path		: JSON.parse(element.dataset.path),
+					type		: "jsonb"
 				})
 			}
 
 		}
-	}//end for (let i = 0; i < len; i++) {
+	};//end for (let i = 0; i < len; i++) {
 
 	return query_group
-}//end recursive_groups
+};//end recursive_groups
 
 
 
@@ -686,7 +683,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	}
 
 	return operator_value
-}//end get_search_group_operator
+};//end get_search_group_operator
 
 
 
@@ -764,7 +761,7 @@ this.get_search_json_object = function() {
 		}
 
 	return search_json_object
-}//end get_search_json_object
+};//end get_search_json_object
 */
 
 
@@ -819,7 +816,7 @@ this.get_search_json_object = function() {
 
 
 		return true
-	}//end update_state
+	};//end update_state
 
 
 
@@ -845,7 +842,7 @@ this.get_search_json_object = function() {
 			})
 
 		return api_response
-	}//end save_temp_preset
+	};//end save_temp_preset
 
 
 
@@ -879,7 +876,6 @@ this.get_search_json_object = function() {
 		// sqo
 			self.sqo.filter = filter_obj
 			self.sqo.limit 	= self.limit
-			// const sqo = section.sqo_context.show.find(el => el.typo==='sqo')
 			// sqo.filter = filter_obj
 			// sqo.limit 	= self.limit
 
@@ -895,7 +891,7 @@ this.get_search_json_object = function() {
 			})
 
 		return js_promise
-	}//end search
+	};//end search
 
 
 
@@ -933,7 +929,7 @@ this.get_search_json_object = function() {
 			})
 
 		return js_promise
-	}//end show_all
+	};//end show_all
 
 
 
@@ -956,7 +952,7 @@ this.get_search_json_object = function() {
 		self.render_search_buttons()
 
 		return true
-	}//end reset
+	};//end reset
 
 
 
@@ -993,7 +989,7 @@ search.prototype.track_show_panel = function(options) {
 	}
 
 	return true
-}//end track_show_panel
+};//end track_show_panel
 
 
 
@@ -1013,7 +1009,7 @@ search.prototype.cookie_track = function(cookie_name) {
 	const cookie_track 	= (cookie_obj[section_tipo]) ? cookie_obj[section_tipo][cookie_name] : false
 
 	return cookie_track
-}//end cookie_track
+};//end cookie_track
 
 
 
@@ -1022,6 +1018,7 @@ search.prototype.cookie_track = function(cookie_name) {
 * @return
 */
 search.prototype.search_from_enter_key = function(button_submit) {
+
 	if(SHOW_DEBUG===true) {
 		//console.log("[saerch2.search_from_enter_key] search_panel_is_open:",button_submit, search2.search_panel_is_open);
 	}
@@ -1035,7 +1032,7 @@ search.prototype.search_from_enter_key = function(button_submit) {
 	}
 
 	return true
-}//end search_from_enter_key
+};//end search_from_enter_key
 
 
 
@@ -1051,7 +1048,7 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 
 	return is_empty
-}//end filter_is_empty
+};//end filter_is_empty
 
 
 
@@ -1072,6 +1069,4 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 
 // 	return true;
-// }//end init_tipology_selector
-
-
+// };//end init_tipology_selector

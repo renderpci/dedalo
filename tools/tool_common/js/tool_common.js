@@ -14,7 +14,7 @@
 export const tool_common = function(){
 
 	return true
-}//end tool_common
+};//end tool_common
 
 
 
@@ -46,7 +46,7 @@ tool_common.prototype.init = async function(options) {
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -54,6 +54,7 @@ tool_common.prototype.init = async function(options) {
 * BUILD
 */
 tool_common.prototype.build = async function(autoload=false) {
+
 	const t0 = performance.now()
 
 	const self = this
@@ -83,8 +84,8 @@ tool_common.prototype.build = async function(autoload=false) {
 					return false
 				}
 
-			// sqo_context. Create the basic sqo_context
-				const sqo_context = {show: []}
+			// dd_request. Create the basic dd_request
+				const dd_request = {show: []}
 
 				// tool source for component json that stores full tool config
 				const source = {
@@ -97,22 +98,25 @@ tool_common.prototype.build = async function(autoload=false) {
 					mode 			: 'edit',
 					lang 			: 'lg-nolan'
 				}
-				sqo_context.show.push(source)
+				dd_request.show.push(source)
 
 			// load data. Load section data from db of the current tool.
 			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
 			// The tool info was generated when it was imported / registered by admin
-				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.section_load_data(sqo_context.show)
-				const data 					= api_response.result.data
+				const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.read(dd_request.show)
+				const data					= api_response.result.data
 
 			// config set
-				const simple_tool_object 	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
-				self.simple_tool_object 	= simple_tool_object[0];
-				const label 				= self.simple_tool_object.label.find(item => item.lang===self.lang);
-				self.label 					= typeof label!=='undefined' ? label.value : self.model
-				const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
-				self.description 			= typeof description!=='undefined' ? description.value : null
+				// simple_tool_object
+					const simple_tool_object	= data.find(item => item.section_id===self.tool_section_id && item.tipo===simple_tool_object_tipo).value
+					self.simple_tool_object		= simple_tool_object[0];
+				// label
+					const label					= self.simple_tool_object.label.find(item => item.lang===self.lang);
+					self.label					= typeof label!=='undefined' ? label.value : self.model
+				// description
+					const description			= self.simple_tool_object.description.find(item => item.lang===self.lang)
+					self.description			= typeof description!=='undefined' ? description.value : null
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -131,7 +135,7 @@ tool_common.prototype.build = async function(autoload=false) {
 
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -182,7 +186,7 @@ export const load_tool = async (options) => {
 
 
 	return tool_instance
-}//end load_tool
+};//end load_tool
 
 
 
@@ -190,6 +194,7 @@ export const load_tool = async (options) => {
 * TRIGGER_REQUEST
 */
 export const trigger_request = async function(trigger_url, body) {
+
 	const t0 = performance.now()
 
 	const handle_errors = function(response) {
@@ -230,7 +235,7 @@ export const trigger_request = async function(trigger_url, body) {
 
 
 	return trigger_response
-}//end trigger_request
+};//end trigger_request
 
 
 
@@ -257,6 +262,4 @@ const get_label = function(label_name) {
 	}
 
 	return label_item
-}//end get_label
-
-
+};//end get_label

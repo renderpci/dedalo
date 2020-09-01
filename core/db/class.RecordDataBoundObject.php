@@ -197,8 +197,10 @@ abstract class RecordDataBoundObject {
 		*/
 		# DEBUG
 		if(SHOW_DEBUG===true) {
-			#$totaltime = exec_time_unit($start_time,'ms');
-			#debug_log(__METHOD__." Total: $totaltime - $strQuery ".to_string(), logger::DEBUG);
+			// $totaltime = exec_time_unit($start_time,'ms');
+			// static $totaltime_static;
+			// $totaltime_static = $totaltime_static + $totaltime;
+			// debug_log(__METHOD__." Total: $totaltime ms - $strQuery - sum time ms: ".to_string($totaltime_static), logger::DEBUG);
 		}		
 	}//end load
 

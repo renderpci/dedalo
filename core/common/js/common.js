@@ -16,7 +16,7 @@
 export const common = function(){
 
 	return true
-}//end common
+};//end common
 
 
 
@@ -27,7 +27,7 @@ export const common = function(){
 * (!) For components, remember use always component_common.build()
 * @return bool true
 */
-common.prototype.build = async function(){
+common.prototype.build = async function () {
 
 	const self = this
 
@@ -42,7 +42,7 @@ common.prototype.build = async function(){
 
 
 	return true
-}//end common.prototype.build
+};//end common.prototype.build
 
 
 
@@ -53,13 +53,13 @@ common.prototype.build = async function(){
 * @return promise
 *	node first dom node stored in instance 'node' array
 */
-common.prototype.render = async function(options={render_level:'full'}) {
+common.prototype.render = async function (options={render_level:'full'}) {
 	const t0 = performance.now()
 
 	const self = this
 
 	const render_level 	= options.render_level || 'full'
-	const render_mode 	= self.mode
+	let render_mode 	= self.mode
 
 	// status update
 		self.status = 'rendering'
@@ -75,8 +75,9 @@ common.prototype.render = async function(options={render_level:'full'}) {
 
 	// render node. Method name is element node like 'edit' or 'list'
 		if (typeof self[render_mode]!=='function') {
-			console.warn(`Invalid function (render_mode: ${render_mode} ) ` +
+			console.warn(`Invalid function (render_mode: ${render_mode} ) using fallbact to LIST mode on ` +
 						 'instance: ', self);
+			render_mode = 'list'
 		}
 		const node = await self[render_mode]({
 			render_level : render_level
@@ -110,7 +111,10 @@ common.prototype.render = async function(options={render_level:'full'}) {
 							const wrapper = self.node[i]
 
 							// old content_data node
-								const old_content_data_node = wrapper.querySelector(":scope >.content_data")
+								const old_content_data_node = self.model==='section' && self.mode==='list'
+									? wrapper.querySelector(":scope >.list_body >.content_data")
+									: wrapper.querySelector(":scope >.content_data")
+
 								// const old_content_data_nodes = wrapper.querySelectorAll(":scope >.content_data")
 								// const get_content_data_node = () => {
 								// 	let result = null
@@ -141,11 +145,16 @@ common.prototype.render = async function(options={render_level:'full'}) {
 									? node // use already calculated node
 									: await self[render_mode]({render_level : render_level});
 
+								// console.log("-----------------old_content_data_node:",old_content_data_node);
 								// console.log("-----------------new_node:", new_content_data_node, self.model);
 
 							// replace child from parent wrapper
-								wrapper.replaceChild(new_content_data_node, old_content_data_node)
-
+								if (self.model==='section' && self.mode==='list') {
+									const list_body = wrapper.querySelector(":scope >.list_body")
+									list_body.replaceChild(new_content_data_node, old_content_data_node)
+								}else{
+									wrapper.replaceChild(new_content_data_node, old_content_data_node)
+								}
 						}
 
 					return self.node[0]
@@ -178,7 +187,7 @@ common.prototype.render = async function(options={render_level:'full'}) {
 		}
 
 	return result_node
-}//end render
+};//end render
 
 
 
@@ -186,22 +195,18 @@ common.prototype.render = async function(options={render_level:'full'}) {
 * REFRESH
 * @return promise
 */
-common.prototype.refresh = async function() {
+common.prototype.refresh = async function () {
 	const t0 = performance.now()
 
 	const self = this
 
 	// offset update
-		if (self.sqo_context && typeof self.pagination!=="undefined") {
-			const sqo = self.sqo_context.show.find(element => element.typo==='sqo')
+		if (self.dd_request.show && typeof self.pagination!=="undefined") {
+			const sqo = self.dd_request.show.find(element => element.typo==='sqo')
 			if (sqo) {
 				sqo.offset = self.pagination.offset
 			}
 
-			const source = self.sqo_context.show.find(element => element.typo==='source')
-			if (source) {
-				source.pagination.offset = self.pagination.offset
-			}
 		}
 
 	// destroy dependences only
@@ -236,8 +241,8 @@ common.prototype.refresh = async function() {
 	//const isPromise = (val) => {
 	//  return (
 	//  	(val !== undefined && val !== null) &&
-	//    typeof val.then === 'function' &&
-	//    typeof val.catch === 'function'
+	//    typeof val.then==='function' &&
+	//    typeof val.catch==='function'
 	//  )
 	//}
 
@@ -248,7 +253,7 @@ common.prototype.refresh = async function() {
 
 
 	return true
-}//end refresh
+};//end refresh
 
 
 
@@ -286,11 +291,13 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 							continue;
 						}
 						// console.log("self.ar_instances:",JSON.parse(JSON.stringify(self.ar_instances[i])));
-						// self.ar_instances[i].destroy(true, true, false)
+						// remove from array of instances of current element
 						const destroyed_elements = self.ar_instances.splice(i, 1)
 
-						//ar_to_destroy.push(destroyed_elements[0])
-						destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+						// send instance to general destroy
+						if (typeof destroyed_elements[0].destroy!=="undefined") {
+							destroyed_elements[0].destroy(true, true, false) // No wait here, only launch destroy order
+						}
 					}
 
 				// destroy all removed instances
@@ -375,7 +382,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 
 	//console.log("self.ar_instances final:",JSON.parse(JSON.stringify(self.ar_instances)));
 	return result
-}//end destroy
+};//end destroy
 
 
 
@@ -384,7 +391,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 * @param object options
 * @return object source
 */
-export const create_source = function(self, action){
+export const create_source = function (self, action) {
 
 	const source = { // source object
 		typo			: "source",
@@ -395,7 +402,7 @@ export const create_source = function(self, action){
 		section_id		: self.section_id,
 		mode 			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
 		lang 			: self.lang,
-		pagination		: self.pagination || null
+		//pagination		: self.pagination || null
 	}
 
 	// matrix_id optional (used in time machine mode)
@@ -404,7 +411,7 @@ export const create_source = function(self, action){
 		}
 
 	return source
-}//end create_source
+};//end create_source
 
 
 
@@ -412,7 +419,7 @@ export const create_source = function(self, action){
 * LOAD_STYLE
 * @param object self
 */
-common.prototype.load_style = function(src){
+common.prototype.load_style = function (src) {
 
 	const js_promise = new Promise(function(resolve, reject) {
 
@@ -451,7 +458,7 @@ common.prototype.load_style = function(src){
 	}
 
 	return js_promise
-}//end load_style
+};//end load_style
 
 
 
@@ -498,7 +505,102 @@ common.prototype.load_script = async function(src) {
 	}
 
 	return js_promise
-}//end load_script
+};//end load_script
+
+
+
+
+/**
+* GET_COLUMNS
+*/
+common.prototype.get_columns = async function(){
+
+	const self = this
+
+	const ar_columns 	= []
+
+	// get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
+	const ddo_map 		= self.dd_request.show.find(item => item.typo === 'rqo').show.ddo_map
+	console.log("self.dd_request", self.dd_request);
+	// get the sub elements with the ddo_map, the method is recursive,
+	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
+	const sub_columns 	= get_sub_columns(self, self.tipo, ddo_map, [])
+	ar_columns.push(...sub_columns)
+
+	return ar_columns
+};//end get_columns
+
+
+/**
+* GET_SUB_COLUMNS
+* @param self instance_caller (section, component_portal)
+* @param caller_tipo tipo from section or portal that call to get the sub_columns
+* @param ddo_map the requested tipos
+* @param sub_ddo used for create the f_path of the compomnent, f_path is used to get the full path
+* @return array ar_columns
+*/
+const get_sub_columns = function(self, caller_tipo, ddo_map, sub_ddo){
+
+	const ddo_length 	= ddo_map.length
+	const ar_columns 	= []
+	// every ddo will be checked if it is a component_portal or if is the last compomnet in the chain
+	for (let i = 0; i < ddo_length; i++) {
+		const ar_sub_ddo 	= sub_ddo
+		const current_ddo 	= ddo_map[i]
+		// check if the item in ddo_map is a object, if true, get the tipo,
+		// if ddo is a f_path, get the last component, it will use for show the information
+		// else get the string with the tipo.
+		const current_tipo = typeof current_ddo.tipo!=='undefined'
+			? current_ddo.tipo
+			: typeof current_ddo.f_path!=='undefined'
+				? current_ddo.f_path[current_ddo.f_path.length - 1]
+				: current_ddo
+		// get the ddo context of the compoment from the datum,
+		// is necesary the match with the caller_tipo if the section has a relation with itself
+		// (the last component in the chain can had different parent, multiple portals can call same component)
+		const ddo = self.datum.context.find(item => item.tipo === current_tipo && item.parent === caller_tipo)
+		// if the ddo has a request_config it has sub-components and it will be not used
+		if(ddo.request_config){
+			// get the rqo of the component and the ddo_map for show
+			const rqo = ddo.request_config.find(item => item.typo==='rqo')
+			if (rqo) {
+				const sub_ddo_map = rqo.show.ddo_map
+				// add the section_tipo and tipo of ddo for create the parent_f_path
+				ar_sub_ddo.push(ddo.section_tipo)
+				ar_sub_ddo.push(current_tipo)
+				// recursive with the sub_ddo_map
+				const sub_columns = get_sub_columns(self, ddo.tipo, sub_ddo_map, ar_sub_ddo)
+				ar_columns.push(...sub_columns)
+				// reset the parent_f_path
+				ar_sub_ddo.splice(0, ar_sub_ddo.length)
+			}
+		}else{
+			// the component don't has sub-components and it is the last in the chain.
+			if(ar_sub_ddo.length > 0){
+				// add the section_tipo and tipo of ddo for create the parent_f_path
+				ar_sub_ddo.push(ddo.section_tipo)
+				ar_sub_ddo.push(ddo.tipo)
+				// add the parente_f_path to the ddo
+				ddo.parent_f_path = [...ar_sub_ddo]
+			}
+			ar_columns.push(ddo)
+		}
+	}
+
+	return ar_columns
+};//end build_request_show
+
+
+
+/**
+* get_rows
+*/
+common.prototype.get_row = async function(){
+
+
+	return row
+};//end get_rows
+
 
 
 
@@ -533,4 +635,590 @@ common.prototype.load_script = async function(src) {
 	// 	tool_instance.render()
 
 	// 	return tool_instance
-// }//end load_tool
+// };//end load_tool
+
+
+
+/**
+* BUILD_DD_REQUEST
+*/
+common.prototype.build_dd_request = function(dd_request_type, request_config, action){
+
+	const self = this
+
+	switch (dd_request_type) {
+
+		case 'show':
+			return build_request_show(self, request_config, action)
+
+		case 'search':
+			return build_request_search(self, request_config, action)
+
+		case 'select':
+			return build_request_select(self, request_config, action)
+			break;
+	}
+
+	return null
+};//end build_dd_request
+
+
+
+/**
+* BUILD_REQUEST_SHOW
+* @return array dd_request
+*/
+const build_request_show = function(self, request_config, action){
+
+	const dd_request = []
+
+	// source . auto create
+		const source = create_source(self, action);
+		dd_request.push(source)
+
+	// empty request_config cases
+		if(!request_config) {
+			return dd_request;
+		}
+
+	// // direct request ddo if exists
+	// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
+	// 	if (ar_requested_ddo.length>0) {
+	// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
+	// 			dd_request.push(ar_requested_ddo[i])
+	// 		}
+	// 	}
+
+	// direct request sqo if exists
+		const request_sqo = request_config.find(item => item.typo==='sqo')
+		if (request_sqo) {
+			dd_request.push(request_sqo)
+		}
+
+	// rqo. If don't has rqo, return the source only
+		const rqo = request_config.filter(item => item.typo==='rqo')
+		if(rqo.length < 1){
+			return dd_request;
+		}
+
+	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
+		// const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
+		// const all_request_ddo		= request_ddo_object.value
+		const all_request_ddo		= self.datum.context
+
+		const rqo_length	= rqo.length
+		const ar_sections	= []
+		const request_ddo 	= []
+		if(self.model!=='section'){
+
+			//set the context of the component in the request_ddo
+			request_ddo.push(self.context)
+			for (let i = 0; i < rqo_length; i++) {
+
+				const current_rqo		= rqo[i]
+				const operator			= current_rqo.show.sqo_config.operator || '$and'
+				const sections			= current_rqo.section_tipo
+
+				const sections_length	= sections.length
+				// show
+				const show				= current_rqo.show
+				const ddo_map			= show.ddo_map
+				const ddo_map_length	= ddo_map.length
+				//get sections
+				for (let j = 0; j < sections_length; j++) {
+					ar_sections.push(sections[j])
+					// get the fpath array
+					for (let k = 0; k < ddo_map_length; k++) {
+
+						const f_path = typeof ddo_map[k].tipo!=='undefined'
+							? ['self', ddo_map[k].tipo]
+							: typeof ddo_map[k].f_path!=='undefined'
+								? ddo_map[k].f_path
+								: ['self', ddo_map[k]]
+						const f_path_length = f_path.length
+
+						// get the current item of the fpath
+						for (let l = 0; l < f_path_length; l++) {
+							const item = f_path[l]==='self'
+								? sections[j]
+								: f_path[l]
+							const exist = request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
+
+							if(!exist){
+								const ddo = all_request_ddo.find(ddo => ddo.tipo===item && ddo.section_tipo===sections[j])
+
+								if(ddo){
+									ddo.config_type = 'show'
+									request_ddo.push(ddo)
+								}
+							}
+						}
+					}
+				}
+
+				//value_with_parents
+				if(show.value_with_parents){
+					dd_request.push({
+						typo : 'value_with_parents',
+						value : show.value_with_parents
+					})
+				}
+
+				//divisor
+				if(show.divisor){
+					dd_request.push({
+						typo : 'divisor',
+						value : show.divisor
+					})
+				}
+			}
+		}else{
+			for (let i = 0; i < rqo_length; i++) {
+
+				const current_rqo		= rqo[i]
+				const sections			= current_rqo.section_tipo
+				const show				= current_rqo.show
+
+				//get sections
+				ar_sections.push(...sections)
+
+				//value_with_parents
+				if(show.value_with_parents){
+					dd_request.push({
+						typo : 'value_with_parents',
+						value : show.value_with_parents
+					})
+				}
+
+				//divisor
+				if(show.divisor){
+					dd_request.push({
+						typo : 'divisor',
+						value : show.divisor
+					})
+				}
+			}
+
+			for (var i = 0; i < all_request_ddo.length; i++) {
+
+				const ddo = all_request_ddo[i]
+				// if(ddo.tipo === self.tipo && ddo.section_tipo === self.section_tipo && self.model==='section') continue
+				ddo.config_type = 'show'
+				request_ddo.push( ddo )
+			}
+
+		}
+
+
+		// set the selected ddos into new request_ddo for do the call with the selection
+		dd_request.push({
+			typo : 'request_ddo',
+			value : request_ddo
+		})
+
+
+	// get the limit and offset
+		const limit	= (rqo[0].show.sqo_config.limit)
+			? rqo[0].show.sqo_config.limit
+			: 10
+		const offset = (rqo[0].show.sqo_config.offset)
+			? rqo[0].show.sqo_config.offset
+			: 0
+
+	// sqo
+		const sqo = {
+			typo				: 'sqo',
+			section_tipo		: ar_sections,
+			filter				: null,
+			limit				: limit,
+			offset				: offset,
+			select				: [],
+			full_count			: false,
+			filter_by_locators	: null
+		}
+		dd_request.push(sqo)
+
+		//add the full rqo to the dd_request
+		dd_request.push(rqo[0])
+console.log("dd_request", dd_request);
+	return dd_request
+};//end build_request_show
+
+
+
+/**
+* BUILD_REQUEST_SEARCH
+* @return array dd_request
+*/
+const build_request_search = function(self, request_config, action){
+
+	const dd_request	= []
+	const ar_sections	= []
+
+	const rqo = request_config.filter(item => item.typo==='rqo')
+
+	// get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section.
+	// const all_request_ddo	= self.datum.context.find(item => item.typo==='request_ddo').value
+	const all_request_ddo	= self.datum.context
+
+	const rqo_length	= rqo.length
+	// const operator	= self.context.properties.source.operator || '$and'
+	const request_ddo 		= []
+
+	for (let i = 0; i < rqo_length; i++) {
+
+		const current_rqo		= rqo[i]
+		const operator			= current_rqo.search.sqo_config.operator || '$and'
+		const sections			= current_rqo.section_tipo
+		const sections_length	= sections.length
+		const sqo_search		= []
+
+		// source . auto create
+			const source = create_source(self, action)
+			sqo_search.push(source)
+
+
+		const fixed_filter	= current_rqo.fixed_filter
+		const filter_free	= {}
+			  filter_free[operator] = []
+
+		// type add
+		sqo_search.push({
+			typo	: 'search_engine',
+			value	: current_rqo.search_engine
+		})
+
+		// search
+		const search			= current_rqo.search
+		const ddo_map			= search.ddo_map
+		const ddo_map_length	= ddo_map.length
+
+		//get sections
+		for (let j = 0; j < sections_length; j++) {
+			const section_ddo = all_request_ddo.find(ddo => ddo.tipo===sections[j]  && ddo.section_tipo===sections[j])
+			request_ddo.push(section_ddo)
+
+			// get the fpath array
+			for (let k = 0; k < ddo_map_length; k++) {
+
+				const f_path		= typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path :  ['self', ddo_map[k]]
+				const f_path_length	= f_path.length
+				const ar_paths		= []
+
+				// get the current item of the fpath
+				for (let l = 0; l < f_path_length; l++) {
+					if(l % 2 !== 0){
+
+						const item = f_path[l]
+						const section_tipo = (f_path[l-1]==='self')
+							? sections[j]
+							: f_path[l-1]
+
+						const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===section_tipo )
+						if (ddo) {
+							ddo.mode = 'list' // enable lang fallback value
+							request_ddo.push(ddo)
+							const path = {
+								section_tipo	: section_tipo,
+								component_tipo	: item,
+								modelo			: ddo.model
+							}
+							ar_paths.push(path)
+						}
+					}
+				}
+
+				filter_free[operator].push({
+					q		: '',
+					path	: ar_paths
+				})
+			}
+		}
+		// fixed_filter
+		if (fixed_filter) {
+			sqo_search.push({
+				typo : 'fixed_filter',
+				value : fixed_filter
+			})
+		}
+
+		// filter_free
+		if (filter_free) {
+			sqo_search.push({
+				typo 		: 'filter_free',
+				value 		: filter_free,
+				operator 	: operator
+			})
+		}
+
+		// filter_by_list if exists
+		const filter_by_list = current_rqo.filter_by_list
+		if (filter_by_list) {
+			sqo_search.push({
+				typo : 'filter_by_list',
+				value : filter_by_list
+			})
+		}
+
+		// limit and offset
+			// check if limit and offset exist in select
+			const limit	= current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.limit
+				? current_rqo.select.sqo_config.limit
+				: (search.sqo_config.limit)
+					? search.sqo_config.limit
+					: current_rqo.show.sqo_config.limit
+			const offset = current_rqo.select && current_rqo.select.sqo_config && current_rqo.select.sqo_config.offset
+				? current_rqo.select.sqo_config.offset
+				: search.sqo_config.offset
+
+		// sqo_search
+		sqo_search.push({
+			typo			: 'sqo',
+			section_tipo	: sections,
+			filter			: {[operator]:[]},
+			offset			: offset || 0,
+			limit			: limit || 10,
+			select			: [],
+			full_count		: false
+		})
+
+		// if(current_rqo.select){
+		// 	const select = self.build_dd_request('select', request_config, 'get_data')
+		// 	const ddo_select = select.filter(item => item.typo === 'ddo')
+		// 	sqo_search.push(...ddo_select)
+		// 	console.log("ddo_select", sqo_search);
+		// }
+
+		//value_with_parents
+		if(search.value_with_parents){
+			sqo_search.push({
+				typo : 'value_with_parents',
+				value : search.value_with_parents
+			})
+		}
+
+		//divisor
+		if(search.divisor){
+			sqo_search.push({
+				typo : 'divisor',
+				value : search.divisor
+			})
+		}
+
+		// set the selected ddos into new request_ddo for do the call with the selection
+		sqo_search.push({
+			typo : 'request_ddo',
+			value : request_ddo
+		})
+
+
+		// add group
+		dd_request.push(sqo_search)
+	}//end for (let i = 0; i < length; i++)
+
+
+	return dd_request
+};//end build_request_search
+
+
+
+/**
+* BUILD_REQUEST_SELECT
+* @return array dd_request
+*/
+const build_request_select = function(self, request_config, action){
+
+	const dd_request = []
+
+	// source . auto create
+		const source = create_source(self, action);
+		dd_request.push(source)
+
+	// empty request_config cases
+		if(!request_config) {
+			return dd_request;
+		}
+
+	// // direct request ddo if exists
+	// 	const ar_requested_ddo = request_config.filter(item => item.typo==='ddo')
+	// 	if (ar_requested_ddo.length>0) {
+	// 		for (let i = 0; i < ar_requested_ddo.length; i++) {
+	// 			dd_request.push(ar_requested_ddo[i])
+	// 		}
+	// 	}
+
+	// direct request sqo if exists
+		const request_sqo = request_config.find(item => item.typo==='sqo')
+		if (request_sqo) {
+			dd_request.push(request_sqo)
+		}
+
+	// rqo. If don't has rqo, return the source only
+		const rqo = request_config.filter(item => item.typo==='rqo')
+		if(rqo.length < 1){
+			return dd_request;
+		}
+
+	// ddo. get the global request_ddo storage, ddo_storage is the centralized storage for all ddo in section
+		// const request_ddo_object	= self.datum.context.find(item => item.typo==='request_ddo')
+		// const all_request_ddo			= request_ddo_object.value
+		const all_request_ddo		= self.datum.context
+
+		const request_ddo 			= []
+		// const instance_ddo 			= self.context
+		// 		instance_ddo.config_type = 'show'
+		// request_ddo.push(instance_ddo)
+
+		const rqo_length	= rqo.length
+		const ar_sections	= []
+		for (let i = 0; i < rqo_length; i++) {
+
+			const current_rqo		= rqo[i]
+			const sections			= current_rqo.section_tipo
+
+			const sections_length	= sections.length
+			// select
+			const select			= current_rqo.select
+			const ddo_map			= select.ddo_map
+
+			const ddo_map_length	= ddo_map.length
+			//get sections
+			for (let j = 0; j < sections_length; j++) {
+				ar_sections.push(sections[j])
+				// get the fpath array
+				for (let k = 0; k < ddo_map_length; k++) {
+
+					const f_path = typeof ddo_map[k].f_path!=='undefined' ? ddo_map[k].f_path : ['self', ddo_map[k]]
+					const f_path_length = f_path.length
+
+					// get the current item of the fpath
+					for (let l = 0; l < f_path_length; l++) {
+						const item = f_path[l]==='self'
+							? sections[j]
+							: f_path[l]
+						const exist = request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+
+						if(!exist){
+							const ddo = all_request_ddo.find(ddo => ddo.tipo===item  && ddo.section_tipo===sections[j])
+
+							if(ddo){
+								ddo.config_type = 'show'
+								const select_ddo = JSON.parse(JSON.stringify(ddo))
+								select_ddo.parent = sections[j]
+								request_ddo.push(select_ddo)
+							}
+						}
+					}
+				}
+			}
+			//value_with_parents
+			if(select.value_with_parents){
+				dd_request.push({
+					typo : 'value_with_parents',
+					value : select.value_with_parents
+				})
+			}
+
+			//divisor
+			if(select.divisor){
+				dd_request.push({
+					typo : 'divisor',
+					value : select.divisor
+				})
+			}
+		}
+
+		// set the selected ddos into new request_ddo for do the call with the selection
+		dd_request.push({
+			typo : 'request_ddo',
+			value : request_ddo
+		})
+
+	return dd_request
+};//end build_request_show
+
+
+
+
+/**
+* LOAD_DATA_DEBUG
+* @return
+*/
+export const load_data_debug = async function(self, load_data_promise, dd_request_show_original) {
+
+	if(SHOW_DEBUG===false) {
+		return false
+	}
+
+	if (self.model!=="section" && self.model!=="area" && self.model.indexOf("area_")===-1) {
+		return false
+	}
+
+	const response		= await load_data_promise
+	const dd_request	= self.dd_request
+
+	console.log("----> load_data_debug request dd_request_show_original "+self.model +" "+self.tipo+ ":", dd_request_show_original);
+	// console.trace()
+
+	// load_data_promise
+	if (response.result===false) {
+		console.error("API EXCEPTION:",response.msg);
+	}
+	console.log("["+self.model+".load_data_debug] response:",response, " TIME: "+response.debug.exec_time)
+	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
+	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
+
+	const debug = document.getElementById("debug")
+	// debug.classList.add("hide")
+
+	// clean
+		while (debug.firstChild) {
+			debug.removeChild(debug.firstChild)
+		}
+
+	// request to api
+		const sqo = dd_request_show_original.find(el => el.typo==='sqo') || null
+		const request_pre = ui.create_dom_element({
+			element_type	: 'pre',
+			text_content	: "dd_request sended to api: \n\n" + JSON.stringify(dd_request_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
+			parent			: debug
+		})
+
+
+	// context
+		const context_pre = ui.create_dom_element({
+			element_type	: 'pre',
+			text_content	: "context: " + JSON.stringify(response.result.context, null, "  "),
+			parent			: debug
+		})
+
+	// data
+		const data_pre = ui.create_dom_element({
+			element_type	: 'pre',
+			text_content	: "data: " + JSON.stringify(response.result.data, null, "  "),
+			parent			: debug
+		})
+
+	// const time_info = "" +
+	// 	"Total time: " + response.debug.exec_time +
+	// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
+	// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
+
+	// const time_info_pre = ui.create_dom_element({
+	// 	element_type : "pre",
+	// 	class_name   : "total_time",
+	// 	id   		 : "total_time",
+	// 	inner_html   : time_info,
+	// 	parent 		 : debug
+	// })
+
+	// show
+		// event_manager.subscribe('render_'+self.id, function(node){
+		// 	//console.log("node:",node);
+		// 	debug.classList.remove("hide")
+		// })
+		debug.classList.remove("hide")
+
+
+	return true
+};//end load_data_debug

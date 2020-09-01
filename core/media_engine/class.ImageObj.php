@@ -10,7 +10,7 @@ class ImageObj extends MediaObj {
 	protected $image_id ;			# image_id
 	protected $quality ;			# like 'A2,A4,A0..'
 
-	function __construct($image_id, $quality=false, $aditional_path=false, $initial_media_path, $external_source=false) {
+	function __construct($image_id, $quality=false, $aditional_path=false, $initial_media_path='', $external_source=false) {
 
 		# SPECIFIC VARS
 		$this->set_image_id($image_id);

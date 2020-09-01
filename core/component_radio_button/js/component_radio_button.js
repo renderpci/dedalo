@@ -23,7 +23,7 @@ export const component_radio_button = function(){
 	this.node
 
 	return true
-}//end component_radio_button
+};//end component_radio_button
 
 
 
@@ -33,25 +33,27 @@ export const component_radio_button = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_radio_button.prototype.init 	 			= component_common.prototype.init
-	component_radio_button.prototype.build 				= component_common.prototype.build
-	component_radio_button.prototype.render 			= common.prototype.render	
-	component_radio_button.prototype.refresh 			= common.prototype.refresh
-	component_radio_button.prototype.destroy 	 		= common.prototype.destroy
+	component_radio_button.prototype.init				= component_common.prototype.init
+	component_radio_button.prototype.build				= component_common.prototype.build
+	component_radio_button.prototype.render				= common.prototype.render
+	component_radio_button.prototype.refresh			= common.prototype.refresh
+	component_radio_button.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_radio_button.prototype.save 	 			= component_common.prototype.save
-	component_radio_button.prototype.update_data_value 	= component_common.prototype.update_data_value
+	component_radio_button.prototype.save				= component_common.prototype.save
+	component_radio_button.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_radio_button.prototype.update_datum		= component_common.prototype.update_datum
-	component_radio_button.prototype.change_value 		= component_common.prototype.change_value
+	component_radio_button.prototype.change_value		= component_common.prototype.change_value
+	component_radio_button.prototype.build_dd_request	= common.prototype.build_dd_request
 
-	// render	
-	component_radio_button.prototype.list 				= render_component_radio_button.prototype.list
-	component_radio_button.prototype.edit 				= render_component_radio_button.prototype.edit
+	// render
+	component_radio_button.prototype.mini				= render_component_radio_button.prototype.mini
+	component_radio_button.prototype.list				= render_component_radio_button.prototype.list
+	component_radio_button.prototype.edit				= render_component_radio_button.prototype.edit
 	component_radio_button.prototype.edit_in_list		= render_component_radio_button.prototype.edit
 	component_radio_button.prototype.tm					= render_component_radio_button.prototype.edit
-	component_radio_button.prototype.search 			= render_component_radio_button.prototype.search
-	component_radio_button.prototype.change_mode 		= component_common.prototype.change_mode
+	component_radio_button.prototype.search				= render_component_radio_button.prototype.search
+	component_radio_button.prototype.change_mode		= component_common.prototype.change_mode
 
 
 
@@ -61,7 +63,7 @@ export const component_radio_button = function(){
 component_radio_button.prototype.get_checked_value_label = function() {
 
 	const self = this
-	
+
 	if (self.data.value[0] !=null) {
 
 		const checked_key = self.data.datalist.findIndex( (item) => {
@@ -75,5 +77,5 @@ component_radio_button.prototype.get_checked_value_label = function() {
 		return ''
 
 	}
-	
-}//end get_checked_value_label
+
+};//end get_checked_value_label

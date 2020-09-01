@@ -30,15 +30,15 @@ export const ui = {
 
 				const new_message_wrap = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: message_node, // + msg_type,
-					parent 			: wrapper
+					class_name		: message_node, // + msg_type,
+					parent			: wrapper
 				})
 
 				const close_button = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'close',
-					text_content 	: ' x ',
-					parent 			: new_message_wrap
+					class_name		: 'close',
+					text_content	: ' x ',
+					parent			: new_message_wrap
 				})
 				close_button.addEventListener("click", (e) => {
 					e.stopPropagation()
@@ -56,7 +56,7 @@ export const ui = {
 			if (clean===true) {
 				// clean
 				const items = message_wrap.querySelectorAll(".text")
-				for (var i = items.length - 1; i >= 0; i--) {
+				for (let i = items.length - 1; i >= 0; i--) {
 					items[i].remove()
 				}
 			}
@@ -64,9 +64,9 @@ export const ui = {
 		// add msg text
 			const text = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'text',
-				text_content 	: message,
-				parent 			: message_wrap
+				class_name		: 'text',
+				text_content	: message,
+				parent			: message_wrap
 			})
 
 		// adjust height
@@ -74,9 +74,9 @@ export const ui = {
 
 		// close button move to bottom when height is too much
 			if (message_wrap.offsetHeight>120) {
-				const close_button = message_wrap.querySelector('.close')
-				close_button.style.top 		= 'unset';
-				close_button.style.bottom 	= '0px';
+				const close_button			= message_wrap.querySelector('.close')
+				close_button.style.top		= 'unset';
+				close_button.style.bottom	= '0px';
 			}
 
 		// remove msg after time
@@ -105,13 +105,14 @@ export const ui = {
 				//console.log("[ui.build_wrapper_edit] instance:",instance)
 			}
 
-			const id 		= instance.id || 'id is not set'
-			const model 	= instance.model 	// like component_input-text
-			const type 		= instance.type 	// like 'component'
-			const tipo 		= instance.tipo 	// like 'rsc26'
-			const mode 		= instance.mode 	// like 'edit'
-			const label 	= (mode==='edit_in_list') ? null : instance.label // instance.context.label
-			const component_css = instance.context.css || {}
+			const id			= instance.id || 'id is not set'
+			const model			= instance.model 	// like component_input-text
+			const type			= instance.type 	// like 'component'
+			const tipo			= instance.tipo 	// like 'rsc26'
+			const mode			= instance.mode 	// like 'edit'
+			const view			= instance.view || null
+			const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
+			const component_css	= instance.context.css || {}
 
 			const fragment = new DocumentFragment()
 
@@ -150,7 +151,7 @@ export const ui = {
 					const filter = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
-						parent 			: fragment
+						parent			: fragment
 					})
 					instance.filter.render().then(filter_wrapper =>{
 						filter.appendChild(filter_wrapper)
@@ -162,7 +163,7 @@ export const ui = {
 					const paginator = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'paginator',
-						parent 			: fragment
+						parent			: fragment
 					})
 					instance.paginator.render().then(paginator_wrapper =>{
 						paginator.appendChild(paginator_wrapper)
@@ -185,8 +186,8 @@ export const ui = {
 					const tooltip = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tooltip hidden_tooltip',
-						inner_html 		: instance.context.search_options_title || '',
-						parent 			: fragment
+						inner_html		: instance.context.search_options_title || '',
+						parent			: fragment
 					})
 				}
 
@@ -196,7 +197,8 @@ export const ui = {
  				})
  				// css
 	 				const wrapper_structure_css = typeof component_css.wrapper!=="undefined" ? component_css.wrapper : []
-					const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
+					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
+					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
 					wrapper.classList.add(...ar_css)
 				// event click activate component
@@ -226,11 +228,9 @@ export const ui = {
 		*/
 		build_content_data : (instance, options={}) => {
 
-			const type 			= instance.type
-			const component_css = instance.context.css || {}
-
-			const autoload 		= typeof options.autoload==="undefined" ? false : options.autoload
-
+			const type			= instance.type
+			const component_css	= instance.context.css || {}
+			const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
 
 			const content_data = document.createElement("div")
 
@@ -243,8 +243,8 @@ export const ui = {
 				if(instance.mode==='edit_in_list' && !instance.is_inside_tool){
 					const button_close = ui.create_dom_element({
 						element_type	: 'span',
-						class_name 		: 'button close',
-						parent 			: content_data
+						class_name		: 'button close',
+						parent			: content_data
 					})
 					button_close.addEventListener("click", function(){
 						instance.change_mode('list', autoload)
@@ -265,7 +265,7 @@ export const ui = {
 
 			const buttons_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'buttons_container'
+				class_name		: 'buttons_container'
 			})
 
 			return buttons_container
@@ -281,18 +281,18 @@ export const ui = {
 				//console.log("[ui.build_wrapper_list] instance:",instance)
 			}
 
-			const id 			= instance.id || 'id is not set'
-			const model 		= instance.model 	// like component_input-text
-			const type 			= instance.type 	// like 'component'
-			const tipo 			= instance.tipo 	// like 'rsc26'
-			const mode 			= instance.mode 	// like 'edit'
-			const autoload 		= typeof options.autoload==="undefined" ? false : options.autoload
-			const edit_in_list 	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
+			const id			= instance.id || 'id is not set'
+			const model			= instance.model 	// like component_input-text
+			const type			= instance.type 	// like 'component'
+			const tipo			= instance.tipo 	// like 'rsc26'
+			const mode			= instance.mode 	// like 'edit'
+			const autoload		= typeof options.autoload==="undefined" ? false : options.autoload
+			const edit_in_list	= (instance.section_tipo === 'dd542') ? false : true // dd542-> activity section
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+					class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
  				})
 
  			// event dblclick change component mode
@@ -308,6 +308,25 @@ export const ui = {
 
 			return wrapper
 		},//end build_wrapper_list
+
+
+		build_wrapper_mini : (instance) => {
+			// if(SHOW_DEBUG===true) {
+			// 	//console.log("[ui.build_wrapper_mini] instance:",instance)
+			// }
+			// const model			= instance.model 	// like component_input-text
+			// const type			= instance.type 	// like 'component'
+			// const tipo			= instance.tipo 	// like 'rsc26'
+			// const mode			= instance.mode 	// like 'edit'
+
+			// wrapper
+				const wrapper = ui.create_dom_element({
+					element_type	: 'span',
+					// class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+ 				})
+
+			return wrapper
+		},//end build_wrapper_mini
 
 
 
@@ -426,7 +445,7 @@ export const ui = {
 
 
 			return true
-		}//end add_image_fallback
+		}//end  add_image_fallback
 
 
 
@@ -451,7 +470,7 @@ export const ui = {
 			const tipo 			= instance.tipo 	// like 'rsc26'
 			const mode 			= instance.mode 	// like 'edit'
 			const label 		= mode === 'edit_in_list' ? null : instance.label // instance.context.label
-			const main_context 	= instance.context.find(element => element.tipo===instance.tipo)
+			const main_context 	= instance.context
 			const element_css 	= main_context.css || {}
 
  			const fragment = new DocumentFragment()
@@ -464,12 +483,12 @@ export const ui = {
 					fragment.appendChild(items.label)
 				}else{
 					// default
-					const component_label = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'label',
-						inner_html 		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
-						parent 			: fragment
-					})
+					// const component_label = ui.create_dom_element({
+					// 	element_type	: 'div',
+					// 	class_name		: 'label',
+					// 	inner_html		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
+					// 	parent			: fragment
+					// })
 				}
 
 			// inspector
@@ -485,7 +504,7 @@ export const ui = {
 					const inspector = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'inspector',
-						parent 			: fragment
+						parent			: fragment
 					})
 					// wrapper
 					instance.inspector.render().then(inspector_wrapper =>{
@@ -498,7 +517,7 @@ export const ui = {
 					const buttons = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'buttons',
-						parent 			: fragment
+						parent			: fragment
 					})
 					const items_buttons_length = items.buttons.length
 					for (let i = 0; i < items_buttons_length; i++) {
@@ -511,7 +530,7 @@ export const ui = {
 					const filter = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
-						parent 			: fragment
+						parent			: fragment
 					})
 					instance.filter.render().then(filter_wrapper =>{
 						filter.appendChild(filter_wrapper)
@@ -523,18 +542,18 @@ export const ui = {
 					// const paginator = ui.create_dom_element({
 					// 	element_type	: 'div',
 					// 	class_name		: 'paginator',
-					// 	parent 			: fragment
+					// 	parent			: fragment
 					// })
 					instance.paginator.render().then(paginator_wrapper =>{
 						//paginator.appendChild(paginator_wrapper)
 
 						// place paginator in inspector
 						ui.place_element({
-							source_node 		: paginator_wrapper,
-							source_instance 	: instance,
-							target_instance 	: instance.inspector,
-							container_selector 	: ".paginator_container",
-							target_selector 	: ".wrapper_paginator"
+							source_node			: paginator_wrapper,
+							source_instance		: instance,
+							target_instance		: instance.inspector,
+							container_selector	: ".paginator_container",
+							target_selector		: ".wrapper_paginator"
 						})
 					})
 				}
@@ -554,7 +573,7 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
+					class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
  				})
  				// css
 	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
@@ -566,7 +585,7 @@ export const ui = {
 
 
 			return wrapper
-		}//end build_wrapper_edit
+		}//end  build_wrapper_edit
 
 
 
@@ -585,12 +604,12 @@ export const ui = {
 				//console.log("[ui.build_wrapper_edit] instance:",instance)
 			}
 
-			const id 		= instance.id || 'id is not set'
-			const model 	= instance.model 	// like component_input-text
-			const type 		= instance.type 	// like 'component'
-			const tipo 		= instance.tipo 	// like 'rsc26'
-			const mode 		= instance.mode 	// like 'edit'
-			const label 	= instance.label 	// instance.context.label
+			const id	= instance.id || 'id is not set'
+			const model	= instance.model 	// like component_input-text
+			const type	= instance.type 	// like 'component'
+			const tipo	= instance.tipo 	// like 'rsc26'
+			const mode	= instance.mode 	// like 'edit'
+			const label	= instance.label 	// instance.context.label
 
 			const fragment = new DocumentFragment()
 
@@ -605,8 +624,8 @@ export const ui = {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'label',
-						inner_html 		: label + ' [' + instance.lang.substring(3) + ']',
-						parent 			: fragment
+						inner_html		: label + ' [' + instance.lang.substring(3) + ']',
+						parent			: fragment
 					})
 				}
 
@@ -615,7 +634,7 @@ export const ui = {
 					const buttons = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'buttons',
-						parent 			: fragment
+						parent			: fragment
 					})
 					const items_buttons_length = items.buttons.length
 					for (let i = 0; i < items_buttons_length; i++) {
@@ -628,7 +647,7 @@ export const ui = {
 					const filter = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
-						parent 			: fragment
+						parent			: fragment
 					})
 					instance.filter.render().then(filter_wrapper =>{
 						filter.appendChild(filter_wrapper)
@@ -646,13 +665,13 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'wrapper_' + type + ' area ' + model + ' ' + tipo + ' ' + mode
+					class_name		: 'wrapper_' + type + ' area ' + model + ' ' + tipo + ' ' + mode
  				})
  				wrapper.appendChild(fragment)
 
 
 			return wrapper
-		}//end build_wrapper_edit
+		}//end  build_wrapper_edit
 
 
 
@@ -666,13 +685,13 @@ export const ui = {
 
 		build_wrapper_edit : async(instance, items={})=>{
 
-			const id 		= instance.id || 'id is not set'
-			const model 	= instance.model 	// like component_input_text
-			const type 		= instance.type 	// like 'component'
-			const tipo 		= instance.tipo 	// like 'rsc26'
-			const mode 		= instance.mode 	// like 'edit'
-			const label 	= instance.label
-			const name 		= instance.constructor.name
+			const id	= instance.id || 'id is not set'
+			const model	= instance.model 	// like component_input_text
+			const type	= instance.type 	// like 'component'
+			const tipo	= instance.tipo 	// like 'rsc26'
+			const mode	= instance.mode 	// like 'edit'
+			const label	= instance.label
+			const name	= instance.constructor.name
 
 			const fragment = new DocumentFragment()
 
@@ -680,7 +699,7 @@ export const ui = {
 				const tool_header = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'tool_header ' + name,
-					parent 			: fragment
+					parent			: fragment
 				})
 
 			// label
@@ -689,8 +708,8 @@ export const ui = {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'label',
-						inner_html 		: label,
-						parent 			: tool_header
+						inner_html		: label,
+						parent			: tool_header
 					})
 				}
 
@@ -700,8 +719,8 @@ export const ui = {
 					const component_description = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'description',
-						inner_html 		: instance.description,
-						parent 			: tool_header
+						inner_html		: instance.description,
+						parent			: tool_header
 					})
 				}
 
@@ -710,7 +729,7 @@ export const ui = {
 					const buttons = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'buttons',
-						parent 			: fragment
+						parent			: fragment
 					})
 					const items_buttons_length = items.buttons.length
 					for (let i = 0; i < items_buttons_length; i++) {
@@ -728,7 +747,7 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'wrapper_' + type + ' ' + model + ' ' + mode
+					class_name		: 'wrapper_' + type + ' ' + model + ' ' + mode
  				})
  				wrapper.appendChild(fragment)
 
@@ -748,11 +767,11 @@ export const ui = {
 			// button
 				const tool_button = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button tool',
-					title_label 	: tool_object.label,
-					style 			: {
-						"-webkit-mask" : "url('" +tool_object.icon +"')",
-						"mask" 		   : "url('" +tool_object.icon +"')"
+					class_name		: 'button tool',
+					title_label		: tool_object.label,
+					style			: {
+						"-webkit-mask"	: "url('" +tool_object.icon +"')",
+						"mask"			: "url('" +tool_object.icon +"')"
 					},
 					dataset			: {
 						tool : tool_object.name
@@ -760,11 +779,11 @@ export const ui = {
 				})
 				// const tool_button = ui.create_dom_element({
 				// 	element_type	: 'img',
-				// 	class_name 		: 'button tool',
-				// 	// style 		: { "background-image": "url('" +tool_object.icon +"')" },
-				// 	src 			: tool_object.icon,
+				// 	class_name		: 'button tool',
+				// 	// style		: { "background-image": "url('" +tool_object.icon +"')" },
+				// 	src				: tool_object.icon,
 				// 	dataset			: { tool : tool_object.name },
-				// 	title_label 	: tool_object.label
+				// 	title_label		: tool_object.label
 				// })
 
 
@@ -777,8 +796,8 @@ export const ui = {
 					//common.prototype.load_tool(self, tool_object)
 					// ui.tool.load_tool(self, tool_object)
 					event_manager.publish('load_tool', {
-						self 		: self,
-						tool_object : tool_object
+						self		: self,
+						tool_object	: tool_object
 					})
 				}
 
@@ -797,10 +816,10 @@ export const ui = {
 
 		build_wrapper_edit : async(instance, items)=>{
 
-			const id 		= instance.id || 'id is not set'
-			const mode 		= instance.mode 	// like 'edit'
-			const type 		= "widget"
-			const name 		= instance.constructor.name
+			const id	= instance.id || 'id is not set'
+			const mode	= instance.mode 	// like 'edit'
+			const type	= "widget"
+			const name	= instance.constructor.name
 
 			const fragment = new DocumentFragment()
 
@@ -814,7 +833,7 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'wrapper_' + type + ' ' + name + ' ' + mode
+					class_name		: 'wrapper_' + type + ' ' + name + ' ' + mode
  				})
  				wrapper.appendChild(fragment)
 
@@ -843,9 +862,9 @@ export const ui = {
 		// 		// button
 		// 			const button = ui.create_dom_element({
 		// 				element_type	: 'span',
-		// 				class_name 		: class_name,
-		// 				text_content  	: label
-		// 				//style 			: { "background-image": "url('" +tool_object.icon +"')" },
+		// 				class_name		: class_name,
+		// 				text_content	: label
+		// 				//style			: { "background-image": "url('" +tool_object.icon +"')" },
 		// 			})
 
 		// 		// Events
@@ -869,27 +888,25 @@ export const ui = {
 	*/
 	create_dom_element : function(element_options){
 
-		const element_type			= element_options.element_type
-		const parent				= element_options.parent
-		const class_name			= element_options.class_name
-		const style					= element_options.style
-		let data_set				= element_options.data_set
-			if (typeof data_set==="undefined" && typeof element_options.dataset!=="undefined") data_set = element_options.dataset
-
-		const custom_function_events= element_options.custom_function_events
-		const title_label			= element_options.title_label || element_options.title
-		const text_node				= element_options.text_node
-		const text_content			= element_options.text_content
-		const inner_html			= element_options.inner_html
-		const id 					= element_options.id
-		const draggable				= element_options.draggable
-		const value					= element_options.value
-		const src					= element_options.src
-		const type					= element_options.type
-		const contenteditable		= element_options.contenteditable
-		const name					= element_options.name
-		const placeholder			= element_options.placeholder
-		const pattern				= element_options.pattern
+		const element_type				= element_options.element_type
+		const parent					= element_options.parent
+		const class_name				= element_options.class_name
+		const style						= element_options.style
+		const data_set					= (typeof element_options.dataset!=="undefined") ? element_options.dataset : element_options.data_set
+		const custom_function_events	= element_options.custom_function_events
+		const title_label				= element_options.title_label || element_options.title
+		const text_node					= element_options.text_node
+		const text_content				= element_options.text_content
+		const inner_html				= element_options.inner_html
+		const id						= element_options.id
+		const draggable					= element_options.draggable
+		const value						= element_options.value
+		const src						= element_options.src
+		const type						= element_options.type
+		const contenteditable			= element_options.contenteditable
+		const name						= element_options.name
+		const placeholder				= element_options.placeholder
+		const pattern					= element_options.pattern
 
 		const element = document.createElement(element_type);
 
@@ -1060,12 +1077,12 @@ export const ui = {
 	*/
 	place_element : function(options) {
 
-		const source_node 		= options.source_node // like node of component_filter
-		const source_instance 	= options.source_instance // like section
-		const target_instance 	= options.target_instance // like inspector instance
-		const container_selector= options.container_selector // like .project_container
-		const target_selector 	= options.target_selector // like .wrapper_component.component_filter
-		const place_mode 		= options.place_mode || 'replace' // like 'add' | 'replace'
+		const source_node			= options.source_node // like node of component_filter
+		const source_instance		= options.source_instance // like section
+		const target_instance		= options.target_instance // like inspector instance
+		const container_selector	= options.container_selector // like .project_container
+		const target_selector		= options.target_selector // like .wrapper_component.component_filter
+		const place_mode			= options.place_mode || 'replace' // like 'add' | 'replace'
 
 		if (!target_instance) {
 			console.error("[ui.place_element] Error on get target instance:", options);
@@ -1082,8 +1099,8 @@ export const ui = {
 			const node_length = target_instance.node.length;
 			for (let i = 0; i < node_length; i++) {
 
-				const target_container 	= target_instance.node[i].querySelector(container_selector)
-				const target_node 		= target_container.querySelector(target_selector)
+				const target_container	= target_instance.node[i].querySelector(container_selector)
+				const target_node		= target_container.querySelector(target_selector)
 				if (!target_node) {
 					// first set inside container. Append
 					target_container.appendChild(source_node)
@@ -1145,10 +1162,10 @@ export const ui = {
 	build_select_lang : (options) => {
 
 		// options
-			const id  			= options.id || null
-			const langs  		= options.langs || page_globals.dedalo_projects_default_langs
-			const selected 		= options.selected || page_globals.dedalo_application_lang
-			const action 		= options.action
+			const id			= options.id || null
+			const langs			= options.langs || page_globals.dedalo_projects_default_langs
+			const selected		= options.selected || page_globals.dedalo_application_lang
+			const action		= options.action
 			const class_name	= options.class_name || 'select_lang'
 
 		const fragment = new DocumentFragment()
@@ -1175,9 +1192,9 @@ export const ui = {
 
 				const option = ui.create_dom_element({
 					element_type	: 'option',
-					value 			: ar_langs[i].value,
-					text_content 	: ar_langs[i].label,
-					parent 			: fragment
+					value			: ar_langs[i].value,
+					text_content	: ar_langs[i].label,
+					parent			: fragment
 				})
 				// selected options set on match
 				if (ar_langs[i].value===selected) {
@@ -1189,9 +1206,9 @@ export const ui = {
 			// for (const lang in langs) {
 			// 	const option = ui.create_dom_element({
 			// 		element_type	: 'option',
-			// 		value 			: lang,
-			// 		text_content 	: langs[lang],
-			// 		parent 			: fragment
+			// 		value			: lang,
+			// 		text_content	: langs[lang],
+			// 		parent			: fragment
 			// 	})
 			// 	// selected options set on match
 			// 	if (lang===reference_lang) {
@@ -1200,9 +1217,9 @@ export const ui = {
 			// }
 
 		const select_lang = ui.create_dom_element({
-			id 				: id,
+			id				: id,
 			element_type	: 'select',
-			class_name 		: class_name
+			class_name		: class_name
 		})
 		select_lang.addEventListener("change", action)
 		select_lang.appendChild(fragment)
@@ -1223,9 +1240,9 @@ export const ui = {
 		// bold
 			const button_bold = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button bold',
-				text_content 	: "Bold",
-				parent 			: fragment
+				class_name		: 'button bold',
+				text_content	: "Bold",
+				parent			: fragment
 			})
 			button_bold.addEventListener("click", (e)=>{
 				e.stopPropagation()
@@ -1234,9 +1251,9 @@ export const ui = {
 		// italic
 			const button_italic = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button italic',
-				text_content 	: "Italic",
-				parent 			: fragment
+				class_name		: 'button italic',
+				text_content	: "Italic",
+				parent			: fragment
 			})
 			button_italic.addEventListener("click", (e)=>{
 				e.stopPropagation()
@@ -1245,9 +1262,9 @@ export const ui = {
 		// underline
 			const button_underline = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button underline',
-				text_content 	: "Underline",
-				parent 			: fragment
+				class_name		: 'button underline',
+				text_content	: "Underline",
+				parent			: fragment
 			})
 			button_underline.addEventListener("click", (e)=>{
 				e.stopPropagation()
@@ -1256,9 +1273,9 @@ export const ui = {
 		// find and replace
 			const button_replace = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'button replace',
-				text_content 	: "Replace",
-				parent 			: fragment
+				class_name		: 'button replace',
+				text_content	: "Replace",
+				parent			: fragment
 			})
 			button_replace.addEventListener("click", (e)=>{
 				e.stopPropagation()
@@ -1278,7 +1295,7 @@ export const ui = {
 		// contenteditable_buttons
 			const contenteditable_buttons = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'contenteditable_buttons'
+				class_name		: 'contenteditable_buttons'
 			})
 			contenteditable_buttons.addEventListener("mousedown", (e)=>{
 				e.preventDefault()
@@ -1483,63 +1500,68 @@ export const ui = {
 	create_dialog : (options) =>{
 
 		const element_id	= options.element_id
-		const title 		= options.title 		|| ''
-		const msg 			= options.msg 			|| ''
-		const header_class 	= options.header_class 	|| 'light'
-		const body_class 	= options.body_class 	|| 'light'
-		const footer_class 	= options.footer_class 	|| 'light'
+		const title			= options.title 		|| ''
+		const msg			= options.msg 			|| ''
+		const header_class	= options.header_class 	|| 'light'
+		const body_class	= options.body_class 	|| 'light'
+		const footer_class	= options.footer_class 	|| 'light'
 		const user_options	= options.user_options 	|| [{
-								id 			: 1,
-								label 		: get_label.ok,
-								class_name 	: 'light'
+								id			: 1,
+								label		: get_label.ok,
+								class_name	: 'light'
 							}]
 
 		// header
 			const header = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'header ' + header_class,
+				class_name		: 'header ' + header_class,
 			})
 			// title
 				const title_dialog = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'title',
-					parent 			: header,
-					text_node 		: title
+					class_name		: 'title',
+					parent			: header,
+					text_node		: title
 				})
 
 		// body
 			const body = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'body ' + body_class,
+				class_name		: 'body ' + body_class,
 			})
 			// msg
 				const msg_dialog = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'msg',
-					parent 			: body,
-					text_node 		: msg
+					class_name		: 'msg',
+					parent			: body,
+					text_node		: msg
 				})
 
 		// footer
 			const footer = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'footer ' + footer_class
+				class_name		: 'footer ' + footer_class
 			})
+			const on_option_mouseup = function (e){
+				event_manager.publish('user_option_'+element_id, this.option_id)
+				// modal.remove()
+				modal._closeModal()
+			}
 			const user_options_len = user_options.length
 			for (let i = 0; i < user_options_len; i++) {
+
 				const option = user_options[i]
+
 				//user_option
 					const user_option = ui.create_dom_element({
 						element_type	: 'button',
-						class_name 		: 'user_option ' + option.class_name,
-						parent 			: footer,
-						text_content 	: option.label
+						class_name		: 'user_option ' + option.class_name,
+						parent			: footer,
+						text_content	: option.label
 					})
-					user_option.addEventListener("mouseup", function(e) {
-						event_manager.publish('user_option_'+element_id, option.id)
-						// modal.remove()
-						modal._closeModal()
-					})
+					// add option_id property
+					user_option.option_id = option.id
+					user_option.addEventListener("mouseup", on_option_mouseup);
 			}
 
 		// modal open
@@ -1547,7 +1569,7 @@ export const ui = {
 
 
 		return footer
-	}//end create_dialog
+	}//end  create_dialog
 
 
 
@@ -1599,11 +1621,11 @@ export const ui = {
 
 
 	// 	return js_promise;
-	// }//end exec_scripts_inside
+	// };//end  exec_scripts_inside
 
 
 
-}//end  ui
+};//end   ui
 
 
 

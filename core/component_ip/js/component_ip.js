@@ -10,10 +10,10 @@ var component_ip = new function() {
 
 	/**
 	* INIT
-	* @return 
+	* @return
 	*/
 	this.init = function(options) {
-		
+
 
 		return true
 	};//end init
@@ -35,10 +35,10 @@ var component_ip = new function() {
 		let dato = null
 
 		// ul list of inputs
-		const input = wrapper_obj.getElementsByTagName('input')[0] //wrapper_obj.querySelector('.content_data')	
+		const input = wrapper_obj.getElementsByTagName('input')[0] //wrapper_obj.querySelector('.content_data')
 		if (input) {
 			dato = input.value
-		}	
+		}
 		if(SHOW_DEBUG===true) {
 			console.log("[component_ip] dato:",dato);;
 		}
@@ -67,8 +67,8 @@ var component_ip = new function() {
 		let dato = self.get_dato(wrap_div)
 
 		// Set for save
-		self.save_arguments.dato = dato;	
-		
+		self.save_arguments.dato = dato;
+
 		// Exec general save
 		let js_promise = component_common.Save(component_obj, self.save_arguments).then(function(response) {
 
@@ -101,7 +101,7 @@ var component_ip = new function() {
 		}
 
 		return true;
-	}//end open_ip_info
+	};//end open_ip_info
 
 
 
@@ -114,8 +114,8 @@ var component_ip = new function() {
 		$.getJSON("http://ip-api.com/json/"+ip, function(data) {
 			console.log(data)
 		});
-	}//end load_ip_info
+	};//end load_ip_info
 
 
 
-}//end component_ip
+};//end component_ip

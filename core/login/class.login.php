@@ -627,7 +627,7 @@ class login extends common {
 		$response->logged 	= true;
 		$response->msg 		= 'Logged successfully';
 		return $response;
-	}#rest_login
+	}//rest_login
 
 
 
@@ -990,23 +990,6 @@ class login extends common {
 
 
 
-	/**
-	* GET HTML CODE .
-	* Return include file __class__.php
-	*/
-	public function get_html() {
-
-		$file_include	= DEDALO_CORE_PATH .'/'. __CLASS__ . '/' . __CLASS__ . '.php' ;
-
-		ob_start();
-		include ( $file_include );
-		$html =  ob_get_clean();
-
-
-		return $html;
-	}//end get_html
-
-
 
 	/**
 	* QUIT
@@ -1195,7 +1178,7 @@ class login extends common {
 			$lang		  = $this->get_lang();
 
 		// properties
-			$properties   = $this->get_propiedades();
+			$properties   = $this->get_properties();
 			if (empty($properties)) {
 				$properties = new stdClass();
 			}

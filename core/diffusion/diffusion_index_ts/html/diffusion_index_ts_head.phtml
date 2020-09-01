@@ -5,7 +5,7 @@
 	$html_head .= "<tr class=\"tr_head\">";
 
 
-	# INFO	
+	# INFO
 	for ($i=0; $i < count($ar_diffusion_obj_head) ; $i++) {
 
 		$current_diffusion_obj = $ar_diffusion_obj_head[$i];
@@ -15,7 +15,7 @@
 		$label 	= $current_diffusion_obj->label;
 		$valor 	= $current_diffusion_obj->columns['valor'];
 			#dump($valor, ' valor ++ '.to_string());
-		
+
 
 		$current_css_class = '';
 		#if($i==0)
@@ -26,16 +26,16 @@
 		}
 
 		$html_head .= "<td $current_css_class >";
-		
+
 		$html_head .= "<div class=\"head_row_wrap\">";
-		
+
 			# LABEL : Excluimos el label del primer elemento, generalmente la foto identificativa (sólo nos interesa el contenido, no el label de la misma)
 			if($i>0) {
 				#$html_head .= "<div class=\"head_row_label\">";
 				#$html_head .= "<h5>$label</h5>";
 				#$html_head .= "</div>";
 			}
-			
+
 
 			# CONTENT
 			$html_head .= "<div class=\"head_row_content\">";
@@ -52,7 +52,7 @@
 
 				# VALOR IS ARRAY
 				if (is_array($valor)) {
-	
+
 					# FORMATO DEL ARRAY RECIBIDO
 					# [valor] => Array
 		            #    (
@@ -78,14 +78,14 @@
 
 								# IMG
 								case 'component_image':
-									/* CALCULATED MODE DES FOR SPEED 
+									/* CALCULATED MODE DES FOR SPEED
 										$component_image = component_common::get_instance($component_modelo_name,
 																						  $component_tipo,
 																						  $section_id,
 																						  'list',
 																						  DEDALO_DATA_NOLAN,
 																						  $section_tipo);
-										$html_head .= $component_image->get_html();
+										$html_head .= $component_image->get_valor();
 										*/
 									#$img_url 	= DEDALO_IMAGE_FILE_URL . "?m=image&SID=$current_valor&w=102&h=57&fx=crop";
 									$img_url 	= DEDALO_MEDIA_URL .'/'. DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_THUMB_DEFAULT . "/{$current_valor}.jpg";
@@ -98,15 +98,15 @@
 									#dump($current_valor, ' current_valor ++ '.to_string());
 									$img_url 	= DEDALO_IMAGE_FILE_URL . "?m=posterframe&SID=$current_valor&w=102&h=57&fx=crop";
 									$html_head .= "<img src=\"$img_url\" class=\"index_ts_thumb\" />";
-									#$html_head .= "WORKING HERE [component_av]"; 
+									#$html_head .= "WORKING HERE [component_av]";
 									break;
 
-								default:									
+								default:
 									if ($i==1) {
 										$html_head .= "<h5>$current_section_id</h5>";
-										if (!empty($current_valor)) {											
+										if (!empty($current_valor)) {
 											$html_head .= " [$current_valor]";
-										}										
+										}
 										#dump($var, ' var ++ '.to_string());
 									}else{
 										$html_head .= $current_valor;
@@ -126,13 +126,13 @@
 						# Separador
 						if (count($valor)>1 && $ar_section_id!=end($valor)) {
 							$html_head .= ', ';
-						}						
+						}
 
 					}#end foreach ($valor as $section_id => $ar_section_id)
 
 				# VALOR IS STRING
 				}else{
-					
+
 					$html_head .= $valor;
 				}
 
@@ -140,18 +140,18 @@
 
 
 		$html_head .= "</div>";#end head_row_wrap
-		
+
 
 		$html_head .= "</td>";
-		
+
 	}
-	
+
 
 	$html_head .= "</tr>";
 
 
 	# ROW TR HEAD ------------------------------------------------
-		
+
 	/*
 	$html_head .= "<tr>";
 	$html_head .= "<td>ID</td>";

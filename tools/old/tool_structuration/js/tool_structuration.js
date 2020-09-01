@@ -18,28 +18,28 @@ var tool_structuration = new function() {
 
 	// Original text lang of text area
 	this.original_lang 		 = null
-	this.original_lang_label = null	
+	this.original_lang_label = null
 
 
 
 	/**
 	* INIT
-	* @return 
+	* @return
 	*/
-	//this.inited = false
+	//this.initiated = false
 	this.init = function(data) {
-		
+
 		if(SHOW_DEBUG===true) {
 			//console.log("[tool_struturation.init} +++ data",data);;
-		}		
+		}
 
 		const self = this;
 
 		// Default
-		self.wrapper_id  = data.uid		
+		self.wrapper_id  = data.uid
 
-		//if (self.inited===false) {
-			
+		//if (self.initiated===false) {
+
 			// Activate split pane
 			Split(['#left_side', '#right_side'], {
 				sizes: [40, 60],
@@ -54,10 +54,10 @@ var tool_structuration = new function() {
 
 				setTimeout(function(){
 					let tesaurus_frame = document.getElementById("tesaurus_frame")
-						tesaurus_frame.src = tesaurus_frame.dataset.url	
+						tesaurus_frame.src = tesaurus_frame.dataset.url
 					document.getElementById("tesaurus_frame_loading").remove()
 				},300)
-				
+
 				// DELETE_USER_SECTION_EVENTS
 				try {
 					// window opener sometimes is not in edit mode and not have loaded lock_components.js
@@ -80,16 +80,16 @@ var tool_structuration = new function() {
 			window.addEventListener("load", function (event) {
 				// Select tag if received via url to global_page vars
 				if (page_globals.tag_id.length > 0) {
-					self.select_tag(page_globals.tag_id, self.wrapper_id)					
-				}				
+					self.select_tag(page_globals.tag_id, self.wrapper_id)
+				}
 
 				//document.getElementById("toc").style.display = "none"
 
 
 			}, false)
-			
 
-			// BEFOREUNLOAD (EVENT)			
+
+			// BEFOREUNLOAD (EVENT)
 			window.addEventListener("beforeunload", function (event) {
 				//console.log("-> triggered beforeunload event (tool_transcription)");
 				event.preventDefault();
@@ -97,24 +97,24 @@ var tool_structuration = new function() {
 				if ( component_text_area.content_is_changed===true ) {
 					// SAVE ON EXIT
 					//tool_structuration.save_structuration_text(null, false); // Only with blur works well
-					
+
 					var confirmationMessage = "Leaving tool structuration page.. ";
 					event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
-					return confirmationMessage;              	// Gecko, WebKit, Chrome <34									
+					return confirmationMessage;              	// Gecko, WebKit, Chrome <34
 				}
 			}, false)//end beforeunload
 
 
-			// UNLOAD (EVENT)			
+			// UNLOAD (EVENT)
 			window.addEventListener("unload", function (event) {
 				//event.preventDefault();
 
 				// Reload opener page list
 				if (window.opener && window.opener.page_globals.modo && window.opener.page_globals.modo==='list') {
 					//window.opener.location.reload();
-				
+
 					// EDITING FROM PROCESSES
-			
+
 					// RELOAD_ROWS_LIST
 					var call_uid = 'wrap_' + page_globals.section_tipo + '_' + 'list';	// wrap_dd1140_list
 					window.opener.search.reload_rows_list(call_uid);
@@ -132,8 +132,8 @@ var tool_structuration = new function() {
 			// RESIZE (EVENT)
 			window.addEventListener("resize", function (event) {
 				tool_structuration.fix_height(self.wrapper_id)
-			});			
-		
+			});
+
 
 			// KEYUP (EVENT)
 			window.addEventListener('keyup', function(e){
@@ -145,7 +145,7 @@ var tool_structuration = new function() {
 			window.addEventListener('keydown', function(e){
 				tool_structuration.av_editor_key_down(e)
 			}, false)
-			
+
 
 			// LOAD_COMPONENT_BY_WRAPPER_ID (EVENT)
 			// Is triggered when component is saved and reloaded
@@ -155,7 +155,7 @@ var tool_structuration = new function() {
 
 				var loaded_wrapper_id = e.detail.wrapper_id
 				if (loaded_wrapper_id==text_area_wrapper.id) {
-					// Re init tool		
+					// Re init tool
 					tool_structuration.init({textarea_lang:self.textarea_lang})
 
 					if (tool_structuration.tags_vissible!==true) {
@@ -165,14 +165,14 @@ var tool_structuration = new function() {
 						},100)
 					}
 					console.log("[tool_structuration.init] fired event load_component_by_wrapper_id ",e);
-				}				
+				}
 			})*/
 
 
 			// VISIBILITYCHANGE (EVENT)
 			document.addEventListener("visibilitychange", function(e) {
 				if (document.hidden===true) return false;
-				
+
 				let tool_text_area_wrapper = self.get_tool_text_area_wrapper()
 				let locator = {
 					section_tipo 	: page_globals.section_tipo,
@@ -183,13 +183,13 @@ var tool_structuration = new function() {
 				if(SHOW_DEBUG===true) {
 					console.warn("[tool_structuration.visibilitychange_action] locator:", locator)
 				}
-				tool_common.update_tracking_status(e,{locator:locator})				
+				tool_common.update_tracking_status(e,{locator:locator})
 			}, false)
 
 
 			// COMPONENT_SAVE HOOK (EVENT)
-			// Event triggered when component_text_area is saved 
-			var _id_wrapper = self.id_wrapper		
+			// Event triggered when component_text_area is saved
+			var _id_wrapper = self.id_wrapper
 			window.addEventListener('component_save', function(e){
 				// When is saved input "title", capture and update titles in editor
 				if(e.detail.dataset.tipo==="rsc372") {
@@ -199,12 +199,12 @@ var tool_structuration = new function() {
 
 					// Removes current is exists (avoid duplicate on update)
 					if(tool_structuration.tag_obj) {
-						
+
 						// CHAPTER TITLE UPDATE
-						let text_area_wrapper = self.get_tool_text_area_wrapper()						
+						let text_area_wrapper = self.get_tool_text_area_wrapper()
 						let section_elements = [tool_structuration.tag_obj]
-						let lang 			 = null						
-						text_editor.set_section_titles(section_elements, lang, text_area_wrapper.id)						
+						let lang 			 = null
+						text_editor.set_section_titles(section_elements, lang, text_area_wrapper.id)
 					}
 				}
 				/*
@@ -216,12 +216,12 @@ var tool_structuration = new function() {
 					return false
 				}else{
 					console.log("[tool_structuration:init] Postprocessing save action..");
-				}*/				
-			}, false)			
+				}*/
+			}, false)
 
-		//}//end if (this.inited!==true)		
+		//}//end if (this.initiated!==true)		
 
-		this.inited = true
+		this.initiated = true
 	};//end init
 
 
@@ -244,7 +244,7 @@ var tool_structuration = new function() {
 
 		if (text_area_wrapper) {
 			text_preview = text_area_wrapper.querySelector("#text_preview")
-		}		
+		}
 
 		return text_preview || null
 	};//end get_tool_text_preview
@@ -267,7 +267,7 @@ var tool_structuration = new function() {
 	/**
 	* UPDATE_VIEW
 	* Updates selected tag object if is selected. Else updates all nodes
-	* @return 
+	* @return
 	*/
 	this.update_view = function(button_obj) {
 
@@ -280,10 +280,10 @@ var tool_structuration = new function() {
 		const id_wrapper 		= text_area_wrapper.id
 
 		const section_elements 	= text_preview.getElementsByTagName('section') // iterate later all section elements and add click listeners etc
-		
+
 
 		if (typeof self.tag_obj==="undefined" || self.tag_obj===null) {
-			
+
 
 			// Removes current is exists (avoid duplicate on update)
 			var h2  = text_preview.getElementsByTagName('h2')
@@ -292,7 +292,7 @@ var tool_structuration = new function() {
 				for (var i = len - 1; i >= 0; i--) {
 					h2[i].remove()
 				}
-			}			
+			}
 
 			// Updates all titles
 			var js_promise = text_editor.set_section_titles(section_elements, '' ,id_wrapper)
@@ -324,11 +324,11 @@ var tool_structuration = new function() {
 		js_promise.then(function(){
 
 			const toc = text_preview.querySelector('#toc') //document.getElementById("toc")
-			if (toc) {			
+			if (toc) {
 				// Delete toc wrap contents
-				while (toc.firstChild) toc.removeChild(toc.firstChild)	
-				
-				//toc.appendChild( document.createTextNode("Table of Contents") )	
+				while (toc.firstChild) toc.removeChild(toc.firstChild)
+
+				//toc.appendChild( document.createTextNode("Table of Contents") )
 
 				// Update toc
 				text_editor.toc_solved = []
@@ -337,17 +337,17 @@ var tool_structuration = new function() {
 				console.log("Unable to find toc in text_preview:",toc);
 			}
 		})
-		
+
 	};//end update_view
 
 
 
 	/**
 	* FIX_TOOL_VARS
-	* 
+	*
 	*/
 	this.fix_tool_vars = function(tag_obj, tipo, parent, section_tipo, lang) {
-		
+
 		// Fix global selected_tag and selected_tipo for index
 		this.section_top_tipo 	= page_globals.top_tipo
 		this.section_top_id 	= page_globals.top_id
@@ -355,8 +355,8 @@ var tool_structuration = new function() {
 		this.section_id 		= parent +"" // maintain value as text for now
 		this.component_tipo		= tipo
 		this.tag_obj 			= tag_obj
-		this.tag_id 			= tag_obj.dataset.tag_id +"" // maintain value as text for now	
-		this.tag_state 			= tag_obj.dataset.state	
+		this.tag_id 			= tag_obj.dataset.tag_id +"" // maintain value as text for now
+		this.tag_state 			= tag_obj.dataset.state
 		this.lang 				= lang
 		this.locator 			= {
 									section_top_tipo 	: this.section_top_tipo,
@@ -386,10 +386,10 @@ var tool_structuration = new function() {
 	this.elementContainsSelection = function(el) {
 		var sel;
 
-		if (window.getSelection) {	    	  	
+		if (window.getSelection) {
 			sel = window.getSelection();
 			if (sel.rangeCount > 0) {
-				
+
 				for (var i = 0; i < sel.rangeCount; ++i) {
 					//console.log(sel.getRangeAt(i).commonAncestorContainer)
 					//console.log(el)
@@ -420,10 +420,10 @@ var tool_structuration = new function() {
 		onmouseup = function(e){
 		var selection = window.getSelection();
 			var range = selection.getRangeAt(0);
-				
+
 		   var   compare_start = range.compareBoundaryPoints(range.START_TO_START , ref_range);
 			var   compare_end = range.compareBoundaryPoints(range.END_TO_END , ref_range);
-			  
+
 			  if (compare_start === -1){
 						 console.log(compare_start)
 				   range.setStart(ref_range.startContainer,ref_range.startOffset)
@@ -454,18 +454,18 @@ var tool_structuration = new function() {
 			// Set caret
 			tool_structuration.set_caret(event);
 		}
-		
+
 		// make global container unselectable
 			//if(el===text_preview) {
 			if(el.id == "text_preview") {
 					alert("1");
 				// make current selected element, selectable
 				text_preview.classList.remove('text_unselectable')
-				text_preview.classList.add('text_selectable','text_active')	
+				text_preview.classList.add('text_selectable','text_active')
 			}else{
 				text_preview.classList.remove('text_selectable','text_active')
 				text_preview.classList.add('text_unselectable')
-			}			
+			}
 
 		// iterate all section elements
 		var section_elements = text_preview.getElementsByTagName('section')
@@ -475,10 +475,10 @@ var tool_structuration = new function() {
 				if (section_elements[i]===el) {
 					// make current selected element, selectable
 					el.classList.remove('text_unselectable')
-					el.classList.add('text_selectable','text_active')	
+					el.classList.add('text_selectable','text_active')
 				}else{
 					section_elements[i].classList.remove('text_selectable','text_active')
-					section_elements[i].classList.add('text_unselectable')		
+					section_elements[i].classList.add('text_unselectable')
 				}
 			}
 			//el.classList.remove('text_unselectable')
@@ -494,7 +494,7 @@ var tool_structuration = new function() {
 
 		// Show fragment info
 		this.fragment_info(el, this.component_tipo, this.section_id, this.section_tipo, this.lang, wrapper_id)
-	
+
 	};//end select_area
 
 
@@ -517,7 +517,7 @@ var tool_structuration = new function() {
 		// Select text container
 		var text_preview = this.get_tool_text_preview(wrapper_id) //document.getElementById(wrapper_id).querySelector('#text_preview')
 			//console.log("[tool_structuration:create_area] text_preview",text_preview); return;
-		
+
 		// Clean info log div
 		let tool_info_log = document.getElementById('tool_info_log')
 			tool_info_log.innerHTML = ""
@@ -530,11 +530,11 @@ var tool_structuration = new function() {
 				tool_info_log.innerHTML = "<span class=\"warning\">Invalid selection area [create_area]</span>"
 				if(SHOW_DEBUG===true) {
 					console.log( "[tool_structuration:create_area] Selected text: ", window.getSelection().toString() )
-				}				
+				}
 				return false;
 			}else{
 				tool_info_log.innerHTML = "Ok. Valid selection area [create_area]"
-			}		
+			}
 
 		var selObj = document.getSelection()
 			//console.log(selObj)
@@ -553,21 +553,21 @@ var tool_structuration = new function() {
 
 		// Create new DOM element
 		var div = document.createElement("section")
-			div.classList.add('section_struct','text_unselectable') // 
+			div.classList.add('section_struct','text_unselectable') //
 			div.id = 'section_'+ new_id
 			div.dataset.state 	= 'n'
 			div.dataset.tag_id 	= new_id
 			div.dataset.label 	= 'struct '+new_id
 			div.dataset.data  	= ''
 			//div.contentEditable = false
-			
+
 			// Click event of section tag
 			div.addEventListener("mouseup", function(e){
-				self.select_area(this, e)				
+				self.select_area(this, e)
 			},false)
 
-		var html_content = rg.extractContents() 
-			div.appendChild( html_content )			
+		var html_content = rg.extractContents()
+			div.appendChild( html_content )
 
 		// Remove current selection (data is already copied into new div element)
 		rg.deleteContents()
@@ -580,13 +580,13 @@ var tool_structuration = new function() {
 		// Insert created node and contents in same range position
 		rg.collapse(true)
 		rg.insertNode(div)
-		
-		
+
+
 
 
 
 		// Fix selected section on click
-		self.selected_section = div			
+		self.selected_section = div
 
 		// Create record associated	in DB
 		return self.create_new_struct(new_id, wrapper_id) // is js_promise
@@ -596,7 +596,7 @@ var tool_structuration = new function() {
 
 	/**
 	* CREATE_NEW_STRUCT
-	* Insert new record 'struct' in table matrix_structurations and inject locator in 
+	* Insert new record 'struct' in table matrix_structurations and inject locator in
 	* selected tag section dataset
 	* @return js promise
 	*/
@@ -615,18 +615,18 @@ var tool_structuration = new function() {
 				if(SHOW_DEBUG===true) {
 					console.log("[tool_structuration.create_new_struct] response",response);
 				}
-					
+
 				if (response===null) {
 					alert("Error on create_new_struct record (null). Maybe your structuration table is not ready or you don't have permission to create records here. See server log to obtain more details")
 				}else{
 					// SECTION : Update data container in section tag
-					self.update_tag_section_data(new_id, response.result, wrapper_id)	
+					self.update_tag_section_data(new_id, response.result, wrapper_id)
 
 					// Fix as new record
 					self.is_new_record = true
 
 					self.remove_fake_caret()
-				}			
+				}
 			})
 
 		return js_promise
@@ -650,11 +650,11 @@ var tool_structuration = new function() {
 		if (!section_tag) {
 			return alert("Error on select section tag "+id)
 		}
-		
+
 		data = JSON.stringify(data)
 				// Format data Important !!
 				data = replaceAll('"', '\'', data);
-		
+
 		// Inject dataset
 		section_tag.dataset.data = data
 		//console.log(section_tag)
@@ -690,18 +690,18 @@ var tool_structuration = new function() {
 		component_text_area.set_content_is_changed(true)
 
 		// Select text_preview element (component_obj)
-		//var wrapper_obj   = document.getElementById(wrapper_id)		
+		//var wrapper_obj   = document.getElementById(wrapper_id)
 		//var component_obj = wrapper_obj.querySelector("#text_preview")
 		let component_obj = self.get_tool_text_preview(wrapper_id)
 		let tool_info_log = document.getElementById('tool_info_log')
-		
-		let js_promise = component_text_area.Save(component_obj, null, null).then(function(){							
 
-				tool_info_log.innerHTML = "Saved " 
+		let js_promise = component_text_area.Save(component_obj, null, null).then(function(){
+
+				tool_info_log.innerHTML = "Saved "
 
 				// Reset to default state
-				self.update_titles_on_save = true 
-		
+				self.update_titles_on_save = true
+
 				/*
 				//if (tool_structuration.tags_vissible!==true) {
 					tool_structuration.tags_vissible=true
@@ -709,13 +709,13 @@ var tool_structuration = new function() {
 				//}	*/
 				if (self.tags_vissible!==true) {
 					self.tags_vissible=true
-					setTimeout(function(){						
-						self.toggle_tags(null)						
+					setTimeout(function(){
+						self.toggle_tags(null)
 					},100)
-				}				
+				}
 			})
 
-		return js_promise;		
+		return js_promise;
 	};//end save_structuration_text
 
 
@@ -734,7 +734,7 @@ var tool_structuration = new function() {
 		if (self.lang!==self.original_lang) {
 			alert("Opss. Yo can't delete chapter from non source lang (" + self.original_lang_label +" "+ self.original_lang +")");
 		}
-		
+
 
 		let tool_info_log = document.getElementById('tool_info_log')
 			tool_info_log.innerHTML = ""
@@ -756,18 +756,18 @@ var tool_structuration = new function() {
 				if (h2) {
 					/*
 					var span  = h2.getElementsByTagName('span')[1]
-					var title = span ? span.innerHTML : "No title"				
-					if (!confirm( get_label.esta_seguro_de_borrar_este_registro + "\n\n" + title + "\n")) return false;					
+					var title = span ? span.innerHTML : "No title"
+					if (!confirm( get_label.esta_seguro_de_borrar_este_registro + "\n\n" + title + "\n")) return false;
 					*/
-					// Removes current is exists (avoid duplicate on update)				
-					h2.remove()					
-				}				
+					// Removes current is exists (avoid duplicate on update)
+					h2.remove()
+				}
 
 				if (selected_element.tagName==='SECTION') {
 
 					// Deletes tag in db and related indexations
 					self.delete_tag(selected_element).then(function(){
-						
+
 						// Replace selected section by his contents
 						component_text_area.unwrap_element(selected_element)
 
@@ -778,11 +778,11 @@ var tool_structuration = new function() {
 
 						// Updates fragment info
 						var wrap_div = document.getElementById('indexation_page_list')
-						// Delete wrap contents		
-						while (wrap_div.firstChild) wrap_div.removeChild(wrap_div.firstChild)	
+						// Delete wrap contents
+						while (wrap_div.firstChild) wrap_div.removeChild(wrap_div.firstChild)
 
-					})									
-					
+					})
+
 					return true
 				}
 			}else{
@@ -796,12 +796,12 @@ var tool_structuration = new function() {
 
 	/**
 	* GET_PARENT_SECTION
-	* @return 
+	* @return
 	*/
 	this.get_parent_section = function(range) {
-		
+
 		console.log(range)
-	};//end get_parent_section	
+	};//end get_parent_section
 
 
 
@@ -812,10 +812,10 @@ var tool_structuration = new function() {
 	this.change_section_tag_state = function (select_obj, wrapper_id) {
 
 		// Note: 'this.tag_obj' is fixed in text_editor when user makes click on image element
-		var tag_obj 		= this.tag_obj		
-		var	current_state 	= this.tag_obj.dataset.state		
-		var related_tipo 	= this.component_tipo		
-	
+		var tag_obj 		= this.tag_obj
+		var	current_state 	= this.tag_obj.dataset.state
+		var related_tipo 	= this.component_tipo
+
 		// Get new state from select
 		var	new_state 		= select_obj.value
 			//console.log("tag_id:"+tag_id+" - current_state:"+current_state+" - new_state:"+new_state);
@@ -831,7 +831,7 @@ var tool_structuration = new function() {
 		}
 
 		// SYNC_CLASS_TO_STATE
-		tag_obj.dataset.state = new_state		
+		tag_obj.dataset.state = new_state
 		text_editor.sync_class_to_state(tag_obj)
 
 		// UPDATE_TITLES_ON_SAVE
@@ -851,7 +851,7 @@ var tool_structuration = new function() {
 
 	/**
 	* FRAGMENT_INFO
-	* Loads all fragment information in a container below the text editor 
+	* Loads all fragment information in a container below the text editor
 	* for change tag state, delete tag or add indexation terms
 	*/
 	this.fragment_info = function(tag_obj, tipo, parent, section_tipo, lang, wrapper_id) {
@@ -860,10 +860,10 @@ var tool_structuration = new function() {
 		var self = this;
 
 		// Target div container element
-		var wrap_div = document.getElementById('indexation_page_list')	
+		var wrap_div = document.getElementById('indexation_page_list')
 
 		if (!tag_obj.dataset || typeof tag_obj.dataset.tag_id==="undefined" ) {
-			// Delete wrap contents		
+			// Delete wrap contents
 			while (wrap_div.firstChild) wrap_div.removeChild(wrap_div.firstChild);
 			return false;
 		}
@@ -875,7 +875,7 @@ var tool_structuration = new function() {
 			let text_area_wrapper = self.get_tool_text_area_wrapper()
 			wrapper_id = text_area_wrapper.id
 		}
-		
+
 
 		// Target div container element
 		var wrap_div = document.getElementById('indexation_page_list')
@@ -936,7 +936,7 @@ var tool_structuration = new function() {
 
 						// Term list
 						var ul = tool_structuration.build_term_list(response.indexations_list)
-						
+
 						// Clean and update terminos_list container
 						var terminos_list_container = document.getElementById("terminos_list_container")
 						if(terminos_list_container) {
@@ -957,8 +957,8 @@ var tool_structuration = new function() {
 								title_fields[0].focus()
 							}
 							tool_structuration.is_new_record = false
-						}									
-						
+						}
+
 					})
 				}
 				html_page.loading_content( wrap_div, 0 );
@@ -972,40 +972,40 @@ var tool_structuration = new function() {
 
 	/**
 	* SET_TAB_ACTIVE
-	* @return 
+	* @return
 	*/
 	this.set_tab_active = function(button) {
 
 		set_localStorage('section_tab_active', button.id)
 
-		const container			= button.parentNode		
-		
+		const container			= button.parentNode
+
 		// Buttons
 		const button_tabs 		= container.getElementsByClassName('section_tab_label')
 		const button_tabs_len	= button_tabs.length
-		for (let i = button_tabs_len - 1; i >= 0; i--) {				
+		for (let i = button_tabs_len - 1; i >= 0; i--) {
 			if (button_tabs[i].classList.contains("section_tab_active")) {
 				button_tabs[i].classList.remove("section_tab_active")
-			}			
+			}
 		}
 		button.classList.add("section_tab_active")
 
-		// Containers		
+		// Containers
 		const section_tabs 		= container.getElementsByClassName('section_tab')
 		const section_tabs_len	= section_tabs.length
 		for (let i = section_tabs_len - 1; i >= 0; i--) {
 			if(section_tabs[i].id === button.id + '_content' ){
-				section_tabs[i].style.display = 'table';						
+				section_tabs[i].style.display = 'table';
 			}else{
 				section_tabs[i].style.display = 'none';
 			}
-		}	
+		}
 	};//end set_tab_active
 
 
 	/**
 	* SELECT_TAB_ACTIVE
-	* @return 
+	* @return
 	*/
 	this.select_tab_active = function() {
 
@@ -1013,7 +1013,7 @@ var tool_structuration = new function() {
 
 		var selected = false
 
-		const cookie_tab_active = get_localStorage('section_tab_active');		
+		const cookie_tab_active = get_localStorage('section_tab_active');
 		if (cookie_tab_active) {
 			// Previously set on cookie
 			var tab_active_element = document.getElementById(cookie_tab_active)
@@ -1021,22 +1021,22 @@ var tool_structuration = new function() {
 				self.set_tab_active(tab_active_element)
 				selected = true
 		}
-		
+
 		if (selected===false) {
 			const buttons 		= document.getElementsByClassName('section_tab_label')
 			const buttons_len 	= buttons.length
 			//const section_tabs 	= document.getElementsByClassName('section_tab')
-			
+
 			for (let i = buttons_len - 1; i >= 0; i--) {
 				const button 	= buttons[i]
-				if(button.classList.contains("section_tab_active")){				
-					const content = document.getElementById(button.id + "_content")	
+				if(button.classList.contains("section_tab_active")){
+					const content = document.getElementById(button.id + "_content")
 					content.style.display = 'table';
 					return true
 				}
 			}
 		}
-		
+
 
 		return false
 	};//end select_tab_active
@@ -1078,7 +1078,7 @@ var tool_structuration = new function() {
 
 					// Term list
 					var ul = tool_structuration.build_term_list(response.indexations_list)
-					
+
 					// Clean and update terminos_list container
 					var terminos_list_container = document.getElementById("inspector_indexations")
 					var myNode = terminos_list_container; while (myNode.firstChild) {
@@ -1097,7 +1097,7 @@ var tool_structuration = new function() {
 
 	/**
 	* BUILD_FRAGMENT_INFO
-	* @return 
+	* @return
 	*/
 	this.build_fragment_info = function( data, div ) {
 		if (!div) {
@@ -1118,11 +1118,11 @@ var tool_structuration = new function() {
 				common_line.appendChild(fragment_info)
 
 			var wrap_tag_state_selector = document.createElement('div')
-				wrap_tag_state_selector.classList.add('wrap_tag_state_selector')				
+				wrap_tag_state_selector.classList.add('wrap_tag_state_selector')
 				wrap_tag_state_selector.appendChild( document.createTextNode(get_label.estado) )
 
 				var select = document.createElement('select')
-					select.classList.add('tag_state_selector')				
+					select.classList.add('tag_state_selector')
 					//Create and append the options
 					for(var k in data.tag_options){
 						var option = document.createElement("option");
@@ -1140,22 +1140,22 @@ var tool_structuration = new function() {
 
 				// Add element
 				common_line.appendChild(wrap_tag_state_selector)
-	
+
 			if (self.lang===self.original_lang) {
 			let div_delete_tag = document.createElement('div')
 				div_delete_tag.classList.add("div_delete_tag","hide_on_not_source")
 
 				let icon_delete_tag = document.createElement('div')
-					icon_delete_tag.classList.add("icon_bs","tool_structuration_delete_icon","link")				
+					icon_delete_tag.classList.add("icon_bs","tool_structuration_delete_icon","link")
 					icon_delete_tag.title = "Delete selected chapter"
 					icon_delete_tag.addEventListener("click", function(e){
 						tool_structuration.remove_area(this)
 					})
-				div_delete_tag.appendChild(icon_delete_tag)	
+				div_delete_tag.appendChild(icon_delete_tag)
 
-				let label = document.createElement('label')					
+				let label = document.createElement('label')
 					label.appendChild( document.createTextNode("Delete chapter") )
-				
+
 				div_delete_tag.appendChild(label)
 
 				// Add element
@@ -1163,9 +1163,9 @@ var tool_structuration = new function() {
 			}
 
 		// Add element
-		div.appendChild(common_line)		
+		div.appendChild(common_line)
 
-		// Tabs		
+		// Tabs
 		const button_tab_2 = common.create_dom_element({
 			element_type: "span",
 			id 			: "section_tab_2",
@@ -1192,7 +1192,7 @@ var tool_structuration = new function() {
 			tab_1.classList.add("section_tab")
 			// Add element
 			div.appendChild(tab_1)
-			
+
 
 			var icon_show_fragment = document.createElement('div')
 				icon_show_fragment.classList.add("icon_bs","tool_structuration_show_fragment","link")
@@ -1205,7 +1205,7 @@ var tool_structuration = new function() {
 				tab_1.appendChild(icon_show_fragment)
 
 			var selected_fragment = document.createElement('div')
-				selected_fragment.classList.add("selected_fragment")		
+				selected_fragment.classList.add("selected_fragment")
 				selected_fragment.innerHTML = data.selected_fragment_text // use innerHTML to parse the html content
 
 				// Add element
@@ -1231,17 +1231,17 @@ var tool_structuration = new function() {
 
 		var tab_2 = document.createElement('section')
 			tab_2.id = "section_tab_2_content"
-			tab_2.classList.add("section_tab")	
+			tab_2.classList.add("section_tab")
 			// Add element
-			div.appendChild(tab_2)			
-		
+			div.appendChild(tab_2)
+
 			if (data.info_notes && data.info_notes.html) {
 				var notes = document.createElement("div")
 					notes.innerHTML = data.info_notes.html
 					setTimeout(function() {
 						exec_scripts_inside(notes)
-					},10)				
-					
+					},10)
+
 					// Add element
 					tab_2.appendChild(notes)
 			}else{
@@ -1264,7 +1264,7 @@ var tool_structuration = new function() {
 					// Add element
 					tab_2.appendChild(notes)
 			}
-			//console.log(div);	
+			//console.log(div);
 
 		return div
 	};//end build_fragment_info
@@ -1273,18 +1273,18 @@ var tool_structuration = new function() {
 
 	/**
 	* BUILD_TERM_LIST
-	* @return 
+	* @return
 	*/
 	this.build_term_list = function(result) {
 
 		var ul = document.createElement('ul')
-								
+
 		var len = result.length
 		for (var i = 0; i < len; i++) {
 			var element = result[i]
-			
+
 			if (page_globals.modo==='tool_structuration') {
-	
+
 				// Delete icon
 				var icon = document.createElement('div')
 					icon.classList.add('icon_bs','tool_structuration_delete_icon','link')
@@ -1303,13 +1303,13 @@ var tool_structuration = new function() {
 				// Label icon
 				var icon = document.createElement('div')
 					icon.classList.add('icon_bs','tool_current_indexation_icon','link')
-			}		
+			}
 
 			// Term
 			var t  = document.createTextNode(element.term)
-			
+
 			// li
-			var li = document.createElement('li')				
+			var li = document.createElement('li')
 				li.appendChild(icon)
 				li.appendChild(t)
 
@@ -1368,20 +1368,20 @@ var tool_structuration = new function() {
 					alert("Error on remove tag: "+ tool_structuration.locator.tag_id)
 
 				}else{
-					
+
 					//tool_structuration.tag_obj = null;
 					//tool_structuration.update_view(null)
 				}
 			})
 
-		return js_promise		
+		return js_promise
 	};//end delete_tag
 
 
 
 	/**
 	* ADD_INDEX
-	* @return 
+	* @return
 	*/
 	this.add_index = function(section_id, section_tipo, label, wrapper_id) {
 
@@ -1396,7 +1396,7 @@ var tool_structuration = new function() {
 		if(typeof this.locator==='undefined') {
 			alert(" Please select a tag before indexing! " );
 			return false
-		}		
+		}
 
 		let container = document.getElementById('terminos_list_container')
 			if (!container) {
@@ -1439,7 +1439,7 @@ var tool_structuration = new function() {
 												  tool_structuration.section_tipo,
 												  tool_structuration.lang,
 												  wrapper_id)
-												  
+
 				}
 				html_page.loading_content( container, 0 );
 			})
@@ -1451,7 +1451,7 @@ var tool_structuration = new function() {
 
 	/**
 	* REMOVE_INDEX_V4
-	* @return 
+	* @return
 	*/
 	this.remove_index = function(button_obj) {
 
@@ -1469,7 +1469,7 @@ var tool_structuration = new function() {
 
 
 		let text_area_wrapper = self.get_tool_text_area_wrapper()
-		var wrapper_id = text_area_wrapper.id		
+		var wrapper_id = text_area_wrapper.id
 
 		const trigger_vars = {
 				mode 		 	: 'remove_index',
@@ -1510,7 +1510,7 @@ var tool_structuration = new function() {
 	* TOGGLE_SELECTED_FRAGMENT
 	*/
 	this.toggle_selected_fragment = function( button_obj ) {
-		$(button_obj).next('.selected_fragment').toggle();		
+		$(button_obj).next('.selected_fragment').toggle();
 	};
 
 
@@ -1534,11 +1534,11 @@ var tool_structuration = new function() {
 
 	/**
 	* TOGGLE_TAGS
-	* @return 
+	* @return
 	*/
 	this.tags_vissible = true
 	this.toggle_tags = function(button) {
-	
+
 		if (!button) {
 			if(SHOW_DEBUG===true) {
 				console.log("[tool_structuration.toggle_tags] ERROR button is null:",button)
@@ -1546,7 +1546,7 @@ var tool_structuration = new function() {
 			return false;
 		}
 		var text_preview = this.get_tool_text_preview()
-		
+
 		var ar_elements = text_preview.querySelectorAll('.index, .tc, .person, .page, .geo, .svg') // .note,
 		var len = ar_elements.length
 		//console.log(ar_elements);
@@ -1590,21 +1590,21 @@ var tool_structuration = new function() {
 				//console.log("[tool_structuration.fix_height] trying resolve text_preview without wrapper_id ",text_preview);
 			}
 		}
-		if (text_preview) {			
+		if (text_preview) {
 			let current_height = window.innerHeight
 			text_preview.style.height = (current_height -340) +45 +'px';
-			//document.getElementById('text_preview').style.height = (current_height -340) +45 +'px';	
-		}			
+			//document.getElementById('text_preview').style.height = (current_height -340) +45 +'px';
+		}
 	};//end fix_height
 
 
 
 	/**
 	* SET_CARET
-	* @return 
+	* @return
 	*/
 	this.set_caret = function(e) {
-	
+
 		// Remove existing caret
 		this.remove_fake_caret()
 
@@ -1614,7 +1614,7 @@ var tool_structuration = new function() {
 
 		var selObj 	 = window.getSelection();
 			if(SHOW_DEBUG===true) {
-				console.log("Called set_caret with type: " + selObj.type);	
+				console.log("Called set_caret with type: " + selObj.type);
 			}
 			if (selObj.type!=='Caret') {
 				return false;
@@ -1634,7 +1634,7 @@ var tool_structuration = new function() {
 
 			setTimeout(function(){
 				selRange.insertNode(caret)
-			}, 0)		
+			}, 0)
 
 		return false;
 
@@ -1642,14 +1642,14 @@ var tool_structuration = new function() {
 		// Get range data from click event
 		var range_data = this.get_range_data_from_click(e)
 
-		if (range_data.textNode.parentNode.nodeName==="SPAN" 
-			|| range_data.textNode.parentNode.nodeName==="HEADER" 
+		if (range_data.textNode.parentNode.nodeName==="SPAN"
+			|| range_data.textNode.parentNode.nodeName==="HEADER"
 			|| range_data.textNode.parentNode.nodeName==="H2"
 			|| range_data.textNode.parentNode.nodeName==="LABEL") {
 			console.log("Ignored caret point");
 			return false;
-		}	
-		
+		}
+
 		var caret = document.createElement("caret")
 			//caret.id = 'caret'
 			caret.classList.add("text_caret","blink")
@@ -1657,7 +1657,7 @@ var tool_structuration = new function() {
 
 		// only split TEXT_NODEs
 		if (range_data.textNode.nodeType == 3) {
-			var replacement = range_data.textNode.splitText(range_data.offset);			
+			var replacement = range_data.textNode.splitText(range_data.offset);
 			range_data.textNode.parentNode.insertBefore(caret, replacement);
 		}else{
 			range_data.range.insertNode(caret); // No standard
@@ -1669,13 +1669,13 @@ var tool_structuration = new function() {
 
 	/**
 	* REMOVE_FAKE_CARET
-	* @return 
+	* @return
 	*/
 	this.remove_fake_caret = function(target) {
 
 		//var target_obj = target || document
 		let target_obj = document
-	
+
 		// REMOVE TEMPORAL TAG (FAKE CARET)
 		let temp_elements = target_obj.getElementsByTagName('caret')
 		const len = temp_elements.length
@@ -1742,7 +1742,7 @@ var tool_structuration = new function() {
 
 					var selection = window.getSelection();
 					var range = selection.getRangeAt(0);
-						
+
 						range.insertNode(endTextNode)
 					alert("Warning! This key is reserved and will be replaced for safe char. Key: " + e.key);
 					break;
@@ -1758,22 +1758,22 @@ var tool_structuration = new function() {
 
 	/**
 	* SELECT_TAG
-	* @return 
+	* @return
 	*/
 	this.select_tag = function(tag_id, wrapper_id) {
 
-		// Selects wrapper	
+		// Selects wrapper
 		var text_preview = this.get_tool_text_preview(wrapper_id) //wrapper.querySelector('#text_preview')
 
 		var tag_obj 	 = text_preview.querySelector('section[data-tag_id="'+tag_id+'"]')
 		if (tag_obj) {
-			this.select_area(tag_obj, null, wrapper_id)	
+			this.select_area(tag_obj, null, wrapper_id)
 
 			// Scrool to element
 			let topPos = tag_obj.offsetTop;
 			text_preview.scrollTop = topPos -50;
 		}
-		
+
 
 		return true
 	};//end select_tag
@@ -1782,7 +1782,7 @@ var tool_structuration = new function() {
 
 	/**
 	* FAST_SWITCH_LANG
-	* @return 
+	* @return
 	*/
 	this.fast_switch_lang = function(selector_obj) {
 
@@ -1790,18 +1790,18 @@ var tool_structuration = new function() {
 		var js_promise = component_common.fast_switch_lang(selector_obj)
 
 		var text_preview = this.text_preview
-		return true		
+		return true
 	};//end fast_switch_lang
 
 
 
 	/**
 	* place_broken_tag_in_approximate_position
-	* @return 
+	* @return
 	*/
 	this.place_broken_tag_in_approximate_position = function(button_obj) {
 		var target_lang_container = this.get_tool_text_preview()
-		
+
 		// DELETED TAGS
 		// Get current tags with state "deleted" (d)
 		let deleted_tags = target_lang_container.querySelectorAll("section[data-state=\"d\"]")
@@ -1825,13 +1825,13 @@ var tool_structuration = new function() {
 					var source_lang_container = document.createElement("div")
 					source_lang_container.innerHTML = response.result
 						console.log(source_lang_container);
-			
+
 					deleted_tags.forEach(function(deleted_tag){
 						//console.log(deleted_tag);
 						let curent_id = deleted_tag.id
 						let source_element 				= source_lang_container.querySelector('#'+curent_id)
 						let source_reference_element 	= source_element.previousElementSibling
-						
+
 						let ar_text =[]
 						var current = source_reference_element.nextSibling
 						while(current.id !== source_element.id){

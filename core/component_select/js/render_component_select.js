@@ -16,7 +16,34 @@
 export const render_component_select = function(component) {
 
 	return true
-}//end render_component_select
+};//end render_component_select
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_select.prototype.mini = async function() {
+
+	const self = this
+
+	// short vars
+		const data = self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value
+
+	// Set value
+		wrapper.insertAdjacentHTML('afterbegin', value_string);
+
+
+	return wrapper
+};//end mini
+
 
 
 /**
@@ -41,10 +68,10 @@ render_component_select.prototype.list = async function() {
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string);
-	
+
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -82,7 +109,7 @@ render_component_select.prototype.edit = async function(options={render_level:'f
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -122,9 +149,9 @@ const add_events = (self, wrapper) => {
 					const parsed_value = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
 
 					const changed_data = Object.freeze({
-						action  : (parsed_value != null) ? 'update' : 'remove',
-						key 	: (parsed_value != null) ? 0 : false,
-						value 	: parsed_value
+						action	: (parsed_value != null) ? 'update' : 'remove',
+						key		: (parsed_value != null) ? 0 : false,
+						value	: parsed_value
 					})
 
 					self.change_value({
@@ -178,7 +205,7 @@ const add_events = (self, wrapper) => {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -210,7 +237,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -229,36 +256,37 @@ const get_buttons = (self) => {
 	// button edit
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 
-			if (self.sqo_context) {
-				const show						= self.sqo_context.show
-				const target_section		 	= show.filter(item => item.model==='section')
-				const target_section_lenght 	= target_section.length
+			if (self.dd_request.show) {
+				const show					= self.dd_request.show
+				const target_section		= show.filter(item => item.model==='section')
+				const target_section_lenght	= target_section.length
 				// sort section by label asc
 					target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
 				for (let i = 0; i < target_section_lenght; i++) {
-					
+
 					const item = target_section[i]
 
 					const label = (SHOW_DEBUG===true)
 						? item.label + " [" + item.tipo + "]"
 						: item.label
-				
+
 					const button_edit = ui.create_dom_element({
 						element_type	: 'span',
-						class_name 		: 'button edit',
-						title 			: label,
-						parent 			: fragment
+						class_name		: 'button edit',
+						title			: label,
+						parent			: fragment
 					})
 					button_edit.addEventListener("click", function(){
 						// navigate link
 							event_manager.publish('user_action', {
-								tipo 	: item.tipo,
-								mode 	: 'list'
+								tipo	: item.tipo,
+								model	: 'section',
+								mode	: 'list'
 							})
 					})
 				}
-			}			
+			}
 		}
 
 	// buttons tools
@@ -272,7 +300,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -291,19 +319,19 @@ const input_element = (inputs_container, self) => {
 	// create li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			parent 			: inputs_container
+			parent			: inputs_container
 		})
 
 	// select
 		const select = ui.create_dom_element({
 			element_type	: 'select',
-			parent 			: li
+			parent			: li
 		})
 
 	// add empty option at begining of array
 		const empty_option = {
-			label : '',
-			value : null
+			label	: '',
+			value	: null
 		}
 		datalist.unshift(empty_option);
 
@@ -313,9 +341,9 @@ const input_element = (inputs_container, self) => {
 		for (let i = 0; i < length; i++) {
 
 			const datalist_item = datalist[i]
-			
+
 			const current_section_id = typeof datalist_item.section_id!=="undefined" ? datalist_item.section_id : null
-			
+
 			const current_label = (SHOW_DEBUG===true)
 				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
 				: datalist_item.label
@@ -337,4 +365,4 @@ const input_element = (inputs_container, self) => {
 
 	return li
 
-}//end input_element
+};//end input_element

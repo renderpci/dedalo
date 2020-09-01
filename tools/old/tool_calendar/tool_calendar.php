@@ -13,13 +13,13 @@
 
 	$lang_tld2 	= tools::convert_d4_to_d3_lang(DEDALO_DATA_LANG);
 	$button 	= $section_obj->get_button('button_import');
-	#dump($button->propiedades," button");
+	#dump($button->properties," button");
 
 
 	# Fix tool general vars
 	$ar_tool_data = array();
 	$ar_tool_data['tipo'] = $tipo;
-	foreach ($button->propiedades as $key => $value) { 
+	foreach ($button->properties as $key => $value) { 
 	$ar_tool_data[$key] = $value;
 	}
 	
@@ -28,7 +28,7 @@
 		# Calculate button
 		$backgound_events_section = section::get_instance(null,$ar_tool_data['backgound_events_tipo']);
 		$backgound_events_button  = $backgound_events_section->get_button('button_import');
-		foreach ($backgound_events_button->propiedades->event as $key => $value) {
+		foreach ($backgound_events_button->properties->event as $key => $value) {
 
 			$ar_tool_data['backgound_event_'.$key] = $value;
 			

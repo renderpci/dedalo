@@ -16,7 +16,35 @@
 export const render_component_check_box = function() {
 
 	return true
-}//end render_component_check_box
+};//end render_component_check_box
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_check_box.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = value.join(self.divisor)
+
+	// Set value
+		wrapper.textContent = value_string
+
+
+	return wrapper
+};//end mini
 
 
 
@@ -48,7 +76,7 @@ render_component_check_box.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -88,7 +116,7 @@ render_component_check_box.prototype.edit = async function(options={render_level
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -220,7 +248,7 @@ const add_events = function(self, wrapper) {
 		},true)
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -306,7 +334,7 @@ render_component_check_box.prototype.search = async function() {
 
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -353,7 +381,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -398,7 +426,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -451,7 +479,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 
 	return li
-}//end get_input_element_edit
+};//end get_input_element_edit
 
 
 
@@ -500,4 +528,4 @@ const get_content_data_search = async function(self) {
 
 
 	return content_data
-}//end get_content_data_search
+};//end get_content_data_search

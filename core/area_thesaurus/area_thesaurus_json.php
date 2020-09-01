@@ -4,10 +4,10 @@
 
 
 // configuration vars
-	$tipo				= $this->get_tipo();
-	$permissions		= common::get_permissions($tipo, $tipo);
-	$modo				= $this->get_modo();
-	$search_action 		= $this->search_action;
+	$tipo			= $this->get_tipo();
+	$permissions	= common::get_permissions($tipo, $tipo);
+	$modo			= $this->get_modo();
+	$search_action	= $this->search_action;
 
 
 // context
@@ -18,17 +18,17 @@
 
 		// set self from_parent
 			$this->from_parent = $tipo;
-			
+
 		// Component structure context (tipo, relations, properties, etc.)
-			$current_context = $this->get_structure_context($permissions, $sqo_context=true);
+			$current_context = $this->get_structure_context($permissions, $add_request_config=true);
 
 		// section_tipo. Adaptation of the context with the specific ddo and sqo for used them into the filter.
 		// set the section_tipo with the area_tipo, it will be used to store presets of the search (area_tipo will use as section_tipo)
 			$current_context->section_tipo = $tipo;
-		
-	
+
+
 		$context[] = $current_context;
-		
+
 	}//end if($options->get_context===true)
 
 
@@ -51,9 +51,9 @@
 					$typology = new stdClass();
 						$typology->section_id	= $hierarchy_data->typology_section_id;
 						$typology->type			= 'typology';
-						$typology->label 		= $this->get_typology_name($hierarchy_data->typology_section_id);
-						$typology->order 		= $this->get_typology_order($hierarchy_data->typology_section_id);
-					
+						$typology->label		= $this->get_typology_name($hierarchy_data->typology_section_id);
+						$typology->order		= $this->get_typology_order($hierarchy_data->typology_section_id);
+
 					$ar_typologies[] = $typology;
 				}
 			}
@@ -61,23 +61,23 @@
 			$value = array_merge($ar_typologies,$hierarchy_sections);
 
 		$item = new stdClass();
-			$item->tipo 				= $this->get_tipo();
-			$item->value 				= $value;			
+			$item->tipo		= $this->get_tipo();
+			$item->value	= $value;
 
-		// search_action			
+		// search_action
 			if (!empty($search_action) && $search_action->action==='search') {
 				// search rows
-				$result = $this->search_thesaurus( $search_action->search_query_object );				
-				$item->ts_search = $result;	
+				$result = $this->search_thesaurus( $search_action->search_query_object );
+				$item->ts_search = $result;
 			}
-		
+
 
 		// subdata add
 			$data[] = $item;
-			
+
 	}// end if $permissions > 0
-	
-	
+
+
 
 
 // JSON string

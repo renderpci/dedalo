@@ -10,16 +10,16 @@
 ?>
 
 <!-- LISTADO DE TERMINOS RELACIONADOS -->
-<div class="textoIndex" style="margin:4px">
+<div class="textoIndex">
 
 	<!-- BTN Abrir Tesauro -->
     <input value="<?php echo $terminos_title ?>" class="btnTesauro" onclick="dd_abrirTSlist('tesauro_rel','<?php echo $tipo ?>',this);" type="button">
 
     <?php if($n_terminos_relacionados>0){?>
-    <div style="color:#000000; font-size:11px; font-weight:bold"><?php echo $terminos_relacionados_title ?>  <?php echo " [".$n_terminos_relacionados."] "; ?></div>
+    <div class="related_terms"><?php echo $terminos_relacionados_title ?>  <?php echo " [".$n_terminos_relacionados."] "; ?></div>
     <hr>
 
-    <div style="height:80px; overflow:auto; ">
+    <div class="related_terms_rows">
         <?php
 
 		if(count($arTR) == 0) {
@@ -34,10 +34,11 @@
 				$terminoID		= $arTR['terminoID'][$key];
 				$terminoNjs		= urlencode($termino);
 
-				$html .= "<img src=\"../dd/images/delete.png\" hspace=\"4\" onClick=\"unlinkTS('$terminoID','$terminoNjs')\" title=\"$eliminar_relacion_title\" style=\"cursor:pointer\" />";
+				$html .= '<div class="related_term_item">';
+				$html .= "<img src=\"../dd/images/delete.png\" hspace=\"4\" onClick=\"unlinkTS('$terminoID','$terminoNjs')\" title=\"$eliminar_relacion_title\"/>";
 				$html .= $termino ;
-				$html .= "<span class=\"terminoIDinList\" title=\"ID\"> [ $terminoID ]</span></br>";
-
+				$html .= "<span class=\"terminoIDinList\"> [$terminoID]</span>";
+				$html .= '</div>';
 			}
 		}
 		echo $html;

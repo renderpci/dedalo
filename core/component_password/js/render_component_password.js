@@ -16,8 +16,37 @@
 export const render_component_password = function() {
 
 	return true
-}//end render_component_password
+};//end render_component_password
 
+
+/**
+* LIST
+* Render node to be used by service autocomplete or any datali
+* It shouldn't be use but just in case someone added it to a list the page would work properly
+* @return DOM node
+*/
+render_component_password.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = value
+
+	// Set value
+		wrapper.textContent = value_string
+		wrapper.type = 'password'
+
+
+	return wrapper
+};//end mini
 
 
 /**
@@ -48,7 +77,7 @@ render_component_password.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -83,7 +112,7 @@ render_component_password.prototype.edit = async function(options={render_level:
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -132,7 +161,7 @@ const add_events = function(self, wrapper) {
 		}, false)
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -164,7 +193,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -192,6 +221,4 @@ const input_element = (inputs_container, self) => {
 		input.autocomplete = 'new-password'
 
 	return li
-}//end input_element
-
-
+};//end input_element

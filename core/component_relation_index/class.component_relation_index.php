@@ -14,9 +14,6 @@ class component_relation_index extends component_relation_common {
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id');
 
-	// default paginated max rows
-	public $max_records = 5;
-
 
 	
 	/**

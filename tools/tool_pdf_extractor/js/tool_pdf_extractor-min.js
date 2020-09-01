@@ -12,7 +12,7 @@
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_pdf_extractor = function () {
-
+	
 	this.id
 	this.model
 	this.mode
@@ -24,7 +24,7 @@ export const tool_pdf_extractor = function () {
 	this.caller
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -62,7 +62,7 @@ tool_pdf_extractor.prototype.init = async function(options) {
 		}
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -77,7 +77,7 @@ tool_pdf_extractor.prototype.build = async function(autoload=false) {
 		const common_build = tool_common.prototype.build.call(this, autoload);
 
 	return common_build
-}//end build_custom
+};//end build_custom
 
 
 /**
@@ -128,7 +128,7 @@ tool_pdf_extractor.prototype.get_pdf_data = async function(self) {
 			});
 
 	return trigger_response.result
-}//end get_pdf_data
+};//end get_pdf_data
 
 
 /**
@@ -187,4 +187,4 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 	}
 
 	 return final_text
-}// end process_pdf_data
+};//end process_pdf_data

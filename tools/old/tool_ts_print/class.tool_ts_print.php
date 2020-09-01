@@ -5,12 +5,12 @@
 *
 */
 class tool_ts_print extends tool_common {
-	
+
 
 	protected $section_obj;
 
 
-	
+
 	/**
 	* __CONSTRUCT
 	*/
@@ -22,7 +22,7 @@ class tool_ts_print extends tool_common {
 		# Fix current media component
 		$this->section_obj = $section_obj;
 
-		
+
 		return true;
 	}//end __construct
 
@@ -40,11 +40,11 @@ class tool_ts_print extends tool_common {
 
 		# Get all section records
 		$ar_all_section_records = section::get_ar_all_section_records_unfiltered($section_tipo);
-			#dump($ar_all_section_records, ' ar_all_section_records ++ '.to_string());	
-			
+			#dump($ar_all_section_records, ' ar_all_section_records ++ '.to_string());
+
 		$ar_data_node = [];
 		foreach ($ar_all_section_records as $key => $section_id) {
-			
+
 			$data_node = self::build_data_node( $section_tipo, $section_id );
 
 			$ar_data_node[] = $data_node;
@@ -57,21 +57,21 @@ class tool_ts_print extends tool_common {
 			# dump($ar_related, ' ar_related ++ '.to_string());
 			if (!empty($ar_related)) foreach ($ar_related as $related_locator) {
 				if ($related_locator->section_tipo!==$section_tipo) {
-					
+
 					$external_data_node = self::build_data_node( $related_locator->section_tipo, $related_locator->section_id );
 					$ar_data_node[] 	= $external_data_node;
 					debug_log(__METHOD__." Added extenal data node of related term ".to_string($related_locator), logger::DEBUG);
 				}
 			}
 		}
-		
+
 		$context_name = '@context';
 
 		$ts_data = new stdClass();
 			$ts_data->$context_name = self::build_data_context($section_tipo);
 			$ts_data->components 	= $ar_data_node;
 			$ts_data->ar_root 		= $ar_root;
-	
+
 
 		return $ts_data;
 	}//end build_ts_data
@@ -85,7 +85,7 @@ class tool_ts_print extends tool_common {
 	public static function get_root_terms_of_section( $section_tipo, $model=false ) {
 
 		$ar_roots = [];
-		
+
 		$ar_hierachies = area_thesaurus::get_active_hierarchy_sections();
 
 		$ar_result = array_filter($ar_hierachies, function($element) use($section_tipo) {
@@ -108,7 +108,7 @@ class tool_ts_print extends tool_common {
 													  DEDALO_DATA_NOLAN,
 													  $hierarchy->section_tipo);
 		$ar_roots = $component->get_dato();
-	
+
 
 		return $ar_roots;
 	}//end get_root_terms_of_section
@@ -116,10 +116,10 @@ class tool_ts_print extends tool_common {
 
 
 	/**
-	* GET_CHILDRENS
-	* @return 
+	* GET_CHILDREN
+	* @return
 	*//*
-	public static function get_childrens( $locator ) {
+	public static function get_children( $locator ) {
 
 		$section_tipo 	= $locator->section_tipo;
 		$section_id 	= $locator->section_id;
@@ -145,15 +145,15 @@ class tool_ts_print extends tool_common {
 																		 $section_tipo);
 		$ar_childrens   = $component_relation_children->get_dato();
 
-		
+
 
 		# Iterate all recursively
 		if (!empty($ar_childrens)) {
-			
+
 			foreach ($ar_childrens as $key => $children_locator) {
 				# Recursive call
-				$ar_temp = self::get_childrens($children_locator);
-			
+				$ar_temp = self::get_children($children_locator);
+
 				$pseudo_locator = $children_locator->section_tipo .'_'. $children_locator->section_id;
 
 				$term_obj = new stdClass();
@@ -166,23 +166,23 @@ class tool_ts_print extends tool_common {
 
 			return $ar_current;
 		}
-		
+
 		$term_obj = new stdClass();
 			$term_obj->term_id  = $section_tipo.'_'.$section_id;
 			$term_obj->term 	= 'patata';
 			$term_obj->ar_ch 	= [];
 
 		return $term_obj;
-	}//end get_childrens */
+	}//end get_children */
 
 
 
 	/**
 	* BUILD_DATA_NODE
-	* @return 
+	* @return
 	*/
 	public static function build_data_node( $section_tipo, $section_id ) {
-		
+
 		$section 		= section::get_instance($section_id, $section_tipo);
 		$section_dato 	= $section->get_dato();
 			#dump($section_dato, ' section_dato ++ '.to_string());
@@ -191,7 +191,7 @@ class tool_ts_print extends tool_common {
 			$relations = [];
 			if (isset($section_dato->relations)) {
 				$relations = array_filter($section_dato->relations, function($element) {
-					return ($element->type === DEDALO_RELATION_TYPE_CHILDREN_TIPO || 
+					return ($element->type === DEDALO_RELATION_TYPE_CHILDREN_TIPO ||
 							$element->type === DEDALO_RELATION_TYPE_RELATED_TIPO); // $element->from_component_tipo===DEDALO_THESAURUS_DESCRIPTOR_TIPO
 				});
 			}
@@ -215,7 +215,7 @@ class tool_ts_print extends tool_common {
 					}
 				}
 			}
-		
+
 		# Es descriptor. Resolve value as component
 			if (isset($section_dato->relations)) {
 				$ar_descriptor = array_filter($section_dato->relations, function($element) {
@@ -232,7 +232,7 @@ class tool_ts_print extends tool_common {
 					$node_obj->from_component_tipo 	= DEDALO_THESAURUS_DESCRIPTOR_TIPO;
 					$node_obj->lang 				= DEDALO_DATA_NOLAN;
 					$node_obj->data 				= reset($ar_descriptor);
-					$node_obj->value 				= $is_descriptor;			
+					$node_obj->value 				= $is_descriptor;
 				array_unshift($components, $node_obj);
 			}
 
@@ -240,7 +240,7 @@ class tool_ts_print extends tool_common {
 		# Data node
 		$data_node = new stdClass();
 			$data_node->section_tipo	= $section_tipo;
-			$data_node->section_id 		= $section_id;			
+			$data_node->section_id 		= $section_id;
 			$data_node->data 			= $components;
 			$data_node->relations 		= array_values($relations);
 
@@ -255,7 +255,7 @@ class tool_ts_print extends tool_common {
 	* @return array of objects $data_context
 	*/
 	public static function build_data_context( $section_tipo ) {
-		
+
 		#
 		# Section and components
 		$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo,
@@ -289,25 +289,25 @@ class tool_ts_print extends tool_common {
 			# Descriptors
 			$all_descriptors_langs = RecordObj_descriptors_dd::get_all_descriptors_langs_by_tipo($current_tipo);
 				#dump($all_descriptors_langs, ' all_descriptors_langs ++ '.to_string());
-			
+
 			foreach ($all_descriptors_langs as $key => $current_lang) {
 				$current_obj = new stdClass();
 					$current_obj->tipo 		 	= $current_tipo;
 					$current_obj->$lang_name	= $current_lang;
 					$current_obj->term 		 	= RecordObj_dd::get_termino_by_tipo($current_tipo, $current_lang, $from_cache=true, $fallback=false);
 					$current_obj->model 	 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					#$current_obj->properties 	= 
+					#$current_obj->properties 	=
 
 				$ar_obj[] = $current_obj;
 			}
 		}
-		
+
 		$data_context = $ar_obj;
 
 		return $data_context;
 	}//end build_data_context
 
-	
+
 
 
 }//end tool_ts_print

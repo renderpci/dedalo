@@ -8,7 +8,7 @@
 	$id 					= $this->get_target();
 	$modo					= $this->get_modo();
 	$label 					= $this->get_label();
-	$propiedades 			= $this->get_propiedades();
+	$properties 			= $this->get_properties();
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$html_title				= "Info about $tipo";

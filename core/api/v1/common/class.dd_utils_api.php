@@ -9,6 +9,80 @@ class dd_utils_api {
 
 
 	/**
+	* GET_MENU
+	* @return object $response
+	*/
+	public static function get_menu($request_options=null) {
+		global $start_time;
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$menu = new menu();
+
+		// menu json
+			$get_json_options = new stdClass();
+				$get_json_options->get_context	= true;
+				$get_json_options->get_data		= true;
+			$menu_json = $menu->get_json($get_json_options);
+
+		$response->msg 		= 'Ok. Request done';
+		$response->result 	= $menu_json;
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end get_menu
+
+
+
+	/**
+	* GET_LOGIN
+	* @return object $response
+	*/
+	public static function get_login($request_options=null) {
+		global $start_time;
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$login = new login();
+
+		// login json
+			$get_json_options = new stdClass();
+				$get_json_options->get_context	= true;
+				$get_json_options->get_data		= true;
+			$login_json = $login->get_json($get_json_options);			
+
+		$response->msg		= 'Ok. Request done';
+		$response->result	= $login_json;
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options	= $request_options;
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end get_login
+
+
+
+	/**
 	* DEDALO_VERSION
 	* @return object $response
 	*/
@@ -18,8 +92,8 @@ class dd_utils_api {
 		session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
 		$response->result = (object)[
@@ -32,7 +106,7 @@ class dd_utils_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
+					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 
@@ -51,20 +125,20 @@ class dd_utils_api {
 		session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$info 			= pg_version(DBi::_getConnection());
-		$info['host'] 	= to_string(DEDALO_HOSTNAME_CONN);
+		$info			= pg_version(DBi::_getConnection());
+		$info['host']	= to_string(DEDALO_HOSTNAME_CONN);
 
-		$response->result = $info;
-		$response->msg 	  = 'Ok. Request done';
+		$response->result	= $info;
+		$response->msg		= 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
+					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 
@@ -80,15 +154,15 @@ class dd_utils_api {
 	public static function make_backup($request_options=null) {
 		global $start_time;
 
-		session_write_close();
+		// ssession_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-		$response->result = backup::make_backup();
-		$response->msg 	  = 'Ok. Request done';
+		$response->result	= backup::make_backup();
+		$response->msg		= 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -113,20 +187,39 @@ class dd_utils_api {
 		// session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
+		// dedalo_prefix_tipos
+			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+				return $item->name==='dedalo_prefix_tipos';
+			})->value;
+			$ar_dedalo_prefix_tipos = array_map(function($item){
+				return trim($item);
+			}, explode(',', $dedalo_prefix_tipos));
+			if (empty($ar_dedalo_prefix_tipos)) {
+				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
+				return $response;
+			}
 
 		# Remote server case
 		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
 
+			debug_log(__METHOD__." Checking remote_server status. Expected header code 200 .... ".to_string(), logger::DEBUG);
+
 			# Check remote server status before begins
 			$remote_server_status = (object)backup::check_remote_server();
+
+			if(SHOW_DEBUG===true) {
+				$check_status_exec_time = exec_time_unit($start_time,'ms')." ms";
+				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_status), logger::DEBUG);
+			}				
+			
 			if ($remote_server_status->result===true) {
-				$response->msg 		.= $remote_server_status->msg;
+				$response->msg		.= $remote_server_status->msg;
 			}else{
-				$response->msg 		.= $remote_server_status->msg;
-				$response->result 	= false;
+				$response->msg		.= $remote_server_status->msg;
+				$response->result	= false;
 				return (object)$response;
 			}
 		}
@@ -139,20 +232,20 @@ class dd_utils_api {
 				return $response;
 			}else{
 				# Append msg
-				$response->msg .= $res_export_structure->msg;
+				$response->msg	.= $res_export_structure->msg;
 				# Exec time
 				$export_exec_time	= exec_time_unit($start_time,'ms')." ms";
-				$prev_time 			= microtime(1);
+				$prev_time			= microtime(1);
 			}
 
 		# IMPORT
-			$res_import_structure = backup::import_structure();
+			$res_import_structure = backup::import_structure($db_name='dedalo4_development_str.custom', $check_server=true, $ar_dedalo_prefix_tipos);
 
 			if ($res_import_structure->result===false) {
-				$response->msg .= $res_import_structure->msg;
+				$response->msg	.= $res_import_structure->msg;
 				return $response;
 			}else{
-				$response->msg .= $res_import_structure->msg;
+				$response->msg	.= $res_import_structure->msg;
 				# Exec time
 				$import_exec_time = exec_time_unit($prev_time,'ms')." ms";
 			}
@@ -192,14 +285,14 @@ class dd_utils_api {
 			if ($build_structure_css_response->result===false) {
 				debug_log(__METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response), logger::ERROR);
 
-				$response->result 	= false;
-				$response->msg 		= __METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response);
+				$response->result	= false;
+				$response->msg		= __METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response);
 				return $response;
 			}
 
 
-		$response->result 	= true;
-		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+		$response->result	= true;
+		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
 
 
 		// Debug
@@ -217,6 +310,117 @@ class dd_utils_api {
 
 
 	/**
+	* STRUCTURE_TO_JSON
+	* @return object $response
+	*/
+	public static function structure_to_json($request_options=null) {
+		global $start_time;
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// dedalo_prefix_tipos
+			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+				return $item->name==='dedalo_prefix_tipos';
+			})->value;
+			$ar_dedalo_prefix_tipos = array_map(function($item){
+				return trim($item);
+			}, explode(',', $dedalo_prefix_tipos));
+			if (empty($ar_dedalo_prefix_tipos)) {
+				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
+				return $response;
+			}
+
+
+		$ar_tld		= $ar_dedalo_prefix_tipos;
+		$json_data	= backup::structure_to_json($ar_tld);
+
+		$file_name	= 'structure.json';
+		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+		// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+			// dump($file_path, ' file_path ++ '.to_string());
+
+		if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
+			// write error occurred
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']. Impossible to write json file';
+			return $response;
+		}
+
+		$response->result	= true;
+		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+
+		return (object)$response;
+	}//end structure_to_json
+
+
+
+
+
+	/**
+	* IMPORT_STRUCTURE_FROM_JSON
+	* @return object $response
+	*/
+	public static function import_structure_from_json($request_options=null) {
+		global $start_time;
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// dedalo_prefix_tipos
+			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+				return $item->name==='dedalo_prefix_tipos';
+			})->value;
+			$ar_dedalo_prefix_tipos = array_map(function($item){
+				return trim($item);
+			}, explode(',', $dedalo_prefix_tipos));
+			
+
+		$ar_tld	= empty($ar_dedalo_prefix_tipos) ? [] : $ar_dedalo_prefix_tipos;
+	
+		$file_name	= 'structure.json';
+		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+
+		$data		= json_decode( file_get_contents($file_path) );
+		$response	= backup::import_structure_json_data($data, $ar_tld);
+
+		$response->result	= true;
+		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->request_options = $request_options;
+				$response->debug = $debug;
+			}
+
+
+		return (object)$response;
+	}//end import_structure_from_json
+
+
+
+
+
+	/**
 	* REGISTER_TOOLS
 	* @return object $response
 	*/
@@ -224,18 +428,18 @@ class dd_utils_api {
 		global $start_time;
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-		$response->result = tools_register::import_tools();
-		$response->msg 	  = 'Ok. Request done';
+		$response->result	= tools_register::import_tools();
+		$response->msg		= 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
+					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 
@@ -254,18 +458,18 @@ class dd_utils_api {
 		// session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-		$response->result = css::build_structure_css();
-		$response->msg 	  = 'Ok. Request done';
+		$response->result	= css::build_structure_css();
+		$response->msg		= 'Ok. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
+					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 
@@ -286,8 +490,8 @@ class dd_utils_api {
 		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
 		$response->result = update::update_version();
@@ -297,7 +501,7 @@ class dd_utils_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
+					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 
@@ -316,8 +520,8 @@ class dd_utils_api {
 		// session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
 		set_time_limit ( 259200 );  // 3 days
@@ -343,9 +547,9 @@ class dd_utils_api {
 				$sql_query = implode(PHP_EOL, $ar_final);
 				$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
 
-			$response->result 	= true;
-			$response->msg 		= $sql_query;
-			$response->rows 	= $rows;
+			$response->result	= true;
+			$response->msg		= $sql_query;
+			$response->rows		= $rows;
 		}
 
 
@@ -353,7 +557,7 @@ class dd_utils_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
+					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 
@@ -370,13 +574,13 @@ class dd_utils_api {
 		global $start_time;
 
 		$response = new stdClass();
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+			$response->result	= true;
+			$response->msg		= 'Ok. Request done ['.__METHOD__.']';
 
 		// options
-			$options 				= $request_options->options;
-			$dedalo_data_lang 		= $options->dedalo_data_lang ?? null;
-			$dedalo_application_lang= $options->dedalo_application_lang ?? null;
+			$options					= $request_options->options;
+			$dedalo_data_lang			= $options->dedalo_data_lang ?? null;
+			$dedalo_application_lang	= $options->dedalo_application_lang ?? null;
 
 		// dedalo_data_lang
 			if (!empty($dedalo_data_lang)) {
@@ -395,8 +599,6 @@ class dd_utils_api {
 
 				$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;
 			}
-
-		session_write_close();
 
 		// Debug
 			$debug = new stdClass();
@@ -419,8 +621,8 @@ class dd_utils_api {
 		global $start_time;
 
 		$options = new stdClass();
-			$options->username = $request_options->options->username;
-			$options->password = $request_options->options->auth;
+			$options->username	= $request_options->options->username;
+			$options->password	= $request_options->options->auth;
 
 		$response = (object)login::Login( $options );
 
@@ -448,8 +650,8 @@ class dd_utils_api {
 		global $start_time;
 
 		$response = new stdClass();
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+			$response->result	= true;
+			$response->msg		= 'Ok. Request done ['.__METHOD__.']';
 
 		// Login type . Get before unset session
 			$login_type = isset($_SESSION['dedalo']['auth']['login_type']) ? $_SESSION['dedalo']['auth']['login_type'] : 'default';
@@ -461,8 +663,8 @@ class dd_utils_api {
 			session_write_close();
 
 		// Response
-			$response->result 	= $result;
-			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+			$response->result	= $result;
+			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
 
 			// saml logout
 				if ($login_type==='saml' && defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
@@ -508,11 +710,11 @@ class dd_utils_api {
 		global $start_time;
 
 		$response = new stdClass();
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+			$response->result	= true;
+			$response->msg		= 'Ok. Request done ['.__METHOD__.']';
 
 		session_write_close();
-		
+
 		// tables value
 			$item_tables = array_find($request_options->options, function($item){
 				return $item->name==='tables';
@@ -521,7 +723,7 @@ class dd_utils_api {
 			$tables = $item_tables->value;
 			if (empty($tables) || !is_string($tables)) {
 				return $response;
-			}		
+			}
 
 		// generate_relations_table_data
 		$response = area_development::generate_relations_table_data($tables);
@@ -530,7 +732,7 @@ class dd_utils_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options = $request_options;
+					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 

@@ -16,9 +16,8 @@
 * Manages the area apperance in client side
 */
 export const render_area_development = function() {
-
 	return true
-}//end render_area_development
+};//end  render_area_development
 
 
 
@@ -28,9 +27,8 @@ export const render_area_development = function() {
 * @return DOM node
 */
 render_area_development.prototype.list = async function(options={render_level:'full'}) {
-
 	return this.edit(options)
-}//end list
+};//end  list
 
 
 
@@ -62,7 +60,7 @@ render_area_development.prototype.edit = async function(options={render_level:'f
 
 
 	return wrapper
-}//end edit
+};//end  edit
 
 
 
@@ -110,7 +108,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
+};//end  content_data
 
 
 
@@ -123,7 +121,7 @@ const build_widget = (item, self) => {
 		id 			 : item.id,
 		element_type : 'div',
 		dataset 	 : {},
-		class_name 	 : "widget_container"
+		class_name 	 : "widget_container " + (item.class || '')
 	})
 
 	// label
@@ -133,9 +131,18 @@ const build_widget = (item, self) => {
 			parent 		 : container,
 			inner_html	 : item.label || ''
 		})
-		label.addEventListener("dblclick", function(e){
+		label.addEventListener("click", function(e){
+			e.stopPropagation()
 			const body = e.target.nextElementSibling
-			body.classList.contains("display_none") ? body.classList.remove("display_none") : body.classList.add("display_none")
+			if (body.classList.contains("display_none")) {
+				// show
+				body.classList.remove("display_none")
+				localStorage.removeItem('ad_hide_' + item.id)
+			}else{
+				// hide
+				body.classList.add("display_none")
+				localStorage.setItem('ad_hide_' + item.id, 'true')
+			}
 		})
 
 	// body
@@ -144,6 +151,12 @@ const build_widget = (item, self) => {
 			class_name 	 : "widget_body",
 			parent 		 : container
 		})
+
+		// cookie hide body value
+			const hide_value = localStorage.getItem('ad_hide_' + item.id)
+			if (hide_value==='true') {
+				body.classList.add("display_none")
+			}
 
 		// item info
 			if (item.info) {
@@ -203,23 +216,23 @@ const build_widget = (item, self) => {
 			//event_manager.subscribe('render_page', (page_wrapper) => {
 				for (let i = 0; i < item.run.length; i++) {
 
-					const func 			= item.run[i].fn
-					const func_options  = item.run[i].options
-					
+					const func			= item.run[i].fn
+					const func_options	= item.run[i].options
+
 					const js_promise = self[func].apply(self, [{
 						...item,
 						...func_options,
-						body_info 		: body_info,
-						body_response  	: body_response,
-						print_response 	: print_response
-					}])					
+						body_info		: body_info,
+						body_response	: body_response,
+						print_response	: print_response
+					}])
 				}
 			//})
 		}
 
 
 	return container
-}//end build_widget
+};//end  build_widget
 
 
 
@@ -235,9 +248,9 @@ const print_response = (container, api_response) => {
 
 	// clean (eraser)
 		const eraser = ui.create_dom_element({
-			element_type : 'span',
-			class_name 	 : "button reset eraser",
-			parent 		 : container
+			element_type	: 'span',
+			class_name		: "button reset eraser",
+			parent			: container
 		})
 		eraser.addEventListener("mouseup", function(e){
 			e.stopPropagation();
@@ -249,24 +262,24 @@ const print_response = (container, api_response) => {
 
 	// msg
 		const msg = ui.create_dom_element({
-			element_type : 'div',
-			class_name 	 : "",
-			parent 		 : container,
-			inner_html 	 : api_response.msg
+			element_type	: 'div',
+			class_name		: "",
+			parent			: container,
+			inner_html		: api_response.msg.replace(/\\n/g, "<br>")
 		})
 
 	// json response result
 		const result = ui.create_dom_element({
-			element_type : 'pre',
-			class_name 	 : "",
-			parent 		 : container,
-			inner_html 	 : JSON.stringify(api_response, null, " ").replace(/\\n/g, "<br>")
+			element_type	: 'pre',
+			class_name		: "",
+			parent			: container,
+			inner_html		: JSON.stringify(api_response, null, " ").replace(/\\n/g, "<br>")
 		})
 
 	container.classList.remove("preload")
 
 	return container
-}//end print_response
+};//end  print_response
 
 
 
@@ -278,10 +291,8 @@ const buttons = async function(self) {
 
 	const buttons = []
 
-	
-
 	return buttons
-}//end buttons
+};//end  buttons
 
 
 
@@ -292,26 +303,26 @@ export const build_form = async function(widget_object) {
 
 	const self = this
 
-		console.log("widget_object:",widget_object);  
 
 	const trigger			= widget_object.trigger
 	const body_info			= widget_object.body_info
 	const body_response		= widget_object.body_response
 	const print_response	= widget_object.print_response
+	const confirm_text		= widget_object.confirm_text
 
-	const inputs 			= widget_object.inputs
+	const inputs			= widget_object.inputs || []
 
-	console.log("body_info:",body_info);
+
 	// create the form
 		const form_container = ui.create_dom_element({
 			element_type : "form",
-			class_name 	 : "form_container",			
+			class_name 	 : "form_container",
 			parent 		 : body_info
 		})
 		form_container.addEventListener("submit", async function(e){
 			e.preventDefault()
 
-			if (confirm( (get_label["seguro"] || "Sure?") )) {
+			if ( confirm( (confirm_text || get_label["seguro"] || "Sure?") ) ) {
 
 				// check mandatory values
 					for (let i = 0; i < input_nodes.length; i++) {
@@ -324,7 +335,7 @@ export const build_form = async function(widget_object) {
 
 				// submit data
 					form_container.classList.add("lock")
-					body_response.classList.add("preload")			
+					body_response.classList.add("preload")
 
 					// colect values from inputs
 					const values = input_nodes.map((el)=>{
@@ -336,7 +347,7 @@ export const build_form = async function(widget_object) {
 
 					const options = (widget_object.trigger.options)
 						? Object.assign(widget_object.trigger.options, values)
-						: values			
+						: values
 
 
 					// data_manager
@@ -347,19 +358,19 @@ export const build_form = async function(widget_object) {
 							options 	: options
 						}
 					})
-					// console.log("api_response:",api_response);
+					// *----------console.log("api_response:",api_response); return
 
 					print_response(body_response, api_response)
 
 					form_container.classList.remove("lock")
 					body_response.classList.remove("preload")
 			}
-		})	
+		})
 
 	// form inputs
 		const input_nodes = []
 		for (let i = 0; i < inputs.length; i++) {
-			
+
 			const input = inputs[i]
 
 			const class_name = input.mandatory
@@ -367,13 +378,16 @@ export const build_form = async function(widget_object) {
 				: ""
 
 			const input_node = ui.create_dom_element({
-				element_type : "input",
-				type 		 : input.type,
-				name 		 : input.name,
-				placeholder  : input.label,
-				class_name 	 : class_name,
-				parent 		 : form_container
+				element_type	: "input",
+				type			: input.type,
+				name			: input.name,
+				placeholder		: input.label,
+				class_name		: class_name,
+				parent			: form_container
 			})
+			if (input.value) {
+				input_node.value = input.value
+			}
 			input_node.addEventListener("keyup", function(){
 				if (this.value.length>0) {
 					this.classList.remove("empty")
@@ -385,10 +399,10 @@ export const build_form = async function(widget_object) {
 
 	// button submit
 		const button_submit = ui.create_dom_element({
-			element_type : "button",
-			class_name 	 : "light",
-			text_content : "OK",
-			parent 		 : form_container
+			element_type	: "button",
+			class_name		: "light",
+			text_content	: "OK",
+			parent			: form_container
 		})
 		button_submit.addEventListener("click", function(){
 			// if (confirm( (get_label["seguro"] || "Sure?") )) {
@@ -403,8 +417,6 @@ export const build_form = async function(widget_object) {
 			// }
 		})
 
-		
+
 	return form_container
-}//end build_form
-
-
+};//end  build_form

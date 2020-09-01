@@ -465,12 +465,12 @@ if($mode=='download_file') {
 															 'list',
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo);
-		$propiedades = $component_image->get_propiedades();
-		if (isset($propiedades->target_filename)) {
+		$properties = $component_image->get_properties();
+		if (isset($properties->target_filename)) {
 			
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename, true);
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename, true);
 			$component 		= component_common::get_instance($modelo_name,
-															 $propiedades->target_filename,
+															 $properties->target_filename,
 															 $parent,
 															 'list',
 															 DEDALO_DATA_LANG,

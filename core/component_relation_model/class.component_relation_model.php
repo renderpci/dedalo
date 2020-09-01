@@ -84,11 +84,11 @@ class component_relation_model extends component_relation_common {
 			return $this->ar_target_section_tipo;
 		}
 
-		$target_mode = isset($this->propiedades->target_mode) ? $this->propiedades->target_mode : null;
+		$target_mode = isset($this->properties->target_mode) ? $this->properties->target_mode : null;
 		switch ($target_mode) {
 			case 'free':
 				# Defined in structure
-				$ar_target_section_tipo = (array)$this->propiedades->target_values;
+				$ar_target_section_tipo = (array)$this->properties->target_values;
 				break;
 
 			default:

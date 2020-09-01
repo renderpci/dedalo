@@ -25,7 +25,7 @@ export const component_iri = function(){
 	this.node
 
 	return true
-}//end component_iri
+};//end component_iri
 
 
 
@@ -35,25 +35,27 @@ export const component_iri = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_iri.prototype.init 	 			= component_common.prototype.init
-	component_iri.prototype.build 	 			= component_common.prototype.build
-	component_iri.prototype.render 				= common.prototype.render
-	component_iri.prototype.refresh 			= common.prototype.refresh
-	component_iri.prototype.destroy 	 		= common.prototype.destroy
+	component_iri.prototype.init				= component_common.prototype.init
+	component_iri.prototype.build				= component_common.prototype.build
+	component_iri.prototype.render				= common.prototype.render
+	component_iri.prototype.refresh				= common.prototype.refresh
+	component_iri.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_iri.prototype.save 	 			= component_common.prototype.save
+	component_iri.prototype.save				= component_common.prototype.save
 	component_iri.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_iri.prototype.update_datum 		= component_common.prototype.update_datum
-	component_iri.prototype.change_value 		= component_common.prototype.change_value
+	component_iri.prototype.update_datum		= component_common.prototype.update_datum
+	component_iri.prototype.change_value		= component_common.prototype.change_value
+	component_iri.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_iri.prototype.list 				= render_component_iri.prototype.list
-	component_iri.prototype.edit 				= render_component_iri.prototype.edit
+	component_iri.prototype.mini				= render_component_iri.prototype.mini
+	component_iri.prototype.list				= render_component_iri.prototype.list
+	component_iri.prototype.edit				= render_component_iri.prototype.edit
 	component_iri.prototype.edit_in_list		= render_component_iri.prototype.edit
 	component_iri.prototype.tm					= render_component_iri.prototype.edit
-	component_iri.prototype.search 				= render_component_iri.prototype.search
-	component_iri.prototype.change_mode 		= component_common.prototype.change_mode
+	component_iri.prototype.search				= render_component_iri.prototype.search
+	component_iri.prototype.change_mode			= component_common.prototype.change_mode
 
 
 
@@ -63,7 +65,7 @@ export const component_iri = function(){
 // component_iri.prototype.build = function() {
 
 // 	return true
-// }//end build
+// };//end build
 
 
 
@@ -80,7 +82,7 @@ component_iri.prototype.open_iri = function(component_obj) {
 	window.open(iri, '_blank')
 
 	return true
-}//end open_iri
+};//end open_iri
 
 
 
@@ -136,7 +138,4 @@ component_iri.prototype.set_value = function(node, key) {
 	const value = (title_value.length > 0 || iri_value.length > 0) ? {iri 	: iri_value, title	: title_value}: null
 
 	return value
-}//end set_value
-
-
-
+};//end set_value

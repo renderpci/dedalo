@@ -135,7 +135,7 @@
 				$html .= " [$target_portal_tipo]";
 			}
 			$html .= '</option>';
-			if(!empty($button_propiedades->additional_component_tipo)) foreach ($button_propiedades->additional_component_tipo as $current_tipo) {
+			if(!empty($button_properties->additional_component_tipo)) foreach ($button_properties->additional_component_tipo as $current_tipo) {
 				$html .= '<option value="'.$current_tipo.'">';
 				$html .= RecordObj_dd::get_termino_by_tipo($current_tipo);
 				if(SHOW_DEVELOPER===true) {
@@ -191,9 +191,9 @@
 		$section = section::get_instance($temp_id, $temp_section_tipo, 'edit');
 		$section->get_dato(); // 'get_dato' force update section->save_handler (!)
 
-		# Add custom layout map defined in propiedades of current component portal
+		# Add custom layout map defined in properties of current component portal
 		if (!empty($custom_layout_map)) {
-			$section->layout_map = $custom_layout_map;	// Inject custom layout map fron propiedades
+			$section->layout_map = $custom_layout_map;	// Inject custom layout map fron properties
 		}
 		$section->show_inspector = (bool)false;
 		

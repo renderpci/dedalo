@@ -16,7 +16,35 @@
 export const render_component_filter_records = function() {
 
 	return true
-}//end render_component_filter_records
+};//end render_component_filter_records
+
+
+/**
+* LIST
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_filter_records.prototype.min = function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_min(self)
+
+	// Value as string
+		const value_string = value.join(' | ')
+
+	// Set value
+		wrapper.textContent = value_string
+
+
+	return wrapper
+};//end min
 
 
 
@@ -48,7 +76,7 @@ render_component_filter_records.prototype.list = function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -87,7 +115,7 @@ render_component_filter_records.prototype.edit = async function(options={render_
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -180,7 +208,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -261,7 +289,7 @@ const render_content_data = async function(self) {
 
 
 	return content_data
-}//end render_content_data
+};//end render_content_data
 
 
 
@@ -288,7 +316,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -314,7 +342,7 @@ const validate_value = (value) => {
 	}
 
 	return safe_values
-}//end validate_value
+};//end validate_value
 
 
 
@@ -370,5 +398,4 @@ const get_input_element = (i, datalist_item, inputs_container, self) => {
 
 
 	return li
-}//end get_input_element
-
+};//end get_input_element

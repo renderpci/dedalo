@@ -84,7 +84,7 @@ class component_number extends component_common {
 
 	/*
 	* SET_FORMAT_FORM_TYPE
-	* Format the dato into the standard format or the propiedades format of the current intance of the component
+	* Format the dato into the standard format or the properties format of the current intance of the component
 	*/
 	public function set_format_form_type( $dato_value ) {
 
@@ -92,11 +92,11 @@ class component_number extends component_common {
 			return $dato_value;
 		}
 
-		$propiedades = $this->get_propiedades();
-		if(empty($propiedades->type)){
+		$properties = $this->get_properties();
+		if(empty($properties->type)){
 			return (float)$dato_value;
 		}else{
-			foreach ($propiedades->type as $key => $value) {
+			foreach ($properties->type as $key => $value) {
 
 				switch ($key) {
 
@@ -117,8 +117,8 @@ class component_number extends component_common {
 						break;
 				}
 
-			}//end foreach ($propiedades->type as $key => $value)
-		}//end if(empty($propiedades->type))
+			}//end foreach ($properties->type as $key => $value)
+		}//end if(empty($properties->type))
 
 		return $dato_value;
 	}//end set_format_form_type
@@ -127,7 +127,7 @@ class component_number extends component_common {
 
 	/*
 	* NUMBER_TO_STRING
-	* Format the dato into the standard format or the propiedades format of the current intance of the component
+	* Format the dato into the standard format or the properties format of the current intance of the component
 	*/
 	public function number_to_string( $dato_value ) {
 
@@ -135,11 +135,11 @@ class component_number extends component_common {
 			return $dato_value;
 		}
 
-		$propiedades = $this->get_propiedades();
-		if(empty($propiedades->type)){
+		$properties = $this->get_properties();
+		if(empty($properties->type)){
 			return (string)$dato_value;
 		}else{
-			foreach ($propiedades->type as $key => $value) {
+			foreach ($properties->type as $key => $value) {
 
 				switch ($key) {
 					case 'int':
@@ -160,8 +160,8 @@ class component_number extends component_common {
 						break;
 				}
 
-			}//end foreach ($propiedades->type as $key => $value)
-		}//end if(empty($propiedades->type))
+			}//end foreach ($properties->type as $key => $value)
+		}//end if(empty($properties->type))
 
 		return $dato_value;
 	}//end number_to_string
@@ -207,10 +207,12 @@ class component_number extends component_common {
 
 				$query_object_one = clone $query_object;
 					$query_object_one->operator = '>=';
+					$first_val  = str_replace(',', '.', $first_val);
 					$query_object_one->q_parsed	= '\''.$first_val.'\'';
 
 				$query_object_two = clone $query_object;
 					$query_object_two->operator = '<=';
+					$second_val  = str_replace(',', '.', $second_val);
 					$query_object_two->q_parsed	= '\''.$second_val.'\'';
 
 				// Return an array instead object
@@ -247,6 +249,7 @@ class component_number extends component_common {
 			case (substr($q, 0, 2)==='>='):
 				$operator = '>=';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
@@ -254,6 +257,7 @@ class component_number extends component_common {
 			case (substr($q, 0, 2)==='<='):
 				$operator = '<=';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
@@ -261,6 +265,7 @@ class component_number extends component_common {
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
@@ -268,6 +273,7 @@ class component_number extends component_common {
 			case (substr($q, 0, 1)==='<'):
 				$operator = '<';
 				$q_clean  = str_replace($operator, '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
@@ -275,6 +281,7 @@ class component_number extends component_common {
 			default:
 				$operator = '=';
 				$q_clean  = str_replace('+', '', $q);
+				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = '@>';
 				$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
@@ -327,4 +334,3 @@ class component_number extends component_common {
 
 
 }//end component_number
-?>

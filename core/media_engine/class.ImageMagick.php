@@ -40,7 +40,7 @@ class ImageMagick {
 	* @param $mode (str 'edit,list,..')
 	* @param $f (str filename)
 	*/
-	public static function get_thumb( $mode, $f, $verify=true, $initial_media_path) {
+	public static function get_thumb($mode, $f, $verify=true, $initial_media_path='') {
 
 		if(empty($f)) throw new Exception("Error Processing Request. Few arguments", 1);
 
@@ -108,7 +108,7 @@ class ImageMagick {
 	* @param $source_file (full sourcefile path)
 	* @param $target_file (full target thumb file path)
 	*/
-	public static function dd_thumb( $mode, $source_file, $target_file, $dimensions=false, $initial_media_path) {
+	public static function dd_thumb($mode, $source_file, $target_file, $dimensions=false, $initial_media_path='') {
 
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
