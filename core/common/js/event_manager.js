@@ -40,7 +40,7 @@ const event_manager_class = function(){
 
 		// return the token to save into the events_tokens propertie inside the caller instance
 			return token
-	}//end subscribe
+	};//end  subscribe
 
 
 
@@ -58,7 +58,7 @@ const event_manager_class = function(){
 
 		// return the new array without the events
 			return result
-	}//end unsubscribe
+	};//end  unsubscribe
 
 
 
@@ -84,7 +84,7 @@ const event_manager_class = function(){
 			const result = current_events.map(current_event => current_event.callback(data))
 			return result
 		}
-	}//end publish
+	};//end  publish
 
 
 
@@ -95,11 +95,35 @@ const event_manager_class = function(){
 	this.get_events = function() {
 
 		return this.events
-	}//end get_events
+	};//end  get_events
 
 
 
-}//end event_manager
+	/**
+	* WHEN_IN_DOM
+	* Exec a callback when node element is placed in the DOM (then is possible to know their size, etc.)
+	* Useful to render leaflet maps and so forth
+	* @return mutation observer
+	*/
+	this.when_in_dom = function(node, callback) {
+
+		const observer = new MutationObserver(function(mutations) {
+			if (document.contains(node)) {
+				// console.log("It's in the DOM!");
+				observer.disconnect();
+
+				callback()
+			}
+		});
+
+		observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
+
+		return observer
+	};//end  when_in_dom
+
+
+
+};//end  event_manager
 
 
 
@@ -116,6 +140,3 @@ export const event_manager = new event_manager_class()
 * iframes calling as parent.window
 */
 window.event_manager = event_manager
-
-
-

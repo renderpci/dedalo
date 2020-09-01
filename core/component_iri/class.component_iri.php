@@ -157,7 +157,7 @@ class component_iri extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -165,13 +165,7 @@ class component_iri extends component_common {
 
 		$valor = $this->get_valor($lang);
 		$valor = strip_tags($valor); // Removes the span tag used in list mode
-		/*
-		$previous_modo = $this->get_modo();
-		$this->set_modo('list'); // Force list mode
-		$valor = $this->get_html();
-		# Restore modo after
-		$this->set_modo($previous_modo);
-		*/
+
 		if(SHOW_DEBUG===true) {
 			#return "DATE: ".$valor;
 		}

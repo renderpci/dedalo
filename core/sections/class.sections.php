@@ -18,8 +18,8 @@ class sections extends common {
 		# modo
 		protected $modo;
 
-		# context. Full context
-		public $base_context;
+		# dd_request. Full dd_request
+		public $dd_request;
 
 		# search_query_object
 		public $search_query_object;
@@ -31,7 +31,7 @@ class sections extends common {
     * Singleton pattern
     * @returns array array of section objects by key
     */
-    public static function get_instance($ar_locators=[], $search_query_object, $caller_tipo=null, $modo='edit', $lang=DEDALO_DATA_NOLAN) {
+    public static function get_instance($ar_locators=[], $search_query_object=null, $caller_tipo=null, $modo='edit', $lang=DEDALO_DATA_NOLAN) {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $modo, $lang);
 
@@ -49,10 +49,6 @@ class sections extends common {
 	* Si se le pasa sólo el section_id, se espera una ficha (modo edit)
 	*/
 	private function __construct($ar_locators, $search_query_object, $caller_tipo, $modo, $lang) {
-
-		if ($search_query_object===false) {
-			throw new Exception("Error: on construct sections : search_query_object is mandatory. ar_locators:$ar_locators, tipo:$caller_tipo, modo:$modo", 1);
-		}
 
 		if(SHOW_DEBUG===true) {
 			#$section_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
@@ -79,7 +75,7 @@ class sections extends common {
 	public function get_dato() {
 
 		$search_query_object = $this->search_query_object;
-
+			
 		$search 	= search::get_instance($search_query_object);
 		$rows_data	= $search->search();
 
@@ -95,54 +91,40 @@ class sections extends common {
 	*/
 	public function get_ar_section_tipo() {
 
-		$this->get_ar_section_tipo = $this->search_query_object->section_tipo;
+		$this->ar_section_tipo = $this->search_query_object->section_tipo;
 
-		return $this->get_ar_section_tipo;
+		return $this->ar_section_tipo;
 	}//end get_ar_section_tipo
 
 
 
 	/**
-	* GET_SQO_CONTEXT
-	* @return
-	*//*
-	public function get_sqo_context() {
-
-		$sqo_context = new stdClass();
-
-		$show = [];
-
-		$section_tipo 	= $this->tipo;
-		$section_id 	= $this->section_id;
-		$mode 			= $this->modo;
-		$lang 			= $this->lang;
-
-
-		// Records_html. Render search form html using search.
-		// We know the current record id but we search like a list filtered by id for maintain always the same criterion
-			$self_locator = new locator();
-				$self_locator->set_section_tipo($section_tipo);
-				$self_locator->set_section_id($section_id);
-
-			# SEARCH_QUERY_OBJECT . Add search_query_object to options
-			$search_query_object_options = new stdClass();
-				$search_query_object_options->limit  		= 1;
-				$search_query_object_options->offset 		= 0;
-				$search_query_object_options->filter_by_id 	= [$self_locator];
-				$search_query_object_options->tipo 			= $section_tipo;
-				$search_query_object_options->section_tipo 	= [$section_tipo];
-			#$search_query_object = $this->build_search_query_object($search_query_object_options);
-			$search_query_object = common::build_search_query_object($search_query_object_options);
-
-			# Create new options object
-			$show[] = $search_query_object;
-
-		$sqo_context->show 		= $show;
-		$sqo_context->search 	= [];
-
-		return $sqo_context;
-	}//end get_sqo_context
+	* GET_AR_ALL_SECTION_ID
+	* @return array $ar_all_section_id
 	*/
+	public function get_ar_all_section_id() {
+		
+		$ar_all_section_id = isset($this->search_query_object)
+			? (function($sqo){
+				// sqo config
+					$sqo->limit			= 0;
+					$sqo->offset		= 0;
+					$sqo->full_count	= false;
+					$sqo->select		= [];
+					$sqo->parsed		= true;
+				// search
+				$search		= search::get_instance($sqo);
+				$rows_data	= $search->search();
+
+				return array_map(function($row){
+					return (int)$row->section_id;
+				}, $rows_data->ar_records);
+			
+			})($this->search_query_object)
+			: [];
+
+		return $ar_all_section_id;
+	}//end get_ar_all_section_id
 
 
 

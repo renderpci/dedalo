@@ -91,8 +91,8 @@ class tool_description extends tool_common {
 			foreach ($ar_tipos as $current_alias_component_tipo) {
 							
 				$current_alias_component 	= new RecordObj_dd($current_alias_component_tipo);
-				$current_alias_properties 	= $current_alias_component->get_propiedades(true);
-				# Inject in propiedades current component tipo
+				$current_alias_properties 	= $current_alias_component->get_properties(true);
+				# Inject in properties current component tipo
 				$current_alias_properties->alias_component_tipo = $current_alias_component_tipo;
 
 				$current_component_tipo 	= $current_alias_properties->alias_of;				
@@ -109,8 +109,8 @@ class tool_description extends tool_common {
 																		 DEDALO_DATA_LANG,
 																		 $this->section_tipo);
 
-					$current_component->set_propiedades($current_alias_properties);
-						#dump($current_component->get_propiedades(), ' current_component ++ '.to_string($modelo_name));
+					$current_component->set_properties($current_alias_properties);
+						#dump($current_component->get_properties(), ' current_component ++ '.to_string($modelo_name));
 
 					#$ar_components[] = $current_component;
 					$element = new stdClass();

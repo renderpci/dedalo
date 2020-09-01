@@ -18,7 +18,7 @@
 export const render_section_record = function() {
 
 	return true
-}//end render_section_record
+};//end render_section_record
 
 
 
@@ -34,28 +34,28 @@ render_section_record.prototype.edit = async function(options={render_level:'ful
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.component.build_wrapper_edit(self, {
-			label 		 : null,
-			content_data : current_content_data
+			label			: null,
+			content_data	: content_data
 		})
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
 /**
-* CONTENT_DATA_EDIT
-* @return DOM node content_data_edit
+* GET_CONTENT_DATA_EDIT
+* @return DOM node get_content_data_edit
 */
-const content_data_edit = async function(self) {
+const get_content_data_edit = async function(self) {
 
 	const ar_instances = await self.get_ar_instances()
 
@@ -72,12 +72,12 @@ const content_data_edit = async function(self) {
 				continue;
 			}
 
-			const current_instance 		= ar_instances[i]
-			const current_instance_node = current_instance.node[0] || await current_instance.render()
+			const current_instance		= ar_instances[i]
+			const current_instance_node	= current_instance.node[0] || await current_instance.render()
 
 			// get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper
-			
+
 			// if the item has the parent the section_tipo is direct children of the section_record
 			// else we has other item parent
 			if(parent_grouper===self.section_tipo || self.mode==="list"){
@@ -90,12 +90,12 @@ const content_data_edit = async function(self) {
 					if (current_instance.model==='component_filter') {
 
 						ui.place_element({
-							source_node 		: current_instance_node,
-							source_instance 	: self,
-							target_instance 	: self.caller.inspector,
-							container_selector 	: ".project_container",
-							target_selector 	: ".wrapper_component.component_filter",
-							place_mode 			: 'replace' // add | replace
+							source_node			: current_instance_node,
+							source_instance		: self,
+							target_instance		: self.caller.inspector,
+							container_selector	: ".project_container",
+							target_selector		: ".wrapper_component.component_filter",
+							place_mode			: 'replace' // add | replace
 						})
 
 						continue;
@@ -138,7 +138,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -152,29 +152,34 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 	const self = this
 
-	const ar_instances = await self.get_ar_instances()
+	const ar_instances = await self.get_ar_row_instances()
 
+// const ar_instances = await self.get_ar_instances()
+// console.log("ar_instances------------", ar_instances);
 	const fragment = new DocumentFragment()
 
 	// section_record wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			id 				: self.id,
+			id				: self.id,
 			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
 
 	// id column
-		const id_column = build_id_column(self)
-		fragment.appendChild(id_column)
+		if (self.caller.model==='section' || self.caller.mode==='edit') {
+			const id_column = build_id_column(self)
+			fragment.appendChild(id_column)
+		}
 
 	// regular columns
-		let n_colums 					= 0
-		let n_relation_columns 			= 0
-		const ar_grid_columns 			= [] // remember add id column
-		const components_with_relations = get_components_with_subcolumns()
+		let n_colums					= 0
+		let n_relation_columns			= 0
+		const ar_grid_columns			= [] // remember add id column
+		const components_with_relations	= get_components_with_subcolumns()
 
 	// loop the instances for select the parent node
 		const ar_instances_length = ar_instances.length
+		// console.log("/// ar_instances", ar_instances);
 		for (let i = 0; i < ar_instances_length; i++) {
 
 			const current_instance = ar_instances[i]
@@ -189,35 +194,58 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 				// 	self.modification_date = current_instance.data.value
 				// }
 
-			const current_instance_node = await current_instance.render()
+			if (current_instance.model==='component_portal' && self.mode==='list') {
 
-			// add
-				fragment.appendChild(current_instance_node)
+				// console.log("PORTAL -- current_instance", current_instance);
+
+				const current_instance_section_record_node = await current_instance.render()
+				// if (current_instance_section_record_node) {
+				// 	fragment.appendChild(current_instance_section_record_node.childNodes)
+				// }
+				// console.log("///// current_instance_section_record_node", current_instance_section_record_node.childNodes);
+
+				if (current_instance_section_record_node && current_instance_section_record_node.childNodes) {
+					for (let j = 0; j < current_instance_section_record_node.childNodes.length; j++) {
+						console.log("///// current_instance_section_record_node[j]", current_instance_section_record_node.childNodes[j]);
+						fragment.appendChild( current_instance_section_record_node.childNodes[j] )
+					}
+				}
+
+			}else{
+				const current_instance_node = await current_instance.render()
+
+				// add
+					fragment.appendChild(current_instance_node)
+			}
+
+
 
 			// grid . add columns
-				if (components_with_relations.indexOf(current_instance.model)!==-1) {
+				// if (components_with_relations.indexOf(current_instance.model)!==-1) {
 
 					// grid . calculate recursively all children columns to set the total grid fr in current section_record
-					n_colums = recursive_relation_columns(current_instance, self.datum)
+					// n_colums = recursive_relation_columns(current_instance, self.datum)
 
-				}else{
+				// }else{
 
 					// grid
 					n_colums = 1
-				}
+				// }
 				ar_grid_columns.push(n_colums)
 
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
 	// grid css calculation assign
-		const ar_grid_columns_fr = ar_grid_columns.map(n => n + "fr");
-		const id_column_width 	 = self.caller.id_column_width // from section init
-		Object.assign(
-			wrapper.style,
-			{
-				"grid-template-columns": id_column_width + " " + ar_grid_columns_fr.join(" ")
-			}
-		)
+		// const ar_grid_columns_fr	= ar_grid_columns.map(n => n + "fr");
+		// const id_column_width		= self.caller.id_column_width // from section init
+		// Object.assign(
+		// 	wrapper.style,
+		// 	{
+		// 		// "grid-template-columns": id_column_width + " " + ar_grid_columns_fr.join(" ")
+		// 		"grid-template-columns": id_column_width + " repeat("+(ar_grid_columns.length)+", 1fr)",
+		// 	}
+		// )
+
 
 	// component_info
 		const component_info = self.get_component_info()
@@ -243,7 +271,7 @@ render_section_record.prototype.list = async function(options={render_level : 'f
 
 
 	return wrapper
-}//end render_section_record.prototype.list
+};//end render_section_record.prototype.list
 
 
 
@@ -256,30 +284,33 @@ const build_id_column = function(self) {
 
 	const permissions = self.caller.permissions
 
+	// offset
+		const offset = self.offset
+
 	// id_column
 		const id_column = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'id_column'
+			class_name		: 'id_column'
 		})
 
 	// edit_line
 		const edit_line = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'edit_line',
-			parent 			: id_column
+			class_name		: 'edit_line',
+			parent			: id_column
 		})
 
 		// section id
 			const section_id_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'section_id',
-				text_content 	: self.section_id,
-				parent 			: edit_line
+				text_content	: self.section_id,
+				parent			: edit_line
 			})
 
 		// initiator. Caller section defined
 			const initiator = self.caller.initiator || false
-		
+
 		// button
 		switch(true) {
 
@@ -288,13 +319,13 @@ const build_id_column = function(self) {
 					const link_button = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button link',
-						parent 			: edit_line
+						parent			: edit_line
 					})
 					link_button.addEventListener("click", function(e){
 						// top window event
 						top.event_manager.publish('initiator_link_' + initiator, {
-							section_tipo : self.section_tipo,
-							section_id 	 : self.section_id
+							section_tipo	: self.section_tipo,
+							section_id		: self.section_id
 						})
 					})
 				// button edit (pen)
@@ -302,15 +333,20 @@ const build_id_column = function(self) {
 						const edit_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button edit',
-							parent 			: edit_line
+							parent			: edit_line
 						})
 						edit_button.addEventListener("click", async function(e){
 							// navigate link
-								event_manager.publish('user_action', {
-									tipo 		: self.section_tipo,
-									section_id 	: self.section_id,
-									mode 		: 'edit'
-								})
+								const user_action_options = {
+									tipo		: self.section_tipo,
+									section_id	: self.section_id,
+									model		: self.caller.model,
+									mode		: 'edit'
+								}
+								if(SHOW_DEBUG===true) {
+									console.log("// section_record build_id_column user_action_options initiator component:",user_action_options);
+								}
+								event_manager.publish('user_action', user_action_options)
 
 							// detail_section
 								// ( async () => {
@@ -373,16 +409,16 @@ const build_id_column = function(self) {
 					const edit_button_tm = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button eye',
-						parent 			: edit_line
+						parent			: edit_line
 					})
 					edit_button_tm.addEventListener("click", function(e){
 						// publish event
 						event_manager.publish('tm_edit_record', {
-							tipo 		: self.section_tipo,
-							section_id 	: self.section_id,
-							matrix_id 	: self.matrix_id,
-							date 		: self.modification_date || null,
-							mode 		: 'tm'
+							tipo		: self.section_tipo,
+							section_id	: self.section_id,
+							matrix_id	: self.matrix_id,
+							date		: self.modification_date || null,
+							mode		: 'tm'
 						})
 					})
 				break
@@ -393,28 +429,47 @@ const build_id_column = function(self) {
 						const edit_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button edit',
-							parent 			: edit_line
+							parent			: edit_line
 						})
 						edit_button.addEventListener("click", function(e){
 							// edit_record(this, self)
-							event_manager.publish('user_action', {
-								tipo 		: self.section_tipo,
-								section_id 	: self.section_id,
-								mode 		: 'edit'
-							})
+
+							const sqo = {
+								typo			: "sqo",
+								mode			: 'edit',
+								section_tipo	: [self.section_tipo],
+								filter			: null,
+								limit			: 1,
+								offset			: offset,
+								select			: [],
+								full_count		: false
+							}
+
+							const user_action_options = {
+								tipo		: self.section_tipo,
+								// section_id	: null,//self.section_id,
+								// offset		: offset,
+								// model		: 'section',
+								mode		: 'edit',
+								sqo			: sqo
+							}
+							if(SHOW_DEBUG===true) {
+								console.log("// section_record build_id_column user_action_options default:",user_action_options);
+							}
+							event_manager.publish('user_action', user_action_options, 'patata')
 						})
 					}
 				// delete_line
 					if (permissions>1 && (initiator && initiator.indexOf('component_')!==-1)) {
 						const delete_line = ui.create_dom_element({
 							element_type	: 'div',
-							class_name 		: 'delete_line',
-							parent 			: id_column
+							class_name		: 'delete_line',
+							parent			: id_column
 						})
 						const delete_button = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button remove',
-							parent 			: delete_line
+							parent			: delete_line
 						})
 						delete_button.addEventListener("click", function(e){
 							delete_record(this, self)
@@ -422,7 +477,7 @@ const build_id_column = function(self) {
 					}
 				break
 		}
-	
+
 
 	return id_column
 };//end build_id_column
@@ -435,8 +490,8 @@ const build_id_column = function(self) {
 */
 const recursive_relation_columns = function(current_instance, datum) {
 
-	let n_relation_columns 	  = 0
-	const component_childrens = datum.context.filter(instance => instance.parent===current_instance.tipo)
+	let n_relation_columns		= 0
+	const component_childrens	= datum.context.filter(instance => instance.parent===current_instance.tipo)
 
 	if(component_childrens.length>0) {
 
@@ -456,7 +511,7 @@ const recursive_relation_columns = function(current_instance, datum) {
 	}
 
 	return n_relation_columns
-}//end recursive_relation_columns
+};//end recursive_relation_columns
 
 
 
@@ -465,6 +520,7 @@ const recursive_relation_columns = function(current_instance, datum) {
 * Return an array of component models with relations (equivalent to method class.component_relation_common.php)
 */
 const get_components_with_subcolumns = () => {
+
 	return [
 			// 'component_autocomplete',
 			//'component_autocomplete_hi',
@@ -483,99 +539,7 @@ const get_components_with_subcolumns = () => {
 			//'component_select',
 			//'component_select_lang'
 	]
-}//end get_components_with_subcolumns
-
-
-
-// /**
-// * EDIT_RECORD
-// * Navigate to selected record in edit mode
-// */
-// const edit_record = (button, self) => {
-
-	// 	// old mode (new url)
-	// 		const url = `?t=${self.section_tipo}&id=${self.section_id}`
-	// 		return window.location.href = url;
-
-	// 	// section element
-	// 		const element = {
-	// 			model 		 	: self.caller.model,
-	// 			section_tipo 	: self.section_tipo,
-	// 			section_id 		: self.section_id,
-	// 			mode 			: "edit",
-	// 			lang 			: self.lang,
-	// 			sqo_context 	: {
-	// 				show : [
-	// 					{
-	// 						typo : "sqo",
-	// 						section_tipo : [self.section_tipo],
-	// 						filter : false,
-	// 						filter_by_locators : [
-	// 							{
-	// 								section_tipo : self.section_tipo,
-	// 								section_id : self.section_id
-	// 							}
-	// 	                	],
-	// 						select : [],
-	// 						limit : 1,
-	// 						offset : 0,
-	// 						full_count : false
-	// 					},
-	// 					{
-	// 						typo : "ddo",
-	// 						type : "section",
-	// 						model : "section",
-	// 						tipo : self.section_tipo,
-	// 						section_tipo : self.section_tipo,
-	// 						mode : "edit"
-	// 					}
-	// 				]
-	// 			}
-	// 		}
-	// 		console.log("element:",element);
-
-	// 	// update page node
-	// 		const update_page = async () => {
-
-	// 			// const main = document.getElementById("main")
-	// 			// 	  main.classList.add("loading")
-
-	// 			// page instance (recycle actual)
-	// 				const page = await get_instance({
-	// 					model : 'page'
-	// 				})
-
-	// 				page.elements = [element]
-	// 					console.log("page:",page);
-
-	// 			// page instance build and render
-	// 				//const build 	= await page.build()
-	// 				//const wrapper_page 	= await page.render()
-	// 				const refresh = await page.refresh()
-	// 					console.log("refresh:",refresh);
-
-	// 				if (refresh===true) {
-	// 					const state = {'page_id': page.id}
-	// 					const title = ''
-	// 					const url 	= "?t=test65"//window.location.href
-
-	// 					history.pushState(state, title, url)
-	// 				}
-
-	// 			// main add and restore class
-	// 				// while (main.firstChild) {
-	// 				// 	main.removeChild(main.firstChild);
-	// 				// }
-	// 				// main.appendChild(wrapper_page)
-	// 		 	// 	main.classList.remove("loading","hide")
-
-	// 		}
-	// 		update_page()
-
-
-	// 	return false
-// }//end edit_record
-
+};//end get_components_with_subcolumns
 
 
 /**
@@ -589,8 +553,5 @@ const delete_record = (button, self) => {
 		section_id: ${self.section_id}`)
 
 
-
-
-
 	return false
-}//end delete_record
+};//end delete_record

@@ -4,12 +4,12 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-	$section_tipo 		= $this->section_tipo;
-	$lang 				= $this->lang;
-	$tipo 				= $this->get_tipo();
-	$properties 		= $this->get_propiedades() ?? new stdClass();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$section_tipo	= $this->section_tipo;
+	$lang			= $this->lang;
+	$tipo			= $this->get_tipo();
+	$properties		= $this->get_properties() ?? new stdClass();
 
 
 
@@ -24,23 +24,12 @@
 				break;
 
 			default:
-				$sqo_context = true; // overwrite default false to force calculate
-
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $sqo_context);					
-					// add records_mode to properties, if not already defined 
-					if (!isset($current_context->properties->source->records_mode)) {
-						if (!property_exists($current_context, 'properties')) {
-							$current_context->properties = new stdClass();
-						}
-						if (!property_exists($current_context->properties, 'source')) {
-							$current_context->properties->source = new stdClass();
-						}
-						$current_context->properties->source->records_mode = 'list';
-					}
+					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
+
 					$context[] = $current_context;
 
-				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
+				// subcontext from element layout_map items (from_parent, parent_grouper)
 					$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
 					foreach ($ar_subcontext as $current_context) {
 						$context[] = $current_context;
@@ -60,12 +49,11 @@
 
 		if (!empty($dato)) {
 
-			$value  	= $this->get_dato_paginated();
+			$value		= $this->get_dato_paginated();
 			$section_id	= $this->get_parent();
-			$limit 		= ($modo==='list')
-				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
-				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
-		
+			$limit		= $this->pagination->limit;
+			$offset		= $this->pagination->offset;
+
 			// data item
 				$item = $this->get_data_item($value);
 					$item->parent_tipo 			= $tipo;
@@ -74,7 +62,7 @@
 						$pagination = new stdClass();
 							$pagination->total	= count($dato);
 							$pagination->limit 	= $limit;
-							$pagination->offset = $this->pagination->offset ?? 0;
+							$pagination->offset = $offset;
 					$item->pagination = $pagination;
 
 				$data[] = $item;
@@ -83,11 +71,20 @@
 				$ar_subdata = $this->get_ar_subdata($value);
 
 			// subdata add
+			if ($modo==='list') {
 				foreach ($ar_subdata as $current_data) {
-					$current_data->parent_tipo 			= $tipo;
-					$current_data->parent_section_id 	= $section_id;
+
+					$current_data->parent_tipo			= $tipo;
+					$current_data->parent_section_id	= $section_id;
+
 					$data[] = $current_data;
 				}
+			}else{
+				foreach ($ar_subdata as $current_data) {
+					$data[] =$current_data;
+				}
+			}
+
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 

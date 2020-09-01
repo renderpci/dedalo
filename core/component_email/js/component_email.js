@@ -31,7 +31,7 @@ export const component_email = function(){
 	this.tools
 
 	return true
-}//end component_email
+};//end component_email
 
 
 
@@ -41,25 +41,27 @@ export const component_email = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_email.prototype.init 	 			= component_common.prototype.init
-	component_email.prototype.build 	 		= component_common.prototype.build
-	component_email.prototype.render 			= common.prototype.render
-	component_email.prototype.refresh 			= common.prototype.refresh
-	component_email.prototype.destroy 	 		= common.prototype.destroy
+	component_email.prototype.init				= component_common.prototype.init
+	component_email.prototype.build				= component_common.prototype.build
+	component_email.prototype.render			= common.prototype.render
+	component_email.prototype.refresh			= common.prototype.refresh
+	component_email.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_email.prototype.save 	 			= component_common.prototype.save
+	component_email.prototype.save				= component_common.prototype.save
 	component_email.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_email.prototype.update_datum 		= component_common.prototype.update_datum
-	component_email.prototype.change_value 		= component_common.prototype.change_value
+	component_email.prototype.update_datum		= component_common.prototype.update_datum
+	component_email.prototype.change_value		= component_common.prototype.change_value
+	component_email.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_email.prototype.list 				= render_component_email.prototype.list
-	component_email.prototype.edit 				= render_component_email.prototype.edit
+	component_email.prototype.mini				= render_component_email.prototype.mini
+	component_email.prototype.list				= render_component_email.prototype.list
+	component_email.prototype.edit				= render_component_email.prototype.edit
 	component_email.prototype.edit_in_list		= render_component_email.prototype.edit
 	component_email.prototype.tm				= render_component_email.prototype.edit
-	component_email.prototype.search 			= render_component_email.prototype.search
-	component_email.prototype.change_mode 		= component_common.prototype.change_mode
+	component_email.prototype.search			= render_component_email.prototype.search
+	component_email.prototype.change_mode		= component_common.prototype.change_mode
 
 
 /**
@@ -101,7 +103,7 @@ component_email.prototype.verify_email = function(email_value) {
 
 
 	return valid_email;
-}//end verify_email
+};//end verify_email
 
 
 
@@ -120,7 +122,7 @@ component_email.prototype.send_email = function(component_obj) {
 	window.location.href = 'mailto:' + email
 
 	return true
-}//end send_email
+};//end send_email
 
 
 
@@ -142,6 +144,4 @@ component_email.prototype.send_multiple_email_calculation = function(component_o
 		//let mail_body = document.createElement( 'html' );
 		window.location.href = "mailto:?bcc=" + emails ; //+ "&body=" +mail_body
 	});
-}//end send_multiple_email_calculation
-
-
+};//end send_multiple_email_calculation

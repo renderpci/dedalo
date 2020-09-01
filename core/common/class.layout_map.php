@@ -17,308 +17,194 @@ class layout_map {
 	* Cases:
 	*	1. Modo 'list' : Uses childrens to build layout map
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
+	* @return array $layout_map
 	*/
-	public static function get_layout_map($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
+	public static function get_layout_map($request_options, $request_config) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
+		// $start_time=microtime(1);
+
+		// debug
+			// $bt = debug_backtrace();
+			// 	dump($bt[0], ' bt[0] ++ '.to_string($request_options->tipo));
+			// 	dump($bt[1], ' bt[1] ++ '.to_string($request_options->tipo));
 
 		$options = new stdClass();
-			$options->section_tipo 			= null;
-			$options->tipo 					= null;
-			$options->modo 					= null;
-			$options->user_id 				= navigator::get_user_id();
-			$options->view 					= 'full';
-			$options->config_context_type	= 'show';
-			$options->lang 					= null;
-			$options->add_section 			= false;
-			$options->external 				= false;
+			$options->section_tipo			= null;
+			$options->tipo					= null;
+			$options->modo					= null;
+			$options->user_id				= navigator::get_user_id();
+			$options->view					= 'full';
+			$options->request_config_type	= 'show';
+			$options->lang					= null;
+			$options->add_section			= false;
+			$options->external				= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// cache
+			static $resolved_layout_map = [];
+			$resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->modo .'_'. $options->user_id .'_'. $options->view .'_'. $options->request_config_type.'_'. $options->lang.'_'. (int)$options->add_section.'_'. (int)$options->external;
+			// $resolved_key = $options->section_tipo .'_'. $options->tipo .'_'. $options->request_config_type .'_'. $options->user_id ;
+			if (isset($resolved_layout_map[$resolved_key])) {
+			// if (isset($_SESSION['dedalo']['resolved_layout_map'][$resolved_key])) {
+
+				debug_log(__METHOD__." Returned resolved layout_map with key: ".to_string($resolved_key), logger::DEBUG);
+				// dump($resolved_layout_map[$resolved_key], ' var ++ '.to_string($resolved_key)); //die();
+				// $bt = debug_backtrace();
+				// dump($bt, ' bt ++ '.to_string()); die();
+				$layout_map = $resolved_layout_map[$resolved_key];
+				// $layout_map = $_SESSION['dedalo']['resolved_layout_map'][$resolved_key];
+
+				return $layout_map;
+			}
 
 		// madatory
 			$ar_mandatory = ['section_tipo','tipo','modo'];
 			foreach ($ar_mandatory as $current_property) {
 				if (empty($options->{$current_property})) {
-					debug_log(__METHOD__." Error. property $current_property is mandatory !".to_string(), logger::ERROR);
-					return false;
+					debug_log(__METHOD__." Error. property $current_property is mandatory for $options->tipo ". RecordObj_dd::get_termino_by_tipo($options->tipo,null,true) ." !".to_string(), logger::ERROR);
+					// dump($options, ' get_layout_map options ++ '.to_string());
+					return [];
 				}
 			}
 
 		// sort vars
-			$section_tipo 	= $options->section_tipo;
-			$tipo 			= $options->tipo;
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$modo 			= $options->modo;
-			$user_id 		= $options->user_id;
-			$view 			= $options->view;
-			$lang 			= $options->lang;
+			$section_tipo			= $options->section_tipo;
+			$tipo					= $options->tipo;
+			$model					= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$modo					= $options->modo;
+			$user_id				= $options->user_id;
+			$view					= $options->view;
+			$lang					= $options->lang ?? DEDALO_DATA_LANG;
+			$request_config_type	= $options->request_config_type;
+			$parent					= $tipo;
 
 		// properties
-			$RecordObj_dd = new RecordObj_dd($tipo);
-			$properties 	= $RecordObj_dd->get_propiedades(true);
+			// $RecordObj_dd	= new RecordObj_dd($tipo);
+			// $properties		= $RecordObj_dd->get_properties();
 
 		#dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
 
-		// 1. dd_core_api::$ar_dd_objects
-			if (isset(dd_core_api::$ar_dd_objects)) {
-				# dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '.to_string($tipo));
-				// check found dd_objects of current portal
-				$self_ar_dd_objects = array_filter(dd_core_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
-					if($item->tipo===$tipo) return false;
+		// OLD
+			// 1. dd_core_api::$ar_dd_objects
+				if (isset(dd_core_api::$ar_dd_objects)) {
+					# dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '.to_string($tipo));
+					// check found dd_objects of current portal
+					$self_ar_dd_objects = array_filter(dd_core_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
+						if($item->tipo===$tipo) return false;
 
-					if ($model==='section') {
-						if($item->section_tipo===$section_tipo) return $item;
-					}else{
-						if($item->parent===$tipo) return $item;
+						if ($model==='section') {
+							if($item->section_tipo===$section_tipo) return $item;
+						}else{
+							// dump($item->ar_sections_tipo, '  ++ $item->ar_sections_tipo - '.to_string($section_tipo));
+							// dump($item, ' $item ++ '.to_string($tipo));
+							if($item->parent===$tipo) {
+								return $item;
+							}
+							// else if(isset($item->ar_sections_tipo) && in_array($item->parent, $item->ar_sections_tipo)) {
+							// 	// $item->section_tipo = $item->parent;
+							// 	return $item;
+							// }
+						}
+					});
+					#if($tipo==='test175') dump($self_ar_dd_objects, ' self_ar_dd_objects ++ '.to_string($tipo));
+					if (!empty($self_ar_dd_objects)) {
+
+						// groupers with childrens already defined case
+							if (in_array($model, layout_map::$groupers)) {
+								return []; // stop here (!)
+							}
+
+						// layout_map
+							$layout_map = array_values($self_ar_dd_objects);
+							#$a = debug_backtrace(); error_log( print_r($a,true) );
+							debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo] key:".to_string($resolved_key), logger::DEBUG);
+							#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
+							if(SHOW_DEBUG===true) {
+								foreach ($layout_map as $current_item) {
+									$current_item->debug_from = 'calculated from dd_core_api::$ar_dd_objects ['.$tipo.'] (1)';
+								}
+							}
 					}
-				});
-				#if($tipo==='test175') dump($self_ar_dd_objects, ' self_ar_dd_objects ++ '.to_string($tipo));
-				if (!empty($self_ar_dd_objects)) {
-
-					// groupers with childrens already defined case
-						if (in_array($model, layout_map::$groupers)) {
-							return []; // stop here (!)
-						}
-
-					// layout_map
-						$layout_map = array_values($self_ar_dd_objects);
-						#$a = debug_backtrace(); error_log( print_r($a,true) );
-						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
-						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
-						if(SHOW_DEBUG===true) {
-							foreach ($layout_map as $current_item) {
-								$current_item->debug_from = 'dd_core_api::$ar_dd_objects';
-							}
-						}
 				}
-			}
-
-		// 2. search in user presets
-			if (!isset($layout_map)) {
-				$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);				
-				if (!empty($user_preset)) {
-					// layout_map
-						$layout_map = $user_preset;
-						debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo]".to_string(), logger::DEBUG);
-						//dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));
-						if(SHOW_DEBUG===true) {
-							foreach ($layout_map as $current_item) {
-								$current_item->debug_from = 'user_preset';
-							}
-						}
-				}
-			}
+			//
+			// // 2. search in user presets
+			// 	if (!isset($layout_map)) {
+			// 		$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);
+			// 		if (!empty($user_preset)) {
+			// 			// layout_map
+			// 				// $layout_map = $user_preset;
+			// 				$layout_map = [];
+			// 				foreach ($user_preset as $preset_item) {
+			// 					if ($preset_item->typo==='ddo') {
+			// 						$layout_map[] = $preset_item;
+			// 					}
+			// 				}
+			// 				debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo] key:".to_string($resolved_key), logger::DEBUG);
+			// 				//dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));
+			// 				if(SHOW_DEBUG===true) {
+			// 					foreach ($layout_map as $current_item) {
+			// 						$current_item->debug_from = 'calculated from user_preset ['.$tipo.'] (2)';
+			// 					}
+			// 				}
+			// 		}
+			// 	}
 
 		// 3. calculate from section list or related terms
 			if (!isset($layout_map)) {
-				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$ar_related = [];
-				switch ($modo) {
-					case 'list':
-					case 'portal_list':
-						if (in_array($model, self::$groupers)) {
-							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 
-						}else{
+				// $request_config  = v5 definition (related terms) and v6 definition (properties)
+				// layout_map
+				$layout_map = [];
+				foreach ($request_config as $item_request_config) {
 
-							if(isset($properties->source->config_context)){
-								// v6 definition in properties
-								$config_context = component_common::get_config_context($tipo, $options->external, $options->section_tipo);
-
-							}else{
-								// legacy case
-								# case section list is defined
-								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
-								if(isset($ar_terms[0])) {
-
-									# Use found related terms as new list
-									$current_term = $ar_terms[0];
-									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-
-								}else{
-
-									# Fallback related when section list is not defined
-									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-								}
-							}
-						}
-						break;
-
-					case 'edit':
-					default:
-						if ($model==='section') {
-							// section
-							$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
-							$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_tipo_exclude_elements=false);
-
-						}elseif (in_array($model, self::$groupers)) {
-							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-
-							// exclude elements check
-								$ar_excluded = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, 'exclude_elements', 'children', true);
-								if (isset($ar_excluded[0])) {
-									$ar_excluded_terms = RecordObj_dd::get_ar_terminos_relacionados($ar_excluded[0], $cache=true, $simple=true);
-									if (!empty($ar_excluded_terms)) {
-										$ar_related_temp = [];
-										foreach ($ar_related as $current_term) {
-											if (!in_array($current_term, $ar_excluded_terms)) {
-												$ar_related_temp[] = $current_term;
-											}
-										}
-										// overwrite var $ar_related
-										$ar_related = $ar_related_temp;
-									}
-								}
-						}else{
-							// portal, autocomplete
-							// OVERWRITTE MODO: when one component call for you own layout the mode of the component will be edit,
-							// but the components that it referenced will be in list, (autocomplete, portal that show the components inside in list)
-							$modo = isset($properties->source->records_mode) ? $properties->source->records_mode : 'list';
-							$edit_view_options ='';
-							if($view==='full') { // || $view==='view_mosaic'
-
-								if(isset($properties->source->config_context)){
-									
-									// v6 definition in properties
-									$config_context = component_common::get_config_context($tipo, $options->external, $options->section_tipo);
-
-								}else{
-
-									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-								}
-								break;
-							}else{
-								# CASE VIEW IS DEFINED
-								$ar_terms = (array)RecordObj_dd::get_ar_childrens($tipo);
-								foreach ($ar_terms as $current_term) {
-									# Locate 'edit_views' in childrens
-									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
-									if ($modelo_name!=='edit_view') continue;
-
-									$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
-									if($view===$view_name){
-										# Use related terms as new list
-										$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-										break;
-									}
-								}
-							}
-						}
-						break;
-				}//end switch $modo
-
-
-			// parse ar_related as config_context format
-				if (!isset($config_context) && !empty($ar_related)) {
-					$ar_related_clean 	 = [];
-					$target_section_tipo = $section_tipo;
-					foreach ((array)$ar_related as $key => $current_tipo) {
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						if ($modelo_name==='section') {
-							$target_section_tipo = $current_tipo; // Overwrite
-							continue;
-						}else if ($modelo_name==='section' || $modelo_name==='exclude_elements') {
-							continue;
-						}
-						$ar_related_clean[] = $current_tipo;
+					if (!is_object($item_request_config)) {
+						dump($item_request_config, ' item_request_config ++ '.to_string($tipo));
+						dump($request_config, ' request_config ++ '.to_string($tipo));
+						continue;
 					}
 
-					// build config_context_item
-					$config_context_item = new stdClass();
-						$config_context_item->type 			= 'internal';
-						$config_context_item->section_tipo 	= $target_section_tipo;
-						$config_context_item->search 		= $ar_related_clean;
-						$config_context_item->select 		= $ar_related_clean;
-						$config_context_item->show 			= $ar_related_clean;
+					if($item_request_config->typo !== 'rqo') continue;
 
-					$config_context = [$config_context_item];
-				}//end if (!isset($config_context) && !empty($ar_related))
-
-
-			// check valid config_context
-				if (empty($config_context)) {
-					$config_context = [];
-					#throw new Exception("Error Processing Request. Empty config_context", 1);
-				}
-
-
-			// layout_map
-				$layout_map = [];
-				foreach ($config_context as $current_section_config) {
-
-					$current_section_tipo = $current_section_config->section_tipo;
-
-					// section add
+					foreach ($item_request_config->section_tipo as $current_section_tipo) {
 						if ($options->add_section===true) {
-
-							$dd_object = new dd_object((object)[
-								'tipo' 			=> $current_section_tipo,
-								'section_tipo' 	=> $current_section_tipo,
-								'model' 		=> 'section',
-								'mode' 			=> $modo,
-								'lang'			=> DEDALO_DATA_NOLAN,
-								'label' 		=> RecordObj_dd::get_termino_by_tipo($current_section_tipo),
-								'parent' 		=> 'root'
-							]);
-
-							$layout_map[] = $dd_object;
-						}//end if ($options->add_section===true)
-
-					$config_context_type = $options->config_context_type;
-					foreach ($current_section_config->{$config_context_type} as $current_tipo) {
-
-						if($config_context_type==='select'){
-							$parent 		= $current_section_tipo;
-						}else{
-							$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-							$parent 		= $RecordObj_dd->get_parent();
+							$layout_map[] = layout_map::get_section_ddo($current_section_tipo, $modo, $lang);
 						}
 
-						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						// ddo_map
+							$current_ddo_map = $item_request_config->{$request_config_type}->ddo_map ?? false;
+							if ($current_ddo_map!==false) {
+								foreach ((array)$current_ddo_map as $item) {
+									// $db = debug_backtrace();	dump($db, ' $db ++ '.to_string());
+									$current_mode = isset($item->mode) ? $item->mode : $modo;
+									if(isset($item->tipo)){
+										$item = $item->tipo;
+									}
+									// dump($item, ' $item +///////-------///////////+ '.to_string());
+									$ar_ddo = is_string($item)
+										? [layout_map::get_component_ddo($request_config_type, $current_section_tipo, $item, $current_mode, $lang, $parent)]
+										: layout_map::get_f_path_ddo($item, $request_config_type, $current_section_tipo, $current_mode, $lang, $parent);
 
-
-						// common temporal excluded/mapped models *******
-							$match_key = array_search($model, common::$ar_temp_map_models);
-							if (false!==$match_key) {
-								debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
-								$model = $match_key;
-							}else if (in_array($model, common::$ar_temp_exclude_models)) {
-								debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
-								continue;
+									$layout_map = array_merge($layout_map, $ar_ddo);
+								}
+							}else{
+								debug_log(__METHOD__." Ignored not existing ddo_map for config_type: '$request_config_type' ".to_string(), logger::WARNING);
+								if ($request_config_type!=='select') {
+									dump($item_request_config, ' ERROR !!!!!!!!!!!!!!!!!! item_request_config ++ '.to_string($request_config_type));
+								}
 							}
+					}// end iterate sections
+				}//end foreach ($request_config as $item_request_config)
 
-
-						// component add
-							$dd_object = new dd_object((object)[
-								'tipo' 			=> $current_tipo,
-								'section_tipo' 	=> $current_section_tipo,
-								'model' 		=> $model,
-								'mode' 			=> $modo,
-								'parent' 		=> $parent
-							]);
-							if(!empty($lang)) $dd_object->lang = $lang;
-
-							// remove non allow components
-								#$allow_models = [
-								#	'component_input_text',
-								#	//'component_number',
-								#	//'component_autocomplete',
-								#	'section',
-								#	'area',
-								#	'area_development',
-								#	'section_group'
-								#];
-								#if (!in_array($model, $allow_models)) {
-								#	continue;
-								#}
-
-							$layout_map[] = $dd_object;
-					}//end foreach ($current_section_config->{$config_context_type} as $current_tipo)
-				}//end foreach ($config_context as $current_section_config)
+				// dump($layout_map, ' $layout_map ++ '.to_string()); die();
 
 				if(SHOW_DEBUG===true) {
-					# dump($layout_map, ' layout_map ++ '.to_string());
+					// dump($layout_map, ' layout_map ++ '.to_string());
 					foreach ($layout_map as $current_item) {
-						$current_item->debug_from = 'calculated from section list or related terms 1';
+						if (!isset($current_item->tipo)) {
+							dump($current_item, ' current_item ++ '.to_string());
+							continue;
+						}
+						$current_item->debug_label = RecordObj_dd::get_termino_by_tipo($current_item->tipo, $lang, true, true);
+						$current_item->debug_from = 'calculated from section list or related terms ['.$tipo.'] (3)';
 					}
 				}
 			}//end if (!isset($layout_map))
@@ -336,359 +222,121 @@ class layout_map {
 				}
 				$layout_map = array_values($layout_map);
 			}
+			// dump($layout_map, ' layout_map ++++++++++++ $resolved_key: '.to_string($resolved_key));
 
+		// cache
+			$resolved_layout_map[$resolved_key] = $layout_map;
+			// $_SESSION['dedalo']['resolved_layout_map'][$resolved_key] = $layout_map;
 
-		return $layout_map;
+		// dump(null, 'Time to get_layout_map '.$model.' '.$tipo.' - time: '.exec_time_unit($start_time,'ms')." ms".to_string());
+
+		return (array)$layout_map;
 	}//end get_layout_map
 
 
 
 	/**
-	* GET_LAYOUT_MAP
-	* Calculate display items to generate portal html
-	* Cases:
-	*	1. Modo 'list' : Uses childrens to build layout map
-	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
+	* GET_SECTION_DDO
+	* @return object $dd_object
 	*/
-	public static function get_layout_map__DES($request_options) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
+	public static function get_section_ddo($section_tipo, $mode, $lang) {
 
-		$options = new stdClass();
-			$options->section_tipo 	= null;
-			$options->tipo 			= null;
-			$options->modo 			= null;
-			$options->user_id 		= navigator::get_user_id();
-			$options->view 			= 'full';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// section add
+		$dd_object = new dd_object((object)[
+			'label'			=> RecordObj_dd::get_termino_by_tipo($section_tipo, $lang, true, true),
+			'tipo'			=> $section_tipo,
+			'section_tipo'	=> $section_tipo,
+			'model'			=> 'section',
+			'mode'			=> $mode,
+			'lang'			=> DEDALO_DATA_NOLAN,
+			'parent'		=> 'root',
+			'config_type'	=> 'show'
+		]);
 
-		// madatory
-			$ar_mandatory = ['section_tipo','tipo','modo'];
-			foreach ($ar_mandatory as $current_property) {
-				if (empty($options->{$current_property})) {
-					debug_log(__METHOD__." Error. property $current_property is mandatory !".to_string(), logger::ERROR);
-					return false;
-				}
-			}
-
-		// sort vars
-			$section_tipo 	= $options->section_tipo;
-			$tipo 			= $options->tipo;
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$modo 			= $options->modo;
-			$user_id 		= $options->user_id;
-			$view 			= $options->view;
-
-		// properties
-			$RecordObj_dd = new RecordObj_dd($tipo);
-			$properties 	= $RecordObj_dd->get_propiedades(true);
-
-		#dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '."[$section_tipo-$tipo]".to_string());
-
-		// 1. dd_core_api::$ar_dd_objects
-			if (isset(dd_core_api::$ar_dd_objects)) {
-				# dump(dd_core_api::$ar_dd_objects, '+++++++++++++++++++ dd_core_api::$ar_dd_objects ++ '.to_string($tipo));
-				// check found dd_objects of current portal
-				$self_ar_dd_objects = array_filter(dd_core_api::$ar_dd_objects, function($item) use($tipo, $section_tipo, $model){
-					if($item->tipo===$tipo) return false;
-
-					if ($model==='section') {
-						if($item->section_tipo===$section_tipo) return $item;
-					}else{
-						if($item->parent===$tipo) return $item;
-					}
-				});
-				#if($tipo==='test175') dump($self_ar_dd_objects, ' self_ar_dd_objects ++ '.to_string($tipo));
-				if (!empty($self_ar_dd_objects)) {
-
-					// groupers with childrens already defined case
-						if (in_array($model, layout_map::$groupers)) {
-							return []; // stop here (!)
-						}
-
-					// layout_map
-						$layout_map = array_values($self_ar_dd_objects);
-						#$a = debug_backtrace(); error_log( print_r($a,true) );
-						debug_log(__METHOD__." layout map selected from 'dd_core_api::ar_dd_objects' [$section_tipo-$tipo]".to_string(), logger::DEBUG);
-						#dump($layout_map, ' layout_map 1 ++ '.to_string($tipo));
-				}
-			}
-
-		// 2. search in user presets
-			if (!isset($layout_map)) {
-				$user_preset = layout_map::search_user_preset($tipo, $section_tipo, $user_id, $modo, $view);
-				if (!empty($user_preset)) {
-					// layout_map
-						$layout_map = $user_preset;
-						debug_log(__METHOD__." layout map calculated from user preset [$section_tipo-$tipo]".to_string(), logger::DEBUG);
-						//dump($layout_map, ' layout_map 2 ++ '.to_string($tipo));
-				}
-			}
-
-		// 3. calculate from section list or related terms
-			if (!isset($layout_map)) {
-				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$ar_related 	= [];
-				switch ($modo) {
-					case 'list':
-					case 'portal_list':
-						if (in_array($model, self::$groupers)) {
-							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-
-						}else{
-
-							if(isset($properties->source->config_context)){
-								// v6 definition in properties
-								$config_context = component_common::get_config_context($tipo, $external=false);
-
-							}else{
-								// legacy case
-								# case section list is defined
-								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
-								if(isset($ar_terms[0])) {
-
-									# Use found related terms as new list
-									$current_term = $ar_terms[0];
-									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-
-								}else{
-
-									# Fallback related when section list is not defined
-									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-								}
-							}
-						}
-						break;
-
-					case 'edit':
-					default:
-						if ($model==='section') {
-							// section
-							$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
-							$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false, $ar_tipo_exclude_elements=false);
-
-						}elseif (in_array($model, self::$groupers)) {
-							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-
-						}else{
-							// portal, autocomplete
-							// OVERWRITTE MODO: when one component call for you own layout the mode of the component will be edit,
-							// but the components that it referenced will be in list, (autocomplete, portal that show the components inside in list)
-							$modo = 'list';
-							$edit_view_options ='';
-							if($view==='full') { // || $view==='view_mosaic'
-
-								if(isset($properties->source->config_context)){
-									// v6 definition in properties
-									$config_context = component_common::get_config_context($tipo, $external=false);
-
-								}else{
-
-									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-								}
-								break;
-							}else{
-								# CASE VIEW IS DEFINED
-								$ar_terms = (array)RecordObj_dd::get_ar_childrens($tipo);
-								foreach ($ar_terms as $current_term) {
-									# Locate 'edit_views' in childrens
-									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
-									if ($modelo_name!=='edit_view') continue;
-
-									$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
-									if($view===$view_name){
-										# Use related terms as new list
-										$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-										break;
-									}
-								}
-							}
-						}
-						break;
-				}//end switch $modo
-
-
-			// parse ar_related as config_context format
-				if (!isset($config_context) && !empty($ar_related)) {
-
-					$ar_related_clean 	 = [];
-					$target_section_tipo = $section_tipo;
-					foreach ((array)$ar_related as $key => $current_tipo) {
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						if ($modelo_name==='section') {
-							$target_section_tipo = $current_tipo; // Overwrite
-							continue;
-						}else if ($modelo_name==='section' || $modelo_name==='exclude_elements') {
-							continue;
-						}
-						$ar_related_clean[] = $current_tipo;
-					}
-
-					// build config_context_item
-					$config_context_item = new stdClass();
-						$config_context_item->type 			= 'internal';
-						$config_context_item->section_tipo 	= $target_section_tipo;
-						$config_context_item->search 		= $ar_related_clean;
-						$config_context_item->select 		= $ar_related_clean;
-						$config_context_item->show 			= $ar_related_clean;
-
-					$config_context = [$config_context_item];
-				}//end if (!isset($config_context) && !empty($ar_related))
-
-
-			// layout_map
-				$layout_map = [];
-				foreach ($config_context as $current_section_config) {
-					if($current_section_config->type!=='internal') continue;
-
-					$current_section_tipo = $current_section_config->section_tipo;
-					foreach ($current_section_config->show as $current_tipo) {
-
-						$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-						$parent 		= $RecordObj_dd->get_parent();
-
-						$dd_object = new dd_object((object)[
-							'tipo' 			=> $current_tipo,
-							'section_tipo' 	=> $current_section_tipo,
-							'model' 		=> RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true),
-							'mode' 			=> $modo,
-							'parent' 		=> $parent
-						]);
-						$layout_map[] = $dd_object;
-					}
-				}
-
-			}//end if (!isset($layout_map))
-
-		// Remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
-			if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
-				$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
-				foreach ($layout_map as $key => $item) {
-					$current_tipo = $item->tipo;
-					if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
-						unset( $layout_map[$key]);
-						debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
-					}
-				}
-				$layout_map = array_values($layout_map);
-			}
-		return $layout_map;
-	}//end get_layout_map
+		return $dd_object;
+	}//end get_section_ddo
 
 
 
 	/**
-	* GET_LAYOUT_MAP_OLD
-	* Calculate display items to generate portal html
-	* Cases:
-	*	1. Modo 'list' : Uses childrens to build layout map
-	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
-	*//*
-	public static function get_layout_map_OLD($section_tipo, $tipo, $modo, $user_id) {
+	* GET_COMPONENT_DDO
+	* @return object $dd_object
+	*/
+	public static function get_component_ddo($request_config_type, $current_section_tipo, $current_tipo, $mode, $lang, $parent) {
 
-		// preset. look db presets for existing user layout_map preset
-			#$preset_data = self::search_preset($section_tipo, $tipo, $user_id);
+		// parent
+			$current_parent = ($request_config_type==='select')
+				? $current_section_tipo
+				: $parent;
+				// : (function($current_tipo){
+				// 	$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+				// 	return $RecordObj_dd->get_parent();
+				// })($current_tipo);
+
+		// model
+			$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 
-		$ar_related=array();
-		switch ($modo) {
-			case 'list':
-			case 'portal_list':
-				# CASE SECTION LIST IS DEFINED
-				$ar_terms 		  = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
-
-				if(isset($ar_terms[0]) ) {
-
-					# Use found related terms as new list
-					$current_term = $ar_terms[0];
-					$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-
-				}else{
-
-					# FALLBACK RELATED WHEN SECTION LIST IS NOT DEFINED
-					# If not defined sectiopn list
-					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-				}
-				break;
-
-			case 'edit':
-			default:
-				$edit_view_options ='';
-				if($view==='full') { // || $view==='view_mosaic'
-					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-					break;
-				}else{
-					# CASE VIEW IS DEFINED
-					$ar_terms = (array)RecordObj_dd::get_ar_childrens($tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());
-					foreach ($ar_terms as $current_term) {
-						# Locate 'edit_views' in childrens
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
-						if ($modelo_name!=='edit_view') continue;
-
-						$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
-						if($view===$view_name){
-							# Use related terms as new list
-							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-							# Fix / set current edit_view propiedades to portal propiedades
-							$RecordObj_dd 			= new RecordObj_dd($current_term);
-							$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-							# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());
-							if ( isset($edit_view_propiedades->edit_view_options) ) {
-								$edit_view_options = $edit_view_propiedades->edit_view_options;
-							}
-							break;
-						}
-					}
-				}
-				break;
-		}//end switch ($this->modo)
-
-		# PORTAL_SECTION_TIPO : Find portal_section_tipo in related terms and store for use later
-		foreach ((array)$ar_related as $key => $current_tipo) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				#dump($modelo_name,"modelo_name $modelo");
-
-			if ($modelo_name==='component_state') {
-				$component_state_tipo = $current_tipo; // Store to reuse in custom layout map later
+		// common temporal excluded/mapped models *******-
+			$match_key = array_search($current_model, common::$ar_temp_map_models);
+			if (false!==$match_key) {
+				debug_log(__METHOD__." +++ Mapped model $current_model to $match_key from layout map ".to_string(), logger::WARNING);
+				$current_model = $match_key;
+			}else if (in_array($current_model, common::$ar_temp_exclude_models)) {
+				debug_log(__METHOD__." +++ Excluded model $current_model from layout map ".to_string(), logger::WARNING);
+				return false;
 			}
-			elseif ($modelo_name==='section') {
-				$ar_target_section_tipo[] = $current_tipo; // Set portal_section_tipo find it
-				unset($ar_related[$key]); // Remove self section_tipo from array of components
-				//break;
+
+		$component_lang = common::get_element_lang($current_tipo, $lang);
+
+		// component add
+			$dd_object = new dd_object((object)[
+				'label'			=> RecordObj_dd::get_termino_by_tipo($current_tipo, $lang, true, true),
+				'tipo'			=> $current_tipo,
+				'section_tipo'	=> $current_section_tipo,
+				'model'			=> $current_model,
+				'mode'			=> $mode,
+				'lang'			=> $component_lang,
+				'parent'		=> $current_parent,
+				'config_type'	=> $request_config_type
+			]);
+
+			if($current_model === 'component_external'){
+				$RecordObj_dd = new RecordObj_dd($current_tipo);
+				$dd_object->properties = $RecordObj_dd->get_properties();
 			}
-			elseif ($modelo_name==='exclude_elements') {
-				unset($ar_related[$key]); // Remove self section_tipo from array of components
-			}
-		}
-		#$layout_map = array($this->tipo => $ar_related);
 
-		$layout_map = [];
-		foreach ($ar_related as $current_related) {
-			$related = new stdClass();
-						$related->section_tipo 	= $ar_target_section_tipo[0];
-						$related->tipo 			= $current_related;
-						$related->mode 			= $modo;
-			$layout_map[] = $related;
-		}
+			return $dd_object;
+	}//end get_component_ddo
 
 
-		#
-		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
-		# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
-		if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
-			$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
-			foreach ($layout_map as $key => $item) {
-				$current_tipo = $item->tipo;
-				if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
-					unset( $layout_map[$key]);
-					debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
+
+	/**
+	* GET_F_PATH_DDO
+	* @return array $ar_dd_object
+	*/
+	public static function get_f_path_ddo($f_path_object, $request_config_type, $current_section_tipo, $mode, $lang, $parent) {
+
+		$f_path = $f_path_object->f_path;
+
+		$ar_dd_object = [];
+		foreach ($f_path as $key => $value) {
+			if($key % 2 === 0){
+				if($value === 'self') continue;
+				$ar_dd_object[] = layout_map::get_section_ddo($value, $mode, $lang);
+			}else{
+				$section_tipo = ($f_path[$key-1] === 'self')
+					? $section_tipo = $current_section_tipo
+					: $f_path[$key-1];
+				$component_ddo = layout_map::get_component_ddo($request_config_type, $section_tipo, $value, $mode, $lang, $parent);
+				if (!empty($component_ddo)) {
+					$ar_dd_object[] = $component_ddo;
 				}
 			}
-			$layout_map = array_values($layout_map);
 		}
 
-		return $layout_map;
-	}//end get_layout_map_OLD */
+		return $ar_dd_object;
+	}//end get_fpath_ddo
 
 
 
@@ -710,66 +358,67 @@ class layout_map {
 
 		// filter
 			$filter = 	[
-							(object)[
-								'q' 	=> '\''.$tipo.'\'',
-								'path' 	=> [(object)[
-									'section_tipo' 	 => $preset_section_tipo,
-									'component_tipo' => 'dd1242',
-									'modelo' 		 => 'component_input_text',
-									'name' 			 => 'Tipo'
-								]]
-							],
-							(object)[
-								'q' 	=> '\''.$section_tipo.'\'',
-								'path' 	=> [(object)[
-									'section_tipo' 	 => $preset_section_tipo,
-									'component_tipo' => 'dd642',
-									'modelo' 		 => 'component_input_text',
-									'name' 			 => 'Section tipo'
-								]]
-							],
-							(object)[
-								'q' 	=> $user_locator,
-								'path' 	=> [(object)[
-									'section_tipo' 	 => $preset_section_tipo,
-									'component_tipo' => 'dd654',
-									'modelo' 		 => 'component_select',
-									'name' 			 => 'User'
-								]]
-							],
-							(object)[
-								'q' 	=> '\''.$modo.'\'',
-								'path' 	=> [(object)[
-									'section_tipo' 	 => $preset_section_tipo,
-									'component_tipo' => 'dd1246',
-									'modelo' 		 => 'component_input_text',
-									'name' 			 => 'Modo'
-								]]
-							]
-						];
+				(object)[
+					'q'		=> '\''.$tipo.'\'',
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd1242',
+						'modelo'			=> 'component_input_text',
+						'name'				=> 'Tipo'
+					]]
+				],
+				(object)[
+					'q'		=> '\''.$section_tipo.'\'',
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd642',
+						'modelo'			=> 'component_input_text',
+						'name'				=> 'Section tipo'
+					]]
+				],
+				(object)[
+					'q'		=> $user_locator,
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd654',
+						'modelo'			=> 'component_select',
+						'name'				=> 'User'
+					]]
+				],
+				(object)[
+					'q'		=> '\''.$modo.'\'',
+					'path'	=> [(object)[
+						'section_tipo'		=> $preset_section_tipo,
+						'component_tipo'	=> 'dd1246',
+						'modelo'			=> 'component_input_text',
+						'name'				=> 'Modo'
+					]]
+				]
+			];
+
 			// add filter view if exists
 			if (!empty($view)) {
 				$filter[] = (object)[
-								'q' 	=> '\''.$view.'\'',
-								'path' 	=> [
-									(object)[
-										'section_tipo' 	 => $preset_section_tipo,
-										'component_tipo' => 'dd1247',
-										'modelo' 		 => 'component_input_text',
-										'name' 			 => 'view'
-									]
-								]
-							];
+					'q'		=> '\''.$view.'\'',
+					'path'	=> [
+						(object)[
+							'section_tipo'		=> $preset_section_tipo,
+							'component_tipo'	=> 'dd1247',
+							'modelo'			=> 'component_input_text',
+							'name'				=> 'view'
+						]
+					]
+				];
 			}
 
 		// search query object
 			$search_query_object = [
-				'id' 			=> 'search_user_preset_layout_map',
-				'modo' 			=> 'list',
-				'section_tipo' 	=> 'dd1244',
+				'id'			=> 'search_user_preset_layout_map',
+				'modo'			=> 'list',
+				'section_tipo'	=> 'dd1244',
 				'limit'			=> 1,
-				'full_count' 	=> false,
-				'filter' 		=> (object)[
+				'full_count'	=> false,
+				'filter'		=> (object)[
 					'$and' => $filter
 				]//,
 				// 'select' 		=> [
@@ -795,28 +444,59 @@ class layout_map {
 			#dump($search_query_object, ' search_query_object ++ '.to_string());
 			#error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
 
-		$search 	= search::get_instance($search_query_object);
-		$rows_data 	= $search->search();
-			#dump($rows_data, ' rows_data ++ '.to_string());
+		$search		= search::get_instance($search_query_object);
+		$rows_data	= $search->search();
 
 		$ar_records = $rows_data->ar_records;
 		if (empty($ar_records)) {
-			$result 		= false;
+
+			$result = false;
+
 		}else{
 			$dato = reset($ar_records);
 			if (isset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN})) {
-				$json_data 		= reset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN});
-				$preset_value 	= is_array($json_data) ? $json_data : [$json_data];
-				$result 		= $preset_value;
+
+				$json_data		= reset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN});
+				$preset_value	= is_array($json_data) ? $json_data : [$json_data];
+
+				// check proper config of items
+				// $valid_items = [];
+				// foreach ($preset_value as $key => $item) {
+				//
+				// 	// typo
+				// 		if (!isset($item->typo) || $item->typo!=='ddo') {
+				// 			debug_log(__METHOD__." Ignored invalid user preset typo ! ".to_string($item), logger::DEBUG);
+				// 			continue;
+				// 		}
+				//
+				// 	// tipo
+				// 		if (!isset($item->tipo)) {
+				// 			debug_log(__METHOD__." Invalid user preset item ! ".to_string($item), logger::ERROR);
+				// 			continue;
+				// 		}
+				//
+				// 	// label
+				// 		if (!property_exists($item, 'label')) {
+				// 			$item->label = RecordObj_dd::get_termino_by_tipo($item->tipo, DEDALO_DATA_LANG, true, true);
+				// 		}
+				//
+				// 	$valid_items[] = $item;
+				// }
+				//
+				// $result = $valid_items;
+
+				$result = $preset_value;
+
 			}else{
-				$result 		= false;
+
+				$result = false;
 			}
 		}
+
 
 		return $result;
 	}//end search_user_preset
 
 
 
-}
-?>
+}//end class layout_map

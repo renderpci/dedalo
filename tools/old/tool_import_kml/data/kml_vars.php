@@ -3,7 +3,7 @@
 * KML_VARS . Dédalo standar vars
 * Define correspondences from kml file vars to Dédalo tipos
 
-	Please use 'propiedades' to configure this tool
+	Please use 'properties' to configure this tool
 
 	Example:
 

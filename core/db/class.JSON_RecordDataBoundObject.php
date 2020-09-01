@@ -176,7 +176,7 @@ abstract class JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
 				#$_SESSION['debug_content'][__METHOD__][] = "". str_replace("\n",'',$strQuery) ." [$total_time_ms ms]";
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." - LOAD_SLOW_QUERY: $strQuery - records:".count($dato));
+				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." ms - LOAD_SLOW_QUERY: $strQuery - records:".count($dato));
 			}
 		}
 
@@ -188,8 +188,10 @@ abstract class JSON_RecordDataBoundObject {
 
 		# DEBUG
 		if(SHOW_DEBUG===true) {
-			#$totaltime = exec_time_unit($start_time,'ms');
-			#debug_log(__METHOD__." Total: $totaltime - $strQuery ".to_string(), logger::DEBUG);
+			// $totaltime = exec_time_unit($start_time,'ms');
+			// static $totaltime_static2;
+			// $totaltime_static2 = $totaltime_static2 + $totaltime;
+			// debug_log(__METHOD__." Total: $totaltime ms - $strQuery + sum ms: $totaltime_static2 ".to_string(), logger::DEBUG);
 		}
 	}//end load
 
@@ -584,7 +586,12 @@ abstract class JSON_RecordDataBoundObject {
 	/**
 	* BUILD_PG_FILTER
 	*/
-	public static function build_pg_filter($modo,$datos='datos',$tipo,$lang,$value) {
+	public static function build_pg_filter($modo, $datos, $tipo, $lang, $value) {
+		
+		if (empty($datos)) {
+			$datos = 'datos';
+		}
+
 		switch ($modo) {
 			case 'gin':
 				# ref: datos @>'{"components":{"rsc24":{"dato":{"lg-nolan":"114"}}}}'
@@ -647,7 +654,12 @@ abstract class JSON_RecordDataBoundObject {
 	/**
 	* BUILD_PG_SELECT
 	*/
-	public static function build_pg_select($modo,$datos='datos',$tipo,$key='dato',$lang) {
+	public static function build_pg_select($modo, $datos='datos', $tipo=null, $key='dato', $lang=DEDALO_DATA_LANG) {
+
+		if (empty($tipo)) {
+			throw new Exception("Error Processing Request. tipo is mandatory !", 1);			
+		}
+
 		switch ($modo) {
 			case 'gin':
 				throw new Exception("Error Processing Request. Sorry not implemented...", 1);

@@ -16,7 +16,35 @@
 export const render_component_geolocation = function() {
 
 	return true
-}//end render_component_geolocation
+};//end render_component_geolocation
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_geolocation.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+		const value 	= data.value || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = value.join(' | ')
+
+	// Set value
+		wrapper.textContent = value_string
+
+
+	return wrapper
+};//end mini
 
 
 
@@ -47,7 +75,7 @@ render_component_geolocation.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -194,7 +222,7 @@ render_component_geolocation.prototype.edit = async function(options={render_lev
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -269,7 +297,7 @@ render_component_geolocation.prototype.search = async function() {
 
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -305,7 +333,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -352,7 +380,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -463,10 +491,11 @@ const get_input_element_edit = (i, current_value, ul_container, self, is_inside_
 			parent 			: li
 		})
 
-	//init the map with the wrapper
-		self.get_map(map_container, current_value)
-
-
+	// init the map with the wrapper when container node is in DOM
+		event_manager.when_in_dom(map_container, draw_map)
+		function draw_map() {
+			self.get_map(map_container, current_value)
+		}
 
 	return li
-}//end get_input_element_edit
+};//end get_input_element_edit

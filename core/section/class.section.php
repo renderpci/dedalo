@@ -55,6 +55,16 @@ class section extends common {
 
 		public $layout_map;
 
+		// injected 'dd_request'
+		// public $dd_request;
+
+		// injected whole database record, with all columns
+		public $record;
+
+		public $pagination;
+
+
+
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
 	# Format is array or null
@@ -91,8 +101,8 @@ class section extends common {
 		# key for cache
 		$key = $section_id .'_'. $tipo;
 
-		$max_cache_instances = 300*4; // Default 300
-		$cache_slice_on 	 = 100*4; // Default 100
+		$max_cache_instances = 300*5; // Default 300
+		$cache_slice_on 	 = 100*5; // Default 100
 
 		# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
 		# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
@@ -138,16 +148,15 @@ class section extends common {
 		}
 
 		// Set general vars
-			$this->lang 		= DEDALO_DATA_NOLAN;
-			$this->section_id 	= $section_id;
-			$this->tipo 		= $tipo;
-			$this->modo 		= $modo;
-			$this->parent 		= 0;
+			$this->lang			= DEDALO_DATA_NOLAN;
+			$this->section_id	= $section_id;
+			$this->tipo			= $tipo;
+			$this->modo			= $modo;
+			$this->parent		= 0;
 
 
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
-
 
 
 		// active_section_section_id : Set global var
@@ -158,6 +167,13 @@ class section extends common {
 					// fix active_section_id
 						section::$active_section_id = $this->get_section_id();
 			}
+
+		// pagination
+			$this->pagination = new stdClass();
+				$this->pagination->offset	= 0; // default
+				$this->pagination->limit	= isset($properties->list_max_records)
+					? (int)$properties->list_max_records 
+					: ($modo==='list' ? 10 : 1);
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -174,103 +190,64 @@ class section extends common {
 	*/
 	public function get_dato() {
 
-		# If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
-		if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
-			$this->save_handler = 'session';
-		}
+		// check valid call
+			if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+				if(SHOW_DEBUG===true) {
+					if ($this->section_id==='result') {
+						throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
+					};
+				}
+				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
+			}
 
+		// save_handler. If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
+			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
+				$this->save_handler = 'session';
+			}
 
-		#
-		# SAVE_HANDLER DIFFERENT TO DATABASE CASE
-		# Sometimes we need use section as temporal element without save real data to database. Is this case
-		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+		// save_handler session
+			// Sometimes we need use section as temporal element without save real data to database. Is this case
+			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
-
 				if (!isset($this->dato)) {
-
 					$temp_data_uid = $this->tipo.'_'.$this->section_id;
 					# Fix dato as object
-					if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-						$section_temp_data = clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid];
-						$this->dato = $section_temp_data;
-						#$this->bl_loaded_matrix_data = true;
-					}else{
-
-						$this->dato = new stdClass();
-					}
-
+					$this->dato = isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])
+						? clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]
+						: new stdClass();
 				}
-
 				return $this->dato;
-			}//end if (isset($this->save_handler) && $this->save_handler==='session')
+			}		
 
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				#$start_time = start_time();
-				#global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-			}
-
-		// Cache dato
-			// static $section_dato_static;
-			// if(isset($section_dato_static[$this->section_id])) {
-			// 	#trigger_error("Cacheado dato in section $this->section_id ($this->tipo)");
-			// 	#return($section_dato_static[$this->section_id]);
-			// }
-
-
-		if( empty($this->section_id) || (abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
-
-			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin section_id)
-			#$this->bl_loaded_matrix_data = true;
-			#debug_log(__METHOD__." error on get dato . Trying get dato from section $this->tipo, section_id = ".to_string($this->section_id), logger::DEBUG);
-			if(SHOW_DEBUG===true) {
-				#throw new Exception("Error on get dato:  Trying get dato in modo edit without section_id section. Section section_id = ($this->section_id) in modo $this->modo", 1);
-			}
-
-			#return null;
-			#$initial_dato = new stdClass();
-			#return $initial_dato;
-		}
-
-		// is not loaded
+		// data is not loaded. Load once
 			if($this->bl_loaded_matrix_data!==true) {
-			# Experimental (si ya se ha intentado cargar pero con sin section_id, y ahora se hace con section_id, lo volvemos a intentar)
-			#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->section_id)<1) ) {
 
-				#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-				if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo==='real'){
-					$tipo = $this->get_section_real_tipo();
-				}else{
-					$tipo = $this->tipo;
-				}
+				// if virtual section have section_tipo "real" in properties, change the tipo of the section to the real					
+					$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
+						? $this->get_section_real_tipo()
+						: $this->tipo;
 
-				$section_tipo 			= $this->tipo;
-				$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
+				$section_tipo			= $this->tipo;
+				$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
 				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
 
-				$dato = $JSON_RecordObj_matrix->get_dato();
+				// load dato from db
+					$dato = $JSON_RecordObj_matrix->get_dato();
+					// dump(null, ' dato from DB ++ ->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->-> '.to_string($this->tipo.'-'.$this->section_id.'-'. RecordObj_dd::get_termino_by_tipo($this->tipo) ));
 
-				# Fix dato as object
-				$this->dato = (object)$dato;
+				// fix dato (force object)
+					$this->dato = (object)$dato;
 
-				/* modificar esta verificación. con secciones virtuales no funciona..
-				if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
-					if(SHOW_DEBUG===true) {
-						dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
-					}
-					throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
-				}
-				*/
+				// modificar esta verificación. con secciones virtuales no funciona..
+					// if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
+					// 	if(SHOW_DEBUG===true) {
+					// 		dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
+					// 	}
+					// 	throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
+					// }				
 
 				// set as loaded
-				$this->bl_loaded_matrix_data = true;
-
-				// cache dato
-					// trigger_error("Loaded dato in section $this->section_id ($this->tipo)");
-					// $section_dato_static[$this->section_id] = $this->dato;
-
-				#debug_log(__METHOD__." LOADED DATA FROM DB ++++ ".to_string($this->tipo), logger::ERROR);
+					$this->bl_loaded_matrix_data = true;
 			}//end if($this->bl_loaded_matrix_data!==true)
 
 		// debug
@@ -292,56 +269,29 @@ class section extends common {
 	*/
 	public function get_component_dato($component_tipo, $lang, $lang_fallback=false) {
 
-		$component_dato = null;
+		$all_component_data = $this->get_all_component_data($component_tipo);
 
-		if(SHOW_DEBUG===true) {
-			#$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-		if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-			if(SHOW_DEBUG===true) {
-				if ($this->section_id==='result') {
-					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
-				};
-			}
-			throw new Exception("Error Processing Request. get_component_dato of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
-		}
-
-		$section_tipo 	= $this->tipo;
-		$datos 			= $this->get_dato();
-
-
-		if (is_object($datos)) {
-
-			if ($lang_fallback===true) { // case mode list (see component common)
-				if (isset($datos->components->$component_tipo->dato->$lang) && !empty($datos->components->$component_tipo->dato->$lang)) {
-					$component_dato = $datos->components->$component_tipo->dato->$lang;
-				}else{
-					$lang_default = DEDALO_DATA_LANG_DEFAULT;
-					if ($lang !== $lang_default && !empty($datos->components->$component_tipo->dato->$lang_default)) {
-						$component_dato = $datos->components->$component_tipo->dato->$lang_default;
-					}
-				}
+		if ($lang_fallback===true) { // case mode list (see component common)
+			
+			if (isset($all_component_data->dato->{$lang}) && !empty($all_component_data->dato->{$lang})) {
+				// lang data exists
+				$component_dato = $all_component_data->dato->{$lang};
 			}else{
-
-				if (isset($datos->components->$component_tipo->dato->$lang)) {
-					$component_dato = $datos->components->$component_tipo->dato->$lang;
-				}
+				// fallback to default lang
+				$component_dato = ($lang!==$lang_default && !empty($all_component_data->dato->{$lang_default}))
+					? $all_component_data->dato->{$lang_default}
+					: null;
 			}
 
 		}else{
-			trigger_error("[get_component_dato] Error on read component_dato (datos is not object) ". safe_tipo($component_tipo) .' - gettype: '. gettype($datos) );
-		}
 
-		if(SHOW_DEBUG===true) {
-			#$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			$component_dato = isset($all_component_data->dato->{$lang})
+				? $all_component_data->dato->{$lang}
+				: null;
 		}
-		#debug_log(__METHOD__." component_dato ".to_string($component_dato), logger::DEBUG);
-
+		
 		return $component_dato;
-	}#end get_component_dato
+	}//end get_component_dato
 
 
 
@@ -353,38 +303,15 @@ class section extends common {
 	*/
 	public function get_all_component_data($component_tipo) {
 
-		$component_data = null;
+		$section_data = $this->get_dato();
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$component_tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		if (!is_object($section_data)) {
+			trigger_error("[get_all_component_data] Error on read component_data component_tipo: $component_tipo" );
 		}
 
-		if ( abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-			if(SHOW_DEBUG===true) {
-				if ($this->section_id==='result') {
-					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
-				};
-			}
-			throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
-		}
-
-		$section_tipo 	= $this->tipo;
-		$section_data 	= $this->get_dato();
-
-
-		if (is_object($section_data)) {
-
-			if (isset($section_data->components->$component_tipo)) {
-				$component_data = $section_data->components->$component_tipo;
-			}
-		}else{
-			trigger_error("Error on read component_data $component_tipo" );
-		}
-
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$component_tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
+		$component_data = isset($section_data->components->{$component_tipo})
+			? $section_data->components->{$component_tipo}
+			: null;
 
 		return $component_data;
 	}//end get_all_component_data
@@ -466,17 +393,19 @@ class section extends common {
 
 		$result = $this->Save( $save_options );
 
-		#
-		# DIFFUSION_INFO
-		# Note that this process can be very long if there are many inverse locators in this section
-		# To optimize save process in scripts of importation, you can dissable this option if is not really necessary
-		#
-		#$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
-		#register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
-		if ($component_obj->update_diffusion_info_propagate_changes===true) {
-			$this->diffusion_info_propagate_changes();
-			# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
-		}
+
+		// Stopped diffusion_info_propagate_changes
+			// #
+			// # DIFFUSION_INFO
+			// # Note that this process can be very long if there are many inverse locators in this section
+			// # To optimize save process in scripts of importation, you can dissable this option if is not really necessary
+			// #
+			// #$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
+			// #register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
+			// if ($component_obj->update_diffusion_info_propagate_changes===true) {
+			// 	$this->diffusion_info_propagate_changes();
+			// 	# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
+			// }
 
 
 		return $result;
@@ -644,10 +573,10 @@ class section extends common {
 	*/
 	public function set_component_relation_dato( $component_obj ) {
 
-		$component_tipo 		= $component_obj->get_tipo();
-		$component_dato 		= $component_obj->get_dato_full();
-		$relation_type 		 	= $component_obj->get_relation_type();
-		$from_component_tipo 	= $component_tipo;
+		$component_tipo			= $component_obj->get_tipo();
+		$component_dato			= $component_obj->get_dato_full();
+		$relation_type			= $component_obj->get_relation_type();
+		$from_component_tipo	= $component_tipo;
 
 		# Remove all previous locators of current component tipo
 		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
@@ -691,7 +620,6 @@ class section extends common {
 
 
 
-
 	/**
 	* BUILD_AR_SECTION_CREATOR
 	* Construye el array con los datos de creación de la sección
@@ -722,9 +650,9 @@ class section extends common {
 		}
 
 		return array(
-				'top_tipo' 				=> $top_tipo,
-				'portal_section_tipo' 	=> $portal_section_tipo,
-				'portal_tipo' 			=> $portal_tipo
+				'top_tipo'				=> $top_tipo,
+				'portal_section_tipo'	=> $portal_section_tipo,
+				'portal_tipo'			=> $portal_tipo
 				);
 	}#end build_section_locator
 
@@ -775,7 +703,7 @@ class section extends common {
 
 
 			# If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-			if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo==='real'){
+			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
 				$tipo = $this->get_section_real_tipo();
 			}
 
@@ -999,7 +927,7 @@ class section extends common {
 
 			}else{
 
-				// Counter update : If all is ok, update section counter (counter +1) in structure 'propiedades:section_id_counter'
+				// Counter update : If all is ok, update section counter (counter +1) in structure 'properties:section_id_counter'
 				if ($saved_id_matrix > 0) {
 					if ($options->forced_create_record!==false) {
 						# CONSOLIDATE COUNTER VALUE
@@ -1143,7 +1071,7 @@ class section extends common {
 		$section_tipo = $this->tipo;
 
 		#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-		if(isset($this->propiedades->section_tipo) && $this->propiedades->section_tipo === "real"){
+		if(isset($this->properties->section_tipo) && $this->properties->section_tipo === "real"){
 			$section_tipo = $this->get_section_real_tipo();
 		}
 
@@ -2463,7 +2391,7 @@ class section extends common {
 			}
 
 			// Store in cached sections . Important
-				# key for cache
+				# key for CACHE
 				$key = $this->section_id .'_'. $this->tipo;
 				self::$ar_section_instances[$key] = $this;
 
@@ -2909,7 +2837,7 @@ class section extends common {
 
 	/**
 	* GET_SECTION_MAP
-	* Section map data is stored in 'propiedades' of element of model 'section_map' placed in first level of section
+	* Section map data is stored in 'properties' of element of model 'section_map' placed in first level of section
 	*
 	* @return object $setion_map or null
 	*/
@@ -2934,15 +2862,9 @@ class section extends common {
 		$section_map = null;
 		if( isset($ar_children[0]) ) {
 
-			$tipo 			= $ar_children[0];
-			$RecordObj_dd 	= new RecordObj_dd($tipo);
-			$propiedades 	= $RecordObj_dd->get_propiedades();
-
-			if ($section_map  = json_decode($propiedades)) {
-				$section_map  = (object)$section_map;
-			}else{
-				$section_map  = null;
-			}
+			$tipo			= $ar_children[0];
+			$RecordObj_dd	= new RecordObj_dd($tipo);
+			$section_map	= $RecordObj_dd->get_properties() ?? null;
 		}
 		# Store in cache for speed
 		$section_map_cache[$section_tipo] = $section_map;
@@ -3030,112 +2952,105 @@ class section extends common {
 
 	/**
 	* BUILD_SEARCH_QUERY_OBJECT
-	* @return object $query_object
-
-	public function build_search_query_object_DES( $request_options=array() ) {
-
-		$start_time=microtime(1);
-
-		$options = new stdClass();
-			$options->q 	 			= null;
-			$options->limit  			= 10;
-			$options->order  			= null;
-			$options->offset 			= 0;
-			$options->lang 				= DEDALO_DATA_LANG;
-			$options->id 				= $this->tipo . '_' .$this->modo;
-			$options->section_tipo		= $this->tipo;
-			$options->select_fields		= 'default';
-			$options->filter_by_id		= false;
-			$options->full_count		= true;
-			$options->remove_distinct	= false;
-
-			#$options->forced_matrix_table = false;
-			if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-
-				#$order_obj = new stdClass();
-				#	$order_obj->direction 	= "DESC";
-				#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');
-				# Defaults for activity
-				$options->limit  		= 30;
-				#$options->order  		= [$order_obj];
-			}
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		# SELECT
-			$select_group = [];
-			if ($options->select_fields===false) {
-				# No fields are required
-			}else{
-				# Default case
-				$layout_map = component_layout::get_layout_map_from_section( $this );
-
-				if (!empty($layout_map)) {
-					$ar_component_tipo = reset($layout_map);
-					foreach ($ar_component_tipo as $key => $component_tipo) {
-						if (empty($component_tipo)) {
-							debug_log(__METHOD__." Ignored empty component tipo (key:$key) received from layout map: ".json_encode($layout_map, JSON_PRETTY_PRINT), logger::ERROR);
-							continue;
-						}
-						$select_element = new stdClass();
-							$select_element->path = search::get_query_path($component_tipo, $options->section_tipo, false);
-						# Add to group
-						$select_group[] = $select_element;
-					}
-				}
-			}
-
-		# FILTER
-			$filter_group = null;
-			if ($options->filter_by_id!==false) {
-
-				// Is an array of objects
-				$ar_section_id = [];
-				foreach ((array)$options->filter_by_id as $locator) {
-					$ar_section_id[] = (int)$locator->section_id;
-				}
-
-				$filter_element = new stdClass();
-					$filter_element->q 		= json_encode($ar_section_id);
-					$filter_element->path 	= json_decode('[
-						{
-							"section_tipo": "'.$options->section_tipo.'",
-							"component_tipo": "section_id",
-							"modelo": "component_section_id",
-							"name": "section_id"
-						}
-					]');
-
-				$op = '$and';
-				$filter_group = new stdClass();
-					$filter_group->$op = [$filter_element];
-			}//end if ($options->filter_by_id!==false)
-
-
-		# QUERY OBJECT
-		$query_object = new stdClass();
-			$query_object->id  	   		= $options->id;
-			$query_object->section_tipo = [$options->section_tipo];
-			$query_object->limit   		= $options->limit;
-			$query_object->order   		= $options->order;
-			$query_object->offset  		= $options->offset;
-			$query_object->full_count  	= $options->full_count;
-			# Used only for time machine list
-			#if ($options->forced_matrix_table!==false) {
-				# add forced_matrix_table (time machine case)
-			#	$query_object->forced_matrix_table = $options->forced_matrix_table;
-			#}
-			$query_object->filter  		= $filter_group;
-			$query_object->select  		= $select_group;
-
-
-		return (object)$query_object;
-	}//end build_search_query_object
-	*/
-
-
-	/**
-	* GET_DATO_IN_PATH
-	* @return string | null
+	*	* @return object $query_object
+	*
+	*	public function build_search_query_object_DES( $request_options=array() ) {
+	*
+	*		$start_time=microtime(1);
+	*
+	*		$options = new stdClass();
+	*			$options->q 	 			= null;
+	*			$options->limit  			= 10;
+	*			$options->order  			= null;
+	*			$options->offset 			= 0;
+	*			$options->lang 				= DEDALO_DATA_LANG;
+	*			$options->id 				= $this->tipo . '_' .$this->modo;
+	*			$options->section_tipo		= $this->tipo;
+	*			$options->select_fields		= 'default';
+	*			$options->filter_by_id		= false;
+	*			$options->full_count		= true;
+	*			$options->remove_distinct	= false;
+	*
+	*			#$options->forced_matrix_table = false;
+	*			if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+	*
+	*				#$order_obj = new stdClass();
+	*				#	$order_obj->direction 	= "DESC";
+	*				#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');
+	*				# Defaults for activity
+	*				$options->limit  		= 30;
+	*				#$options->order  		= [$order_obj];
+	*			}
+	*			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	*
+	*		# SELECT
+	*			$select_group = [];
+	*			if ($options->select_fields===false) {
+	*				# No fields are required
+	*			}else{
+	*				# Default case
+	*				$layout_map = component_layout::get_layout_map_from_section( $this );
+	*
+	*				if (!empty($layout_map)) {
+	*					$ar_component_tipo = reset($layout_map);
+	*					foreach ($ar_component_tipo as $key => $component_tipo) {
+	*						if (empty($component_tipo)) {
+	*							debug_log(__METHOD__." Ignored empty component tipo (key:$key) received from layout map: ".json_encode($layout_map, JSON_PRETTY_PRINT), logger::ERROR);
+	*							continue;
+	*						}
+	*						$select_element = new stdClass();
+	*							$select_element->path = search::get_query_path($component_tipo, $options->section_tipo, false);
+	*						# Add to group
+	*						$select_group[] = $select_element;
+	*					}
+	*				}
+	*			}
+	*
+	*		# FILTER
+	*			$filter_group = null;
+	*			if ($options->filter_by_id!==false) {
+	*
+	*				// Is an array of objects
+	*				$ar_section_id = [];
+	*				foreach ((array)$options->filter_by_id as $locator) {
+	*					$ar_section_id[] = (int)$locator->section_id;
+	*				}
+	*
+	*				$filter_element = new stdClass();
+	*					$filter_element->q 		= json_encode($ar_section_id);
+	*					$filter_element->path 	= json_decode('[
+	*						{
+	*							"section_tipo": "'.$options->section_tipo.'",
+	*							"component_tipo": "section_id",
+	*							"modelo": "component_section_id",
+	*							"name": "section_id"
+	*						}
+	*					]');
+	*
+	*				$op = '$and';
+	*				$filter_group = new stdClass();
+	*					$filter_group->$op = [$filter_element];
+	*			}//end if ($options->filter_by_id!==false)
+	*
+	*
+	*		# QUERY OBJECT
+	*		$query_object = new stdClass();
+	*			$query_object->id  	   		= $options->id;
+	*			$query_object->section_tipo = [$options->section_tipo];
+	*			$query_object->limit   		= $options->limit;
+	*			$query_object->order   		= $options->order;
+	*			$query_object->offset  		= $options->offset;
+	*			$query_object->full_count  	= $options->full_count;
+	*			# Used only for time machine list
+	*			#if ($options->forced_matrix_table!==false) {
+	*				# add forced_matrix_table (time machine case)
+	*			#	$query_object->forced_matrix_table = $options->forced_matrix_table;
+	*			#}
+	*			$query_object->filter  		= $filter_group;
+	*			$query_object->select  		= $select_group;
+	*
+	*
+	*		return (object)$query_object;
 	*/
 	public function get_dato_in_path( $ar_path ) {
 
@@ -3382,101 +3297,6 @@ class section extends common {
 
 
 	/**
-	* GET_SQO_CONTEXT
-	* @return object $sqo_context
-	*/
-	public function get_sqo_context() {
-
-		// already calculated
-			if (isset($this->sqo_context)) {
-				return $this->sqo_context;
-			}
-
-		// sort vars
-			$section_tipo 	= $this->get_tipo();
-			$section_id 	= $this->get_section_id();
-			$lang 			= $this->get_lang();
-			$mode 			= $this->get_modo();
-			$limit 			= ($mode==='list') ? 10 : 1;
-
-
-		// SHOW
-			$show = [];
-			// source
-				$source = new stdClass();
-					$source->typo 			= 'source';
-					$source->action 		= 'search';
-					$source->tipo 			= $section_tipo;
-					$source->section_tipo 	= $section_tipo;
-					$source->lang 			= $lang;
-					$source->mode 			= $mode;
-					$source->section_id 	= $section_id;
-					$source->model 			= get_class($this);
-					$source->pagination 	= (object)[
-						'total'  => 0,
-						'offset' => 0,
-					];
-
-				$show[] = $source;
-
-			// search_query_object
-				$sqo_options = new stdClass();
-					$sqo_options->tipo 			= $section_tipo;
-					$sqo_options->section_tipo 	= [$section_tipo];
-					$sqo_options->full_count 	= false;
-					$sqo_options->add_select 	= false;
-					$sqo_options->direct 		= true;
-
-					$sqo_options->limit  		= $limit;
-					$sqo_options->offset 		= 0;
-
-					// filter_by_locators. when sectio_id is received
-					if (!empty($section_id)) {
-						$self_locator = new locator();
-							$self_locator->set_section_tipo($section_tipo);
-							$self_locator->set_section_id($section_id);
-						$sqo_options->filter_by_locators = [$self_locator];
-					}
-
-				$search_query_object = common::build_search_query_object($sqo_options);
-
-				// add search_query_object
-					$show[] = $search_query_object;
-
-			// ddo
-				$layout_map_options = new stdClass();
-					$layout_map_options->section_tipo 		 = $section_tipo;
-					$layout_map_options->tipo 				 = $section_tipo;
-					$layout_map_options->modo 				 = $mode;
-					$layout_map_options->add_section 		 = true;
-					$layout_map_options->config_context_type = 'show';
-
-				$ar_ddo = layout_map::get_layout_map($layout_map_options);
-
-				// add layout_map ddo's
-					$show = array_merge($show, $ar_ddo);
-
-
-		// SEARCH
-			$search = [];
-			// nothing to do yet
-
-
-		// sqo_context object
-			$sqo_context = new stdClass();
-				$sqo_context->show 	 = $show;
-				$sqo_context->search = $search;
-
-		// fix
-			$this->sqo_context = $sqo_context;
-
-
-		return $sqo_context;
-	}//end get_sqo_context
-
-
-
-	/**
 	* GET_SECTION_MODEL
 	* Resolve section component_relation_model value (hierarchy sections only)
 	* Gets component_relation_model value (dato and value) in current section (by locator)
@@ -3505,5 +3325,310 @@ class section extends common {
 
 
 
+	/**
+	* GET_TM_CONTEXT
+	* Build specific context when section is in 'tm' (time machine) mode
+	* @return array $context
+	*/
+	public function get_tm_context() {
+
+		$dd_request = dd_core_api::$dd_request; // $this->dd_request
+
+		// source form dd_request		
+		$source = array_find($dd_request, function($element){
+			return (isset($element->typo) && $element->typo==='source');
+		});
+		
+		$ddo = array_find($dd_request, function($element){
+			return (isset($element->typo) && $element->typo==='ddo');
+		});
+
+		$sqo = array_find($dd_request, function($element){
+			return (isset($element->typo) && $element->typo==='sqo');
+		});
+
+		$component_tipo = $ddo->tipo;
+		$component_lang = $ddo->lang;
+		
+		$context = [];
+
+
+		// sqo
+			// $item = (object)[
+			// 	'typo'				 => 'sqo',
+			// 	'id'				 => 'tmp',
+			// 	'mode'				 => 'tm',
+			// 	'section_tipo'		 => [$this->tipo],
+			// 	'filter_by_locators' => [(object)[
+			// 		'section_tipo'		=> $source->section_tipo,
+			// 		'section_id'		=> $source->section_id,
+			// 		'tipo'				=> $component_tipo,
+			// 		'lang'				=> $component_lang
+			// 	]],
+			// 	'full_count'		=> false,
+			// 	'limit'				=> 10,
+			// 	'offset'			=> 0,
+			// 	'order'				=> json_decode('[{
+			// 		direction : "DESC",
+			// 		path	  : [{component_tipo: "id"}]
+			// 	}]')
+			// ];
+			// $context[] = $item;
+			
+
+		// ddo section
+			$item = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'section',
+				'model'			=> 'section',
+				'tipo'			=> $this->tipo,
+				'section_tipo'	=> $this->tipo,
+				'label'			=> RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true),
+				'mode'			=> 'tm',
+				'parent'		=> null,
+				'request_config'=> $dd_request
+			];
+			$context[] = $item;
+
+
+		// source
+			// $item = (object)[
+			// 	'typo'			=> 'source',
+			// 	'action'		=> 'search',
+			// 	'model'			=> 'section',
+			// 	'tipo'			=> $component_tipo,
+			// 	'section_tipo'	=> $this->tipo,
+			// 	'section_id'	=> $source->section_id,
+			// 	'component_tipo'=> $component_tipo,
+			// 	'mode'			=> 'tm',
+			// 	'lang'			=> $component_lang
+			// ];
+			// $context[] = $item;
+
+
+		// ddo matrix id
+			$item = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
+				'model'			=> 'component_section_id',
+				'tipo'			=> 'section_id_tipo', // fake tipo only used to match ddo with data
+				'section_tipo'	=> $this->tipo,
+				'label'			=> 'matrix ID',
+				'mode'			=> 'list',
+				'parent'		=> $this->tipo
+			];
+			$context[] = $item;
+
+
+		// ddo modification date
+			$item = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
+				'model'			=> 'component_date',
+				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_DATE,
+				'section_tipo'	=> $this->tipo,
+				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_DATE, DEDALO_DATA_LANG, true, true),
+				'mode'			=> 'list',
+				'parent'		=> $this->tipo
+			];
+			$context[] = $item;
+
+
+		// ddo modification user id
+			$item = (object)[
+				'typo'			=> 'ddo',
+				'type'			=> 'component',
+				'model'			=> 'component_select',
+				'tipo'			=> DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+				'section_tipo'	=> $this->tipo,
+				'label'			=> RecordObj_dd::get_termino_by_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER, DEDALO_DATA_LANG, true, true),
+				'mode'			=> 'list',
+				'parent'		=> $this->tipo
+			];
+			$context[] = $item;
+
+
+		// ddo component
+			// $RecordObj_dd	= new RecordObj_dd($component_tipo);
+			// $properties		= $RecordObj_dd->get_properties();
+			// $item = (object)[
+			// 	'typo'			=> 'ddo',
+			// 	'type'			=> 'component',
+			// 	'model'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+			// 	'tipo'			=> $component_tipo,
+			// 	'section_tipo'	=> $this->tipo,
+			// 	'label'			=> RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true),
+			// 	'mode'			=> 'list',
+			// 	'parent'		=> $this->tipo,
+			// 	'properties'	=> $properties
+			// ];
+			// $context[] = $item;
+			$context[] = (function($tipo, $section_tipo, $lang) {
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $tipo,
+																 null,
+																 'list',
+																 $lang,
+																 $section_tipo);			
+				// get component json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= true;
+						$get_json_options->get_data		= false;
+					$element_json = $component->get_json($get_json_options);
+
+				// edit section_id to match section locator data item
+					$current_item = reset($element_json->context);
+
+				return $current_item;
+			})($component_tipo, $this->tipo, $component_lang);
+
+
+		return (array)$context;
+	}//end get_tm_context
+
+
+
+	/**
+	* GET_TM_AR_SUBDATA
+	* Resolve requested component data and the fixed ddo elements MODIFIED_BY_USER and MODIFIED_DATE
+	* @return array $data
+	*/
+	public function get_tm_ar_subdata($value=null) {
+
+		$data = [];
+
+		$current_record = $this->get_record();
+		
+		// subdata time machine
+			$section_id		= $current_record->section_id;
+			$section_tipo	= $current_record->section_tipo;
+			$tipo			= $current_record->tipo;
+			$lang			= $current_record->lang;
+			$id				= $current_record->id;
+			$timestamp		= $current_record->timestamp;
+			$user_id		= $current_record->userID;
+			$component_dato	= $current_record->dato;
+
+		// component. Data of actual component to show in section list
+			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $component_dato) {
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);				
+				$component->set_dato($component_dato); // inject dato from time machine record
+
+				// get component json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= false;
+						$get_json_options->get_data		= true;
+					$element_json = $component->get_json($get_json_options);
+
+				// edit section_id to match section locator data item
+					$current_item = reset($element_json->data);
+					if (!empty($current_item)) {
+						$current_item->matrix_id = $id;						
+					}			
+
+				return $current_item;
+			})($tipo, $section_tipo, $section_id, $lang, $id, $component_dato);
+			
+
+		// timestamp
+			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $timestamp) {
+
+				$timestamp_tipo	= DEDALO_SECTION_INFO_MODIFIED_DATE; // 'dd201' Modification date
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($timestamp_tipo,true);
+				$component		= component_common::get_instance($modelo_name,
+																 $timestamp_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				// dato
+					$dd_date = new dd_date();
+						$date = $dd_date->get_date_from_timestamp( $timestamp );
+					$date_value = new stdClass();
+						$date_value->start = $date;
+					$component_dato = [$date_value];
+					$component->set_dato($component_dato);
+
+				// get component json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= false;
+						$get_json_options->get_data		= true;
+					$element_json = $component->get_json($get_json_options);
+
+				// edit section_id to match section locator data item
+					$current_item = reset($element_json->data);
+						$current_item->matrix_id = $id;
+				
+				return $current_item;
+			})($tipo, $section_tipo, $section_id, $lang, $id, $timestamp);
+
+
+		// user_id
+			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id, $user_id) {
+
+				$user_id_tipo	= DEDALO_SECTION_INFO_MODIFIED_BY_USER; // 'dd197' Modified by user
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($user_id_tipo,true); // select
+				$component		= component_common::get_instance($modelo_name,
+																 $user_id_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				// dato
+					$locator = new locator();
+						$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+						$locator->set_section_id($user_id);
+						$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+					$component_dato = [$locator];
+
+					$component->set_dato($component_dato);
+
+				// get component json
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= false;
+						$get_json_options->get_data		= true;
+					$element_json = $component->get_json($get_json_options);
+
+				// edit section_id to match section locator data item
+					$current_item = reset($element_json->data);
+						$current_item->matrix_id = $id;
+				
+				return $current_item;
+			})($tipo, $section_tipo, $section_id, $lang, $id, $user_id);
+
+
+		// matrix ID
+			$data[] = (function($tipo, $section_tipo, $section_id, $lang, $id) {			
+
+				$current_item = (object)[
+					'section_id'			=> $section_id,
+					'section_tipo'			=> $section_tipo,
+					'tipo'					=> 'section_id_tipo',  // fake tipo only used to match ddo with data
+					'lang'					=> DEDALO_DATA_NOLAN,
+					'from_component_tipo'	=> 'section_id_tipo',  // fake tipo only used to match ddo with data
+					'value'					=> $id,
+					'debug_model'			=> 'component_section_id',
+					'debug_label'			=> 'matrix ID',
+					'debug_mode'			=> 'list',
+					'matrix_id'				=> $id
+				];
+				
+				return $current_item;
+			})($tipo, $section_tipo, $section_id, $lang, $id);
+
+		
+		return $data;
+	}//end get_tm_ar_subdata
+
+
+
 }//end section
-?>

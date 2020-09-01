@@ -16,7 +16,7 @@
 export const render_login = function() {
 
 	return true
-}//end render_login
+};//end render_login
 
 
 
@@ -40,7 +40,7 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: "wrapper_login"
+			class_name		: "wrapper_login"
 		})
 		wrapper.appendChild(content_data)
 
@@ -57,7 +57,7 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	},600)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -91,9 +91,9 @@ const add_events = function(self, wrapper, content_data) {
 					//wrapper.classList.add("loading")
 					//wrapper.classList.add("preload")
 
-					const button 		= e.target
-					const button_label 	= button.querySelector('.button_label')
-					const preload 		= button.querySelector('.preload')
+					const button		= e.target
+					const button_label	= button.querySelector('.button_label')
+					const preload		= button.querySelector('.preload')
 
 					// show spinner and hide button label
 						button_label.classList.add("display_none")
@@ -102,17 +102,17 @@ const add_events = function(self, wrapper, content_data) {
 					// data_manager api call
 					const api_response = data_manager.prototype.request({
 						body : {
-							action 	 : 'login',
-							dd_api 	 : 'dd_utils_api',
-							options  : {
-								username : username,
-								auth 	 : auth
+							action	: 'login',
+							dd_api	: 'dd_utils_api',
+							options	: {
+								username	: username,
+								auth		: auth
 							}
 						}
 					}).then((response)=>{
 
-						const message  = response.msg
-						const msg_type = response.result===true ? 'ok' : 'error'
+						const message	= response.msg
+						const msg_type	= response.result===true ? 'ok' : 'error'
 						ui.show_message(content_data, message, msg_type, 'component_message', true)
 
 						if (response.result===true) {
@@ -131,7 +131,7 @@ const add_events = function(self, wrapper, content_data) {
 		})
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -142,11 +142,13 @@ const add_events = function(self, wrapper, content_data) {
 */
 const get_content_data = async function(self) {
 
+	const dedalo_application_langs = self.data.value.dedalo_application_langs
+
 	const fragment = new DocumentFragment()
 
 	// select lang
-		const langs 		= self.data.dedalo_application_langs
-		const select_lang 	= ui.build_select_lang({
+		const langs			= dedalo_application_langs
+		const select_lang	= ui.build_select_lang({
 			langs 	 : langs,
 			selected : page_globals.dedalo_application_lang,
 			action 	 : async (e) => {
@@ -155,11 +157,11 @@ const get_content_data = async function(self) {
 					// data_manager api call
 					const api_response = await data_manager.prototype.request({
 						body : {
-							action 	 : 'change_lang',
-							dd_api 	 : 'dd_utils_api',
+							action	: 'change_lang',
+							dd_api	: 'dd_utils_api',
 							options  : {
-								dedalo_data_lang 		: lang,
-								dedalo_application_lang : lang
+								dedalo_data_lang		: lang,
+								dedalo_application_lang	: lang
 							}
 						}
 					})
@@ -186,20 +188,20 @@ const get_content_data = async function(self) {
 	// User name input
 		const login_item_username = login_items.reduce((carry, item) => {return (item.tipo==='dd255') ? item : carry;})
 		const user_input = ui.create_dom_element({
-			id 				: 'username',
+			id				: 'username',
 			element_type	: 'input',
-			type 			: 'text',
+			type			: 'text',
 			parent			: form
 		})
-		user_input.placeholder = login_item_username.label
-		user_input.autocomplete= "username"
+		user_input.placeholder	= login_item_username.label
+		user_input.autocomplete	= "username"
 
 	// Authorization input
 		const login_item_password = login_items.reduce((carry, item) => {return (item.tipo==='dd256') ? item : carry;})
 		const auth_input = ui.create_dom_element({
-			id 				: 'auth',
+			id				: 'auth',
 			element_type	: 'input',
-			type 			: 'password',
+			type			: 'password',
 			parent			: form
 		})
 		auth_input.placeholder = login_item_password.label
@@ -208,10 +210,10 @@ const get_content_data = async function(self) {
 	// Button
 		const login_item_enter = login_items.reduce((carry, item) => { return (item.tipo==='dd259') ? item : carry; })
 		const button_enter = ui.create_dom_element({
-			id 				: 'auth_submit',
+			id				: 'auth_submit',
 			element_type	: 'button',
-			type 			: 'submit',
-			class_name 		: 'warning',
+			type			: 'submit',
+			class_name		: 'warning',
 			parent			: form
 		})
 		const button_loading = ui.create_dom_element({
@@ -222,7 +224,7 @@ const get_content_data = async function(self) {
 		const button_content = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button_label',
-			text_content 	: login_item_enter.label,
+			text_content	: login_item_enter.label,
 			parent			: button_enter
 		})
 
@@ -238,21 +240,21 @@ const get_content_data = async function(self) {
 			element_type : 'div',
 			class_name 	 : "info"
 		})
-		const info_data 		= self.context.properties.info || []
-		const info_data_length 	= info_data.length
+		const info_data			= self.context.properties.info || []
+		const info_data_length	= info_data.length
 		for (let j = 0; j < info_data_length; j++) {
 
 			const item = info_data[j]
 
 			ui.create_dom_element({
-				element_type : 'span',
-				text_content : item.label,
-				parent 		 : info
+				element_type	: 'span',
+				text_content	: item.label,
+				parent			: info
 			})
 			ui.create_dom_element({
-				element_type : 'span',
-				text_content : item.value,
-				parent 		 : info
+				element_type	: 'span',
+				text_content	: item.value,
+				parent			: info
 			})
 		}
 		fragment.appendChild(info)
@@ -260,13 +262,13 @@ const get_content_data = async function(self) {
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: "content_data"
+			class_name		: "content_data"
 		})
 		content_data.appendChild(fragment)
 
 
 	return content_data
-}//end get_content_data
+};//end get_content_data
 
 
 
@@ -297,7 +299,7 @@ const get_browser_info = function() {
 	  name: M[0],
 	  version: M[1]
 	};
-}//end get_browser_info
+};//end get_browser_info
 
 
 
@@ -309,9 +311,9 @@ const validate_browser = function() {
 
 	const browser_info = get_browser_info()
 	const min_version  = {
-		Chrome  	: 76,
-		Firefox 	: 65,
-		AppleWebKit : 10
+		Chrome		: 76,
+		Firefox		: 65,
+		AppleWebKit	: 10
 	}
 
 	const msg = (browser, version, min_version) => {
@@ -352,6 +354,4 @@ const validate_browser = function() {
 	}
 
 	return true;
-}//end validate_browser
-
-
+};//end validate_browser

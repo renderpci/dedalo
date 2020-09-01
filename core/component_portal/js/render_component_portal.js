@@ -10,6 +10,8 @@
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 
+	import {view_autocomplete} from './view_autocomplete.js'
+
 
 
 /**
@@ -19,8 +21,32 @@
 export const render_component_portal = function() {
 
 	return true
-}//end render_component_portal
+};//end  render_component_portal
 
+
+/**
+* MINI
+* Render node for use in list
+* @return DOM node wrapper
+*/
+render_component_portal.prototype.mini = async function() {
+
+	const self = this
+
+	const ar_section_record = await self.get_ar_instances()
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// add all nodes
+		const length = ar_section_record.length
+		for (let i = 0; i < length; i++) {
+			const child_item = await ar_section_record[i].render()
+			wrapper.appendChild(child_item)
+		}
+
+	return wrapper
+};//end  mini
 
 
 /**
@@ -34,12 +60,14 @@ render_component_portal.prototype.list = async function() {
 
 	const ar_section_record = await self.get_ar_instances()
 
+	const ar_nodes = []
+
 	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: self.model + '_list ' + self.tipo + ' breakdown'
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : false
 		})
 
+		console.log("ar_section_record", ar_section_record);
 
 	// add all nodes
 		const length = ar_section_record.length
@@ -48,21 +76,27 @@ render_component_portal.prototype.list = async function() {
 			//const child_item = await ar_section_record[i].node
 			const child_item = await ar_section_record[i].render()
 
-			wrapper.appendChild(child_item)
+			// wrapper.appendChild(child_item)
+
+			return child_item
+
+			break;
 		}
+
+		return null
 
 	// events
 		// dblclick
-			wrapper.addEventListener("dblclick", function(e){
-				// e.stopPropagation()
-
-				// change mode
-				self.change_mode('edit_in_list', true)
-			})
+			// wrapper.addEventListener("dblclick", function(e){
+			// 	// e.stopPropagation()
+			//
+			// 	// change mode
+			// 	self.change_mode('edit_in_list', true)
+			// })
 
 
 	return wrapper
-}//end list
+};//end  list
 
 
 
@@ -78,34 +112,51 @@ render_component_portal.prototype.edit = async function(options={render_level:'f
 	// render_level
 		const render_level = options.render_level
 
-	// reset service state portal_active
-		self.portal_active = false
+	self.view = null // 'view_autocomplete'
 
-	// content_data
-		const content_data = await get_content_data_edit(self)
-		if (render_level==='content') {
-			return content_data
-		}
+	const view = self.view || null
 
-	// buttons
-		const buttons = get_buttons(self)
+	let wrapper
+	switch(view) {
 
-	// top
-		const top = get_top(self)
+		case 'view_autocomplete99':
+			wrapper = view_autocomplete(self, options)
+			// return wrapper;
+			break;
 
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper =	ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons,
-			top 		 : top
-		})
+		default:
+			// reset service state portal_active
+				// self.portal_active = false
 
-	// events
-		add_events(self, wrapper)
+			// content_data
+				const content_data = await get_content_data_edit(self)
+				if (render_level==='content') {
+					return content_data
+				}
 
+			// buttons
+				const buttons = get_buttons(self)
 
-	return wrapper
-}//end edit
+			// top
+				// const top = get_top(self)
+
+			// wrapper. ui build_edit returns component wrapper
+				wrapper =	ui.component.build_wrapper_edit(self, {
+					content_data	: content_data,
+					buttons			: buttons
+					// top			: top
+				})
+				wrapper.classList.add("portal")
+
+			// events
+				add_events(self, wrapper)
+			break;
+	}
+
+	const js_promise = wrapper
+
+	return js_promise
+};//end  edit
 
 
 
@@ -189,13 +240,6 @@ const add_events = function(self, wrapper) {
 					})
 					changed.then(async (api_response)=>{
 
-						// service destroy. change the portal service to false and desactive it.
-							if(self.portal_active===true){
-								const destroyed = self.portal.destroy()
-								self.portal_active = false
-								self.portal 		 = null
-							}
-
 						// update pagination offset
 							self.update_pagination_values('remove')
 
@@ -213,6 +257,10 @@ const add_events = function(self, wrapper) {
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
 				if(self.autocomplete_active===false){
 
+					// set dd_request
+						self.dd_request.search 	= self.dd_request.search || self.build_dd_request('search', self.context.request_config, 'search')
+						self.dd_request.select 	= self.dd_request.select || self.build_dd_request('select', self.context.request_config, 'get_data')
+
 					self.autocomplete = new service_autocomplete()
 					self.autocomplete.init({
 						caller	: self,
@@ -228,7 +276,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end  add_events
 
 
 
@@ -239,7 +287,7 @@ const add_events = function(self, wrapper) {
 const get_content_data_edit = async function(self) {
 
 	const ar_section_record = await self.get_ar_instances()
-	const is_inside_tool 	= self.is_inside_tool	
+	const is_inside_tool 	= self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
@@ -261,6 +309,12 @@ const get_content_data_edit = async function(self) {
 		}
 		fragment.appendChild(inputs_container)
 
+	// build references
+		if(self.data.references && self.data.references.length > 0){
+			const references_node = render_references(self.data.references)
+			fragment.appendChild(references_node)
+		}
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add("nowrap")
@@ -268,7 +322,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end  get_content_data_edit
 
 
 
@@ -279,10 +333,146 @@ const get_content_data_edit = async function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool		= self.is_inside_tool
+	const mode					= self.mode
+	const show					= self.dd_request.show
+	const target_section		= show.filter(item => item.model==='section')
+	const target_section_lenght	= target_section.length
+		  // sort section by label asc
+		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
 	const fragment = new DocumentFragment()
+
+	// button_add
+		// const button_add = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button add',
+		// 	parent			: fragment
+		// })
+		// button_add.addEventListener("click", async function(e){
+
+		// 	// data_manager. create new record
+		// 		const api_response = await data_manager.prototype.request({
+		// 			body : {
+		// 				action			: 'create',
+		// 				section_tipo	: select_section.value
+		// 			}
+		// 		})
+		// 		// add value to current data
+		// 		if (api_response.result && api_response.result>0) {
+		// 			const value = {
+		// 				section_tipo	: select_section.value,
+		// 				section_id		: api_response.result
+		// 			}
+		// 			self.add_value(value)
+		// 		}else{
+		// 			console.error("Error on api_response on try to create new row:", api_response);
+		// 		}
+		// })
+
+	// button_link
+		const button_link = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button link',
+			parent			: fragment
+		})
+		button_link.addEventListener("click", async function(e){
+			// const section_tipo	= select_section.value
+			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
+			const section_tipo	= target_section[0].tipo
+			const section_label	= target_section[0].label;
+
+			// iframe
+				( () => {
+
+					const iframe_url = (tipo) => {
+						return '../page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
+					}
+
+					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
+					const iframe = ui.create_dom_element({
+						element_type	: 'iframe',
+						class_name		: 'fixed',
+						src				: iframe_url(section_tipo),
+						parent			: iframe_container
+					})
+
+					// select_section
+						const select_section = ui.create_dom_element({
+							element_type	: 'select',
+							class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
+						})
+						select_section.addEventListener("change", function(){
+							iframe.src = iframe_url(this.value)
+						})
+						// options for select_section
+							for (let i = 0; i < target_section_lenght; i++) {
+								const item = target_section[i]
+								ui.create_dom_element({
+									element_type	: 'option',
+									value			: item.tipo,
+									inner_html		: item.label + " [" + item.tipo + "]",
+									parent			: select_section
+								})
+							}
+
+					// header label
+						const header = ui.create_dom_element({
+							element_type	: 'span',
+							text_content	: get_label.seccion,
+							class_name		: 'label'
+						})
+
+					// header custom
+						const header_custom = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'header_custom'
+						})
+						header_custom.appendChild(header)
+						header_custom.appendChild(select_section)
+
+					// fix modal to allow close later, on set value
+					self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
+
+				})()
+				return
+		})
+
+
+	// button tree terms selector
+		if(self.context.properties.source.mode === 'tree'){
+			const button_tree_selector = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button gear',
+				parent			: fragment
+			})
+			// add listener to the select
+			button_tree_selector.addEventListener('mouseup',function(){
+
+			},false)
+		}
+
+
+		if(self.context.properties.source.mode === 'external'){
+
+			// button_update data external
+				const button_update_data_external = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button sync',
+					parent			: fragment
+				})
+				button_update_data_external.addEventListener("click", async function(e){
+					const source = self.dd_request.show.find(item => item.typo === 'source')
+					source.build_options = {
+						get_dato_external : true
+					}
+					const builded = await self.build(true)
+					// render
+					if (builded) {
+						self.render({render_level : 'content'})
+					}
+				})
+		}
 
 	// buttons tools
 		if (!is_inside_tool) {
@@ -295,7 +485,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end  get_buttons
 
 
 
@@ -315,7 +505,7 @@ const get_top = function(self) {
 		const is_inside_tool		= self.is_inside_tool
 		const mode					= self.mode
 		const current_data_manager	= new data_manager()
-		const show					= self.sqo_context.show
+		const show					= self.dd_request.show
 		const target_section		= show.filter(item => item.model==='section')
 		const target_section_lenght	= target_section.length
 		// sort section by label asc
@@ -324,182 +514,190 @@ const get_top = function(self) {
 	const fragment = new DocumentFragment()
 
 	// select_section
-		const select_section = ui.create_dom_element({
-			element_type	: 'select',
-			class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
-			parent			: fragment
-		})
+		// const select_section = ui.create_dom_element({
+		// 	element_type	: 'select',
+		// 	class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
+		// 	// parent			: fragment
+		// })
+		// select_section.addEventListener("click", function(e){
+		// 	// e.stopPropagation()
+		// })
+		// select_section.addEventListener("change", function(e){
+		// 		console.log("iframe_container:",iframe_container);
+		// })
 
-		// options
-			for (let i = 0; i < target_section_lenght; i++) {
-				const item = target_section[i]
-				ui.create_dom_element({
-					element_type	: 'option',
-					value			: item.tipo,
-					inner_html		: item.label + " [" + item.tipo + "]",
-					parent			: select_section
-				})
-			}
+		// // options for select_section
+		// 	for (let i = 0; i < target_section_lenght; i++) {
+		// 		const item = target_section[i]
+		// 		ui.create_dom_element({
+		// 			element_type	: 'option',
+		// 			value			: item.tipo,
+		// 			inner_html		: item.label + " [" + item.tipo + "]",
+		// 			parent			: select_section
+		// 		})
+		// 	}
 
 	// button_add
-		const button_add = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button add',
-			parent			: fragment
-		})
-		button_add.addEventListener("click", async function(e){
+		// const button_add = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button add',
+		// 	parent			: fragment
+		// })
+		// button_add.addEventListener("click", async function(e){
 
-			// data_manager. create new record
-				const api_response = await data_manager.prototype.request({
-					body : {
-						action 		: 'create',
-						section_tipo: select_section.value
-					}
-				})
-				// add value to current data
-				if (api_response.result && api_response.result>0) {
-					const value = {
-						section_tipo : select_section.value,
-						section_id 	 : api_response.result
-					}
-					self.add_value(value)
-				}else{
-					console.error("Error on api_response on try to create new row:", api_response);
-				}
-		})
+		// 	// data_manager. create new record
+		// 		const api_response = await data_manager.prototype.request({
+		// 			body : {
+		// 				action			: 'create',
+		// 				section_tipo	: select_section.value
+		// 			}
+		// 		})
+		// 		// add value to current data
+		// 		if (api_response.result && api_response.result>0) {
+		// 			const value = {
+		// 				section_tipo	: select_section.value,
+		// 				section_id		: api_response.result
+		// 			}
+		// 			self.add_value(value)
+		// 		}else{
+		// 			console.error("Error on api_response on try to create new row:", api_response);
+		// 		}
+		// })
 
-	// button_find
-		const button_find = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button find',
-			parent 			: fragment
-		})
-		button_find.addEventListener("click", async function(e){
+	// button_link
+		// const button_link = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button link',
+		// 	parent			: fragment
+		// })
+		// button_link.addEventListener("click", async function(e){
 
-			const section_tipo	= select_section.value
-			const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
+		// 	// const section_tipo	= select_section.value
+		// 	// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
+		// 	const section_tipo	= target_section[0].tipo
+		// 	const section_label	= target_section[0].label;
 
-			// des
-				// const source = {
-				// 	typo 		 : 'source',
-				// 	tipo 		 : section_tipo,
-				// 	section_tipo : section_tipo,
-				// 	section_id 	 : null,
-				// 	model 		 : 'section',
-				// 	lang 		 : page_globals.dedalo_data_lang,
-				// 	pagination 	 : {
-				// 		total  : 0,
-				// 		offset : 0,
-				// 		limit  : 10
-				// 	}
-				// }
-				// const element_context_call 	= await current_data_manager.get_element_context(source)
-				// const element_context 		= element_context_call.result
-				// 	console.log("!-- get_element_context:", element_context_call);
+		// 	// iframe
+		// 		( async () => {
+		// 			const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
+		// 			const iframe = ui.create_dom_element({
+		// 				element_type	: 'iframe',
+		// 				class_name		: 'fixed',
+		// 				src				: '../page/?tipo=' + section_tipo + '&mode=list&initiator='+ self.id,
+		// 				parent			: iframe_container
+		// 			})
 
-				// // section instance (regular section)
-				// 	const section_instance = await get_instance({
-				// 		model 			: "section",
-				// 		tipo 			: source.section_tipo,
-				// 		section_tipo 	: source.section_tipo,
-				// 		section_id 		: null,
-				// 		mode 			: "list",
-				// 		lang 			: source.lang,
-				// 		section_lang 	: source.lang,
-				// 		type 			: "section",
-				// 		// sqo_context 	: {
-				// 		// 	show : show
-				// 		// }
-				// 		context 		: element_context
-				// 	})
-				// 	await section_instance.build(true)
-				// 		console.log("section_instance:",section_instance);
+		// 			// select_section
+		// 				const select_section = ui.create_dom_element({
+		// 					element_type	: 'select',
+		// 					class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
+		// 					// parent			: fragment
+		// 				})
+		// 				select_section.addEventListener("click", function(e){
+		// 					// e.stopPropagation()
+		// 				})
+		// 				select_section.addEventListener("change", function(){
+		// 					iframe.src = '../page/?tipo=' + this.value + '&mode=list&initiator='+ self.id
+		// 				})
+		// 				// options for select_section
+		// 					for (let i = 0; i < target_section_lenght; i++) {
+		// 						const item = target_section[i]
+		// 						ui.create_dom_element({
+		// 							element_type	: 'option',
+		// 							value			: item.tipo,
+		// 							inner_html		: item.label + " [" + item.tipo + "]",
+		// 							parent			: select_section
+		// 						})
+		// 					}
 
-			// iframe
-				( async () => {
-					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
-					const iframe = ui.create_dom_element({
-						element_type	: 'iframe',
-						class_name		: 'fixed',
-						src				: '../page/?tipo=' + section_tipo + '&mode=list&initiator='+ self.id,
-						parent			: iframe_container
-					})
+		// 			// header label
+		// 				const header = ui.create_dom_element({
+		// 					element_type	: 'span',
+		// 					text_content	: get_label.seccion,
+		// 					class_name		: 'label'
+		// 				})
 
-					// fix modal to allow close later, on set value
-					const header = ui.create_dom_element({element_type : 'div', text_content : section_label, class_name: "label"})
-					self.modal   = ui.attach_to_modal(header, iframe_container, null, 'big')
+		// 			// header custom
+		// 				const header_custom = ui.create_dom_element({
+		// 					element_type	: 'div',
+		// 					class_name		: 'header_custom'
+		// 				})
+		// 				header_custom.appendChild(header)
+		// 				header_custom.appendChild(select_section)
 
-				})()
-				return
+		// 			// fix modal to allow close later, on set value
+		// 			self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
 
-			// page
-				// ( async () => {
+		// 		})()
+		// 		return
 
-				// 	const options = {
-				// 		model 			: 'section',
-				// 		type 			: 'section',
-				// 		tipo  			: section_tipo,
-				// 		section_tipo  	: section_tipo,
-				// 		section_id 		: null,
-				// 		mode 			: 'list',
-				// 		lang 			: page_globals.dedalo_data_lang
-				// 	}
-				// 	const page_element_call = await current_data_manager.get_page_element(options)
-				// 	const page_element 		= page_element_call.result
+		// 	// page
+		// 		// ( async () => {
 
-				// 	const page = await get_instance({
-				// 		model 		: 'page',
-				// 		id_variant  : 'PORTAL_VARIANT',
-				// 		elements 	: [page_element_call.result]
-				// 	})
-				// 	page.caller = self.caller
-				// 	const build 		= await page.build()
-				// 	const wrapper_page 	= await page.render()
-				// 	const header = ui.create_dom_element({element_type : 'div',text_content : section_label})
-				// 	const modal  = ui.attach_to_modal(header, wrapper_page, null, 'big')
-				// 		console.log("page:",page);
-				// })()
-				// return
+		// 		// 	const options = {
+		// 		// 		model 			: 'section',
+		// 		// 		type 			: 'section',
+		// 		// 		tipo  			: section_tipo,
+		// 		// 		section_tipo  	: section_tipo,
+		// 		// 		section_id 		: null,
+		// 		// 		mode 			: 'list',
+		// 		// 		lang 			: page_globals.dedalo_data_lang
+		// 		// 	}
+		// 		// 	const page_element_call = await current_data_manager.get_page_element(options)
+		// 		// 	const page_element 		= page_element_call.result
 
-			// section
-				// // find_section options. To create a complete set of options (including sqo), call API requesting a page_elemen
-				// 	const options = {
-				// 		model 			: 'section',
-				// 		type 			: 'section',
-				// 		tipo  			: section_tipo,
-				// 		section_tipo  	: section_tipo,
-				// 		section_id 		: null,
-				// 		mode 			: 'list',
-				// 		lang 			: page_globals.dedalo_data_lang
-				// 	}
-				// 	const page_element_call = await current_data_manager.get_page_element(options)
-				// 	const page_element 		= page_element_call.result
-				// 	// id_variant avoid instances id collisions
-				// 		page_element.id_variant = 'ID_VARIANT_PORTAL'
-				// 	const find_section_options = page_element
+		// 		// 	const page = await get_instance({
+		// 		// 		model 		: 'page',
+		// 		// 		id_variant  : 'PORTAL_VARIANT',
+		// 		// 		elements 	: [page_element_call.result]
+		// 		// 	})
+		// 		// 	page.caller = self.caller
+		// 		// 	const build 		= await page.build()
+		// 		// 	const wrapper_page 	= await page.render()
+		// 		// 	const header = ui.create_dom_element({element_type : 'div',text_content : section_label})
+		// 		// 	const modal  = ui.attach_to_modal(header, wrapper_page, null, 'big')
+		// 		// 		console.log("page:",page);
+		// 		// })()
+		// 		// return
 
-				// // find_section instance. Create target section page element and instance
-				// 	const find_section = await get_instance(find_section_options)
+		// 	// section
+		// 		// // find_section options. To create a complete set of options (including sqo), call API requesting a page_elemen
+		// 		// 	const options = {
+		// 		// 		model 			: 'section',
+		// 		// 		type 			: 'section',
+		// 		// 		tipo  			: section_tipo,
+		// 		// 		section_tipo  	: section_tipo,
+		// 		// 		section_id 		: null,
+		// 		// 		mode 			: 'list',
+		// 		// 		lang 			: page_globals.dedalo_data_lang
+		// 		// 	}
+		// 		// 	const page_element_call = await current_data_manager.get_page_element(options)
+		// 		// 	const page_element 		= page_element_call.result
+		// 		// 	// id_variant avoid instances id collisions
+		// 		// 		page_element.id_variant = 'ID_VARIANT_PORTAL'
+		// 		// 	const find_section_options = page_element
 
-				// 	// set self as find_section caller (!)
-				// 		find_section.caller = self
+		// 		// // find_section instance. Create target section page element and instance
+		// 		// 	const find_section = await get_instance(find_section_options)
 
-				// 	// load data and render wrapper
-				// 		await find_section.build(true)
-				// 		const find_section_wrapper = await find_section.render()
+		// 		// 	// set self as find_section caller (!)
+		// 		// 		find_section.caller = self
 
-				// // modal container
-				// 	const header = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		text_content 	: section_label
-				// 	})
-				// 	// fix modal to allow close later, on set value
-				// 		self.modal = ui.attach_to_modal(header, find_section_wrapper, null, 'big')
-				// 		self.modal.on_close = () =>{
-				// 			find_section.destroy(true, true, true)
-				// 		}
-		})
+		// 		// 	// load data and render wrapper
+		// 		// 		await find_section.build(true)
+		// 		// 		const find_section_wrapper = await find_section.render()
 
+		// 		// // modal container
+		// 		// 	const header = ui.create_dom_element({
+		// 		// 		element_type	: 'div',
+		// 		// 		text_content 	: section_label
+		// 		// 	})
+		// 		// 	// fix modal to allow close later, on set value
+		// 		// 		self.modal = ui.attach_to_modal(header, find_section_wrapper, null, 'big')
+		// 		// 		self.modal.on_close = () =>{
+		// 		// 			find_section.destroy(true, true, true)
+		// 		// 		}
+		// })
 
 	// top container
 		const top = ui.create_dom_element({
@@ -513,7 +711,7 @@ const get_top = function(self) {
 
 
 	return top
-}//end get_top
+};//end  get_top
 
 
 
@@ -527,9 +725,9 @@ const input_element = async function(current_section_record, inputs_container){
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			dataset 	 : { key : key },
-			parent 		 : inputs_container
+			element_type	: 'li',
+			dataset			: { key : key },
+			parent			: inputs_container
 		})
 
 	// input field
@@ -539,11 +737,68 @@ const input_element = async function(current_section_record, inputs_container){
 	// button remove
 		const button_remove = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button remove',
+			class_name		: 'button remove',
 			dataset			: { key : key },
-			parent 			: li
+			parent			: li
 		})
 
 
 	return li
-}//end input_element
+};//end  input_element
+
+
+
+/**
+* RENDER_REFERENCES
+* @return DOM node fragment
+*/
+const render_references = function(ar_references) {
+
+	const fragment = new DocumentFragment()
+
+	// ul
+		const ul = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'references',
+			parent			: fragment
+		})
+
+	// references label
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html 		: get_label.references,
+			parent			: ul
+		})
+
+	const ref_length = ar_references.length
+	for (let i = 0; i < ref_length; i++) {
+
+		const reference = ar_references[i]
+
+		// li
+			const li = ui.create_dom_element({
+				element_type	: 'li',
+				parent			: ul
+			})
+			// button_link
+				const button_link = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button link',
+					parent			: li
+				})
+				button_link.addEventListener("click", function(e){
+					e.stopPropagation()
+					window.location.href = '../page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
+					// window.open(url,'ref_edit')
+				})
+			// label
+				const button_edit = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					inner_html		: reference.label,
+					parent			: li
+				})
+	}
+
+	return fragment
+};//end render_references

@@ -42,7 +42,7 @@ export const paginator = function() {
 	this.id_variant
 
 	return true
-}//end paginator
+};//end paginator
 
 
 
@@ -51,11 +51,11 @@ export const paginator = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	paginator.prototype.edit 	= render_paginator.prototype.edit
-	paginator.prototype.list 	= render_paginator.prototype.edit // same as edit
+	paginator.prototype.edit	= render_paginator.prototype.edit
+	paginator.prototype.list	= render_paginator.prototype.edit // same as edit
 	paginator.prototype.tm		= render_paginator.prototype.edit // same as edit
-	paginator.prototype.render 	= common.prototype.render
-	paginator.prototype.refresh = common.prototype.refresh
+	paginator.prototype.render	= common.prototype.render
+	paginator.prototype.refresh	= common.prototype.refresh
 
 
 
@@ -72,11 +72,11 @@ paginator.prototype.init = function(options) {
 	}
 
 	// set vars
-		self.model 				= 'paginator'
-		self.mode 				= options.caller.mode
-		self.caller				= options.caller
-		self.events_tokens		= []
-		self.node 				= []
+		self.model			= 'paginator'
+		self.mode			= options.caller.mode
+		self.caller			= options.caller
+		self.events_tokens	= []
+		self.node			= []
 
 	// serialize the paginator.Create the unique token
 		self.id = 'paginator_'+self.caller.id
@@ -86,7 +86,7 @@ paginator.prototype.init = function(options) {
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -103,27 +103,28 @@ paginator.prototype.build = async function(){
 	const offset	= self.get_offset()
 
 	// pages fix vars
-		self.total_pages 		= Math.ceil(total / limit)
-		self.page_number 		= self.get_page_number(limit, offset)
-		self.prev_page_offset 	= offset - limit
-		self.next_page_offset 	= offset + limit
+		self.limit				= limit
+		self.total_pages		= Math.ceil(total / limit)
+		self.page_number		= self.get_page_number(limit, offset)
+		self.prev_page_offset	= offset - limit
+		self.next_page_offset	= offset + limit
 
-		self.page_row_begin 	= (total===0) ? 0 : offset + 1;
-		self.page_row_end 		= self.get_page_row_end(self.page_row_begin, limit, total);
+		self.page_row_begin		= (total===0) ? 0 : offset + 1;
+		self.page_row_end		= self.get_page_row_end(self.page_row_begin, limit, total);
 
 	// offset fix
-		self.offset_first 	= 0;
-		self.offset_prev 	= (offset>limit) ? offset - limit : 0
-		self.offset_next 	= offset + limit
-		self.offset_last 	= limit * (self.total_pages -1)
+		self.offset_first		= 0;
+		self.offset_prev		= (offset>limit) ? offset - limit : 0
+		self.offset_next		= offset + limit
+		self.offset_last		= limit * (self.total_pages -1)
 
 
 	// status update
 		self.status = 'builded'
 
-			
 
-			if(SHOW_DEBUG===true) 
+
+			if(SHOW_DEBUG===true)
 			{
 		// console.log("paginator [build] self:",self);
 		// console.log("paginator total:",total);
@@ -131,7 +132,7 @@ paginator.prototype.build = async function(){
 
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -153,7 +154,7 @@ paginator.prototype.destroy = async function(){
 	result.delete_self = delete_events
 
 	return result
-}//end destroy
+};//end destroy
 
 
 
@@ -165,7 +166,7 @@ paginator.prototype.get_total = async function() {
 	const total = await this.caller.pagination.total
 
 	return total
-}//end get_total
+};//end get_total
 
 
 
@@ -177,7 +178,7 @@ paginator.prototype.get_limit = function() {
 	const limit = this.caller.pagination.limit
 
 	return limit
-}//end get_limit
+};//end get_limit
 
 
 
@@ -189,7 +190,7 @@ paginator.prototype.get_offset = function() {
 	const offset = this.caller.pagination.offset
 
 	return offset
-}//end get_offset
+};//end get_offset
 
 
 
@@ -221,7 +222,7 @@ paginator.prototype.paginate = async function(offset) {
 
 
 	return true
-}//end paginate
+};//end paginate
 
 
 
@@ -238,7 +239,7 @@ paginator.prototype.get_page_number = function(item_per_page, offset) {
 	}
 
 	return 1;
-}//end get_page_number
+};//end get_page_number
 
 
 
@@ -260,7 +261,7 @@ paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, t
 	}
 
 	return page_row_end;
-}//end get_page_row_end
+};//end get_page_row_end
 
 
 
@@ -298,4 +299,4 @@ paginator.prototype.go_to_page_json = function(input_obj, e, total_pages, item_p
 	}
 
 	return false
-}//end go_to_page_json
+};//end go_to_page_json

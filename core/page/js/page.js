@@ -31,13 +31,13 @@ export const page = function () {
 	this.mode
 	this.node
 	this.ar_instances
-	this.elements
+	this.context
 	this.status
 	this.events_tokens
 
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -46,10 +46,10 @@ export const page = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	page.prototype.edit 	= render_page.prototype.edit
-	page.prototype.render  	= common.prototype.render
-	page.prototype.refresh 	= common.prototype.refresh
-	page.prototype.destroy 	= common.prototype.destroy
+	page.prototype.edit		= render_page.prototype.edit
+	page.prototype.render	= common.prototype.render
+	page.prototype.refresh	= common.prototype.refresh
+	page.prototype.destroy	= common.prototype.destroy
 
 
 
@@ -61,15 +61,20 @@ page.prototype.init = async function(options) {
 
 	const self = this
 
-	self.model 			= 'page'
-	self.type 			= 'page'
-	self.mode 			= 'edit' // options.mode 	  // mode like 'section', 'tool', 'thesaurus'...
-	self.node 			= []
-	self.ar_instances 	= []
-	self.elements 		= options.elements // mixed items types like 'sections', 'tools'..
-	self.status 		= null
+	self.model			= 'page'
+	self.type			= 'page'
+	self.mode			= 'edit' // options.mode 	  // mode like 'section', 'tool', 'thesaurus'...
+	self.node			= []
+	self.ar_instances	= []
+	self.context		= options.context // mixed items types like 'sections', 'tools'..
+	self.page_elements	= self.context ? self.context.page_elements : []
+	self.status			= null
 	self.events_tokens	= []
-	self.menu_data 		= options.menu_data
+	self.menu_data		= options.menu_data
+
+	self.dd_request		= {
+		show : null
+	}
 
 
 	// launch preload all components files in parallel
@@ -82,33 +87,60 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('user_action', user_action)
 			)
 		// user_action fn
-			async function user_action(options) {
+			async function user_action(user_action_options) {
+				if(SHOW_DEBUG===true) {
+					console.log("// page user_action received user_action_options", user_action_options);
+				}
 
-				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.get_page_element(options)
+				const options = {}
+				for(const name in user_action_options) {
+					if (name!=='sqo') {					
+						options[name] = user_action_options[name]
+					}
+				}
 
-				// element context from api server result
-					const page_element = api_response.result
+				// const current_data_manager 	= new data_manager()
+				// const api_response 			= await current_data_manager.get_element_context(options)
+				//
+				// // element context from api server result
+				// 	const page_element = api_response.result
+
+				const request_config = []
+				
+				// source
+					const source = JSON.parse(JSON.stringify(options))
+						  source.typo	 = "source"
+					request_config.push(source)				
+
+				// sqo
+					if (user_action_options.sqo) {
+						request_config.push(user_action_options.sqo)
+					}
+				
 
 				// check response page element is valid for instantiate. Element instance loads the file
-					const page_element_instance = await instantiate_page_element(self, page_element)
+					const page_element_instance = await instantiate_page_element(self, request_config)
 					if (typeof page_element_instance==="undefined" || !page_element_instance) {
-						console.error("[page.user_action] Stopped user action. Element instance not suitable. page_element:", page_element);
+						console.error("[page.user_action] Stopped user action. Element instance not suitable. source:", request_config);
 						return false
 					}
 
 				// elements to stay
-					const base_types = ['section','tool','area']
+					// const base_models = ['section','tool','area']
+					const base_models = ['menu']
 					// const elements_to_stay 	= self.elements.filter(item => item.model!==page_element.model)
-					const elements_to_stay 	= self.elements.filter(item => !base_types.includes(item.type))
-						  elements_to_stay.push(page_element)
-					self.elements = elements_to_stay
+					const elements_to_stay 	= self.page_elements.filter( el => el.filter(item => base_models.includes(item.model)).length > 0)
+
+
+					// add current source from options
+						elements_to_stay.push(request_config)
+						self.page_elements = elements_to_stay
 
 				// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
 					// const instances_to_destroy = self.ar_instances.filter(item => item.model!==page_element.model)
-					const instances_to_destroy = self.ar_instances.filter(item => !base_types.includes(item.type))
-					for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
-						instances_to_destroy[i].destroyable = false
+					const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+					for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+						instances_to_stay[i].destroyable = false
 					}
 					await self.refresh()
 
@@ -119,17 +151,17 @@ page.prototype.init = async function(options) {
 						const options_url 	= Object.assign({}, options);
 						delete options_url.event_in_history
 
-						const var_uri 		= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
+						const var_uri		= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
 						const uri_options	= JSON.parse(JSON.stringify(options))
-						const state 		= {options : uri_options}
-						const title 		= ''
-						const url 			= "?"+var_uri //window.location.href
+						const state			= {options : uri_options}
+						const title			= ''
+						const url			= "?"+var_uri //window.location.href
 
 						history.pushState(state, title, url)
 					}
 
 				return true
-			}//end user_action
+			};//end user_action
 
 
 	// window onpopstate
@@ -139,7 +171,7 @@ page.prototype.init = async function(options) {
 				options.event_in_history = true
 				event_manager.publish('user_action', options)
 			}
-		};
+		}
 
 
 	// observe tool calls
@@ -175,11 +207,11 @@ page.prototype.init = async function(options) {
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
  	return true
-}//end init
+};//end init
 
 
 
@@ -193,25 +225,11 @@ page.prototype.build = async function() {
 	// instances (like section). Instances are returned init and builded
 		await self.get_ar_instances()
 
-	// menu
-	// const page_menu = new menu()
-	// page_menu.init({menu_data : self.menu_data})
-	// page_menu.build()
-	// self.menu = page_menu
-
-	// reset self.ar_instances
-		//self.ar_instances = []
-
-	// reset self.node
-		//self.node = []
-
-
-
 	// status update
 		self.status = 'builded'
 
  	return true
-}//end build
+};//end build
 
 
 
@@ -223,39 +241,31 @@ page.prototype.get_ar_instances = async function(){
 	const self = this
 
 	// instances
-		const elements 			= self.elements
-		const elements_length 	= elements.length
-		for (let i = 0; i < elements_length; i++) {
+		const page_elements			= self.page_elements;
 
-			const element = elements[i]
+		const page_elements_length	= page_elements.length
+		for (let i = 0; i < page_elements_length; i++) {
+
+			const request_config = page_elements[i]
+
 			if(SHOW_DEBUG===true) {
-				console.log("page.get_ar_instances element:", element);
+				// console.log("page.get_ar_instances source:", source);
 			}
 
-			// element instance (load file)
-				// const current_instance = await get_instance({
-				// 	model 				: element.model,
-				// 	tipo 				: element.tipo || element.section_tipo,
-				// 	section_tipo		: element.section_tipo || null,
-				// 	section_id			: element.section_id || null,
-				// 	mode				: element.mode,
-				// 	lang				: element.lang,
-				// 	sqo_context			: element.sqo_context || null,
-				// 	datum				: element.datum || null
-				// })
-				const current_instance = await instantiate_page_element(self, element)
+			const current_instance = await instantiate_page_element(self, request_config)
+			// console.log("---- page get_ar_instances current_instance", current_instance);
 
 			// build (load data)
-				await current_instance.build(true)
+			const autoload = current_instance.status==="initiated" // avoid reload menu data
+			await current_instance.build(autoload)
 
 			// add
 				self.ar_instances.push(current_instance)
-
-		}//end for (let i = 0; i < elements_length; i++)
+		};//end for (let i = 0; i < elements_length; i++)
 
 
 	return self.ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
 
 
 
@@ -263,18 +273,29 @@ page.prototype.get_ar_instances = async function(){
 * INSTANTIATE_PAGE_ELEMENT
 * @return promise current_instance_promise
 */
-const instantiate_page_element = function(self, page_element) {
+const instantiate_page_element = function(self, request_config) {
+
+	const source = request_config.find(item => item.typo==='source')
+
+	const tipo			= source.tipo
+	const section_tipo	= source.section_tipo || tipo
+
+	const context		= {
+		model			: source.model,
+		tipo			: tipo,
+		request_config 	: request_config
+	}
 
 	// instance options
 		const instance_options = {
-			model 				: page_element.model,
-			tipo 				: page_element.tipo || page_element.section_tipo,
-			section_tipo		: page_element.section_tipo || null,
-			section_id			: page_element.section_id || null,
-			mode				: page_element.mode,
-			lang				: page_element.lang,
-			sqo_context			: page_element.sqo_context || null,
-			datum				: page_element.datum || null
+			model			: source.model,
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: source.section_id || null,
+			mode			: source.mode,
+			lang			: source.lang,
+			// datum		: source.datum || null
+			context			: context
 		}
 
 		// id_variant . Propagate a custom instance id to children
@@ -283,10 +304,11 @@ const instantiate_page_element = function(self, page_element) {
 			}
 
 	// page_element instance (load file)
-		const current_instance_promise = get_instance(instance_options)
+		const instance_promise = get_instance(instance_options)
 
-	return current_instance_promise
-}//end instantiate_page_element
+
+	return instance_promise
+};//end instantiate_page_element
 
 
 
@@ -339,4 +361,4 @@ page.prototype.build_element = async function(){
 // 		history.pushState(state, title, url)
 
 // 	return true
-// }//end user_action
+// };//end user_action

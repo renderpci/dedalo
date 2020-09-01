@@ -34,7 +34,7 @@ export const component_json = function(){
 	this.editors = []
 
 	return true
-}//end component_json
+};//end component_json
 
 
 
@@ -44,33 +44,35 @@ export const component_json = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_json.prototype.init 	 			= component_common.prototype.init
-	component_json.prototype.build 	 			= component_common.prototype.build
-	component_json.prototype.render 			= common.prototype.render
-	component_json.prototype.refresh 			= common.prototype.refresh
-	component_json.prototype.destroy 	 		= common.prototype.destroy
+	component_json.prototype.init				= component_common.prototype.init
+	component_json.prototype.build				= component_common.prototype.build
+	component_json.prototype.render				= common.prototype.render
+	component_json.prototype.refresh			= common.prototype.refresh
+	component_json.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_json.prototype.save 	 			= component_common.prototype.save
+	component_json.prototype.save				= component_common.prototype.save
 	component_json.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_json.prototype.update_datum 		= component_common.prototype.update_datum
-	component_json.prototype.change_value 		= component_common.prototype.change_value
+	component_json.prototype.update_datum		= component_common.prototype.update_datum
+	component_json.prototype.change_value		= component_common.prototype.change_value
+	component_json.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_json.prototype.list 				= render_component_json.prototype.list
-	component_json.prototype.edit 				= render_component_json.prototype.edit
+	component_json.prototype.mini				= render_component_json.prototype.mini
+	component_json.prototype.list				= render_component_json.prototype.list
+	component_json.prototype.edit				= render_component_json.prototype.edit
 	component_json.prototype.edit_in_list		= render_component_json.prototype.edit
 	component_json.prototype.tm					= render_component_json.prototype.edit
-	// component_json.prototype.search 			= render_component_json.prototype.search
-	component_json.prototype.change_mode 		= component_common.prototype.change_mode
+	// component_json.prototype.search			= render_component_json.prototype.search
+	component_json.prototype.change_mode		= component_common.prototype.change_mode
 
 
 
 /**
-* LOAD_EDITOR
+* LOAD_EDITOR_FILES
 * @return promise
 */
-component_json.prototype.load_editor = async function() {
+component_json.prototype.load_editor_files = function() {
 
 	const self = this
 
@@ -90,7 +92,8 @@ component_json.prototype.load_editor = async function() {
 
 
 	return js_promise
-};//end load_editor
+};//end load_editor_files
+
 
 
 /**
@@ -103,7 +106,7 @@ component_json.prototype.set_value = async function(value) {
 	self.editors[0].set(value)
 
 
-}// end set_value
+};//end set_value
 
 
 // /**
@@ -131,7 +134,7 @@ component_json.prototype.set_value = async function(value) {
 // 	//console.log("component_json: init:",self);
 
 // 	//event_manager.subscribe('stateChange', () => self.render())
-// }//end init
+// };//end init
 
 
 
@@ -176,7 +179,7 @@ component_json.prototype.set_value = async function(value) {
 // 	//event_manager.subscribe('stateChange', () => self.render())
 
 // 	return js_promise
-// }//end load_context
+// };//end load_context
 
 // /**
 // * LOAD_DATA
@@ -206,7 +209,7 @@ component_json.prototype.set_value = async function(value) {
 // 		})
 
 // 	return js_promise
-// }//end load_data
+// };//end load_data
 
 // /**
 // * RENDER
@@ -245,4 +248,4 @@ component_json.prototype.set_value = async function(value) {
 // 				//},1000)
 // 		})
 // 	})
-// }//end render
+// };//end render

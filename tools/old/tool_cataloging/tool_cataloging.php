@@ -11,7 +11,7 @@
 	$tool_label 		= label::get_label('cataloging');
 
 	$RecordObj_dd		= new RecordObj_dd($tool_tipo);
-	$properties 		= $RecordObj_dd->get_propiedades(true);
+	$properties 		= $RecordObj_dd->get_properties(true);
 
 
 	switch($modo) {

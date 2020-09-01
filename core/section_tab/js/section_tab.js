@@ -20,10 +20,10 @@ var section_tabs = new function() {
 			set_localStorage('section_tab_active', button_object.id)
 
 		const section_tab_tipo 	  = button_object.dataset.tipo
-		const section_tab_wrapper = button_object.parentNode		
-		
+		const section_tab_wrapper = button_object.parentNode
+
 		// section_tab_active. reset
-			const section_tab_active = section_tab_wrapper.querySelector('span.section_tab_active')			
+			const section_tab_active = section_tab_wrapper.querySelector('span.section_tab_active')
 			section_tab_active.classList.remove("section_tab_active")
 
 		// button activate
@@ -39,13 +39,13 @@ var section_tabs = new function() {
 					section_tabs_containers.push(node)
 				}
 			}
-		
+
 			const section_tabs_containers_len 	= section_tabs_containers.length
 			const section_tab_active_id 		= 'section_tab_content_' + section_tab_tipo; // section_tab_active current
 			for (let i = 0; i < section_tabs_containers_len; i++) {
 
 				const container = section_tabs_containers[i]
-			
+
 				if(container.id===section_tab_active_id ){
 					//container.style.display = 'table';
 					container.classList.add("tab_content_active");
@@ -53,12 +53,12 @@ var section_tabs = new function() {
 					//container.style.display = 'none';
 					if (container.classList.contains("tab_content_active")) {
 						container.classList.remove("tab_content_active");
-					}					
+					}
 				}
-			}		
+			}
 
 		return true
-	}//end set_tab_active
+	};//end set_tab_active
 
 
 
@@ -69,25 +69,25 @@ var section_tabs = new function() {
 	* Called on component html is rendered in edit mode
 	*/
 	this.select_tab_active = function() {
-		
+
 		const self = this
 
-		const cookie_tab_active = get_localStorage('section_tab_active');		
+		const cookie_tab_active = get_localStorage('section_tab_active');
 		if (cookie_tab_active) {
 			// Previously set on cookie
 			const tab_active_element = document.getElementById(cookie_tab_active)
 			if (tab_active_element)
 				self.set_tab_active(tab_active_element)
-				
+
 		}else{
 			// Fallback. Selects first tab input element and set as checked
 			const tab_active_element = document.querySelector('span.section_tab_label')
 				  tab_active_element.classList.add("section_tab_active");
 				  set_localStorage('section_tab_active', tab_active_element.id)
 				  self.set_tab_active(tab_active_element)
-		}		
-	}//end select_tab_active
+		}
+	};//end select_tab_active
 
 
 
-}//end class
+};//end class

@@ -31,7 +31,7 @@
 					$current_component  = $current_element->component;
 					$current_tipo 		= $current_component->get_tipo();
 	
-					# Skip propiedades defined skip_components
+					# Skip properties defined skip_components
 					if (in_array($current_tipo, $skip_components)) {
 						continue;
 					}else{
@@ -71,7 +71,7 @@
 					$html .= $value;
 					
 					# look_inside
-					$look_inside = isset($current_element->component->propiedades->look_inside) ? (bool)$current_element->component->propiedades->look_inside : false;
+					$look_inside = isset($current_element->component->properties->look_inside) ? (bool)$current_element->component->properties->look_inside : false;
 					# Iterate relationable components too when look_inside is true
 					$current_modelo_name = get_class($current_component);
 					if( $look_inside===true && true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) ) {
@@ -82,7 +82,7 @@
 											
 							foreach ($ar_related_component_tipo as $current_component_tipo) {
 								
-								# Skip propiedades defined skip_components
+								# Skip properties defined skip_components
 								if (in_array($current_component_tipo, $skip_components)) {
 									continue;
 								}

@@ -36,7 +36,7 @@ export const login = function() {
 	this.status
 
 	return true
-}//end login
+};//end login
 
 
 
@@ -45,10 +45,10 @@ export const login = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	login.prototype.edit 		= render_login.prototype.edit
-	login.prototype.render 		= common.prototype.render
-	login.prototype.destroy 	= common.prototype.destroy
-	login.prototype.refresh 	= common.prototype.refresh
+	login.prototype.edit	= render_login.prototype.edit
+	login.prototype.render	= common.prototype.render
+	login.prototype.destroy	= common.prototype.destroy
+	login.prototype.refresh	= common.prototype.refresh
 
 
 
@@ -61,29 +61,29 @@ login.prototype.init = async function(options) {
 	const self = this
 
 	// instance key used vars
-	self.model 				= options.model
-	self.tipo 				= options.tipo
-	self.mode 				= options.mode
-	self.lang 				= options.lang
+	self.model			= options.model
+	self.tipo			= options.tipo
+	self.mode			= options.mode
+	self.lang			= options.lang
 
 	// DOM
-	self.node 				= []
+	self.node			= []
 
-	self.events_tokens		= []
-	self.context 			= options.context 		|| null
-	self.data 	 			= options.data 	  		|| null
-	self.datum 	 			= options.datum   		|| null
+	self.events_tokens	= []
+	self.context		= options.context	|| null
+	self.data			= options.data		|| null
+	self.datum			= options.datum		|| null
 
-	self.type 				= 'login'
-	self.label 				= null
+	self.type			= 'login'
+	self.label			= null
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -92,29 +92,65 @@ login.prototype.init = async function(options) {
 * @return promise
 *	bool true
 */
-login.prototype.build = async function() {
+login.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
 
-	// set context and data to current instance
-		self.context	= self.datum.context
-		self.data 		= self.datum.data
+	// status update
+		self.status = 'building'
 
-	// Update section mode with context declaration
-	 	self.mode 		= self.context.mode
-	 	self.label 		= self.context.label
+
+	if (autoload===true) {
+
+		// load data
+			const current_data_manager = new data_manager()
+
+		// get context and data
+			const api_response = await current_data_manager.get_login()
+
+		// set the result to the datum
+			self.datum = api_response.result
+	}
+
+	// set context and data to current instance
+		self.context	= self.datum.context.find(element => element.tipo===self.tipo);
+		self.data		= self.datum.data.find(element => element.tipo===self.tipo);
 
 	// debug
 		if(SHOW_DEBUG===true) {
+			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 		}
 
 	// status update
 		self.status = 'builded'
 
+
 	return true
-}//end build
+
+	// const t0 = performance.now()
+
+	// const self = this
+
+	// // set context and data to current instance
+	// 	self.context	= self.datum.context
+	// 	self.data 		= self.datum.data
+
+	// // Update section mode with context declaration
+	//  	self.mode 		= self.context.mode
+	//  	self.label 		= self.context.label
+
+	// // debug
+	// 	if(SHOW_DEBUG===true) {
+	// 		console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+	// 	}
+
+	// // status update
+	// 	self.status = 'builded'
+
+	// return true
+};//end build
 
 
 
@@ -126,9 +162,9 @@ export const quit = async function() {
 	// data_manager api call
 		const api_response = await data_manager.prototype.request({
 			body : {
-				action 	 : 'quit',
-				dd_api 	 : 'dd_utils_api',
-				options  : {}
+				action	: 'quit',
+				dd_api	: 'dd_utils_api',
+				options	: {}
 			}
 		})
 
@@ -152,7 +188,7 @@ export const quit = async function() {
 
 
 	return api_response
-}//end quit
+};//end quit
 
 
 
@@ -160,5 +196,3 @@ export const quit = async function() {
 	// window.login = {
 	// 	quit : quit
 	// }
-
-

@@ -6,7 +6,7 @@
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
 	$modo				= $this->get_modo();
-	$properties			= $this->get_propiedades();
+	$properties			= $this->get_properties();
 
 
 
@@ -21,9 +21,9 @@
 				break;
 
 			default:
-				$sqo_context = isset($properties->unique) ? true : false;
+				$add_request_config = isset($properties->unique) ? true : false;
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $sqo_context);
+					$context[] = $this->get_structure_context($permissions, $add_request_config);
 
 				// add buttons
 					$context = array_merge($context, $this->get_structure_buttons($permissions));
@@ -41,11 +41,14 @@
 		// Value
 		switch ($modo) {
 			case 'list':
-				$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$value					= $this->get_dato();
+				$fallback_value			= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				// $fallback_lang_applied	= $value!==$fallback_value;
 				break;
 			case 'edit':
 			default:
-				$value = $this->get_dato();
+				$value 					= $this->get_dato();
+				$fallback_value			= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
 				break;
 		}
 
@@ -68,8 +71,11 @@
 
 		// data item
 			$item  = $this->get_data_item($value);
-				$item->parent_tipo 		 = $this->get_tipo();		// (? used)
- 				$item->parent_section_id = $this->get_section_id();	// (? used)
+				$item->parent_tipo				= $this->get_tipo();
+				$item->parent_section_id		= $this->get_section_id();
+				$item->fallback_value			= $fallback_value;
+				// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
+
 
 		$data[] = $item;
 

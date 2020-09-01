@@ -18,7 +18,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
@@ -34,7 +34,7 @@
 
 		// Value
 		$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-		
+
 		// data item
 		$item  = $this->get_data_item($value);
 

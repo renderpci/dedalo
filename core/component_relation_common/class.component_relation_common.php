@@ -67,14 +67,13 @@ class component_relation_common extends component_common {
 		# Force always DEDALO_DATA_NOLAN
 		// $lang = $this->lang;
 
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$translatable = $RecordObj_dd->get_traducible();
-		if ($translatable==='si') {
+		$translatable = RecordObj_dd::get_translatable($tipo);
+		if ($translatable===true) {
 			if (empty($lang)) {
 				$lang = DEDALO_DATA_LANG;
 			}else{
 				if ($lang===DEDALO_DATA_NOLAN) {
-					debug_log(__METHOD__." Changed component wrong lang [translatable $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
+					debug_log(__METHOD__." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
 					$lang = DEDALO_DATA_LANG;
 				}
 			}
@@ -83,7 +82,9 @@ class component_relation_common extends component_common {
 				$lang = DEDALO_DATA_NOLAN;
 			}else{
 				if ($lang!==DEDALO_DATA_NOLAN) {
-					debug_log(__METHOD__." Changed component wrong lang [non translatable $section_tipo - $tipo] from $lang to ".DEDALO_DATA_NOLAN, logger::ERROR);
+					$bt = debug_backtrace()[1];
+					debug_log(__METHOD__." Changed component wrong lang [NON TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_NOLAN, logger::ERROR);
+						dump($bt, ' bt ++ '.to_string());
 					$lang = DEDALO_DATA_NOLAN;
 				}
 			}
@@ -102,6 +103,15 @@ class component_relation_common extends component_common {
 		// 	}
 		// }
 
+		$properties = $this->get_properties();
+
+		$this->pagination->limit = isset($properties->source->request_config)
+		&& isset($properties->source->request_config[0]->show)
+		&& isset($properties->source->request_config[0]->show->sqo_config)
+		&& isset($properties->source->request_config[0]->show->sqo_config->limit)
+			? $properties->source->request_config[0]->show->sqo_config->limit
+			: 5;
+
 		return true;
 	}//end __construct
 
@@ -109,7 +119,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_DATO
-	* Returns dato from container 'relations', not for component dato container
+	* Returns dato from container 'relations', not from component dato container
 	* @return array $dato
 	*	$dato is always an array of locators or an empy array
 	*/
@@ -169,7 +179,7 @@ class component_relation_common extends component_common {
 	*/
 	protected function load_component_dato() {
 
-		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
+		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
 			return null;
 		}
 
@@ -366,6 +376,7 @@ class component_relation_common extends component_common {
 			$this->dato_full =  (array)$safe_dato;
 		}
 
+
 		return true;
 	}//end set_dato
 
@@ -400,7 +411,7 @@ class component_relation_common extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			// if not already receved 'valor', force component load 'dato' from DB
@@ -670,20 +681,23 @@ class component_relation_common extends component_common {
 	* Resolve locator to string value to show in list etc.
 	* @return string $locator_value
 	*/
-	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true ) {
+	public static function get_locator_value($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true) {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
-			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string());;
+			#dump($ar_components_related, ' ar_components_related ++ '.to_string());
 		}
 
 		if (empty($locator) || !is_object($locator)) {
 			return false;
 		}
 		$locator = new locator($locator);
-		if($ar_componets_related!==false && !empty($ar_componets_related)){
+
+		$ar_value = [];
+
+		if($ar_components_related!==false && !empty($ar_components_related)){
 
 			$value = array();
-			foreach ($ar_componets_related as $component_tipo) {
+			foreach ($ar_components_related as $component_tipo) {
 				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				$current_component = component_common::get_instance($modelo_name,
 																	$component_tipo,
@@ -696,7 +710,7 @@ class component_relation_common extends component_common {
 					#dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
 
 				$value[] = $current_value;
-			}//end foreach ($ar_componets_related as $component_tipo)
+			}//end foreach ($ar_components_related as $component_tipo)
 
 			$ar_values_clean = [];
 			foreach ((array)$value as $key => $element_value) {
@@ -704,15 +718,16 @@ class component_relation_common extends component_common {
 				$ar_values_clean[] = $element_value;
 			}
 
-			$locator_value = implode($divisor, $ar_values_clean);
+			// $locator_value = implode($divisor, $ar_values_clean);
+			$ar_value = array_merge($ar_value, $ar_values_clean);
 
 		}else{
 
 			if ($show_parents===true) {
 
-				$ar_values = [];
+				$ar_current_values = [];
 				if ($include_self===true) {
-					$ar_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
+					$ar_current_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
 				}
 
 				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
@@ -726,16 +741,17 @@ class component_relation_common extends component_common {
 
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
 					if (!empty($current_value)) {
-						$ar_values[]  = $current_value;
+						$ar_current_values[]  = $current_value;
 					}
 				}
 
-				#debug_log(__METHOD__."  ".to_string($ar_parents_values), logger::DEBUG);
-				$locator_value = implode($divisor, $ar_values);
+				// $locator_value = implode($divisor, $ar_current_values);
+				$ar_value = array_merge($ar_value, $ar_current_values);
 
 			}else{
 
-				$locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
+				// $locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
+				$ar_value[] = ts_object::get_term_by_locator( $locator, $lang, true );
 
 			}//end if ($show_parents===true)
 		}
@@ -745,8 +761,12 @@ class component_relation_common extends component_common {
 			#debug_log(__METHOD__." Total time $total ".to_string(), logger::DEBUG);
 		}
 
+		$locator_value = ($glue===true)
+			? implode($divisor, $ar_value)
+			: $ar_value;
 
-		return (string)$locator_value;
+
+		return $locator_value;
 	}//end get_locator_value
 
 
@@ -801,9 +821,9 @@ class component_relation_common extends component_common {
 																		  $lang,
 																		  $current_section_tipo);
 
-			# NOTE: remove_me_as_your_children deletes current section references from component_relation_children and section->relations container
-			# $removed = (bool)$component_relation_children->remove_children_and_save($children_locator);
-			$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $section_id );
+			# NOTE: remove_me_as_your_child deletes current section references from component_relation_children and section->relations container
+			# $removed = (bool)$component_relation_children->remove_child_and_save($child_locator);
+			$removed = (bool)$component_relation_children->remove_me_as_your_child( $section_tipo, $section_id );
 			if ($removed===true) {
 				$component_relation_children->Save();
 				debug_log(__METHOD__." Removed references in component_relation_children ($current_section_id, $current_section_tipo) to $section_id, $section_tipo ".to_string(), logger::DEBUG);
@@ -1018,17 +1038,16 @@ class component_relation_common extends component_common {
 			}
 			#dump($dato, ' dato ++ '.to_string());
 
-		// propiedades . get the properties for get search section and component
-			$propiedades 				= $this->get_propiedades();
-			$ar_section_to_search 		= $propiedades->source->section_to_search;
-			$ar_component_to_search 	= $propiedades->source->component_to_search;
+		// properties . get the properties for get search section and component
+			$properties 				= $this->get_properties();
+			$ar_section_to_search 		= $properties->source->section_to_search;
+			$ar_component_to_search 	= $properties->source->component_to_search;
 
 		// current section tipo/id
-			$section_id 	= $this->get_parent();
+			$section_id 	= $this->get_section_id();
 			$section_tipo 	= $this->get_section_tipo();
-
 		// data source overwrite (tool cataloging case)
-			if (isset($propiedades->source->source_overwrite) && isset($propiedades->source->component_to_search)) {
+			if (isset($properties->source->source_overwrite) && isset($properties->source->component_to_search)) {
 				// overwrite source locator
 					$component_to_search_tipo 	= reset($ar_component_to_search);
 					$modelo_name 	  		   	= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
@@ -1049,7 +1068,7 @@ class component_relation_common extends component_common {
 				// get overwrite source data when exists
 					if (isset($locator)) {
 
-						$data_from_field_tipo		= $propiedades->source->source_overwrite->data_from_field;
+						$data_from_field_tipo		= $properties->source->source_overwrite->data_from_field;
 						$modelo_name 	  		   	= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
 						$component_overwrite 		= component_common::get_instance($modelo_name,
 																					 $data_from_field_tipo,
@@ -1076,8 +1095,8 @@ class component_relation_common extends component_common {
 			$new_dato = [];
 
 		// data_from_field. get if the search need add fields data:
-			if(isset($propiedades->source->data_from_field)){
-				$data_from_field  = $propiedades->source->data_from_field;
+			if(isset($properties->source->data_from_field)){
+				$data_from_field  = $properties->source->data_from_field;
 
 				foreach ($data_from_field as $current_component_tipo) {
 					$modelo_name 	  		   = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
@@ -1102,8 +1121,8 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 			$new_dato[] = $locator;
+			$ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 
-			$ar_result 		 = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 			$total_ar_result = count($ar_result);
 			$total_ar_dato   = count($dato);
 
@@ -1147,10 +1166,28 @@ class component_relation_common extends component_common {
 		// changed true
 			if ($changed===true) {
 				$dato = array_values($dato);
-				$this->set_dato($dato);
-				if ($save===true) {
-					$this->Save();
-					debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+				foreach ($new_dato as $current_section) {
+					$component_to_update = component_common::get_instance(get_called_class(),
+																		$this->tipo,
+																		$current_section->section_id,
+																		'list',
+																		DEDALO_DATA_NOLAN,
+																		$current_section->section_tipo,
+																		false);
+
+					// set the dato in all instances, included the same instance that current instance.
+					$component_to_update->set_dato($dato);
+					if ($save===true) {
+						$component_to_update->Save();
+						debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+					}
+
+					// if the current section_id is the same of the current instace update the dato of the current instance
+					// else update the dato of the other instances (references witht the same dato)
+					if($current_section->section_id == $this->section_id){
+						$this->set_dato($dato);
+					}
+
 				}
 			}
 
@@ -1260,11 +1297,16 @@ class component_relation_common extends component_common {
 																 $f_section_tipo);
 			// get section json
 				$get_json_options = new stdClass();
-					$get_json_options->get_context 	= false;
+					$get_json_options->get_context 	= true;
+					$get_json_options->context_type = 'simple';
 					$get_json_options->get_data 	= true;
-				$filter_list_data[] = $current_component->get_json($get_json_options);
 
+				$json_data = $current_component->get_json($get_json_options);
 
+				$filter_list = new stdClass();
+					$filter_list->context	= $json_data->context[0];
+					$filter_list->datalist	= $json_data->data[0]->datalist ?? [];
+				$filter_list_data[] = $filter_list;
 		}
 
 		return $filter_list_data;
@@ -1276,12 +1318,12 @@ class component_relation_common extends component_common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
+	public static function parse_stats_values($tipo, $section_tipo, $properties, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
 
 		// Search
-			if (isset($propiedades->stats_look_at)) {
-				$related_tipo = reset($propiedades->stats_look_at);
-				if (isset($propiedades->valor_arguments)) {
+			if (isset($properties->stats_look_at)) {
+				$related_tipo = reset($properties->stats_look_at);
+				if (isset($properties->valor_arguments)) {
 					$selector = 'dato';
 				}
 			}else{
@@ -1317,7 +1359,7 @@ class component_relation_common extends component_common {
 				$value = end($item);
 
 				// locators case (like component_select)
-				if (strpos($value, '[{')===0 && !isset($propiedades->valor_arguments)) {
+				if (strpos($value, '[{')===0 && !isset($properties->valor_arguments)) {
 					$ar_locators = $value;
 					foreach ((array)$ar_locators as $locator) {
 
@@ -1345,9 +1387,9 @@ class component_relation_common extends component_common {
 					}
 
 					// Override label with custom component parse
-					if (isset($propiedades->stats_look_at) && isset($propiedades->valor_arguments)) {
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($propiedades->stats_look_at), true);
-						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $propiedades->valor_arguments);
+					if (isset($properties->stats_look_at) && isset($properties->valor_arguments)) {
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($properties->stats_look_at), true);
+						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
 					}
 
 					$uid = $label;
@@ -1370,260 +1412,20 @@ class component_relation_common extends component_common {
 	}//end parse_stats_values
 
 
-	/**
-	* GET_SQO_CONTEXT
-	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
-	* The search_query_object_context (sqo_context) have at least:
-	* one sqo, that define the search with filter, offest, limit, etc, the select option is not used (it will use the ddo)
-	* one ddo for the searched section (source ddo)
-	* one ddo for the component searched.
-	* 	is possible create more than one ddo for different components.
-	* @return object | json
-	*/
-	public function get_sqo_context() {
-
-		// already calculated
-			if (isset($this->sqo_context)) {
-				return $this->sqo_context;
-			}
-
-		// sort vars
-			$section_tipo 	= $this->get_section_tipo();
-			$tipo			= $this->get_tipo();
-			$lang 			= $this->get_lang();
-			$section_id		= $this->get_parent();
-			$mode 			= $this->get_modo();
-			$propiedades	= $this->get_propiedades();
-
-
-		// SEARCH
-			$search = [];
-			// typo SOURCE SEARCH
-				$source_search = new stdClass();
-					$source_search->typo 			= 'source';
-					$source_search->action 			= 'search';
-					$source_search->tipo 			= $tipo;
-					$source_search->section_tipo 	= $section_tipo;
-					$source_search->lang 			= $lang;
-					$source_search->mode 			= 'list';
-
-				$search[] = $source_search;
-
-			// typo SEARCH
-				// filter_custom
-					$filter_custom = [];
-				// hierarchy_terms_filter
-					if (isset($propiedades->source->hierarchy_terms)) {
-						$hierarchy_terms_filter = $this->get_hierarchy_terms_filter();
-						$filter_custom = array_merge($filter_custom, $hierarchy_terms_filter);
-					}
-				// propiedades filter custom
-					if (isset($propiedades->source->filter_custom)) {
-						$filter_custom = array_merge($filter_custom, $propiedades->source->filter_custom);
-					}
-				// Limit
-					$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 40;
-				// operator can be injected by api
-					$operator = isset($propiedades->source->operator) ? '$'.$propiedades->source->operator : null;
-				// search_sections
-					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-					$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
-
-				// search_query_object build
-					$search_sqo_options = new stdClass();
-						$search_sqo_options->q 	 				  = null;
-						$search_sqo_options->limit  			  = $limit;
-						$search_sqo_options->offset 			  = 0;
-						$search_sqo_options->section_tipo 		  = $search_sections;
-						$search_sqo_options->tipo 				  = $tipo;
-						$search_sqo_options->logical_operator 	  = $operator;
-						$search_sqo_options->add_select 		  = false;
-						$search_sqo_options->filter_custom 		  = !empty($hierarchy_terms_filter) ? $hierarchy_terms_filter : null;
-						$search_sqo_options->skip_projects_filter = true; // skip_projects_filter true on edit mode
-
-					$search_query_object = common::build_search_query_object($search_sqo_options);
-
-				// value_with_parents
-					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true){
-
-						$search_query_object->value_with_parents 	= true;
-						$search_query_object->source_component_tipo = $tipo;
-
-					}// end $value_with_parent = true
-
-				// add sqo
-					$search[] = $search_query_object;
-
-
-		// SHOW
-			$show= [];
-			// search_query_object_options
-
-				$limit 	= $propiedades->max_records ?? $this->max_records;
-				$offset = 0;
-
-				$pagination = new stdClass();
-					$pagination->limit 	= $limit;
-					$pagination->offset = $offset;
-
-				$show_sqo_options = new stdClass();
-					$show_sqo_options->section_tipo = $search_sections;
-					$show_sqo_options->tipo			= $tipo;
-					$show_sqo_options->full_count	= false;
-					$show_sqo_options->add_select 	= false;
-					$show_sqo_options->add_filter 	= true;
-					// paginations options
-					$show_sqo_options->limit 		 = $limit;
-					$show_sqo_options->offset 		 = $offset;
-
-				$search_query_object = common::build_search_query_object($show_sqo_options);
-
-				// value_with_parents
-					if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true){
-						$search_query_object->value_with_parents 	= true;
-						$search_query_object->source_component_tipo = $tipo;
-					}// end $value_with_parent = true
-
-				// add sqo
-					$show[] = $search_query_object;
-
-
-		// LAYOUT MAP // fields for select / show. add ddo
-
-			// subcontext from layout_map items
-			// search
-				$layout_map_options = new stdClass();
-					$layout_map_options->section_tipo 			= $section_tipo;
-					$layout_map_options->tipo 					= $tipo;
-					$layout_map_options->modo 					= $mode;
-					$layout_map_options->add_section 			= true;
-					$layout_map_options->config_context_type 	= 'select';
-				$search = array_merge( $search, layout_map::get_layout_map($layout_map_options) );
-
-			// show
-				$layout_map_options->config_context_type 		= 'show';
-				$show = array_merge( $show, layout_map::get_layout_map($layout_map_options) );
-
-
-			$sqo_context = new stdClass();
-				$sqo_context->show 		= $show;
-				$sqo_context->search 	= $search;
-
-
-			///////////////////////////////////////////
-
-			/*
-			$search = json_decode('[
-				{
-					"typo": "sqo",
-					"id": "temp",
-					"section_tipo": ["numisdata3"],
-					"filter": {
-						"$or": [
-							{
-								"q": null,
-								"lang": "all",
-								"path": [
-									{
-										"name"				: "Catálogo",
-										"modelo"			: "component_select",
-										"section_tipo"		: "numisdata3",
-										"component_tipo"	: "numisdata309"
-									},
-									{
-										"name"				: "Catálogo",
-										"modelo"			: "component_input_text",
-										"section_tipo"		: "numisdata300",
-										"component_tipo"	: "numisdata303",
-										"lang_DES"				: "all"
-									}
-								]
-							},
-							{
-								"q"		: null,
-								"lang"	: "all",
-								"path"	: [
-									{
-										"name"				: "Número",
-										"modelo"			: "component_input_text",
-										"section_tipo"		: "numisdata3",
-										"component_tipo"	: "numisdata27",
-										"lang_DES"				: "all"
-									}
-								]
-							}
-						]
-					},
-					"limit": 40,
-					"offset": 0,
-					"skip_projects_filter": true
-				},
-				{
-					"typo"			: "ddo",
-					"model"			: "section",
-					"tipo" 			: "numisdata3",
-					"section_tipo" 	: "numisdata3",
-					"mode" 			: "list",
-					"lang" 			: "no-lan",
-					"parent"		: "root"
-				},
-				{
-					"typo"			: "ddo",
-					"tipo" 			: "numisdata27",
-					"section_tipo" 	: "numisdata3",
-					"mode" 			: "list",
-					"lang" 			: "lg-nolan",
-					"parent"		: "numisdata3",
-					"model"			: "component_input_text"
-				},
-				{
-					"typo"			: "ddo",
-					"tipo" 			: "numisdata309",
-					"section_tipo" 	: "numisdata3",
-					"mode" 			: "list",
-					"lang" 			: "lg-nolan",
-					"parent"		: "numisdata3",
-					"model"			: "component_select"
-				},
-				{
-					"typo"			: "ddo",
-					"tipo" 			: "numisdata81",
-					"section_tipo" 	: "numisdata3",
-					"mode" 			: "list",
-					"lang" 			: "lg-eng",
-					"parent"		: "numisdata3",
-					"model"			: "component_input_text"
-				}
-			]');
-			*/
-
-		// fix
-		$this->sqo_context	= $sqo_context;
-		$this->pagination	= $pagination;
-
-
-		return $sqo_context;
-	}//end get_sqo_context
-
-
 
 	/**
 	* GET_HIERARCHY_TERMS_FILTER
 	* Create a sqo filter from
 	* @return array $filter_custom
-	* @see get_sqo_context
+	* @see get_request_config
 	*/
-	public function get_hierarchy_terms_filter() {
+	public static function get_hierarchy_terms_filter($ar_terms) {
 
-		$filter_custom = [];
-
-		$properties = $this->get_propiedades();
-
-		$terms = $properties->source->hierarchy_terms;
-		foreach ($terms as $current_item) {
+		$filter = [];
+		foreach ($ar_terms as $current_item) {
 			$resursive = (bool)$current_item->recursive;
 			# Get childrens
-			$ar_childrens = component_relation_children::get_childrens($current_item->section_id, $current_item->section_tipo, null, $resursive);
+			$ar_childrens = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $resursive);
 			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_item->section_tipo, ['component_section_id'], true, true, true, true, false);
 
 			$path = new stdClass();
@@ -1640,12 +1442,247 @@ class component_relation_common extends component_common {
 				$filter_item->q 	= implode(',', $ar_section_id);
 				$filter_item->path 	= [$path];
 
-				$filter_custom[] = $filter_item;
+				$filter[] = $filter_item;
 		}//end foreach
 
 
-		return $filter_custom;
+		return $filter;
 	}//end get_hierarchy_terms_filter
+
+
+
+	/**
+	* GET_HIERARCHY_SECTIONS_FROM_TYPES
+	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
+	* @return array $hierarchy_sections_from_types
+	*/
+	public static function get_hierarchy_sections_from_types( $hierarchy_types ) {
+
+		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
+		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
+
+
+		$ar_filter = [];
+		# Active
+		$active_locator = new locator();
+			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+			$active_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+			$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+			$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
+
+		$ar_filter[] = '{
+				"q": '.json_encode(json_encode($active_locator)).',
+				"path": [
+					{
+						"section_tipo": "'.$hierarchy_section_tipo.'",
+						"component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'",
+						"modelo": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
+						"name": "Active"
+					}
+				]
+			}';
+		# Typology
+		foreach ((array)$hierarchy_types as $key => $value) {
+
+			$typology_locator = new locator();
+				$typology_locator->set_section_id($value);
+				$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
+				$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
+
+			$ar_filter[] = '{
+				"q": '.json_encode(json_encode($typology_locator)).',
+				"path": [
+					{
+						"section_tipo": "hierarchy1",
+						"component_tipo": "hierarchy9",
+						"modelo": "component_select",
+						"name": "Typology"
+					}
+				]
+			}';
+		}//end foreach ((array)$hierarchy_types as $key => $value)
+
+		$filter = implode(',',$ar_filter);
+
+		$search_query_object = json_decode('
+			{
+			  "id": "get_hierarchy_sections_from_types",
+			  "section_tipo": "'.$hierarchy_section_tipo.'",
+			  "skip_projects_filter":"true",
+			  "limit":0,
+			  "filter": {
+				"$and": [
+				  '.$filter.'
+				]
+			  }
+			}
+		');
+
+
+		$search = search::get_instance($search_query_object);
+		$result = $search->search();
+
+		// iterate rows
+			$hierarchy_sections_from_types = [];
+			foreach ($result->ar_records as $row) {
+
+				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
+					debug_log(__METHOD__." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string(), logger::ERROR);
+					continue;
+				}
+
+				$target_dato 		 = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
+				$target_section_tipo = reset($target_dato);
+
+				$hierarchy_sections_from_types[] = $target_section_tipo;
+			}
+
+
+		return (array)$hierarchy_sections_from_types;
+	}//end get_hierarchy_sections_from_types
+
+
+
+	/**
+	* GET_CONFIG_CONTEXT_SECTION_TIPO
+	* @return array $ar_section_tipo
+	*/
+	public static function get_request_config_section_tipo($ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) {
+
+		$ar_section_tipo = [];
+		foreach ((array)$ar_section_tipo_sources as $source_item) {
+
+			if (is_string($source_item)) {
+
+				// old self section tipo properties definitions
+					// if ($source_item==='self') {
+					// 	$source_item = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
+					// }
+					if ($source_item==='self') {
+						throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+					}
+
+				$ar_section_tipo[] = $source_item;
+				debug_log(__METHOD__." ++++++++++++++++++++++++++++++++++++ Received string source item ".to_string($source_item), logger::ERROR);
+				continue;
+			}
+
+			switch ($source_item->source) {
+				case 'hierarchy_types':
+					$hierarchy_types = component_relation_common::get_hierarchy_sections_from_types($source_item->value);
+					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
+					break;
+				case 'self':
+					// $ar_section_tipo = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
+					$ar_section_tipo = is_array($retrived_section_tipo) ? $retrived_section_tipo : [$retrived_section_tipo];
+					break;
+				case 'field_value':
+						// this case is used in component_relation_children in the hierarchy section
+						// in these case the array of sections will get from the value of specific field
+						$target_values = $source_item->value;
+						foreach ((array)$target_values as $key => $current_component_tipo) {
+							$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+							$component 		 = component_common::get_instance($model_name,
+																			  $current_component_tipo,
+																			  $section_id,
+																			  $modo='edit',
+																			  $lang=DEDALO_DATA_LANG,
+																			  $retrived_section_tipo);
+
+							$dato = $component->get_dato();
+							$ar_section_tipo = $dato; // Like ['es1']
+						}
+						break;
+					break;
+				case 'section':
+				default:
+					$ar_section_tipo = array_merge($ar_section_tipo, (array)$source_item->value);
+					break;
+			}
+		}
+		$ar_section_tipo = array_unique($ar_section_tipo);
+		return $ar_section_tipo;
+	}//end get_request_config_section_tipo
+
+
+
+	/**
+	* GET_FIXED_FILTER
+	* @return
+	*/
+	public static function get_fixed_filter($ar_fixed, $section_tipo, $section_id) {
+
+
+		$ar_fixed_filter = [];
+
+		foreach ($ar_fixed as $search_item) {
+			$operator = $search_item->operator;
+			$dato_filter = new stdClass();
+				$dato_filter->{$operator} = [];
+
+			switch ($search_item->source) {
+				case 'fixed_dato':
+					foreach ($search_item->value as $object) {
+						foreach ($object->q->value as $q_value) {
+							$filter_item = new stdClass();
+								$filter_item->q 	= '';
+								$filter_item->path 	= [];
+							foreach ($object->f_path as $key => $value) {
+								if($key % 2 ===0){
+									$filter_item->path[] = search::get_query_path($value, $object->f_path[$key+1],false,false)[0];
+								}
+							}
+							$filter_item->q = $q_value;
+							$dato_filter->{$operator}[] =  $filter_item;
+						}
+					}
+
+					break;
+
+				case 'component_dato':
+					foreach ($search_item->value as $object) {
+						$tipo 			= $object->q->value;
+						$model 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$RecordObj_dd 	= new RecordObj_dd($tipo);
+						$translatable	= $RecordObj_dd->get_traducible();
+
+						$component = component_common::get_instance($model,
+														$tipo,
+														$section_id,
+														'list',
+														$translatable === 'si'? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
+														$section_tipo);
+						$dato = $component->get_dato();
+						if(empty($dato)) continue;
+						foreach ($dato as $value) {
+							$filter_item = new stdClass();
+								$filter_item->q 	= json_encode($value);
+								$filter_item->path 	= search::get_query_path($section_tipo, $tipo,false,false)[0];
+
+							$dato_filter->{$operator}[] =  $filter_item;
+						}
+					}
+
+					break;
+
+				case 'hierarchy_terms':
+					$hierarchy_terms_filter = component_relation_common::get_hierarchy_terms_filter($search_item->value);
+					if(empty($hierarchy_terms_filter)) break;
+					$dato_filter->{$operator} =  $hierarchy_terms_filter;
+					break;
+			}
+
+			// finished group add
+			if(!empty($dato_filter->{$operator})){
+				$ar_fixed_filter[] =$dato_filter;
+			}
+
+		}//end foreach ($ar_fixed as $search_item)
+
+		return $ar_fixed_filter;
+	}//end get_fixed_filter
+
 
 
 

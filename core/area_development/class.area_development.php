@@ -40,19 +40,27 @@ class area_development extends area_common {
 
 		$ar_widgets = [];
 
+
 		// make_backup
 			$item = new stdClass();
-				$item->id 		= 'make_backup';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('hacer_backup');
-				$item->info 	= 'Click to force make a full backup now';
-				$item->body 	= ' ';
+				$item->id		= 'make_backup';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('hacer_backup');
+				$item->info		= null;
+				$file_name 		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
+				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';					
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[						
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
 				$item->trigger 	= (object)[
-					'dd_api' 		=> 'dd_utils_api',
-					'action' 	 	=> 'make_backup',
-					'options' 	 	=> null
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'make_backup',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -73,10 +81,11 @@ class area_development extends area_common {
 							(object)[
 								'type' => 'text',
 								'name' => 'tables',
-								'label' => 'Table name/s like "matrix,matrix_hierarcht" or "*" for all',
+								'label' => 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
 								'mandatory' => true
 							]
-						]
+						],
+						'confirm_text' => label::get_label('seguro')
 					]
 				];
 				$item->trigger 	= (object)[
@@ -87,41 +96,129 @@ class area_development extends area_common {
 			$ar_widgets[] = $item;
 
 
-
-
 		// update_structure
 			$item = new stdClass();
-				$item->id 		= 'update_structure';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('actualizar_estructura');
-				$item->info 	= 'Click to update structure from remote master server';
-				$item->confirm 	= '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
-				$item->confirm .= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
-				$item->confirm .= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
-				$item->confirm .= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
+				$item->id		= 'update_structure';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('actualizar_estructura');
+				$item->info		= null;
 				$item->body 	= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
-					'Current: ' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .
+					'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
 					'<hr>TLD: <tt>' . implode(', ', unserialize(DEDALO_PREFIX_TIPOS)).'</tt>' :
 					label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
 				$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
 				$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
+				$confirm_text	 = '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
+				$confirm_text	.= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
+				$confirm_text	.= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
+				$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;	
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'inputs' => [
+							(object)[
+								'type'		=> 'text',
+								'name'		=> 'dedalo_prefix_tipos',
+								'label'		=> 'Dédalo prefix tipos to update',
+								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'mandatory'	=> true
+							]
+						],
+						'confirm_text' => $confirm_text
+					]
+				];
 				$item->trigger 	= (object)[
 					'dd_api' 	=> 'dd_utils_api',
-					'action' 	 => 'update_structure',
-					'options' 	 => null
+					'action' 	=> 'update_structure',
+					'options' 	=> null
+				];
+			$ar_widgets[] = $item;
+
+
+		// export_structure_to_json
+			$item = new stdClass();
+				$item->id		= 'export_structure_to_json';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('exportar_estructura_json');
+				$item->info		= null;				
+
+				$file_name		= 'structure.json';
+				$file_path		= 'Target: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+				$item->body		= $file_path;
+				$confirm_text	= label::get_label('seguro');
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'inputs' => [
+							(object)[
+								'type'		=> 'text',
+								'name'		=> 'dedalo_prefix_tipos',
+								'label'		=> 'Dédalo prefix tipos to export',
+								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'mandatory'	=> true
+							]
+						],
+						'confirm_text' => $confirm_text
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'structure_to_json',
+					'options' 	=> null
+				];
+			$ar_widgets[] = $item;
+
+
+		// import_structure_from_json
+			$item = new stdClass();
+				$item->id		= 'import_structure_from_json';
+				$item->class	= 'danger';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('importar_estructura_json');
+				$item->info		= null;				
+
+				$file_name		= 'structure.json';
+				$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+				$item->body		= $file_path;
+				$confirm_text	= label::get_label('seguro');
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'inputs' => [
+							(object)[
+								'type'		=> 'text',
+								'name'		=> 'dedalo_prefix_tipos',
+								'label'		=> 'Dédalo prefix tipos to import',
+								'value'		=> implode(',', unserialize(DEDALO_PREFIX_TIPOS)),
+								'mandatory'	=> false
+							]
+						],
+						'confirm_text' => $confirm_text
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'import_structure_from_json',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
 
 
 		// register_tools
 			$item = new stdClass();
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('registrar_herramientas');
-				$item->info 	= 'Click to read tools folder and update the tools register in database';
+				$item->id		= 'register_tools';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('registrar_herramientas');				
 				$list = array_map(function($path){
 					// ignore folders with name different from pattern 'tool_*'
 					if (1!==preg_match('/tools\/tool_*/', $path, $output_array)) {
@@ -137,28 +234,40 @@ class area_development extends area_common {
 						return $tool_name;
 					}
 				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
-				$item->body 	= implode('<br>', array_filter($list));
+				$item->body 	= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
+				$item->body 	.= implode('<br>', array_filter($list));					
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[						
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
 				$item->trigger 	= (object)[
-					'dd_api' 		=> 'dd_utils_api',
-					'action' 	 	=> 'register_tools',
-					'options' 	 	=> null
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'register_tools',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
 
 
 		// build_structure_css
 			$item = new stdClass();
-				$item->id 		= 'build_structure_css';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= label::get_label('build_structure_css');
-				$item->info 	= 'Click to regenerate css from actual structure';
-				$item->body 	= ' ';
+				$item->id		= 'build_structure_css';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('build_structure_css');				
+				$item->body 	= 'Regenerate css from actual structure (Ontology)';									
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[						
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
 				$item->trigger 	= (object)[
-					'dd_api' 		=> 'dd_utils_api',
-					'action' 	 	=> 'build_structure_css',
-					'options' 	 	=> null
+					'dd_api' 	=> 'dd_utils_api',
+					'action' 	=> 'build_structure_css',
+					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
 
@@ -220,10 +329,40 @@ class area_development extends area_common {
 				$ar_widgets[] = $item;
 			}
 
+		
+		// Dédalo API test enviroment
+			$item = new stdClass();
+				$item->id		= 'dedalo_api_test_enviroment';
+				$item->class	= 'blue';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'DÉDALO API TEST ENVIROMENT';
+				$item->info		= null;
+				$item->body		= '<textarea id="json_editor_api" class="hide"></textarea>';				
+				$item->body		.= '<label>API base class</label> <input type="text" id="dd_api_base" placeholder="dd_api_base" class="" value="" />';
+				$item->body		.= '<label>API function name</label> <input type="text" id="dd_api_fn" class="" placeholder="dd_api_fn" value="" />';
+				$item->body		.= '<label>API request name</label> <input type="text" id="dd_api_request" placeholder="request" class="" value="" />';
+				$item->body		.= '<label></label> <button id="submit_api" class="border light">OK</button>';
+				$item->body		.= '<div id="json_editor_api_container" class="editor_json"></div>';
+				$item->run[]	= (object)[
+					'fn'		=> 'init_json_editor_api',
+					'options'	=> (object)[
+						'editor_id'	=> 'json_editor_api'										
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api' 	=> 'get_input_value:dd_api_base',
+					'action' 	=> 'get_input_value:dd_api_fn',
+					'options' 	=> null
+				];
+			$ar_widgets[] = $item;
+
 
 		// search query object test enviroment
 			$item = new stdClass();
 				$item->id 		= 'search_query_object_test_enviroment';
+				$item->class	= 'blue';
 				$item->typo 	= 'widget';
 				$item->tipo 	= $this->tipo;
 				$item->parent 	= $this->tipo;
@@ -241,7 +380,7 @@ class area_development extends area_common {
 					'options' 	=> null
 				];
 			$ar_widgets[] = $item;
-
+		
 
 		// dedalo version
 			$item = new stdClass();
@@ -334,7 +473,7 @@ class area_development extends area_common {
 				$item->parent 	= $this->tipo;
 				$item->label 	= 'PHP INFO';
 				$item->info 	= null;
-				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/html/info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
+				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px\';this.parentNode.parentNode.classList.add(\'display_none\')"></iframe>';
 			$ar_widgets[] = $item;
 
 

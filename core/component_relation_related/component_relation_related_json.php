@@ -9,7 +9,7 @@
 	$section_tipo 		= $this->section_tipo;
 	$lang 				= $this->lang;
 	$tipo 				= $this->get_tipo();
-	$properties 		= $this->get_propiedades() ?? new stdClass();
+	$properties 		= $this->get_properties() ?? new stdClass();
 
 
 
@@ -24,20 +24,10 @@
 				break;
 
 			default:
-				$sqo_context = true; // overwrite default false to force calculate
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context($permissions, $sqo_context);					
-					// add records_mode to properties, if not already defined 
-					if (!isset($current_context->properties->source->records_mode)) {
-						if (!property_exists($current_context, 'properties')) {
-							$current_context->properties = new stdClass();
-						}
-						if (!property_exists($current_context->properties, 'source')) {
-							$current_context->properties->source = new stdClass();
-						}
-						$current_context->properties->source->records_mode = 'list';
-					}
+					$current_context = $this->get_structure_context($permissions, $add_request_config=true);
+
 					$context[] = $current_context;
 
 				// subcontext from element layout_map items (from_parent_tipo, parent_grouper)
@@ -56,39 +46,55 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$dato = $this->get_dato();
+		// get the data into DDBB
+		$dato 		= $this->get_dato();
+		// get the references calculated by relations with other sections
+		$references = $this->get_calculated_references();
+
+		$value		= $this->get_dato_paginated();
+		$section_id	= $this->get_section_id();
+		$limit		= $this->pagination->limit;
+		$offset		= $this->pagination->offset;
+
+		// data item
+			$item = $this->get_data_item($value);
+				$item->parent_tipo			= $tipo;
+				$item->parent_section_id	= $section_id;
 
 		if (!empty($dato)) {
 
-			$value  	= $this->get_dato_paginated();
-			$section_id	= $this->get_parent();
-			$limit 		= ($modo==='list')
-				? $this->pagination->limit ?? $properties->list_max_records ?? $this->max_records
-				: $this->pagination->limit ?? $properties->max_records ?? $this->max_records;
-		
-			// data item
-				$item = $this->get_data_item($value);
-					$item->parent_tipo 			= $tipo;
-					$item->parent_section_id 	= $section_id;
-					// fix pagination vars
-						$pagination = new stdClass();
-							$pagination->total	= count($dato);
-							$pagination->limit 	= $limit;
-							$pagination->offset = $this->pagination->offset ?? 0;
-					$item->pagination = $pagination;
+			// fix pagination vars
+				$pagination = new stdClass();
+					$pagination->total	= count($dato);
+					$pagination->limit	= $limit;
+					$pagination->offset	= $offset;
+				$item->pagination = $pagination;
 
-				$data[] = $item;
 
-			// subcontext data from layout_map items
+			// subdata.
 				$ar_subdata = $this->get_ar_subdata($value);
-
 			// subdata add
-				foreach ($ar_subdata as $current_data) {
-					$current_data->parent_tipo 			= $tipo;
-					$current_data->parent_section_id 	= $section_id;
-					$data[] = $current_data;
+				if ($modo==='list') {
+					foreach ($ar_subdata as $current_data) {
+
+						$current_data->parent_tipo			= $tipo;
+						$current_data->parent_section_id	= $section_id;
+
+						$data[] = $current_data;
+					}
+				}else{
+					foreach ($ar_subdata as $current_data) {
+						$data[] =$current_data;
+					}
 				}
 		}//end if (!empty($dato))
+
+		// references. Add to item if exists
+			if (isset($references)) {
+				$item->references = $references;
+			}
+
+		$data[] = $item;
 	}//end if $options->get_data===true && $permissions>0
 
 

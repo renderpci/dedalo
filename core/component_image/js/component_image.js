@@ -36,7 +36,7 @@ export const component_image = function(){
 
 
 	return true
-}//end component_image
+};//end component_image
 
 
 
@@ -46,22 +46,24 @@ export const component_image = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_image.prototype.init 	 			= component_common.prototype.init
-	component_image.prototype.build 	 		= component_common.prototype.build
-	component_image.prototype.render 			= common.prototype.render
-	component_image.prototype.refresh 			= common.prototype.refresh
-	component_image.prototype.destroy 	 		= common.prototype.destroy
+	component_image.prototype.init				= component_common.prototype.init
+	component_image.prototype.build				= component_common.prototype.build
+	component_image.prototype.render			= common.prototype.render
+	component_image.prototype.refresh			= common.prototype.refresh
+	component_image.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_image.prototype.save 	 			= component_common.prototype.save
+	component_image.prototype.save				= component_common.prototype.save
 	component_image.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_image.prototype.update_datum 		= component_common.prototype.update_datum
-	component_image.prototype.change_value 		= component_common.prototype.change_value
+	component_image.prototype.update_datum		= component_common.prototype.update_datum
+	component_image.prototype.change_value		= component_common.prototype.change_value
+	component_image.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_image.prototype.list 				= render_component_image.prototype.list
-	component_image.prototype.edit 				= render_component_image.prototype.edit
-
+	component_image.prototype.mini				= render_component_image.prototype.mini
+	component_image.prototype.list				= render_component_image.prototype.list
+	component_image.prototype.edit				= render_component_image.prototype.edit
+	component_image.prototype.search			= render_component_image.prototype.search
 
 
 
@@ -96,7 +98,7 @@ component_image.prototype.init = async function(options) {
 		const common_init = component_common.prototype.init.call(this, options);
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -130,7 +132,7 @@ component_image.prototype.get_data_tag = function(){
 	}
 
 	return data_tag
-}//end get_data_tag
+};//end get_data_tag
 
 
 
@@ -152,7 +154,7 @@ component_image.prototype.get_lib_data = function(){
 
 
 	return lib_data
-}//get_lib_data
+};//end get_lib_data
 
 
 
@@ -169,7 +171,7 @@ component_image.prototype.get_last_layer_id = function(){
 	const last_layer_id = Math.max(...ar_layer_id)
 
 	return last_layer_id
-}//end get_last_layer_id
+};//end get_last_layer_id
 
 
 
@@ -240,9 +242,9 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 		default:
 		break;
-	}//end switch
+	};//end switch
 
-}//end load_vector_editor
+};//end load_vector_editor
 
 
 
@@ -284,7 +286,7 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 			// self.vector_editor.load_layer(self, data, layer_id)
 
 
-}// load_tag_into_vector_editor
+};//end load_tag_into_vector_editor
 
 
 /**
@@ -304,7 +306,7 @@ component_image.prototype.add_layer = function(){
 		})
 
 	return layer_id
-}//end get_last_layer_id
+};//end get_last_layer_id
 
 
 /**
@@ -335,7 +337,7 @@ component_image.prototype.delete_layer = function(layer) {
 		self.data.changed_data = changed_data
 
 	return true
-}//end delete_layer
+};//end delete_layer
 
 
 
@@ -383,7 +385,7 @@ component_image.prototype.update_draw_data = function() {
 		// current_tag.save 		= false
 
 	return true
-}//end update_draw_data
+};//end update_draw_data
 
 
 

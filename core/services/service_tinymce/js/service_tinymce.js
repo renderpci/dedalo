@@ -18,7 +18,6 @@
 export const service_tinymce = function() {
 
 
-
 	// self vars
 		this.caller
 		this.container
@@ -37,15 +36,15 @@ export const service_tinymce = function() {
 		const self = this
 
 		// options vars
-			const value 		= options.value
-			const key 			= options.key
-			const editor_config = options.editor_config
+			const value			= options.value
+			const key			= options.key
+			const editor_config	= options.editor_config
 
 		// fix vars
-			self.caller 	= caller
-			self.container 	= container
-			self.options 	= options
-			self.key 		= key
+			self.caller		= caller
+			self.container	= container
+			self.options	= options
+			self.key		= key
 
 		// editor options
 			const toolbar = editor_config.toolbar
@@ -63,11 +62,11 @@ export const service_tinymce = function() {
 		// dd-tiny options (to config editor)
 			dd_tinny.options = {
 				// called when tinymce editor is ready
-				onsetup_editor  		: self.onsetup_editor.bind(this),
-				value  	 				: value,
-				toolbar  				: toolbar,
-				plugins 				: plugins,
-				container 				: container
+				onsetup_editor	: self.onsetup_editor.bind(this),
+				value			: value,
+				toolbar			: toolbar,
+				plugins			: plugins,
+				container		: container
 			}
 
 		// add to dom
@@ -75,7 +74,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	}//end init
+	};//end init
 
 
 
@@ -91,8 +90,8 @@ export const service_tinymce = function() {
 
 		const self = this
 
-		const editor = self.editor
-		const key 	 = self.key
+		const editor	= self.editor
+		const key		= self.key
 
 		// no user interactions case
 		if (editor.isDirty()!==true) {
@@ -104,7 +103,7 @@ export const service_tinymce = function() {
 		self.caller.save_value(key, value)
 
 		return true
-	}//end save
+	};//end save
 
 
 
@@ -118,11 +117,10 @@ export const service_tinymce = function() {
 		const self = this
 
 		const editor = self.editor
-		
-		const value = editor.getContent({format:'raw'})
-		
+		const value	 = editor.getContent({format:'raw'})
+
 		return value
-	}//end get_value
+	};//end get_value
 
 
 
@@ -134,10 +132,10 @@ export const service_tinymce = function() {
 
 		const editor = this.editor
 
-		const custom_buttons 		= this.options.editor_config.custom_buttons
-		const custom_buttons_length = (custom_buttons) ? custom_buttons.length : 0
+		const custom_buttons		= this.options.editor_config.custom_buttons
+		const custom_buttons_length	= (custom_buttons) ? custom_buttons.length : 0
 		for (let i = 0; i < custom_buttons_length; i++) {
-			
+
 			const options = custom_buttons[i].options
 
 			// button add
@@ -145,7 +143,7 @@ export const service_tinymce = function() {
 		}
 
 		return custom_buttons
-	}//end add_editor_buttons
+	};//end add_editor_buttons
 
 
 
@@ -183,9 +181,9 @@ export const service_tinymce = function() {
 			editor.on('blur', function(evt) {
 				if (custom_events.blur) {
 					custom_events.blur(evt, {
-						key 	: self.key,
-						value 	: editor.getContent({format:'raw'}),
-						isDirty : editor.isDirty()
+						key		: self.key,
+						value	: editor.getContent({format:'raw'}),
+						isDirty	: editor.isDirty()
 					})
 				}
 			})//end blur event
@@ -224,9 +222,9 @@ export const service_tinymce = function() {
 
 		// KeyPress
 			// prevent that user insert special reserved chars
-			const minor_than_code 	= 60 // <
-			const more_than_code  	= 62 // >
-			const prevent_chars 	= [minor_than_code, more_than_code]
+			const minor_than_code	= 60 // <
+			const more_than_code	= 62 // >
+			const prevent_chars		= [minor_than_code, more_than_code]
 			editor.on('KeyPress', function(evt) {
 				if(prevent_chars.indexOf(evt.keyCode)!==-1) {
 					evt.preventDefault()
@@ -262,10 +260,10 @@ export const service_tinymce = function() {
 				const container_height  = self.dd_tinny.offsetHeight; // self.container
 
 				const toolbar			= self.dd_tinny.querySelector('.mce-toolbar-grp') // mce-toolbar-grp mce-container mce-panel mce-stack-layout-item mce-first
-				const toolbar_height 	= toolbar ? toolbar.offsetHeight : 0
+				const toolbar_height	= toolbar ? toolbar.offsetHeight : 0
 
-				const statusbar 		= self.dd_tinny.querySelector('.mce-statusbar') // mce-statusbar mce-container mce-panel mce-stack-layout-item mce-last
-				const statusbar_height  = statusbar ? statusbar.offsetHeight : 0
+				const statusbar			= self.dd_tinny.querySelector('.mce-statusbar') // mce-statusbar mce-container mce-panel mce-stack-layout-item mce-last
+				const statusbar_height	= statusbar ? statusbar.offsetHeight : 0
 
 				const h = container_height - toolbar_height - statusbar_height - 3
 
@@ -278,7 +276,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	}//end onsetup_editor
+	};//end onsetup_editor
 
 
 
@@ -302,7 +300,7 @@ export const service_tinymce = function() {
 		self.caller.save_value(self.key, value)
 
 		return true
-	}//end set_content
+	};//end set_content
 
 
 
@@ -320,7 +318,7 @@ export const service_tinymce = function() {
 		const editor_content_data = self.editor.getBody();
 
 		return editor_content_data
-	}//end get_editor_content_data
+	};//end get_editor_content_data
 
 
 
@@ -340,7 +338,7 @@ export const service_tinymce = function() {
 		const selection = self.editor.selection.getContent({format:'raw'})
 
 		return selection
-	}//end get_selection
+	};//end get_selection
 
 
 
@@ -351,7 +349,7 @@ export const service_tinymce = function() {
 	this.wrap_selection_with_tags = function(tag_node_in, tag_node_out) {
 
 		const self 	 = this
-		const editor = self.editor		
+		const editor = self.editor
 
 		// Get selection range
 			const range			= editor.selection.getRng(0)
@@ -362,7 +360,7 @@ export const service_tinymce = function() {
 			const startContainer	= range_clon.startContainer
 
 		// Go to end of range position
-			range_clon.collapse(false)	
+			range_clon.collapse(false)
 
 		// Insert end out node
 			range_clon.insertNode(tag_node_out)
@@ -381,8 +379,8 @@ export const service_tinymce = function() {
 
 
 		return true
-	}//end wrap_selection_with_tags
+	};//end wrap_selection_with_tags
 
 
 
-}//end class
+};//end class

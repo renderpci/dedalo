@@ -196,6 +196,13 @@ class css {
 			$response->result = false;
 			$response->msg 	  = null;
 
+
+		$response = new stdClass();
+			$response->result = true;
+			$response->msg 	  = 'Ignored build_structure_css in v6';
+		return $response; // STOPPED METHOD EXECUTION ON V6
+
+
 		include DEDALO_LIB_PATH . '/lessphp/lessc.inc.php';
 		$less = new lessc;
 		$less_code   = [];
@@ -221,11 +228,11 @@ class css {
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
 
-			$terminoID 		 = $rows["terminoID"];
-			$propiedades_str = $rows["propiedades"];
-			$propiedades 	 = json_decode($propiedades_str);
+			$terminoID		= $rows["terminoID"];
+			$propiedades_str	= $rows["propiedades"];
+			$propiedades		= json_decode($propiedades_str);
 			if (!isset($propiedades->css)) {
-				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
+				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. propiedades: ".to_string($propiedades_str), logger::ERROR);
 				continue;
 			}
 			$css_obj = $propiedades->css;

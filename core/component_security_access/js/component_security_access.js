@@ -31,7 +31,7 @@ export const component_security_access = function(){
 	this.tools
 
 	return true
-}//end component_security_access
+};//end component_security_access
 
 
 
@@ -41,24 +41,23 @@ export const component_security_access = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_security_access.prototype.init 	 			= component_common.prototype.init
-	component_security_access.prototype.build 	 			= component_common.prototype.build
-	component_security_access.prototype.render 				= common.prototype.render
-	component_security_access.prototype.refresh 			= common.prototype.refresh
-	component_security_access.prototype.destroy 	 		= common.prototype.destroy
+	component_security_access.prototype.init				= component_common.prototype.init
+	component_security_access.prototype.build				= component_common.prototype.build
+	component_security_access.prototype.render				= common.prototype.render
+	component_security_access.prototype.refresh				= common.prototype.refresh
+	component_security_access.prototype.destroy				= common.prototype.destroy
 
 	// change data
-	component_security_access.prototype.save 	 			= component_common.prototype.save
+	component_security_access.prototype.save				= component_common.prototype.save
 	component_security_access.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_security_access.prototype.update_datum 		= component_common.prototype.update_datum
-	component_security_access.prototype.change_value 		= component_common.prototype.change_value
+	component_security_access.prototype.update_datum		= component_common.prototype.update_datum
+	component_security_access.prototype.change_value		= component_common.prototype.change_value
+	component_security_access.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_security_access.prototype.list 			= render_component_security_access.prototype.list
-	component_security_access.prototype.edit 			= render_component_security_access.prototype.edit
-	component_security_access.prototype.edit_in_list	= render_component_security_access.prototype.edit
-	component_security_access.prototype.search 			= render_component_security_access.prototype.search
-	component_security_access.prototype.change_mode 	= component_common.prototype.change_mode
-
-
-
+	component_security_access.prototype.mini				= render_component_security_access.prototype.mini
+	component_security_access.prototype.list				= render_component_security_access.prototype.list
+	component_security_access.prototype.edit				= render_component_security_access.prototype.edit
+	component_security_access.prototype.edit_in_list		= render_component_security_access.prototype.edit
+	component_security_access.prototype.search				= render_component_security_access.prototype.search
+	component_security_access.prototype.change_mode			= component_common.prototype.change_mode

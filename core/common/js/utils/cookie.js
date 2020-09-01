@@ -5,7 +5,7 @@
 * CREATE_COOKIE
 */
 export const create_cookie = (name, value) => {
-
+	
 	try {
 		return localStorage.setItem(name, value)
 	}catch (e) {
@@ -16,7 +16,7 @@ export const create_cookie = (name, value) => {
 	}
 
 	return false
-}//end create_cookie
+};//end  create_cookie
 
 
 
@@ -32,7 +32,7 @@ export const read_cookie = (name) => {
 	}
 
 	return null
-}//end read_cookie
+};//end  read_cookie
 
 
 
@@ -48,7 +48,4 @@ export const erase_cookie = (name) => {
 	}
 
 	return false
-}//end erase_cookie
-
-
-
+};//end  erase_cookie

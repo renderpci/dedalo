@@ -89,21 +89,21 @@ var relation_list = new function() {
 
     /**
     * INIT
-    * 
+    *
     */
     this.init = function(relation_wrap) {
-      
+        
       let self = this
-      
-      /* get the current button state 
+
+      /* get the current button state
        * if the button has the class "relation_list_button"     = off   and can process the the request to the server
-       * if the button has the class "relation_list_button_off" = on    and can't do anything 
+       * if the button has the class "relation_list_button_off" = on    and can't do anything
       */
       const ar_button_class_list = relation_wrap.classList
 
       const parent_container   = relation_wrap.parentNode.parentNode
       this.relation_list_wrap = parent_container.querySelector('#wrap_relation_list_sections');
-   
+
       if(ar_button_class_list.contains('relation_list_button')){
         ar_button_class_list.remove('relation_list_button')
         ar_button_class_list.add('relation_list_button_off')
@@ -112,9 +112,9 @@ var relation_list = new function() {
         ar_button_class_list.remove('relation_list_button_off')
         ar_button_class_list.add('relation_list_button')
         self.clean_the_list()
-      }     
-    
-    }
+      }
+
+    };//end init
 
 
     /**
@@ -152,7 +152,7 @@ var relation_list = new function() {
                         inner_html        : get_label['processing_wait']
                         })
       relation_list_wrap.appendChild(loading_content);
-                
+
       // 1 send the request of the data
       options.count = false;
       self.load_relation_list_data(options).then(function(response){
@@ -167,21 +167,19 @@ var relation_list = new function() {
       options.count = true;
       self.load_relation_list_data(options).then(function(response){
         const total_records_count = response.reduce(
-                                      (accumulator, currentValue) => accumulator + parseInt( currentValue.count), 0
-                                  );
-      // Render the paginator 
-      self.parse_paginator_html(options, total_records_count);
+              (accumulator, currentValue) => accumulator + parseInt( currentValue.count), 0
+          );
+          // Render the paginator
+          self.parse_paginator_html(options, total_records_count);
+      });
 
-      });      
-      
-
-    }//end get_server_records
+    };//end get_server_records
 
 
 
     /**
     * PARSE_HTML
-    * process the JSON recived 
+    * process the JSON recived
     */
     this.parse_html = function(main_object){
 
@@ -194,7 +192,7 @@ var relation_list = new function() {
       // create new styleSheet
       let CSS_style_sheet = common.create_new_CSS_style_sheet();
 
-      // loop of the different section_tipo inside the context to build the specific list for every section_tipo 
+      // loop of the different section_tipo inside the context to build the specific list for every section_tipo
       context_id.forEach(function(current_context){
         const current_context_colums  = context.filter(current_context_colums => current_context_colums.section_tipo === current_context.section_tipo);
         const current_data            = data.filter(current_data_header => current_data_header.section_tipo === current_context.section_tipo);
@@ -204,7 +202,7 @@ var relation_list = new function() {
         self.build_grid_html(current_context, current_context_colums, current_data, count_data, CSS_style_sheet)
       })
 
-    }//end parse_html
+    };//end parse_html
 
 
 
@@ -233,8 +231,8 @@ var relation_list = new function() {
                       class_name        : 'relation_list_grid',
                       })
 
-      
-      /* 2 Create the header */      
+
+      /* 2 Create the header */
       //create a section_header, main info header, section name and counter
       const header  = common.create_dom_element({
                       element_type      : 'div',
@@ -272,12 +270,12 @@ var relation_list = new function() {
                 text_node         : column.component_label
                 })
       })
-    
-     /* 3 Create the rows with the data */    
+
+     /* 3 Create the rows with the data */
       let curent_section_id = 0;
       let data_row_header = ''
       data.forEach(function(current_data){
-        
+
         //check if the columns id the first column for create the ul node and the first id column
         if(curent_section_id !== current_data.section_id){
           curent_section_id = current_data.section_id;
@@ -292,14 +290,14 @@ var relation_list = new function() {
                   data_set                : current_data
                   })
 
-          //the id information        
+          //the id information
           const data_row  = common.create_dom_element({
                   element_type      : 'li',
                   parent            : data_row_header,
                   class_name        : 'relation_list_data_row_center',
                   text_node         : current_data.section_id
                   })
-           
+
         }else{
           // the information colums of the components of the section
           const data_row  = common.create_dom_element({
@@ -311,7 +309,7 @@ var relation_list = new function() {
         }
       })
 
-    }//end build_grid_html
+    };//end build_grid_html
 
 
     /**
@@ -319,7 +317,7 @@ var relation_list = new function() {
     * build the paginator html
     */
     this.parse_paginator_html = function(options, total_records_count){
-        
+
       let self = this
 
       //set the total_records_count into the options object
@@ -354,7 +352,7 @@ var relation_list = new function() {
                             parent            : paginator,
                             data_set          : options
                             })
-      
+
 
       // create a paginator current record
       const currrent_record   = common.create_dom_element({
@@ -397,7 +395,7 @@ var relation_list = new function() {
 
 
 
-    }//end parse_paginator_html
+    };//end parse_paginator_html
 
 
     /**
@@ -417,8 +415,8 @@ var relation_list = new function() {
       if( current_offset >= 1){
           object_paginator.dataset.offset = current_offset - current_limit
           relation_list.get_server_records(object_paginator)
-      }      
-    }//end previous_records
+      }
+    };//end previous_records
 
 
     /**
@@ -426,26 +424,26 @@ var relation_list = new function() {
     * build the next button in the paginator
     */
     this.next_records = function(object){
-   
-      let self = this
-      //get the paginator and get the offset, limit and total of records found
-      let object_paginator = object.parentNode;
-      const current_offset = parseInt(object_paginator.dataset.offset);
-      const current_limit  = parseInt(object_paginator.dataset.limit)
-      const current_total  = parseInt(object_paginator.dataset.total_records_count)
 
-      // calculate the current and the final page
-      const current_page   = (current_offset + current_limit)/current_limit
-      const final_page     = Math.floor(current_total/current_limit) + 1
+        let self = this
+        //get the paginator and get the offset, limit and total of records found
+        let object_paginator = object.parentNode;
+        const current_offset = parseInt(object_paginator.dataset.offset);
+        const current_limit  = parseInt(object_paginator.dataset.limit)
+        const current_total  = parseInt(object_paginator.dataset.total_records_count)
 
-       // if the paginator is NOT in the last page the button can navegate to the next page
-      if(current_page < final_page){
+        // calculate the current and the final page
+        const current_page   = (current_offset + current_limit)/current_limit
+        const final_page     = Math.floor(current_total/current_limit) + 1
+
+        // if the paginator is NOT in the last page the button can navegate to the next page
+        if(current_page < final_page){
           object_paginator.dataset.offset = current_offset + current_limit
           relation_list.get_server_records(object_paginator)
-      }
-    }//end next_records
+        }
+    };//end next_records
 
-  
+
 
     /**
     * EDIT_RELATION
@@ -480,7 +478,7 @@ var relation_list = new function() {
 
       // FUTURE IMPLEMENTATION, WHEN THE USER CLOSE THE WINDOW THE RELATION_LIST WILL BE UPDATED.
      /* if(ts_object.edit_window === null || ts_object.edit_window.closed) { //  || edit_window.location.href!=url || ts_object.edit_window.closed
-    
+
         ts_object.edit_window = window.open(
           url,
           "edit_window",
@@ -491,19 +489,19 @@ var relation_list = new function() {
           //console.log("Edit window is closed for record "+section_id +". Calling refresh_element section_tipo:"+section_tipo+" section_id:"+section_id);
           ts_object.refresh_element(section_tipo, section_id)
 
-        }, false);  
+        }, false);
       }
       */
-    }//end edit_relation
+    };//end edit_relation
 
 
 
     /**
     * LOAD_RELATION_LIST_DATA
-    * @return 
+    * @return
     */
     this.load_relation_list_data = function(options) {
-      
+
       let self = this
 
       //build the server variable to send to the trigger
@@ -525,11 +523,11 @@ var relation_list = new function() {
           if(SHOW_DEBUG===true) {
             console.log("[relation_list.load_relation_list_data] response",response);
           }
-            
+
           if (response===null) {
             alert("Error on load_relation_list_data "+options.section_tipo+" record (null response). See server log for more details")
           }else{
-            
+
             if(response.result === false){
 
               self.show_empty_result()
@@ -538,7 +536,7 @@ var relation_list = new function() {
              // return the JSON data
              return response.result
             }
-            
+
           }
 
           html_page.loading_content( relation_list_wrap, 0 );
@@ -554,12 +552,13 @@ var relation_list = new function() {
     * remove the all previous inforamtion inside the global container
     */
     this.clean_the_list = function(){
+
       const relation_list_wrap = this.relation_list_wrap
       if (relation_list_wrap){
         relation_list_wrap.innerHTML=''
         relation_list_wrap.style.visibility = 'none'
-      } 
-    }//end clean_the_list
+      }
+    };//end clean_the_list
 
 
     /**
@@ -570,8 +569,8 @@ var relation_list = new function() {
 
       console.log('empty')
 
-    }//end show_empty_result
+    };//end show_empty_result
 
 
 
-}//end relation_list
+};//end relation_list

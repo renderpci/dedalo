@@ -16,7 +16,40 @@
 export const render_component_av = function() {
 
 	return true
-}//end render_component_av
+};//end  render_component_av
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_av.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const data 		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// url
+		const posterframe_url 	= data.posterframe_url
+		const url 				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+
+	// image
+		const image = ui.create_dom_element({
+			element_type	: "img",
+			src 			: url,
+			parent 			: wrapper
+		})
+		// ui.component.add_image_fallback(image)
+
+
+	return wrapper
+};//end  mini
 
 
 
@@ -52,7 +85,7 @@ render_component_av.prototype.list = async function() {
 
 
 	return wrapper
-}//end list
+};//end  list
 
 
 
@@ -91,7 +124,7 @@ render_component_av.prototype.edit = async function(options={render_level:'full'
 
 
 	return wrapper
-}//end edit
+};//end  edit
 
 
 
@@ -139,7 +172,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end  add_events
 
 
 
@@ -191,7 +224,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+};//end  get_content_data_edit
 
 
 
@@ -230,7 +263,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end  get_buttons
 
 
 
@@ -412,5 +445,5 @@ const build_video_html5 = function(request_options) {
 
 
 	return video
-}//end build_video_html5
+};//end  build_video_html5
 */

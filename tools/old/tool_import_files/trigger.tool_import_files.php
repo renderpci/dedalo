@@ -259,9 +259,9 @@ function import_files($json_data) {
 
 			#
 			# FILE_PROCESSOR
-			# Global var button propiedades json data array
+			# Global var button properties json data array
 			# Optional aditional file script processor defined in button import propiedaes
-			# Note that var $file_processor_properties is the button propiedades json data, NOT current element processor selection
+			# Note that var $file_processor_properties is the button properties json data, NOT current element processor selection
 			if (!empty($current_file_processor) && !empty($file_processor_properties)) {
 				$processor_options = new stdClass();
 					$processor_options->file_processor 				= $current_file_processor;
@@ -280,10 +280,10 @@ function import_files($json_data) {
 			# SET_MEDIA_FILE
 			# Move uploaded file to media folder and create default versions
 			#$file_data = tool_import_files::get_file_data($files_dir, $current_file_name);  
-			#$tool_import_files->set_media_file($file_data, $target_section_tipo, $current_section_id, $tool_propiedades);
-			$portal_propiedades  = $component_portal->get_propiedades();
-			$tool_propiedades 	 = $portal_propiedades->ar_tools_name->tool_import_files;
-			tool_import_files::set_media_file($file_data, $target_section_tipo, $current_section_id, $tool_propiedades);
+			#$tool_import_files->set_media_file($file_data, $target_section_tipo, $current_section_id, $tool_properties);
+			$portal_properties  = $component_portal->get_properties();
+			$tool_properties 	 = $portal_properties->ar_tools_name->tool_import_files;
+			tool_import_files::set_media_file($file_data, $target_section_tipo, $current_section_id, $tool_properties);
 			
 
 			// Add as processed

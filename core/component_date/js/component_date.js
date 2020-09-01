@@ -35,7 +35,7 @@ export const component_date = function(){
 	this.separator_time = ':'
 
 	return true
-}//end component_date
+};//end component_date
 
 
 
@@ -46,25 +46,27 @@ export const component_date = function(){
 
 // prototypes assign
 	// lifecycle
-	component_date.prototype.init 	 			= component_common.prototype.init
-	component_date.prototype.build 				= component_common.prototype.build
-	component_date.prototype.render 			= common.prototype.render
-	component_date.prototype.refresh 			= common.prototype.refresh
-	component_date.prototype.destroy 	 		= common.prototype.destroy
+	component_date.prototype.init				= component_common.prototype.init
+	component_date.prototype.build				= component_common.prototype.build
+	component_date.prototype.render				= common.prototype.render
+	component_date.prototype.refresh			= common.prototype.refresh
+	component_date.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_date.prototype.save 	 			= component_common.prototype.save
-	component_date.prototype.update_data_value 	= component_common.prototype.update_data_value
+	component_date.prototype.save				= component_common.prototype.save
+	component_date.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_date.prototype.update_datum		= component_common.prototype.update_datum
-	component_date.prototype.change_value 		= component_common.prototype.change_value
+	component_date.prototype.change_value		= component_common.prototype.change_value
+	component_date.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_date.prototype.list 				= render_component_date.prototype.list
-	component_date.prototype.edit 				= render_component_date.prototype.edit
+	component_date.prototype.mini				= render_component_date.prototype.mini
+	component_date.prototype.list				= render_component_date.prototype.list
+	component_date.prototype.edit				= render_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_component_date.prototype.edit
 	component_date.prototype.tm					= render_component_date.prototype.edit
-	component_date.prototype.search 			= render_component_date.prototype.search
-	component_date.prototype.change_mode 		= component_common.prototype.change_mode
+	component_date.prototype.search				= render_component_date.prototype.search
+	component_date.prototype.change_mode		= component_common.prototype.change_mode
 
 /**
 * LOAD_EDITOR
@@ -93,7 +95,7 @@ component_date.prototype.load_editor = async function() {
 
 
 	return load_promise
-}//end load_editor
+};//end load_editor
 
 
 
@@ -170,7 +172,7 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 	}
 
 	return dateString
-}//end get_dd_timestamp
+};//end get_dd_timestamp
 
 
 
@@ -198,7 +200,7 @@ component_date.prototype.get_locale_value = function () {
 		//result = result.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
 
 	return 'es-ES' //locale_value
-}//end get_locale_value
+};//end get_locale_value
 
 
 
@@ -284,7 +286,7 @@ component_date.prototype.format_date = function (date_value) {
 	}
 
 	return result
-}//end format_date
+};//end format_date
 
 
 
@@ -375,7 +377,7 @@ component_date.prototype.convert_date_to_seconds = function(dd_date, mode) {
 	//}
 
 	return time
-}//end convert_date_to_seconds
+};//end convert_date_to_seconds
 
 
 
@@ -386,7 +388,7 @@ component_date.prototype.convert_date_to_seconds = function(dd_date, mode) {
 component_date.prototype.pad = function(n, size) {
 	let s = "00" + n;
 	return s.substr(s.length-size);
-}//end pad
+};//end pad
 
 
 
@@ -417,7 +419,7 @@ component_date.prototype.get_dato_period = function(parentNode) {
 
 	return dato
 
-}//end get_dato_period
+};//end get_dato_period
 
 
 
@@ -486,7 +488,7 @@ component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
 		}
 
 	return (dato.start || dato.end) ? dato : ''
-}//end get_dato_range
+};//end get_dato_range
 
 
 
@@ -522,7 +524,7 @@ component_date.prototype.get_dato_date = function(value) {
 		}
 
 	return dato
-}//end get_dato_date
+};//end get_dato_date
 
 
 
@@ -562,7 +564,7 @@ component_date.prototype.get_dato_time = function(value) {
 
 
 	return value_formatted
-}//end get_dato_time
+};//end get_dato_time
 
 
 
@@ -683,7 +685,7 @@ component_date.prototype.format_time = function(options) {
 	}
 
 	return result
-}//end format_time
+};//end format_time
 
 
 
@@ -716,7 +718,7 @@ component_date.prototype.set_default_date = function(dateStr) {
 	}
 
 	return value
-}//end set_default_date
+};//end set_default_date
 
 
 
@@ -745,7 +747,7 @@ component_date.prototype.get_placeholder_value = function() {
 	}
 
 	return placeholder_value
-}//end get_placeholder_value
+};//end get_placeholder_value
 
 
 
@@ -756,7 +758,7 @@ component_date.prototype.close_flatpickr = function(selectedDates, dateStr, inst
 
 	instance.destroy()
 
-}//end close_flatpickr
+};//end close_flatpickr
 
 
 
@@ -808,4 +810,4 @@ component_date.prototype.update_value_flatpickr = function(selectedDates, dateSt
 
 
 	return true
-}//end update_value_flatpickr
+};//end update_value_flatpickr

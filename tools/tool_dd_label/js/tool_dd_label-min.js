@@ -24,7 +24,7 @@ export const tool_dd_label = function () {
 	this.caller
 
 	return true
-}//end page
+};//end page
 
 
 
@@ -59,7 +59,7 @@ tool_dd_label.prototype.init = async function(options) {
 
 
 	return common_init
-}//end init
+};//end init
 
 
 
@@ -73,4 +73,4 @@ tool_dd_label.prototype.update_data = function() {
 	this.caller.set_value(self.ar_data)
 
 	return true
-}//end update_data
+};//end update_data

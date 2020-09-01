@@ -13,10 +13,9 @@
 * Manage the components logic and appearance in client side
 */
 export const render_section_group = function() {
-
-
+	
 	return true
-}//end render_section_group
+};//end render_section_group
 
 
 
@@ -59,7 +58,7 @@ render_section_group.prototype.edit = async function(options={render_level : 'fu
 		}, false)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -75,7 +74,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
+};//end content_data
 
 
 
@@ -85,5 +84,3 @@ const content_data = async function(self) {
 * @return DOM node
 */
 render_section_group.prototype.list = render_section_group.prototype.edit
-
-

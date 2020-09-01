@@ -15,7 +15,43 @@
 export const render_component_image = function(component) {
 
 	return true
-}//end render_component_image
+};//end render_component_image
+
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_image.prototype.mini = function(options) {
+
+	const self = this
+
+	// Options vars
+		const context 	= self.context
+		const datalist 	= self.data.datalist || []
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// url
+		const quality 			= "thumb"
+		const url_object 		= datalist.filter(item => item.quality===quality)[0]
+		const url 				= (typeof url_object==="undefined") ? DEDALO_CORE_URL + "/themes/default/0.jpg" : url_object.url
+
+	// image
+		const image = ui.create_dom_element({
+			element_type	: "img",
+			src 			: url,
+			parent 			: wrapper
+		})
+		// ui.component.add_image_fallback(image)
+
+
+	return wrapper
+};//end list
+
 
 
 
@@ -30,7 +66,7 @@ render_component_image.prototype.list = function(options) {
 
 	// Options vars
 		const context 	= self.context
-		const datalist 	= self.data.datalist
+		const datalist 	= self.data.datalist || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -62,7 +98,7 @@ render_component_image.prototype.list = function(options) {
 
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -100,7 +136,7 @@ render_component_image.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -200,7 +236,7 @@ const content_data_edit = async function(self) {
 	// })
 
 	return content_data
-}//end content_data_edit
+};//end content_data_edit
 
 
 
@@ -264,7 +300,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -307,6 +343,4 @@ const get_quality_selector = (self) => {
 		}
 
 	return quality_selector
-}//end get_quality_selector
-
-
+};//end get_quality_selector

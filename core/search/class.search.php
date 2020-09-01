@@ -497,7 +497,7 @@ class search {
 
 		foreach ($ar_value as $search_object) {
 			if (!is_object($search_object)) {
-				dump($search_object, ' Invalid received object (search_object) : '.to_string());
+				dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
 				debug_log(__METHOD__." Invalid (ignored) non object search_object: ".to_string($search_object), logger::DEBUG);
 				debug_log(__METHOD__." ar_value: ".json_encode($ar_value), logger::DEBUG);
 				throw new Exception("Error Processing Request. search_object must be an object", 1);
@@ -521,10 +521,13 @@ class search {
 
 				// Case object is a end search object
 				$path				= $search_object->path;
-				$search_component 	= end($path);
-				#$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
-				$modelo_name 		= $search_component->modelo;
-				$ar_query_object 	= $modelo_name::get_search_query2($search_object);
+				$search_component	= end($path);
+				// model (with fallback if not exists)
+				if (!isset($search_component->modelo)) {
+					$search_component->modelo = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
+				}
+				$model_name			= $search_component->modelo;
+				$ar_query_object	= $model_name::get_search_query2($search_object);
 				#debug_log(__METHOD__." ar_query_object $op - ".to_string($ar_query_object), logger::DEBUG);
 				#if (empty(reset($ar_query_object))) {
 				#	continue;
@@ -640,7 +643,7 @@ class search {
 					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 				if(SHOW_DEBUG===true) {
 					$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
-					debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::ERROR);
+					// debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::ERROR);
 				}
 				break;
 
@@ -1562,7 +1565,7 @@ class search {
 			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
 		}
 
-		$sql_filter = PHP_EOL . implode(' OR ', $ar_parts);
+		$sql_filter = PHP_EOL . '-- filter_by_locators' . PHP_EOL . implode(' OR ', $ar_parts);
 
 		return $sql_filter;
 	}//end build_sql_filter_by_locators
@@ -2111,10 +2114,10 @@ class search {
 		# Add first level always
 		$current_path = new stdClass();
 
-			$current_path->name 	  	  = strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
-			$current_path->modelo 	  	  = $term_model;
-			$current_path->section_tipo   = $section_tipo;
-			$current_path->component_tipo = $tipo;
+			$current_path->name				= strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
+			$current_path->modelo			= $term_model;
+			$current_path->section_tipo		= $section_tipo;
+			$current_path->component_tipo	= $tipo;
 
 		# Add direct level to array path
 		$path[] = $current_path;
@@ -2264,15 +2267,12 @@ class search {
 		$ar_query=array();
 		foreach ($ar_tables_to_search as $table) {
 
-			$query   = '';
-			if($count === true){
-				$query  .= PHP_EOL . 'SELECT COUNT(*)';
-			}else{
-				$query  .= PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
-			}
-			$query  .= PHP_EOL . 'FROM "'.$table.'"';
-			$query  .= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
-			#$query  .= PHP_EOL . 'WHERE datos @> \'{"relations":['.$compare.']}\'::jsonb';
+			$query	 = '';
+			$query	.= ($count===true)
+				? PHP_EOL . 'SELECT COUNT(*)'
+				: PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
+			$query	.= PHP_EOL . 'FROM "'.$table.'"';
+			$query	.= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 
 			$ar_query[] = $query;
 		}
@@ -2315,15 +2315,15 @@ class search {
 
 			while ($rows = pg_fetch_assoc($result)) {
 
-				$current_section_id   	= $rows['section_id'];
-				$current_section_tipo 	= $rows['section_tipo'];
-				$current_relations 		= (array)json_decode($rows['relations']);
+				$current_section_id		= $rows['section_id'];
+				$current_section_tipo	= $rows['section_tipo'];
+				$current_relations		= (array)json_decode($rows['relations']);
 
 				foreach ($current_relations as $current_locator) {
 					if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
 						// Add some temporal info to current locator for build component later
-						$current_locator->from_section_tipo = $current_section_tipo;
-						$current_locator->from_section_id 	= $current_section_id;
+						$current_locator->from_section_tipo	= $current_section_tipo;
+						$current_locator->from_section_id	= $current_section_id;
 						// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
 						$ar_inverse_locators[] = $current_locator;
 					}

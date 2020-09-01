@@ -17,7 +17,7 @@
 export const render_section = function() {
 
 	return true
-}//end render_section
+};//end render_section
 
 
 
@@ -33,9 +33,9 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -43,7 +43,7 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.section.build_wrapper_edit(self, {
-			content_data : current_content_data,
+			content_data : content_data,
 			// buttons 	 : current_buttons
 		})
 
@@ -103,15 +103,15 @@ render_section.prototype.edit = async function(options={render_level:'full'}) {
 
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
 /**
-* CONTENT_DATA
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const content_data = async function(self) {
+const get_content_data = async function(self) {
 
 	// section_record instances (initied and builded)
 	const ar_section_record = await self.get_ar_instances()
@@ -153,7 +153,7 @@ const content_data = async function(self) {
 
 
 	return content_data
-}//end content_data
+};//end get_content_data
 
 
 
@@ -167,7 +167,7 @@ const buttons = async function(self) {
 
 
 	return buttons
-}//end buttons
+};//end buttons
 
 
 
@@ -183,11 +183,12 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 	const render_level 		= options.render_level
 	const ar_section_record = self.ar_instances
 
+	// const row 		= self.get_ar_instances()
 
 	// content_data
-		const current_content_data = await content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	const fragment = new DocumentFragment()
@@ -203,7 +204,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 					parent 			: fragment
 				})
 
-			// button_new section				
+			// button_new section
 				const button_new = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light add',
@@ -221,24 +222,27 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 						}
 					})
 					if (api_response.result && api_response.result>0) {
-						// launch event 'user_action' tha page is watching
+						// launch event 'user_action' that page is watching
 						event_manager.publish('user_action', {
-							tipo 			 : self.tipo,
-							mode 			 : 'edit',
-							section_id		 : api_response.result
+							tipo		: self.tipo,
+							mode		: 'edit',
+							model		: self.model,
+							section_id	: api_response.result
 						})
 					}
 				})
 
 			// search filter node
-				const filter = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'filter',
-					parent 			: fragment
-				})
-				await self.filter.render().then(filter_wrapper =>{
-					filter.appendChild(filter_wrapper)
-				})
+				if (self.filter) {
+					const filter = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'filter',
+						parent			: fragment
+					})
+					await self.filter.render().then(filter_wrapper =>{
+						filter.appendChild(filter_wrapper)
+					})
+				}
 
 		}//end if (self.mode!=='tm')
 
@@ -247,34 +251,51 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'paginator',
-			parent 			: fragment
+			parent			: fragment
 		})
 		self.paginator.render().then(paginator_wrapper =>{
 			paginator_div.appendChild(paginator_wrapper)
 		})
 
+
+	// list body
+		const list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_body',
+			parent			: fragment
+		})
+
+
 	// list_header_node
 		if (ar_section_record.length>0) {
 			const list_header_node = await self.list_header()
-			fragment.appendChild(list_header_node)
+
+			Object.assign(
+				list_body.style,
+				{
+					//display: 'grid',
+					//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
+					"grid-template-columns": self.id_column_width + " repeat("+(list_header_node.children.length-1)+", 1fr)",
+				}
+			)
+			list_body.appendChild(list_header_node)
 		}
 
 	// content_data append
-		fragment.appendChild(current_content_data)
+		list_body.appendChild(content_data)
 
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
-			id 				: self.id,
+			id				: self.id,
 			//class_name		: self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name 		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 		})
 		wrapper.appendChild(fragment)
 
-
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -305,7 +326,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 	// 			class_name		: 'buttons',
 	// 			parent 			: fragment
 	// 		})
-	
+
 	// 	// filter node
 	// 		const filter = ui.create_dom_element({
 	// 			element_type	: 'div',
@@ -345,7 +366,7 @@ render_section.prototype.list = async function(options={render_level:'full'}) {
 
 
 	// 	return wrapper
-// }//end list_tm
+// };//end list_tm
 
 
 
@@ -357,46 +378,44 @@ render_section.prototype.list_header = async function(){
 
 	const self = this
 
-	const components = self.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component")
+	// const components = self.datum.context.filter(item => item.section_tipo===self.section_tipo && item.type==="component" && item.parent===self.section_tipo)
 
-	const ar_nodes	 = []
-	const len 		 = components.length
-	for (let i = 0;  i < len; i++) {
+	const columns 		= await self.columns
 
-		const component = components[i]
+	const ar_nodes			= []
+	const columns_length	= columns.length
+	for (let i = 0;  i < columns_length; i++) {
 
-		breakdown_header_items(component, self.datum, ar_nodes, null)
+		const component = columns[i]
 
-		// const sub_components = self.datum.context.filter(item => item.parent===component.tipo)
- 		// if (sub_components.length>0) {
- 		// 	sub_components.forEach(function(element) {
-		//
- 		// 		// node header_item
- 		// 			const header_item = ui.create_dom_element({
- 		// 				element_type	: "div",
- 		// 				id 				: element.tipo + "_" + element.section_tipo,
- 		// 				inner_html 		: component.label +" - "+ element.label
- 		// 			})
- 		// 			//header_item.column_parent 	= component.tipo
- 		// 			//header_item.column_id 		= element.tipo
- 		// 			ar_nodes.push(header_item)
- 		// 	})
- 		//
- 		// }else{
-		//
-		// 	// node header_item
-		// 		const header_item = ui.create_dom_element({
-		// 			element_type	: "div",
-		// 			id 				: component.tipo + "_" + component.section_tipo,
-		// 			inner_html 		: component.label
-		// 		})
-		// 		//header_item.column_parent 	= null
-		// 		//header_item.column_id 		= component.tipo
-		// 		ar_nodes.push(header_item)
-		// // }
+		const label = []
+
+		if(component.parent === self.section_tipo){
+			label.push( component.label )
+		}else {
+			const component_parent = self.datum.context.find(item => item.tipo===component.parent && item.section_tipo===self.section_tipo)
+			if(component_parent){
+				label.push( component_parent.label + ': '+ component.label )
+			}else{
+				label.push(': '+ component.label)
+			}
+		}
+			 // && item.type==="component")
+
+		// if(label)
+
+		// node header_item
+			const id			=  component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+			const header_item	= ui.create_dom_element({
+				element_type	: "div",
+				id				: id,
+				inner_html		: label.join('')
+			})
+			// add if not already exists
+			// if (!ar_nodes.find(item => item.id===id)) {
+				ar_nodes.push(header_item)
+			// }
 	}
-
-
 
 	// header_wrapper
 		const header_wrapper = ui.create_dom_element({
@@ -429,50 +448,17 @@ render_section.prototype.list_header = async function(){
 		}
 
 	// css calculation
-		Object.assign(
-			header_wrapper.style,
-		  {
-		    //display: 'grid',
-		    //"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-		    "grid-template-columns": self.id_column_width + " repeat("+(ar_nodes_length)+", 1fr)",
-		  }
-		)
+		// Object.assign(
+		// 	header_wrapper.style,
+		// 	{
+		// 		//display: 'grid',
+		// 		//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
+		// 		"grid-template-columns": self.id_column_width + " repeat("+(ar_nodes_length)+", 1fr)",
+		// 	}
+		// )
 
 	return header_wrapper
-}//end list_header
-
-
-
-/**
-* BREAKDOWN_HEADER_ITEMS
-* @return array ar_nodes
-*/
-const breakdown_header_items = function(component, datum, ar_nodes, parent){
-
-	const sub_components = datum.context.filter(item => item.parent===component.tipo)
-
-	if (sub_components.length>0) {
-		sub_components.forEach(function(element) {
-			// recursion
-			breakdown_header_items(element, datum, ar_nodes, component)
-		})
-
-	}else{
-
-		// node header_item
-			const header_item = ui.create_dom_element({
-				element_type	: "div",
-				id 				: component.tipo + "_" + component.section_tipo,
-				inner_html 		: (parent) ? parent.label + "<br>" + component.label : component.label
-			})
-			//header_item.column_parent 	= null
-			//header_item.column_id 		= component.tipo
-
-			ar_nodes.push(header_item)
-	}
-
-	return ar_nodes
-}//end breakdown_header_items
+};//end list_header
 
 
 
@@ -485,11 +471,8 @@ const no_records_node = () => {
 	const node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'no_records',
-		inner_html 		: get_label["no_records"] || "No records found"
+		inner_html		: get_label["no_records"] || "No records found"
 	})
 
 	return node
-}//end no_records_node
-
-
-
+};//end no_records_node

@@ -8,7 +8,7 @@
 */
 export const data_manager = function() {
 
-}//end data_manager
+};//end data_manager
 
 
 
@@ -20,19 +20,19 @@ export const data_manager = function() {
 */
 data_manager.prototype.request = async function(options) {
 
-	this.url 			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
-	this.method 		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-	this.mode 			= options.mode || 'cors' // no-cors, cors, *same-origin
-	this.cache 			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-	this.credentials 	= options.credentials || 'same-origin' // include, *same-origin, omit
-	this.headers 		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-	this.redirect 		= options.redirect || 'follow' // manual, *follow, error
-	this.referrer 		= options.referrer || 'no-referrer' // no-referrer, *client
-	this.body 			= options.body // body data type must match "Content-Type" header
+	this.url			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
+	this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
+	this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
+	this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
+	this.credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
+	this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
+	this.redirect		= options.redirect || 'follow' // manual, *follow, error
+	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
+	this.body			= options.body // body data type must match "Content-Type" header
 
 	const handle_errors = function(response) {
 		if (!response.ok) {
-			console.warn("-> handle_errors response:",response);
+			console.warn("-> HANDLE_ERRORS response:",response);
 			throw Error(response.statusText);
 		}
 		return response;
@@ -54,9 +54,10 @@ data_manager.prototype.request = async function(options) {
 		.then(response => {
 			// console.log("-> json response 1 ok:",response.body);
 			const json_parsed = response.json().then((result)=>{
-				//console.log("-> json result 2:",result);
+				// console.log("-> json result 2:",result);
 				return result
 			})
+			// console.log("-> json_parsed:",json_parsed);
 			return json_parsed
 		})// parses JSON response into native Javascript objects
 		.catch(error => {
@@ -67,6 +68,7 @@ data_manager.prototype.request = async function(options) {
 				error 	: error
 			}
 		});
+
 
 	// const api_response = await fetch(this.url, {
 	// 		method		: this.method,
@@ -88,35 +90,95 @@ data_manager.prototype.request = async function(options) {
 	// }
 
 	return api_response
-}//end request
+};//end request
 
 
 
 /**
-* SECTION_LOAD_DATA
+* GET_MENU
 * Generic section data loader (API read)
 * @param object context
 * @return promise api_response
 */
-data_manager.prototype.section_load_data = async function(sqo_context) {
+data_manager.prototype.get_menu = async function(dd_request) {
 
 	// data_manager
 		const api_response = this.request({
 			body : {
-				action 	: 'read',
-				context : sqo_context
+				action	: 'get_menu',
+				dd_api	: 'dd_utils_api',
+				context	: dd_request
 			}
 		})
 
 	// debug
 		if(SHOW_DEBUG===true) {
 			api_response.then((response)=>{
-				console.log(`__Time to section_load_data ${response.debug.exec_time} [data_manager.section_load_data] response:`, response, `sqo_context:`, sqo_context);
+				console.log(`__Time to get_menu ${response.debug.exec_time} [data_manager.get_menu] response:`, response, `dd_request:`, dd_request);
 			})
 		}
 
 	return api_response
-}//end section_load_data
+};//end get_menu
+
+
+
+/**
+* GET_login
+* Generic section data loader (API read)
+* @param object context
+* @return promise api_response
+*/
+data_manager.prototype.get_login = async function() {
+
+	// data_manager
+		const api_response = this.request({
+			body : {
+				action	: 'get_login',
+				dd_api	: 'dd_utils_api'
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			api_response.then((response)=>{
+				const exec_time = response.debug ? response.debug.exec_time : ''
+				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response);
+			})
+		}
+
+	return api_response
+};//end get_login
+
+
+
+
+/**
+* READ
+* Generic section data loader (API read)
+* @param object context
+* @return promise api_response
+*/
+data_manager.prototype.read = async function(dd_request) {
+
+	// data_manager
+		const api_response = this.request({
+			body : {
+				action		: 'read',
+				dd_request	: dd_request
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			api_response.then((response)=>{
+				const exec_time = response.debug ? response.debug.exec_time : '';
+				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `dd_request:`, dd_request);
+			})
+		}
+
+	return api_response
+};//end read
 
 
 
@@ -131,8 +193,8 @@ data_manager.prototype.count = async function(sqo) {
 	// data_manager
 		const api_response = this.request({
 			body : {
-				action 	: 'count',
-				sqo 	: sqo
+				action	: 'count',
+				sqo		: sqo
 			}
 		})
 
@@ -145,7 +207,7 @@ data_manager.prototype.count = async function(sqo) {
 		}
 
 	return api_response
-}//end count
+};//end count
 
 
 
@@ -160,8 +222,8 @@ data_manager.prototype.count_OLD = async function(sqo) {
 	// data_manager
 		const api_response = await this.request({
 			body : {
-				action 	: 'count',
-				sqo 	: sqo
+				action	: 'count',
+				sqo		: sqo
 			}
 		})
 
@@ -176,7 +238,7 @@ data_manager.prototype.count_OLD = async function(sqo) {
 		}
 
 	return total
-}//end count
+};//end count
 
 
 
@@ -200,14 +262,14 @@ data_manager.prototype.get_element_context = async function(source) {
 		// const api_response = await this.request({
 		const api_response = this.request({
 			body : {
-				action 	: 'get_element_context',
-				source 	: source
+				action	: 'get_element_context',
+				source	: source
 			}
 		})
 
 
 	return api_response
-}//end get_element_context
+};//end get_element_context
 
 
 
@@ -232,14 +294,14 @@ data_manager.prototype.get_page_element = async function(options) {
 		// const api_response = await this.request({
 		const api_response = this.request({
 			body : {
-				action 	: 'get_page_element',
-				options : options
+				action	: 'get_page_element',
+				options	: options
 			}
 		})
 
 
 	return api_response
-}//end get_page_element
+};//end get_page_element
 
 
 
@@ -260,7 +322,7 @@ export function download_url(url, filename) {
 		}
 		);
 	});
-}//end download_url
+};//end download_url
 
 
 
@@ -282,11 +344,11 @@ data_manager.prototype.area_load_data = async function(basic_context) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[data_manager.area_load_data] api_response for sqo_context:", api_response, sqo_context);
+			console.log("[data_manager.area_load_data] api_response for dd_request:", api_response, dd_request);
 		}
 
 	return api_response
-}//end area_load_data
+};//end area_load_data
 */
 
 
@@ -303,9 +365,9 @@ data_manager.prototype.component_load_data = async function() {
 
 	// section_record instance
 		const section_record = await instances.get_instance({
-			model 			: 'section_record',
-			tipo 			: component.section_tipo,
-			section_tipo 	: component.section_tipo,
+			model			: 'section_record',
+			tipo			: component.section_tipo,
+			section_tipo	: component.section_tipo,
 			section_id		: component.section_id,
 			mode			: component.mode,
 			lang			: component.section_lang
@@ -318,7 +380,7 @@ data_manager.prototype.component_load_data = async function() {
 		component.data = data
 
 	return data
-}//end component_load_data
+};//end component_load_data
 */
 
 
@@ -333,9 +395,9 @@ data_manager.prototype.component_load_context = async function(component) {
 
 	// section_record instance
 		const section_record = await instances.get_instance({
-			model 			: 'section_record',
-			tipo 			: component.section_tipo,
-			section_tipo 	: component.section_tipo,
+			model			: 'section_record',
+			tipo			: component.section_tipo,
+			section_tipo	: component.section_tipo,
 			section_id		: component.section_id,
 			mode			: component.mode,
 			lang			: component.section_lang
@@ -348,5 +410,5 @@ data_manager.prototype.component_load_context = async function(component) {
 		component.context = context
 
 	return context
-}//end component_load_context
+};//end component_load_context
 */

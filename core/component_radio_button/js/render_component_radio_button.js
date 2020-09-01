@@ -16,8 +16,33 @@
 export const render_component_radio_button = function() {
 
 	return true
-}//end render_component_radio_button
+};//end render_component_radio_button
 
+
+/**
+* LIST
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_radio_button.prototype.mini = async function() {
+
+	const self = this
+
+	// Options vars
+		const context	= self.context
+		const data		= self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Value as string
+		const value_string = data.value
+
+	// Set value
+		wrapper.textContent = value_string
+
+	return wrapper
+};//end mini
 
 
 /**
@@ -45,7 +70,7 @@ render_component_radio_button.prototype.list = async function() {
 		wrapper.textContent = value_string
 
 	return wrapper
-}//end list
+};//end list
 
 
 
@@ -83,7 +108,7 @@ render_component_radio_button.prototype.edit = async function(options={render_le
 		add_events(self, wrapper)
 
 	return wrapper
-}//end edit
+};//end edit
 
 
 
@@ -219,7 +244,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+};//end add_events
 
 
 
@@ -378,7 +403,7 @@ render_component_radio_button.prototype.search = async function() {
 
 
 	return wrapper
-}//end search
+};//end search
 
 
 
@@ -425,7 +450,7 @@ const get_content_data_edit = async function(self) {
 		content_data.appendChild(fragment)
 
 	return content_data
-}//end get_content_data_edit
+};//end get_content_data_edit
 
 
 
@@ -470,7 +495,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+};//end get_buttons
 
 
 
@@ -525,7 +550,7 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 
 	return li
-}//end get_input_element_edit
+};//end get_input_element_edit
 
 
 
@@ -574,6 +599,4 @@ const get_content_data_search = async function(self) {
 
 
 	return content_data
-}//end get_content_data_search
-
-
+};//end get_content_data_search

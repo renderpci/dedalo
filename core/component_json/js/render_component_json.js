@@ -16,7 +16,51 @@
 export const render_component_json = function(options) {
 
 	return true
-}//end render_component_json
+}; //end render_component_json
+
+
+/**
+* MINI
+* Render node to be used by service autocomplete or any datalist
+* @return DOM node
+*/
+render_component_json.prototype.mini = function() {
+
+	const self = this
+
+	// Options vars
+		const data = self.data
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// Set value
+		if(self.section_tipo==='dd542'){
+			// activity section case
+			const value_len = data.value.length
+			const node = []
+			for (let i = 0; i < value_len; i++) {
+				const value_map = new Map(Object.entries(data.value[i]))
+				for (let [key, value] of value_map) {
+					node.push(key+ ": " +value)
+				}
+			}
+			// wrapper.innerHTML = node.join('<br>')
+			wrapper.insertAdjacentHTML('afterbegin', node.join('<br>'));
+		}else{
+
+			// Value as string
+			const list_show_key = typeof self.context.properties!=="undefined"
+				? self.context.properties.list_show_key
+				: 'msg'
+			const value_string = (typeof data.value[0][list_show_key]!=='undefined')
+					? data.value[0][list_show_key]
+					: JSON.stringify(data.value).substring(0,100)+" ..."
+			wrapper.textContent = value_string
+		}
+
+	return wrapper
+}; //end mini
 
 
 
@@ -68,7 +112,7 @@ render_component_json.prototype.list = function() {
 
 
 	return wrapper
-}//end list
+}; //end list
 
 
 
@@ -110,7 +154,7 @@ render_component_json.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end edit
+}; //end edit
 
 
 
@@ -176,7 +220,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-}//end add_events
+}; //end add_events
 
 
 
@@ -207,6 +251,8 @@ const get_content_data_edit = async function(self) {
 		}
 		for (let i = 0; i < value_length; i++) {
 			get_input_element(i, inputs_value[i], inputs_container, self)
+			// const li = await get_input_element(i, inputs_value[i], inputs_container, self)
+			// inputs_container.appendChild(li)
 			break; // only one is used for the time being
 		}
 
@@ -217,7 +263,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}; //end get_content_data_edit
 
 
 
@@ -268,7 +314,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}//end get_buttons
+}; //end get_buttons
 
 
 
@@ -280,12 +326,14 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 	const mode = self.mode
 
-	let validated = false
+	let validated = true
+	let editor
+
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type	: 'li',
+			parent			: inputs_container
 		})
 
 	// button_save
@@ -302,12 +350,23 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 
 			// check json format and validate
 				if (validated!==true) {
-					// styles as error
-						self.node.map(item => {
-							item.classList.add("error")
-						})
-					alert("Error: component_json. Trying so save non validated json value!");
-					return false
+
+					// manual check valid value
+					let v = false
+					try {
+						v = JSON.parse(JSON.stringify(current_value))
+					}catch(e) {
+						console.warn("Error. JSON value is invalid!",);
+					}
+					
+					if (!v) {
+						// styles as error
+							self.node.map(item => {
+								item.classList.add("error")
+							})
+						alert("Error: component_json. Trying so save non validated json value!");
+						return false
+					}
 				}
 
 			// check data has really changed. If not, stop save
@@ -333,65 +392,87 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 					event_manager.publish('update_value_'+self.id, changed_data)
 
 					on_change(self, editor)
+
+					editor.frame.classList.remove("isDirty")
+					button_save.classList.remove("warning")
 				})
 		})
 
-	// load
-		await self.load_editor()
+	// load editor files (js/css)
+	await self.load_editor_files()
+	// .then(()=>{
+	// setTimeout(()=>{
 
-	// create the editor
-		const editor_options = {
-			mode	 : 'code',
-			modes	 : ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-			// maxLines : 100, // Infinity,
-			onError	 : function (err) {
-				console.error("err:",err);
-				alert(err.toString());
-			},
-			onValidationError : function() {
-				validated = false
-			},			
-			onChange : function(json) {				
-				on_change(self, editor)
-			},
-			onValidate: function() {
-				validated = true
 
-		       //var json = editor.get();
-		       // Update hidden text area value
-		       //editor_text_area.value = editor.getText()
 
-				// const json = editor.get();
-				//      	console.log("json:",json);
-				//      	//console.log("json editor.get():",editor.get());
-				//      	console.log("text editor.getText():",editor.getText());
+		// editor_options
+			const editor_options = {
+				mode	 : 'code',
+				modes	 : ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+				// maxLines : 100, // Infinity,
+				onError	 : function (err) {
+					console.error("err:",err);
+					alert(err.toString());
+				},
+				onValidationError : function() {
+					validated = false
+				},
+				onChange : function(json) {
+					if (editor) {
+						on_change(self, editor)
+					}else{
+						console.error("Error. editor is not available!:");
+					}
+				},
+				onValidate: function() {
+					validated = true
 
-				// const changed_data = Object.freeze({
-				// 	action	: 'update',
-				// 	key		: 0,
-				// 	value	: editor.get()
-				// })
-				// self.change_value({
-				// 	changed_data : changed_data,
-				// 	refresh 	 : false
-				// })
-				// .then((save_response)=>{
-				// 	// event to update the dom elements of the instance
-				// 	event_manager.publish('update_value_'+self.id, changed_data)
-				// })
-		    },
-		    // onBlur: function() {
-		    // 	console.log('content changed:', this);
-		    // 	alert("content changed");
-		    // }
-		}
-		const editor = new JSONEditor(li, editor_options, current_value)
+			       //var json = editor.get();
+			       // Update hidden text area value
+			       //editor_text_area.value = editor.getText()
 
-		// blur event
+					// const json = editor.get();
+					//      	console.log("json:",json);
+					//      	//console.log("json editor.get():",editor.get());
+					//      	console.log("text editor.getText():",editor.getText());
+
+					// const changed_data = Object.freeze({
+					// 	action	: 'update',
+					// 	key		: 0,
+					// 	value	: editor.get()
+					// })
+					// self.change_value({
+					// 	changed_data : changed_data,
+					// 	refresh 	 : false
+					// })
+					// .then((save_response)=>{
+					// 	// event to update the dom elements of the instance
+					// 	event_manager.publish('update_value_'+self.id, changed_data)
+					// })
+			    },
+			    onBlur: function() {
+				    // 	console.log('content changed:', this);
+				    // 	alert("content changed");
+			    }
+			}
+
+		// create a new instace of the editor when DOM element is ready
+			// event_manager.when_in_dom(li, function(){
+			// 	console.log("container in DOM:",li);
+			// })
+
+			editor = new JSONEditor(li, editor_options, current_value)
+
+			// append current editor
+			self.editors.push(editor)
+	// })
+	// }, 2000)
+
+	// blur event
 			// const ace_editor = editor.aceEditor
 			// ace_editor.on("blur", function(e){
 			// 	e.stopPropagation()
-			// 
+			//
 			// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
 			// 	const edited_value 	= editor.get()
 			// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
@@ -403,14 +484,10 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 			// 		button_save.click()
 			// 	}
 			// })
-						
-
-	// append current editor
-		self.editors.push(editor)
 
 
 	return li
-}//end get_input_element
+}; //end get_input_element
 
 
 
@@ -419,24 +496,37 @@ const get_input_element = async (i, current_value, inputs_container, self) => {
 */
 const on_change = function(self, editor) {
 
-	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
-	const edited_value 	= editor.get()
-	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
-	const editor_wrapper= editor.frame
-	const button_save 	= editor_wrapper.previousElementSibling
+	const editor_wrapper	= editor.frame
+	const button_save		= editor_wrapper.previousElementSibling
+	const db_value			= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
 
-	if (changed) {
+	button_save.classList.add("warning")
+	editor_wrapper.classList.add("isDirty")
+
+	try {
+		const edited_value 	= editor.get()
+	}catch(e){
+		// console.log("e:",e);
 		editor_wrapper.classList.add("isDirty")
-		button_save.classList.add("warning")
-	}else{
-		if (editor_wrapper.classList.contains("isDirty")) {
-			editor_wrapper.classList.remove("isDirty")
-			button_save.classList.remove("warning")
-		}		
+
 	}
-	
+
+	if (typeof edited_value!=="undefined") {
+
+		const changed = JSON.stringify(db_value)!==JSON.stringify(edited_value)
+		if (changed) {
+			editor_wrapper.classList.add("isDirty")
+			button_save.classList.add("warning")
+		}else{
+			if (editor_wrapper.classList.contains("isDirty")) {
+				editor_wrapper.classList.remove("isDirty")
+				button_save.classList.remove("warning")
+			}
+		}
+	}
+
 	return true
-}//end on_change
+}; //end on_change
 
 
 
@@ -458,6 +548,6 @@ const download_object_as_json = function(export_obj, export_name){
     download_anchor_node.remove();
 
     return true
-}//end download_object_as_json
+}; //end download_object_as_json
 
 

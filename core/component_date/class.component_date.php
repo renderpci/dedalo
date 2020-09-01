@@ -175,10 +175,10 @@ class component_date extends component_common {
 	*/
 	public function get_date_mode() {
 
-		$propiedades = $this->get_propiedades();
+		$properties = $this->get_properties();
 
-		if (isset($propiedades->date_mode)) {
-			$date_mode = $propiedades->date_mode; // Default from structure if is defined
+		if (isset($properties->date_mode)) {
+			$date_mode = $properties->date_mode; // Default from structure if is defined
 		}else{
 			$date_mode = 'date'; // Default
 		}
@@ -195,8 +195,8 @@ class component_date extends component_common {
 				$date_mode = 'period';
 				break;
 			default:
-				if (isset($propiedades->date_mode)) {
-					$date_mode = $propiedades->date_mode; // Default from structure if is defined
+				if (isset($properties->date_mode)) {
+					$date_mode = $properties->date_mode; // Default from structure if is defined
 				}else{
 					$date_mode = 'date'; // Default
 				}
@@ -241,17 +241,12 @@ class component_date extends component_common {
 	*/
 	public function get_valor() {
 
-		#$previous_modo = $this->get_modo();
-		#$this->set_modo('list'); // Force list mode
-		#$valor = $this->get_html();
-		# Restore modo after
-		#$this->set_modo($previous_modo);
 
-		$ar_dato 		= $this->get_dato();
-		$propiedades	= $this->get_propiedades();
-		$ar_valor		= array();
-		$valor			= '';
-		$date_mode 		= $this->get_date_mode();
+		$ar_dato	= $this->get_dato();
+		$properties	= $this->get_properties();
+		$ar_valor	= array();
+		$valor		= '';
+		$date_mode	= $this->get_date_mode();
 		foreach ($ar_dato as $key => $current_dato) {
 
 			$ar_valor[$key] = ''; // default
@@ -268,8 +263,8 @@ class component_date extends component_common {
 					if(isset($current_dato->start)) {
 						$dd_date = new dd_date($current_dato->start);
 						/*
-						$valor_start= isset($propiedades->method->get_valor_local)
-									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) )
+						$valor_start= isset($properties->method->get_valor_local)
+									? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
 									: component_date::get_valor_local( $dd_date, false );
 									*/
 						if(isset($current_dato->start->day)) {
@@ -290,8 +285,8 @@ class component_date extends component_common {
 					if(isset($current_dato->end)) {
 						$dd_date	= new dd_date($current_dato->end);
 						/*
-						$valor_end 	= isset($propiedades->method->get_valor_local)
-									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) )
+						$valor_end 	= isset($properties->method->get_valor_local)
+									? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
 									: component_date::get_valor_local( $dd_date, false );
 						*/
 
@@ -386,7 +381,7 @@ class component_date extends component_common {
 			}
 		}
 
- 		$valor = implode((isset($propiedades->divisor) ? $propiedades->divisor : ' | '), $ar_valor);
+ 		$valor = implode((isset($properties->divisor) ? $properties->divisor : ' | '), $ar_valor);
 
 		return (string)$valor;
 	}//end get_valor
@@ -427,7 +422,7 @@ class component_date extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -436,15 +431,6 @@ class component_date extends component_common {
 			#$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-
-		#$valor = strip_tags($valor); // Removes the span tag used in list mode
-		/*
-		$previous_modo = $this->get_modo();
-		$this->set_modo('list'); // Force list mode
-		$valor = $this->get_html();
-		# Restore modo after
-		$this->set_modo($previous_modo);
-		*/
 
 		return (string)$valor;
 	}//end get_valor_export
@@ -566,19 +552,19 @@ class component_date extends component_common {
 	/**
 	* GET_STATS_VALUE_RESOLVED
 	*/
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
+	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) {
 
 		$caller_component = get_called_class();
 
-			#dump($stats_propiedades,'stats_propiedades '.$caller_component);
+			#dump($stats_properties,'stats_properties '.$caller_component);
 
 		#if($caller_component=='component_autocomplete_ts')
 		#dump($current_stats_value ,'$current_stats_value '.$tipo ." $caller_component");
 
 		foreach ($current_stats_value as $current_dato => $value) {
 
-			# PROPIEDADES 'year_only' : Return only year as '1997'
-			if($stats_propiedades->context_name==='year_only') {
+			# properties 'year_only' : Return only year as '1997'
+			if($stats_properties->context_name==='year_only') {
 				$current_dato = date("Y", strtotime($current_dato));
 			}
 
@@ -676,10 +662,10 @@ class component_date extends component_common {
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
-		$component_tipo = end($query_object->path)->component_tipo;
-        $RecordObj   	= new RecordObj_dd($component_tipo);
-        $propiedades 	= json_decode($RecordObj->get_propiedades());
-        $date_mode 	 	= isset($propiedades->date_mode) ? $propiedades->date_mode : 'date';
+		$component_tipo	= end($query_object->path)->component_tipo;
+		$RecordObj		= new RecordObj_dd($component_tipo);
+		$properties		= $RecordObj->get_properties();
+		$date_mode		= isset($properties->date_mode) ? $properties->date_mode : 'date';
         	#dump($query_object, ' date_mode ++ '.to_string($date_mode));
 
 		$query_object->component_path = ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
@@ -1016,12 +1002,12 @@ class component_date extends component_common {
 		$search_comparison_operators = new stdClass();
 
 		#
-		# Overwrite defaults with 'propiedades'->SQL_comparison_operators
+		# Overwrite defaults with 'properties'->SQL_comparison_operators
 			if(SHOW_DEBUG===true) {
-				#dump($this->propiedades, " this->propiedades ".to_string());;
+				#dump($this->properties, " this->properties ".to_string());;
 			}
-			if(isset($this->propiedades->SQL_comparison_operators)) {
-				$comparison_operators = (array)$this->propiedades->SQL_comparison_operators;
+			if(isset($this->properties->SQL_comparison_operators)) {
+				$comparison_operators = (array)$this->properties->SQL_comparison_operators;
 			}
 
 

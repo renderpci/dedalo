@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -15,7 +15,7 @@
 export const component_common = function(){
 
 	return true
-}//end component_common
+};//end component_common
 
 
 
@@ -33,44 +33,54 @@ component_common.prototype.init = async function(options) {
 	}
 
 	// instance key used vars
-	self.model 			= options.model // structure model like 'component_input_text'
-	self.tipo 			= options.tipo // structure tipo of current component like 'dd345'
-	self.section_tipo 	= options.section_tipo // structure tipo like 'oh1'
-	self.section_id 	= options.section_id // record section_id like 1
-	self.matrix_id 		= options.matrix_id || null // record matrix_id like 1 (list_tm mode only)
-	self.mode 			= options.mode // current component mode like 'edit'
-	self.lang 			= options.lang // current component lang like 'lg-nolan'
+	self.model			= options.model // structure model like 'component_input_text'
+	self.tipo			= options.tipo // structure tipo of current component like 'dd345'
+	self.section_tipo	= options.section_tipo // structure tipo like 'oh1'
+	self.section_id		= options.section_id // record section_id like 1
+	self.matrix_id		= options.matrix_id || null // record matrix_id like 1 (list_tm mode only)
+	self.mode			= options.mode // current component mode like 'edit'
+	self.lang			= options.lang // current component lang like 'lg-nolan'
 
-	// DOM
-	self.node 			= [] // array of component nodes places in lihgt DOM
-
-	self.section_lang 	= options.section_lang // current section lang like 'lg-eng'
-	self.parent 		= options.parent // tipo of structure parent like a section group 'dd4567'
-	//self.paginator_id 	= options.paginator_id // removed unused
-	self.events_tokens	= [] // array of events of current component
-	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-	self.sqo_context	= options.sqo_context // search query object of current component (used for autocomplete, etc.)
+	self.section_lang	= options.section_lang // current section lang like 'lg-eng'
+	self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
 
 	// Optional vars
-	self.context 	= options.context  		|| null // structure context of current component (include properties, tools, etc.)
-	self.data 	 	= options.data 			|| null // current specific data of this component
-	self.datum 	 	= options.datum  		|| null // global data including dependent data (used in portals, etc.)
+	self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
+	self.data			= options.data		|| null // current specific data of this component
+	self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
+
+	// DOM
+	self.node			= [] // array of component nodes places in lihgt DOM
+
+	self.events_tokens	= [] // array of events of current component
+	self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
+
+	// dd request
+	self.dd_request = {
+		show	: null,
+		search	: null,
+		select	: null
+	}
+
+	// pagination info
 	self.pagination = (self.data && self.data.pagination)
 		? self.data.pagination
 		: { // pagination info (used in portals, etc.)
-			total : 0,
-			offset: 0,
-			limit : 0
+			total	: 0,
+			offset	: 0,
+			limit	: 0
 		}
 
-	self.type  = self.context.type 	// tipology of current instance, usually 'component'
-	self.label = self.context.label // label of current component like 'summary'
+	// self.type	= self.context.type 	// tipology of current instance, usually 'component'
+	// self.label	= self.context.label // label of current component like 'summary'
+	// self.tools	= self.context.tools || [] //set the tools of the component
+	// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
 
-	self.tools = self.context.tools || [] //set the tools of the component
+	// set_context_vars. context vars re-updated after new build
+	set_context_vars(self, self.context)
 
-	self.divisor = (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
-
-	self.change_value_pool = [] // cue of component value changes (needed to avoid parallel change save)
+	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
+	self.change_value_pool = []
 
 	self.permissions = null
 
@@ -87,7 +97,6 @@ component_common.prototype.init = async function(options) {
 					})
 				})
 			)
-
 
 	// events subscription (from component properties)
 	// the ontology can define a observer property that specify the tipo that this component will listen
@@ -117,7 +126,6 @@ component_common.prototype.init = async function(options) {
 				}
 			}
 		}
-
 
 	// component_save (when user change component value) every component is looking if the own the instance was changed.
 		/*
@@ -158,28 +166,28 @@ component_common.prototype.init = async function(options) {
 
 	//event_manager.publish('component_init', self)
 
-	// self.sqo_context. Fill from context.sqo_context if defined
-		if (!self.sqo_context && self.context.sqo_context) {
-			self.sqo_context = self.context.sqo_context
-		}
-
-	// source. add to sqo_context show
-		if (self.sqo_context && self.sqo_context.show) {
-			// check if already exists a source into sqo_context.show
-			const show_source = self.sqo_context.show.find(element => element.typo==='source')
-			if (typeof show_source==="undefined") {
-				const source = create_source(self,'get_data')
-				// deep clone self sqo_context to avoid interactions (!)
-				self.sqo_context = JSON.parse(JSON.stringify(self.sqo_context))
-				self.sqo_context.show.push(source)
-			}
-		}
-
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 	return true
-}//end init
+};//end init
+
+
+
+/**
+* SET_CONTEXT_VARS
+* type, label, tools, divisor, permissions
+*/
+export const set_context_vars = function(self, context) {
+// console.log("context", self);
+	self.type			= self.context.type 	// tipology of current instance, usually 'component'
+	self.label			= self.context.label // label of current component like 'summary'
+	self.tools			= self.context.tools || [] //set the tools of the component
+	self.divisor		= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
+	self.permissions	= self.context.permissions
+
+	return true
+};//end set_context_vars
 
 
 
@@ -188,12 +196,10 @@ component_common.prototype.init = async function(options) {
 * @param object value (locator)
 * @return bool
 */
-component_common.prototype.build = async function(autoload){
+component_common.prototype.build = async function(autoload=false){
 	const t0 = performance.now()
 
 	const self = this
-
-	autoload = typeof autoload==="undefined" ? false : autoload
 
 	// status update
 		self.status = 'building'
@@ -201,29 +207,40 @@ component_common.prototype.build = async function(autoload){
 	// self.datum. On building, if datum is not created, creation is needed
 		if (!self.datum) self.datum = {data:[]}
 
-	// load data if is not already received as option
+	// load data on autoload true
 		if (autoload===true) {
-				
-			// sqo_context
-				// create the sqo_context
-				self.sqo_context = {show: []}
-				// create the own show ddo element
-				const source = create_source(self, 'get_data')
-				self.sqo_context.show.push(source)
+
+			// console.log("++++ self.dd_request.show:", JSON.parse(JSON.stringify(self.dd_request.show)));
+			// console.log("self.context:",self.context);
+			// alert("Loading component " + self.model + " - " + self.tipo);
+
+			// set dd_request if not exists
+				if(!self.dd_request.show){
+					self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
+				}
+
+			// console.log("self.dd_request", self.dd_request);
+			// console.log("self.dd_request", !self.dd_request.show);
 
 			// load data
 				const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.section_load_data(self.sqo_context.show)
+				const api_response 			= await current_data_manager.read(self.dd_request.show)
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					console.log("[component_common.build] api_response:",api_response);
+					console.log("[component_common.build] + api_response:",api_response);
 				}
 
-			// Update the self.data into the datum and self instance
-				if (api_response.result) {
-					const new_data = api_response.result.data
-					self.update_datum(new_data)
+			// set context and data to current instance
+				self.update_datum(api_response.result.data)
+				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+
+			// update instance properties from context
+				set_context_vars(self, self.context)
+
+			// dd_request. build again dd_request with updated request_config if exists
+				if (self.context.request_config) {
+					self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'get_data')
 				}
 		}
 
@@ -248,7 +265,7 @@ component_common.prototype.build = async function(autoload){
 
 
 	return true
-}//end component_common.prototype.build
+};//end component_common.prototype.build
 
 
 
@@ -362,7 +379,7 @@ component_common.prototype.save = async function(changed_data) {
 					setTimeout(()=>{
 						self.node.map(item => {
 							// item.classList.remove("save_success")
-							// allow restart animation. Not set state pause before animation ends (2 secs)							
+							// allow restart animation. Not set state pause before animation ends (2 secs)
 							item.style.animationPlayState = "paused";
 							item.style.webkitAnimationPlayState = "paused";
 						})
@@ -371,7 +388,7 @@ component_common.prototype.save = async function(changed_data) {
 		})
 
 	return save_promise
-}//end save
+};//end save
 
 
 
@@ -385,7 +402,7 @@ component_common.prototype.get_value = function() {
 	const value = this.data.value
 
 	return value
-}//end get_value
+};//end get_value
 
 
 
@@ -400,7 +417,7 @@ component_common.prototype.set_value = function(value) {
 	this.data.value = value
 
 	return true
-}//end set_value
+};//end set_value
 
 
 
@@ -417,27 +434,27 @@ component_common.prototype.update_datum = function(new_data) {
 	const self = this
 
 	// (!) Note that component datum is shared with section datum. On the contrary, Portals have custom datum
-	
+
 	// new_data
 		const new_data_length = new_data.length
 			// console.log("update_datum --------------------------- new_data:",JSON.parse(JSON.stringify(new_data)) );
-			// console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data))); 
+			console.log("update_datum --------------------------- first self.datum.data:",JSON.parse(JSON.stringify(self.datum.data)));
 			// console.trace();
 
 	// datum (global shared with section)
-		// remove the component old data in the datum (from down to top array items)		
+		// remove the component old data in the datum (from down to top array items)
 			for (let i = new_data_length - 1; i >= 0; i--) {
-				
+
 				const data_item = new_data[i]
-				
+
 				const index_to_delete = self.datum.data.findIndex(item => item.tipo===data_item.tipo && item.section_tipo===data_item.section_tipo && item.section_id===data_item.section_id)
-				
+
 				if (index_to_delete!==-1) {
 					if(SHOW_DEBUG===true) {
 						console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, JSON.parse( JSON.stringify(self.datum.data[index_to_delete])) );
 					}
 					self.datum.data.splice(index_to_delete, 1);
-				}else{ 
+				}else{
 					console.warn("(!) Not found index_to_delete in datum:", data_item.tipo, data_item.section_tipo, data_item.section_id)
 				}
 			}
@@ -451,7 +468,7 @@ component_common.prototype.update_datum = function(new_data) {
 			self.data = self.datum.data.find(item => item.tipo===self.tipo && item.section_tipo===self.section_tipo && item.section_id===self.section_id) || []
 				//console.log("=======self.data:",JSON.parse( JSON.stringify(self.data)));
 		// data of another components
-			/* 
+			/*
 			const ar_instances = instances.get_all_instances()
 			for (let i = new_data_length - 1; i >= 0; i--) {
 				const data_item = new_data[i]
@@ -461,7 +478,7 @@ component_common.prototype.update_datum = function(new_data) {
 					current_instance.data = self.datum.data.find(item => item.tipo===data_item.tipo && item.section_id===data_item.section_id) || []
 				}else{
 					console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
-				}		
+				}
 			}
 			*/
 
@@ -473,7 +490,7 @@ component_common.prototype.update_datum = function(new_data) {
 				}
 				alert("Error on read component data!");
 			}
-	
+
 
 	// add as new data the most recent changed_data
 		//self.data.changed_data = changed_data
@@ -490,7 +507,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 
 	return true
-}//end update_datum
+};//end update_datum
 
 
 
@@ -503,7 +520,7 @@ component_common.prototype.update_datum = function(new_data) {
 * @return bool true
 */
 component_common.prototype.update_data_value = function(changed_data){
-	
+
 	const self = this
 
 	if(SHOW_DEBUG===true) {
@@ -534,7 +551,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 
 	return true
-}//end update_data_value
+};//end update_data_value
 
 
 
@@ -570,7 +587,7 @@ component_common.prototype.change_value = async function(options) {
 
 	// update the data in the instance previous to save
 		const update_data = self.update_data_value(changed_data)
-
+console.log("***********changed_data", changed_data);
 	// rebuild and save the component
 		const api_response = await self.save(changed_data)
 
@@ -591,7 +608,7 @@ component_common.prototype.change_value = async function(options) {
 			}
 
 	return api_response
-}//end change_value
+};//end change_value
 
 
 
@@ -619,7 +636,7 @@ const function_queue = function(context, pool, fn, options) {
 
 
 	return fun
-}//end function_queue
+};//end function_queue
 
 
 
@@ -641,7 +658,7 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 	//current_node.parentNode.replaceChild(new_node, current_node);
 
 	return current_node
-}//end update_node_contents
+};//end update_node_contents
 
 
 
@@ -651,7 +668,8 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 component_common.prototype.get_ar_instances = async function(){
 
 	const self 			= this
-	const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
+	// const records_mode 	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
+	const records_mode 	= null
 
 	const lang 			= self.section_lang
 	const value 		= self.data.value || []
@@ -675,7 +693,7 @@ component_common.prototype.get_ar_instances = async function(){
 
 			const instance_options = {
 				model 			: 'section_record',
-				tipo 			: current_section_tipo,
+				tipo 			: self.tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
 				mode			: records_mode,
@@ -684,7 +702,8 @@ component_common.prototype.get_ar_instances = async function(){
 				data			: current_data,
 				datum 			: self.datum,
 				paginated_key 	: locator.paginated_key, // used by autocomplete / portal
-				caller 			: self
+				caller 			: self,
+				columns 		: self.columns
 			}
 
 			// id_variant . Propagate a custom instance id to children
@@ -694,19 +713,18 @@ component_common.prototype.get_ar_instances = async function(){
 
 			// section_record instance
 				const current_section_record = await instances.get_instance(instance_options)
-
 				await current_section_record.build()
 
 			// add instance
 				ar_instances.push(current_section_record)
 
-		}//end for loop
+		};//end for loop
 
 	// set
 		self.ar_instances = ar_instances
 
 	return ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
 
 
 
@@ -739,19 +757,18 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 
 	// element. Create the instance options for build it. The instance is reflect of the context and section_id
 		const new_instance = await instances.get_instance({
-			model 			: current_context.model,
-			tipo 			: current_context.tipo,
-			section_tipo 	: current_context.section_tipo,
-			section_id 		: current_section_id,
-			mode 			: new_mode,
-			lang 			: current_context.lang,
-			section_lang 	: section_lang,
-			parent 			: current_context.parent,
-			type 			: current_context.type,
-			context 		: current_context,
-			data 			: current_data,
-			datum 			: current_datum,
-			sqo_context 	: current_context.sqo_context
+			model			: current_context.model,
+			tipo			: current_context.tipo,
+			section_tipo	: current_context.section_tipo,
+			section_id		: current_section_id,
+			mode			: new_mode,
+			lang			: current_context.lang,
+			section_lang	: section_lang,
+			parent			: current_context.parent,
+			type			: current_context.type,
+			context			: current_context,
+			data			: current_data,
+			datum			: current_datum
 		})
 
 	// build
@@ -770,7 +787,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 
 
 	return true
-}//end change_mode
+};//end change_mode
 
 
 
@@ -781,7 +798,7 @@ component_common.prototype.test_save = async function(component) {
 
 	if (component.model==='component_input_text') {
 
-		for (var i = 1; i <= 1; i++) {
+		for (let i = 1; i <= 1; i++) {
 
 			const time = i * 1000
 			const ar_value = [i,"234"]
@@ -795,4 +812,4 @@ component_common.prototype.test_save = async function(component) {
 			},time)
 		}
 	}
-}//end test_save
+};//end test_save

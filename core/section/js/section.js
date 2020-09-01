@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common,create_source} from '../../common/js/common.js'
+	import {common,create_source,load_data_debug} from '../../common/js/common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
@@ -47,7 +47,7 @@ export const section = function() {
 	this.id_variant
 
 	return true
-}//end section
+};//end section
 
 
 
@@ -57,15 +57,20 @@ export const section = function() {
 */
 // prototypes assign
 	// life clycle
-	section.prototype.render 		= common.prototype.render
-	section.prototype.destroy 		= common.prototype.destroy
-	section.prototype.refresh 		= common.prototype.refresh
+	section.prototype.render			= common.prototype.render
+	section.prototype.destroy			= common.prototype.destroy
+	section.prototype.refresh			= common.prototype.refresh
+	section.prototype.build_dd_request	= common.prototype.build_dd_request
+
 	// render
-	section.prototype.edit 			= render_section.prototype.edit
-	section.prototype.list 			= render_section.prototype.list
-	section.prototype.list_portal 	= render_section.prototype.list
-	section.prototype.tm 			= render_section.prototype.list
-	section.prototype.list_header 	= render_section.prototype.list_header
+	section.prototype.edit				= render_section.prototype.edit
+	section.prototype.list				= render_section.prototype.list
+	section.prototype.list_portal		= render_section.prototype.list
+	section.prototype.tm				= render_section.prototype.list
+	section.prototype.list_header		= render_section.prototype.list_header
+
+	section.prototype.get_columns		= common.prototype.get_columns
+
 
 
 
@@ -79,66 +84,62 @@ section.prototype.init = async function(options) {
 	const self = this
 
 	// instance key used vars
-	self.model 				= options.model
-	self.tipo 				= options.tipo
-	self.section_tipo 		= options.section_tipo
-	self.section_id 		= options.section_id
-	self.mode 				= options.mode
-	self.lang 				= options.lang
+	self.model				= options.model
+	self.tipo				= options.tipo
+	self.section_tipo		= options.section_tipo
+	self.section_id			= options.section_id
+	self.mode				= options.mode
+	self.lang				= options.lang
 
 	// DOM
-	self.node 				= []
+	self.node				= []
 
-	self.section_lang 		= options.section_lang
-	self.parent 			= options.parent
+	self.section_lang		= options.section_lang
+	self.parent				= options.parent
 
 	self.events_tokens		= []
 	self.ar_instances		= []
-	self.sqo_context		= options.sqo_context 	|| null
 
-	self.datum 	 			= options.datum   		|| null
-	self.context 			= options.context 		|| null
-	self.data 	 			= options.data 	  		|| null
-	self.pagination 		= { // pagination info
+	self.caller				= options.caller	|| null
+
+	self.datum				= options.datum		|| null
+	self.context			= options.context	|| null
+	self.data				= options.data		|| null
+
+	// dd request
+	self.dd_request			= options.dd_request || {
+								show	: null,
+								search	: null,
+								select	: null
+							}
+
+	// pagination info
+	self.pagination			= {
 		total : 0,
 		offset: 0
 	}
 
-	self.type 				= 'section'
-	self.label 				= null
+	self.columns 			= []
 
-	self.filter 			= null // (? used)
-	self.inspector 			= null
+	self.type				= 'section'
+	self.label				= null
 
-	self.id_column_width 	= '7.5em'
-	self.permissions 		= options.permissions || null
+	self.filter				= null // (? used)
+	self.inspector			= null
 
-
-	// source. add to sqo_context if not exists. Be careful not to add a source element twice
-	// (!) VERIFICAR QUE REALMENTE HACE FALTA
-		if (self.sqo_context && self.sqo_context.show) {
-			const current_source = self.sqo_context.show.find(element => element.typo==='source')
-			if (current_source) {
-				console.warn("Source alredy exists. Skipped source creation for sqo_context",current_source)
-			}else{
-				const source = create_source(self,'search')
-				self.sqo_context.show.push(source)
-				if(SHOW_DEBUG===true) {
-					console.warn("Added created 'source' element to sqo_context.show on init section",source)
-				}
-			}
-		}
+	self.id_column_width	= '7.5em'
+	self.permissions		= options.permissions || null
 
 
 	// events subscription
 
 
 	// status update
-		self.status = 'inited'
+		self.status = 'initiated'
 
 
 	return true
-}//end init
+};//end init
 
 
 
@@ -148,6 +149,7 @@ section.prototype.init = async function(options) {
 *	bool true
 */
 section.prototype.build = async function(autoload=false) {
+
 	const t0 = performance.now()
 
 	const self = this
@@ -155,52 +157,79 @@ section.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
-	// sqo
-		const show_sqo = self.sqo_context.show.find(element => element.typo==='sqo')
+	// set dd_request
+		self.dd_request.show = self.dd_request.show || self.build_dd_request('show', self.context.request_config, 'search')
+
+	// debug
+		const dd_request_show_original = JSON.parse(JSON.stringify(self.dd_request.show))
 
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			const current_data_manager = new data_manager()
-
-			// count rows
-				if (!self.pagination.total) {
-					// self.pagination.total = (show_sqo.full_count && show_sqo.full_count>0)
-					// 	? show_sqo.full_count
-					// 	: current_data_manager.count(show_sqo)
-
-					self.pagination.total = (show_sqo.full_count && show_sqo.full_count>0)
-						? show_sqo.full_count
-						: (async () => {
-							const response = await current_data_manager.count(show_sqo)
-							return response.result.total
-						})()
-				}
-				// console.log("self.pagination.total:",self.pagination.total);
-
-
 			// get context and data
-				const api_response = await current_data_manager.section_load_data(self.sqo_context.show)
+				const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.read(self.dd_request.show)
+					console.log("///// section autoload=true api_response:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
 
-			// debug
-				load_section_data_debug(self.tipo, self.sqo_context, api_response, self)
-		}
+			// set context and data to current instance
+				self.context	= self.datum.context.find(element => element.section_tipo===self.section_tipo)
+				self.data		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
+				self.section_id	= self.data
+					? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+					: null
 
-	// set context and data to current instance
-		self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
-		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
-		self.section_id = self.data
-			? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
-			: null
+			// recreate and set dd_request with the new configuration
+				self.dd_request.show = self.build_dd_request('show', self.context.request_config, 'search')
+
+			// sqo
+				const sqo = self.dd_request.show.find(element => element.typo==='sqo')
+				// console.log("self.context.request_config", self.context.request_config);
+				// console.log(" self.dd_request.show",  self.dd_request.show);
+
+			// count rows
+				if (!self.pagination.total) {
+
+					self.pagination.total = (sqo.full_count && sqo.full_count>0)
+						? sqo.full_count
+						: (async () => {
+							const response = await current_data_manager.count(sqo)
+							return response.result.total
+						})()
+				}
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					event_manager.subscribe('render_'+self.id, function(){
+						load_data_debug(self, api_response, dd_request_show_original)
+					})
+				}
+		}
+		// else{
+		//
+		// 	// set context and data to current instance
+		// 		self.context	= self.datum.context.filter(element => element.section_tipo===self.section_tipo)
+		// 		self.data 		= self.datum.data.find(element => element.tipo===element.section_tipo && element.section_tipo===self.section_tipo)
+		// 		self.section_id = self.data
+		// 			? self.data.value.find(element => element.section_tipo===self.section_tipo).section_id
+		// 			: null
+		//
+		// 	// set request_config
+		// 		self.request_config = self.context.find(item => item.tipo===self.tipo && item.model==='section').request_config
+		// }
+
+
+	// sqo
+		const sqo = self.dd_request.show.find(element => element.typo==='sqo')
+
 
 	// Update section mode/label with context declarations
-		const section_context = self.context.find(element => element.tipo===self.section_tipo) || {
-			mode  		: 'edit',
-			label 		: 'Section without permissions '+self.tipo,
-			permissions : 0
+		const section_context = self.context || {
+			mode		: 'edit',
+			label		: 'Section without permissions '+self.tipo,
+			permissions	: 0
 		}
 		self.mode 	= section_context.mode
 		self.label 	= section_context.label
@@ -212,19 +241,20 @@ section.prototype.build = async function(autoload=false) {
 		const searchParams = new URLSearchParams(window.location.href);
 		const initiator = searchParams.has("initiator")
 			? searchParams.get("initiator")
-			: typeof self.caller!=="undefined"
+			: self.caller!==null
 				? self.caller.id
 				: false
 		// fix initiator
 			self.initiator = initiator
 
 	// pagination update properties
-		self.pagination.limit	= show_sqo.limit
-		self.pagination.offset	= show_sqo.offset
-		self.pagination.total	= self.pagination.total || show_sqo.full_count || 0
+		self.pagination.limit	= sqo.limit
+		self.pagination.offset	= sqo.offset
+		self.pagination.total	= self.pagination.total || sqo.full_count || 0
 
 	// paginator
 		if (!self.paginator) {
+
 			const current_paginator = new paginator()
 			current_paginator.init({
 				caller : self
@@ -239,21 +269,19 @@ section.prototype.build = async function(autoload=false) {
 					self.refresh() // refresh current section
 				})
 			)//end events push
-		}else{
-			// refresh current existing paginator
-			self.paginator.refresh()
 		}
 
 	// filter
-		if (!self.filter && self.permissions>0) {
-			const current_filter = new search()
-			current_filter.init({
-				caller : self
-			})
-			current_filter.build()
-			// fix section filter
-			self.filter = current_filter
-		}
+		// if (!self.filter && self.permissions>0) {
+		// 	const current_filter = new search()
+		// 	current_filter.init({
+		// 		caller : self
+		// 	})
+		// 	current_filter.build()
+		// 	// fix section filter
+		// 	self.filter = current_filter
+		// }
+		console.log("section build filter unactive (remember) ");
 
 	// inspector
 		if (!self.inspector && self.permissions) {
@@ -265,8 +293,8 @@ section.prototype.build = async function(autoload=false) {
 
 				const current_inspector = new inspector()
 				current_inspector.init({
-					section_tipo 	: self.section_tipo,
-					section_id 		: self.section_id
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id
 				})
 				current_inspector.caller = self
 				current_inspector.build()
@@ -275,18 +303,34 @@ section.prototype.build = async function(autoload=false) {
 			// }
 		}
 
+	// columns
+		if(self.mode === 'list'){
+			self.columns = self.get_columns()
+		}
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-			// load_section_data_debug(self.section_tipo, self.sqo_context, load_section_data_promise)
+			// load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
 			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+
+			// debug duplicates check
+				const ar_used = []
+				for(const element of self.datum.data) {
+					const index = ar_used.findIndex(item => item.tipo===element.tipo && item.section_tipo===element.section_tipo && item.section_id===element.section_id && item.from_component_tipo===element.from_component_tipo && item.parent_section_id===element.parent_section_id )
+					if (index!==-1) {
+						console.error("SECTION ERROR. self.datum.data contains duplicated elements:", self.datum.data);
+					}else{
+						ar_used.push(element)
+					}
+				}
 		}
 
 	// status update
 		self.status = 'builded'
 
 	return true
-}//end build
+};//end build
 
 
 
@@ -305,30 +349,34 @@ section.prototype.get_ar_instances = async function(){
 		}
 
 	// iterate records
-		const value 		= self.data.value || []
-		const value_length 	= value.length
+		const value			= self.data.value || []
+		const value_length	= value.length
+
+		const offset = self.pagination.offset
 
 		for (let i = 0; i < value_length; i++) {
 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
 
-			const current_section_id 	= value[i].section_id
-			const current_section_tipo 	= value[i].section_tipo
+			const current_section_id	= value[i].section_id
+			const current_section_tipo	= value[i].section_tipo
 			const current_data			= (self.mode==='tm')
 				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
 				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
 			const current_context 		= self.context
 
 			const instance_options = {
-					model 			: 'section_record',
-					tipo 			: current_section_tipo,
+					model			: 'section_record',
+					tipo			: current_section_tipo,
 					section_tipo	: current_section_tipo,
 					section_id		: current_section_id,
 					mode			: self.mode,
 					lang			: self.lang,
-					context 		: current_context,
+					context			: current_context,
 					data			: current_data,
-					datum 			: self.datum,
-					caller 			: self
+					datum			: self.datum,
+					caller			: self,
+					offset			: (offset+i),
+					columns 		: self.columns || null
 			}
 
 			// id_variant . Propagate a custom instance id to children
@@ -338,9 +386,9 @@ section.prototype.get_ar_instances = async function(){
 
 			// time machine options
 				if (self.mode==='tm') {
-					instance_options.matrix_id 			= value[i].matrix_id
-					instance_options.modification_date 	= value[i].timestamp
-					// instance_options.state 			= value[i].state
+					instance_options.matrix_id			= value[i].matrix_id
+					instance_options.modification_date	= value[i].timestamp
+					// instance_options.state			= value[i].state
 				}
 
 			// section_record. init and build
@@ -354,85 +402,82 @@ section.prototype.get_ar_instances = async function(){
 
 
 	return self.ar_instances
-}//end get_ar_instances
+};//end get_ar_instances
 
 
+//
+// /**
+// * GET_AR_ROWS
+// */
+// section.prototype.get_ar_rows = async function(){
+//
+// 	const self = this
+//
+// 	// self data veification
+// 		if (typeof self.data==="undefined") {
+// 			self.data = {
+// 				value : []
+// 			}
+// 		}
+//
+// 	// iterate records
+// 		const value			= self.data.value || []
+// 		const value_length	= value.length
+//
+// 		const offset = self.pagination.offset
+//
+// 		for (let i = 0; i < value_length; i++) {
+// 			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
+//
+// 			const current_section_id	= value[i].section_id
+// 			const current_section_tipo	= value[i].section_tipo
+// 			const current_data			= (self.mode==='tm')
+// 				? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+// 				: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
+// 			const current_context 		= self.context
+//
+// 			const instance_options = {
+// 					model			: 'section_record',
+// 					tipo			: current_section_tipo,
+// 					section_tipo	: current_section_tipo,
+// 					section_id		: current_section_id,
+// 					mode			: 'list',
+// 					lang			: self.lang,
+// 					context			: current_context,
+// 					data			: current_data,
+// 					datum			: self.datum,
+// 					caller			: self,
+// 					offset			: (offset+i),
+// 					columns 		: self.columns
+// 			}
+//
+// 			// id_variant . Propagate a custom instance id to children
+// 				if (self.id_variant) {
+// 					instance_options.id_variant = self.id_variant
+// 				}
+//
+// 			// time machine options
+// 				if (self.mode==='tm') {
+// 					instance_options.matrix_id			= value[i].matrix_id
+// 					instance_options.modification_date	= value[i].timestamp
+// 					// instance_options.state			= value[i].state
+// 				}
+//
+// 			// section_record. init and build
+// 				const current_section_record = await instances.get_instance(instance_options);
+// 				await current_section_record.build()
+//
+// 			// add
+// 				// self.ar_instances.push(current_section_record)
+//
+// 		}//end for loop
+//
+//
+// 	// return self.ar_instances
+// };//end get_ar_instances
+//
 
-/**
-* LOAD_SECTION_DATA_DEBUG
-* @return
-*/
-const load_section_data_debug = async function(section_tipo, sqo_context, load_section_data_promise, self) {
 
-	if(SHOW_DEBUG===false) {
-		return false
-	}
-
-	//import {ui} from '../../common/js/ui.js'
-
-	const response = await load_section_data_promise
-
-	console.log("----> request sqo_context:",sqo_context);
-
-	// load_section_data_promise
-	if (response.result===false) {
-		console.error("API EXCEPTION:",response.msg);
-	}
-	console.log("[section.load_section_data_debug] response:",response, " TIME: "+response.debug.exec_time)
-	console.log("[section.load_section_data_debug] context:",response.result.context)
-	console.log("[section.load_section_data_debug] data:",response.result.data)
-
-	const debug = document.getElementById("debug")
-	debug.classList.add("hide")
-
-	// clean
-	while (debug.firstChild) {
-		debug.removeChild(debug.firstChild)
-	}
-
-	// request to api
-		const sqo = sqo_context.show.find(el => el.typo==='sqo')
-		const request_pre = ui.create_dom_element({
-			element_type : 'pre',
-			text_content : "search query object sended to api: \n\n" + JSON.stringify(sqo, null, "   "),
-			parent 		 : debug
-		})
-
-	// context
-		const context_pre = ui.create_dom_element({
-			element_type : 'pre',
-			text_content : "context: " + JSON.stringify(response.result.context, null, "   "),
-			parent 		 : debug
-		})
-
-	// data
-		const data_pre = ui.create_dom_element({
-			element_type : 'pre',
-			text_content : "data: " + JSON.stringify(response.result.data, null, "   "),
-			parent 		 : debug
-		})
-
-	// const time_info = "" +
-	// 	"Total time: " + response.debug.exec_time +
-	// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
-	// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
-
-	// const time_info_pre = ui.create_dom_element({
-	// 	element_type : "pre",
-	// 	class_name   : "total_time",
-	// 	id   		 : "total_time",
-	// 	inner_html   : time_info,
-	// 	parent 		 : debug
-	// })
-
-	event_manager.subscribe('render_'+self.id, function(node){
-		//console.log("node:",node);
-		debug.classList.remove("hide")
-	})
-
-
-	return true
-}//end load_section_data_debug
 
 
 
@@ -542,7 +587,7 @@ section.prototype.render__DES = async function(){
 
 
 	return node
-}//end render
+};//end render
 */
 
 
@@ -585,17 +630,17 @@ section.prototype.render_content = async function(){
 
 
 	return self.node[0]
-}//end render_content
+};//end render_content
 */
 
 
 
 
 /**
-* CREATE_SQO_CONTEXT
+* CREATE_request_config
 * @return
 *//*
-section.prototype.create_sqo_context = function(){
+section.prototype.create_request_config = function(){
 
 	const self = this
 
@@ -645,14 +690,14 @@ section.prototype.create_sqo_context = function(){
 				parent			: "root"
 			}
 		]
-	// sqo_context
-		const sqo_context = {
+	// request_config
+		const request_config = {
 			show : show,
 			search : []
 		}
 
-	return sqo_context
-}//end create_sqo_context
+	return request_config
+};//end create_request_config
 */
 
 
@@ -680,7 +725,7 @@ section.prototype.load_data = async function() {
 		self.ar_section_id 		= ar_section_id
 
 	return true
-}//end load_data
+};//end load_data
 */
 
 
@@ -739,5 +784,5 @@ section.prototype.load_section_records = function() {
 	})//end loaded
 
 	return loaded
-}//end load_section_records
+};//end load_section_records
 */
