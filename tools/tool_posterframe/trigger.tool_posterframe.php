@@ -1,55 +1,100 @@
 <?php
-require_once( DEDALO_CONFIG_PATH .'/config.php');
+
+
+$start_time=microtime(1);
+include( dirname(dirname(dirname(__FILE__))) .'/config/config.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
+
+
 require_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
 require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 require_once( DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+// if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
 
-# set vars
-	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode','parent','select_val');
-		foreach($vars as $name) $$name = common::setVar($name);
+// # set vars
+// 	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode','parent','select_val');
+// 		foreach($vars as $name) $$name = common::setVar($name);
 	
 
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+// # mode
+// 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 
+#nuevo formato
 /**
 * GENERATE_POSTERFRAME
-* Build a posterframe from current video tc
-* @param $quality
-* @param $video_id
-* @param $timecode
+*
 */
-if($mode=='generate_posterframe') {
+function generate_posterframe($json_data) {
 
-	if (empty($quality)) {
-		return "Error: quality is not defined!";
-	}
-	if (empty($video_id) || strlen($video_id)<4) {
-		return "Error: video_id is not defined!";
-	}
-	if (empty($timecode) || strlen($timecode)<1) {
-		return "Error: timecode is not defined!";
-	}
-	if ( empty($parent) ) {
-		throw new Exception("Error Processing Request. Few vars! (parent)", 1);
-	}
+		dump($json_data, ' json_data ++ '.to_string());
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-	$reelID		= $video_id ;
-	$quality 	= $target_quality ;
+	# set vars
+		$vars = array('component_tipo','section_tipo','section_id','video_id','quality','timecode');
+
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+
+	// $modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+	// $component_obj 	 = component_common::get_instance($modelo_name,
+	// 												  $component_tipo,
+	// 												  $section_id,
+	// 												  'edit',
+	// 												  $lang,
+	// 												  $section_tipo);
+
+	// $tool_tc  = new tool_tc($component_obj);
+
+	// $response = (object)$tool_tc ->change_all_timecodes($offset_seconds);
+
+
+	//aaa
+	// if (empty($quality)) {
+	// 	return "Error: quality is not defined!";
+	// }
+	// if (empty($video_id) || strlen($video_id)<4) {
+	// 	return "Error: video_id is not defined!";
+	// }
+	// if (empty($timecode) || strlen($timecode)<1) {
+	// 	return "Error: timecode is not defined!";
+	// }
+	// if ( empty($parent) ) {
+	// 	throw new Exception("Error Processing Request. Few vars! (parent)", 1);
+	// }
+
+
+	// $reelID		= $video_id ;
+	// $quality 	= $target_quality ;
 			
 	# AVObj
-	$AVObj		= new AVObj($reelID, $quality);
+	$AVObj		= new AVObj($video_id, $quality);
 	
+	dump($AVObj, ' AVObj ++ '.to_string());
+
 	# Ffmpeg
 	$Ffmpeg		= new Ffmpeg();
+
+	dump($Ffmpeg, ' Ffmpeg ++ '.to_string());
 	$render		= $Ffmpeg->create_posterframe($AVObj, $timecode);			#create_posterframe(AVObj $AVObj, $timecode)
 
+	dump($render, ' render ++ '.to_string());
 	# Extract tipo from video_id like rsc35_rsc167_8.mp4 => rsc35
 	$ar 	= explode('_', $video_id);
 	$tipo 	= $ar[0];
@@ -78,7 +123,36 @@ if($mode=='generate_posterframe') {
 	
 	print 'Posterframe generated';
 	die();
+
+	//xxx
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end generate_posterframe
+
+
+
+
+#fin nuevo formato
+
+
+/**
+* GENERATE_POSTERFRAME
+* Build a posterframe from current video tc
+* @param $quality
+* @param $video_id
+* @param $timecode
+*/
 
 /**
 * DELETE POSTERFRAME
