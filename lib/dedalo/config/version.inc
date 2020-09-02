@@ -1814,8 +1814,13 @@
 	Valencia 08-08-2020 5.6.11
 		Fixed web_data public api issues
 
+
 	Valencia 09-08-2020 5.6.12
 		Add diffsuion option to overwrite diffusion table element from table_alias
+
+
+	Valencia 02-09-2020 5.6.14
+		Add component relation common get_diffusion value control to avoid publish non publicable target indexations
 
 
 
@@ -1841,12 +1846,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.12';
+	$DEDALO_VERSION = '5.6.14';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-08-2020');
+	define('DEDALO_BUILD'	, '02-09-2020');
 
 
 

@@ -1129,16 +1129,35 @@ class component_relation_common extends component_common {
 	public function get_diffusion_value($lang=null) {
 
 		$dato = $this->get_dato();
-		/*
-		$ar_data = array();
-		foreach ((array)$dato as $current_locator) {
-			$ar_data[] = $current_locator->section_id;
-		}
-		$diffusion_value = json_encode($ar_data);
-		*/
-		$diffusion_value = json_encode($dato);
 
-		return (string)$diffusion_value;
+		// old
+			// $diffusion_value = json_encode($dato);
+		
+
+		// new (2-9-2020). Remove non publicable values		
+			if (empty($dato)) {
+				
+				$diffusion_value = null;
+			
+			}else{
+				
+				$diffusion_value = [];
+				foreach ((array)$dato as $current_locator) {
+
+					// Check target is publicable
+						$current_is_publicable = diffusion::get_is_publicable($current_locator);
+						if ($current_is_publicable!==true) {
+							debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+							continue;
+						}
+
+					$diffusion_value[] = $current_locator;
+				}
+				$diffusion_value = json_encode($diffusion_value);
+			}
+		
+
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 
