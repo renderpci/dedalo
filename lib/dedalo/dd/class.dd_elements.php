@@ -27,7 +27,7 @@ class dd_elements {
 
 			if($this->modo==='tesauro_edit' || $this->modo==='modelo_edit') {
 
-				if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!=='dedalo4_master' && DEDALO_DATABASE_CONN!=='dedalo4_development' ) {
+				if( substr($terminoID, 0,2)==='dd' && (!defined('STRUCTURE_IS_MASTER') || STRUCTURE_IS_MASTER!==true) ) {
 					# No buttons are showed
 				}else{
 
@@ -40,7 +40,6 @@ class dd_elements {
 					# Editar termino
 					$html .= $this->renderBtnEditTermino($terminoID);
 				}
-
 			}
 
 			if($this->modo==='tesauro_rel') {
@@ -244,7 +243,7 @@ class dd_elements {
 			$html .= "</span>";
 		}
 
-		if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!='dedalo4_master' ) {
+		if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!='dedalo_master_v5' ) {
 			$html .= "\n <span class=\"termino_text\" alt=\"$terminoID\" >";
 		}else{
 			$html .= "\n <span class=\"termino_text\" alt=\"$terminoID\" ondblclick=\"dd.edit_inline(this)\">";
