@@ -139,12 +139,16 @@ tool_posterframe.prototype.button_click = function(value, button_obj) {
 
 	const self = this
 
+	const seconds = 20
+
 	switch (value) {
 
 		case 'Play':
 
-	//TODO - cambiar la llamada
-			self.generate_posterframe(button_obj, 45);
+
+//TODO - cambiar la llamada
+			self.generate_posterframe(button_obj, seconds);
+
 			break;
 
 		case '< 10 seg':
@@ -155,18 +159,20 @@ tool_posterframe.prototype.button_click = function(value, button_obj) {
 		case '5 seg >':
 
 
-	//TODO - cambiar la llamada
-			self.generate_posterframe(button_obj, 45);
+
+//TODO - cambiar la llamada
+			self.generate_posterframe(button_obj, seconds);
+
 			break;
 
 		case 'Create identifyying image':
 
-			self.generate_identifying_image(button_obj, 45);
+			self.generate_identifying_image(button_obj, seconds);
 			break;
 
 		case 'Make Posterframe':
 
-			self.generate_posterframe(button_obj, 45);
+			self.generate_posterframe(button_obj, seconds);
 			break;
 
 		case 'Delete Posterframe':
@@ -182,54 +188,123 @@ tool_posterframe.prototype.button_click = function(value, button_obj) {
 /**
 * GENERATE POSTERFRAME
 */
-tool_posterframe.prototype.generate_posterframe = function(button_obj, current_time_in_seconds) {
+tool_posterframe.prototype.generate_posterframe = async function(button_obj, current_time_in_seconds) {
+
+	const self = this
 
 	//TODO - change function code to adapt to the new version, the function contains old code that has been copied
 
 	//if(window.self !== window.top) return alert("Please exec in top window");
 
-	var video_id 		= $(button_obj).data('video_id'),
-		quality			= $(button_obj).data('quality'),
-		parent			= $(button_obj).data('parent');
+	
+	// var video_id 		= $(button_obj).data('video_id'),
+	// 	quality			= $(button_obj).data('quality'),
+	// 	parent			= $(button_obj).data('parent');
 
-	if(SHOW_DEBUG===true) console.log("->generate_posterframe vars: " +video_id+' '+quality+ ' '+current_time_in_seconds);
+	// if(SHOW_DEBUG===true) console.log("->generate_posterframe vars: " +video_id+' '+quality+ ' '+current_time_in_seconds);		
+	
 
 	// TC
 	var timecode = parseFloat( current_time_in_seconds );
 	// Minimun tc fix
 	if(timecode==0) timecode = 0.001;
 
-	var mode 		= 'generate_posterframe';
-	var mydata		= { 'mode': mode,
-						'video_id': video_id,
-						'quality': quality ,
-						'timecode': timecode,
-						'parent': parent,
-						'top_tipo':page_globals.top_tipo
-					};
-
+	// 					'parent': parent,
+	// 					'top_tipo':page_globals.top_tipo
+	
 	/*
 	var video_element 	= top.$('.css_av_video[data-video_id="'+video_id+'"]', window.opener);
 	var wrap_div 		= $(video_element).parents('.wrap_component:first');
 		//return alert( 'css_av_video lengh: '+$(wrap_div).length )
 	*/
-	var wrap_div 	= top.$('.css_wrap_av[data-dato="'+video_id+'"]', window.opener);
+	// var wrap_div 	= top.$('.css_wrap_av[data-dato="'+video_id+'"]', window.opener);
 		//console.log(wrap_div.length); return false;
+
+		
+	// var wrap_div_tool = $(button_obj).parents('.wrap_tool:first');
+	// html_page.loading_content( wrap_div_tool, 1 );	
+
+		console.log("self.caller:",self.caller);
+			console.log("self.trigger_url:",self.trigger_url);
+	const body = {
+		url 			: self.trigger_url,
+		mode 			: 'generate_posterframe',
+		component_tipo	: self.caller.tipo,
+		section_tipo  	: self.caller.section_tipo,
+		section_id 		: self.caller.section_id,
+		video_id        : 'test1_23',//video_id,
+		quality         : 404,//quality ,
+		timecode        : timecode,
+	}
+
 
 	var wrap_div_tool = $(button_obj).parents('.wrap_tool:first');
 	html_page.loading_content( wrap_div_tool, 1 );
 
-	// AJAX REQUEST
-	$.ajax({
-		url		: tool_posterframe.url_trigger,
-		data	: mydata,
-		type	: "POST"
-	})
-	// DONE
+
+	//trigger_fetch.then((trigger_response)=>{
+		// user messages
+			const msg_type = (trigger_response.result===false) ? 'error' : 'ok'
+			// //if (trigger_response.result===false) {
+			// 	//ui.show_message(buttons_container, trigger_response.msg, msg_type)
+			// 	ui.show_message(wrapper, trigger_response.msg, msg_type , 'response_div', true)
+
+			// 	//response_div.innerHTML  = trigger_response.msg
+			// //}
+
+		// reload target content
+			const target_component_container = self.node[0].querySelector('.target_component_container')
+			//add_component(self, target_component_container, tc_lang.value)
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				console.log("trigger_response:",trigger_response);
+			}
+	//})
+
+	console.log("trigger_response:",trigger_response);
+
+	return trigger_response
+
+	// // DONE
 	.done(function(received_data) {
 
-		// Search 'error' string in response
-		var error_response = /error/i.test(received_data);	//alert(error_response)
+	// 	// Search 'error' string in response
+	// 	var error_response = /error/i.test(received_data);	//alert(error_response)
+
+	// 	// If received_data contains 'error' show alert error with (received_data), else reload the page
+	// 	if(error_response) {
+	// 		// Warning msg
+	// 		var msg = "<span class='error'>Error when generate posterframe: \n" + received_data + "</span>" ;
+	// 			inspector.show_log_msg(msg);
+	// 			alert( $(msg).text() )
+	// 	}else{
+	// 		// Notification msg ok
+	// 		var msg = "<span class='ok'>"+received_data+"</span>";
+	// 			inspector.show_log_msg(msg);
+			
+	// 		// Update image av_posterframe
+	// 		if($(wrap_div).length===1) {
+	// 			let wrapper_id 		= $(wrap_div).attr('id')
+	// 			let my_arguments 	= null
+	// 			let varcallback 	= null
+	// 			top.component_common.load_component_by_wrapper_id(wrapper_id, my_arguments, varcallback);	//wrapper_id, my_arguments, callback
+	// 		}else{
+	// 			console.log("Error: wrap div not found! Sorry, no component update is done.");
+	// 		}
+	// 	}			
+	// })
+	// // FAIL ERROR
+	// .fail(function(error_data) {
+	// 	// Notify to log messages in top of page
+	// 	var msg = "<span class='error'>ERROR: on generate_posterframe data:" + error_data + "</span>";				
+	// 	inspector.show_log_msg(msg);
+	// 	if(SHOW_DEBUG===true) console.log(error_data);	
+	// })
+	// // ALWAYS
+	// .always(function() {
+	// 	html_page.loading_content( wrap_div_tool, 0 );
+	// })
 
 		// If received_data contains 'error' show alert error with (received_data), else reload the page
 		if(error_response) {
@@ -252,7 +327,7 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 				console.log("Error: wrap div not found! Sorry, no component update is done.");
 			}
 		}
-	})
+	}
 	// FAIL ERROR
 	.fail(function(error_data) {
 		// Notify to log messages in top of page
@@ -264,6 +339,7 @@ tool_posterframe.prototype.generate_posterframe = function(button_obj, current_t
 	.always(function() {
 		html_page.loading_content( wrap_div_tool, 0 );
 	})
+
 
 };//end generate_posterframe
 

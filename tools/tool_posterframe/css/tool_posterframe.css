@@ -1,0 +1,58 @@
+.wrapper_tool.tool_posterframe .components_container {
+  /* TC DIV SHOW GREEN TIMECODE LIKE 00:02:36.432 */
+}
+.wrapper_tool.tool_posterframe .components_container .wrap_edit_video {
+  display: block;
+  width: 99.9%;
+}
+.wrapper_tool.tool_posterframe .components_container button {
+  display: inline-block;
+  margin-left: 0.5rem;
+}
+.wrapper_tool.tool_posterframe .components_container button.secondary {
+  color: #000;
+  background-color: #ccc;
+  border-color: #ccc;
+}
+.wrapper_tool.tool_posterframe .components_container button.av_player_btn {
+  color: #000;
+  background-color: #ccc;
+  border-color: #ccc;
+  padding: 4px;
+}
+.wrapper_tool.tool_posterframe .components_container .posterframe_container {
+  margin-top: 22px;
+}
+.wrapper_tool.tool_posterframe .components_container #TCdiv {
+  color: #fd7f26;
+  padding: 0;
+  margin: 0;
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 23px;
+  height: 1em;
+  display: inline-block;
+  vertical-align: baseline;
+  text-shadow: 1px 2px 2px #b9b9b9;
+  position: relative;
+  top: 3px;
+  padding-right: 5px;
+  padding-left: 3px;
+}
+.wrapper_tool.tool_posterframe .offset_management_container > * {
+  margin-right: 0.5em;
+  vertical-align: middle;
+  font-size: 1em;
+}
+.wrapper_tool.tool_posterframe .offset_management_container select,
+.wrapper_tool.tool_posterframe .offset_management_container input {
+  height: 2.25em;
+}
+.wrapper_tool.tool_posterframe .offset_management_container input {
+  height: 2em;
+  width: 6em;
+  text-align: center;
+}
+.wrapper_tool.tool_posterframe .offset_management_container button {
+  text-transform: capitalize;
+}
+/*# sourceMappingURL=tool_posterframe.css.map */
