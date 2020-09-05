@@ -78,8 +78,15 @@ render_component_input_text.prototype.list = async function() {
 			autoload : false
 		})
 
+		const span_value = ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: value_string,
+			parent			: wrapper
+		})
+
 	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+		// wrapper.insertAdjacentHTML('afterbegin', value_string)
+
 
 	return wrapper
 };//end list
