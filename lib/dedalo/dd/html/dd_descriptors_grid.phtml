@@ -39,8 +39,8 @@
 			$excludeLang 	= $mainLang;
 			$selectedItem 	= $lang;			
 			
-			$select_html .= "\n<select name=\"SelectLangList\" id=\"SelectLangList\" class=\"selectProjectLang\" onChange=\"add_new_lang(this);\" title=\"Langs\" >";
-			$select_html .= "\n <option value=\"\" ></option>";
+			$select_html .= "<select name=\"SelectLangList\" id=\"SelectLangList\" class=\"selectProjectLang\" onChange=\"add_new_lang(this);\" title=\"Langs\" >";
+			$select_html .= "<option value=\"\" ></option>";
 
 			#dump($ar_all_langs,'$ar_all_langs');
 			#dump($ar_transtations_of_current,'ar_transtations_of_current '.$id);
@@ -54,7 +54,7 @@
 				#$termino	= RecordObj_dd::get_termino_by_tipo($current_terminoID);
 				#$termino	= RecordObj_dd::get_termino_by_tipo($current_terminoID);
 				
-				$select_html .= "\n <option value=\"$current_terminoID\" ";
+				$select_html .= "<option value=\"$current_terminoID\" ";
 
 				if($selectedItem==$current_terminoID)
 				$select_html .= " selected=\"selected\" ";
@@ -67,9 +67,9 @@
 			
 			# OTRO
 			global $otro_title;
-			$select_html .= "\n <option value=\"otro\" > $otro_title </option>";
+			$select_html .= " <option value=\"otro\" > $otro_title </option>";
 			
-			$select_html .= "\n</select>\n";
+			$select_html .= "</select>";
 			
 			print $select_html;
 		
