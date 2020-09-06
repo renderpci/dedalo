@@ -533,7 +533,12 @@ common.prototype.get_columns = async function(){
 	const ar_columns = []
 
 	// get ddo_map from the dd_request.show, self can be a section or component_portal, and both has dd_request
-	const ddo_map = self.dd_request.show.find(item => item.typo === 'rqo').show.ddo_map
+	const rqo = self.dd_request.show.find(item => item.typo === 'rqo')
+	if (!rqo) {
+		console.log("No rqo found in self.dd_request.show. Skip get_columns. ", self.dd_request.show);
+		return ar_columns
+	}	
+	const ddo_map = rqo.show.ddo_map
 	
 	// console.log("self.dd_request", self.dd_request);
 	
