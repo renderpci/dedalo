@@ -844,17 +844,21 @@ class hierarchy {
 		}//end if(strpos($terminoID, 'lg-')===0)
 
 		if(empty($dato_modelo)) {
+			
 			$loc_modelo = null;
+		
 		}else{
+
+			$modelo_id = substr($dato_modelo, 2);
+
 			$loc_modelo = new locator();
-				$loc_modelo->set_section_tipo($tld.'2');
-				$modelo_id = substr($dato_modelo, 2);
+				$loc_modelo->set_section_tipo($tld.'2');				
 				$loc_modelo->set_section_id($modelo_id);
 				$loc_modelo->set_type(DEDALO_RELATION_TYPE_MODEL_TIPO);
 				$loc_modelo->set_from_component_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO);
-		}
-
-		#["ts2","pt234","fr37028"]
+		}	
+		
+		// ["ts2","pt234","fr37028"]		
 		$relaciones	= json_decode($relaciones);
 		$relacion = array();
 		if(!empty($relaciones) && is_array($relaciones)){

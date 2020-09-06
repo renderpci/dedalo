@@ -412,9 +412,9 @@ class ts_object extends Accessors {
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 
 		foreach ((array)$ar_children as $key => $current_locator) {
-
+			
 			$section_map = hierarchy::get_section_map_elemets( $current_locator->section_tipo );
-				#dump($section_map, ' section_map ++ '.to_string());
+				// dump($section_map, ' section_map ++ '.to_string());
 
 			if (!isset($section_map['thesaurus']->is_descriptor)) {
 				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
