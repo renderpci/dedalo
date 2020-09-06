@@ -129,8 +129,7 @@ page.prototype.init = async function(options) {
 					// const base_models = ['section','tool','area']
 					const base_models = ['menu']
 					// const elements_to_stay 	= self.elements.filter(item => item.model!==page_element.model)
-					const elements_to_stay 	= self.page_elements.filter( el => el.filter(item => base_models.includes(item.model)).length > 0)
-
+					const elements_to_stay 	= self.page_elements.filter( el => el.filter(item => base_models.includes(item.model)).length > 0 )
 
 					// add current source from options
 						elements_to_stay.push(request_config)

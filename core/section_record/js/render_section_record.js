@@ -446,17 +446,17 @@ const build_id_column = function(self) {
 							}
 
 							const user_action_options = {
-								tipo		: self.section_tipo,
+								tipo			: self.section_tipo,
 								// section_id	: null,//self.section_id,
 								// offset		: offset,
-								// model		: 'section',
-								mode		: 'edit',
-								sqo			: sqo
+								model			: self.caller.model,
+								mode			: 'edit',
+								sqo				: sqo
 							}
 							if(SHOW_DEBUG===true) {
 								console.log("// section_record build_id_column user_action_options default:",user_action_options);
 							}
-							event_manager.publish('user_action', user_action_options, 'patata')
+							event_manager.publish('user_action', user_action_options)
 						})
 					}
 				// delete_line
