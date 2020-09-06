@@ -58,15 +58,20 @@ export const get_instance = async function(options){
 		const mode				= options.mode  || 'list'
 		const lang				= options.lang  || page_globals.dedalo_data_lang
 		const model				= options.model || await ( async () => {
-		    const current_data_manager 	= new data_manager()
-			const element_context = await current_data_manager.get_element_context({
+			const current_data_manager		= new data_manager()
+			const element_context_response	= await current_data_manager.get_element_context({
 				tipo			: tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id
 			})
-			const current_model = element_context.result[0].model
+			if(SHOW_DEBUG===true) {
+				console.log("// [get_instance] element_context API response:", element_context_response);
+				console.trace();
+			}			
+			const current_model = element_context_response.result[0].model
 			if(typeof options.context==='undefined'){
-				options.context = element_context.result[0]
+				// inject context to options
+				options.context = element_context_response.result[0]
 			}
 		    return current_model
 		})();
