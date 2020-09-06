@@ -169,7 +169,6 @@ section.prototype.build = async function(autoload=false) {
 			// get context and data
 				const current_data_manager	= new data_manager()
 				const api_response			= await current_data_manager.read(self.dd_request.show)
-					console.log("///// section autoload=true api_response:",api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -202,9 +201,11 @@ section.prototype.build = async function(autoload=false) {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					event_manager.subscribe('render_'+self.id, function(){
-						load_data_debug(self, api_response, dd_request_show_original)
-					})
+					const event_token = event_manager.subscribe('render_'+self.id, show_debug_info)
+					function show_debug_info() {
+						event_manager.unsubscribe(event_token)
+						load_data_debug(self, api_response, dd_request_show_original)						
+					}
 				}
 		}
 		// else{

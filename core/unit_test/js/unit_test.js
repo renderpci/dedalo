@@ -447,7 +447,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 				// init instance
 					const new_instance = await get_instance(options)
-					console.log("new_instance:",new_instance);
+						console.log("new_instance:",new_instance);
 
 				if (stage==='build' || stage==='render' || stage==='refresh' || stage==='destroy') {
 

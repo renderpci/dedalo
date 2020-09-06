@@ -201,6 +201,7 @@ component_portal.prototype.build = async function(autoload=false){
 				self.pagination.total 	= self.pagination.total  || 0
 				self.pagination.offset 	= self.pagination.offset || 0
 				self.pagination.limit 	= self.pagination.limit  || (self.dd_request.show.sqo_config ? self.dd_request.show.sqo_config.limit : 5)
+			
 			// sqo update filter_by_locators
 				// if(self.pagination.total>self.pagination.limit){
 
@@ -249,7 +250,6 @@ component_portal.prototype.build = async function(autoload=false){
 
 	// permissions. calculate and set (used by section records later)
 		self.permissions = self.context.permissions
-
 
 	// columns
 		if(self.mode === 'edit'){
