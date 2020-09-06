@@ -216,6 +216,13 @@ common.prototype.refresh = async function () {
 			return false
 		}
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.group("Refresh "+self.model +" "+ (self.tipo ? self.tipo : '') );
+			console.log("+ Time to destroy:", self.model, performance.now()-t0);
+			var t1 = performance.now()			
+		}
+
 	// build. Update the instance with new data
 		//if (self.status==='destroyed') {
 			const builded = await self.build(true)
@@ -223,6 +230,12 @@ common.prototype.refresh = async function () {
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false
 		//}
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log("+ Time to build:", self.model, performance.now()-t1);
+			var t2 = performance.now()
+		}
 
 	// copy original ar_node
 		//const ar_node 		 = self.node
@@ -247,7 +260,10 @@ common.prototype.refresh = async function () {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("+ Time to refresh:", self.model, performance.now()-t0);
+			console.log("+ Time to render:", self.model, performance.now()-t2);
+			// console.log("+ Time to full refresh:", self.model, performance.now()-t0);
+			console.log("%c+ Time to full refresh:" +" "+ self.model + " " + (performance.now()-t0), "color:#d2f115");
+			console.groupEnd();
 		}
 
 
@@ -334,7 +350,7 @@ common.prototype.destroy = async function (delete_self=true, delete_dependences=
 				// destroy services
 					if (self.services) {
 						const services_length = self.services.length
-						for (let i = self.services.length - 1; i >= 0; i--) {
+						for (let i = services_length - 1; i >= 0; i--) {
 							console.log("removed services:", i, services_length);
 							delete self.services[i]
 						}
@@ -395,13 +411,12 @@ export const create_source = function (self, action) {
 	const source = { // source object
 		typo			: "source",
 		action			: action,
-		model 			: self.model,
-		tipo 			: self.tipo,
+		model			: self.model,
+		tipo			: self.tipo,
 		section_tipo	: self.section_tipo,
 		section_id		: self.section_id,
-		mode 			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
-		lang 			: self.lang,
-		//pagination		: self.pagination || null
+		mode			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
+		lang			: self.lang
 	}
 
 	// matrix_id optional (used in time machine mode)
@@ -1164,13 +1179,14 @@ export const load_data_debug = async function(self, load_data_promise, dd_reques
 	const dd_request	= self.dd_request
 
 	// console.log("----> load_data_debug request dd_request_show_original "+self.model +" "+self.tipo+ ":", dd_request_show_original);
+	// console.log(">>>>>>>>>>>>>> response:",response);
 	// console.trace()
 
 	// load_data_promise
 	if (response.result===false) {
 		console.error("API EXCEPTION:",response.msg);
 	}
-	console.log("["+self.model+".load_data_debug] response:",response, " TIME: "+response.debug.exec_time)
+	console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.exec_time)
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
 	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
 

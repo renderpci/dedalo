@@ -459,7 +459,7 @@ component_common.prototype.update_datum = function(new_data) {
 					}
 					self.datum.data.splice(index_to_delete, 1);
 				}else{
-					console.warn("(!) Not found index_to_delete in datum:", data_item.tipo, data_item.section_tipo, data_item.section_id)
+					console.warn("(!) [update_datum] Not found index_to_delete in datum:", data_item.tipo, data_item.section_tipo, data_item.section_id)
 				}
 			}
 
