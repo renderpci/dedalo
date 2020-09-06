@@ -63,11 +63,11 @@ class component_text_area extends component_common {
 			}
 			if (isset($related_component_select_lang)) {
 				$component_select_lang = component_common::get_instance('component_select_lang',
-																	    $related_component_select_lang,
-																	    $parent,
-																	    'list',
-																	    DEDALO_DATA_NOLAN,
-																	    $section_tipo);
+																		$related_component_select_lang,
+																		$parent,
+																		'list',
+																		DEDALO_DATA_NOLAN,
+																		$section_tipo);
 				$component_select_lang_dato = (array)$component_select_lang->get_dato();
 
 				#
@@ -574,29 +574,29 @@ class component_text_area extends component_common {
 		pattern: /([index-([a-z])-([0-9]{1,6})])/
 		result :
 		[0] => Array
-	        (
-	            [0] => [index-n-5]
-	            [1] => [index-n-4]
-	            [2] => [index-n-3]
-	        )
-	    [1] => Array
-	        (
-	            [0] => [index-n-5]
-	            [1] => [index-n-4]
-	            [2] => [index-n-3]
-	        )
-	    [2] => Array
-	        (
-	            [0] => n
-	            [1] => n
-	            [2] => n
-	        )
-	    [3] => Array
-	        (
-	            [0] => 5
-	            [1] => 4
-	            [2] => 3
-	        )
+			(
+				[0] => [index-n-5]
+				[1] => [index-n-4]
+				[2] => [index-n-3]
+			)
+		[1] => Array
+			(
+				[0] => [index-n-5]
+				[1] => [index-n-4]
+				[2] => [index-n-3]
+			)
+		[2] => Array
+			(
+				[0] => n
+				[1] => n
+				[2] => n
+			)
+		[3] => Array
+			(
+				[0] => 5
+				[1] => 4
+				[2] => 3
+			)
 		*/
 	public function get_ar_relation_tags() {
 
@@ -659,24 +659,24 @@ class component_text_area extends component_common {
 			#if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER) ) {
 			if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER|PREG_OFFSET_CAPTURE) ) {
 				$key_fragment = 3;
-			    foreach($matches as $match) {
-			        if (isset($match[$key_fragment][0])) {
+				foreach($matches as $match) {
+					if (isset($match[$key_fragment][0])) {
 
-			        	$fragment_text = $match[$key_fragment][0];
+						$fragment_text = $match[$key_fragment][0];
 
-			        	# Clean fragment_text
-			        	$fragment_text = TR::deleteMarks($fragment_text);
-			        	$fragment_text = self::decode_dato_html($fragment_text);
+						# Clean fragment_text
+						$fragment_text = TR::deleteMarks($fragment_text);
+						$fragment_text = self::decode_dato_html($fragment_text);
 
-			        	# tag in position
-			        	$tag_in_pos = $match[0][1];
+						# tag in position
+						$tag_in_pos = $match[0][1];
 
-			        	# tag out position
-			        	$tag_out_pos = $tag_in_pos + strlen($match[0][0]);
+						# tag out position
+						$tag_out_pos = $tag_in_pos + strlen($match[0][0]);
 
-			        	return array( $fragment_text, $tag_in_pos, $tag_out_pos );
-			        }
-			    }
+						return array( $fragment_text, $tag_in_pos, $tag_out_pos );
+					}
+				}
 			}
 
 		return NULL;
@@ -694,10 +694,10 @@ class component_text_area extends component_common {
 		$text = $raw_text;
 
 		# Clean fragment_text
-    	$text 	= TR::deleteMarks($text);
-    	$text 	= html_entity_decode($text);
+		$text 	= TR::deleteMarks($text);
+		$text 	= html_entity_decode($text);
 
-    	return $text;
+		return $text;
 	}//end clean_raw_text_for_preview
 
 
@@ -805,7 +805,7 @@ class component_text_area extends component_common {
 																	 $this->tipo,
 																	 $this->parent,
 																	 $this->modo,
-			 														 $current_lang,
+																	 $current_lang,
 																	 $this->section_tipo,
 																	 false);
 			$text_raw 				= $component_text_area->get_dato();
@@ -815,7 +815,7 @@ class component_text_area extends component_common {
 				$text_raw_updated 	= $delete_tag_from_text->result;
 				$component_text_area->set_dato($text_raw_updated);
 				if (!$component_text_area->Save()) {
-				 	throw new Exception("Error Processing Request. Error saving component_text_area lang ($current_lang)", 1);
+					throw new Exception("Error Processing Request. Error saving component_text_area lang ($current_lang)", 1);
 				}
 				$ar_langs_changed[] = $current_lang;
 				debug_log(__METHOD__." Deleted tag ($tag_id, $tag_type) in lang ".to_string($current_lang), logger::WARNING);
@@ -1454,17 +1454,17 @@ class component_text_area extends component_common {
 					$tc_out 	 	= OptimizeTC::optimize_tcOUT($texto, false, $tag_out_pos, $in_margin=100);
 
 					$tcin_secs		= OptimizeTC::TC2seg($tc_in);
-			        $tcout_secs		= OptimizeTC::TC2seg($tc_out);
-			        $duracion_secs	= $tcout_secs - $tcin_secs;
-			        $duracion_tc	= OptimizeTC::seg2tc($duracion_secs);
+					$tcout_secs		= OptimizeTC::TC2seg($tc_out);
+					$duracion_secs	= $tcout_secs - $tcin_secs;
+					$duracion_tc	= OptimizeTC::seg2tc($duracion_secs);
 
-			        $diffusion_obj->columns['related_tipo']	= $current_related_tipo;
-			        $diffusion_obj->columns['related']		= $related_modelo_name;
-			        $diffusion_obj->columns['tc_in']		= $tc_in;
-			        $diffusion_obj->columns['tc_out']		= $tc_out;
-			        $diffusion_obj->columns['duracion_tc']	= $duracion_tc;
-			        $diffusion_obj->columns['tcin_secs']	= $tcin_secs;
-			        $diffusion_obj->columns['tcout_secs']	= $tcout_secs;
+					$diffusion_obj->columns['related_tipo']	= $current_related_tipo;
+					$diffusion_obj->columns['related']		= $related_modelo_name;
+					$diffusion_obj->columns['tc_in']		= $tc_in;
+					$diffusion_obj->columns['tc_out']		= $tc_out;
+					$diffusion_obj->columns['duracion_tc']	= $duracion_tc;
+					$diffusion_obj->columns['tcin_secs']	= $tcin_secs;
+					$diffusion_obj->columns['tcout_secs']	= $tcout_secs;
 
 					#$component_av   = new component_av($current_related_tipo, $this->get_parent(), 'edit');
 					$component_av   = component_common::get_instance($related_modelo_name,
@@ -1476,7 +1476,7 @@ class component_text_area extends component_common {
 					$video_id 		= $component_av->get_video_id();
 
 					$diffusion_obj->columns['video_id']	= $video_id;
-			        #$diffusion_obj->columns['video_url']	= $duracion_tc;
+					#$diffusion_obj->columns['video_url']	= $duracion_tc;
 					break;
 
 				case 'component_image':
@@ -1738,10 +1738,10 @@ class component_text_area extends component_common {
 		$ar_caller_section_id = array();
 		foreach ((array)$my_inverse_locators as $key => $current_locator) {
 
-			$current_section_tipo = $current_locator->from_section_tipo;
-			$current_section_id   = $current_locator->from_section_id;
+			$current_section_tipo	= $current_locator->from_section_tipo;
+			$current_section_id		= $current_locator->from_section_id;
 
-			if ( $current_section_tipo===$section_tipo ) {
+			if ($current_section_tipo===$section_tipo) {
 				$ar_caller_section_id[] = $current_section_id;
 			}
 		}
@@ -1758,16 +1758,16 @@ class component_text_area extends component_common {
 	*/
 	public function build_tag_person($ar_data) {
 
-		$type 		  = 'person';
-		$tag_id 	  = $ar_data['tag_id'];
-		$state 		  = $ar_data['state'];
-		$label 	 	  = trim($ar_data['label']);
-		$locator 	  = $ar_data['data'];
-		$locator_json = json_encode($locator);
-		$data 		  = $locator_json;
+		$type			= 'person';
+		$tag_id			= $ar_data['tag_id'];
+		$state			= $ar_data['state'];
+		$label			= trim($ar_data['label']);
+		$locator		= $ar_data['data'];
+		$locator_json	= json_encode($locator);
+		$data			= $locator_json;
 
-		$person_tag   = TR::build_tag($type, $state, $tag_id, $label, $data); 	// '[person-'.$state.'-'.$label.'-data:'.$locator_json.':data]';
-		#$person_tag = '[person-data:'.$section_tipo.'_'.$section_id.':data]';
+		$person_tag		= TR::build_tag($type, $state, $tag_id, $label, $data); 	// '[person-'.$state.'-'.$label.'-data:'.$locator_json.':data]';
+		// $person_tag = '[person-data:'.$section_tipo.'_'.$section_id.':data]';
 
 		return $person_tag;
 	}//end build_tag_person
@@ -1782,9 +1782,10 @@ class component_text_area extends component_common {
 	public static function get_tag_person_label($locator) {
 
 		# Fixes tipos
-		$ar_tipos = array(	'name'=>'rsc85',
-							'surname'=>'rsc86'
-						 );
+		$ar_tipos = [
+			'name'		=> 'rsc85',
+			'surname'	=> 'rsc86'
+		];
 
 		$label = new stdClass();
 			$label->initials  = '';
@@ -1792,13 +1793,13 @@ class component_text_area extends component_common {
 			$label->role 	  = '';
 
 		if (isset($locator->component_tipo)) {
-			$label->role 	  = RecordObj_dd::get_termino_by_tipo($locator->component_tipo,DEDALO_APPLICATION_LANG,true);
+			$label->role = RecordObj_dd::get_termino_by_tipo($locator->component_tipo,DEDALO_APPLICATION_LANG,true);
 		}
 
 		foreach ($ar_tipos as $key => $tipo) {
 
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component		= component_common::get_instance($modelo_name,
 															 $tipo,
 															 $locator->section_id,
 															 'list',
@@ -1807,10 +1808,12 @@ class component_text_area extends component_common {
 			$dato = $component->get_valor(0);
 
 			switch ($key) {
+				
 				case 'name':
-					$label->initials .= mb_substr($dato,0,3);
-					$label->full_name .= $dato;
+					$label->initials	.= mb_substr($dato,0,3);
+					$label->full_name	.= $dato;
 					break;
+				
 				case 'surname':
 					if (!empty($dato)) {
 						$ar_parts = explode(' ', $dato);
@@ -1823,12 +1826,12 @@ class component_text_area extends component_common {
 						$label->full_name .= ' '.$dato;
 					}
 					break;
-				default:
-					# code...
+
+				default:					
 					break;
 			}
 		}
-		#$label = mb_strtolower($label);
+		
 
 		return (object)$label;
 	}//end get_tag_person_label
@@ -1881,21 +1884,21 @@ class component_text_area extends component_common {
 	public static function create_new_note() {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
 
 		#$user_id = navigator::get_user_id();
 		$section_tipo = DEDALO_NOTES_SECTION_TIPO;
 
-		$section 	= section::get_instance(null, $section_tipo, 'edit', false);
-		$section_id = $section->Save();
+		$section	= section::get_instance(null, $section_tipo, 'edit', false);
+		$section_id	= $section->Save();
 
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
 			$locator->set_section_id($section_id);
 
-		$response->result = $locator;
-		$response->msg 	  = 'Created notes record successfully with locator: '.json_encode($locator);
+		$response->result	= $locator;
+		$response->msg		= 'Created notes record successfully with locator: '.json_encode($locator);
 
 		return (object)$response;
 	}//end create_new_note
@@ -1968,7 +1971,7 @@ class component_text_area extends component_common {
 			$decore = 'h2';
 		}
 
-		$pattern 			= TR::get_mark_pattern($mark='structIn', $standalone=true, false, $data=false);
+		$pattern = TR::get_mark_pattern($mark='structIn', $standalone=true, false, $data=false);
 
 		$matches = array();
 		preg_match_all($pattern, $raw_text, $matches);
@@ -2035,107 +2038,105 @@ class component_text_area extends component_common {
 
 	/**
 	* BUILD_GEOLOCATION_DATA
-	* @return
+	* @return array $ar_elements
 	*/
 	public static function build_geolocation_data($raw_text) {
 
-		# Test data
-		#$request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-		#$request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-		#$request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
+		// Test data
+			// $request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
+			// $request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
+			// $request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
 
-		#$raw_text = str_replace("'", '"', $raw_text);
+		// $raw_text = str_replace("'", '"', $raw_text);
 
-		#[geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
-		#"(\[geo-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\])";
+		// [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
+		// "(\[geo-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\])";
 
 		$options = new stdClass();
 			$options->raw_text = $raw_text;
 
-		#$response = new stdClass();
-		#	$response->result = false;
-		#	$response->msg 	  = 'Error. Request build_geolocation_data failed';
+		// $response = new stdClass();
+		// 	$response->result = false;
+		// 	$response->msg 	  = 'Error. Request build_geolocation_data failed';
 
-		#$pattern = TR::get_mark_pattern('geo',false);
-		#$result  = free_node::pregMatchCapture($matchAll=true, $pattern, $options->raw_text, $offset=0);
+		// $pattern = TR::get_mark_pattern('geo',false);
+		// $result  = free_node::pregMatchCapture($matchAll=true, $pattern, $options->raw_text, $offset=0);
 
 
-		# split by pattern
-		$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
-		$result 		  = preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+		// split by pattern
+			$pattern_geo_full	= TR::get_mark_pattern('geo_full',$standalone=true);
+			$result				= preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
-		/* sample result
-		[0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
-	    [1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
-	    [2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
-	    [3] => &nbsp;Texto dos
-	    */
-	    #dump($result, ' result ++ '.to_string());
+		// sample result
+			// [0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
+			// [1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
+			// [2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
+			// [3] => &nbsp;Texto dos
 
-	    $format_text = function($text) {
-			$text = str_replace("&nbsp;"," ",$text);
-			$text = trim($text);
+		$format_text = function($text) {
+			$text	= str_replace("&nbsp;"," ",$text);
+			$text	= trim($text);
 			return $text;
-	    };
+		};
 
-	    $ar_elements = array();
-	    $pattern_geo = TR::get_mark_pattern('geo',$standalone=true);
-	    $key_tag_id  = 4;
-	    $key_data    = 7;
-	    foreach ((array)$result as $key => $value) {
-	    	if (strpos($value,'[geo-')===0) {
-	    		$tag_string  = $value;
-	    		$next_row_id = (int)($key+2);
-	    		$text 		 = '';
-	    		if (isset($result[$next_row_id]) && strpos($result[$next_row_id],'[geo-')!==0 && strpos($result[$next_row_id],'-')!==0 && strpos($result[$next_row_id],'{\'type')!==0) { // && strpos($result[$next_row_id],'{\'type')!==0 && trim($result[$next_row_id])!=='-'
-	    			$text = $format_text( $result[$next_row_id] );
-	    		}elseif (isset($result[$next_row_id+1]) && strpos($result[$next_row_id+1],'[geo-')!==0 && strpos($result[$next_row_id+1],'-')!==0 && strpos($result[$next_row_id+1],'{\'type')!==0) { // {\u0027type
-	    			$text = $format_text( $result[$next_row_id+1] );
-	    		}elseif (isset($result[$next_row_id+2]) && strpos($result[$next_row_id+2],'[geo-')!==0 && strpos($result[$next_row_id+2],'-')!==0 && strpos($result[$next_row_id+2],'{\'type')!==0) { // {\u0027type
-	    			$text = $format_text( $result[$next_row_id+2] );
-	    		}
-	    		// JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-	    		if (!empty($text)) {
-	    			$text = json_encode($text, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-	    		}
+		$ar_elements	= array();
+		$pattern_geo	= TR::get_mark_pattern('geo',$standalone=true);
+		$key_tag_id		= 4;
+		$key_data		= 7;
+		foreach ((array)$result as $key => $value) {
+			if (strpos($value,'[geo-')===0) {
+				$tag_string		= $value;
+				$next_row_id	= (int)($key+2);
+				$text			= '';
+				if (isset($result[$next_row_id]) && strpos($result[$next_row_id],'[geo-')!==0 && strpos($result[$next_row_id],'-')!==0 && strpos($result[$next_row_id],'{\'type')!==0) { // && strpos($result[$next_row_id],'{\'type')!==0 && trim($result[$next_row_id])!=='-'
+					$text = $format_text( $result[$next_row_id] );
+				}elseif (isset($result[$next_row_id+1]) && strpos($result[$next_row_id+1],'[geo-')!==0 && strpos($result[$next_row_id+1],'-')!==0 && strpos($result[$next_row_id+1],'{\'type')!==0) { // {\u0027type
+					$text = $format_text( $result[$next_row_id+1] );
+				}elseif (isset($result[$next_row_id+2]) && strpos($result[$next_row_id+2],'[geo-')!==0 && strpos($result[$next_row_id+2],'-')!==0 && strpos($result[$next_row_id+2],'{\'type')!==0) { // {\u0027type
+					$text = $format_text( $result[$next_row_id+2] );
+				}
+				// JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
+				if (!empty($text)) {
+					$text = json_encode($text, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+				}
 
-	    		preg_match_all($pattern_geo, $value, $matches);
-	    		$layer_id = (int)$matches[$key_tag_id][0];
-	    		$geo_data = $matches[$key_data][0];
+				preg_match_all($pattern_geo, $value, $matches);
+				$layer_id	= (int)$matches[$key_tag_id][0];
+				$geo_data	= $matches[$key_data][0];
 
-	    		# Skip empty values
-	    		if (!empty($geo_data)) {
+				# Skip empty values
+				if (!empty($geo_data)) {
 
-		    		$geo_data = str_replace('\'', '"', $geo_data);
-		    		$geo_data = json_decode($geo_data);
+					$geo_data	= str_replace('\'', '"', $geo_data);
+					$geo_data	= json_decode($geo_data);
 
-		    		$layer_data = array();
-		    		if(!empty($geo_data->features)){
-		    			foreach ((array)$geo_data->features as $key => $feature) {
-							$lon = isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
-							$lat = isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
+					$layer_data = array();
+					if(!empty($geo_data->features)){
+						foreach ((array)$geo_data->features as $key => $feature) {
+							
+							$lon	= isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
+							$lat	= isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
 
 							$object = new stdClass();
-								$object->lon 	= $lon;
-								$object->lat 	= $lat;
-								$object->type   = $feature->geometry->type;
+								$object->lon	= $lon;
+								$object->lat	= $lat;
+								$object->type	= $feature->geometry->type;
 							$layer_data[] = $object;
 						}
-		    		}
+					}
+
+					$element = new stdClass();
+						$element->layer_id		= $layer_id;
+						$element->text			= $text;
+						$element->layer_data	= $layer_data;
+
+					$ar_elements[] = $element;
+				}
+			}
+		}//end foreach ((array)$result as $key => $value)
 
 
-		    		$element = new stdClass();
-		    			$element->layer_id 		= $layer_id;
-		    			$element->text 			= $text;
-		    			$element->layer_data	= $layer_data;
-
-		    		$ar_elements[] = $element;
-	    		}
-	    	}
-	    }//end foreach ((array)$result as $key => $value)
-
-		#return $response;
-		return $ar_elements;//json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+		return $ar_elements;
 	}//end build_geolocation_data
 
 
@@ -2146,38 +2147,39 @@ class component_text_area extends component_common {
 	*/
 	public static function resolve_query_object_sql($query_object) {
 
-    	# Always set fixed values
+		# Always set fixed values
 		$query_object->type = 'string';
 
 		$q = $query_object->q;
 		$q = pg_escape_string(stripslashes($q));
 
-        switch (true) {
-        	# IS NULL
+		switch (true) {
+			# IS NULL
 			case ($q==='!*'):
-				/* old
-					$operator = 'IS NULL';
-					$q_clean  = '';
-					$query_object->operator = $operator;
-	    			$query_object->q_parsed	= $q_clean;
-	    			$query_object->unaccent = false;
+				// old
+					// $operator = 'IS NULL';
+					// $q_clean  = '';
+					// $query_object->operator = $operator;
+					// $query_object->q_parsed	= $q_clean;
+					// $query_object->unaccent = false;
 
-					$clone = clone($query_object);
-		    			$clone->operator = '~*';
-		    			$clone->q_parsed = '\'.*""\'';
+					// $clone = clone($query_object);
+					// 	$clone->operator = '~*';
+					// 	$clone->q_parsed = '\'.*""\'';
 
-					$logical_operator = '$or';
-	    			$new_query_json = new stdClass;
-		    			$new_query_json->$logical_operator = [$query_object, $clone];
-	    			# override
-	    			$query_object = $new_query_json ;
-					*/
-				$operator = 'IS NULL';
-				$q_clean  = '';
-				$query_object->operator = $operator;
+					// $logical_operator = '$or';
+					// $new_query_json = new stdClass;
+					// 	$new_query_json->$logical_operator = [$query_object, $clone];
+					// # override
+					// $query_object = $new_query_json ;
+					
+				$operator	= 'IS NULL';
+				$q_clean	= '';
+
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
-				$query_object->lang 	= 'all';
+				$query_object->unaccent	= false;
+				$query_object->lang		= 'all';
 
 				$logical_operator = '$or';
 				$new_query_json = new stdClass;
@@ -2185,122 +2187,119 @@ class component_text_area extends component_common {
 
 				// Search empty only in current lang
 				// Resolve lang based on if is translatable
-					$path_end 		= end($query_object->path);
-					$component_tipo = $path_end->component_tipo;
-					$RecordObj_dd   = new RecordObj_dd($component_tipo);
-					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+					$RecordObj_dd	= new RecordObj_dd($component_tipo);
+					$lang			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
 					$clone = clone($query_object);
-						$clone->operator = '=';
-						$clone->q_parsed = '\'""\'';
-						$clone->lang 	 = $lang;
+						$clone->operator	= '=';
+						$clone->q_parsed	= '\'""\'';
+						$clone->lang		= $lang;
 
 					$new_query_json->$logical_operator[] = $clone;
 
 					// legacy data (set as null instead [])
 					$clone = clone($query_object);
-						$clone->operator = 'IS NULL';
-						$clone->lang 	 = $lang;
+						$clone->operator	= 'IS NULL';
+						$clone->lang		= $lang;
 
 					$new_query_json->$logical_operator[] = $clone;
 
 				// langs check all
-					/*
-					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
-						// Empty data is blank array []
-						$clone = clone($query_object);
-							$clone->operator = '=';
-							$clone->q_parsed = '\'""\'';
-							$clone->lang 	 = $current_lang;
+					// $ar_query_object = [];
+					// $ar_all_langs 	 = common::get_ar_all_langs();
+					// $ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					// foreach ($ar_all_langs as $current_lang) {
+					// 	// Empty data is blank array []
+					// 	$clone = clone($query_object);
+					// 		$clone->operator = '=';
+					// 		$clone->q_parsed = '\'""\'';
+					// 		$clone->lang 	 = $current_lang;
 
-						$ar_query_object[] = $clone;
+					// 	$ar_query_object[] = $clone;
 
-						// legacy data (set as null instead [])
-						$clone = clone($query_object);
-							$clone->operator = 'IS NULL';
-							$clone->lang 	 = $current_lang;
+					// 	// legacy data (set as null instead [])
+					// 	$clone = clone($query_object);
+					// 		$clone->operator = 'IS NULL';
+					// 		$clone->lang 	 = $current_lang;
 
-						$ar_query_object[] = $clone;
-					}
+					// 	$ar_query_object[] = $clone;
+					// }
 
-					#$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
-					$new_query_json->$logical_operator = $ar_query_object;
-					*/
+					// #$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
+					// $new_query_json->$logical_operator = $ar_query_object;
 
-				# override
+				// override
 				$query_object = $new_query_json;
 				break;
 			# IS NOT NULL
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
-    			$query_object->unaccent = false;
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent	= false;
 
 				$clone = clone($query_object);
-	    			//$clone->operator = '!=';
-	    			$clone->operator = '!~';
-	    			$clone->q_parsed = '\'.*""\'';
-
+					//$clone->operator = '!=';
+					$clone->operator = '!~';
+					$clone->q_parsed = '\'.*""\'';
 
 				$logical_operator ='$and';
-    			$new_query_json = new stdClass;
-    				$new_query_json->$logical_operator = [$query_object, $clone];
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object, $clone];
 
 				# override
-    			$query_object = $new_query_json ;
+				$query_object = $new_query_json ;
 				break;
 			# IS DIFFERENT
 			case (strpos($q, '!=')===0):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '!~';
-    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-    			$query_object->unaccent = false;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = false;
 				break;
 			# IS SIMILAR
 			case (strpos($q, '=')===0):
 				$operator = '=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '~';
-    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = true;
 				break;
 			# NOT CONTAIN
 			case (strpos($q, '-')===0):
 				$operator = '!~*';
 				$q_clean  = str_replace('-', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# CONTAIN
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# ENDS WITH
 			case (substr($q, 0, 1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
+				$query_object->unaccent = true;
 				break;
 			# BEGINS WITH
 			case (substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# LITERAL
 			case (substr($q, 0, 1)==='"' && substr($q, -1)==='"'):
@@ -2315,13 +2314,13 @@ class component_text_area extends component_common {
 				$operator = '~*';
 				$q_clean  = $q;
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 		}//end switch (true) {
 
 
-        return $query_object;
+		return $query_object;
 	}//end resolve_query_object_sql
 
 
@@ -2334,15 +2333,15 @@ class component_text_area extends component_common {
 	public function search_operators_info() {
 
 		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null
-			'=' 	 => 'similar_a',
-			'!=' 	 => 'distinto_de',
-			'-' 	 => 'no_contiene',
-			'*text*' => 'contiene',
-			'text*'  => 'empieza_con',
-			'*text'  => 'acaba_con',
-			'"text"' => 'literal',
+			'*'			=> 'no_vacio', // not null
+			'!*'		=> 'campo_vacio', // null
+			'='			=> 'similar_a',
+			'!='		=> 'distinto_de',
+			'-'			=> 'no_contiene',
+			'*text*'	=> 'contiene',
+			'text*'		=> 'empieza_con',
+			'*text'		=> 'acaba_con',
+			'"text"'	=> 'literal'
 		];
 
 		return $ar_operators;
@@ -2352,23 +2351,23 @@ class component_text_area extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @return
+	* 
 	*/
 	public static function update_dato_version($request_options) {
 
 		$options = new stdClass();
-			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
-			$options->reference_id 		= null;
-			$options->tipo 				= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
-			$reference_id 	= $options->reference_id;
+			$update_version	= $options->update_version;
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
 
 
 		$update_version = implode(".", $update_version);
@@ -2535,14 +2534,15 @@ class component_text_area extends component_common {
 					return $response;
 				}
 				break;
+			
 			default:
-				# code...
+				
 				break;
 		}
 	}//end update_dato_version
 
 
 
-
 }//end component_text_area
-?>
+
+

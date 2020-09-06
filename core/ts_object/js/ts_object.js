@@ -133,8 +133,8 @@ export const ts_object = new function() {
 						}
 						return result
 					}else{
-						console.log("[ts_object.get_children] Error, response is null");
-						reject(false)
+						console.warn("[ts_object.get_children] Error, response is null");
+						return false
 					}
 
 					if(SHOW_DEBUG===true) {
