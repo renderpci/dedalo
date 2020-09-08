@@ -785,7 +785,7 @@
 	Valencia 07-11-2016 v4.5.0.bl
 		counter : optimized class
 		diffusion_sql : fixed some minor issues when publish data
-		diffusion_mysql : removed is publicable verification. No longer necessary because previous verification is made
+		diffusion_mysql : removed is publishable verification. No longer necessary because previous verification is made
 
 
 	Valencia 12-11-2016 v4.5.0.bo
@@ -1723,12 +1723,13 @@
 		Moved method get_diffusion_resolve_value from component_autocomplete to component_common
 
 
-	Valencia 09-05-2020 5.5.49
+	Valencia 09-05-2020 5.5.50
 		Added method component_info get_diffusion_dato using widget dato response
 
 
 	Valencia 11-05-2020 5.5.51
-		Added search_development2 children recursive injection search to allow user add childrens on thesaurus sections searchs
+		Added search_development2 children recursive injection search to allow user add children on thesaurus sections search
+
 
 	Valencia 16-05-2020 5.5.52
 		Fix search_development2 children recursive bug on pagination. Now no limit is applied to first search
@@ -1816,11 +1817,15 @@
 
 
 	Valencia 09-08-2020 5.6.12
-		Add diffsuion option to overwrite diffusion table element from table_alias
+		Add diffusion option to overwrite diffusion table element from table_alias
 
 
 	Valencia 02-09-2020 5.6.14
-		Add component relation common get_diffusion value control to avoid publish non publicable target indexations
+		Add component relation common get_diffusion value control to avoid publish non publishable target indexations
+
+	
+	Valencia 08-09-2020 5.6.15
+		Add relation_list get_diffusion_value option value 'custom' to allow custom calculations on relation data calculated values (see qdp341)
 
 
 
@@ -1846,12 +1851,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.14';
+	$DEDALO_VERSION = '5.6.15';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '02-09-2020');
+	define('DEDALO_BUILD'	, '08-09-2020');
 
 
 

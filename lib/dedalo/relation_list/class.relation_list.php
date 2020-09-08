@@ -77,9 +77,8 @@ class relation_list extends common {
 	* GET_RELATION_LIST_OBJ
 	*
 	*/
-	public function get_relation_list_obj($ar_inverse_references, $value_resolved=false){
+	public function get_relation_list_obj($ar_inverse_references, $value_resolved=false){		
 		
-		$json		= new stdClass;
 		$ar_context	= [];
 		$ar_data	= [];
 
@@ -91,70 +90,72 @@ class relation_list extends common {
 			$current_section_tipo = $current_locator->from_section_tipo;
 
 			# 1 get the @context
-			if (!in_array($current_section_tipo, $sections_related )){
+				if (!in_array($current_section_tipo, $sections_related )){
 
-				$sections_related[] =$current_section_tipo;
+					$sections_related[] =$current_section_tipo;
 
-				//get the id
-				$current_id = new stdClass;
-					$current_id->section_tipo		= $current_section_tipo;
-					$current_id->section_label		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
-					$current_id->component_tipo		= 'id';
-					$current_id->component_label	= 'id';
+					//get the id
+					$current_id = new stdClass;
+						$current_id->section_tipo		= $current_section_tipo;
+						$current_id->section_label		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+						$current_id->component_tipo		= 'id';
+						$current_id->component_label	= 'id';
 
-					$ar_context[] = $current_id;
+						$ar_context[] = $current_id;
 
-				//get the columns of the @context
-				$ar_modelo_name_required	= array('relation_list');
-				$resolve_virtual			= false;
+					//get the columns of the @context
+					$ar_modelo_name_required	= array('relation_list');
+					$resolve_virtual			= false;
 
-				// Locate relation_list element in current section (virtual ot not)
-				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
-
-				// If not found children, try resolving real section
-				if (empty($ar_children)) {
-					$resolve_virtual = true;
+					// Locate relation_list element in current section (virtual ot not)
 					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
-				}// end if (empty($ar_children))
+
+					// If not found children, try resolving real section
+					if (empty($ar_children)) {
+						$resolve_virtual = true;
+						$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+					}// end if (empty($ar_children))
 
 
-				if( isset($ar_children[0]) ) {
-					$current_children 		= reset($ar_children);
-					$recordObjdd 			= new RecordObj_dd($current_children);
-					$ar_relation_components[$current_section_tipo] = $recordObjdd->get_relaciones();
-					if(isset($ar_relation_components[$current_section_tipo])){
-						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
-							foreach ($current_relation_component as $modelo => $tipo) {
+					if( isset($ar_children[0]) ) {
+						$current_children 		= reset($ar_children);
+						$recordObjdd 			= new RecordObj_dd($current_children);
+						$ar_relation_components[$current_section_tipo] = $recordObjdd->get_relaciones();
+						if(isset($ar_relation_components[$current_section_tipo])){
+							foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
+								foreach ($current_relation_component as $modelo => $tipo) {
 
-								$current_relation_list = new stdClass;
-									$current_relation_list->section_tipo	= $current_section_tipo;
-									$current_relation_list->section_label	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
-									$current_relation_list->component_tipo	= $tipo;
-									$current_relation_list->component_label	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
+									$current_relation_list = new stdClass;
+										$current_relation_list->section_tipo	= $current_section_tipo;
+										$current_relation_list->section_label	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+										$current_relation_list->component_tipo	= $tipo;
+										$current_relation_list->component_label	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
 
 									$ar_context[] = $current_relation_list;
+								}
 							}
 						}
 					}
-				}
-				
-			}// end if (!in_array($current_section_tipo, $sections_related )
+					
+				}// end if (!in_array($current_section_tipo, $sections_related )
 
 			# 2 get ar_data
-			if (isset($ar_relation_components[$current_section_tipo])) {
-				$current_component = $ar_relation_components[$current_section_tipo];
-			}else{
-				$current_component = null;
-				debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
-			}					
-			$ar_data_result	= $this->get_ar_data($current_locator, $current_component, $value_resolved);			
-			$ar_data		= array_merge($ar_data, $ar_data_result);
-		}// end foreach
+				if (isset($ar_relation_components[$current_section_tipo])) {
+					$current_component = $ar_relation_components[$current_section_tipo];
+				}else{
+					$current_component = null;
+					debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
+				}					
+				$ar_data_result	= $this->get_ar_data($current_locator, $current_component, $value_resolved);			
+				$ar_data		= array_merge($ar_data, $ar_data_result);
+
+		}// end foreach ar_inverse_references
 
 		$context = 'context';
 		
-		$json->$context	= $ar_context;
-		$json->data		= $ar_data;
+		$json = new stdClass;
+			$json->{$context}	= $ar_context;
+			$json->data			= $ar_data;
 
 
 		return $json;
@@ -241,7 +242,7 @@ class relation_list extends common {
 	*/
 	public function get_diffusion_value($lang=null) {
 
-		// dump(func_get_args(), 'func_get_args() ++ '.to_string());
+		// dump(func_get_args(), 'func_get_args() ++ '.to_string($this->tipo));
 		// dump($this, ' this ++ '.to_string());
 		// dump($this->tipo, ' this->tipo ++ '.to_string());
 
@@ -251,13 +252,130 @@ class relation_list extends common {
 		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
 		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
 		$diffusion_properties = $this->get_diffusion_properties();
-
-
 		
 		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
 		switch ($data_to_be_used) {
+
+			case 'custom':
+				$ar_values = [];
+
+				$custom_map = $diffusion_properties->process_dato_arguments->custom_map;
+					// dump($custom_map, ' custom_map ++ '.to_string());
+
+				$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
+				foreach ($ar_inverse_references as $current_locator) {
+
+					// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+						continue;
+					}
+
+					$custom_locator = new locator();
+						$custom_locator->set_section_tipo($current_locator->from_section_tipo);
+						$custom_locator->set_section_id($current_locator->from_section_id);									
+
+					// custom_map reference
+						// [
+						// {
+						// 	"section_tipo": "qdp1",
+						// 	"table": "objects",
+						// 	"image": {
+						// 	  "component_method": "get_diffusion_resolve_value",
+						// 	  "custom_arguments": {
+						// 		"process_dato_arguments": {
+						// 		  "target_component_tipo": "qdp66",
+						// 		  "dato_splice": [
+						// 			1
+						// 		  ],
+						// 		  "component_method": "get_diffusion_resolve_value",
+						// 		  "custom_arguments": [
+						// 			{
+						// 			  "process_dato_arguments": {
+						// 				"target_component_tipo": "rsc29",
+						// 				"component_method": "get_diffusion_value",
+						// 				"dato_splice": [
+						// 				  1
+						// 				]
+						// 			  }
+						// 			}
+						// 		  ]
+						// 		}
+						// 	  }
+						// 	},
+						// 	"title": {
+						// 	  "component_method": "get_diffusion_resolve_value",
+						// 	  "custom_arguments": {
+						// 		"process_dato_arguments": {
+						// 		  "target_component_tipo": "qdp152",
+						// 		  "component_method": "get_diffusion_value",
+						// 		  "dato_splice": [
+						// 			1
+						// 		  ]
+						// 		}
+						// 	  }
+						// 	}
+						// }
+						// ]
+					foreach ((array)$custom_map as $map_item) {
+
+						// match current locator section tipo with defined maps section_tipo. If not exist, ignore it
+						if ($map_item->section_tipo===$current_locator->from_section_tipo) {
+
+							$value_obj = new stdClass();
+								$value_obj->section_tipo	= $current_locator->from_section_tipo;
+								$value_obj->section_id		= $current_locator->from_section_id;
+
+							// iterate object map_item
+							foreach ($map_item as $map_key => $map_obj) {
+								// dump($map_obj, ' map_obj ++ '.to_string($map_key));
+
+								// section_tipo
+									if ($map_key==='section_tipo') {
+										continue;
+									}
+
+								// table
+									if ($map_key==='table') {
+										$value_obj->table = $map_obj;
+										continue;
+									}
+
+								// reference
+									// "type": "dd151",
+									// "section_id": "7",
+									// "section_tipo": "technique1",
+									// "from_component_tipo": "qdp168",
+									// "from_section_tipo": "qdp1",
+									// "from_section_id": "2"
+
+								$custom_locator = new locator();
+									$custom_locator->set_section_tipo($current_locator->from_section_tipo);
+									$custom_locator->set_section_id($current_locator->from_section_id);	
+
+								$current_dato = [$custom_locator];
+
+								$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+									$process_dato_arguments->lang = $lang;		
+
+								$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
+									// dump($current_value, ' current_value ++ '.to_string());
+								
+								$value_obj->{$map_key} = $current_value;
+							}
+
+							$ar_values[] = $value_obj;
+						}
+
+					}//end foreach ($custom_map as $map_item)					
+				}
+
+				$diffusion_value = $ar_values;
+				break;
 			
 			case 'valor':
+				$ar_values = [];
 				$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
 				foreach ($ar_inverse_references as $current_locator) {
 				// Check target is publicable
@@ -274,7 +392,7 @@ class relation_list extends common {
 				break;
 
 			case 'dato_full':
-				$ar_values = [];				
+				$ar_values = [];
 				$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
 				foreach ($ar_inverse_references as $current_locator) {
 

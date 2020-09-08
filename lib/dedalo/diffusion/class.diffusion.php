@@ -731,7 +731,7 @@ abstract class diffusion  {
 	*/
 	public static function resolve_component_value( $options, $dato ) {
 		// dump($options, ' options ++ '.to_string());
-		#dump($dato, ' dato ++ '.to_string());
+		// dump($dato, ' dato ++ '.to_string());
 
 		# Ref. $options
 		# [typology] =>

@@ -346,7 +346,9 @@ class diffusion_sql extends diffusion  {
 				$ar_field_data['field_type'] 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 				
 				$related_component_tipo			= self::get_field_related_component($options->tipo);
-				$ar_field_data['field_coment']	= RecordObj_dd::get_termino_by_tipo($related_component_tipo)." - $related_component_tipo";
+				$ar_field_data['field_coment']	= !empty($related_component_tipo)
+					? RecordObj_dd::get_termino_by_tipo($related_component_tipo)." - $related_component_tipo"
+					: $ar_field_data['field_name'];
 
 				$RecordObj_dd 		 			= new RecordObj_dd($options->tipo);
 				$propiedades 				 	= $RecordObj_dd->get_propiedades(true);
@@ -1015,7 +1017,8 @@ class diffusion_sql extends diffusion  {
 			break;
 		}
 		if (!isset($related_term)) {
-			throw new Exception("Error Processing Request. Table field '$tipo' related component not found. Please review your structure config and fixit.", 1);
+			// throw new Exception("Error Processing Request. Table field '$tipo' related component not found. Please review your structure config and fixit.", 1);
+			debug_log(__METHOD__." Table field '$tipo' related component not found. Please review your structure config".to_string(), logger::WARNING);
 			return false;			
 		}
 
@@ -2917,7 +2920,6 @@ class diffusion_sql extends diffusion  {
 
 
 
-
 	/**
 	* MAP_LOCATOR_TO_NAME
 	* 
@@ -3779,11 +3781,24 @@ class diffusion_sql extends diffusion  {
 	/**
 	* EMPTY_VALUE
 	* Check if a value is considered empty
+	* @return bool
 	*/
 	public static function empty_value($value) {
 
 		return (bool)( (empty($value) || $value==='[]') && $value!='0' );		
 	}//end empty_value
+
+
+
+	/**
+	* MAP_RELATIONS
+	* @return 
+	*/
+	public function map_relations($options, $dato) {
+		
+
+
+	}//end map_relations
 
 
 
