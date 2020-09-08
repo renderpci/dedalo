@@ -265,16 +265,16 @@ class relation_list extends common {
 				$ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
 				foreach ($ar_inverse_references as $current_locator) {
 
-					// Check target is publicable
-					$current_is_publicable = diffusion::get_is_publicable($current_locator);
-					if ($current_is_publicable!==true) {
-						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
-						continue;
-					}
-
 					$custom_locator = new locator();
 						$custom_locator->set_section_tipo($current_locator->from_section_tipo);
-						$custom_locator->set_section_id($current_locator->from_section_id);									
+						$custom_locator->set_section_id($current_locator->from_section_id);
+
+					// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($custom_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($custom_locator), logger::DEBUG);
+						continue;
+					}
 
 					// custom_map reference
 						// [
