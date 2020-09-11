@@ -1828,6 +1828,9 @@
 		Add relation_list get_diffusion_value option value 'custom' to allow custom calculations on relation data calculated values (see qdp341)
 
 
+	Valencia 11-09-2020 5.6.16
+		Fix component_text_area issues when properties css height was not properly rendered on tabs
+
 
 
 
@@ -1851,12 +1854,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.15';
+	$DEDALO_VERSION = '5.6.16';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-09-2020');
+	define('DEDALO_BUILD'	, '11-09-2020');
 
 
 
