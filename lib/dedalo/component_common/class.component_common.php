@@ -987,8 +987,13 @@ abstract class component_common extends common {
 			}
 		}
 
+
 		# Create obj tools array
 		if( is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
+
+			if ( $tool_name==='tool_add_component_data' && !in_array(get_called_class(), component_relation_common::get_components_with_relations()) ) {
+				continue; // Skip. Only suitable for component_relation_common (portals, autocomplete, etc...)
+			}	
 
 			$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
 
