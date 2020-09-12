@@ -30,6 +30,7 @@ class tool_add_component_data extends tool_common {
 		$search_options_id 	  = $section_tipo; // section tipo like oh1
 		$saved_search_options = section_records::get_search_options( $search_options_id );
 		
+		
 		$this->search_options = unserialize(serialize($saved_search_options));
 	}//end __construct
 

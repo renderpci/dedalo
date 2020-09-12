@@ -119,6 +119,6 @@ if ($mode=='add_data') {
 
 
 	exit();
-
 }//end if ($mode=='add_data')
-?>
+
+
