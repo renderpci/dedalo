@@ -1,65 +1,95 @@
 <?php
+
+	$tool_title = label::get_label('tool_add_component_data');
 	
 
 	# HTML VIEW
+	$html = '';
 	
 
-
-	$html    = "<!-- TOOL PAGE [tipo:$component_tipo] -->";
-	$html   .= "<div class=\"wrap_tool wrap_tool_add_component_data_page\" >";
-	$html   .= "<div class=\"content_data tool_add_component_data_text\" >";
-
+	$html	.= '<!-- TOOL PAGE [tipo:'.$component_tipo.'] -->';
+	$html	.= '<div class="tool_title text_shadow_inset no-print">'.$tool_title.'</div>';
+	$html	.= '<div class="wrap_tool wrap_tool_add_component_data_page">';
+	$html	.= '<div class="content_data tool_add_component_data_text">';
 	
 
 		// Temporal section
 		$html .= "<div class=\"section_temp_title\">".RecordObj_dd::get_termino_by_tipo($section_tipo)." <span class=\"notes\">[$section_tipo]</span></div>";
 		$html .= "<div class=\"wrap_section_temp\">";		
-		$html .= $temp_section_html;
+		$html .= $component_html;
 		$html .= "</div>";
 
-
-		// The labels of the tool: 'Se reemplazara el contenido del campo: %s en los %s registros actuales con el valor %s'
-		$dialog = label::get_label('tool_add_component_data_dialog');
 		
-		$label 			= "<label>$label</label>";
-		if (empty($valor)) {
-			$valor 		= "<label><i>". label::get_label('vacio') ."</i></label>";
-		}else{
-			$valor 		= "<label>$valor</label>";
+		// info text
+		if ($total_records>0) {	
+
+			// coponent label
+				$label = "<strong>$label [$component_tipo]</strong>";
+			
+				// total records selected
+				$total_records 	= "<strong>$total_records</strong>";
+				if ($lang==DEDALO_DATA_NOLAN) {
+					$lang_text = "<strong>". label::get_label('todos') ."</strong>";
+				}else{
+					$lang_text = "<strong>". lang::get_name_from_code( $lang, DEDALO_DATA_LANG ) ."</strong>";
+				}
+			
+			// The labels of the tool: 'Se reemplazara el contenido del campo: %s en los %s registros actuales con el valor %s'
+			$html .= '<div class="info_text">'.sprintf(label::get_label('tool_add_component_data_dialog'), $label, $total_records).'</div>';
+			
+			// buttons
+				$html .= '<div class="buttons_container">';
+
+				// button add
+					$html	.= '<div class="css_button_generic button_replace a" onclick="tool_add_component_data.add_data(this)"';
+					$html	.= ' data-component_tipo="'.$component_tipo.'"';
+					$html	.= ' data-parent="'.$section_id.'"';
+					$html	.= ' data-section_tipo="'.$section_tipo.'"';
+					$html	.= ' data-temp_id="'.$temp_id.'"';
+					$html	.= ' data-action="add"';
+					$html	.= '>';
+					$html	.= label::get_label('tool_do_add');
+					$html	.= "</div>";
+
+				// button remove
+					$html	.= '<div class="css_button_generic" onclick="tool_add_component_data.add_data(this)"';
+					$html	.= ' data-component_tipo="'.$component_tipo.'"';
+					$html	.= ' data-parent="'.$section_id.'"';
+					$html	.= ' data-section_tipo="'.$section_tipo.'"';
+					$html	.= ' data-temp_id="'.$temp_id.'"';
+					$html	.= ' data-action="remove"';
+					$html	.= '>';
+					$html	.= label::get_label('elminar_contenido');
+					$html	.= '</div>';			
+
+				$html	.= '</div>';
 		}
-		
-		$total_records 	= "<label>$total_records</label>";
-		if ($lang==DEDALO_DATA_NOLAN) {
-			$lang_text		= "<label>". label::get_label('todos') ."</label>";
-		}else{
-			$lang_text		= "<label>". lang::get_name_from_code( $lang, DEDALO_DATA_LANG ) ."</label>";
-		}
-		
-		$html   .= sprintf($dialog, $label, $total_records, $valor, $lang_text);
-		
-		# Ok button
-		$html .= "<div class=\"css_button_generic button_replace\" onclick=\"tool_add_component_data.add_data(this)\"
-		data-component_tipo=\"$component_tipo\"
-		data-parent=\"$section_id\"
-		data-section_tipo=\"$section_tipo\"
-		>";
-		$html .= label::get_label('tool_do_add');
-		$html .= "</div>";
 
+		// response
+			$html .= '<div id="tool_add_component_data_response"></div>';
 
-
-		$html .= "<div id=\"tool_add_component_data_response\"></div>";
+		// button close
+			$html	.= '<div class="css_button_generic btn_close" onclick="window.close()">';
+			$html	.= label::get_label('cerrar');
+			$html	.= '</div>';	
 	
-	$html .= "</div><!-- /content_data -->";
-	$html .= "</div><!-- /wrap_tool -->"; //wrap_tool
+	$html .= '</div><!-- /content_data -->';
+	$html .= '</div><!-- /wrap_tool -->'; //wrap_tool
 
 	
 	# INSPECTOR LOG TOOL
-	$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
-
+	$html .= '<div id="inspector_log" class="tool_transcription_inspector_log"></div>';
 
 
 
 	print $html;
-
 ?>
+<script type="text/javascript">
+	const wrap_component = document.querySelector(".wrap_component_<?php echo $component_tipo ?>")
+	if (wrap_component) {
+		when_in_dom(wrap_component, function(){
+			wrap_component.click()
+		})
+	}
+</script>
+

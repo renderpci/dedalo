@@ -42,64 +42,79 @@ class tool_add_component_data extends tool_common {
 	* for speed we use mode 'list' to avoid this process (in component_radio_button for example)
 	* @return array $ar_records (all searched an changed records)
 	*/
-	public function propagate_data() {
+	public function propagate_data($source_dato, $action) {
 		
-		# Source component dato
-		$source_dato 	= $this->component_obj->get_dato();
+		# source_dato check
+		if (empty($source_dato)) {
+			return false;
+		}
 
 		$tipo 			= $this->component_obj->get_tipo();
 		$section_tipo 	= $this->component_obj->get_section_tipo();
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$lang 			= $this->component_obj->get_traducible()==='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG ;
 	
+		// Records to change
+			$this->search_options->search_query_object->limit 	= false;
+			$this->search_options->search_query_object->offset 	= 0;
+			$this->search_options->search_query_object->select 	= [];
 
-		# Records to change
-		$this->search_options->search_query_object->limit 	= false;
-		$this->search_options->search_query_object->offset 	= 0;
-		$this->search_options->search_query_object->select 	= [];
+		// Search
+			$search_development2	= new search_development2($this->search_options->search_query_object);
+			$rows_data				= $search_development2->search();
+			$ar_records				= (array)$rows_data->ar_records;
+			$total_records			= (int)$this->search_options->search_query_object->full_count;
 
-		# Search
-		$search_development2 = new search_development2($this->search_options->search_query_object);
-		$rows_data 			 = $search_development2->search();
-			#dump($rows_data, ' get_rows_data'.to_string()); die();
+		// propagate iterating records
+			$i=0;
+			$j=0;
+			foreach ($ar_records as $row) {
 
-		$ar_records  	= (array)$rows_data->ar_records;
-		$total_records 	= (int)$this->search_options->search_query_object->full_count;
-
-		
-		$i=0;
-		$j=0;
-		foreach ($ar_records as $row) {
-
-			$parent = $row->section_id;
-
-			$component_obj = component_common::get_instance($modelo_name, $tipo, $parent, 'list', $lang, $section_tipo);
-				#dump($component, ' component'.to_string());
-			$dato_orig = $component_obj->get_dato();
-
-			if ($dato_orig != $source_dato) {
-				if(is_array($dato_orig)){
-					$dato = array_merge($dato_orig, $source_dato);
-				}else{
-					$dato = $dato_orig. " " .$source_dato;
+				$section_id			= $row->section_id;
+				$current_component	= component_common::get_instance($modelo_name, $tipo, $section_id, 'list', $lang, $section_tipo);
+				$current_dato		= $current_component->get_dato();
+				
+				$final_dato = $current_dato;
+				switch ($action) {
+					case 'remove':						
+						foreach ((array)$source_dato as $current_locator) {
+							$key = locator::get_key_in_array_locator( $current_locator, $final_dato, $ar_properties=['section_tipo','section_id'] );
+							if (false!==$key) {
+								unset($final_dato[$key]);
+							}
+						}
+						$final_dato = array_values($final_dato);
+						break;
+					
+					case 'add':
+						foreach ((array)$source_dato as $current_locator) {
+							if (!in_array($current_locator, $final_dato)) {
+								$final_dato[] = $current_locator;
+							}
+						}						
+						break;
 				}
 
-				$component_obj->set_dato($dato);
-				$component_obj->Save();
-			}
-			$i++;
-			if(floor($i * 100 / $total_records) > $j){
-				$percent  = floor($i * 100 / $total_records);
-				$msg  	  = label::get_label('procesando')." $percent %";
-					#echo "id: $i". PHP_EOL;
-					echo "data: ".json_encode($msg). PHP_EOL;
-					echo PHP_EOL;
-					//ob_flush();
-    				flush();
-				$j++;
-				//error_log($percent);
-			}
-		}//end foreach ($ar_records as $row)
+				if ($final_dato!==$current_dato) {
+					$current_component->set_dato($final_dato);
+					$current_component->Save();
+				}				
+
+				// process state % for EventSource peticion flush
+					$i++;
+					if(floor($i * 100 / $total_records) > $j){
+						$percent	= floor($i * 100 / $total_records);
+						$msg		= label::get_label('procesando')." $percent %";
+							#echo "id: $i". PHP_EOL;
+							echo "data: ".json_encode($msg). PHP_EOL;
+							echo PHP_EOL;
+							//ob_flush();
+							flush();
+						$j++;
+						//error_log($percent);
+					}
+
+			}//end foreach ($ar_records as $row)
 		
 
 		return (array)$ar_records;
@@ -108,4 +123,3 @@ class tool_add_component_data extends tool_common {
 
 
 }//end tool_add_component_data
-?>

@@ -3,32 +3,74 @@
 
 .wrap_tool_add_component_data_page {
 	display: block;
-	width: 99.9%;
-	height: 97.7%;
+	width: 100%;
+	min-height: calc(100vh - 125px);
+	padding: 1em;
+	padding-top: 0;
 	//position: absolute;
 	text-align: center;
 	/*background-color:#efc4f4;*/
 	//padding: 20px;
-	}
-	.wrap_tool_add_component_data_page .content_data {
-		width: 100%;	
-	}
+
+	
+	>.content_data {
+		width: 100%;
+
+
+		// css_wrap_component_autocomplete_hi wrap_component_edit wrap_component_qdp168 tooltip_active selected_wrap
+		.wrap_component {
+			padding: 0.7em;
+
+			// &.css_wrap_autocomplete, &.css_wrap_component_autocomplete_hi {
+				width: 50%;
+				margin-left: 25%;
+				>.content_data {
+					width: 100%;
+				}
+			// }
+
+			&.css_wrap_portal {
+				width: 100%;
+				margin: 0;
+			}
+		} 
+
+	}//end >.content_data
+
+}
+	
 	.wrap_tool_add_component_data_page label {
 		font-weight: bold;
 		display: block;
 		padding: 5px;
 	}
 
-	.button_replace:hover {
-		background-color:#5cb85c;
-		color: #F9FEFF;
-		text-shadow:none;
-		}		
+	.info_text {
+		display: table;
+		width: 100%;
+		padding: 1em;
+		padding-top: 4em;
+	}
 
-	.button_cancel:hover {
-		background-color:#d9534f;
-		color: #F9FEFF;
-		text-shadow:none;		
+	.button_replace {
+		display: inline-block;
+		clear: both;
+		margin-top: 1em;
+
+		&:hover {
+			background-color:#5cb85c;
+			color: #F9FEFF;
+			text-shadow:none;
+		}		
+	}		
+
+	.button_cancel {
+
+		&:hover {
+			background-color:#d9534f;
+			color: #F9FEFF;
+			text-shadow:none;
+		}
 	}
 
 	#tool_add_component_data_response {
@@ -41,5 +83,5 @@
 		line-height: 1.4;
 		color: #333;
 		text-align: center;
-
 	}
+

@@ -47,28 +47,17 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 */
 if ($mode=='add_data') {
 
-	$vars = array('component_tipo','parent','section_tipo','json_data');
-		foreach($vars as $name) $$name = common::setVar($name);
+	$vars = array('json_data');
+		foreach($vars as $name) $$name = common::setVar($name);	
 
-	if (isset($json_data)) {
-		$data = json_decode($json_data);
-		foreach ($data as $key => $value) {
-			$$key = $value;
-		}
-	}
-
-	if (empty($component_tipo)) {
-		$msg = "<span class='error'> Trigger: Error Need component_tipo..</span>";		
-	}
-	if (empty($parent)) {
-		$msg = "<span class='error'> Trigger: Error Need parent..</span>";
-	}
-	if (empty($section_tipo)) {
-		$msg = "<span class='error'> Trigger: Error Need section_tipo..</span>";
-	}
-	if (isset($msg)) {
-		trigger_error($msg);
-	}
+	$data = json_decode($json_data);
+	
+	$action			= $data->action;
+	$component_tipo	= $data->component_tipo;
+	$section_id		= $data->parent;
+	$section_tipo	= $data->section_tipo;
+	$temp_id		= $data->temp_id;
+	$top_tipo		= $data->top_tipo;
 
 
 	header('Content-Type: text/event-stream');
@@ -81,19 +70,17 @@ if ($mode=='add_data') {
 	# Disable logging activity !IMPORTANT
 	logger_backend_activity::$enable_log = false;
 
-	#
-	# Component
-	$tipo 			= (string)$component_tipo;
-	$section_tipo 	= (string)$section_tipo;
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_obj  = component_common::get_instance($modelo_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
-
 	
+	// temporal component	
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component		= component_common::get_instance($model, $component_tipo, $temp_id, 'list', DEDALO_DATA_LANG, $section_tipo);	
+		$source_dato	= $component->get_dato();
 
-	$tool_add_component_data = new tool_add_component_data($component_obj);
-	$ar_records_replaced 		 = (array)$tool_add_component_data->propagate_data();
 
-	#echo count($ar_records_replaced)." ".label::get_label('registros_actualizados');
+	// tool (tool doesn't use 'component_id' so we can send the temporary component here safely)
+		$tool_add_component_data	= new tool_add_component_data($component);
+		$ar_records_replaced		= (array)$tool_add_component_data->propagate_data($source_dato, $action);
+
 
 
 	# Enable logging activity !IMPORTANT

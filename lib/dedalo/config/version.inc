@@ -1832,6 +1832,13 @@
 		Fix component_text_area issues when properties css height was not properly rendered on tabs
 
 
+	Valencia 12-09-2020 5.6.17
+		Improved tool_add_component_data (finish code and add remove option)
+		Add component portal support for new record on temporal sections (issues with component filter propagation)
+		Added 'tool_add_component_data' exception for non relationable compnents (only portals, autocomplete, etc. can use this tool)
+		Clean code
+
+
 
 
 
@@ -1854,12 +1861,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.16';
+	$DEDALO_VERSION = '5.6.17';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-09-2020');
+	define('DEDALO_BUILD'	, '112-09-2020');
 
 
 
