@@ -486,7 +486,7 @@ class component_portal extends component_relation_common {
 			$options->section_target_tipo 	= null;
 			$options->top_tipo 				= TOP_TIPO;
 			$options->top_id 				= TOP_ID;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}		
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -495,10 +495,13 @@ class component_portal extends component_relation_common {
 		#
 		# 1 PROJECTS GET. Obtenemos los datos del filtro (proyectos) de la sección actual para heredarlos en el registro del portal
 		# We get current portal filter data (projects) to heritage in the new portal record
-			$component_filter_dato = $this->get_current_section_filter_data();
+			$section_id				= $this->get_section_id();
+			$component_filter_dato	= (strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false)
+				? null
+				: $this->get_current_section_filter_data();
 			if(empty($component_filter_dato)) {
 
-				debug_log(__METHOD__." Empty filter value in current section. Default project value will be used (section tipo: $this->section_tipo, section_id: $this->section_id) ".to_string(), logger::WARNING);
+				debug_log(__METHOD__." Empty filter value in current section. Default project value will be used (section tipo: $this->section_tipo, section_id: $section_id) ".to_string(), logger::WARNING);
 
 				# Default value is used
 				# Temp section case Use default project here
@@ -532,6 +535,7 @@ class component_portal extends component_relation_common {
 				$save_options->top_id 		= $options->top_id;
 
 			$new_section_id = $section_new->Save( $save_options );
+
 
 			if($new_section_id<1) {
 				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
