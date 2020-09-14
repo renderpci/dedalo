@@ -143,8 +143,8 @@ class tool_qr extends tool_common {
 	*/
 	public static function build_url($section_tipo, $section_id) {
 
-		// $url = DEDALO_PROTOCOL . DEDALO_HOST . DEDALO_TOOL_QR_BASE_URL . '/main/?t=' . $section_tipo .'&id=' . $section_id .'&m=edit';
-		$url = 'https://museuquartdepoblet.org/dedalo/lib/dedalo/main/?t=' . $section_tipo .'&id=' . $section_id .'&m=edit';
+		$url = DEDALO_PROTOCOL . DEDALO_HOST . (DEDALO_TOOL_QR_BASE_URL ?? DEDALO_LIB_BASE_URL) . '/main/?t=' . $section_tipo .'&id=' . $section_id .'&m=edit';
+		
 		
 		return $url;
 	}//end build_url
