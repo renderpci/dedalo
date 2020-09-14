@@ -79,7 +79,6 @@
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
 						
 						# FILES UPLOAD MANAGER
-						#$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_files/inc/upload_handler.php?t='.$tipo;
 						$upload_handler_url = TOOL_IMPORT_FILES_HANDLER_URL;
 
 						# file_processor

@@ -376,10 +376,21 @@
 				// file
 				$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . 'structure.json';
 				if (file_exists($file_path)) {
-					$file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . 'structure.json';
+					// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . 'structure.json';
+					$file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_MEDIA_BASE_URL . '/import/files' . '/' . 'structure.json';
 					$html   .= "<a href=\"$file_url\" target=\"_blank\">$file_url</a>";									
 					$file_structure_size = format_size_units( filesize($file_path) );					
 					$html   .= "<div>File size: $file_structure_size</div>";
+
+					// 
+					$structure_data = json_decode( file_get_contents($file_path) );
+					$unique_ar_tld = [];
+					foreach ($structure_data as $item) {
+						if (!in_array($item->tld, $unique_ar_tld)) {
+							$unique_ar_tld[] = $item->tld;
+						}
+					}
+					$html   .= '<div>Available TLDs: '. implode(',', $unique_ar_tld) . '</div>';
 				}
 
 				$html   .= "  <div id=\"export_structure_to_json_response\"></div>";

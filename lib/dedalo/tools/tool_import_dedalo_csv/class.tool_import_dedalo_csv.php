@@ -564,7 +564,7 @@ class tool_import_dedalo_csv extends tool_common {
 	*/
 	public static function get_csv_files( $dir ) {
 
-		$result = tool_common::read_files($dir, $valid_extensions=array('csv'));
+		$result = tool_common::read_files($dir, $valid_extensions=array('csv','json'));
 
 		$files_info = array();
 		foreach ($result as $current_file_name) {
