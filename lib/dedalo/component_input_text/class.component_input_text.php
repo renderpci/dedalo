@@ -460,6 +460,10 @@ class component_input_text extends component_common {
 		#	$q = $query_object->q_operator . $q;
 		#}
 
+		$component = end($query_object->path);
+		$component_tipo = $component->component_tipo;
+
+
 		switch (true) {
 			# EMPTY VALUE (in current lang data)
 			case ($q==='!*'):
@@ -602,8 +606,12 @@ class component_input_text extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				//exception for activity
+				$query_object->q_parsed	= $component_tipo === 'dd551'
+					? '\'.*\{".*'.$q_clean.'.*\''
+					: '\'.*\[".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
+				dump(($component_tipo === 'dd551'), '$component_tipo  ++ '.to_string());
 				break;
 			# ENDS WITH
 			case (substr($q, 0, 1)==='*'):
@@ -634,7 +642,10 @@ class component_input_text extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('+', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				//exception for activity
+				$query_object->q_parsed	= $component_tipo === 'dd551'
+					? '\'.*\{".*'.$q_clean.'.*\''
+					: '\'.*\[".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
 		}//end switch (true) {
