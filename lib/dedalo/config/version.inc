@@ -1838,7 +1838,8 @@
 		Added 'tool_add_component_data' exception for non relationable compnents (only portals, autocomplete, etc. can use this tool)
 		Clean code
 
-
+	Valencia 14-09-2020 5.6.18
+		Added new tool QR codes
 
 
 
@@ -1861,12 +1862,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.17';
+	$DEDALO_VERSION = '5.6.18';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '112-09-2020');
+	define('DEDALO_BUILD'	, '14-09-2020');
 
 
 

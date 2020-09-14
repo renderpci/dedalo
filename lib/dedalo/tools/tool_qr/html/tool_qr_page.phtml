@@ -1,0 +1,39 @@
+<?php
+
+	$tool_title = label::get_label('tool_qr');
+	
+
+	# HTML VIEW
+	$html = '';	
+
+	$html	.= '<!-- TOOL PAGE [tipo:'.$section_tipo.'] -->';
+
+	$html	.= '<div class="tool_title text_shadow_inset no-print">'.$tool_title.'</div>';
+
+	$html	.= '<div class="section_label no-print">'.$section_label.' ('.label::get_label('total').' '.$total.')</div>';
+
+	$html	.= '<div class="wrap_tool wrap_tool_qr_page">';
+	// $html	.= '<div class="content_data tool_qr_text">';
+	
+	$html	.= '<div id="qr_list"><div id="spinner" class="spinner"></div></div>';	
+	
+	// $html .= '</div><!-- /content_data -->';
+	$html .= '</div><!-- /wrap_tool -->'; //wrap_tool
+
+
+	print $html;
+?>
+<script type="text/javascript">
+	const data = <?php echo json_encode($data); ?>;
+	tool_qr.init({
+		data		: data,
+		container	: 'qr_list'
+	})
+	.then(function(tool){
+		tool.render()
+		.then(function(fragment){
+			document.getElementById("spinner").remove()
+			document.getElementById("qr_list").appendChild(fragment)
+		})
+	})
+</script>
