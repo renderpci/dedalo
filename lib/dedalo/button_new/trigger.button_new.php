@@ -66,5 +66,3 @@ function new_record($json_data) {
 }//end new_record
 
 
-
-?>

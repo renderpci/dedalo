@@ -9,7 +9,9 @@ common::trigger_manager();
 
 # Disable logging activity and time machine # !IMPORTANT
 logger_backend_activity::$enable_log = false;
-#RecordObj_time_machine::$save_time_machine_version = false;
+#RecordObj_time_machine::$save_time_machine_version = true;
+
+
 
 # Write session to unlock session file
 session_write_close();
@@ -120,7 +122,7 @@ function import_seleted_files($json_data) {
 	ignore_user_abort(true);
 
 	# Disable logging activity and time machine # !IMPORTANT
-	logger_backend_activity::$enable_log = false;
+	#logger_backend_activity::$enable_log = false;
 	#RecordObj_time_machine::$save_time_machine_version = false;
 
 	$response = new stdClass();
@@ -503,5 +505,3 @@ function import_images_custom($json_data) {
 }//end import_images_custom
 
 
-
-?>
