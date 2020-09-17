@@ -1862,12 +1862,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.18';
+	$DEDALO_VERSION = '5.6.20';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-09-2020');
+	define('DEDALO_BUILD'	, '17-09-2020');
 
 
 
