@@ -1844,7 +1844,11 @@
 
 
 	Valencia 18-09-2020 5.6.21
-		Added tool_import_dedalo_csv option (checkbox) to set time machine save version or not on import		
+		Added tool_import_dedalo_csv option (checkbox) to set time machine save version or not on import
+
+
+	Valencia 18-09-2020 5.6.22
+		Add component_autocomplete check property 'is_publicable'. Case Bibliography 'rsc368'		
 
 	
 
@@ -1867,7 +1871,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.21';
+	$DEDALO_VERSION = '5.6.22';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
