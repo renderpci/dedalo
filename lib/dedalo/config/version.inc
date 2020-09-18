@@ -1838,10 +1838,15 @@
 		Added 'tool_add_component_data' exception for non relationable compnents (only portals, autocomplete, etc. can use this tool)
 		Clean code
 
+
 	Valencia 14-09-2020 5.6.18
 		Added new tool QR codes
 
 
+	Valencia 18-09-2020 5.6.21
+		Added tool_import_dedalo_csv option (checkbox) to set time machine save version or not on import		
+
+	
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1862,12 +1867,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.20';
+	$DEDALO_VERSION = '5.6.21';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-09-2020');
+	define('DEDALO_BUILD'	, '18-09-2020');
 
 
 
