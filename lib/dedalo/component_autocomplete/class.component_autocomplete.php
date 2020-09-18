@@ -937,14 +937,13 @@ class component_autocomplete extends component_relation_common {
 
 		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ')
 		$value = $this->get_valor($lang, 'array');
-
+		
 		$diffusion_value_clean = [];
 		foreach ($value as $item) {
 			
-			$locator_section_tipo 	= $item->value->section_tipo;
-			$section_table 			= common::get_matrix_table_from_tipo($locator_section_tipo);
-			
-			$current_is_publicable = ($section_table==='matrix_list' || $section_table==='matrix_hierarchy' || $section_table==='matrix_dd')
+			$locator_section_tipo	= $item->value->section_tipo;
+			$section_table			= common::get_matrix_table_from_tipo($locator_section_tipo);
+			$current_is_publicable	= ($section_table==='matrix_list' || $section_table==='matrix_hierarchy' || $section_table==='matrix_dd')
 				? true
 				: diffusion::get_is_publicable($item->value);
 

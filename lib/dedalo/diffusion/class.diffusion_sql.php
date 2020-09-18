@@ -3508,7 +3508,6 @@ class diffusion_sql extends diffusion  {
 		$process_dato_arguments = (!isset($options->propiedades))
 			? $options
 			: (object)$options->propiedades->process_dato_arguments;
-		
 
 		$output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
 

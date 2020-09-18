@@ -15,21 +15,34 @@ common::trigger_manager();
 */
 function pdf_automatic_transcription($json_data) {
 	global $start_time;
-
+	
 	# Write session to unlock session file
-	session_write_close();
+	// session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$vars = array('id','parent','dato','tipo','lang','source_lang','target_lang', 'section_id', 'section_tipo', 'source_tipo', 'target_tipo');
+	// $vars = array('id','parent','dato','tipo','lang','source_lang','target_lang', 'section_id', 'section_tipo', 'source_tipo', 'target_tipo');
+	// 	foreach($vars as $name) {
+	// 		$$name = common::setVarData($name, $json_data);
+	// 		# DATA VERIFY
+	// 		# if ($name==='dato') continue; # Skip non mandatory
+	// 		if (empty($$name)) {
+	// 			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+	// 			debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+	// 			return $response;
+	// 		}
+	// 	}
+
+	$vars = array('section_id', 'section_tipo', 'source_tipo', 'target_tipo');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
 			# if ($name==='dato') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 		}
@@ -254,5 +267,3 @@ if($mode=='change_text_editor_lang') {
 }//end change_text_editor_lang */
 
 
-
-?>

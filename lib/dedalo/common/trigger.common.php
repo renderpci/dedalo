@@ -61,4 +61,3 @@ function change_lang($json_data) {
 
 	return (object)$response;
 }//end change_lang
-?>

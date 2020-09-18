@@ -1165,7 +1165,7 @@ abstract class common {
 		# Set JSON headers for all responses
 		#header('Content-Type: application/json');
 		header('Content-Type: application/json; charset=utf-8');
-
+		
 		# JSON_DATA
 		# javascript common.get_json_data sends a stringify json object
 		# this object is getted here and decoded with all ajax request vars
@@ -1184,10 +1184,10 @@ abstract class common {
 			$response = new stdClass();
 				$response->result 	= false;
 				$response->msg 		= "Error on read php://input data";
-			
+				debug_log(__METHOD__." $response->msg . str_json: ".to_string($str_json), logger::ERROR);
 			return false;
 		}
-
+		
 		# DEDALO_MAINTENANCE_MODE
 		$mode = $json_data->mode;
 		if ($mode!=="Save" && $mode!=="Login") {
