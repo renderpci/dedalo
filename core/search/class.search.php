@@ -1267,7 +1267,10 @@ class search {
 						#$filter_join .= ' AND f.target_section_tipo=\''.DEDALO_SECTION_PROJECTS_TIPO.'\' AND'.PHP_EOL.' ('. implode(' OR ',$ar_filter_join).')';
 						$filter_join .= ')';
 						$this->filter_join = $filter_join;
-						$this->filter_join_where = PHP_EOL .' AND ('. implode(' OR ',$ar_filter_join).')';
+						// $this->filter_join_where = PHP_EOL .' AND ('. implode(' OR ',$ar_filter_join).')';
+						$this->filter_join_where = PHP_EOL .' AND (f.target_section_id IN ('.  implode(',', array_map(function($locator){
+							return (int)$locator->section_id;
+						}, $ar_projects)).'))';
 
 						#if(SHOW_DEBUG!==true) {
 							# Delete old filter except for reference to debuger
@@ -2911,9 +2914,9 @@ class search {
 		# (!) Hecha para usar en estadísticas actividad pero no implementada todavía ! [2018-12-14]
 
 		$options = new stdClass();
-			$options->column_tipo  = null; // string like dd15
-			$options->column_path  = null; // string like datos#>>'{components, dd544, dato, lg-nolan }'
-			$options->section_tipo = null; // string like oh1
+			$options->column_tipo	= null; // string like dd15
+			$options->column_path	= null; // string like datos#>>'{components, dd544, dato, lg-nolan }'
+			$options->section_tipo	= null; // string like oh1
 
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
@@ -2981,8 +2984,8 @@ class search {
 
 			// object to store in this path level
 			$data_item = new stdClass();
-				$data_item->path 	= $path_item;
-				$data_item->value 	= $path_level_locators;
+				$data_item->path	= $path_item;
+				$data_item->value	= $path_level_locators;
 
 			$data[] = $data_item;
 
@@ -3002,13 +3005,13 @@ class search {
 
 		$result = [];
 		foreach ($ar_locator as $locator) {
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($path_item->component_tipo,true);
-			$component 	= component_common::get_instance($model_name,
-													     $path_item->component_tipo,
-													     $locator->section_id,
-													     'list',
-													     DEDALO_DATA_NOLAN,
-													     $locator->section_tipo);
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($path_item->component_tipo,true);
+			$component	= component_common::get_instance($model_name,
+														 $path_item->component_tipo,
+														 $locator->section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $locator->section_tipo);
 			$component_dato = $component->get_dato_full();
 
 			if (!empty($component_dato)) {
