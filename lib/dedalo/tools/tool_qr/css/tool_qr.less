@@ -54,6 +54,7 @@
 			// generated qr
 			>img {
 				// height: @item_height;
+				width: @item_width;
 			}
 
 			// info
@@ -191,17 +192,28 @@
 		// script, style { 
 		//     display:none; 
 		// }
-		.qr_wrapper {
-		    page-break-inside: avoid;
+		.wrap_tool_qr_page {
+
+			#qr_list {
+				width: unset !important;
+
+				.qr_wrapper {
+				    page-break-inside: avoid !important;
+				    // margin-bottom: 0.5em;
+    				// margin-top: 0.5em;			    
+				}
+			}			
 		}
+		
 
 		.tool_title {
-			display: none;
+			display: none !important;
 		}
 
 		#log_messages, #global_info, .time_to_load_div {
-			display: none;
+			display: none !important;
 		}
+
 	}
 
 	@page {
