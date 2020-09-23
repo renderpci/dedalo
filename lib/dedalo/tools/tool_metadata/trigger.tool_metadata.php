@@ -13,9 +13,6 @@ common::trigger_manager();
 
 
 
-
-
-
 /**
 * PROCESS_FILES
 */
@@ -105,4 +102,34 @@ function count_files($json_data) {
 
 	return (object)$response;
 }//end count_files
+
+
+
+/**
+* CHECK_EXIFTOOL
+*/
+function check_exiftool($json_data) {
+	global $start_time;
+	
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';	
+
+	$response = (object)tool_metadata::check_exiftool();
+
+	
+	# Debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
+
+			$response->debug = $debug;
+		}
+
+	return (object)$response;
+}//end check_exiftool
+
 

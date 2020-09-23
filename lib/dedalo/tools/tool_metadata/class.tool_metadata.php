@@ -39,7 +39,7 @@ class tool_metadata extends tool_common {
 			$response->msg		= 'Error. Request failed';
 
 		$dir		= DEDALO_MEDIA_BASE_PATH . rtrim($path, '/');
-		$process	= function($file) {			
+		$process	= function($file) {
 			self::$total_files++;
 		};
 
@@ -53,6 +53,32 @@ class tool_metadata extends tool_common {
 	}//end count_files
 
 
+
+	/**
+	* CHECK_EXIFTOOL
+	* @return object $response
+	*/
+	public static function check_exiftool() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		$command	= EXIFTOOL_PATH . "exiftool -ver";
+		$output		= shell_exec($command);
+
+		$result = (object)[
+			'command'	=> $command,
+			'output'	=> trim($output),
+			'path'		=> EXIFTOOL_PATH . "exiftool"
+		];
+
+		$response->result	= $result;
+		$response->msg		= 'Ok. Request done';
+	
+
+		return $response;
+	}//end check_exiftool
 
 
 
@@ -126,7 +152,7 @@ class tool_metadata extends tool_common {
 	*	List of objects ( property name => property value )
 	* @return object $result
 	*/
-	public static function edit_metadata($file, $data) {		
+	public static function edit_metadata($file, $data) {
 		
 		// sentences
 			$sentences = array_map(function($item){
@@ -144,7 +170,7 @@ class tool_metadata extends tool_common {
 			$sentences[]	= '-description=\'' . $description . '\''; // add as sentence too
 
 		// metadata edit
-			$command			= EXIFTOOL_PATH . "/exiftool " .implode(' ', $sentences). " $file;";
+			$command			= EXIFTOOL_PATH . "exiftool " .implode(' ', $sentences). " $file;";
 			$output_exiftool	= shell_exec($command);
 
 			$result = (object)[
