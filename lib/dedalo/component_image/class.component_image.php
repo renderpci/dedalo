@@ -1143,7 +1143,9 @@ class component_image extends component_common {
 	*/
 	public function get_diffusion_value( $lang=null ) {
 
-		$diffusion_value = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT);
+		$diffusion_value = (defined('DEDALO_PUBLICATION_CLEAN_URL') && true===DEDALO_PUBLICATION_CLEAN_URL)
+			? ($this->get_image_id() .'.'. DEDALO_IMAGE_EXTENSION)
+			: $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT);
 
 
 		return (string)$diffusion_value;
