@@ -701,14 +701,21 @@
 
 			#
 			# PHP USER
-			#if(SHOW_DEBUG===true) {
 			$processUser = get_current_user(); // $processUser = posix_getpwuid(posix_geteuid());
 			$html .= tool_administration::show_info( "PHP user",
 													 $processUser,
 													 $processUser
 													);
-			#}
-
+			
+			#
+			# SEE YOURSELF
+			$command	= 'curl -X GET "' . DEDALO_PROTOCOL . '' . DEDALO_HOST . DEDALO_LIB_BASE_URL . '/tools/tool_administration/html/test.php" ';
+			$output		= shell_exec($command);
+			$info = empty($output) ? '<error class="error">Error. Server can\'t connect with itself. Review your server host config to fix this issue</error>' : $output;
+			$html .= tool_administration::show_info( "SEE YOURSELF",
+													 $command,
+													 $info
+													);
 
 			#
 			# USER_LIMITS
