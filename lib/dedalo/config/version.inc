@@ -1848,7 +1848,15 @@
 
 
 	Valencia 18-09-2020 5.6.22
-		Add component_autocomplete check property 'is_publicable'. Case Bibliography 'rsc368'		
+		Add component_autocomplete check property 'is_publicable'. Case Bibliography 'rsc368'
+
+
+	Valencia 23-09-2020 5.6.23
+		Added tool_administration feature. Now administrator can see a resolve self host warning when server is not properly configured
+		Fix tool metadata issues and deficiencies
+		Increase default quality value from 90 to 94 in class ImageMagick thumb generation
+		Added diffusion preference to both component_av and component_image to output clean value only instead the complete file path
+		Added tool metadata 
 
 	
 
@@ -1871,12 +1879,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.22';
+	$DEDALO_VERSION = '5.6.23';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '18-09-2020');
+	define('DEDALO_BUILD'	, '23-09-2020');
 
 
 
