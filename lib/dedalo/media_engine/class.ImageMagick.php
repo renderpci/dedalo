@@ -133,12 +133,14 @@ class ImageMagick {
 
 		switch ($mode) {
 			case 'list':
+				$quality_value = 94; // previous 90
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -gravity center -unsharp 0x.5 -quality $quality_value \"$target_file\" ";
 				break;
 			case 'edit':
+				$quality_value = 94; // previous 72
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 jpg -quality 72 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 -quality 72 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 -quality $quality_value \"$target_file\" ";
 				break;
 			default:
 				throw new Exception("Error Processing file. Thumb mode is not valid", 1);
