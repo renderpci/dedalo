@@ -1,0 +1,148 @@
+/* tool_watermark */
+
+
+
+// section label
+.section_label {
+	padding: 1em;
+	font-size: 1.3em;
+	padding-top: 0;
+}
+
+
+// wrap_tool_watermark_page
+.wrap_tool_watermark_page {
+	display: block;
+	width: 100%;
+	min-height: calc(100vh - 125px);
+	padding: 2.5em;
+	padding-top: 0;
+	//position: absolute;
+	text-align: left;
+	/*background-color:#efc4f4;*/
+	//padding: 20px;
+
+
+	>.metadata_form {
+		padding: 1em;
+		position: relative;
+
+		>.title {
+			opacity: 0.85;
+		}
+
+		>ul.options_list {
+			padding: 1em;
+			padding-left: 0;
+
+			>li {
+				display: grid;
+				grid-template-columns: 12em auto;
+				margin: 0.25em;
+				background-color: #efefef;
+				line-height: 2em;
+				border-radius: 4px;
+
+				label {
+					padding: 0.5em;
+					font-weight: 600;
+				}
+			}
+		}
+
+
+		.response_path_info {
+			position: relative;
+			clear: both;
+
+			>span {
+				padding: .5em;
+				padding-left: 13em;
+
+				&.red {
+					color: red;
+				}
+			}
+		}
+
+		.response_element {
+			position: relative;
+			clear: both;
+
+			&:before {
+				content: " ";
+				display: block;
+				clear: both;
+				margin-top: 1.5em;
+			}
+
+			>.info {
+				display: inline-block;
+				padding-right: 2em;
+				line-height: 2em;
+				font-size: 1.25em;
+				vertical-align: middle;			
+			}
+
+			>.btn {
+				vertical-align: middle;	
+			}
+
+			>pre {
+				margin-top: 1em;
+			}
+		}
+	}
+
+	
+
+
+}//end .wrap_tool_watermark_page
+
+
+
+// spinner loading	
+	.spinner {
+		@border_size: 7px;
+		display: block;
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		height: 90px;
+		width: 90px;
+		margin: -45px 0 0 -45px;
+		border: @border_size transparent solid; // rgba(0, 0, 0, 0.25)
+		border-top: @border_size #e1e1e1 solid;
+		border-right: @border_size #e1e1e1 solid;
+		border-bottom: @border_size #e1e1e1 solid;
+		border-radius: 50%;
+		-webkit-animation: spin3 1.25s infinite linear;
+		animation: spin3 1.25s infinite linear;
+	}	
+	@-webkit-keyframes spin3 {
+		from {
+			-webkit-transform: rotate(0deg);
+			transform: rotate(0deg);
+		}
+		to {
+			-webkit-transform: rotate(359deg);
+			transform: rotate(359deg);
+		}
+		}
+		@keyframes spin3 {
+		from {
+			-webkit-transform: rotate(0deg);
+			transform: rotate(0deg);
+			-webkit-transform: rotate(0deg);
+			transform: rotate(0deg);
+		}
+		to {
+			-webkit-transform: rotate(359deg);
+			transform: rotate(359deg);
+			-webkit-transform: rotate(359deg);
+			transform: rotate(359deg);
+		}
+	}
+
+
+

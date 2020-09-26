@@ -1859,7 +1859,7 @@
 		Added tool metadata 
 
 	
-	Valencia 26-09-2020 5.6.24
+	Valencia 26-09-2020 5.6.4
 		Update Dedalo_basic_library_pack
 		Udpated dedalo4_install database. Changed format from custom to pgsl zipped)
 

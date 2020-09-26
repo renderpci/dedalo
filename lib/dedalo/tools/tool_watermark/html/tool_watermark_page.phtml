@@ -1,0 +1,31 @@
+<?php
+
+	$tool_title = label::get_label('tool_watermark');
+	
+
+	# HTML VIEW
+	$html = '';	
+
+	$html	.= '<!-- TOOL PAGE -->';
+	
+	$html	.= '<div class="tool_title text_shadow_inset no-print">'.$tool_title.'</div>';
+
+
+	
+	$html	.= '<div id= "wrap_tool" class="wrap_tool wrap_tool_watermark_page">';
+	$html	.= '<div class="tool_note">The displayed properties and the default values are defined in config as DEDALO_IMAGE_METADATA_OPTIONS</div>';
+	// $html	.= '<div id="tool_watermark_wrapper"><div id="spinner" class="spinner"></div></div>';	
+	
+	$html 	.= '</div><!-- /wrap_tool -->'; //wrap_tool
+
+
+	print $html;
+?>
+<script type="text/javascript">
+tool_watermark.init({
+	metadata_options	: <?php echo json_encode($metadata_options) ?>,
+	container			: document.getElementById("wrap_tool"),
+	path				: '<?php echo DEDALO_IMAGE_FOLDER . '/' .DEDALO_IMAGE_QUALITY_DEFAULT ?>',
+	extensions			: <?php echo json_encode($extensions) ?>
+})
+</script>
