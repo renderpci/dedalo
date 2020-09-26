@@ -1859,6 +1859,11 @@
 		Added tool metadata 
 
 	
+	Valencia 26-09-2020 5.6.24
+		Update Dedalo_basic_library_pack
+		Udpated dedalo4_install database. Changed format from custom to pgsl zipped)
+
+	
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1879,12 +1884,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.23';
+	$DEDALO_VERSION = '5.6.4';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-09-2020');
+	define('DEDALO_BUILD'	, '26-09-2020');
 
 
 
