@@ -27,7 +27,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* IMPORT_DEDALO_CSV_FILE
 	* @return object $result
 	*/
-	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data) {
+	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data, $time_machine_save=false) {
 
 		$start_time = start_time();
 
@@ -245,7 +245,9 @@ class tool_import_dedalo_csv extends tool_common {
 					# SAVE_TO_DATABASE
 					# Set component to save data but tells section that don save updated section to DDBB for now
 					# No component time machine data will be saved when section saves later
-					$component->save_to_database = false;
+					$component->save_to_database = ((bool)$time_machine_save===true)
+						? true
+						: false; // default is false. To activate, select checkbox on tool import dedalo csv
 
 
 				# If value is json encoded, decode and set

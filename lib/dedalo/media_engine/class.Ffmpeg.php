@@ -620,7 +620,7 @@ class Ffmpeg {
 			error_log($command);
 		}
 
-		$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
+		$file_url = DEDALO_PROTOCOL . DEDALO_HOST . $AVObj->get_media_path() .'fragments/'. $target_filename;
 
 		return $file_url;
 	}//end build_fragment

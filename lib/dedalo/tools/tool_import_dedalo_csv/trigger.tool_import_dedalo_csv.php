@@ -9,7 +9,9 @@ common::trigger_manager();
 
 # Disable logging activity and time machine # !IMPORTANT
 logger_backend_activity::$enable_log = false;
-#RecordObj_time_machine::$save_time_machine_version = false;
+#RecordObj_time_machine::$save_time_machine_version = true;
+
+
 
 # Write session to unlock session file
 session_write_close();
@@ -120,23 +122,24 @@ function import_seleted_files($json_data) {
 	ignore_user_abort(true);
 
 	# Disable logging activity and time machine # !IMPORTANT
-	logger_backend_activity::$enable_log = false;
+	#logger_backend_activity::$enable_log = false;
 	#RecordObj_time_machine::$save_time_machine_version = false;
 
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
-	$vars = array('files','dir');
+	$vars = array('files','dir','time_machine_save');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if ($name==='time_machine_save') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
+		
 
 	# Files is a json encoded array
 	$files = json_decode($files);
@@ -166,7 +169,7 @@ function import_seleted_files($json_data) {
 			counter::consolidate_counter( $section_tipo, common::get_matrix_table_from_tipo($section_tipo) );
 
 		# IMPORT
-		$import_response[] = (object)tool_import_dedalo_csv::import_dedalo_csv_file($section_tipo, $ar_csv_data_final);
+		$import_response[] = (object)tool_import_dedalo_csv::import_dedalo_csv_file($section_tipo, $ar_csv_data_final, $time_machine_save);
 	}
 	#dump($result, ' result ++ '.to_string()); exit();
 
@@ -503,5 +506,3 @@ function import_images_custom($json_data) {
 }//end import_images_custom
 
 
-
-?>

@@ -127,5 +127,3 @@ function update_target_section($json_data) {
 }//end update_target_section
 
 
-
-?>

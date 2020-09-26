@@ -67,4 +67,3 @@ class button_common extends common {
 	
 
 }//end button_common
-?>

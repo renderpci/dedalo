@@ -1838,10 +1838,27 @@
 		Added 'tool_add_component_data' exception for non relationable compnents (only portals, autocomplete, etc. can use this tool)
 		Clean code
 
+
 	Valencia 14-09-2020 5.6.18
 		Added new tool QR codes
 
 
+	Valencia 18-09-2020 5.6.21
+		Added tool_import_dedalo_csv option (checkbox) to set time machine save version or not on import
+
+
+	Valencia 18-09-2020 5.6.22
+		Add component_autocomplete check property 'is_publicable'. Case Bibliography 'rsc368'
+
+
+	Valencia 23-09-2020 5.6.23
+		Added tool_administration feature. Now administrator can see a resolve self host warning when server is not properly configured
+		Fix tool metadata issues and deficiencies
+		Increase default quality value from 90 to 94 in class ImageMagick thumb generation
+		Added diffusion preference to both component_av and component_image to output clean value only instead the complete file path
+		Added tool metadata 
+
+	
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1862,12 +1879,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.18';
+	$DEDALO_VERSION = '5.6.23';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-09-2020');
+	define('DEDALO_BUILD'	, '23-09-2020');
 
 
 

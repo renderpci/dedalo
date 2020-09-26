@@ -2,34 +2,36 @@
 	
 	# CONTROLLER
 	
-	$tipo 					= $this->get_tipo();
-	$target_tipo			= $this->get_target();
-	$id						= NULL;
-	$modo					= $this->get_modo();
-	$label 					= $this->get_label();
-	$section_tipo 			= $this->get_section_tipo();
-	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo, $tipo);
-	$html_title				= "Info about $tipo";
-	$file_name 				= $modo;
+	$tipo			= $this->get_tipo();
+	$target_tipo	= $this->get_target();
+	$id				= NULL;
+	$modo			= $this->get_modo();
+	$label			= $this->get_label();
+	$section_tipo	= $this->get_section_tipo();
+	$debugger		= $this->get_debugger();
+	$permissions	= common::get_permissions($section_tipo, $tipo);
+	$html_title		= "Info about $tipo";
+	$file_name		= $modo;
 	
 	switch($modo) {
-		
+
 		case 'list':
 		case 'edit':		
-				$file_name 		= 'edit';
-				$propiedades 	= $this->get_propiedades();
-				
-				$propiedades->component_parent 	= $this->parent;	# add current parent section_id to vars
-				$propiedades->lang_filter 		= DEDALO_DATA_LANG;	# add current lang to vars
-				$propiedades_json 				= json_handler::encode($propiedades);
-	
-				# Custom js_exec_function (instead default 'trigger')
-					$js_exec_function = isset($propiedades->js_exec_function) ? $propiedades->js_exec_function : false;
-				break;
+			$file_name		= 'edit';
+			$propiedades	= $this->get_propiedades();
+			
+			$propiedades->component_parent	= $this->parent;	# add current parent section_id to vars
+			$propiedades->lang_filter		= DEDALO_DATA_LANG;	# add current lang to vars
+			$propiedades_json				= json_handler::encode($propiedades);
+
+			# Custom js_exec_function (instead default 'trigger')
+				$js_exec_function = isset($propiedades->js_exec_function) ? $propiedades->js_exec_function : false;
+			break;
 		
-		default:
-				throw new Exception("Error Processing Request. Modo '$modo' not supported by $label", 1);
+		default:		
+			// throw new Exception("Error Processing Request. Modo '$modo' not supported by $label", 1);
+			debug_log(__METHOD__."Warning: Mode '$modo' is not supported by button: '$label' ".to_string(), logger::WARNING);
+			return '';
 	}
 	
 
