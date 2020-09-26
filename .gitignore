@@ -124,3 +124,6 @@ lib/dedalo/common/js/lang/*
 
 /lib/dedalo/search/js/search copy.js
 /lib/dedalo/extras/mdcat/cercador
+
+config_private
+

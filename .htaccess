@@ -2,7 +2,6 @@
 
 # Directories are final path only, not between. 
 <FilesMatch "(\.(inc|sh|txt|tpl|backup|composer\.(json|lock))$|^#.*#$|\.php(~|\.sw[op]|\.orig\.save)$|deleted|backup|config)">
-
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
