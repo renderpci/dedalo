@@ -186,9 +186,9 @@ Dédalo have three main updates procedures:
 **SERVER SYSTEM**
 
 Dédalo in the server part is tested into the next Operating Systems:
-- CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7,5
-- Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7.5
-- Debian 8.7
+- CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7,5, 8+
+- Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7.5, 8+
+- Debian 8.7+
 - MacOsX 10.10 (deprecated update as soon as possible), 10.11, 10.12+
 
 All other Linux will be compatible but we don't test it.
@@ -197,7 +197,7 @@ Windows: is possible that Dédalo can run, but we NO TESTED.
 
 **USE**
 
-Dédalo version 4, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...). 
+Dédalo version 4+, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...). 
 Firefox situation: From the 4.8 version of Dédalo is full compatible with Firefox, and can be used in production, but we need more feedback from the users, please comment your experience. 
 
 Browser	|	Version |	certificated
@@ -208,8 +208,10 @@ Chrome	|	0 to 50 | NO
 Safari	|	10+ | YES
 Safari	|	9 | Deprecated (Please update as soon as posible)
 Safari	|	0 to 7 | NO	
-Firefox	|	50+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (10-09-2018), please test it and comment it.
+Firefox	|	60+ | YES
+Firefox	|	50 | Deprecated (Please update as soon as posible)
 Firefox	|	40-49 | NO
 Firefox	|	0-40 | NO
-EDGE	| All 	| For us NO, we don't test it. But, is possible that Dédalo run fine in the last versions, because Microsoft say that EDGE is ECMA and HTML5 standards compatible. But we insist that we don't test it.
+EDGE	|	77+ | YES
+EDGE	| All before 2019 (v45)	| For us NO, we don't test it. is possible that Dédalo run fine in the previous versions,  Microsoft say that EDGE is ECMA and HTML5 standards compatible.
 IExplorer	| All 	| NO
