@@ -104,13 +104,13 @@ SO libraries:
 
 1. Download Dédalo and copy to the httpdocs of web server
 2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
-3. Restore the file /install/db/dedalo4_install.backup to the postgres created DB. 
+3. Restore the plain sql file /install/db/dedalo4_install.pgsql (from zip version) to the postgres created DB. 
 
-		Basic pg_restore:
-		pg_restore /install/db/dedalo4_install.backup dedalo_xx
+        Basic psql command:
+        psql --dbname=XXX --file "/install/db/dedalo4_install.pgsql"
 
-		Example of actual use:
-		pg_restore --host localhost --port 5432 --username "XXX" --dbname "dedalo4_xx" --role "xxx" --no-owner --no-privileges --clean --verbose "/install/db/dedalo4_install.backup"
+        Example of actual use:
+        psql --echo-errors --dbname=XXX --file "/install/db/dedalo4_install.pgsql"
 
 4. Download the dependences and libs for Dédalo and install it into the /lib/ folder. In some cases you need see the /lib/dedalo/config/sample.config4.php file in order to change or customize the installation.
 5. Rename the /lib/dedalo/config/sample.config4.php to /lib/dedalo/config/config4.php.
