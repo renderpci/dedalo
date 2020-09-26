@@ -1,4 +1,25 @@
 **UPDATES AND CHANGES**
+
+*ver 5.6.0 21-06-2020
+
+'Attention. Key update. The ontology structure will be updated with new column for V6 compatibility! 
+
+Do not update the ontology using "Update structure" link in administration tools before update to 5.6.0 version. You can lost the ontology data.'
+
+Follow this steps:
+	1 - Dédalo version. Verify that you are running version code >= 5.5.59 (if not, update to it).
+	2 - Backup. Make a complete DB backup and make sure is finished and reliable (you can use "Make backup" link in administration tools)
+	3 - Run update.
+	4 - Verify that the ontology has the new "properties" column in "jer_dd" table with jsonb format.
+		
+		If the column exist you can update the ontology with the link in the administration tool. "Update structure".
+		Else you can do this update manually in SQL with the command:
+		
+			ALTER TABLE "jer_dd" ADD "properties" jsonb NULL;
+	
+	*IMPORTANT*
+	Starting today 21-06-2020, the ontology files will be incompatible with the jer_dd columns, if you update the ontology before run 5.6.0 update you will need re-import the ontology data manually, because you can not access to administrator tool.
+
 *Ver 5.0.0 - 12-11-2018
 Today we introduce the upgrade of the V4 to V5
 
