@@ -127,3 +127,4 @@ lib/dedalo/common/js/lang/*
 
 config_private
 
+/install/db/config_install.txt
