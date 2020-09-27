@@ -905,88 +905,95 @@ function update_dedalo_code($json_data) {
 
 	// is_preview (on true, exec rsync in preview mode --dry-run)
 		$is_preview = isset($is_preview) ? json_decode($is_preview) : false;
-
-
-	$result = new stdClass();
 	
-	// Download zip file from server (master)
-		$contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
-		if (!$contents) {
-			$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
-			debug_log(__METHOD__." $response->msg", logger::ERROR);
-			return $response;
-		}
-		$result->download_file = [
-			"Donwloaded file: " . DEDALO_SOURCE_VERSION_URL,
-			"Time: " . exec_time_unit($start_time,'secs')." secs"
-		];
 
-	// Save contents to local dir
-		if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
-			if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
-				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+	try{
+
+		$result = new stdClass();	
+	
+		// Download zip file from server (master)
+			$contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
+			if (!$contents) {
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
 				debug_log(__METHOD__." $response->msg", logger::ERROR);
 				return $response;
 			}
-		}
-		$file_name		= 'dedalo5_code.zip';
-		$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
-		$put_contents	= file_put_contents($target_file, $contents);
-		if (!$put_contents) {			
-			$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
-			debug_log(__METHOD__." $response->msg", logger::ERROR);
-			return $response;
-		}
-		$result->write_file = [
-			"Writed file: "	. $target_file,
-			"File size: "	. format_size_units( filesize($target_file) )
-		];
+			$result->download_file = [
+				"Donwloaded file: " . DEDALO_SOURCE_VERSION_URL,
+				"Time: " . exec_time_unit($start_time,'secs')." secs"
+			];
 
-	// extract files fom zip
-		$zip = new ZipArchive;
-		$res = $zip->open($target_file);
-		if ($res!==true) {
-			$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
-			debug_log(__METHOD__." $response->msg", logger::ERROR);
-			return $response;
-		}
-		$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
-		$zip->close();
-		debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);		
-		$result->extract = [
-			"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
-		];
+		// Save contents to local dir
+			if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
+				if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+					debug_log(__METHOD__." $response->msg", logger::ERROR);
+					return $response;
+				}
+			}
+			$file_name		= 'dedalo5_code.zip';
+			$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
+			$put_contents	= file_put_contents($target_file, $contents);
+			if (!$put_contents) {			
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
+				debug_log(__METHOD__." $response->msg", logger::ERROR);
+				return $response;
+			}
+			$result->write_file = [
+				"Writed file: "	. $target_file,
+				"File size: "	. format_size_units( filesize($target_file) )
+			];
 
-	// rsync 
-		$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo5_code' from 'dedalo5_code.zip'
-		$target		= DEDALO_ROOT;
-		$exclude	= ' --exclude="*/dedalo_4*" --exclude="media" ';
-		$aditional	= $is_preview===true ? ' --dry-run ' : '';
-		$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
-		$output		= shell_exec($command);
-		$result->rsync = [
-			"command: " . $command,
-			"output: "  . str_replace(["\n","\r"], '<br>', $output),
-		];
+		// extract files fom zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
+			$zip = new ZipArchive();
+			$res = $zip->open($target_file);
+			if ($res!==true) {
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+				debug_log(__METHOD__." $response->msg", logger::ERROR);
+				return $response;
+			}
+			$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
+			$zip->close();
+			debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);		
+			$result->extract = [
+				"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
+			];
 
-	// remove used files and folders
-		$command_rm_dir		= "rm -R -f $source";
-		$output_rm_dir		= shell_exec($command_rm_dir);
-		$result->remove_dir	= [
-			"command_rm_dir: " . $command_rm_dir,
-			"output_rm_dir: "  . $output_rm_dir
-		];
-		$command_rm_file 	= "rm $target_file";
-		$output_rm_file		= shell_exec($command_rm_file);
-		$result->remove_file= [
-			"command_rm_file: " . $command_rm_file,
-			"output_rm_file: "  . $output_rm_file
-		];
+		// rsync 
+			$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo5_code' from 'dedalo5_code.zip'
+			$target		= DEDALO_ROOT;
+			$exclude	= ' --exclude="*/dedalo_4*" --exclude="media" ';
+			$aditional	= $is_preview===true ? ' --dry-run ' : '';
+			$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
+			$output		= shell_exec($command);
+			$result->rsync = [
+				"command: " . $command,
+				"output: "  . str_replace(["\n","\r"], '<br>', $output),
+			];
 
+		// remove used files and folders
+			$command_rm_dir		= "rm -R -f $source";
+			$output_rm_dir		= shell_exec($command_rm_dir);
+			$result->remove_dir	= [
+				"command_rm_dir: " . $command_rm_dir,
+				"output_rm_dir: "  . $output_rm_dir
+			];
+			$command_rm_file 	= "rm $target_file";
+			$output_rm_file		= shell_exec($command_rm_file);
+			$result->remove_file= [
+				"command_rm_file: " . $command_rm_file,
+				"output_rm_file: "  . $output_rm_file
+			];
 
-	$response->result	= $result;
-	$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
-
+		// response ok
+			$response->result	= $result;
+			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+	
+	
+	} catch (Exception $e) {
+		
+		$response->msg = $e->getMessage();
+	}
 
 
 	// Debug
