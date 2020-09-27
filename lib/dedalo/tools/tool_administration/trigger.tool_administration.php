@@ -27,7 +27,7 @@ function make_backup($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			
 		$response->debug = $debug;
 	}
@@ -55,7 +55,7 @@ function force_unlock_all_components($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
 
 		$response->debug = $debug;
 	}
@@ -79,7 +79,7 @@ function get_active_users($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
 
 		$response->debug = $debug;
 	}
@@ -101,7 +101,7 @@ function build_structure_css($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
 
 		$response->debug = $debug;
 	}
@@ -148,14 +148,13 @@ function update_structure($json_data) {
 			# Append msg
 			$response->msg .= $res_export_structure->msg;
 			# Exec time
-			$export_exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$export_exec_time	= exec_time_unit($start_time,'secs')." secs";
 			$prev_time 			= microtime(1);	
 		}
 		
 
 	# IMPORT
 		$res_import_structure = backup::import_structure();
-
 		if ($res_import_structure->result===false) {
 			$response->msg .= $res_import_structure->msg;
 			return $response;
@@ -208,7 +207,7 @@ function update_structure($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time			= exec_time_unit($start_time,'secs')." secs";
 			$debug->export_exec_time 	= $export_exec_time;
 			$debug->import_exec_time 	= $import_exec_time;			
 					
@@ -264,7 +263,7 @@ function delete_component_tipo_in_matrix_table($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
@@ -312,7 +311,7 @@ function renumerate_sections($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
@@ -351,7 +350,7 @@ function update_version($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";		
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";		
 
 		$response->debug = $debug;
 	}
@@ -394,7 +393,7 @@ function skip_publication_state_check($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
@@ -426,7 +425,7 @@ function remove_av_temporals($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";		
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";		
 
 		$response->debug = $debug;
 	}
@@ -485,7 +484,7 @@ function move_component_data($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
@@ -533,7 +532,7 @@ function remove_inverse_locators_in_section($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
@@ -586,7 +585,7 @@ function propagate_relations($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
@@ -633,7 +632,7 @@ function update_jer_from_4_0_to_4_1($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
@@ -708,7 +707,7 @@ function convert_search_object_to_sql_query($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			#foreach($vars as $name) {
 			#	$debug->{$name} = $$name;
 			#}
@@ -752,7 +751,7 @@ function export_hierarchy($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 			#foreach($vars as $name) {
 			#	$debug->{$name} = $$name;
 			#}
@@ -808,7 +807,7 @@ function export_structure_to_json($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 		$response->debug = $debug;
 	}
 
@@ -831,7 +830,7 @@ function import_structure_from_json($json_data) {
 	# set vars
 	$vars = array('tld_list');
 		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);			
+			$$name = common::setVarData($name, $json_data);
 			// if (empty($$name)) {
 			// 	$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 			// 	return $response;
@@ -852,7 +851,7 @@ function import_structure_from_json($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 		$response->debug = $debug;
 	}
 
@@ -861,7 +860,10 @@ function import_structure_from_json($json_data) {
 	
 
 
-
+/**
+* LONG_TIME_PROCESS
+* @return object $response
+*/
 function long_time_process($json_data) {
 	global $start_time;
 
@@ -880,5 +882,100 @@ function long_time_process($json_data) {
 		$response->msg 		= 'Ok. Request done. secondes: '.$seconds;
 
 	return (object)$response;
-}
+}///end long_time_process
+
+
+
+/**
+* UPDATE_DEDALO_CODE
+* @return object $response
+*/
+function update_dedalo_code($json_data) {
+	global $start_time;		
+
+	$response = new stdClass();
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('is_preview');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);			
+		}
+
+	// is_preview (on true, exec rsync in preview mode --dry-run)
+		$is_preview = isset($is_preview) ? json_decode($is_preview) : false;
+
+
+	$result = new stdClass();
+	
+	// Download zip file from server (master)
+		$contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
+		if (!$contents) {
+			$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
+			debug_log(__METHOD__." $response->msg", logger::ERROR);
+			return $response;
+		}
+		$result->download_file = [
+			"Donwloaded file: " . DEDALO_SOURCE_VERSION_URL,
+			"Time: " . exec_time_unit($start_time,'secs')." secs"
+		];
+
+	// Save contents to local dir
+		$file_name		= 'dedalo5_code.zip';
+		$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
+		$put_contents	= file_put_contents($target_file, $contents);
+		if (!$put_contents) {			
+			$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
+			debug_log(__METHOD__." $response->msg", logger::ERROR);
+			return $response;
+		}
+		$result->write_file = [
+			"Writed file: "	. $target_file,
+			"File size: "	. format_size_units( filesize($target_file) ),
+		];
+
+	// extract files fom zip
+		$zip = new ZipArchive;
+		$res = $zip->open($target_file);
+		if ($res!==true) {
+			$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+			debug_log(__METHOD__." $response->msg", logger::ERROR);
+			return $response;
+		}
+		$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
+		$zip->close();
+		debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);		
+		$result->extract = [
+			"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
+		];
+
+	// rsync 
+		$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename'] .'/'; // like 'dedalo5_code' from 'dedalo5_code.zip'
+		$target		= DEDALO_ROOT . '/';
+		$exclude	= ' --exclude="*/dedalo_4*" --exclude="media" ';
+		$aditional	= $is_preview===true ? ' --dry-run ' : '';
+		$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source .' ' . $target;
+		$output		= shell_exec($command);
+		$result->rsync = [
+			"command: " . $command,
+			"output: "  . str_replace(["\n","\r"], '<br>', $output),
+		];
+
+
+	$response->result	= $result;
+	$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+
+
+
+	// Debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
+			$response->debug = $debug;
+		}
+
+
+	return (object)$response;
+}//end update_dedalo_code
 
