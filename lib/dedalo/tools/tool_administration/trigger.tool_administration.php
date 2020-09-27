@@ -963,15 +963,15 @@ function update_dedalo_code($json_data) {
 		];
 
 	// remove used files and folders
-		$command_rm_dir	= "rm -R -f $source";
-		$output_rm_dir	= shell_exec($command_rm_dir);
+		$command_rm_dir		= "rm -R -f $source";
+		$output_rm_dir		= shell_exec($command_rm_dir);
 		$result->remove_dir	= [
 			"command_rm_dir: " . $output_rm_dir,
 			"output_rm_dir: "  . $output_rm_dir
 		];
-		$command_rm_file= "rm $target_file";
-		$output_rm_file	= shell_exec($command_rm_file);
-		$result->remove_file	= [
+		$command_rm_file 	= "rm $target_file";
+		$output_rm_file		= shell_exec($command_rm_file);
+		$result->remove_file= [
 			"command_rm_file: " . $output_rm_file,
 			"output_rm_file: "  . $output_rm_file
 		];
