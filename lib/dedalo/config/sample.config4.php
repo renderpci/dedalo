@@ -102,10 +102,10 @@
 
 		# Session
 		session_start_manager([
-						'save_handler' 		=> 'files',
-						'timeout_seconds'	=> $timeout_seconds,
-						'session_name' 		=> 'dedalo_'.DEDALO_ENTITY
-					]);
+			'save_handler'		=> 'files',
+			'timeout_seconds'	=> $timeout_seconds,
+			'session_name'		=> 'dedalo_'.DEDALO_ENTITY
+		]);
 
 	}//end if (session_status() !== PHP_SESSION_ACTIVE)
 
@@ -237,13 +237,14 @@
 
 	#
 	# DEDALO_PREFIX_TIPOS
-	define('DEDALO_PREFIX_TIPOS', serialize( ['dd',
-											  'rsc',
-											  'hierarchy',
-											  'lg',
-											  'oh',
-											  'ich']
-											));
+	define('DEDALO_PREFIX_TIPOS', serialize([
+		'dd',
+		'rsc',
+		'hierarchy',
+		'lg',
+		'oh',
+		'ich'
+	]));
 
 	# Fallback section
 	define('MAIN_FALLBACK_SECTION'				,'oh1'); # go after login (tipo inventory)
@@ -551,7 +552,7 @@
 ################################################################
 # DEDALO_CODE
 	// server side (master)
-		// server git files (master) 
+		// server git files (master) like /home/dedalo/master_dedalo.git
 		define('DEDALO_CODE_SERVER_GIT_DIR'		, '/home/dedalo/master_dedalo.git');
 		// target dir where git command send the compresed file like 'dedalo5_code.zip'
 		define('DEDALO_CODE_FILES_DIR'			, DEDALO_ROOT . '/code');
