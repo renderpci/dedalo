@@ -951,23 +951,29 @@ function update_dedalo_code($json_data) {
 		];
 
 	// rsync 
-		$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename'] .'/'; // like 'dedalo5_code' from 'dedalo5_code.zip'
-		$target		= DEDALO_ROOT . '/';
+		$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo5_code' from 'dedalo5_code.zip'
+		$target		= DEDALO_ROOT;
 		$exclude	= ' --exclude="*/dedalo_4*" --exclude="media" ';
 		$aditional	= $is_preview===true ? ' --dry-run ' : '';
-		$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source .' ' . $target;
+		$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
 		$output		= shell_exec($command);
 		$result->rsync = [
 			"command: " . $command,
-			"output: "  . str_replace(["\n","\r"], '<br>', $output)
+			"output: "  . str_replace(["\n","\r"], '<br>', $output),
 		];
 
 	// remove used files and folders
-		$command_rm	= "rm -R -f $target; rm $target_file";
-		$output_rm	= shell_exec($command_rm);
-		$result->rsync = [
-			"command: " . $output_rm,
-			"output: "  . $output_rm
+		$command_rm_dir	= "rm -R -f $source";
+		$output_rm_dir	= shell_exec($command_rm_dir);
+		$result->remove_dir	= [
+			"command_rm_dir: " . $output_rm_dir,
+			"output_rm_dir: "  . $output_rm_dir
+		];
+		$command_rm_file= "rm $target_file";
+		$output_rm_file	= shell_exec($command_rm_file);
+		$result->remove_file	= [
+			"command_rm_file: " . $output_rm_file,
+			"output_rm_file: "  . $output_rm_file
 		];
 
 
