@@ -16,43 +16,69 @@ function export_str($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= "";//'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= "";
 
-	# Dump all historic data first
-	$db_name 				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
-	$res_export_structure 	= backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-	if ($res_export_structure->result===false) {
-		$response->result 	= false;
-		$response->msg 		= $res_export_structure->msg;
-		return $response;
-	}else{
-		# Append msg
-		$response->msg .= $res_export_structure->msg;
-	}
+	// rsync trigger code HEAD from master git	
+		function update_head_code() {
 
+			$source		= DEDALO_CODE_SERVER_GIT_DIR;
+			$target		= DEDALO_CODE_FILES_DIR .'/dedalo5_code.zip';
+			$command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target "; // @see https://git-scm.com/docs/git-archive
 
+			debug_log(__METHOD__." Updated Dédalo code with command: ".to_string($command), logger::DEBUG);
+
+			$output = shell_exec($command);
+			
+			return $output;
+		}
+		try{
+
+			$output = update_head_code();
+
+			# Append msg
+			$response->msg .= $output;
+			debug_log(__METHOD__." update_head_code output OK: $response->msg ".to_string(), logger::DEBUG);
+
+		} catch (Exception $e) {
+		
+			# Append msg
+			$response->msg .= $e->getMessage();
+			debug_log(__METHOD__." update_head_code output ERROR: $response->msg ".to_string(), logger::ERROR);
+		}
+
+	// dump all historic data first
+		$db_name				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+		$res_export_structure	= backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+		if ($res_export_structure->result===false) {
+			$response->result	= false;
+			$response->msg		= $res_export_structure->msg;
+			return $response;
+		}else{
+			# Append msg
+			$response->msg .= $res_export_structure->msg;
+		}
 	
-	# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
-	$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
-	if ($res_export_structure2->result===false) {
-		$response->result 	= false;
-		$response->msg 		= $res_export_structure2->msg;
-		return $response;
-	}else{
-		# Append msg
-		$response->msg .= $res_export_structure2->msg;
-	}
+	// dump official structure version 'dedalo4_development_str.custom' (partial backup)
+		$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
+		if ($res_export_structure2->result===false) {
+			$response->result	= false;
+			$response->msg		= $res_export_structure2->msg;
+			return $response;
+		}else{
+			# Append msg
+			$response->msg .= $res_export_structure2->msg;
+		}
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";			
 
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
-
-		$response->debug = $debug;
-	}
+			$response->debug = $debug;
+		}
 	
+
 	return (object)$response;
 }//end export_str
 
@@ -130,5 +156,3 @@ function load_str_data() {
 }//end load_str_data */
 
 
-
-?>
