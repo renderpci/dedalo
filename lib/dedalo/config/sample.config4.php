@@ -548,6 +548,20 @@
 	define('STRUCTURE_DOWNLOAD_JSON_FILE', STRUCTURE_DOWNLOAD_DIR);
 
 
+################################################################
+# DEDALO_CODE
+	// server side (master)
+		// server git files (master) 
+		define('DEDALO_CODE_SERVER_GIT_DIR'		, '/home/dedalo/master_dedalo.git');
+		// target dir where git command send the compresed file like 'dedalo5_code.zip'
+		define('DEDALO_CODE_FILES_DIR'			, DEDALO_ROOT . '/code');
+	// client side
+		// target dir where git command send the compresed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		define('DEDALO_SOURCE_VERSION_URL'		, 'https://master.render.es/dedalo/code/dedalo5_code.zip');
+		// target dir where git command send the compresed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		define('DEDALO_SOURCE_VERSION_LOCAL_DIR', '/tmp/'.DEDALO_ENTITY);
+
+
 
 ################################################################
 # API
