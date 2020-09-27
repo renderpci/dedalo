@@ -8,7 +8,6 @@
  *
  * Copyright 2013, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
- * comment 4
  */
 
 
