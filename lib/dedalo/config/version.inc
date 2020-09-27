@@ -1864,7 +1864,7 @@
 		Udpated dedalo4_install database. Changed format from custom to pgsl zipped)
 	
 
-	Valencia 27-09-2020 5.6.4
+	Valencia 27-09-2020 5.6.4a
 		Added tool administration update Dédalo code feature (download from master and exec rsync on caller instalation)
 
 
@@ -1888,7 +1888,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.5';
+	$DEDALO_VERSION = '5.6.4a';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
