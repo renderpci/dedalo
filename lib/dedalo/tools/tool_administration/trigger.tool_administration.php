@@ -932,7 +932,7 @@ function update_dedalo_code($json_data) {
 		}
 		$result->write_file = [
 			"Writed file: "	. $target_file,
-			"File size: "	. format_size_units( filesize($target_file) ),
+			"File size: "	. format_size_units( filesize($target_file) )
 		];
 
 	// extract files fom zip
@@ -959,7 +959,15 @@ function update_dedalo_code($json_data) {
 		$output		= shell_exec($command);
 		$result->rsync = [
 			"command: " . $command,
-			"output: "  . str_replace(["\n","\r"], '<br>', $output),
+			"output: "  . str_replace(["\n","\r"], '<br>', $output)
+		];
+
+	// remove used files and folders
+		$command_rm	= "rm -R -f $target; rm $target_file";
+		$output_rm	= shell_exec($command_rm);
+		$result->rsync = [
+			"command: " . $output_rm,
+			"output: "  . $output_rm
 		];
 
 
