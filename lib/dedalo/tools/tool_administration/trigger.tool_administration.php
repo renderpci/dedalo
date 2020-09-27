@@ -922,6 +922,13 @@ function update_dedalo_code($json_data) {
 		];
 
 	// Save contents to local dir
+		if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
+			if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+				debug_log(__METHOD__." $response->msg", logger::ERROR);
+				return $response;
+			}
+		}
 		$file_name		= 'dedalo5_code.zip';
 		$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
 		$put_contents	= file_put_contents($target_file, $contents);
@@ -966,13 +973,13 @@ function update_dedalo_code($json_data) {
 		$command_rm_dir		= "rm -R -f $source";
 		$output_rm_dir		= shell_exec($command_rm_dir);
 		$result->remove_dir	= [
-			"command_rm_dir: " . $output_rm_dir,
+			"command_rm_dir: " . $command_rm_dir,
 			"output_rm_dir: "  . $output_rm_dir
 		];
 		$command_rm_file 	= "rm $target_file";
 		$output_rm_file		= shell_exec($command_rm_file);
 		$result->remove_file= [
-			"command_rm_file: " . $output_rm_file,
+			"command_rm_file: " . $command_rm_file,
 			"output_rm_file: "  . $output_rm_file
 		];
 
