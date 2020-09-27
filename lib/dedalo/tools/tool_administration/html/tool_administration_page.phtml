@@ -540,6 +540,16 @@
 				$html   .= "</div>";#end panel_option
 
 
+			#
+			# UPDATE DEDALO CODE
+				$html   .= "<div class=\"panel_option form-inline\">";
+				$html   .= "<span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
+				$html   .= "<input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Update Dédalo code\" data-mode=\"update_dedalo_code\" onclick=\"tool_administration.update_dedalo_code(this,event)\" /> ";
+				$html   .= '<input type="checkbox" id="update_dedalo_code_check" value="true"> <label for="update_dedalo_code_check">Preview only</label>';
+				$html   .= "<div id=\"update_dedalo_code_response\"></div>";
+				$html   .= "</div>";
+
+
 
 		$html   .= "  </div>";//end panel-body
 		$html   .= "</div>";//end panel-primary

@@ -1862,8 +1862,12 @@
 	Valencia 26-09-2020 5.6.4
 		Update Dedalo_basic_library_pack
 		Udpated dedalo4_install database. Changed format from custom to pgsl zipped)
-
 	
+
+	Valencia 27-09-2020 5.6.4
+		Added tool administration update Dédalo code feature (download from master and exec rsync on caller instalation)
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1884,12 +1888,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.4';
+	$DEDALO_VERSION = '5.6.5';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '26-09-2020');
+	define('DEDALO_BUILD'	, '27-09-2020');
 
 
 
