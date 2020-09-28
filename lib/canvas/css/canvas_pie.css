@@ -1,0 +1,106 @@
+@charset "UTF-8";
+/* CSS Document */
+
+
+body {
+  background-color:transparent;
+  color: #333;
+  font-family: "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif;
+  font-size: 0.9em;
+  padding: 15px;
+}
+
+.wideBox {
+	clear: both;
+	text-align: center;
+	margin-bottom: 50px;
+	padding: 10px;
+	background: #ebedf2;
+	line-height: 80%;
+	border-top-width: 1px;
+	border-right-width: 1px;
+	border-bottom-width: 1px;
+	border-top-style: solid;
+	border-right-style: solid;
+	border-bottom-style: solid;
+	border-top-color: #333;
+	border-right-color: #333;
+	border-bottom-color: #333;
+}
+
+#container {
+  width: 950px;
+  margin: 0 auto;
+}
+
+
+#chart, #chartData {
+	background: #ebedf2 url("../images/gradient.png") repeat-x 0 0;
+	border: 1px solid #333;
+}
+
+/* PIE */
+#chart {
+  display: block;
+  margin: 0 0 50px 0;
+  float: left;
+  cursor: pointer;
+  /*
+  box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
+  */
+  z-index:0;
+  /* position: fixed;  top:50px; */
+}
+
+/* TABLA */
+#chartData {
+  width: 287px;
+  position:relative;
+  margin: 0 40px 0 0;
+  float: none;
+  border-collapse: collapse;
+  overflow:hidden;
+  /*
+  box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
+  */
+  background-position: 0 -100px;
+  z-index:2;
+  margin-left:200px;
+}
+
+#chartData th, #chartData td {
+	padding: 0.5em;
+	text-align: left;
+	border-top-width: 1px;
+	border-right-width: 1px;
+	border-bottom-width: 1px;
+	border-top-style: dotted;
+	border-right-style: dotted;
+	border-bottom-style: dotted;
+	border-top-color: #666;
+	border-right-color: #666;
+	border-bottom-color: #666;
+}
+
+#chartData th {
+  border-bottom: 2px solid #333;
+  text-transform: uppercase;
+}
+
+#chartData td {
+  cursor: pointer;
+}
+
+#chartData td.highlight {
+  background: #e8e8e8;
+}
+
+#chartData tr:hover td {
+  background: #f0f0f0;
+}
+
+.no_hay_resultados_coincidentes { padding-top:5px; font-family:Verdana, Geneva, sans-serif; color:#999999}
