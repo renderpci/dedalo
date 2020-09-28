@@ -104,56 +104,54 @@ abstract class counter {
 	* @param string $section_tipo
 	* @param string $matrix_table
 	* @param string $counter_matrix_table default matrix_counter
-	* @return bool true if update/create counter, false if not
+	* @return bool true if create counter, false if not
 	*/
 	public static function consolidate_counter( $section_tipo, $matrix_table, $counter_matrix_table='matrix_counter' ) {
 		
-		# BIGGER_SECTION_ID . Search bigger section_tipo existent
-		$strQuery = 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
-		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
-		if(!$result) throw new Exception("Error Processing Request. DB error on get last section_id of tipo: '$section_tipo' - table: '$matrix_table'", 1);
-		$rows 	  = (array)pg_fetch_assoc($result);
+		$counter_created = false;
 
-		$bigger_section_id = reset($rows);
+		// BIGGER_SECTION_ID . Search bigger section_tipo existent
+			$strQuery	= 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
+			if(!$result) throw new Exception("Error Processing Request. DB error on get last section_id of tipo: '$section_tipo' - table: '$matrix_table'", 1);
+			$rows		= (array)pg_fetch_assoc($result);
+			$bigger_section_id = reset($rows);
 			if (empty($bigger_section_id)) {
 				return false;
 			}
-
-		#
-		# UPDATE COUNTER WITH BIGGEST VALUE
-		$bigger_section_id = (int)$bigger_section_id; # update_counter set current value + 1. For this we pass current -1 to consolidate counter	
-		if ($bigger_section_id<0) {
-			$bigger_section_id=0;
-		}
 		
-		#
-		# TEST IF COUNTER EXISTS BEFORE SET	
-		$counter_created = false;
-		# When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value				
-		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$counter_matrix_table.'" WHERE tipo = $1 LIMIT 1';
-		$result	  	= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
-		if(!$result) throw new Exception("Error Processing Request. DB error on get counter value", 1);
-		$rows 		= pg_num_rows($result);
-		if ($rows<1) {
-			# COUNTER NOT EXITS. Call update counter with value zero to force create new
-			counter::update_counter($section_tipo, $counter_matrix_table, 0); # Zero is important
-			$counter_created = true;
-		}
-
-		# $counter_number = pg_fetch_result($result, 0, 0);			
-		# COUNTER EXISTS. But value is different than bigger_section_id
-		if($bigger_section_id>0) {
-			# update_counter with bigger_section_id value 			
-			$strQuery = 'UPDATE "'.$counter_matrix_table.'" SET dato = $1 WHERE tipo = $2';
-			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $bigger_section_id, $section_tipo ));
-			if(!$result)throw new Exception("Error Processing Request. DB error on update counter value", 1);
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Consolidated counter with value: dato:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
-			}			
-		}					
-		#debug_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table] ".to_string(), logger::DEBUG);
+		// UPDATE COUNTER WITH BIGGEST VALUE
+			$bigger_section_id = (int)$bigger_section_id; # update_counter set current value + 1. For this we pass current -1 to consolidate counter	
+			if ($bigger_section_id<0) {
+				$bigger_section_id=0;
+			}		
 		
-		return true;
+		// TEST IF COUNTER EXISTS BEFORE SET
+			// When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value
+			$strQuery	= 'SELECT dato AS counter_number FROM "'.$counter_matrix_table.'" WHERE tipo = $1 LIMIT 1';
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
+			if(!$result) throw new Exception("Error Processing Request. DB error on get counter value", 1);
+			$rows		= pg_num_rows($result);
+			if ($rows<1) {
+				# COUNTER NOT EXITS. Call update counter with value zero to force create new
+				counter::update_counter($section_tipo, $counter_matrix_table, 0); # Zero is important
+				$counter_created = true;
+			}
+		 		
+		// COUNTER EXISTS. But value is different than bigger_section_id
+			if($bigger_section_id>0) {
+				# update_counter with bigger_section_id value 			
+				$strQuery	= 'UPDATE "'.$counter_matrix_table.'" SET dato = $1 WHERE tipo = $2';
+				$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $bigger_section_id, $section_tipo ));
+				if(!$result) throw new Exception("Error Processing Request. DB error on update counter value", 1);
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." Consolidated counter with value: dato:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
+				}
+			}
+			// debug_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table] ".to_string(), logger::DEBUG);
+		
+
+		return $counter_created;
 	}//end consolidate_counter
 
 
