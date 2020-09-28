@@ -1868,6 +1868,10 @@
 		Added tool administration update Dédalo code feature (download from master and exec rsync on caller instalation)
 		Fix update_head_code issues on trigger.db_utils.php (used by master only)
 
+	
+	Valencia 27-09-2020 5.6.4e
+		Fixed error on Dédalo counter when new counter is created and some record already exists in section (users case) that generates a incorrect id (2)
+
 
 
 	WORK IN PROGRESS
@@ -1889,12 +1893,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.6.4c';
+	$DEDALO_VERSION = '5.6.4e';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '27-09-2020');
+	define('DEDALO_BUILD'	, '28-09-2020');
 
 
 

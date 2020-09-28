@@ -882,17 +882,22 @@ class section extends common {
 				if ($options->forced_create_record===false) {
 
 					// Use normal incremental counter
-					$matrix_table_counter 	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
-					$current_id_counter 	= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+					$matrix_table_counter	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
+					$current_id_counter		= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+					$counter_created		= false;
 
 					// Create a counter if not exists
 						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-							$consolidate_counter 	= counter::consolidate_counter( $tipo, $matrix_table, $matrix_table_counter );
+							
+							$counter_created = counter::consolidate_counter( $tipo, $matrix_table, $matrix_table_counter );
+							
 							// Re-check counter value
-							$current_id_counter 	= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+							$current_id_counter = (int)counter::get_counter_value($tipo, $matrix_table_counter);
 						}
 
-					$section_id_counter 	= $current_id_counter+1;
+					$section_id_counter = ($counter_created===true)
+						? $current_id_counter		// new final value is set to the created counter: 1
+						: $current_id_counter+1;	// already exists. Increase value
 
 					# section_id. Fix section_id (Non return point, next calls to Save will be updates)
 					$this->section_id = (int)$section_id_counter;
@@ -1028,7 +1033,9 @@ class section extends common {
 
 					}else{
 						# Counter update
-						counter::update_counter($tipo, $matrix_table_counter, $current_id_counter);
+						if ($counter_created!==true) {
+							counter::update_counter($tipo, $matrix_table_counter, $current_id_counter);
+						}						
 					}
 				}
 
