@@ -23,6 +23,7 @@ test
 *.graffle
 *.data
 .smbdelete*
+cache/*
 
 # install/import/hierarchy
 str_data*
