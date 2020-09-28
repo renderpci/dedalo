@@ -36,6 +36,28 @@ lib/dedalo/diffusion/diffusion_index_ts_V40
 lib/dedalo/publication/client_api
 #lib/dedalo/common/js/lang/*
 
+# add some libraries
+!lib/background-color-theif
+!lib/bootstrap
+!lib/canvas
+!lib/d3
+!lib/dd_node
+!lib/javascript_load_image
+!lib/javascript-templates
+!lib/jquery
+!lib/json-logic
+!lib/jsoneditor
+!lib/leaflet
+!lib/nvd3
+!lib/paper
+!lib/pdfjs
+!lib/Smalot
+# !lib/tcpdf
+!lib/tinymce
+# !lib/vexflow
+!lib/Zend
+
+
 # extras ignore all except common
 lib/dedalo/extras/*
 !lib/dedalo/extras/oh
@@ -131,3 +153,50 @@ config_private
 /install/db/config_install.txt
 
 saml_config.php
+
+/lib/background-color-theif/README.md
+/lib/background-color-theif/demo.html
+/lib/background-color-theif/demo.js
+/lib/bootstrap/CHANGELOG.md
+/lib/bootstrap/CNAME
+/lib/bootstrap/CONTRIBUTING.md
+/lib/bootstrap/Gruntfile.js
+/lib/bootstrap/LICENSE
+/lib/bootstrap/README.md
+/lib/bootstrap/_config.yml
+/lib/bootstrap/bower.json
+/lib/bootstrap/composer.json
+/lib/bootstrap/css/
+/lib/bootstrap/docs/
+/lib/bootstrap/fonts/
+/lib/bootstrap/grunt/
+/lib/bootstrap/img/
+/lib/bootstrap/js/tests/
+/lib/bootstrap/less/
+/lib/bootstrap/nuget/
+/lib/bootstrap/package.js
+/lib/bootstrap/package.json
+/lib/bootstrap/test-infra/
+/lib/d3/CONTRIBUTING.md
+/lib/d3/LICENSE
+/lib/d3/README.md
+/lib/d3/bin/
+/lib/d3/composer.json
+/lib/d3/lib/colorbrewer/LICENSE
+/lib/d3/lib/geographiclib/
+/lib/d3/lib/penner/
+/lib/d3/lib/polymaps/
+/lib/d3/lib/protovis/
+/lib/d3/lib/rhill-voronoi/
+/lib/d3/lib/science/LICENSE
+/lib/d3/package.js
+/lib/d3/package.json
+/lib/javascript_load_image/.gitignore
+/lib/javascript_load_image/LICENSE.txt
+/lib/javascript_load_image/README.md
+/lib/javascript_load_image/package.json
+/lib/javascript-templates/.gitignore
+/lib/javascript-templates/Gruntfile.js
+/lib/javascript-templates/README.md
+/lib/javascript-templates/bower.json
+/lib/javascript-templates/package.json
