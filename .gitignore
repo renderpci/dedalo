@@ -23,6 +23,7 @@ test
 *.graffle
 *.data
 .smbdelete*
+cache/*
 
 # install/import/hierarchy
 str_data*
@@ -128,3 +129,5 @@ lib/dedalo/common/js/lang/*
 config_private
 
 /install/db/config_install.txt
+
+saml_config.php
