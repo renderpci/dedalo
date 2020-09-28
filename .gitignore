@@ -200,3 +200,5 @@ saml_config.php
 /lib/javascript-templates/README.md
 /lib/javascript-templates/bower.json
 /lib/javascript-templates/package.json
+.svn
+
