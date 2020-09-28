@@ -18,46 +18,45 @@
 
 ################################################################
 # DEDALO 4 MAIN VARS
-	define('DEDALO_HOST'			, $_SERVER['HTTP_HOST'] );
-	define('DEDALO_PROTOCOL'		, (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
+	define('DEDALO_HOST',			$_SERVER['HTTP_HOST'] );
+	define('DEDALO_PROTOCOL',		(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
 
 	# Dedalo paths
-	define('DEDALO_ROOT'			, dirname(dirname(dirname(dirname(__FILE__)))));
-	#define('DEDALO_ROOT_WEB'		, '/'. substr(substr($_SERVER["REQUEST_URI"],1), 0,  strpos(substr($_SERVER["REQUEST_URI"],1), "/")));
-	define('DEDALO_ROOT_WEB'		, explode('/lib/', $_SERVER["REQUEST_URI"])[0]);
+	define('DEDALO_ROOT',			dirname(dirname(dirname(dirname(__FILE__)))));
+	define('DEDALO_ROOT_WEB',		explode('/lib/', $_SERVER["REQUEST_URI"])[0]);
 
-	define('DEDALO_LIB_BASE_PATH'	, dirname( dirname(__FILE__) ));
-	define('DEDALO_LIB_BASE_URL'	, DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_LIB_BASE_PATH)) . '/'. basename(DEDALO_LIB_BASE_PATH) );
+	define('DEDALO_LIB_BASE_PATH',	dirname( dirname(__FILE__) ));
+	define('DEDALO_LIB_BASE_URL',	DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_LIB_BASE_PATH)) . '/'. basename(DEDALO_LIB_BASE_PATH) );
 
-	define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
+	define('DEDALO_EXTRAS_PATH',	DEDALO_LIB_BASE_PATH .'/extras');
 
 	# Dedalo information
-	define('DEDALO_SALT_STRING'		, 'dedalo_cuatro');
+	define('DEDALO_SALT_STRING',	'dedalo_cuatro');
 
 	# TIME ZONE : Zona horaria (for backups archive names)
-	define('DEDALO_TIMEZONE'		, 'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
+	define('DEDALO_TIMEZONE',		'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
 	# SET LOCALE (Spanish for example)
-	#setlocale(LC_ALL,'en_EN');
-	setlocale(LC_ALL,'es_ES'); 			// For Mac
-	#setlocale(LC_ALL, 'es_ES.utf8');	// For Linux
+	// setlocale(LC_ALL,'en_EN');
+	// setlocale(LC_ALL,'es_ES');		// For Mac
+	setlocale(LC_ALL, 'es_ES.utf8');	// For Linux
 
 
 
 ################################################################
 # DEDALO 4 ENTITY
-	define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
+	define('DEDALO_ENTITY',			'my_entity_name'); # Like 'dedalo4'
 	# DEDALO_ENTITY_LABEL . (Showed title of html pages)
-	define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
+	define('DEDALO_ENTITY_LABEL',	DEDALO_ENTITY);
 	# DEDALO_ENTITY_ID . (From Dédalo private list)
-	define('DEDALO_ENTITY_ID', 0);
+	define('DEDALO_ENTITY_ID',		0);
 	# DEVELOPMENT_SERVER
-	define('DEVELOPMENT_SERVER'	, false);
+	define('DEVELOPMENT_SERVER',	false);
 
 
 
 ################################################################
 # CACHE MANAGER
-	define('DEDALO_CACHE_MANAGER', false );	# redis / memcached / zebra_db / false
+	define('DEDALO_CACHE_MANAGER',	false );	# redis / memcached / zebra_db / false
 	if(DEDALO_CACHE_MANAGER) {
 		define('DEDALO_CACHE_MANAGER_DB', 'cache_'.substr(DEDALO_HOST, 0,-5) );
 		include(DEDALO_LIB_BASE_PATH.'/config/cache_manager.php');
@@ -114,9 +113,9 @@
 ################################################################
 # BACKUP : Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false
-	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
+	define('DEDALO_BACKUP_ON_LOGIN',	true);
 	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
-	define('DEDALO_BACKUP_TIME_RANGE', 4);
+	define('DEDALO_BACKUP_TIME_RANGE',	8);
 
 
 
@@ -137,7 +136,7 @@
 		# SUPERUSER IS LOGGED
 		(
 			isset($_SESSION['dedalo4']['auth']['user_id'])
-			&& 	 ($_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
+			&&	 ($_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
 		)
 	) {
 		$show_debug = true;
@@ -175,16 +174,16 @@
 
 	# ACTIVITY LOG DB
 	# Log application info in db
-		logger::register('activity'	, 'activity://auto:auto@auto:3306/log_data?table=matrix_activity');
+		logger::register('activity', 'activity://auto:auto@auto:3306/log_data?table=matrix_activity');
 		# Store object in logger static array var
 		logger::$obj['activity'] = logger::get_instance('activity');
 
 	# ERROR LOG FILE
 	# Log aplication errors in file
 		# Logs dir (Maintain this directory unaccessible for security)
-		define('DEDALO_LOGS_DIR'  , dirname(dirname(DEDALO_ROOT)) . '/logs');	# !! In production mode log MUST BE out of site
+		define('DEDALO_LOGS_DIR',	dirname(dirname(DEDALO_ROOT)) . '/logs');	# !! In production mode log MUST BE out of site
 		# Set file. In production mode log MUST BE out of site
-		logger::register('error', 'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');
+		logger::register('error',	'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');
 		# Store object in logger static array var
 		logger::$obj['error'] = logger::get_instance('error');
 
@@ -196,39 +195,39 @@
 ################################################################
 # LANG
 	# DEDALO STRUCTURE LANG (default 'lg-spa')
-	define('DEDALO_STRUCTURE_LANG'				, 'lg-spa');
+	define('DEDALO_STRUCTURE_LANG', 'lg-spa'); // (!) ONLY 'lg-spa', Do not change this value !
 
 	# APPLICATION LANG : Dedalo application lang
-	define('DEDALO_APPLICATION_LANGS'			, serialize([
-													"lg-spa" => "Castellano",
-													"lg-cat" => "Català",
-													"lg-eus" => "Euskara",
-													"lg-eng" => "English",
-													"lg-fra" => "French",
-													]));
-	define('DEDALO_APPLICATION_LANGS_DEFAULT'	, 'lg-spa');
-	define('DEDALO_APPLICATION_LANG'			, fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
+	define('DEDALO_APPLICATION_LANGS', serialize([
+		'lg-spa'	=> 'Castellano',
+		'lg-cat'	=> 'Català',
+		'lg-eus'	=> 'Euskara',
+		'lg-eng'	=> 'English',
+		'lg-fra'	=> 'French'
+	]));
+	define('DEDALO_APPLICATION_LANGS_DEFAULT',	'lg-spa');
+	define('DEDALO_APPLICATION_LANG',			fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 
 	# DATA LANG : Dedalo data lang
-	define('DEDALO_DATA_LANG_DEFAULT'			, 'lg-spa');
-	define('DEDALO_DATA_LANG'					, fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
-	define('DEDALO_DATA_LANG_SELECTOR' 			, false);
+	define('DEDALO_DATA_LANG_DEFAULT',			'lg-spa');
+	define('DEDALO_DATA_LANG',					fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
+	define('DEDALO_DATA_LANG_SELECTOR',			false);
 
 	# DEDALO_DATA_NOLAN
-	define('DEDALO_DATA_NOLAN'					, 'lg-nolan');
+	define('DEDALO_DATA_NOLAN',					'lg-nolan');
 
 	# Projects langs
-	define('DEDALO_PROJECTS_DEFAULT_LANGS'		, serialize([
-													'lg-spa',
-													'lg-cat',
-													'lg-eng',
-													]));
+	define('DEDALO_PROJECTS_DEFAULT_LANGS',		serialize([
+		'lg-spa',
+		'lg-cat',
+		'lg-eng',
+	]));
 	# DEDALO_DIFFUSION_LANGS
 	# Default value is the same as proyect langs. Change for custom diffusion langs
-	define('DEDALO_DIFFUSION_LANGS'				, DEDALO_PROJECTS_DEFAULT_LANGS);
+	define('DEDALO_DIFFUSION_LANGS',			DEDALO_PROJECTS_DEFAULT_LANGS);
 
 	# TRANSLATOR
-	define('DEDALO_TRANSLATOR_URL'				, 'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
+	define('DEDALO_TRANSLATOR_URL',				'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
 
 
 
@@ -247,20 +246,20 @@
 	]));
 
 	# Fallback section
-	define('MAIN_FALLBACK_SECTION'				,'oh1'); # go after login (tipo inventory)
+	define('MAIN_FALLBACK_SECTION',				'oh1'); # go after login (tipo inventory)
 	# NUMERICAL MATRIX VALUES. List of values 'yes/no' : used in login secuence before enter to system
-	define('NUMERICAL_MATRIX_VALUE_YES'			, 1);
-	define('NUMERICAL_MATRIX_VALUE_NO'			, 2);
+	define('NUMERICAL_MATRIX_VALUE_YES',		1);
+	define('NUMERICAL_MATRIX_VALUE_NO',			2);
 	# PERMISSIONS DEDALO DEFAULT ROOT
-	define('DEDALO_PERMISSIONS_ROOT'			, 1);
+	define('DEDALO_PERMISSIONS_ROOT',			1);
 	# MAX ROWS . ROWS LIST MAX RECORDS PER PAGE
-	define('DEDALO_MAX_ROWS_PER_PAGE'			, 10);
+	define('DEDALO_MAX_ROWS_PER_PAGE',			10);
 	# USER PROFLE BY DEFAULT
-	define('DEDALO_PROFILE_DEFAULT'				, 2); // User (defined in profiles)
+	define('DEDALO_PROFILE_DEFAULT',			2); // User (defined in profiles)
 	# DEDALO_DEFAULT_PROJECT. Default section_id of target filter section
-	define('DEDALO_DEFAULT_PROJECT'				, 1);
+	define('DEDALO_DEFAULT_PROJECT',			1);
 	# DEDALO_FILTER_SECTION_TIPO_DEFAULT. Target filter section (actually dd153)
-	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT'	, DEDALO_SECTION_PROJECTS_TIPO); // dd153 Projects section (dd tipos)
+	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT',DEDALO_SECTION_PROJECTS_TIPO); // dd153 Projects section (dd tipos)
 
 
 
@@ -268,29 +267,28 @@
 # LIBS PATH
 
 	# JQUERY JS LIB
-	define('JQUERY_LIB_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');
+	define('JQUERY_LIB_URL_JS',			DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');
 	# JQUERY UI
-	define('JQUERY_UI_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
-	define('JQUERY_UI_URL_CSS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
+	define('JQUERY_UI_URL_JS',			DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
+	define('JQUERY_UI_URL_CSS',			DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
 	# TABLESORTER
-	define('JQUERY_TABLESORTER_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
+	define('JQUERY_TABLESORTER_JS',		DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
 	# Text editor
-	define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
-	#define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/vendor/tinymce/tinymce/tinymce.min.js');
+	define('TEXT_EDITOR_URL_JS',		DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
 	# PAPER
-	define('PAPER_JS_URL' 				, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-core.min.js');
+	define('PAPER_JS_URL',				DEDALO_ROOT_WEB .'/lib/paper/dist/paper-core.min.js');
 	# LEAFLET
-	define('LEAFLET_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
+	define('LEAFLET_JS_URL',			DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
 	# D3
-	define('D3_URL_JS' 					, DEDALO_ROOT_WEB .'/lib/nvd3/lib/d3.v3.min.js');
+	define('D3_URL_JS',					DEDALO_ROOT_WEB .'/lib/nvd3/lib/d3.v3.min.js');
 	# NVD3
-	define('NVD3_URL_JS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
-	define('NVD3_URL_CSS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
+	define('NVD3_URL_JS',				DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
+	define('NVD3_URL_CSS',				DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
 	# BOOTSTRAP
-	define('BOOTSTRAP_CSS_URL' 			, DEDALO_ROOT_WEB .'/lib/bootstrap/dist/css/bootstrap.min.css');
-	define('BOOTSTRAP_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/bootstrap/dist/js/bootstrap.min.js');
+	define('BOOTSTRAP_CSS_URL',			DEDALO_ROOT_WEB .'/lib/bootstrap/dist/css/bootstrap.min.css');
+	define('BOOTSTRAP_JS_URL',			DEDALO_ROOT_WEB .'/lib/bootstrap/dist/js/bootstrap.min.js');
 	# CDN USE BOOL
-	define('USE_CDN' 					, false);
+	define('USE_CDN',					false);
 
 
 
@@ -298,150 +296,150 @@
 # MEDIA CONFIG
 
 	# MEDIA_BASE PATH
-	define('DEDALO_MEDIA_BASE_PATH'		, DEDALO_ROOT 		. '/media');
-	define('DEDALO_MEDIA_BASE_URL'		, DEDALO_ROOT_WEB 	. '/media');
+	define('DEDALO_MEDIA_BASE_PATH',	DEDALO_ROOT		. '/media');
+	define('DEDALO_MEDIA_BASE_URL',		DEDALO_ROOT_WEB	. '/media');
 
 
 	#
 	# AV MEDIA
 		# AV FOLDER normally '/media/av'
-		define('DEDALO_AV_FOLDER'					, '/av');
+		define('DEDALO_AV_FOLDER',					'/av');
 		# EXTENSION normally mp4, mov
-		define('DEDALO_AV_EXTENSION'				, 'mp4');
+		define('DEDALO_AV_EXTENSION',				'mp4');
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, serialize(['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg']));
+		define('DEDALO_AV_EXTENSIONS_SUPPORTED',	serialize(['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg']));
 		# MIME normally video/mp4, quicktime/mov
-		define('DEDALO_AV_MIME_TYPE'				, 'video/mp4');
+		define('DEDALO_AV_MIME_TYPE',				'video/mp4');
 		# TYPE normally h264/AAC
-		define('DEDALO_AV_TYPE'						, 'h264/AAC');
+		define('DEDALO_AV_TYPE',					'h264/AAC');
 		# QUALITY DEDALO_AV_QUALITY_ORIGINAL normally 'original'
-		define('DEDALO_AV_QUALITY_ORIGINAL'			, 'original');
+		define('DEDALO_AV_QUALITY_ORIGINAL',		'original');
 		# QUALITY DEFAULT normally '404' (estándar dedalo 72x404)
-		define('DEDALO_AV_QUALITY_DEFAULT'			, '404');
+		define('DEDALO_AV_QUALITY_DEFAULT',			'404');
 		# QUALITY FOLDERS ARRAY normally '404','audio' (Sort DESC quality)
-		define('DEDALO_AV_AR_QUALITY'				, serialize([DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']));
+		define('DEDALO_AV_AR_QUALITY',				serialize([DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']));
 		# EXTENSION normally mp4, mov
-		define('DEDALO_AV_POSTERFRAME_EXTENSION'	, 'jpg');
+		define('DEDALO_AV_POSTERFRAME_EXTENSION',	'jpg');
 		# FFMPEG PATH
-		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/bin/ffmpeg'); # Like /usr/bin/ffmpeg
+		define('DEDALO_AV_FFMPEG_PATH',				'/usr/bin/ffmpeg'); # Like /usr/bin/ffmpeg
 		# FFMPEG SETTINGS
-		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
+		define('DEDALO_AV_FFMPEG_SETTINGS',			DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
 		# FAST START PATH
-		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');	# Like /usr/bin/qt-faststart
+		define('DEDALO_AV_FASTSTART_PATH',			'/usr/bin/qt-faststart'); # Like /usr/bin/qt-faststart
 		# DEDALO_AV_FFPROBE_PATH PATH usualmente /usr/bin/ffprobe
-		define('DEDALO_AV_FFPROBE_PATH'				, '/usr/bin/ffprobe'); # Like /usr/bin/ffprobe
+		define('DEDALO_AV_FFPROBE_PATH',			'/usr/bin/ffprobe'); # Like /usr/bin/ffprobe
 		# AV STREAMER
-		define('DEDALO_AV_STREAMER'					, NULL);
+		define('DEDALO_AV_STREAMER',				NULL);
 		# AV DEDALO_AV_WATERMARK_FILE
-		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
+		define('DEDALO_AV_WATERMARK_FILE',			DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
 
 		# TEXT_SUBTITLES_ENGINE (tool_subtitles)
-		define('TEXT_SUBTITLES_ENGINE'				, DEDALO_LIB_BASE_PATH . '/tools/tool_subtitles');
+		define('TEXT_SUBTITLES_ENGINE',				DEDALO_LIB_BASE_PATH . '/tools/tool_subtitles');
 		# DEDALO_SUBTITLES_FOLDER (tool_subtitles)
-		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
+		define('DEDALO_SUBTITLES_FOLDER',			'/subtitles');
 		# EXTENSION normally vtt
-		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
+		define('DEDALO_AV_SUBTITLES_EXTENSION',		'vtt');
 
 		# DEDALO_AV_RECOMPRESS_ALL
-		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
+		define('DEDALO_AV_RECOMPRESS_ALL',			1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
 
 	#
 	# IMAGE MEDIA
 		# IMAGE FOLDER normally '/image'
-		define('DEDALO_IMAGE_FOLDER'				, '/image');
+		define('DEDALO_IMAGE_FOLDER',				'/image');
 		# EXTENSION normally jpg
-		define('DEDALO_IMAGE_EXTENSION'				, 'jpg');
+		define('DEDALO_IMAGE_EXTENSION',			'jpg');
 		# MIME normally image/jpeg
-		define('DEDALO_IMAGE_MIME_TYPE'				, 'image/jpeg');
+		define('DEDALO_IMAGE_MIME_TYPE',			'image/jpeg');
 		# TYPE normally jpeg
-		define('DEDALO_IMAGE_TYPE'					, 'jpeg');
+		define('DEDALO_IMAGE_TYPE',					'jpeg');
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, serialize(['jpg','jpeg','png','tif','tiff','bmp','psd','raw']));
+		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED',	serialize(['jpg','jpeg','png','tif','tiff','bmp','psd','raw']));
 		# QUALITY ORIGINAL normally 'original'
-		define('DEDALO_IMAGE_QUALITY_ORIGINAL'		, 'original');
+		define('DEDALO_IMAGE_QUALITY_ORIGINAL',		'original');
 		# QUALITY MODIFY of original normally 'modify'
-		define('DEDALO_IMAGE_QUALITY_RETOUCHED'		, 'modified');
+		define('DEDALO_IMAGE_QUALITY_RETOUCHED',	'modified');
 		# QUALITY DEFAULT normally '1.5MB'
-		define('DEDALO_IMAGE_QUALITY_DEFAULT'		, '1.5MB');
+		define('DEDALO_IMAGE_QUALITY_DEFAULT',		'1.5MB');
 		# DEDALO_IMAGE_THUMB_DEFAULT
-		define('DEDALO_IMAGE_THUMB_DEFAULT'			, 'thumb');
+		define('DEDALO_IMAGE_THUMB_DEFAULT',		'thumb');
 		# QUALITY FOLDERS ARRAY IN MB
-		define('DEDALO_IMAGE_AR_QUALITY'			, serialize([DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]));
+		define('DEDALO_IMAGE_AR_QUALITY',			serialize([DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]));
 		# PRINT DPI (default 150. Used to calculate print size of images -tool_image_versions-)
-		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
+		define('DEDALO_IMAGE_PRINT_DPI',			150);
 		# IMAGE LIB
-		define('DEDALO_IMAGE_LIB'					, true);
+		define('DEDALO_IMAGE_LIB',					true);
 		# IMG FILE
-		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_LIB_BASE_URL . '/media_engine/img.php');
+		define('DEDALO_IMAGE_FILE_URL',				DEDALO_LIB_BASE_URL . '/media_engine/img.php');
 
 		# LIB ImageMagick MAGICK_PATH
-		define('MAGICK_PATH'						, '/usr/bin/'); 	# Like '/usr/bin/';
+		define('MAGICK_PATH',						'/usr/bin/'); # Like '/usr/bin/';
 		# COLOR_PROFILES_PATH
-		define('COLOR_PROFILES_PATH'				, DEDALO_LIB_BASE_PATH . '/media_engine/lib/color_profiles_icc/');
+		define('COLOR_PROFILES_PATH',				DEDALO_LIB_BASE_PATH . '/media_engine/lib/color_profiles_icc/');
 
-		define('DEDALO_IMAGE_THUMB_WIDTH'			, 102);	// Default 102
-		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 57);	// Default 57
+		define('DEDALO_IMAGE_THUMB_WIDTH',			102);	# Default 102
+		define('DEDALO_IMAGE_THUMB_HEIGHT',			57);	# Default 57
 
 		# DEDALO_IMAGE_WEB_FOLDER normally '/web' Used to save uploaded files from component_html_text
-		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
+		define('DEDALO_IMAGE_WEB_FOLDER',			'/web');
 
 
 	#
 	# PDF MEDIA
 		# PDF FOLDER normally '/image'
-		define('DEDALO_PDF_FOLDER'					, '/pdf');
+		define('DEDALO_PDF_FOLDER',					'/pdf');
 		# EXTENSION normally pdf
-		define('DEDALO_PDF_EXTENSION'				, 'pdf');
+		define('DEDALO_PDF_EXTENSION',				'pdf');
 		# DEDALO_PDF_EXTENSIONS_SUPPORTED
-		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, serialize(['pdf']));
+		define('DEDALO_PDF_EXTENSIONS_SUPPORTED',	serialize(['pdf']));
 		# QUALITY DEFAULT normally 'standar'
-		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standar');
+		define('DEDALO_PDF_QUALITY_DEFAULT',		'standar');
 		# QUALITY FOLDERS ARRAY
-		define('DEDALO_PDF_AR_QUALITY'				, serialize([DEDALO_PDF_QUALITY_DEFAULT]));
+		define('DEDALO_PDF_AR_QUALITY',				serialize([DEDALO_PDF_QUALITY_DEFAULT]));
 		# MIME normally application/pdf
-		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
+		define('DEDALO_PDF_MIME_TYPE',				'application/pdf');
 		# TYPE normally jpeg
-		define('DEDALO_PDF_TYPE'					, 'pdf');
+		define('DEDALO_PDF_TYPE',					'pdf');
 		# DEDALO_PDF_THUMB_DEFAULT
-		define('DEDALO_PDF_THUMB_DEFAULT'			, 'thumb');
+		define('DEDALO_PDF_THUMB_DEFAULT',			'thumb');
 
 		# DEDALO_PDF_RENDERER (daemon for generate pdf from html files)
-		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');	# Like '/usr/bin/wkhtmltopdf'
+		define('DEDALO_PDF_RENDERER',				'/usr/bin/wkhtmltopdf');	# Like '/usr/bin/wkhtmltopdf'
 
 		# PDF_AUTOMATIC_TRANSCRIPTION_ENGINE (daemon for generate text files from pdf files)
-		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');	# Like '/usr/bin/pdftotext'
+		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE','/usr/bin/pdftotext');	# Like '/usr/bin/pdftotext'
 
 
 	#
 	# HTML_FILES
-		define('DEDALO_HTML_FILES_FOLDER'			, '/html_files');
-		define('DEDALO_HTML_FILES_EXTENSION'		, 'html');
+		define('DEDALO_HTML_FILES_FOLDER',			'/html_files');
+		define('DEDALO_HTML_FILES_EXTENSION',		'html');
 
 
 	#
 	# SVG MEDIA
 		# SVG FOLDER normally '/svg'
-		define('DEDALO_SVG_FOLDER'				, '/svg');
+		define('DEDALO_SVG_FOLDER',					'/svg');
 		# EXTENSION normally svg
-		define('DEDALO_SVG_EXTENSION'			, 'svg');
+		define('DEDALO_SVG_EXTENSION',				'svg');
 		# MIME normally image/svg+xml
-		define('DEDALO_SVG_MIME_TYPE'			, 'image/svg+xml');
+		define('DEDALO_SVG_MIME_TYPE',				'image/svg+xml');
 		# DEDALO_SVG_EXTENSIONS_SUPPORTED
-		define('DEDALO_SVG_EXTENSIONS_SUPPORTED', serialize( array('svg') ));
+		define('DEDALO_SVG_EXTENSIONS_SUPPORTED',	serialize(['svg']));
 
 
 
 ################################################################
 # UPLOADER CONFIG
-	define('DEDALO_UPLOADER_DIR'			, DEDALO_ROOT 		. '/lib/jquery/jQuery-File-Upload');
-	define('DEDALO_UPLOADER_URL'			, DEDALO_ROOT_WEB	. '/lib/jquery/jQuery-File-Upload');
+	define('DEDALO_UPLOADER_DIR',	DEDALO_ROOT		. '/lib/jquery/jQuery-File-Upload');
+	define('DEDALO_UPLOADER_URL',	DEDALO_ROOT_WEB	. '/lib/jquery/jQuery-File-Upload');
 
 
 
 ################################################################
 # GEO LOCATION
-	define('DEDALO_GEO_PROVIDER'			, 'VARIOUS');	# OSM, ARCGIS, GOOGLE, VARIOUS, ARCGIS
+	define('DEDALO_GEO_PROVIDER',	'VARIOUS');	# OSM, ARCGIS, GOOGLE, VARIOUS, ARCGIS
 
 
 
@@ -454,9 +452,9 @@
 ################################################################
 # MEDIA ENTITY
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
-	define('DEDALO_ENTITY_MEDIA_AREA_TIPO'			, '');
+	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
 	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...
-	define('DEDALO_ENTITY_MENU_SKIP_TIPOS'			, serialize( array()));
+	define('DEDALO_ENTITY_MENU_SKIP_TIPOS', serialize( array()));
 
 
 
@@ -476,8 +474,8 @@
 ################################################################
 # TOOLS VARS
 	# TOOL EXPORT
-	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/export/files');
-	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,	DEDALO_MEDIA_BASE_URL  . '/export/files');
+	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',			DEDALO_MEDIA_BASE_PATH . '/export/files');
+	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,			DEDALO_MEDIA_BASE_URL  . '/export/files');
 	# TOOL IMPORT
 	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/import/files');
 
@@ -493,44 +491,44 @@
 ################################################################
 # NOTIFICATIONS
 	# Send notifications to user browser. E.g. Current lock components..
-	define('DEDALO_NOTIFICATIONS'			, false);
-	define('DEDALO_NODEJS'					, '/usr/local/bin/node');
-	define('DEDALO_NODEJS_PM2'				, '/usr/local/bin/pm2');
+	define('DEDALO_NOTIFICATIONS',	false);
+	define('DEDALO_NODEJS',			'/usr/local/bin/node');
+	define('DEDALO_NODEJS_PM2',		'/usr/local/bin/pm2');
 
 
 
 ################################################################
 # STRUCTURE CSS
 	# Aditional css precessed from structure or created in aditional external files
-	define('DEDALO_STRUCTURE_CSS', true);
-	define('DEDALO_ADITIONAL_CSS', false);
+	define('DEDALO_STRUCTURE_CSS',	true);
+	define('DEDALO_ADITIONAL_CSS',	false);
 
 
 
 ################################################################
 # DIFFUSION DOMAIN
-	define('DEDALO_DIFFUSION_DOMAIN'			, 'default');
-	define('DEDALO_DIFFUSION_RESOLVE_LEVELS'	, 2);
-	define('DEDALO_PUBLICATION_ALERT'			, false);
+	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	define('DEDALO_PUBLICATION_ALERT',			false);
 
 
 ################################################################
 # DIFFUSION_CUSTOM
 # Otional custom class to maniputate diffusion options
-	define('DIFFUSION_CUSTOM'					, false);
+	define('DIFFUSION_CUSTOM', false);
 
 
 
 ################################################################
 # DEDALO_PROTECT_MEDIA
-	define('DEDALO_PROTECT_MEDIA_FILES'			, false);
+	define('DEDALO_PROTECT_MEDIA_FILES', false);
 
 
 
 ################################################################
 # DEDALO_FILTER_USER_RECORDS_BY_ID
 # Activate user records filter restriction
-	define('DEDALO_FILTER_USER_RECORDS_BY_ID'	, false);
+	define('DEDALO_FILTER_USER_RECORDS_BY_ID', false);
 
 
 
@@ -542,25 +540,25 @@
 
 ################################################################
 # REMOTE_STRUCTURE_SERVER_CODE
-	define('STRUCTURE_FROM_SERVER'		 , true); # bool
-	define('STRUCTURE_SERVER_CODE'		 , ''); 	 # string like aZdUs7asdasdhRsw4!sp
-	define('STRUCTURE_SERVER_URL'		 , ''); 	 # string like https://master.render.es/dedalo/lib/dedalo/extras/str_manager/
-	define('STRUCTURE_DOWNLOAD_DIR'		 , DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
-	define('STRUCTURE_DOWNLOAD_JSON_FILE', STRUCTURE_DOWNLOAD_DIR);
+	define('STRUCTURE_FROM_SERVER',			true); # bool
+	define('STRUCTURE_SERVER_CODE',			''); 	 # string like aZdUs7asdasdhRsw4!sp
+	define('STRUCTURE_SERVER_URL',			''); 	 # string like https	://master.render.es/dedalo/lib/dedalo/extras/str_manager/
+	define('STRUCTURE_DOWNLOAD_DIR',		DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
+	define('STRUCTURE_DOWNLOAD_JSON_FILE',	STRUCTURE_DOWNLOAD_DIR);
 
 
 ################################################################
 # DEDALO_CODE
 	// server side (master)
 		// server git files (master) like /home/dedalo/master_dedalo.git
-		define('DEDALO_CODE_SERVER_GIT_DIR'		, '/home/dedalo/master_dedalo.git');
+		// define('DEDALO_CODE_SERVER_GIT_DIR',	'/home/dedalo/master_dedalo.git');
 		// target dir where git command send the compresed file like 'dedalo5_code.zip'
-		define('DEDALO_CODE_FILES_DIR'			, DEDALO_ROOT . '/code');
+		// define('DEDALO_CODE_FILES_DIR',			DEDALO_ROOT . '/code');
 	// client side
 		// target dir where git command send the compresed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
-		define('DEDALO_SOURCE_VERSION_URL'		, 'https://master.render.es/dedalo/code/dedalo5_code.zip');
+		define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo5_code.zip');
 		// target dir where git command send the compresed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
-		define('DEDALO_SOURCE_VERSION_LOCAL_DIR', '/tmp/'.DEDALO_ENTITY);
+		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
 
 
 
@@ -572,7 +570,7 @@
 	define('API_WEB_USER_CODE_MULTIPLE' , [
 		[
 			'db_name'	=> 'web_xxx',  // like web_my_entity
-			'code' 		=> 'xxxxxxxx'  // like asd38kjlkadsg2f68doWeqhijQks
+			'code'		=> 'xxxxxxxx'  // like asd38kjlkadsg2f68doWeqhijQks
 		]
 	]);
 
