@@ -1,0 +1,150 @@
+{
+  "_from": "blueimp-file-upload",
+  "_id": "blueimp-file-upload@10.31.0",
+  "_inBundle": false,
+  "_integrity": "sha512-dGAxOf9+SsMDvZPTsIUpe0cOk57taMJYE3FocHEUebhn5BnDbu1hcWOmrP8oswIe6V61Qcm9UDuhq/Pv1t/eRw==",
+  "_location": "/blueimp-file-upload",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "blueimp-file-upload",
+    "name": "blueimp-file-upload",
+    "escapedName": "blueimp-file-upload",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/blueimp-file-upload/-/blueimp-file-upload-10.31.0.tgz",
+  "_shasum": "46fc4fea4e678b57afbd9008f179e59fc3aa3e84",
+  "_spec": "blueimp-file-upload",
+  "_where": "/Users/paco/Trabajos/Navarra/Navarra install Dédalo v5.6.8/master_dedalo",
+  "author": {
+    "name": "Sebastian Tschan",
+    "url": "https://blueimp.net"
+  },
+  "bugs": {
+    "url": "https://github.com/blueimp/jQuery-File-Upload/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "blueimp-canvas-to-blob": "3",
+    "blueimp-load-image": "5",
+    "blueimp-tmpl": "3"
+  },
+  "deprecated": false,
+  "description": "File Upload widget with multiple file selection, drag&drop support, progress bar, validation and preview images, audio and video for jQuery. Supports cross-domain, chunked and resumable file uploads. Works with any server-side platform (Google App Engine, PHP, Python, Ruby on Rails, Java, etc.) that supports standard HTML form file uploads.",
+  "devDependencies": {
+    "eslint": "7",
+    "eslint-config-blueimp": "2",
+    "eslint-config-prettier": "6",
+    "eslint-plugin-jsdoc": "29",
+    "eslint-plugin-prettier": "3",
+    "prettier": "2",
+    "stylelint": "13",
+    "stylelint-config-prettier": "8",
+    "stylelint-config-recommended": "3"
+  },
+  "eslintConfig": {
+    "extends": [
+      "blueimp",
+      "plugin:jsdoc/recommended",
+      "plugin:prettier/recommended"
+    ],
+    "env": {
+      "browser": true
+    }
+  },
+  "eslintIgnore": [
+    "js/*.min.js",
+    "test/vendor"
+  ],
+  "files": [
+    "css/jquery.fileupload-noscript.css",
+    "css/jquery.fileupload-ui-noscript.css",
+    "css/jquery.fileupload-ui.css",
+    "css/jquery.fileupload.css",
+    "img/loading.gif",
+    "img/progressbar.gif",
+    "js/cors/jquery.postmessage-transport.js",
+    "js/cors/jquery.xdr-transport.js",
+    "js/vendor/jquery.ui.widget.js",
+    "js/jquery.fileupload-audio.js",
+    "js/jquery.fileupload-image.js",
+    "js/jquery.fileupload-process.js",
+    "js/jquery.fileupload-ui.js",
+    "js/jquery.fileupload-validate.js",
+    "js/jquery.fileupload-video.js",
+    "js/jquery.fileupload.js",
+    "js/jquery.iframe-transport.js"
+  ],
+  "homepage": "https://github.com/blueimp/jQuery-File-Upload",
+  "keywords": [
+    "jquery",
+    "file",
+    "upload",
+    "widget",
+    "multiple",
+    "selection",
+    "drag",
+    "drop",
+    "progress",
+    "preview",
+    "cross-domain",
+    "cross-site",
+    "chunk",
+    "resume",
+    "gae",
+    "go",
+    "python",
+    "php",
+    "bootstrap"
+  ],
+  "license": "MIT",
+  "main": "js/jquery.fileupload.js",
+  "name": "blueimp-file-upload",
+  "optionalDependencies": {
+    "blueimp-canvas-to-blob": "3",
+    "blueimp-load-image": "5",
+    "blueimp-tmpl": "3"
+  },
+  "peerDependencies": {
+    "jquery": ">=1.7"
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "proseWrap": "always",
+    "singleQuote": true,
+    "trailingComma": "none"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/blueimp/jQuery-File-Upload.git"
+  },
+  "scripts": {
+    "lint": "stylelint '**/*.css' && eslint .",
+    "posttest": "docker-compose down -v",
+    "postversion": "git push --tags origin master && npm publish",
+    "preversion": "npm test",
+    "test": "npm run lint && npm run unit && npm run wdio && npm run wdio -- conf/firefox.js",
+    "unit": "docker-compose run --rm mocha",
+    "wdio": "docker-compose run --rm wdio"
+  },
+  "stylelint": {
+    "extends": [
+      "stylelint-config-recommended",
+      "stylelint-config-prettier"
+    ],
+    "ignoreFiles": [
+      "css/*.min.css",
+      "css/vendor/*",
+      "test/vendor/*"
+    ]
+  },
+  "title": "jQuery File Upload",
+  "version": "10.31.0"
+}
