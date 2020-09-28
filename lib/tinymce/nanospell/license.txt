@@ -1,0 +1,38 @@
+LICENSE
+
+TINYMCESPELLCHECK.COM  hereby grants you a non-exclusive license to the 'NanoSpell for TinyMCE' spellchecker plugin for TinyMCE (the Software).  By downloading or using the Software, the Licensee agrees not to utilize the software in a manner which is disparaging to TINYMCESPELLCHECK.COM , and not to rent, lease,  or otherwise transfer rights to the Software.
+ 
+The Licensee agrees that no attempt will be made by the Licensee or associated parties to translate, reverse engineer, modify, decompile, disassemble or distribute the Software without written consent from TINYMCESPELLCHECK.COM .
+ 
+License terms are offered on the following terms, as purchased. If no purchase or insufficient purchase has been made then the Free Developer License terms apply.
+  
+
+1)Free Development License - This license grants the use of the Software within unpublished software projects for development and evaluation purposes only.  The Software should not be used for use within any website nor intranet application.
+
+2)Public Website License - This license grants the use of the Software within one public website domain, where the website's full contents are available at no cost to all members of the public.
+
+3)SaaS License - This license grants the use of the Software within one public website domain, where some or all of the website's visitors have paid for access.
+
+3)Enterprise License - This license grants the use of the Software within ONE public website domain and up to TWO private intranet or extranet applications for the business usage of ONE end user organization.  All machines on which the Software is used for intranet or extranet usage must physically located in the same country.
+
+4)Global Enterprise License - This license grants the use of the Software within up-to THREE private website domains and up-to SIX intranet or extranet domains for the business usage of ONE end user organization.  
+
+5)OEM Redistribution License - This license grants the right to distribute the Software (without royalty) as part of ONE distinct packaged commercial title ("your Product"), provided that your Product is not a software development system or tool and that your Product's primary function is not spell-checking related.
+
+TINYMCESPELLCHECK.COM shall at all times retain ownership of the Software and all subsequent copies
+
+
+UPGRADES
+If a new release of the software is produced within 12 months from the date of any license purchase, the licensee will be entitled to a free upgrade.  No license grant the licensee any right to any enhancement or update beyond the initial 12 month period, commencing from the date of purchase.
+ 
+COPYRIGHT
+Title, ownership rights, and intellectual property rights in and to the Software shall remain with TINYMCESPELLCHECK.COM. The Software is protected by the international copyright laws. Title, ownership rights, and intellectual property rights in and to the content accessed through the Software is the property of the applicable content owner and may be protected by applicable copyright or other law. This License gives you no rights to such content.
+ 
+LIMITATION OF LIABILITY.
+THIS SOFTWARE IS PROVIDED "AS IS," WITHOUT A WARRANTY OF ANY KIND. ALL EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES, INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE HEREBY EXCLUDED. TINYMCESPELLCHECK.COM AND ITS LICENSORS SHALL NOT BE LIABLE FOR ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING OR DISTRIBUTING THE SOFTWARE OR ITS DERIVATIVES. IN NO EVENT WILL TINYMCESPELLCHECK.COM  OR ITS LICENSORS BE LIABLE FOR ANY LOST REVENUE, PROFIT OR DATA, OR FOR DIRECT, INDIRECT, SPECIAL, CONSEQUENTIAL, INCIDENTAL OR PUNITIVE DAMAGES, HOWEVER CAUSED AND REGARDLESS OF THE THEORY OF LIABILITY, ARISING OUT OF THE USE OF OR INABILITY TO USE SOFTWARE, EVEN IF TINYMCESPELLCHECK.COM HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+ 
+MISCELLANEOUS
+This software is not designed or intended for use in on-line control of aircraft, air traffic, aircraft navigation or aircraft communications; or in the design, construction, operation or maintenance of any nuclear facility. Licensee represents and warrants that it will not use or redistribute the Software for such purposes.
+ 
+
+

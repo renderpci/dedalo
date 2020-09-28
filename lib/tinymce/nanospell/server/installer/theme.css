@@ -1,0 +1,121 @@
+a {
+color: #4682B4
+}
+
+/* Customize container */
+
+.container {
+max-width: 720px;
+width: 720px;
+margin:0 auto;
+}
+
+
+}
+.container-narrow > hr {
+margin: 30px 0;
+}
+
+.nav li.active {
+font-weight: bold;
+}
+
+ 
+
+.nav {
+margin-left: -12px;
+font-size: 1.11em;
+}
+
+.brand {
+margin-bottom: 165px;
+}
+
+body, h1, h2, h3, h4, h5, h6, p , .container {
+font-family: "Helvetica Neue",Helvetica,sans-serif;
+}
+ 
+ 
+.brand img {
+margin-top: 15px;
+vertical-align: center;
+ float :left;
+margin-right: 20px;
+}
+
+.brand h1 {
+ 
+vertical-align: center;
+text-rendering: optimizelegibility;
+font-size: 75px;
+font-weight: 100;
+letter-spacing: -2px;
+margin-top: 20px;
+white-space: nowrap;
+ float :left;
+color: #006d63
+}
+
+.brand h1 strong {
+font-size: 75px;
+font-variant: normal;
+font-weight: 100;
+margin-left: 3px;
+letter-spacing: -1px;
+color: #555
+}
+
+h6 {
+font-size: 1.2em;
+font-weight: 500;
+color: #222;
+}
+
+
+h1,h2,h3 {
+font-weight: 200;
+color: #555;
+text-rendering: optimizelegibility;
+}
+
+.circle {
+width: 100px;
+height: 100px;
+line-height: 100px;
+text-align: center;
+border: 2px solid #006d63;
+background-color: #fff;
+border-radius: 50%;
+color: #006d63;
+font-size: 2em;
+margin-left: auto ;
+margin-right: auto ;
+}
+
+.circle i {
+transition: color 0.3s ;
+transition: font-size 0.3s ;
+}
+
+.circle:hover i {
+font-size: 1.3em;
+color: #ff7400;
+}
+
+.metacontainer {
+padding-bottom: 40px;
+padding-top: 40px;
+border-bottom: 1px solid #bbb;
+}
+
+h2 i {
+color: #006d63;
+}
+.nav-pills li a{
+	border:1px solid #bbb;
+}
+
+ 
+
+
+ 
