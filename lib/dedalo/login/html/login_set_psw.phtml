@@ -16,9 +16,14 @@
 									IMPORTANT: Remember this password because you can not change it later.
 									</span>";
 
-				$html_content .= "<div class=\"set_pasw_input\">";	
-				$html_content .= " User : <strong>root</strong>";
-				$html_content .= "</div>";
+				// info
+					$html_content .= "<div class=\"set_pasw_input\">";
+					$html_content .= " User : <strong>root</strong>";
+					$html_content .= '<div> Entity : <strong>'.DEDALO_ENTITY.'</strong></div>';
+					if (DEDALO_ENTITY==='my_entity_name') {
+						$html_content .= '<div class="error"> Entity is set as default value.<br> Please change config var \'DEDALO_ENTITY\' before set password.<br> Later you will not be able to change it</div>';
+					}
+					$html_content .= "</div>";
 
 				$html_content .= "<div class=\"set_pasw_input\">";	
 				$html_content .= " Password <input type=\"password\" name=\"psw\" id=\"psw\" class=\"login_input\" placeholder=\"Password\" />";
