@@ -127,9 +127,10 @@ abstract class RecordDataBoundObject {
 			$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error());
 			
 			if ($result===false) {
-				trigger_error("Error Processing Request Load");
+				$msg = "Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".pg_last_error() .' ';				
+				trigger_error($msg);
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error()." <hr>$strQuery", 1);
+					throw new Exception("Error Processing Request Load [1]: (".json_encode(DEDALO_DATABASE_CONN).") ".pg_last_error()." ".to_string($strQuery), 1);
 				}
 			}
 
