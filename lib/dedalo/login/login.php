@@ -38,6 +38,16 @@
 				#debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::WARNING);
 				error_log("[Login page] Generated structure css file: ".$response->msg);
 			}
+	
+
+	// verify database is ok
+		try {
+			// Create connection to force check databsae connection
+			$conn = DBi::_getConnection();
+		} catch (Exception $e) {
+			echo 'Caught exception: ',  $e->getMessage(), "\n";
+			die();
+		}
 
 	
 	// Verify current URL tipo exists as DEDALO_ROOT_TIPO children before login. If not, redirect to MAIN_FALLBACK_SECTION tipo
