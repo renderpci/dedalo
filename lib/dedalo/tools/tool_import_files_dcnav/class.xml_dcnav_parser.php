@@ -17,6 +17,15 @@ class xml_dcnav_parser {
 		
 		$xml = new xml($file);
 
+		if (!function_exists('array_key_first')) {
+			function array_key_first(array $arr) {
+				foreach($arr as $key => $unused) {
+					return $key;
+				}
+				return NULL;
+			}
+		}
+
 		// first key check to determine multiple
 			$first_key = array_key_first($xml->data['rdf:RDF']);
 
