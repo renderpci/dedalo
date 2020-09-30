@@ -1877,8 +1877,9 @@
 	Valencia 29-09-2020 5.7.0
 		Added library pack as default libs to easy install
 
-
-
+	
+	Valencia 30-09-2020 5.7.1
+		Fixed tool administration issues with github download code and added php no Zip lib available warning
 
 
 
@@ -1901,12 +1902,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.0';
+	$DEDALO_VERSION = '5.7.1';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-09-2020');
+	define('DEDALO_BUILD'	, '30-09-2020');
 
 
 
