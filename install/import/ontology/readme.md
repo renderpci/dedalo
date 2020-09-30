@@ -17,3 +17,8 @@ The ontology file, with the changes of the specific tld , will include ONLY the 
 -matrix_counter_dd (sql file without user, role or id column)
 
 Only one tld for file is allowed. All files with more that one tld will be rejected.
+
+An example of data export could be:
+
+	psql my_db_name -c "\copy (SELECT parent, dato, tipo, lang FROM matrix_descriptors_dd WHERE parent LIKE 'mupreva%' ORDER BY id ASC) TO 'matrix_descriptors_dd_mupreva.copy' ";
+	psql my_db_name -c "\copy (SELECT \"terminoID\", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades FROM jer_dd WHERE tld = 'mupreva' ORDER BY id ASC) TO 'jer_dd_mupreva.copy' ";
