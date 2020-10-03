@@ -15,46 +15,17 @@
 */
 
 
-// debug			
+// debug
 	#error_log(print_r($_REQUEST,true));
 	#error_log(print_r(file_get_contents('php://input'),true));
 
 
-// headers 
-	# Allow CORS
-	$ACCESS_CONTROL_ALLOW_ORIGIN = defined('ACCESS_CONTROL_ALLOW_ORIGIN') ? ACCESS_CONTROL_ALLOW_ORIGIN : '*';
-	header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
+
+// headers (configure it to allow CORS acces, etc.)
+	$headers_file = dirname(dirname(__FILE__)) . '/config_api/server_config_headers.php';
+	include $headers_file;
 
 
-	# function cors() {
-	# 
-	#     // Allow from any origin
-	#     if (isset($_SERVER['HTTP_ORIGIN'])) {
-	#         // Decide if the origin in $_SERVER['HTTP_ORIGIN'] is one
-	#         // you want to allow, and if so:
-	#         header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
-	#         header('Access-Control-Allow-Credentials: true');
-	#         header('Access-Control-Max-Age: 86400');    // cache for 1 day
-	#     }
-	# 
-	#     // Access-Control headers are received during OPTIONS requests
-	#     if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-	# 
-	#         if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'])) {
-	#         	// may also be using PUT, PATCH, HEAD etc
-	#             header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); 
-	#         }                    
-	# 
-	#         if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
-	#             header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
-	#         }
-	# 
-	# 		exit(0);
-	#     }
-	# 
-	#     echo "You have CORS!";
-	# }
-	# cors();
 
 // safe_xss 
 	$safe_xss = function($value) {
@@ -120,7 +91,6 @@
 			$options = json_decode( $options );
 		}
 	}else{
-
 		$options = new stdClass();
 		foreach ($_REQUEST as $key => $cvalue) {
 			
@@ -143,71 +113,22 @@
 	}
 
 
-	#
-	# SEARCH OPTIONS AND DEFAULTS
-		#
-		# $options->table 		 	 = null;
-		# $options->ar_fields 	 	 = array('*');
-		# $options->sql_fullselect 	 = false; // default false
-		# $options->sql_filter 	 	 = "";
-		# $options->lang 			 = WEB_CURRENT_LANG_CODE; // default WEB_CURRENT_LANG_CODE (lg-spa)
-		# $options->order 		 	 = '`id` ASC';
-		# $options->limit 		 	 = null;
-		# $options->group 		 	 = false;
-		# $options->offset 		 	 = false;
-		# $options->count 		 	 = false;
-		# $options->resolve_portal 	 = false;
-		# $options->conn 			 = web_data::get_db_connection();	
 
-		#
-		# DATA 
-		# SAMPLE GET ALL RECORDS FROM TABLE
-			/*
-			$table = 'edificios';
-			$options = new stdClass();
-				$options->table 		 = $table;
-				$options->ar_fields 	 = array('*');
-				$options->order 		 = null;
-				$options->sql_filter 	 = PUBLICACION_FILTER_SQL;
-			*/
-
-		/*
-		$dedalo_get = isset($options->dedalo_get) ? $options->dedalo_get : null;
-
-		switch ($dedalo_get) {
-
-			case 'tables_info':
-				#
-				# Execute data retrieving
-				$full = isset($options->full) ? $options->full : false;
-				$dedalo_data = (object)web_data::get_tables_info( $full );
-				break;
-			case 'publication_schema':
-				#
-				# Execute data retrieving
-				$dedalo_data = (array)web_data::get_full_publication_schema( );
-				break;
-			case 'records':
-			default:
-				#
-				# Execute data retrieving
-				$dedalo_data = (object)web_data::get_rows_data( $options );
-				break;
-		}
-		*/
-
-
-	$manager = new manager();
-
-	#
-	# PRINT AS JSON DATA
+// print as json data
 	header('Content-Type: application/json');
 
+
+
+// manager
+	$manager = new manager();	
 	try {
+		
 		$dedalo_data = $manager->manage_request( $options );
 		$result 	 = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
 		echo $result;
-	} catch (Exception $e) {
+	
+	}catch (Exception $e) {
+		
 		$error_obj = new stdClass();
 			$error_obj->result 	= false;
 			$error_obj->msg 	= 'Exception when calling Dédalo API: '. $e->getMessage();
