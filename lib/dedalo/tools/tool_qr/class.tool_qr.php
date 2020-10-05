@@ -9,7 +9,7 @@ class tool_qr extends tool_common {
 	
 
 	# component
-	protected $section_tipo ;
+	protected $section_tipo;
 	public $search_options;
 
 

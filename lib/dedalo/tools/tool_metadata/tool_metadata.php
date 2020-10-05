@@ -22,23 +22,11 @@
 		case 'page':
 
 			// info from button trigger (received in request)
-				$button_tipo		= $_REQUEST['button_tipo'];
-				// $RecordObj_dd		= new RecordObj_dd($button_tipo);
-				// $button_properties	= $RecordObj_dd->get_propiedades(true);
-				// $source_list		= $button_properties->source_list;
-				
-			// records data (from search options)
-				// $data	= $this->get_data($source_list);
-				// $files	= [];
-				// foreach ($data as $item) {
-				// 	foreach ($item->files as $file) {
-				// 		$files[] = $file;
-				// 	}
-				// }
+				$button_tipo = $_REQUEST['button_tipo'];				
 
 			// saved_search_options					
-				$search_options_id 	  = $section_tipo; // section tipo like oh1
-				$saved_search_options = section_records::get_search_options( $search_options_id );
+				$search_options_id		= $section_tipo; // section tipo like oh1
+				$saved_search_options	= section_records::get_search_options( $search_options_id );
 				if (!isset($saved_search_options->search_query_object)) {
 					$msg = '<h3 class="raw_msg">Error. search_query_object is not available.  ';
 					$msg .= '<a href="'.DEDALO_LIB_BASE_URL .'/main/?t=' .$section_tipo .'">Load '.RecordObj_dd::get_termino_by_tipo($section_tipo).' ['.$section_tipo.']</a>';

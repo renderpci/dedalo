@@ -46,7 +46,7 @@ common::trigger_manager();
 // 	# Debug
 // 		if(SHOW_DEBUG===true) {
 // 			$debug = new stdClass();
-// 				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+// 				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 // 				foreach($vars as $name) {
 // 					$debug->{$name} = $$name;
 // 				}
@@ -72,8 +72,8 @@ function process_files($json_data) {
 	ignore_user_abort(true);
 	
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$vars = array('data', 'section_tipo', 'button_tipo', 'quality_selected');
 		foreach($vars as $name) {
@@ -92,11 +92,10 @@ function process_files($json_data) {
 	# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
 				foreach($vars as $name) {
 					$debug->{$name} = $$name;
 				}
-
 			$response->debug = $debug;
 		}
 
@@ -142,7 +141,6 @@ function count_files($json_data) {
 				foreach($vars as $name) {
 					$debug->{$name} = $$name;
 				}
-
 			$response->debug = $debug;
 		}
 
@@ -167,8 +165,7 @@ function check_exiftool($json_data) {
 	# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
 			$response->debug = $debug;
 		}
 

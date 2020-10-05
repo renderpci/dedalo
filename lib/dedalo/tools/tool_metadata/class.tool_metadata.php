@@ -134,13 +134,6 @@ class tool_metadata extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-		// $dir		= DEDALO_MEDIA_BASE_PATH . rtrim($path, '/');
-		// $process	= function($file) use($data){
-		// 	return self::edit_metadata($file, $data);
-		// };
-
-		// $result = self::iterate_dir($dir, $process, $extensions);
-
 		// info from button trigger (received in request)
 			$RecordObj_dd						= new RecordObj_dd($button_tipo);
 			$button_properties					= $RecordObj_dd->get_propiedades(true);
@@ -285,7 +278,6 @@ class tool_metadata extends tool_common {
 			$search_development2	= new search_development2($search_query_object);
 			$rows_data				= $search_development2->search();
 			$ar_records				= (array)$rows_data->ar_records;
-			// $total_records		= (int)$this->search_options->search_query_object->full_count;
 	
 		// data
 			$data = array_map(function($row) use($source_list){
