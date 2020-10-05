@@ -935,7 +935,7 @@ class hierarchy {
 				$loc_modelo->set_from_component_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO);
 		}
 
-		#["ts2","pt234","fr37028"]
+		// ["ts2","pt234","fr37028"]
 		$relaciones	= json_decode($relaciones);
 		$relacion = array();
 		if(!empty($relaciones) && is_array($relaciones)){

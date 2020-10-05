@@ -177,7 +177,7 @@
 						$portal_parent 		 = safe_xss($_GET['portal_parent']);
 						$portal_section_tipo = safe_tipo($_GET['portal_section_tipo']);
 
-						$button_action 	= 'tool_portal.add_resource(this)';#"tool_portal.add_fragment_resource(this)";
+						$button_action 	= 'tool_portal.add_resource(this)';
 						
 						$html_content .= "<div class=\"css_button_generic btn_relate_fragment\" id=\"btn_relate_fragment_{$tipo}\" style=\"display:none\" ";
 						$html_content .= "onclick=\"{$button_action}\" ";

@@ -388,7 +388,7 @@ abstract class RecordDataBoundObject {
 
 		if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
 
-			switch(true) {	#"AND dato LIKE  '%\"{$area_tipo}\"%' ";
+			switch(true) {	# "AND dato LIKE '%\"{$area_tipo}\"%' ";
 
 				# SI $key ES 'strPrimaryKeyName', LO USAREMOS COMO strPrimaryKeyName A BUSCAR
 				case ($key==='strPrimaryKeyName'):

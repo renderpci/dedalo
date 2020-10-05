@@ -94,12 +94,12 @@ class dd extends dd_elements {
 	public function get_arrayTablas() {
 
 		return array(
-				#"prefijo" 	=> array('dd'),
-				"tabla" 	=> array('jer_dd'),
-				"nombre" 	=> array('Dedalo'),
-				"tipo" 		=> array(5),
-				"tipoText" 	=> array('Estructura')
-				);
+			// "prefijo"	=> array('dd'),
+			"tabla"			=> array('jer_dd'),
+			"nombre"		=> array('Dedalo'),
+			"tipo"			=> array(5),
+			"tipoText"		=> array('Estructura')
+	);
 		/*
 		if(isset($this->arrayTablas)) return $this->arrayTablas;
 		

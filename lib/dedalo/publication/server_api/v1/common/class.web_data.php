@@ -3353,12 +3353,12 @@ class web_data {
 		/**
 		* GET_GEOLOCATION_DATA -> moved to class.diffusion_sql.php
 		* @return
-		*//*
+		*/
 		public static function get_geolocation_data( $request_options ) {
 
-			# Test data
-			#$request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-			#$request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
+			// Test data
+			// $request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
+			// $request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
 			$request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
 
 			$options = new stdClass();
@@ -3369,18 +3369,18 @@ class web_data {
 				$response->result = false;
 				$response->msg 	  = 'Error. Request get_geolocation_data failed';
 
-			#$pattern = TR::get_mark_pattern('geo',false);
-			#$result  = free_node::pregMatchCapture($matchAll=true, $pattern, $options->raw_text, $offset=0);
+			// $pattern = TR::get_mark_pattern('geo',false);
+			// $result  = free_node::pregMatchCapture($matchAll=true, $pattern, $options->raw_text, $offset=0);
 
-			# split by pattern
+			// split by pattern
 			$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
 			$result 		  = preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
-			# sample result
-			#[0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
-		    #[1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
-		    #[2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
-		    #[3] => &nbsp;Texto dos
+			// sample result
+			// [0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
+			//    [1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
+			//    [2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
+			//    [3] => &nbsp;Texto dos
 
 		    $ar_elements = array();
 		    $pattern_geo = TR::get_mark_pattern('geo',$standalone=true);
@@ -3396,7 +3396,7 @@ class web_data {
 		    		}
 
 		    		preg_match_all($pattern_geo, $value, $matches);
-		    			#dump($matches, ' matches ++ '.to_string());
+		    		
 		    		$layer_id = (int)$matches[$key_tag_id][0];
 		    		$geo_data = $matches[$key_data][0];
 		    		$geo_data = str_replace('\'', '"', $geo_data);
@@ -3420,7 +3420,7 @@ class web_data {
 			$response->msg 	  = 'Ok. Request done. get_geolocation_data';
 
 			return $response;
-		}//end get_geolocation_data*/
+		}//end get_geolocation_data
 
 
 

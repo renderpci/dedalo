@@ -569,16 +569,16 @@ class dd_elements {
 			$add_class = 'json_bad_alert';
 		}
 		
-		$obj_html  = '';#"\n<!-- DIV PROPIEDADES O INSTRUCCIONES DE USO (DESPLEGABLE) -->\n";
+		$obj_html  = ''; # "\n<!-- DIV PROPIEDADES O INSTRUCCIONES DE USO (DESPLEGABLE) -->\n";
 		$obj_html .= "<div id=\"propiedades_{$terminoID}\" class=\"divLineasInfo div_propiedades none $add_class\" >";
-		#$obj_html .= "[ P ] ";
-		#if (empty($propiedades)) {
+		# $obj_html .= "[ P ] ";
+		# if (empty($propiedades)) {
 		#	$obj_html .= ' propiedades n/d ' ;
-		#}else{
+		# }else{
 			#$p = json_encode($propiedades);
 			#$propiedades = json_encode($propiedades, JSON_PRETTY_PRINT);
 			$obj_html .= "<pre>$propiedades</pre>"; 
-		#}
+		# }
 		$obj_html .= "</div>";
 
 		return $obj_html ;

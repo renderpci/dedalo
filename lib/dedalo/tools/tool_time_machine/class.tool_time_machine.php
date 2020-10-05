@@ -170,7 +170,7 @@ class tool_time_machine extends tool_common {
 		/*
 		# db fieldn ame			# property name
 			"id" 					=> "ID",		# integer
-			#"id_matrix" 			=> "id_matrix",	# integer
+			# "id_matrix" 			=> "id_matrix",	# integer
 			"section_id" 			=> "section_id",# integer
 			"tipo" 					=> "tipo",		# string charvar 32
 			"lang" 					=> "lang", 		# string 16
