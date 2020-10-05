@@ -1,6 +1,6 @@
 <?php
 
-# Reviewed: 12-05-2018
+# Reviewed: 05-10-2020
 
 # POSTGRESQL (PRIVATE DATA)
 # Default PotsgreSQL connection, for investigation system
@@ -15,6 +15,8 @@ define('DEDALO_DATABASE_CONN'		, 'dedalo4_XXX');
 define('DEDALO_USERNAME_CONN'		, 'myusername');
 define('DEDALO_PASSWORD_CONN'		, 'mypassword');
 define('DEDALO_INFORMACION'			, 'Dédalo 4 install version');
+define('DEDALO_DB_MANAGEMENT'		, true); // default is true. Set false for non Dédalo backup manager
+
 
 # MYSQL (PUBLIC DATA)
 # MySQL connection for publication

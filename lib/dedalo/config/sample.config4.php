@@ -547,6 +547,7 @@
 	define('STRUCTURE_DOWNLOAD_JSON_FILE',	STRUCTURE_DOWNLOAD_DIR);
 
 
+
 ################################################################
 # DEDALO_CODE
 	// server side (master)
