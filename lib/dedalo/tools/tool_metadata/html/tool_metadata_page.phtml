@@ -25,7 +25,11 @@
 tool_metadata.init({
 	metadata_options	: <?php echo json_encode($metadata_options) ?>,
 	container			: document.getElementById("wrap_tool"),
-	path				: '<?php echo DEDALO_IMAGE_FOLDER . '/' .DEDALO_IMAGE_QUALITY_DEFAULT ?>',
-	extensions			: <?php echo json_encode($extensions) ?>
+	total_records		: <?php echo json_encode($total_records) ?>,
+	ar_quality			: <?php echo json_encode($ar_quality) ?>,
+	section_tipo		: '<?php echo $section_tipo ?>',
+	button_tipo			: '<?php echo $button_tipo ?>'
+	// path				: '<?php echo DEDALO_IMAGE_FOLDER . '/' .DEDALO_IMAGE_QUALITY_DEFAULT ?>',
+	// extensions		: <?php echo json_encode($extensions) ?>	
 })
 </script>

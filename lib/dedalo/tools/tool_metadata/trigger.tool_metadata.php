@@ -13,6 +13,52 @@ common::trigger_manager();
 
 
 
+// /**
+// * PROCESS_FILES
+// */
+// function process_files($json_data) {
+// 	global $start_time;
+
+// 	# Write session to unlock session file
+// 	session_write_close();
+
+// 	# Ignore user close browser
+// 	ignore_user_abort(true);
+	
+// 	$response = new stdClass();
+// 		$response->result 	= false;
+// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+// 	$vars = array('data','path','extensions');
+// 		foreach($vars as $name) {
+// 			$$name = common::setVarData($name, $json_data);
+// 			# DATA VERIFY
+// 			if ($name==='extensions') continue; # Skip non mandatory
+// 			if (empty($$name)) {
+// 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+// 				return $response;
+// 			}
+// 		}
+
+// 	$response = (object)tool_metadata::process_files($path, $data, $extensions);
+
+	
+// 	# Debug
+// 		if(SHOW_DEBUG===true) {
+// 			$debug = new stdClass();
+// 				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+// 				foreach($vars as $name) {
+// 					$debug->{$name} = $$name;
+// 				}
+
+// 			$response->debug = $debug;
+// 		}
+
+// 	return (object)$response;
+// }//end process_files
+
+
+
 /**
 * PROCESS_FILES
 */
@@ -29,7 +75,7 @@ function process_files($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$vars = array('data','path','extensions');
+	$vars = array('data', 'section_tipo', 'button_tipo', 'quality_selected');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -40,7 +86,7 @@ function process_files($json_data) {
 			}
 		}
 
-	$response = (object)tool_metadata::process_files($path, $data, $extensions);
+	$response = (object)tool_metadata::process_files_from_section($section_tipo, $button_tipo, $data, $quality_selected);
 
 	
 	# Debug
@@ -122,10 +168,7 @@ function check_exiftool($json_data) {
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
 				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-				foreach($vars as $name) {
-					$debug->{$name} = $$name;
-				}
-
+			
 			$response->debug = $debug;
 		}
 
