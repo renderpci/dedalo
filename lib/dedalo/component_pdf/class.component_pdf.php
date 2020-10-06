@@ -574,7 +574,9 @@ class component_pdf extends component_common {
 	*/
 	public function get_diffusion_value( $lang=null ) {
 		
-		$diffusion_value = $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT);
+		$diffusion_value = (defined('DEDALO_PUBLICATION_CLEAN_URL') && true===DEDALO_PUBLICATION_CLEAN_URL)
+			? ($this->get_pdf_id() .'.'. DEDALO_PDF_EXTENSION)
+			: $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT);
 
 
 		return (string)$diffusion_value;
@@ -619,6 +621,4 @@ class component_pdf extends component_common {
 
 
 
-
 }
-?>
