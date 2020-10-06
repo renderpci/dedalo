@@ -510,6 +510,7 @@
 	define('DEDALO_DIFFUSION_DOMAIN',			'default');
 	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
 	define('DEDALO_PUBLICATION_ALERT',			false);
+	define('DEDALO_PUBLICATION_CLEAN_URL',		false);
 
 
 ################################################################
