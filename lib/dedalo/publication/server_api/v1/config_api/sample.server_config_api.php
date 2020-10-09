@@ -7,19 +7,24 @@
 # After load Dédalo config, set API constants 
 # API SERVER 
 
-// API API_ENTITY . Like 'my_organization'
+// API_ENTITY . Like 'my_organization'
 	define('API_ENTITY', 'my_api_entity_name');
 
 
-// db_name . Optional
-	$db_name = !empty($db_name)
-		? $db_name
-		: 'web_' . API_ENTITY;
-	
+// basic vars
+	$DEFAULT_LANG 		= 'lg-spa';
+	$__WEB_BASE_URL__ 	= 'http://my_domain';
+	$API_WEB_USER_CODE 	= 'XXXXXXXXXXXXXXXXX';
+
 
 
 ################################################################
 # DB
+	// db_name . Optional
+	$db_name = !empty($db_name)
+		? $db_name
+		: 'web_' . API_ENTITY;
+	// mysql config (may be different that Dédalo publish config)
 	define('MYSQL_DEDALO_HOSTNAME_CONN'	, 'localhost');
 	define('MYSQL_DEDALO_USERNAME_CONN'	, 'my username');
 	define('MYSQL_DEDALO_PASSWORD_CONN'	, 'my password');
@@ -46,13 +51,11 @@
 	define('DEDALO_NOTES_TEXT_TIPO'							, 'rsc329');
 
 
-################################################################
-
-
-
 
 ################################################################
 # CONSTANTS
+	// vars $code, $lang are fixed before load current config file (from /json/index.php)
+
 
 	// API_WEB_USER_CODE . Verification user code (must be identical in config of client and server)
 	if (isset($skip_api_web_user_code_verification) && $skip_api_web_user_code_verification===true) {
@@ -141,23 +144,10 @@
 
 
 ################################################################
-# Access-Control-Allow-Origin
-# Specifies a URI that may access the resource. You may specify one or more origins, separated by commas.
-# Use * for requests without credentials,
-	#define('ACCESS_CONTROL_ALLOW_ORIGIN', '*');
-
-
-
-################################################################
 # Database to use (for multiple database publication options like 'mht'). var $db_name is set in json/index.php file from request
-	if(!empty($db_name)) {
-		// received in json request
-			$MYSQL_WEB_DATABASE_CONN = $db_name;
-	}else{
-		// default from dedalo db config
-			$MYSQL_WEB_DATABASE_CONN = MYSQL_DEDALO_DATABASE_CONN;
-	}	
-	define('MYSQL_WEB_DATABASE_CONN', $MYSQL_WEB_DATABASE_CONN);
-
+	define('MYSQL_WEB_DATABASE_CONN', !empty($db_name)
+		? $db_name // received in json request
+		: MYSQL_DEDALO_DATABASE_CONN // default from current db config
+	);
 
 
