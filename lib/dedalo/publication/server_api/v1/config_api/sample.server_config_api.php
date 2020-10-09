@@ -34,9 +34,9 @@
 	define('DEDALO_LIB_BASE_PATH'							, dirname(dirname(dirname(API_ROOT))) );
 	define('DEDALO_LIB_BASE_URL'							, '/dedalo/lib/dedalo');
 	define('DEDALO_MEDIA_BASE_URL'							, '/dedalo/media'); // '/dedalo/media'
-	define('DEDALO_AV_QUALITY_DEFAULT' 						, '404');
+	define('DEDALO_AV_QUALITY_DEFAULT'						, '404');
 	define('DEDALO_AV_FOLDER' 								, '/av');
-	define('DEDALO_AV_POSTERFRAME_EXTENSION' 				, 'jpg');
+	define('DEDALO_AV_POSTERFRAME_EXTENSION'				, 'jpg');
 	define('SHOW_DEBUG'										, false);
 	# Video components resources
 	define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
