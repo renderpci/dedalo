@@ -1620,6 +1620,9 @@ class web_data {
 			$fragments_obj->fragm = $clean_fragm;
 		}
 
+		// add self $index_locator to fragments_obj
+			$fragments_obj->index_locator = $index_locator;
+
 		$response->result = $fragments_obj;
 		#$response->msg    = 'Request done successfully';
 
