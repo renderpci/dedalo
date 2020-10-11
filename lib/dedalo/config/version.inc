@@ -1881,6 +1881,13 @@
 	Valencia 30-09-2020 5.7.1
 		Fixed tool administration issues with github download code and added php no Zip lib available warning
 
+	
+	Valencia 11-10-2020 5.7.2
+		Added Public API web_data method 'get_full_interview' to easily retrive interview data
+
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1902,12 +1909,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.1';
+	$DEDALO_VERSION = '5.7.2';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '30-09-2020');
+	define('DEDALO_BUILD'	, '11-10-2020');
 
 
 
