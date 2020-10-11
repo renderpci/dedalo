@@ -3348,6 +3348,57 @@ class web_data {
 
 
 
+		/**
+		* GET_FULL_INTERVIEW
+		* Get full interview reels data. Complete transcription and no tc cut
+		* Used when you need show full interview (mode full)
+		* @return object $response
+		*/
+		public static function get_full_interview( $request_options ) {
+
+			$options = new stdClass();
+				$options->section_id	= false;
+				$options->lang			= WEB_CURRENT_LANG_CODE;
+				$options->image_type	= 'posterframe';
+				$options->terms			= false;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$response = new stdClass();
+				$response->result = false;
+				$response->msg 	  = 'Error. Request full_interview failed';
+
+
+			// resolve interview tapes (audiovisual)
+				$sd_options = new stdClass();
+					$sd_options->table 	 	= TABLE_INTERVIEW;
+					$sd_options->ar_fields  = ['section_id',FIELD_AUDIOVISUAL];
+					$sd_options->sql_filter = 'section_id='.(int)$options->section_id;
+					$sd_options->lang 	 	= $options->lang;
+					$sd_options->limit 	 	= 1;
+
+				$search_data	= (object)web_data::get_rows_data( $sd_options );						
+				$row			= (object)reset($search_data->result);				
+				$ar_audiovisual	= json_decode($row->{FIELD_AUDIOVISUAL});
+												
+				$ar_result = [];
+				foreach ($ar_audiovisual as $section_id) {
+
+					$full_reel_options = clone $options;
+					$full_reel_options->av_section_id = (int)$section_id;
+
+					$current_response	= web_data::get_full_reel($full_reel_options);
+					$ar_result[]		= $current_response->result;
+				}
+
+			$response->result = $ar_result;
+			$response->msg 	  = 'Ok. Request full_interview done successfully';
+
+
+			return $response;
+		}//end get_full_interview
+
+
+
 	/* GEOLOCATION
 	----------------------------------------------------------------------- */
 

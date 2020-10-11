@@ -150,6 +150,12 @@ class manager {
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_full_reel( $options );
 				break;
+			case 'full_interview':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_full_interview( $options );
+				break;
+				
 
 			## GLOBAL_SEARCH ##
 			case 'global_search':
