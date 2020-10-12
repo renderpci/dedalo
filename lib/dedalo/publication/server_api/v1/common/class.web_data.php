@@ -3281,7 +3281,7 @@ class web_data {
 					}
 					#dump($fn_options, ' fn_options ++ '.to_string());
 				$free_node = new free_node( $av_section_id, $fn_options );
-				$free_node->load_data(); # Froce to load data
+				$free_node->load_data(); # Force load data
 
 				# Clean data
 				$FIELD_TRANSCRIPTION = FIELD_TRANSCRIPTION;

@@ -1884,9 +1884,13 @@
 	
 	Valencia 11-10-2020 5.7.2
 		Added Public API web_data method 'get_full_interview' to easily retrive interview data
+		
+
+	Valencia 12-10-2020 5.7.3
+		Added server_config_headers.php include to subtiltes public API to allow acces from different domains
 
 
-
+	
 
 
 
@@ -1909,12 +1913,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.2';
+	$DEDALO_VERSION = '5.7.3';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-10-2020');
+	define('DEDALO_BUILD'	, '12-10-2020');
 
 
 

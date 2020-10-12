@@ -8,6 +8,12 @@
 */
 
 	$start_time=microtime(1);
+	
+
+	// headers (configure it to allow CORS acces, etc.)
+		$headers_file = dirname(dirname(__FILE__)) . '/config_api/server_config_headers.php';
+		include $headers_file;
+		header('Content-Type: text/vtt');
 
 
 	// Load class
@@ -85,10 +91,10 @@
 		if(SHOW_DEBUG===true) {
 			$total = exec_time_unit($start_time,'ms')." ms";
 			debug_log(__METHOD__." Created subtitles for section: $av_section_id - time : $total ".to_string(), logger::DEBUG);
-		}
+		}	
 		
 
-	// Show text
-		header("Access-Control-Allow-Origin: *");
-		header('Content-Type: text/vtt');
+	// Show text		
 		echo $subtitles_text;
+
+
