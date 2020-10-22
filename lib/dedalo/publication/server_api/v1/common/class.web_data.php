@@ -2915,12 +2915,57 @@ class web_data {
 
 
 
+		// /**
+		// * GET_THESAURUS_CHILDRENS
+		// * Alias of get_thesaurus_children
+		// * @return object $response
+		// */
+		// public static function get_thesaurus_childrens( $request_options ) {
+		// 	return web_data::get_thesaurus_children($request_options);
+		// }//end get_thesaurus_childrens
+
+
+
 		/**
-		* GET_THESAURUS_CHILDRENS
+		* GET_THESAURUS_CHILDREN
 		* @return object $response
 		*/
-		public static function get_thesaurus_childrens( $request_options ) {
+		public static function get_thesaurus_children( $request_options ) {
 			global $table_thesaurus_map; // From server api config
+
+			// various case like ts1_1,ts1_2. Use 'request_options->multiple=true' if you want response multiple unified response
+			if ( (isset($request_options->multiple) && $request_options->multiple===true) || strpos($request_options->term_id, ',')!==false ) {
+				
+				$ar_response = [];
+				$terms = explode(',', $request_options->term_id);
+				foreach ($terms as $term_id) {
+					
+					$term_id = trim($term_id);
+
+					if (empty($term_id)) {
+						debug_log(__METHOD__." Ignored empty term_id in ".to_string($terms), logger::ERROR);
+						continue;
+					}
+
+					$request_options_clone = clone $request_options;
+						$request_options_clone->term_id		= $term_id;
+						$request_options_clone->multiple	= false; // avoid infinite loop
+
+					$current_response = self::get_thesaurus_children($request_options_clone);
+					$ar_response[] = (object)[
+						'ter_id'	=> $term_id,
+						'result'	=> $current_response->result,
+						'total'		=> $current_response->total
+					];
+				}
+
+				$response = new stdClass();
+					$response->result 	= $ar_response;
+					$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+					$response->total 	= null;
+
+				return $response;
+			}
 
 			$options = new stdClass();
 				$options->term_id				= null;
@@ -2963,7 +3008,7 @@ class web_data {
 
 
 			// get_items. Recursion is optional
-			// if (!function_exists('get_items'))
+			if (!function_exists('get_items')) {
 			function get_items($current_term_id, $table, $lang, $ar_fields, $recursive, $only_descriptors, $remove_restricted, $remove_unused_terms) {
 
 				# Compatibility with old parent data (single)
@@ -2982,11 +3027,13 @@ class web_data {
 				# remove_restricted
 				if ($remove_restricted===true) {
 					$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
-					$ar=array();
-					foreach ((array)$ar_restricted_terms as $key => $restricted_term) {
-						$ar[] = "term_id != '{$restricted_term}'";
+					if (!empty($ar_restricted_terms)) {						
+						$ar=array();
+						foreach ((array)$ar_restricted_terms as $key => $restricted_term) {
+							$ar[] = "term_id != '{$restricted_term}'";
+						}
+						$term_filter .= ' AND (' . implode(' AND ', $ar) . ') ';
 					}
-					$term_filter .= ' AND (' . implode(' AND ', $ar) . ') ';
 				}
 
 				# Remove unused terms
@@ -3021,6 +3068,7 @@ class web_data {
 
 				return (array)$ar_data;
 			}//end get_items
+			}
 			$ar_children = get_items($options->term_id, $table, $lang, $ar_fields, $recursive, $only_descriptors, $remove_restricted, $remove_unused_terms);
 				#dump($ar_children, ' ar_children ++ '.to_string());
 
@@ -3030,7 +3078,7 @@ class web_data {
 				$response->total 	= count($ar_children);
 
 			return $response;
-		}//end get_thesaurus_childrens
+		}//end get_thesaurus_children
 
 
 
