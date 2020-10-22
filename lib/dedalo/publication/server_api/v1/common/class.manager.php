@@ -126,9 +126,10 @@ class manager {
 				break;
 
 			case 'thesaurus_childrens':
+			case 'thesaurus_children':
 				#
 				# Execute data retrieving
-				$dedalo_data = (object)web_data::get_thesaurus_childrens( $options );
+				$dedalo_data = (object)web_data::get_thesaurus_children( $options );
 				break;
 
 			case 'thesaurus_parents':
