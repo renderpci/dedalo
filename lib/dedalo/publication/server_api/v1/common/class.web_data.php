@@ -2915,17 +2915,6 @@ class web_data {
 
 
 
-		// /**
-		// * GET_THESAURUS_CHILDRENS
-		// * Alias of get_thesaurus_children
-		// * @return object $response
-		// */
-		// public static function get_thesaurus_childrens( $request_options ) {
-		// 	return web_data::get_thesaurus_children($request_options);
-		// }//end get_thesaurus_childrens
-
-
-
 		/**
 		* GET_THESAURUS_CHILDREN
 		* @return object $response
