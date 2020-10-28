@@ -1893,6 +1893,9 @@
 	Valencia 28-10-2020 5.7.4a
 		Reactivated canvas image hidpi to improve view in retina displays
 
+	Valencia 28-10-2020 5.7.5
+		Fix error ob trigger.tool_administration.php (target definition is unactive)
+
 
 	
 

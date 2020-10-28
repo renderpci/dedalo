@@ -962,7 +962,8 @@ function update_dedalo_code($json_data) {
 		// rsync 
 			$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
 				? DEDALO_SOURCE_VERSION_LOCAL_DIR .'/dedalo-master' // like 'dedalo-master'
-				: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo5_code' from 'dedalo5_code.zip'			$target		= DEDALO_ROOT;
+				: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo5_code' from 'dedalo5_code.zip'
+			$target		= DEDALO_ROOT;
 			$exclude	= ' --exclude="*/dedalo_4*" --exclude="media" ';
 			$aditional	= $is_preview===true ? ' --dry-run ' : '';
 			$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
