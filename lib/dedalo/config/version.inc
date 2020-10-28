@@ -1890,7 +1890,7 @@
 		Added server_config_headers.php include to subtiltes public API to allow acces from different domains
 
 
-	Valencia 28-10-2020 5.7.4
+	Valencia 28-10-2020 5.7.4a
 		Reactivated canvas image hidpi to improve view in retina displays
 
 
@@ -1918,7 +1918,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.4';
+	$DEDALO_VERSION = '5.7.4a';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
