@@ -1893,8 +1893,13 @@
 	Valencia 28-10-2020 5.7.4a
 		Reactivated canvas image hidpi to improve view in retina displays
 
-	Valencia 28-10-2020 5.7.5
+
+	Valencia 28-10-2020 5.7.4c
 		Fix error ob trigger.tool_administration.php (target definition is unactive)
+
+
+	Valencia 03-11-2020 5.7.4d
+		Fix load edit page error on Safari when page wraper is not properly css set to display : table
 
 
 	
@@ -1921,7 +1926,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.4c';
+	$DEDALO_VERSION = '5.7.4d';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
