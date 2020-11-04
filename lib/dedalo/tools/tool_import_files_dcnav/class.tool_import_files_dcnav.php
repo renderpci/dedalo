@@ -202,23 +202,23 @@ class tool_import_files_dcnav extends tool_common {
 		# 8	=>	A 			: A 			# target map (A,B,C..)
 		# 9	=>	jpg 		: jpg 			# extension
 
-		// preg_match('/^(((\d{1,5})-(\d{1,5}))-?(\d{1,5})?)\.([a-zA-Z]{3,4})$/', $file, $ar_match);
-		preg_match('/^(((\d{1,5})-(\d{1,5}))-?(\d{1,5})?-?\d{1,5}?-?\d{1,5}?)\.([a-zA-Z]{3,4})$/', $file, $ar_match);
-		if (!isset($ar_match[0])) {
-			trigger_error('Error on regex. Invalid file name: '.$file,);
-			dump($file, ' file ++ '.to_string());
-			dump($ar_match, ' ar_match ++ '.to_string());
-		}			
-		$regex_data = new stdClass();
-			$regex_data->full_name	= $ar_match[0]; // like 0001-0002.xml
-			$regex_data->name		= $ar_match[1]; // like 0001-0001-0002
-			$regex_data->code		= $ar_match[2]; // like 0001-0002
-			$regex_data->base_code1	= $ar_match[3];
-			$regex_data->base_code2	= $ar_match[4];
-			$regex_data->base_code3	= $ar_match[5];
-			$regex_data->extension	= $ar_match[6];
+		// // preg_match('/^(((\d{1,5})-(\d{1,5}))-?(\d{1,5})?)\.([a-zA-Z]{3,4})$/', $file, $ar_match);
+		// preg_match('/^(((\d{1,5})-(\d{1,5}))-?(\d{1,5})?-?\d{1,5}?-?\d{1,5}?)\.([a-zA-Z]{3,4})$/', $file, $ar_match);
+		// if (!isset($ar_match[0])) {
+		// 	trigger_error('Error on regex. Invalid file name: '.$file,);
+		// 	dump($file, ' file ++ '.to_string());
+		// 	dump($ar_match, ' ar_match ++ '.to_string());
+		// }			
+		// $regex_data = new stdClass();
+		// 	$regex_data->full_name	= $ar_match[0]; // like 0001-0002.xml
+		// 	$regex_data->name		= $ar_match[1]; // like 0001-0001-0002
+		// 	$regex_data->code		= $ar_match[2]; // like 0001-0002
+		// 	$regex_data->base_code1	= $ar_match[3];
+		// 	$regex_data->base_code2	= $ar_match[4];
+		// 	$regex_data->base_code3	= $ar_match[5];
+		// 	$regex_data->extension	= $ar_match[6];
 
-		$ar_data['regex'] = $regex_data;
+		// $ar_data['regex'] = $regex_data;
 		
 
 		return $ar_data;
@@ -529,10 +529,13 @@ class tool_import_files_dcnav extends tool_common {
 					// }
 					$file_data = tool_import_files_dcnav::get_file_data($files_dir, $current_file_name);
 					// dump($file_data, ' file_data ++ import_file_name_mode - '.to_string()); die(); // continue;
-					$base_code1	= $file_data['regex']->base_code1; // code value from filename used in Catalog grouper like '1001'
-					$code		= $file_data['regex']->code; // code value from filename like '1001-0001'
-					$name		= $file_data['regex']->name; // fulname of file without extension
-					$code		= $name; // CODE PASA A SER IGUAL A NAME (!) 30-10-2020. Problema con variabilidad de nombres
+					
+					// $file_name	= $file_data['regex']->base_code1; // code value from filename used in Catalog grouper like '1001'
+					// $code		= $file_data['regex']->code; // code value from filename like '1001-0001'
+					// $name		= $file_data['regex']->name; // fulname of file without extension
+					// $code		= $name; // CODE PASA A SER IGUAL A NAME (!) 30-10-2020. Problema con variabilidad de nombres
+
+					$file_name = $file_data['file_name']; // Like '0002-0001'
 
 				// parse XML file
 					$parsed_data = xml_dcnav_parser::parse_file($file_full_path);
@@ -544,9 +547,9 @@ class tool_import_files_dcnav extends tool_common {
 					$about = array_find($parsed_data[0]->value, function($el){
 						return $el->prefix==='rdf' && $el->local==='about';
 					});
-					if ($about->value!==$name) {
+					if ($about->value!==$file_name) {
 						// incorrect file name, not match about code
-						$msg = 'Error. Filename "'.$name.'" and rdf about value "'.$about->value.'" don\'t match! Review data and file name: '.$current_file_name;
+						$msg = 'Error. Filename "'.$file_name.'" and rdf about value "'.$about->value.'" don\'t match! Review data and file name: '.$current_file_name;
 						trigger_error($msg);
 
 						$response->result	= false;
@@ -569,7 +572,7 @@ class tool_import_files_dcnav extends tool_common {
 						"filter": {
 							"$and": [
 								{
-									"q": "'.$name.'",
+									"q": "'.$file_name.'",
 									"q_operator": null,
 									"path": [
 										{
@@ -605,7 +608,7 @@ class tool_import_files_dcnav extends tool_common {
 																				 'list',
 																				 DEDALO_DATA_LANG,
 																				 $section_tipo);
-							$code_component->set_dato([$name]);
+							$code_component->set_dato([$file_name]);
 							$code_component->Save();
 					}				
 
@@ -680,7 +683,7 @@ class tool_import_files_dcnav extends tool_common {
 									$result = $component->Save();
 
 									return $result;
-								})('navarra73', $section_xml_data_tipo, $section_xml_data_id, $base_code1);
+								})('navarra73', $section_xml_data_tipo, $section_xml_data_id, $file_name);
 
 							// document code. like '0008-0001' or '0008-0001-0001'
 								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
@@ -697,7 +700,7 @@ class tool_import_files_dcnav extends tool_common {
 									$result = $component->Save();
 
 									return $result;
-								})('navarra74', $section_xml_data_tipo, $section_xml_data_id, $name);
+								})('navarra74', $section_xml_data_tipo, $section_xml_data_id, $file_name);
 							
 							// prefix (component_select)
 								if (isset($item_value->prefix)) {
@@ -1132,10 +1135,10 @@ class tool_import_files_dcnav extends tool_common {
 
 
 				// attach to 'Catálogo Documental' documents portal
-					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $base_code1) {
+					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $file_name) {
 
 						// find existing or creates new setion ($section_tipo, $component_tipo, $value, $filter=null)
-						$locator	= self::get_solved_select_value($this->catalog_section_tipo, $code_tipo, $base_code1);
+						$locator	= self::get_solved_select_value($this->catalog_section_tipo, $code_tipo, $file_name);
 
 						// portal add document locator
 						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -1155,7 +1158,7 @@ class tool_import_files_dcnav extends tool_common {
 						$result = $component->Save();
 
 						return $result;
-					})('navarra59', $section_tipo, $section_id, $code_tipo, $base_code1);
+					})('navarra59', $section_tipo, $section_id, $code_tipo, $file_name);
 
 
 				// Add as processed
