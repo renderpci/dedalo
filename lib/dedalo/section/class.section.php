@@ -686,7 +686,7 @@ class section extends common {
 				$add_relation = $this->add_relation( $current_locator, 'relations' );
 				// If something fail, advise
 				if($add_relation===false) {
-					debug_log(__METHOD__." ERROR ON ADD RELATION:  ".to_string($current_locator), logger::ERROR);
+					debug_log(__METHOD__." ERROR ON ADD RELATION:  ".to_string($current_locator). '. Maybe the locator already exists.', logger::ERROR);
 					#$result = false;
 				}
 			}
@@ -1258,7 +1258,12 @@ class section extends common {
 					}
 					$dato_time_machine 	= $RecordObj_time_machine->get_dato();
 					$dato_section 		= $this->get_dato();
-					if ($dato_time_machine != $dato_section) {
+
+					// before compare, encode and decode the objects to avoid comparison errors
+					$dato_time_machine_compare	= json_decode( json_encode($dato_time_machine) );
+					$dato_section_compare		= json_decode( json_encode($dato_section) );
+
+					if ($dato_time_machine_compare != $dato_section_compare) {
 						if(SHOW_DEBUG===true) {
 							dump($dato_time_machine,"SHOW_DEBUG COMPARE ERROR dato_time_machine");
 							dump($dato_section,"SHOW_DEBUG COMPARE ERROR dato_section");
@@ -1268,7 +1273,6 @@ class section extends common {
 
 						return false;
 					}
-
 
 					#
 					# SECTION DELETE
