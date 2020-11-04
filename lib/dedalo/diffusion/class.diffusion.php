@@ -1081,7 +1081,7 @@ abstract class diffusion  {
 
 		$response = new stdClass();
 			$response->result 		= false;
-			$response->msg 			= __METHOD__ . ' Error. Request failed ';
+			$response->msg 			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
 			$response->ar_deleted 	= [];
 
 		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
