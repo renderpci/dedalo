@@ -2987,7 +2987,7 @@ class search_development2 {
 			# Exec query (all records at once)
 				if (!empty($ar_insert_values)) {
 
-					$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
+					$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).' ON CONFLICT ON CONSTRAINT relations_all_constraint DO NOTHING;';
 					$result = pg_query(DBi::_getConnection(), $strQuery);
 					if(!$result) {
 						$msg = " Failed Insert relations record - $strQuery";
