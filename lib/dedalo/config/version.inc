@@ -1901,8 +1901,12 @@
 	Valencia 03-11-2020 5.7.4d
 		Fix load edit page error on Safari when page wraper is not properly css set to display : table
 
-
 	
+	Valencia 04-11-2020 5.7.5
+		Fix bug on class section when on Delete a record, data comparisson failed
+		Added INSERT  ON CONFLICT ON CONSTRAINT relations_all_constraint DO NOTHING to prevent conflicts when new records are added to relations table
+		Modified import_files dcnav way to manage file code. Now full filename is used instead a regex
+		Changed confuse response message on diffusion delete_record when no record is found	
 
 
 
@@ -1926,12 +1930,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.4d';
+	$DEDALO_VERSION = '5.7.5';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-11-2020');
+	define('DEDALO_BUILD'	, '04-11-2020');
 
 
 
