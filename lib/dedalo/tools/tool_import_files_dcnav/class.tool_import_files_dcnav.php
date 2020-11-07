@@ -450,10 +450,10 @@ class tool_import_files_dcnav extends tool_common {
 			$response->msg		= __METHOD__ . ' Error. Request failed';
 
 
-		// sort vars
+		// short vars
 			$mode					= $json_data->mode; // "import_files"
 			$tipo					= $json_data->tipo; // "navarra1"
-			$section_tipo			= $json_data->section_tipo; // "navarra1"
+			$section_tipo			= $json_data->section_tipo; // "navarra57"
 			$ar_data				= $json_data->ar_data; // [{"file_name": "0001-0001-0002.jpg","file_type": "image"}]
 			// temp section data
 			$user_id				= navigator::get_user_id();
@@ -489,7 +489,7 @@ class tool_import_files_dcnav extends tool_common {
 		
 		// ar_data_sorted. merge all
 			// $ar_data_sorted = array_merge($ar_xml, $ar_image);
-			// dump($ar_xml, ' ar_xml ++ '.to_string());		
+			// dump($ar_xml, ' ar_xml ++ '.to_string());
 			// dump($ar_image, ' ar_image ++ '.to_string());
 			// dump($ar_data_sorted, ' ar_data_sorted ++ '.to_string());
 
@@ -539,9 +539,9 @@ class tool_import_files_dcnav extends tool_common {
 
 				// parse XML file
 					$parsed_data = xml_dcnav_parser::parse_file($file_full_path);
-					if(SHOW_DEBUG===true) {
-						// dump($parsed_data, ' parsed_data from file ++++++++++++++++++++++ '.to_string($current_file_name));
-					}
+					// if(SHOW_DEBUG===true) {
+					// 	// dump($parsed_data, ' parsed_data from file ++++++++++++++++++++++ '.to_string($current_file_name));
+					// }
 
 				// check filename match the about info	
 					$about = array_find($parsed_data[0]->value, function($el){
@@ -558,8 +558,8 @@ class tool_import_files_dcnav extends tool_common {
 						break; // stop current loop and file
 					}					
 
-				// find existing section or create a new one
-					$code_tipo	= 'navarra19'; // tipo of the component_input_text where is stored code value
+				// find existing document section or create a new one
+					$code_tipo	= 'navarra19'; // tipo of the component_input_text where is stored code value (non translatable)
 					$sqo = json_decode('{
 						"id": "'.$section_tipo.'_list",
 						"parsed": false,
@@ -588,12 +588,12 @@ class tool_import_files_dcnav extends tool_common {
 							]
 						},
 						"select": []
-					}');					
+					}');
 					$search_development2	= new search_development2($sqo);
 					$search_result			= $search_development2->search();
 					$ar_records				= $search_result->ar_records;
 					if (count($ar_records)>1) {
-						throw new Exception("Error Processing Request. Search in 'navarra19' get more than one result. Only one is expected !", 1);						
+						throw new Exception("Error Processing Request. Search in 'navarra19' get more than one result. Only one is expected ! Total: ".count($ar_records), 1);						
 					}
 					if(!empty($ar_records)) {
 						// founded. Already created record
@@ -611,7 +611,7 @@ class tool_import_files_dcnav extends tool_common {
 																				 $code_tipo,
 																				 $section_id,
 																				 'list',
-																				 DEDALO_DATA_LANG,
+																				 DEDALO_DATA_NOLAN,
 																				 $section_tipo);
 							$code_component->set_dato([$file_name]);
 							$code_component->Save();
@@ -624,7 +624,7 @@ class tool_import_files_dcnav extends tool_common {
 																					 $portal_xml_data_tipo,
 																					 $section_id,
 																					 'list',
-																					 DEDALO_DATA_LANG,
+																					 DEDALO_DATA_NOLAN,
 																					 $section_tipo);
 					$portal_xml_data_dato = $portal_xml_data_component->get_dato();
 					if (!empty($portal_xml_data_dato)) {
@@ -1102,7 +1102,7 @@ class tool_import_files_dcnav extends tool_common {
 																						 $tipo,
 																						 $section_id,
 																						 'list',
-																						 DEDALO_DATA_LANG,
+																						 DEDALO_DATA_NOLAN,
 																						 $section_tipo);
 										$component->set_dato( (array)$value );
 										$result = $component->Save();
@@ -1205,6 +1205,7 @@ class tool_import_files_dcnav extends tool_common {
 	}//end import_files
 
 
+
 	/**
 	* GET_SOLVED_SELECT_VALUE
 	* Search for received value in section. If it found, returns locator, else create the new value
@@ -1283,11 +1284,13 @@ class tool_import_files_dcnav extends tool_common {
 				$section_id	= $section->get_section_id();
 
 			// save new value
+				$RecordObj_dd	= new RecordObj_dd($component_tipo);
+				$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 				$code_component	= component_common::get_instance($modelo_name,
 																 $component_tipo,
 																 $section_id,
 																 'list',
-																 DEDALO_DATA_LANG,
+																 $lang,
 																 $section_tipo);
 				$dato = is_array($value) ? $value : [$value];
 				$code_component->set_dato( $dato );
