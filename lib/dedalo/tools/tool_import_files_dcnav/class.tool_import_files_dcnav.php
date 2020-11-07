@@ -568,12 +568,14 @@ class tool_import_files_dcnav extends tool_common {
 						"offset": 0,
 						"type": "search_json_object",
 						"full_count": false,
+						"skip_projects_filter": true,
 						"order": false,
 						"filter": {
 							"$and": [
 								{
 									"q": "'.$file_name.'",
 									"q_operator": "=",
+									"unaccent": false,
 									"path": [
 										{
 											"section_tipo": "'.$section_tipo.'",
@@ -1212,6 +1214,7 @@ class tool_import_files_dcnav extends tool_common {
 							"q": "'.$value.'",
 							"q_operator": "=",
 							"q_split": false,
+							"unaccent": false,
 							"path": [
 								{
 									"section_tipo": "'.$section_tipo.'",
@@ -1233,18 +1236,36 @@ class tool_import_files_dcnav extends tool_common {
 			"full_count": false,
 			"order": false,
 			"filter": '.$filter_string.',
+			"skip_projects_filter": true,
 			"select": []
 		}');
+
+		// debug
+			// if ($value=='INM') {
+			// 	dump($sqo, ' sqo ++ '.to_string());
+			// }
 		$search_development2	= new search_development2($sqo);
 		$search_result			= $search_development2->search();
 		$ar_records				= $search_result->ar_records;
-		if (count($ar_records)>1) {
-			throw new Exception("Error Processing Request [get_solved_select_value]. Search in '$section_tipo' get more than one result. Only one is expected !", 1);						
-		}
-		if(!empty($ar_records)) {
+		$count					= count($ar_records);
+		// debug
+			// if ($value=='INM') {
+			// 	dump($count, ' count ++ search_result: '.to_string($search_result));
+			// }
+
+		if($count>1) {
+
+			// more than one exists with same value
+				dump('', ' SQO +++++++++++++++++ '.to_string($sqo));
+				throw new Exception("Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)", 1);						
+		
+		}elseif ($count===1) {
+			
 			// founded. Already created record
 				$section_id = reset($ar_records)->section_id;
-		}else{
+
+		}elseif ($count===0) {
+			
 			// no found. Create a new empty record
 				$section	= section::get_instance(null, $section_tipo);
 				$section->Save();
