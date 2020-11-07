@@ -1908,6 +1908,11 @@
 		Modified import_files dcnav way to manage file code. Now full filename is used instead a regex
 		Changed confuse response message on diffusion delete_record when no record is found	
 
+	Valencia 07-11-2020 5.7.6
+		Added debug info about path in tool_import_files_dcnav_page
+		Fix bug when q_operator is non defined in class.tool_import_files_dcnav search query object (import files)
+		Fix error trigger on UploadHandler when image Orientation is not available
+		Update version info to 5.7.6
 
 
 
@@ -1930,12 +1935,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.7.5';
+	$DEDALO_VERSION = '5.7.6';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '04-11-2020');
+	define('DEDALO_BUILD'	, '07-11-2020');
 
 
 
